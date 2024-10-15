@@ -42,14 +42,14 @@ var OIDACMEIdentifier = asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 1, 31}
 func ValidateKeyAuthorization(keyAuthz string, token string, thumbprint string) (bool, error) {
 	parts := strings.Split(keyAuthz, ".")
 	if len(parts) != 2 {
-		return false, fmt.Errorf("invalid authorization: got %v parts, expected 2", len(parts))
+		return false, fmt.Errorf("%w: %s", ErrMalformed, fmt.Errorf("invalid authorization: got %v parts, expected 2", len(parts)).Error())
 	}
 
 	tokenPart := parts[0]
 	thumbprintPart := parts[1]
 
 	if token != tokenPart || thumbprint != thumbprintPart {
-		return false, fmt.Errorf("key authorization was invalid")
+		return false, fmt.Errorf("%w: %s", ErrIncorrectResponse, fmt.Errorf("key authorization was invalid").Error())
 	}
 
 	return true, nil
@@ -126,7 +126,7 @@ func ValidateHTTP01Challenge(domain string, token string, thumbprint string, con
 	path := "http://" + domain + "/.well-known/acme-challenge/" + token
 	dialer, err := buildDialerConfig(config)
 	if err != nil {
-		return false, fmt.Errorf("failed to build dialer: %w", err)
+		return false, fmt.Errorf("%w: %s", ErrServerInternal, fmt.Errorf("failed to build dialer: %w", err).Error())
 	}
 
 	transport := &http.Transport{
@@ -167,7 +167,7 @@ func ValidateHTTP01Challenge(domain string, token string, thumbprint string, con
 
 	resp, err := client.Get(path)
 	if err != nil {
-		return false, fmt.Errorf("http-01: failed to fetch path %v: %w", path, err)
+		return false, fmt.Errorf("%w: %s", ErrConnection, fmt.Errorf("http-01: failed to fetch path %v: %w", path, err).Error())
 	}
 
 	// We provision a buffer which allows for a variable size challenge, some
@@ -180,15 +180,15 @@ func ValidateHTTP01Challenge(domain string, token string, thumbprint string, con
 	// Attempt to read the body, but don't do so infinitely.
 	body, err := io.ReadAll(io.LimitReader(resp.Body, int64(maxExpected+1)))
 	if err != nil {
-		return false, fmt.Errorf("http-01: unexpected error while reading body: %w", err)
+		return false, fmt.Errorf("%w: %s", ErrIncorrectResponse, fmt.Errorf("http-01: unexpected error while reading body: %w", err).Error())
 	}
 
 	if len(body) > maxExpected {
-		return false, fmt.Errorf("http-01: response too large: received %v > %v bytes", len(body), maxExpected)
+		return false, fmt.Errorf("%w: %s", ErrMalformed, fmt.Errorf("http-01: response too large: received %v > %v bytes", len(body), maxExpected).Error())
 	}
 
 	if len(body) < minExpected {
-		return false, fmt.Errorf("http-01: response too small: received %v < %v bytes", len(body), minExpected)
+		return false, fmt.Errorf("%w: %s", ErrMalformed, fmt.Errorf("http-01: response too small: received %v < %v bytes", len(body), minExpected).Error())
 	}
 
 	// Per RFC 8555 Section 8.3. HTTP Challenge:
@@ -215,7 +215,7 @@ func ValidateDNS01Challenge(domain string, token string, thumbprint string, conf
 	// 2. To use a context to set stricter timeout limits.
 	resolver, err := buildResolver(config)
 	if err != nil {
-		return false, fmt.Errorf("failed to build resolver: %w", err)
+		return false, fmt.Errorf("%w: %s", ErrServerInternal, fmt.Errorf("failed to build resolver: %w", err).Error())
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -224,7 +224,7 @@ func ValidateDNS01Challenge(domain string, token string, thumbprint string, conf
 	name := DNSChallengePrefix + domain
 	results, err := resolver.LookupTXT(ctx, name)
 	if err != nil {
-		return false, fmt.Errorf("dns-01: failed to lookup TXT records for domain (%v) via resolver %v: %w", name, config.DNSResolver, err)
+		return false, fmt.Errorf("%w: %s", ErrDNS, fmt.Errorf("dns-01: failed to lookup TXT records for domain (%v) via resolver %v: %w", name, config.DNSResolver, err).Error())
 	}
 
 	for _, keyAuthz := range results {
@@ -234,7 +234,7 @@ func ValidateDNS01Challenge(domain string, token string, thumbprint string, conf
 		}
 	}
 
-	return false, fmt.Errorf("dns-01: challenge failed against %v records", len(results))
+	return false, fmt.Errorf("%w: %s", ErrDNS, fmt.Errorf("dns-01: challenge failed against %v records", len(results)).Error())
 }
 
 func ValidateTLSALPN01Challenge(domain string, token string, thumbprint string, config *acmeConfigEntry) (bool, error) {
@@ -456,7 +456,7 @@ func ValidateTLSALPN01Challenge(domain string, token string, thumbprint string, 
 	// resolved according to configuration.
 	dialer, err := buildDialerConfig(config)
 	if err != nil {
-		return false, fmt.Errorf("failed to build dialer: %w", err)
+		return false, fmt.Errorf("%w: %s", ErrServerInternal, fmt.Errorf("failed to build dialer: %w", err).Error())
 	}
 
 	// Per RFC 8737 Section 3. TLS with Application-Layer Protocol
@@ -471,7 +471,7 @@ func ValidateTLSALPN01Challenge(domain string, token string, thumbprint string, 
 	address := fmt.Sprintf("%v:"+ALPNPort, domain)
 	conn, err := dialer.Dial("tcp", address)
 	if err != nil {
-		return false, fmt.Errorf("tls-alpn-01: failed to dial host: %w", err)
+		return false, fmt.Errorf("%w: %s", ErrConnection, fmt.Errorf("tls-alpn-01: failed to dial host: %w", err).Error())
 	}
 
 	// Initiate the connection to the remote peer.
@@ -496,7 +496,7 @@ func ValidateTLSALPN01Challenge(domain string, token string, thumbprint string, 
 	// See note above about why we can allow Handshake to complete
 	// successfully.
 	if err := client.HandshakeContext(ctx); err != nil {
-		return false, fmt.Errorf("tls-alpn-01: failed to perform handshake: %w", err)
+		return false, fmt.Errorf("%w: %s", ErrTLS, fmt.Errorf("tls-alpn-01: failed to perform handshake: %w", err).Error())
 	}
 	return true, nil
 }
