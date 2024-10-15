@@ -62,10 +62,11 @@ The National Institute of Standards and Technology (NIST) recommends
 periodically rotating encryption keys, even without a leak or compromise event.
 
 Due to the nature of AES-256-GCM encryption,
-[NIST publication 800-38D](NIST-800-38D) recommends rotating keys **before**
-performing ~2<sup>32</sup> encryptions. By default, Vault monitors the
-`vault.barrier.estimated_encryptions` metric and automatically rotates the
-backend encryption key before reaching 2<sup>32</sup> encryption operations.
+[NIST publication 800-38D](https://csrc.nist.gov/pubs/sp/800/38/d/final)
+recommends rotating keys **before** performing ~2<sup>32</sup> encryptions. By
+default, Vault monitors the `vault.barrier.estimated_encryptions` metric and
+automatically rotates the backend encryption key before reaching 2<sup>32</sup>
+encryption operations.
 
 You can approximate the `vault.barrier.estimated_encryptions` metric with the
 following sum:
@@ -97,5 +98,3 @@ where:
   server to a larger value, such as "5s".
 
 </Tip>
-
-[NIST-800-38D]: https://csrc.nist.gov/pubs/sp/800/38/d/final
