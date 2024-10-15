@@ -43,8 +43,7 @@ module('Unit | Decorators | ModelFormFields', function (hooks) {
           name: 'path',
           options: {
             label: 'Path for this secret',
-            subText:
-              'When using / in the path, the UI will interpret the words before / as the name of the directory.',
+            subText: 'Names with forward slashes define hierarchical path structures.',
           },
           type: 'string',
         },

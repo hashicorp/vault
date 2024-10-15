@@ -54,8 +54,7 @@ export default class KvSecretDataModel extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord.
   @attr('string', {
     label: 'Path for this secret',
-    subText:
-      'When using / in the path, the UI will interpret the words before / as the name of the directory.',
+    subText: 'Names with forward slashes define hierarchical path structures.',
   })
   path;
   @attr('object') secretData; // { key: value } data of the secret version
