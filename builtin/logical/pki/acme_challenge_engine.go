@@ -488,7 +488,7 @@ func (ace *ACMEChallengeEngine) _verifyChallenge(sc *storageContext, id string, 
 
 	if err := saveAuthorizationAtPath(sc, authzPath, authz); err != nil {
 		err = fmt.Errorf("error saving updated (validated) authorization %v/%v for challenge %v: %w", cv.Account, cv.Authorization, id, err)
-		return ace._verifyChallengeRetry(sc, cv, authzPath, authz, challenge, err, id)
+		return ace._verifyChallengeRetry(sc, cv, authzPath, authz, challenge, fmt.Errorf("%w: %s", ErrServerInternal, err.Error()), id)
 	}
 
 	return ace._verifyChallengeCleanup(sc, nil, id)

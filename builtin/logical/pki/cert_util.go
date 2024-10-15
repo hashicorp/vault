@@ -264,7 +264,7 @@ func fetchCertBySerial(sc pki_backend.StorageContext, prefix, serial string) (*l
 		default:
 			certCounter.IncrementTotalCertificatesCount(certsCounted, path)
 		}
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error deleting certificate with serial %s from old location", serial)}
+		return nil, errutil.InternalError{Err: fmt.Sprintf("error deleting certificate with serial %s from old location: %s", serial, err)}
 	}
 
 	return certEntry, nil
