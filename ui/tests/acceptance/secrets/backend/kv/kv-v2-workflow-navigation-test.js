@@ -126,6 +126,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
   });
 
   test('KVv2 handles secret with % and space in path correctly', async function (assert) {
+    // To check this bug no longer happens: https://github.com/hashicorp/vault/issues/11616
     await navToBackend(this.backend);
     await click(PAGE.list.createSecret);
     const pathWithSpace = 'per%centfu ll';
@@ -133,11 +134,13 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
     await fillIn(FORM.keyInput(), 'someKey');
     await fillIn(FORM.maskedValueInput(), 'someValue');
     await click(FORM.saveBtn);
+    assert.dom(PAGE.title).hasText(pathWithSpace, 'title is full path without any encoding/decoding.');
     assert
-      .dom(PAGE.title)
-      .hasText(pathWithSpace, 'title on overview is of the full path without any encoding/decoding.');
-    assert.dom(PAGE.breadcrumbAtIdx(2)).hasText(this.backend, 'the breadcrumb before current is the backend');
-    assert.dom(PAGE.breadcrumbAtValue(pathWithSpace)).exists('the current breadcrumb is value of the path');
+      .dom(PAGE.breadcrumbAtIdx(1))
+      .hasText(this.backend, 'breadcrumb before secret path is backend path');
+    assert
+      .dom(PAGE.breadcrumbAtValue(pathWithSpace))
+      .exists('the current breadcrumb is value of the secret path');
 
     await click(PAGE.breadcrumbAtIdx(1));
     assert
@@ -170,7 +173,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       .dom(PAGE.title)
       .hasText(
         nestedPathWithSpace,
-        'title on overview is of the full nested path (directory included) without any encoding/decoding.'
+        'title is of the full nested path (directory included) without any encoding/decoding.'
       );
     assert.dom(PAGE.breadcrumbAtIdx(2)).hasText('per%');
     assert.dom(PAGE.breadcrumbAtValue('centfu ll')).exists('the current breadcrumb is value centfu ll');
@@ -193,6 +196,44 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       'Path is encoded in the URL'
     );
   });
+
+  test('KVv2 handles nested secret with a percent-encoded data octet in path correctly', async function (assert) {
+    // To check this bug no longer happens: https://github.com/hashicorp/vault/issues/25905
+    await navToBackend(this.backend);
+    await click(PAGE.list.createSecret);
+    const pathDataOctet = 'hello/foo%2fbar/world';
+    await typeIn(GENERAL.inputByAttr('path'), pathDataOctet);
+    await fillIn(FORM.keyInput(), 'someKey');
+    await fillIn(FORM.maskedValueInput(), 'someValue');
+    await click(FORM.saveBtn);
+    assert
+      .dom(PAGE.title)
+      .hasText(
+        pathDataOctet,
+        'title is of the full nested path (directory included) without any encoding/decoding.'
+      );
+    assert
+      .dom(PAGE.breadcrumbAtIdx(2))
+      .hasText('hello', 'hello is the first directory and shows up as a separate breadcrumb');
+    assert
+      .dom(PAGE.breadcrumbAtIdx(3))
+      .hasText('foo%2fbar', 'foo%2fbar is the second directory and shows up as a separate breadcrumb');
+    assert.dom(PAGE.breadcrumbAtValue('world')).exists('the current breadcrumb is value world');
+
+    await click(PAGE.breadcrumbAtIdx(2));
+    assert
+      .dom(`${PAGE.list.item('foo%2fbar/')} [data-test-path]`)
+      .hasText('foo%2fbar/', 'the directory item is shown correctly');
+
+    await click(PAGE.list.item('foo%2fbar/'));
+    await click(PAGE.list.item('world'));
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${this.backend}/kv/${encodeURIComponent(pathDataOctet)}`,
+      'Path is encoded in the URL'
+    );
+  });
+
   module('admin persona', function (hooks) {
     hooks.beforeEach(async function () {
       const token = await runCmd(
@@ -229,7 +270,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.list.filter).doesNotExist('List filter does not show because no secrets exists.');
       // Page content correct
       assert.dom(PAGE.emptyStateTitle).hasText('No secrets yet');
-      assert.dom(PAGE.rlist.ceateSecret).hasText('Create secret');
+      assert.dom(PAGE.list.createSecret).hasText('Create secret');
 
       // click toolbar CTA
       await click(PAGE.list.createSecret);
