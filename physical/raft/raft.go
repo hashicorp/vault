@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -74,7 +75,10 @@ const (
 	defaultMaxBatchSize = 128 * 1024
 )
 
-var getMmapFlags = func(string) int { return 0 }
+var (
+	getMmapFlags     = func(string) int { return 0 }
+	usingMapPopulate = func(int) bool { return false }
+)
 
 // Verify RaftBackend satisfies the correct interfaces
 var (
@@ -447,6 +451,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		}
 	}
 
+	// Create the log store.
 	// Build an all in-memory setup for dev mode, otherwise prepare a full
 	// disk-based setup.
 	var logStore raft.LogStore
@@ -473,6 +478,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		if err != nil {
 			return nil, fmt.Errorf("failed to check if raft.db already exists: %w", err)
 		}
+
 		if backendConfig.RaftWal && raftDbExists {
 			logger.Warn("raft is configured to use raft-wal for storage but existing raft.db detected. raft-wal config will be ignored.")
 			backendConfig.RaftWal = false
@@ -502,6 +508,10 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 				Path:                    dbPath,
 				BoltOptions:             opts,
 				MsgpackUseNewTimeFormat: true,
+			}
+
+			if runtime.GOOS == "linux" && raftDbExists && !usingMapPopulate(opts.MmapFlags) {
+				logger.Warn("the MAP_POPULATE mmap flag has not been set before opening the log store database. This may be due to the database file being larger than the available memory on the system, or due to the VAULT_RAFT_DISABLE_MAP_POPULATE environment variable being set. As a result, Vault may be slower to start up.")
 			}
 
 			store, err := raftboltdb.New(raftOptions)
@@ -687,6 +697,12 @@ func (b *RaftBackend) UpgradeVersion() string {
 		return b.upgradeVersion
 	}
 
+	return b.effectiveSDKVersion
+}
+
+func (b *RaftBackend) SDKVersion() string {
+	b.l.RLock()
+	defer b.l.RUnlock()
 	return b.effectiveSDKVersion
 }
 

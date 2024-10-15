@@ -108,7 +108,7 @@ export default Component.extend({
     const currentRoute = owner.lookup(`router:main`).currentRouteName;
 
     try {
-      this.store.clearAllDatasets();
+      this.store.clearDataset();
       yield this.router.transitionTo(currentRoute);
       this.logAndOutput(null, { type: 'success', content: 'The current screen has been refreshed!' });
     } catch (error) {

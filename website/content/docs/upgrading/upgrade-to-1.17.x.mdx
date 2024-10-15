@@ -131,6 +131,8 @@ kubectl exec -ti <NAME> -- wget https://github.com/moparisthebest/static-curl/re
 
 ## Known issues and workarounds
 
+@include 'known-issues/1_17_audit-log-hmac.mdx'
+
 @include 'known-issues/ocsp-redirect.mdx'
 
 @include 'known-issues/agent-and-proxy-excessive-cpu-1-17.mdx'
@@ -144,3 +146,7 @@ kubectl exec -ti <NAME> -- wget https://github.com/moparisthebest/static-curl/re
 @include 'known-issues/duplicate-identity-groups.mdx'
 
 @include 'known-issues/manual-entity-merge-does-not-persist.mdx'
+
+@include 'known-issues/aws-auth-external-id.mdx'
+
+@include 'known-issues/sync-activation-flags-cache-not-updated.mdx'

@@ -16,10 +16,11 @@ const Eng = Engine.extend({
   dependencies: {
     services: [
       'auth',
+      'capabilities',
       'flash-messages',
       'namespace',
       'replication-mode',
-      'router',
+      'app-router',
       'store',
       'version',
       '-portal',

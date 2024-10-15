@@ -119,6 +119,7 @@ type ServerCommand struct {
 	flagConfigs            []string
 	flagRecovery           bool
 	flagExperiments        []string
+	flagCLIDump            string
 	flagDev                bool
 	flagDevTLS             bool
 	flagDevTLSCertDir      string
@@ -219,6 +220,13 @@ func (c *ServerCommand) Flags() *FlagSets {
 			"flag can be specified multiple times to specify multiple experiments. This can also be " +
 			fmt.Sprintf("specified via the %s environment variable as a comma-separated list. ", EnvVaultExperiments) +
 			"Valid experiments are: " + strings.Join(experiments.ValidExperiments(), ", "),
+	})
+
+	f.StringVar(&StringVar{
+		Name:       "pprof-dump-dir",
+		Target:     &c.flagCLIDump,
+		Completion: complete.PredictDirs("*"),
+		Usage:      "Directory where generated profiles are created. If left unset, files are not generated.",
 	})
 
 	f = set.NewFlagSet("Dev Options")
@@ -439,6 +447,8 @@ func (c *ServerCommand) parseConfig() (*server.Config, []configutil.ConfigError,
 		c.UI.Warn("WARNING: Entropy Augmentation is not supported in FIPS 140-2 Inside mode; disabling from server configuration!\n")
 		config.Entropy = nil
 	}
+
+	entCheckRequestLimiter(c, config)
 
 	return config, configErrors, nil
 }
@@ -1423,12 +1433,6 @@ func (c *ServerCommand) Run(args []string) int {
 		info["HCP resource ID"] = config.HCPLinkConf.Resource.ID
 	}
 
-	requestLimiterStatus := entGetRequestLimiterStatus(coreConfig)
-	if requestLimiterStatus != "" {
-		infoKeys = append(infoKeys, "request limiter")
-		info["request limiter"] = requestLimiterStatus
-	}
-
 	infoKeys = append(infoKeys, "administrative namespace")
 	info["administrative namespace"] = config.AdministrativeNamespacePath
 
@@ -1593,6 +1597,11 @@ func (c *ServerCommand) Run(args []string) int {
 		coreShutdownDoneCh = core.ShutdownDone()
 	}
 
+	cliDumpCh := make(chan struct{})
+	if c.flagCLIDump != "" {
+		go func() { cliDumpCh <- struct{}{} }()
+	}
+
 	// Wait for shutdown
 	shutdownTriggered := false
 	retCode := 0
@@ -1707,8 +1716,8 @@ func (c *ServerCommand) Run(args []string) int {
 
 			// Notify systemd that the server has completed reloading config
 			c.notifySystemd(systemd.SdNotifyReady)
-
 		case <-c.SigUSR2Ch:
+			c.logger.Info("Received SIGUSR2, dumping goroutines. This is expected behavior. Vault continues to run normally.")
 			logWriter := c.logger.StandardWriter(&hclog.StandardLoggerOptions{})
 			pprof.Lookup("goroutine").WriteTo(logWriter, 2)
 
@@ -1759,6 +1768,51 @@ func (c *ServerCommand) Run(args []string) int {
 			}
 
 			c.logger.Info(fmt.Sprintf("Wrote pprof files to: %s", pprofPath))
+		case <-cliDumpCh:
+			path := c.flagCLIDump
+
+			if _, err := os.Stat(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+				c.logger.Error("Checking cli dump path failed", "error", err)
+				continue
+			}
+
+			pprofPath := filepath.Join(path, "vault-pprof")
+			err := os.MkdirAll(pprofPath, os.ModePerm)
+			if err != nil {
+				c.logger.Error("Could not create temporary directory for pprof", "error", err)
+				continue
+			}
+
+			dumps := []string{"goroutine", "heap", "allocs", "threadcreate", "profile"}
+			for _, dump := range dumps {
+				pFile, err := os.Create(filepath.Join(pprofPath, dump))
+				if err != nil {
+					c.logger.Error("error creating pprof file", "name", dump, "error", err)
+					break
+				}
+
+				if dump != "profile" {
+					err = pprof.Lookup(dump).WriteTo(pFile, 0)
+					if err != nil {
+						c.logger.Error("error generating pprof data", "name", dump, "error", err)
+						pFile.Close()
+						break
+					}
+				} else {
+					// CPU profiles need to run for a duration so we're going to run it
+					// just for one second to avoid blocking here.
+					if err := pprof.StartCPUProfile(pFile); err != nil {
+						c.logger.Error("could not start CPU profile: ", err)
+						pFile.Close()
+						break
+					}
+					time.Sleep(time.Second * 1)
+					pprof.StopCPUProfile()
+				}
+				pFile.Close()
+			}
+
+			c.logger.Info(fmt.Sprintf("Wrote startup pprof files to: %s", pprofPath))
 		}
 	}
 	// Notify systemd that the server is shutting down

@@ -386,7 +386,9 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		ctx := r.Context()
 		var cancelFunc context.CancelFunc
 		// Add our timeout, but not for the monitor or events endpoints, as they are streaming
-		if strings.HasSuffix(r.URL.Path, "sys/monitor") || strings.Contains(r.URL.Path, "sys/events") {
+		// Request URL path for sys/monitor looks like /v1/sys/monitor
+		// Request URL paths for event subscriptions look like /v1/sys/events/subscribe/{eventType}. Example: /v1/sys/events/subscribe/kv*
+		if r.URL.Path == "/v1/sys/monitor" || strings.HasPrefix(r.URL.Path, "/v1/sys/events/subscribe") {
 			ctx, cancelFunc = context.WithCancel(ctx)
 		} else {
 			ctx, cancelFunc = context.WithTimeout(ctx, maxRequestDuration)
@@ -1415,7 +1417,13 @@ func respondOIDCPermissionDenied(w http.ResponseWriter) {
 	enc.Encode(oidcResponse)
 }
 
-// trimPath removes the /v1/ prefix and the namespace from the path
+// trimPath removes the /v1/ prefix (if present) and the namespace from the path
 func trimPath(ns *namespace.Namespace, path string) string {
-	return ns.TrimmedPath(path[len("/v1/"):])
+	const v1Prefix = "/v1/"
+
+	if strings.HasPrefix(path, v1Prefix) {
+		return ns.TrimmedPath(path[len(v1Prefix):])
+	}
+
+	return ns.TrimmedPath(path)
 }

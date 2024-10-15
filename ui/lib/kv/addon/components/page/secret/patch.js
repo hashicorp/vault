@@ -37,9 +37,10 @@ import errorMessage from 'vault/utils/error-message';
 export default class KvSecretPatch extends Component {
   @service controlGroup;
   @service flashMessages;
-  @service router;
+  @service('app-router') router;
   @service store;
 
+  @tracked controlGroupError;
   @tracked errorMessage;
   @tracked invalidFormAlert;
   @tracked patchMethod = 'UI';
@@ -60,21 +61,19 @@ export default class KvSecretPatch extends Component {
 
     const { backend, path, metadata, subkeysMeta } = this.args;
     // if no metadata permission, use subkey metadata as backup
-    const version = metadata.currentVersion || subkeysMeta.version;
+    const version = metadata?.currentVersion || subkeysMeta?.version;
     const adapter = this.store.adapterFor('kv/data');
     try {
       yield adapter.patchSecret(backend, path, patchData, version);
       this.flashMessages.success(`Successfully patched new version of ${path}.`);
       this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.index');
     } catch (error) {
-      // TODO test...this is copy pasta'd from the edit page
-      let message = errorMessage(error);
       if (error.message === 'Control Group encountered') {
         this.controlGroup.saveTokenFromError(error);
-        const err = this.controlGroup.logFromError(error);
-        message = err.content;
+        this.controlGroupError = this.controlGroup.logFromError(error);
+        return;
       }
-      this.errorMessage = message;
+      this.errorMessage = errorMessage(error);
       this.invalidFormAlert = 'There was an error submitting this form.';
     }
   }

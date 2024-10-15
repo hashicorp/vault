@@ -174,7 +174,7 @@ module('Acceptance | clients | overview', function (hooks) {
     const orderedNs = response.byNamespace.sort((a, b) => b.clients - a.clients);
     const topNamespace = orderedNs[0];
     // the namespace dropdown excludes the current namespace, so use second-largest if that's the case
-    const filterNamespace = topNamespace === 'root' ? orderedNs[1] : topNamespace;
+    const filterNamespace = topNamespace.label === 'root' ? orderedNs[1] : topNamespace;
     const topMount = filterNamespace?.mounts.sort((a, b) => b.clients - a.clients)[0];
 
     assert

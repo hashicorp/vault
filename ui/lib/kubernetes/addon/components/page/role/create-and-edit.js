@@ -20,7 +20,7 @@ import errorMessage from 'vault/utils/error-message';
  */
 
 export default class CreateAndEditRolePageComponent extends Component {
-  @service router;
+  @service('app-router') router;
   @service flashMessages;
 
   @tracked roleRulesTemplates;

@@ -1,0 +1,16 @@
+<a id="standard-vault_log_level" />
+
+**`VAULT_LOG_LEVEL (enum : info)`**
+
+Default logging level for the Vault server.
+
+Enum    | Logging behavior
+------- | ----------------
+`trace` | Log everything including details about process flow within the server
+`debug` | `info` level logging and detailed server state
+`info`  | `warn` level logging, server events, and general server state
+`warn`  | `err` level logging, deprecations, and potentially harmful events/states in the server
+`err`   | Log information about non-fatal errors and handled exceptions
+
+**Example**: `export VAULT_LOG_LEVEL=debug`
+

@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-{{#if this.showHeader}}
+{{#if (not-eq this.router.currentRoute.localName "edit")}}
   <PageHeader as |p|>
     <p.top>
       <Hds::Breadcrumb>

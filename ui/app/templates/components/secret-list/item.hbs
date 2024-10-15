@@ -21,6 +21,7 @@
         @backend={{@backendModel.id}}
         @queryParams={{secret-query-params @backendModel.type @item.type asQueryParams=true}}
         class="has-text-black has-text-weight-semibold"
+        data-test-secret-item-link={{@item.id}}
       >
         {{#if (eq @backendModel.type "transit")}}
           <Icon @name="key" class="has-text-grey-light" />
@@ -39,7 +40,7 @@
           data-test-popup-menu-trigger
         />
         {{#if @item.isFolder}}
-          <dd.Interactive @text="Contents" @route="vault.cluster.secrets.backend.list" @model={{@item.id}} />
+          <dd.Interactive @route="vault.cluster.secrets.backend.list" @model={{@item.id}}>Contents</dd.Interactive>
         {{else}}
           {{#if (or @item.versionPath.isLoading @item.secretPath.isLoading)}}
             <dd.Generic class="has-text-center">
@@ -48,27 +49,24 @@
           {{else}}
             {{#if @item.canRead}}
               <dd.Interactive
-                @text="Details"
                 @route="vault.cluster.secrets.backend.show"
                 @model={{@item.id}}
                 @query={{secret-query-params @backendModel.type @item.type asQueryParams=true}}
-              />
+              >Details</dd.Interactive>
             {{/if}}
             {{#if @item.canEdit}}
               <dd.Interactive
-                @text="Edit"
                 @route="vault.cluster.secrets.backend.edit"
                 @model={{@item.id}}
                 @query={{secret-query-params @backendModel.type @item.type asQueryParams=true}}
-              />
+              >Edit</dd.Interactive>
             {{/if}}
             {{#if @item.canDelete}}
               <dd.Interactive
-                @text="Delete"
                 @color="critical"
                 data-test-confirm-action-trigger
                 {{on "click" (fn (mut this.showConfirmModal) true)}}
-              />
+              >Delete</dd.Interactive>
             {{/if}}
           {{/if}}
         {{/if}}

@@ -34,8 +34,25 @@
   },
 
   {
-    "title": "Installing Vault",
-    "path": "install"
+    "title": "Install Vault",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "install"
+      },
+      {
+        "title": "Install manually",
+        "path": "install/install-binary"
+      },
+      {
+        "title": "Build from code",
+        "path": "install/build-from-code"
+      }
+    ]
+  },
+  {
+    "title": "Run Vault as a service",
+    "path": "run-as-service"
   },
   {
     "title": "Internals",
@@ -305,40 +322,16 @@
         }
       },
       {
-        "title": "Request Limiter",
-        "badge": {
-          "text": "ENTERPRISE | DEPRECATED",
-          "type": "outlined",
-          "color": "neutral"
-        },
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "concepts/request-limiter",
-            "badge": {
-              "text": "BETA",
-              "type": "outlined",
-              "color": "highlight"
-            }
-          }
-        ]
-      },
-      {
         "title": "Adaptive overload protection",
         "badge": {
-          "text": "ENTERPRISE | BETA",
+          "text": "ENTERPRISE",
           "type": "outlined",
           "color": "neutral"
         },
         "routes": [
           {
             "title": "Overview",
-            "path": "concepts/adaptive-overload-protection",
-            "badge": {
-              "text": "BETA",
-              "type": "outlined",
-              "color": "highlight"
-            }
+            "path": "concepts/adaptive-overload-protection"
           },
           {
             "title": "Vault server temporarily overloaded",
@@ -584,11 +577,12 @@
         "path": "configuration/telemetry"
       },
       {
-        "title": "<code>Request Limiter</code>",
-        "path": "configuration/request-limiter"
-      },
-      {
         "title": "Adaptive overload protection",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "path": "configuration/adaptive-overload-protection"
       },
       {
@@ -624,16 +618,18 @@
     ]
   },
   {
-    "title": "Commands (CLI)",
+    "title": "Vault CLI",
     "routes": [
       {
-        "title": "Overview",
+        "title": "Usage",
         "path": "commands"
       },
       {
-        "title": "Web REPL",
-        "path": "commands/web"
+        "title": "Use a custom token helper",
+        "path": "commands/token-helper"
       },
+      { "divider": true },
+      { "heading": "CLI commands" },
       {
         "title": "<code>agent</code>",
         "path": "commands/agent"
@@ -641,10 +637,6 @@
       {
         "title": "<code>audit</code>",
         "routes": [
-          {
-            "title": "Overview",
-            "path": "commands/audit"
-          },
           {
             "title": "<code>disable</code>",
             "path": "commands/audit/disable"
@@ -1136,15 +1128,11 @@
       {
         "title": "<code>write</code>",
         "path": "commands/write"
-      },
-      {
-        "title": "Token Helpers",
-        "path": "commands/token-helper"
       }
     ]
   },
   {
-    "title": "Vault UI",
+    "title": "Vault GUI",
     "routes": [
       {
         "title": "Overview",
@@ -1158,6 +1146,10 @@
           "type": "outlined",
           "color": "neutral"
         }
+      },
+      {
+        "title": "CLI emulation",
+        "path": "ui/web-cli"
       }
     ]
   },
@@ -1598,11 +1590,6 @@
             "path": "secrets/pki/considerations"
           },
           {
-            "title": "Troubleshooting ACME integration",
-            "path": "secrets/pki/troubleshooting-acme"
-          },
-
-          {
             "title": "Rotation Primitives",
             "path": "secrets/pki/rotation-primitives"
           },
@@ -1617,12 +1604,26 @@
           },
           {
             "title": "Enrollment over Secure Transport (EST)",
+            "path": "secrets/pki/est",
             "badge": {
-              "text": "BETA",
+              "text": "ENTERPRISE",
               "type": "outlined",
-              "color": "highlight"
+              "color": "neutral"
             },
             "path": "secrets/pki/est"
+          },
+          {
+            "title": "Certificate Management Protocol (CMPv2)",
+            "badge": {
+              "text": "ENTERPRISE",
+              "type": "outlined",
+              "color": "neutral"
+            },
+            "path": "secrets/pki/cmpv2"
+          },
+          {
+            "title": "Troubleshooting ACME",
+            "path": "secrets/pki/troubleshooting-acme"
           }
         ]
       },
@@ -2633,6 +2634,10 @@
       {
         "title": "Overview",
         "path": "release-notes"
+      },
+      {
+        "title": "1.18.0",
+        "path": "release-notes/1.18.0"
       },
       {
         "title": "1.17.0",

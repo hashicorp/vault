@@ -84,7 +84,7 @@
           <div class="level-left">
             <div>
               <Icon @name={{if metadata.pathIsDirectory "folder" "file"}} class="has-text-grey-light" />
-              <span class="has-text-weight-semibold is-underline">
+              <span class="has-text-weight-semibold is-underline" data-test-path>
                 {{metadata.path}}
               </span>
             </div>
@@ -100,35 +100,25 @@
                 />
                 {{#if metadata.pathIsDirectory}}
                   <dd.Interactive
-                    @text="Content"
                     @route="list-directory"
                     @models={{array @backend metadata.fullSecretPath}}
-                  />
+                  >Content</dd.Interactive>
                 {{else}}
                   <dd.Interactive
-                    @text="Overview"
                     @route="secret.index"
                     @models={{array @backend metadata.fullSecretPath}}
-                  />
-                  <dd.Interactive
-                    @text="Secret data"
-                    @route="secret.details"
-                    @models={{array @backend metadata.fullSecretPath}}
-                  />
+                  >Overview</dd.Interactive>
+                  <dd.Interactive @route="secret.details" @models={{array @backend metadata.fullSecretPath}}>Secret data</dd.Interactive>
                   {{#if metadata.canReadMetadata}}
-                    <dd.Interactive
-                      @text="View version history"
-                      @route="secret.metadata.versions"
-                      @models={{array @backend metadata.fullSecretPath}}
-                    />
+                    <dd.Interactive @route="secret.metadata.versions" @models={{array @backend metadata.fullSecretPath}}>
+                      View version history</dd.Interactive>
                   {{/if}}
                   {{#if metadata.canDeleteMetadata}}
                     <dd.Interactive
-                      @text="Permanently delete"
                       @color="critical"
                       {{on "click" (fn (mut this.metadataToDelete) metadata)}}
                       data-test-popup-metadata-delete
-                    />
+                    >Permanently delete</dd.Interactive>
                   {{/if}}
                 {{/if}}
               </Hds::Dropdown>

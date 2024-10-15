@@ -8,7 +8,7 @@ import { breadcrumbsForSecret } from 'kv/utils/kv-breadcrumbs';
 import { service } from '@ember/service';
 
 export default class SecretPatch extends Route {
-  @service router;
+  @service('app-router') router;
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
@@ -21,7 +21,7 @@ export default class SecretPatch extends Route {
     controller.breadcrumbs = breadcrumbsArray;
   }
 
-  // isPatchAllowed is true if the version is enterprise AND a user has "patch" secret + "read" subkeys capabilities
+  // isPatchAllowed is true if (1) the version is enterprise, (2) a user has "patch" secret + "read" subkeys capabilities, (3) latest secret version is not deleted or destroyed
   redirect(model) {
     if (!model.isPatchAllowed) {
       this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.index', model.path);

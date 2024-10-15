@@ -13,7 +13,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 const SELECTORS = {
   identityRow: (name) => `[data-test-identity-row="${name}"]`,
   popupMenu: '[data-test-popup-menu-trigger]',
-  menuDelete: '[data-test-popup-menu="delete"]',
+  menuDelete: (name) => `[data-test-identity-row="${name}"] [data-test-popup-menu="delete"]`,
 };
 export const testCRUD = async (name, itemType, assert) => {
   await page.visit({ item_type: itemType });
@@ -36,8 +36,8 @@ export const testCRUD = async (name, itemType, assert) => {
   );
 
   await click(`${SELECTORS.identityRow(name)} ${SELECTORS.popupMenu}`);
-  await waitUntil(() => find(SELECTORS.menuDelete));
-  await click(SELECTORS.menuDelete);
+  await waitUntil(() => find(SELECTORS.menuDelete(name)));
+  await click(SELECTORS.menuDelete(name));
   await indexPage.confirmDelete();
   await settled();
   assert.dom(GENERAL.latestFlashContent).includesText('Successfully deleted');
@@ -57,7 +57,7 @@ export const testDeleteFromForm = async (name, itemType, assert) => {
   await click('[data-test-tab-subnav="policies"]');
   assert.dom('.list-item-row').exists({ count: 1 }, 'One item is under policies');
   await click('[data-test-tab-subnav="metadata"]');
-  assert.dom('.info-table-row').hasText('hello goodbye', 'Metadata shows on tab');
+  assert.dom('.info-table-row').hasTextContaining('hello goodbye', 'Metadata shows on tab');
   await showPage.edit();
   assert.strictEqual(
     currentRouteName(),

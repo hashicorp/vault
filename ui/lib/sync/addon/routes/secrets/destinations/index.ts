@@ -34,7 +34,7 @@ interface SyncSecretsDestinationsController extends Controller {
 
 export default class SyncSecretsDestinationsIndexRoute extends Route {
   @service declare readonly store: StoreService;
-  @service declare readonly router: RouterService;
+  @service('app-router') declare readonly router: RouterService;
 
   queryParams = {
     page: {
