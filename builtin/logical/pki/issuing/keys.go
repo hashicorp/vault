@@ -58,7 +58,7 @@ func FetchKeyById(ctx context.Context, s logical.Storage, keyId KeyID) (*KeyEntr
 
 	entry, err := s.Get(ctx, KeyPrefix+keyId.String())
 	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki key: %v", err)}
+		return nil, fmt.Errorf("unable to fetch pki key: %v", err)
 	}
 	if entry == nil {
 		return nil, errutil.UserError{Err: fmt.Sprintf("pki key id %s does not exist", keyId.String())}

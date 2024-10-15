@@ -223,7 +223,7 @@ func fetchCertBySerial(sc pki_backend.StorageContext, prefix, serial string) (*l
 
 	certEntry, err = sc.GetStorage().Get(sc.GetContext(), path)
 	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching certificate %s: %s", serial, err)}
+		return nil, fmt.Errorf("error fetching certificate %s: %s", serial, err)
 	}
 	if certEntry != nil {
 		if certEntry.Value == nil || len(certEntry.Value) == 0 {
@@ -246,7 +246,7 @@ func fetchCertBySerial(sc pki_backend.StorageContext, prefix, serial string) (*l
 		return nil, nil
 	}
 	if certEntry.Value == nil || len(certEntry.Value) == 0 {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("returned certificate bytes for serial %s were empty", serial)}
+		return nil, fmt.Errorf("returned certificate bytes for serial %s were empty", serial)
 	}
 
 	// Update old-style paths to new-style paths
@@ -254,7 +254,7 @@ func fetchCertBySerial(sc pki_backend.StorageContext, prefix, serial string) (*l
 	certCounter := sc.GetCertificateCounter()
 	certsCounted := certCounter.IsInitialized()
 	if err = sc.GetStorage().Put(sc.GetContext(), certEntry); err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error saving certificate with serial %s to new location: %s", serial, err)}
+		return nil, fmt.Errorf("error saving certificate with serial %s to new location: %s", serial, err)
 	}
 	if err = sc.GetStorage().Delete(sc.GetContext(), legacyPath); err != nil {
 		// If we fail here, we have an extra (copy) of a cert in storage, add to metrics:
@@ -264,7 +264,7 @@ func fetchCertBySerial(sc pki_backend.StorageContext, prefix, serial string) (*l
 		default:
 			certCounter.IncrementTotalCertificatesCount(certsCounted, path)
 		}
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error deleting certificate with serial %s from old location", serial)}
+		return nil, fmt.Errorf("error deleting certificate with serial %s from old location", serial)
 	}
 
 	return certEntry, nil

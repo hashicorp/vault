@@ -1865,7 +1865,7 @@ func getLocalRevokedCertEntries(sc *storageContext, issuerIDCertMap map[issuing.
 
 	revokedSerials, err := sc.Storage.List(sc.Context, listingPath)
 	if err != nil {
-		return nil, nil, errutil.InternalError{Err: fmt.Sprintf("error fetching list of revoked certs: %s", err)}
+		return nil, nil, fmt.Errorf("error fetching list of revoked certs: %s", err)
 	}
 
 	// Build a mapping of issuer serial -> certificate.
@@ -1884,7 +1884,7 @@ func getLocalRevokedCertEntries(sc *storageContext, issuerIDCertMap map[issuing.
 		var revInfo revocation.RevocationInfo
 		revokedEntry, err := sc.Storage.Get(sc.Context, revokedPath+serial)
 		if err != nil {
-			return nil, nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch revoked cert with serial %s: %s", serial, err)}
+			return nil, nil, fmt.Errorf("unable to fetch revoked cert with serial %s: %s", serial, err)
 		}
 
 		if revokedEntry == nil {
@@ -2199,7 +2199,7 @@ WRITE:
 		Value: crlBytes,
 	})
 	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error storing CRL: %s", err)}
+		return nil, fmt.Errorf("error storing CRL: %s", err)
 	}
 
 	return &nextUpdate, nil

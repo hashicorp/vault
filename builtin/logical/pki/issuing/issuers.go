@@ -336,7 +336,7 @@ func FetchIssuerById(ctx context.Context, s logical.Storage, issuerId IssuerID) 
 
 	entry, err := s.Get(ctx, IssuerPrefix+issuerId.String())
 	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki issuer: %v", err)}
+		return nil, fmt.Errorf("unable to fetch pki issuer: %v", err)
 	}
 	if entry == nil {
 		return nil, errutil.UserError{Err: fmt.Sprintf("pki issuer id %s does not exist", issuerId.String())}
