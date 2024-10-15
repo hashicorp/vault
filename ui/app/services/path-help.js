@@ -49,13 +49,6 @@ export default class PathHelpService extends Service {
 
     // bust cache in EmberData's model lookup
     delete store._modelFactoryCache[modelType];
-
-    // bust cache in schema service
-    const schemas = store.getSchemaDefinitionService?.();
-    if (schemas) {
-      delete schemas._relationshipsDefCache[modelType];
-      delete schemas._attributesDefCache[modelType];
-    }
   }
 
   /**
@@ -111,6 +104,8 @@ export default class PathHelpService extends Service {
 
     // hydrate model
     const HydratedKlass = this._upgradeModelSchema(Klass, attrs, newFields);
+
+    // store.identifierCache.forgetRecordIdentifier({ type: 'secret-engine', id: backend });
 
     this._registerModel(owner, HydratedKlass, modelType);
   }
