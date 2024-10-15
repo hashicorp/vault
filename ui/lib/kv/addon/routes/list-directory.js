@@ -46,7 +46,8 @@ export default class KvSecretsListRoute extends Route {
   getPathToSecret(pathParam) {
     if (!pathParam) return '';
     // links and routing assumes pathToParam includes trailing slash
-    // users may want to include a percent-encoded octet like %2f in their path. Example: 'foo%2fbar' or non-data octets like 'foo%bar'. We are assuming the user intended to include these characters in their path and we should not decode them. When these paths hit the URL they will be encoded as foo%252fbar or foo%25bar. This is the expected behavior.
+    // users may want to include a percent-encoded octet like %2f in their path. Example: 'foo%2fbar' or non-data octets like 'foo%bar'.
+    // we are assuming the user intended to include these characters in their path and we should not decode them.
     return pathIsDirectory(pathParam) ? pathParam : `${pathParam}/`;
   }
 
