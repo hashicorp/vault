@@ -15,7 +15,6 @@ import (
 
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -70,7 +69,7 @@ func getAcmeConfig(sc *storageContext) (*acmeConfigEntry, error) {
 	}
 
 	if err := entry.DecodeJSON(&mapping); err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode ACME configuration: %v", err)}
+		return nil, fmt.Errorf("unable to decode ACME configuration: %v", err)
 	}
 
 	// Update previous stored configurations to use the default max ttl we used to enforce

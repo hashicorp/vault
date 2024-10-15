@@ -169,7 +169,7 @@ func getIssuerName(sc *storageContext, data *framework.FieldData) (string, error
 		}
 
 		if err != nil && issuerId != issuing.IssuerRefNotFound {
-			return issuerName, errutil.InternalError{Err: err.Error()}
+			return issuerName, err
 		}
 	}
 	return issuerName, nil
@@ -194,7 +194,7 @@ func getKeyName(sc *storageContext, data *framework.FieldData) (string, error) {
 		}
 
 		if err != nil && keyId != issuing.KeyRefNotFound {
-			return "", errutil.InternalError{Err: err.Error()}
+			return "", err
 		}
 	}
 	return keyName, nil

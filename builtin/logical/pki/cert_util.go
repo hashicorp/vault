@@ -10,6 +10,7 @@ import (
 	"encoding/asn1"
 	"encoding/base64"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -223,11 +224,11 @@ func fetchCertBySerial(sc pki_backend.StorageContext, prefix, serial string) (*l
 
 	certEntry, err = sc.GetStorage().Get(sc.GetContext(), path)
 	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching certificate %s: %s", serial, err)}
+		return nil, fmt.Errorf("error fetching certificate %s: %s", serial, err)
 	}
 	if certEntry != nil {
 		if certEntry.Value == nil || len(certEntry.Value) == 0 {
-			return nil, errutil.InternalError{Err: fmt.Sprintf("returned certificate bytes for serial %s were empty", serial)}
+			return nil, fmt.Errorf("returned certificate bytes for serial %s were empty", serial)
 		}
 		return certEntry, nil
 	}
@@ -246,7 +247,7 @@ func fetchCertBySerial(sc pki_backend.StorageContext, prefix, serial string) (*l
 		return nil, nil
 	}
 	if certEntry.Value == nil || len(certEntry.Value) == 0 {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("returned certificate bytes for serial %s were empty", serial)}
+		return nil, fmt.Errorf("returned certificate bytes for serial %s were empty", serial)
 	}
 
 	// Update old-style paths to new-style paths
@@ -254,7 +255,7 @@ func fetchCertBySerial(sc pki_backend.StorageContext, prefix, serial string) (*l
 	certCounter := sc.GetCertificateCounter()
 	certsCounted := certCounter.IsInitialized()
 	if err = sc.GetStorage().Put(sc.GetContext(), certEntry); err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error saving certificate with serial %s to new location: %s", serial, err)}
+		return nil, fmt.Errorf("error saving certificate with serial %s to new location: %s", serial, err)
 	}
 	if err = sc.GetStorage().Delete(sc.GetContext(), legacyPath); err != nil {
 		// If we fail here, we have an extra (copy) of a cert in storage, add to metrics:
@@ -264,7 +265,7 @@ func fetchCertBySerial(sc pki_backend.StorageContext, prefix, serial string) (*l
 		default:
 			certCounter.IncrementTotalCertificatesCount(certsCounted, path)
 		}
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error deleting certificate with serial %s from old location", serial)}
+		return nil, fmt.Errorf("error deleting certificate with serial %s from old location", serial)
 	}
 
 	return certEntry, nil
@@ -330,7 +331,7 @@ func generateCert(sc *storageContext,
 	ctx := sc.Context
 
 	if input.role == nil {
-		return nil, nil, errutil.InternalError{Err: "no role found in data bundle"}
+		return nil, nil, errors.New("no role found in data bundle")
 	}
 
 	if input.role.KeyType == "rsa" && input.role.KeyBits < 2048 {
@@ -342,7 +343,7 @@ func generateCert(sc *storageContext,
 		return nil, nil, err
 	}
 	if data.Params == nil {
-		return nil, nil, errutil.InternalError{Err: "nil parameters received from parameter bundle generation"}
+		return nil, nil, errors.New("nil parameters received from parameter bundle generation")
 	}
 
 	if isCA {
@@ -354,7 +355,7 @@ func generateCert(sc *storageContext,
 			// issuer entry yet, we default to the global URLs.
 			entries, err := getGlobalAIAURLs(ctx, sc.Storage)
 			if err != nil {
-				return nil, nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch AIA URL information: %v", err)}
+				return nil, nil, fmt.Errorf("unable to fetch AIA URL information: %v", err)
 			}
 
 			uris, err := ToURLEntries(sc, issuing.IssuerID(""), entries)
@@ -372,7 +373,7 @@ func generateCert(sc *storageContext,
 				// however), and setting this before root generation (or, on
 				// root renewal) could cause problems.
 				if _, nonEmptyIssuerErr := ToURLEntries(sc, issuing.IssuerID("empty-issuer-id"), entries); nonEmptyIssuerErr != nil {
-					return nil, nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse AIA URL information: %v\nUsing templated AIA URL's {{issuer_id}} field when generating root certificates is not supported.", err)}
+					return nil, nil, fmt.Errorf("unable to parse AIA URL information: %v\nUsing templated AIA URL's {{issuer_id}} field when generating root certificates is not supported.", err)
 				}
 
 				uris = &certutil.URLEntries{}
@@ -407,7 +408,7 @@ func generateIntermediateCSR(sc *storageContext, input *inputBundle, randomSourc
 		return nil, nil, err
 	}
 	if creation.Params == nil {
-		return nil, nil, errutil.InternalError{Err: "nil parameters received from parameter bundle generation"}
+		return nil, nil, errors.New("nil parameters received from parameter bundle generation")
 	}
 
 	_, exists := input.apiData.GetOk("key_usage")
@@ -478,7 +479,7 @@ func (i SignCertInputFromDataFields) IgnoreCSRSignature() bool {
 
 func signCert(sysView logical.SystemView, data *inputBundle, caSign *certutil.CAInfoBundle, isCA bool, useCSRValues bool) (*certutil.ParsedCertBundle, []string, error) {
 	if data.role == nil {
-		return nil, nil, errutil.InternalError{Err: "no role found in data bundle"}
+		return nil, nil, errors.New("no role found in data bundle")
 	}
 
 	entityInfo := issuing.NewEntityInfoFromReq(data.req)

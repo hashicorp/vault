@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -37,7 +36,7 @@ func GetKeysConfig(ctx context.Context, s logical.Storage) (*KeyConfigEntry, err
 	keyConfig := &KeyConfigEntry{}
 	if entry != nil {
 		if err := entry.DecodeJSON(keyConfig); err != nil {
-			return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode key configuration: %v", err)}
+			return nil, fmt.Errorf("unable to decode key configuration: %v", err)
 		}
 	}
 

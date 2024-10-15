@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -1865,7 +1866,7 @@ func getLocalRevokedCertEntries(sc *storageContext, issuerIDCertMap map[issuing.
 
 	revokedSerials, err := sc.Storage.List(sc.Context, listingPath)
 	if err != nil {
-		return nil, nil, errutil.InternalError{Err: fmt.Sprintf("error fetching list of revoked certs: %s", err)}
+		return nil, nil, fmt.Errorf("error fetching list of revoked certs: %s", err)
 	}
 
 	// Build a mapping of issuer serial -> certificate.
@@ -1884,27 +1885,27 @@ func getLocalRevokedCertEntries(sc *storageContext, issuerIDCertMap map[issuing.
 		var revInfo revocation.RevocationInfo
 		revokedEntry, err := sc.Storage.Get(sc.Context, revokedPath+serial)
 		if err != nil {
-			return nil, nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch revoked cert with serial %s: %s", serial, err)}
+			return nil, nil, fmt.Errorf("unable to fetch revoked cert with serial %s: %s", serial, err)
 		}
 
 		if revokedEntry == nil {
-			return nil, nil, errutil.InternalError{Err: fmt.Sprintf("revoked certificate entry for serial %s is nil", serial)}
+			return nil, nil, fmt.Errorf("revoked certificate entry for serial %s is nil", serial)
 		}
 		if revokedEntry.Value == nil || len(revokedEntry.Value) == 0 {
 			// TODO: In this case, remove it and continue? How likely is this to
 			// happen? Alternately, could skip it entirely, or could implement a
 			// delete function so that there is a way to remove these
-			return nil, nil, errutil.InternalError{Err: "found revoked serial but actual certificate is empty"}
+			return nil, nil, errors.New("found revoked serial but actual certificate is empty")
 		}
 
 		err = revokedEntry.DecodeJSON(&revInfo)
 		if err != nil {
-			return nil, nil, errutil.InternalError{Err: fmt.Sprintf("error decoding revocation entry for serial %s: %s", serial, err)}
+			return nil, nil, fmt.Errorf("error decoding revocation entry for serial %s: %s", serial, err)
 		}
 
 		revokedCert, err := x509.ParseCertificate(revInfo.CertificateBytes)
 		if err != nil {
-			return nil, nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse stored revoked certificate with serial %s: %s", serial, err)}
+			return nil, nil, fmt.Errorf("unable to parse stored revoked certificate with serial %s: %s", serial, err)
 		}
 
 		// We want to skip issuer certificate's revocationEntries for two
@@ -2120,7 +2121,7 @@ func buildCRL(sc *storageContext, crlInfo *pki_backend.CrlConfig, forceNew bool,
 
 	crlLifetime, err := parseutil.ParseDurationSecond(crlInfo.Expiry)
 	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error parsing CRL duration of %s", crlInfo.Expiry)}
+		return nil, fmt.Errorf("error parsing CRL duration of %s", crlInfo.Expiry)
 	}
 
 	if crlInfo.Disable {
@@ -2148,7 +2149,7 @@ WRITE:
 		case errutil.UserError:
 			return nil, errutil.UserError{Err: fmt.Sprintf("could not fetch the CA certificate: %s", caErr)}
 		default:
-			return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching CA certificate: %s", caErr)}
+			return nil, fmt.Errorf("error fetching CA certificate: %s", caErr)
 		}
 	}
 
@@ -2175,7 +2176,7 @@ WRITE:
 
 	crlBytes, err := x509.CreateRevocationList(rand.Reader, revocationListTemplate, signingBundle.Certificate, signingBundle.PrivateKey)
 	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error creating new CRL: %s", err)}
+		return nil, fmt.Errorf("error creating new CRL: %s", err)
 	}
 
 	writePath := issuing.PathCrls + identifier.String()
@@ -2199,7 +2200,7 @@ WRITE:
 		Value: crlBytes,
 	})
 	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error storing CRL: %s", err)}
+		return nil, fmt.Errorf("error storing CRL: %s", err)
 	}
 
 	return &nextUpdate, nil

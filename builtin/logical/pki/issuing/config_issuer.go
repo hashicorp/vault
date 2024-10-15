@@ -34,7 +34,7 @@ func GetIssuersConfig(ctx context.Context, s logical.Storage) (*IssuerConfigEntr
 	issuerConfig := &IssuerConfigEntry{}
 	if entry != nil {
 		if err := entry.DecodeJSON(issuerConfig); err != nil {
-			return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode issuer configuration: %v", err)}
+			return nil, fmt.Errorf("unable to decode issuer configuration: %v", err)
 		}
 	}
 	issuerConfig.fetchedDefault = issuerConfig.DefaultIssuerId

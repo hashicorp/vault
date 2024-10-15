@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/hashicorp/vault/sdk/helper/errutil"
 )
 
 func comparePublicKey(sc *storageContext, key *issuing.KeyEntry, publicKey crypto.PublicKey) (bool, error) {
@@ -39,16 +38,16 @@ func getPublicKey(ctx context.Context, mkv managed_key.PkiManagedKeyView, key *i
 
 func getSignerFromKeyEntryBytes(key *issuing.KeyEntry) (crypto.Signer, certutil.BlockType, *pem.Block, error) {
 	if key.PrivateKeyType == certutil.UnknownPrivateKey {
-		return nil, certutil.UnknownBlock, nil, errutil.InternalError{Err: fmt.Sprintf("unsupported unknown private key type for key: %s (%s)", key.ID, key.Name)}
+		return nil, certutil.UnknownBlock, nil, fmt.Errorf("unsupported unknown private key type for key: %s (%s)", key.ID, key.Name)
 	}
 
 	if key.PrivateKeyType == certutil.ManagedPrivateKey {
-		return nil, certutil.UnknownBlock, nil, errutil.InternalError{Err: fmt.Sprintf("can not get a signer from a managed key: %s (%s)", key.ID, key.Name)}
+		return nil, certutil.UnknownBlock, nil, fmt.Errorf("can not get a signer from a managed key: %s (%s)", key.ID, key.Name)
 	}
 
 	bytes, blockType, blk, err := getSignerFromBytes([]byte(key.PrivateKey))
 	if err != nil {
-		return nil, certutil.UnknownBlock, nil, errutil.InternalError{Err: fmt.Sprintf("failed parsing key entry bytes for key id: %s (%s): %s", key.ID, key.Name, err.Error())}
+		return nil, certutil.UnknownBlock, nil, fmt.Errorf("failed parsing key entry bytes for key id: %s (%s): %s", key.ID, key.Name, err.Error())
 	}
 
 	return bytes, blockType, blk, nil
@@ -57,12 +56,12 @@ func getSignerFromKeyEntryBytes(key *issuing.KeyEntry) (crypto.Signer, certutil.
 func getSignerFromBytes(keyBytes []byte) (crypto.Signer, certutil.BlockType, *pem.Block, error) {
 	pemBlock, _ := pem.Decode(keyBytes)
 	if pemBlock == nil {
-		return nil, certutil.UnknownBlock, pemBlock, errutil.InternalError{Err: "no data found in PEM block"}
+		return nil, certutil.UnknownBlock, pemBlock, errors.New("no data found in PEM block")
 	}
 
 	signer, blk, err := certutil.ParseDERKey(pemBlock.Bytes)
 	if err != nil {
-		return nil, certutil.UnknownBlock, pemBlock, errutil.InternalError{Err: fmt.Sprintf("failed to parse PEM block: %s", err.Error())}
+		return nil, certutil.UnknownBlock, pemBlock, fmt.Errorf("failed to parse PEM block: %s", err.Error())
 	}
 	return signer, blk, pemBlock, nil
 }
@@ -70,7 +69,7 @@ func getSignerFromBytes(keyBytes []byte) (crypto.Signer, certutil.BlockType, *pe
 func getPublicKeyFromBytes(keyBytes []byte) (crypto.PublicKey, error) {
 	signer, _, _, err := getSignerFromBytes(keyBytes)
 	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("failed parsing key bytes: %s", err.Error())}
+		return nil, fmt.Errorf("failed parsing key bytes: %s", err.Error())
 	}
 
 	return signer.Public(), nil

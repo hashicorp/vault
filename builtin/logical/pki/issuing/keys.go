@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto"
 	"encoding/pem"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
@@ -53,12 +54,12 @@ func ListKeys(ctx context.Context, s logical.Storage) ([]KeyID, error) {
 
 func FetchKeyById(ctx context.Context, s logical.Storage, keyId KeyID) (*KeyEntry, error) {
 	if len(keyId) == 0 {
-		return nil, errutil.InternalError{Err: "unable to fetch pki key: empty key identifier"}
+		return nil, errors.New("unable to fetch pki key: empty key identifier")
 	}
 
 	entry, err := s.Get(ctx, KeyPrefix+keyId.String())
 	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki key: %v", err)}
+		return nil, fmt.Errorf("unable to fetch pki key: %v", err)
 	}
 	if entry == nil {
 		return nil, errutil.UserError{Err: fmt.Sprintf("pki key id %s does not exist", keyId.String())}
@@ -66,7 +67,7 @@ func FetchKeyById(ctx context.Context, s logical.Storage, keyId KeyID) (*KeyEntr
 
 	var key KeyEntry
 	if err := entry.DecodeJSON(&key); err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode pki key with id %s: %v", keyId.String(), err)}
+		return nil, fmt.Errorf("unable to decode pki key with id %s: %v", keyId.String(), err)
 	}
 
 	return &key, nil
@@ -148,7 +149,7 @@ func ResolveKeyReference(ctx context.Context, s logical.Storage, reference strin
 
 func GetManagedKeyUUID(key *KeyEntry) (managed_key.UUIDKey, error) {
 	if !key.IsManagedPrivateKey() {
-		return "", errutil.InternalError{Err: "getManagedKeyUUID called on a key id %s (%s) "}
+		return "", fmt.Errorf("getManagedKeyUUID called on a key id %s (%s) ", key.ID)
 	}
 	return managed_key.ExtractManagedKeyId([]byte(key.PrivateKey))
 }

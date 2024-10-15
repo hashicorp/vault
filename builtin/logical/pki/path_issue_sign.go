@@ -397,8 +397,8 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 			return nil, errutil.UserError{Err: fmt.Sprintf(
 				"could not fetch the CA certificate (was one set?): %s", caErr)}
 		default:
-			return nil, errutil.InternalError{Err: fmt.Sprintf(
-				"error fetching CA certificate: %s", caErr)}
+			return nil, fmt.Errorf(
+				"error fetching CA certificate: %s", caErr)
 		}
 	}
 	issuerId, err := issuing.ResolveIssuerReference(ctx, req.Storage, role.Issuer)

@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -51,7 +50,7 @@ func _getInternalCRLConfig(ctx context.Context, s logical.Storage, path string) 
 	mapping := &InternalCRLConfigEntry{}
 	if entry != nil {
 		if err := entry.DecodeJSON(mapping); err != nil {
-			return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode cluster-local CRL configuration: %v", err)}
+			return nil, fmt.Errorf("unable to decode cluster-local CRL configuration: %v", err)
 		}
 	}
 

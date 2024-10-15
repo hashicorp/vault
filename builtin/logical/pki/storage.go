@@ -582,10 +582,10 @@ func (sc *storageContext) isKeyInUse(keyId string) (inUse bool, issuerId string,
 	for _, issuerId := range knownIssuers {
 		issuerEntry, err := sc.fetchIssuerById(issuerId)
 		if err != nil {
-			return true, issuerId.String(), errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki issuer: %v", err)}
+			return true, issuerId.String(), fmt.Errorf("unable to fetch pki issuer: %v", err)
 		}
 		if issuerEntry == nil {
-			return true, issuerId.String(), errutil.InternalError{Err: fmt.Sprintf("Issuer listed: %s does not exist", issuerId.String())}
+			return true, issuerId.String(), fmt.Errorf("Issuer listed: %s does not exist", issuerId.String())
 		}
 		if issuerEntry.KeyID.String() == keyId {
 			return true, issuerId.String(), nil

@@ -7,12 +7,12 @@ import (
 	"bytes"
 	"context"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
-	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -86,11 +86,11 @@ func FetchIssuerMapForRevocationChecking(sc pki_backend.StorageContext) (map[iss
 
 		parsedBundle, err := issuing.ParseCABundle(sc.GetContext(), sc.GetPkiManagedView(), bundle)
 		if err != nil {
-			return nil, errutil.InternalError{Err: err.Error()}
+			return nil, err
 		}
 
 		if parsedBundle.Certificate == nil {
-			return nil, errutil.InternalError{Err: "stored CA information not able to be parsed"}
+			return nil, errors.New("stored CA information not able to be parsed")
 		}
 
 		issuerIDCertMap[issuer] = parsedBundle.Certificate

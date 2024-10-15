@@ -373,8 +373,8 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 			return nil, errutil.UserError{Err: fmt.Sprintf(
 				"could not fetch the CA certificate (was one set?): %s", caErr)}
 		default:
-			return nil, errutil.InternalError{Err: fmt.Sprintf(
-				"error fetching CA certificate: %s", caErr)}
+			return nil, fmt.Errorf(
+				"error fetching CA certificate: %s", caErr)
 		}
 	}
 
@@ -406,8 +406,8 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		case errutil.UserError:
 			return logical.ErrorResponse(err.Error()), nil
 		default:
-			return nil, errutil.InternalError{Err: fmt.Sprintf(
-				"error signing cert: %s", err)}
+			return nil, fmt.Errorf(
+				"error signing cert: %s", err)
 		}
 	}
 
@@ -542,7 +542,7 @@ func (b *backend) pathIssuerSignSelfIssued(ctx context.Context, req *logical.Req
 			return nil, errutil.UserError{Err: fmt.Sprintf(
 				"could not fetch the CA certificate (was one set?): %s", caErr)}
 		default:
-			return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching CA certificate: %s", caErr)}
+			return nil, fmt.Errorf("error fetching CA certificate: %s", caErr)
 		}
 	}
 

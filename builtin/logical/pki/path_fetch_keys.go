@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -259,12 +258,12 @@ func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, d
 	if key.IsManagedPrivateKey() {
 		managedKeyUUID, err := issuing.GetManagedKeyUUID(key)
 		if err != nil {
-			return nil, errutil.InternalError{Err: fmt.Sprintf("failed extracting managed key uuid from key id %s (%s): %v", key.ID, key.Name, err)}
+			return nil, fmt.Errorf("failed extracting managed key uuid from key id %s (%s): %v", key.ID, key.Name, err)
 		}
 
 		keyInfo, err := managed_key.GetManagedKeyInfo(ctx, b, managedKeyUUID)
 		if err != nil {
-			return nil, errutil.InternalError{Err: fmt.Sprintf("failed fetching managed key info from key id %s (%s): %v", key.ID, key.Name, err)}
+			return nil, fmt.Errorf("failed fetching managed key info from key id %s (%s): %v", key.ID, key.Name, err)
 		}
 
 		pkForSkid, err = managed_key.GetManagedKeyPublicKey(sc.Context, sc.GetPkiManagedView(), managedKeyUUID)

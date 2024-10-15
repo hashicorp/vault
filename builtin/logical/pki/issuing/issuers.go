@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -144,7 +145,7 @@ type IssuerEntry struct {
 func (i IssuerEntry) GetCertificate() (*x509.Certificate, error) {
 	cert, err := parsing.ParseCertificateFromString(i.Certificate)
 	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse certificate from issuer: %s: %v", err.Error(), i.ID)}
+		return nil, fmt.Errorf("unable to parse certificate from issuer: %s: %v", err.Error(), i.ID)
 	}
 
 	return cert, nil
@@ -331,12 +332,12 @@ func ListIssuers(ctx context.Context, s logical.Storage) ([]IssuerID, error) {
 // FetchIssuerById returns an IssuerEntry based on issuerId, if none found an error is returned.
 func FetchIssuerById(ctx context.Context, s logical.Storage, issuerId IssuerID) (*IssuerEntry, error) {
 	if len(issuerId) == 0 {
-		return nil, errutil.InternalError{Err: "unable to fetch pki issuer: empty issuer identifier"}
+		return nil, errors.New("unable to fetch pki issuer: empty issuer identifier")
 	}
 
 	entry, err := s.Get(ctx, IssuerPrefix+issuerId.String())
 	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki issuer: %v", err)}
+		return nil, fmt.Errorf("unable to fetch pki issuer: %v", err)
 	}
 	if entry == nil {
 		return nil, errutil.UserError{Err: fmt.Sprintf("pki issuer id %s does not exist", issuerId.String())}
@@ -344,7 +345,7 @@ func FetchIssuerById(ctx context.Context, s logical.Storage, issuerId IssuerID) 
 
 	var issuer IssuerEntry
 	if err := entry.DecodeJSON(&issuer); err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode pki issuer with id %s: %v", issuerId.String(), err)}
+		return nil, fmt.Errorf("unable to decode pki issuer with id %s: %v", issuerId.String(), err)
 	}
 
 	return upgradeIssuerIfRequired(&issuer), nil
@@ -436,21 +437,21 @@ func FetchCAInfoByIssuerId(ctx context.Context, s logical.Storage, mkv managed_k
 		case errutil.InternalError:
 			return nil, err
 		default:
-			return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching CA info: %v", err)}
+			return nil, fmt.Errorf("error fetching CA info: %v", err)
 		}
 	}
 
 	if err = entry.EnsureUsage(usage); err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error while attempting to use issuer %v: %v", issuerId, err)}
+		return nil, fmt.Errorf("error while attempting to use issuer %v: %v", issuerId, err)
 	}
 
 	parsedBundle, err := ParseCABundle(ctx, mkv, bundle)
 	if err != nil {
-		return nil, errutil.InternalError{Err: err.Error()}
+		return nil, err
 	}
 
 	if parsedBundle.Certificate == nil {
-		return nil, errutil.InternalError{Err: "stored CA information not able to be parsed"}
+		return nil, errors.New("stored CA information not able to be parsed")
 	}
 	if parsedBundle.PrivateKey == nil {
 		return nil, errutil.UserError{Err: fmt.Sprintf("unable to fetch corresponding key for issuer %v; unable to use this issuer for signing", issuerId)}
@@ -465,7 +466,7 @@ func FetchCAInfoByIssuerId(ctx context.Context, s logical.Storage, mkv managed_k
 
 	entries, err := GetAIAURLs(ctx, s, entry)
 	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch AIA URL information: %v", err)}
+		return nil, fmt.Errorf("unable to fetch AIA URL information: %v", err)
 	}
 	caInfo.URLs = entries
 

@@ -8,6 +8,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/x509"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -115,7 +116,7 @@ func (b BasicSignCertInput) GetPermittedDomains() []string {
 
 func SignCert(b logical.SystemView, role *RoleEntry, entityInfo EntityInfo, caSign *certutil.CAInfoBundle, signInput SignCertInput) (*certutil.ParsedCertBundle, []string, error) {
 	if role == nil {
-		return nil, nil, errutil.InternalError{Err: "no role found in data bundle"}
+		return nil, nil, errors.New("no role found in data bundle")
 	}
 
 	csr, err := signInput.GetCSR()
@@ -210,7 +211,7 @@ func SignCert(b logical.SystemView, role *RoleEntry, entityInfo EntityInfo, caSi
 			return nil, nil, errutil.UserError{Err: "Unknown key type in CSR: " + csr.PublicKeyAlgorithm.String()}
 		}
 	default:
-		return nil, nil, errutil.InternalError{Err: fmt.Sprintf("unsupported key type Value: %s", role.KeyType)}
+		return nil, nil, fmt.Errorf("unsupported key type Value: %s", role.KeyType)
 	}
 
 	// Before validating key lengths, update our KeyBits/SignatureBits based
@@ -230,7 +231,7 @@ func SignCert(b logical.SystemView, role *RoleEntry, entityInfo EntityInfo, caSi
 		var err error
 		if role.KeyBits, role.SignatureBits, err = certutil.ValidateDefaultOrValueKeyTypeSignatureLength(
 			actualKeyType, 0, role.SignatureBits); err != nil {
-			return nil, nil, errutil.InternalError{Err: fmt.Sprintf("unknown internal error updating default values: %v", err)}
+			return nil, nil, fmt.Errorf("unknown internal error updating default values: %v", err)
 		}
 
 		// We're using the KeyBits field as a minimum Value below, and P-224 is safe
@@ -276,7 +277,7 @@ func SignCert(b logical.SystemView, role *RoleEntry, entityInfo EntityInfo, caSi
 		return nil, nil, err
 	}
 	if creation.Params == nil {
-		return nil, nil, errutil.InternalError{Err: "nil parameters received from parameter bundle generation"}
+		return nil, nil, errors.New("nil parameters received from parameter bundle generation")
 	}
 
 	creation.Params.IsCA = signInput.IsCA()

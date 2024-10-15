@@ -23,7 +23,6 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -575,7 +574,7 @@ func (b *backend) IsSecondaryNode() bool {
 func (b *backend) GetManagedKeyView() (logical.ManagedKeySystemView, error) {
 	managedKeyView, ok := b.System().(logical.ManagedKeySystemView)
 	if !ok {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported system view")}
+		return nil, fmt.Errorf("unsupported system view")
 	}
 	return managedKeyView, nil
 }
