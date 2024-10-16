@@ -26,17 +26,6 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-const (
-	RaftInitialChallengeLimit = 20 // allow an initial burst to 20
-	RaftChallengesPerSecond   = 5  // equating to an average 200ms min time
-)
-
-type raftBootstrapChallenge struct {
-	serverID  string
-	answer    []byte // the random answer
-	challenge []byte // the Sealed answer
-}
-
 // raftStoragePaths returns paths for use when raft is the storage mechanism.
 func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 	makeSealer := func(logger hclog.Logger, use string) func() snapshot.Sealer {
@@ -294,31 +283,30 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite(makeSealer func() snap
 		var answer []byte
 		challenge, ok := b.Core.pendingRaftPeers.Get(serverID)
 		if !ok {
-			if b.raftChallengeLimiter.Allow() {
-				var err error
-				answer, err = uuid.GenerateRandomBytes(16)
-				if err != nil {
-					return nil, err
-				}
-
-				sealer := makeSealer()
-				if sealer == nil {
-					return nil, errors.New("core has no seal Access to write raft bootstrap challenge")
-				}
-				protoBlob, err := sealer.Seal(ctx, answer)
-				if err != nil {
-					return nil, err
-				}
-
-				challenge = &raftBootstrapChallenge{
-					serverID:  serverID,
-					answer:    answer,
-					challenge: protoBlob,
-				}
-				b.Core.pendingRaftPeers.Add(serverID, challenge)
-			} else {
+			if !b.raftChallengeLimiter.Allow() {
 				return logical.RespondWithStatusCode(logical.ErrorResponse("too many raft challenges in flight"), req, http.StatusTooManyRequests)
 			}
+			var err error
+			answer, err = uuid.GenerateRandomBytes(16)
+			if err != nil {
+				return nil, err
+			}
+
+			sealer := makeSealer()
+			if sealer == nil {
+				return nil, errors.New("core has no seal access to write raft bootstrap challenge")
+			}
+			protoBlob, err := sealer.Seal(ctx, answer)
+			if err != nil {
+				return nil, err
+			}
+
+			challenge = &raftBootstrapChallenge{
+				serverID:  serverID,
+				answer:    answer,
+				challenge: protoBlob,
+			}
+			b.Core.pendingRaftPeers.Add(serverID, challenge)
 		}
 
 		sealConfig, err := b.Core.seal.BarrierConfig(ctx)

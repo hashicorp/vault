@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/md5"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -16,7 +17,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-cleanhttp"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
@@ -248,6 +251,99 @@ func TestRaft_Retry_Join(t *testing.T) {
 	})
 }
 
+// TestRaftChallenge_sameAnswerSameID verifies that repeated bootstrap requests
+// with the same node ID return the same challenge, but that a different node ID
+// returns a different challenge
+func TestRaftChallenge_sameAnswerSameID(t *testing.T) {
+	t.Parallel()
+
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
+		DisableFollowerJoins: true,
+		NumCores:             1,
+	})
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+	res, err := client.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
+		"server_id": "node1",
+	})
+	require.NoError(t, err)
+
+	// querying the same ID returns the same challenge
+	challenge := res.Data["challenge"]
+	resSameID, err := client.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
+		"server_id": "node1",
+	})
+	require.NoError(t, err)
+	require.Equal(t, challenge, resSameID.Data["challenge"])
+
+	// querying a different ID returns a new challenge
+	resDiffID, err := client.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
+		"server_id": "node2",
+	})
+	require.NoError(t, err)
+	require.NotEqual(t, challenge, resDiffID.Data["challenge"])
+}
+
+// TestRaftChallenge_evicted verifies that a valid answer errors if there have
+// been more than 20 challenge requests after it, because our cache of pending
+// bootstraps is limited to 20
+func TestRaftChallenge_evicted(t *testing.T) {
+	t.Parallel()
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
+		DisableFollowerJoins: true,
+		NumCores:             1,
+	})
+	defer cluster.Cleanup()
+	firstResponse := map[string]interface{}{}
+	client := cluster.Cores[0].Client
+	for i := 0; i < vault.RaftInitialChallengeLimit+1; i++ {
+		if i == vault.RaftInitialChallengeLimit {
+			// wait before sending the last request, so we don't get rate
+			// limited
+			time.Sleep(2 * time.Second)
+		}
+		res, err := client.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
+			"server_id": fmt.Sprintf("node-%d", i),
+		})
+		require.NoError(t, err)
+
+		// save the response from the first challenge
+		if i == 0 {
+			firstResponse = res.Data
+		}
+	}
+
+	// get the answer to the challenge
+	challengeRaw, err := base64.StdEncoding.DecodeString(firstResponse["challenge"].(string))
+	require.NoError(t, err)
+	eBlob := &wrapping.BlobInfo{}
+	err = proto.Unmarshal(challengeRaw, eBlob)
+	require.NoError(t, err)
+	access := cluster.Cores[0].SealAccess().GetAccess()
+	multiWrapValue := &vaultseal.MultiWrapValue{
+		Generation: access.Generation(),
+		Slots:      []*wrapping.BlobInfo{eBlob},
+	}
+	plaintext, _, err := access.Decrypt(context.Background(), multiWrapValue)
+	require.NoError(t, err)
+
+	// send the answer
+	_, err = client.Logical().Write("sys/storage/raft/bootstrap/answer", map[string]interface{}{
+		"answer":          base64.StdEncoding.EncodeToString(plaintext),
+		"server_id":       "node-0",
+		"cluster_addr":    "127.0.0.1:8200",
+		"sdk_version":     "1.1.1",
+		"upgrade_version": "1.2.3",
+		"non_voter":       false,
+	})
+
+	require.ErrorContains(t, err, "no expected answer for the server id provided")
+}
+
+// TestRaft_ChallengeSpam creates 40 raft bootstrap challenges. The first 20
+// should succeed. After 20 challenges have been created, slow down the requests
+// so that there are 2.5 occurring per second. Some of these will fail, due to
+// rate limiting, but others will succeed.
 func TestRaft_ChallengeSpam(t *testing.T) {
 	t.Parallel()
 	cluster, _ := raftCluster(t, &RaftClusterOpts{
