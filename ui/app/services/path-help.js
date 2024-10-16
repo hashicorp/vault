@@ -105,8 +105,6 @@ export default class PathHelpService extends Service {
     // hydrate model
     const HydratedKlass = this._upgradeModelSchema(Klass, attrs, newFields);
 
-    // store.identifierCache.forgetRecordIdentifier({ type: 'secret-engine', id: backend });
-
     this._registerModel(owner, HydratedKlass, modelType);
   }
 
