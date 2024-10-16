@@ -59,8 +59,9 @@ uses either Workload Identity (JWT) or token roles for client count:
 	  [`user_claim`](/vault/api-docs/auth/jwt#user_claim) field. The
 	  recommended default is `nomad_job`, which results in 1 client per
 	  Nomad job.
-	- Nomad has deprecated token roles and they will be removed in v1.10. Client counts for legacy
-	  token roles are 1 non-entity client per unique each policy combination.
+	- Nomad deprecated token roles and will remove the feature in v1.10. Client
+	  counts for legacy token roles treat each unique policy combination as 1
+		non-entity client.
 
 ### Are batch tokens counted differently than service tokens? ((#batch-tokens))
 
