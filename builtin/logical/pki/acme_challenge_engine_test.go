@@ -4,8 +4,6 @@
 package pki
 
 import (
-	"fmt"
-	"net/netip"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,8 +12,6 @@ import (
 // Test_encodeIdentifierForHTTP01Challenge validates the encoding behaviors of our identifiers
 // for the HTTP01 challenge. Basically properly encode the identifier for an HTTP request.
 func Test_encodeIdentifierForHTTP01Challenge(t *testing.T) {
-	ip, _ := netip.ParseAddr("2001:db8::68")
-	fmt.Printf(ip.StringExpanded())
 	tests := []struct {
 		name string
 		arg  *ACMEIdentifier
