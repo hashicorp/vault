@@ -50,12 +50,18 @@ details.
 
 ### Does the Nomad-Vault integration affect client counts? ((#nomad))
 
-**Maybe**.
+**Yes**.
 
-[Nomad Vault integration](/nomad/docs/integrations/vault-integration#token-role-based-integration)
-uses token roles where a single token role creates tokens for many Nomad jobs.
-Unless you have configured explicit identity aliases for your Nomad tokens,
-Vault will record every running instance of a Nomad job as a unique client.
+The [Nomad Vault integration](/nomad/docs/integrations/vault-integration)
+uses either Workload Identity (JWT) or token roles for client count:
+
+	- Vault bases Workload Identity client counts on the
+	  [`user_claim`](/vault/api-docs/auth/jwt#user_claim) field. The
+	  recommended default is `nomad_job`, which results in 1 client per
+	  Nomad job.
+	- Nomad deprecated token roles and will remove the feature in v1.10. Client
+	  counts for legacy token roles treat each unique policy combination as 1
+		non-entity client.
 
 ### Are batch tokens counted differently than service tokens? ((#batch-tokens))
 
