@@ -139,8 +139,8 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       .dom(PAGE.breadcrumbAtIdx(1))
       .hasText(this.backend, 'breadcrumb before secret path is backend path');
     assert
-      .dom(PAGE.breadcrumbAtValue(pathWithSpace))
-      .exists('the current breadcrumb is value of the secret path');
+      .dom(PAGE.breadcrumbCurrentAtIdx(2))
+      .hasText('per%centfu ll', 'the current breadcrumb is value of the secret path');
 
     await click(PAGE.breadcrumbAtIdx(1));
     assert
@@ -176,7 +176,9 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         'title is of the full nested path (directory included) without any encoding/decoding.'
       );
     assert.dom(PAGE.breadcrumbAtIdx(2)).hasText('per%');
-    assert.dom(PAGE.breadcrumbAtValue('centfu ll')).exists('the current breadcrumb is value centfu ll');
+    assert
+      .dom(PAGE.breadcrumbCurrentAtIdx(3))
+      .hasText('centfu ll', 'the current breadcrumb is value centfu ll');
 
     await click(PAGE.breadcrumbAtIdx(1));
     assert
@@ -218,7 +220,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
     assert
       .dom(PAGE.breadcrumbAtIdx(3))
       .hasText('foo%2fbar', 'foo%2fbar is the second directory and shows up as a separate breadcrumb');
-    assert.dom(PAGE.breadcrumbAtValue('world')).exists('the current breadcrumb is value world');
+    assert.dom(PAGE.breadcrumbCurrentAtIdx(4)).hasText('world', 'the current breadcrumb is value world');
 
     await click(PAGE.breadcrumbAtIdx(2));
     assert
