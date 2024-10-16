@@ -51,6 +51,26 @@ export default ApplicationAdapter.extend({
     });
   },
 
+  // TODO replace above method? (and add logic to support whether or not user is authenticated)
+  // findAll makes a network request and supplements the ember-data store with what the API returns
+  // after upgrading to ember-data 5.3.2 the store was becoming cluttered with outdated records
+  // use query so we refresh the store with each request
+  query() {
+    const url = `/${this.urlPrefix()}/internal/ui/mounts`;
+    return this.ajax(url, 'GET')
+      .then((result) => {
+        return {
+          data: result.data.auth,
+        };
+      })
+      .catch((e) => {
+        if (e instanceof AdapterError) {
+          set(e, 'policyPath', 'sys/internal/ui/mounts');
+        }
+        throw e;
+      });
+  },
+
   createRecord(store, type, snapshot) {
     const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot);

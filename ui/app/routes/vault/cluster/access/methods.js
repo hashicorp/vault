@@ -19,7 +19,7 @@ export default class VaultClusterAccessMethodsRoute extends Route {
   };
 
   model() {
-    // when initially mounting and configuring secret engine, ember-data creates a ghost auth config model
+    // when initially mounting and configuring secret engine, ember-data creates a ghost auth-method model
     // we don't want this record appearing in the access list so unload records
     this.store.unloadAll('auth-method');
     return this.store.findAll('auth-method');
