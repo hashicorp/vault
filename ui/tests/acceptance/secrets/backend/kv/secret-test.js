@@ -256,7 +256,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await deleteEngine(backend, assert);
     });
 
-    test('UI handles secret with % in path correctly', async function (assert) {
+    test('KVv1 handles secret with % in path correctly', async function (assert) {
       const enginePath = this.backend;
       const secretPath = 'per%cent/%fu ll';
       const [firstPath, secondPath] = secretPath.split('/');
