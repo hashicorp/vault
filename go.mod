@@ -128,7 +128,7 @@ require (
 	github.com/hashicorp/raft-wal v0.4.0
 	github.com/hashicorp/vault-hcp-lib v0.0.0-20240704151836-a5c058ac604c
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.19.0
-	github.com/hashicorp/vault-plugin-auth-azure v0.19.0
+	github.com/hashicorp/vault-plugin-auth-azure v0.19.1
 	github.com/hashicorp/vault-plugin-auth-cf v0.19.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.19.0
 	github.com/hashicorp/vault-plugin-auth-jwt v0.22.0
@@ -144,13 +144,13 @@ require (
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.19.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.18.0
-	github.com/hashicorp/vault-plugin-secrets-azure v0.20.0
+	github.com/hashicorp/vault-plugin-secrets-azure v0.20.1
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.20.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.19.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.9.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.20.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.13.0
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.14.1
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.14.2
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.10.0
 	github.com/hashicorp/vault-testing-stepwise v0.3.1
 	github.com/hashicorp/vault/api v1.15.0
