@@ -183,7 +183,7 @@ require (
 	github.com/ory/dockertest v3.3.5+incompatible
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
-	github.com/pires/go-proxyproto v1.0.0
+	github.com/pires/go-proxyproto v0.8.0
 	github.com/pkg/errors v0.9.1
 	github.com/posener/complete v1.2.3
 	github.com/pquerna/otp v1.2.1-0.20191009055518-468c2dd2b58d
@@ -543,7 +543,3 @@ require (
 )
 
 replace github.com/ma314smith/signedxml v1.1.1 => github.com/moov-io/signedxml v1.1.1
-
-// Support using the forked repository until https://github.com/pires/go-proxyproto/pull/110 merges
-// and is released.
-replace github.com/pires/go-proxyproto v1.0.0 => github.com/peteski22/go-proxyproto v1.0.0
