@@ -1003,7 +1003,7 @@ func writeTokenSegment(t *testing.T, core *Core, ts time.Time, index int, item *
 	t.Helper()
 	protoItem, err := proto.Marshal(item)
 	require.NoError(t, err)
-	WriteToStorage(t, core, makeSegmentPath(t, activityTokenBasePath, ts, index), protoItem)
+	WriteToStorage(t, core, makeSegmentPath(t, activityTokenLocalBasePath, ts, index), protoItem)
 }
 
 // makeSegmentPath formats the path for a segment at a particular time and index
@@ -1020,7 +1020,7 @@ func TestSegmentFileReader_BadData(t *testing.T) {
 	now := time.Now()
 
 	// write bad data that won't be able to be unmarshaled at index 0
-	WriteToStorage(t, core, makeSegmentPath(t, activityTokenBasePath, now, 0), []byte("fake data"))
+	WriteToStorage(t, core, makeSegmentPath(t, activityTokenLocalBasePath, now, 0), []byte("fake data"))
 	WriteToStorage(t, core, makeSegmentPath(t, activityEntityBasePath, now, 0), []byte("fake data"))
 
 	// write entity at index 1
@@ -1063,7 +1063,7 @@ func TestSegmentFileReader_MissingData(t *testing.T) {
 	now := time.Now()
 	// write entities and tokens at indexes 0, 1, 2
 	for i := 0; i < 3; i++ {
-		WriteToStorage(t, core, makeSegmentPath(t, activityTokenBasePath, now, i), []byte("fake data"))
+		WriteToStorage(t, core, makeSegmentPath(t, activityTokenLocalBasePath, now, i), []byte("fake data"))
 		WriteToStorage(t, core, makeSegmentPath(t, activityEntityBasePath, now, i), []byte("fake data"))
 
 	}
@@ -1084,7 +1084,7 @@ func TestSegmentFileReader_MissingData(t *testing.T) {
 
 	// delete the indexes 0, 1, 2
 	for i := 0; i < 3; i++ {
-		require.NoError(t, core.barrier.Delete(context.Background(), makeSegmentPath(t, activityTokenBasePath, now, i)))
+		require.NoError(t, core.barrier.Delete(context.Background(), makeSegmentPath(t, activityTokenLocalBasePath, now, i)))
 		require.NoError(t, core.barrier.Delete(context.Background(), makeSegmentPath(t, activityEntityBasePath, now, i)))
 	}
 
