@@ -16,7 +16,7 @@ export default BaseAdapter.extend({
     return this._url(...arguments);
   },
   urlForCreateRecord(modelName, snapshot) {
-    const id = snapshot.id || snapshot.record.mutableId;
+    const id = snapshot.record.mutableId;
     return this._url(id, modelName, snapshot);
   },
   urlForUpdateRecord() {
@@ -26,7 +26,7 @@ export default BaseAdapter.extend({
   createRecord(store, type, snapshot) {
     return this._super(...arguments).then(() => {
       // saving returns a 204, return object with id to please ember-data...
-      const id = snapshot.id || snapshot.record.mutableId;
+      const id = snapshot.record.mutableId;
       return { id };
     });
   },
