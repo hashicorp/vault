@@ -141,16 +141,14 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
     assert
       .dom(PAGE.breadcrumbCurrentAtIdx(2))
       .hasText('per%centfu ll', 'the current breadcrumb is value of the secret path');
-
     await click(PAGE.breadcrumbAtIdx(1));
-    assert
-      .dom(`${PAGE.list.item(pathWithSpace)} [data-test-path]`)
-      .hasText(pathWithSpace, 'the list item is shown correctly');
+
+    assert.dom(`${PAGE.list.item(pathWithSpace)}`).hasText(pathWithSpace, 'the list item is shown correctly');
 
     await typeIn(PAGE.list.filter, 'per%');
     await click('[data-test-kv-list-filter-submit]');
     assert
-      .dom(`${PAGE.list.item(pathWithSpace)} [data-test-path]`)
+      .dom(`${PAGE.list.item(pathWithSpace)}`)
       .hasText(pathWithSpace, 'the list item is shown correctly after filtering');
 
     await click(PAGE.list.item(pathWithSpace));
@@ -181,14 +179,12 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       .hasText('centfu ll', 'the current breadcrumb is value centfu ll');
 
     await click(PAGE.breadcrumbAtIdx(1));
-    assert
-      .dom(`${PAGE.list.item('per%/')} [data-test-path]`)
-      .hasText('per%/', 'the directory item is shown correctly');
+    assert.dom(`${PAGE.list.item('per%/')}`).hasText('per%/', 'the directory item is shown correctly');
 
     await typeIn(PAGE.list.filter, 'per%/');
     await click('[data-test-kv-list-filter-submit]');
     assert
-      .dom(`${PAGE.list.item('centfu ll')} [data-test-path]`)
+      .dom(`${PAGE.list.item('centfu ll')}`)
       .hasText('centfu ll', 'the list item is shown correctly after filtering');
 
     await click(PAGE.list.item('centfu ll'));
@@ -224,7 +220,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
     await click(PAGE.breadcrumbAtIdx(2));
     assert
-      .dom(`${PAGE.list.item('foo%2fbar/')} [data-test-path]`)
+      .dom(`${PAGE.list.item('foo%2fbar/')}`)
       .hasText('foo%2fbar/', 'the directory item is shown correctly');
 
     await click(PAGE.list.item('foo%2fbar/'));
