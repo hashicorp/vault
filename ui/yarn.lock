@@ -59,7 +59,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/core@npm:^7.0.0, @babel/core@npm:^7.12.0, @babel/core@npm:^7.13.10, @babel/core@npm:^7.16.10, @babel/core@npm:^7.16.7, @babel/core@npm:^7.21.4, @babel/core@npm:^7.22.20, @babel/core@npm:^7.23.2, @babel/core@npm:^7.23.6, @babel/core@npm:^7.24.5, @babel/core@npm:^7.3.4":
+"@babel/core@npm:^7.0.0, @babel/core@npm:^7.12.0, @babel/core@npm:^7.13.10, @babel/core@npm:^7.16.10, @babel/core@npm:^7.16.7, @babel/core@npm:^7.22.20, @babel/core@npm:^7.23.2, @babel/core@npm:^7.23.6, @babel/core@npm:^7.24.5, @babel/core@npm:^7.3.4":
   version: 7.24.9
   resolution: "@babel/core@npm:7.24.9"
   dependencies:
@@ -789,7 +789,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/plugin-transform-block-scoping@npm:^7.12.1, @babel/plugin-transform-block-scoping@npm:^7.21.0, @babel/plugin-transform-block-scoping@npm:^7.22.5, @babel/plugin-transform-block-scoping@npm:^7.24.7":
+"@babel/plugin-transform-block-scoping@npm:^7.12.1, @babel/plugin-transform-block-scoping@npm:^7.22.5, @babel/plugin-transform-block-scoping@npm:^7.24.7":
   version: 7.24.7
   resolution: "@babel/plugin-transform-block-scoping@npm:7.24.7"
   dependencies:
@@ -1763,26 +1763,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ember-data/legacy-compat@npm:~4.12.4":
-  version: 4.12.8
-  resolution: "@ember-data/legacy-compat@npm:4.12.8"
-  dependencies:
-    "@ember-data/private-build-infra": 4.12.8
-    "@embroider/macros": ^1.10.0
-    ember-cli-babel: ^7.26.11
-  peerDependencies:
-    "@ember-data/graph": 4.12.8
-    "@ember-data/json-api": 4.12.8
-    "@ember/string": ^3.0.1
-  peerDependenciesMeta:
-    "@ember-data/graph":
-      optional: true
-    "@ember-data/json-api":
-      optional: true
-  checksum: 634e745a28c9cd515e191b899e3c8f8eb85dc6bde77087bc6bed8d4381d3ccb4bee5ab70beb27fcd223a5130bcb01463c3eaa7924e7bb3bb99c3b0f02556992c
-  languageName: node
-  linkType: hard
-
 "@ember-data/model@npm:5.3.8":
   version: 5.3.8
   resolution: "@ember-data/model@npm:5.3.8"
@@ -1807,39 +1787,6 @@ __metadata:
     "@ember-data/json-api":
       optional: true
   checksum: 5f34995272aea56914ead76cd898bac10cbec32ade0f9c9dbee11668f9c0801c9c01a69428c0da17ef6436c6e139f0e671df021956882fe02606d3b907dd1651
-  languageName: node
-  linkType: hard
-
-"@ember-data/private-build-infra@npm:4.12.8":
-  version: 4.12.8
-  resolution: "@ember-data/private-build-infra@npm:4.12.8"
-  dependencies:
-    "@babel/core": ^7.21.4
-    "@babel/plugin-transform-block-scoping": ^7.21.0
-    "@babel/runtime": ^7.21.0
-    "@ember/edition-utils": ^1.2.0
-    "@embroider/macros": ^1.10.0
-    babel-import-util: ^1.3.0
-    babel-plugin-debug-macros: ^0.3.4
-    babel-plugin-filter-imports: ^4.0.0
-    babel6-plugin-strip-class-callcheck: ^6.0.0
-    broccoli-debug: ^0.6.5
-    broccoli-file-creator: ^2.1.1
-    broccoli-funnel: ^3.0.8
-    broccoli-merge-trees: ^4.2.0
-    broccoli-rollup: ^5.0.0
-    calculate-cache-key-for-tree: ^2.0.0
-    chalk: ^4.1.2
-    ember-cli-babel: ^7.26.11
-    ember-cli-path-utils: ^1.0.0
-    ember-cli-string-utils: ^1.1.0
-    ember-cli-version-checker: ^5.1.2
-    git-repo-info: ^2.1.1
-    glob: ^9.3.4
-    npm-git-info: ^1.0.3
-    semver: ^7.3.8
-    silent-error: ^1.1.1
-  checksum: 6bdd5a9b32fdd093f199fed10d68f57e38dfbdf35beac9e886b459fb84afbb70cb4fa39b8f1e40d813aa627cd00430b72070cf2e83b1a5687999e52326d34201
   languageName: node
   linkType: hard
 
@@ -3045,15 +2992,6 @@ __metadata:
     "@types/connect": "*"
     "@types/node": "*"
   checksum: 1e251118c4b2f61029cc43b0dc028495f2d1957fe8ee49a707fb940f86a9bd2f9754230805598278fe99958b49e9b7e66eec8ef6a50ab5c1f6b93e1ba2aaba82
-  languageName: node
-  linkType: hard
-
-"@types/broccoli-plugin@npm:^3.0.0":
-  version: 3.0.0
-  resolution: "@types/broccoli-plugin@npm:3.0.0"
-  dependencies:
-    broccoli-plugin: "*"
-  checksum: c5daf3b3ff689a00fa18c90c08e2998c373b7ee11235fcd63ad5ad03ff5d9b844f2b84fca966682490853a443714db4d2f0b389208478a0c1d4e7666f85ca04f
   languageName: node
   linkType: hard
 
@@ -4475,7 +4413,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"babel-import-util@npm:^1.2.2, babel-import-util@npm:^1.3.0":
+"babel-import-util@npm:^1.2.2":
   version: 1.4.1
   resolution: "babel-import-util@npm:1.4.1"
   checksum: a7f43a10141f62f05c0b4b3c80ee31f5f362d5f7a7d614fcef836f3eca2ec3ae0a732f8550674542d1821e87c3fd3d986fea94ed12e2a283a1571b6d1249380a
@@ -4666,13 +4604,6 @@ __metadata:
   version: 6.18.0
   resolution: "babel-plugin-syntax-dynamic-import@npm:6.18.0"
   checksum: 0a7a98ecb63878d65d4fd35e5435b0a7ad8e5c43b394389ce82298733c7a5d95c4373f1dd68566694214dad64abd0fec1e4eb7ee9ca7d1ee06d502e630d61600
-  languageName: node
-  linkType: hard
-
-"babel6-plugin-strip-class-callcheck@npm:^6.0.0":
-  version: 6.0.0
-  resolution: "babel6-plugin-strip-class-callcheck@npm:6.0.0"
-  checksum: e765ff21f9aee4e488a270cd8515a456c0de4f56739c2c285a7d8c72712fcca10cd89d24eec47dec0ce8b77a7e27257ece2674c781169a01a90bcb18c825b369
   languageName: node
   linkType: hard
 
@@ -5306,21 +5237,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"broccoli-plugin@npm:*, broccoli-plugin@npm:^4.0.0, broccoli-plugin@npm:^4.0.2, broccoli-plugin@npm:^4.0.3, broccoli-plugin@npm:^4.0.5, broccoli-plugin@npm:^4.0.7":
-  version: 4.0.7
-  resolution: "broccoli-plugin@npm:4.0.7"
-  dependencies:
-    broccoli-node-api: ^1.7.0
-    broccoli-output-wrapper: ^3.2.5
-    fs-merger: ^3.2.1
-    promise-map-series: ^0.3.0
-    quick-temp: ^0.1.8
-    rimraf: ^3.0.2
-    symlink-or-copy: ^1.3.1
-  checksum: 49d6a55ebfe1880e73956dc8bf23104ad81c1272d4a06755823e6e1eec5255583d2913de99427b3e0a620e3b56178fdd8ea03c832b7452f0440c166044aa555c
-  languageName: node
-  linkType: hard
-
 "broccoli-plugin@npm:1.1.0":
   version: 1.1.0
   resolution: "broccoli-plugin@npm:1.1.0"
@@ -5357,6 +5273,21 @@ __metadata:
   languageName: node
   linkType: hard
 
+"broccoli-plugin@npm:^4.0.0, broccoli-plugin@npm:^4.0.2, broccoli-plugin@npm:^4.0.3, broccoli-plugin@npm:^4.0.5, broccoli-plugin@npm:^4.0.7":
+  version: 4.0.7
+  resolution: "broccoli-plugin@npm:4.0.7"
+  dependencies:
+    broccoli-node-api: ^1.7.0
+    broccoli-output-wrapper: ^3.2.5
+    fs-merger: ^3.2.1
+    promise-map-series: ^0.3.0
+    quick-temp: ^0.1.8
+    rimraf: ^3.0.2
+    symlink-or-copy: ^1.3.1
+  checksum: 49d6a55ebfe1880e73956dc8bf23104ad81c1272d4a06755823e6e1eec5255583d2913de99427b3e0a620e3b56178fdd8ea03c832b7452f0440c166044aa555c
+  languageName: node
+  linkType: hard
+
 "broccoli-rollup@npm:4.0.0":
   version: 4.0.0
   resolution: "broccoli-rollup@npm:4.0.0"
@@ -5372,23 +5303,6 @@ __metadata:
     symlink-or-copy: ^1.2.0
     walk-sync: ^1.1.3
   checksum: 89ac42aaf952674b0b81500551b4eccd96a51a1485d9b0cb89c690cc8cfbda9b82860147e810ec3012fceaf79af12cdf35e08c57ee1bac69d805072fdd87220d
-  languageName: node
-  linkType: hard
-
-"broccoli-rollup@npm:^5.0.0":
-  version: 5.0.0
-  resolution: "broccoli-rollup@npm:5.0.0"
-  dependencies:
-    "@types/broccoli-plugin": ^3.0.0
-    broccoli-plugin: ^4.0.7
-    fs-tree-diff: ^2.0.1
-    heimdalljs: ^0.2.6
-    node-modules-path: ^1.0.1
-    rollup: ^2.50.0
-    rollup-pluginutils: ^2.8.1
-    symlink-or-copy: ^1.2.0
-    walk-sync: ^2.2.0
-  checksum: 752725e1b78b8dc6b228b0156b44e293feb948c00bf3b505254ba1f9a706a14334727eb1505c8e01ee22500387cc3059f8cb0ecf7857935346768bdcf1939b1e
   languageName: node
   linkType: hard
 
@@ -10957,7 +10871,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"glob@npm:^9.3.3, glob@npm:^9.3.4":
+"glob@npm:^9.3.3":
   version: 9.3.5
   resolution: "glob@npm:9.3.5"
   dependencies:
@@ -14460,13 +14374,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"npm-git-info@npm:^1.0.3":
-  version: 1.0.3
-  resolution: "npm-git-info@npm:1.0.3"
-  checksum: 1f2218004e109db649580f023ae2b6eb690efae0e47ec26216a01751325b45788430428b12478d91583e18bd8f4bc933d02a1f42984b8d4977f1c35ddef1bad2
-  languageName: node
-  linkType: hard
-
 "npm-package-arg@npm:^10.1.0":
   version: 10.1.0
   resolution: "npm-package-arg@npm:10.1.0"
@@ -16307,7 +16214,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"rollup-pluginutils@npm:^2.6.0, rollup-pluginutils@npm:^2.8.1":
+"rollup-pluginutils@npm:^2.6.0":
   version: 2.8.2
   resolution: "rollup-pluginutils@npm:2.8.2"
   dependencies:
@@ -18814,7 +18721,6 @@ __metadata:
     "@babel/preset-env": ^7.24.6
     "@babel/preset-typescript": ^7.24.6
     "@docfy/ember": ^0.8.5
-    "@ember-data/legacy-compat": ~4.12.4
     "@ember/legacy-built-in-components": ^0.4.1
     "@ember/optional-features": ^2.0.0
     "@ember/render-modifiers": ^1.0.2
