@@ -125,6 +125,113 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
     return;
   });
 
+  test('KVv2 handles secret with % and space in path correctly', async function (assert) {
+    // To check this bug no longer happens: https://github.com/hashicorp/vault/issues/11616
+    await navToBackend(this.backend);
+    await click(PAGE.list.createSecret);
+    const pathWithSpace = 'per%centfu ll';
+    await typeIn(GENERAL.inputByAttr('path'), pathWithSpace);
+    await fillIn(FORM.keyInput(), 'someKey');
+    await fillIn(FORM.maskedValueInput(), 'someValue');
+    await click(FORM.saveBtn);
+    assert.dom(PAGE.title).hasText(pathWithSpace, 'title is full path without any encoding/decoding.');
+    assert
+      .dom(PAGE.breadcrumbAtIdx(1))
+      .hasText(this.backend, 'breadcrumb before secret path is backend path');
+    assert
+      .dom(PAGE.breadcrumbCurrentAtIdx(2))
+      .hasText('per%centfu ll', 'the current breadcrumb is value of the secret path');
+    await click(PAGE.breadcrumbAtIdx(1));
+
+    assert.dom(`${PAGE.list.item(pathWithSpace)}`).hasText(pathWithSpace, 'the list item is shown correctly');
+
+    await typeIn(PAGE.list.filter, 'per%');
+    await click('[data-test-kv-list-filter-submit]');
+    assert
+      .dom(`${PAGE.list.item(pathWithSpace)}`)
+      .hasText(pathWithSpace, 'the list item is shown correctly after filtering');
+
+    await click(PAGE.list.item(pathWithSpace));
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${this.backend}/kv/${encodeURIComponent(pathWithSpace)}`,
+      'Path is encoded in the URL'
+    );
+  });
+
+  test('KVv2 handles nested secret with % and space in path correctly', async function (assert) {
+    await navToBackend(this.backend);
+    await click(PAGE.list.createSecret);
+    const nestedPathWithSpace = 'per%/centfu ll';
+    await typeIn(GENERAL.inputByAttr('path'), nestedPathWithSpace);
+    await fillIn(FORM.keyInput(), 'someKey');
+    await fillIn(FORM.maskedValueInput(), 'someValue');
+    await click(FORM.saveBtn);
+    assert
+      .dom(PAGE.title)
+      .hasText(
+        nestedPathWithSpace,
+        'title is of the full nested path (directory included) without any encoding/decoding.'
+      );
+    assert.dom(PAGE.breadcrumbAtIdx(2)).hasText('per%');
+    assert
+      .dom(PAGE.breadcrumbCurrentAtIdx(3))
+      .hasText('centfu ll', 'the current breadcrumb is value centfu ll');
+
+    await click(PAGE.breadcrumbAtIdx(1));
+    assert.dom(`${PAGE.list.item('per%/')}`).hasText('per%/', 'the directory item is shown correctly');
+
+    await typeIn(PAGE.list.filter, 'per%/');
+    await click('[data-test-kv-list-filter-submit]');
+    assert
+      .dom(`${PAGE.list.item('centfu ll')}`)
+      .hasText('centfu ll', 'the list item is shown correctly after filtering');
+
+    await click(PAGE.list.item('centfu ll'));
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${this.backend}/kv/${encodeURIComponent(nestedPathWithSpace)}`,
+      'Path is encoded in the URL'
+    );
+  });
+
+  test('KVv2 handles nested secret with a percent-encoded data octet in path correctly', async function (assert) {
+    // To check this bug no longer happens: https://github.com/hashicorp/vault/issues/25905
+    await navToBackend(this.backend);
+    await click(PAGE.list.createSecret);
+    const pathDataOctet = 'hello/foo%2fbar/world';
+    await typeIn(GENERAL.inputByAttr('path'), pathDataOctet);
+    await fillIn(FORM.keyInput(), 'someKey');
+    await fillIn(FORM.maskedValueInput(), 'someValue');
+    await click(FORM.saveBtn);
+    assert
+      .dom(PAGE.title)
+      .hasText(
+        pathDataOctet,
+        'title is of the full nested path (directory included) without any encoding/decoding.'
+      );
+    assert
+      .dom(PAGE.breadcrumbAtIdx(2))
+      .hasText('hello', 'hello is the first directory and shows up as a separate breadcrumb');
+    assert
+      .dom(PAGE.breadcrumbAtIdx(3))
+      .hasText('foo%2fbar', 'foo%2fbar is the second directory and shows up as a separate breadcrumb');
+    assert.dom(PAGE.breadcrumbCurrentAtIdx(4)).hasText('world', 'the current breadcrumb is value world');
+
+    await click(PAGE.breadcrumbAtIdx(2));
+    assert
+      .dom(`${PAGE.list.item('foo%2fbar/')}`)
+      .hasText('foo%2fbar/', 'the directory item is shown correctly');
+
+    await click(PAGE.list.item('foo%2fbar/'));
+    await click(PAGE.list.item('world'));
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${this.backend}/kv/${encodeURIComponent(pathDataOctet)}`,
+      'Path is encoded in the URL'
+    );
+  });
+
   module('admin persona', function (hooks) {
     hooks.beforeEach(async function () {
       const token = await runCmd(
