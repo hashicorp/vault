@@ -2263,6 +2263,29 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 		}
 	}
 
+	// Finally, we should stop sending CORS headers. When Vault is initially
+	// started prior to unsealing, CORS configuration is stored within
+	// barrier protected storage and isn't present on initial requests prior
+	// to unsealing.
+	//
+	// By disabling CORS while Vault is sealed, we potentially prohibit access
+	// to sealed Vault from CORS clients and behave like a freshly-started
+	// Vault. Since requests to unseal are not authenticated (because the auth
+	// system is likewise barrier protected), a malicious CORS-executed script
+	// could spam unseal requests, prohibiting operators from themselves
+	// unsealing.
+	//
+	// This is all within relatively-safe windows though: clients are allowed
+	// to cache Vault CORS responses for a period of 300 seconds (see the
+	// value of Access-Control-Max-Age in vault/cors.go). So immediately after
+	// Vault is sealed, CORS scripts could still abuse access to unsealing,
+	// but after their client invalidates this cache, they'll be prohibited
+	// until Vault is unsealed by an operator.
+	//
+	// We explicitly do not call c.CORSConfig().Disable() as we do not wish
+	// for this to be persisted.
+	atomic.StoreUint32(c.CORSConfig().Enabled, 1)
+
 	// Unlock; sealing will grab the lock when needed
 	unlocked = true
 	c.stateLock.RUnlock()
