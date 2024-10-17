@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Stretch text field to fit content in JSON editor
+```
