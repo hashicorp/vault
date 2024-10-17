@@ -294,39 +294,11 @@ button.
 This downloads the usage metrics data on your local drive in comma separated
 values format (`.csv`) or JSON.
 
-**Sample data entry:**
-
-```json
-{
-   "client_id":"9c8e7363-f5d5-56dc-e15e-1ec3ab3d6d0f",
-   "mount_accessor":"auth_userpass_c6566093",
-   "namespace_id":"Ev3Wp",
-   "timestamp":"2024-08-01T00:00:00Z",
-   "client_type":"entity",
-   "identity_name":"bar-9995",
-   "alias_name":"bar-a-alias-9995",
-   "local_alias":false,
-   "namespace_path":"ns9995/",
-   "mount_type":"userpass",
-   "mount_path":"auth/userpass-a-9995/",
-   "policies":[
-      "secret-read"
-   ],
-   "identity_metadata":{
-      "email_address":"bar@example.com"
-   },
-   "alias_metadata":null,
-   "alias_custom_metadata":{
-      "contact_email":"bar@example.com"
-   },
-   "identity_group_ids":[
-      "027b9d8e-558b-e1fc-c0e5-ac16564cb236"
-   ]
-}
-```
-
 
 ## API 
 
-To retrive the client count data using Vault API, refer to the
-[`sys/internal/counters`](/vault/api-docs/system/internal-counters#client-count) page.
+- Refer to the
+  [`sys/internal/counters`](/vault/api-docs/system/internal-counters#client-count)
+  page to retrieve client count using API.
+- [Activity export API](/vault/api-docs/system/internal-counters#activity-export) to
+  export activity log.
