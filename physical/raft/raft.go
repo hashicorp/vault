@@ -87,6 +87,7 @@ var (
 	_ physical.TransactionalLimits       = (*RaftBackend)(nil)
 	_ physical.HABackend                 = (*RaftBackend)(nil)
 	_ physical.MountTableLimitingBackend = (*RaftBackend)(nil)
+	_ physical.RemovableNodeHABackend    = (*RaftBackend)(nil)
 	_ physical.Lock                      = (*RaftLock)(nil)
 )
 
@@ -255,6 +256,30 @@ type RaftBackend struct {
 	// specialPathLimits is a map of special paths to their configured entrySize
 	// limits.
 	specialPathLimits map[string]uint64
+
+	removed atomic.Bool
+}
+
+func (b *RaftBackend) IsNodeRemoved(ctx context.Context, nodeID string) (bool, error) {
+	conf, err := b.GetConfiguration(ctx)
+	if err != nil {
+		return false, err
+	}
+	for _, srv := range conf.Servers {
+		if srv.NodeID == nodeID {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+func (b *RaftBackend) IsRemoved() bool {
+	return b.removed.Load()
+}
+
+func (b *RaftBackend) RemoveSelf() error {
+	b.removed.Store(true)
+	return nil
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
@@ -1390,6 +1415,8 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		}
 	}
 
+	b.StartRemovedChecker(ctx)
+
 	b.logger.Trace("finished setting up raft cluster")
 	return nil
 }
@@ -1421,6 +1448,34 @@ func (b *RaftBackend) TeardownCluster(clusterListener cluster.ClusterHook) error
 	}
 
 	return nil
+}
+
+func (b *RaftBackend) StartRemovedChecker(ctx context.Context) {
+	go func() {
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
+
+		logger := b.logger.Named("removed.checker")
+		for {
+			select {
+			case <-ticker.C:
+				removed, err := b.IsNodeRemoved(ctx, b.localID)
+				if err != nil {
+					logger.Error("failed to check if node is removed", "node ID", b.localID, "error", err)
+					continue
+				}
+				if removed {
+					err := b.RemoveSelf()
+					if err != nil {
+						logger.Error("failed to remove self", "node ID", b.localID, "error", err)
+					}
+					return
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 }
 
 // CommittedIndex returns the latest index committed to stable storage
