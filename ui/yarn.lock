@@ -2458,9 +2458,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hashicorp/design-system-components@npm:~4.12.0":
-  version: 4.12.0
-  resolution: "@hashicorp/design-system-components@npm:4.12.0"
+"@hashicorp/design-system-components@npm:~4.13.0":
+  version: 4.13.0
+  resolution: "@hashicorp/design-system-components@npm:4.13.0"
   dependencies:
     "@ember/render-modifiers": ^2.0.5
     "@ember/string": ^3.1.1
@@ -2468,7 +2468,7 @@ __metadata:
     "@embroider/addon-shim": ^1.8.7
     "@floating-ui/dom": ^1.6.3
     "@hashicorp/design-system-tokens": ^2.2.1
-    "@hashicorp/flight-icons": ^3.6.0
+    "@hashicorp/flight-icons": ^3.7.0
     decorator-transforms: ^1.1.0
     ember-a11y-refocus: ^4.1.3
     ember-cli-sass: ^11.0.1
@@ -2479,14 +2479,14 @@ __metadata:
     ember-modifier: ^4.1.0
     ember-power-select: ^8.2.0
     ember-stargate: ^0.4.3
-    ember-style-modifier: ^3.0.1
+    ember-style-modifier: ^4.4.0
     ember-truth-helpers: ^4.0.3
     prismjs: ^1.29.0
     sass: ^1.69.5
     tippy.js: ^6.3.7
   peerDependencies:
     ember-source: ^3.28.0 || ^4.0.0 || ^5.3.0
-  checksum: ed7c79a43e3b286b5a4d543064dc566159909bee7052700eebe160a93f99b64dfc41291cd4d81c5dd558b415fc9033bc8937b0d751b191283ce404c407d1388b
+  checksum: 6cf10c729fc1146ea33e3af3949aa8d1dee3a3b68723bbfe8a36a3372f1226d8a18144662c80326cfda8ea039c7a13e5237d7a95557985c5098ae67a8b6af085
   languageName: node
   linkType: hard
 
@@ -2509,17 +2509,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hashicorp/flight-icons@npm:^3.5.0":
-  version: 3.5.0
-  resolution: "@hashicorp/flight-icons@npm:3.5.0"
-  checksum: a06f6606d4df682d2756eddebf92765b18774cdcc8e2050e440c85cff16126ae72455869b967e2aef15d97a5caf517578d66cf6fc098f1d3564a9deec9a95ebf
-  languageName: node
-  linkType: hard
-
-"@hashicorp/flight-icons@npm:^3.6.0":
-  version: 3.6.0
-  resolution: "@hashicorp/flight-icons@npm:3.6.0"
-  checksum: 5c09574c3e44b5662665271f4aaec8e9d50d0eecb858ba5e9d4d669baf0d98d0e875ce440d84ea7911bf81ff35a01440f79dd27cb78af706ca85341101d61073
+"@hashicorp/flight-icons@npm:^3.5.0, @hashicorp/flight-icons@npm:^3.7.0":
+  version: 3.7.0
+  resolution: "@hashicorp/flight-icons@npm:3.7.0"
+  checksum: 9d043a8df428ce47475a8f2605ad31119a9da766b2310eeba207fd311ae5c0422c19fb91b636b744c590a5c0d19075cb295787961d3e46fdd5e21ef17b2df606
   languageName: node
   linkType: hard
 
@@ -7513,7 +7506,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-auto-import@npm:^2.2.4, ember-auto-import@npm:^2.4.1, ember-auto-import@npm:^2.5.0, ember-auto-import@npm:^2.6.0, ember-auto-import@npm:^2.6.1, ember-auto-import@npm:^2.6.3, ember-auto-import@npm:^2.7.0, ember-auto-import@npm:^2.7.2":
+"ember-auto-import@npm:^2.2.4, ember-auto-import@npm:^2.4.1, ember-auto-import@npm:^2.6.0, ember-auto-import@npm:^2.6.1, ember-auto-import@npm:^2.6.3, ember-auto-import@npm:^2.7.0, ember-auto-import@npm:^2.7.2":
   version: 2.7.4
   resolution: "ember-auto-import@npm:2.7.4"
   dependencies:
@@ -8755,20 +8748,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-style-modifier@npm:^3.0.1":
-  version: 3.1.1
-  resolution: "ember-style-modifier@npm:3.1.1"
-  dependencies:
-    ember-auto-import: ^2.5.0
-    ember-cli-babel: ^7.26.11
-    ember-modifier: ^3.2.7 || ^4.0.0
-  peerDependencies:
-    "@ember/string": ^3.0.1
-  checksum: 53984539a55b34b47f041f48979da096d922406f70e6940adfb6548e0e5479d5e90690948c28c2b5bf0fee2e2e76f8a0b01c624bbb749ea656f48703cfeeec47
-  languageName: node
-  linkType: hard
-
-"ember-style-modifier@npm:^4.1.0, ember-style-modifier@npm:^4.3.1":
+"ember-style-modifier@npm:^4.1.0, ember-style-modifier@npm:^4.3.1, ember-style-modifier@npm:^4.4.0":
   version: 4.4.0
   resolution: "ember-style-modifier@npm:4.4.0"
   dependencies:
@@ -15526,21 +15506,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"qs@npm:6.13.0":
+"qs@npm:6.13.0, qs@npm:^6.4.0":
   version: 6.13.0
   resolution: "qs@npm:6.13.0"
   dependencies:
     side-channel: ^1.0.6
   checksum: e9404dc0fc2849245107108ce9ec2766cde3be1b271de0bf1021d049dc5b98d1a2901e67b431ac5509f865420a7ed80b7acb3980099fe1c118a1c5d2e1432ad8
-  languageName: node
-  linkType: hard
-
-"qs@npm:^6.4.0":
-  version: 6.12.3
-  resolution: "qs@npm:6.12.3"
-  dependencies:
-    side-channel: ^1.0.6
-  checksum: 9a9228a623bc36d41648237667d7342fb8d64d1cfeb29e474b0c44591ba06ac507e2d726f60eca5af8dc420e5dd23370af408ef8c28e0405675c7187b736a693
   languageName: node
   linkType: hard
 
@@ -18756,7 +18727,7 @@ __metadata:
     "@ember/test-waiters": ^3.1.0
     "@glimmer/component": ^1.1.2
     "@glimmer/tracking": ^1.1.2
-    "@hashicorp/design-system-components": ~4.12.0
+    "@hashicorp/design-system-components": ~4.13.0
     "@hashicorp/ember-flight-icons": ^5.1.3
     "@icholy/duration": ^5.1.0
     "@lineal-viz/lineal": ^0.5.1
