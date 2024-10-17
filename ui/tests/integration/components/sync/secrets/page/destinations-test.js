@@ -56,7 +56,7 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
     };
 
     this.transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
-    this.clearDatasetStub = sinon.stub(store, 'clearDataset');
+    this.clearDatasetStub = sinon.stub(this.owner.lookup('service:pagination'), 'clearDataset');
   });
 
   test('it should render header and tabs', async function (assert) {
