@@ -24,11 +24,10 @@ export default BaseAdapter.extend({
   },
 
   createRecord(store, type, snapshot) {
-    return this._super(...arguments).then((response) => {
-      // if the server does not return an id and one has not been set on the model we need to set it manually from the mutableId value
-      if (!response?.id && !snapshot.record.id) {
-        return { id: snapshot.record.mutableId };
-      }
+    return this._super(...arguments).then(() => {
+      // saving returns a 204, return object with id to please ember-data...
+      const id = snapshot.id || snapshot.record.mutableId;
+      return { id };
     });
   },
 });
