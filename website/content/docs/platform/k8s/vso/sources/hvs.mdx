@@ -22,6 +22,8 @@ changes to the secret source are properly reflected in the Kubernetes secret.
 - Supports all VSO features, including rollout-restarts on secret rotation or
   during drift remediation.
 - Supports authentication to HCP using [HCP service principals](/hcp/docs/hcp/admin/iam/service-principals).
+- Supports [static](#static-secrets), [auto-rotating and dynamic secrets](#auto-rotating-and-dynamic-secrets)
+  within an HCP Vault Secrets app.
 
 
 ### Supported HCP authentication methods
@@ -71,6 +73,59 @@ spec:
   destination:
     create: true
     name: vso-app-secret
+```
+
+### Static Secrets
+
+VSO supports syncing [static secrets](/hcp/docs/vault-secrets/static-secrets/create-static-secret)
+from an HCP Vault Secrets app to a Kubernetes Secret. VSO syncs the secrets to
+Kubernetes on the [refreshAfter](/vault/docs/platform/k8s/vso/api-reference#hcpvaultsecretsappspec)
+interval set in the HCPVaultSecretsApp spec.
+
+### Auto-rotating and Dynamic Secrets
+
+<Tip title="Feature availability">
+
+  VSO v0.9.0
+
+</Tip>
+
+VSO also supports syncing [auto-rotating](/hcp/docs/vault-secrets/auto-rotation)
+and [dynamic](/hcp/docs/vault-secrets/dynamic-secrets) secrets from an HCP Vault
+Secrets app to a Kubernetes Secret.
+
+VSO syncs auto-rotating secrets along with static secrets on the
+[refreshAfter](/vault/docs/platform/k8s/vso/api-reference#hcpvaultsecretsappspec)
+interval, and rotation is handled by HCP. VSO syncs dynamic secrets when the
+[specified percentage](/vault/docs/platform/k8s/vso/api-reference#hvsdynamicsyncconfig)
+of their TTL has elapsed. Each sync of a dynamic secret generates a new set of
+credentials.
+
+An auto-rotating or dynamic secret can have multiple key-value pairs, which
+are rendered in the destination Kubernetes Secret as both a nested map and
+flattened key-value pairs. For example:
+
+```yaml
+apiVersion: v1
+kind: Secret
+data:
+  secret_name: {"key_one": "value_one", "key_two": "value_two"}
+  secret_name_key_one: "value_one"
+  secret_name_key_two: "value_two"
+...
+```
+
+Transformation [template commands like `get` and `dig`](/vault/docs/platform/k8s/vso/secret-transformation#map-functions)
+in the HCPVaultSecretsApp Destination can be used to extract values from the
+nested map format:
+
+```yaml
+    transformation:
+      templates:
+        secret_one:
+          text: '{{- get (get .Secrets "secret_name") "key_one" -}}'
+        secret_two:
+          text: '{{- dig "secret_name" "key_two" "<missing>" .Secrets -}}'
 ```
 
 @include 'vso/blurb-api-reference.mdx'
