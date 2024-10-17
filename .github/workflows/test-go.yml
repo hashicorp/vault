@@ -158,6 +158,7 @@ jobs:
         if: ${{ !inputs.testonly }}
         env:
           GOPRIVATE: github.com/hashicorp/*
+          GODEBUG: asynctimerchan=1
         run: |
           # testonly tests need additional build tag though let's exclude them anyway for clarity
           (
@@ -169,6 +170,7 @@ jobs:
         if: ${{ inputs.testonly }}
         env:
           GOPRIVATE: github.com/hashicorp/*
+          GODEBUG: asynctimerchan=1
         run: |
           set -exo pipefail
           # enable glob expansion
@@ -230,6 +232,7 @@ jobs:
         id: ${{ fromJSON(needs.test-matrix.outputs.matrix_ids) }}
     env:
       GOPRIVATE: github.com/hashicorp/*
+      GODEBUG: asynctimerchan=1
       TIMEOUT_IN_MINUTES: ${{ inputs.timeout-minutes }}
     outputs:
       go-test-results-download-pattern: ${{ steps.metadata.outputs.go-test-results-download-pattern }}
@@ -317,6 +320,7 @@ jobs:
         if: inputs.binary-tests && matrix.id == inputs.total-runners && github.repository == 'hashicorp/vault-enterprise'
         env:
           GOPRIVATE: github.com/hashicorp/*
+          GODEBUG: asynctimerchan=1
         run: |
           set -exo pipefail
           time make prep enthsmdev
@@ -327,6 +331,7 @@ jobs:
         # The dev mode binary has to exist for binary tests that are dispatched on the last runner.
         env:
           GOPRIVATE: github.com/hashicorp/*
+          GODEBUG: asynctimerchan=1
         run: time make prep dev
       - name: Install gVisor
         # Enterprise repo runners do not allow sudo, so can't install gVisor there yet.

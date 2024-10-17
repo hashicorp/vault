@@ -2866,12 +2866,15 @@ func runUnseal(c *ServerCommand, core *vault.Core, ctx context.Context) {
 		c.logger.Warn("failed to unseal core", "error", err)
 
 		timer := time.NewTimer(5 * time.Second)
+		// // If using go < 1.23, clear timer channel after Stop.
+		// if cap(timer.C) == 1 {
 		select {
 		case <-c.ShutdownCh:
 			timer.Stop()
 			return
 		case <-timer.C:
 		}
+		// }
 	}
 }
 

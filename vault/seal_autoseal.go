@@ -542,6 +542,8 @@ error and restart Vault.`)
 		}
 
 		for {
+			// // If using go < 1.23, clear timer channel after Stop.
+			// if cap(healthCheck.C) == 1 {
 			select {
 			case <-healthCheckStop:
 				if healthCheck != nil {
@@ -553,6 +555,7 @@ error and restart Vault.`)
 				check(t)
 			}
 		}
+		// }
 	}()
 }
 

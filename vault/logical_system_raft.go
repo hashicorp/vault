@@ -615,7 +615,8 @@ func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool, makeSealer fu
 
 			// Grab statelock
 			l := newLockGrabber(b.Core.stateLock.Lock, b.Core.stateLock.Unlock, b.Core.standbyStopCh.Load().(chan struct{}))
-			go l.grab()
+			b.Core.logger.Debug("grabbing lock in handleStorageRaftSnapshotWrite")
+			go l.grab(b.Core.logger, "handleStorageRaftSnapshotWrite")
 			if stopped := l.lockOrStop(); stopped {
 				b.Core.logger.Error("not applying snapshot; shutting down")
 				return

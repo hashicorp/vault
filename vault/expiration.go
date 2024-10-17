@@ -422,6 +422,8 @@ func (c *Core) setupExpiration(e ExpireLeaseStrategy) error {
 	go func() {
 		t := time.NewTimer(24 * time.Hour)
 		for {
+			// // If using go < 1.23, clear timer channel after Stop.
+			// if cap(t.C) == 1 {
 			select {
 			case <-quit:
 				return
@@ -429,6 +431,7 @@ func (c *Core) setupExpiration(e ExpireLeaseStrategy) error {
 				c.expiration.attemptIrrevocableLeasesRevoke()
 				t.Reset(24 * time.Hour)
 			}
+			// }
 		}
 	}()
 
@@ -865,8 +868,8 @@ func expireNoop(ctx context.Context, manager *ExpirationManager, s string, n *na
 // This must be called before sealing the view.
 func (m *ExpirationManager) Stop() error {
 	// Stop all the pending expiration timers
-	m.logger.Debug("stop triggered")
-	defer m.logger.Debug("finished stopping")
+	m.logger.Debug("stop expirationtriggered")
+	defer m.logger.Debug("finished stopping expiration")
 
 	m.jobManager.Stop()
 

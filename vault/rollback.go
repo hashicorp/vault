@@ -119,20 +119,26 @@ func (m *RollbackManager) numRollbackWorkers() int {
 
 // Start starts the rollback manager
 func (m *RollbackManager) Start() {
+	m.logger.Debug("entering Start of rollback manager ")
+	defer m.logger.Debug("exiting Start of rollback manager")
 	go m.run()
 }
 
 // Stop stops the running manager. This will wait for any in-flight
 // rollbacks to complete.
 func (m *RollbackManager) Stop() {
+	m.logger.Debug("entering rollback manager stop")
 	m.shutdownLock.Lock()
 	defer m.shutdownLock.Unlock()
+	defer m.logger.Debug("exiting rollback manager stop")
 	if !m.shutdown {
 		m.shutdown = true
 		close(m.shutdownCh)
 		<-m.doneCh
 	}
+	m.logger.Debug("entering rollback stopWait")
 	m.runner.StopWait()
+	m.logger.Debug("exiting rollback stopWait")
 }
 
 // StopTicker stops the automatic Rollback manager's ticker, causing us
@@ -142,7 +148,7 @@ func (m *RollbackManager) Stop() {
 //
 // THIS SHOULD ONLY BE CALLED FROM TEST HELPERS.
 func (m *RollbackManager) StopTicker() {
-	if !m.tickerIsStopped {
+	if cap(m.stopTicker) == 1 && !m.tickerIsStopped {
 		close(m.stopTicker)
 		m.tickerIsStopped = true
 	}
@@ -156,6 +162,8 @@ func (m *RollbackManager) run() {
 	defer tick.Stop()
 	defer close(m.doneCh)
 	for {
+		// // If using go < 1.23, clear timer channel after Stop.
+		// if cap(tick.C) == 1 {
 		select {
 		case <-tick.C:
 			m.triggerRollbacks()
@@ -170,6 +178,7 @@ func (m *RollbackManager) run() {
 			}
 			tick.Stop()
 		}
+		// }
 	}
 }
 
@@ -225,6 +234,8 @@ func (m *RollbackManager) newRollbackLocked(fullPath string) *rollbackState {
 
 // startOrLookupRollback is used to start an async rollback attempt.
 func (m *RollbackManager) startOrLookupRollback(ctx context.Context, fullPath string, grabStatelock bool) *rollbackState {
+	m.logger.Debug("entering startOrLookupRollback")
+	defer m.logger.Debug("exiting startOrLookupRollback")
 	m.inflightLock.Lock()
 	defer m.inflightLock.Unlock()
 	rs := m.lookupRollbackLocked(fullPath)
@@ -321,7 +332,8 @@ func (m *RollbackManager) attemptRollback(ctx context.Context, fullPath string, 
 
 		// Grab the statelock or stop
 		l := newLockGrabber(m.core.stateLock.RLock, m.core.stateLock.RUnlock, stopCh)
-		go l.grab()
+		m.logger.Debug("grabbing lock in attemptRollback")
+		go l.grab(m.logger, "attemptRollback")
 		if stopped := l.lockOrStop(); stopped {
 			// If we stopped due to shutdown, return. Otherwise another thread
 			// is holding the lock for us, continue on.
@@ -365,6 +377,8 @@ func (m *RollbackManager) attemptRollback(ctx context.Context, fullPath string, 
 // core's statelock held (write OR read). If an already inflight rollback is
 // happening this function will simply wait for it to complete
 func (m *RollbackManager) Rollback(ctx context.Context, path string) error {
+	m.logger.Debug("entering Rollback")
+	defer m.logger.Debug("exiting Rollback")
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return err
@@ -409,6 +423,8 @@ func (m *RollbackManager) Rollback(ctx context.Context, path string) error {
 
 // startRollback is used to start the rollback manager after unsealing
 func (c *Core) startRollback() error {
+	c.logger.Debug("entering startRollback")
+	defer c.logger.Debug("exiting startRollback")
 	backendsFunc := func() []*MountEntry {
 		ret := []*MountEntry{}
 		c.mountsLock.RLock()

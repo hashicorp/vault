@@ -159,6 +159,8 @@ func (c *Core) generateShares(sc *SealConfig) ([]byte, [][]byte, error) {
 // Initialize is used to initialize the Vault with the given
 // configurations.
 func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitResult, error) {
+	c.logger.Debug("entering Initialize")
+	defer c.logger.Debug("exiting Initialize")
 	if err := c.entCheckLicenseInit(); err != nil {
 		return nil, err
 	}
@@ -226,8 +228,12 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	}
 
 	// Avoid an initialization race
+	c.logger.Debug("grabbing the stateLock()")
 	c.stateLock.Lock()
-	defer c.stateLock.Unlock()
+	defer func() {
+		c.logger.Debug("unlocking the stateLock()")
+		c.stateLock.Unlock()
+	}()
 
 	// Check if we are initialized
 	init, err := c.Initialized(ctx)
@@ -374,18 +380,24 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	// disabled. When using recovery keys they are stored in the barrier, so
 	// this must happen post-unseal.
 	if c.seal.RecoveryKeySupported() {
+		c.logger.Debug("executing code for recovery key supported")
+		c.logger.Debug("executing code for set recovery config")
 		err = c.seal.SetRecoveryConfig(ctx, recoveryConfig)
 		if err != nil {
 			c.logger.Error("failed to save recovery configuration", "error", err)
 			return nil, fmt.Errorf("recovery configuration saving failed: %w", err)
 		}
+		c.logger.Debug("finished executing code for set recovery config")
 
 		if recoveryConfig.SecretShares > 0 {
+			c.logger.Debug("secret shares greater than 0")
 			recoveryKey, recoveryUnsealKeys, err := c.generateShares(recoveryConfig)
 			if err != nil {
 				c.logger.Error("failed to generate recovery shares", "error", err)
 				return nil, err
 			}
+			c.logger.Debug("finished generating shares")
+			c.logger.Debug("set recovery key")
 
 			err = c.seal.SetRecoveryKey(ctx, recoveryKey)
 			if err != nil {
@@ -395,6 +407,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 			results.RecoveryShares = recoveryUnsealKeys
 		}
 	}
+	c.logger.Debug("finished recovery key")
 
 	// Generate a new root token
 	rootToken, err := c.tokenStore.rootToken(ctx)
@@ -449,6 +462,9 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 // Callers should attempt to retry any NonFatalErrors. Callers should
 // not re-attempt fatal errors.
 func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
+	c.logger.Debug("entering UnsealWithStoredKeys")
+	defer c.logger.Debug("exiting UnsealWithStoredKeys")
+
 	c.unsealWithStoredKeysLock.Lock()
 	defer c.unsealWithStoredKeysLock.Unlock()
 

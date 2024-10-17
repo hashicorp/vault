@@ -20,12 +20,16 @@ import (
 )
 
 func (c *Core) metricsLoop(stopCh chan struct{}) {
+	c.logger.Debug("entering metricsLoop")
+	defer c.logger.Debug("exiting metricsLoop")
 	emitTimer := time.Tick(time.Second)
 
 	stopOrHAState := func() (bool, consts.HAState) {
 		l := newLockGrabber(c.stateLock.RLock, c.stateLock.RUnlock, stopCh)
-		go l.grab()
+		c.logger.Debug("grabbing lock in metricsLoop")
+		go l.grab(c.logger, "metricsLoop 1")
 		if stopped := l.lockOrStop(); stopped {
+			c.logger.Debug("stopped metricsLoop")
 			return true, 0
 		}
 		defer c.stateLock.RUnlock()
@@ -34,11 +38,13 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 
 	identityCountTimer := time.Tick(time.Minute * 10)
 	// Only emit on active node of cluster that is not a DR secondary.
+	c.logger.Debug("before stopOrHAState 1")
 	if stopped, haState := stopOrHAState(); stopped {
 		return
 	} else if haState == consts.Standby || c.IsDRSecondary() {
 		identityCountTimer = nil
 	}
+	c.logger.Debug("after stopOrHAState 1")
 
 	writeTimer := time.Tick(time.Second * 30)
 	// Do not process the writeTimer on DR Secondary nodes
@@ -54,7 +60,9 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 	for {
 		select {
 		case <-emitTimer:
+			c.logger.Debug("before stopOrHAState 2")
 			stopped, haState := stopOrHAState()
+			c.logger.Debug("after stopOrHAState 2")
 			if stopped {
 				return
 			}
@@ -166,7 +174,8 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 			c.cachedGaugeMetricsEmitter()
 		case <-writeTimer:
 			l := newLockGrabber(c.stateLock.RLock, c.stateLock.RUnlock, stopCh)
-			go l.grab()
+			c.logger.Debug("grabbing lock in metricsLoop 2")
+			go l.grab(c.logger, "metricsLoop 2")
 			if stopped := l.lockOrStop(); stopped {
 				return
 			}
@@ -276,6 +285,8 @@ func (c *Core) tokenGaugeTtlCollector(ctx context.Context) ([]metricsutil.GaugeL
 // emitMetricsActiveNode is used to start all the periodic metrics; all of them should
 // be shut down when stopCh is closed.  This code runs on the active node only.
 func (c *Core) emitMetricsActiveNode(stopCh chan struct{}) {
+	c.logger.Debug("entering emitMetricsActiveNode")
+	defer c.logger.Debug("exiting emitMetricsActiveNode")
 	// The gauge collection processes are started and stopped here
 	// because there's more than one TokenManager created during startup,
 	// but we only want one set of gauges.
