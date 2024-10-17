@@ -52,7 +52,14 @@ jobs:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           ref: ${{ inputs.vault-revision }}
+      - uses: ./.github/actions/set-up-go
+        with:
+          github-token: ${{ github.repository != 'hashicorp/vault-enterprise' && secrets.ELEVATED_GITHUB_TOKEN || '' }}
+          no-restore: true # Don't download vault's modules for pipeline
       - uses: hashicorp/action-setup-enos@v1
+        with:
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+      - uses: ./.github/actions/set-up-pipeline
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - id: metadata
@@ -69,6 +76,11 @@ jobs:
             # shellcheck disable=2001
             vault_version="$(sed 's/+ent/+${{ inputs.vault-edition }}/g' <<< '${{ inputs.vault-version }}')"
           fi
+          # Make sure that any branch specific dynamic config has been generated
+          pipeline generate enos-dynamic-config -d ./enos -f enos-dynamic-config.hcl -v ${{ inputs.vault-version }} -e ${{ inputs.vault-edition }} -n 3 --log debug
+          # Take a sample observation
+          sample_seed=$(date +%s)
+          sample=$(enos scenario sample observe "${{ inputs.sample-name }}" --chdir ./enos --min 1 --max "${{ inputs.sample-max }}" --seed "${sample_seed}" --format json | jq -c ".observation.elements")
           {
             echo "build-date=${build_date}"
             echo "vault-version=${vault_version}"
@@ -99,6 +111,7 @@ jobs:
       ENOS_VAR_vault_build_date: ${{ needs.metadata.outputs.build-date }}
       ENOS_VAR_vault_product_version: ${{ needs.metadata.outputs.vault-version }}
       ENOS_VAR_vault_revision: ${{ inputs.vault-revision }}
+      ENOS_VAR_vault_upgrade_initial_version: ${{ matrix.attributes.upgrade_initial_version }}
       ENOS_VAR_consul_license_path: ./support/consul.hclic
       ENOS_VAR_vault_license_path: ./support/vault.hclic
       ENOS_VAR_distro_version_amzz: ${{ matrix.attributes.distro_version_amzn }}

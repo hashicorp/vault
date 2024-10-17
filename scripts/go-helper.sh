@@ -40,7 +40,7 @@ check_fmt() {
     echo "Run \`make fmt\` to reformat code."
     for file in "${malformed[@]}"; do
       gofumpt -w "$file"
-      echo "$(git diff --no-color "$file")"
+      git diff --no-color "$file"
     done
     exit 1
   fi
@@ -79,7 +79,7 @@ mod_download() {
   while IFS= read -r -d '' mod; do
     echo "==> Downloading Go modules for $mod to $(go env GOMODCACHE)..."
     pushd "$(dirname "$mod")" > /dev/null || (echo "failed to push into module dir" && exit 1)
-      GOOS=linux GOARCH=amd64 go mod download -x
+      GOOS=linux GOARCH=amd64 GOPRIVATE=github.com/hashicorp go mod download -x
     popd > /dev/null || (echo "failed to pop out of module dir" && exit 1)
   done < <(find . -type f -name go.mod -print0)
 }
@@ -89,7 +89,7 @@ mod_tidy() {
   while IFS= read -r -d '' mod; do
     echo "==> Tidying $mod..."
     pushd "$(dirname "$mod")" > /dev/null || (echo "failed to push into module dir" && exit 1)
-      GOOS=linux GOARCH=amd64 go mod tidy
+      GOOS=linux GOARCH=amd64 GOPRIVATE=github.com/hashicorp go mod tidy
     popd > /dev/null || (echo "failed to pop out of module dir" && exit 1)
   done < <(find . -type f -name go.mod -print0)
 }
