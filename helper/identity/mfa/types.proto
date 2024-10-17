@@ -85,6 +85,8 @@ message OktaConfig {
   string base_url = 4;
   // @inject_tag: sentinel:"-"
   bool primary_email = 5;
+  // @inject_tag: sentinel:"-"
+  bool use_passcode = 6;
 }
 
 // PingIDConfig contains PingID configuration information
