@@ -307,11 +307,15 @@ module('Acceptance | pki workflow', function (hooks) {
       await visit(`/vault/secrets/${this.mountPath}/pki/keys`);
       await click(PKI_KEYS.generateKey);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/create`);
-      await fillIn(GENERAL.inputByAttr('type'), 'exported');
+      await fillIn(GENERAL.inputByAttr('type'), 'exported'); // exported keys generated private_key data
       await fillIn(GENERAL.inputByAttr('keyType'), 'rsa');
       await click(GENERAL.saveButton);
       keyId = find(GENERAL.infoRowValue('Key ID')).textContent?.trim();
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/${keyId}/details`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.mountPath}/pki/keys/create`,
+        'it does not transition to details private_key data exists'
+      );
 
       assert
         .dom(PKI_KEYS.nextStepsAlert)

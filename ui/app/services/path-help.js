@@ -49,13 +49,6 @@ export default class PathHelpService extends Service {
 
     // bust cache in EmberData's model lookup
     delete store._modelFactoryCache[modelType];
-
-    // bust cache in schema service
-    const schemas = store.getSchemaDefinitionService?.();
-    if (schemas) {
-      delete schemas._relationshipsDefCache[modelType];
-      delete schemas._attributesDefCache[modelType];
-    }
   }
 
   /**

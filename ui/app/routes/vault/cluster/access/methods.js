@@ -19,6 +19,6 @@ export default class VaultClusterAccessMethodsRoute extends Route {
   };
 
   model() {
-    return this.store.findAll('auth-method');
+    return this.store.query('auth-method', {});
   }
 }

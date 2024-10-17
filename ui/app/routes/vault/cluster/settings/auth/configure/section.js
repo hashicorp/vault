@@ -86,7 +86,7 @@ export default Route.extend(UnloadModelRoute, {
         // if you haven't saved a config, the API 404s, so create one here to edit and return it
         if (e.httpStatus === 404) {
           config = this.store.createRecord(modelType, {
-            id: backend.id,
+            mutableId: backend.id,
           });
           config.set('backend', backend);
 
