@@ -7,7 +7,7 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { hash } from 'rsvp';
 
-import type StoreService from 'vault/services/store';
+import type PaginationService from 'vault/services/pagination';
 import type SyncDestinationModel from 'vault/vault/models/sync/destination';
 import type SyncAssociationModel from 'vault/vault/models/sync/association';
 import type Controller from '@ember/controller';
@@ -27,7 +27,7 @@ interface SyncDestinationSecretsController extends Controller {
 }
 
 export default class SyncDestinationSecretsRoute extends Route {
-  @service declare readonly store: StoreService;
+  @service declare readonly pagination: PaginationService;
 
   queryParams = {
     page: {
@@ -39,7 +39,7 @@ export default class SyncDestinationSecretsRoute extends Route {
     const destination = this.modelFor('secrets.destinations.destination') as SyncDestinationModel;
     return hash({
       destination,
-      associations: this.store.lazyPaginatedQuery('sync/association', {
+      associations: this.pagination.lazyPaginatedQuery('sync/association', {
         responsePath: 'data.keys',
         page: Number(params.page) || 1,
         destinationType: destination.type,

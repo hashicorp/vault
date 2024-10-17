@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: Address issue with ACME HTTP-01 challenges failing for IPv6 IPs due to improperly formatted URLs
+```

@@ -7,12 +7,12 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 
 export default class PkiIssuersListRoute extends Route {
-  @service store;
+  @service pagination;
   @service secretMountPath;
 
   model(params) {
     const page = Number(params.page) || 1;
-    return this.store
+    return this.pagination
       .lazyPaginatedQuery('pki/issuer', {
         backend: this.secretMountPath.currentPath,
         responsePath: 'data.keys',
