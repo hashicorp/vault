@@ -10,8 +10,9 @@ import { hash } from 'rsvp';
 import { getCliMessage } from 'pki/routes/overview';
 @withConfig()
 export default class PkiRolesIndexRoute extends Route {
-  @service store;
+  @service store; // used by @withConfig decorator
   @service secretMountPath;
+  @service pagination;
 
   queryParams = {
     page: {
@@ -22,7 +23,7 @@ export default class PkiRolesIndexRoute extends Route {
   async fetchRoles(params) {
     try {
       const page = Number(params.page) || 1;
-      return await this.store.lazyPaginatedQuery('pki/role', {
+      return await this.pagination.lazyPaginatedQuery('pki/role', {
         backend: this.secretMountPath.currentPath,
         responsePath: 'data.keys',
         page,

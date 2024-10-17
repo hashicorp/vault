@@ -39,6 +39,7 @@ export default class KvSecretMetadataDetails extends Component {
   @service flashMessages;
   @service('app-router') router;
   @service store;
+  @service pagination;
 
   @tracked error = null;
   @tracked customMetadataFromData = null;
@@ -54,7 +55,7 @@ export default class KvSecretMetadataDetails extends Component {
     const adapter = this.store.adapterFor('kv/metadata');
     try {
       await adapter.deleteMetadata(backend, path);
-      this.store.clearDataset('kv/metadata'); // Clear out the store cache so that the metadata/list view is updated.
+      this.pagination.clearDataset('kv/metadata'); // Clear out the store cache so that the metadata/list view is updated.
       this.flashMessages.success(
         `Successfully deleted the metadata and all version data for the secret ${path}.`
       );

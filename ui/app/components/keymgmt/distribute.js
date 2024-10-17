@@ -37,6 +37,7 @@ const VALID_TYPES_BY_PROVIDER = {
   azurekeyvault: ['rsa-2048', 'rsa-3072', 'rsa-4096'],
 };
 export default class KeymgmtDistribute extends Component {
+  @service pagination;
   @service store;
   @service flashMessages;
   @service router;
@@ -191,7 +192,7 @@ export default class KeymgmtDistribute extends Component {
       .then(() => {
         this.flashMessages.success(`Successfully distributed key ${key} to ${provider}`);
         // update keys on provider model
-        this.store.clearDataset('keymgmt/key');
+        this.pagination.clearDataset('keymgmt/key');
         const providerModel = this.store.peekRecord('keymgmt/provider', provider);
         providerModel.fetchKeys(providerModel.keys?.meta?.currentPage || 1);
         this.args.onClose();

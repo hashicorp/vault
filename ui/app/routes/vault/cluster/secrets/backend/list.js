@@ -30,6 +30,7 @@ function getValidPage(pageParam) {
 }
 
 export default Route.extend({
+  pagination: service(),
   store: service(),
   templateName: 'vault/cluster/secrets/backend/list',
   pathHelp: service('path-help'),
@@ -131,7 +132,7 @@ export default Route.extend({
 
     return hash({
       secret,
-      secrets: this.store
+      secrets: this.pagination
         .lazyPaginatedQuery(modelType, {
           id: secret,
           backend,
@@ -163,7 +164,7 @@ export default Route.extend({
     const has404 = this.has404;
     // only clear store cache if this is a new model
     if (secret !== controller?.baseKey?.id) {
-      this.store.clearDataset();
+      this.pagination.clearDataset();
     }
     controller.set('hasModel', true);
     controller.setProperties({
@@ -220,12 +221,12 @@ export default Route.extend({
     willTransition(transition) {
       window.scrollTo(0, 0);
       if (transition.targetName !== this.routeName) {
-        this.store.clearDataset();
+        this.pagination.clearDataset();
       }
       return true;
     },
     reload() {
-      this.store.clearDataset();
+      this.pagination.clearDataset();
       this.refresh();
     },
   },
