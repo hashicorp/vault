@@ -18,6 +18,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws/credentials"
+
 	metrics "github.com/armon/go-metrics"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -27,7 +29,6 @@ import (
 	"github.com/cenkalti/backoff/v3"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -198,22 +199,9 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 		}
 	}
 
-	credsConfig := &awsutil.CredentialsConfig{
-		AccessKey:    conf["access_key"],
-		SecretKey:    conf["secret_key"],
-		SessionToken: conf["session_token"],
-		Logger:       logger,
-	}
-	creds, err := credsConfig.GenerateCredentialChain()
-	if err != nil {
-		return nil, err
-	}
-
 	pooledTransport := cleanhttp.DefaultPooledTransport()
 	pooledTransport.MaxIdleConnsPerHost = consts.ExpirationRestoreWorkerCount
-
 	awsConf := aws.NewConfig().
-		WithCredentials(creds).
 		WithRegion(region).
 		WithEndpoint(endpoint).
 		WithHTTPClient(&http.Client{
@@ -221,7 +209,24 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 		}).
 		WithMaxRetries(dynamodbMaxRetry)
 
-	awsSession, err := session.NewSession(awsConf)
+	if conf["access_key"] != "" && conf["secret_key"] != "" {
+		creds := credentials.NewStaticCredentials(conf["access_key"], conf["secret_key"], conf["session_token"])
+		awsConf.WithCredentials(creds)
+	}
+
+	opt := session.Options{
+		SharedConfigState: session.SharedConfigStateFromEnv,
+		Config:            *awsConf,
+	}
+
+	if os.Getenv("AWS_DEFAULT_PROFILE") != "" && os.Getenv("AWS_SDK_LOAD_CONFIG") != "" {
+		opt.Profile = os.Getenv("AWS_DEFAULT_PROFILE")
+	}
+	if os.Getenv("AWS_PROFILE") != "" {
+		opt.Profile = os.Getenv("AWS_PROFILE")
+	}
+
+	awsSession, err := session.NewSessionWithOptions(opt)
 	if err != nil {
 		return nil, fmt.Errorf("Could not establish AWS session: %w", err)
 	}
