@@ -758,6 +758,38 @@ func TestRaft_TransactionalBackend_ThreeNode(t *testing.T) {
 	})
 }
 
+// TestRaft_Removed creates a 3 node cluster and checks that the nodes are not
+// removed, then verifies that node3 marks itself as removed when it gets
+// removed from the cluster
+func TestRaft_Removed(t *testing.T) {
+	t.Parallel()
+	testBothRaftBackends(t, func(t *testing.T, raftWALValue string) {
+		conf := map[string]string{
+			"trailing_logs": "100",
+			"raft_wal":      raftWALValue,
+		}
+
+		raft1, _ := GetRaftWithConfig(t, true, true, conf)
+		raft2, _ := GetRaftWithConfig(t, false, true, conf)
+		raft3, _ := GetRaftWithConfig(t, false, true, conf)
+
+		addPeer(t, raft1, raft2)
+		addPeer(t, raft1, raft3)
+		physical.ExerciseBackend(t, raft1)
+
+		require.False(t, raft1.IsRemoved())
+		require.False(t, raft2.IsRemoved())
+		require.False(t, raft3.IsRemoved())
+
+		err := raft1.RemovePeer(context.Background(), raft3.NodeID())
+		require.NoError(t, err)
+
+		require.Eventually(t, raft3.IsRemoved, 5*time.Second, 500*time.Millisecond)
+		require.False(t, raft1.IsRemoved())
+		require.False(t, raft2.IsRemoved())
+	})
+}
+
 // TestRaft_TransactionalLimitsEnvOverride ensures the ENV var overrides for
 // transaction size limits are plumbed through as expected.
 func TestRaft_TransactionalLimitsEnvOverride(t *testing.T) {
