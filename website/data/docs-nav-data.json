@@ -282,6 +282,10 @@
             "path": "concepts/client-count/counting"
           },
           {
+            "title": "Usage metrics",
+            "path": "concepts/client-count/usage-metrics"
+          },
+          {
             "title": "FAQ",
             "path": "concepts/client-count/faq"
           }
