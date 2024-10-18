@@ -64,6 +64,27 @@ Variables that are required:
 See [enos.vars.hcl](./enos.vars.hcl) or [enos-variables.hcl](./enos-variables.hcl)
 for further descriptions of the variables.
 
+Additional variable information can also be found in the [Scenario Outlines](#scenario_outlines)
+
+## Scenario Outlines
+Enos is capable of producing an outline of each scenario that is defined in a given directory. These
+scenarios often include a description of what behavior the scenario performs, which variants are
+available, and which variables are required. They also provide a step by step breakdown including
+which quality requirments are verifiend by a given step.
+
+You can generate outlines of all scenarios or specify one via it's name.
+
+From the `enos` directory:
+```bash
+enos scenario outline smoke
+```
+
+There are also HTML versions available for an improved reading experience:
+```bash
+enos scenario outline --format html > index.html
+open index.html
+```
+
 ## Executing Scenarios
 From the `enos` directory:
 
@@ -95,45 +116,6 @@ enos scenario destroy smoke artifact_source:local
 
 Refer to the [Enos documentation](https://github.com/hashicorp/Enos-Docs)
 for further information regarding installation, execution or composing scenarios.
-
-# Scenarios
-There are current two scenarios: `smoke` and `upgrade`. Both begin by building Vault
-as specified by the selected `artifact_source` variant (see Variants section below for more
-information).
-
-## Smoke
-The [`smoke` scenario](./enos-scenario-smoke.hcl) creates a Vault cluster using
-the version from the current branch (either in CI or locally), with the backend
-specified by the `backend` variant (`raft` or `consul`). Next, it unseals with the
-appropriate method (`awskms` or `shamir`) and performs different verifications
-depending on the backend and seal type.
-
-## Upgrade
-The [`upgrade` scenario](./enos-scenario-upgrade.hcl) creates a Vault cluster using
-the version specified in `vault_upgrade_initial_release`, with the backend specified
-by the `backend` variant (`raft` or `consul`). Next, it upgrades the Vault binary
-that is determined by the `artifact_source` variant. After the upgrade, it verifies that
-cluster is at the desired version, along with additional verifications.
-
-
-## Autopilot
-The [`autopilot` scenario](./enos-scenario-autopilot.hcl) creates a Vault cluster using
-the version specified in `vault_upgrade_initial_release`. It writes test data to the Vault cluster. Next, it creates additional nodes with the candidate version of Vault as determined by the `vault_product_version` variable set.
-The module uses AWS auto-join to handle discovery and unseals with auto-unseal
-or Shamir depending on the `seal` variant. After the new nodes have joined and been
-unsealed, it verifies reading stored data on the new nodes. Autopilot upgrade verification checks the upgrade status is "await-server-removal" and the target version is set to the version of upgraded nodes. This test also verifies the undo_logs status for Vault versions 1.13.x
-
-## Replication
-The [`replication` scenario](./enos-scenario-replication.hcl) creates two 3-node Vault clusters and runs following verification steps:
-
- 1. Writes data on the primary cluster
- 1. Enables performance replication
- 1. Verifies reading stored data from secondary cluster
- 1. Verifies initial replication status between both clusters
- 1. Replaces the leader node and one standby node on the primary Vault cluster
- 1. Verifies updated replication status between both clusters
-
- This scenario verifies the performance replication status on both clusters to have their connection_status as "connected" and that the secondary cluster has known_primaries cluster addresses updated to the active nodes IP addresses of the primary Vault cluster. This scenario currently works around issues VAULT-12311 and VAULT-12309.  The scenario fails when the primary storage backend is Consul due to issue VAULT-12332
 
 ## UI Tests
 The [`ui` scenario](./enos-scenario-ui.hcl) creates a Vault cluster (deployed to AWS) using a version 
