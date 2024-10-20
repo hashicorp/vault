@@ -1,0 +1,3 @@
+```release-note:improvement
+identity: Allow usage of token metadata in identity and ACL templates
+```
