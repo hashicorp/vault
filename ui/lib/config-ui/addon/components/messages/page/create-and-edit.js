@@ -23,8 +23,9 @@ import { isAfter } from 'date-fns';
  */
 
 export default class MessagesList extends Component {
-  @service router;
+  @service('app-router') router;
   @service store;
+  @service pagination;
   @service flashMessages;
   @service customMessages;
   @service namespace;
@@ -75,7 +76,7 @@ export default class MessagesList extends Component {
         const { isNew } = this.args.message;
         const { id, title } = yield this.args.message.save();
         this.flashMessages.success(`Successfully ${isNew ? 'created' : 'updated'} ${title} message.`);
-        this.store.clearDataset('config-ui/message');
+        this.pagination.clearDataset('config-ui/message');
         this.customMessages.fetchMessages(this.namespace.path);
         this.router.transitionTo('vault.cluster.config-ui.messages.message.details', id);
       }

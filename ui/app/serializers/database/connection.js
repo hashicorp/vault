@@ -4,7 +4,7 @@
  */
 
 import RESTSerializer from '@ember-data/serializer/rest';
-import { AVAILABLE_PLUGIN_TYPES } from '../../utils/database-helpers';
+import { AVAILABLE_PLUGIN_TYPES } from '../../utils/model-helpers/database-helpers';
 
 export default RESTSerializer.extend({
   primaryKey: 'name',

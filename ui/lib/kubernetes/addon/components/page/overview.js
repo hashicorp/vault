@@ -19,7 +19,7 @@ import { action } from '@ember/object';
  */
 
 export default class OverviewPageComponent extends Component {
-  @service router;
+  @service('app-router') router;
 
   @tracked selectedRole = null;
   @tracked roleOptions = [];

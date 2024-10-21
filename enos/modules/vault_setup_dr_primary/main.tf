@@ -42,14 +42,16 @@ variable "vault_root_token" {
   type        = string
   description = "The vault root token"
 }
-resource "enos_remote_exec" "configure_dr_primary" {
+
+// Enable DR replication on the primary. This will immediately clear all data in the secondary.
+resource "enos_remote_exec" "enable_dr_replication" {
   environment = {
     VAULT_ADDR        = var.vault_addr
     VAULT_TOKEN       = var.vault_root_token
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
-  scripts = [abspath("${path.module}/scripts/configure-vault-dr-primary.sh")]
+  scripts = [abspath("${path.module}/scripts/enable.sh")]
 
   transport = {
     ssh = {

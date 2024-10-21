@@ -638,7 +638,7 @@ scenario "dev_pr_replication" {
     description = <<-EOF
       Wait for the for the primary cluster to unseal and reach a healthy state.
     EOF
-    module      = module.vault_verify_unsealed
+    module      = module.vault_wait_for_cluster_unsealed
     depends_on = [
       step.create_primary_cluster
     ]
@@ -658,7 +658,7 @@ scenario "dev_pr_replication" {
     description = <<-EOF
       Wait for the for the secondary cluster to unseal and reach a healthy state.
     EOF
-    module      = module.vault_verify_unsealed
+    module      = module.vault_wait_for_cluster_unsealed
     depends_on = [
       step.create_secondary_cluster
     ]
@@ -722,7 +722,7 @@ scenario "dev_pr_replication" {
     description = <<-EOF
       Enable the auth userpass method and create a new user.
     EOF
-    module      = module.vault_verify_write_data
+    module      = module.vault_verify_secrets_engines_create
     depends_on  = [step.get_primary_cluster_ips]
 
 
@@ -758,7 +758,6 @@ scenario "dev_pr_replication" {
     variables {
       ip_version          = local.ip_version
       primary_leader_host = step.get_primary_cluster_ips.leader_host
-      replication_type    = "performance"
       vault_addr          = step.create_primary_cluster.api_addr_localhost
       vault_install_dir   = local.vault_install_dir
       vault_root_token    = step.create_primary_cluster.root_token
@@ -815,7 +814,7 @@ scenario "dev_pr_replication" {
       Depending on how we're configured we'll pass the unseal keys according to this guide:
       https://developer.hashicorp.com/vault/docs/enterprise/replication#seals
     EOF
-    module      = module.vault_unseal_nodes
+    module      = module.vault_unseal_replication_followers
     depends_on = [
       step.create_primary_cluster,
       step.create_secondary_cluster,
@@ -840,7 +839,7 @@ scenario "dev_pr_replication" {
     description = <<-EOF
       Verify that the secondary cluster is unsealed after we enable PR replication.
     EOF
-    module      = module.vault_verify_unsealed
+    module      = module.vault_wait_for_cluster_unsealed
     depends_on = [
       step.unseal_secondary_followers
     ]

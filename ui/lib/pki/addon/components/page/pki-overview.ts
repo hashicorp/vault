@@ -19,7 +19,7 @@ interface Args {
 }
 
 export default class PkiOverview extends Component<Args> {
-  @service declare readonly router: RouterService;
+  @service('app-router') declare readonly router: RouterService;
   @service declare readonly store: Store;
 
   @tracked rolesValue = '';

@@ -108,12 +108,11 @@
                   data-test-popup-menu-trigger
                 />
                 <dd.Interactive
-                  @text="Details"
                   @route="issuers.issuer.details"
                   @models={{array @backend pkiIssuer.id}}
                   data-test-pki-issuer-details
-                />
-                <dd.Interactive @text="Edit" @route="issuers.issuer.edit" @models={{array @backend pkiIssuer.id}} />
+                >Details</dd.Interactive>
+                <dd.Interactive @route="issuers.issuer.edit" @models={{array @backend pkiIssuer.id}}>Edit</dd.Interactive>
               </Hds::Dropdown>
             </div>
           </div>

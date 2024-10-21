@@ -14,6 +14,7 @@ import errorMessage from 'vault/utils/error-message';
 import type SyncDestinationModel from 'vault/models/sync/destination';
 import type RouterService from '@ember/routing/router-service';
 import type StoreService from 'vault/services/store';
+import type PaginationService from 'vault/services/pagination';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type { SearchSelectOption } from 'vault/vault/app-types';
 
@@ -22,9 +23,10 @@ interface Args {
 }
 
 export default class DestinationSyncPageComponent extends Component<Args> {
-  @service declare readonly router: RouterService;
+  @service('app-router') declare readonly router: RouterService;
   @service declare readonly store: StoreService;
   @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly pagination: PaginationService;
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
@@ -46,7 +48,7 @@ export default class DestinationSyncPageComponent extends Component<Args> {
   }
 
   willDestroy(): void {
-    this.store.clearDataset('sync/association');
+    this.pagination.clearDataset('sync/association');
     super.willDestroy();
   }
 

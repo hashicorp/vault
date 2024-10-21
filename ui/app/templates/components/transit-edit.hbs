@@ -40,14 +40,13 @@
     @deleteKey={{action "deleteKey"}}
     @key={{this.key}}
     @requestInFlight={{this.requestInFlight}}
-    @capabilities={{this.capabilities}}
+    @model={{this.model}}
   />
 {{else if (eq this.mode "show")}}
   <TransitFormShow
     @refresh={{action "refresh"}}
     @tab={{this.tab}}
     @key={{this.key}}
-    @capabilities={{this.capabilities}}
     @mode={{this.mode}}
     @model={{this.model}}
     @backend={{this.backend}}

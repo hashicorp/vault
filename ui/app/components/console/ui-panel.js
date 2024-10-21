@@ -28,7 +28,7 @@ export default Component.extend({
   console: service(),
   router: service(),
   controlGroup: service(),
-  store: service(),
+  pagination: service(),
   'data-test-component': 'console/ui-panel',
   attributeBindings: ['data-test-component'],
 
@@ -108,7 +108,7 @@ export default Component.extend({
     const currentRoute = owner.lookup(`router:main`).currentRouteName;
 
     try {
-      this.store.clearAllDatasets();
+      this.pagination.clearDataset();
       yield this.router.transitionTo(currentRoute);
       this.logAndOutput(null, { type: 'success', content: 'The current screen has been refreshed!' });
     } catch (error) {

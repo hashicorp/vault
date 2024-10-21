@@ -9,6 +9,8 @@ export const PAGE = {
   breadcrumbs: '[data-test-breadcrumbs]',
   breadcrumb: '[data-test-breadcrumbs] li',
   breadcrumbAtIdx: (idx) => `[data-test-breadcrumbs] li:nth-child(${idx + 1}) a`,
+  breadcrumbCurrentAtIdx: (idx) =>
+    `[data-test-breadcrumbs] li:nth-child(${idx + 1}) .hds-breadcrumb__current`,
   infoRow: '[data-test-component="info-table-row"]',
   infoRowValue: (label) => `[data-test-value-div="${label}"]`,
   infoRowToggleMasked: (label) => `[data-test-value-div="${label}"] [data-test-button="toggle-masked"]`,
@@ -110,7 +112,7 @@ export const FORM = {
   kvRow: '[data-test-kv-row]',
   keyInput: (idx = 0) => `[data-test-kv-key="${idx}"]`,
   valueInput: (idx = 0) => `[data-test-kv-value="${idx}"]`,
-  maskedValueInput: (idx = 0) => `[data-test-kv-value="${idx}"] [data-test-textarea]`,
+  maskedValueInput: (idx = 0) => `[data-test-kv-value="${idx}"] [data-test-input]`,
   addRow: (idx = 0) => `[data-test-kv-add-row="${idx}"]`,
   deleteRow: (idx = 0) => `[data-test-kv-delete-row="${idx}"]`,
   // <KvPatchEditor>

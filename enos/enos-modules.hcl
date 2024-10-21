@@ -256,8 +256,8 @@ module "vault_test_ui" {
   ui_run_tests = var.ui_run_tests
 }
 
-module "vault_unseal_nodes" {
-  source = "./modules/vault_unseal_nodes"
+module "vault_unseal_replication_followers" {
+  source = "./modules/vault_unseal_replication_followers"
 
   vault_install_dir = var.vault_install_dir
 }
@@ -281,28 +281,22 @@ module "vault_verify_dr_replication" {
   vault_install_dir = var.vault_install_dir
 }
 
-module "vault_verify_raft_auto_join_voter" {
-  source = "./modules/vault_verify_raft_auto_join_voter"
+module "vault_verify_secrets_engines_create" {
+  source = "./modules/verify_secrets_engines/modules/create"
 
-  vault_install_dir       = var.vault_install_dir
-  vault_cluster_addr_port = global.ports["vault_cluster"]["port"]
+  vault_install_dir = var.vault_install_dir
 }
 
+module "vault_verify_secrets_engines_read" {
+  source = "./modules/verify_secrets_engines/modules/read"
+
+  vault_install_dir = var.vault_install_dir
+}
 
 module "vault_verify_default_lcq" {
   source = "./modules/vault_verify_default_lcq"
 
   vault_autopilot_default_max_leases = "300000"
-}
-
-module "vault_verify_replication" {
-  source = "./modules/vault_verify_replication"
-}
-
-module "vault_verify_read_data" {
-  source = "./modules/vault_verify_read_data"
-
-  vault_install_dir = var.vault_install_dir
 }
 
 module "vault_verify_performance_replication" {
@@ -311,16 +305,15 @@ module "vault_verify_performance_replication" {
   vault_install_dir = var.vault_install_dir
 }
 
-module "vault_verify_version" {
-  source = "./modules/vault_verify_version"
+module "vault_verify_raft_auto_join_voter" {
+  source = "./modules/vault_verify_raft_auto_join_voter"
 
-  vault_install_dir = var.vault_install_dir
+  vault_install_dir       = var.vault_install_dir
+  vault_cluster_addr_port = global.ports["vault_cluster"]["port"]
 }
 
-module "vault_verify_write_data" {
-  source = "./modules/vault_verify_write_data"
-
-  vault_install_dir = var.vault_install_dir
+module "vault_verify_replication" {
+  source = "./modules/vault_verify_replication"
 }
 
 module "vault_verify_ui" {
@@ -333,8 +326,14 @@ module "vault_verify_undo_logs" {
   vault_install_dir = var.vault_install_dir
 }
 
-module "vault_verify_unsealed" {
-  source = "./modules/vault_verify_unsealed"
+module "vault_wait_for_cluster_unsealed" {
+  source = "./modules/vault_wait_for_cluster_unsealed"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_verify_version" {
+  source = "./modules/vault_verify_version"
 
   vault_install_dir = var.vault_install_dir
 }
@@ -364,3 +363,4 @@ module "vault_verify_billing_start_date" {
   vault_instance_count    = var.vault_instance_count
   vault_cluster_addr_port = global.ports["vault_cluster"]["port"]
 }
+

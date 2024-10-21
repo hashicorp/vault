@@ -24,7 +24,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
     this.transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
-    this.clearDatasetStub = sinon.stub(this.store, 'clearDataset');
+    this.clearDatasetStub = sinon.stub(this.owner.lookup('service:pagination'), 'clearDataset');
 
     this.renderFormComponent = () => {
       return render(hbs` <Secrets::Page::Destinations::CreateAndEdit @destination={{this.model}} />`, {
@@ -183,9 +183,9 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
 
     await this.renderFormComponent();
     await click(PAGE.enableField('accessKeyId'));
-    await click(PAGE.maskedInput('accessKeyId')); // click on input but do not change value
+    await click(PAGE.inputByAttr('accessKeyId')); // click on input but do not change value
     await click(PAGE.enableField('secretAccessKey'));
-    await fillIn(PAGE.maskedInput('secretAccessKey'), 'new-secret');
+    await fillIn(PAGE.inputByAttr('secretAccessKey'), 'new-secret');
     await click(PAGE.saveButton);
   });
 
@@ -277,10 +277,10 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
         // iterate over the form fields and filter for those that are obfuscated
         // fill those in and assert that they are masked
         filteredObfuscatedFields.forEach(async (field) => {
-          await fillIn(PAGE.maskedInput(field.name), 'blah');
+          await fillIn(PAGE.inputByAttr(field.name), 'blah');
 
           assert
-            .dom(PAGE.maskedInput(field.name))
+            .dom(PAGE.inputByAttr(field.name))
             .hasClass('masked-font', `it renders ${field.name} for ${destination} with masked font`);
           assert
             .dom(PAGE.form.enableInput(field.name))
