@@ -40,4 +40,4 @@ jobs:
         run: curl -sfL https://raw.githubusercontent.com/knqyf263/cob/master/install.sh | sudo sh -s -- -b /usr/local/bin
 
       - name: Run Benchmark
-        run: cob --base ${{ github.event.pull_request.base.sha }} -bench-args "test -bench . -benchmem ./bench/"
+        run: cob --base ${{ github.event.pull_request.base.sha }} -bench-args "test -bench . -benchmem github.com/hashicorp/vault/vault/bench"
