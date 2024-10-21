@@ -11,7 +11,7 @@ import (
 	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
+	rsa2 "crypto/rsa"
 	"crypto/sha1"
 	"crypto/tls"
 	"crypto/x509"
@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-secure-stdlib/cryptoutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/mitchellh/mapstructure"
@@ -156,7 +157,7 @@ func getSubjectKeyIDFromBundle(data *CreationBundle) ([]byte, error) {
 func GetSubjectKeyID(pub interface{}) ([]byte, error) {
 	var publicKeyBytes []byte
 	switch pub := pub.(type) {
-	case *rsa.PublicKey:
+	case *rsa2.PublicKey:
 		type pkcs1PublicKey struct {
 			N *big.Int
 			E int
@@ -233,7 +234,7 @@ func ParseDERKey(privateKeyBytes []byte) (signer crypto.Signer, format BlockType
 	var rawKey interface{}
 	if rawKey, thirdError = x509.ParsePKCS8PrivateKey(privateKeyBytes); thirdError == nil {
 		switch rawSigner := rawKey.(type) {
-		case *rsa.PrivateKey:
+		case *rsa2.PrivateKey:
 			signer = rawSigner
 		case *ecdsa.PrivateKey:
 			signer = rawSigner
@@ -368,11 +369,11 @@ func generatePrivateKey(keyType string, keyBits int, container ParsedPrivateKeyC
 			return errutil.InternalError{Err: fmt.Sprintf("insecure bit length for RSA private key: %d", keyBits)}
 		}
 		privateKeyType = RSAPrivateKey
-		privateKey, err = rsa.GenerateKey(randReader, keyBits)
+		privateKey, err = cryptoutil.GenerateRSAKeyWithHMACDRBG(randReader, keyBits)
 		if err != nil {
 			return errutil.InternalError{Err: fmt.Sprintf("error generating RSA private key: %v", err)}
 		}
-		privateKeyBytes = x509.MarshalPKCS1PrivateKey(privateKey.(*rsa.PrivateKey))
+		privateKeyBytes = x509.MarshalPKCS1PrivateKey(privateKey.(*rsa2.PrivateKey))
 	case "ec":
 		privateKeyType = ECPrivateKey
 		var curve elliptic.Curve
@@ -450,9 +451,9 @@ func ComparePublicKeysAndType(key1Iface, key2Iface crypto.PublicKey) (bool, erro
 // returns an error if public key types are mismatched, or they are an unsupported key type.
 func ComparePublicKeys(key1Iface, key2Iface crypto.PublicKey) (bool, error) {
 	switch key1Iface.(type) {
-	case *rsa.PublicKey:
-		key1 := key1Iface.(*rsa.PublicKey)
-		key2, ok := key2Iface.(*rsa.PublicKey)
+	case *rsa2.PublicKey:
+		key1 := key1Iface.(*rsa2.PublicKey)
+		key2, ok := key2Iface.(*rsa2.PublicKey)
 		if !ok {
 			return false, fmt.Errorf("key types do not match: %T and %T", key1Iface, key2Iface)
 		}
@@ -516,7 +517,7 @@ func ParsePublicKeyPEM(data []byte) (interface{}, error) {
 		}
 
 		switch key := rawKey.(type) {
-		case *rsa.PublicKey:
+		case *rsa2.PublicKey:
 			return key, nil
 		case *ecdsa.PublicKey:
 			return key, nil
@@ -1422,7 +1423,7 @@ func ParseCertsPEM(pemCerts []byte) ([]*x509.Certificate, error) {
 // GetPublicKeySize returns the key size in bits for a given arbitrary crypto.PublicKey
 // Returns -1 for an unsupported key type.
 func GetPublicKeySize(key crypto.PublicKey) int {
-	if key, ok := key.(*rsa.PublicKey); ok {
+	if key, ok := key.(*rsa2.PublicKey); ok {
 		return key.Size() * 8
 	}
 	if key, ok := key.(*ecdsa.PublicKey); ok {
@@ -2049,7 +2050,7 @@ func FindBitLength(publicKey any) int {
 		return 0
 	}
 	switch pub := publicKey.(type) {
-	case *rsa.PublicKey:
+	case *rsa2.PublicKey:
 		return pub.N.BitLen()
 	case *ecdsa.PublicKey:
 		switch pub.Curve {

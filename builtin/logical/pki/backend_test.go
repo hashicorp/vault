@@ -12,7 +12,7 @@ import (
 	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
+	rsa2 "crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/base64"
@@ -38,6 +38,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/fatih/structs"
 	"github.com/go-test/deep"
+	"github.com/hashicorp/go-secure-stdlib/cryptoutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
 	auth "github.com/hashicorp/vault/api/auth/userpass"
@@ -409,7 +410,7 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage x509.KeyUs
 		case "rsa":
 			parsedCertBundle.PrivateKeyType = certutil.RSAPrivateKey
 			parsedCertBundle.PrivateKey = key
-			parsedCertBundle.PrivateKeyBytes = x509.MarshalPKCS1PrivateKey(key.(*rsa.PrivateKey))
+			parsedCertBundle.PrivateKeyBytes = x509.MarshalPKCS1PrivateKey(key.(*rsa2.PrivateKey))
 		case "ec":
 			parsedCertBundle.PrivateKeyType = certutil.ECPrivateKey
 			parsedCertBundle.PrivateKey = key
@@ -510,14 +511,14 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 		},
 	}
 
-	priv1024, _ := rsa.GenerateKey(rand.Reader, 1024)
+	priv1024, _ := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 1024)
 	csr1024, _ := x509.CreateCertificateRequest(rand.Reader, &csrTemplate, priv1024)
 	csrPem1024 := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
 		Type:  "CERTIFICATE REQUEST",
 		Bytes: csr1024,
 	})))
 
-	priv2048, _ := rsa.GenerateKey(rand.Reader, 2048)
+	priv2048, _ := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
 	csr2048, _ := x509.CreateCertificateRequest(rand.Reader, &csrTemplate, priv2048)
 	csrPem2048 := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
 		Type:  "CERTIFICATE REQUEST",
@@ -699,7 +700,7 @@ func generateCSR(t *testing.T, csrTemplate *x509.CertificateRequest, keyType str
 	var err error
 	switch keyType {
 	case "rsa":
-		priv, err = rsa.GenerateKey(rand.Reader, keyBits)
+		priv, err = cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, keyBits)
 	case "ec":
 		switch keyBits {
 		case 224:
@@ -1180,7 +1181,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		case "rsa":
 			privKey, ok = generatedRSAKeys[keyBits]
 			if !ok {
-				privKey, _ = rsa.GenerateKey(rand.Reader, keyBits)
+				privKey, _ = cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, keyBits)
 				generatedRSAKeys[keyBits] = privKey
 			}
 
@@ -2164,7 +2165,7 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 	}
 
 	// create a CSR and key
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	key, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2735,7 +2736,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	key, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2879,7 +2880,7 @@ func TestBackend_SignSelfIssued_DifferentTypes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	key, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3834,7 +3835,7 @@ func setCerts() {
 	}
 	ecCACert = strings.TrimSpace(string(pem.EncodeToMemory(caCertPEMBlock)))
 
-	rak, err := rsa.GenerateKey(rand.Reader, 2048)
+	rak, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
 	if err != nil {
 		panic(err)
 	}

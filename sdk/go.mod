@@ -1,6 +1,8 @@
 module github.com/hashicorp/vault/sdk
 
-go 1.22
+go 1.23.0
+
+replace github.com/hashicorp/go-secure-stdlib/cryptoutil => ../../go-secure-stdlib/cryptoutil
 
 require (
 	cloud.google.com/go/cloudsqlconn v1.4.3
@@ -58,6 +60,8 @@ require (
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/go-jose/go-jose/v4 v4.0.1 // indirect
+	github.com/hashicorp/go-hmac-drbg v0.0.0-20210916214228-a6e5a68489f6 // indirect
+	github.com/hashicorp/go-secure-stdlib/cryptoutil v0.0.0-00010101000000-000000000000 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect

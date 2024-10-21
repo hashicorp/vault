@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/sha1"
 	"crypto/tls"
 	"crypto/x509"
@@ -17,6 +16,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/go-secure-stdlib/cryptoutil"
 )
 
 type certBuilder struct {
@@ -24,7 +25,7 @@ type certBuilder struct {
 	parentTmpl *x509.Certificate
 
 	selfSign  bool
-	parentKey *rsa.PrivateKey
+	parentKey *rsa2.PrivateKey
 
 	isCA bool
 }
@@ -147,14 +148,14 @@ func newCert(t *testing.T, opts ...certOpt) (cert certificate) {
 // Private Key
 // ////////////////////////////////////////////////////////////////////////////
 type keyWrapper struct {
-	privKey *rsa.PrivateKey
+	privKey *rsa2.PrivateKey
 	pem     []byte
 }
 
 func newPrivateKey(t *testing.T) (key keyWrapper) {
 	t.Helper()
 
-	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	privKey, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
 	if err != nil {
 		t.Fatalf("Unable to generate key for cert: %s", err)
 	}

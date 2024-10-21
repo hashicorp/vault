@@ -6,7 +6,6 @@ package transit
 import (
 	"context"
 	cryptoRand "crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -14,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/go-secure-stdlib/cryptoutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -167,7 +167,7 @@ func testTransit_ImportCertChain(t *testing.T, apiClient *api.Client, keyType st
 	require.NoError(t, err)
 
 	// Setup a new CSR
-	privKey, err := rsa.GenerateKey(cryptoRand.Reader, 3072)
+	privKey, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(cryptoRand.Reader, 3072)
 	require.NoError(t, err)
 
 	var csrTemplate x509.CertificateRequest
