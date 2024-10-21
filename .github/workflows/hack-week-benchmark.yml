@@ -30,4 +30,4 @@ jobs:
       - name: Go get
         run: go get github.com/hashicorp/vault/vault/bench
       - name: Run Benchmark
-        run: cob --base ${{ github.event.pull_request.base.sha }} -bench-args "test -bench . -benchmem github.com/hashicorp/vault/vault/bench"
+        run: cob --base ${{ github.event.pull_request.base.sha }} -bench-args "test -bench . -benchmem -v ./vault/bench"
