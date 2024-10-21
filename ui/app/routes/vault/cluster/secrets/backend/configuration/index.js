@@ -131,9 +131,19 @@ export default class SecretsBackendConfigurationRoute extends Route {
 
   async fetchAzureConfig(id) {
     try {
-      // Azure will return a 200 if the config has not been set. The only way to check if it's been configured or not is to check the response for subscription_id which is a required field.
-      const response = await this.store.queryRecord('azure/config', { backend: id });
-      return response.subscriptionId ? response : null;
+      let response = await this.store.queryRecord('azure/config', { backend: id });
+      // Azure will return a 200 if the config has not been set. The only way to check if it's been configured or not is to check the response for tenantId which is a required field for both wif and azure account access types.
+      response = response.tenantId ? response : null;
+      const configArray = [];
+      let issuer = null;
+      if (this.version.isEnterprise && response) {
+        // Issuer is an enterprise only related feature
+        // Issuer is also a global endpoint that doesn't mean anything in the Azure secret details context if WIF related fields on the azureConfig have not been set.
+        const WIF_FIELDS = ['identityTokenAudience', 'identityTokenTtl'];
+        WIF_FIELDS.some((field) => response[field]) ? (issuer = await this.fetchIssuer()) : null;
+      }
+      configArray.push(response, issuer);
+      return configArray;
     } catch (e) {
       if (e.httpStatus === 404) {
         // a 404 error is thrown when Azure's config hasn't been set yet.

@@ -12,8 +12,8 @@ export default class AzureConfig extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord
   @attr('string') subscriptionId; // JSON string
   @attr('string') tenantId;
-  @attr('string', { sensitive: true }) clientId; // TODO? obfuscated, never returned by API
-  @attr('string', { sensitive: true }) clientSecret; // TODO? obfuscated, never returned by API
+  @attr('string') clientId;
+  @attr('string') clientSecret;
   @attr('string', {
     subText:
       'The audience claim value for plugin identity tokens. Must match an allowed audience configured for the target IAM OIDC identity provider.',
@@ -36,7 +36,16 @@ export default class AzureConfig extends Model {
   rootPasswordTtl;
 
   get attrs() {
-    const keys = ['subscriptionId', 'tenantId', 'identityTokenAudience', 'identityTokenTtl'];
+    const keys = [
+      'subscriptionId',
+      'tenantId',
+      'clientId',
+      'clientSecret',
+      'identityTokenAudience',
+      'identityTokenTtl',
+      'environment',
+      'rootPasswordTtl',
+    ];
     return expandAttributeMeta(this, keys);
   }
 
@@ -53,7 +62,7 @@ export default class AzureConfig extends Model {
     const formFieldGroups = [];
     if (accessType === 'wif') {
       formFieldGroups.push({
-        default: ['tenantId', 'clientId', 'identityTokenAudience', 'identityTokenTtl'],
+        default: ['tenantId', 'identityTokenAudience', 'identityTokenTtl'], // ARG TODO follow up if we need client id or not, did not include because not including client secret
       });
     }
     if (accessType === 'azure') {
