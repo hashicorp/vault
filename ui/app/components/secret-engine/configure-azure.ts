@@ -154,7 +154,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
   }
 
   transition() {
-    this.router.transitionTo('vault.cluster.secrets.backend.configuration', this.args.backendPath);
+    this.router.transitionTo('vault.cluster.secrets.backend', this.args.backendPath);
   }
 
   @action
