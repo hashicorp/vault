@@ -252,7 +252,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
-* auth/aws: Fixed potential panic after step-down and the queue has not repopulated. [[GH-28330](https://github.com/hashicorp/vault/pull/28330)]
+* secret/aws: Fixed potential panic after step-down and the queue has not repopulated. [[GH-28330](https://github.com/hashicorp/vault/pull/28330)]
 * auth/cert: During certificate validation, OCSP requests are debug logged even if Vault's log level is above DEBUG. [[GH-28450](https://github.com/hashicorp/vault/pull/28450)]
 * auth/cert: ocsp_ca_certificates field was not honored when validating OCSP responses signed by a CA that did not issue the certificate. [[GH-28309](https://github.com/hashicorp/vault/pull/28309)]
 * auth: Updated error handling for missing login credentials in AppRole and UserPass auth methods to return a 400 error instead of a 500 error. [[GH-28441](https://github.com/hashicorp/vault/pull/28441)]
@@ -633,7 +633,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
-* auth/aws: Fixed potential panic after step-down and the queue has not repopulated. [[GH-28330](https://github.com/hashicorp/vault/pull/28330)]
+* secret/aws: Fixed potential panic after step-down and the queue has not repopulated. [[GH-28330](https://github.com/hashicorp/vault/pull/28330)]
 * auth/cert: During certificate validation, OCSP requests are debug logged even if Vault's log level is above DEBUG. [[GH-28450](https://github.com/hashicorp/vault/pull/28450)]
 * auth/cert: ocsp_ca_certificates field was not honored when validating OCSP responses signed by a CA that did not issue the certificate. [[GH-28309](https://github.com/hashicorp/vault/pull/28309)]
 * auth: Updated error handling for missing login credentials in AppRole and UserPass auth methods to return a 400 error instead of a 500 error. [[GH-28441](https://github.com/hashicorp/vault/pull/28441)]
@@ -1273,7 +1273,7 @@ CHANGES:
 
 BUG FIXES:
 
-* auth/aws: Fixed potential panic after step-down and the queue has not repopulated. [[GH-28330](https://github.com/hashicorp/vault/pull/28330)]
+* secret/aws: Fixed potential panic after step-down and the queue has not repopulated. [[GH-28330](https://github.com/hashicorp/vault/pull/28330)]
 * auth/cert: During certificate validation, OCSP requests are debug logged even if Vault's log level is above DEBUG. [[GH-28450](https://github.com/hashicorp/vault/pull/28450)]
 * auth/cert: ocsp_ca_certificates field was not honored when validating OCSP responses signed by a CA that did not issue the certificate. [[GH-28309](https://github.com/hashicorp/vault/pull/28309)]
 * auth: Updated error handling for missing login credentials in AppRole and UserPass auth methods to return a 400 error instead of a 500 error. [[GH-28441](https://github.com/hashicorp/vault/pull/28441)]
