@@ -12,6 +12,7 @@ import sinon from 'sinon';
 import authPage from 'vault/tests/pages/auth';
 import { click, waitFor, visit, currentURL } from '@ember/test-helpers';
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { runCmd } from 'vault/tests/helpers/commands';
 
 // sync is an enterprise feature but since mirage is used the enterprise label has been intentionally omitted from the module name
@@ -63,7 +64,7 @@ module('Acceptance | sync | overview', function (hooks) {
             await click(ts.navLink('Secrets Sync'));
             await click(ts.destinations.list.create);
             await click(ts.createCancel);
-            await click(ts.overviewCard.actionLink('Create new'));
+            await click(ts.overviewCard.actionText('Create new'));
             await click(ts.createCancel);
             await waitFor(ts.overview.table.actionToggle(0));
             await click(ts.overview.table.actionToggle(0));
@@ -73,7 +74,9 @@ module('Acceptance | sync | overview', function (hooks) {
             await waitFor(ts.overview.table.actionToggle(0));
             await click(ts.overview.table.actionToggle(0));
             await click(ts.overview.table.action('details'));
-            assert.dom(ts.tab('Secrets')).hasClass('active', 'Navigates to secrets view for destination');
+            assert
+              .dom(GENERAL.tab('Secrets'))
+              .hasClass('active', 'Navigates to secrets view for destination');
           });
         });
 

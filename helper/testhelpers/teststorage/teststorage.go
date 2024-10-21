@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"testing"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -25,10 +26,9 @@ import (
 	physFile "github.com/hashicorp/vault/sdk/physical/file"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
-	"github.com/mitchellh/go-testing-interface"
 )
 
-func MakeInmemBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBundle {
+func MakeInmemBackend(t testing.TB, logger hclog.Logger) *vault.PhysicalBackendBundle {
 	inm, err := inmem.NewTransactionalInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -44,7 +44,7 @@ func MakeInmemBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBu
 	}
 }
 
-func MakeLatentInmemBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBundle {
+func MakeLatentInmemBackend(t testing.TB, logger hclog.Logger) *vault.PhysicalBackendBundle {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	jitter := r.Intn(20)
 	latency := time.Duration(r.Intn(15)) * time.Millisecond
@@ -55,7 +55,7 @@ func MakeLatentInmemBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBac
 	return pbb
 }
 
-func MakeInmemNonTransactionalBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBundle {
+func MakeInmemNonTransactionalBackend(t testing.TB, logger hclog.Logger) *vault.PhysicalBackendBundle {
 	inm, err := inmem.NewInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -71,7 +71,7 @@ func MakeInmemNonTransactionalBackend(t testing.T, logger hclog.Logger) *vault.P
 	}
 }
 
-func MakeFileBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBundle {
+func MakeFileBackend(t testing.TB, logger hclog.Logger) *vault.PhysicalBackendBundle {
 	path, err := ioutil.TempDir("", "vault-integ-file-")
 	if err != nil {
 		t.Fatal(err)
@@ -101,7 +101,7 @@ func MakeFileBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBun
 	}
 }
 
-func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger, extraConf map[string]interface{}, bridge *raft.ClusterAddrBridge) *vault.PhysicalBackendBundle {
+func MakeRaftBackend(t testing.TB, coreIdx int, logger hclog.Logger, extraConf map[string]interface{}, bridge *raft.ClusterAddrBridge) *vault.PhysicalBackendBundle {
 	nodeID := fmt.Sprintf("core-%d", coreIdx)
 	raftDir, err := ioutil.TempDir("", "vault-raft-")
 	if err != nil {
@@ -155,8 +155,8 @@ func makeRaftBackend(logger hclog.Logger, nodeID, raftDir string, extraConf map[
 // RaftHAFactory returns a PhysicalBackendBundle with raft set as the HABackend
 // and the physical.Backend provided in PhysicalBackendBundler as the storage
 // backend.
-func RaftHAFactory(f PhysicalBackendBundler) func(t testing.T, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
-	return func(t testing.T, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
+func RaftHAFactory(f PhysicalBackendBundler) func(t testing.TB, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
+	return func(t testing.TB, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
 		// Call the factory func to create the storage backend
 		physFactory := SharedPhysicalFactory(f)
 		bundle := physFactory(t, coreIdx, logger, nil)
@@ -201,10 +201,10 @@ func RaftHAFactory(f PhysicalBackendBundler) func(t testing.T, coreIdx int, logg
 	}
 }
 
-type PhysicalBackendBundler func(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBundle
+type PhysicalBackendBundler func(t testing.TB, logger hclog.Logger) *vault.PhysicalBackendBundle
 
-func SharedPhysicalFactory(f PhysicalBackendBundler) func(t testing.T, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
-	return func(t testing.T, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
+func SharedPhysicalFactory(f PhysicalBackendBundler) func(t testing.TB, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
+	return func(t testing.TB, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
 		if coreIdx == 0 {
 			return f(t, logger)
 		}
@@ -230,7 +230,7 @@ func FileBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 	opts.PhysicalFactory = SharedPhysicalFactory(MakeFileBackend)
 }
 
-func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
+func RaftClusterJoinNodes(t testing.TB, cluster *vault.TestCluster) {
 	leader := cluster.Cores[0]
 
 	leaderInfos := []*raft.LeaderJoinInfo{
@@ -255,7 +255,7 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 func RaftBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 	opts.KeepStandbysSealed = true
 	var bridge *raft.ClusterAddrBridge
-	opts.PhysicalFactory = func(t testing.T, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
+	opts.PhysicalFactory = func(t testing.TB, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
 		// The same PhysicalFactory can be shared across multiple clusters.
 		// The coreIdx == 0 check ensures that each time a new cluster is setup,
 		// when setting up its first node we create a new ClusterAddrBridge.
@@ -269,7 +269,7 @@ func RaftBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 		}
 		return bundle
 	}
-	opts.SetupFunc = func(t testing.T, c *vault.TestCluster) {
+	opts.SetupFunc = func(t testing.TB, c *vault.TestCluster) {
 		if opts.NumCores != 1 {
 			RaftClusterJoinNodes(t, c)
 			time.Sleep(15 * time.Second)

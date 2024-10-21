@@ -8,7 +8,7 @@ import { service } from '@ember/service';
 import { hash } from 'rsvp';
 
 export default class MessagesRoute extends Route {
-  @service store;
+  @service pagination;
 
   queryParams = {
     page: {
@@ -38,7 +38,7 @@ export default class MessagesRoute extends Route {
     if (status === 'active') active = true;
     if (status === 'inactive') active = false;
 
-    const messages = this.store
+    const messages = this.pagination
       .lazyPaginatedQuery('config-ui/message', {
         authenticated,
         pageFilter: filter,

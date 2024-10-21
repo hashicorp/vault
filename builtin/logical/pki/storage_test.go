@@ -242,6 +242,7 @@ func genCertBundle(t *testing.T, b *backend, s logical.Storage) *certutil.CertBu
 	fields := addCACommonFields(map[string]*framework.FieldSchema{})
 	fields = addCAKeyGenerationFields(fields)
 	fields = addCAIssueFields(fields)
+	fields = addCACertKeyUsage(fields)
 	apiData := &framework.FieldData{
 		Schema: fields,
 		Raw: map[string]interface{}{

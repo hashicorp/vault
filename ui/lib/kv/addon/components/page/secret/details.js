@@ -17,21 +17,31 @@ import { isAdvancedSecret } from 'core/utils/advanced-secret';
  * @module KvSecretDetails renders the key/value data of a KV secret.
  * It also renders a dropdown to display different versions of the secret.
  * <Page::Secret::Details
- *  @path={{this.model.path}}
- *  @secret={{this.model.secret}}
- *  @metadata={{this.model.metadata}}
- *  @breadcrumbs={{this.breadcrumbs}}
-  />
+ * @backend={{this.model.backend}}
+ * @breadcrumbs={{this.breadcrumbs}}
+ * @canReadData={{this.model.canReadData}}
+ * @canReadMetadata={{this.model.canReadMetadata}}
+ * @canUpdateData={{this.model.canUpdateData}}
+ * @isPatchAllowed={{this.model.isPatchAllowed}}
+ * @metadata={{this.model.metadata}}
+ * @path={{this.model.path}}
+ * @secret={{this.model.secret}}
+ * />
  *
+ * @param {string} backend - path where kv engine is mounted
+ * @param {array} breadcrumbs - Array to generate breadcrumbs, passed to the page header component
+ * @param {boolean} canReadData - if true and the secret is not destroyed/deleted the copy secret dropdown renders
+ * @param {boolean} canReadMetadata - if true it renders the kv select version dropdown in the toolbar and "Version History" tab
+ * @param {boolean} canUpdateData - if true it renders "Create new version" toolbar action
+ * @param {boolean} isPatchAllowed - if true it renders "Patch latest version" toolbar action. True when: (1) the version is enterprise, (2) a user has "patch" secret + "read" subkeys capabilities, (3) latest secret version is not deleted or destroyed
+ * @param {model} metadata - Ember data model: 'kv/metadata'
  * @param {string} path - path of kv secret 'my/secret' used as the title for the KV page header
  * @param {model} secret - Ember data model: 'kv/data'
- * @param {model} metadata - Ember data model: 'kv/metadata'
- * @param {array} breadcrumbs - Array to generate breadcrumbs, passed to the page header component
  */
 
 export default class KvSecretDetails extends Component {
   @service flashMessages;
-  @service router;
+  @service('app-router') router;
   @service store;
 
   @tracked showJsonView = false;
@@ -95,7 +105,7 @@ export default class KvSecretDetails extends Component {
         adapterOptions: { deleteType: 'undelete', deleteVersions: this.version },
       });
       this.flashMessages.success(`Successfully undeleted ${secret.path}.`);
-      this.refreshRoute();
+      this.transition();
     } catch (err) {
       this.flashMessages.danger(
         `There was a problem undeleting ${secret.path}. Error: ${err.errors?.join(' ')}.`
@@ -108,8 +118,9 @@ export default class KvSecretDetails extends Component {
     const { secret } = this.args;
     try {
       await secret.destroyRecord({ adapterOptions: { deleteType: type, deleteVersions: this.version } });
-      this.flashMessages.success(`Successfully ${secret.state} Version ${this.version} of ${secret.path}.`);
-      this.refreshRoute();
+      const verb = type.includes('delete') ? 'deleted' : 'destroyed';
+      this.flashMessages.success(`Successfully ${verb} Version ${this.version} of ${secret.path}.`);
+      this.transition();
     } catch (err) {
       const verb = type.includes('delete') ? 'deleting' : 'destroying';
       this.flashMessages.danger(
@@ -120,11 +131,9 @@ export default class KvSecretDetails extends Component {
     }
   }
 
-  refreshRoute() {
-    // transition to the parent secret route to refresh both metadata and data models
-    this.router.transitionTo('vault.cluster.secrets.backend.kv.secret', {
-      queryParams: { version: this.version },
-    });
+  transition() {
+    // transition to the overview to prevent automatically reading sensitive secret data
+    this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.index');
   }
 
   get version() {
@@ -189,7 +198,7 @@ export default class KvSecretDetails extends Component {
   }
 
   get emptyState() {
-    if (!this.args.secret.canReadData) {
+    if (!this.args.canReadData) {
       return {
         title: 'You do not have permission to read this secret',
         message:
@@ -202,7 +211,7 @@ export default class KvSecretDetails extends Component {
       return {
         title: `Version ${version} of this secret has been permanently destroyed`,
         message: `A version that has been permanently deleted cannot be restored. ${
-          this.args.secret.canReadMetadata
+          this.args.canReadMetadata
             ? ' You can view other versions of this secret in the Version History tab above.'
             : ''
         }`,
@@ -213,7 +222,7 @@ export default class KvSecretDetails extends Component {
       return {
         title: `Version ${version} of this secret has been deleted`,
         message: `This version has been deleted but can be undeleted. ${
-          this.args.secret.canReadMetadata
+          this.args.canReadMetadata
             ? 'View other versions of this secret by clicking the Version History tab above.'
             : ''
         }`,

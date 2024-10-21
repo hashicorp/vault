@@ -9,7 +9,7 @@ import { action } from '@ember/object';
 
 export default class CredentialsShowController extends Controller {
   @service flashMessages;
-  @service router;
+  @service('app-router') router;
 
   @action
   async revokeCredentials() {

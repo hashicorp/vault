@@ -6,7 +6,7 @@
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
-import { getOwner } from '@ember/application';
+import { getOwner } from '@ember/owner';
 import errorMessage from 'vault/utils/error-message';
 import { tracked } from '@glimmer/tracking';
 import keys from 'core/utils/key-codes';
@@ -23,7 +23,7 @@ import keys from 'core/utils/key-codes';
  */
 export default class RolesPageComponent extends Component {
   @service flashMessages;
-  @service router;
+  @service('app-router') router;
   @tracked query;
   @tracked roleToDelete = null;
 

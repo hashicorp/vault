@@ -28,8 +28,8 @@ import errorMessage from 'vault/utils/error-message';
 export default class KvSecretCreate extends Component {
   @service controlGroup;
   @service flashMessages;
-  @service router;
-  @service store;
+  @service('app-router') router;
+  @service pagination;
 
   @tracked showJsonView = false;
   @tracked errorMessage;
@@ -60,7 +60,7 @@ export default class KvSecretCreate extends Component {
       try {
         // try saving secret data first
         yield secret.save();
-        this.store.clearDataset('kv/metadata'); // Clear out the store cache so that the metadata/list view is updated.
+        this.pagination.clearDataset('kv/metadata'); // Clear out the pagination cache so that the metadata/list view is updated.
         this.flashMessages.success(`Successfully saved secret data for: ${secret.path}.`);
       } catch (error) {
         let message = errorMessage(error);
@@ -90,7 +90,7 @@ export default class KvSecretCreate extends Component {
       if (this.errorMessage) {
         this.invalidFormAlert = 'There was an error submitting this form.';
       } else {
-        this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.details', secret.path);
+        this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.index', secret.path);
       }
     }
   }

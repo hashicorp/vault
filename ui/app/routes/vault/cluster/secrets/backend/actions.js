@@ -47,7 +47,7 @@ export default EditBase.extend({
         models: [model.secret.backend, model.secret.id],
       },
       {
-        label: 'actions',
+        label: 'Actions',
       },
     ]);
   },

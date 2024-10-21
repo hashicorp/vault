@@ -114,7 +114,7 @@ func TestSocketBackend_newSocketBackend(t *testing.T) {
 				},
 				MountPath: tc.mountPath,
 			}
-			b, err := newSocketBackend(cfg, &NoopHeaderFormatter{})
+			b, err := newSocketBackend(cfg, &noopHeaderFormatter{})
 
 			if tc.wantErr {
 				require.Error(t, err)

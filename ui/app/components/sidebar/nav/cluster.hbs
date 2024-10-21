@@ -9,7 +9,7 @@
   <Nav.Link @route="vault.cluster.dashboard" @text="Dashboard" data-test-sidebar-nav-link="Dashboard" />
   <Nav.Link
     @route="vault.cluster.secrets"
-    @current-when="vault.cluster.secrets vault.cluster.settings.mount-secret-backend vault.cluster.settings.configure-secret-backend"
+    @current-when="vault.cluster.secrets vault.cluster.settings.mount-secret-backend vault.cluster.secrets.backend.configuration.edit"
     @text="Secrets Engines"
     data-test-sidebar-nav-link="Secrets Engines"
   />
@@ -53,7 +53,7 @@
   {{#if
     (or
       (and this.isRootNamespace (has-permission "status" routeParams=(array "replication" "raft" "license" "seal")))
-      (has-permission "clients" routeParams="activity")
+      (and (has-permission "clients" routeParams="activity") (not this.hasChrootNamespace))
     )
   }}
     <Nav.Title data-test-sidebar-nav-heading="Monitoring">Monitoring</Nav.Title>
@@ -81,7 +81,9 @@
       data-test-sidebar-nav-link="Raft Storage"
     />
   {{/if}}
-  {{#if (and (has-permission "clients" routeParams="activity") (not this.cluster.dr.isSecondary))}}
+  {{#if
+    (and (has-permission "clients" routeParams="activity") (not this.cluster.dr.isSecondary) (not this.hasChrootNamespace))
+  }}
     <Nav.Link
       @route="vault.cluster.clients"
       @text="Client Count"

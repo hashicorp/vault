@@ -57,3 +57,75 @@ WARNING! The following warnings were returned from Vault:
 ```
 
 </CodeBlockConfig>
+
+### Docker image no longer contains `curl`
+
+The `curl` binary is no longer included in the published Docker container images for Vault and Vault
+Enterprise. If your workflow depends on `curl` being available in the container, consider one of the
+following strategies:
+
+#### Create a wrapper container image
+
+Use the HashiCorp image as a base image to create a new container image with `curl` installed.
+
+```Dockerfile
+FROM hashicorp/vault-enterprise
+RUN apk add curl
+```
+
+**NOTE:** While this is the preferred option it will require managing your own registry and rebuilding new images.
+
+#### Install it at runtime dynamically
+
+When running the image as root (not recommended), you can install it at runtime dynamically by using the `apk` package manager:
+
+```shell-session
+docker exec <CONTAINER-ID> apk add curl
+```
+```shell-session
+kubectl exec -ti <NAME> -- apk add curl
+```
+
+When running the image as non-root without privilege escalation (recommended) you can use existing
+tools to install a static binary of `curl` into the `vault` users home directory:
+
+```shell-session
+docker exec <CONTAINER-ID> wget https://github.com/moparisthebest/static-curl/releases/latest/download/curl-amd64 -O /home/vault/curl && chmod +x /home/vault/curl
+```
+```shell-session
+kubectl exec -ti <NAME> -- wget https://github.com/moparisthebest/static-curl/releases/latest/download/curl-amd64 -O /home/vault/curl && chmod +x /home/vault/curl
+```
+
+**NOTE:** When using this option you'll want to verify that the static binary comes from a trusted source.
+
+### Request limiter configuration removal
+
+Vault 1.16.0 included an experimental request limiter. The limiter was disabled
+by default with an opt-in `request_limiter` configuration.
+
+Further testing indicated that an alternative approach improves performance and
+reduces risk for many workloads. Vault 1.17.0 included a new [adaptive overload
+protection](/vault/docs/concepts/adaptive-overload-protection) feature that
+prevents outages when Vault is overwhelmed by write requests.
+
+Adaptive overload protection was a beta feature in 1.17.0.
+
+As of Vault 1.18.0, the adaptive overload protection feature for writes is
+now GA and enabled by default for the integrated storage backend.
+
+The beta `request_limiter` configuration stanza is officially removed in Vault 1.18.0.
+
+Vault will output two types of warnings if the `request_limiter` stanza is
+detected in your Vault config.
+
+1. A UI warning message printed to `stderr`:
+
+```text
+WARNING: Request Limiter configuration is no longer supported; overriding server configuration to disable
+```
+
+2. A log line with level `WARN`, appearing in Vault's logs:
+
+```text
+... [WARN]  unknown or unsupported field request_limiter found in configuration at config.hcl:22:1
+```

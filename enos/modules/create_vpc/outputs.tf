@@ -6,9 +6,14 @@ output "id" {
   value       = aws_vpc.vpc.id
 }
 
-output "cidr" {
-  description = "CIDR for whole VPC"
-  value       = var.cidr
+output "ipv4_cidr" {
+  description = "The VPC subnet CIDR for ipv4 mode"
+  value       = var.ipv4_cidr
+}
+
+output "ipv6_cidr" {
+  description = "The VPC subnet CIDR for ipv6 mode"
+  value       = aws_vpc.vpc.ipv6_cidr_block
 }
 
 output "cluster_id" {

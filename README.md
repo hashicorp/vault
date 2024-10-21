@@ -72,9 +72,12 @@ If you wish to work on Vault itself or any of its built-in systems, you'll
 first need [Go](https://www.golang.org) installed on your machine.
 
 For local dev first make sure Go is properly installed, including setting up a
-[GOPATH](https://golang.org/doc/code.html#GOPATH). Ensure that `$GOPATH/bin` is in
-your path as some distributions bundle the old version of build tools. Next, clone this
-repository. Vault uses [Go Modules](https://github.com/golang/go/wiki/Modules),
+[GOPATH](https://golang.org/doc/code.html#GOPATH), then setting the 
+[GOBIN](https://pkg.go.dev/cmd/go#hdr-Environment_variables) variable to `$GOPATH/bin`. 
+Ensure that `$GOPATH/bin` is in your path as some distributions bundle the old version 
+of build tools. 
+
+Next, clone this repository. Vault uses [Go Modules](https://github.com/golang/go/wiki/Modules),
 so it is recommended that you clone the repository ***outside*** of the GOPATH.
 You can then download any required build tools by bootstrapping your environment:
 
@@ -119,6 +122,15 @@ package by specifying the `TEST` variable. For example below, only
 $ make test TEST=./vault
 ...
 ```
+
+### Troubleshooting
+
+If you encounter an error like `could not read Username for 'https://github.com'` you may need to adjust your git config like so:
+
+```sh
+$ git config --global --add url."git@github.com:".insteadOf "https://github.com/"
+```
+
 
 ### Importing Vault
 

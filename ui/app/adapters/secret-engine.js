@@ -87,23 +87,6 @@ export default ApplicationAdapter.extend({
     }
   },
 
-  findRecord(store, type, path, snapshot) {
-    if (snapshot.attr('type') === 'ssh') {
-      return this.ajax(`/v1/${encodePath(path)}/config/ca`, 'GET');
-    }
-    return { data: {} };
-  },
-
-  queryRecord(store, type, query) {
-    if (query.type === 'aws') {
-      return this.ajax(`/v1/${encodePath(query.backend)}/config/lease`, 'GET').then((resp) => {
-        resp.path = query.backend + '/';
-        return resp;
-      });
-    }
-    return;
-  },
-
   updateRecord(store, type, snapshot) {
     const { apiPath, options, adapterMethod } = snapshot.adapterOptions;
     if (adapterMethod) {
@@ -115,18 +98,6 @@ export default ApplicationAdapter.extend({
       const path = encodePath(snapshot.id);
       return this.ajax(`/v1/${path}/${apiPath}`, options.isDelete ? 'DELETE' : 'POST', { data });
     }
-  },
-
-  saveAWSRoot(store, type, snapshot) {
-    const { data } = snapshot.adapterOptions;
-    const path = encodePath(snapshot.id);
-    return this.ajax(`/v1/${path}/config/root`, 'POST', { data });
-  },
-
-  saveAWSLease(store, type, snapshot) {
-    const { data } = snapshot.adapterOptions;
-    const path = encodePath(snapshot.id);
-    return this.ajax(`/v1/${path}/config/lease`, 'POST', { data });
   },
 
   saveZeroAddressConfig(store, type, snapshot) {

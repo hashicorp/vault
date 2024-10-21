@@ -15,7 +15,7 @@ jobs:
       vault-version: ${{ github.event.client_payload.payload.version }}
       vault-version-package: ${{ steps.get-metadata.outputs.vault-version-package }}
     steps:
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           # Check out the repository at the same Git SHA that was used to create
           # the artifacts to get the correct metadata.
@@ -64,7 +64,7 @@ jobs:
     secrets: inherit
 
   save-metadata:
-    runs-on: linux
+    runs-on: ubuntu-latest
     if: always()
     needs: test
     steps:

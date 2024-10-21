@@ -128,6 +128,13 @@ Usage: vault operator raft list-peers
 }
 ```
 
+Use the output of `list-peers` to ensure that your cluster is in an expected state.
+If you've removed a server using `remove-peer`, the server should no longer be
+listed in the `list-peers` output. If you've added a server using `add-peer` or
+through `retry_join`, check the `list-peers` output to see that it has been added
+to the cluster and (if the node has not been added as a non-voter)
+it has been promoted to a voter.
+
 ## remove-peer
 
 This command is used to remove a node from being a peer to the Raft cluster. In
@@ -229,14 +236,9 @@ Subcommands:
 ### autopilot state
 
 Displays the state of the raft cluster under integrated storage as seen by
-autopilot. It shows whether autopilot thinks the cluster is healthy or not,
-and how many nodes could fail before the cluster becomes unhealthy ("Failure Tolerance").
+autopilot. It shows whether autopilot thinks the cluster is healthy or not.
 
-State includes a list of all servers by nodeID and IP address. Last Index
-indicates how close the state on each node is to the leader's.
-
-A node can have a status of "leader", "voter", and
-"[non-voter](/vault/docs/concepts/integrated-storage#non-voting-nodes-enterprise-only)".
+State includes a list of all servers by nodeID and IP address.
 
 ```text
 Usage: vault operator raft autopilot state
@@ -249,34 +251,60 @@ Usage: vault operator raft autopilot state
 #### Example output
 
 ```text
-Healthy:                      true
-Failure Tolerance:            1
-Leader:                       raft1
+Healthy:                         true
+Failure Tolerance:               1
+Leader:                          vault_1
 Voters:
-   raft1
-   raft2
-   raft3
+   vault_1
+   vault_2
+   vault_3
 Servers:
-   raft1
-      Name:            raft1
-      Address:         127.0.0.1:8201
-      Status:          leader
-      Node Status:     alive
-      Healthy:         true
-      Last Contact:    0s
-      Last Term:       3
-      Last Index:      38
-   raft2
-      Name:            raft2
-      Address:         127.0.0.2:8201
-      Status:          voter
-      Node Status:     alive
-      Healthy:         true
-      Last Contact:    2.514176729s
-      Last Term:       3
-      Last Index:      38
+   vault_1
+      Name:              vault_1
+      Address:           127.0.0.1:8201
+      Status:            leader
+      Node Status:       alive
+      Healthy:           true
+      Last Contact:      0s
+      Last Term:         3
+      Last Index:        61
+      Version:           1.17.3
+      Node Type:         voter
+   vault_2
+      Name:              vault_2
+      Address:           127.0.0.1:8203
+      Status:            voter
+      Node Status:       alive
+      Healthy:           true
+      Last Contact:      564.765375ms
+      Last Term:         3
+      Last Index:        61
+      Version:           1.17.3
+      Node Type:         voter
+   vault_3
+      Name:              vault_3
+      Address:           127.0.0.1:8205
+      Status:            voter
+      Node Status:       alive
+      Healthy:           true
+      Last Contact:      3.814017875s
+      Last Term:         3
+      Last Index:        61
+      Version:           1.17.3
+      Node Type:         voter
 ```
-Vault Enterprise will include additional output related to automated upgrades and redundancy zones.
+
+The "Failure Tolerance" of a cluster is the number of nodes in the cluster that could
+fail gradually without causing an outage.
+
+When verifying the health of your cluster, check the following fields of each server:
+- Healthy: whether Autopilot considers this node healthy or not
+- Status: the voting status of the node. This will be `voter`, `leader`, or [`non-voter`](/vault/docs/concepts/integrated-storage#non-voting-nodes-enterprise-only).
+- Last Index: the index of the last applied Raft log. This should be close to the "Last Index" value of the leader.
+- Version: the version of Vault running on the server
+- Node Type: the type of node. On CE, this will always be `voter`. See below for an explanation of Enterprise node types.
+
+Vault Enterprise will include additional output related to automated upgrades, optimistic failure tolerance, and redundancy zones.
 
 #### Example Vault enterprise output
 
@@ -292,7 +320,7 @@ Redundancy Zones:
       Failure Tolerance: 1
 Upgrade Info:
    Status: await-new-voters
-   Target Version: 1.12.0
+   Target Version: 1.17.5
    Target Version Voters:
    Target Version Non-Voters: vault_5
    Other Version Voters: vault_1, vault_3
@@ -309,6 +337,11 @@ Upgrade Info:
          Other Version Voters: vault_3
          Other Version Non-Voters: vault_4
 ```
+
+"Optimistic Failure Tolerance" describes the number of healthy active and
+back-up voting servers that can fail gradually without causing an outage.
+
+@include 'autopilot/node-types.mdx'
 
 ### autopilot get-config
 
@@ -337,29 +370,49 @@ Usage: vault operator raft autopilot set-config [options]
 
 Flags applicable to this command are the following:
 
-- `cleanup-dead-servers` `(bool)` - Controls whether to remove dead servers from
+- `cleanup-dead-servers` `(bool: false)` - Controls whether to remove dead servers from
   the Raft peer list periodically or when a new server joins. This requires that
-  `min-quorum` is also set. Defaults to `false`.
+  `min-quorum` is also set.
 
-- `last-contact-threshold` `(string)` - Limit on the amount of time a server can
-  go without leader contact before being considered unhealthy. Defaults to `10s`.
+- `last-contact-threshold` `(string: "10s")` - Limit on the amount of time a server can
+  go without leader contact before being considered unhealthy.
 
-- `dead-server-last-contact-threshold` `(string)` - Limit on the amount of time
-  a server can go without leader contact before being considered failed.
-  This takes effect only when `cleanup_dead_servers` is set as `true`. Defaults to `24h`.
-  
-  -> **Note:** A failed server that autopilot has removed from the raft configuration cannot rejoin the cluster without being reinitialized.  
+- `dead-server-last-contact-threshold` `(string: "24h")` - Limit on the amount of time
+a server can go without leader contact before being considered failed. This
+takes effect only when `cleanup_dead_servers` is set. When adding new nodes
+to your cluster, the `dead_server_last_contact_threshold` needs to be larger
+than the amount of time that it takes to load a Raft snapshot, otherwise the
+newly added nodes will be removed from your cluster before they have finished
+loading the snapshot and starting up. If you are using an [HSM](/vault/docs/enterprise/hsm), your
+`dead_server_last_contact_threshold` needs to be larger than the response
+time of the HSM.
 
-- `max-trailing-logs` `(int)` - Amount of entries in the Raft Log that a server
-  can be behind before being considered unhealthy. Defaults to `1000`.
+<Warning>
 
-- `min-quorum` `(int)` - Minimum number of servers that should always be present in a cluster.
-  Autopilot will not prune servers below this number. This should be set to the expected number
-  of voters in your cluster. There is no default.
+  We strongly recommend keeping `dead_server_last_contact_threshold` at a high
+  duration, such as a day, as it being too low could result in removal of nodes
+  that aren't actually dead
 
-- `server-stabilization-time` `(string)` - Minimum amount of time a server must be in a healthy state before it
+</Warning>
+
+- `max-trailing-logs` `(int: 1000)` - Amount of entries in the Raft Log that a server
+  can be behind before being considered unhealthy. If this value is too low,
+  it can cause the cluster to lose quorum if a follower falls behind. This
+  value only needs to be increased from the default if you have a very high
+  write load on Vault and you see that it takes a long time to promote new
+  servers to becoming voters. This is an unlikely scenario and most users
+  should not modify this value.
+
+- `min-quorum` `(int)` - The minimum number of servers that should always be
+present in a cluster. Autopilot will not prune servers below this number.
+**There is no default for this value** and it should be set to the expected
+number of voters in your cluster when `cleanup_dead_servers` is set as `true`.
+Use the [quorum size guidance](/vault/docs/internals/integrated-storage#quorum-size-and-failure-tolerance)
+to determine the proper minimum quorum size for your cluster.
+
+- `server-stabilization-time` `(string: "10s")` - Minimum amount of time a server must be in a healthy state before it
   can become a voter. Until that happens, it will be visible as a peer in the cluster, but as a non-voter, meaning it
-  won't contribute to quorum. Defaults to `10s`.
+  won't contribute to quorum.
 
-- `disable-upgrade-migration` `(bool)` - Controls whether to disable automated
-  upgrade migrations, an Enterprise-only feature. Defaults to `false`.
+- `disable-upgrade-migration` `(bool: false)` - Controls whether to disable automated
+  upgrade migrations, an Enterprise-only feature.

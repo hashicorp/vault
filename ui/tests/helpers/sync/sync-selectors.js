@@ -85,7 +85,9 @@ export const PAGE = {
   saveButton: '[data-test-save]',
   toolbar: (btnText) => `[data-test-toolbar="${btnText}"]`,
   form: {
-    enableInput: (attr) => `[data-test-enable-field="${attr}"] [data-test-icon="edit"]`,
+    enableInput: (attr) => `[data-test-enable-field="${attr}"] [data-test-icon="edit"]`, // TODO duplicated in general-selectors as this component became more widely used
+    fieldGroupHeader: (group) => `[data-test-destination-header="${group}"]`,
+    fieldGroupSubtext: (group) => `[data-test-destination-subText="${group}"]`,
     fillInByAttr: async (attr, value) => {
       // for handling more complex form input elements by attr name
       switch (attr) {

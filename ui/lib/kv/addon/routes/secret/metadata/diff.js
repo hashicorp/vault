@@ -15,8 +15,8 @@ export default class KvSecretMetadataDiffRoute extends Route {
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backend, route: 'list', model: resolvedModel.backend },
       ...breadcrumbsForSecret(resolvedModel.backend, resolvedModel.path),
-      { label: 'version history', route: 'secret.metadata.versions' },
-      { label: 'diff' },
+      { label: 'Version History', route: 'secret.metadata.versions' },
+      { label: 'Diff' },
     ];
     controller.set('breadcrumbs', breadcrumbsArray);
   }

@@ -7,6 +7,7 @@ import { action } from '@ember/object';
 import { bind } from '@ember/runloop';
 import codemirror from 'codemirror';
 import Modifier from 'ember-modifier';
+import { stringify } from 'core/helpers/stringify';
 
 import 'codemirror/addon/edit/matchbrackets';
 import 'codemirror/addon/selection/active-line';
@@ -26,7 +27,19 @@ export default class CodeMirrorModifier extends Modifier {
     } else {
       // this hook also fires any time there is a change to tracked state
       this._editor.setOption('readOnly', namedArgs.readOnly);
-      if (namedArgs.content && this._editor.getValue() !== namedArgs.content) {
+      let value = this._editor.getValue();
+      let content = namedArgs.content;
+      if (!content) return;
+      try {
+        // First parse json to make white space and line breaks consistent between the two items,
+        // then stringify so they can be compared.
+        // We use the stringify helper so we do not flatten the json object
+        value = stringify([JSON.parse(value)], {});
+        content = stringify([JSON.parse(content)], {});
+      } catch {
+        // this catch will occur for non-json content when the mode is not javascript (e.g. ruby).
+      }
+      if (value !== content) {
         this._editor.setValue(namedArgs.content);
       }
     }

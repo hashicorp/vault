@@ -368,10 +368,10 @@ func (q *PrecomputedQuery) CombineWithCurrentMonth(currentMonth *MonthRecord) {
 		existingNamespaceMounts[monthlyNamespaceRecord.NamespaceID] = monthlyNamespaceRecord
 	}
 
-	// Get the counts of each mount per namespace in the current month, and increment
+	// Get the counts of new clients each mount per namespace in the current month, and increment
 	// its total count in the precomputed query. These total values will be visible in the
 	// by_namespace grouping in the final response data
-	for _, nsRecord := range currentMonth.Namespaces {
+	for _, nsRecord := range currentMonth.NewClients.Namespaces {
 		namespaceId := nsRecord.NamespaceID
 
 		// If the namespace already exists in the previous months, iterate through the mounts and increment the counts

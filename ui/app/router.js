@@ -50,10 +50,6 @@ Router.map(function () {
           });
         });
         this.route('mount-secret-backend');
-        this.route('configure-secret-backend', { path: '/secrets/configure/:backend' }, function () {
-          this.route('index', { path: '/' });
-          this.route('section', { path: '/:section_name' });
-        });
       });
       this.route('unseal');
       this.route('tools', function () {
@@ -172,7 +168,10 @@ Router.map(function () {
           this.mount('ldap');
           this.mount('pki');
           this.route('index', { path: '/' });
-          this.route('configuration');
+          this.route('configuration', function () {
+            // only CONFIGURABLE_SECRET_ENGINES can be configured and access the edit route
+            this.route('edit');
+          });
           // because globs / params can't be empty,
           // we have to special-case ids of '' with their own routes
           this.route('list-root', { path: '/list/' });

@@ -148,7 +148,7 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 			}
 
 			if i.logger.IsDebug() {
-				i.logger.Debug("loading group", "name", group.Name, "id", group.ID)
+				i.logger.Debug("loading group", "namespace", ns.ID, "name", group.Name, "id", group.ID)
 			}
 
 			txn := i.db.Txn(true)
@@ -171,6 +171,19 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 			}
 
 			err = i.UpsertGroupInTxn(ctx, txn, group, persist)
+
+			if errors.Is(err, logical.ErrReadOnly) {
+				// This is an imperfect solution to unblock customers who are running into
+				// a readonly error during a DR failover (jira #28191). More specifically, if there
+				// are duplicate aliases in storage then they are merged during loadEntities. Vault
+				// attempts to remove the deleted duplicate entities from their groups to clean up.
+				// If the node is a PR secondary though it will fail because the RPC client
+				// is not yet initialized and the storage is read-only. This prevents the cluster from
+				// unsealing entirely and can potentially block a DR failover from succeeding.
+				i.logger.Warn("received a read only error while trying to upsert group to storage")
+				err = nil
+			}
+
 			if err != nil {
 				txn.Abort()
 				return fmt.Errorf("failed to update group in memdb: %w", err)
@@ -446,6 +459,10 @@ LOOP:
 
 				mountAccessors := getAccessorsOnDuplicateAliases(entity.Aliases)
 
+				if len(mountAccessors) > 0 {
+					i.logger.Warn("Entity has multiple aliases on the same mount(s)", "entity_id", entity.ID, "mount_accessors", mountAccessors)
+				}
+
 				for _, accessor := range mountAccessors {
 					if _, ok := duplicatedAccessors[accessor]; !ok {
 						duplicatedAccessors[accessor] = struct{}{}
@@ -483,10 +500,6 @@ LOOP:
 	for accessor := range duplicatedAccessors {
 		duplicatedAccessorsList[accessorCounter] = accessor
 		accessorCounter++
-	}
-
-	if len(duplicatedAccessorsList) > 0 {
-		i.logger.Warn("One or more entities have multiple aliases on the same mount(s), remove duplicates to avoid ACL templating issues", "mount_accessors", duplicatedAccessorsList)
 	}
 
 	if i.logger.IsInfo() {

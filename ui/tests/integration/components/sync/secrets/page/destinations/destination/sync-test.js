@@ -140,7 +140,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
   });
 
   test('it should clear sync associations from store in willDestroy hook', async function (assert) {
-    const clearDatasetStub = sinon.stub(this.store, 'clearDataset');
+    const clearDatasetStub = sinon.stub(this.owner.lookup('service:pagination'), 'clearDataset');
 
     this.renderComponent = true;
     await render(

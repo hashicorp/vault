@@ -10,6 +10,12 @@ import { assert } from '@ember/debug';
 import { action } from '@ember/object';
 import { guidFor } from '@ember/object/internals';
 import KVObject from 'vault/lib/kv-object';
+import {
+  hasWhitespace,
+  isNonString,
+  NON_STRING_WARNING,
+  WHITESPACE_WARNING,
+} from 'vault/utils/model-helpers/validators';
 
 /**
  * @module KvObjectEditor
@@ -37,6 +43,8 @@ import KVObject from 'vault/lib/kv-object';
 export default class KvObjectEditor extends Component {
   // kvData is type ArrayProxy, so addObject etc are fine here
   @tracked kvData;
+  whitespaceWarning = WHITESPACE_WARNING('key');
+  nonStringWarning = NON_STRING_WARNING;
 
   get placeholders() {
     return {
@@ -85,15 +93,11 @@ export default class KvObjectEditor extends Component {
   }
   showWhitespaceWarning = (name) => {
     if (this.args.allowWhiteSpace) return false;
-    return new RegExp('\\s', 'g').test(name);
+    return hasWhitespace(name);
   };
+
   showNonStringWarning = (value) => {
     if (!this.args.warnNonStringValues) return false;
-    try {
-      JSON.parse(value);
-      return true;
-    } catch (e) {
-      return false;
-    }
+    return isNonString(value);
   };
 }

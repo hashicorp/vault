@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/metricregistry"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
@@ -46,6 +47,26 @@ const (
 	// of orphaned leader keys, to prevent slamming the backend.
 	leaderPrefixCleanDelay = 200 * time.Millisecond
 )
+
+func init() {
+	// Register metrics that we should always consistently report whether or not
+	// they've been hit recently. The help texts are taken verbatim from our
+	// telemetry reference docs so if updated should probably stay in sync.
+	metricregistry.RegisterSummaries([]metricregistry.SummaryDefinition{
+		{
+			Name: []string{"core", "step_down"},
+			Help: "Time required to step down cluster leadership",
+		},
+		{
+			Name: []string{"core", "leadership_setup_failed"},
+			Help: "Time taken by the most recent leadership setup failure",
+		},
+		{
+			Name: []string{"core", "leadership_lost"},
+			Help: "Total time that a high-availability cluster node last maintained leadership",
+		},
+	})
+}
 
 var (
 	addEnterpriseHaActors func(*Core, *run.Group) chan func()            = addEnterpriseHaActorsNoop

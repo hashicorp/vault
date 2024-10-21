@@ -21,8 +21,8 @@ export default class PkiIssuersGenerateIntermediateRoute extends Route {
     controller.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview', model: this.secretMountPath.currentPath },
-      { label: 'issuers', route: 'issuers.index', model: this.secretMountPath.currentPath },
-      { label: 'generate CSR' },
+      { label: 'Issuers', route: 'issuers.index', model: this.secretMountPath.currentPath },
+      { label: 'Generate CSR' },
     ];
   }
 }

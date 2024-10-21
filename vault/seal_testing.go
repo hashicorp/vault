@@ -5,13 +5,13 @@ package vault
 
 import (
 	"context"
-	testing2 "testing"
+	testing "testing"
 
 	"github.com/hashicorp/vault/vault/seal"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 )
 
-func TestCoreUnsealedWithConfigs(t testing2.TB, barrierConf, recoveryConf *SealConfig) (*Core, [][]byte, [][]byte, string) {
+func TestCoreUnsealedWithConfigs(t testing.TB, barrierConf, recoveryConf *SealConfig) (*Core, [][]byte, [][]byte, string) {
 	t.Helper()
 	opts := &seal.TestSealOpts{}
 	if recoveryConf == nil {
@@ -20,7 +20,7 @@ func TestCoreUnsealedWithConfigs(t testing2.TB, barrierConf, recoveryConf *SealC
 	return TestCoreUnsealedWithConfigSealOpts(t, barrierConf, recoveryConf, opts)
 }
 
-func TestCoreUnsealedWithConfigSealOpts(t testing2.TB, barrierConf, recoveryConf *SealConfig, sealOpts *seal.TestSealOpts) (*Core, [][]byte, [][]byte, string) {
+func TestCoreUnsealedWithConfigSealOpts(t testing.TB, barrierConf, recoveryConf *SealConfig, sealOpts *seal.TestSealOpts) (*Core, [][]byte, [][]byte, string) {
 	t.Helper()
 	seal := NewTestSeal(t, sealOpts)
 	core := TestCoreWithSeal(t, seal, false)

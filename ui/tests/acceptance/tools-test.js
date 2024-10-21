@@ -88,9 +88,9 @@ module('Acceptance | tools', function (hooks) {
         JSON.parse(DATA_TO_WRAP),
         'unwrapped data equals input data'
       );
-      await waitUntil(() => find(TS.tab('details')));
-      await click(TS.tab('details'));
-      await click(TS.tab('data'));
+      await waitUntil(() => find(GENERAL.hdsTab('details')));
+      await click(GENERAL.hdsTab('details'));
+      await click(GENERAL.hdsTab('data'));
       assert.deepEqual(
         JSON.parse(codemirror().getValue()),
         JSON.parse(DATA_TO_WRAP),

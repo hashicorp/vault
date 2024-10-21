@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BUSL-1.1
 
 ## DOCKERHUB DOCKERFILE ##
-FROM alpine:3.18 as default
+FROM alpine:3 AS default
 
 ARG BIN_NAME
 # NAME and PRODUCT_VERSION are the name of the software in releases.hashicorp.com
@@ -25,7 +25,7 @@ LABEL name="Vault" \
       description="Vault is a tool for securely accessing secrets. A secret is anything that you want to tightly control access to, such as API keys, passwords, certificates, and more. Vault provides a unified interface to any secret, while providing tight access control and recording a detailed audit log."
 
 # Copy the license file as per Legal requirement
-COPY LICENSE /licenses/LICENSE.txt
+COPY LICENSE /usr/share/doc/$NAME/LICENSE.txt
 
 # Set ARGs as ENV so that they can be used in ENTRYPOINT/CMD
 ENV NAME=$NAME
@@ -34,7 +34,11 @@ ENV VERSION=$VERSION
 # Create a non-root user to run the software.
 RUN addgroup ${NAME} && adduser -S -G ${NAME} ${NAME}
 
-RUN apk add --no-cache libcap su-exec dumb-init tzdata
+RUN apk add --no-cache libcap su-exec dumb-init tzdata curl && \
+    mkdir -p /usr/share/doc/vault && \
+    curl -o /usr/share/doc/vault/EULA.txt https://eula.hashicorp.com/EULA.txt && \
+    curl -o /usr/share/doc/vault/TermsOfEvaluation.txt https://eula.hashicorp.com/TermsOfEvaluation.txt && \
+    apk del curl
 
 COPY dist/$TARGETOS/$TARGETARCH/$BIN_NAME /bin/
 
@@ -75,11 +79,12 @@ CMD ["server", "-dev"]
 
 
 ## UBI DOCKERFILE ##
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.10 as ubi
+FROM registry.access.redhat.com/ubi8/ubi-minimal AS ubi
 
 ARG BIN_NAME
-# PRODUCT_VERSION is the version built dist/$TARGETOS/$TARGETARCH/$BIN_NAME,
-# which we COPY in later. Example: PRODUCT_VERSION=1.2.3.
+# NAME and PRODUCT_VERSION are the name of the software in releases.hashicorp.com
+# and the version to download. Example: NAME=vault PRODUCT_VERSION=1.2.3.
+ARG NAME=vault
 ARG PRODUCT_VERSION
 ARG PRODUCT_REVISION
 # TARGETARCH and TARGETOS are set automatically when --platform is provided.
@@ -96,18 +101,21 @@ LABEL name="Vault" \
       summary="Vault is a tool for securely accessing secrets." \
       description="Vault is a tool for securely accessing secrets. A secret is anything that you want to tightly control access to, such as API keys, passwords, certificates, and more. Vault provides a unified interface to any secret, while providing tight access control and recording a detailed audit log."
 
-# Copy the license file as per Legal requirement
-COPY LICENSE /licenses/LICENSE.txt
-
 # Set ARGs as ENV so that they can be used in ENTRYPOINT/CMD
 ENV NAME=$NAME
 ENV VERSION=$VERSION
+
+# Copy the license file as per Legal requirement
+COPY LICENSE /usr/share/doc/$NAME/LICENSE.txt
+
+# We must have a copy of the license in this directory to comply with the HasLicense Redhat requirement
+COPY LICENSE /licenses/LICENSE.txt
 
 # Set up certificates, our base tools, and Vault. Unlike the other version of
 # this (https://github.com/hashicorp/docker-vault/blob/master/ubi/Dockerfile),
 # we copy in the Vault binary from CRT.
 RUN set -eux; \
-    microdnf install -y ca-certificates gnupg openssl libcap tzdata procps shadow-utils util-linux
+    microdnf install -y ca-certificates gnupg openssl libcap tzdata procps shadow-utils util-linux tar
 
 # Create a non-root user to run the software.
 RUN groupadd --gid 1000 vault && \
@@ -123,7 +131,7 @@ COPY dist/$TARGETOS/$TARGETARCH/$BIN_NAME /bin/
 # storage backend, if desired; the server will be started with /vault/config as
 # the configuration directory so you can add additional config files in that
 # location.
-ENV HOME /home/vault
+ENV HOME=/home/vault
 RUN mkdir -p /vault/logs && \
     mkdir -p /vault/file && \
     mkdir -p /vault/config && \
@@ -131,6 +139,11 @@ RUN mkdir -p /vault/logs && \
     chown -R vault /vault && chown -R vault $HOME && \
     chgrp -R 0 $HOME && chmod -R g+rwX $HOME && \
     chgrp -R 0 /vault && chmod -R g+rwX /vault
+
+# Include EULA and Terms of Eval
+RUN mkdir -p /usr/share/doc/vault && \
+    curl -o /usr/share/doc/vault/EULA.txt https://eula.hashicorp.com/EULA.txt && \
+    curl -o /usr/share/doc/vault/TermsOfEvaluation.txt https://eula.hashicorp.com/TermsOfEvaluation.txt
 
 # Expose the logs directory as a volume since there's potentially long-running
 # state in there
@@ -158,3 +171,9 @@ USER vault
 # # By default you'll get a single-node development server that stores everything
 # # in RAM and bootstraps itself. Don't use this configuration for production.
 CMD ["server", "-dev"]
+
+FROM ubi AS ubi-fips
+
+FROM ubi AS ubi-hsm
+
+FROM ubi AS ubi-hsm-fips

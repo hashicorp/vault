@@ -23,11 +23,11 @@ import errorMessage from 'vault/utils/error-message';
  */
 
 export default class MessagesList extends Component {
-  @service store;
-  @service router;
+  @service customMessages;
   @service flashMessages;
   @service namespace;
-  @service customMessages;
+  @service pagination;
+  @service('app-router') router;
 
   @tracked showMaxMessageModal = false;
   @tracked messageToDelete = null;
@@ -90,8 +90,8 @@ export default class MessagesList extends Component {
   @task
   *deleteMessage(message) {
     try {
-      this.store.clearDataset('config-ui/message');
       yield message.destroyRecord(message.id);
+      this.pagination.clearDataset('config-ui/message');
       this.router.transitionTo('vault.cluster.config-ui.messages');
       this.customMessages.fetchMessages(this.namespace.path);
       this.flashMessages.success(`Successfully deleted ${message.title}.`);

@@ -6,13 +6,12 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { render, click, settled, findAll } from '@ember/test-helpers';
+import { render, click, findAll, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import clientsHandler, { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
-import { getUnixTime } from 'date-fns';
+import { fromUnixTime, getUnixTime } from 'date-fns';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
-import { dateDropdownSelect } from 'vault/tests/helpers/clients/client-count-helpers';
 import { selectChoose } from 'ember-power-select/test-support';
 import timestamp from 'core/utils/timestamp';
 import sinon from 'sinon';
@@ -20,6 +19,8 @@ import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 
 const START_TIME = getUnixTime(LICENSE_START);
 const END_TIME = getUnixTime(STATIC_NOW);
+const START_ISO = LICENSE_START.toISOString();
+const END_ISO = STATIC_NOW.toISOString();
 
 module('Integration | Component | clients | Page::Counts', function (hooks) {
   setupRenderingTest(hooks);
@@ -36,8 +37,8 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     };
     this.activity = await this.store.queryRecord('clients/activity', activityQuery);
     this.config = await this.store.queryRecord('clients/config', {});
-    this.startTimestamp = START_TIME;
-    this.endTimestamp = END_TIME;
+    this.startTimestamp = START_ISO;
+    this.endTimestamp = END_ISO;
     this.versionHistory = [];
     this.renderComponent = () =>
       render(hbs`
@@ -57,38 +58,11 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     `);
   });
 
-  test('it should render start date label and description based on version', async function (assert) {
-    const versionService = this.owner.lookup('service:version');
-
-    await this.renderComponent();
-
-    assert.dom(CLIENT_COUNT.counts.startLabel).hasText('Client counting start date', 'Label renders for OSS');
-    assert
-      .dom(CLIENT_COUNT.counts.description)
-      .hasText(
-        'This date is when client counting starts. Without this starting point, the data shown is not reliable.',
-        'Description renders for OSS'
-      );
-
-    versionService.set('type', 'enterprise');
-    await settled();
-
-    assert.dom(CLIENT_COUNT.counts.startLabel).hasText('Billing start month', 'Label renders for Enterprise');
-    assert
-      .dom(CLIENT_COUNT.counts.description)
-      .hasText(
-        'This date comes from your license, and defines when client counting starts. Without this starting point, the data shown is not reliable.',
-        'Description renders for Enterprise'
-      );
-  });
-
   test('it should populate start and end month displays', async function (assert) {
     await this.renderComponent();
 
-    assert.dom(CLIENT_COUNT.counts.startMonth).hasText('July 2023', 'Start month renders');
-    assert
-      .dom(CLIENT_COUNT.calendarWidget.trigger)
-      .hasText('Jul 2023 - Jan 2024', 'Start and end months render in filter bar');
+    assert.dom(CLIENT_COUNT.dateRange.dateDisplay('start')).hasText('July 2023', 'Start month renders');
+    assert.dom(CLIENT_COUNT.dateRange.dateDisplay('end')).hasText('January 2024', 'End month renders');
   });
 
   test('it should render no data empty state', async function (assert) {
@@ -122,32 +96,77 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
       .hasText('Tracking is disabled', 'Config disabled alert renders');
   });
 
-  test('it should send correct values on start and end date change', async function (assert) {
-    assert.expect(4);
+  const jan23start = getUnixTime(new Date('2023-01-01T00:00:00Z'));
+  // license start is July 2, 2024 on date change it recalculates start to beginning of the month
+  const july23start = getUnixTime(new Date('2023-07-01T00:00:00Z'));
+  const dec23end = getUnixTime(new Date('2023-12-31T00:00:00Z'));
+  const jan24end = getUnixTime(new Date('2024-01-31T00:00:00Z'));
+  [
+    {
+      scenario: 'changing start only',
+      expected: { start_time: jan23start, end_time: jan24end },
+      editStart: '2023-01',
+      expectedStart: 'January 2023',
+      expectedEnd: 'January 2024',
+    },
+    {
+      scenario: 'changing end only',
+      expected: { start_time: july23start, end_time: dec23end },
+      editEnd: '2023-12',
+      expectedStart: 'July 2023',
+      expectedEnd: 'December 2023',
+    },
+    {
+      scenario: 'changing both',
+      expected: { start_time: jan23start, end_time: dec23end },
+      editStart: '2023-01',
+      editEnd: '2023-12',
+      expectedStart: 'January 2023',
+      expectedEnd: 'December 2023',
+    },
+    {
+      scenario: 'reset',
+      expected: { start_time: undefined, end_time: undefined },
+      reset: true,
+      expectedStart: 'July 2023',
+      expectedEnd: 'January 2024',
+    },
+  ].forEach((testCase) => {
+    test(`it should send correct millis value on filter change when ${testCase.scenario}`, async function (assert) {
+      assert.expect(5);
+      // set to enterprise so reset will save correctly
+      this.owner.lookup('service:version').type = 'enterprise';
+      this.onFilterChange = (params) => {
+        assert.deepEqual(params, testCase.expected, 'Correct values sent on filter change');
+        // in the app, the timestamp choices trigger a qp refresh as millis from epoch,
+        // but in the model they are translated from millis to ISO timestamps before being
+        // passed to this component. Mock that behavior here.
+        this.set(
+          'startTimestamp',
+          params?.start_time ? fromUnixTime(params.start_time).toISOString() : START_ISO
+        );
+        this.set('endTimestamp', params?.end_time ? fromUnixTime(params.end_time).toISOString() : END_ISO);
+      };
+      await this.renderComponent();
+      await click(CLIENT_COUNT.dateRange.edit);
 
-    let expected = { start_time: getUnixTime(new Date('2023-01-01T00:00:00Z')), end_time: END_TIME };
-    this.onFilterChange = (params) => {
-      assert.deepEqual(params, expected, 'Correct values sent on filter change');
-      this.startTimestamp = params.start_time || START_TIME;
-      this.endTimestamp = params.end_time || END_TIME;
-    };
+      // page starts with default billing dates, which are july 23 - jan 24
+      assert.dom(CLIENT_COUNT.dateRange.editDate('start')).hasValue('2023-07');
+      assert.dom(CLIENT_COUNT.dateRange.editDate('end')).hasValue('2024-01');
 
-    await this.renderComponent();
-    await dateDropdownSelect('January', '2023');
-
-    expected.start_time = END_TIME;
-    await click(CLIENT_COUNT.calendarWidget.trigger);
-    await click(CLIENT_COUNT.calendarWidget.currentMonth);
-
-    expected.start_time = getUnixTime(this.config.billingStartTimestamp);
-    await click(CLIENT_COUNT.calendarWidget.trigger);
-    await click(CLIENT_COUNT.calendarWidget.currentBillingPeriod);
-
-    expected = { end_time: getUnixTime(new Date('2023-12-31T00:00:00Z')) };
-    await click(CLIENT_COUNT.calendarWidget.trigger);
-    await click(CLIENT_COUNT.calendarWidget.customEndMonth);
-    await click(CLIENT_COUNT.calendarWidget.previousYear);
-    await click(CLIENT_COUNT.calendarWidget.calendarMonth('December'));
+      if (testCase.editStart) {
+        await fillIn(CLIENT_COUNT.dateRange.editDate('start'), testCase.editStart);
+      }
+      if (testCase.editEnd) {
+        await fillIn(CLIENT_COUNT.dateRange.editDate('end'), testCase.editEnd);
+      }
+      if (testCase.reset) {
+        await click(CLIENT_COUNT.dateRange.reset);
+      }
+      await click(GENERAL.saveButton);
+      assert.dom(CLIENT_COUNT.dateRange.dateDisplay('start')).hasText(testCase.expectedStart);
+      assert.dom(CLIENT_COUNT.dateRange.dateDisplay('end')).hasText(testCase.expectedEnd);
+    });
   });
 
   test('it should render namespace and auth mount filters', async function (assert) {
@@ -186,7 +205,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
   });
 
   test('it should render start time discrepancy alert', async function (assert) {
-    this.startTimestamp = getUnixTime(new Date('2022-06-01T00:00:00Z'));
+    this.startTimestamp = new Date('2022-06-01T00:00:00Z').toISOString();
 
     await this.renderComponent();
 
@@ -246,17 +265,15 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
       );
   });
 
-  test('it should render empty state for no start or license start time', async function (assert) {
+  test('it should render empty state for no start when CE', async function (assert) {
+    this.owner.lookup('service:version').type = 'community';
     this.startTimestamp = null;
-    this.config.billingStartTimestamp = null;
     this.activity = {};
 
     await this.renderComponent();
 
     assert.dom(GENERAL.emptyStateTitle).hasText('No start date found', 'Empty state renders');
-    assert
-      .dom(CLIENT_COUNT.counts.startDropdown)
-      .exists('Date dropdown renders when start time is not provided');
+    assert.dom(CLIENT_COUNT.dateRange.edit).hasText('Set date range');
   });
 
   test('it should render catch all empty state', async function (assert) {

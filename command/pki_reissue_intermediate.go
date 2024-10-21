@@ -113,6 +113,10 @@ func (c *PKIReIssueCACommand) Run(args []string) int {
 	}
 
 	templateData, err := parseTemplateCertificate(*certificate, useExistingKey, keyRef)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error fetching parsing template certificate: %v", err))
+		return 1
+	}
 	data := updateTemplateWithData(templateData, userData)
 
 	return pkiIssue(c.BaseCommand, parentIssuer, intermediateMount, c.flagNewIssuerName, c.flagKeyStorageSource, data)

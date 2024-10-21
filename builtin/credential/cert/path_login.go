@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/helper/ocsp"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -596,15 +597,39 @@ func (b *backend) certificateExtensionsMetadata(clientCert *x509.Certificate, co
 
 func (b *backend) getTrustedCerts(ctx context.Context, storage logical.Storage, certName string) (pool *x509.CertPool, trusted []*ParsedCert, trustedNonCAs []*ParsedCert, conf *ocsp.VerifyConfig) {
 	if !b.trustedCacheDisabled.Load() {
-		if trusted, found := b.trustedCache.Get(certName); found {
+		trusted, found := b.getTrustedCertsFromCache(certName)
+		if found {
 			return trusted.pool, trusted.trusted, trusted.trustedNonCAs, trusted.ocspConf
 		}
 	}
 	return b.loadTrustedCerts(ctx, storage, certName)
 }
 
+func (b *backend) getTrustedCertsFromCache(certName string) (*trusted, bool) {
+	if certName == "" {
+		trusted := b.trustedCacheFull.Load()
+		if trusted != nil {
+			return trusted, true
+		}
+	} else if trusted, found := b.trustedCache.Get(certName); found {
+		return trusted, true
+	}
+	return nil, false
+}
+
 // loadTrustedCerts is used to load all the trusted certificates from the backend
 func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage, certName string) (pool *x509.CertPool, trustedCerts []*ParsedCert, trustedNonCAs []*ParsedCert, conf *ocsp.VerifyConfig) {
+	lock := locksutil.LockForKey(b.trustedCacheLocks, certName)
+	lock.Lock()
+	defer lock.Unlock()
+
+	if !b.trustedCacheDisabled.Load() {
+		trusted, found := b.getTrustedCertsFromCache(certName)
+		if found {
+			return trusted.pool, trusted.trusted, trusted.trustedNonCAs, trusted.ocspConf
+		}
+	}
+
 	pool = x509.NewCertPool()
 	trustedCerts = make([]*ParsedCert, 0)
 	trustedNonCAs = make([]*ParsedCert, 0)
@@ -668,16 +693,30 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 			conf.QueryAllServers = conf.QueryAllServers || entry.OcspQueryAllServers
 			conf.OcspThisUpdateMaxAge = entry.OcspThisUpdateMaxAge
 			conf.OcspMaxRetries = entry.OcspMaxRetries
+
+			if len(entry.OcspCaCertificates) > 0 {
+				certs, err := certutil.ParseCertsPEM([]byte(entry.OcspCaCertificates))
+				if err != nil {
+					b.Logger().Error("failed to parse ocsp_ca_certificates", "name", name, "error", err)
+					continue
+				}
+				conf.ExtraCas = certs
+			}
 		}
 	}
 
 	if !b.trustedCacheDisabled.Load() {
-		b.trustedCache.Add(certName, &trusted{
+		entry := &trusted{
 			pool:          pool,
 			trusted:       trustedCerts,
 			trustedNonCAs: trustedNonCAs,
 			ocspConf:      conf,
-		})
+		}
+		if certName == "" {
+			b.trustedCacheFull.Store(entry)
+		} else {
+			b.trustedCache.Add(certName, entry)
+		}
 	}
 	return
 }

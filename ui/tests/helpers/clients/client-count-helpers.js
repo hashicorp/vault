@@ -3,18 +3,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, findAll } from '@ember/test-helpers';
-import { CLIENT_COUNT, CHARTS } from './client-count-selectors';
-
-export async function dateDropdownSelect(month, year) {
-  const { dateDropdown, counts } = CLIENT_COUNT;
-  await click(counts.startEdit);
-  await click(dateDropdown.toggleMonth);
-  await click(dateDropdown.selectMonth(month));
-  await click(dateDropdown.toggleYear);
-  await click(dateDropdown.selectYear(year));
-  await click(dateDropdown.submit);
-}
+import { findAll } from '@ember/test-helpers';
+import { CHARTS } from './client-count-selectors';
 
 export function assertBarChart(assert, chartName, byMonthData, isStacked = false) {
   // assertion count is byMonthData.length, plus 2
@@ -52,8 +42,6 @@ export const ACTIVITY_RESPONSE_STUB = {
         entity_clients: 4256,
         non_entity_clients: 4138,
         secret_syncs: 4810,
-        distinct_entities: 4256,
-        non_entity_tokens: 4138,
       },
       mounts: [
         {
@@ -64,8 +52,6 @@ export const ACTIVITY_RESPONSE_STUB = {
             entity_clients: 4256,
             non_entity_clients: 4138,
             secret_syncs: 0,
-            distinct_entities: 4256,
-            non_entity_tokens: 4138,
           },
         },
         {
@@ -76,8 +62,6 @@ export const ACTIVITY_RESPONSE_STUB = {
             entity_clients: 0,
             non_entity_clients: 0,
             secret_syncs: 4810,
-            distinct_entities: 0,
-            non_entity_tokens: 0,
           },
         },
         {
@@ -88,8 +72,6 @@ export const ACTIVITY_RESPONSE_STUB = {
             entity_clients: 0,
             non_entity_clients: 0,
             secret_syncs: 0,
-            distinct_entities: 0,
-            non_entity_tokens: 0,
           },
         },
       ],
@@ -103,8 +85,6 @@ export const ACTIVITY_RESPONSE_STUB = {
         entity_clients: 4002,
         non_entity_clients: 4089,
         secret_syncs: 4290,
-        distinct_entities: 4002,
-        non_entity_tokens: 4089,
       },
       mounts: [
         {
@@ -115,8 +95,6 @@ export const ACTIVITY_RESPONSE_STUB = {
             entity_clients: 4002,
             non_entity_clients: 4089,
             secret_syncs: 0,
-            distinct_entities: 4002,
-            non_entity_tokens: 4089,
           },
         },
         {
@@ -127,8 +105,6 @@ export const ACTIVITY_RESPONSE_STUB = {
             entity_clients: 0,
             non_entity_clients: 0,
             secret_syncs: 4290,
-            distinct_entities: 0,
-            non_entity_tokens: 0,
           },
         },
         {
@@ -139,8 +115,6 @@ export const ACTIVITY_RESPONSE_STUB = {
             entity_clients: 0,
             non_entity_clients: 0,
             secret_syncs: 0,
-            distinct_entities: 0,
-            non_entity_tokens: 0,
           },
         },
       ],
@@ -157,12 +131,10 @@ export const ACTIVITY_RESPONSE_STUB = {
       timestamp: '2023-07-01T00:00:00Z',
       counts: {
         acme_clients: 100,
-        clients: 100,
+        clients: 400,
         entity_clients: 100,
         non_entity_clients: 100,
         secret_syncs: 100,
-        distinct_entities: 100,
-        non_entity_tokens: 100,
       },
       namespaces: [
         {
@@ -170,12 +142,10 @@ export const ACTIVITY_RESPONSE_STUB = {
           namespace_path: '',
           counts: {
             acme_clients: 100,
-            clients: 100,
+            clients: 400,
             entity_clients: 100,
             non_entity_clients: 100,
             secret_syncs: 100,
-            distinct_entities: 100,
-            non_entity_tokens: 100,
           },
           mounts: [
             {
@@ -186,20 +156,16 @@ export const ACTIVITY_RESPONSE_STUB = {
                 entity_clients: 0,
                 non_entity_clients: 0,
                 secret_syncs: 0,
-                distinct_entities: 0,
-                non_entity_tokens: 0,
               },
             },
             {
               mount_path: 'auth/authid/0',
               counts: {
                 acme_clients: 0,
-                clients: 100,
+                clients: 200,
                 entity_clients: 100,
                 non_entity_clients: 100,
                 secret_syncs: 0,
-                distinct_entities: 0,
-                non_entity_tokens: 0,
               },
             },
             {
@@ -210,8 +176,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                 entity_clients: 0,
                 non_entity_clients: 0,
                 secret_syncs: 100,
-                distinct_entities: 0,
-                non_entity_tokens: 0,
               },
             },
           ],
@@ -220,12 +184,10 @@ export const ACTIVITY_RESPONSE_STUB = {
       new_clients: {
         counts: {
           acme_clients: 100,
-          clients: 100,
+          clients: 400,
           entity_clients: 100,
           non_entity_clients: 100,
           secret_syncs: 100,
-          distinct_entities: 100,
-          non_entity_tokens: 100,
         },
         namespaces: [
           {
@@ -233,12 +195,10 @@ export const ACTIVITY_RESPONSE_STUB = {
             namespace_path: '',
             counts: {
               acme_clients: 100,
-              clients: 100,
+              clients: 400,
               entity_clients: 100,
               non_entity_clients: 100,
               secret_syncs: 100,
-              distinct_entities: 100,
-              non_entity_tokens: 100,
             },
             mounts: [
               {
@@ -249,20 +209,16 @@ export const ACTIVITY_RESPONSE_STUB = {
                   entity_clients: 0,
                   non_entity_clients: 0,
                   secret_syncs: 0,
-                  distinct_entities: 0,
-                  non_entity_tokens: 0,
                 },
               },
               {
                 mount_path: 'auth/authid/0',
                 counts: {
                   acme_clients: 0,
-                  clients: 100,
+                  clients: 200,
                   entity_clients: 100,
                   non_entity_clients: 100,
                   secret_syncs: 0,
-                  distinct_entities: 0,
-                  non_entity_tokens: 0,
                 },
               },
               {
@@ -273,8 +229,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                   entity_clients: 0,
                   non_entity_clients: 0,
                   secret_syncs: 100,
-                  distinct_entities: 0,
-                  non_entity_tokens: 0,
                 },
               },
             ],
@@ -286,12 +240,10 @@ export const ACTIVITY_RESPONSE_STUB = {
       timestamp: '2023-08-01T00:00:00Z',
       counts: {
         acme_clients: 100,
-        clients: 100,
+        clients: 400,
         entity_clients: 100,
         non_entity_clients: 100,
         secret_syncs: 100,
-        distinct_entities: 100,
-        non_entity_tokens: 100,
       },
       namespaces: [
         {
@@ -299,12 +251,10 @@ export const ACTIVITY_RESPONSE_STUB = {
           namespace_path: '',
           counts: {
             acme_clients: 100,
-            clients: 100,
+            clients: 400,
             entity_clients: 100,
             non_entity_clients: 100,
             secret_syncs: 100,
-            distinct_entities: 100,
-            non_entity_tokens: 100,
           },
           mounts: [
             {
@@ -315,20 +265,16 @@ export const ACTIVITY_RESPONSE_STUB = {
                 entity_clients: 0,
                 non_entity_clients: 0,
                 secret_syncs: 0,
-                distinct_entities: 0,
-                non_entity_tokens: 0,
               },
             },
             {
               mount_path: 'auth/authid/0',
               counts: {
                 acme_clients: 0,
-                clients: 100,
+                clients: 200,
                 entity_clients: 100,
                 non_entity_clients: 100,
                 secret_syncs: 0,
-                distinct_entities: 0,
-                non_entity_tokens: 0,
               },
             },
             {
@@ -339,8 +285,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                 entity_clients: 0,
                 non_entity_clients: 0,
                 secret_syncs: 100,
-                distinct_entities: 0,
-                non_entity_tokens: 0,
               },
             },
           ],
@@ -359,8 +303,6 @@ export const ACTIVITY_RESPONSE_STUB = {
         entity_clients: 832,
         non_entity_clients: 930,
         secret_syncs: 238,
-        distinct_entities: 832,
-        non_entity_tokens: 930,
       },
       namespaces: [
         {
@@ -372,8 +314,6 @@ export const ACTIVITY_RESPONSE_STUB = {
             entity_clients: 708,
             non_entity_clients: 182,
             secret_syncs: 157,
-            distinct_entities: 708,
-            non_entity_tokens: 182,
           },
           mounts: [
             {
@@ -384,8 +324,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                 entity_clients: 0,
                 non_entity_clients: 0,
                 secret_syncs: 0,
-                distinct_entities: 0,
-                non_entity_tokens: 0,
               },
             },
             {
@@ -396,8 +334,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                 entity_clients: 708,
                 non_entity_clients: 182,
                 secret_syncs: 0,
-                distinct_entities: 0,
-                non_entity_tokens: 0,
               },
             },
             {
@@ -408,8 +344,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                 entity_clients: 0,
                 non_entity_clients: 0,
                 secret_syncs: 157,
-                distinct_entities: 0,
-                non_entity_tokens: 0,
               },
             },
           ],
@@ -423,8 +357,6 @@ export const ACTIVITY_RESPONSE_STUB = {
             entity_clients: 124,
             non_entity_clients: 748,
             secret_syncs: 81,
-            distinct_entities: 124,
-            non_entity_tokens: 748,
           },
           mounts: [
             {
@@ -435,8 +367,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                 entity_clients: 0,
                 non_entity_clients: 0,
                 secret_syncs: 0,
-                distinct_entities: 0,
-                non_entity_tokens: 0,
               },
             },
             {
@@ -447,8 +377,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                 entity_clients: 124,
                 non_entity_clients: 748,
                 secret_syncs: 0,
-                distinct_entities: 0,
-                non_entity_tokens: 0,
               },
             },
             {
@@ -459,8 +387,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                 entity_clients: 0,
                 non_entity_clients: 0,
                 secret_syncs: 81,
-                distinct_entities: 0,
-                non_entity_tokens: 0,
               },
             },
           ],
@@ -473,8 +399,6 @@ export const ACTIVITY_RESPONSE_STUB = {
           entity_clients: 59,
           non_entity_clients: 112,
           secret_syncs: 49,
-          distinct_entities: 59,
-          non_entity_tokens: 112,
         },
         namespaces: [
           {
@@ -486,8 +410,6 @@ export const ACTIVITY_RESPONSE_STUB = {
               entity_clients: 25,
               non_entity_clients: 50,
               secret_syncs: 25,
-              distinct_entities: 25,
-              non_entity_tokens: 50,
             },
             mounts: [
               {
@@ -498,8 +420,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                   entity_clients: 0,
                   non_entity_clients: 0,
                   secret_syncs: 0,
-                  distinct_entities: 0,
-                  non_entity_tokens: 0,
                 },
               },
               {
@@ -510,8 +430,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                   entity_clients: 25,
                   non_entity_clients: 50,
                   secret_syncs: 0,
-                  distinct_entities: 0,
-                  non_entity_tokens: 0,
                 },
               },
               {
@@ -522,8 +440,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                   entity_clients: 0,
                   non_entity_clients: 0,
                   secret_syncs: 25,
-                  distinct_entities: 0,
-                  non_entity_tokens: 0,
                 },
               },
             ],
@@ -537,8 +453,6 @@ export const ACTIVITY_RESPONSE_STUB = {
               entity_clients: 34,
               non_entity_clients: 62,
               secret_syncs: 24,
-              distinct_entities: 34,
-              non_entity_tokens: 62,
             },
             mounts: [
               {
@@ -549,8 +463,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                   entity_clients: 34,
                   non_entity_clients: 62,
                   secret_syncs: 0,
-                  distinct_entities: 0,
-                  non_entity_tokens: 0,
                 },
               },
               {
@@ -561,8 +473,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                   entity_clients: 0,
                   non_entity_clients: 0,
                   secret_syncs: 0,
-                  distinct_entities: 0,
-                  non_entity_tokens: 0,
                 },
               },
               {
@@ -573,8 +483,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                   entity_clients: 0,
                   non_entity_clients: 0,
                   secret_syncs: 24,
-                  distinct_entities: 0,
-                  non_entity_tokens: 0,
                 },
               },
             ],
@@ -589,8 +497,6 @@ export const ACTIVITY_RESPONSE_STUB = {
     entity_clients: 8258,
     non_entity_clients: 8227,
     secret_syncs: 9100,
-    distinct_entities: 8258,
-    non_entity_tokens: 8227,
   },
 };
 
@@ -601,10 +507,8 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
   total: {
     acme_clients: 0,
     clients: 3,
-    distinct_entities: 3,
     entity_clients: 3,
     non_entity_clients: 0,
-    non_entity_tokens: 0,
     secret_syncs: 0,
   },
   by_namespace: [
@@ -612,10 +516,8 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
       counts: {
         acme_clients: 0,
         clients: 3,
-        distinct_entities: 3,
         entity_clients: 3,
         non_entity_clients: 0,
-        non_entity_tokens: 0,
         secret_syncs: 0,
       },
       mounts: [
@@ -623,10 +525,8 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
           counts: {
             acme_clients: 0,
             clients: 2,
-            distinct_entities: 2,
             entity_clients: 2,
             non_entity_clients: 0,
-            non_entity_tokens: 0,
             secret_syncs: 0,
           },
           mount_path: 'no mount accessor (pre-1.10 upgrade?)',
@@ -635,10 +535,8 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
           counts: {
             acme_clients: 0,
             clients: 1,
-            distinct_entities: 1,
             entity_clients: 1,
             non_entity_clients: 0,
-            non_entity_tokens: 0,
             secret_syncs: 0,
           },
           mount_path: 'auth/u/',
@@ -659,10 +557,8 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
       counts: {
         acme_clients: 0,
         clients: 3,
-        distinct_entities: 0,
         entity_clients: 3,
         non_entity_clients: 0,
-        non_entity_tokens: 0,
         secret_syncs: 0,
       },
       namespaces: [
@@ -670,10 +566,8 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
           counts: {
             acme_clients: 0,
             clients: 3,
-            distinct_entities: 0,
             entity_clients: 3,
             non_entity_clients: 0,
-            non_entity_tokens: 0,
             secret_syncs: 0,
           },
           mounts: [
@@ -681,10 +575,8 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
               counts: {
                 acme_clients: 0,
                 clients: 2,
-                distinct_entities: 0,
                 entity_clients: 2,
                 non_entity_clients: 0,
-                non_entity_tokens: 0,
                 secret_syncs: 0,
               },
               mount_path: 'no mount accessor (pre-1.10 upgrade?)',
@@ -693,10 +585,8 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
               counts: {
                 acme_clients: 0,
                 clients: 1,
-                distinct_entities: 0,
                 entity_clients: 1,
                 non_entity_clients: 0,
-                non_entity_tokens: 0,
                 secret_syncs: 0,
               },
               mount_path: 'auth/u/',
@@ -710,10 +600,8 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
         counts: {
           acme_clients: 0,
           clients: 3,
-          distinct_entities: 0,
           entity_clients: 3,
           non_entity_clients: 0,
-          non_entity_tokens: 0,
           secret_syncs: 0,
         },
         namespaces: [
@@ -721,10 +609,8 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
             counts: {
               acme_clients: 0,
               clients: 3,
-              distinct_entities: 0,
               entity_clients: 3,
               non_entity_clients: 0,
-              non_entity_tokens: 0,
               secret_syncs: 0,
             },
             mounts: [
@@ -732,10 +618,8 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
                 counts: {
                   acme_clients: 0,
                   clients: 2,
-                  distinct_entities: 0,
                   entity_clients: 2,
                   non_entity_clients: 0,
-                  non_entity_tokens: 0,
                   secret_syncs: 0,
                 },
                 mount_path: 'no mount accessor (pre-1.10 upgrade?)',
@@ -744,10 +628,8 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
                 counts: {
                   acme_clients: 0,
                   clients: 1,
-                  distinct_entities: 0,
                   entity_clients: 1,
                   non_entity_clients: 0,
-                  non_entity_tokens: 0,
                   secret_syncs: 0,
                 },
                 mount_path: 'auth/u/',
@@ -847,7 +729,6 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
       month: '6/23',
       timestamp: '2023-06-01T00:00:00Z',
       namespaces: [],
-      namespaces_by_key: {},
       new_clients: {
         month: '6/23',
         timestamp: '2023-06-01T00:00:00Z',
@@ -858,7 +739,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
       month: '7/23',
       timestamp: '2023-07-01T00:00:00Z',
       acme_clients: 100,
-      clients: 100,
+      clients: 400,
       entity_clients: 100,
       non_entity_clients: 100,
       secret_syncs: 100,
@@ -866,7 +747,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
         {
           label: 'root',
           acme_clients: 100,
-          clients: 100,
+          clients: 400,
           entity_clients: 100,
           non_entity_clients: 100,
           secret_syncs: 100,
@@ -882,7 +763,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
             {
               label: 'auth/authid/0',
               acme_clients: 0,
-              clients: 100,
+              clients: 200,
               entity_clients: 100,
               non_entity_clients: 100,
               secret_syncs: 0,
@@ -898,120 +779,11 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
           ],
         },
       ],
-      namespaces_by_key: {
-        root: {
-          acme_clients: 100,
-          clients: 100,
-          entity_clients: 100,
-          non_entity_clients: 100,
-          secret_syncs: 100,
-          timestamp: '2023-07-01T00:00:00Z',
-          month: '7/23',
-          new_clients: {
-            month: '7/23',
-            timestamp: '2023-07-01T00:00:00Z',
-            label: 'root',
-            acme_clients: 100,
-            clients: 100,
-            entity_clients: 100,
-            non_entity_clients: 100,
-            secret_syncs: 100,
-            mounts: [
-              {
-                label: 'pki-engine-0',
-                acme_clients: 100,
-                clients: 100,
-                entity_clients: 0,
-                non_entity_clients: 0,
-                secret_syncs: 0,
-              },
-              {
-                label: 'auth/authid/0',
-                acme_clients: 0,
-                clients: 100,
-                entity_clients: 100,
-                non_entity_clients: 100,
-                secret_syncs: 0,
-              },
-              {
-                label: 'kvv2-engine-0',
-                acme_clients: 0,
-                clients: 100,
-                entity_clients: 0,
-                non_entity_clients: 0,
-                secret_syncs: 100,
-              },
-            ],
-          },
-          mounts_by_key: {
-            'pki-engine-0': {
-              label: 'pki-engine-0',
-              acme_clients: 100,
-              clients: 100,
-              entity_clients: 0,
-              non_entity_clients: 0,
-              secret_syncs: 0,
-              timestamp: '2023-07-01T00:00:00Z',
-              month: '7/23',
-              new_clients: {
-                month: '7/23',
-                timestamp: '2023-07-01T00:00:00Z',
-                label: 'pki-engine-0',
-                acme_clients: 100,
-                clients: 100,
-                entity_clients: 0,
-                non_entity_clients: 0,
-                secret_syncs: 0,
-              },
-            },
-            'auth/authid/0': {
-              label: 'auth/authid/0',
-              acme_clients: 0,
-              clients: 100,
-              entity_clients: 100,
-              non_entity_clients: 100,
-              secret_syncs: 0,
-              timestamp: '2023-07-01T00:00:00Z',
-              month: '7/23',
-              new_clients: {
-                month: '7/23',
-                timestamp: '2023-07-01T00:00:00Z',
-                label: 'auth/authid/0',
-                acme_clients: 0,
-                clients: 100,
-                entity_clients: 100,
-                non_entity_clients: 100,
-                secret_syncs: 0,
-              },
-            },
-            'kvv2-engine-0': {
-              label: 'kvv2-engine-0',
-              acme_clients: 0,
-              clients: 100,
-              entity_clients: 0,
-              non_entity_clients: 0,
-              secret_syncs: 100,
-              timestamp: '2023-07-01T00:00:00Z',
-              month: '7/23',
-              new_clients: {
-                month: '7/23',
-                timestamp: '2023-07-01T00:00:00Z',
-                label: 'kvv2-engine-0',
-                acme_clients: 0,
-                clients: 100,
-                entity_clients: 0,
-                non_entity_clients: 0,
-                secret_syncs: 100,
-              },
-            },
-          },
-        },
-      },
       new_clients: {
         month: '7/23',
         timestamp: '2023-07-01T00:00:00Z',
         acme_clients: 100,
-        clients: 100,
+        clients: 400,
         entity_clients: 100,
         non_entity_clients: 100,
         secret_syncs: 100,
@@ -1019,7 +791,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
           {
             label: 'root',
             acme_clients: 100,
-            clients: 100,
+            clients: 400,
             entity_clients: 100,
             non_entity_clients: 100,
             secret_syncs: 100,
@@ -1035,7 +807,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
               {
                 label: 'auth/authid/0',
                 acme_clients: 0,
-                clients: 100,
+                clients: 200,
                 entity_clients: 100,
                 non_entity_clients: 100,
                 secret_syncs: 0,
@@ -1057,7 +829,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
       month: '8/23',
       timestamp: '2023-08-01T00:00:00Z',
       acme_clients: 100,
-      clients: 100,
+      clients: 400,
       entity_clients: 100,
       non_entity_clients: 100,
       secret_syncs: 100,
@@ -1065,7 +837,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
         {
           label: 'root',
           acme_clients: 100,
-          clients: 100,
+          clients: 400,
           entity_clients: 100,
           non_entity_clients: 100,
           secret_syncs: 100,
@@ -1081,7 +853,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
             {
               label: 'auth/authid/0',
               acme_clients: 0,
-              clients: 100,
+              clients: 200,
               entity_clients: 100,
               non_entity_clients: 100,
               secret_syncs: 0,
@@ -1097,70 +869,6 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
           ],
         },
       ],
-      namespaces_by_key: {
-        root: {
-          acme_clients: 100,
-          clients: 100,
-          entity_clients: 100,
-          non_entity_clients: 100,
-          secret_syncs: 100,
-          timestamp: '2023-08-01T00:00:00Z',
-          month: '8/23',
-          new_clients: {
-            label: 'root',
-            month: '8/23',
-            timestamp: '2023-08-01T00:00:00Z',
-            mounts: [],
-          },
-          mounts_by_key: {
-            'pki-engine-0': {
-              label: 'pki-engine-0',
-              acme_clients: 100,
-              clients: 100,
-              entity_clients: 0,
-              non_entity_clients: 0,
-              secret_syncs: 0,
-              timestamp: '2023-08-01T00:00:00Z',
-              month: '8/23',
-              new_clients: {
-                label: 'pki-engine-0',
-                month: '8/23',
-                timestamp: '2023-08-01T00:00:00Z',
-              },
-            },
-            'auth/authid/0': {
-              label: 'auth/authid/0',
-              acme_clients: 0,
-              clients: 100,
-              entity_clients: 100,
-              non_entity_clients: 100,
-              secret_syncs: 0,
-              timestamp: '2023-08-01T00:00:00Z',
-              month: '8/23',
-              new_clients: {
-                label: 'auth/authid/0',
-                month: '8/23',
-                timestamp: '2023-08-01T00:00:00Z',
-              },
-            },
-            'kvv2-engine-0': {
-              label: 'kvv2-engine-0',
-              acme_clients: 0,
-              clients: 100,
-              entity_clients: 0,
-              non_entity_clients: 0,
-              secret_syncs: 100,
-              timestamp: '2023-08-01T00:00:00Z',
-              month: '8/23',
-              new_clients: {
-                label: 'kvv2-engine-0',
-                month: '8/23',
-                timestamp: '2023-08-01T00:00:00Z',
-              },
-            },
-          },
-        },
-      },
       new_clients: {
         month: '8/23',
         timestamp: '2023-08-01T00:00:00Z',
@@ -1245,222 +953,6 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
           ],
         },
       ],
-      namespaces_by_key: {
-        ns1: {
-          acme_clients: 934,
-          clients: 1981,
-          entity_clients: 708,
-          non_entity_clients: 182,
-          secret_syncs: 157,
-          timestamp: '2023-09-01T00:00:00Z',
-          month: '9/23',
-          new_clients: {
-            month: '9/23',
-            timestamp: '2023-09-01T00:00:00Z',
-            label: 'ns1',
-            acme_clients: 53,
-            clients: 173,
-            entity_clients: 34,
-            non_entity_clients: 62,
-            secret_syncs: 24,
-            mounts: [
-              {
-                label: 'auth/authid/0',
-                acme_clients: 0,
-                clients: 96,
-                entity_clients: 34,
-                non_entity_clients: 62,
-                secret_syncs: 0,
-              },
-              {
-                label: 'pki-engine-0',
-                acme_clients: 53,
-                clients: 53,
-                entity_clients: 0,
-                non_entity_clients: 0,
-                secret_syncs: 0,
-              },
-              {
-                label: 'kvv2-engine-0',
-                acme_clients: 0,
-                clients: 24,
-                entity_clients: 0,
-                non_entity_clients: 0,
-                secret_syncs: 24,
-              },
-            ],
-          },
-          mounts_by_key: {
-            'pki-engine-0': {
-              label: 'pki-engine-0',
-              acme_clients: 934,
-              clients: 934,
-              entity_clients: 0,
-              non_entity_clients: 0,
-              secret_syncs: 0,
-              timestamp: '2023-09-01T00:00:00Z',
-              month: '9/23',
-              new_clients: {
-                month: '9/23',
-                timestamp: '2023-09-01T00:00:00Z',
-                label: 'pki-engine-0',
-                acme_clients: 53,
-                clients: 53,
-                entity_clients: 0,
-                non_entity_clients: 0,
-                secret_syncs: 0,
-              },
-            },
-            'auth/authid/0': {
-              label: 'auth/authid/0',
-              acme_clients: 0,
-              clients: 890,
-              entity_clients: 708,
-              non_entity_clients: 182,
-              secret_syncs: 0,
-              timestamp: '2023-09-01T00:00:00Z',
-              month: '9/23',
-              new_clients: {
-                month: '9/23',
-                timestamp: '2023-09-01T00:00:00Z',
-                label: 'auth/authid/0',
-                acme_clients: 0,
-                clients: 96,
-                entity_clients: 34,
-                non_entity_clients: 62,
-                secret_syncs: 0,
-              },
-            },
-            'kvv2-engine-0': {
-              label: 'kvv2-engine-0',
-              acme_clients: 0,
-              clients: 157,
-              entity_clients: 0,
-              non_entity_clients: 0,
-              secret_syncs: 157,
-              timestamp: '2023-09-01T00:00:00Z',
-              month: '9/23',
-              new_clients: {
-                month: '9/23',
-                timestamp: '2023-09-01T00:00:00Z',
-                label: 'kvv2-engine-0',
-                acme_clients: 0,
-                clients: 24,
-                entity_clients: 0,
-                non_entity_clients: 0,
-                secret_syncs: 24,
-              },
-            },
-          },
-        },
-        root: {
-          acme_clients: 994,
-          clients: 1947,
-          entity_clients: 124,
-          non_entity_clients: 748,
-          secret_syncs: 81,
-          timestamp: '2023-09-01T00:00:00Z',
-          month: '9/23',
-          new_clients: {
-            month: '9/23',
-            timestamp: '2023-09-01T00:00:00Z',
-            label: 'root',
-            acme_clients: 91,
-            clients: 191,
-            entity_clients: 25,
-            non_entity_clients: 50,
-            secret_syncs: 25,
-            mounts: [
-              {
-                label: 'pki-engine-0',
-                acme_clients: 91,
-                clients: 91,
-                entity_clients: 0,
-                non_entity_clients: 0,
-                secret_syncs: 0,
-              },
-              {
-                label: 'auth/authid/0',
-                acme_clients: 0,
-                clients: 75,
-                entity_clients: 25,
-                non_entity_clients: 50,
-                secret_syncs: 0,
-              },
-              {
-                label: 'kvv2-engine-0',
-                acme_clients: 0,
-                clients: 25,
-                entity_clients: 0,
-                non_entity_clients: 0,
-                secret_syncs: 25,
-              },
-            ],
-          },
-          mounts_by_key: {
-            'pki-engine-0': {
-              label: 'pki-engine-0',
-              acme_clients: 994,
-              clients: 994,
-              entity_clients: 0,
-              non_entity_clients: 0,
-              secret_syncs: 0,
-              timestamp: '2023-09-01T00:00:00Z',
-              month: '9/23',
-              new_clients: {
-                month: '9/23',
-                timestamp: '2023-09-01T00:00:00Z',
-                label: 'pki-engine-0',
-                acme_clients: 91,
-                clients: 91,
-                entity_clients: 0,
-                non_entity_clients: 0,
-                secret_syncs: 0,
-              },
-            },
-            'auth/authid/0': {
-              label: 'auth/authid/0',
-              acme_clients: 0,
-              clients: 872,
-              entity_clients: 124,
-              non_entity_clients: 748,
-              secret_syncs: 0,
-              timestamp: '2023-09-01T00:00:00Z',
-              month: '9/23',
-              new_clients: {
-                month: '9/23',
-                timestamp: '2023-09-01T00:00:00Z',
-                label: 'auth/authid/0',
-                acme_clients: 0,
-                clients: 75,
-                entity_clients: 25,
-                non_entity_clients: 50,
-                secret_syncs: 0,
-              },
-            },
-            'kvv2-engine-0': {
-              label: 'kvv2-engine-0',
-              acme_clients: 0,
-              clients: 81,
-              entity_clients: 0,
-              non_entity_clients: 0,
-              secret_syncs: 81,
-              timestamp: '2023-09-01T00:00:00Z',
-              month: '9/23',
-              new_clients: {
-                month: '9/23',
-                timestamp: '2023-09-01T00:00:00Z',
-                label: 'kvv2-engine-0',
-                acme_clients: 0,
-                clients: 25,
-                entity_clients: 0,
-                non_entity_clients: 0,
-                secret_syncs: 25,
-              },
-            },
-          },
-        },
-      },
       new_clients: {
         month: '9/23',
         timestamp: '2023-09-01T00:00:00Z',

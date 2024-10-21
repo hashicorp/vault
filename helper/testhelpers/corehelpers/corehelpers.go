@@ -11,7 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	testing2 "testing"
+	"testing"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -26,7 +26,7 @@ var externalPlugins = []string{"transform", "kmip", "keymgmt"}
 
 // RetryUntil runs f until it returns a nil result or the timeout is reached.
 // If a nil result hasn't been obtained by timeout, calls t.Fatal.
-func RetryUntil(t testing2.TB, timeout time.Duration, f func() error) {
+func RetryUntil(t testing.TB, timeout time.Duration, f func() error) {
 	t.Helper()
 	deadline := time.Now().Add(timeout)
 	var err error
@@ -41,7 +41,7 @@ func RetryUntil(t testing2.TB, timeout time.Duration, f func() error) {
 
 // MakeTestPluginDir creates a temporary directory suitable for holding plugins.
 // This helper also resolves symlinks to make tests happy on OS X.
-func MakeTestPluginDir(t testing2.TB) string {
+func MakeTestPluginDir(t testing.TB) string {
 	t.Helper()
 
 	dir, err := os.MkdirTemp("", "")
@@ -210,11 +210,11 @@ type TestLogger struct {
 	sink hclog.SinkAdapter
 }
 
-func NewTestLogger(t testing2.TB) *TestLogger {
+func NewTestLogger(t testing.TB) *TestLogger {
 	return NewTestLoggerWithSuffix(t, "")
 }
 
-func NewTestLoggerWithSuffix(t testing2.TB, logFileSuffix string) *TestLogger {
+func NewTestLoggerWithSuffix(t testing.TB, logFileSuffix string) *TestLogger {
 	var logFile *os.File
 	var logPath string
 	output := os.Stderr

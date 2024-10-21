@@ -91,7 +91,7 @@ upgrade frequently, quickly, or easily.
 Vault upgrades are challenging, especially for sensitive or critical workflows,
 extensive integrations, and large-scale deployments. Strict upgrade policies
 also require significant planning, testing, and employee hours to execute
-successfully. 
+successfully.
 
 Customers who need assurances that their current installation will receive
 critical bug fixes and security patches with minimal service disruptions should
@@ -111,8 +111,8 @@ the current version ("N") and the two previous versions ("N&minus;2").
 Vault versions typically update 3 times per calendar year (CY), which means that
 **standard maintenance** for a given Vault version lasts approximately 1 year.
 After the first year, LTS Vault versions move from standard maintenance to
-**extended maintenance** for an additional year with with patches for bugs that
-may cause outages and critical vulnerabilities and exposures (CVEs).
+**extended maintenance** for three additional major version releases (approximately one additional year)
+with patches for bugs that may cause outages and critical vulnerabilities and exposures (CVEs).
 
 Maintenance updates               | Standard maintenance | Extended maintenance
 --------------------------------- | -------------------- | --------------------
@@ -152,10 +152,10 @@ The goal is to establish a predictable upgrade path with a longer timeline
 rather than extending the lifetime for every Vault version.
 
 Long-term support ensures your Vault Enterprise version continues to receive
-critical patches for an additional year. If you upgrade to a non-LTS version,
-you are moving your Vault instance to a version that lacks extended support.
-Non-LTS versions stop receiving updates once they leave the standard maintenance
-window.
+critical patches for an additional three major version releases (approximately one additional year).
+If you upgrade to a non-LTS version,you are moving your Vault instance to a version
+that lacks extended support. Non-LTS versions stop receiving updates once they leave
+the standard maintenance window.
 
 @include 'assets/lts-upgrade-path.mdx'
 
@@ -164,7 +164,7 @@ Version | Expected release | Standard maintenance ends  | Extended maintenance e
 1.19    | CY25 Q1          | CY26 Q1 (1.22 release)     | CY27 Q1 (1.25 release)
 1.18    | CY24 Q3          | CY25 Q3 (1.21 release)     | Not provided
 1.17    | CY24 Q2          | CY25 Q2 (1.20 release)     | Not provided
-1.16    | CY24 Q1          | CY25 Q1 (1.19 release)     | CY26 Q1 (1.22 release) 
+1.16    | CY24 Q1          | CY25 Q1 (1.19 release)     | CY26 Q1 (1.22 release)
 
 If a newer version of Vault Enterprise includes features you want to take
 advantage of, you have two options:

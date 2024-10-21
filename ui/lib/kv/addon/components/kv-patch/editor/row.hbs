@@ -1,0 +1,76 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{! display only template for kv data rows to edit, delete or undo patching a key/value }}
+
+{{#let @kvClass.key @kvClass.value @kvClass.state as |key value state|}}
+  <div class="flex column-gap-16 has-top-padding-s">
+    <Hds::Form::TextInput::Base
+      @value={{key}}
+      aria-label="Key {{@idx}}"
+      class="one-fourth-width {{if (eq state 'deleted') 'line-through'}}"
+      {{! Original subkeys are not editable, only their values can be updated }}
+      disabled={{and (eq state "disabled") (@isOriginalSubkey key)}}
+      readonly={{and (not-eq state "disabled") (@isOriginalSubkey key)}}
+      {{on "blur" (fn @updateKey @kvClass)}}
+      data-test-kv-key={{@idx}}
+    />
+
+    <div class="flex column-gap-16 three-fourths-width">
+      <Hds::Form::MaskedInput::Base
+        @value={{value}}
+        aria-label="Value {{@idx}}"
+        disabled={{eq state "disabled"}}
+        readonly={{eq state "deleted"}}
+        {{on "blur" @kvClass.updateValue}}
+        data-test-kv-value={{@idx}}
+      />
+
+      <div class="flex column-gap-16" {{style width="9rem"}}>
+        {{#if (eq state "disabled")}}
+          <Hds::Button
+            @text="Edit"
+            @icon="edit"
+            @color="secondary"
+            @isIconOnly={{true}}
+            @isFullWidth={{true}}
+            {{on "click" (fn @kvClass.updateState "enabled")}}
+            data-test-edit-button={{@idx}}
+          />
+          <Hds::Button
+            @text="Delete"
+            @icon="trash"
+            @color="critical"
+            @isIconOnly={{true}}
+            @isFullWidth={{true}}
+            {{on "click" (fn @kvClass.updateState "deleted")}}
+            data-test-delete-button={{@idx}}
+          />
+        {{else}}
+          <Hds::Button
+            @text={{if (@isOriginalSubkey key) "Cancel" "Remove"}}
+            @color="secondary"
+            @isFullWidth={{true}}
+            {{on "click" (fn @undoKey @kvClass)}}
+            data-test-undo-button={{@idx}}
+          />
+        {{/if}}
+      </div>
+    </div>
+  </div>
+
+  {{#if (eq state "deleted")}}
+    <Hds::Alert @type="compact" @color="critical" @icon="trash" data-test-alert-delete={{@idx}} as |A|>
+      <A.Description>This key value pair is marked for deletion.</A.Description>
+    </Hds::Alert>
+  {{/if}}
+
+  <KvPatch::Editor::Alerts
+    @idx={{@idx}}
+    @keyError={{@kvClass.keyError}}
+    @keyWarning={{@kvClass.keyWarning}}
+    @valueWarning={{@kvClass.valueWarning}}
+  />
+{{/let}}

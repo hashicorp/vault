@@ -14,6 +14,8 @@ import { click, currentURL, currentRouteName, visit } from '@ember/test-helpers'
 import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { clearRecords } from 'vault/tests/helpers/pki/pki-helpers';
 import { PKI_OVERVIEW } from 'vault/tests/helpers/pki/pki-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+const { overviewCard } = GENERAL;
 
 module('Acceptance | pki overview', function (hooks) {
   setupApplicationTest(hooks);
@@ -59,9 +61,9 @@ module('Acceptance | pki overview', function (hooks) {
   test('navigates to view issuers when link is clicked on issuer card', async function (assert) {
     await authPage.login(this.pkiAdminToken);
     await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
-    assert.dom(PKI_OVERVIEW.issuersCardTitle).hasText('Issuers');
-    assert.dom(PKI_OVERVIEW.issuersCardOverviewNum).hasText('1');
-    await click(PKI_OVERVIEW.issuersCardLink);
+    assert.dom(overviewCard.title('Issuers')).hasText('Issuers');
+    assert.dom(`${overviewCard.container('Issuers')} p`).hasText('1');
+    await click(overviewCard.actionLink('Issuers'));
     assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/issuers`);
     await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
   });
@@ -69,9 +71,9 @@ module('Acceptance | pki overview', function (hooks) {
   test('navigates to view roles when link is clicked on roles card', async function (assert) {
     await authPage.login(this.pkiAdminToken);
     await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
-    assert.dom(PKI_OVERVIEW.rolesCardTitle).hasText('Roles');
-    assert.dom(PKI_OVERVIEW.rolesCardOverviewNum).hasText('0');
-    await click(PKI_OVERVIEW.rolesCardLink);
+    assert.dom(overviewCard.title('Roles')).hasText('Roles');
+    assert.dom(`${overviewCard.container('Roles')} p`).hasText('0');
+    await click(overviewCard.actionLink('Roles'));
     assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles`);
     await runCmd([
       `write ${this.mountPath}/roles/some-role \
@@ -81,14 +83,14 @@ module('Acceptance | pki overview', function (hooks) {
     max_ttl="720h"`,
     ]);
     await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
-    assert.dom(PKI_OVERVIEW.rolesCardOverviewNum).hasText('1');
+    assert.dom(`${overviewCard.container('Roles')} p`).hasText('1');
   });
 
   test('hides roles card if user does not have permissions', async function (assert) {
     await authPage.login(this.pkiIssuersList);
     await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
-    assert.dom(PKI_OVERVIEW.rolesCardTitle).doesNotExist('Roles card does not exist');
-    assert.dom(PKI_OVERVIEW.issuersCardTitle).exists('Issuers card exists');
+    assert.dom(overviewCard.title('Roles')).doesNotExist('Roles card does not exist');
+    assert.dom(overviewCard.title('Issuers')).hasText('Issuers');
   });
 
   test('navigates to generate certificate page for Issue Certificates card', async function (assert) {

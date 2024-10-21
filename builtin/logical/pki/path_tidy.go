@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"math/rand/v2"
 	"net/http"
 	"sync/atomic"
 	"time"
@@ -53,6 +54,7 @@ type tidyStatus struct {
 	tidyCrossRevokedCerts bool
 	tidyAcme              bool
 	tidyCertMetadata      bool
+	tidyCMPV2NonceStore   bool
 	pauseDuration         string
 
 	// Status
@@ -70,6 +72,7 @@ type tidyStatus struct {
 	revQueueDeletedCount     uint
 	crossRevokedDeletedCount uint
 	certMetadataDeletedCount uint
+	cmpv2NonceDeletedCount   uint
 
 	acmeAccountsCount        uint
 	acmeAccountsRevokedCount uint
@@ -79,8 +82,10 @@ type tidyStatus struct {
 
 type tidyConfig struct {
 	// AutoTidy config
-	Enabled  bool          `json:"enabled"`
-	Interval time.Duration `json:"interval_duration"`
+	Enabled           bool          `json:"enabled"`
+	Interval          time.Duration `json:"interval_duration"`
+	MinStartupBackoff time.Duration `json:"min_startup_backoff_duration"`
+	MaxStartupBackoff time.Duration `json:"max_startup_backoff_duration"`
 
 	// Tidy Operations
 	CertStore         bool `json:"tidy_cert_store"`
@@ -92,6 +97,7 @@ type tidyConfig struct {
 	CrossRevokedCerts bool `json:"tidy_cross_cluster_revoked_certs"`
 	TidyAcme          bool `json:"tidy_acme"`
 	CertMetadata      bool `json:"tidy_cert_metadata"`
+	CMPV2NonceStore   bool `json:"tidy_cmpv2_nonce_store"`
 
 	// Safety Buffers
 	SafetyBuffer            time.Duration `json:"safety_buffer"`
@@ -106,16 +112,31 @@ type tidyConfig struct {
 }
 
 func (tc *tidyConfig) IsAnyTidyEnabled() bool {
-	return tc.CertStore || tc.RevokedCerts || tc.IssuerAssocs || tc.ExpiredIssuers || tc.BackupBundle || tc.TidyAcme || tc.CrossRevokedCerts || tc.RevocationQueue || tc.CertMetadata
+	return tc.CertStore || tc.RevokedCerts || tc.IssuerAssocs || tc.ExpiredIssuers || tc.BackupBundle || tc.TidyAcme || tc.CrossRevokedCerts || tc.RevocationQueue || tc.CertMetadata || tc.CMPV2NonceStore
 }
 
 func (tc *tidyConfig) AnyTidyConfig() string {
 	return "tidy_cert_store / tidy_revoked_certs / tidy_revoked_cert_issuer_associations / tidy_expired_issuers / tidy_move_legacy_ca_bundle / tidy_revocation_queue / tidy_cross_cluster_revoked_certs / tidy_acme"
 }
 
+func (tc *tidyConfig) CalculateStartupBackoff(mountStartup time.Time) time.Time {
+	minBackoff := int64(tc.MinStartupBackoff.Seconds())
+	maxBackoff := int64(tc.MaxStartupBackoff.Seconds())
+
+	maxNumber := maxBackoff - minBackoff
+	if maxNumber <= 0 {
+		return mountStartup.Add(tc.MinStartupBackoff)
+	}
+
+	backoffSecs := rand.Int64N(maxNumber) + minBackoff
+	return mountStartup.Add(time.Duration(backoffSecs) * time.Second)
+}
+
 var defaultTidyConfig = tidyConfig{
 	Enabled:                 false,
 	Interval:                12 * time.Hour,
+	MinStartupBackoff:       5 * time.Minute,
+	MaxStartupBackoff:       15 * time.Minute,
 	CertStore:               false,
 	RevokedCerts:            false,
 	IssuerAssocs:            false,
@@ -132,6 +153,180 @@ var defaultTidyConfig = tidyConfig{
 	QueueSafetyBuffer:       48 * time.Hour,
 	CrossRevokedCerts:       false,
 	CertMetadata:            false,
+	CMPV2NonceStore:         false,
+}
+
+var tidyStatusResponseFields = map[string]*framework.FieldSchema{
+	"safety_buffer": {
+		Type:        framework.TypeInt,
+		Description: `Safety buffer time duration`,
+		Required:    true,
+	},
+	"issuer_safety_buffer": {
+		Type:        framework.TypeInt,
+		Description: `Issuer safety buffer`,
+		Required:    true,
+	},
+	"revocation_queue_safety_buffer": {
+		Type:        framework.TypeInt,
+		Description: `Revocation queue safety buffer`,
+		Required:    true,
+	},
+	"acme_account_safety_buffer": {
+		Type:        framework.TypeInt,
+		Description: `Safety buffer after creation after which accounts lacking orders are revoked`,
+		Required:    false,
+	},
+	"tidy_cert_store": {
+		Type:        framework.TypeBool,
+		Description: `Tidy certificate store`,
+		Required:    true,
+	},
+	"tidy_revoked_certs": {
+		Type:        framework.TypeBool,
+		Description: `Tidy revoked certificates`,
+		Required:    true,
+	},
+	"tidy_revoked_cert_issuer_associations": {
+		Type:        framework.TypeBool,
+		Description: `Tidy revoked certificate issuer associations`,
+		Required:    true,
+	},
+	"tidy_expired_issuers": {
+		Type:        framework.TypeBool,
+		Description: `Tidy expired issuers`,
+		Required:    true,
+	},
+	"tidy_cross_cluster_revoked_certs": {
+		Type:        framework.TypeBool,
+		Description: `Tidy the cross-cluster revoked certificate store`,
+		Required:    false,
+	},
+	"tidy_acme": {
+		Type:        framework.TypeBool,
+		Description: `Tidy Unused Acme Accounts, and Orders`,
+		Required:    true,
+	},
+	"tidy_cert_metadata": {
+		Type:        framework.TypeBool,
+		Description: `Tidy cert metadata`,
+		Required:    true,
+	},
+	"tidy_cmpv2_nonce_store": {
+		Type:        framework.TypeBool,
+		Description: `Tidy CMPv2 nonce store`,
+		Required:    true,
+	},
+	"pause_duration": {
+		Type:        framework.TypeString,
+		Description: `Duration to pause between tidying certificates`,
+		Required:    true,
+	},
+	"state": {
+		Type:        framework.TypeString,
+		Description: `One of Inactive, Running, Finished, or Error`,
+		Required:    true,
+	},
+	"error": {
+		Type:        framework.TypeString,
+		Description: `The error message`,
+		Required:    true,
+	},
+	"time_started": {
+		Type:        framework.TypeString,
+		Description: `Time the operation started`,
+		Required:    true,
+	},
+	"time_finished": {
+		Type:        framework.TypeString,
+		Description: `Time the operation finished`,
+		Required:    false,
+	},
+	"last_auto_tidy_finished": {
+		Type:        framework.TypeString,
+		Description: `Time the last auto-tidy operation finished`,
+		Required:    true,
+	},
+	"message": {
+		Type:        framework.TypeString,
+		Description: `Message of the operation`,
+		Required:    true,
+	},
+	"cert_store_deleted_count": {
+		Type:        framework.TypeInt,
+		Description: `The number of certificate storage entries deleted`,
+		Required:    true,
+	},
+	"revoked_cert_deleted_count": {
+		Type:        framework.TypeInt,
+		Description: `The number of revoked certificate entries deleted`,
+		Required:    true,
+	},
+	"current_cert_store_count": {
+		Type:        framework.TypeInt,
+		Description: `The number of revoked certificate entries deleted`,
+		Required:    true,
+	},
+	"cross_revoked_cert_deleted_count": {
+		Type:        framework.TypeInt,
+		Description: ``,
+		Required:    true,
+	},
+	"current_revoked_cert_count": {
+		Type:        framework.TypeInt,
+		Description: `The number of revoked certificate entries deleted`,
+		Required:    true,
+	},
+	"revocation_queue_deleted_count": {
+		Type:     framework.TypeInt,
+		Required: true,
+	},
+	"tidy_move_legacy_ca_bundle": {
+		Type:     framework.TypeBool,
+		Required: true,
+	},
+	"tidy_revocation_queue": {
+		Type:     framework.TypeBool,
+		Required: true,
+	},
+	"missing_issuer_cert_count": {
+		Type:     framework.TypeInt,
+		Required: true,
+	},
+	"internal_backend_uuid": {
+		Type:     framework.TypeString,
+		Required: true,
+	},
+	"total_acme_account_count": {
+		Type:        framework.TypeInt,
+		Description: `Total number of acme accounts iterated over`,
+		Required:    false,
+	},
+	"acme_account_deleted_count": {
+		Type:        framework.TypeInt,
+		Description: `The number of revoked acme accounts removed`,
+		Required:    false,
+	},
+	"acme_account_revoked_count": {
+		Type:        framework.TypeInt,
+		Description: `The number of unused acme accounts revoked`,
+		Required:    false,
+	},
+	"acme_orders_deleted_count": {
+		Type:        framework.TypeInt,
+		Description: `The number of expired, unused acme orders removed`,
+		Required:    false,
+	},
+	"cert_metadata_deleted_count": {
+		Type:        framework.TypeInt,
+		Description: `The number of metadata entries removed`,
+		Required:    false,
+	},
+	"cmpv2_nonce_deleted_count": {
+		Type:        framework.TypeInt,
+		Description: `The number of CMPv2 nonces removed`,
+		Required:    false,
+	},
 }
 
 func pathTidy(b *backend) *framework.Path {
@@ -177,167 +372,7 @@ func pathTidyCancel(b *backend) *framework.Path {
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
-						Fields: map[string]*framework.FieldSchema{
-							"safety_buffer": {
-								Type:        framework.TypeInt,
-								Description: `Safety buffer time duration`,
-								Required:    false,
-							},
-							"issuer_safety_buffer": {
-								Type:        framework.TypeInt,
-								Description: `Issuer safety buffer`,
-								Required:    false,
-							},
-							"revocation_queue_safety_buffer": {
-								Type:        framework.TypeInt,
-								Description: `Revocation queue safety buffer`,
-								Required:    true,
-							},
-							"tidy_cert_store": {
-								Type:        framework.TypeBool,
-								Description: `Tidy certificate store`,
-								Required:    false,
-							},
-							"tidy_revoked_certs": {
-								Type:        framework.TypeBool,
-								Description: `Tidy revoked certificates`,
-								Required:    false,
-							},
-							"tidy_revoked_cert_issuer_associations": {
-								Type:        framework.TypeBool,
-								Description: `Tidy revoked certificate issuer associations`,
-								Required:    false,
-							},
-							"tidy_acme": {
-								Type:        framework.TypeBool,
-								Description: `Tidy Unused Acme Accounts, and Orders`,
-								Required:    false,
-							},
-							"acme_account_safety_buffer": {
-								Type:        framework.TypeInt,
-								Description: `Safety buffer after creation after which accounts lacking orders are revoked`,
-								Required:    false,
-							},
-							"tidy_expired_issuers": {
-								Type:        framework.TypeBool,
-								Description: `Tidy expired issuers`,
-								Required:    false,
-							},
-							"tidy_cert_metadata": {
-								Type:        framework.TypeBool,
-								Description: `Tidy cert metadata`,
-								Required:    false,
-							},
-							"pause_duration": {
-								Type:        framework.TypeString,
-								Description: `Duration to pause between tidying certificates`,
-								Required:    false,
-							},
-							"state": {
-								Type:        framework.TypeString,
-								Description: `One of Inactive, Running, Finished, or Error`,
-								Required:    false,
-							},
-							"error": {
-								Type:        framework.TypeString,
-								Description: `The error message`,
-								Required:    false,
-							},
-							"time_started": {
-								Type:        framework.TypeString,
-								Description: `Time the operation started`,
-								Required:    false,
-							},
-							"time_finished": {
-								Type:        framework.TypeString,
-								Description: `Time the operation finished`,
-								Required:    false,
-							},
-							"last_auto_tidy_finished": {
-								Type:        framework.TypeString,
-								Description: `Time the last auto-tidy operation finished`,
-								Required:    true,
-							},
-							"message": {
-								Type:        framework.TypeString,
-								Description: `Message of the operation`,
-								Required:    false,
-							},
-							"cert_store_deleted_count": {
-								Type:        framework.TypeInt,
-								Description: `The number of certificate storage entries deleted`,
-								Required:    false,
-							},
-							"revoked_cert_deleted_count": {
-								Type:        framework.TypeInt,
-								Description: `The number of revoked certificate entries deleted`,
-								Required:    false,
-							},
-							"current_cert_store_count": {
-								Type:        framework.TypeInt,
-								Description: `The number of revoked certificate entries deleted`,
-								Required:    false,
-							},
-							"current_revoked_cert_count": {
-								Type:        framework.TypeInt,
-								Description: `The number of revoked certificate entries deleted`,
-								Required:    false,
-							},
-							"missing_issuer_cert_count": {
-								Type:     framework.TypeInt,
-								Required: false,
-							},
-							"tidy_move_legacy_ca_bundle": {
-								Type:     framework.TypeBool,
-								Required: false,
-							},
-							"tidy_cross_cluster_revoked_certs": {
-								Type:        framework.TypeBool,
-								Description: `Tidy the cross-cluster revoked certificate store`,
-								Required:    false,
-							},
-							"tidy_revocation_queue": {
-								Type:     framework.TypeBool,
-								Required: false,
-							},
-							"revocation_queue_deleted_count": {
-								Type:     framework.TypeInt,
-								Required: false,
-							},
-							"cross_revoked_cert_deleted_count": {
-								Type:     framework.TypeInt,
-								Required: false,
-							},
-							"internal_backend_uuid": {
-								Type:     framework.TypeString,
-								Required: false,
-							},
-							"total_acme_account_count": {
-								Type:        framework.TypeInt,
-								Description: `Total number of acme accounts iterated over`,
-								Required:    false,
-							},
-							"acme_account_deleted_count": {
-								Type:        framework.TypeInt,
-								Description: `The number of revoked acme accounts removed`,
-								Required:    false,
-							},
-							"acme_account_revoked_count": {
-								Type:        framework.TypeInt,
-								Description: `The number of unused acme accounts revoked`,
-								Required:    false,
-							},
-							"acme_orders_deleted_count": {
-								Type:        framework.TypeInt,
-								Description: `The number of expired, unused acme orders removed`,
-								Required:    false,
-							},
-							"cert_metadata_deleted_count": {
-								Type:        framework.TypeInt,
-								Description: `The number of metadata entries removed`,
-								Required:    false,
-							},
-						},
+						Fields:      tidyStatusResponseFields,
 					}},
 				},
 				ForwardPerformanceStandby: true,
@@ -364,168 +399,7 @@ func pathTidyStatus(b *backend) *framework.Path {
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
-						Fields: map[string]*framework.FieldSchema{
-							"safety_buffer": {
-								Type:        framework.TypeInt,
-								Description: `Safety buffer time duration`,
-								Required:    true,
-							},
-							"issuer_safety_buffer": {
-								Type:        framework.TypeInt,
-								Description: `Issuer safety buffer`,
-								Required:    true,
-							},
-							"revocation_queue_safety_buffer": {
-								Type:        framework.TypeInt,
-								Description: `Revocation queue safety buffer`,
-								Required:    true,
-							},
-							"acme_account_safety_buffer": {
-								Type:        framework.TypeInt,
-								Description: `Safety buffer after creation after which accounts lacking orders are revoked`,
-								Required:    false,
-							},
-							"tidy_cert_store": {
-								Type:        framework.TypeBool,
-								Description: `Tidy certificate store`,
-								Required:    true,
-							},
-							"tidy_revoked_certs": {
-								Type:        framework.TypeBool,
-								Description: `Tidy revoked certificates`,
-								Required:    true,
-							},
-							"tidy_revoked_cert_issuer_associations": {
-								Type:        framework.TypeBool,
-								Description: `Tidy revoked certificate issuer associations`,
-								Required:    true,
-							},
-							"tidy_expired_issuers": {
-								Type:        framework.TypeBool,
-								Description: `Tidy expired issuers`,
-								Required:    true,
-							},
-							"tidy_cross_cluster_revoked_certs": {
-								Type:        framework.TypeBool,
-								Description: `Tidy the cross-cluster revoked certificate store`,
-								Required:    false,
-							},
-							"tidy_acme": {
-								Type:        framework.TypeBool,
-								Description: `Tidy Unused Acme Accounts, and Orders`,
-								Required:    true,
-							},
-							"tidy_cert_metadata": {
-								Type:        framework.TypeBool,
-								Description: `Tidy cert metadata`,
-								Required:    true,
-							},
-							"pause_duration": {
-								Type:        framework.TypeString,
-								Description: `Duration to pause between tidying certificates`,
-								Required:    true,
-							},
-							"state": {
-								Type:        framework.TypeString,
-								Description: `One of Inactive, Running, Finished, or Error`,
-								Required:    true,
-							},
-							"error": {
-								Type:        framework.TypeString,
-								Description: `The error message`,
-								Required:    true,
-							},
-							"time_started": {
-								Type:        framework.TypeString,
-								Description: `Time the operation started`,
-								Required:    true,
-							},
-							"time_finished": {
-								Type:        framework.TypeString,
-								Description: `Time the operation finished`,
-								Required:    false,
-							},
-							"last_auto_tidy_finished": {
-								Type:        framework.TypeString,
-								Description: `Time the last auto-tidy operation finished`,
-								Required:    true,
-							},
-							"message": {
-								Type:        framework.TypeString,
-								Description: `Message of the operation`,
-								Required:    true,
-							},
-							"cert_store_deleted_count": {
-								Type:        framework.TypeInt,
-								Description: `The number of certificate storage entries deleted`,
-								Required:    true,
-							},
-							"revoked_cert_deleted_count": {
-								Type:        framework.TypeInt,
-								Description: `The number of revoked certificate entries deleted`,
-								Required:    true,
-							},
-							"current_cert_store_count": {
-								Type:        framework.TypeInt,
-								Description: `The number of revoked certificate entries deleted`,
-								Required:    true,
-							},
-							"cross_revoked_cert_deleted_count": {
-								Type:        framework.TypeInt,
-								Description: ``,
-								Required:    true,
-							},
-							"current_revoked_cert_count": {
-								Type:        framework.TypeInt,
-								Description: `The number of revoked certificate entries deleted`,
-								Required:    true,
-							},
-							"revocation_queue_deleted_count": {
-								Type:     framework.TypeInt,
-								Required: true,
-							},
-							"tidy_move_legacy_ca_bundle": {
-								Type:     framework.TypeBool,
-								Required: true,
-							},
-							"tidy_revocation_queue": {
-								Type:     framework.TypeBool,
-								Required: true,
-							},
-							"missing_issuer_cert_count": {
-								Type:     framework.TypeInt,
-								Required: true,
-							},
-							"internal_backend_uuid": {
-								Type:     framework.TypeString,
-								Required: true,
-							},
-							"total_acme_account_count": {
-								Type:        framework.TypeInt,
-								Description: `Total number of acme accounts iterated over`,
-								Required:    false,
-							},
-							"acme_account_deleted_count": {
-								Type:        framework.TypeInt,
-								Description: `The number of revoked acme accounts removed`,
-								Required:    false,
-							},
-							"acme_account_revoked_count": {
-								Type:        framework.TypeInt,
-								Description: `The number of unused acme accounts revoked`,
-								Required:    false,
-							},
-							"acme_orders_deleted_count": {
-								Type:        framework.TypeInt,
-								Description: `The number of expired, unused acme orders removed`,
-								Required:    false,
-							},
-							"cert_metadata_deleted_count": {
-								Type:        framework.TypeInt,
-								Description: `The number of metadata entries removed`,
-								Required:    false,
-							},
-						},
+						Fields:      tidyStatusResponseFields,
 					}},
 				},
 				ForwardPerformanceStandby: true,
@@ -537,6 +411,108 @@ func pathTidyStatus(b *backend) *framework.Path {
 }
 
 func pathConfigAutoTidy(b *backend) *framework.Path {
+	autoTidyResponseFields := map[string]*framework.FieldSchema{
+		"enabled": {
+			Type:        framework.TypeBool,
+			Description: `Specifies whether automatic tidy is enabled or not`,
+			Required:    true,
+		},
+		"min_startup_backoff_duration": {
+			Type:        framework.TypeInt,
+			Description: `The minimum amount of time in seconds auto-tidy will be delayed after startup`,
+			Required:    true,
+		},
+		"max_startup_backoff_duration": {
+			Type:        framework.TypeInt,
+			Description: `The maximum amount of time in seconds auto-tidy will be delayed after startup`,
+			Required:    true,
+		},
+		"interval_duration": {
+			Type:        framework.TypeInt,
+			Description: `Specifies the duration between automatic tidy operation`,
+			Required:    true,
+		},
+		"tidy_cert_store": {
+			Type:        framework.TypeBool,
+			Description: `Specifies whether to tidy up the certificate store`,
+			Required:    true,
+		},
+		"tidy_revoked_certs": {
+			Type:        framework.TypeBool,
+			Description: `Specifies whether to remove all invalid and expired certificates from storage`,
+			Required:    true,
+		},
+		"tidy_revoked_cert_issuer_associations": {
+			Type:        framework.TypeBool,
+			Description: `Specifies whether to associate revoked certificates with their corresponding issuers`,
+			Required:    true,
+		},
+		"tidy_expired_issuers": {
+			Type:        framework.TypeBool,
+			Description: `Specifies whether tidy expired issuers`,
+			Required:    true,
+		},
+		"tidy_acme": {
+			Type:        framework.TypeBool,
+			Description: `Tidy Unused Acme Accounts, and Orders`,
+			Required:    true,
+		},
+		"tidy_cert_metadata": {
+			Type:        framework.TypeBool,
+			Description: `Tidy cert metadata`,
+			Required:    true,
+		},
+		"tidy_cmpv2_nonce_store": {
+			Type:        framework.TypeBool,
+			Description: `Tidy CMPv2 nonce store`,
+			Required:    true,
+		},
+		"safety_buffer": {
+			Type:        framework.TypeInt,
+			Description: `Safety buffer time duration`,
+			Required:    true,
+		},
+		"issuer_safety_buffer": {
+			Type:        framework.TypeInt,
+			Description: `Issuer safety buffer`,
+			Required:    true,
+		},
+		"acme_account_safety_buffer": {
+			Type:        framework.TypeInt,
+			Description: `Safety buffer after creation after which accounts lacking orders are revoked`,
+			Required:    true,
+		},
+		"pause_duration": {
+			Type:        framework.TypeString,
+			Description: `Duration to pause between tidying certificates`,
+			Required:    true,
+		},
+		"tidy_cross_cluster_revoked_certs": {
+			Type:        framework.TypeBool,
+			Description: `Tidy the cross-cluster revoked certificate store`,
+			Required:    true,
+		},
+		"tidy_revocation_queue": {
+			Type:     framework.TypeBool,
+			Required: true,
+		},
+		"tidy_move_legacy_ca_bundle": {
+			Type:     framework.TypeBool,
+			Required: true,
+		},
+		"revocation_queue_safety_buffer": {
+			Type:     framework.TypeInt,
+			Required: true,
+		},
+		"publish_stored_certificate_count_metrics": {
+			Type:     framework.TypeBool,
+			Required: true,
+		},
+		"maintain_stored_certificate_counts": {
+			Type:     framework.TypeBool,
+			Required: true,
+		},
+	}
 	return &framework.Path{
 		Pattern: "config/auto-tidy",
 		DisplayAttrs: &framework.DisplayAttributes{
@@ -546,6 +522,16 @@ func pathConfigAutoTidy(b *backend) *framework.Path {
 			"enabled": {
 				Type:        framework.TypeBool,
 				Description: `Set to true to enable automatic tidy operations.`,
+			},
+			"min_startup_backoff_duration": {
+				Type:        framework.TypeDurationSecond,
+				Description: `The minimum amount of time in seconds auto-tidy will be delayed after startup.`,
+				Default:     int(defaultTidyConfig.MinStartupBackoff.Seconds()),
+			},
+			"max_startup_backoff_duration": {
+				Type:        framework.TypeDurationSecond,
+				Description: `The maximum amount of time in seconds auto-tidy will be delayed after startup.`,
+				Default:     int(defaultTidyConfig.MaxStartupBackoff.Seconds()),
 			},
 			"interval_duration": {
 				Type:        framework.TypeDurationSecond,
@@ -577,92 +563,7 @@ available on the tidy-status endpoint.`,
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
-						Fields: map[string]*framework.FieldSchema{
-							"enabled": {
-								Type:        framework.TypeBool,
-								Description: `Specifies whether automatic tidy is enabled or not`,
-								Required:    true,
-							},
-							"interval_duration": {
-								Type:        framework.TypeInt,
-								Description: `Specifies the duration between automatic tidy operation`,
-								Required:    true,
-							},
-							"tidy_cert_store": {
-								Type:        framework.TypeBool,
-								Description: `Specifies whether to tidy up the certificate store`,
-								Required:    true,
-							},
-							"tidy_revoked_certs": {
-								Type:        framework.TypeBool,
-								Description: `Specifies whether to remove all invalid and expired certificates from storage`,
-								Required:    true,
-							},
-							"tidy_revoked_cert_issuer_associations": {
-								Type:        framework.TypeBool,
-								Description: `Specifies whether to associate revoked certificates with their corresponding issuers`,
-								Required:    true,
-							},
-							"tidy_expired_issuers": {
-								Type:        framework.TypeBool,
-								Description: `Specifies whether tidy expired issuers`,
-								Required:    true,
-							},
-							"tidy_acme": {
-								Type:        framework.TypeBool,
-								Description: `Tidy Unused Acme Accounts, and Orders`,
-								Required:    true,
-							},
-							"tidy_cert_metadata": {
-								Type:        framework.TypeBool,
-								Description: `Tidy cert metadata`,
-								Required:    true,
-							},
-							"safety_buffer": {
-								Type:        framework.TypeInt,
-								Description: `Safety buffer time duration`,
-								Required:    true,
-							},
-							"issuer_safety_buffer": {
-								Type:        framework.TypeInt,
-								Description: `Issuer safety buffer`,
-								Required:    true,
-							},
-							"acme_account_safety_buffer": {
-								Type:        framework.TypeInt,
-								Description: `Safety buffer after creation after which accounts lacking orders are revoked`,
-								Required:    false,
-							},
-							"pause_duration": {
-								Type:        framework.TypeString,
-								Description: `Duration to pause between tidying certificates`,
-								Required:    true,
-							},
-							"tidy_move_legacy_ca_bundle": {
-								Type:     framework.TypeBool,
-								Required: true,
-							},
-							"tidy_cross_cluster_revoked_certs": {
-								Type:     framework.TypeBool,
-								Required: true,
-							},
-							"tidy_revocation_queue": {
-								Type:     framework.TypeBool,
-								Required: true,
-							},
-							"revocation_queue_safety_buffer": {
-								Type:     framework.TypeInt,
-								Required: true,
-							},
-							"publish_stored_certificate_count_metrics": {
-								Type:     framework.TypeBool,
-								Required: true,
-							},
-							"maintain_stored_certificate_counts": {
-								Type:     framework.TypeBool,
-								Required: true,
-							},
-						},
+						Fields:      autoTidyResponseFields,
 					}},
 				},
 			},
@@ -675,93 +576,7 @@ available on the tidy-status endpoint.`,
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
-						Fields: map[string]*framework.FieldSchema{
-							"enabled": {
-								Type:        framework.TypeBool,
-								Description: `Specifies whether automatic tidy is enabled or not`,
-								Required:    true,
-							},
-							"interval_duration": {
-								Type:        framework.TypeInt,
-								Description: `Specifies the duration between automatic tidy operation`,
-								Required:    true,
-							},
-							"tidy_cert_store": {
-								Type:        framework.TypeBool,
-								Description: `Specifies whether to tidy up the certificate store`,
-								Required:    true,
-							},
-							"tidy_revoked_certs": {
-								Type:        framework.TypeBool,
-								Description: `Specifies whether to remove all invalid and expired certificates from storage`,
-								Required:    true,
-							},
-							"tidy_revoked_cert_issuer_associations": {
-								Type:        framework.TypeBool,
-								Description: `Specifies whether to associate revoked certificates with their corresponding issuers`,
-								Required:    true,
-							},
-							"tidy_expired_issuers": {
-								Type:        framework.TypeBool,
-								Description: `Specifies whether tidy expired issuers`,
-								Required:    true,
-							},
-							"tidy_acme": {
-								Type:        framework.TypeBool,
-								Description: `Tidy Unused Acme Accounts, and Orders`,
-								Required:    true,
-							},
-							"tidy_cert_metadata": {
-								Type:        framework.TypeBool,
-								Description: `Tidy cert metadata`,
-								Required:    true,
-							},
-							"safety_buffer": {
-								Type:        framework.TypeInt,
-								Description: `Safety buffer time duration`,
-								Required:    true,
-							},
-							"issuer_safety_buffer": {
-								Type:        framework.TypeInt,
-								Description: `Issuer safety buffer`,
-								Required:    true,
-							},
-							"acme_account_safety_buffer": {
-								Type:        framework.TypeInt,
-								Description: `Safety buffer after creation after which accounts lacking orders are revoked`,
-								Required:    true,
-							},
-							"pause_duration": {
-								Type:        framework.TypeString,
-								Description: `Duration to pause between tidying certificates`,
-								Required:    true,
-							},
-							"tidy_cross_cluster_revoked_certs": {
-								Type:        framework.TypeBool,
-								Description: `Tidy the cross-cluster revoked certificate store`,
-								Required:    true,
-							},
-							"tidy_revocation_queue": {
-								Type:     framework.TypeBool,
-								Required: true,
-							},
-							"tidy_move_legacy_ca_bundle": {
-								Type:     framework.TypeBool,
-								Required: true,
-							},
-							"revocation_queue_safety_buffer": {
-								Type:     framework.TypeInt,
-								Required: true,
-							},
-							"publish_stored_certificate_count_metrics": {
-								Type:     framework.TypeBool,
-								Required: true,
-							},
-							"maintain_stored_certificate_counts": {
-								Type:     framework.TypeBool,
-								Required: true,
-							},
-						},
+						Fields:      autoTidyResponseFields,
 					}},
 				},
 				// Read more about why these flags are set in backend.go.
@@ -790,6 +605,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	tidyAcme := d.Get("tidy_acme").(bool)
 	acmeAccountSafetyBuffer := d.Get("acme_account_safety_buffer").(int)
 	tidyCertMetadata := d.Get("tidy_cert_metadata").(bool)
+	tidyCMPV2NonceStore := d.Get("tidy_cmpv2_nonce_store").(bool)
 
 	if safetyBuffer < 1 {
 		return logical.ErrorResponse("safety_buffer must be greater than zero"), nil
@@ -846,6 +662,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 		TidyAcme:                tidyAcme,
 		AcmeAccountSafetyBuffer: acmeAccountSafetyBufferDuration,
 		CertMetadata:            tidyCertMetadata,
+		CMPV2NonceStore:         tidyCMPV2NonceStore,
 	}
 
 	if !atomic.CompareAndSwapUint32(b.tidyCASGuard, 0, 1) {
@@ -860,16 +677,20 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 		Storage: req.Storage,
 	}
 
+	resp := &logical.Response{}
 	// Mark the last tidy operation as relatively recent, to ensure we don't
 	// try to trigger the periodic function.
-	b.tidyStatusLock.Lock()
-	b.lastTidy = time.Now()
-	b.tidyStatusLock.Unlock()
+	// NOTE: not sure this is correct as we are updating the auto tidy time with this manual run. Ideally we
+	//       could track when we ran each type of tidy was last run which would allow manual runs and auto
+	//       runs to properly impact each other.
+	sc := b.makeStorageContext(ctx, req.Storage)
+	if err := b.updateLastAutoTidyTime(sc, time.Now()); err != nil {
+		resp.AddWarning(fmt.Sprintf("failed persisting tidy last run time: %v", err))
+	}
 
 	// Kick off the actual tidy.
 	b.startTidyOperation(req, config)
 
-	resp := &logical.Response{}
 	if !config.IsAnyTidyEnabled() {
 		resp.AddWarning("Manual tidy requested but no tidy operations were set. Enable at least one tidy operation to be run (" + config.AnyTidyConfig() + ").")
 	} else {
@@ -983,6 +804,17 @@ func (b *backend) startTidyOperation(req *logical.Request, config *tidyConfig) {
 				}
 			}
 
+			// Check for cancel before continuing.
+			if atomic.CompareAndSwapUint32(b.tidyCancelCAS, 1, 0) {
+				return tidyCancelledError
+			}
+
+			if config.CMPV2NonceStore {
+				if err := b.doTidyCMPV2NonceStore(ctx, req.Storage); err != nil {
+					return err
+				}
+			}
+
 			return nil
 		}
 
@@ -995,9 +827,10 @@ func (b *backend) startTidyOperation(req *logical.Request, config *tidyConfig) {
 			// Since the tidy operation finished without an error, we don't
 			// really want to start another tidy right away (if the interval
 			// is too short). So mark the last tidy as now.
-			b.tidyStatusLock.Lock()
-			b.lastTidy = time.Now()
-			b.tidyStatusLock.Unlock()
+			sc := b.makeStorageContext(ctx, req.Storage)
+			if err := b.updateLastAutoTidyTime(sc, time.Now()); err != nil {
+				logger.Error("error persisting last tidy run time", "error", err)
+			}
 		}
 	}()
 }
@@ -1701,6 +1534,7 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 			"tidy_cross_cluster_revoked_certs":      nil,
 			"tidy_acme":                             nil,
 			"tidy_cert_metadata":                    nil,
+			"tidy_cmpv2_nonce_store":                nil,
 			"pause_duration":                        nil,
 			"state":                                 "Inactive",
 			"error":                                 nil,
@@ -1721,6 +1555,8 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 			"acme_orders_deleted_count":             nil,
 			"acme_account_safety_buffer":            nil,
 			"cert_metadata_deleted_count":           nil,
+			"cmpv2_nonce_deleted_count":             nil,
+			"last_auto_tidy_finished":               b.getLastAutoTidyTimeWithoutLock(), // we acquired the tidyStatusLock above.
 		},
 	}
 
@@ -1755,6 +1591,7 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 	resp.Data["tidy_cross_cluster_revoked_certs"] = b.tidyStatus.tidyCrossRevokedCerts
 	resp.Data["tidy_acme"] = b.tidyStatus.tidyAcme
 	resp.Data["tidy_cert_metadata"] = b.tidyStatus.tidyCertMetadata
+	resp.Data["tidy_cmpv2_nonce_store"] = b.tidyStatus.tidyCMPV2NonceStore
 	resp.Data["pause_duration"] = b.tidyStatus.pauseDuration
 	resp.Data["time_started"] = b.tidyStatus.timeStarted
 	resp.Data["message"] = b.tidyStatus.message
@@ -1764,15 +1601,17 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 	resp.Data["revocation_queue_deleted_count"] = b.tidyStatus.revQueueDeletedCount
 	resp.Data["cross_revoked_cert_deleted_count"] = b.tidyStatus.crossRevokedDeletedCount
 	resp.Data["revocation_queue_safety_buffer"] = b.tidyStatus.revQueueSafetyBuffer
-	resp.Data["last_auto_tidy_finished"] = b.lastTidy
 	resp.Data["total_acme_account_count"] = b.tidyStatus.acmeAccountsCount
 	resp.Data["acme_account_deleted_count"] = b.tidyStatus.acmeAccountsDeletedCount
 	resp.Data["acme_account_revoked_count"] = b.tidyStatus.acmeAccountsRevokedCount
 	resp.Data["acme_orders_deleted_count"] = b.tidyStatus.acmeOrdersDeletedCount
 	resp.Data["acme_account_safety_buffer"] = b.tidyStatus.acmeAccountSafetyBuffer
 	resp.Data["cert_metadata_deleted_count"] = b.tidyStatus.certMetadataDeletedCount
+	resp.Data["cmpv2_nonce_deleted_count"] = b.tidyStatus.cmpv2NonceDeletedCount
 
 	switch b.tidyStatus.state {
+	case tidyStatusInactive:
+		resp.Data["state"] = "Inactive"
 	case tidyStatusStarted:
 		resp.Data["state"] = "Running"
 	case tidyStatusFinished:
@@ -1814,8 +1653,44 @@ func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Requ
 		return nil, err
 	}
 
+	isAutoTidyBeingEnabled := false
+
 	if enabledRaw, ok := d.GetOk("enabled"); ok {
-		config.Enabled = enabledRaw.(bool)
+		enabled, err := parseutil.ParseBool(enabledRaw)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("failed to parse enabled flag as a boolean: %s", err.Error())), nil
+		}
+		if !config.Enabled && enabled {
+			// we are turning on auto-tidy reset our persisted time to now
+			isAutoTidyBeingEnabled = true
+		}
+		config.Enabled = enabled
+	}
+
+	if minStartupBackoffRaw, ok := d.GetOk("min_startup_backoff_duration"); ok {
+		minDuration, err := parseutil.ParseDurationSecond(minStartupBackoffRaw)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("failed to parse min_startup_backoff_duration flag as a duration: %s", err.Error())), nil
+		}
+		if minDuration.Seconds() < 1 {
+			return logical.ErrorResponse(fmt.Sprintf("min_startup_backoff_duration must be at least 1 second: parsed: %v", minDuration)), nil
+		}
+		config.MinStartupBackoff = minDuration
+	}
+
+	if maxStartupBackoffRaw, ok := d.GetOk("max_startup_backoff_duration"); ok {
+		maxDuration, err := parseutil.ParseDurationSecond(maxStartupBackoffRaw)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("failed to parse max_startup_backoff_duration flag as a duration: %s", err.Error())), nil
+		}
+		if maxDuration.Seconds() < 1 {
+			return logical.ErrorResponse(fmt.Sprintf("max_startup_backoff_duration must be at least 1 second: parsed: %v", maxDuration)), nil
+		}
+		config.MaxStartupBackoff = maxDuration
+	}
+
+	if config.MinStartupBackoff > config.MaxStartupBackoff {
+		return logical.ErrorResponse(fmt.Sprintf("max_startup_backoff_duration %v must be greater or equal to min_startup_backoff_duration %v", config.MaxStartupBackoff, config.MinStartupBackoff)), nil
 	}
 
 	if intervalRaw, ok := d.GetOk("interval_duration"); ok {
@@ -1924,6 +1799,13 @@ func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Requ
 		return nil, err
 	}
 
+	if isAutoTidyBeingEnabled {
+		if err := b.updateLastAutoTidyTime(sc, time.Now()); err != nil {
+			b.Logger().Warn("failed to update last auto tidy run time to now, the first auto-tidy "+
+				"might run soon and not at the next delay provided", "error", err.Error())
+		}
+	}
+
 	return &logical.Response{
 		Data: getTidyConfigData(*config),
 	}, nil
@@ -1964,7 +1846,7 @@ func (b *backend) tidyStatusStop(err error) {
 	b.tidyStatus.err = err
 	if err == nil {
 		b.tidyStatus.state = tidyStatusFinished
-	} else if err == tidyCancelledError {
+	} else if errors.Is(err, tidyCancelledError) {
 		b.tidyStatus.state = tidyStatusCancelled
 	} else {
 		b.tidyStatus.state = tidyStatusError
@@ -2054,6 +1936,37 @@ func (b *backend) tidyStatusIncCertMetadataCount() {
 	defer b.tidyStatusLock.Unlock()
 
 	b.tidyStatus.certMetadataDeletedCount++
+}
+
+func (b *backend) tidyStatusIncCMPV2NonceDeletedCount() {
+	b.tidyStatusLock.Lock()
+	defer b.tidyStatusLock.Unlock()
+
+	b.tidyStatus.cmpv2NonceDeletedCount++
+}
+
+// updateLastAutoTidyTime should be used to update b.lastAutoTidy as the required locks
+// are acquired and the auto tidy time is persisted to storage to work across restarts
+func (b *backend) updateLastAutoTidyTime(sc *storageContext, lastRunTime time.Time) error {
+	b.tidyStatusLock.Lock()
+	defer b.tidyStatusLock.Unlock()
+
+	b.lastAutoTidy = lastRunTime
+	return sc.writeAutoTidyLastRun(lastRunTime)
+}
+
+// getLastAutoTidyTime should be used to read from b.lastAutoTidy as the required locks
+// are acquired prior to reading
+func (b *backend) getLastAutoTidyTime() time.Time {
+	b.tidyStatusLock.RLock()
+	defer b.tidyStatusLock.RUnlock()
+	return b.getLastAutoTidyTimeWithoutLock()
+}
+
+// getLastAutoTidyTimeWithoutLock should be used to read from b.lastAutoTidy with the
+// b.tidyStatusLock being acquired, normally use getLastAutoTidyTime
+func (b *backend) getLastAutoTidyTimeWithoutLock() time.Time {
+	return b.lastAutoTidy
 }
 
 const pathTidyHelpSyn = `
@@ -2152,6 +2065,8 @@ func getTidyConfigData(config tidyConfig) map[string]interface{} {
 		// This map is in the same order as tidyConfig to ensure that all fields are accounted for
 		"enabled":                                  config.Enabled,
 		"interval_duration":                        int(config.Interval / time.Second),
+		"min_startup_backoff_duration":             int(config.MinStartupBackoff.Seconds()),
+		"max_startup_backoff_duration":             int(config.MaxStartupBackoff.Seconds()),
 		"tidy_cert_store":                          config.CertStore,
 		"tidy_revoked_certs":                       config.RevokedCerts,
 		"tidy_revoked_cert_issuer_associations":    config.IssuerAssocs,
@@ -2168,5 +2083,6 @@ func getTidyConfigData(config tidyConfig) map[string]interface{} {
 		"revocation_queue_safety_buffer":           int(config.QueueSafetyBuffer / time.Second),
 		"tidy_cross_cluster_revoked_certs":         config.CrossRevokedCerts,
 		"tidy_cert_metadata":                       config.CertMetadata,
+		"tidy_cmpv2_nonce_store":                   config.CMPV2NonceStore,
 	}
 }

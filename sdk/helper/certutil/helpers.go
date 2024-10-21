@@ -17,13 +17,11 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
-	"encoding/binary"
 	"encoding/hex"
 	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/big"
 	"net"
 	"net/url"
@@ -1104,12 +1102,21 @@ func createCSR(data *CreationBundle, addBasicConstraints bool, randReader io.Rea
 	}
 
 	// Like many root CAs, other information is ignored
+
 	csrTemplate := &x509.CertificateRequest{
 		Subject:        data.Params.Subject,
 		DNSNames:       data.Params.DNSNames,
 		EmailAddresses: data.Params.EmailAddresses,
 		IPAddresses:    data.Params.IPAddresses,
 		URIs:           data.Params.URIs,
+	}
+
+	if data.Params.KeyUsage != 0 {
+		keyUsageExt, err := marshalKeyUsage(data.Params.KeyUsage)
+		if err != nil {
+			return nil, fmt.Errorf("failed marshalling existing key usage: %w", err)
+		}
+		csrTemplate.ExtraExtensions = []pkix.Extension{keyUsageExt}
 	}
 
 	if err := HandleOtherCSRSANs(csrTemplate, data.Params.OtherSANs); err != nil {
@@ -1161,6 +1168,56 @@ func createCSR(data *CreationBundle, addBasicConstraints bool, randReader io.Rea
 	return result, nil
 }
 
+// Marshal Key Usage taken from: https://cs.opensource.google/go/go/+/master:src/crypto/x509/x509.go;drc=370a6959e3edd9d901446661ee9fef3f72d150d4;l=1339
+// It requires the two following functions (reverseBitsInAByte and asn1BitLength) below, taken from the same code base
+// It's used for that code only for certificates; but we need to marshal key usage on CSR (createCSR above) as well
+func marshalKeyUsage(ku x509.KeyUsage) (pkix.Extension, error) {
+	ext := pkix.Extension{Id: KeyUsageOID, Critical: true}
+
+	var a [2]byte
+	a[0] = reverseBitsInAByte(byte(ku))
+	a[1] = reverseBitsInAByte(byte(ku >> 8))
+
+	l := 1
+	if a[1] != 0 {
+		l = 2
+	}
+
+	bitString := a[:l]
+	var err error
+	ext.Value, err = asn1.Marshal(asn1.BitString{Bytes: bitString, BitLength: asn1BitLength(bitString)})
+	return ext, err
+}
+
+// reverseBitsInAByte Taken from: https://cs.opensource.google/go/go/+/master:src/crypto/x509/x509.go;drc=370a6959e3edd9d901446661ee9fef3f72d150d4;l=1011
+// needed for marshalKeyUsage called above
+func reverseBitsInAByte(in byte) byte {
+	b1 := in>>4 | in<<4
+	b2 := b1>>2&0x33 | b1<<2&0xcc
+	b3 := b2>>1&0x55 | b2<<1&0xaa
+	return b3
+}
+
+// asn1BitLength returns the bit-length of bitString by considering the
+// most-significant bit in a byte to be the "first" bit. This convention
+// matches ASN.1, but differs from almost everything else.
+func asn1BitLength(bitString []byte) int {
+	bitLen := len(bitString) * 8
+
+	for i := range bitString {
+		b := bitString[len(bitString)-i-1]
+
+		for bit := uint(0); bit < 8; bit++ {
+			if (b>>bit)&1 == 1 {
+				return bitLen
+			}
+			bitLen--
+		}
+	}
+
+	return 0
+}
+
 // SignCertificate performs the heavy lifting
 // of generating a certificate from a CSR.
 // Returns a ParsedCertBundle sans private keys.
@@ -1187,9 +1244,10 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		return nil, errutil.UserError{Err: "nil csr given to signCertificate"}
 	}
 
-	err := data.CSR.CheckSignature()
-	if err != nil {
-		return nil, errutil.UserError{Err: "request signature invalid"}
+	if !data.Params.IgnoreCSRSignature {
+		if err := data.CSR.CheckSignature(); err != nil {
+			return nil, errutil.UserError{Err: "request signature invalid"}
+		}
 	}
 
 	result := &ParsedCertBundle{}
@@ -1315,7 +1373,7 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 }
 
 func NewCertPool(reader io.Reader) (*x509.CertPool, error) {
-	pemBlock, err := ioutil.ReadAll(reader)
+	pemBlock, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, err
 	}
@@ -1637,17 +1695,26 @@ func getKeyUsage(exts []pkix.Extension) (x509.KeyUsage, error) {
 	keyUsage := x509.KeyUsage(0)
 	for _, ext := range exts {
 		if ext.Id.Equal(KeyUsageOID) {
-			// ASN1 is Big Endian
-			// another example of equivalent code: https://cs.opensource.google/go/go/+/master:src/crypto/x509/parser.go;drc=dd84bb682482390bb8465482cb7b13d2e3b17297;l=319
-			buf := bytes.NewReader(ext.Value)
-			err := binary.Read(buf, binary.BigEndian, &keyUsage)
-			if err != nil {
-				return keyUsage, err
-			}
-			return keyUsage, nil
+			return parseKeyUsageExtension(ext.Value)
 		}
 	}
 	return keyUsage, nil
+}
+
+// Taken from: https://cs.opensource.google/go/go/+/master:src/crypto/x509/parser.go;drc=dd84bb682482390bb8465482cb7b13d2e3b17297;l=319
+func parseKeyUsageExtension(der cryptobyte.String) (x509.KeyUsage, error) {
+	var usageBits asn1.BitString
+	if !der.ReadASN1BitString(&usageBits) {
+		return 0, errors.New("x509: invalid key usage")
+	}
+
+	var usage int
+	for i := 0; i < 9; i++ {
+		if usageBits.At(i) != 0 {
+			usage |= 1 << uint(i)
+		}
+	}
+	return x509.KeyUsage(usage), nil
 }
 
 func getExtKeyUsageOids(exts []pkix.Extension) ([]string, error) {

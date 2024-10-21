@@ -9,7 +9,6 @@ import { service } from '@ember/service';
 import { set } from '@ember/object';
 import RSVP from 'rsvp';
 import config from '../config/environment';
-import fetch from 'fetch';
 
 const { APP } = config;
 const { POLLING_URLS, NAMESPACE_ROOT_URLS } = APP;
@@ -92,7 +91,7 @@ export default RESTAdapter.extend({
         controlGroup.deleteControlGroupToken(controlGroupToken.accessor);
       }
       const [resp] = args;
-      if (resp && resp.warnings) {
+      if (resp && resp.warnings && !options.skipWarnings) {
         const flash = this.flashMessages;
         resp.warnings.forEach((message) => {
           flash.info(message);

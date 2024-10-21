@@ -584,6 +584,11 @@ primary node.`,
 		Description: `Set to true to enable tidying up certificate metadata`,
 	}
 
+	fields["tidy_cmpv2_nonce_store"] = &framework.FieldSchema{
+		Type:        framework.TypeBool,
+		Description: `Set to true to enable tidying up the CMPv2 nonce store`,
+	}
+
 	return fields
 }
 
@@ -652,6 +657,36 @@ SHA-2-512. Defaults to 0 to automatically detect based on key length
 		Default: issuing.DefaultRoleUsePss,
 		Description: `Whether or not to use PSS signatures when using a
 RSA key-type issuer. Defaults to false.`,
+	}
+
+	return fields
+}
+
+func addCACertKeyUsage(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields["key_usage"] = &framework.FieldSchema{ // Same Name as Leaf-Cert Field, and CA CSR Field, but Description and Default Differ
+		Type:    framework.TypeCommaStringSlice,
+		Default: []string{"CertSign", "CRLSign"},
+		Description: `This list of key usages (not extended key usages) will be 
+added to the existing set of key usages, CRL,CertSign, on 
+the generated certificate.  Valid values can be found at 
+https://golang.org/pkg/crypto/x509/#KeyUsage -- simply drop 
+the "KeyUsage" part of the name.  To use the issuer for 
+CMPv2, DigitalSignature must be set.`,
+	}
+
+	return fields
+}
+
+func addCaCsrKeyUsage(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields["key_usage"] = &framework.FieldSchema{ // Same Name as Leaf-Cert, CA-Cert Field, but Description and Default Differ
+		Type:    framework.TypeCommaStringSlice,
+		Default: []string{},
+		Description: `Specifies key_usage to encode in the certificate signing
+request.  This is a comma-separated string or list of key
+usages (not extended key usages). Valid values can be found
+at https://golang.org/pkg/crypto/x509/#KeyUsage -- simply 
+drop the "KeyUsage" part of the name.  If not set, key 
+usage will not appear on the CSR.`,
 	}
 
 	return fields

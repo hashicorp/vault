@@ -27,10 +27,10 @@
     </h1>
   </p.levelLeft>
 </PageHeader>
-{{#if (and (not-eq this.model.id "root") (or this.capabilities.canUpdate this.capabilities.canDelete))}}
+{{#if (and (not-eq this.model.id "root") (or this.model.canUpdate this.model.canDelete))}}
   <Toolbar>
     <ToolbarActions>
-      {{#if (and (not-eq this.model.id "default") this.capabilities.canDelete)}}
+      {{#if (and (not-eq this.model.id "default") this.model.canDelete)}}
         <ConfirmAction
           @buttonText="Delete policy"
           class="toolbar-button"

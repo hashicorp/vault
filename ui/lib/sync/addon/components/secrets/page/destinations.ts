@@ -7,14 +7,14 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import { getOwner } from '@ember/application';
+import { getOwner } from '@ember/owner';
 import errorMessage from 'vault/utils/error-message';
 import { findDestination, syncDestinations } from 'core/helpers/sync-destinations';
 import { next } from '@ember/runloop';
 
 import type SyncDestinationModel from 'vault/vault/models/sync/destination';
 import type RouterService from '@ember/routing/router-service';
-import type StoreService from 'vault/services/store';
+import type PaginationService from 'vault/services/pagination';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type { EngineOwner } from 'vault/vault/app-types';
 import type { SyncDestinationName, SyncDestinationType } from 'vault/vault/helpers/sync-destinations';
@@ -27,8 +27,8 @@ interface Args {
 }
 
 export default class SyncSecretsDestinationsPageComponent extends Component<Args> {
-  @service declare readonly router: RouterService;
-  @service declare readonly store: StoreService;
+  @service('app-router') declare readonly router: RouterService;
+  @service declare readonly pagination: PaginationService;
   @service declare readonly flashMessages: FlashMessageService;
 
   @tracked destinationToDelete: SyncDestinationModel | null = null;
@@ -98,7 +98,7 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
       const { name } = destination;
       const message = `Destination ${name} has been queued for deletion.`;
       await destination.destroyRecord();
-      this.store.clearDataset('sync/destination');
+      this.pagination.clearDataset('sync/destination');
       this.router.transitionTo('vault.cluster.sync.secrets.overview');
       this.flashMessages.success(message);
     } catch (error) {

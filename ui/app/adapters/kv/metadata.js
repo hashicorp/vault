@@ -68,11 +68,17 @@ export default class KvMetadataAdapter extends ApplicationAdapter {
     });
   }
 
-  // This method is only called when deleting from the LIST view. Otherwise, delete on kv/data
+  // This method is called when deleting from the list or metadata details view.
+  // Otherwise, delete happens in kv/data adapter
   deleteRecord(store, type, snapshot) {
     const { backend, path, fullSecretPath } = snapshot.record;
     // fullSecretPath is used when deleting from the LIST view and is defined via the serializer
     // path is used when deleting from the metadata details view.
     return this.ajax(this._url(kvMetadataPath(backend, fullSecretPath || path)), 'DELETE');
+  }
+
+  // custom method used if users do not have "read" permissions to fetch record
+  deleteMetadata(backend, path) {
+    return this.ajax(this._url(kvMetadataPath(backend, path)), 'DELETE');
   }
 }

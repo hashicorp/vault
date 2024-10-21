@@ -361,7 +361,9 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 			contentType = "application/pem-certificate-chain"
 		}
 	default:
-		serial = data.Get("serial").(string)
+		if ser, ok := data.GetOk("serial"); ok {
+			serial = ser.(string)
+		}
 		pemType = "CERTIFICATE"
 	}
 	if len(serial) == 0 {

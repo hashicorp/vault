@@ -3,50 +3,21 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<PageHeader as |p|>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      Vault Usage Metrics
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+<Clients::PageHeader
+  @startTimestamp={{@startTimestamp}}
+  @endTimestamp={{@endTimestamp}}
+  @namespace={{@namespace}}
+  @upgradesDuringActivity={{this.upgradesDuringActivity}}
+  @noData={{not @activity.total.clients}}
+/>
 
-<div class="box is-sideless is-fullwidth is-marginless is-bottomless">
-  <p class="has-bottom-margin-xl">
-    This dashboard surfaces Vault client usage over time.
-    <Hds::Link::Inline @href={{doc-link "/vault/docs/concepts/client-count"}}>Documentation is available here</Hds::Link::Inline>.
-    Date queries are sent in UTC.
-  </p>
-
-  <Hds::Text::Display @tag="p" class="has-bottom-margin-xs" data-test-counts-start-label>
-    {{this.versionText.label}}
-  </Hds::Text::Display>
-
-  <div class="is-flex-align-baseline">
-    {{#if this.formattedStartDate}}
-      <p class="is-size-6" data-test-counts-start-month>{{this.formattedStartDate}}</p>
-      <Hds::Button
-        class="has-left-margin-xs"
-        @text="Edit"
-        @color="tertiary"
-        @icon="edit"
-        @iconPosition="trailing"
-        data-test-counts-start-edit
-        {{on "click" (fn (mut this.showBillingStartModal) true)}}
-      />
-    {{else}}
-      <DateDropdown
-        @handleSubmit={{this.onDateChange}}
-        @dateType="startDate"
-        @submitText="Save"
-        data-test-counts-start-dropdown
-      />
-    {{/if}}
-  </div>
-
-  <Hds::Text::Body @tag="p" @color="faint" @size="300" class="has-bottom-margin-l" data-test-counts-description>
-    {{this.versionText.description}}
-  </Hds::Text::Body>
+<div class="box is-sideless is-fullwidth is-marginless is-bottomless is-shadowless">
+  <Clients::DateRange
+    @startTime={{@startTimestamp}}
+    @endTime={{@endTimestamp}}
+    @onChange={{this.onDateChange}}
+    class="has-bottom-margin-l"
+  />
 
   {{#if (eq @activity.id "no-data")}}
     <Clients::NoData @config={{@config}} @dateRangeMessage={{this.dateRangeMessage}} />
@@ -65,7 +36,7 @@
       </Hds::Alert>
     {{/if}}
 
-    {{#if @startTimestamp}}
+    {{#if (or @namespace this.namespaces @mountPath this.mountPaths)}}
       <Hds::Text::Display @tag="p">
         Filters
       </Hds::Text::Display>
@@ -76,11 +47,6 @@
       </Hds::Text::Body>
       <Toolbar aria-label="toolbar for filtering client count data" class="has-bottom-margin-m" data-test-clients-filter-bar>
         <ToolbarFilters>
-          <CalendarWidget
-            @startTimestamp={{this.startTimestampISO}}
-            @endTimestamp={{this.endTimestampISO}}
-            @selectMonth={{this.onDateChange}}
-          />
           {{#if (or @namespace this.namespaces)}}
             <SearchSelect
               @id="namespace-search-select"
@@ -90,11 +56,12 @@
               @disallowNewItems={{true}}
               @fallbackComponent="input-search"
               @onChange={{fn this.setFilterValue "ns"}}
-              @placeholder="Filter by namespace"
+              @placeholder="Namespace within {{this.namespacePathForFilter}}"
               @displayInherit={{true}}
               class="is-marginless"
               data-test-counts-namespaces
             />
+            <div class="has-left-margin-xs"></div>
           {{/if}}
           {{#if (or @mountPath this.mountPaths)}}
             <SearchSelect
@@ -105,7 +72,7 @@
               @disallowNewItems={{true}}
               @fallbackComponent="input-search"
               @onChange={{fn this.setFilterValue "mountPath"}}
-              @placeholder="Filter by mount path"
+              @placeholder="Mount path within {{this.namespacePathForFilter}}"
               @displayInherit={{true}}
               data-test-counts-auth-mounts
             />
@@ -114,7 +81,7 @@
       </Toolbar>
     {{/if}}
 
-    {{#if this.filteredActivity}}
+    {{#if this.totalUsageCounts}}
       {{#if this.upgradeExplanations}}
         <Hds::Alert data-test-clients-upgrade-warning @type="inline" @color="warning" class="has-bottom-margin-m" as |A|>
           <A.Title>
@@ -156,9 +123,12 @@
       {{! CLIENT COUNT PAGE COMPONENTS RENDER HERE }}
       {{yield}}
 
-    {{else if (and (not @config.billingStartTimestamp) (not @startTimestamp))}}
-      {{! Empty state for no billing/license start date }}
-      <EmptyState @title={{this.versionText.title}} @message={{this.versionText.message}} />
+    {{else if (and this.version.isCommunity (not @startTimestamp))}}
+      {{! Empty state for community without start query param }}
+      <EmptyState
+        @title="No start date found"
+        @message="In order to get the most from this data, please enter a start month above. Vault will calculate new clients starting from that month."
+      />
     {{else}}
       <EmptyState
         @title="No data received {{if this.dateRangeMessage this.dateRangeMessage}}"
@@ -173,21 +143,3 @@
     {{/if}}
   {{/if}}
 </div>
-
-{{#if this.showBillingStartModal}}
-  <Hds::Modal id="clients-edit-date-modal" @onClose={{fn (mut this.showBillingStartModal) false}} as |M|>
-    <M.Header>
-      Edit start month
-    </M.Header>
-    <M.Body>
-      <p class="has-bottom-margin-s">
-        {{this.versionText.description}}
-      </p>
-      <p><strong>{{this.versionText.label}}</strong></p>
-      <DateDropdown class="has-top-padding-s" @handleSubmit={{this.onDateChange}} @dateType="startDate" @submitText="Save" />
-    </M.Body>
-    <M.Footer as |F|>
-      <Hds::Button data-test-date-dropdown-cancel @text="Cancel" @color="secondary" {{on "click" F.close}} />
-    </M.Footer>
-  </Hds::Modal>
-{{/if}}

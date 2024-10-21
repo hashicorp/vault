@@ -9,6 +9,7 @@ import authPage from 'vault/tests/pages/auth';
 import { deleteAuthCmd, deleteEngineCmd, mountAuthCmd, mountEngineCmd, runCmd } from '../helpers/commands';
 import expectedSecretAttrs from 'vault/tests/helpers/openapi/expected-secret-attrs';
 import expectedAuthAttrs from 'vault/tests/helpers/openapi/expected-auth-attrs';
+import { getHelpUrlForModel } from 'vault/utils/openapi-helpers';
 
 /**
  * This set of tests is for ensuring that backend changes to the OpenAPI spec
@@ -72,8 +73,7 @@ function secretEngineHelper(test, secretEngine) {
   // A given secret engine might have multiple models that are openApi driven
   modelNames.forEach((modelName) => {
     test(`${modelName} model getProps returns correct attributes`, async function (assert) {
-      const model = this.store.createRecord(modelName, {});
-      const helpUrl = model.getHelpUrl(this.backend);
+      const helpUrl = getHelpUrlForModel(modelName, this.backend);
       const result = await this.pathHelp.getProps(helpUrl, this.backend);
       const expected = engineData[modelName];
       // Expected values should be updated to match "actual" (result)
@@ -98,8 +98,7 @@ function authEngineHelper(test, authBackend) {
     if (itemName.startsWith('auth-config/')) {
       // Config test doesn't need to instantiate a new model
       test(`${itemName} model`, async function (assert) {
-        const model = this.store.createRecord(itemName, {});
-        const helpUrl = model.getHelpUrl(this.mount);
+        const helpUrl = getHelpUrlForModel(itemName, this.mount);
         const result = await this.pathHelp.getProps(helpUrl, this.mount);
         const expected = authData[itemName];
         assert.deepEqual(
@@ -116,9 +115,8 @@ function authEngineHelper(test, authBackend) {
         const modelName = `generated-${itemName}-${authBackend}`;
         // Generated items need to instantiate the model first via getNewModel
         await this.pathHelp.getNewModel(modelName, this.mount, `auth/${this.mount}/`, itemName);
-        const model = this.store.createRecord(modelName, {});
-        // Generated items don't have this method -- helpUrl is calculated in path-help.js line 101
-        const helpUrl = model.getHelpUrl(this.mount);
+        // Generated items don't have helpUrl method -- helpUrl is calculated in path-help.js line 101
+        const helpUrl = `/v1/auth/${this.mount}?help=1`;
         const result = await this.pathHelp.getProps(helpUrl, this.mount);
         const expected = authData[modelName];
         assert.deepEqual(result, expected, `getProps returns expected attributes for ${modelName}`);

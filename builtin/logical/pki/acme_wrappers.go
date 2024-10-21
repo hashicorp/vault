@@ -17,13 +17,13 @@ import (
 )
 
 type acmeContext struct {
+	issuing.IssuerRoleContext
+
 	// baseUrl is the combination of the configured cluster local URL and the acmePath up to /acme/
 	baseUrl    *url.URL
 	clusterUrl *url.URL
 	sc         *storageContext
 	acmeState  *acmeState
-	role       *issuing.RoleEntry
-	issuer     *issuing.IssuerEntry
 	// acmeDirectory is a string that can distinguish the various acme directories we have configured
 	// if something needs to remain locked into a directory path structure.
 	acmeDirectory string
@@ -161,16 +161,15 @@ func (b *backend) acmeWrapper(opts acmeWrapperOpts, op acmeOperation) framework.
 		}
 
 		acmeCtx := &acmeContext{
-			baseUrl:       acmeBaseUrl,
-			clusterUrl:    clusterBase,
-			sc:            sc,
-			acmeState:     b.acmeState,
-			role:          role,
-			issuer:        issuer,
-			acmeDirectory: acmeDirectory,
-			eabPolicy:     eabPolicy,
-			ciepsPolicy:   ciepsPolicy,
-			runtimeOpts:   runtimeOpts,
+			IssuerRoleContext: issuing.NewIssuerRoleContext(ctx, issuer, role),
+			baseUrl:           acmeBaseUrl,
+			clusterUrl:        clusterBase,
+			sc:                sc,
+			acmeState:         b.acmeState,
+			acmeDirectory:     acmeDirectory,
+			eabPolicy:         eabPolicy,
+			ciepsPolicy:       ciepsPolicy,
+			runtimeOpts:       runtimeOpts,
 		}
 
 		return op(acmeCtx, r, data)

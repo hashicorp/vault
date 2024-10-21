@@ -413,6 +413,11 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 		Commands: input.Role.Statements.Rotation,
 	}
 
+	// Add external password to request so we can use static account connection
+	if input.Role.StaticAccount.SelfManagedPassword != "" {
+		updateReq.SelfManagedPassword = input.Role.StaticAccount.SelfManagedPassword
+	}
+
 	// Use credential from input if available. This happens if we're restoring from
 	// a WAL item or processing the rotation queue with an item that has a WAL
 	// associated with it
@@ -528,6 +533,12 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 		return output, fmt.Errorf("error setting credentials: %w", err)
 	}
 	modified = true
+
+	// static user password successfully updated in external system
+	// update self-managed password if available for future connections
+	if input.Role.StaticAccount.SelfManagedPassword != "" {
+		input.Role.StaticAccount.SelfManagedPassword = input.Role.StaticAccount.Password
+	}
 
 	// Store updated role information
 	// lvr is the known LastVaultRotation

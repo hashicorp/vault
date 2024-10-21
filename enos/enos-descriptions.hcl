@@ -1,5 +1,5 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
 
 globals {
   description = {
@@ -126,12 +126,6 @@ globals {
       'await-server-removal'.
     EOF
 
-    verify_read_test_data = <<-EOF
-      Verify that we are able to read test data we've written in prior steps. This includes:
-        - Auth user policies
-        - Kv data
-    EOF
-
     verify_replication_status = <<-EOF
       Verify that the default replication status is correct depending on the edition of Vault that
       been deployed. When testing a Community Edition of Vault we'll ensure that replication is not
@@ -163,12 +157,22 @@ globals {
       Vault's reported seal type matches our configuration.
     EOF
 
-    verify_write_test_data = <<-EOF
-      Verify that vault is capable mounting engines and writing data to them. These currently include:
-        - Mount the auth engine
-        - Mount the kv engine
-        - Write auth user policies
-        - Write kv data
+    verify_secrets_engines_create = <<-EOF
+      Verify that Vault is capable mounting, configuring, and using various secrets engines and auth
+      methods. These currently include:
+        - v1/auth/userpass/*
+        - v1/identity/*
+        - v1/kv/*
+        - v1/sys/policy/*
+    EOF
+
+    verify_secrets_engines_read = <<-EOF
+      Verify that data that we've created previously is still valid, consistent, and duarable.
+      This includes:
+        - v1/auth/userpass/*
+        - v1/identity/*
+        - v1/kv/*
+        - v1/sys/policy/*
     EOF
 
     verify_ui = <<-EOF
@@ -180,7 +184,8 @@ globals {
     EOF
 
     verify_vault_version = <<-EOF
-      Verify that the Vault cluster has the correct embedded version metadata. This metadata includes
+      Verify that the Vault CLI has the correct embedded version metadata and that the Vault Cluster
+      verision history includes our expected version. The CLI metadata that is validated includes
       the Vault version, edition, build date, and any special prerelease metadata.
     EOF
 
@@ -191,5 +196,10 @@ globals {
     wait_for_seal_rewrap = <<-EOF
       Wait for the Vault cluster seal rewrap process to complete.
     EOF
+
+    verify_billing_start_date = <<-EOF
+      Verify that the billing start date has successfully rolled over to the latest billing year if needed.  
+    EOF
+
   }
 }

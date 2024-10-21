@@ -9,6 +9,7 @@ import type { ModelValidations, FormField, FormFieldGroups } from 'vault/app-typ
 import type MountConfigModel from 'vault/models/mount-config';
 
 export default class SecretEngineModel extends Model {
+  id: string;
   path: string;
   type: string;
   description: string;
@@ -39,7 +40,6 @@ export default class SecretEngineModel extends Model {
   get localDisplay(): string;
   get formFields(): Array<FormField>;
   get formFieldGroups(): FormFieldGroups;
-  saveCA(options: object): Promise;
   saveZeroAddressConfig(): Promise;
   validate(): ModelValidations;
   // need to override isNew which is a computed prop and ts will complain since it sees it as a function

@@ -14,10 +14,10 @@
 
   <hr class="has-background-gray-100" />
 
-  {{#if this.hasActivity}}
-    {{#if this.fetchClientActivity.isRunning}}
-      <VaultLogoSpinner />
-    {{else}}
+  {{#if this.fetchClientActivity.isRunning}}
+    <VaultLogoSpinner />
+  {{else}}
+    {{#if this.activityData}}
       <div class="is-grid grid-2-columns grid-gap-2 has-top-margin-m grid-align-items-start is-flex-v-centered">
         <StatText @label="Total" @value={{this.activityData.total.clients}} @size="l" @subText={{this.statSubText.total}} />
         <StatText @label="New" @value={{this.currentMonthActivityTotalCount}} @size="l" @subText={{this.statSubText.new}} />
@@ -34,15 +34,13 @@
           {{on "click" (perform this.fetchClientActivity)}}
           data-test-refresh
         />
-        <small class="has-left-margin-xs has-text-grey">
+        <small class="has-left-margin-xs has-text-grey" data-test-updated-timestamp>
           Updated
           {{date-format this.updatedAt "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
         </small>
       </div>
+    {{else}}
+      <Clients::NoData @config={{this.activityConfig}} />
     {{/if}}
-  {{else}}
-    {{! This will likely never show since the clients activity api has changed to always return data. In the past it
-  would return no activity data. Adding this empty state here to match the current client count behavior }}
-    <Clients::NoData @config={{hash enabled="On"}} />
   {{/if}}
 </Hds::Card::Container>

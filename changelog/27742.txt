@@ -1,0 +1,3 @@
+```release-note:bug
+ui: fix issue where enabling then disabling "Tidy ACME" in PKI results in failed API call.
+```

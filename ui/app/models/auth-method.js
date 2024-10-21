@@ -12,14 +12,14 @@ import { allMethods } from 'vault/helpers/mountable-auth-methods';
 import lazyCapabilities from 'vault/macros/lazy-capabilities';
 import { action } from '@ember/object';
 import { camelize } from '@ember/string';
+import { WHITESPACE_WARNING } from 'vault/utils/model-helpers/validators';
 
 const validations = {
   path: [
     { type: 'presence', message: "Path can't be blank." },
     {
       type: 'containsWhiteSpace',
-      message:
-        "Path contains whitespace. If this is desired, you'll need to encode it with %20 in API requests.",
+      message: WHITESPACE_WARNING('path'),
       level: 'warn',
     },
   ],

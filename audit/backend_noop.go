@@ -35,14 +35,17 @@ type noopWrapper struct {
 	backend *NoopAudit
 }
 
-// NoopAuditEventListener is a callback used by noopWrapper.Process() to notify
-// of each received audit event.
-type NoopAuditEventListener func(*AuditEvent)
-
-func (n *NoopAudit) SetListener(listener NoopAuditEventListener) {
+// SetListener provides a callback func to the NoopAudit which can be invoked
+// during processing of the Event.
+//
+// Deprecated: SetListener should not be used in new tests.
+func (n *NoopAudit) SetListener(listener func(event *Event)) {
 	n.listener = listener
 }
 
+// NoopAudit only exists to allow legacy tests to continue working.
+//
+// Deprecated: NoopAudit should not be used in new tests.
 type NoopAudit struct {
 	Config *BackendConfig
 
@@ -68,16 +71,16 @@ type NoopAudit struct {
 	nodeIDList []eventlogger.NodeID
 	nodeMap    map[eventlogger.NodeID]eventlogger.Node
 
-	listener NoopAuditEventListener
+	listener func(event *Event)
 }
 
-// NoopHeaderFormatter can be used within no-op audit devices to do nothing when
+// noopHeaderFormatter can be used within no-op audit devices to do nothing when
 // it comes to only allow configured headers to appear in the result.
 // Whatever is passed in will be returned (nil becomes an empty map) in lowercase.
-type NoopHeaderFormatter struct{}
+type noopHeaderFormatter struct{}
 
-// ApplyConfig implements the relevant interface to make NoopHeaderFormatter an HeaderFormatter.
-func (f *NoopHeaderFormatter) ApplyConfig(_ context.Context, headers map[string][]string, _ Salter) (result map[string][]string, retErr error) {
+// ApplyConfig implements the relevant interface to make noopHeaderFormatter an HeaderFormatter.
+func (f *noopHeaderFormatter) ApplyConfig(_ context.Context, headers map[string][]string, _ Salter) (result map[string][]string, retErr error) {
 	if len(headers) < 1 {
 		return map[string][]string{}, nil
 	}
@@ -95,6 +98,8 @@ func (f *NoopHeaderFormatter) ApplyConfig(_ context.Context, headers map[string]
 // NewNoopAudit should be used to create a NoopAudit as it handles creation of a
 // predictable salt and wraps eventlogger nodes so information can be retrieved on
 // what they've seen or formatted.
+//
+// Deprecated: NewNoopAudit only exists to allow legacy tests to continue working.
 func NewNoopAudit(config *BackendConfig) (*NoopAudit, error) {
 	view := &logical.InmemStorage{}
 
@@ -122,7 +127,7 @@ func NewNoopAudit(config *BackendConfig) (*NoopAudit, error) {
 		nodeMap:    make(map[eventlogger.NodeID]eventlogger.Node, 2),
 	}
 
-	cfg, err := newFormatterConfig(&NoopHeaderFormatter{}, nil)
+	cfg, err := newFormatterConfig(&noopHeaderFormatter{}, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -158,6 +163,8 @@ func NewNoopAudit(config *BackendConfig) (*NoopAudit, error) {
 // NoopAuditFactory should be used when the test needs a way to access bytes that
 // have been formatted by the pipeline during audit requests.
 // The records parameter will be repointed to the one used within the pipeline.
+//
+// Deprecated: NoopAuditFactory only exists to allow legacy tests to continue working.
 func NoopAuditFactory(records **[][]byte) Factory {
 	return func(config *BackendConfig, _ HeaderFormatter) (Backend, error) {
 		n, err := NewNoopAudit(config)
@@ -184,7 +191,7 @@ func (n *noopWrapper) Process(ctx context.Context, e *eventlogger.Event) (*event
 	var err error
 
 	// We're expecting audit events since this is an audit device.
-	a, ok := e.Payload.(*AuditEvent)
+	a, ok := e.Payload.(*Event)
 	if !ok {
 		return nil, errors.New("cannot parse payload as an audit event")
 	}
@@ -244,7 +251,7 @@ func (n *noopWrapper) Process(ctx context.Context, e *eventlogger.Event) (*event
 	// formatted headers that would have made it to the logs via the sink node.
 	// They only appear in requests.
 	if a.Subtype == RequestType {
-		reqEntry := &RequestEntry{}
+		reqEntry := &entry{}
 		err = json.Unmarshal(b, &reqEntry)
 		if err != nil {
 			return nil, fmt.Errorf("unable to parse formatted audit entry data: %w", err)
@@ -336,6 +343,7 @@ func (n *NoopAudit) IsFallback() bool {
 	return false
 }
 
+// Deprecated: TestNoopAudit only exists to allow legacy tests to continue working.
 func TestNoopAudit(t *testing.T, path string, config map[string]string) *NoopAudit {
 	cfg := &BackendConfig{
 		Config:    config,
