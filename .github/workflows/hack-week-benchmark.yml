@@ -1,13 +1,13 @@
 name: Bench
 
-#on: [push, pull_request]
+on: [push, pull_request]
 
-on:
-  workflow_call:
-    inputs:
-      checkout-ref:
-        type: string
-        default: ""
+#on:
+#  workflow_call:
+#    inputs:
+#      checkout-ref:
+#        type: string
+#        default: ""
 
 jobs:
   bench:
@@ -29,4 +29,4 @@ jobs:
         run: curl -sfL https://raw.githubusercontent.com/knqyf263/cob/master/install.sh | sudo sh -s -- -b /usr/local/bin
 
       - name: Run Benchmark
-        run: cob
+        run: cob --base origin/main ./vault/bench/
