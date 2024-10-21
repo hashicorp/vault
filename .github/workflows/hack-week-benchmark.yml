@@ -33,5 +33,7 @@ jobs:
         run: ls
       - name: ls 2
         run: ls vault
+      - name: stat
+        run: stat /home/runner/work/vault/vault/vault/bench
       - name: Run Benchmark
         run: cob --base ${{ github.event.pull_request.base.sha }} -bench-args "test -bench . -benchmem -v ./vault/bench"
