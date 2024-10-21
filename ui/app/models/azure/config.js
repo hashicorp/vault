@@ -4,7 +4,7 @@
  */
 
 import Model, { attr } from '@ember-data/model';
-import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
+import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 // TODO add validations
 // there are more options available on the API, but the UI does not support them yet.
@@ -39,6 +39,32 @@ export default class AzureConfig extends Model {
     const keys = ['subscriptionId', 'tenantId', 'identityTokenAudience', 'identityTokenTtl'];
     return expandAttributeMeta(this, keys);
   }
+
+  // "filedGroupsWif" and "fieldGroupsAzure" are passed to the FormFieldGroups component to determine which group to show in the form (ex: @groupName="fieldGroupsWif")
+  get fieldGroupsWif() {
+    return fieldToAttrs(this, this.formFieldGroups('wif'));
+  }
+
+  get fieldGroupsAzure() {
+    return fieldToAttrs(this, this.formFieldGroups('azure'));
+  }
+
+  formFieldGroups(accessType = 'azure') {
+    const formFieldGroups = [];
+    if (accessType === 'wif') {
+      formFieldGroups.push({
+        default: ['tenantId', 'clientId', 'identityTokenAudience', 'identityTokenTtl'],
+      });
+    }
+    if (accessType === 'azure') {
+      formFieldGroups.push({
+        default: ['subscriptionId', 'tenantId', 'clientId', 'clientSecret'],
+        'More options': ['environment', 'rootPasswordTtl'],
+      });
+    }
+    return formFieldGroups;
+  }
+
   // return client and secret key for edit/create view
   get formFields() {
     const keys = [

@@ -9,10 +9,8 @@ import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { ValidationMap } from 'vault/vault/app-types';
 import errorMessage from 'vault/utils/error-message';
 
-import type LeaseConfigModel from 'vault/models/aws/lease-config';
 import type ConfigModel from 'vault/models/azure/config';
 import type IdentityOidcConfigModel from 'vault/models/identity/oidc/config';
 import type Router from '@ember/routing/router';
@@ -23,7 +21,7 @@ import type FlashMessageService from 'vault/services/flash-messages';
 /**
  * @module ConfigureAzureComponent is used to configure the Azure secret engine
  * A user can configure the endpoint config.
- * For enterprise users, they will see an additional option to config WIF attributes in place of IAM attributes.
+ * For enterprise users, they will see an additional option to config WIF attributes in place of Azure account attributes.
  * The fields for these endpoints are on one form.
  *
  * @example
@@ -54,8 +52,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
 
   @tracked errorMessage: string | null = null;
   @tracked invalidFormAlert: string | null = null;
-  // @tracked modelValidationsLease: ValidationMap | null = null;
-  @tracked accessType = 'iam';
+  @tracked accessType = 'azure';
   @tracked saveIssuerWarning = '';
 
   disableAccessType = false;
@@ -63,15 +60,15 @@ export default class ConfigureAwsComponent extends Component<Args> {
   constructor(owner: unknown, args: Args) {
     super(owner, args);
     // the following checks are only relevant to enterprise users and those editing an existing root configuration.
-    if (this.version.isCommunity || this.args.rootConfig.isNew) return;
-    const { roleArn, identityTokenAudience, identityTokenTtl, accessKey } = this.args.rootConfig;
+    if (this.version.isCommunity || this.args.model.isNew) return;
+    const { identityTokenAudience, identityTokenTtl, subscriptionId } = this.args.model;
     // do not include issuer in this check. Issuer is a global endpoint and can bet set even if we're not editing wif attributes
-    const wifAttributesSet = !!roleArn || !!identityTokenAudience || !!identityTokenTtl;
-    const iamAttributesSet = !!accessKey;
-    // If any WIF attributes have been set in the rootConfig model, set accessType to 'wif'.
-    this.accessType = wifAttributesSet ? 'wif' : 'iam';
-    // If there are either WIF or IAM attributes set then disable user's ability to change accessType.
-    this.disableAccessType = wifAttributesSet || iamAttributesSet;
+    const wifAttributesSet = !!identityTokenAudience || !!identityTokenTtl;
+    const azureAttributesSet = !!subscriptionId;
+    // If any WIF attributes have been set in the model model, set accessType to 'wif'.
+    this.accessType = wifAttributesSet ? 'wif' : 'azure';
+    // If there are either WIF or azure attributes set then disable user's ability to change accessType.
+    this.disableAccessType = wifAttributesSet || azureAttributesSet;
   }
 
   @action continueSubmitForm() {
@@ -85,10 +82,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
     waitFor(async (event: Event) => {
       event?.preventDefault();
       this.resetErrors();
-      const { leaseConfig, issuerConfig } = this.args;
-      // Note: only aws/lease-config model has validations
-      const isValid = this.validate(leaseConfig);
-      if (!isValid) return;
+      const { issuerConfig } = this.args;
       if (issuerConfig?.hasDirtyAttributes) {
         // if the issuer has changed show modal with warning that the config will change
         // if the modal is shown, the user has to click confirm to continue save
@@ -104,28 +98,23 @@ export default class ConfigureAwsComponent extends Component<Args> {
 
   save = task(
     waitFor(async () => {
-      // when we get here, the models have already been validated so just continue with save
-      const { leaseConfig, rootConfig, issuerConfig } = this.args;
-      // Check if any of the models' attributes have changed.
-      // If no changes to either model, transition and notify user.
-      // If changes to either model, save the model(s) that changed and notify user.
+      const { model, issuerConfig } = this.args;
+      // Check if any of the model attributes have changed.
+      // If no changes, transition and notify user.
+      // If changes, save the model and notify user.
       // Note: "backend" dirties model state so explicity ignore it here.
-      const leaseAttrChanged = Object.keys(leaseConfig?.changedAttributes()).some(
-        (item) => item !== 'backend'
-      );
-      const rootAttrChanged = Object.keys(rootConfig?.changedAttributes()).some((item) => item !== 'backend');
+      const attrChanged = Object.keys(model?.changedAttributes()).some((item) => item !== 'backend');
       const issuerAttrChanged = issuerConfig?.hasDirtyAttributes;
-      if (!leaseAttrChanged && !rootAttrChanged && !issuerAttrChanged) {
+      if (!attrChanged && !issuerAttrChanged) {
         this.flashMessages.info('No changes detected.');
         this.transition();
         return;
       }
-      // Attempt saves of changed models. If at least one of them succeed, transition
-      const rootSaved = rootAttrChanged ? await this.saveRoot() : false;
-      const leaseSaved = leaseAttrChanged ? await this.saveLease() : false;
+      // Attempt to save changed model.
+      const modelSaved = attrChanged ? await this.saveModel() : false;
       const issuerSaved = issuerAttrChanged ? await this.updateIssuer() : false;
 
-      if (rootSaved || leaseSaved || issuerSaved) {
+      if (modelSaved || issuerSaved) {
         this.transition();
       } else {
         // otherwise there was a failure and we should not transition and exit the function.
@@ -145,45 +134,22 @@ export default class ConfigureAwsComponent extends Component<Args> {
     }
   }
 
-  async saveRoot(): Promise<boolean> {
-    const { backendPath, rootConfig } = this.args;
+  async saveModel(): Promise<boolean> {
+    const { backendPath, model } = this.args;
     try {
-      await rootConfig.save();
+      await model.save();
       this.flashMessages.success(`Successfully saved ${backendPath}'s root configuration.`);
       return true;
     } catch (error) {
-      this.errorMessageRoot = errorMessage(error);
+      this.errorMessage = errorMessage(error);
       this.invalidFormAlert = 'There was an error submitting this form.';
       return false;
     }
   }
 
-  async saveLease(): Promise<boolean> {
-    const { backendPath, leaseConfig } = this.args;
-    try {
-      await leaseConfig.save();
-      this.flashMessages.success(`Successfully saved ${backendPath}'s lease configuration.`);
-      return true;
-    } catch (error) {
-      // if lease config fails, but there was no error saving rootConfig: notify user of the lease failure with a flash message, save the root config, and transition.
-      if (!this.errorMessageRoot) {
-        this.flashMessages.danger(`Lease configuration was not saved: ${errorMessage(error)}`, {
-          sticky: true,
-        });
-        return true;
-      } else {
-        this.errorMessageLease = errorMessage(error);
-        this.flashMessages.danger(
-          `Configuration not saved: ${errorMessage(error)}. ${this.errorMessageRoot}`
-        );
-        return false;
-      }
-    }
-  }
-
   resetErrors() {
     this.flashMessages.clearMessages();
-    this.errorMessageRoot = null;
+    this.errorMessage = null;
     this.invalidFormAlert = null;
   }
 
@@ -191,31 +157,25 @@ export default class ConfigureAwsComponent extends Component<Args> {
     this.router.transitionTo('vault.cluster.secrets.backend.configuration', this.args.backendPath);
   }
 
-  validate(model: LeaseConfigModel) {
-    const { isValid, state, invalidFormMessage } = model.validate();
-    this.modelValidationsLease = isValid ? null : state;
-    this.invalidFormAlert = isValid ? '' : invalidFormMessage;
-    return isValid;
-  }
-
-  unloadModels() {
-    this.args.rootConfig.unloadRecord();
-    this.args.leaseConfig.unloadRecord();
-  }
-
   @action
   onChangeAccessType(accessType: string) {
     this.accessType = accessType;
-    const { rootConfig } = this.args;
-    if (accessType === 'iam') {
+    const { model } = this.args;
+    if (accessType === 'azure') {
       // reset all WIF attributes
-      rootConfig.roleArn = rootConfig.identityTokenAudience = rootConfig.identityTokenTtl = undefined;
+      model.identityTokenAudience = model.identityTokenTtl = undefined;
       // for the issuer return to the globally set value (if there is one) on toggle
       this.args.issuerConfig.rollbackAttributes();
     }
     if (accessType === 'wif') {
       // reset all IAM attributes
-      rootConfig.accessKey = rootConfig.secretKey = undefined;
+      model.subscriptionId =
+        model.clientId =
+        model.tenantId =
+        model.clientSecret =
+        model.environment =
+        model.rootPasswordTtl =
+          undefined;
     }
   }
 
@@ -223,7 +183,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
   onCancel() {
     // clear errors because they're canceling out of the workflow.
     this.resetErrors();
-    this.unloadModels();
+    this.args.model.unloadRecord();
     this.transition();
   }
 }
