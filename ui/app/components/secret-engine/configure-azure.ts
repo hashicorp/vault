@@ -59,13 +59,13 @@ export default class ConfigureAwsComponent extends Component<Args> {
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
-    // the following checks are only relevant to enterprise users and those editing an existing root configuration.
+    // the following checks are only relevant to enterprise users and those editing an existing configuration.
     if (this.version.isCommunity || this.args.model.isNew) return;
     const { identityTokenAudience, identityTokenTtl, subscriptionId } = this.args.model;
     // do not include issuer in this check. Issuer is a global endpoint and can bet set even if we're not editing wif attributes
     const wifAttributesSet = !!identityTokenAudience || !!identityTokenTtl;
     const azureAttributesSet = !!subscriptionId;
-    // If any WIF attributes have been set in the model model, set accessType to 'wif'.
+    // If any WIF attributes have been set in the model, set accessType to 'wif'.
     this.accessType = wifAttributesSet ? 'wif' : 'azure';
     // If there are either WIF or azure attributes set then disable user's ability to change accessType.
     this.disableAccessType = wifAttributesSet || azureAttributesSet;
@@ -77,7 +77,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
     this.save.perform();
   }
 
-  // on form submit - validate inputs and check for issuer changes
+  // on form submit check for issuer changes then save model and issuer
   submitForm = task(
     waitFor(async (event: Event) => {
       event?.preventDefault();
@@ -110,7 +110,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
         this.transition();
         return;
       }
-      // Attempt to save changed model.
+
       const modelSaved = attrChanged ? await this.saveModel() : false;
       const issuerSaved = issuerAttrChanged ? await this.updateIssuer() : false;
 

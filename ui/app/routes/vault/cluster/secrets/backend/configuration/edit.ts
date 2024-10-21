@@ -7,7 +7,7 @@ import AdapterError from '@ember-data/adapter/error';
 import { set } from '@ember/object';
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { CONFIGURABLE_SECRET_ENGINES } from 'vault/helpers/mountable-secret-engines';
+import { CONFIGURABLE_SECRET_ENGINES, WIF_ENGINES } from 'vault/helpers/mountable-secret-engines';
 import errorMessage from 'vault/utils/error-message';
 import { action } from '@ember/object';
 
@@ -49,10 +49,20 @@ export default class SecretsBackendConfigurationEdit extends Route {
       // ex: adapterPath = ssh/ca-config, convert to: ssh-ca-config so that you can pass to component @model={{this.model.ssh-ca-config}}
       const standardizedKey = adapterPath.replace(/\//g, '-');
       try {
-        model[standardizedKey] = await this.store.queryRecord(adapterPath, {
+        const response = await this.store.queryRecord(adapterPath, {
           backend,
           type,
         });
+        if (type === 'azure' && !response.tenantId) {
+          // Azure API returns 200 for a record that doesn't exist (GRR!!).
+          // Thus, check if the tenantId has been set to determine if we should create the record or not.
+          model[standardizedKey] = await this.store.createRecord(adapterPath, {
+            backend,
+            type,
+          });
+        } else {
+          model[standardizedKey] = response;
+        }
       } catch (e: AdapterError) {
         // For most models if the adapter returns a 404, we want to create a new record.
         // The ssh secret engine however returns a 400 if the CA is not configured.
@@ -70,9 +80,9 @@ export default class SecretsBackendConfigurationEdit extends Route {
         }
       }
     }
-    // if the type is AWS and it's enterprise, we also fetch the issuer
+    // if the type is a WIF engine and it's enterprise, we also fetch the issuer
     // from a global endpoint which has no associated model/adapter
-    if (type === 'aws' && this.version.isEnterprise) {
+    if (WIF_ENGINES.includes(type) && this.version.isEnterprise) {
       try {
         const response = await this.store.queryRecord('identity/oidc/config', {});
         model['identity-oidc-config'] = response;
