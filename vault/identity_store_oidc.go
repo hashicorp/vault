@@ -8,7 +8,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -24,6 +23,7 @@ import (
 	"github.com/go-jose/go-jose/v3/jwt"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/base62"
+	"github.com/hashicorp/go-secure-stdlib/cryptoutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
@@ -1762,7 +1762,7 @@ func generateKeys(algorithm string) (*jose.JSONWebKey, error) {
 	switch algorithm {
 	case "RS256", "RS384", "RS512":
 		// 2048 bits is recommended by RSA Laboratories as a minimum post 2015
-		if key, err = rsa.GenerateKey(rand.Reader, 2048); err != nil {
+		if key, err = cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048); err != nil {
 			return nil, err
 		}
 	case "ES256", "ES384", "ES512":

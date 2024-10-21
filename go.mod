@@ -22,6 +22,8 @@ replace github.com/hashicorp/vault/api/auth/userpass => ./api/auth/userpass
 
 replace github.com/hashicorp/vault/sdk => ./sdk
 
+replace github.com/hashicorp/go-secure-stdlib/cryptoutil => ../go-secure-stdlib/cryptoutil
+
 require (
 	cloud.google.com/go/cloudsqlconn v1.4.3
 	cloud.google.com/go/monitoring v1.21.0
@@ -99,6 +101,7 @@ require (
 	github.com/hashicorp/go-rootcerts v1.0.2
 	github.com/hashicorp/go-secure-stdlib/awsutil v0.3.0
 	github.com/hashicorp/go-secure-stdlib/base62 v0.1.2
+	github.com/hashicorp/go-secure-stdlib/cryptoutil v0.0.0-20241125183314-0047f3e55b0a
 	github.com/hashicorp/go-secure-stdlib/gatedwriter v0.1.1
 	github.com/hashicorp/go-secure-stdlib/kv-builder v0.1.2
 	github.com/hashicorp/go-secure-stdlib/mlock v0.1.3
@@ -234,6 +237,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.1.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0 // indirect
+	github.com/hashicorp/go-hmac-drbg v0.0.0-20210916214228-a6e5a68489f6 // indirect
 	github.com/hashicorp/go-secure-stdlib/httputil v0.1.0 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect

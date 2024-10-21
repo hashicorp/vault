@@ -9,7 +9,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -32,6 +31,7 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-rootcerts"
+	"github.com/hashicorp/go-secure-stdlib/cryptoutil"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/pki"
@@ -658,7 +658,7 @@ func TestBackend_NonCAExpiry(t *testing.T) {
 	template.IPAddresses = []net.IP{parsedIP}
 
 	// Private key for CA cert
-	caPrivateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	caPrivateKey, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -726,7 +726,7 @@ func TestBackend_NonCAExpiry(t *testing.T) {
 	template.SerialNumber = big.NewInt(5678)
 
 	template.KeyUsage = x509.KeyUsage(x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign)
-	issuedPrivateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	issuedPrivateKey, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
 	if err != nil {
 		t.Fatal(err)
 	}

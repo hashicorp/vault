@@ -14,7 +14,7 @@ import (
 	"crypto/elliptic"
 	"crypto/hmac"
 	"crypto/rand"
-	"crypto/rsa"
+	rsa2 "crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/asn1"
@@ -32,6 +32,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/hashicorp/go-secure-stdlib/cryptoutil"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
@@ -323,8 +325,8 @@ type KeyEntry struct {
 	EC_Y *big.Int `json:"ec_y"`
 	EC_D *big.Int `json:"ec_d"`
 
-	RSAKey       *rsa.PrivateKey `json:"rsa_key"`
-	RSAPublicKey *rsa.PublicKey  `json:"rsa_public_key"`
+	RSAKey       *rsa2.PrivateKey `json:"rsa_key"`
+	RSAPublicKey *rsa2.PublicKey  `json:"rsa_public_key"`
 
 	// The public key in an appropriate format for the type of key
 	FormattedPublicKey string `json:"public_key"`
@@ -465,7 +467,7 @@ func LoadPolicy(ctx context.Context, s logical.Storage, path string) (*Policy, e
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		for _, entry := range policy.Keys {
 			if entry.RSAPublicKey == nil && entry.RSAKey != nil {
-				entry.RSAPublicKey = entry.RSAKey.Public().(*rsa.PublicKey)
+				entry.RSAPublicKey = entry.RSAKey.Public().(*rsa2.PublicKey)
 			}
 		}
 	}
@@ -1122,9 +1124,9 @@ func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, factori
 
 		switch paddingScheme {
 		case PaddingScheme_PKCS1v15:
-			plain, err = rsa.DecryptPKCS1v15(rand.Reader, key, decoded)
+			plain, err = rsa2.DecryptPKCS1v15(rand.Reader, key, decoded)
 		case PaddingScheme_OAEP:
-			plain, err = rsa.DecryptOAEP(sha256.New(), rand.Reader, key, decoded, nil)
+			plain, err = rsa2.DecryptOAEP(sha256.New(), rand.Reader, key, decoded, nil)
 		default:
 			return "", errutil.InternalError{Err: fmt.Sprintf("unsupported RSA padding scheme %s", paddingScheme)}
 		}
@@ -1210,14 +1212,14 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, si
 	return p.SignWithOptions(ver, context, input, &SigningOptions{
 		HashAlgorithm: hashAlgorithm,
 		Marshaling:    marshaling,
-		SaltLength:    rsa.PSSSaltLengthAuto,
+		SaltLength:    rsa2.PSSSaltLengthAuto,
 		SigAlgorithm:  sigAlgorithm,
 	})
 }
 
 func (p *Policy) minRSAPSSSaltLength() int {
 	// https://cs.opensource.google/go/go/+/refs/tags/go1.19:src/crypto/rsa/pss.go;l=247
-	return rsa.PSSSaltLengthEqualsHash
+	return rsa2.PSSSaltLengthEqualsHash
 }
 
 func (p *Policy) maxRSAPSSSaltLength(keyBitLen int, hash crypto.Hash) int {
@@ -1370,12 +1372,12 @@ func (p *Policy) SignWithOptions(ver int, context, input []byte, options *Signin
 			if !p.validRSAPSSSaltLength(key.N.BitLen(), algo, saltLength) {
 				return nil, errutil.UserError{Err: fmt.Sprintf("requested salt length %d is invalid", saltLength)}
 			}
-			sig, err = rsa.SignPSS(rand.Reader, key, algo, input, &rsa.PSSOptions{SaltLength: saltLength})
+			sig, err = rsa2.SignPSS(rand.Reader, key, algo, input, &rsa2.PSSOptions{SaltLength: saltLength})
 			if err != nil {
 				return nil, err
 			}
 		case "pkcs1v15":
-			sig, err = rsa.SignPKCS1v15(rand.Reader, key, algo, input)
+			sig, err = rsa2.SignPKCS1v15(rand.Reader, key, algo, input)
 			if err != nil {
 				return nil, err
 			}
@@ -1406,7 +1408,7 @@ func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, 
 	return p.VerifySignatureWithOptions(context, input, sig, &SigningOptions{
 		HashAlgorithm: hashAlgorithm,
 		Marshaling:    marshaling,
-		SaltLength:    rsa.PSSSaltLengthAuto,
+		SaltLength:    rsa2.PSSSaltLengthAuto,
 		SigAlgorithm:  sigAlgorithm,
 	})
 }
@@ -1567,13 +1569,13 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 			if !p.validRSAPSSSaltLength(publicKey.N.BitLen(), algo, saltLength) {
 				return false, errutil.UserError{Err: fmt.Sprintf("requested salt length %d is invalid", saltLength)}
 			}
-			err = rsa.VerifyPSS(publicKey, algo, input, sigBytes, &rsa.PSSOptions{SaltLength: saltLength})
+			err = rsa2.VerifyPSS(publicKey, algo, input, sigBytes, &rsa2.PSSOptions{SaltLength: saltLength})
 		case "pkcs1v15":
 			publicKey := keyEntry.RSAPublicKey
 			if !keyEntry.IsPrivateKeyMissing() {
 				publicKey = &keyEntry.RSAKey.PublicKey
 			}
-			err = rsa.VerifyPKCS1v15(publicKey, algo, input, sigBytes)
+			err = rsa2.VerifyPKCS1v15(publicKey, algo, input, sigBytes)
 		default:
 			return false, errutil.InternalError{Err: fmt.Sprintf("unsupported rsa signature algorithm %s", sigAlgorithm)}
 		}
@@ -1825,12 +1827,12 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 			bitSize = 4096
 		}
 
-		entry.RSAKey, err = rsa.GenerateKey(randReader, bitSize)
+		entry.RSAKey, err = cryptoutil.GenerateRSAKeyWithHMACDRBG(randReader, bitSize)
 		if err != nil {
 			return err
 		}
 
-		entry.RSAPublicKey = entry.RSAKey.Public().(*rsa.PublicKey)
+		entry.RSAPublicKey = entry.RSAKey.Public().(*rsa2.PublicKey)
 
 	default:
 		if err := entRotateInMemory(p, &entry, randReader); err != nil {
@@ -2218,7 +2220,7 @@ func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value
 		if err != nil {
 			return "", err
 		}
-		var publicKey *rsa.PublicKey
+		var publicKey *rsa2.PublicKey
 		if keyEntry.RSAKey != nil {
 			publicKey = &keyEntry.RSAKey.PublicKey
 		} else {
@@ -2226,9 +2228,9 @@ func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value
 		}
 		switch paddingScheme {
 		case PaddingScheme_PKCS1v15:
-			ciphertext, err = rsa.EncryptPKCS1v15(rand.Reader, publicKey, plaintext)
+			ciphertext, err = rsa2.EncryptPKCS1v15(rand.Reader, publicKey, plaintext)
 		case PaddingScheme_OAEP:
-			ciphertext, err = rsa.EncryptOAEP(sha256.New(), rand.Reader, publicKey, plaintext, nil)
+			ciphertext, err = rsa2.EncryptOAEP(sha256.New(), rand.Reader, publicKey, plaintext, nil)
 		default:
 			return "", errutil.InternalError{Err: fmt.Sprintf("unsupported RSA padding scheme %s", paddingScheme)}
 		}
@@ -2357,8 +2359,8 @@ func (p *Policy) ImportPrivateKeyForVersion(ctx context.Context, storage logical
 		if !publicKey.(*ecdsa.PublicKey).Equal(&ecdsaKey.PublicKey) {
 			return fmt.Errorf("cannot import key, key pair does not match")
 		}
-	case *rsa.PrivateKey:
-		rsaKey := parsedPrivateKey.(*rsa.PrivateKey)
+	case *rsa2.PrivateKey:
+		rsaKey := parsedPrivateKey.(*rsa2.PrivateKey)
 		if !rsaKey.PublicKey.Equal(keyEntry.RSAPublicKey) {
 			return fmt.Errorf("cannot import key, key pair does not match")
 		}
@@ -2453,7 +2455,7 @@ func (ke *KeyEntry) parseFromKey(PolKeyType KeyType, parsedKey any) error {
 			publicKey := parsedKey.(ed25519.PublicKey)
 			ke.FormattedPublicKey = base64.StdEncoding.EncodeToString(publicKey)
 		}
-	case *rsa.PrivateKey, *rsa.PublicKey:
+	case *rsa2.PrivateKey, *rsa2.PublicKey:
 		if PolKeyType != KeyType_RSA2048 && PolKeyType != KeyType_RSA3072 && PolKeyType != KeyType_RSA4096 {
 			return fmt.Errorf("invalid key type: expected %s, got %T", PolKeyType, parsedKey)
 		}
@@ -2465,15 +2467,15 @@ func (ke *KeyEntry) parseFromKey(PolKeyType KeyType, parsedKey any) error {
 			keyBytes = 512
 		}
 
-		rsaKey, ok := parsedKey.(*rsa.PrivateKey)
+		rsaKey, ok := parsedKey.(*rsa2.PrivateKey)
 		if ok {
 			if rsaKey.Size() != keyBytes {
 				return fmt.Errorf("invalid key size: expected %d bytes, got %d bytes", keyBytes, rsaKey.Size())
 			}
 			ke.RSAKey = rsaKey
-			ke.RSAPublicKey = rsaKey.Public().(*rsa.PublicKey)
+			ke.RSAPublicKey = rsaKey.Public().(*rsa2.PublicKey)
 		} else {
-			rsaKey := parsedKey.(*rsa.PublicKey)
+			rsaKey := parsedKey.(*rsa2.PublicKey)
 			if rsaKey.Size() != keyBytes {
 				return fmt.Errorf("invalid key size: expected %d bytes, got %d bytes", keyBytes, rsaKey.Size())
 			}
@@ -2541,7 +2543,7 @@ func (ke *KeyEntry) WrapKey(targetKey any, targetKeyType KeyType, hash hash.Hash
 	return result, nil
 }
 
-func wrapTargetPKCS8ForImport(wrappingKey *rsa.PublicKey, preppedTargetKey []byte, hash hash.Hash) (string, error) {
+func wrapTargetPKCS8ForImport(wrappingKey *rsa2.PublicKey, preppedTargetKey []byte, hash hash.Hash) (string, error) {
 	// Generate an ephemeral AES-256 key
 	ephKey, err := uuid.GenerateRandomBytes(32)
 	if err != nil {
@@ -2549,7 +2551,7 @@ func wrapTargetPKCS8ForImport(wrappingKey *rsa.PublicKey, preppedTargetKey []byt
 	}
 
 	// Wrap ephemeral AES key with public wrapping key
-	ephKeyWrapped, err := rsa.EncryptOAEP(hash, rand.Reader, wrappingKey, ephKey, []byte{} /* label */)
+	ephKeyWrapped, err := rsa2.EncryptOAEP(hash, rand.Reader, wrappingKey, ephKey, []byte{} /* label */)
 	if err != nil {
 		return "", fmt.Errorf("failed to encrypt ephemeral wrapping key with public key: %w", err)
 	}
@@ -2701,7 +2703,7 @@ func (p *Policy) ValidateLeafCertKeyMatch(keyVersion int, certPublicKeyAlgorithm
 		return publicKey.Equal(certPublicKey), nil
 
 	case x509.RSA:
-		certPublicKey := certPublicKey.(*rsa.PublicKey)
+		certPublicKey := certPublicKey.(*rsa2.PublicKey)
 		publicKey := keyEntry.RSAKey.PublicKey
 		return publicKey.Equal(certPublicKey), nil
 

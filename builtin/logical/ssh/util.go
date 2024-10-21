@@ -6,7 +6,6 @@ package ssh
 import (
 	"context"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
@@ -14,6 +13,7 @@ import (
 	"net"
 	"strings"
 
+	"github.com/hashicorp/go-secure-stdlib/cryptoutil"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/crypto/ssh"
@@ -22,7 +22,7 @@ import (
 // Creates a new RSA key pair with the given key length. The private key will be
 // of pem format and the public key will be of OpenSSH format.
 func generateRSAKeys(keyBits int) (publicKeyRsa string, privateKeyRsa string, err error) {
-	privateKey, err := rsa.GenerateKey(rand.Reader, keyBits)
+	privateKey, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, keyBits)
 	if err != nil {
 		return "", "", fmt.Errorf("error generating RSA key-pair: %w", err)
 	}

@@ -9,7 +9,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/base64"
@@ -26,6 +25,7 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-secure-stdlib/cryptoutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/pki/dnstest"
 	"github.com/hashicorp/vault/helper/constants"
@@ -60,7 +60,7 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			baseAcmeURL := "/v1/pki/" + tc.prefixUrl
-			accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+			accountKey, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
 			require.NoError(t, err, "failed creating rsa key")
 
 			acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)
@@ -592,7 +592,7 @@ func TestAcmeAccountsCrossingDirectoryPath(t *testing.T) {
 	defer cluster.Cleanup()
 
 	baseAcmeURL := "/v1/pki/acme/"
-	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	accountKey, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
 	require.NoError(t, err, "failed creating rsa key")
 
 	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
@@ -628,7 +628,7 @@ func TestAcmeEabCrossingDirectoryPath(t *testing.T) {
 	require.NoError(t, err)
 
 	baseAcmeURL := "/v1/pki/acme/"
-	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	accountKey, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
 	require.NoError(t, err, "failed creating rsa key")
 
 	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
@@ -838,7 +838,7 @@ func TestAcmeTruncatesToIssuerExpiry(t *testing.T) {
 	require.NoError(t, err, "failed updating issuer name")
 
 	baseAcmeURL := "/v1/pki/issuer/short-ca/acme/"
-	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	accountKey, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
 	require.NoError(t, err, "failed creating rsa key")
 
 	acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)
@@ -910,7 +910,7 @@ func TestAcmeRoleExtKeyUsage(t *testing.T) {
 	_, err := client.Logical().Write("pki/roles/"+roleName, roleOpt)
 
 	baseAcmeURL := "/v1/pki/roles/" + roleName + "/acme/"
-	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	accountKey, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
 	require.NoError(t, err, "failed creating rsa key")
 
 	require.NoError(t, err, "failed creating role test-role")
@@ -1179,7 +1179,7 @@ func TestAcmeWithCsrIncludingBasicConstraintExtension(t *testing.T) {
 	defer cancel()
 
 	baseAcmeURL := "/v1/pki/acme/"
-	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	accountKey, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
 	require.NoError(t, err, "failed creating rsa key")
 
 	acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)
@@ -1511,7 +1511,7 @@ func TestAcmeValidationError(t *testing.T) {
 	defer cancel()
 
 	baseAcmeURL := "/v1/pki/acme/"
-	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	accountKey, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
 	require.NoError(t, err, "failed creating rsa key")
 
 	acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)
@@ -1619,7 +1619,7 @@ func TestAcmeRevocationAcrossAccounts(t *testing.T) {
 	defer cancel()
 
 	baseAcmeURL := "/v1/pki/acme/"
-	accountKey1, err := rsa.GenerateKey(rand.Reader, 2048)
+	accountKey1, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
 	require.NoError(t, err, "failed creating rsa key")
 
 	acmeClient1 := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey1)
@@ -1718,7 +1718,7 @@ func TestAcmeMaxTTL(t *testing.T) {
 	require.NoError(t, err, "error configuring acme")
 
 	// First Create Our Client
-	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	accountKey, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
 	require.NoError(t, err, "failed creating rsa key")
 	acmeClient := getAcmeClientForCluster(t, cluster, "/v1/pki/acme/", accountKey)
 
@@ -1946,7 +1946,7 @@ func TestACMEClientRequestLimits(t *testing.T) {
 	for _, tc := range cases {
 
 		// First Create Our Client
-		accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+		accountKey, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
 		require.NoError(t, err, "failed creating rsa key")
 		acmeClient := getAcmeClientForCluster(t, cluster, "/v1/pki/acme/", accountKey)
 

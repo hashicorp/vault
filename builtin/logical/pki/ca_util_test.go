@@ -9,14 +9,14 @@ import (
 	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"testing"
 
+	"github.com/hashicorp/go-secure-stdlib/cryptoutil"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 )
 
 func TestGetKeyTypeAndBitsFromPublicKeyForRole(t *testing.T) {
-	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	rsaKey, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
 	if err != nil {
 		t.Fatalf("error generating rsa key: %s", err)
 	}
