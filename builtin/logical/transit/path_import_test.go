@@ -10,7 +10,6 @@ import (
 	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
@@ -19,6 +18,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/hashicorp/go-secure-stdlib/cryptoutil"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/tink-crypto/tink-go/v2/kwp/subtle"
@@ -162,7 +162,7 @@ func TestTransit_Import(t *testing.T) {
 	t.Run(
 		"import into a key fails before wrapping key is read",
 		func(t *testing.T) {
-			fakeWrappingKey, err := rsa.GenerateKey(rand.Reader, 4096)
+			fakeWrappingKey, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 4096)
 			if err != nil {
 				t.Fatalf("failed to generate fake wrapping key: %s", err)
 			}
@@ -502,7 +502,7 @@ func TestTransit_ImportVersion(t *testing.T) {
 	t.Run(
 		"import into a key version fails before wrapping key is read",
 		func(t *testing.T) {
-			fakeWrappingKey, err := rsa.GenerateKey(rand.Reader, 4096)
+			fakeWrappingKey, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 4096)
 			if err != nil {
 				t.Fatalf("failed to generate fake wrapping key: %s", err)
 			}
@@ -948,7 +948,7 @@ func TestTransit_ImportVersionWithPublicKeys(t *testing.T) {
 	)
 }
 
-func wrapTargetKeyForImport(t *testing.T, wrappingKey *rsa.PublicKey, targetKey interface{}, targetKeyType string, hashFnName string) string {
+func wrapTargetKeyForImport(t *testing.T, wrappingKey *rsa2.PublicKey, targetKey interface{}, targetKeyType string, hashFnName string) string {
 	t.Helper()
 
 	// Format target key for wrapping
@@ -971,7 +971,7 @@ func wrapTargetKeyForImport(t *testing.T, wrappingKey *rsa.PublicKey, targetKey 
 	return wrapTargetPKCS8ForImport(t, wrappingKey, preppedTargetKey, hashFnName)
 }
 
-func wrapTargetPKCS8ForImport(t *testing.T, wrappingKey *rsa.PublicKey, preppedTargetKey []byte, hashFnName string) string {
+func wrapTargetPKCS8ForImport(t *testing.T, wrappingKey *rsa2.PublicKey, preppedTargetKey []byte, hashFnName string) string {
 	t.Helper()
 
 	// Generate an ephemeral AES-256 key
@@ -1027,11 +1027,11 @@ func generateKey(keyType string) (interface{}, error) {
 	case "ecdsa-p521":
 		return ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	case "rsa-2048":
-		return rsa.GenerateKey(rand.Reader, 2048)
+		return cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
 	case "rsa-3072":
-		return rsa.GenerateKey(rand.Reader, 3072)
+		return cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 3072)
 	case "rsa-4096":
-		return rsa.GenerateKey(rand.Reader, 4096)
+		return cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 4096)
 	default:
 		return nil, fmt.Errorf("failed to generate unsupported key type: %s", keyType)
 	}
@@ -1042,7 +1042,7 @@ func getPublicKey(privateKey crypto.PrivateKey, keyType string) ([]byte, error) 
 	var publicKeyBytes []byte
 	switch keyType {
 	case "rsa-2048", "rsa-3072", "rsa-4096":
-		publicKey = privateKey.(*rsa.PrivateKey).Public()
+		publicKey = privateKey.(*rsa2.PrivateKey).Public()
 	case "ecdsa-p256", "ecdsa-p384", "ecdsa-p521":
 		publicKey = privateKey.(*ecdsa.PrivateKey).Public()
 	case "ed25519":

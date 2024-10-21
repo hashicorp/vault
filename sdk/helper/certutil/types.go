@@ -16,7 +16,7 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
-	"crypto/rsa"
+	rsa2 "crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -153,7 +153,7 @@ type KeyBundle struct {
 func GetPrivateKeyTypeFromSigner(signer crypto.Signer) PrivateKeyType {
 	// We look at the public key types to work-around limitations/typing of managed keys.
 	switch signer.Public().(type) {
-	case *rsa.PublicKey:
+	case *rsa2.PublicKey:
 		return RSAPrivateKey
 	case *ecdsa.PublicKey:
 		return ECPrivateKey
@@ -167,7 +167,7 @@ func GetPrivateKeyTypeFromSigner(signer crypto.Signer) PrivateKeyType {
 // that would be associated with it, returning UnknownPrivateKey for unsupported types
 func GetPrivateKeyTypeFromPublicKey(pubKey crypto.PublicKey) PrivateKeyType {
 	switch pubKey.(type) {
-	case *rsa.PublicKey:
+	case *rsa2.PublicKey:
 		return RSAPrivateKey
 	case *ecdsa.PublicKey:
 		return ECPrivateKey
@@ -449,7 +449,7 @@ func (p *ParsedCertBundle) getSigner() (crypto.Signer, error) {
 	case PKCS8Block:
 		if k, err := x509.ParsePKCS8PrivateKey(p.PrivateKeyBytes); err == nil {
 			switch k := k.(type) {
-			case *rsa.PrivateKey, *ecdsa.PrivateKey, ed25519.PrivateKey:
+			case *rsa2.PrivateKey, *ecdsa.PrivateKey, ed25519.PrivateKey:
 				return k.(crypto.Signer), nil
 			default:
 				return nil, errutil.UserError{Err: "Found unknown private key type in pkcs#8 wrapping"}
@@ -478,7 +478,7 @@ func getPKCS8Type(bs []byte) (PrivateKeyType, error) {
 	switch k.(type) {
 	case *ecdsa.PrivateKey:
 		return ECPrivateKey, nil
-	case *rsa.PrivateKey:
+	case *rsa2.PrivateKey:
 		return RSAPrivateKey, nil
 	case ed25519.PrivateKey:
 		return Ed25519PrivateKey, nil

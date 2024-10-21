@@ -10,7 +10,6 @@ import (
 	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
@@ -26,6 +25,7 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
+	"github.com/hashicorp/go-secure-stdlib/cryptoutil"
 )
 
 // Tests converting back and forth between a CertBundle and a ParsedCertBundle.
@@ -465,11 +465,11 @@ vitin0L6nprauWkKO38XgM4T75qKZpqtiOcT
 }
 
 func TestGetPublicKeySize(t *testing.T) {
-	rsa, err := rsa.GenerateKey(rand.Reader, 3072)
+	rsa, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 3072)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if GetPublicKeySize(&rsa.PublicKey) != 3072 {
+	if GetPublicKeySize(&rsa2.PublicKey) != 3072 {
 		t.Fatal("unexpected rsa key size")
 	}
 	ecdsa, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
@@ -735,7 +735,7 @@ func setCerts() {
 
 	// RSA generation
 	{
-		key, err := rsa.GenerateKey(rand.Reader, 2048)
+		key, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
 		if err != nil {
 			panic(err)
 		}
@@ -1101,8 +1101,8 @@ func TestIgnoreCSRSigning(t *testing.T) {
 	})
 }
 
-func genRsaKey(t *testing.T) *rsa.PrivateKey {
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
+func genRsaKey(t *testing.T) *rsa2.PrivateKey {
+	key, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
 	if err != nil {
 		t.Fatal(err)
 	}

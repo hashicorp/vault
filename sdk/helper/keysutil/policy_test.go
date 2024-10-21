@@ -9,7 +9,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
 	"errors"
@@ -22,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/cryptoutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -810,7 +810,7 @@ func Test_Import(t *testing.T) {
 func generateTestKeys() (map[KeyType][]byte, error) {
 	keyMap := make(map[KeyType][]byte)
 
-	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	rsaKey, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
 	if err != nil {
 		return nil, err
 	}
@@ -820,7 +820,7 @@ func generateTestKeys() (map[KeyType][]byte, error) {
 	}
 	keyMap[KeyType_RSA2048] = rsaKeyBytes
 
-	rsaKey, err = rsa.GenerateKey(rand.Reader, 3072)
+	rsaKey, err = cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 3072)
 	if err != nil {
 		return nil, err
 	}
@@ -830,7 +830,7 @@ func generateTestKeys() (map[KeyType][]byte, error) {
 	}
 	keyMap[KeyType_RSA3072] = rsaKeyBytes
 
-	rsaKey, err = rsa.GenerateKey(rand.Reader, 4096)
+	rsaKey, err = cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 4096)
 	if err != nil {
 		return nil, err
 	}
@@ -969,7 +969,7 @@ func Test_RSA_PSS(t *testing.T) {
 		tabs[i] = strings.Repeat("\t", i)
 	}
 
-	test_RSA_PSS := func(t *testing.T, p *Policy, rsaKey *rsa.PrivateKey, hashType HashType,
+	test_RSA_PSS := func(t *testing.T, p *Policy, rsaKey *rsa2.PrivateKey, hashType HashType,
 		marshalingType MarshalingType,
 	) {
 		unsaltedOptions := SigningOptions{
@@ -1084,7 +1084,7 @@ func Test_RSA_PSS(t *testing.T) {
 		if err != nil {
 			t.Fatalf("error parsing test keys: %s", err)
 		}
-		rsaKey := rsaKeyAny.(*rsa.PrivateKey)
+		rsaKey := rsaKeyAny.(*rsa2.PrivateKey)
 
 		// 2. For each hash algorithm...
 		for hashAlgorithm, hashType := range HashTypeMap {
@@ -1117,7 +1117,7 @@ func Test_RSA_PKCS1Encryption(t *testing.T) {
 		tabs[i] = strings.Repeat("\t", i)
 	}
 
-	test_RSA_PKCS1 := func(t *testing.T, p *Policy, rsaKey *rsa.PrivateKey, padding PaddingScheme) {
+	test_RSA_PKCS1 := func(t *testing.T, p *Policy, rsaKey *rsa2.PrivateKey, padding PaddingScheme) {
 		// 1. Make a signature with the given key size and hash algorithm.
 		t.Log(tabs[3], "Make an automatic signature")
 		ct, err := p.EncryptWithFactory(0, nil, nil, string(input), padding)
@@ -1152,7 +1152,7 @@ func Test_RSA_PKCS1Encryption(t *testing.T) {
 		if err != nil {
 			t.Fatalf("error parsing test keys: %s", err)
 		}
-		rsaKey := rsaKeyAny.(*rsa.PrivateKey)
+		rsaKey := rsaKeyAny.(*rsa2.PrivateKey)
 		for _, padding := range []PaddingScheme{PaddingScheme_OAEP, PaddingScheme_PKCS1v15, ""} {
 			t.Run(fmt.Sprintf("%s/%s", rsaKeyType.String(), padding), func(t *testing.T) { test_RSA_PKCS1(t, p, rsaKey, padding) })
 		}
@@ -1173,7 +1173,7 @@ func Test_RSA_PKCS1Signing(t *testing.T) {
 		tabs[i] = strings.Repeat("\t", i)
 	}
 
-	test_RSA_PKCS1 := func(t *testing.T, p *Policy, rsaKey *rsa.PrivateKey, hashType HashType,
+	test_RSA_PKCS1 := func(t *testing.T, p *Policy, rsaKey *rsa2.PrivateKey, hashType HashType,
 		marshalingType MarshalingType,
 	) {
 		unsaltedOptions := SigningOptions{
@@ -1229,7 +1229,7 @@ func Test_RSA_PKCS1Signing(t *testing.T) {
 		if err != nil {
 			t.Fatalf("error parsing test keys: %s", err)
 		}
-		rsaKey := rsaKeyAny.(*rsa.PrivateKey)
+		rsaKey := rsaKeyAny.(*rsa2.PrivateKey)
 
 		// 2. For each hash algorithm...
 		for hashAlgorithm, hashType := range HashTypeMap {
