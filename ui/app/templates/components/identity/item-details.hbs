@@ -19,7 +19,7 @@
   {{/if}}
   <InfoTableRow @label="Name" @value={{@model.name}} data-test-identity-item-name={{true}} />
   <InfoTableRow @label="Type" @value={{@model.type}} />
-  <InfoTableRow @label="ID" @value={{@model.id}} />
+  <InfoTableRow @label="ID" @value={{@model.id}} @addCopyButton={{true}} />
   <InfoTableRow @label="Merged Ids" @value={{@model.mergedEntityIds}}>
     <div>
       {{#each @model.mergedEntityIds as |id|}}
