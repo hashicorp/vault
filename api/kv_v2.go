@@ -218,6 +218,7 @@ func (kv *KVv2) GetMetadata(ctx context.Context, secretPath string) (*KVMetadata
 // GetMetadata can provide a list of available versions.
 func (kv *KVv2) Put(ctx context.Context, secretPath string, data map[string]interface{}, opts ...KVOption) (*KVSecret, error) {
 	pathToWriteTo := fmt.Sprintf("%s/data/%s", kv.mountPath, secretPath)
+	time.Sleep(500 * time.Millisecond)
 
 	wrappedData := map[string]interface{}{
 		"data": data,
