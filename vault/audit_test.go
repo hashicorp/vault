@@ -139,8 +139,8 @@ func TestCore_EnableExistingAudit(t *testing.T) {
 
 	// Enable second audit backend
 	err = c.enableAudit(namespace.RootContext(context.Background()), me2, true)
-	if err != nil {
-		t.Errorf("failed to enable audit for path 'foo2': %v", err)
+	if err == nil {
+		t.Errorf("Should not be able to enable audit for path 'foo2' due to duplication: %v", err)
 	}
 }
 
