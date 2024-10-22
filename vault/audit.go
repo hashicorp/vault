@@ -107,6 +107,7 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 
 	// Look for matching name
 	for _, ent := range c.audit.Entries {
+
 		switch {
 		// Existing is sql/mysql/ new is sql/ or
 		// existing is sql/ and new is sql/mysql/
@@ -114,6 +115,11 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 			fallthrough
 		case strings.HasPrefix(entry.Path, ent.Path):
 			return fmt.Errorf("path already in use: %w", audit.ErrExternalOptions)
+		}
+
+		// Check if argument file_path vs current vault file_path
+		if entry.Options["file_path"] == ent.Options["file_path"] {
+			return fmt.Errorf("file_path already in use: %w", audit.ErrExternalOptions)
 		}
 	}
 
