@@ -13,6 +13,7 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
+	"github.com/hashicorp/vault/helper/osutil"
 )
 
 // fileSink is a Sink implementation that writes a token to a file
@@ -117,7 +118,7 @@ func (f *fileSink) WriteToken(token string) error {
 		return fmt.Errorf("error opening temp file in dir %s for writing: %w", targetDir, err)
 	}
 
-	if err := tmpFile.Chown(f.owner, f.group); err != nil {
+	if err := osutil.Chown(tmpFile, f.owner, f.group); err != nil {
 		return fmt.Errorf("error changing ownership of %s: %w", tmpFile.Name(), err)
 	}
 

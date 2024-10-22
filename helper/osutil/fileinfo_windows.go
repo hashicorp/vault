@@ -7,6 +7,7 @@ package osutil
 
 import (
 	"io/fs"
+	"os"
 )
 
 func FileUidMatch(info fs.FileInfo, path string, uid int) error {
@@ -16,4 +17,8 @@ func FileUidMatch(info fs.FileInfo, path string, uid int) error {
 // Umask does nothing for windows for now
 func Umask(newmask int) int {
 	return 0
+}
+
+func Chown(f *os.File, owner, group int) error {
+	return nil
 }

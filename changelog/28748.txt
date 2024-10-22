@@ -1,0 +1,6 @@
+```release-note:bug
+agent: Fix chown error running agent on Windows with an auto-auth file sinks. 
+```
+```release-note:bug
+proxy: Fix chown error running proxy on Windows with an auto-auth file sink.
+```
