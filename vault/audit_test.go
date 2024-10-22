@@ -113,7 +113,7 @@ func TestCore_EnableExistingAudit(t *testing.T) {
 		Path:  "foo",
 		Type:  audit.TypeFile,
 		Options: map[string]string{
-			"file_path": "testdata/audit_test.log",
+			"file_path": "stdout",
 		},
 	}
 
@@ -122,7 +122,7 @@ func TestCore_EnableExistingAudit(t *testing.T) {
 		Path:  "foo2",
 		Type:  audit.TypeFile,
 		Options: map[string]string{
-			"file_path": "testdata/audit_test.log",
+			"file_path": "stdout",
 		},
 	}
 

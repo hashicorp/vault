@@ -107,7 +107,6 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 
 	// Look for matching name
 	for _, ent := range c.audit.Entries {
-
 		switch {
 		// Existing is sql/mysql/ new is sql/ or
 		// existing is sql/ and new is sql/mysql/
