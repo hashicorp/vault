@@ -117,8 +117,10 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 		}
 
 		// Check if argument file_path vs current vault file_path
-		if entry.Options["file_path"] == ent.Options["file_path"] {
-			return fmt.Errorf("file_path already in use: %w", audit.ErrExternalOptions)
+		if entry.Type == "file" {
+			if entry.Options["file_path"] == ent.Options["file_path"] {
+				return fmt.Errorf("file_path already in use: %w", audit.ErrExternalOptions)
+			}
 		}
 	}
 
