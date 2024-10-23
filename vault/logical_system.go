@@ -2155,8 +2155,8 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 		resp.Data["identity_token_key"] = rawVal.(string)
 	}
 
-	if rawVal, ok := mountEntry.synthesizedConfigCache.Load("trim_request_trailing_slashes"); ok {
-		resp.Data["trim_request_trailing_slashes"] = rawVal.(string)
+	if mountEntry.Config.TrimRequestTrailingSlashes {
+		resp.Data["trim_request_trailing_slashes"] = mountEntry.Config.TrimRequestTrailingSlashes
 	}
 
 	if mountEntry.Config.UserLockoutConfig != nil {
