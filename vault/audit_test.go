@@ -105,6 +105,7 @@ func TestCore_EnableAudit(t *testing.T) {
 	}
 }
 
+// Test vault audit option duplicate file_path for multiple path
 func TestCore_EnableExistingAudit(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 
