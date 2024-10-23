@@ -612,18 +612,6 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 }
 
 func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request) (resp *logical.Response, err error) {
-	// Allowing writing to a path ending in / makes it extremely difficult to
-	// understand user intent for the filesystem-like backends (kv,
-	// cubbyhole) -- did they want a key named foo/ or did they want to write
-	// to a directory foo/ with no (or forgotten) key, or...? It also affects
-	// lookup, because paths ending in / are considered prefixes by some
-	// backends. Basically, it's all just terrible, so don't allow it.
-	if strings.HasSuffix(req.Path, "/") &&
-		(req.Operation == logical.UpdateOperation ||
-			req.Operation == logical.CreateOperation ||
-			req.Operation == logical.PatchOperation) {
-		return logical.ErrorResponse("cannot write to a path ending in '/'"), nil
-	}
 	waitGroup, err := waitForReplicationState(ctx, c, req)
 	if err != nil {
 		return nil, err
@@ -1006,6 +994,23 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		// Get and set ignored HMAC'd value.
 		if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
 			nonHMACReqDataKeys = rawVals.([]string)
+		}
+
+		// Allowing writing to a path ending in / makes it extremely difficult to
+		// understand user intent for the filesystem-like backends (kv,
+		// cubbyhole) -- did they want a key named foo/ or did they want to write
+		// to a directory foo/ with no (or forgotten) key, or...? It also affects
+		// lookup, because paths ending in / are considered prefixes by some
+		// backends. Basically, it's all just terrible, so don't allow it.
+		if strings.HasSuffix(req.Path, "/") &&
+			(req.Operation == logical.UpdateOperation ||
+				req.Operation == logical.CreateOperation ||
+				req.Operation == logical.PatchOperation) {
+			if !entry.Config.TrimRequestTrailingSlashes {
+				return logical.ErrorResponse("cannot write to a path ending in '/'"), nil, nil
+			} else {
+				req.Path = strings.TrimSuffix(req.Path, "/")
+			}
 		}
 	}
 
