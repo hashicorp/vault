@@ -1445,7 +1445,6 @@ func (m *ExpirationManager) RenewToken(ctx context.Context, req *logical.Request
 // the lease is assumed by the expiration manager.
 func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, resp *logical.Response, loginRole string) (id string, retErr error) {
 	defer metrics.MeasureSince([]string{"expire", "register"}, time.Now())
-	time.Sleep(10 * time.Millisecond)
 
 	te := req.TokenEntry()
 	if te == nil {
