@@ -196,17 +196,18 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 		Usage: "Select the semantic version of the plugin to run. The new version must be registered in " +
 			"the plugin catalog, and will not start running until the plugin is reloaded.",
 	})
-	f.StringVar(&StringVar{
-		Name:    flagNameIdentityTokenKey,
-		Target:  &c.flagIdentityTokenKey,
-		Default: "default",
-		Usage:   "Select the key used to sign plugin identity tokens.",
-	})
 	f.BoolVar(&BoolVar{
 		Name:    flagNameTrimRequestTrailingSlashes,
 		Target:  &c.flagTrimRequestTrailingSlashes,
 		Default: false,
 		Usage:   "Whether to trim trailing slashes for incoming requests to this mount",
+	})
+
+	f.StringVar(&StringVar{
+		Name:    flagNameIdentityTokenKey,
+		Target:  &c.flagIdentityTokenKey,
+		Default: "default",
+		Usage:   "Select the key used to sign plugin identity tokens.",
 	})
 
 	return set

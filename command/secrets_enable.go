@@ -23,26 +23,27 @@ var (
 type SecretsEnableCommand struct {
 	*BaseCommand
 
-	flagDescription               string
-	flagPath                      string
-	flagDefaultLeaseTTL           time.Duration
-	flagMaxLeaseTTL               time.Duration
-	flagAuditNonHMACRequestKeys   []string
-	flagAuditNonHMACResponseKeys  []string
-	flagListingVisibility         string
-	flagPassthroughRequestHeaders []string
-	flagAllowedResponseHeaders    []string
-	flagForceNoCache              bool
-	flagPluginName                string
-	flagPluginVersion             string
-	flagOptions                   map[string]string
-	flagLocal                     bool
-	flagSealWrap                  bool
-	flagExternalEntropyAccess     bool
-	flagVersion                   int
-	flagAllowedManagedKeys        []string
-	flagDelegatedAuthAccessors    []string
-	flagIdentityTokenKey          string
+	flagDescription                string
+	flagPath                       string
+	flagDefaultLeaseTTL            time.Duration
+	flagMaxLeaseTTL                time.Duration
+	flagAuditNonHMACRequestKeys    []string
+	flagAuditNonHMACResponseKeys   []string
+	flagListingVisibility          string
+	flagPassthroughRequestHeaders  []string
+	flagAllowedResponseHeaders     []string
+	flagForceNoCache               bool
+	flagPluginName                 string
+	flagPluginVersion              string
+	flagOptions                    map[string]string
+	flagLocal                      bool
+	flagSealWrap                   bool
+	flagExternalEntropyAccess      bool
+	flagVersion                    int
+	flagAllowedManagedKeys         []string
+	flagDelegatedAuthAccessors     []string
+	flagIdentityTokenKey           string
+	flagTrimRequestTrailingSlashes bool
 }
 
 func (c *SecretsEnableCommand) Synopsis() string {
@@ -245,6 +246,13 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 		Usage:   "Select the key used to sign plugin identity tokens.",
 	})
 
+	f.BoolVar(&BoolVar{
+		Name:    flagNameTrimRequestTrailingSlashes,
+		Target:  &c.flagTrimRequestTrailingSlashes,
+		Default: false,
+		Usage:   "Whether to trim trailing slashes for incoming requests to this mount",
+	})
+
 	return set
 }
 
@@ -358,6 +366,10 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 
 		if fl.Name == flagNameIdentityTokenKey {
 			mountInput.Config.IdentityTokenKey = c.flagIdentityTokenKey
+		}
+
+		if fl.Name == flagNameTrimRequestTrailingSlashes {
+			mountInput.Config.TrimRequestTrailingSlashes = c.flagTrimRequestTrailingSlashes
 		}
 	})
 

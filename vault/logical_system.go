@@ -1389,7 +1389,9 @@ func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry, legacy
 			entryConfig["max_lease_ttl"] = coreMaxTTL
 		}
 	}
-
+	if entry.Config.TrimRequestTrailingSlashes {
+		entryConfig["trim_request_trailing_slashes"] = true
+	}
 	if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
 		entryConfig["audit_non_hmac_request_keys"] = rawVal.([]string)
 	}
@@ -1611,6 +1613,10 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	// Copy over the force no cache if set
 	if apiConfig.ForceNoCache {
 		config.ForceNoCache = true
+	}
+
+	if apiConfig.TrimRequestTrailingSlashes {
+		config.TrimRequestTrailingSlashes = true
 	}
 
 	if err := checkListingVisibility(apiConfig.ListingVisibility); err != nil {
@@ -2147,6 +2153,10 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 
 	if rawVal, ok := mountEntry.synthesizedConfigCache.Load("identity_token_key"); ok {
 		resp.Data["identity_token_key"] = rawVal.(string)
+	}
+
+	if rawVal, ok := mountEntry.synthesizedConfigCache.Load("trim_request_trailing_slashes"); ok {
+		resp.Data["trim_request_trailing_slashes"] = rawVal.(string)
 	}
 
 	if mountEntry.Config.UserLockoutConfig != nil {
@@ -2772,10 +2782,8 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			return handleError(err)
 		}
 
-		mountEntry.SyncCache()
-
 		if b.Core.logger.IsInfo() {
-			b.Core.logger.Info("mount tuning of delegated_auth_accessors successful", "path", path)
+			b.Core.logger.Info("mount tuning of trim_request_trailing_slashes successful", "path", path)
 		}
 	}
 
