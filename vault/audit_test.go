@@ -105,10 +105,12 @@ func TestCore_EnableAudit(t *testing.T) {
 	}
 }
 
-// Test handling of duplicate file_path in vault audit options across multiple paths
+// TestCore_EnableExistingAudit tests the handling of enabling existing audit backends,
+// specifically checking for duplicate file paths in audit options across multiple paths.
 func TestCore_EnableExistingAudit(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 
+	// First audit backend entry
 	me := &MountEntry{
 		Table: auditTableType,
 		Path:  "foo",
@@ -118,6 +120,7 @@ func TestCore_EnableExistingAudit(t *testing.T) {
 		},
 	}
 
+	// Second audit backend entry
 	me2 := &MountEntry{
 		Table: auditTableType,
 		Path:  "foo2",
