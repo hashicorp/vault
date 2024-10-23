@@ -323,10 +323,6 @@ func (c *AuthTuneCommand) Run(args []string) int {
 		if fl.Name == flagNameTrimRequestTrailingSlashes {
 			mountConfigInput.TrimRequestTrailingSlashes = c.flagTrimRequestTrailingSlashes
 		}
-
-		if fl.Name == flagNameTrimRequestTrailingSlashes {
-			mountConfigInput.TrimRequestTrailingSlashes = c.flagTrimRequestTrailingSlashes
-		}
 	})
 
 	// Append /auth (since that's where auths live) and a trailing slash to

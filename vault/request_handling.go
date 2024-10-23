@@ -612,6 +612,20 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 }
 
 func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request) (resp *logical.Response, err error) {
+	waitGroup, err := waitForReplicationState(ctx, c, req)
+	if err != nil {
+		return nil, err
+	}
+
+	// Decrement the wait group when our request is done
+	if waitGroup != nil {
+		defer waitGroup.Done()
+	}
+
+	if c.MissingRequiredState(req.RequiredState(), c.perfStandby) {
+		return nil, logical.ErrMissingRequiredState
+	}
+
 	// Ensure the req contains a MountPoint as it is depended on by some
 	// functionality (e.g. quotas)
 	var entry *MountEntry
@@ -632,20 +646,6 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 		} else {
 			req.Path = strings.TrimSuffix(req.Path, "/")
 		}
-	}
-
-	waitGroup, err := waitForReplicationState(ctx, c, req)
-	if err != nil {
-		return nil, err
-	}
-
-	// Decrement the wait group when our request is done
-	if waitGroup != nil {
-		defer waitGroup.Done()
-	}
-
-	if c.MissingRequiredState(req.RequiredState(), c.perfStandby) {
-		return nil, logical.ErrMissingRequiredState
 	}
 
 	err = c.PopulateTokenEntry(ctx, req)
@@ -1011,23 +1011,6 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		// Get and set ignored HMAC'd value.
 		if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
 			nonHMACReqDataKeys = rawVals.([]string)
-		}
-
-		// Allowing writing to a path ending in / makes it extremely difficult to
-		// understand user intent for the filesystem-like backends (kv,
-		// cubbyhole) -- did they want a key named foo/ or did they want to write
-		// to a directory foo/ with no (or forgotten) key, or...? It also affects
-		// lookup, because paths ending in / are considered prefixes by some
-		// backends. Basically, it's all just terrible, so don't allow it.
-		if strings.HasSuffix(req.Path, "/") &&
-			(req.Operation == logical.UpdateOperation ||
-				req.Operation == logical.CreateOperation ||
-				req.Operation == logical.PatchOperation) {
-			if !entry.Config.TrimRequestTrailingSlashes {
-				return logical.ErrorResponse("cannot write to a path ending in '/'"), nil, nil
-			} else {
-				req.Path = strings.TrimSuffix(req.Path, "/")
-			}
 		}
 	}
 
