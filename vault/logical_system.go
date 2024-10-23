@@ -7212,8 +7212,4 @@ This path responds to the following HTTP methods.
 		`Whether to trim a trailing slash on incoming requests to this mount`,
 		"",
 	},
-	"trim_request_trailing_slashes": {
-		`Whether to trim a trailing slash on incoming requests to this mount`,
-		"",
-	},
 }
