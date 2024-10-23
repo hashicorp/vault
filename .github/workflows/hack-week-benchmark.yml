@@ -24,10 +24,8 @@ jobs:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - name: Configure Git
         run: git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN }}:@github.com".insteadOf "https://github.com"
-      - name: pwd
-        run: pwd
-      - name: ls -a
-        run: ls -a
+      - name: Chmod
+        run: chmod +x ./.github/scripts/install-cob.sh
       - name: Install cob
         run: ./.github/scripts/install-cob.sh -d v0.0.8 -b /usr/local/bin
       - name: Run Benchmark
