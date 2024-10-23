@@ -25,6 +25,6 @@ jobs:
       - name: Configure Git
         run: git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN }}:@github.com".insteadOf "https://github.com"
       - name: Install cob
-        run: cat ./.github/scripts/install-cob.sh | sudo sh -s -- -b /usr/local/bin -d v0.0.8
+        run: ./.github/scripts/install-cob.sh | sudo sh -s -- -b /usr/local/bin -d v0.0.8
       - name: Run Benchmark
         run: cob --base ${{ github.event.pull_request.base.sha }} -threshold 0.1 -bench-args "test -bench . -benchmem -v ./vault/bench"
