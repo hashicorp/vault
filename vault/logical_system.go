@@ -2753,6 +2753,58 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 	}
 
+	if rawVal, ok := data.GetOk("trim_request_trailing_slashes"); ok {
+		trimRequestTrailingSlashes := rawVal.(bool)
+
+		oldVal := mountEntry.Config.TrimRequestTrailingSlashes
+		mountEntry.Config.TrimRequestTrailingSlashes = trimRequestTrailingSlashes
+
+		// Update the mount table
+		var err error
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Config.TrimRequestTrailingSlashes = oldVal
+			return handleError(err)
+		}
+
+		mountEntry.SyncCache()
+
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("mount tuning of delegated_auth_accessors successful", "path", path)
+		}
+	}
+
+	if rawVal, ok := data.GetOk("trim_request_trailing_slashes"); ok {
+		trimRequestTrailingSlashes := rawVal.(bool)
+
+		oldVal := mountEntry.Config.TrimRequestTrailingSlashes
+		mountEntry.Config.TrimRequestTrailingSlashes = trimRequestTrailingSlashes
+
+		// Update the mount table
+		var err error
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Config.TrimRequestTrailingSlashes = oldVal
+			return handleError(err)
+		}
+
+		mountEntry.SyncCache()
+
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("mount tuning of delegated_auth_accessors successful", "path", path)
+		}
+	}
+
 	var err error
 	var resp *logical.Response
 	var options map[string]string
@@ -7154,6 +7206,14 @@ This path responds to the following HTTP methods.
 
 	"well-known-label": {
 		`The label representing a path-prefix within the /.well-known/ path`,
+		"",
+	},
+	"trim_request_trailing_slashes": {
+		`Whether to trim a trailing slash on incoming requests to this mount`,
+		"",
+	},
+	"trim_request_trailing_slashes": {
+		`Whether to trim a trailing slash on incoming requests to this mount`,
 		"",
 	},
 }
