@@ -433,6 +433,7 @@ func (c *Core) stopClusterListener() {
 }
 
 func (c *Core) SetClusterListenerAddrs(addrs []*net.TCPAddr) {
+	time.Sleep(10 * time.Millisecond)
 	c.clusterListenerAddrs = addrs
 	if c.ClusterAddr() == "" && len(addrs) == 1 {
 		c.clusterAddr.Store(fmt.Sprintf("https://%s", addrs[0].String()))
@@ -440,6 +441,7 @@ func (c *Core) SetClusterListenerAddrs(addrs []*net.TCPAddr) {
 }
 
 func (c *Core) SetClusterHandler(handler http.Handler) {
+	time.Sleep(10 * time.Millisecond)
 	c.clusterHandler = handler
 }
 

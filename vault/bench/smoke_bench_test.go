@@ -36,28 +36,20 @@ func BenchmarkSmoke_KVV2(b *testing.B) {
 	err := client.Sys().Mount(v2MountPath, &api.MountInput{
 		Type: "kv-v2",
 	})
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 
 	data, err := client.KVv2(v2MountPath).Put(context.Background(), secretPath, secretData)
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 
 	data, err = client.KVv2(v2MountPath).Get(context.Background(), secretPath)
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 
 	require.Equal(b, "kv", data.Raw.MountType)
 	require.Equal(b, secretData, data.Data)
 
 	bench := func(b *testing.B, dataSize int) {
 		data, err := uuid.GenerateRandomBytes(dataSize)
-		if err != nil {
-			b.Fatal(err)
-		}
+		require.NoError(b, err)
 
 		testName := b.Name()
 
@@ -67,15 +59,78 @@ func BenchmarkSmoke_KVV2(b *testing.B) {
 			_, err := client.KVv2(v2MountPath).Put(context.Background(), key, map[string]interface{}{
 				"foo": string(data),
 			})
-			if err != nil {
-				b.Fatal(err)
-			}
+			require.NoError(b, err)
 			_, err = client.KVv2(v2MountPath).Get(context.Background(), secretPath)
-			if err != nil {
-				b.Fatal(err)
-			}
+			require.NoError(b, err)
 		}
 	}
 
 	b.Run("kv-puts-and-gets", func(b *testing.B) { bench(b, 1024) })
+}
+
+// BenchmarkSmoke_ClusterCreation runs some basic benchmarking on NewTestCluster
+func BenchmarkSmoke_ClusterCreation(b *testing.B) {
+	bench := func(b *testing.B) {
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			cluster := vault.NewTestCluster(b, &vault.CoreConfig{}, &vault.TestClusterOptions{
+				HandlerFunc: vaulthttp.Handler,
+			})
+			cluster.Start()
+			cluster.Cleanup()
+		}
+	}
+
+	b.Run("cluster-creation", func(b *testing.B) { bench(b) })
+}
+
+// BenchmarkSmoke_MountUnmount runs some basic benchmarking on mounting and unmounting
+func BenchmarkSmoke_MountUnmount(b *testing.B) {
+	cluster := vault.NewTestCluster(b, &vault.CoreConfig{}, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	client := cluster.Cores[0].Client
+
+	bench := func(b *testing.B) {
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			err := client.Sys().Mount(v2MountPath, &api.MountInput{
+				Type: "kv-v2",
+			})
+			require.NoError(b, err)
+			err = client.Sys().Unmount(v2MountPath)
+			require.NoError(b, err)
+		}
+	}
+
+	b.Run("mount-unmount", func(b *testing.B) { bench(b) })
+}
+
+// BenchmarkSmoke_TokenCreationRevocation runs some basic benchmarking on tokens
+func BenchmarkSmoke_TokenCreationRevocation(b *testing.B) {
+	cluster := vault.NewTestCluster(b, &vault.CoreConfig{}, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	client := cluster.Cores[0].Client
+	rootToken := client.Token()
+
+	bench := func(b *testing.B) {
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			client.SetToken(rootToken)
+			secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+				Policies: []string{"default"},
+				TTL:      "30m",
+			})
+			require.NoError(b, err)
+			require.NotNil(b, secret)
+			require.NotNil(b, secret.Auth)
+			require.NotNil(b, secret.Auth.ClientToken)
+			client.SetToken(secret.Auth.ClientToken)
+			err = client.Auth().Token().RevokeSelf(secret.Auth.ClientToken)
+			require.NoError(b, err)
+		}
+	}
+
+	b.Run("token-creation-revocation", func(b *testing.B) { bench(b) })
 }
