@@ -40,7 +40,7 @@ jobs:
       uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       with:
         repository: hashicorp/security-scanner
-        token: ${{ secrets.HASHIBOT_PRODSEC_GITHUB_TOKEN }}
+        token: ${{ secrets.PRODSEC_SCANNER_READ_ONLY }}
         path: security-scanner
         ref: main
 
@@ -62,7 +62,7 @@ jobs:
         python3 -m pip install semgrep==1.45.0
 
         # CodeQL
-        LATEST=$(gh release list --repo https://github.com/github/codeql-action | cut -f 3 | sort --version-sort | tail -n1)
+        LATEST=$(gh release list --repo https://github.com/github/codeql-action | cut -f 3 | grep codeql-bundle- | sort --version-sort | tail -n1)
         gh release download --repo https://github.com/github/codeql-action --pattern codeql-bundle-linux64.tar.gz "$LATEST"
         tar xf codeql-bundle-linux64.tar.gz -C "$HOME/.bin"
 
