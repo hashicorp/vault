@@ -4,6 +4,7 @@
 ~}}
 
 <TabPageHeader @model={{@backendModel}} @breadcrumbs={{@breadcrumbs}}>
+  {{!-- {{#unless @isSubDirectory}} --}}
   <:toolbarFilters>
     {{#if (and (not @promptConfig) @roles.meta.total)}}
       <FilterInput
@@ -26,93 +27,122 @@
       </ToolbarLink>
     {{/if}}
   </:toolbarActions>
+  {{!-- {{/unless}} --}}
 </TabPageHeader>
 
-{{#if @promptConfig}}
-  <ConfigCta />
-{{else if (not @roles.meta.filteredTotal)}}
-  {{#if @pageFilter}}
-    <EmptyState @title="There are no roles matching &quot;{{@pageFilter}}&quot;" />
-  {{else}}
-    <EmptyState
-      data-test-config-cta
-      @title="No roles created yet"
-      @message="Roles in Vault will allow you to manage LDAP credentials. Create a role to get started."
-    />
-  {{/if}}
+{{#if @isSubDirectory}}
+  <h2 class="title is-4 has-top-bottom-margin" data-test-header-title>
+    <Icon @name="folder-users" @size="24" class="has-text-grey-light" />
+    {{@roleName}}
+  </h2>
+
+  <Hds::Table @model={{@roles}} @columns={{array (hash key="name" label="Role" isSortable=true)}}>
+    <:body as |B|>
+      <B.Tr>
+        <B.Td>
+          <Hds::Link::Standalone
+            @icon="user"
+            @text={{B.data.name}}
+            @route="roles.role"
+            @models={{array B.data.type (this.rolePath B.data.name)}}
+            @color="secondary"
+          />
+        </B.Td>
+      </B.Tr>
+    </:body>
+  </Hds::Table>
 {{else}}
-  <div class="has-bottom-margin-s">
-    {{#each @roles as |role|}}
-      <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{array "roles.role.details" role.type role.name}} as |Item|>
-        <Item.content>
-          <Icon @name="user" />
-          <span data-test-role={{role.name}}>{{role.name}}</span>
-          <Hds::Badge @text={{role.type}} data-test-role-type-badge={{role.name}} />
-        </Item.content>
-        <Item.menu>
-          <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
-            <dd.ToggleIcon @icon="more-horizontal" @text="More options" @hasChevron={{false}} data-test-popup-menu-trigger />
-            {{#if role.canEdit}}
+  {{#if @promptConfig}}
+    <ConfigCta />
+  {{else if (not @roles.meta.filteredTotal)}}
+    {{#if @pageFilter}}
+      <EmptyState @title="There are no roles matching &quot;{{@pageFilter}}&quot;" />
+    {{else}}
+      <EmptyState
+        data-test-config-cta
+        @title="No roles created yet"
+        @message="Roles in Vault will allow you to manage LDAP credentials. Create a role to get started."
+      />
+    {{/if}}
+  {{else}}
+    <div class="has-bottom-margin-s">
+      {{#each @roles as |role|}}
+        <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{array "roles.role" role.type role.name}} as |Item|>
+          <Item.content>
+            <Icon @name="user" />
+            <span data-test-role={{role.name}}>{{role.name}}</span>
+            <Hds::Badge @text={{role.type}} data-test-role-type-badge={{role.name}} />
+          </Item.content>
+          <Item.menu>
+            <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+              <dd.ToggleIcon
+                @icon="more-horizontal"
+                @text="More options"
+                @hasChevron={{false}}
+                data-test-popup-menu-trigger
+              />
+              {{#if role.canEdit}}
+                <dd.Interactive
+                  data-test-edit
+                  @route="roles.role.edit"
+                  @models={{array role.type role.name}}
+                >Edit</dd.Interactive>
+              {{/if}}
+              {{#if role.canReadCreds}}
+                <dd.Interactive data-test-get-creds @route="roles.role.credentials" @models={{array role.type role.name}}>
+                  Get credentials
+                </dd.Interactive>
+              {{/if}}
+              {{#if role.canRotateStaticCreds}}
+                <dd.Interactive
+                  data-test-rotate-creds
+                  @color="critical"
+                  {{on "click" (fn (mut this.credsToRotate) role)}}
+                >Rotate credentials</dd.Interactive>
+              {{/if}}
               <dd.Interactive
-                data-test-edit
-                @route="roles.role.edit"
+                data-test-details
+                @route="roles.role.details"
+                {{! this will force the roles.role model hook to fire since we may only have a partial model loaded in the list view }}
                 @models={{array role.type role.name}}
-              >Edit</dd.Interactive>
-            {{/if}}
-            {{#if role.canReadCreds}}
-              <dd.Interactive data-test-get-creds @route="roles.role.credentials" @models={{array role.type role.name}}>
-                Get credentials
-              </dd.Interactive>
-            {{/if}}
-            {{#if role.canRotateStaticCreds}}
-              <dd.Interactive
-                data-test-rotate-creds
-                @color="critical"
-                {{on "click" (fn (mut this.credsToRotate) role)}}
-              >Rotate credentials</dd.Interactive>
-            {{/if}}
-            <dd.Interactive
-              data-test-details
-              @route="roles.role.details"
-              {{! this will force the roles.role model hook to fire since we may only have a partial model loaded in the list view }}
-              @models={{array role.type role.name}}
-            >Details</dd.Interactive>
-            {{#if role.canDelete}}
-              <dd.Interactive
-                data-test-delete
-                @color="critical"
-                {{on "click" (fn (mut this.roleToDelete) role)}}
-              >Delete</dd.Interactive>
-            {{/if}}
-          </Hds::Dropdown>
-        </Item.menu>
-      </ListItem>
-    {{/each}}
+              >Details</dd.Interactive>
+              {{#if role.canDelete}}
+                <dd.Interactive
+                  data-test-delete
+                  @color="critical"
+                  {{on "click" (fn (mut this.roleToDelete) role)}}
+                >Delete</dd.Interactive>
+              {{/if}}
+            </Hds::Dropdown>
+          </Item.menu>
+        </ListItem>
+      {{/each}}
 
-    {{#if this.credsToRotate}}
-      <ConfirmModal
-        @confirmMessage="When manually rotating credentials, the rotation period will start over."
-        @onConfirm={{fn this.onRotate this.credsToRotate}}
-        @onClose={{fn (mut this.credsToRotate) null}}
-      />
-    {{/if}}
-    {{#if this.roleToDelete}}
-      <ConfirmModal
-        @color="critical"
-        @confirmMessage="Deleting this role means that you’ll need to recreate it in order to generate credentials again."
-        @onConfirm={{fn this.onDelete this.roleToDelete}}
-        @onClose={{fn (mut this.roleToDelete) null}}
-      />
-    {{/if}}
+      {{#if this.credsToRotate}}
+        <ConfirmModal
+          @confirmMessage="When manually rotating credentials, the rotation period will start over."
+          @onConfirm={{fn this.onRotate this.credsToRotate}}
+          @onClose={{fn (mut this.credsToRotate) null}}
+        />
+      {{/if}}
+      {{#if this.roleToDelete}}
+        <ConfirmModal
+          @color="critical"
+          @confirmMessage="Deleting this role means that you’ll need to recreate it in order to generate credentials again."
+          @onConfirm={{fn this.onDelete this.roleToDelete}}
+          @onClose={{fn (mut this.roleToDelete) null}}
+        />
+      {{/if}}
 
-    <Hds::Pagination::Numbered
-      @currentPage={{@roles.meta.currentPage}}
-      @currentPageSize={{@roles.meta.pageSize}}
-      @route="roles"
-      @showSizeSelector={{false}}
-      @totalItems={{@roles.meta.filteredTotal}}
-      @queryFunction={{this.paginationQueryParams}}
-      data-test-pagination
-    />
-  </div>
+      <Hds::Pagination::Numbered
+        @currentPage={{@roles.meta.currentPage}}
+        @currentPageSize={{@roles.meta.pageSize}}
+        @route="roles"
+        @showSizeSelector={{false}}
+        @totalItems={{@roles.meta.filteredTotal}}
+        @queryFunction={{this.paginationQueryParams}}
+        data-test-pagination
+      />
+    </div>
+  {{/if}}
 {{/if}}
