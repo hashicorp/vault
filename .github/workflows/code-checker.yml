@@ -80,10 +80,10 @@ jobs:
     needs: setup
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-      - uses: ./.github/actions/install-external-tools # for buf and gofumpt
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+      - uses: ./.github/actions/install-external-tools # for buf and gofumpt
       - name: Go format
         run: make prep check-go-fmt
       - name: Protobuf format

@@ -55,6 +55,11 @@ jobs:
       - uses: hashicorp/action-setup-enos@v1
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+      - uses: ./.github/actions/create-dynamic-config
+        with:
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          vault-version: ${{ inputs.vault-version }}
+          vault-edition: ${{ inputs.vault-edition }}
       - id: metadata
         run: |
           build_date=$(make ci-get-date)
@@ -69,6 +74,8 @@ jobs:
             # shellcheck disable=2001
             vault_version="$(sed 's/+ent/+${{ inputs.vault-edition }}/g' <<< '${{ inputs.vault-version }}')"
           fi
+          sample_seed=$(date +%s)
+          sample=$(enos scenario sample observe "${{ inputs.sample-name }}" --chdir ./enos --min 1 --max "${{ inputs.sample-max }}" --seed "${sample_seed}" --format json | jq -c ".observation.elements")
           {
             echo "build-date=${build_date}"
             echo "vault-version=${vault_version}"
@@ -99,6 +106,7 @@ jobs:
       ENOS_VAR_vault_build_date: ${{ needs.metadata.outputs.build-date }}
       ENOS_VAR_vault_product_version: ${{ needs.metadata.outputs.vault-version }}
       ENOS_VAR_vault_revision: ${{ inputs.vault-revision }}
+      ENOS_VAR_vault_upgrade_initial_version: ${{ matrix.attributes.upgrade_initial_version }}
       ENOS_VAR_consul_license_path: ./support/consul.hclic
       ENOS_VAR_vault_license_path: ./support/vault.hclic
       ENOS_VAR_distro_version_amzz: ${{ matrix.attributes.distro_version_amzn }}
@@ -127,6 +135,11 @@ jobs:
       - uses: hashicorp/action-setup-enos@v1
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+      - uses: ./.github/actions/create-dynamic-config
+        with:
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          vault-version: ${{ inputs.vault-version }}
+          vault-edition: ${{ inputs.vault-edition }}
       - name: Prepare scenario dependencies
         id: prepare_scenario
         run: |

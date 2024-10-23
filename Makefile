@@ -297,6 +297,10 @@ check-tools-external:
 check-tools-internal:
 	@$(CURDIR)/tools/tools.sh check-internal
 
+.PHONY: check-tools-pipeline
+check-tools-pipeline:
+	@$(CURDIR)/tools/tools.sh check-pipeline
+
 check-vault-in-path:
 	@VAULT_BIN=$$(command -v vault) || { echo "vault command not found"; exit 1; }; \
 		[ -x "$$VAULT_BIN" ] || { echo "$$VAULT_BIN not executable"; exit 1; }; \
@@ -313,6 +317,10 @@ tools-external:
 .PHONY: tools-internal
 tools-internal:
 	@$(CURDIR)/tools/tools.sh install-internal
+
+.PHONY: tools-pipeline
+tools-pipeline:
+	@$(CURDIR)/tools/tools.sh install-pipeline
 
 mysql-database-plugin:
 	@CGO_ENABLED=0 $(GO_CMD) build -o bin/mysql-database-plugin ./plugins/database/mysql/mysql-database-plugin
@@ -368,10 +376,6 @@ ci-get-revision:
 ci-get-version-package:
 	@$(CURDIR)/scripts/ci-helper.sh version-package
 
-.PHONY: ci-install-external-tools
-ci-install-external-tools:
-	@$(CURDIR)/scripts/ci-helper.sh install-external-tools
-
 .PHONY: ci-prepare-ent-legal
 ci-prepare-ent-legal:
 	@$(CURDIR)/scripts/ci-helper.sh prepare-ent-legal
@@ -379,10 +383,6 @@ ci-prepare-ent-legal:
 .PHONY: ci-prepare-ce-legal
 ci-prepare-ce-legal:
 	@$(CURDIR)/scripts/ci-helper.sh prepare-ce-legal
-
-.PHONY: ci-update-external-tool-modules
-ci-update-external-tool-modules:
-	@$(CURDIR)/scripts/ci-helper.sh update-external-tool-modules
 
 .PHONY: ci-copywriteheaders
 ci-copywriteheaders:

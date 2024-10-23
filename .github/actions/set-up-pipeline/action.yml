@@ -1,0 +1,47 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
+---
+name: Install the pipeline tool
+description: Install the pipeline tool
+
+inputs:
+  github-token:
+    description: An elevated Github token to access private HashiCorp modules.
+
+runs:
+  using: composite
+  steps:
+    - uses: ./.github/actions/set-up-go
+      with:
+        github-token: ${{ inputs.github-token }}
+        no-restore: true # Don't download vault's modules for pipeline
+    - name: pipeline-metadata
+      id: pipeline-metadata
+      shell: bash
+      # Uses GITHUB_ENV instead of GITHUB_OUTPUT because composite actions are broken,
+      # see: https://github.com/actions/cache/issues/803#issuecomment-1793565071
+      run: |
+        gobin=$(go env GOBIN)
+        if [[ -z "$gobin" ]]; then
+          gobin="$(go env GOPATH)/bin"
+        fi
+        {
+          echo "PIPELINE_HASH=$(git ls-tree HEAD tools/pipeline --object-only)"
+          echo "PIPELINE_PATH=$gobin/pipeline"
+        } | tee -a "$GITHUB_ENV"
+    - name: Try to restore pipeline from cache
+      id: pipeline-cache
+      uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+      with:
+        path: ${{ env.PIPELINE_PATH }}
+        key: pipeline-${{ env.PIPELINE_HASH }}
+    - if: steps.pipeline-cache.outputs.cache-hit != 'true'
+      id: pipeline-build
+      name: Build pipeline
+      shell: bash
+      env:
+        GOPRIVATE: github.com/hashicorp/*
+      run: |
+        git config --global url."https://${{ inputs.github-token }}@github.com".insteadOf https://github.com
+        make tools-pipeline

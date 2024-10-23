@@ -29,7 +29,6 @@ scenario "upgrade" {
     consul_version  = global.consul_versions
     distro          = global.distros
     edition         = global.editions
-    initial_version = global.upgrade_initial_versions_ce
     ip_version      = global.ip_versions
     seal            = global.seals
 
@@ -37,19 +36,6 @@ scenario "upgrade" {
     exclude {
       artifact_source = ["local"]
       artifact_type   = ["package"]
-    }
-
-    // Don't upgrade from super-ancient versions in CI because there are known reliability issues
-    // in those versions that have already been fixed.
-    exclude {
-      initial_version = [for e in matrix.initial_version : e if semverconstraint(e, "<1.11.0-0")]
-    }
-
-    // FIPS 140-2 editions were not supported until 1.11.x, even though there are 1.10.x binaries
-    // published.
-    exclude {
-      edition         = ["ent.fips1402", "ent.hsm.fips1402"]
-      initial_version = [for e in matrix.initial_version : e if semverconstraint(e, "<1.11.0-0")]
     }
 
     // There are no published versions of these artifacts yet. We'll update this to exclude older
@@ -314,7 +300,7 @@ scenario "upgrade" {
       packages             = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       release = {
         edition = matrix.edition
-        version = matrix.initial_version
+        version = var.vault_upgrade_initial_version
       }
       seal_attributes = step.create_seal_key.attributes
       seal_type       = matrix.seal
