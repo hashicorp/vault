@@ -627,7 +627,7 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 		(req.Operation == logical.UpdateOperation ||
 			req.Operation == logical.CreateOperation ||
 			req.Operation == logical.PatchOperation) {
-		if !entry.Config.TrimRequestTrailingSlashes {
+		if entry == nil || !entry.Config.TrimRequestTrailingSlashes {
 			return logical.ErrorResponse("cannot write to a path ending in '/'"), nil
 		} else {
 			req.Path = strings.TrimSuffix(req.Path, "/")
