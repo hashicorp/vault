@@ -1091,7 +1091,7 @@ func (m *ExpirationManager) RevokeForce(ctx context.Context, prefix string) erro
 // The prefix maps to that of the mount table to make this simpler
 // to reason about.
 func (m *ExpirationManager) RevokePrefix(ctx context.Context, prefix string, sync bool) error {
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 	defer metrics.MeasureSince([]string{"expire", "revoke-prefix"}, time.Now())
 
 	return m.revokePrefixCommon(ctx, prefix, false, sync)
