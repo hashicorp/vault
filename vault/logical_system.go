@@ -2779,32 +2779,6 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 	}
 
-	if rawVal, ok := data.GetOk("trim_request_trailing_slashes"); ok {
-		trimRequestTrailingSlashes := rawVal.(bool)
-
-		oldVal := mountEntry.Config.TrimRequestTrailingSlashes
-		mountEntry.Config.TrimRequestTrailingSlashes = trimRequestTrailingSlashes
-
-		// Update the mount table
-		var err error
-		switch {
-		case strings.HasPrefix(path, "auth/"):
-			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
-		default:
-			err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
-		}
-		if err != nil {
-			mountEntry.Config.TrimRequestTrailingSlashes = oldVal
-			return handleError(err)
-		}
-
-		mountEntry.SyncCache()
-
-		if b.Core.logger.IsInfo() {
-			b.Core.logger.Info("mount tuning of delegated_auth_accessors successful", "path", path)
-		}
-	}
-
 	var err error
 	var resp *logical.Response
 	var options map[string]string
