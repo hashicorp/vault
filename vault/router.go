@@ -394,7 +394,7 @@ func (r *Router) matchingMountInternal(ctx context.Context, path string) (string
 	if !ok {
 		return "", nil
 	}
-	return mount, raw.(*MountEntry)
+	return mount, raw.(*routeEntry).mountEntry
 }
 
 // matchingPrefixInternal returns a mount prefix that a path may be a part of
