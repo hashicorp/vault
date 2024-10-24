@@ -1,6 +1,6 @@
 <a id="standard-ca-cert" />
 
-**`[-ca-cert | VAULT_CA_CERT] (string : "")`**
+**`[-ca-cert | VAULT_CACERT] (string : "")`**
 
 Path to a PEM-encoded CA certificate file on the local disk. Used to verify SSL
 certificates for the server. **Takes precedence over `-ca_path`**.
@@ -8,5 +8,5 @@ certificates for the server. **Takes precedence over `-ca_path`**.
 **Examples**:
 
 - CLI flag: `-ca-cert "/path/to/certs/mycert.pem"`
-- Environment variable: `export VAULT_CA_CERT="/path/to/certs/mycert.pem"`
+- Environment variable: `export VAULT_CACERT="/path/to/certs/mycert.pem"`
 
