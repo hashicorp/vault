@@ -19,11 +19,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/base62"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/fairshare"
 	"github.com/hashicorp/vault/helper/locking"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -35,6 +36,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/quotas"
 	uberAtomic "go.uber.org/atomic"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 const (
@@ -84,6 +86,10 @@ const (
 	MaxIrrevocableLeasesToReturn = 10000
 
 	MaxIrrevocableLeasesWarning = "Command halted because many irrevocable leases were found. To emit the entire list, re-run the command with force set true."
+
+	leaseCreateEventType = logical.EventType("core/lease-create")
+	leaseRevokeEventType = logical.EventType("core/lease-revoke")
+	leaseRenewEventType  = logical.EventType("core/lease-renew")
 )
 
 type pendingInfo struct {
@@ -1076,6 +1082,9 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 		}
 		m.logger.Warn("finished revoking incorrectly non-expiring lease", "leaseID", le.LeaseID, "accessor", accessor)
 	}
+	if !skipToken {
+		go m.sendEvent(leaseRevokeEventType, le)
+	}
 	return nil
 }
 
@@ -1318,6 +1327,8 @@ func (m *ExpirationManager) Renew(ctx context.Context, leaseID string, increment
 	// Update the expiration time
 	m.updatePending(le)
 
+	go m.sendEvent(leaseRenewEventType, le)
+
 	// Return the response
 	return resp, nil
 }
@@ -1435,6 +1446,8 @@ func (m *ExpirationManager) RenewToken(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 	m.updatePending(le)
+
+	go m.sendEvent(leaseRenewEventType, le)
 
 	retResp.Auth = resp.Auth
 	return retResp, nil
@@ -1572,6 +1585,8 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 	// microseconds. This provides a nicer UX.
 	resp.Secret.TTL = le.ExpireTime.Sub(time.Now()).Round(time.Second)
 
+	go m.sendEvent(leaseCreateEventType, le)
+
 	// Done
 	return le.LeaseID, nil
 }
@@ -1655,6 +1670,7 @@ func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenE
 		te.ExternalID = tok
 	}
 
+	go m.sendEvent(leaseCreateEventType, &le)
 	return nil
 }
 
@@ -1822,6 +1838,67 @@ func (m *ExpirationManager) deleteLockForLease(id string) {
 	m.lockPerLease.Delete(id)
 }
 
+func (m *ExpirationManager) sendEventByID(eventType logical.EventType, leaseID string) {
+	le, err := m.loadEntry(context.Background(), leaseID)
+	if err != nil {
+		m.logger.Warn("Error fetching lease information", "error", err)
+		return
+	}
+	m.sendEvent(eventType, le)
+}
+
+func (m *ExpirationManager) sendEvent(eventType logical.EventType, le *leaseEntry) {
+	data := &logical.EventData{}
+	id, err := uuid.GenerateUUID()
+	if err != nil {
+		m.logger.Warn("Error creating uuid", "error", err)
+		return
+	}
+	ns := namespace.RootNamespace
+	if le.namespace != nil {
+		ns = le.namespace
+	}
+	data.Id = id
+	data.EntityIds = []string{}
+	structMap := map[string]interface{}{
+		"path":              le.Path,
+		"expire_time":       le.ExpireTime.Format(time.RFC3339),
+		"last_renewal_time": le.LastRenewalTime.Format(time.RFC3339),
+		"version":           strconv.Itoa(le.Version),
+		"login_role":        le.LoginRole,
+		"client_token_type": le.ClientTokenType.String(),
+		"namespace":         ns.Path,
+	}
+	if le.RevokeErr != "" {
+		structMap["revoke_err"] = le.RevokeErr
+	}
+	if !le.IssueTime.IsZero() {
+		structMap["issue_time"] = le.IssueTime.Format(time.RFC3339)
+	}
+	if !le.ExpireTime.IsZero() {
+		structMap["expire_time"] = le.ExpireTime.Format(time.RFC3339)
+	}
+	if !le.LastRenewalTime.IsZero() {
+		structMap["last_renewal_time"] = le.LastRenewalTime.Format(time.RFC3339)
+	}
+	if le.Auth != nil {
+		data.EntityIds = append(data.EntityIds, le.Auth.EntityID)
+		structMap["token_entity_id"] = le.Auth.EntityID
+		structMap["token_accessor"] = le.Auth.Accessor
+	}
+
+	metadata, err := structpb.NewStruct(structMap)
+	if err != nil {
+		m.logger.Warn("Error creating expiration event metadata", err)
+		return
+	}
+	data.Metadata = metadata
+	err = m.core.Events().SendEventInternal(context.Background(), ns, nil, eventType, data)
+	if err != nil {
+		m.logger.Warn("Error sending event", "err", err)
+	}
+}
+
 // updatePending is used to update a pending invocation for a lease
 func (m *ExpirationManager) updatePending(le *leaseEntry) {
 	m.pendingLock.Lock()
@@ -1841,7 +1918,7 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 	if le.ExpireTime.IsZero() && le.nonexpiringToken() {
 		// Store this in the nonexpiring map instead of pending.
 		// There does not appear to be any cases where a token that had
-		// a nonzero can be can be assigned a zero TTL, but that can be
+		// a nonzero can be assigned a zero TTL, but that can be
 		// handled by the next check
 		pending.cachedLeaseInfo = m.inMemoryLeaseInfo(le)
 		m.nonexpiring.Store(le.LeaseID, pending)
