@@ -99,12 +99,26 @@ synchronize_repos() {
   esac
 }
 
+# Function to check cloud-init status and retry on failure
 # Before we start to modify repositories and install packages we'll wait for cloud-init to finish
 # so it doesn't race with any of our package installations.
-# We run as sudo becase Amazon Linux 2 throws Python 2.7 errors when running `cloud-init status` as
+# We run as sudo because Amazon Linux 2 throws Python 2.7 errors when running `cloud-init status` as
 # non-root user (known bug).
-sudo cloud-init status --wait
+check_cloud_init() {
+  sudo cloud-init status --wait
+  exit_code=$?
+  if [ "$exit_code" -ne 0 ] && [ "$exit_code" -ne 2 ]; then
+    echo "cloud-init did not complete successfully. Exit code: $exit_code" 1>&2
+    echo "Here are the logs for the failure:"
+    cat /var/log/cloud-init-* | grep "Failed"
+    exit 1
+  fi
+}
 
+# Checking cloud-init
+check_cloud_init
+
+# Synchronizing repos
 begin_time=$(date +%s)
 end_time=$((begin_time + TIMEOUT_SECONDS))
 while [ "$(date +%s)" -lt "$end_time" ]; do
