@@ -19,6 +19,7 @@ const SUPPORTED_SECRET_BACKENDS = [
   'keymgmt',
   'kubernetes',
   'ldap',
+  'totp',
 ];
 
 export function supportedSecretBackends() {
