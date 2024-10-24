@@ -105,8 +105,8 @@ func TestCore_EnableAudit(t *testing.T) {
 	}
 }
 
-// TestCore_EnableExistingAudit tests the handling of enabling existing audit backends,
-// specifically checking for duplicate file paths in audit options across multiple paths.
+// TestCore_EnableExistingAudit ensures that we don't allow enabling a file audit device
+// with the same `file_path` as one of the existing ones.
 func TestCore_EnableExistingAudit(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 
