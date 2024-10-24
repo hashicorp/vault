@@ -23,6 +23,7 @@ interface Args {
   backendModel: SecretEngineModel;
   breadcrumbs: Array<Breadcrumb>;
   pageFilter: string;
+  roleName?: string;
 }
 
 export default class LdapRolesPageComponent extends Component<Args> {
@@ -31,6 +32,8 @@ export default class LdapRolesPageComponent extends Component<Args> {
   @service declare readonly pagination: PaginationService;
   @tracked credsToRotate: LdapRoleModel | null = null;
   @tracked roleToDelete: LdapRoleModel | null = null;
+
+  rolePath = (name: string) => `${this.args.roleName}${name}`;
 
   get mountPoint(): string {
     const owner = getOwner(this) as EngineOwner;
