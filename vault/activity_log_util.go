@@ -14,7 +14,7 @@ func (a *ActivityLog) sendCurrentFragment(ctx context.Context) error {
 	return nil
 }
 
-// sendGlobalClients is a no-op on OSS
+// sendGlobalClients is a no-op on CE
 func (a *ActivityLog) sendGlobalClients(ctx context.Context) error {
 	return nil
 }
