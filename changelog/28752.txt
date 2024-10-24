@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Add a mount tuneable that trims trailing slashes of request paths during POST.  Needed to support CMPv2 in PKI.
+```

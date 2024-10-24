@@ -89,6 +89,10 @@ flags](/vault/docs/commands) included on all commands.
 - `-token-type` `(string: "")` - Specifies the type of tokens that should be
   returned by the auth method.
 
+- `-trim-request-trailing-slashes` `(bool: false)` - If true, requests to
+  this mount with trailing slashes will have those slashes trimmed.
+  Necessary for some standards based APIs handled by Vault.
+
 - `-plugin-version` `(string: "")` - Configures the semantic version of the plugin
   to use. If unspecified, implies the built-in or any matching unversioned plugin
   that may have been registered.
