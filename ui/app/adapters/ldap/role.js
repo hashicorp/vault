@@ -33,17 +33,18 @@ export default class LdapRoleAdapter extends NamedPathAdapter {
   }
 
   async query(store, type, query, recordArray, options) {
-    const { showPartialError, roleType } = options.adapterOptions || {};
+    const { showPartialError, parentRole } = options.adapterOptions || {};
     const { backend } = query;
     let roles = [];
     const errors = [];
 
-    if (roleType) {
-      const { roleName } = query;
-      const url = `${this.getURL(backend, this.pathForRoleType(roleType))}/${roleName}`;
-      return this.ajax(url, 'GET', { data: { list: true } }).then((resp) => {
-        return resp.data.keys.map((name) => ({ id: name, name, backend, type: roleType }));
+    if (parentRole) {
+      const { name, type } = parentRole;
+      const url = `${this.getURL(backend, this.pathForRoleType(type))}/${name}`;
+      const roles = await this.ajax(url, 'GET', { data: { list: true } }).then((resp) => {
+        return resp.data.keys.map((key) => ({ id: key, name: `${name}${key}`, backend, type }));
       });
+      return { data: { keys: roles } };
     }
 
     for (const roleType of ['static', 'dynamic']) {

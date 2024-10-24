@@ -12,16 +12,18 @@ import type { Breadcrumb } from 'vault/vault/app-types';
 
 import type RouterService from '@ember/routing/router-service';
 import { LdapRoleRouteModel } from '../role';
+
 interface LdapRoleDetailsController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
   model: LdapRoleRouteModel;
 }
 
+// If a role is a hierarchal path, this is the list view for that role's subdirectories
 export default class LdapRoleIndexRoute extends Route {
   @service('app-router') declare readonly router: RouterService;
 
   redirect(model: LdapRoleRouteModel) {
-    if (!model.roles) {
+    if (!model?.roles) {
       this.router.transitionTo('vault.cluster.secrets.backend.ldap.roles.role.details');
     }
   }
@@ -35,7 +37,7 @@ export default class LdapRoleIndexRoute extends Route {
     controller.breadcrumbs = [
       { label: resolvedModel.backendModel.id, route: 'overview' },
       { label: 'roles', route: 'roles' },
-      { label: resolvedModel.roleName },
+      { label: resolvedModel.parentRole.name },
     ];
   }
 }
