@@ -9,7 +9,7 @@ import { equal } from '@ember/object/computed'; // eslint-disable-line
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
-import { isAddonEngine, allEngines } from 'vault/helpers/mountable-secret-engines';
+import { isAddonEngine, allEngines, WIF_ENGINES } from 'vault/helpers/mountable-secret-engines';
 import { WHITESPACE_WARNING } from 'vault/utils/model-helpers/validators';
 
 const LINKED_BACKENDS = supportedSecretBackends();
@@ -179,8 +179,8 @@ export default class SecretEngineModel extends Model {
     if (type === 'kv' && parseInt(this.version, 10) === 2) {
       fields.push('casRequired', 'deleteVersionAfter', 'maxVersions');
     }
-    // WIF secret engines
-    if (type === 'aws') {
+    // For WIF Secret engines, allow users to set the identity token key when mounting the engine.
+    if (WIF_ENGINES.includes(type)) {
       fields.push('config.identityTokenKey');
     }
     return fields;
@@ -232,7 +232,7 @@ export default class SecretEngineModel extends Model {
         // no ttl options for keymgmt
         optionFields = [...CORE_OPTIONS, 'config.allowedManagedKeys', ...STANDARD_CONFIG];
         break;
-      case 'aws':
+      case WIF_ENGINES.find((type) => type === this.engineType):
         defaultFields = ['path'];
         optionFields = [
           ...CORE_OPTIONS,
