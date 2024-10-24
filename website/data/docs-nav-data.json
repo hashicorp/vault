@@ -1903,12 +1903,47 @@
       },
       {
         "title": "SAML",
-        "path": "auth/saml",
         "badge": {
           "text": "ENTERPRISE",
           "type": "outlined",
           "color": "neutral"
-        }
+        },
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "auth/saml"
+          },
+          {
+            "title": "Use AD FS for SAML authN",
+            "path": "auth/saml/adfs"
+          },
+          {
+            "title": "Link SAML AD groups to Vault",
+            "path": "auth/saml/link-vault-group-to-ad"
+          },
+          {
+            "title": "Troubleshoot SAML+ADFS",
+            "routes": [
+              {
+                "title": "Before you start",
+                "path": "auth/saml/troubleshoot-adfs"
+              },
+              {
+                "title": "Bad mapping",
+                "path": "auth/saml/troubleshoot-adfs/bad-mapping"
+              },
+              {
+                "title": "Invalid `BoundSubjects`",
+                "path": "auth/saml/troubleshoot-adfs/boundsubjects"
+              },
+              {
+                "title": "AD FS event 320",
+                "path": "auth/saml/troubleshoot-adfs/adfs-event-320"
+              }
+            ]
+            
+          }
+        ]
       },
       {
         "title": "TLS Certificates",
