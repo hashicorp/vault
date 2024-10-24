@@ -157,7 +157,7 @@ func TestAuthTuneCommand_Run(t *testing.T) {
 			if exp := 3600; mountInfo.Config.MaxLeaseTTL != exp {
 				t.Errorf("expected %d to be %d", mountInfo.Config.MaxLeaseTTL, exp)
 			}
-			if mountInfo.Config.TrimRequestTrailingSlashes {
+			if !mountInfo.Config.TrimRequestTrailingSlashes {
 				t.Errorf("expected trim_request_trailing_slashes to be enabled")
 			}
 			if diff := deep.Equal([]string{"authorization", "www-authentication"}, mountInfo.Config.PassthroughRequestHeaders); len(diff) > 0 {
