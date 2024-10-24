@@ -120,7 +120,7 @@ func TestAuthTuneCommand_Run(t *testing.T) {
 				"-listing-visibility", "unauth",
 				"-plugin-version", version,
 				"-identity-token-key", "default",
-				"-trim-request-trailing-slashes",
+				"-trim-request-trailing-slashes=true",
 				"my-auth/",
 			})
 			if exp := 0; code != exp {

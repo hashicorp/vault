@@ -40,7 +40,7 @@ type AuthTuneCommand struct {
 	flagUserLockoutCounterResetDuration time.Duration
 	flagUserLockoutDisable              bool
 	flagIdentityTokenKey                string
-	flagTrimRequestTrailingSlashes      bool
+	flagTrimRequestTrailingSlashes      BoolPtr
 }
 
 func (c *AuthTuneCommand) Synopsis() string {
@@ -196,11 +196,10 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 		Usage: "Select the semantic version of the plugin to run. The new version must be registered in " +
 			"the plugin catalog, and will not start running until the plugin is reloaded.",
 	})
-	f.BoolVar(&BoolVar{
-		Name:    flagNameTrimRequestTrailingSlashes,
-		Target:  &c.flagTrimRequestTrailingSlashes,
-		Default: false,
-		Usage:   "Whether to trim trailing slashes for incoming requests to this mount",
+	f.BoolPtrVar(&BoolPtrVar{
+		Name:   flagNameTrimRequestTrailingSlashes,
+		Target: &c.flagTrimRequestTrailingSlashes,
+		Usage:  "Whether to trim trailing slashes for incoming requests to this mount",
 	})
 
 	f.StringVar(&StringVar{
@@ -314,8 +313,9 @@ func (c *AuthTuneCommand) Run(args []string) int {
 			mountConfigInput.IdentityTokenKey = c.flagIdentityTokenKey
 		}
 
-		if fl.Name == flagNameTrimRequestTrailingSlashes {
-			mountConfigInput.TrimRequestTrailingSlashes = c.flagTrimRequestTrailingSlashes
+		if fl.Name == flagNameTrimRequestTrailingSlashes && c.flagTrimRequestTrailingSlashes.IsSet() {
+			val := c.flagTrimRequestTrailingSlashes.Get()
+			mountConfigInput.TrimRequestTrailingSlashes = &val
 		}
 	})
 

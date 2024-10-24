@@ -306,7 +306,7 @@ type MountConfigInput struct {
 	UserLockoutConfig          *UserLockoutConfigInput `json:"user_lockout_config,omitempty"`
 	DelegatedAuthAccessors     []string                `json:"delegated_auth_accessors,omitempty" mapstructure:"delegated_auth_accessors"`
 	IdentityTokenKey           string                  `json:"identity_token_key,omitempty" mapstructure:"identity_token_key"`
-	TrimRequestTrailingSlashes bool                    `json:"trim_request_trailing_slashes,omitempty" mapstructure:"trim_request_trailing_slashes"`
+	TrimRequestTrailingSlashes *bool                   `json:"trim_request_trailing_slashes,omitempty" mapstructure:"trim_request_trailing_slashes"`
 	// Deprecated: This field will always be blank for newer server responses.
 	PluginName string `json:"plugin_name,omitempty" mapstructure:"plugin_name"`
 }
