@@ -157,7 +157,7 @@ Configure your Vault instance to work with Active Directory Federation Services
 
    ```powershell
    Set-ADFSRelyingPartyTrust `
-    -TargetName "MyVaultIdentifier"
+    -TargetName "MyVaultIdentifier" `
     -SignedSamlRequestsRequired $false
    ```
   </CodeBlockConfig>
