@@ -3303,6 +3303,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse(fmt.Sprintf("invalid listing_visibility %s", apiConfig.ListingVisibility)), nil
 	}
 	config.ListingVisibility = apiConfig.ListingVisibility
+	config.TrimRequestTrailingSlashes = apiConfig.TrimRequestTrailingSlashes
 
 	if len(apiConfig.AuditNonHMACRequestKeys) > 0 {
 		config.AuditNonHMACRequestKeys = apiConfig.AuditNonHMACRequestKeys
