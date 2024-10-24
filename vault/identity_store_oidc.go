@@ -1857,6 +1857,20 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 		return jwksRaw.(*jose.JSONWebKeySet), nil
 	}
 
+	i.generateJWKSLock.Lock()
+	defer i.generateJWKSLock.Unlock()
+
+	// Check the cache again incase another requset acquired the lock
+	// before this request.
+	jwksRaw, ok, err = i.oidcCache.Get(ns, "jwks")
+	if err != nil {
+		return nil, err
+	}
+
+	if ok {
+		return jwksRaw.(*jose.JSONWebKeySet), nil
+	}
+
 	if _, err := i.expireOIDCPublicKeys(ctx, s); err != nil {
 		return nil, err
 	}

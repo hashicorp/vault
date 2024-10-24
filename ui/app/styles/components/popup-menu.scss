@@ -55,7 +55,8 @@
     &:hover {
       background-color: $ui-gray-050;
     }
-    div {
+    div,
+    span {
       margin-left: -$spacing-4;
       font-size: $size-7;
       font-weight: $font-weight-semibold;
@@ -140,8 +141,7 @@
 }
 
 .list-item-row,
-.info-table-row,
-.wizard-dismiss-menu {
+.info-table-row {
   .popup-menu-trigger {
     height: 2.5rem;
     min-width: 0;

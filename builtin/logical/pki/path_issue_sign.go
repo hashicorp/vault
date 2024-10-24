@@ -341,17 +341,17 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 
 func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, data *framework.FieldData, role *issuing.RoleEntry, useCSR, useCSRValues bool) (*logical.Response, error) {
 	// Error out early if incompatible fields set:
-	metadata, metadataInRequest := data.GetOk("metadata")
+	certMetadata, metadataInRequest := data.GetOk("cert_metadata")
 	if metadataInRequest {
-		err := validateMetadataConfiguration(role)
+		err := validateCertMetadataConfiguration(role)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	// If storing the certificate or metadata about this certificate and on a performance standby, forward this request
+	// If storing the certificate or certMetadata about this certificate and on a performance standby, forward this request
 	// on to the primary
-	// Allow performance secondaries to generate and store certificates and metadata locally to them.
+	// Allow performance secondaries to generate and store certificates and certMetadata locally to them.
 	needsStorage := !role.NoStore || (metadataInRequest && !role.NoStoreMetadata && issuing.MetadataPermitted)
 	if needsStorage && b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
 		return nil, logical.ErrReadOnly
@@ -417,7 +417,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 	var parsedBundle *certutil.ParsedCertBundle
 	var warnings []string
 	if useCSR {
-		parsedBundle, warnings, err = signCert(b, input, signingBundle, false, useCSRValues)
+		parsedBundle, warnings, err = signCert(b.System(), input, signingBundle, false, useCSRValues)
 	} else {
 		parsedBundle, warnings, err = generateCert(sc, input, signingBundle, false, rand.Reader)
 	}
@@ -449,13 +449,13 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		}
 	}
 
-	if metadataInRequest && len(metadata.(string)) > 0 {
-		metadataBytes, err := base64.StdEncoding.DecodeString(metadata.(string))
+	if metadataInRequest {
+		metadataBytes, err := base64.StdEncoding.DecodeString(certMetadata.(string))
 		if err != nil {
 			// TODO: Should we clean up the original cert here?
 			return nil, err
 		}
-		err = storeMetadata(ctx, req.Storage, issuerId, role.Name, parsedBundle.Certificate, metadataBytes)
+		err = storeCertMetadata(ctx, req.Storage, issuerId, role.Name, parsedBundle.Certificate, metadataBytes)
 		if err != nil {
 			// TODO: Should we clean up the original cert here?
 			return nil, err

@@ -11,9 +11,9 @@ import {
   formatByMonths,
   formatByNamespace,
   destructureClientCounts,
-  namespaceArrayToObject,
   sortMonthsByTimestamp,
-  setStartTimeQuery,
+  filterByMonthDataForMount,
+  filteredTotalForMount,
 } from 'core/utils/client-count-utils';
 import clientsHandler from 'vault/mirage/handlers/clients';
 import {
@@ -28,9 +28,6 @@ used to normalize the sys/counters/activity response in the clients/activity
 serializer. these functions are tested individually here, instead of all at once
 in a serializer test for easier debugging
 */
-
-// TODO refactor tests into a module for each util method, then make each assertion its separate tests
-
 module('Integration | Util | client count utils', function (hooks) {
   setupTest(hooks);
 
@@ -59,23 +56,23 @@ module('Integration | Util | client count utils', function (hooks) {
       const expected = [
         {
           previousVersion: '1.9.0',
-          timestampInstalled: '2023-08-02T00:00:00.000Z',
+          timestampInstalled: '2023-08-02T00:00:00Z',
           version: '1.9.1',
         },
         {
           previousVersion: '1.9.1',
-          timestampInstalled: '2023-09-02T00:00:00.000Z',
+          timestampInstalled: '2023-09-02T00:00:00Z',
           version: '1.10.1',
         },
         {
           previousVersion: '1.16.0',
-          timestampInstalled: '2023-12-02T00:00:00.000Z',
+          timestampInstalled: '2023-12-02T00:00:00Z',
           version: '1.17.0',
         },
       ];
       // set start/end times longer than version history to test all relevant upgrades return
       const startTime = '2023-06-02T00:00:00Z'; // first upgrade installed '2023-07-02T00:00:00Z'
-      const endTime = '2024-03-04T16:14:21.000Z'; // latest upgrade installed '2023-12-02T01:00:00.000Z'
+      const endTime = '2024-03-04T16:14:21Z'; // latest upgrade installed '2023-12-02T00:00:00Z'
       const filteredHistory = filterVersionHistory(this.versionHistory, startTime, endTime);
       assert.deepEqual(
         JSON.stringify(filteredHistory),
@@ -99,17 +96,17 @@ module('Integration | Util | client count utils', function (hooks) {
       const expected = [
         {
           previousVersion: '1.9.0',
-          timestampInstalled: '2023-08-02T00:00:00.000Z',
+          timestampInstalled: '2023-08-02T00:00:00Z',
           version: '1.9.1',
         },
         {
           previousVersion: '1.9.1',
-          timestampInstalled: '2023-09-02T00:00:00.000Z',
+          timestampInstalled: '2023-09-02T00:00:00Z',
           version: '1.10.1',
         },
       ];
-      const startTime = '2023-08-02T00:00:00.000Z'; // same date as 1.9.1 install date to catch same day edge cases
-      const endTime = '2023-11-02T00:00:00.000Z';
+      const startTime = '2023-08-02T00:00:00Z'; // same date as 1.9.1 install date to catch same day edge cases
+      const endTime = '2023-11-02T00:00:00Z';
       const filteredHistory = filterVersionHistory(this.versionHistory, startTime, endTime);
       assert.deepEqual(
         JSON.stringify(filteredHistory),
@@ -121,7 +118,7 @@ module('Integration | Util | client count utils', function (hooks) {
         {
           version: '1.10.3',
           previousVersion: '1.10.1',
-          timestampInstalled: '2023-09-23T00:00:00.000Z',
+          timestampInstalled: '2023-09-23T00:00:00Z',
         },
         'it does not return subsequent patch versions of the same notable upgrade version'
       );
@@ -129,27 +126,29 @@ module('Integration | Util | client count utils', function (hooks) {
   });
 
   test('formatByMonths: it formats the months array', async function (assert) {
-    assert.expect(5);
+    assert.expect(7);
     const original = [...RESPONSE.months];
 
-    const [formattedNoData, formattedWithActivity] = formatByMonths(RESPONSE.months);
+    const [formattedNoData, formattedWithActivity, formattedNoNew] = formatByMonths(RESPONSE.months);
 
     // instead of asserting the whole expected response, broken up so tests are easier to debug
     // but kept whole above to copy/paste updated response expectations in the future
-    const [expectedNoData, expectedWithActivity] = SERIALIZED_ACTIVITY_RESPONSE.by_month;
-    const { namespaces, new_clients } = expectedWithActivity;
+    const [expectedNoData, expectedWithActivity, expectedNoNew] = SERIALIZED_ACTIVITY_RESPONSE.by_month;
 
     assert.propEqual(formattedNoData, expectedNoData, 'it formats months without data');
-    assert.propEqual(
-      formattedWithActivity.namespaces,
-      namespaces,
-      'it formats namespaces array for months with data'
-    );
-    assert.propEqual(
-      formattedWithActivity.new_clients,
-      new_clients,
-      'it formats new_clients block for months with data'
-    );
+    ['namespaces', 'new_clients'].forEach((key) => {
+      assert.propEqual(
+        formattedWithActivity[key],
+        expectedWithActivity[key],
+        `it formats ${key} array for months with data`
+      );
+      assert.propEqual(
+        formattedNoNew[key],
+        expectedNoNew[key],
+        `it formats the ${key} array for months with no new clients`
+      );
+    });
+
     assert.propEqual(RESPONSE.months, original, 'it does not modify original months array');
     assert.propEqual(formatByMonths([]), [], 'it returns an empty array if the months key is empty');
   });
@@ -187,40 +186,11 @@ module('Integration | Util | client count utils', function (hooks) {
   test('sortMonthsByTimestamp: sorts timestamps chronologically, oldest to most recent', async function (assert) {
     assert.expect(2);
     // API returns them in order so this test is extra extra
-    const unOrdered = [RESPONSE.months[1], RESPONSE.months[0]]; // mixup order
+    const unOrdered = [RESPONSE.months[1], RESPONSE.months[0], RESPONSE.months[3], RESPONSE.months[2]]; // mixup order
     const original = [...RESPONSE.months];
     const expected = RESPONSE.months;
     assert.propEqual(sortMonthsByTimestamp(unOrdered), expected);
     assert.propEqual(RESPONSE.months, original, 'it does not modify original array');
-  });
-
-  test('namespaceArrayToObject: it returns namespaces_by_key and mounts_by_key', async function (assert) {
-    assert.expect(5);
-
-    // month at 0-index has no data so use second month in array, empty month format covered by formatByMonths test above
-    const original = { ...RESPONSE.months[1] };
-    const expectedObject = SERIALIZED_ACTIVITY_RESPONSE.by_month[1].namespaces_by_key;
-    const formattedTotal = formatByNamespace(RESPONSE.months[1].namespaces);
-
-    const testObject = namespaceArrayToObject(
-      formattedTotal,
-      formatByNamespace(RESPONSE.months[1].new_clients.namespaces),
-      '9/23',
-      '2023-09-01T00:00:00Z'
-    );
-
-    const { root } = testObject;
-    const { root: expectedRoot } = expectedObject;
-    assert.propEqual(root.new_clients, expectedRoot.new_clients, 'it formats namespaces new_clients');
-    assert.propEqual(root.mounts_by_key, expectedRoot.mounts_by_key, 'it formats namespaces mounts_by_key');
-    assert.propContains(root, expectedRoot, 'namespace has correct keys');
-
-    assert.propEqual(
-      namespaceArrayToObject(formattedTotal, formatByNamespace([]), '9/23', '2023-09-01T00:00:00Z'),
-      {},
-      'returns an empty object when there are no new clients '
-    );
-    assert.propEqual(RESPONSE.months[1], original, 'it does not modify original month data');
   });
 
   // TESTS FOR COMBINED ACTIVITY DATA - no mount attribution < 1.10
@@ -231,9 +201,7 @@ module('Integration | Util | client count utils', function (hooks) {
         namespace_id: 'root',
         namespace_path: '',
         counts: {
-          distinct_entities: 10,
           entity_clients: 10,
-          non_entity_tokens: 20,
           non_entity_clients: 20,
           secret_syncs: 0,
           acme_clients: 0,
@@ -242,9 +210,7 @@ module('Integration | Util | client count utils', function (hooks) {
         mounts: [
           {
             counts: {
-              distinct_entities: 10,
               entity_clients: 10,
-              non_entity_tokens: 20,
               non_entity_clients: 20,
               secret_syncs: 0,
               acme_clients: 0,
@@ -280,7 +246,7 @@ module('Integration | Util | client count utils', function (hooks) {
   });
 
   test('it formats the months array with mixed activity data', async function (assert) {
-    assert.expect(3);
+    assert.expect(2);
 
     const [, formattedWithActivity] = formatByMonths(MIXED_RESPONSE.months);
     // mirage isn't set up to generate mixed data, so hardcoding the expected responses here
@@ -357,121 +323,234 @@ module('Integration | Util | client count utils', function (hooks) {
       },
       'it formats combined data for monthly new_clients spanning upgrade to 1.10'
     );
-    assert.propEqual(
-      formattedWithActivity.namespaces_by_key,
-      {
-        root: {
-          acme_clients: 0,
-          clients: 3,
-          entity_clients: 3,
-          month: '4/24',
-          mounts_by_key: {
-            'auth/u/': {
-              acme_clients: 0,
-              clients: 1,
-              entity_clients: 1,
-              label: 'auth/u/',
-              month: '4/24',
-              new_clients: {
-                acme_clients: 0,
-                clients: 1,
-                entity_clients: 1,
-                label: 'auth/u/',
-                month: '4/24',
-                timestamp: '2024-04-01T00:00:00Z',
-                non_entity_clients: 0,
-                secret_syncs: 0,
-              },
-              non_entity_clients: 0,
-              secret_syncs: 0,
-              timestamp: '2024-04-01T00:00:00Z',
-            },
-            'no mount accessor (pre-1.10 upgrade?)': {
-              acme_clients: 0,
-              clients: 2,
-              entity_clients: 2,
-              label: 'no mount accessor (pre-1.10 upgrade?)',
-              month: '4/24',
-              new_clients: {
-                acme_clients: 0,
-                clients: 2,
-                entity_clients: 2,
-                label: 'no mount accessor (pre-1.10 upgrade?)',
-                month: '4/24',
-                timestamp: '2024-04-01T00:00:00Z',
-                non_entity_clients: 0,
-                secret_syncs: 0,
-              },
-              non_entity_clients: 0,
-              secret_syncs: 0,
-              timestamp: '2024-04-01T00:00:00Z',
-            },
-          },
+  });
+
+  module('filterByMonthDataForMount', function (hooks) {
+    hooks.beforeEach(function () {
+      this.getExpected = (label, count = 0, newCount = 0) => {
+        return {
+          month: '6/23',
+          namespaces: [],
+          label,
+          timestamp: '2023-06-01T00:00:00Z',
+          acme_clients: count,
+          clients: count,
+          entity_clients: 0,
+          non_entity_clients: 0,
+          secret_syncs: 0,
           new_clients: {
-            acme_clients: 0,
-            clients: 3,
-            entity_clients: 3,
-            label: 'root',
-            month: '4/24',
-            timestamp: '2024-04-01T00:00:00Z',
-            mounts: [
-              {
-                acme_clients: 0,
-                clients: 2,
-                entity_clients: 2,
-                label: 'no mount accessor (pre-1.10 upgrade?)',
-                non_entity_clients: 0,
-                secret_syncs: 0,
-              },
-              {
-                acme_clients: 0,
-                clients: 1,
-                entity_clients: 1,
-                label: 'auth/u/',
-                non_entity_clients: 0,
-                secret_syncs: 0,
-              },
-            ],
+            month: '6/23',
+            timestamp: '2023-06-01T00:00:00Z',
+            namespaces: [],
+            label,
+            acme_clients: newCount,
+            clients: newCount,
+            entity_clients: 0,
             non_entity_clients: 0,
             secret_syncs: 0,
           },
+        };
+      };
+    });
+
+    test('it works when month has no data', async function (assert) {
+      const months = [
+        {
+          month: '6/23',
+          timestamp: '2023-06-01T00:00:00Z',
+          namespaces: [],
+          new_clients: {
+            month: '6/23',
+            timestamp: '2023-06-01T00:00:00Z',
+            namespaces: [],
+          },
+        },
+      ];
+      const result = filterByMonthDataForMount(months, 'root', 'some-mount');
+      // no data is different than zero, it implies no data was being saved at that time
+      // so we don't fill in missing data with zeros to differentiate those two states
+      assert.deepEqual(result[0], months[0], 'does not change month when no data');
+    });
+
+    test('it works when month has no new clients', async function (assert) {
+      const months = [
+        {
+          month: '6/23',
+          timestamp: '2023-06-01T00:00:00Z',
+          acme_clients: 11,
+          clients: 11,
+          entity_clients: 0,
           non_entity_clients: 0,
           secret_syncs: 0,
-          timestamp: '2024-04-01T00:00:00Z',
+          namespaces: [
+            {
+              label: 'root',
+              acme_clients: 11,
+              clients: 11,
+              entity_clients: 0,
+              non_entity_clients: 0,
+              secret_syncs: 0,
+              mounts: [
+                {
+                  label: 'some-mount',
+                  acme_clients: 11,
+                  clients: 11,
+                  entity_clients: 0,
+                  non_entity_clients: 0,
+                  secret_syncs: 0,
+                },
+              ],
+            },
+          ],
+          new_clients: {
+            month: '6/23',
+            timestamp: '2023-06-01T00:00:00Z',
+            namespaces: [],
+          },
         },
-      },
-      'it formats combined data for monthly namespaces_by_key spanning upgrade to 1.10'
-    );
+      ];
+
+      let result = filterByMonthDataForMount(months, 'root', 'some-mount');
+      assert.propEqual(result[0], this.getExpected('some-mount', 11), 'works when mount is found');
+      result = filterByMonthDataForMount(months, 'root', 'another-mount');
+      assert.deepEqual(result[0], this.getExpected('another-mount', 0), 'works when mount is not found');
+      result = filterByMonthDataForMount(months, 'unknown-child', 'some-mount');
+      assert.deepEqual(result[0], this.getExpected('some-mount', 0), 'works when namespace is not found');
+    });
+
+    test('it works when month has new clients', async function (assert) {
+      const months = [
+        {
+          month: '6/23',
+          timestamp: '2023-06-01T00:00:00Z',
+          acme_clients: 22,
+          clients: 22,
+          entity_clients: 0,
+          non_entity_clients: 0,
+          secret_syncs: 0,
+          namespaces: [
+            {
+              label: 'root',
+              acme_clients: 22,
+              clients: 22,
+              entity_clients: 0,
+              non_entity_clients: 0,
+              secret_syncs: 0,
+              mounts: [
+                {
+                  label: 'some-mount',
+                  acme_clients: 22,
+                  clients: 22,
+                  entity_clients: 0,
+                  non_entity_clients: 0,
+                  secret_syncs: 0,
+                },
+              ],
+            },
+          ],
+          new_clients: {
+            month: '6/23',
+            timestamp: '2023-06-01T00:00:00Z',
+            namespaces: [
+              {
+                label: 'root',
+                acme_clients: 11,
+                clients: 11,
+                entity_clients: 0,
+                non_entity_clients: 0,
+                secret_syncs: 0,
+                mounts: [
+                  {
+                    label: 'some-mount',
+                    acme_clients: 11,
+                    clients: 11,
+                    entity_clients: 0,
+                    non_entity_clients: 0,
+                    secret_syncs: 0,
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      ];
+      let result = filterByMonthDataForMount(months, 'root', 'some-mount');
+      assert.propEqual(result[0], this.getExpected('some-mount', 22, 11), 'works when mount is found');
+      result = filterByMonthDataForMount(months, 'root', 'another-mount');
+      assert.deepEqual(result[0], this.getExpected('another-mount', 0), 'works when mount is not found');
+      result = filterByMonthDataForMount(months, 'unknown-child', 'some-mount');
+      assert.deepEqual(result[0], this.getExpected('some-mount', 0), 'works when namespace is not found');
+    });
   });
 
-  test('setStartTimeQuery: it returns start time query for activity log', async function (assert) {
-    assert.expect(6);
-    const apiPath = 'sys/internal/counters/config';
-    assert.strictEqual(setStartTimeQuery(true, {}), null, `it returns null if no permission to ${apiPath}`);
-    assert.strictEqual(
-      setStartTimeQuery(false, {}),
-      null,
-      `it returns null for community edition and no permission to ${apiPath}`
-    );
-    assert.strictEqual(
-      setStartTimeQuery(true, { billingStartTimestamp: new Date('2022-06-08T00:00:00Z') }),
-      1654646400,
-      'it returns unix time if enterprise and billing_start_timestamp exists'
-    );
-    assert.strictEqual(
-      setStartTimeQuery(false, { billingStartTimestamp: new Date('0001-01-01T00:00:00Z') }),
-      null,
-      'it returns null time for community edition even if billing_start_timestamp exists'
-    );
-    assert.strictEqual(
-      setStartTimeQuery(false, { foo: 'bar' }),
-      null,
-      'it returns null if billing_start_timestamp key does not exist'
-    );
-    assert.strictEqual(
-      setStartTimeQuery(false, undefined),
-      null,
-      'fails gracefully if no config model is passed'
-    );
+  module('filteredTotalForMount', function (hooks) {
+    hooks.beforeEach(function () {
+      this.byNamespace = SERIALIZED_ACTIVITY_RESPONSE.by_namespace;
+    });
+
+    const emptyCounts = {
+      acme_clients: 0,
+      clients: 0,
+      entity_clients: 0,
+      non_entity_clients: 0,
+      secret_syncs: 0,
+    };
+
+    [
+      {
+        when: 'no namespace filter passed',
+        result: 'it returns empty counts',
+        ns: '',
+        mount: 'auth/authid/0',
+        expected: emptyCounts,
+      },
+      {
+        when: 'no mount filter passed',
+        result: 'it returns empty counts',
+        ns: 'ns1',
+        mount: '',
+        expected: emptyCounts,
+      },
+      {
+        when: 'no matching ns/mount exists',
+        result: 'it returns empty counts',
+        ns: 'ns1',
+        mount: 'auth/authid/1',
+        expected: emptyCounts,
+      },
+      {
+        when: 'mount and label have extra slashes',
+        result: 'it returns the data sanitized',
+        ns: 'ns1/',
+        mount: 'auth/authid/0/',
+        expected: {
+          label: 'auth/authid/0',
+          acme_clients: 0,
+          clients: 8394,
+          entity_clients: 4256,
+          non_entity_clients: 4138,
+          secret_syncs: 0,
+        },
+      },
+      {
+        when: 'mount within root',
+        result: 'it returns the data',
+        ns: 'root',
+        mount: 'kvv2-engine-0',
+        expected: {
+          label: 'kvv2-engine-0',
+          acme_clients: 0,
+          clients: 4290,
+          entity_clients: 0,
+          non_entity_clients: 0,
+          secret_syncs: 4290,
+        },
+      },
+    ].forEach((testCase) => {
+      test(`it returns correct values when ${testCase.when}`, async function (assert) {
+        const actual = filteredTotalForMount(this.byNamespace, testCase.ns, testCase.mount);
+        assert.deepEqual(actual, testCase.expected);
+      });
+    });
   });
 });

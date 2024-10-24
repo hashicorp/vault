@@ -171,7 +171,7 @@ func GetPrivateKeyTypeFromPublicKey(pubKey crypto.PublicKey) PrivateKeyType {
 		return RSAPrivateKey
 	case *ecdsa.PublicKey:
 		return ECPrivateKey
-	case *ed25519.PublicKey:
+	case ed25519.PublicKey:
 		return Ed25519PrivateKey
 	default:
 		return UnknownPrivateKey
@@ -819,6 +819,11 @@ type CreationParameters struct {
 
 	// The explicit SKID to use; especially useful for cross-signing.
 	SKID []byte
+
+	// Ignore validating the CSR's signature. This should only be enabled if the
+	// sender of the CSR has proven proof of possession of the associated
+	// private key by some other means, otherwise keep this set to false.
+	IgnoreCSRSignature bool
 }
 
 type CreationBundle struct {

@@ -12,6 +12,8 @@ import (
 // formatterConfig is used to provide basic configuration to a formatter.
 // Use newFormatterConfig to initialize the formatterConfig struct.
 type formatterConfig struct {
+	formatterConfigEnt
+
 	raw          bool
 	hmacAccessor bool
 
@@ -40,7 +42,7 @@ type formatterConfig struct {
 	// This should only ever be used in a testing context
 	omitTime bool
 
-	// The required/target format for the event (supported: JSONFormat and JSONxFormat).
+	// The required/target format for the event (supported: jsonFormat and jsonxFormat).
 	requiredFormat format
 
 	// headerFormatter specifies the formatter used for headers that existing in any incoming audit request.
@@ -56,14 +58,14 @@ func newFormatterConfig(headerFormatter HeaderFormatter, config map[string]strin
 		return formatterConfig{}, fmt.Errorf("header formatter is required: %w", ErrInvalidParameter)
 	}
 
-	var opt []Option
+	var opt []option
 
 	if format, ok := config[optionFormat]; ok {
-		if !IsValidFormat(format) {
+		if !isValidFormat(format) {
 			return formatterConfig{}, fmt.Errorf("unsupported %q: %w", optionFormat, ErrExternalOptions)
 		}
 
-		opt = append(opt, WithFormat(format))
+		opt = append(opt, withFormat(format))
 	}
 
 	// Check if hashing of accessor is disabled
@@ -72,7 +74,7 @@ func newFormatterConfig(headerFormatter HeaderFormatter, config map[string]strin
 		if err != nil {
 			return formatterConfig{}, fmt.Errorf("unable to parse %q: %w", optionHMACAccessor, ErrExternalOptions)
 		}
-		opt = append(opt, WithHMACAccessor(v))
+		opt = append(opt, withHMACAccessor(v))
 	}
 
 	// Check if raw logging is enabled
@@ -81,7 +83,7 @@ func newFormatterConfig(headerFormatter HeaderFormatter, config map[string]strin
 		if err != nil {
 			return formatterConfig{}, fmt.Errorf("unable to parse %q: %w", optionLogRaw, ErrExternalOptions)
 		}
-		opt = append(opt, WithRaw(v))
+		opt = append(opt, withRaw(v))
 	}
 
 	if elideListResponsesRaw, ok := config[optionElideListResponses]; ok {
@@ -89,11 +91,11 @@ func newFormatterConfig(headerFormatter HeaderFormatter, config map[string]strin
 		if err != nil {
 			return formatterConfig{}, fmt.Errorf("unable to parse %q: %w", optionElideListResponses, ErrExternalOptions)
 		}
-		opt = append(opt, WithElision(v))
+		opt = append(opt, withElision(v))
 	}
 
 	if prefix, ok := config[optionPrefix]; ok {
-		opt = append(opt, WithPrefix(prefix))
+		opt = append(opt, withPrefix(prefix))
 	}
 
 	opts, err := getOpts(opt...)
@@ -101,7 +103,13 @@ func newFormatterConfig(headerFormatter HeaderFormatter, config map[string]strin
 		return formatterConfig{}, err
 	}
 
+	fmtCfgEnt, err := newFormatterConfigEnt(config)
+	if err != nil {
+		return formatterConfig{}, err
+	}
+
 	return formatterConfig{
+		formatterConfigEnt: fmtCfgEnt,
 		headerFormatter:    headerFormatter,
 		elideListResponses: opts.withElision,
 		hmacAccessor:       opts.withHMACAccessor,

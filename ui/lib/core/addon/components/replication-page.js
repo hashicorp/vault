@@ -9,6 +9,7 @@ import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
+import { getOwner } from '@ember/owner';
 
 /**
  * @module ReplicationPage
@@ -16,11 +17,8 @@ import { waitFor } from '@ember/test-waiters';
  * It is the top level component on routes displaying replication dashboards.
  *
  * @example
- * ```js
- * <ReplicationPage
-    @model={{cluster}}
-    />
- * ```
+ * <ReplicationPage @model={{cluster}}/>
+ *
  * @param {Object} model=null - An Ember data object that is pulled from the Ember Cluster Model.
  */
 
@@ -31,8 +29,13 @@ const MODE = {
 
 export default class ReplicationPage extends Component {
   @service store;
-  @service router;
   @tracked reindexingDetails = null;
+
+  // This component renders both within and outside the replication engine so we have to dynamically look up the router
+  get router() {
+    const owner = getOwner(this);
+    return owner.lookup('service:router') || owner.lookup('service:app-router');
+  }
 
   @action onModeUpdate(evt, replicationMode) {
     // Called on did-insert and did-update

@@ -11,8 +11,9 @@ import { PKI_DEFAULT_EMPTY_STATE_MSG } from 'pki/routes/overview';
 
 @withConfig()
 export default class PkiKeysIndexRoute extends Route {
+  @service pagination;
   @service secretMountPath;
-  @service store;
+  @service store; // used by @withConfig decorator
 
   queryParams = {
     page: {
@@ -25,7 +26,7 @@ export default class PkiKeysIndexRoute extends Route {
     return hash({
       hasConfig: this.pkiMountHasConfig,
       parentModel: this.modelFor('keys'),
-      keyModels: this.store
+      keyModels: this.pagination
         .lazyPaginatedQuery('pki/key', {
           backend: this.secretMountPath.currentPath,
           responsePath: 'data.keys',
@@ -45,7 +46,7 @@ export default class PkiKeysIndexRoute extends Route {
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
     controller.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview', model: resolvedModel.parentModel.id },
       { label: 'keys', route: 'keys.index', model: resolvedModel.parentModel.id },
     ];

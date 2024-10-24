@@ -13,12 +13,15 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
+	"github.com/hashicorp/vault/helper/osutil"
 )
 
 // fileSink is a Sink implementation that writes a token to a file
 type fileSink struct {
 	path   string
 	mode   os.FileMode
+	owner  int
+	group  int
 	logger hclog.Logger
 }
 
@@ -33,6 +36,8 @@ func NewFileSink(conf *sink.SinkConfig) (sink.Sink, error) {
 	f := &fileSink{
 		logger: conf.Logger,
 		mode:   0o640,
+		owner:  os.Getuid(),
+		group:  os.Getgid(),
 	}
 
 	pathRaw, ok := conf.Config["path"]
@@ -61,11 +66,31 @@ func NewFileSink(conf *sink.SinkConfig) (sink.Sink, error) {
 		f.mode = os.FileMode(mode)
 	}
 
+	if modeRaw, ok := conf.Config["owner"]; ok {
+		owner, typeOK := modeRaw.(int)
+		if !typeOK {
+			return nil, errors.New("could not parse 'owner' as integer")
+		}
+
+		f.logger.Debug("overriding default file sink", "owner", owner)
+		f.owner = owner
+	}
+
+	if modeRaw, ok := conf.Config["group"]; ok {
+		group, typeOK := modeRaw.(int)
+		if !typeOK {
+			return nil, errors.New("could not parse 'group' as integer")
+		}
+
+		f.logger.Debug("overriding default file sink", "group", group)
+		f.group = group
+	}
+
 	if err := f.WriteToken(""); err != nil {
 		return nil, fmt.Errorf("error during write check: %w", err)
 	}
 
-	f.logger.Info("file sink configured", "path", f.path, "mode", f.mode)
+	f.logger.Info("file sink configured", "path", f.path, "mode", f.mode, "owner", f.owner, "group", f.group)
 
 	return f, nil
 }
@@ -91,6 +116,10 @@ func (f *fileSink) WriteToken(token string) error {
 	tmpFile, err := os.OpenFile(filepath.Join(targetDir, fmt.Sprintf("%s.tmp.%s", fileName, tmpSuffix)), os.O_WRONLY|os.O_CREATE, f.mode)
 	if err != nil {
 		return fmt.Errorf("error opening temp file in dir %s for writing: %w", targetDir, err)
+	}
+
+	if err := osutil.Chown(tmpFile, f.owner, f.group); err != nil {
+		return fmt.Errorf("error changing ownership of %s: %w", tmpFile.Name(), err)
 	}
 
 	valToWrite := token

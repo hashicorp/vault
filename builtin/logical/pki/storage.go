@@ -11,11 +11,15 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
+	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
+	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -35,15 +39,18 @@ const (
 	legacyMigrationBundleLogKey = "config/legacyMigrationBundleLog"
 	legacyCertBundlePath        = issuing.LegacyCertBundlePath
 	legacyCertBundleBackupPath  = "config/ca_bundle.bak"
-	legacyCRLPath               = "crl"
-	deltaCRLPath                = "delta-crl"
-	deltaCRLPathSuffix          = "-delta"
-	unifiedCRLPath              = "unified-crl"
-	unifiedDeltaCRLPath         = "unified-delta-crl"
-	unifiedCRLPathPrefix        = "unified-"
+
+	legacyCRLPath        = issuing.LegacyCRLPath
+	deltaCRLPath         = issuing.DeltaCRLPath
+	deltaCRLPathSuffix   = issuing.DeltaCRLPathSuffix
+	unifiedCRLPath       = issuing.UnifiedCRLPath
+	unifiedDeltaCRLPath  = issuing.UnifiedDeltaCRLPath
+	unifiedCRLPathPrefix = issuing.UnifiedCRLPathPrefix
 
 	autoTidyConfigPath = "config/auto-tidy"
 	clusterConfigPath  = "config/cluster"
+
+	autoTidyLastRunPath = "config/auto-tidy-last-run"
 
 	maxRolesToScanOnIssuerChange = 100
 	maxRolesToFindOnIssuerChange = 10
@@ -58,6 +65,8 @@ type storageContext struct {
 	Storage logical.Storage
 	Backend *backend
 }
+
+var _ pki_backend.StorageContext = (*storageContext)(nil)
 
 func (b *backend) makeStorageContext(ctx context.Context, s logical.Storage) *storageContext {
 	return &storageContext{
@@ -74,6 +83,50 @@ func (sc *storageContext) WithFreshTimeout(timeout time.Duration) (*storageConte
 		Storage: sc.Storage,
 		Backend: sc.Backend,
 	}, cancel
+}
+
+func (sc *storageContext) GetContext() context.Context {
+	return sc.Context
+}
+
+func (sc *storageContext) GetStorage() logical.Storage {
+	return sc.Storage
+}
+
+func (sc *storageContext) Logger() hclog.Logger {
+	return sc.Backend.Logger()
+}
+
+func (sc *storageContext) System() logical.SystemView {
+	return sc.Backend.System()
+}
+
+func (sc *storageContext) CrlBuilder() pki_backend.CrlBuilderType {
+	return sc.Backend.CrlBuilder()
+}
+
+func (sc *storageContext) GetUnifiedTransferStatus() *UnifiedTransferStatus {
+	return sc.Backend.GetUnifiedTransferStatus()
+}
+
+func (sc *storageContext) GetPkiManagedView() managed_key.PkiManagedKeyView {
+	return sc.Backend
+}
+
+func (sc *storageContext) GetCertificateCounter() issuing.CertificateCounter {
+	return sc.Backend.GetCertificateCounter()
+}
+
+func (sc *storageContext) UseLegacyBundleCaStorage() bool {
+	return sc.Backend.UseLegacyBundleCaStorage()
+}
+
+func (sc *storageContext) GetRevokeStorageLock() *sync.RWMutex {
+	return sc.Backend.GetRevokeStorageLock()
+}
+
+func (sc *storageContext) GetRole(name string) (*issuing.RoleEntry, error) {
+	return sc.Backend.GetRole(sc.Context, sc.Storage, name)
 }
 
 func (sc *storageContext) listKeys() ([]issuing.KeyID, error) {
@@ -467,41 +520,6 @@ func (sc *storageContext) resolveIssuerReference(reference string) (issuing.Issu
 	return issuing.ResolveIssuerReference(sc.Context, sc.Storage, reference)
 }
 
-func (sc *storageContext) resolveIssuerCRLPath(reference string, unified bool) (string, error) {
-	if sc.Backend.UseLegacyBundleCaStorage() {
-		return legacyCRLPath, nil
-	}
-
-	issuer, err := sc.resolveIssuerReference(reference)
-	if err != nil {
-		return legacyCRLPath, err
-	}
-
-	var crlConfig *issuing.InternalCRLConfigEntry
-	if unified {
-		crlConfig, err = issuing.GetUnifiedCRLConfig(sc.Context, sc.Storage)
-		if err != nil {
-			return legacyCRLPath, err
-		}
-	} else {
-		crlConfig, err = issuing.GetLocalCRLConfig(sc.Context, sc.Storage)
-		if err != nil {
-			return legacyCRLPath, err
-		}
-	}
-
-	if crlId, ok := crlConfig.IssuerIDCRLMap[issuer]; ok && len(crlId) > 0 {
-		path := fmt.Sprintf("crls/%v", crlId)
-		if unified {
-			path = unifiedCRLPathPrefix + path
-		}
-
-		return path, nil
-	}
-
-	return legacyCRLPath, fmt.Errorf("unable to find CRL for issuer: id:%v/ref:%v", issuer, reference)
-}
-
 // Builds a certutil.CertBundle from the specified issuer identifier,
 // optionally loading the key or not. This method supports loading legacy
 // bundles using the legacyBundleShimID issuerId, and if no entry is found will return an error.
@@ -613,15 +631,15 @@ func (sc *storageContext) checkForRolesReferencing(issuerId string) (timeout boo
 	return false, inUseBy, nil
 }
 
-func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
+func (sc *storageContext) getRevocationConfig() (*pki_backend.CrlConfig, error) {
 	entry, err := sc.Storage.Get(sc.Context, "config/crl")
 	if err != nil {
 		return nil, err
 	}
 
-	var result crlConfig
+	var result pki_backend.CrlConfig
 	if entry == nil {
-		result = defaultCrlConfig
+		result = pki_backend.DefaultCrlConfig
 		return &result, nil
 	}
 
@@ -631,15 +649,15 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 
 	if result.Version == 0 {
 		// Automatically update existing configurations.
-		result.OcspDisable = defaultCrlConfig.OcspDisable
-		result.OcspExpiry = defaultCrlConfig.OcspExpiry
-		result.AutoRebuild = defaultCrlConfig.AutoRebuild
-		result.AutoRebuildGracePeriod = defaultCrlConfig.AutoRebuildGracePeriod
+		result.OcspDisable = pki_backend.DefaultCrlConfig.OcspDisable
+		result.OcspExpiry = pki_backend.DefaultCrlConfig.OcspExpiry
+		result.AutoRebuild = pki_backend.DefaultCrlConfig.AutoRebuild
+		result.AutoRebuildGracePeriod = pki_backend.DefaultCrlConfig.AutoRebuildGracePeriod
 		result.Version = 1
 	}
 	if result.Version == 1 {
 		if result.DeltaRebuildInterval == "" {
-			result.DeltaRebuildInterval = defaultCrlConfig.DeltaRebuildInterval
+			result.DeltaRebuildInterval = pki_backend.DefaultCrlConfig.DeltaRebuildInterval
 		}
 		result.Version = 2
 	}
@@ -647,13 +665,13 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 	// Depending on client version, it's possible that the expiry is unset.
 	// This sets the default value to prevent issues in downstream code.
 	if result.Expiry == "" {
-		result.Expiry = defaultCrlConfig.Expiry
+		result.Expiry = pki_backend.DefaultCrlConfig.Expiry
 	}
 
-	isLocalMount := sc.Backend.System().LocalMount()
+	isLocalMount := sc.System().LocalMount()
 	if (!constants.IsEnterprise || isLocalMount) && (result.UnifiedCRLOnExistingPaths || result.UnifiedCRL || result.UseGlobalQueue) {
 		// An end user must have had Enterprise, enabled the unified config args and then downgraded to OSS.
-		sc.Backend.Logger().Warn("Not running Vault Enterprise or using a local mount, " +
+		sc.Logger().Warn("Not running Vault Enterprise or using a local mount, " +
 			"disabling unified_crl, unified_crl_on_existing_paths and cross_cluster_revocation config flags.")
 		result.UnifiedCRLOnExistingPaths = false
 		result.UnifiedCRL = false
@@ -663,7 +681,7 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 	return &result, nil
 }
 
-func (sc *storageContext) setRevocationConfig(config *crlConfig) error {
+func (sc *storageContext) setRevocationConfig(config *pki_backend.CrlConfig) error {
 	entry, err := logical.StorageEntryJSON("config/crl", config)
 	if err != nil {
 		return fmt.Errorf("failed building storage entry JSON: %w", err)
@@ -695,6 +713,14 @@ func (sc *storageContext) getAutoTidyConfig() (*tidyConfig, error) {
 
 	if result.IssuerSafetyBuffer == 0 {
 		result.IssuerSafetyBuffer = defaultTidyConfig.IssuerSafetyBuffer
+	}
+
+	if result.MinStartupBackoff == 0 {
+		result.MinStartupBackoff = defaultTidyConfig.MinStartupBackoff
+	}
+
+	if result.MaxStartupBackoff == 0 {
+		result.MaxStartupBackoff = defaultTidyConfig.MaxStartupBackoff
 	}
 
 	return &result, nil
@@ -753,9 +779,44 @@ func (sc *storageContext) writeClusterConfig(config *issuing.ClusterConfigEntry)
 	return sc.Storage.Put(sc.Context, entry)
 }
 
-func (sc *storageContext) fetchRevocationInfo(serial string) (*revocationInfo, error) {
-	var revInfo *revocationInfo
-	revEntry, err := fetchCertBySerial(sc, revokedPath, serial)
+// tidyLastRun Track the various pieces of information around tidy on a specific cluster
+type tidyLastRun struct {
+	LastRunTime time.Time
+}
+
+func (sc *storageContext) getAutoTidyLastRun() (time.Time, error) {
+	entry, err := sc.Storage.Get(sc.Context, autoTidyLastRunPath)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("failed getting auto tidy last run: %w", err)
+	}
+	if entry == nil {
+		return time.Time{}, nil
+	}
+
+	var result tidyLastRun
+	if err = entry.DecodeJSON(&result); err != nil {
+		return time.Time{}, fmt.Errorf("failed parsing auto tidy last run: %w", err)
+	}
+	return result.LastRunTime, nil
+}
+
+func (sc *storageContext) writeAutoTidyLastRun(lastRunTime time.Time) error {
+	lastRun := tidyLastRun{LastRunTime: lastRunTime}
+	entry, err := logical.StorageEntryJSON(autoTidyLastRunPath, lastRun)
+	if err != nil {
+		return fmt.Errorf("failed generating json for auto tidy last run: %w", err)
+	}
+
+	if err := sc.Storage.Put(sc.Context, entry); err != nil {
+		return fmt.Errorf("failed writing auto tidy last run: %w", err)
+	}
+
+	return nil
+}
+
+func fetchRevocationInfo(sc pki_backend.StorageContext, serial string) (*revocation.RevocationInfo, error) {
+	var revInfo *revocation.RevocationInfo
+	revEntry, err := fetchCertBySerial(sc, revocation.RevokedPath, serial)
 	if err != nil {
 		return nil, err
 	}

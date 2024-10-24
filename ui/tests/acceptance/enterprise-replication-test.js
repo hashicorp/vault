@@ -165,14 +165,12 @@ module('Acceptance | Enterprise | replication', function (hooks) {
         'shows the correct title of the empty state'
       );
 
-    assert.ok(
-      find('[data-test-replication-title]').textContent.includes('Disaster Recovery'),
-      'it displays the replication type correctly'
-    );
-    assert.ok(
-      find('[data-test-replication-mode-display]').textContent.includes('primary'),
-      'it displays the cluster mode correctly'
-    );
+    assert
+      .dom('[data-test-replication-title="Disaster Recovery"]')
+      .includesText('Disaster Recovery', 'it displays the replication type correctly');
+    assert
+      .dom('[data-test-replication-mode-display]')
+      .includesText('primary', 'it displays the cluster mode correctly');
 
     // add dr secondary
     await click('[data-test-replication-link="secondaries"]');
@@ -314,10 +312,9 @@ module('Acceptance | Enterprise | replication', function (hooks) {
       .doesNotExist(`does not render replication summary card when both modes are not enabled as primary`);
 
     // enable DR primary replication
-    await click('[data-test-replication-details-link="dr"]');
-    // eslint-disable-next-line ember/no-settled-after-test-helper
-    await settled(); // let the controller set replicationMode in afterModel
-    assert.dom('[data-test-replication-title]').hasText('Enable Disaster Recovery Replication');
+    await click('[data-test-sidebar-nav-link="Disaster Recovery"]');
+    // let the controller set replicationMode in afterModel
+    await waitFor('[data-test-replication-enable-form]');
     await click('[data-test-replication-enable]');
 
     await pollCluster(this.owner);

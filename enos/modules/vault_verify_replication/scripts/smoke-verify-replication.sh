@@ -2,10 +2,6 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
-
-# The Vault replication smoke test, documented in
-# https://docs.google.com/document/d/16sjIk3hzFDPyY5A9ncxTZV_9gnpYSF1_Vx6UA1iiwgI/edit#heading=h.kgrxf0f1et25
-
 set -e
 
 function fail() {
@@ -13,8 +9,11 @@ function fail() {
   exit 1
 }
 
+[[ -z "$VAULT_ADDR" ]] && fail "VAULT_ADDR env variable has not been set"
+[[ -z "$VAULT_EDITION" ]] && fail "VAULT_EDITION env variable has not been set"
+
 # Replication status endpoint should have data.mode disabled for CE release
-status=$(curl -s http://localhost:8200/v1/sys/replication/status)
+status=$(curl "${VAULT_ADDR}/v1/sys/replication/status")
 if [ "$VAULT_EDITION" == "ce" ]; then
   if [ "$(jq -r '.data.mode' <<< "$status")" != "disabled" ]; then
     fail "replication data mode is not disabled for CE release!"

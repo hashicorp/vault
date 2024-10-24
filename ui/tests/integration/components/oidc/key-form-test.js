@@ -34,7 +34,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
   });
 
   test('it should save new key', async function (assert) {
-    assert.expect(9);
+    assert.expect(8);
     this.server.post('/identity/oidc/key/test-key', (schema, req) => {
       assert.ok(true, 'Request made to save key');
       return JSON.parse(req.requestBody);
@@ -49,7 +49,6 @@ module('Integration | Component | oidc/key-form', function (hooks) {
     />
     `);
 
-    assert.dom('[data-test-oidc-key-title]').hasText('Create Key', 'Form title renders correct text');
     assert.dom(SELECTORS.keySaveButton).hasText('Create', 'Save button has correct text');
     assert.dom('[data-test-input="algorithm"]').hasValue('RS256', 'default algorithm is correct');
     assert.strictEqual(findAll('[data-test-field]').length, 4, 'renders all input fields');
@@ -70,7 +69,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
   });
 
   test('it should update key and limit access to selected applications', async function (assert) {
-    assert.expect(12);
+    assert.expect(11);
 
     this.server.post('/identity/oidc/key/test-key', (schema, req) => {
       assert.ok(true, 'Request made to update key');
@@ -94,7 +93,6 @@ module('Integration | Component | oidc/key-form', function (hooks) {
       />
     `);
 
-    assert.dom('[data-test-oidc-key-title]').hasText('Edit Key', 'Title renders correct text');
     assert.dom(SELECTORS.keySaveButton).hasText('Update', 'Save button has correct text');
     assert.dom('[data-test-input="name"]').isDisabled('Name input is disabled when editing');
     assert.dom('[data-test-input="name"]').hasValue('test-key', 'Name input is populated with model value');

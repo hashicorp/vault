@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"sync/atomic"
@@ -85,6 +84,10 @@ func ProxyHandler(ctx context.Context, logger hclog.Logger, proxier Proxier, inm
 				metrics.IncrCounter([]string{"agent", "proxy", "error"}, 1)
 				logical.RespondError(w, http.StatusInternalServerError, fmt.Errorf("failed to get the response: %w", err))
 			}
+			return
+		} else if resp == nil {
+			metrics.IncrCounter([]string{"agent", "proxy", "error"}, 1)
+			logical.RespondError(w, http.StatusInternalServerError, fmt.Errorf("failed to get the response: %w", err))
 			return
 		}
 
@@ -218,7 +221,7 @@ func sanitizeAutoAuthTokenResponse(ctx context.Context, logger hclog.Logger, inm
 	if resp.Response.Body != nil {
 		resp.Response.Body.Close()
 	}
-	resp.Response.Body = ioutil.NopCloser(bytes.NewReader(bodyBytes))
+	resp.Response.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 	resp.Response.ContentLength = int64(len(bodyBytes))
 
 	// Serialize and re-read the response

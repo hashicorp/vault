@@ -16,19 +16,9 @@ import { assert } from '@ember/debug';
 /**
  * @module SearchSelect
  * The `SearchSelect` is an implementation of the [ember-power-select](https://github.com/cibernox/ember-power-select) used for form elements where options come dynamically from the API.
+ * 
  * @example
- *  <SearchSelect
- *    @id="policy"
- *    @models={{array "policies/acl"}}
- *    @onChange={{this.onChange}}
- *    @inputValue={{get @model this.valuePath}}
- *    @wildcardLabel="role"
- *    @fallbackComponent="string-list"
- *    @selectLimit={{1}}
- *    @backend={{@model.backend}}
- *    @disallowNewItems={{true}}
- *    class={{if this.validationError "dropdown-has-error-border"}}
- * />
+ *  <SearchSelect @id="policy" @models={{array "policies/acl"}} @onChange={{this.onChange}} @inputValue={{get @model this.valuePath}} @wildcardLabel="role" @fallbackComponent="string-list" @selectLimit={{1}} @backend={{@model.backend}} @disallowNewItems={{true}} class={{if this.validationError "dropdown-has-error-border"}} />
  *
  // * component functionality
  * @param {function} onChange - The onchange action for this form field. ** SEE EXAMPLE ** mfa-login-enforcement-form.js (onMethodChange) for example when selecting models from a hasMany relationship

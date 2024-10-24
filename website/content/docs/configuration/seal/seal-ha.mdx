@@ -7,8 +7,6 @@ description: |-
 
 # Seal High Availability
 
-@include 'alerts/beta.mdx'
-
 @include 'alerts/enterprise-only.mdx'
 
 [Seal High Availability](/vault/docs/concepts/seal#seal-high-availability-enterprise)
@@ -36,7 +34,7 @@ Seal HA adds two fields to these stanzas, `name`, and `priority`:
 
 ```hcl
 seal [TYPE] {
-  name = "seal-name"
+  name = "seal_name"
   priority = "1"
   # ...
 }
@@ -45,7 +43,14 @@ seal [TYPE] {
 Name is optional, and if not specified is set to the type of the seal.  Names
 must be unique.  If using two seals of the same type name must be specified.
 Internally, name is used to disambiguate seal wrapped values in some cases,
-so renaming seals should be avoided if possible.
+so renaming seals should be avoided if possible.  Many seal types can use
+environment variables instead of configuration lines to provide sensitive
+values.  Because there may be two seals of the same type, one must
+disambiguate the environment variables used.  To do this, in HA setups,
+append an underscore followed by the seal's configured name (matching its
+case) to any environment variable names.  For example, in the sample
+configuration below, the AWS acces skey could be provided as `ACCESS_KEY_aws_east`.  
+Keep in mind that the seal name must be valid in an environment variable name to use it.
 
 Priority is mandatory if more than one seal is specified.  Priority tells Vault
 the order in which to try seals during unseal (least priority first),
@@ -59,7 +64,7 @@ compatible with Seal HA:
 
 ```hcl
 seal "awskms" {
-  name       = "aws-east"
+  name       = "aws_east"
   priority   = "1"
 
   region     = "us-east-1"

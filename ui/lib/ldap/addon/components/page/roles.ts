@@ -6,7 +6,7 @@
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
-import { getOwner } from '@ember/application';
+import { getOwner } from '@ember/owner';
 import errorMessage from 'vault/utils/error-message';
 
 import type LdapRoleModel from 'vault/models/ldap/role';
@@ -14,7 +14,7 @@ import type SecretEngineModel from 'vault/models/secret-engine';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type { Breadcrumb, EngineOwner } from 'vault/vault/app-types';
 import type RouterService from '@ember/routing/router-service';
-import type StoreService from 'vault/services/store';
+import type PaginationService from 'vault/services/pagination';
 import { tracked } from '@glimmer/tracking';
 
 interface Args {
@@ -27,8 +27,8 @@ interface Args {
 
 export default class LdapRolesPageComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
-  @service declare readonly router: RouterService;
-  @service declare readonly store: StoreService;
+  @service('app-router') declare readonly router: RouterService;
+  @service declare readonly pagination: PaginationService;
   @tracked credsToRotate: LdapRoleModel | null = null;
   @tracked roleToDelete: LdapRoleModel | null = null;
 
@@ -64,7 +64,7 @@ export default class LdapRolesPageComponent extends Component<Args> {
     try {
       const message = `Successfully deleted role ${model.name}.`;
       await model.destroyRecord();
-      this.store.clearDataset('ldap/role');
+      this.pagination.clearDataset('ldap/role');
       this.router.transitionTo('vault.cluster.secrets.backend.ldap.roles');
       this.flashMessages.success(message);
     } catch (error) {

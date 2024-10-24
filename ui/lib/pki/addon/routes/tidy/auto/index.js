@@ -17,7 +17,7 @@ export default class TidyAutoIndexRoute extends Route {
     const { id: backend } = resolvedModel;
     super.setupController(...arguments);
     controller.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview', model: backend },
       { label: 'tidy', route: 'tidy.index', model: backend },
       { label: 'auto' },

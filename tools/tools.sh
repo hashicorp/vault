@@ -34,20 +34,22 @@ check_tool() {
 install_external() {
   local tools
   # If you update this please update check_external below as well as our external tools
-  # install action ./github/actions/install-external-tools.yml
+  # install action .github/actions/install-external-tools/action.yml
+  #
   tools=(
-    github.com/bufbuild/buf/cmd/buf@v1.25.0
+    honnef.co/go/tools/cmd/staticcheck@latest
+    github.com/bufbuild/buf/cmd/buf@v1.45.0
     github.com/favadi/protoc-go-inject-tag@latest
     github.com/golangci/misspell/cmd/misspell@latest
     github.com/golangci/revgrep/cmd/revgrep@latest
+    github.com/loggerhead/enumer@latest
     github.com/rinchsan/gosimports/cmd/gosimports@latest
     golang.org/x/tools/cmd/goimports@latest
     google.golang.org/protobuf/cmd/protoc-gen-go@latest
     google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
     gotest.tools/gotestsum@latest
-    honnef.co/go/tools/cmd/staticcheck@latest
     mvdan.cc/gofumpt@latest
-    github.com/loggerhead/enumer@latest
+    mvdan.cc/sh/v3/cmd/shfmt@latest
   )
 
   echo "==> Installing external tools..."
@@ -75,6 +77,7 @@ check_external() {
     protoc-gen-go-grpc
     protoc-go-inject-tag
     revgrep
+    shfmt
     staticcheck
   )
 
@@ -94,9 +97,9 @@ install_internal() {
   )
 
   echo "==> Installing internal tools..."
-  pushd "$(repo_root)" &> /dev/null
+  pushd "$(repo_root)/tools" &> /dev/null
   for tool in "${tools[@]}"; do
-    go_install ./tools/"$tool"
+    go_install ./"$tool"
   done
   popd &> /dev/null
 }
@@ -114,6 +117,27 @@ check_internal() {
   for tool in "${tools[@]}"; do
     check_tool internal "$tool"
   done
+}
+
+# Install our pipeline tools. In some cases these may require access to internal repositories so
+# they are excluded from our baseline toolset.
+install_pipeline() {
+  echo "==> Installing pipeline tools..."
+  pushd "$(repo_root)/tools/pipeline" &> /dev/null
+  if env GOPRIVATE=github.com/hashicorp go install ./...; then
+    echo "--> pipeline ✔"
+  else
+    echo "--> pipeline ✖"
+    popd &> /dev/null
+    return 1
+  fi
+  popd &> /dev/null
+}
+
+# Check that all required pipeline tools are installed
+check_pipeline() {
+  echo "==> Checking for pipeline tools..."
+  check_tool pipeline pipeline
 }
 
 # Install tools.
@@ -136,11 +160,17 @@ main() {
   install-internal)
     install_internal
   ;;
+  install-pipeline)
+    install_pipeline
+  ;;
   check-external)
     check_external
   ;;
   check-internal)
     check_internal
+  ;;
+  check-pipeline)
+    check_pipeline
   ;;
   install)
     install

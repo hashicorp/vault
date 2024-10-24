@@ -11,7 +11,7 @@ The `operator usage` command allows an administrator to retrieve a
 [client count](/vault/docs/concepts/client-count) report
 for the default reporting period, or for a specific time range of months.
 
-The command output will list clients by distinct entities, non-entity tokens,
+The command output will list clients by distinct entities, non-entity tokens, ACME clients,
 secret sync clients, and total active clients for each namespace, and the total
 for the entire cluster. It may indicate that no data is available for the
 requested time range, which may be because the client count reporting is
@@ -30,11 +30,11 @@ $ vault operator usage
 Period start: 2019-11-01T00:00:00Z
 Period end: 2020-10-31T23:59:59Z
 
-Namespace path   Distinct entities   Non-Entity tokens   Secret syncs   Active clients
---------------   -----------------   -----------------   ------------   --------------
-[root]           1541                332                 40             1913
+Namespace path   Distinct entities   Non-Entity tokens   Secret syncs   ACME clients   Active clients
+--------------   -----------------   -----------------   ------------   ------------   --------------
+[root]           1541                332                 40             60             1973
 
-Total            1541                332                 40             1913
+Total            1541                332                 40             60             1973
 ```
 
 Retrieve the client counts for a specific month in the past:
@@ -44,11 +44,11 @@ $ vault operator usage -start-time=2020-01 -end-time=2020-01
 Period start: 2020-01-01T00:00:00Z
 Period end: 2020-01-31T23:59:59Z
 
-Namespace path   Distinct entities   Non-Entity tokens   Secret syncs   Active clients
---------------   -----------------   -----------------   ------------   --------------
-[root]           934                 176                 20             1130
+Namespace path   Distinct entities   Non-Entity tokens   Secret syncs   ACME clients   Active clients
+--------------   -----------------   -----------------   ------------   ------------   --------------
+[root]           934                 176                 20             30             1160
 
-Total            934                 176                 20             1130
+Total            934                 176                 20             30             1160
 ```
 
 ## Usage

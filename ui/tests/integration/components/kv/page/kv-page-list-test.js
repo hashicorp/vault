@@ -59,7 +59,7 @@ module('Integration | Component | kv | Page::List', function (hooks) {
     this.model.meta = META;
     this.backend = 'kv-engine';
     this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.backend, route: 'list' },
     ];
     this.failedDirectoryQuery = false;
@@ -70,6 +70,7 @@ module('Integration | Component | kv | Page::List', function (hooks) {
       @failedDirectoryQuery={{this.failedDirectoryQuery}}
       @breadcrumbs={{this.breadcrumbs}}
       @meta={{this.model.meta}}
+      @currentRouteParams={{array this.backend}}
     />`,
       {
         owner: this.engine,

@@ -293,7 +293,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	}
 
 	// Build a fresh CRL
-	warnings, err = b.CrlBuilder().rebuild(sc, true)
+	warnings, err = b.CrlBuilder().Rebuild(sc, true)
 	if err != nil {
 		return nil, err
 	}
@@ -356,6 +356,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		NotAfter:                  data.Get("not_after").(string),
 		NotBeforeDuration:         time.Duration(data.Get("not_before_duration").(int)) * time.Second,
 		CNValidations:             []string{"disabled"},
+		KeyUsage:                  data.Get("key_usage").([]string),
 	}
 	*role.AllowWildcardCertificates = true
 
@@ -399,7 +400,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		apiData: data,
 		role:    role,
 	}
-	parsedBundle, warnings, err := signCert(b, input, signingBundle, true, useCSRValues)
+	parsedBundle, warnings, err := signCert(b.System(), input, signingBundle, true, useCSRValues)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:

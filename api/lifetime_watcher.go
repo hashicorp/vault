@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cenkalti/backoff/v3"
+	"github.com/cenkalti/backoff/v4"
 )
 
 var (

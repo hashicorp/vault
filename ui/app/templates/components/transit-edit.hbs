@@ -10,11 +10,11 @@
   <p.levelLeft>
     <h1 class="title is-3">
       {{#if (eq this.mode "create")}}
-        Create Encryption Key
+        Create Key
       {{else if (eq this.mode "edit")}}
-        Edit Encryption Key
+        Edit Key
       {{else}}
-        Encryption Key
+        Key
         <code>{{this.key.id}}</code>
       {{/if}}
     </h1>
@@ -40,14 +40,13 @@
     @deleteKey={{action "deleteKey"}}
     @key={{this.key}}
     @requestInFlight={{this.requestInFlight}}
-    @capabilities={{this.capabilities}}
+    @model={{this.model}}
   />
 {{else if (eq this.mode "show")}}
   <TransitFormShow
     @refresh={{action "refresh"}}
     @tab={{this.tab}}
     @key={{this.key}}
-    @capabilities={{this.capabilities}}
     @mode={{this.mode}}
     @model={{this.model}}
     @backend={{this.backend}}

@@ -16,6 +16,7 @@ import type KvSecretMetadataModel from 'vault/models/kv/metadata';
 
 /**
  * @module KvSuggestionInput
+ * @description
  * Input component that fetches secrets at a provided mount path and displays them as suggestions in a dropdown
  * As the user types the result set will be filtered providing suggestions for the user to select
  * After the input debounce wait time (500ms), if the value ends in a slash, secrets will be fetched at that path
@@ -24,15 +25,12 @@ import type KvSecretMetadataModel from 'vault/models/kv/metadata';
  * This allows the user to build a full path to a secret for the provided mount
  * This is useful for helping the user find deeply nested secrets given the path based policy system
  * If the user does not have list permission they are still able to enter a path to a secret but will not see suggestions
- * 
+ * Input is disabled when mount path is not provided
+ *
  * @example
- * <KvSuggestionInput
-    @label="Select a secret to sync"
-    @subText="Enter the full path to the secret. Suggestions will display below if permitted by policy."
-    @value={{this.secretPath}}
-    @mountPath={{this.mountPath}} // input disabled when mount path is not provided
-    @onChange={{fn (mut this.secretPath)}}
-  /> 
+ * <KvSuggestionInput @label="Select a secret to sync" @subText="Enter the full path to the secret. Suggestions will display below if permitted by policy." @value={{this.secretPath}} @mountPath="my-kv/" @onChange={{fn (mut this.secretPath)}} />
+ *
+ * <KvSuggestionInput @label="Select a secret to sync" @subText="Disabled because no mount path provided" @value={{this.secretPath}} @mountPath={{false}} @onChange={{fn (mut this.secretPath)}} />
  */
 
 interface Args {

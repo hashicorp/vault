@@ -21,15 +21,6 @@
       />
     </:subTitle>
 
-    <:stats>
-      <StatText
-        @label="Average total clients per month"
-        @value={{this.averageTotalClients}}
-        @size="m"
-        class="data-details-top has-top-padding-l"
-      />
-    </:stats>
-
     <:chart>
       <Clients::Charts::VerticalBarStacked
         @chartTitle="Entity/Non-entity clients usage"
@@ -45,8 +36,8 @@
     @description="Entity or non-entity clients which interacted with Vault for the first time during this date range. Each bar represents the total new clients for that month."
     @timestamp={{@activity.responseTimestamp}}
     @legend={{this.legend}}
-    @hasChartData={{this.averageNewClients}}
-    class={{unless this.averageNewClients "no-legend"}}
+    @hasChartData={{this.hasNewClients}}
+    class={{unless this.hasNewClients "no-legend"}}
   >
     <:stats>
       <StatText

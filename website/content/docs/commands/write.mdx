@@ -57,6 +57,15 @@ Configure access to Consul by providing an access token:
 $ echo $MY_TOKEN | vault write consul/config/access token=-
 ```
 
+Set role-level TTL values for a user named "alice" so the generated lease has a
+default TTL of 8 hours (28800 seconds) and maximum TTL of 12 hours
+(43200 seconds):
+
+```shell-session
+$ VAULT_TOKEN=$VAULT_TOKEN vault write /auth/userpass/users/alice \
+    token_ttl="8h" token_max_ttl="12h"
+```
+
 ### API versus CLI
 
 Create a token with TTL set to 8 hours, limited to 3 uses, and attach `admin`

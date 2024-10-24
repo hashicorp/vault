@@ -34,8 +34,25 @@
   },
 
   {
-    "title": "Installing Vault",
-    "path": "install"
+    "title": "Install Vault",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "install"
+      },
+      {
+        "title": "Install manually",
+        "path": "install/install-binary"
+      },
+      {
+        "title": "Build from code",
+        "path": "install/build-from-code"
+      }
+    ]
+  },
+  {
+    "title": "Run Vault as a service",
+    "path": "run-as-service"
   },
   {
     "title": "Internals",
@@ -57,10 +74,13 @@
         "path": "internals/integrated-storage"
       },
       {
+        "title": "Recommended patterns",
+        "path": "internals/recommended-patterns"
+      },
+      {
         "title": "Security Model",
         "path": "internals/security"
       },
-
       {
         "title": "Telemetry",
         "routes": [
@@ -178,14 +198,6 @@
         "path": "concepts/lease"
       },
       {
-        "title": "Lease Explosions",
-        "path": "concepts/lease-explosions"
-      },
-      {
-        "title": "Lease count quota exceeded",
-        "path": "concepts/lease-count-quota-exceeded"
-      },
-      {
         "title": "Authentication",
         "path": "concepts/auth"
       },
@@ -255,6 +267,10 @@
         "path": "concepts/resource-quotas"
       },
       {
+        "title": "Billing Start Date",
+        "path": "concepts/billing-start-date"
+      },
+      {
         "title": "Client count",
         "routes": [
           {
@@ -264,6 +280,10 @@
           {
             "title": "Client count calculation",
             "path": "concepts/client-count/counting"
+          },
+          {
+            "title": "Usage metrics",
+            "path": "concepts/client-count/usage-metrics"
           },
           {
             "title": "FAQ",
@@ -306,40 +326,16 @@
         }
       },
       {
-        "title": "Request Limiter",
-        "badge": {
-          "text": "ENTERPRISE | DEPRECATED",
-          "type": "outlined",
-          "color": "neutral"
-        },
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "concepts/request-limiter",
-            "badge": {
-              "text": "BETA",
-              "type": "outlined",
-              "color": "highlight"
-            }
-          }
-        ]
-      },
-      {
         "title": "Adaptive overload protection",
         "badge": {
-          "text": "ENTERPRISE | BETA",
+          "text": "ENTERPRISE",
           "type": "outlined",
           "color": "neutral"
         },
         "routes": [
           {
             "title": "Overview",
-            "path": "concepts/adaptive-overload-protection",
-            "badge": {
-              "text": "BETA",
-              "type": "outlined",
-              "color": "highlight"
-            }
+            "path": "concepts/adaptive-overload-protection"
           },
           {
             "title": "Vault server temporarily overloaded",
@@ -361,6 +357,18 @@
         "path": "configuration/programmatic-best-practices"
       },
       {
+        "title": "Manage resources programmatically",
+        "path": "configuration/programmatic-management"
+      },
+      {
+        "title": "Prevent lease explosions",
+        "path": "configuration/prevent-lease-explosions"
+      },
+      {
+        "title": "Create a lease count quota",
+        "path": "configuration/create-lease-count-quota"
+      },
+      {
         "title": "<code>listener</code>",
         "routes": [
           {
@@ -369,7 +377,16 @@
           },
           {
             "title": "TCP",
-            "path": "configuration/listener/tcp"
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "configuration/listener/tcp"
+              },
+              {
+                "title": "Configure TLS",
+                "path": "configuration/listener/tcp/tcp-tls"
+              }
+            ]
           },
           {
             "title": "Unix",
@@ -396,9 +413,9 @@
           {
             "title": "High Availability",
             "badge": {
-              "text": "ENTERPRISE | BETA",
+              "text": "ENTERPRISE",
               "type": "outlined",
-              "color": "highlight"
+              "color": "neutral"
             },
             "path": "configuration/seal/seal-ha"
           },
@@ -564,11 +581,12 @@
         "path": "configuration/telemetry"
       },
       {
-        "title": "<code>Request Limiter</code>",
-        "path": "configuration/request-limiter"
-      },
-      {
         "title": "Adaptive overload protection",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "path": "configuration/adaptive-overload-protection"
       },
       {
@@ -604,16 +622,18 @@
     ]
   },
   {
-    "title": "Commands (CLI)",
+    "title": "Vault CLI",
     "routes": [
       {
-        "title": "Overview",
+        "title": "Usage",
         "path": "commands"
       },
       {
-        "title": "Web REPL",
-        "path": "commands/web"
+        "title": "Use a custom token helper",
+        "path": "commands/token-helper"
       },
+      { "divider": true },
+      { "heading": "CLI commands" },
       {
         "title": "<code>agent</code>",
         "path": "commands/agent"
@@ -621,10 +641,6 @@
       {
         "title": "<code>audit</code>",
         "routes": [
-          {
-            "title": "Overview",
-            "path": "commands/audit"
-          },
           {
             "title": "<code>disable</code>",
             "path": "commands/audit/disable"
@@ -1089,6 +1105,19 @@
         ]
       },
       {
+        "title": "<code>transform</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/transform"
+          },
+          {
+            "title": "<code>import</code> and <code>import-version</code>",
+            "path": "commands/transform/import"
+          }
+        ]
+      },
+      {
         "title": "<code>unwrap</code>",
         "path": "commands/unwrap"
       },
@@ -1103,15 +1132,11 @@
       {
         "title": "<code>write</code>",
         "path": "commands/write"
-      },
-      {
-        "title": "Token Helpers",
-        "path": "commands/token-helper"
       }
     ]
   },
   {
-    "title": "Vault UI",
+    "title": "Vault GUI",
     "routes": [
       {
         "title": "Overview",
@@ -1125,6 +1150,10 @@
           "type": "outlined",
           "color": "neutral"
         }
+      },
+      {
+        "title": "CLI emulation",
+        "path": "ui/web-cli"
       }
     ]
   },
@@ -1565,11 +1594,6 @@
             "path": "secrets/pki/considerations"
           },
           {
-            "title": "Troubleshooting ACME integration",
-            "path": "secrets/pki/troubleshooting-acme"
-          },
-
-          {
             "title": "Rotation Primitives",
             "path": "secrets/pki/rotation-primitives"
           },
@@ -1584,12 +1608,26 @@
           },
           {
             "title": "Enrollment over Secure Transport (EST)",
+            "path": "secrets/pki/est",
             "badge": {
-              "text": "BETA",
+              "text": "ENTERPRISE",
               "type": "outlined",
-              "color": "highlight"
+              "color": "neutral"
             },
             "path": "secrets/pki/est"
+          },
+          {
+            "title": "Certificate Management Protocol (CMPv2)",
+            "badge": {
+              "text": "ENTERPRISE",
+              "type": "outlined",
+              "color": "neutral"
+            },
+            "path": "secrets/pki/cmpv2"
+          },
+          {
+            "title": "Troubleshooting ACME",
+            "path": "secrets/pki/troubleshooting-acme"
           }
         ]
       },
@@ -1997,12 +2035,29 @@
     "path": "partnerships"
   },
   {
-    "title": "Vault Interoperability Matrix",
+    "title": "Vault interoperability matrix",
     "path": "interoperability-matrix"
   },
   {
-    "title": "Troubleshoot",
-    "href": "https://learn.hashicorp.com/tutorials/vault/troubleshooting-vault"
+    "title": "Troubleshoot Vault",
+    "routes": [
+      {
+        "title": "Generate a root token",
+        "path": "troubleshoot/generate-root-token"
+      },
+      {
+        "title": "Troubleshoot lease errors",
+        "path": "troubleshoot/lease-issues"
+      },
+      {
+        "title": "Tune the lease TTL",
+        "path": "troubleshoot/tune-lease-ttl"
+      },
+      {
+        "title": "Troubleshooting tutorials",
+        "href": "https://learn.hashicorp.com/tutorials/vault/troubleshooting-vault"
+      }
+    ]
   },
   {
     "divider": true
@@ -2051,7 +2106,10 @@
             "title": "Agent Injector vs. Vault CSI Provider",
             "path": "platform/k8s/injector-csi"
           },
-
+          {
+            "title": "Migrate Consul to Raft storage",
+            "path": "platform/k8s/consul-to-raft"
+          },
           {
             "title": "Helm Chart",
             "routes": [
@@ -2214,8 +2272,12 @@
                         "path": "platform/k8s/vso/sources/vault"
                       },
                       {
-                        "title": "Auth Methods",
+                        "title": "Authentication",
                         "routes": [
+                          {
+                            "title": "Overview",
+                            "path": "platform/k8s/vso/sources/vault/auth"
+                          },
                           {
                             "title": "AWS",
                             "path": "platform/k8s/vso/sources/vault/auth/aws"
@@ -2229,6 +2291,10 @@
                       {
                         "title": "Encrypted client cache",
                         "path": "platform/k8s/vso/sources/vault/client-cache"
+                      },
+                      {
+                        "title": "Instant updates",
+                        "path": "platform/k8s/vso/sources/vault/instant-updates"
                       }
                     ]
                   },
@@ -2343,6 +2409,10 @@
       {
         "title": "Upgrade to Raft WAL",
         "path": "upgrading/raft-wal"
+      },
+      {
+        "title": "Upgrade to 1.18.x",
+        "path": "upgrading/upgrade-to-1.18.x"
       },
       {
         "title": "Upgrade to 1.17.x",
@@ -2605,6 +2675,14 @@
         "path": "release-notes"
       },
       {
+        "title": "1.18.0",
+        "path": "release-notes/1.18.0"
+      },
+      {
+        "title": "1.17.0",
+        "path": "release-notes/1.17.0"
+      },
+      {
         "title": "1.16.1",
         "path": "release-notes/1.16.1"
       },
@@ -2850,6 +2928,15 @@
               "type": "outlined",
               "color": "neutral"
             }
+          },
+          {
+            "title": "Configure cross namespace access",
+            "path": "enterprise/namespaces/configure-cross-namespace-access",
+            "badge": {
+              "text": "ENTERPRISE",
+              "type": "outlined",
+              "color": "neutral"
+            }
           }
         ]
       },
@@ -2864,6 +2951,10 @@
       {
         "title": "Audit",
         "routes": [
+          {
+            "title": "Audit Exclusion",
+            "path": "enterprise/audit/exclusion"
+          },
           {
             "title": "Audit Filtering",
             "path": "enterprise/audit/filtering"

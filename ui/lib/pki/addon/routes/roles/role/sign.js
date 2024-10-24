@@ -23,7 +23,7 @@ export default class PkiRoleSignRoute extends Route {
     super.setupController(controller, resolvedModel);
     const { role } = this.paramsFor('roles/role');
     controller.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview', model: this.secretMountPath.currentPath },
       { label: 'roles', route: 'roles.index', model: this.secretMountPath.currentPath },
       { label: role, route: 'roles.role.details', models: [this.secretMountPath.currentPath, role] },

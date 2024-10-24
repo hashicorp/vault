@@ -6,7 +6,7 @@
 import { service } from '@ember/service';
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
-import { getOwner } from '@ember/application';
+import { getOwner } from '@ember/owner';
 import { tracked } from '@glimmer/tracking';
 
 /**
@@ -26,13 +26,13 @@ import { tracked } from '@glimmer/tracking';
 
 export default class GeneratedItemList extends Component {
   @service router;
-  @service store;
+  @service pagination;
   @tracked itemToDelete = null;
 
   @action
   refreshItemList() {
     const route = getOwner(this).lookup(`route:${this.router.currentRouteName}`);
-    this.store.clearAllDatasets();
+    this.pagination.clearDataset();
     route.refresh();
   }
 }

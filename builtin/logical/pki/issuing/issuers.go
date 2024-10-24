@@ -4,6 +4,7 @@
 package issuing
 
 import (
+	"bytes"
 	"context"
 	"crypto/x509"
 	"fmt"
@@ -43,6 +44,13 @@ const (
 	LegacyCertBundlePath  = "config/ca_bundle"
 	LegacyBundleShimID    = IssuerID("legacy-entry-shim-id")
 	LegacyBundleShimKeyID = KeyID("legacy-entry-shim-key-id")
+
+	LegacyCRLPath        = "crl"
+	DeltaCRLPath         = "delta-crl"
+	DeltaCRLPathSuffix   = "-delta"
+	UnifiedCRLPath       = "unified-crl"
+	UnifiedDeltaCRLPath  = "unified-delta-crl"
+	UnifiedCRLPathPrefix = "unified-"
 )
 
 type IssuerID string
@@ -131,13 +139,41 @@ type IssuerEntry struct {
 	Version              uint                      `json:"version"`
 }
 
+// GetCertificate returns a x509.Certificate of the CA certificate
+// represented by this issuer.
 func (i IssuerEntry) GetCertificate() (*x509.Certificate, error) {
-	cert, err := parsing.ParseCertificateFromBytes([]byte(i.Certificate))
+	cert, err := parsing.ParseCertificateFromString(i.Certificate)
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse certificate from issuer: %s: %v", err.Error(), i.ID)}
 	}
 
 	return cert, nil
+}
+
+// GetFullCaChain returns a slice of x509.Certificate values of this issuer full ca chain,
+// which starts with the CA certificate represented by this issuer followed by the entire CA chain
+func (i IssuerEntry) GetFullCaChain() ([]*x509.Certificate, error) {
+	var chains []*x509.Certificate
+	issuerCert, err := i.GetCertificate()
+	if err != nil {
+		return nil, err
+	}
+
+	chains = append(chains, issuerCert)
+
+	for rangeI, chainVal := range i.CAChain {
+		parsedChainVal, err := parsing.ParseCertificateFromString(chainVal)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing issuer %s ca chain index value [%d]: %w", i.ID, rangeI, err)
+		}
+
+		if bytes.Equal(parsedChainVal.Raw, issuerCert.Raw) {
+			continue
+		}
+		chains = append(chains, parsedChainVal)
+	}
+
+	return chains, nil
 }
 
 func (i IssuerEntry) EnsureUsage(usage IssuerUsage) error {
@@ -207,6 +243,29 @@ func (i IssuerEntry) CanMaybeSignWithAlgo(algo x509.SignatureAlgorithm) error {
 	}
 
 	return fmt.Errorf("unable to use issuer of type %v to sign with %v key type", cert.PublicKeyAlgorithm.String(), algo.String())
+}
+
+// ResolveAndFetchIssuerForIssuance takes a name or uuid referencing an issuer, loads the issuer
+// and validates that we have the associated private key and is allowed to perform issuance operations.
+func ResolveAndFetchIssuerForIssuance(ctx context.Context, s logical.Storage, issuerName string) (*IssuerEntry, error) {
+	if len(issuerName) == 0 {
+		return nil, fmt.Errorf("unable to fetch pki issuer: empty issuer name")
+	}
+	issuerId, err := ResolveIssuerReference(ctx, s, issuerName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve issuer %s: %w", issuerName, err)
+	}
+
+	issuer, err := FetchIssuerById(ctx, s, issuerId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load issuer %s: %w", issuerName, err)
+	}
+
+	if issuer.Usage.HasUsage(IssuanceUsage) && len(issuer.KeyID) > 0 {
+		return issuer, nil
+	}
+
+	return nil, fmt.Errorf("issuer %s missing proper issuance usage or doesn't have associated key", issuerName)
 }
 
 func ResolveIssuerReference(ctx context.Context, s logical.Storage, reference string) (IssuerID, error) {
@@ -491,4 +550,39 @@ func GetLegacyCertBundle(ctx context.Context, s logical.Storage) (*IssuerEntry, 
 	issuer.Usage.ToggleUsage(AllIssuerUsages)
 
 	return issuer, cb, nil
+}
+
+func ResolveIssuerCRLPath(ctx context.Context, storage logical.Storage, useLegacyBundleCaStorage bool, reference string, unified bool) (string, error) {
+	if useLegacyBundleCaStorage {
+		return "crl", nil
+	}
+
+	issuer, err := ResolveIssuerReference(ctx, storage, reference)
+	if err != nil {
+		return "crl", err
+	}
+
+	var crlConfig *InternalCRLConfigEntry
+	if unified {
+		crlConfig, err = GetUnifiedCRLConfig(ctx, storage)
+		if err != nil {
+			return "crl", err
+		}
+	} else {
+		crlConfig, err = GetLocalCRLConfig(ctx, storage)
+		if err != nil {
+			return "crl", err
+		}
+	}
+
+	if crlId, ok := crlConfig.IssuerIDCRLMap[issuer]; ok && len(crlId) > 0 {
+		path := fmt.Sprintf("crls/%v", crlId)
+		if unified {
+			path = ("unified-") + path
+		}
+
+		return path, nil
+	}
+
+	return "crl", fmt.Errorf("unable to find CRL for issuer: id:%v/ref:%v", issuer, reference)
 }

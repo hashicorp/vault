@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Mask obfuscated fields when creating/editing a Secrets sync destination.
+```

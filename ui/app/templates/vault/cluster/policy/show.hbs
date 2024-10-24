@@ -36,7 +36,7 @@
       @extension={{if (eq this.policyType "acl") this.model.format "sentinel"}}
       @text="Download policy"
     />
-    {{#if (and (not-eq this.model.id "root") (or this.capabilities.canUpdate this.capabilities.canDelete))}}
+    {{#if (and (not-eq this.model.id "root") (or this.model.canUpdate this.model.canDelete))}}
       <ToolbarLink
         @route="vault.cluster.policy.edit"
         @models={{array this.policyType this.model.id}}

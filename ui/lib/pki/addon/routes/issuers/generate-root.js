@@ -19,9 +19,9 @@ export default class PkiIssuersGenerateRootRoute extends Route {
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
     controller.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview', model: this.secretMountPath.currentPath },
-      { label: 'generate root' },
+      { label: 'Generate Root' },
     ];
   }
 }

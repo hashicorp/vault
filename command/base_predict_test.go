@@ -351,7 +351,6 @@ func TestPredict_Plugins(t *testing.T) {
 				"aws",
 				"azure",
 				"cassandra-database-plugin",
-				"centrify",
 				"cert",
 				"cf",
 				"consul",

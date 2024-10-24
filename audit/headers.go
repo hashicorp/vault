@@ -42,7 +42,7 @@ func AuditedHeadersKey() string {
 	return AuditedHeadersSubPath + auditedHeadersEntry
 }
 
-type HeaderSettings struct {
+type headerSettings struct {
 	// HMAC is used to indicate whether the value of the header should be HMAC'd.
 	HMAC bool `json:"hmac"`
 }
@@ -51,7 +51,7 @@ type HeaderSettings struct {
 // headers to the audit logs. It uses a BarrierView to persist the settings.
 type HeadersConfig struct {
 	// headerSettings stores the current headers that should be audited, and their settings.
-	headerSettings map[string]*HeaderSettings
+	headerSettings map[string]*headerSettings
 
 	// view is the barrier view which should be used to access underlying audit header config data.
 	view durableStorer
@@ -69,18 +69,18 @@ func NewHeadersConfig(view durableStorer) (*HeadersConfig, error) {
 	// Store the view so that we can reload headers when we 'Invalidate'.
 	return &HeadersConfig{
 		view:           view,
-		headerSettings: make(map[string]*HeaderSettings),
+		headerSettings: make(map[string]*headerSettings),
 	}, nil
 }
 
 // Header attempts to retrieve a copy of the settings associated with the specified header.
 // The second boolean return parameter indicates whether the header existed in configuration,
 // it should be checked as when 'false' the returned settings will have the default values.
-func (a *HeadersConfig) Header(name string) (HeaderSettings, bool) {
+func (a *HeadersConfig) Header(name string) (headerSettings, bool) {
 	a.RLock()
 	defer a.RUnlock()
 
-	var s HeaderSettings
+	var s headerSettings
 	v, ok := a.headerSettings[strings.ToLower(name)]
 
 	if ok {
@@ -91,16 +91,16 @@ func (a *HeadersConfig) Header(name string) (HeaderSettings, bool) {
 }
 
 // Headers returns all existing headers along with a copy of their current settings.
-func (a *HeadersConfig) Headers() map[string]HeaderSettings {
+func (a *HeadersConfig) Headers() map[string]headerSettings {
 	a.RLock()
 	defer a.RUnlock()
 
 	// We know how many entries the map should have.
-	headers := make(map[string]HeaderSettings, len(a.headerSettings))
+	headers := make(map[string]headerSettings, len(a.headerSettings))
 
 	// Clone the headers
 	for name, setting := range a.headerSettings {
-		headers[name] = HeaderSettings{HMAC: setting.HMAC}
+		headers[name] = headerSettings{HMAC: setting.HMAC}
 	}
 
 	return headers
@@ -118,10 +118,10 @@ func (a *HeadersConfig) Add(ctx context.Context, header string, hmac bool) error
 	defer a.Unlock()
 
 	if a.headerSettings == nil {
-		a.headerSettings = make(map[string]*HeaderSettings, 1)
+		a.headerSettings = make(map[string]*headerSettings, 1)
 	}
 
-	a.headerSettings[strings.ToLower(header)] = &HeaderSettings{hmac}
+	a.headerSettings[strings.ToLower(header)] = &headerSettings{hmac}
 	entry, err := logical.StorageEntryJSON(auditedHeadersEntry, a.headerSettings)
 	if err != nil {
 		return fmt.Errorf("failed to persist audited headers config: %w", err)
@@ -167,14 +167,15 @@ func (a *HeadersConfig) Remove(ctx context.Context, header string) error {
 // added to HeadersConfig in order to allow them to appear in audit logs in a raw
 // format. If the Vault Operator adds their own setting for any of the defaults,
 // their setting will be honored.
-func (a *HeadersConfig) DefaultHeaders() map[string]*HeaderSettings {
+func (a *HeadersConfig) DefaultHeaders() map[string]*headerSettings {
 	// Support deprecated 'x-' prefix (https://datatracker.ietf.org/doc/html/rfc6648)
 	const correlationID = "correlation-id"
 	xCorrelationID := fmt.Sprintf("x-%s", correlationID)
 
-	return map[string]*HeaderSettings{
+	return map[string]*headerSettings{
 		correlationID:  {},
 		xCorrelationID: {},
+		"user-agent":   {},
 	}
 }
 
@@ -192,7 +193,7 @@ func (a *HeadersConfig) Invalidate(ctx context.Context) error {
 
 	// If we cannot update the stored 'new' headers, we will clear the existing
 	// ones as part of invalidation.
-	headers := make(map[string]*HeaderSettings)
+	headers := make(map[string]*headerSettings)
 	if out != nil {
 		err = out.DecodeJSON(&headers)
 		if err != nil {
@@ -202,7 +203,7 @@ func (a *HeadersConfig) Invalidate(ctx context.Context) error {
 
 	// Ensure that we are able to case-sensitively access the headers;
 	// necessary for the upgrade case
-	lowerHeaders := make(map[string]*HeaderSettings, len(headers))
+	lowerHeaders := make(map[string]*headerSettings, len(headers))
 	for k, v := range headers {
 		lowerHeaders[strings.ToLower(k)] = v
 	}
@@ -248,7 +249,7 @@ func (a *HeadersConfig) ApplyConfig(ctx context.Context, headers map[string][]st
 			// Optionally hmac the values
 			if settings.HMAC {
 				for i, el := range hVals {
-					hVal, err := HashString(ctx, salter, el)
+					hVal, err := hashString(ctx, salter, el)
 					if err != nil {
 						return nil, err
 					}

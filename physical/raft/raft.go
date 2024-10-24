@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -39,6 +40,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/cluster"
+	"github.com/hashicorp/vault/version"
 	etcdbolt "go.etcd.io/bbolt"
 )
 
@@ -73,7 +75,10 @@ const (
 	defaultMaxBatchSize = 128 * 1024
 )
 
-var getMmapFlags = func(string) int { return 0 }
+var (
+	getMmapFlags     = func(string) int { return 0 }
+	usingMapPopulate = func(int) bool { return false }
+)
 
 // Verify RaftBackend satisfies the correct interfaces
 var (
@@ -446,6 +451,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		}
 	}
 
+	// Create the log store.
 	// Build an all in-memory setup for dev mode, otherwise prepare a full
 	// disk-based setup.
 	var logStore raft.LogStore
@@ -472,6 +478,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		if err != nil {
 			return nil, fmt.Errorf("failed to check if raft.db already exists: %w", err)
 		}
+
 		if backendConfig.RaftWal && raftDbExists {
 			logger.Warn("raft is configured to use raft-wal for storage but existing raft.db detected. raft-wal config will be ignored.")
 			backendConfig.RaftWal = false
@@ -501,6 +508,10 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 				Path:                    dbPath,
 				BoltOptions:             opts,
 				MsgpackUseNewTimeFormat: true,
+			}
+
+			if runtime.GOOS == "linux" && raftDbExists && !usingMapPopulate(opts.MmapFlags) {
+				logger.Warn("the MAP_POPULATE mmap flag has not been set before opening the log store database. This may be due to the database file being larger than the available memory on the system, or due to the VAULT_RAFT_DISABLE_MAP_POPULATE environment variable being set. As a result, Vault may be slower to start up.")
 			}
 
 			store, err := raftboltdb.New(raftOptions)
@@ -582,6 +593,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		failGetInTxn:                  new(uint32),
 		raftLogVerifierEnabled:        backendConfig.RaftLogVerifierEnabled,
 		raftLogVerificationInterval:   backendConfig.RaftLogVerificationInterval,
+		effectiveSDKVersion:           version.GetVersion().Version,
 	}, nil
 }
 
@@ -660,12 +672,6 @@ func (b *RaftBackend) FailGetInTxn(fail bool) {
 	atomic.StoreUint32(b.failGetInTxn, val)
 }
 
-func (b *RaftBackend) SetEffectiveSDKVersion(sdkVersion string) {
-	b.l.Lock()
-	b.effectiveSDKVersion = sdkVersion
-	b.l.Unlock()
-}
-
 func (b *RaftBackend) RedundancyZone() string {
 	b.l.RLock()
 	defer b.l.RUnlock()
@@ -691,6 +697,12 @@ func (b *RaftBackend) UpgradeVersion() string {
 		return b.upgradeVersion
 	}
 
+	return b.effectiveSDKVersion
+}
+
+func (b *RaftBackend) SDKVersion() string {
+	b.l.RLock()
+	defer b.l.RUnlock()
 	return b.effectiveSDKVersion
 }
 
@@ -1089,6 +1101,11 @@ type SetupOpts struct {
 	// RecoveryModeConfig is the configuration for the raft cluster in recovery
 	// mode.
 	RecoveryModeConfig *raft.Configuration
+
+	// EffectiveSDKVersion is typically the version string baked into the binary.
+	// We pass it in though because it can be overridden in tests or via ENV in
+	// core.
+	EffectiveSDKVersion string
 }
 
 func (b *RaftBackend) StartRecoveryCluster(ctx context.Context, peer Peer) error {
@@ -1130,6 +1147,11 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 
 	if len(b.localID) == 0 {
 		return errors.New("no local node id configured")
+	}
+
+	if opts.EffectiveSDKVersion != "" {
+		// Override the SDK version
+		b.effectiveSDKVersion = opts.EffectiveSDKVersion
 	}
 
 	// Setup the raft config

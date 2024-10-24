@@ -7,13 +7,13 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import { getOwner } from '@ember/application';
+import { getOwner } from '@ember/owner';
 import errorMessage from 'vault/utils/error-message';
 
 import SyncDestinationModel from 'vault/vault/models/sync/destination';
 import type SyncAssociationModel from 'vault/vault/models/sync/association';
 import type RouterService from '@ember/routing/router-service';
-import type StoreService from 'vault/services/store';
+import type PaginationService from 'vault/services/pagination';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type { EngineOwner } from 'vault/vault/app-types';
 
@@ -23,8 +23,8 @@ interface Args {
 }
 
 export default class SyncSecretsDestinationsPageComponent extends Component<Args> {
-  @service declare readonly router: RouterService;
-  @service declare readonly store: StoreService;
+  @service('app-router') declare readonly router: RouterService;
+  @service declare readonly pagination: PaginationService;
   @service declare readonly flashMessages: FlashMessageService;
 
   @tracked secretToUnsync: SyncAssociationModel | null = null;
@@ -41,7 +41,7 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @action
   refreshRoute() {
     // refresh route to update displayed secrets
-    this.store.clearDataset('sync/association');
+    this.pagination.clearDataset('sync/association');
     this.router.transitionTo(
       'vault.cluster.sync.secrets.destinations.destination.secrets',
       this.args.destination.type,

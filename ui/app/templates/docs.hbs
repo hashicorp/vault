@@ -1,0 +1,79 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Hds::AppFrame @hasSidebar={{@showSidebar}} @hasHeader={{false}} @hasFooter={{false}} as |Frame|>
+  <Frame.Sidebar data-test-sidebar-nav>
+    <DocfyOutput @scope="docs" as |docs|>
+      {{#let docs.children as |directories|}}
+        {{#let docs.pages as |pages|}}
+          <Hds::SideNav>
+            <:header>
+              <Hds::SideNav::Header>
+                <:logo>
+                  <Hds::SideNav::Header::HomeLink @icon="vault" @route="vault" @ariaLabel="Vault dashboard" />
+                </:logo>
+                <:actions>
+                  <Hds::Button @isIconOnly={{true}} @icon="home" @text="Docs index" @route="docs" />
+                </:actions>
+              </Hds::SideNav::Header>
+            </:header>
+            <:body>
+              <Hds::SideNav::List as |Nav|>
+                <Nav.BackLink @text="Back to work (Vault UI)" @route="vault" />
+                <Nav.Link @icon="home" @route="docs.index">
+                  Home
+                </Nav.Link>
+                <Nav.Link @icon="edit" @route="docs.how-to-docfy">
+                  How to docfy
+                </Nav.Link>
+
+                <Nav.Title>
+                  Components
+                </Nav.Title>
+                <Nav.Item>
+                  {{! FILTER + COMPONENT LIST }}
+                  <ZDocfyFilter @components={{get (find-by "name" "components" directories) "pages"}} />
+                </Nav.Item>
+
+                <Nav.Title>
+                  Contributing docs
+                </Nav.Title>
+                {{! Top level files in docs/ directory }}
+                {{#each pages as |page|}}
+                  {{#let (concat "docs." (if page.relativeUrl page.relativeUrl "index")) as |url|}}
+                    <Nav.Link @route={{url}}>
+                      {{page.title}}
+                    </Nav.Link>
+                  {{/let}}
+                {{/each}}
+
+                {{! Sub directories within docs/ (aside from 'components') }}
+                {{#each directories as |subDirectory|}}
+                  {{#if (not-eq subDirectory.name "components")}}
+                    <Nav.Title>
+                      {{capitalize subDirectory.label}}
+                    </Nav.Title>
+
+                    {{#each subDirectory.pages as |page|}}
+                      {{#let (concat "docs." (if page.relativeUrl page.relativeUrl "index")) as |url|}}
+                        <Nav.Link @route={{url}}>
+                          {{page.title}}
+                        </Nav.Link>
+                      {{/let}}
+                    {{/each}}
+                  {{/if}}
+                {{/each}}
+              </Hds::SideNav::List>
+            </:body>
+          </Hds::SideNav>
+        {{/let}}
+      {{/let}}
+    </DocfyOutput>
+  </Frame.Sidebar>
+
+  <Frame.Main id="docfy-content">
+    {{outlet}}
+  </Frame.Main>
+</Hds::AppFrame>

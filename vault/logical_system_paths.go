@@ -1832,6 +1832,7 @@ func (b *SystemBackend) sealPaths() []*framework.Path {
 							Description: "OK",
 						}},
 					},
+					ForwardPerformanceStandby: true,
 				},
 			},
 
@@ -3825,6 +3826,10 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 					Description: strings.TrimSpace(sysHelp["identity_token_key"][0]),
 					Required:    false,
 				},
+				"trim_request_trailing_slashes": {
+					Type:     framework.TypeBool,
+					Required: false,
+				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
@@ -3913,6 +3918,10 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 								},
 								"identity_token_key": {
 									Type:     framework.TypeString,
+									Required: false,
+								},
+								"trim_request_trailing_slashes": {
+									Type:     framework.TypeBool,
 									Required: false,
 								},
 							},
@@ -4685,6 +4694,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Type:        framework.TypeString,
 					Description: strings.TrimSpace(sysHelp["identity_token_key"][0]),
 				},
+				"trim_request_trailing_slashes": {
+					Type:        framework.TypeBool,
+					Description: strings.TrimSpace(sysHelp["trim_request_trailing_slashes"][0]),
+				},
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -4785,6 +4798,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 								},
 								"identity_token_key": {
 									Type:     framework.TypeString,
+									Required: false,
+								},
+								"trim_request_trailing_slashes": {
+									Type:     framework.TypeBool,
 									Required: false,
 								},
 							},

@@ -29,7 +29,8 @@ custom endpoints to talk to AWS APIs. The instance identity document
 fetched from the PKCS#7 signature will provide the EC2 instance ID. The
 credentials configured using this endpoint will be used to query the status
 of the instances via DescribeInstances API. If static credentials are not
-provided using this endpoint, then the credentials will be retrieved from
+provided using this endpoint, or [plugin workload identity federation](/vault/docs/auth/aws#plugin-workload-identity-federation-wif)
+credentials are also not provided, then the credentials will be retrieved from
 the environment variables `AWS_ACCESS_KEY`, `AWS_SECRET_KEY` and
 `AWS_REGION` respectively. If the credentials are still not found and if the
 method is configured on an EC2 instance with metadata querying
@@ -53,9 +54,17 @@ capabilities, the credentials are fetched automatically.
   access to `iam:GetInstanceProfile`. If, however, an alternate sts
   configuration is set for the target account, then the credentials must be
   permissioned to call `sts:AssumeRole` on the configured role, and that role
-  must have the permissions described here.
+  must have the permissions described here. Mutually exclusive with `identity_token_audience`.
 - `secret_key` `(string: "")` - AWS Secret key with permissions to query AWS
   APIs.
+- `role_arn` `(string: "")` – <EnterpriseAlert product="vault" inline /> Role ARN to assume
+  for plugin workload identity federation. Required with `identity_token_audience`.
+- `identity_token_audience` `(string: "")` - <EnterpriseAlert product="vault" inline /> The
+  audience claim value for plugin identity tokens. Must match an allowed audience configured
+  for the target [IAM OIDC identity provider](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html#manage-oidc-provider-console).
+  Mutually exclusive with `access_key`.
+- `identity_token_ttl` `(string/int: 3600)` - <EnterpriseAlert product="vault" inline /> The
+  TTL of generated tokens. Defaults to 1 hour. Uses [duration format strings](/vault/docs/concepts/duration-format).
 - `endpoint` `(string: "")` - URL to override the default generated endpoint for
   making AWS EC2 API calls.
 - `iam_endpoint` `(string: "")` - URL to override the default generated endpoint
@@ -208,8 +217,8 @@ This configures the way that Vault interacts with the
   is used. When `unique_id` is selected, the [IAM Unique
   ID](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers#identifiers-unique-ids)
   of the IAM principal (either the user or role) is used as the identity alias
-  name. When `canonical_arn` is selected, the role ARN returned by the `sts:GetCallerIdentity`call 
-  will be used. This will be `arn:aws:iam::<account_id>:role/<role name>`. When `full_arn` is selected, 
+  name. When `canonical_arn` is selected, the role ARN returned by the `sts:GetCallerIdentity`call
+  will be used. This will be `arn:aws:iam::<account_id>:role/<role name>`. When `full_arn` is selected,
   the ARN returned by the `sts:GetCallerIdentity` call is used as the alias name. This is either
   `arn:aws:iam::<account_id>:user/<optional_path/><user_name>` or
   `arn:aws:sts::<account_id>:assumed-role/<role_name_without_path>/<role_session_name>`.

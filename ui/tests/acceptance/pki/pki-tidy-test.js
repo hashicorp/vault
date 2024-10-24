@@ -129,7 +129,7 @@ module('Acceptance | pki tidy', function (hooks) {
     await click(PKI_TIDY.tidyEmptyStateConfigure);
     await click(PKI_TIDY.tidyConfigureModal.tidyModalAutoButton);
     assert.dom(PKI_TIDY_FORM.tidyFormName('auto')).exists('Auto tidy form exists');
-    await click(PKI_TIDY_FORM.toggleLabel('Automatic tidy disabled'));
+    await click(GENERAL.ttl.toggle('enabled'));
     assert
       .dom(PKI_TIDY_FORM.tidySectionHeader('ACME operations'))
       .exists('Auto tidy form enabled shows ACME operations field');
@@ -141,6 +141,33 @@ module('Acceptance | pki tidy', function (hooks) {
     await click(PKI_TIDY_FORM.inputByAttr('tidyRevokedCerts'));
     await click(PKI_TIDY_FORM.tidySave);
     assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.tidy.auto.index');
+  });
+
+  // test coverage for a bug where toggling acme tidy on then off caused API failure
+  test('it configures a manual tidy operation', async function (assert) {
+    await authPage.login(this.pkiAdminToken);
+    await visit(`/vault/secrets/${this.mountPath}/pki/tidy`);
+    await click(PKI_TIDY.tidyEmptyStateConfigure);
+    assert.dom(PKI_TIDY.tidyConfigureModal.configureTidyModal).exists();
+    assert.dom(PKI_TIDY.tidyConfigureModal.tidyModalAutoButton).exists();
+    assert.dom(PKI_TIDY.tidyConfigureModal.tidyModalManualButton).exists();
+    await click(PKI_TIDY.tidyConfigureModal.tidyModalManualButton);
+
+    assert.dom(PKI_TIDY_FORM.tidyFormName('manual')).exists();
+    await click(PKI_TIDY_FORM.inputByAttr('tidyCertStore'));
+
+    await click(GENERAL.ttl.toggle('Tidy ACME disabled'));
+    assert
+      .dom(GENERAL.ttl.input('Tidy ACME enabled'))
+      .hasValue('30', 'acmeAccountSafetyBuffer defaults to 30 days');
+    await click('[data-test-toggle-input="Tidy ACME enabled"]');
+
+    await click(PKI_TIDY_FORM.tidySave);
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.pki.tidy.index',
+      'saves successfully and redirects to index'
+    );
   });
 
   test('it opens a tidy modal when the user clicks on the tidy toolbar action', async function (assert) {
@@ -165,7 +192,7 @@ module('Acceptance | pki tidy', function (hooks) {
     await click(PKI_TIDY.tidyConfigureModal.tidyOptionsModal);
     assert.dom(PKI_TIDY.tidyConfigureModal.configureTidyModal).exists('Configure tidy modal exists');
     await click(PKI_TIDY.tidyConfigureModal.tidyModalAutoButton);
-    await click(PKI_TIDY_FORM.toggleLabel('Automatic tidy disabled'));
+    await click(GENERAL.ttl.toggle('enabled'));
     await click(PKI_TIDY_FORM.inputByAttr('tidyCertStore'));
     await click(PKI_TIDY_FORM.inputByAttr('tidyRevokedCerts'));
     await click(PKI_TIDY_FORM.tidySave);

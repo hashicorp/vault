@@ -1,0 +1,6 @@
+```release-note:improvement
+agent/sink: Allow configuration of the user and group ID of the file sink.
+```
+```release-note:improvement
+proxy/sink: Allow configuration of the user and group ID of the file sink.
+```

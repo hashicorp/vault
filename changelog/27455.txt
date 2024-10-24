@@ -1,0 +1,3 @@
+```release-note:change
+ui: Uses the internal/counters/activity/export endpoint for client count export data.
+```

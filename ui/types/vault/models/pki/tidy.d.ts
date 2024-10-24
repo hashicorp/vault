@@ -12,6 +12,8 @@ export default class PkiTidyModel extends Model {
   tidyAcme: boolean;
   enabled: boolean;
   intervalDuration: string;
+  minStartupBackoffDuration: string;
+  maxStartupBackoffDuration: string;
   issuerSafetyBuffer: string;
   pauseDuration: string;
   revocationQueueSafetyBuffer: string;
@@ -24,8 +26,6 @@ export default class PkiTidyModel extends Model {
   tidyRevocationQueue: boolean;
   tidyRevokedCertIssuerAssociations: boolean;
   tidyRevokedCerts: boolean;
-  get useOpenAPI(): boolean;
-  getHelpUrl(backend: string): string;
   allByKey: {
     intervalDuration: FormField[];
   };

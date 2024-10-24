@@ -10,16 +10,8 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 @withFormFields()
 export default class PkiConfigAcmeModel extends Model {
   // This model uses the backend value as the model ID
-  get useOpenAPI() {
-    return true;
-  }
-
-  getHelpUrl(backendPath) {
-    return `/v1/${backendPath}/config/acme?help=1`;
-  }
 
   // attrs order in the form is determined by order here
-
   @attr('boolean', {
     label: 'ACME enabled',
     subText: 'When ACME is disabled, all requests to ACME directory URLs will return 404.',

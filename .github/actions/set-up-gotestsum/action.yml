@@ -34,7 +34,7 @@ runs:
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
-        VERSION=$(gh release list -R gotestyourself/gotestsum --exclude-drafts --exclude-pre-releases | grep ${{ inputs.version }} | cut -f1)
+        VERSION=$(./.github/scripts/retry-command.sh gh release list -R gotestyourself/gotestsum --exclude-drafts --exclude-pre-releases | grep ${{ inputs.version }} | cut -f1)
 
         mkdir -p $(dirname ${{ inputs.destination }})
         DESTINATION="$(readlink -f "${{ inputs.destination }}")"
@@ -54,7 +54,7 @@ runs:
         fi
 
         mkdir -p tmp
-        gh release download "$VERSION" -p "*${OS}_${ARCH}.tar.gz" -O tmp/gotestsum.tgz -R gotestyourself/gotestsum
+        ./.github/scripts/retry-command.sh gh release download "$VERSION" --clobber -p "*${OS}_${ARCH}.tar.gz" -O tmp/gotestsum.tgz -R gotestyourself/gotestsum
         pushd tmp && tar -xvf gotestsum.tgz && popd
         mv tmp/gotestsum "$DESTINATION"
         rm -rf tmp

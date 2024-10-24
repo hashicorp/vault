@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
@@ -103,6 +102,49 @@ func TestCore_EnableAudit(t *testing.T) {
 	// Check for registration
 	if !c2.auditBroker.IsRegistered("foo/") {
 		t.Fatalf("missing audit backend")
+	}
+}
+
+// TestCore_EnableExistingAudit ensures that we don't allow enabling a file audit device
+// with the same `file_path` as one of the existing ones.
+func TestCore_EnableExistingAudit(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	// First audit backend entry
+	me := &MountEntry{
+		Table: auditTableType,
+		Path:  "foo",
+		Type:  audit.TypeFile,
+		Options: map[string]string{
+			"file_path": "stdout",
+		},
+	}
+
+	// Second audit backend entry
+	me2 := &MountEntry{
+		Table: auditTableType,
+		Path:  "foo2",
+		Type:  audit.TypeFile,
+		Options: map[string]string{
+			"file_path": "stdout",
+		},
+	}
+
+	// Enable first audit backend
+	err := c.enableAudit(namespace.RootContext(context.Background()), me, true)
+	if err != nil {
+		t.Errorf("failed to enable audit for path 'foo': %v", err)
+	}
+
+	// Check if the first audit backend is registered
+	if !c.auditBroker.IsRegistered("foo/") {
+		t.Errorf("audit backend for path 'foo/' is not registered")
+	}
+
+	// Enable second audit backend
+	err = c.enableAudit(namespace.RootContext(context.Background()), me2, true)
+	if err == nil {
+		t.Errorf("Should not be able to enable audit for path 'foo2' due to duplication: %v", err)
 	}
 }
 
@@ -442,9 +484,9 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	// Should FAIL work with both failing backends
+	// Should FAIL when both backends fail
 	a2.ReqErr = fmt.Errorf("failed")
-	if err := b.LogRequest(ctx, logInput); !errwrap.Contains(err, "event not processed by enough 'sink' nodes") {
+	if err = b.LogRequest(ctx, logInput); err != nil && !strings.HasPrefix(err.Error(), "event not processed by enough 'sink' nodes") {
 		t.Fatalf("err: %v", err)
 	}
 }
@@ -630,8 +672,7 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 
 	// Should FAIL work with both failing backends
 	a2.ReqErr = fmt.Errorf("failed")
-	err = b.LogRequest(ctx, logInput)
-	if !errwrap.Contains(err, "event not processed by enough 'sink' nodes") {
+	if err = b.LogRequest(ctx, logInput); err != nil && !strings.HasPrefix(err.Error(), "event not processed by enough 'sink' nodes") {
 		t.Fatalf("err: %v", err)
 	}
 }
