@@ -414,6 +414,7 @@ func (b *Backend) InvalidateKey(ctx context.Context, key string) {
 
 // Setup is used to initialize the backend with the initial backend configuration
 func (b *Backend) Setup(ctx context.Context, config *logical.BackendConfig) error {
+	time.Sleep(10 * time.Millisecond)
 	b.logger = config.Logger
 	b.system = config.System
 	b.events = config.EventsSender
