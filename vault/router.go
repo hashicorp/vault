@@ -378,8 +378,10 @@ func (r *Router) MatchingMount(ctx context.Context, path string) string {
 	return mount
 }
 
-// MatchingMountAndEntry returns the MountEntry used for a path and it's router path
+// MatchingMountAndEntry returns the mount prefix and MountEntry used for a path
 func (r *Router) MatchingMountAndEntry(ctx context.Context, path string) (string, *MountEntry) {
+	r.l.RLock()
+	defer r.l.RUnlock()
 	return r.matchingMountInternal(ctx, path)
 }
 
