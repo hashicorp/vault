@@ -612,6 +612,25 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 }
 
 func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request) (resp *logical.Response, err error) {
+	waitGroup, err := waitForReplicationState(ctx, c, req)
+	if err != nil {
+		return nil, err
+	}
+
+	// Decrement the wait group when our request is done
+	if waitGroup != nil {
+		defer waitGroup.Done()
+	}
+
+	if c.MissingRequiredState(req.RequiredState(), c.perfStandby) {
+		return nil, logical.ErrMissingRequiredState
+	}
+
+	// Ensure the req contains a MountPoint as it is depended on by some
+	// functionality (e.g. quotas)
+	var entry *MountEntry
+	req.MountPoint, entry = c.router.MatchingMountAndEntry(ctx, req.Path)
+
 	// Allowing writing to a path ending in / makes it extremely difficult to
 	// understand user intent for the filesystem-like backends (kv,
 	// cubbyhole) -- did they want a key named foo/ or did they want to write
@@ -622,24 +641,11 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 		(req.Operation == logical.UpdateOperation ||
 			req.Operation == logical.CreateOperation ||
 			req.Operation == logical.PatchOperation) {
-		return logical.ErrorResponse("cannot write to a path ending in '/'"), nil
-	}
-	waitGroup, err := waitForReplicationState(ctx, c, req)
-	if err != nil {
-		return nil, err
-	}
-
-	// MountPoint will not always be set at this point, so we ensure the req contains it
-	// as it is depended on by some functionality (e.g. quotas)
-	req.MountPoint = c.router.MatchingMount(ctx, req.Path)
-
-	// Decrement the wait group when our request is done
-	if waitGroup != nil {
-		defer waitGroup.Done()
-	}
-
-	if c.MissingRequiredState(req.RequiredState(), c.perfStandby) {
-		return nil, logical.ErrMissingRequiredState
+		if entry == nil || !entry.Config.TrimRequestTrailingSlashes {
+			return logical.ErrorResponse("cannot write to a path ending in '/'"), nil
+		} else {
+			req.Path = strings.TrimSuffix(req.Path, "/")
+		}
 	}
 
 	err = c.PopulateTokenEntry(ctx, req)
@@ -892,7 +898,6 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 
 	var nonHMACReqDataKeys []string
 	var nonHMACRespDataKeys []string
-	entry := c.router.MatchingMountEntry(ctx, req.Path)
 	if entry != nil {
 		// Get and set ignored HMAC'd value. Reset those back to empty afterwards.
 		if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
