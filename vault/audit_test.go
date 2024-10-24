@@ -105,6 +105,49 @@ func TestCore_EnableAudit(t *testing.T) {
 	}
 }
 
+// TestCore_EnableExistingAudit ensures that we don't allow enabling a file audit device
+// with the same `file_path` as one of the existing ones.
+func TestCore_EnableExistingAudit(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	// First audit backend entry
+	me := &MountEntry{
+		Table: auditTableType,
+		Path:  "foo",
+		Type:  audit.TypeFile,
+		Options: map[string]string{
+			"file_path": "stdout",
+		},
+	}
+
+	// Second audit backend entry
+	me2 := &MountEntry{
+		Table: auditTableType,
+		Path:  "foo2",
+		Type:  audit.TypeFile,
+		Options: map[string]string{
+			"file_path": "stdout",
+		},
+	}
+
+	// Enable first audit backend
+	err := c.enableAudit(namespace.RootContext(context.Background()), me, true)
+	if err != nil {
+		t.Errorf("failed to enable audit for path 'foo': %v", err)
+	}
+
+	// Check if the first audit backend is registered
+	if !c.auditBroker.IsRegistered("foo/") {
+		t.Errorf("audit backend for path 'foo/' is not registered")
+	}
+
+	// Enable second audit backend
+	err = c.enableAudit(namespace.RootContext(context.Background()), me2, true)
+	if err == nil {
+		t.Errorf("Should not be able to enable audit for path 'foo2' due to duplication: %v", err)
+	}
+}
+
 func TestCore_EnableAudit_MixedFailures(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 
