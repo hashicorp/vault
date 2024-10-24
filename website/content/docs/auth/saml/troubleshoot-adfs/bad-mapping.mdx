@@ -1,0 +1,187 @@
+---
+layout: docs
+page_title: "Troubleshoot ADFS and SAML: automatic group mapping fails"
+description: >-
+  Fix connection problems in Vault due to a bad mapping between groups and
+  policies when using Active Directory Federation Services (ADFS) as an SAML
+  provider.
+---
+
+# Automatic group mapping fails
+
+Troubleshoot problems where the debugging data suggests a bad or nonexistent
+mapping between your Vault role and AD FS the Claim Issuance Policy.
+
+
+
+## Example debugging data
+
+<CodeBlockConfig hideClipboard highlight="14,16,21">
+
+```json
+[DEBUG] auth.saml.auth_saml_1d2227e7: validating user context for role: api=callback role_name=default-saml
+role="{
+  "token_bound_cidrs":null,
+  "token_explicit_max_ttl":0,
+  "token_max_ttl":0,
+  "token_no_default_policy":false,
+  "token_num_uses":0,
+  "token_period":0,
+  "token_policies":["default"],
+  "token_type":0,
+  "token_ttl":0,
+  "BoundSubjects":["*@example.com","*@ext.example.com"],
+  "BoundSubjectsType":"glob",
+  "BoundAttributes":{"http://schemas.xmlsoap.org/claims/Group":["VaultAdmin","VaultUser"]},
+  "BoundAttributesType":"string",
+  "GroupsAttribute":"groups"
+  }"
+user context="{
+  "attributes":
+  {
+    "http://schemas.xmlsoap.org/claims/Group":["Domain Users","VaultAdmin"],
+    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress":["rs@example.com"]
+  },
+  "subject":"rs@example.com"
+}"
+```
+
+</CodeBlockConfig>
+
+
+
+## Analysis
+
+Use `vault read` to review the current role configuration:
+
+<CodeBlockConfig hideClipboard highlight="5,9">
+
+```shell-session
+$ vault read auth/<SAML_PLUGIN_PATH>/role/<ADFS_ROLE>
+
+Key                        Value
+---                        -----
+bound_attributes           map[http://schemas.xmlsoap.org/claims/Group:[VaultAdmin VaultUser]]
+bound_attributes_type      string
+bound_subjects             [*@example.com *@ext.example.com]
+bound_subjects_type        glob
+groups_attribute           groups
+token_bound_cidrs          []
+token_explicit_max_ttl     0s
+token_max_ttl              0s
+token_no_default_policy    false
+token_num_uses             0
+token_period               0s
+token_policies             [default]
+token_ttl                  0s
+token_type                 default
+```
+
+</CodeBlockConfig>
+
+The Vault role uses `groups` for the group attribute, so Vault expects user
+context in the SAML response to include a `groups` attribute with the form:
+
+<CodeBlockConfig hideClipboard>
+
+```text
+user context="{
+  "attributes":
+  {
+    "groups":[<LIST_OF_BOUND_GROUPS>]",
+    ...
+  }
+}"
+```
+</CodeBlockConfig>
+
+But the SAML response indicates the Claim Issuance Policy uses `Group` for the
+group attribute, so the user context uses `Group` to key the bound groups:
+
+
+<CodeBlockConfig hideClipboard>
+
+```text
+user context="{
+  "attributes":
+  {
+    "http://schemas.xmlsoap.org/claims/Group":["Domain Users","VaultAdmin"],
+    ...
+  },
+  "subject":"rs@example.com"
+}"
+```
+
+</CodeBlockConfig>
+
+
+
+## Solution
+
+<Tabs>
+
+<Tab heading="Option 1: Use 'Group' in the Vault role">
+
+The first option to resolve the problem is update `group_attribute` for the
+Vault role to use `Group`:
+
+```shell-session
+$ vault write auth/<SAML_PLUGIN_PATH>/role/<ADFS_ROLE> \
+    groups_attribute=http://schemas.xmlsoap.org/claims/Group
+```
+
+For example:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault write auth/saml/role/adfs-default \
+    groups_attribute=http://schemas.xmlsoap.org/claims/Group
+```
+
+</CodeBlockConfig>
+
+</Tab>
+
+<Tab heading="Option 2: Use 'groups' for AD FS">
+
+The second option to resolve the problem is to update your AD FS configuration
+to use `groups` and confirm the bound attributes in Vault match the expected
+groups:
+
+1. Update your AD FS the Claim Issuance Policy to use `groups` for unqualified
+   names:
+
+    | LDAP attribute                     | Outgoing claim type
+    |------------------------------------|--------------------
+    | `Token-Groups - Unqualified Names` | `groups`
+
+1. Verify the bound attribute for your Vault role match the groups listed in the
+   SAML response:
+
+    ```shell-session
+    $ vault write auth/<SAML_PLUGIN_PATH>/role/<ADFS_ROLE> \
+        bound_attributes=groups="<AD_GROUP_LIST>"
+    ```
+
+    For example:
+
+    <CodeBlockConfig hideClipboard>
+
+    ```shell-session
+    $ vault write auth/saml/role/default-adfs \
+        bound_attributes=groups="VaultAdmin,VaultUser"
+    ```
+
+    </CodeBlockConfig>
+
+</Tab>
+</Tabs>
+
+
+
+## Additional resources
+
+- [SAML auth method Documentation](/vault/docs/auth/saml)
+- [SAML API Documentation](/vault/api-docs/auth/saml)
+- [Set up an AD FS lab environment](https://learn.microsoft.com/en-us/windows-server/identity/ad-fs/operations/set-up-an-ad-fs-lab-environment)

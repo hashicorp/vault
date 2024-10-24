@@ -1,0 +1,81 @@
+---
+layout: docs
+page_title: "Troubleshoot ADFS and SAML: AD FS event 320"
+description: >-
+  Fix connection problems in Vault due AD FS event 320 when using Active
+  Directory Federation Services (ADFS) as an SAML provider.
+---
+
+# AD FS event 320
+
+Troubleshoot problems where your AD FS event logs show error 320.
+
+
+
+## Example debugging data
+
+AD FS event log shows the following error:
+
+<CodeBlockConfig hideClipboard highlight="1,4">
+
+```shell-session
+The verification of the SAML message signature failed.
+Message issuer: MyVaultIdentifier
+Exception details:
+MSIS7086: The relying party trust 'MyVaultIdentifier' indicates that authentication requests sent by this relying party will be signed but no signature is present.
+```
+
+</CodeBlockConfig>
+
+
+
+## Analysis
+
+Verify that `SignedSamlRequestsRequired` is `false` for your AD FS Relying Party
+Trust for Vault:
+
+```powershell
+Get-AdfsRelyingPartyTrust -Name "<ADFS_VAULT_POLICY_NAME>"
+```
+
+For example:
+
+<CodeBlockConfig hideClipboard>
+
+```powershell
+Get-AdfsRelyingPartyTrust -Name "Vault"
+```
+
+</CodeBlockConfig>
+
+
+
+## Solution
+
+Set `SignedSamlRequestsRequired` to `false`:
+
+```powershell
+$ Set-AdfsRelyingPartyTrust                 `
+    -TargetName "<ADFS_VAULT_POLICY_NAME>"  `
+    -SignedSamlRequestsRequired $false
+```
+
+For example:
+
+<CodeBlockConfig hideClipboard>
+
+```powershell
+$ Set-AdfsRelyingPartyTrust `
+    -TargetName "Vault"     `
+    -SignedSamlRequestsRequired $false
+```
+
+</CodeBlockConfig>
+
+
+
+## Additional resources
+
+- [SAML auth method Documentation](/vault/docs/auth/saml)
+- [SAML API Documentation](/vault/api-docs/auth/saml)
+- [Set up an AD FS lab environment](https://learn.microsoft.com/en-us/windows-server/identity/ad-fs/operations/set-up-an-ad-fs-lab-environment)
