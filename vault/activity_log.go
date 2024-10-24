@@ -214,6 +214,9 @@ type ActivityLog struct {
 	// precomputedQueryWritten receives an element whenever a precomputed query
 	// is written. It's used for unit testing
 	precomputedQueryWritten chan struct{}
+
+	// globalClients tracks the global clients of all the clients in memory
+	globalClients *activity.LogFragment
 }
 
 // These non-persistent configuration options allow us to disable
@@ -459,6 +462,9 @@ func (a *ActivityLog) saveCurrentSegmentToStorageLocked(ctx context.Context, for
 	}
 	a.currentSegment.currentClients.Clients = segmentClients
 
+	if a.core.IsPerfSecondary() {
+		a.sendGlobalClients(ctx)
+	}
 	err := a.saveCurrentSegmentInternal(ctx, force)
 	if err != nil {
 		// The current fragment(s) have already been placed into the in-memory
@@ -1725,6 +1731,10 @@ func (a *ActivityLog) createCurrentFragment() {
 		// the timer to send it.
 		a.newFragmentCh <- struct{}{}
 	}
+}
+
+func (a *ActivityLog) receivedGlobalClientFragments(fragment *activity.LogFragment) {
+	a.logger.Trace("received fragment from secondary", "cluster_id", fragment.GetOriginatingCluster())
 }
 
 func (a *ActivityLog) receivedFragment(fragment *activity.LogFragment) {
