@@ -21,20 +21,14 @@ $ vault agent [-help | -h]
 
 ## Description
 
-Start an instance of Vault Agent. to perform automatic authentication and secret
-fetching for client applications.
-
+`vault agent` start an instance of Vault Agent, which automatically
+authenticates and fetches secrets for client applications.
 
 <Tip title="Related API endpoints">
 
   **None**
 
 </Tip>
-
-
-### Limitations and warnings 
-
-None.
 
 ## Command arguments
 
@@ -46,43 +40,62 @@ None.
 
 ## Command flags
 
-  -config=<string>
-      Path to a configuration file. This configuration file should contain
-      only agent directives.
+<br />
 
-  -exit-after-auth
-      If set to true, the agent will exit with code 0 after a single
-      successful auth, where success means that a token was retrieved and all
-      sinks successfully wrote it The default is false.
+@include 'cli/agent/flags/config.mdx'
 
-  -log-file=<string>
-      Path to the log file that Vault should use for logging
+<br /><hr /><br />
 
-  -log-format=<string>
-      Log format. Supported values are "standard" and "json". The default
-      is (not set). This can also be specified via the VAULT_LOG_FORMAT
-      environment variable.
+@include 'cli/agent/flags/exit-after-auth.mdx'
 
-  -log-level=<string>
-      Log verbosity level. Supported values (in order of detail) are "trace",
-      "debug", "info", "warn", and "error". The default is (not set). This can
-      also be specified via the VAULT_LOG_LEVEL environment variable.
+<br /><hr /><br />
 
-  -log-rotate-bytes=<int>
-      Number of bytes that should be written to a log before it needs to be
-      rotated. Unless specified, there is no limit to the number of bytes that
-      can be written to a log file
+@include 'cli/shared/flags/log-file.mdx'
 
-  -log-rotate-duration=<string>
-      The maximum duration a log should be written to before it needs to be
-      rotated. Must be a duration value such as 30s
+<br /><hr /><br />
 
-  -log-rotate-max-files=<int>
-      The maximum number of older log file archives to keep
+@include 'cli/shared/flags/log-format.mdx'
 
+<br /><hr /><br />
+
+@include 'cli/shared/flags/log-level.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/shared/flags/log-rotate-bytes.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/shared/flags/log-rotate-duration.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/shared/flags/log-rotate-max-files.mdx'
 
 ## Standard flags
 
-@include 'cli/standard-settings/all-standard-flags.mdx'
+<br />
+
+@include 'cli/standard-settings/all-standard-flags-but-format.mdx'
 
 ## Examples
+
+Start Vault Agent with a single configuration file:
+
+```shell-session
+$ vault agent -config=/etc/vault/agent/config.hcl
+```
+
+Start Vault Agent with a two discrete configuration files:
+
+```shell-session
+$ vault agent                                   \
+    -config=/etc/vault/agent/base-config.hcl    \
+    -config=/etc/vault/agent/auto-auth-config.hcl
+```
+
+Start Vault Agent with a set of configuration files under the `` directory:
+
+```shell-session
+$ vault agent -config=/etc/vault/agent/config-files/
+```
