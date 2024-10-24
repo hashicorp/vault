@@ -343,6 +343,10 @@ jobs:
             URL="https://storage.googleapis.com/gvisor/releases/release/latest/${ARCH}"
             wget --quiet "${URL}/runsc" "${URL}/runsc.sha512" \
               "${URL}/containerd-shim-runsc-v1" "${URL}/containerd-shim-runsc-v1.sha512"
+            echo runsc.sha512
+            cat runsc.sha512
+            echo "containerd-shim-runsc-v1.sha512"
+            cat containerd-shim-runsc-v1.sha512
             sha512sum -c runsc.sha512 \
               -c containerd-shim-runsc-v1.sha512
             rm -f -- *.sha512
