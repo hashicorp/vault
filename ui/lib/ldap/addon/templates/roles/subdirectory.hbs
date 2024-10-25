@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-{{#let this.model.parentRole.type this.model.parentRole.path_to_role as |roleType pathToRole|}}
+{{#let this.model.roleAncestry.type this.model.roleAncestry.path_to_role as |roleType pathToRole|}}
   <Page::Roles
     @roles={{this.model.roles}}
     @promptConfig={{false}}

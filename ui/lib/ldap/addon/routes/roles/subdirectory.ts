@@ -15,7 +15,7 @@ import type Transition from '@ember/routing/transition';
 
 interface LdapRolesSubdirectoryRouteModel {
   backendModel: SecretEngineModel;
-  parentRole: { path_to_role: string; type: string };
+  roleAncestry: { path_to_role: string; type: string };
   roles: Array<LdapRoleModel>;
 }
 
@@ -43,11 +43,11 @@ export default class LdapRolesSubdirectoryRoute extends LdapRolesRoute {
   model(params: LdapRolesSubdirectoryParams) {
     const backendModel = this.modelFor('application') as SecretEngineModel;
     const { path_to_role, type } = params;
-    const parentRole = { path_to_role, type };
+    const roleAncestry = { path_to_role, type };
     return hash({
       backendModel,
-      parentRole,
-      roles: this.lazyQuery({ parentRole }, backendModel.id, params),
+      roleAncestry,
+      roles: this.lazyQuery({ roleAncestry }, backendModel.id, params),
     });
   }
 
@@ -57,12 +57,12 @@ export default class LdapRolesSubdirectoryRoute extends LdapRolesRoute {
     transition: Transition
   ) {
     super.setupController(controller, resolvedModel, transition);
-    const { backendModel, parentRole } = resolvedModel;
+    const { backendModel, roleAncestry } = resolvedModel;
     const crumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: backendModel.id, route: 'overview' },
       { label: 'Roles', route: 'roles' },
-      ...ldapBreadcrumbs(parentRole.path_to_role, parentRole.type, backendModel.id),
+      ...ldapBreadcrumbs(roleAncestry.path_to_role, roleAncestry.type, backendModel.id),
     ];
 
     // must call 'set' so breadcrumbs update as we navigate through directories

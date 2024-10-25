@@ -33,26 +33,20 @@ export default class LdapRoleAdapter extends NamedPathAdapter {
   }
 
   async query(store, type, query, recordArray, options) {
-    const { showPartialError, parentRole } = options.adapterOptions || {};
+    const { showPartialError, roleAncestry } = options.adapterOptions || {};
     const { backend } = query;
+
+    if (roleAncestry) {
+      return this._querySubdirectory(backend, roleAncestry);
+    }
+
+    return this._queryAll(backend, showPartialError);
+  }
+
+  // LIST request for all roles (static and dynamic)
+  async _queryAll(backend, showPartialError) {
     let roles = [];
     const errors = [];
-
-    if (parentRole) {
-      // path_to_role is ancestral directory path
-      const { path_to_role, type } = parentRole;
-      const url = `${this.getURL(backend, this.pathForRoleType(type))}/${path_to_role}`;
-      const roles = await this.ajax(url, 'GET', { data: { list: true } }).then((resp) => {
-        return resp.data.keys.map((name) => ({
-          id: name,
-          path_to_role,
-          name,
-          backend,
-          type,
-        }));
-      });
-      return { data: { keys: roles } };
-    }
 
     for (const roleType of ['static', 'dynamic']) {
       const url = this.getURL(backend, this.pathForRoleType(roleType));
@@ -91,6 +85,24 @@ export default class LdapRoleAdapter extends NamedPathAdapter {
     // changing the responsePath or providing the extractLazyPaginatedData serializer method causes normalizeResponse to return data: [undefined]
     return { data: { keys: sortObjects(roles, 'name') } };
   }
+
+  // LIST request for children of a hierarchal role
+  async _querySubdirectory(backend, roleAncestry) {
+    // path_to_role is the ancestral path
+    const { path_to_role, type } = roleAncestry;
+    const url = `${this.getURL(backend, this.pathForRoleType(type))}/${path_to_role}`;
+    const roles = await this.ajax(url, 'GET', { data: { list: true } }).then((resp) => {
+      return resp.data.keys.map((name) => ({
+        id: name,
+        path_to_role, // adds pathToRole attr to ldap/role model
+        name,
+        backend,
+        type,
+      }));
+    });
+    return { data: { keys: roles } };
+  }
+
   queryRecord(store, type, query) {
     const { backend, name, type: roleType } = query;
     const url = this.getURL(backend, this.pathForRoleType(roleType), name);
