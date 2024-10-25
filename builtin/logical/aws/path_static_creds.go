@@ -23,8 +23,8 @@ const (
 
 type awsCredentials struct {
 	AccessKeyID     string     `json:"access_key" structs:"access_key" mapstructure:"access_key"`
-	SecretAccessKey string     `json:"secret_key" structs:"secret_key" mapstructure:"secret_key"`
 	Expiration      *time.Time `json:"expiration,omitempty" structs:"expiration" mapstructure:"expiration"`
+	SecretAccessKey string     `json:"secret_key" structs:"secret_key" mapstructure:"secret_key"`
 }
 
 func pathStaticCredentials(b *backend) *framework.Path {
