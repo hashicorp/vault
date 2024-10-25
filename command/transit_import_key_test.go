@@ -171,7 +171,7 @@ func execTransitImport(t *testing.T, client *api.Client, method string, path str
 func generateKeys(t *testing.T) (rsa1 []byte, rsa2 []byte, aes128 []byte, aes256 []byte) {
 	t.Helper()
 
-	priv1, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
+	priv1, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	require.NotNil(t, priv1, "failed generating RSA 1 key")
 	require.NoError(t, err, "failed generating RSA 1 key")
 
@@ -179,7 +179,7 @@ func generateKeys(t *testing.T) (rsa1 []byte, rsa2 []byte, aes128 []byte, aes256
 	require.NotNil(t, rsa1, "failed marshaling RSA 1 key")
 	require.NoError(t, err, "failed marshaling RSA 1 key")
 
-	priv2, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
+	priv2, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	require.NotNil(t, priv2, "failed generating RSA 2 key")
 	require.NoError(t, err, "failed generating RSA 2 key")
 

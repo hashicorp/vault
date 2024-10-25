@@ -1792,7 +1792,7 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 			bitSize = 4096
 		}
 
-		entry.RSAKey, err = cryptoutil.GenerateRSAKeyWithHMACDRBG(randReader, bitSize)
+		entry.RSAKey, err = cryptoutil.GenerateRSAKey(randReader, bitSize)
 		if err != nil {
 			return err
 		}

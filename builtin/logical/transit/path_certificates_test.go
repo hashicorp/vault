@@ -167,7 +167,7 @@ func testTransit_ImportCertChain(t *testing.T, apiClient *api.Client, keyType st
 	require.NoError(t, err)
 
 	// Setup a new CSR
-	privKey, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(cryptoRand.Reader, 3072)
+	privKey, err := cryptoutil.GenerateRSAKey(cryptoRand.Reader, 3072)
 	require.NoError(t, err)
 
 	var csrTemplate x509.CertificateRequest

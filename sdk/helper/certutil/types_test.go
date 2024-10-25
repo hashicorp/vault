@@ -15,7 +15,7 @@ import (
 )
 
 func TestGetPrivateKeyTypeFromPublicKey(t *testing.T) {
-	rsaKey, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
+	rsaKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatalf("error generating rsa key: %s", err)
 	}

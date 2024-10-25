@@ -30,7 +30,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-secure-stdlib/cryptoutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/mitchellh/mapstructure"
@@ -369,7 +368,7 @@ func generatePrivateKey(keyType string, keyBits int, container ParsedPrivateKeyC
 			return errutil.InternalError{Err: fmt.Sprintf("insecure bit length for RSA private key: %d", keyBits)}
 		}
 		privateKeyType = RSAPrivateKey
-		privateKey, err = cryptoutil.GenerateRSAKeyWithHMACDRBG(randReader, keyBits)
+		privateKey, err = rsa2.GenerateKey(randReader, keyBits)
 		if err != nil {
 			return errutil.InternalError{Err: fmt.Sprintf("error generating RSA private key: %v", err)}
 		}

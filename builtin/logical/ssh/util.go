@@ -22,7 +22,7 @@ import (
 // Creates a new RSA key pair with the given key length. The private key will be
 // of pem format and the public key will be of OpenSSH format.
 func generateRSAKeys(keyBits int) (publicKeyRsa string, privateKeyRsa string, err error) {
-	privateKey, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, keyBits)
+	privateKey, err := cryptoutil.GenerateRSAKey(rand.Reader, keyBits)
 	if err != nil {
 		return "", "", fmt.Errorf("error generating RSA key-pair: %w", err)
 	}

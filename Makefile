@@ -164,11 +164,11 @@ protolint: prep check-tools-external
 # now run as a pre-commit hook (and there's little value in
 # making every build run the formatter), we've removed that
 # dependency.
-prep: check-go-version clean
+prep: check-go-version
 	@echo "==> Running go generate..."
-	@GOARCH= GOOS= $(GO_CMD) generate $(MAIN_PACKAGES)
-	@GOARCH= GOOS= cd api && $(GO_CMD) generate $(API_PACKAGES)
-	@GOARCH= GOOS= cd sdk && $(GO_CMD) generate $(SDK_PACKAGES)
+#	@GOARCH= GOOS= $(GO_CMD) generate $(MAIN_PACKAGES)
+#	@GOARCH= GOOS= cd api && $(GO_CMD) generate $(API_PACKAGES)
+#	@GOARCH= GOOS= cd sdk && $(GO_CMD) generate $(SDK_PACKAGES)
 
 # Git doesn't allow us to store shared hooks in .git. Instead, we make sure they're up-to-date
 # whenever a make target is invoked.

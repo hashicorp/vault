@@ -155,7 +155,7 @@ type keyWrapper struct {
 func newPrivateKey(t *testing.T) (key keyWrapper) {
 	t.Helper()
 
-	privKey, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
+	privKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatalf("Unable to generate key for cert: %s", err)
 	}
