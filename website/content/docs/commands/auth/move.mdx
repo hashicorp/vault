@@ -20,6 +20,12 @@ status of the operation until a terminal state of `success` or `failure` is reac
 **Moving an existing auth method will revoke any leases from the old
 method.**
 
+## Standard flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags-but-format.mdx'
+
 ## Examples
 
 Move the existing auth method at ns1/approle/ to ns2/new-approle/:
@@ -28,7 +34,3 @@ Move the existing auth method at ns1/approle/ to ns2/new-approle/:
 $ vault auth move ns1/auth/approle/ ns2/auth/new-approle/
 ```
 
-## Usage
-
-There are no flags beyond the [standard set of flags](/vault/docs/commands)
-included on all commands.

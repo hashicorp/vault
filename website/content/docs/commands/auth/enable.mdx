@@ -96,3 +96,20 @@ flags](/vault/docs/commands) included on all commands.
 - `-plugin-version` `(string: "")` - Configures the semantic version of the plugin
   to use. If unspecified, implies the built-in or any matching unversioned plugin
   that may have been registered.
+
+
+
+## Standard flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags-but-format.mdx'
+
+## Examples
+
+Enable an auth method:
+
+```shell-session
+$ vault auth enable userpass
+Success! Enabled userpass auth method at: userpass/
+```
