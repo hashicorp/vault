@@ -117,7 +117,7 @@ func TestAcmeConfig(t *testing.T) {
 				require.NoError(t, err)
 
 				baseAcmeURL := "/v1/pki/" + tc.prefixUrl
-				accountKey, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
+				accountKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 				require.NoError(t, err, "failed creating rsa key")
 
 				acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)

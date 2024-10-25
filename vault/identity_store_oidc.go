@@ -1762,7 +1762,7 @@ func generateKeys(algorithm string) (*jose.JSONWebKey, error) {
 	switch algorithm {
 	case "RS256", "RS384", "RS512":
 		// 2048 bits is recommended by RSA Laboratories as a minimum post 2015
-		if key, err = cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048); err != nil {
+		if key, err = cryptoutil.GenerateRSAKey(rand.Reader, 2048); err != nil {
 			return nil, err
 		}
 	case "ES256", "ES384", "ES512":

@@ -658,7 +658,7 @@ func TestBackend_NonCAExpiry(t *testing.T) {
 	template.IPAddresses = []net.IP{parsedIP}
 
 	// Private key for CA cert
-	caPrivateKey, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
+	caPrivateKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -726,7 +726,7 @@ func TestBackend_NonCAExpiry(t *testing.T) {
 	template.SerialNumber = big.NewInt(5678)
 
 	template.KeyUsage = x509.KeyUsage(x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign)
-	issuedPrivateKey, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
+	issuedPrivateKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatal(err)
 	}

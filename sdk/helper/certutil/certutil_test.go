@@ -465,7 +465,7 @@ vitin0L6nprauWkKO38XgM4T75qKZpqtiOcT
 }
 
 func TestGetPublicKeySize(t *testing.T) {
-	rsa, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 3072)
+	rsa, err := cryptoutil.GenerateRSAKey(rand.Reader, 3072)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -735,7 +735,7 @@ func setCerts() {
 
 	// RSA generation
 	{
-		key, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
+		key, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 		if err != nil {
 			panic(err)
 		}
@@ -1102,7 +1102,7 @@ func TestIgnoreCSRSigning(t *testing.T) {
 }
 
 func genRsaKey(t *testing.T) *rsa2.PrivateKey {
-	key, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
+	key, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatal(err)
 	}

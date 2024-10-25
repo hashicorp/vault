@@ -133,7 +133,7 @@ func (kg *rsaKeyGenerator) generate(r io.Reader) ([]byte, []byte, error) {
 		return nil, nil, fmt.Errorf("invalid key_bits: %v", kg.KeyBits)
 	}
 
-	key, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(reader, keyBits)
+	key, err := cryptoutil.GenerateRSAKey(reader, keyBits)
 	if err != nil {
 		return nil, nil, err
 	}
