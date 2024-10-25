@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -21,8 +22,9 @@ const (
 )
 
 type awsCredentials struct {
-	AccessKeyID     string `json:"access_key" structs:"access_key" mapstructure:"access_key"`
-	SecretAccessKey string `json:"secret_key" structs:"secret_key" mapstructure:"secret_key"`
+	AccessKeyID     string     `json:"access_key" structs:"access_key" mapstructure:"access_key"`
+	SecretAccessKey string     `json:"secret_key" structs:"secret_key" mapstructure:"secret_key"`
+	Expiration      *time.Time `json:"expiration,omitempty" structs:"expiration" mapstructure:"expiration"`
 }
 
 func pathStaticCredentials(b *backend) *framework.Path {
@@ -87,6 +89,13 @@ func (b *backend) pathStaticCredsRead(ctx context.Context, req *logical.Request,
 
 func formatCredsStoragePath(roleName string) string {
 	return fmt.Sprintf("%s/%s", pathStaticCreds, roleName)
+}
+
+func (a *awsCredentials) priority(role staticRoleEntry) int64 {
+	if a.Expiration != nil {
+		return a.Expiration.Unix()
+	}
+	return time.Now().Add(role.RotationPeriod).Unix()
 }
 
 const pathStaticCredsHelpSyn = `Retrieve static credentials from the named role.`
