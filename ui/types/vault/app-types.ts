@@ -64,6 +64,7 @@ export interface Breadcrumb {
   label: string;
   route?: string;
   linkExternal?: boolean;
+  model?: string;
 }
 
 export interface TtlEvent {
@@ -71,12 +72,6 @@ export interface TtlEvent {
   seconds: number;
   timeString: string;
   goSafeTimeString: string;
-}
-
-export interface Breadcrumb {
-  label: string;
-  route?: string;
-  linkExternal?: boolean;
 }
 
 export interface EngineOwner extends Owner {

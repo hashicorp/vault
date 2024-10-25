@@ -17,14 +17,14 @@ import type SecretEngineModel from 'vault/models/secret-engine';
 import type Controller from '@ember/controller';
 import type { Breadcrumb } from 'vault/vault/app-types';
 
-interface LdapRolesRouteModel {
+interface LdapRolesIndexRouteModel {
   backendModel: SecretEngineModel;
   promptConfig: boolean;
   roles: Array<LdapRoleModel>;
 }
 interface LdapRolesController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
-  model: LdapRolesRouteModel;
+  model: LdapRolesIndexRouteModel;
   pageFilter: string | undefined;
   page: number | undefined;
 }
@@ -35,7 +35,7 @@ interface LdapRolesRouteParams {
 }
 
 @withConfig('ldap/config')
-export default class LdapRolesRoute extends Route {
+export default class LdapRolesIndexRoute extends Route {
   @service declare readonly store: StoreService;
   @service declare readonly pagination: PaginationService;
   @service declare readonly secretMountPath: SecretMountPath;
@@ -51,6 +51,7 @@ export default class LdapRolesRoute extends Route {
     },
   };
 
+  // consolidate logic into lazyQuery function?
   model(params: LdapRolesRouteParams) {
     const backendModel = this.modelFor('application') as SecretEngineModel;
     const page = Number(params.page) || 1;
@@ -73,14 +74,14 @@ export default class LdapRolesRoute extends Route {
 
   setupController(
     controller: LdapRolesController,
-    resolvedModel: LdapRolesRouteModel,
+    resolvedModel: LdapRolesIndexRouteModel,
     transition: Transition
   ) {
     super.setupController(controller, resolvedModel, transition);
 
     controller.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backendModel.id, route: 'overview', model: resolvedModel.backend },
+      { label: resolvedModel.backendModel.id, route: 'overview' },
       { label: 'Roles' },
     ];
   }

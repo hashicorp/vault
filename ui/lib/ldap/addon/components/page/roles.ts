@@ -35,6 +35,7 @@ export default class LdapRolesPageComponent extends Component<Args> {
   @tracked credsToRotate: LdapRoleModel | null = null;
   @tracked roleToDelete: LdapRoleModel | null = null;
 
+  // this component renders in the roles index route and in subdirectory lists for hierarchal roles
   linkParams = (role: LdapRoleModel) => {
     const route = role.name.endsWith('/') ? 'roles.subdirectory' : 'roles.role.details';
     // remove trailing forward slash from URL
@@ -56,7 +57,8 @@ export default class LdapRolesPageComponent extends Component<Args> {
 
   @action
   onFilterChange(pageFilter: string) {
-    this.router.transitionTo('vault.cluster.secrets.backend.ldap.roles', { queryParams: { pageFilter } });
+    // refresh route, which fires off lazyPaginatedQuery to re-request and filter response
+    this.router.transitionTo(this.router?.currentRoute?.name, { queryParams: { pageFilter } });
   }
 
   @action

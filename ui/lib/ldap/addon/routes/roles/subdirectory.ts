@@ -36,6 +36,15 @@ export default class LdapRolesSubdirectoryRoute extends Route {
   @service declare readonly pagination: PaginationService;
   @service declare readonly secretMountPath: SecretMountPath;
 
+  queryParams = {
+    pageFilter: {
+      refreshModel: true,
+    },
+    page: {
+      refreshModel: true,
+    },
+  };
+
   model(params: LdapRolesSubdirectoryParams) {
     const backendModel = this.modelFor('application') as SecretEngineModel;
     const { path_to_role, type } = params;
@@ -65,6 +74,7 @@ export default class LdapRolesSubdirectoryRoute extends Route {
     const { backendModel } = resolvedModel;
     const { path_to_role, type } = this.paramsFor('roles.subdirectory');
     const crumbs = [
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: backendModel.id, route: 'overview' },
       { label: 'Roles', route: 'roles' },
       ...ldapBreadcrumbs(path_to_role, type, backendModel.id),
@@ -72,5 +82,12 @@ export default class LdapRolesSubdirectoryRoute extends Route {
 
     // must call 'set' so breadcrumbs update as we navigate through directories
     controller.set('breadcrumbs', crumbs);
+  }
+
+  resetController(controller: LdapRolesSubdirectoryController, isExiting: boolean) {
+    if (isExiting) {
+      controller.set('pageFilter', undefined);
+      controller.set('page', undefined);
+    }
   }
 }
