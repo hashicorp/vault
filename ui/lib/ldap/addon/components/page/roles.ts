@@ -33,7 +33,11 @@ export default class LdapRolesPageComponent extends Component<Args> {
   @tracked credsToRotate: LdapRoleModel | null = null;
   @tracked roleToDelete: LdapRoleModel | null = null;
 
-  rolePath = (name: string) => `${this.args.roleName}${name}`;
+  linkParams = (role: LdapRoleModel) => {
+    const route = role.name.endsWith('/') ? 'roles.subdirectory' : 'roles.role.details';
+    const roleName = role.pathToRole ? role.pathToRole + role.name : role.name;
+    return [route, role.type, roleName];
+  };
 
   get mountPoint(): string {
     const owner = getOwner(this) as EngineOwner;

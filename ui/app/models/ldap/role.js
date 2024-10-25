@@ -64,6 +64,7 @@ export const dynamicRoleFields = [
 @withFormFields()
 export default class LdapRoleModel extends Model {
   @attr('string') backend; // mount path of secret engine -- set on response from value passed to queryRecord
+  @attr('string') pathToRole; // ancestral path to the role (only exists if the role is hierarchal)
 
   @attr('string', {
     defaultValue: 'static',

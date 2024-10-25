@@ -43,7 +43,7 @@
 {{else}}
   <div class="has-bottom-margin-s">
     {{#each @roles as |role|}}
-      <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{array "roles.role" role.type role.name}} as |Item|>
+      <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{this.linkParams role}} as |Item|>
         <Item.content>
           <Icon @name="user" />
           <span data-test-role={{role.name}}>{{role.name}}</span>

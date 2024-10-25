@@ -39,10 +39,17 @@ export default class LdapRoleAdapter extends NamedPathAdapter {
     const errors = [];
 
     if (parentRole) {
-      const { name, type } = parentRole;
-      const url = `${this.getURL(backend, this.pathForRoleType(type))}/${name}`;
+      // path_to_role is ancestral directory path
+      const { path_to_role, type } = parentRole;
+      const url = `${this.getURL(backend, this.pathForRoleType(type))}/${path_to_role}`;
       const roles = await this.ajax(url, 'GET', { data: { list: true } }).then((resp) => {
-        return resp.data.keys.map((key) => ({ id: key, name: `${name}${key}`, backend, type }));
+        return resp.data.keys.map((name) => ({
+          id: name,
+          path_to_role,
+          name,
+          backend,
+          type,
+        }));
       });
       return { data: { keys: roles } };
     }

@@ -9,6 +9,7 @@ export default buildRoutes(function () {
   this.route('overview');
   this.route('roles', function () {
     this.route('create');
+    this.route('subdirectory', { path: '/:type/*path_to_role' });
     this.route('role', { path: '/:type/:name' }, function () {
       this.route('details');
       this.route('edit');

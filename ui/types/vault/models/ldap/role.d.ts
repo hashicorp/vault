@@ -9,6 +9,7 @@ import { LdapDynamicRoleCredentials, LdapStaticRoleCredentials } from 'ldap/rout
 export default interface LdapRoleModel extends WithFormFieldsAndValidationsModel {
   type: string;
   backend: string;
+  pathToRole: string;
   name: string;
   dn: string;
   username: string;
