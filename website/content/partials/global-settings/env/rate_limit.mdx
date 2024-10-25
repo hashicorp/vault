@@ -1,0 +1,20 @@
+<a id="global-vault_rate_limit" />
+
+**`VAULT_RATE_LIMIT (string : unset)`**
+
+The number of operations per second, in `rate[:burst]` format, used to throttle
+requests between the CLI and the server. The `burst` value is optional and
+defaults to `rate` when not specified.
+
+Leaving `VAULT_RATE_LIMIT` unset disables request limiting.
+
+**Example**: `export VAULT_RATE_LIMIT="10:30"`
+
+<Tip>
+
+  The rate limit is not global and applies individually to each invocation of
+  the CLI. As a result, the `VAULT_RATE_LIMIT` variable is most useful when
+  using the Go SDK for Vault.
+
+</Tip>
+

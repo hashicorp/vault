@@ -1,0 +1,17 @@
+<a id="global-vault_srv_lookup" />
+
+**`VAULT_SRV_LOOKUP (bool : false)`**
+
+Use SRV records instead of standard DNS to look up hostnames as described in
+the Network Working Group draft
+["Use of SRV records in conjunction with HTTP and URIs"](https://datatracker.ietf.org/doc/html/draft-andrews-http-srv-02).
+
+**Example**: `export VAULT_SRV_LOOKUP=1`
+
+<Warning title="Not appropriate for production">
+
+  SRV lookup is still in discovery and not designed for high-availability
+  deployments.
+
+</Warning>
+
