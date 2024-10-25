@@ -644,7 +644,7 @@
           {
             "title": "<code>generate-config</code>",
             "path": "commands/agent/generate-config"
-          }    
+          }
         ]
       },
       {
@@ -712,10 +712,6 @@
       {
         "title": "<code>hcp</code>",
         "routes": [
-          {
-            "title": "Overview",
-            "path": "commands/hcp"
-          },
           {
             "title": "<code>connect</code>",
             "path": "commands/hcp/connect"
@@ -1950,7 +1946,6 @@
                 "path": "auth/saml/troubleshoot-adfs/adfs-event-320"
               }
             ]
-            
           }
         ]
       },
