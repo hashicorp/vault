@@ -108,7 +108,9 @@
     <Hds::Pagination::Numbered
       @currentPage={{@roles.meta.currentPage}}
       @currentPageSize={{@roles.meta.pageSize}}
-      @route="roles"
+      {{! localName will be either "index" or "subdirectory" }}
+      @route="roles.{{this.router.currentRoute.localName}}"
+      @models={{@currentRouteParams}}
       @showSizeSelector={{false}}
       @totalItems={{@roles.meta.filteredTotal}}
       @queryFunction={{this.paginationQueryParams}}

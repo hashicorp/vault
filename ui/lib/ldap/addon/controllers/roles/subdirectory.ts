@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import LdapRolesController from '.';
+import Controller from '@ember/controller';
 
-export default class LdapRolesSubdirectoryController extends LdapRolesController {}
+export default class LdapRolesSubdirectoryController extends Controller {
+  queryParams = ['pageFilter', 'page'];
+}

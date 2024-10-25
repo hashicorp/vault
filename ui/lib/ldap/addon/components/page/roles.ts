@@ -35,7 +35,7 @@ export default class LdapRolesPageComponent extends Component<Args> {
   @tracked credsToRotate: LdapRoleModel | null = null;
   @tracked roleToDelete: LdapRoleModel | null = null;
 
-  // this component renders in the roles index route and in subdirectory lists for hierarchal roles
+  // this component renders in the roles.index route and roles.subdirectory (for hierarchal roles)
   linkParams = (role: LdapRoleModel) => {
     const route = role.name.endsWith('/') ? 'roles.subdirectory' : 'roles.role.details';
     // remove trailing forward slash from URL

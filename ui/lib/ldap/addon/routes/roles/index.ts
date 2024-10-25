@@ -3,14 +3,12 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Route from '@ember/routing/route';
+import LdapRolesRoute from '../roles';
 import { service } from '@ember/service';
 import { withConfig } from 'core/decorators/fetch-secrets-engine-config';
 import { hash } from 'rsvp';
 
 import type StoreService from 'vault/services/store';
-import type PaginationService from 'vault/services/pagination';
-import type SecretMountPath from 'vault/services/secret-mount-path';
 import type Transition from '@ember/routing/transition';
 import type LdapRoleModel from 'vault/models/ldap/role';
 import type SecretEngineModel from 'vault/models/secret-engine';
@@ -25,8 +23,6 @@ interface LdapRolesIndexRouteModel {
 interface LdapRolesController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
   model: LdapRolesIndexRouteModel;
-  pageFilter: string | undefined;
-  page: number | undefined;
 }
 
 interface LdapRolesRouteParams {
@@ -35,10 +31,8 @@ interface LdapRolesRouteParams {
 }
 
 @withConfig('ldap/config')
-export default class LdapRolesIndexRoute extends Route {
-  @service declare readonly store: StoreService;
-  @service declare readonly pagination: PaginationService;
-  @service declare readonly secretMountPath: SecretMountPath;
+export default class LdapRolesIndexRoute extends LdapRolesRoute {
+  @service declare readonly store: StoreService; // for @withConfig decorator
 
   declare promptConfig: boolean;
 
@@ -51,24 +45,12 @@ export default class LdapRolesIndexRoute extends Route {
     },
   };
 
-  // consolidate logic into lazyQuery function?
   model(params: LdapRolesRouteParams) {
     const backendModel = this.modelFor('application') as SecretEngineModel;
-    const page = Number(params.page) || 1;
     return hash({
       backendModel,
       promptConfig: this.promptConfig,
-      roles: this.pagination.lazyPaginatedQuery(
-        'ldap/role',
-        {
-          backend: backendModel.id,
-          page,
-          pageFilter: params.pageFilter,
-          responsePath: 'data.keys',
-          skipCache: page === 1,
-        },
-        { adapterOptions: { showPartialError: true } }
-      ),
+      roles: this.lazyQuery({ showPartialError: true }, backendModel.id, params),
     });
   }
 
