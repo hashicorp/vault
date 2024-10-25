@@ -6,9 +6,9 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 
+import { ModelFrom } from 'vault/vault/route';
 import type Store from '@ember-data/store';
 import type SecretMountPath from 'vault/services/secret-mount-path';
-import { ModelFrom } from 'vault/vault/route';
 
 interface LdapRoleRouteParams {
   name: string;

@@ -8,6 +8,8 @@ import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { getOwner } from '@ember/owner';
 import errorMessage from 'vault/utils/error-message';
+import { tracked } from '@glimmer/tracking';
+import { sanitizePath } from 'core/utils/sanitize-path';
 
 import type LdapRoleModel from 'vault/models/ldap/role';
 import type SecretEngineModel from 'vault/models/secret-engine';
@@ -15,7 +17,6 @@ import type FlashMessageService from 'vault/services/flash-messages';
 import type { Breadcrumb, EngineOwner } from 'vault/vault/app-types';
 import type RouterService from '@ember/routing/router-service';
 import type PaginationService from 'vault/services/pagination';
-import { tracked } from '@glimmer/tracking';
 
 interface Args {
   roles: Array<LdapRoleModel>;
@@ -30,12 +31,17 @@ export default class LdapRolesPageComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
   @service('app-router') declare readonly router: RouterService;
   @service declare readonly pagination: PaginationService;
+
   @tracked credsToRotate: LdapRoleModel | null = null;
   @tracked roleToDelete: LdapRoleModel | null = null;
 
   linkParams = (role: LdapRoleModel) => {
     const route = role.name.endsWith('/') ? 'roles.subdirectory' : 'roles.role.details';
-    const roleName = role.pathToRole ? role.pathToRole + role.name : role.name;
+    // remove trailing forward slash from URL
+    const sanitizedName = sanitizePath(role.name);
+    // if there is a pathToRole we're in a subdirectory
+    // and must concat the ancestors with the leaf to get the full name
+    const roleName = role.pathToRole ? `${sanitizePath(role.pathToRole)}/${sanitizedName}` : sanitizedName;
     return [route, role.type, roleName];
   };
 
