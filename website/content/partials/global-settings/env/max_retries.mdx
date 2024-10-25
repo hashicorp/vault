@@ -1,0 +1,14 @@
+<a id="global-vault_max_retries" />
+
+**`VAULT_MAX_RETRIES (integer : 2)`**
+
+The number of times the CLI should retry a request to the Vault server when the
+CLI receives one of the following recoverable error codes:
+
+- **`412`** - "Client consistency requirement not satisfied"
+- **`5xx`** - Any server error except `501`, which Vault does not use.
+
+To disable retrying, set `VAULT_MAX_RETRIES` to `0`.
+
+**Example**: `export VAULT_MAX_RETRIES=5`
+

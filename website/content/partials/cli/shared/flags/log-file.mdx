@@ -1,0 +1,12 @@
+<a id="shared-flag-log-file" />
+
+**`-log-file (string : "./<service>.log")`**
+
+Absolute path where Vault Agent saves logging data.
+
+- Paths ending with `/` use the default file name `<service>.log`. For example,
+  `vault.log` for Vault and `agent.log` for Vault Agent.
+- Paths ending with a name but not an extension use the `.log` extension.
+- Paths ending with a name and extension use the provided file name.
+
+**Example**: `-log-file "/var/log/vault-logs/"`
