@@ -635,8 +635,17 @@
       { "divider": true },
       { "heading": "CLI commands" },
       {
-        "title": "<code>agent</code>",
-        "path": "commands/agent"
+        "title": "Vault Agent",
+        "routes": [
+          {
+            "title": "<code>agent</code>",
+            "path": "commands/agent"
+          },
+          {
+            "title": "<code>generate-config</code>",
+            "path": "commands/agent/generate-config"
+          }    
+        ]
       },
       {
         "title": "<code>audit</code>",
