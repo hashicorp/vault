@@ -2,17 +2,20 @@
 layout: docs
 page_title: "agent generate-config - Vault CLI"
 description: >-
-  Generate a basic Vault Agent configuration file from the provided parameters.
+  Use vault agent generate-config to generate a basic Vault Agent configuration
+  file from secrets plugin data.
 ---
 
 # `agent generate-config`
 
-Generate a basic Vault Agent configuration file from the provided parameters.
+Use secrets plugin data to generate a basic
+[configuration file](/vault/docs/agent-and-proxy/agent#configuration-file-options)
+for running Vault Agent in [process supervisor mode](/vault/docs/agent-and-proxy/agent/process-supervisor).
 
 <CodeBlockConfig hideClipboard>
 
 ```shell-session
-$ vault agent generate-config -type <config_file_type> [options] [<config_file_path>]
+$ vault agent generate-config -type <config_file_type> [options] [<file_path>]
 ```
 
 </CodeBlockConfig>
@@ -20,11 +23,8 @@ $ vault agent generate-config -type <config_file_type> [options] [<config_file_p
 ## Description 
 
 `agent generate-config` composes configuration details for Vault Agent
-based on the configuration `type` and writes the information to a local file. 
-
-Config type    | File contents
--------------- | -------------
-`env-template` | Environment variable entries based on the JSON key(s) found for each `path` value.
+based on the configuration `type` and writes a local configuration file for
+running Vault agent in process supervisor mode.
 
 <Tip title="Related API endpoints">
 
@@ -34,52 +34,60 @@ Config type    | File contents
 
 ### Limitations and warnings
 
-- Plugin support limited to KV plugins.
-- Configuration type limited to environment variable template (`env-template`)
-  configuration files.
+Limitations:
 
-The generated file also includes an `auto_auth` section configured to use the
-`token_file` authentication method. The `token_file` method is convenient for
-local testing, but **is not** appropriates for production use. Refer to the
-full list of Vault Agent
-[autoAuth methods](/vault/docs/agent-and-proxy/autoauth/methods) for a list of
-production-ready authentication methods.
+- Plugin support limited to KV plugins.
+- Configuration type limited to environment variable templates.
+
+<Warning title="Not appropriate for production">
+
+  The file created by `agent generate-config` includes an `auto_auth` section
+  configured to use the `token_file` authentication method.
+
+  Token files are convenient for local testing, but **are not** appropriates for
+  production use. Refer to the full list of Vault Agent
+  [autoAuth methods](/vault/docs/agent-and-proxy/autoauth/methods) for available
+  production-ready authentication methods.
+
+</Warning>
 
 ## Arguments
 
-config-file-path
+<br />
+
+@include 'cli/agent/args/file_path.mdx'
+
+
 
 ## Options
 
+None.
+
+
+
 ## Command Flags
 
-`-type=<enum:env-template>`
+<br />
 
-Indicates the type/purpose of the configuration file:
+@include 'cli/agent/flags/exec.mdx'
 
-- `env-template` - configuration file with environment variable templates for
-  running Vault Agent in process supervisor mode. 
+<br /><hr /><br />
 
----
+@include 'cli/agent/flags/path.mdx'
 
-  The command specified in the '-exec' option will be used to generate an
-  'exec' entry, which will tell Vault Agent which child process to run.
+<br /><hr /><br />
+
+@include 'cli/agent/flags/type.mdx'
 
 
-  By default, the file will be generated in the local directory as 'agent.hcl'
-  unless a path is specified as an argument.
-
----
-
-- `path` - If the `path` ends with `/*`, the command recurses
-  through the secrets tree rooted at the given path and generates entries for
-  each secret found.
 
 ## Global flags
 
 <br />
 
 @include 'cli/standard-settings/all-standard-flags-but-format.mdx'
+
+
 
 ## Examples
 
@@ -105,4 +113,3 @@ $ vault agent generate-config -type="env-template" \
     -path="secret/bar" \
     -path="secret/my-app/*"
 ```
-
