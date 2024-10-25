@@ -810,7 +810,7 @@ func Test_Import(t *testing.T) {
 func generateTestKeys() (map[KeyType][]byte, error) {
 	keyMap := make(map[KeyType][]byte)
 
-	rsaKey, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
+	rsaKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	if err != nil {
 		return nil, err
 	}
@@ -820,7 +820,7 @@ func generateTestKeys() (map[KeyType][]byte, error) {
 	}
 	keyMap[KeyType_RSA2048] = rsaKeyBytes
 
-	rsaKey, err = cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 3072)
+	rsaKey, err = cryptoutil.GenerateRSAKey(rand.Reader, 3072)
 	if err != nil {
 		return nil, err
 	}
@@ -830,7 +830,7 @@ func generateTestKeys() (map[KeyType][]byte, error) {
 	}
 	keyMap[KeyType_RSA3072] = rsaKeyBytes
 
-	rsaKey, err = cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 4096)
+	rsaKey, err = cryptoutil.GenerateRSAKey(rand.Reader, 4096)
 	if err != nil {
 		return nil, err
 	}

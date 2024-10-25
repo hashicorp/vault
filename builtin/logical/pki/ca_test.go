@@ -98,7 +98,7 @@ func TestBackend_CA_Steps(t *testing.T) {
 		}
 		ecCACert = strings.TrimSpace(string(pem.EncodeToMemory(caCertPEMBlock)))
 
-		rak, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
+		rak, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 		if err != nil {
 			panic(err)
 		}

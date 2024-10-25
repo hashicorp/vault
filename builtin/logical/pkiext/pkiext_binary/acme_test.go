@@ -704,7 +704,7 @@ func doAcmeValidationWithGoLibrary(t *testing.T, directoryUrl string, acmeOrderI
 	}
 	httpClient := &http.Client{Transport: tr}
 
-	accountKey, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
+	accountKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	require.NoError(t, err, "failed creating rsa account key")
 	logger.Trace("Using the following url for the ACME directory", "url", directoryUrl)
 	acmeClient := &acme.Client{
@@ -957,7 +957,7 @@ func SubtestACMEStepDownNode(t *testing.T, cluster *VaultPkiCluster) {
 		DNSNames: []string{hostname, hostname},
 	}
 
-	accountKey, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
+	accountKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	require.NoError(t, err, "failed creating rsa account key")
 
 	acmeClient := &acme.Client{

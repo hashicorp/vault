@@ -326,7 +326,7 @@ func generateSSHKeyPair(randomSource io.Reader, keyType string, keyBits int) (st
 			return "", "", fmt.Errorf("refusing to generate weak %v key: %v bits < 2048 bits", keyType, keyBits)
 		}
 
-		privateSeed, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(randomSource, keyBits)
+		privateSeed, err := cryptoutil.GenerateRSAKey(randomSource, keyBits)
 		if err != nil {
 			return "", "", err
 		}

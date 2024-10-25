@@ -916,7 +916,7 @@ func TestTidyAcmeWithBackdate(t *testing.T) {
 
 	// Register an Account, do nothing with it
 	baseAcmeURL := "/v1/pki/acme/"
-	accountKey, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
+	accountKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	require.NoError(t, err, "failed creating rsa key")
 
 	acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)
@@ -1073,7 +1073,7 @@ func TestTidyAcmeWithSafetyBuffer(t *testing.T) {
 
 	// Register an Account, do nothing with it
 	baseAcmeURL := "/v1/pki/acme/"
-	accountKey, err := cryptoutil.GenerateRSAKeyWithHMACDRBG(rand.Reader, 2048)
+	accountKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	require.NoError(t, err, "failed creating rsa key")
 
 	acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)
