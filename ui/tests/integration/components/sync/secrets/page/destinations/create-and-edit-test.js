@@ -24,7 +24,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
     this.transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
-    this.clearDatasetStub = sinon.stub(this.store, 'clearDataset');
+    this.clearDatasetStub = sinon.stub(this.owner.lookup('service:pagination'), 'clearDataset');
 
     this.renderFormComponent = () => {
       return render(hbs` <Secrets::Page::Destinations::CreateAndEdit @destination={{this.model}} />`, {
