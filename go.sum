@@ -1398,8 +1398,8 @@ github.com/hashicorp/go-discover v0.0.0-20210818145131-c573d69da192 h1:eje2KOX8S
 github.com/hashicorp/go-discover v0.0.0-20210818145131-c573d69da192/go.mod h1:3/4dzY4lR1Hzt9bBqMhBzG7lngZ0GKx/nL6G/ad62wE=
 github.com/hashicorp/go-gatedio v0.5.0 h1:Jm1X5yP4yCqqWj5L1TgW7iZwCVPGtVc+mro5r/XX7Tg=
 github.com/hashicorp/go-gatedio v0.5.0/go.mod h1:Lr3t8L6IyxD3DAeaUxGcgl2JnRUpWMCsmBl4Omu/2t4=
-github.com/hashicorp/go-gcp-common v0.9.0 h1:dabqPrA+vlNWcyQV/3yOI6WCmQGFJgwyztDEsqDp+Q0=
-github.com/hashicorp/go-gcp-common v0.9.0/go.mod h1:aZnN6BVMqryPo4vIy97ZAYSoREnJWilLMmaOmi5P7vY=
+github.com/hashicorp/go-gcp-common v0.9.1 h1:ZzAJNAz6OwpNUutnnUVnFERtR2fI1oZT5Z2i1vOly/s=
+github.com/hashicorp/go-gcp-common v0.9.1/go.mod h1:JJ5Zvnsmrn1GkBg64+oDfSK/gJtnGyX5x2nFuSdulLw=
 github.com/hashicorp/go-hclog v0.9.1/go.mod h1:5CU+agLiy3J7N7QjHK5d05KxGsuXiQLrjA0H7acj2lQ=
 github.com/hashicorp/go-hclog v0.9.2/go.mod h1:5CU+agLiy3J7N7QjHK5d05KxGsuXiQLrjA0H7acj2lQ=
 github.com/hashicorp/go-hclog v0.14.1/go.mod h1:whpDNt7SSdeAju8AWKIWsul05p54N/39EeqMAyrmvFQ=
@@ -1550,8 +1550,8 @@ github.com/hashicorp/vault-plugin-auth-azure v0.19.1 h1:7ZUq9fBSqHE+oRZZr/zYxQOz
 github.com/hashicorp/vault-plugin-auth-azure v0.19.1/go.mod h1:elSxwfldjnRJQsJIAfD305g7gvUnFDykGvuY5phNNgw=
 github.com/hashicorp/vault-plugin-auth-cf v0.19.0 h1:/I084ZCypbhTO5ZiYjxhjzokuDqOWWLLxHatyViU9ss=
 github.com/hashicorp/vault-plugin-auth-cf v0.19.0/go.mod h1:LiH/IttNxAgto2ooR9l2g6+CiXc5c/1uPE0pT0hILRg=
-github.com/hashicorp/vault-plugin-auth-gcp v0.19.0 h1:mMTnAGDi6GigGmP9DlLjDzp5VRF8/sZzw8hlfOLFbbU=
-github.com/hashicorp/vault-plugin-auth-gcp v0.19.0/go.mod h1:+0+ufeudu8nKVS448iHnzKp5SgLtMcs2U9E0nOUoL/Q=
+github.com/hashicorp/vault-plugin-auth-gcp v0.19.1 h1:ALSm4IUBRien3uKrdtvihxSwmOaKJxzKqDmTR2WpMG8=
+github.com/hashicorp/vault-plugin-auth-gcp v0.19.1/go.mod h1:NwWKw3t/ZjqDd4PdYe2LVTvX0EAMmwFaexIQQWb+U0U=
 github.com/hashicorp/vault-plugin-auth-jwt v0.22.0 h1:ihjx6HszRSt8Vfknc5t0AKXBQqFhqTQ4Wdd/PK+EboU=
 github.com/hashicorp/vault-plugin-auth-jwt v0.22.0/go.mod h1:+Ne5sCgAza7aDIzxE4aruv6PeQI9ORWIvg/dFe2jlJU=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.13.0 h1:KN+nY7XJANb7IRILf0EnaCT04JI9ctiUhq/W9sgyJnk=
