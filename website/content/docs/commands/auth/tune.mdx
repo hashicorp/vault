@@ -194,3 +194,13 @@ flags](/vault/docs/commands) included on all commands.
 @include 'cli/standard-settings/all-standard-flags-but-format.mdx'
 
 ## Examples
+
+
+## Examples
+
+Tune an auth method:
+
+```shell-session
+$ vault auth tune -max-lease-ttl=30m userpass/
+Success! Tuned the auth method at: userpass/
+```

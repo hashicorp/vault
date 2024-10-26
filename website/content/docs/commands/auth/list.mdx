@@ -61,6 +61,16 @@ approle/    approle    auth_approle_95df932e    system         system     defaul
 token/      token      auth_token_aafab997      system         system     default-service    replicated     false        false                      map[]      token based credentials    6eb5db7b-ac7f-4304-1f52-9b802c6f06c1    n/a
 ```
 
+List all auth methods:
+
+```shell-session
+$ vault auth list
+Path         Type        Description
+----         ----        -----------
+token/       token       token based credentials
+userpass/    userpass    n/a
+```
+
 ## Usage
 
 The following flags are available in addition to the [standard set of

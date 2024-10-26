@@ -668,10 +668,6 @@
         "title": "<code>auth</code>",
         "routes": [
           {
-            "title": "Overview",
-            "path": "commands/auth"
-          },
-          {
             "title": "<code>disable</code>",
             "path": "commands/auth/disable"
           },
