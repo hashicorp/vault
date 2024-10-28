@@ -320,7 +320,6 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite(makeSealer func() snap
 					challenge: protoBlob,
 				}
 				b.Core.pendingRaftPeers.Add(serverID, challenge)
-				b.logger.Info("creating challenge", "node", serverID)
 			}
 		}
 
