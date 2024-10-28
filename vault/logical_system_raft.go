@@ -273,6 +273,10 @@ func (b *SystemBackend) handleRaftRemovePeerUpdate() framework.OperationFunc {
 	}
 }
 
+const answerSize = 16
+
+var answerMaxEncodedSize = base64.StdEncoding.EncodedLen(answerSize)
+
 func (b *SystemBackend) handleRaftBootstrapChallengeWrite(makeSealer func() snapshot.Sealer) framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 		serverID := d.Get("server_id").(string)
@@ -287,7 +291,7 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite(makeSealer func() snap
 				return logical.RespondWithStatusCode(logical.ErrorResponse("too many raft challenges in flight"), req, http.StatusTooManyRequests)
 			}
 			var err error
-			answer, err = uuid.GenerateRandomBytes(16)
+			answer, err = uuid.GenerateRandomBytes(answerSize)
 			if err != nil {
 				return nil, err
 			}
@@ -337,6 +341,9 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 		answerRaw := d.Get("answer").(string)
 		if len(answerRaw) == 0 {
 			return logical.ErrorResponse("no answer provided"), logical.ErrInvalidRequest
+		}
+		if len(answerRaw) > answerMaxEncodedSize {
+			return logical.ErrorResponse("answer is too long"), logical.ErrInvalidRequest
 		}
 		clusterAddr := d.Get("cluster_addr").(string)
 		if len(clusterAddr) == 0 {
