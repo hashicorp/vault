@@ -251,6 +251,43 @@ func TestRaft_Retry_Join(t *testing.T) {
 	})
 }
 
+// TestRaftChallenge_sameAnswerSameID_concurrent verifies that 10 goroutines
+// all requesting a raft challenge with the same ID all return the same answer.
+// This is a regression test for a TOCTTOU race found during testing.
+func TestRaftChallenge_sameAnswerSameID_concurrent(t *testing.T) {
+	t.Parallel()
+
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
+		DisableFollowerJoins: true,
+		NumCores:             1,
+	})
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	challenges := make(chan string, 15)
+	wg := sync.WaitGroup{}
+	for i := 0; i < 15; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			res, err := client.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
+				"server_id": "node1",
+			})
+			require.NoError(t, err)
+			challenges <- res.Data["challenge"].(string)
+		}()
+	}
+
+	wg.Wait()
+	challengeSet := make(map[string]struct{})
+	close(challenges)
+	for challenge := range challenges {
+		challengeSet[challenge] = struct{}{}
+	}
+
+	require.Len(t, challengeSet, 1)
+}
+
 // TestRaftChallenge_sameAnswerSameID verifies that repeated bootstrap requests
 // with the same node ID return the same challenge, but that a different node ID
 // returns a different challenge

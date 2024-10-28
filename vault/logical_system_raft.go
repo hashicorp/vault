@@ -285,32 +285,43 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite(makeSealer func() snap
 		}
 
 		var answer []byte
+		b.Core.pendingRaftPeersLock.RLock()
 		challenge, ok := b.Core.pendingRaftPeers.Get(serverID)
+		b.Core.pendingRaftPeersLock.RUnlock()
 		if !ok {
 			if !b.raftChallengeLimiter.Allow() {
 				return logical.RespondWithStatusCode(logical.ErrorResponse("too many raft challenges in flight"), req, http.StatusTooManyRequests)
 			}
-			var err error
-			answer, err = uuid.GenerateRandomBytes(answerSize)
-			if err != nil {
-				return nil, err
-			}
 
-			sealer := makeSealer()
-			if sealer == nil {
-				return nil, errors.New("core has no seal access to write raft bootstrap challenge")
-			}
-			protoBlob, err := sealer.Seal(ctx, answer)
-			if err != nil {
-				return nil, err
-			}
+			b.Core.pendingRaftPeersLock.Lock()
+			defer b.Core.pendingRaftPeersLock.Unlock()
 
-			challenge = &raftBootstrapChallenge{
-				serverID:  serverID,
-				answer:    answer,
-				challenge: protoBlob,
+			challenge, ok = b.Core.pendingRaftPeers.Get(serverID)
+			if !ok {
+
+				var err error
+				answer, err = uuid.GenerateRandomBytes(answerSize)
+				if err != nil {
+					return nil, err
+				}
+
+				sealer := makeSealer()
+				if sealer == nil {
+					return nil, errors.New("core has no seal access to write raft bootstrap challenge")
+				}
+				protoBlob, err := sealer.Seal(ctx, answer)
+				if err != nil {
+					return nil, err
+				}
+
+				challenge = &raftBootstrapChallenge{
+					serverID:  serverID,
+					answer:    answer,
+					challenge: protoBlob,
+				}
+				b.Core.pendingRaftPeers.Add(serverID, challenge)
+				b.logger.Info("creating challenge", "node", serverID)
 			}
-			b.Core.pendingRaftPeers.Add(serverID, challenge)
 		}
 
 		sealConfig, err := b.Core.seal.BarrierConfig(ctx)
@@ -357,12 +368,15 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			return logical.ErrorResponse("could not base64 decode answer"), logical.ErrInvalidRequest
 		}
 
+		b.Core.pendingRaftPeersLock.Lock()
 		expectedChallenge, ok := b.Core.pendingRaftPeers.Get(serverID)
 		if !ok {
+			b.Core.pendingRaftPeersLock.Unlock()
 			return logical.ErrorResponse("no expected answer for the server id provided"), logical.ErrInvalidRequest
 		}
 
 		b.Core.pendingRaftPeers.Remove(serverID)
+		b.Core.pendingRaftPeersLock.Unlock()
 
 		if subtle.ConstantTimeCompare(answer, expectedChallenge.answer) == 0 {
 			return logical.ErrorResponse("invalid answer given"), logical.ErrInvalidRequest

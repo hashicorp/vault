@@ -630,6 +630,8 @@ type Core struct {
 	raftTLSRotationStopCh chan struct{}
 	// Stores the pending peers we are waiting to give answers
 	pendingRaftPeers *lru.Cache[string, *raftBootstrapChallenge]
+	// holds the lock for modifying pendingRaftPeers
+	pendingRaftPeersLock sync.RWMutex
 
 	// rawConfig stores the config as-is from the provided server configuration.
 	rawConfig *atomic.Value
