@@ -2603,7 +2603,6 @@ func (ts *TokenStore) handleCreateOrphan(ctx context.Context, req *logical.Reque
 // handleCreate handles the auth/token/create path for creation of new non-orphan
 // tokens
 func (ts *TokenStore) handleCreate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	time.Sleep(10 * time.Millisecond)
 	return ts.handleCreateCommon(ctx, req, d, false, nil)
 }
 
