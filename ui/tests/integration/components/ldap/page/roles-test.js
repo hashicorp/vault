@@ -116,8 +116,12 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
   });
 
   test('it should filter roles', async function (assert) {
-    const transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
-
+    const currentRouteName = 'vault.cluster.secrets.backend.ldap.roles';
+    this.router = this.owner.lookup('service:router');
+    const transitionStub = sinon.stub(this.router, 'transitionTo');
+    sinon.stub(this.router, 'currentRoute').value({
+      name: currentRouteName,
+    });
     this.roles.meta.filteredTotal = 0;
     this.pageFilter = 'foo';
 
@@ -129,10 +133,13 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
 
     await fillIn('[data-test-filter-input]', 'bar');
 
-    assert.true(
-      transitionStub.calledWith('vault.cluster.secrets.backend.ldap.roles', {
+    const [calledRoute, calledParams] = transitionStub.lastCall.args;
+    assert.strictEqual(calledRoute, currentRouteName);
+    assert.propEqual(
+      calledParams,
+      {
         queryParams: { pageFilter: 'bar' },
-      }),
+      },
       'Transition called with correct query params on filter change'
     );
   });

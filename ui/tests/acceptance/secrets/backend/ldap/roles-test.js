@@ -51,7 +51,7 @@ module('Acceptance | ldap | roles', function (hooks) {
       'Transitions to role details route on list item click'
     );
 
-    await click('[data-test-breadcrumb="roles"] a');
+    await click('[data-test-breadcrumb="Roles"] a');
     await click('[data-test-list-item-link]:nth-of-type(2) a');
     assert.true(
       isURL('roles/static/static-role/details', this.backend),
@@ -70,7 +70,7 @@ module('Acceptance | ldap | roles', function (hooks) {
         isURL(`roles/dynamic/dynamic-role/${uri}`, this.backend),
         `Transitions to ${uri} route on list item action menu click`
       );
-      await click('[data-test-breadcrumb="roles"] a');
+      await click('[data-test-breadcrumb="Roles"] a');
     }
   });
 
