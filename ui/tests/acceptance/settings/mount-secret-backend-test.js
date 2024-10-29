@@ -31,6 +31,7 @@ import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
+import { mount } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { SELECTORS as OIDC } from 'vault/tests/helpers/oidc-config';
 import { adminOidcCreateRead, adminOidcCreate } from 'vault/tests/helpers/secret-engine/policy-generator';
 import { WIF_ENGINES } from 'vault/helpers/mountable-secret-engines';
@@ -132,16 +133,12 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     await page.visit();
 
     assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
-    await click(MOUNT_BACKEND_FORM.mountType('kv'));
-    await fillIn(GENERAL.inputByAttr('path'), path);
-    await click(GENERAL.saveButton);
-
+    await mount('kv', path);
     await page.secretList();
     await settled();
     await page.enableEngine();
-    await click(MOUNT_BACKEND_FORM.mountType('kv'));
-    await fillIn(GENERAL.inputByAttr('path'), path);
-    await click(GENERAL.saveButton);
+    await mount('kv', path);
+
     assert.dom('[data-test-message-error-description]').containsText(`path is already in use at ${path}`);
     assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
 
@@ -219,9 +216,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
         `delete sys/mounts/${engine.type}`,
       ]);
       await mountSecrets.visit();
-      await click(MOUNT_BACKEND_FORM.mountType(engine.type));
-      await fillIn(GENERAL.inputByAttr('path'), engine.type);
-      await click(GENERAL.saveButton);
+      await mount(engine.type, engine.type);
 
       assert.strictEqual(
         currentRouteName(),
@@ -278,9 +273,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
         `delete sys/mounts/${engine.type}`,
       ]);
       await mountSecrets.visit();
-      await click(MOUNT_BACKEND_FORM.mountType(engine.type));
-      await fillIn(GENERAL.inputByAttr('path'), engine.type);
-      await click(GENERAL.saveButton);
+      await mount(engine.type, engine.type);
 
       assert.strictEqual(
         currentRouteName(),
@@ -298,6 +291,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       `delete sys/mounts/${v2}`,
     ]);
     await mountSecrets.visit();
+    await mount('kv', v2);
     await click(MOUNT_BACKEND_FORM.mountType('kv'));
     await fillIn(GENERAL.inputByAttr('path'), v2);
     await click(GENERAL.saveButton);
