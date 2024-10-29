@@ -11,7 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import backendsPage from 'vault/tests/pages/secrets/backends';
 import authPage from 'vault/tests/pages/auth';
-import { mount } from 'vault/tests/helpers/components/mount-backend-form-helpers';
+import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 
 module('Acceptance | gcpkms/enable', function (hooks) {
   setupApplicationTest(hooks);
@@ -26,7 +26,7 @@ module('Acceptance | gcpkms/enable', function (hooks) {
     const enginePath = `gcpkms-${this.uid}`;
     await mountSecrets.visit();
     await settled();
-    await mount('gcpkms', enginePath);
+    await mountBackend('gcpkms', enginePath);
 
     assert.strictEqual(
       currentRouteName(),

@@ -5,7 +5,7 @@
 
 import { create, visitable, fillable, clickable } from 'ember-cli-page-object';
 import { settled } from '@ember/test-helpers';
-import { mount } from 'vault/tests/helpers/components/mount-backend-form-helpers';
+import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 
 export default create({
   visit: visitable('/vault/settings/mount-secret-backend'),
@@ -22,7 +22,7 @@ export default create({
   enable: async function (type, path) {
     await this.visit();
     await settled();
-    await mount(type, path);
+    await mountBackend(type, path);
     await settled();
   },
 });

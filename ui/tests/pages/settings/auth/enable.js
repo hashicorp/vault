@@ -5,13 +5,13 @@
 
 import { create, visitable } from 'ember-cli-page-object';
 import flashMessages from '../../components/flash-message';
-import { mount } from 'vault/tests/helpers/components/mount-backend-form-helpers';
+import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 
 export default create({
   visit: visitable('/vault/settings/auth/enable'),
   flash: flashMessages,
   enable: async function (type, path) {
     await this.visit();
-    await mount(type, path);
+    await mountBackend(type, path);
   },
 });

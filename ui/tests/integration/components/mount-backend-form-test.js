@@ -11,7 +11,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { allowAllCapabilitiesStub, noopStub } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
-import { mount } from 'vault/tests/helpers/components/mount-backend-form-helpers';
+import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { methods } from 'vault/helpers/mountable-auth-methods';
 import { mountableEngines } from 'vault/helpers/mountable-secret-engines';
 import hbs from 'htmlbars-inline-precompile';
@@ -117,7 +117,7 @@ module('Integration | Component | mount backend form', function (hooks) {
       await render(
         hbs`<MountBackendForm @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
-      await mount('approle', 'foo');
+      await mountBackend('approle', 'foo');
       later(() => cancelTimers(), 50);
       await settled();
 
@@ -190,7 +190,7 @@ module('Integration | Component | mount backend form', function (hooks) {
         hbs`<MountBackendForm @mountType="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
 
-      await mount('ssh', 'foo');
+      await mountBackend('ssh', 'foo');
       later(() => cancelTimers(), 50);
       await settled();
 
