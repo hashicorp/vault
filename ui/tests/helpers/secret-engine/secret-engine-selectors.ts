@@ -14,7 +14,6 @@ export const SECRET_ENGINE_SELECTORS = {
     title: '[data-test-backend-error-title]',
   },
   generateLink: '[data-test-backend-credentials]',
-  mountType: (name: string) => `[data-test-mount-type="${name}"]`, // ARG TODO now duplicate in mount-backend-form-selectors
   secretHeader: '[data-test-secret-header]',
   secretLink: (name: string) => (name ? `[data-test-secret-link="${name}"]` : '[data-test-secret-link]'),
   secretLinkMenu: (name: string) => `[data-test-secret-link="${name}"] [data-test-popup-menu-trigger]`,

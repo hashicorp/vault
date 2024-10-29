@@ -20,7 +20,7 @@ export default (test) => {
   test('it renders mount fields', async function (assert) {
     await click(MOUNT_BACKEND_FORM.mountType(this.type));
     await click(GENERAL.toggleGroup('Method Options'));
-    assertFields(assert, this.mountFields, this.customMOUNT_BACKEND_FORM);
+    assertFields(assert, this.mountFields, this.customSelectors);
   });
 
   test('it renders tune fields', async function (assert) {
