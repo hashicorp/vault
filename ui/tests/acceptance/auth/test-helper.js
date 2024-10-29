@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, currentURL, fillIn } from '@ember/test-helpers';
+import { click, currentURL } from '@ember/test-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
+import { mount } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 
 const assertFields = (assert, fields, customSelectors = {}) => {
   fields.forEach((param) => {
@@ -25,9 +26,7 @@ export default (test) => {
 
   test('it renders tune fields', async function (assert) {
     // enable auth method to check tune fields
-    await click(MOUNT_BACKEND_FORM.mountType(this.type));
-    await fillIn(GENERAL.inputByAttr('path'), this.path);
-    await click(GENERAL.saveButton);
+    await mount(this.type, this.path);
     assert.strictEqual(
       currentURL(),
       `/vault/settings/auth/configure/${this.path}/configuration`,

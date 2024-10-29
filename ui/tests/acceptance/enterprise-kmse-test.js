@@ -10,8 +10,7 @@ import authPage from 'vault/tests/pages/auth';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { allEngines } from 'vault/helpers/mountable-secret-engines';
-import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { mount } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { runCmd } from '../helpers/commands';
 
 module('Acceptance | Enterprise | keymgmt', function (hooks) {
@@ -29,9 +28,7 @@ module('Acceptance | Enterprise | keymgmt', function (hooks) {
     // delete any previous mount with same name
     await runCmd([`delete sys/mounts/${engine.type}`]);
     await mountSecrets.visit();
-    await click(MOUNT_BACKEND_FORM.mountType(engine.type));
-    await fillIn(GENERAL.inputByAttr('path'), engine.type);
-    await click(GENERAL.saveButton);
+    await mount(engine.type, engine.type);
 
     assert.strictEqual(
       currentRouteName(),

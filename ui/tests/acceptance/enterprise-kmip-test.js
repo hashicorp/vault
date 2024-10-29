@@ -22,7 +22,7 @@ import rolesPage from 'vault/tests/pages/secrets/backend/kmip/roles';
 import credentialsPage from 'vault/tests/pages/secrets/backend/kmip/credentials';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
+import { mount } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { allEngines } from 'vault/helpers/mountable-secret-engines';
 import { mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { v4 as uuidv4 } from 'uuid';
@@ -30,7 +30,7 @@ import { v4 as uuidv4 } from 'uuid';
 // port has a lower limit of 1024
 const getRandomPort = () => Math.floor(Math.random() * 5000 + 1024);
 
-const mount = async (backend) => {
+const mountWithCli = async (backend) => {
   const res = await runCmd(`write sys/mounts/${backend} type=kmip`);
   await settled();
   if (res.includes('Error')) {
@@ -41,7 +41,7 @@ const mount = async (backend) => {
 
 const mountWithConfig = async (backend) => {
   const addr = `127.0.0.1:${getRandomPort()}`;
-  await mount(backend);
+  await mountWithCli(backend);
   const res = await runCmd(`write ${backend}/config listen_addrs=${addr}`);
   if (res.includes('Error')) {
     throw new Error(`Error configuring KMIP: ${res}`);
@@ -106,9 +106,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     const engine = allEngines().find((e) => e.type === 'kmip');
 
     await mountSecrets.visit();
-    await click(MOUNT_BACKEND_FORM.mountType(engine.type));
-    await fillIn(GENERAL.inputByAttr('path'), `${engine.type}-${uuidv4()}`);
-    await click(GENERAL.saveButton);
+    await mount(engine.type, `${engine.type}-${uuidv4()}`);
 
     assert.strictEqual(
       currentRouteName(),
@@ -119,7 +117,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
   });
 
   test('it can configure a KMIP secrets engine', async function (assert) {
-    const backend = await mount(this.backend);
+    const backend = await mountWithCli(this.backend);
     await scopesPage.visit({ backend });
     await settled();
     await scopesPage.configurationLink();
