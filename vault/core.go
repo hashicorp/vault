@@ -40,6 +40,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/go-uuid"
+	lru "github.com/hashicorp/golang-lru/v2"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
@@ -628,7 +629,9 @@ type Core struct {
 	// Stop channel for raft TLS rotations
 	raftTLSRotationStopCh chan struct{}
 	// Stores the pending peers we are waiting to give answers
-	pendingRaftPeers *sync.Map
+	pendingRaftPeers *lru.Cache[string, *raftBootstrapChallenge]
+	// holds the lock for modifying pendingRaftPeers
+	pendingRaftPeersLock sync.RWMutex
 
 	// rawConfig stores the config as-is from the provided server configuration.
 	rawConfig *atomic.Value
