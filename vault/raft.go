@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/go-uuid"
 	goversion "github.com/hashicorp/go-version"
+	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/hashicorp/vault/api"
 	httpPriority "github.com/hashicorp/vault/http/priority"
 	"github.com/hashicorp/vault/physical/raft"
@@ -36,6 +37,9 @@ import (
 )
 
 const (
+	RaftInitialChallengeLimit = 20 // allow an initial burst to 20
+	RaftChallengesPerSecond   = 5  // equating to an average 200ms min time
+
 	// undoLogMonitorInterval is how often the leader checks to see
 	// if all the cluster members it knows about are new enough to support
 	// undo logs.
@@ -55,6 +59,12 @@ var (
 
 	ErrJoinWithoutAutoloading = errors.New("attempt to join a cluster using autoloaded licenses while not using autoloading ourself")
 )
+
+type raftBootstrapChallenge struct {
+	serverID  string
+	answer    []byte // the random answer
+	challenge []byte // the Sealed answer
+}
 
 // GetRaftNodeID returns the raft node ID if there is one, or an empty string if there's not
 func (c *Core) GetRaftNodeID() string {
@@ -314,7 +324,11 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 
 	c.logger.Info("starting raft active node")
 
-	c.pendingRaftPeers = &sync.Map{}
+	var err error
+	c.pendingRaftPeers, err = lru.New[string, *raftBootstrapChallenge](RaftInitialChallengeLimit)
+	if err != nil {
+		return err
+	}
 
 	// Reload the raft TLS keys to ensure we are using the latest version.
 	if err := c.checkRaftTLSKeyUpgrades(ctx); err != nil {
