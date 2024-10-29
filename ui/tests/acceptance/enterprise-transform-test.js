@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { currentURL, click, settled, currentRouteName } from '@ember/test-helpers';
+import { fillIn, currentURL, click, settled, currentRouteName } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import { selectChoose } from 'ember-power-select/test-support';
 import { typeInSearch, clickTrigger } from 'ember-power-select/test-support/helpers';
@@ -19,6 +19,8 @@ import alphabetsPage from 'vault/tests/pages/secrets/backend/transform/alphabets
 import searchSelect from 'vault/tests/pages/components/search-select';
 import { runCmd } from '../helpers/commands';
 import { allEngines } from 'vault/helpers/mountable-secret-engines';
+import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const searchSelectComponent = create(searchSelect);
 
@@ -75,9 +77,10 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     // delete any previous mount with same name
     await runCmd([`delete sys/mounts/${engine.type}`]);
     await mountSecrets.visit();
-    await mountSecrets.selectType(engine.type);
-    await mountSecrets.path(engine.type);
-    await mountSecrets.submit();
+    await mountSecrets.visit();
+    await click(MOUNT_BACKEND_FORM.mountType(engine.type));
+    await fillIn(GENERAL.inputByAttr('path'), engine.type);
+    await click(GENERAL.saveButton);
 
     assert.strictEqual(
       currentRouteName(),

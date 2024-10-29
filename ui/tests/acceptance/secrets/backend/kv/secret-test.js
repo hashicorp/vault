@@ -57,7 +57,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await click('[data-test-toggle-label="Automate secret deletion"]');
       await fillIn('[data-test-select="ttl-unit"]', 's');
       await fillIn('[data-test-ttl-value="Automate secret deletion"]', '1');
-      await click('[data-test-mount-submit="true"]');
+      await click(GENERAL.saveButton);
 
       await click(PAGE.secretTab('Configuration'));
 

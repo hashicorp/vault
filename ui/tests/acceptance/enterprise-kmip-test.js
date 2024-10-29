@@ -22,6 +22,7 @@ import rolesPage from 'vault/tests/pages/secrets/backend/kmip/roles';
 import credentialsPage from 'vault/tests/pages/secrets/backend/kmip/credentials';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
 import { allEngines } from 'vault/helpers/mountable-secret-engines';
 import { mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { v4 as uuidv4 } from 'uuid';
@@ -105,8 +106,10 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     const engine = allEngines().find((e) => e.type === 'kmip');
 
     await mountSecrets.visit();
-    await mountSecrets.selectType(engine.type);
-    await mountSecrets.path(this.backend).submit();
+    await click(MOUNT_BACKEND_FORM.mountType(engine.type));
+    await fillIn(GENERAL.inputByAttr('path'), `${engine.type}-${uuidv4()}`);
+    await click(GENERAL.saveButton);
+
     assert.strictEqual(
       currentRouteName(),
       `vault.cluster.secrets.backend.${engine.engineRoute}`,

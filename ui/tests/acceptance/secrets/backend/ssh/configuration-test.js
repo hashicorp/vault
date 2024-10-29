@@ -33,7 +33,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
     await visit('/vault/settings/mount-secret-backend');
     await click(SES.mountType('ssh'));
     await fillIn(GENERAL.inputByAttr('path'), sshPath);
-    await click(SES.mountSubmit);
+    await click(GENERAL.saveButton);
     await click(SES.configTab);
     assert.dom(GENERAL.emptyStateTitle).hasText('SSH not configured');
     assert.dom(GENERAL.emptyStateActions).hasText('Configure SSH');

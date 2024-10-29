@@ -48,7 +48,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       await visit('/vault/settings/mount-secret-backend');
       await click(SES.mountType('aws'));
       await fillIn(GENERAL.inputByAttr('path'), path);
-      await click(SES.mountSubmit);
+      await click(GENERAL.saveButton);
       await click(SES.configTab);
       assert.dom(GENERAL.emptyStateTitle).hasText('AWS not configured');
       assert.dom(GENERAL.emptyStateActions).hasText('Configure AWS');

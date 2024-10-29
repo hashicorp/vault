@@ -225,7 +225,7 @@ module('Acceptance | ssh | roles', function (hooks) {
       await generatePage.generateOTP();
       await settled();
       assert.ok(generatePage.warningIsPresent, 'shows warning');
-      await generatePage.back();
+      await GENERAL.backButton;
       await settled();
       assert.ok(generatePage.userIsPresent, 'clears generate, shows user input');
       assert.ok(generatePage.ipIsPresent, 'clears generate, shows ip input');

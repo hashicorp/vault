@@ -14,6 +14,7 @@ import { click, fillIn, visit } from '@ember/test-helpers';
 import { selectChoose } from 'ember-power-select/test-support';
 import { isURL, visitURL } from 'vault/tests/helpers/ldap/ldap-helpers';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | ldap | overview', function (hooks) {
   setupApplicationTest(hooks);
@@ -37,7 +38,7 @@ module('Acceptance | ldap | overview', function (hooks) {
     await click('[data-test-enable-engine]');
     await click('[data-test-mount-type="ldap"]');
     await fillIn('[data-test-input="path"]', backend);
-    await click('[data-test-mount-submit]');
+    await click(GENERAL.saveButton);
     assert.true(isURL('overview', backend), 'Transitions to ldap overview route on mount success');
     assert.dom('[data-test-header-title]').hasText(backend);
     // cleanup mounted engine
