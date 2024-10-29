@@ -13,6 +13,7 @@ export const mount = async (type, path) => {
     await fillIn(GENERAL.inputByAttr('path'), path);
     await click(GENERAL.saveButton);
   } else {
-    await this.submit();
+    // save with default path
+    await click(GENERAL.saveButton);
   }
 };
