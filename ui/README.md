@@ -30,6 +30,7 @@ Respective versions for `ember-cli`, `ember-source` and `ember-data` for each ve
 
 | Vault Version | Ember CLI | Ember Source | Ember Data |
 | ------------- | --------- | ------------ | ---------- |
+| 1.19.x        | 5.8.0     | 5.8.0        | 5.3.2      |
 | 1.17.x        | 5.4.2     | 5.4.0        | 4.12.4     |
 | 1.15.x        | 4.12.1    | 4.12.0       | 4.11.3     |
 | 1.13.x        | 4.4.0     | 4.4.4        | 4.5.0      |
