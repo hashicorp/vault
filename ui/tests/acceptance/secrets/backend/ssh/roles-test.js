@@ -150,8 +150,7 @@ module('Acceptance | ssh | roles', function (hooks) {
       await settled(); // eslint-disable-line
       role.assertAfterGenerate(assert, sshPath);
 
-      // click the "Back" button
-      await click(SES.backButton);
+      await click(GENERAL.backButton);
       assert.dom('[data-test-secret-generate-form]').exists(`${role.type}: back takes you back to the form`);
 
       await click(GENERAL.cancelButton);
