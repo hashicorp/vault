@@ -19,6 +19,7 @@ import { writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run
 import { runCmd } from 'vault/tests/helpers/commands';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import codemirror from 'vault/tests/helpers/codemirror';
+import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SS } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
@@ -138,8 +139,11 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       this.backend = `kv-v1-${this.uid}`;
       // mount version 1 engine
       await mountSecrets.visit();
-      await mountSecrets.selectType('kv');
-      await mountSecrets.path(this.backend).toggleOptions().version(1).submit();
+      await click(MOUNT_BACKEND_FORM.mountType('kv'));
+      await fillIn(GENERAL.inputByAttr('path'), this.backend);
+      await click(GENERAL.toggleGroup('Method Options'));
+      await mountSecrets.version(1);
+      await click(GENERAL.saveButton);
     });
     hooks.afterEach(async function () {
       await runCmd([`delete sys/mounts/${this.backend}`]);
