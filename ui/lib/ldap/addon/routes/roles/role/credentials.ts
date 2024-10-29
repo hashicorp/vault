@@ -63,9 +63,9 @@ export default class LdapRoleCredentialsRoute extends Route {
     const role = this.modelFor('roles.role') as LdapRoleModel;
     controller.breadcrumbs = [
       { label: role.backend, route: 'overview' },
-      { label: 'roles', route: 'roles' },
+      { label: 'Roles', route: 'roles' },
       { label: role.name, route: 'roles.role' },
-      { label: 'credentials' },
+      { label: 'Credentials' },
     ];
   }
 }

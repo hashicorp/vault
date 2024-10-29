@@ -29,6 +29,7 @@ export default class LdapRolesRoleDetailsRoute extends Route {
     super.setupController(controller, resolvedModel, transition);
 
     controller.breadcrumbs = [
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backend, route: 'overview' },
       { label: 'Roles', route: 'roles' },
       ...ldapBreadcrumbs(resolvedModel.name, resolvedModel.type, this.secretMountPath.currentPath),
