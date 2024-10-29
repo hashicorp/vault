@@ -7474,7 +7474,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-auto-import@npm:^2.2.4, ember-auto-import@npm:^2.4.1, ember-auto-import@npm:^2.5.0, ember-auto-import@npm:^2.6.0, ember-auto-import@npm:^2.6.1, ember-auto-import@npm:^2.6.3, ember-auto-import@npm:^2.7.0, ember-auto-import@npm:^2.7.2":
+"ember-auto-import@npm:^2.2.4, ember-auto-import@npm:^2.4.1, ember-auto-import@npm:^2.6.0, ember-auto-import@npm:^2.6.3, ember-auto-import@npm:^2.7.0, ember-auto-import@npm:^2.7.2":
   version: 2.7.4
   resolution: "ember-auto-import@npm:2.7.4"
   dependencies:
