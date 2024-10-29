@@ -292,9 +292,6 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     ]);
     await mountSecrets.visit();
     await mount('kv', v2);
-    await click(MOUNT_BACKEND_FORM.mountType('kv'));
-    await fillIn(GENERAL.inputByAttr('path'), v2);
-    await click(GENERAL.saveButton);
     assert.strictEqual(currentURL(), `/vault/secrets/${v2}/kv/list`, `${v2} navigates to list url`);
     assert.strictEqual(
       currentRouteName(),
