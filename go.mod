@@ -50,7 +50,7 @@ require (
 	github.com/cockroachdb/cockroach-go/v2 v2.3.8
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
 	github.com/denisenkom/go-mssqldb v0.12.3
-	github.com/docker/docker v26.1.5+incompatible
+	github.com/docker/docker v27.2.1+incompatible
 	github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.17.0
@@ -81,7 +81,7 @@ require (
 	github.com/hashicorp/go-bexpr v0.1.12
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-discover v0.0.0-20210818145131-c573d69da192
-	github.com/hashicorp/go-gcp-common v0.9.0
+	github.com/hashicorp/go-gcp-common v0.9.1
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-kms-wrapping/entropy/v2 v2.0.1
 	github.com/hashicorp/go-kms-wrapping/v2 v2.0.16
@@ -130,7 +130,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.19.0
 	github.com/hashicorp/vault-plugin-auth-azure v0.19.1
 	github.com/hashicorp/vault-plugin-auth-cf v0.19.0
-	github.com/hashicorp/vault-plugin-auth-gcp v0.19.0
+	github.com/hashicorp/vault-plugin-auth-gcp v0.19.1
 	github.com/hashicorp/vault-plugin-auth-jwt v0.22.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.13.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.20.0
@@ -145,14 +145,14 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-ad v0.19.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.18.0
 	github.com/hashicorp/vault-plugin-secrets-azure v0.20.1
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.20.0
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.20.1
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.19.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.9.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.20.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.13.0
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.14.2
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.14.3
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.10.0
-	github.com/hashicorp/vault-testing-stepwise v0.3.1
+	github.com/hashicorp/vault-testing-stepwise v0.3.2
 	github.com/hashicorp/vault/api v1.15.0
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
@@ -183,7 +183,7 @@ require (
 	github.com/ory/dockertest v3.3.5+incompatible
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
-	github.com/pires/go-proxyproto v1.0.0
+	github.com/pires/go-proxyproto v0.8.0
 	github.com/pkg/errors v0.9.1
 	github.com/posener/complete v1.2.3
 	github.com/pquerna/otp v1.2.1-0.20191009055518-468c2dd2b58d
@@ -231,11 +231,14 @@ require (
 require (
 	cel.dev/expr v0.15.0 // indirect
 	cloud.google.com/go/longrunning v0.6.0 // indirect
-	github.com/containerd/containerd v1.7.20 // indirect
+	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
+	github.com/go-viper/mapstructure/v2 v2.1.0 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0 // indirect
 	github.com/hashicorp/go-secure-stdlib/httputil v0.1.0 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
+	github.com/moby/sys/userns v0.1.0 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	golang.org/x/xerrors v0.0.0-20240716161551-93cc26a95ae9 // indirect
@@ -340,7 +343,7 @@ require (
 	github.com/digitalocean/godo v1.7.5 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/cli v26.1.5+incompatible // indirect
+	github.com/docker/cli v27.2.1+incompatible // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dvsekhvalnov/jose2go v1.6.0 // indirect
@@ -398,7 +401,7 @@ require (
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-msgpack/v2 v2.1.2 // indirect
 	github.com/hashicorp/go-secure-stdlib/fileutil v0.1.0 // indirect
-	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.4.0 // indirect
+	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.4.1 // indirect
 	github.com/hashicorp/go-slug v0.15.2 // indirect
 	github.com/hashicorp/go-tfe v1.64.2 // indirect
 	github.com/hashicorp/jsonapi v1.3.1 // indirect
@@ -454,7 +457,7 @@ require (
 	github.com/mitchellh/pointerstructure v1.2.1 // indirect
 	github.com/moby/patternmatcher v0.5.0 // indirect
 	github.com/moby/sys/sequential v0.5.0 // indirect
-	github.com/moby/sys/user v0.2.0 // indirect
+	github.com/moby/sys/user v0.3.0 // indirect
 	github.com/moby/term v0.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
@@ -543,7 +546,3 @@ require (
 )
 
 replace github.com/ma314smith/signedxml v1.1.1 => github.com/moov-io/signedxml v1.1.1
-
-// Support using the forked repository until https://github.com/pires/go-proxyproto/pull/110 merges
-// and is released.
-replace github.com/pires/go-proxyproto v1.0.0 => github.com/peteski22/go-proxyproto v1.0.0
