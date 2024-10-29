@@ -5,7 +5,7 @@
 
 <form data-test-transit-create-form onsubmit={{@createOrUpdateKey}}>
   <div class="box is-sideless is-fullwidth is-marginless">
-    <MessageError @model={{@key}} />
+    <MessageError @model={{@key}} @errorMessage={{@errorMessage}} />
     <NamespaceReminder @mode="create" @noun="transit key" />
     <div class="field">
       <label for="key-name" class="is-label">Name</label>
