@@ -182,8 +182,7 @@ module('Acceptance | ssh | roles', function (hooks) {
       await fillIn(GENERAL.inputByAttr('keyType'), 'otp');
       await fillIn(GENERAL.inputByAttr('defaultUser'), 'admin');
       await fillIn(GENERAL.inputByAttr('cidrList'), '0.0.0.0/0');
-      await click('[data-test-role-ssh-create]');
-      return;
+      await click(SES.ssh.createRole);
     };
     test('it deletes a role from list view', async function (assert) {
       assert.expect(2);
