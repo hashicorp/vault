@@ -27,8 +27,8 @@
           {{/if}}
           <div class="toolbar-separator"></div>
           <Hds::Button
-            @icon={{if this.showExpandedView "maximize" "minimize"}}
-            @text={{if this.showExpandedView "Minimize view" "Maximize view"}}
+            @icon={{if this.showExpandedView "unfold-close" "unfold-open"}}
+            @text={{if this.showExpandedView "Close view" "Open view"}}
             @isIconOnly={{true}}
             @color="tertiary"
             data-test-button="expand-view"
