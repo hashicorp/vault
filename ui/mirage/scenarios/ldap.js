@@ -19,4 +19,6 @@ export default function (server) {
     account: 'mary.smith',
     available: true,
   });
+  server.create('ldap-role', 'static', { name: 'admin/child-static-role' });
+  server.create('ldap-role', 'dynamic', { name: 'admin/child-dynamic-role' });
 }

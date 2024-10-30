@@ -3,15 +3,24 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import NamedPathAdapter from 'vault/adapters/named-path';
+import ApplicationAdapter from 'vault/adapters/application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { service } from '@ember/service';
 import AdapterError from '@ember-data/adapter/error';
 import { addManyToArray } from 'vault/helpers/add-to-array';
 import sortObjects from 'vault/utils/sort-objects';
 
-export default class LdapRoleAdapter extends NamedPathAdapter {
+export default class LdapRoleAdapter extends ApplicationAdapter {
+  namespace = 'v1';
   @service flashMessages;
+
+  // we do this in the adapter because query() requests separate endpoints to fetch static AND dynamic roles.
+  // it also handles some error logic and serializing (some of which is for lazyPaginatedQuery)
+  // so for consistency we format the response here (instead of in the serializer)
+  _constructRecord({ type, name, backend }) {
+    // ID cannot just be the 'name' because static and dynamic roles can have identical names
+    return { id: `type:${type}::name:${name}`, name, backend, type };
+  }
 
   getURL(backend, path, name) {
     const base = `${this.buildURL()}/${encodePath(backend)}/${path}`;
@@ -23,12 +32,18 @@ export default class LdapRoleAdapter extends NamedPathAdapter {
     return type === 'static' ? staticPath : dynamicPath;
   }
 
-  urlForUpdateRecord(name, modelName, snapshot) {
+  urlForCreateRecord(modelName, snapshot) {
+    const { backend, type, name } = snapshot.record;
+    return this.getURL(backend, this.pathForRoleType(type), name);
+  }
+
+  urlForUpdateRecord(modelName, snapshot) {
     const { backend, type } = snapshot.record;
     return this.getURL(backend, this.pathForRoleType(type), name);
   }
-  urlForDeleteRecord(name, modelName, snapshot) {
-    const { backend, type } = snapshot.record;
+
+  urlForDeleteRecord(modelName, snapshot) {
+    const { backend, type, name } = snapshot.record;
     return this.getURL(backend, this.pathForRoleType(type), name);
   }
 
@@ -52,7 +67,7 @@ export default class LdapRoleAdapter extends NamedPathAdapter {
       const url = this.getURL(backend, this.pathForRoleType(roleType));
       try {
         const models = await this.ajax(url, 'GET', { data: { list: true } }).then((resp) => {
-          return resp.data.keys.map((name) => ({ id: name, name, backend, type: roleType }));
+          return resp.data.keys.map((name) => this._constructRecord({ backend, name, type: roleType }));
         });
         roles = addManyToArray(roles, models);
       } catch (error) {
@@ -89,15 +104,12 @@ export default class LdapRoleAdapter extends NamedPathAdapter {
   // LIST request for children of a hierarchal role
   async _querySubdirectory(backend, roleAncestry) {
     // path_to_role is the ancestral path
-    const { path_to_role, type } = roleAncestry;
-    const url = `${this.getURL(backend, this.pathForRoleType(type))}/${path_to_role}`;
+    const { path_to_role, type: roleType } = roleAncestry;
+    const url = `${this.getURL(backend, this.pathForRoleType(roleType))}/${path_to_role}`;
     const roles = await this.ajax(url, 'GET', { data: { list: true } }).then((resp) => {
       return resp.data.keys.map((name) => ({
-        id: name,
+        ...this._constructRecord({ backend, name, type: roleType }),
         path_to_role, // adds pathToRole attr to ldap/role model
-        name,
-        backend,
-        type,
       }));
     });
     return { data: { keys: roles } };
@@ -106,7 +118,10 @@ export default class LdapRoleAdapter extends NamedPathAdapter {
   queryRecord(store, type, query) {
     const { backend, name, type: roleType } = query;
     const url = this.getURL(backend, this.pathForRoleType(roleType), name);
-    return this.ajax(url, 'GET').then((resp) => ({ ...resp.data, backend, name, type: roleType }));
+    return this.ajax(url, 'GET').then((resp) => ({
+      ...resp.data,
+      ...this._constructRecord({ backend, name, type: roleType }),
+    }));
   }
 
   fetchCredentials(backend, type, name) {
