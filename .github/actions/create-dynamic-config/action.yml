@@ -27,7 +27,7 @@ runs:
         # Uses GITHUB_ENV instead of GITHUB_OUTPUT because composite actions are broken,
         # see: https://github.com/actions/cache/issues/803#issuecomment-1793565071
         {
-          echo "DYNAMIC_CONFIG_KEY=$(date +%Y-%m-%U)"
+          echo "DYNAMIC_CONFIG_KEY=${{ inputs.vault-version }}-$(date +%Y-%m-%U)"
           echo "DYNAMIC_CONFIG_PATH=enos/enos-dynamic-config.hcl"
         } | tee -a "$GITHUB_ENV"
     - name: Try to restore dynamic config from cache
