@@ -56,6 +56,7 @@ import (
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/crypto/sha3"
+	"golang.org/x/time/rate"
 )
 
 const (
@@ -94,11 +95,12 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 	}
 
 	b := &SystemBackend{
-		Core:        core,
-		db:          db,
-		logger:      logger,
-		mfaBackend:  NewPolicyMFABackend(core, logger),
-		syncBackend: syncBackend,
+		Core:                 core,
+		db:                   db,
+		logger:               logger,
+		mfaBackend:           NewPolicyMFABackend(core, logger),
+		syncBackend:          syncBackend,
+		raftChallengeLimiter: rate.NewLimiter(rate.Limit(RaftChallengesPerSecond), RaftInitialChallengeLimit),
 	}
 
 	b.Backend = &framework.Backend{
@@ -270,11 +272,12 @@ func (b *SystemBackend) rawPaths() []*framework.Path {
 type SystemBackend struct {
 	*framework.Backend
 	entSystemBackend
-	Core        *Core
-	db          *memdb.MemDB
-	logger      log.Logger
-	mfaBackend  *PolicyMFABackend
-	syncBackend *SecretsSyncBackend
+	Core                 *Core
+	db                   *memdb.MemDB
+	logger               log.Logger
+	mfaBackend           *PolicyMFABackend
+	syncBackend          *SecretsSyncBackend
+	raftChallengeLimiter *rate.Limiter
 }
 
 // handleConfigStateSanitized returns the current configuration state. The configuration
