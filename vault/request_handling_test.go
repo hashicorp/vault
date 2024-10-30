@@ -484,6 +484,8 @@ func TestRequestHandling_SecretLeaseMetric(t *testing.T) {
 	)
 }
 
+// TestRequestHandling_isRetryableRPCError tests that a retryable RPC error
+// can be distinguished from a normal error
 func TestRequestHandling_isRetryableRPCError(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
