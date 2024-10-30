@@ -3,13 +3,10 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, currentURL, fillIn } from '@ember/test-helpers';
+import { click, currentURL } from '@ember/test-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-
-const SELECTORS = {
-  mountType: (name) => `[data-test-mount-type="${name}"]`,
-  submit: '[data-test-mount-submit]',
-};
+import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
+import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 
 const assertFields = (assert, fields, customSelectors = {}) => {
   fields.forEach((param) => {
@@ -22,16 +19,14 @@ const assertFields = (assert, fields, customSelectors = {}) => {
 };
 export default (test) => {
   test('it renders mount fields', async function (assert) {
-    await click(SELECTORS.mountType(this.type));
+    await click(MOUNT_BACKEND_FORM.mountType(this.type));
     await click(GENERAL.toggleGroup('Method Options'));
     assertFields(assert, this.mountFields, this.customSelectors);
   });
 
   test('it renders tune fields', async function (assert) {
     // enable auth method to check tune fields
-    await click(SELECTORS.mountType(this.type));
-    await fillIn(GENERAL.inputByAttr('path'), this.path);
-    await click(SELECTORS.submit);
+    await mountBackend(this.type, this.path);
     assert.strictEqual(
       currentURL(),
       `/vault/settings/auth/configure/${this.path}/configuration`,

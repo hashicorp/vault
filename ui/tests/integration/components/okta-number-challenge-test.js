@@ -8,6 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import sinon from 'sinon';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | auth | okta-number-challenge', function (hooks) {
   setupRenderingTest(hooks);
@@ -71,7 +72,7 @@ module('Integration | Component | auth | okta-number-challenge', function (hooks
         'Correct description renders'
       );
     assert.dom('[data-test-message-error]').hasText(`Error ${this.hasError}`);
-    await click('[data-test-back-button]');
+    await click(GENERAL.backButton);
     assert.true(this.onCancel.calledOnce, 'onCancel is called');
   });
 });

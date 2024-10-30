@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { currentURL, find, visit, settled, click } from '@ember/test-helpers';
+import { currentURL, visit, click, fillIn } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -13,6 +13,7 @@ import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import authPage from 'vault/tests/pages/auth';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
 
 const { searchSelect } = GENERAL;
 
@@ -31,22 +32,24 @@ module('Acceptance | secret engine mount settings', function (hooks) {
     // mount unsupported backend
     await visit('/vault/settings/mount-secret-backend');
 
-    assert.strictEqual(currentURL(), '/vault/settings/mount-secret-backend');
-
-    await mountSecrets.selectType(type);
-    await mountSecrets
-      .path(path)
-      .toggleOptions()
-      .enableDefaultTtl()
-      .defaultTTLUnit('s')
-      .defaultTTLVal(100)
-      .submit();
-    await settled();
-    assert.ok(
-      find('[data-test-flash-message]').textContent.trim(),
-      `Successfully mounted '${type}' at '${path}'!`
+    assert.strictEqual(
+      currentURL(),
+      '/vault/settings/mount-secret-backend',
+      'navigates to the mount secret backend page'
     );
-    await settled();
+    await click(MOUNT_BACKEND_FORM.mountType(type));
+    await fillIn(GENERAL.inputByAttr('path'), path);
+    await click(GENERAL.toggleGroup('Method Options'));
+    await mountSecrets.enableDefaultTtl().defaultTTLUnit('s').defaultTTLVal(100);
+    await click(GENERAL.saveButton);
+
+    assert
+      .dom(`${GENERAL.flashMessage}.is-success`)
+      .includesText(
+        `Success Successfully mounted the ${type} secrets engine at ${path}`,
+        'flash message is shown after mounting'
+      );
+
     assert.strictEqual(currentURL(), `/vault/secrets`, 'redirects to secrets page');
     // cleanup
     await runCmd(deleteEngineCmd(path));

@@ -4,7 +4,7 @@
  */
 
 import { Base } from '../credentials';
-import { clickable, value, create, fillable, isPresent } from 'ember-cli-page-object';
+import { value, create, fillable, isPresent } from 'ember-cli-page-object';
 
 export default create({
   ...Base,
@@ -14,9 +14,5 @@ export default create({
   ip: fillable('[data-test-input="ip"]'),
   warningIsPresent: isPresent('[data-test-warning]'),
   commonNameValue: value('[data-test-input="commonName"]'),
-  submit: clickable('[data-test-save]'),
-  back: clickable('[data-test-back-button]'),
-  generateOTP: async function () {
-    await this.user('admin').ip('192.168.1.1').submit();
-  },
+  generateOTP: async function () {},
 });
