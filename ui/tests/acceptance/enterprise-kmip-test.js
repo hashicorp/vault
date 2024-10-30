@@ -30,18 +30,9 @@ import { v4 as uuidv4 } from 'uuid';
 // port has a lower limit of 1024
 const getRandomPort = () => Math.floor(Math.random() * 5000 + 1024);
 
-const mountWithCli = async (backend) => {
-  const res = await runCmd(`write sys/mounts/${backend} type=kmip`);
-  await settled();
-  if (res.includes('Error')) {
-    throw new Error(`Error mounting secrets engine: ${res}`);
-  }
-  return backend;
-};
-
 const mountWithConfig = async (backend) => {
   const addr = `127.0.0.1:${getRandomPort()}`;
-  await mountWithCli(backend);
+  await runCmd(mountEngineCmd('kmip', backend), false);
   const res = await runCmd(`write ${backend}/config listen_addrs=${addr}`);
   if (res.includes('Error')) {
     throw new Error(`Error configuring KMIP: ${res}`);
@@ -117,7 +108,8 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
   });
 
   test('it can configure a KMIP secrets engine', async function (assert) {
-    const backend = await mountWithCli(this.backend);
+    await runCmd(mountEngineCmd('kmip', this.backend));
+    const backend = this.backend;
     await scopesPage.visit({ backend });
     await settled();
     await scopesPage.configurationLink();

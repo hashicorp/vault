@@ -49,7 +49,7 @@ module('Integration | Component | mount backend form', function (hooks) {
         hbs`<MountBackendForm @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       assert
-        .dom(MOUNT_BACKEND_FORM.header)
+        .dom(GENERAL.title)
         .hasText('Enable an Authentication Method', 'renders auth header in default state');
 
       for (const method of methods()) {
@@ -140,7 +140,7 @@ module('Integration | Component | mount backend form', function (hooks) {
       await render(
         hbs`<MountBackendForm  @mountType="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
-      assert.dom(MOUNT_BACKEND_FORM.header).hasText('Enable a Secrets Engine', 'renders secrets header');
+      assert.dom(GENERAL.title).hasText('Enable a Secrets Engine', 'renders secrets header');
       for (const method of mountableEngines()) {
         assert
           .dom(MOUNT_BACKEND_FORM.mountType(method.type))

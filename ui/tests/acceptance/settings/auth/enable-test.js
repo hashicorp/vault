@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, currentRouteName, fillIn, visit } from '@ember/test-helpers';
+import { click, currentRouteName, visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { deleteAuthCmd, runCmd } from 'vault/tests/helpers/commands';
-import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | settings/auth/enable', function (hooks) {
   setupApplicationTest(hooks);
@@ -26,9 +26,7 @@ module('Acceptance | settings/auth/enable', function (hooks) {
     const type = 'approle';
     await visit('/vault/settings/auth/enable');
     assert.strictEqual(currentRouteName(), 'vault.cluster.settings.auth.enable');
-    await click(SES.mountType(type));
-    await fillIn(GENERAL.inputByAttr('path'), path);
-    await click(SES.mountSubmit);
+    await mountBackend(type, path);
     assert
       .dom(GENERAL.latestFlashContent)
       .hasText(`Successfully mounted the ${type} auth method at ${path}.`);
@@ -49,9 +47,7 @@ module('Acceptance | settings/auth/enable', function (hooks) {
     const path = `approle-config-${this.uid}`;
     const type = 'approle';
     await visit('/vault/settings/auth/enable');
-    await click(SES.mountType(type));
-    await fillIn(GENERAL.inputByAttr('path'), path);
-    await click(SES.mountSubmit);
+    await mountBackend(type, path);
     // the config details is updated to query mount details from sys/internal/ui/mounts
     // but we still want these forms to continue using sys/auth which returns 0 for default ttl values
     // check tune form (right after enabling)

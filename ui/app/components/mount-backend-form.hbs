@@ -5,7 +5,7 @@
 
 <PageHeader as |p|>
   <p.levelLeft>
-    <h1 class="title is-3 title-with-icon" data-test-mount-form-header="true">
+    <h1 class="title is-3 title-with-icon" data-test-page-title>
       {{#if this.showEnable}}
         {{#let (find-by "type" @mountModel.type @mountTypes) as |typeInfo|}}
           <Icon @name={{typeInfo.glyph}} @size="24" class="has-text-grey-light" />
