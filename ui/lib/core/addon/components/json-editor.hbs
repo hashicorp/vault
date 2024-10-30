@@ -26,6 +26,14 @@
             />
           {{/if}}
           <div class="toolbar-separator"></div>
+          <Hds::Button
+            @icon={{if this.showExpandedView "maximize" "minimize"}}
+            @text={{if this.showExpandedView "Minimize view" "Maximize view"}}
+            @isIconOnly={{true}}
+            @color="tertiary"
+            data-test-button="expand-view"
+            {{on "click" (fn (mut this.showExpandedView) (not this.showExpandedView))}}
+          />
           <Hds::Copy::Button
             @container={{@container}}
             @text="Copy"
@@ -57,10 +65,9 @@
       onFocus=this.onFocus
       autoRefresh=(if @container true false)
     }}
-    class={{if @readOnly "readonly-codemirror"}}
+    class={{concat this.isReadOnly " " this.isExpanded}}
     data-test-component="code-mirror-modifier"
   ></div>
-
   {{#if @helpText}}
     <div class="box is-shadowless is-fullwidth has-short-padding">
       <p class="sub-text">{{@helpText}}</p>
