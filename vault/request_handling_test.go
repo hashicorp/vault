@@ -4,6 +4,8 @@
 package vault
 
 import (
+	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -15,6 +17,9 @@ import (
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func TestRequestHandling_Wrapping(t *testing.T) {
@@ -477,4 +482,61 @@ func TestRequestHandling_SecretLeaseMetric(t *testing.T) {
 			"creation_ttl":  "+Inf",
 		},
 	)
+}
+
+func TestRequestHandling_isRetryableRPCError(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	testCases := []struct {
+		name string
+		ctx  context.Context
+		err  error
+		want bool
+	}{
+		{
+			name: "req context canceled",
+			ctx:  ctx,
+			err:  status.Error(codes.Canceled, "context canceled"),
+			want: false,
+		},
+		{
+			name: "server context canceled",
+			err:  status.Error(codes.Canceled, "context canceled"),
+			want: true,
+		},
+		{
+			name: "unavailable",
+			err:  status.Error(codes.Unavailable, "unavailable"),
+			want: true,
+		},
+		{
+			name: "other status",
+			err:  status.Error(codes.FailedPrecondition, "failed"),
+			want: false,
+		},
+		{
+			name: "other unknown",
+			err:  status.Error(codes.Unknown, "unknown"),
+			want: false,
+		},
+		{
+			name: "malformed header unknown",
+			err:  status.Error(codes.Unknown, "malformed header: missing HTTP content-type"),
+			want: true,
+		},
+		{
+			name: "other error",
+			err:  errors.New("other type of error"),
+			want: false,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			useCtx := tc.ctx
+			if tc.ctx == nil {
+				useCtx = context.Background()
+			}
+			require.Equal(t, tc.want, isRetryableRPCError(useCtx, tc.err))
+		})
+	}
 }

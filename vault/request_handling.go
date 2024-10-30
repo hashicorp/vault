@@ -42,6 +42,8 @@ import (
 	"github.com/hashicorp/vault/vault/quotas"
 	"github.com/hashicorp/vault/vault/tokens"
 	uberAtomic "go.uber.org/atomic"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -2079,7 +2081,7 @@ func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, re
 		if auth.TokenType != logical.TokenTypeBatch {
 			leaseGenerated = true
 		}
-	case err == ErrInternalError:
+	case errors.Is(err, ErrInternalError), isRetryableRPCError(ctx, err):
 		return false, nil, err
 	default:
 		return false, logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
@@ -2107,6 +2109,31 @@ func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, re
 	)
 
 	return leaseGenerated, resp, nil
+}
+
+func isRetryableRPCError(ctx context.Context, err error) bool {
+	stat, ok := status.FromError(err)
+	if !ok {
+		return false
+	}
+
+	switch stat.Code() {
+	case codes.Unavailable:
+		return true
+	case codes.Canceled:
+		// if the request context is canceled, we want to return false
+		// but if the request context hasn't been canceled, then there was
+		// either an EOF or the RPC client context has been canceled which
+		// should be retried
+		return ctx.Err() == nil
+	case codes.Unknown:
+		// sometimes a missing HTTP content-type error can happen when multiple
+		// HTTP statuses have been written. This can happen when the error
+		// occurs in the middle of a response. This should be retried.
+		return strings.Contains(err.Error(), "malformed header: missing HTTP content-type")
+	default:
+		return false
+	}
 }
 
 // failedUserLoginProcess updates the userFailedLoginMap with login count and  last failed
