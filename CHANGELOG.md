@@ -6,7 +6,7 @@
 ### October 30, 2024
 
 SECURITY:
-* core/raft: Add raft join limits [[GH-28790](https://github.com/hashicorp/vault/pull/28790)]
+* core/raft: Add raft join limits [[GH-28790](https://github.com/hashicorp/vault/pull/28790), [HCSEC-2024-26](https://discuss.hashicorp.com/t/hcsec-2024-26-vault-vulnerable-to-denial-of-service-through-memory-exhaustion-when-processing-raft-cluster-join-requests)]
 
 CHANGES:
 
@@ -252,7 +252,7 @@ use versioned plugins. [[GH-27881](https://github.com/hashicorp/vault/pull/27881
 ### October 30, 2024
 
 SECURITY:
-* core/raft: Add raft join limits [[GH-28790](https://github.com/hashicorp/vault/pull/28790)]
+* core/raft: Add raft join limits [[GH-28790](https://github.com/hashicorp/vault/pull/28790), [HCSEC-2024-26](https://discuss.hashicorp.com/t/hcsec-2024-26-vault-vulnerable-to-denial-of-service-through-memory-exhaustion-when-processing-raft-cluster-join-requests)]
 
 CHANGES:
 
@@ -659,8 +659,7 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 **Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
 
 SECURITY:
-* core/raft: Add raft join limits [[GH-28790](https://github.com/hashicorp/vault/pull/28790)]
-
+* core/raft: Add raft join limits [[GH-28790](https://github.com/hashicorp/vault/pull/28790), [HCSEC-2024-26](https://discuss.hashicorp.com/t/hcsec-2024-26-vault-vulnerable-to-denial-of-service-through-memory-exhaustion-when-processing-raft-cluster-join-requests)]
 CHANGES:
 
 * auth/azure: Update plugin to v0.17.1
