@@ -60,6 +60,25 @@ type HABackend interface {
 	HAEnabled() bool
 }
 
+// RemovableNodeHABackend is used for HA backends that can remove nodes from
+// their cluster
+type RemovableNodeHABackend interface {
+	HABackend
+
+	// IsNodeRemoved checks if the node with the given ID has been removed.
+	// This will only be called on the active node.
+	IsNodeRemoved(ctx context.Context, nodeID string) (bool, error)
+
+	// NodeID returns the ID for this node
+	NodeID() string
+
+	// IsRemoved checks if this node has been removed
+	IsRemoved() bool
+
+	// RemoveSelf marks this node as being removed
+	RemoveSelf() error
+}
+
 // FencingHABackend is an HABackend which provides the additional guarantee that
 // each Lock it returns from LockWith is also a FencingLock. A FencingLock
 // provides a mechanism to retrieve a fencing token that can be included by
