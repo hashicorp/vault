@@ -198,7 +198,7 @@ module('Integration | Component | auth | page ', function (hooks) {
         'To finish signing in, you will need to complete an additional MFA step. Please wait... Back to login',
         'renders okta number challenge on submit'
       );
-    await click('[data-test-back-button]');
+    await click(GENERAL.backButton);
     assert.dom(AUTH_FORM.form).exists('renders auth form on return to login');
     assert.dom(GENERAL.selectByAttr('auth-method')).hasValue('okta', 'preserves method type on back');
   });

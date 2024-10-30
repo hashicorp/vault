@@ -10,10 +10,11 @@ import { v4 as uuidv4 } from 'uuid';
 import ldapMirageScenario from 'vault/mirage/scenarios/ldap';
 import ldapHandlers from 'vault/mirage/handlers/ldap';
 import authPage from 'vault/tests/pages/auth';
-import { click, fillIn, visit } from '@ember/test-helpers';
+import { click, visit } from '@ember/test-helpers';
 import { selectChoose } from 'ember-power-select/test-support';
 import { isURL, visitURL } from 'vault/tests/helpers/ldap/ldap-helpers';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
+import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 
 module('Acceptance | ldap | overview', function (hooks) {
   setupApplicationTest(hooks);
@@ -35,9 +36,7 @@ module('Acceptance | ldap | overview', function (hooks) {
     const backend = 'ldap-test-mount';
     await visit('/vault/secrets');
     await click('[data-test-enable-engine]');
-    await click('[data-test-mount-type="ldap"]');
-    await fillIn('[data-test-input="path"]', backend);
-    await click('[data-test-mount-submit]');
+    await mountBackend('ldap', backend);
     assert.true(isURL('overview', backend), 'Transitions to ldap overview route on mount success');
     assert.dom('[data-test-header-title]').hasText(backend);
     // cleanup mounted engine

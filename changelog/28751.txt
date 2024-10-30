@@ -1,0 +1,3 @@
+```release-note:bug
+audit: Prevent users from enabling multiple audit devices of file type with the same file_path to write to.
+```
