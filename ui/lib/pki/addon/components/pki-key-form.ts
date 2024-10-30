@@ -39,6 +39,8 @@ export default class PkiKeyForm extends Component<Args> {
   @tracked invalidFormAlert = '';
   @tracked modelValidations: ValidationMap | null = null;
 
+  @tracked generatedKey: PkiKeyModel | null = null;
+
   @task
   @waitFor
   *save(event: Event) {
@@ -51,11 +53,15 @@ export default class PkiKeyForm extends Component<Args> {
         this.invalidFormAlert = invalidFormMessage;
       }
       if (!isValid && isNew) return;
-      yield this.args.model.save({ adapterOptions: { import: false } });
+      this.generatedKey = yield this.args.model.save({ adapterOptions: { import: false } });
       this.flashMessages.success(
         `Successfully ${isNew ? 'generated' : 'updated'} key${keyName ? ` ${keyName}.` : '.'}`
       );
-      this.args.onSave();
+
+      // only transition to details if there is no private_key data to display
+      if (!this.generatedKey?.privateKey) {
+        this.args.onSave();
+      }
     } catch (error) {
       this.errorBanner = errorMessage(error);
       this.invalidFormAlert = 'There was an error submitting this form.';
