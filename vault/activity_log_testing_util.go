@@ -63,11 +63,11 @@ func (c *Core) GetActiveClients() map[string]*activity.EntityRecord {
 	out := make(map[string]*activity.EntityRecord)
 
 	c.stateLock.RLock()
-	c.activityLog.fragmentLock.RLock()
-	for k, v := range c.activityLog.partialMonthClientTracker {
+	c.activityLog.globalFragmentLock.RLock()
+	for k, v := range c.activityLog.globalPartialMonthClientTracker {
 		out[k] = v
 	}
-	c.activityLog.fragmentLock.RUnlock()
+	c.activityLog.globalFragmentLock.RUnlock()
 	c.stateLock.RUnlock()
 
 	return out
@@ -246,4 +246,12 @@ func (a *ActivityLog) GetEnabled() bool {
 // Note: you must do the usual locking scheme when modifying the ActivityLog
 func (c *Core) GetActivityLog() *ActivityLog {
 	return c.activityLog
+}
+
+func (c *Core) GetActiveGlobalFragment() *activity.LogFragment {
+	return c.activityLog.currentGlobalFragment
+}
+
+func (c *Core) GetSecondaryGlobalFragments() []*activity.LogFragment {
+	return c.activityLog.secondaryGlobalClientFragments
 }
