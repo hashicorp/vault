@@ -45,7 +45,7 @@ func TestActivityLog_Creation(t *testing.T) {
 	if a.logger == nil || a.view == nil {
 		t.Fatal("activity log not initialized")
 	}
-	if a.fragment != nil {
+	if a.fragment != nil || a.currentGlobalFragment != nil {
 		t.Fatal("activity log already has fragment")
 	}
 
@@ -54,15 +54,18 @@ func TestActivityLog_Creation(t *testing.T) {
 	ts := time.Now()
 
 	a.AddEntityToFragment(entity_id, namespace_id, ts.Unix())
-	if a.fragment == nil {
+	if a.fragment == nil || a.currentGlobalFragment == nil {
 		t.Fatal("no fragment created")
 	}
 
 	if a.fragment.OriginatingNode != a.nodeID {
 		t.Errorf("mismatched node ID, %q vs %q", a.fragment.OriginatingNode, a.nodeID)
 	}
+	if a.currentGlobalFragment.OriginatingCluster != a.core.ClusterID() {
+		t.Errorf("mismatched cluster ID, %q vs %q", a.currentGlobalFragment.GetOriginatingCluster(), a.core.ClusterID())
+	}
 
-	if a.fragment.Clients == nil {
+	if a.fragment.Clients == nil || a.currentGlobalFragment.Clients == nil {
 		t.Fatal("no fragment entity slice")
 	}
 
@@ -73,8 +76,22 @@ func TestActivityLog_Creation(t *testing.T) {
 	if len(a.fragment.Clients) != 1 {
 		t.Fatalf("wrong number of entities %v", len(a.fragment.Clients))
 	}
+	if len(a.currentGlobalFragment.Clients) != 1 {
+		t.Fatalf("wrong number of entities %v", len(a.currentGlobalFragment.Clients))
+	}
 
 	er := a.fragment.Clients[0]
+	if er.ClientID != entity_id {
+		t.Errorf("mimatched entity ID, %q vs %q", er.ClientID, entity_id)
+	}
+	if er.NamespaceID != namespace_id {
+		t.Errorf("mimatched namespace ID, %q vs %q", er.NamespaceID, namespace_id)
+	}
+	if er.Timestamp != ts.Unix() {
+		t.Errorf("mimatched timestamp, %v vs %v", er.Timestamp, ts.Unix())
+	}
+
+	er = a.currentGlobalFragment.Clients[0]
 	if er.ClientID != entity_id {
 		t.Errorf("mimatched entity ID, %q vs %q", er.ClientID, entity_id)
 	}
@@ -118,7 +135,7 @@ func TestActivityLog_Creation_WrappingTokens(t *testing.T) {
 		t.Fatal("activity log not initialized")
 	}
 	a.fragmentLock.Lock()
-	if a.fragment != nil {
+	if a.fragment != nil || a.currentGlobalFragment != nil {
 		t.Fatal("activity log already has fragment")
 	}
 	a.fragmentLock.Unlock()
@@ -139,7 +156,7 @@ func TestActivityLog_Creation_WrappingTokens(t *testing.T) {
 	}
 
 	a.fragmentLock.Lock()
-	if a.fragment != nil {
+	if a.fragment != nil || a.currentGlobalFragment != nil {
 		t.Fatal("fragment created")
 	}
 	a.fragmentLock.Unlock()
@@ -159,7 +176,7 @@ func TestActivityLog_Creation_WrappingTokens(t *testing.T) {
 	}
 
 	a.fragmentLock.Lock()
-	if a.fragment != nil {
+	if a.fragment != nil || a.currentGlobalFragment != nil {
 		t.Fatal("fragment created")
 	}
 	a.fragmentLock.Unlock()
@@ -198,15 +215,36 @@ func TestActivityLog_UniqueEntities(t *testing.T) {
 	a.AddEntityToFragment(id2, "root", t3.Unix())
 	a.AddEntityToFragment(id1, "root", t3.Unix())
 
-	if a.fragment == nil {
+	if a.fragment == nil || a.currentGlobalFragment == nil {
 		t.Fatal("no current fragment")
 	}
 
 	if len(a.fragment.Clients) != 2 {
 		t.Fatalf("number of entities is %v", len(a.fragment.Clients))
 	}
+	if len(a.currentGlobalFragment.Clients) != 2 {
+		t.Fatalf("number of entities is %v", len(a.currentGlobalFragment.Clients))
+	}
 
 	for i, e := range a.fragment.Clients {
+		expectedID := id1
+		expectedTime := t1.Unix()
+		expectedNS := "root"
+		if i == 1 {
+			expectedID = id2
+			expectedTime = t2.Unix()
+		}
+		if e.ClientID != expectedID {
+			t.Errorf("%v: expected %q, got %q", i, expectedID, e.ClientID)
+		}
+		if e.NamespaceID != expectedNS {
+			t.Errorf("%v: expected %q, got %q", i, expectedNS, e.NamespaceID)
+		}
+		if e.Timestamp != expectedTime {
+			t.Errorf("%v: expected %v, got %v", i, expectedTime, e.Timestamp)
+		}
+	}
+	for i, e := range a.currentGlobalFragment.Clients {
 		expectedID := id1
 		expectedTime := t1.Unix()
 		expectedNS := "root"
@@ -307,7 +345,7 @@ func TestActivityLog_SaveTokensToStorage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("got error writing tokens to storage: %v", err)
 	}
-	if a.fragment != nil {
+	if a.fragment != nil || a.currentGlobalFragment != nil {
 		t.Errorf("fragment was not reset after write to storage")
 	}
 
@@ -339,7 +377,7 @@ func TestActivityLog_SaveTokensToStorage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("got error writing tokens to storage: %v", err)
 	}
-	if a.fragment != nil {
+	if a.fragment != nil || a.currentGlobalFragment != nil {
 		t.Errorf("fragment was not reset after write to storage")
 	}
 
@@ -408,7 +446,7 @@ func TestActivityLog_SaveTokensToStorageDoesNotUpdateTokenCount(t *testing.T) {
 	}
 
 	// Assert that new elements have been written to the fragment
-	if a.fragment != nil {
+	if a.fragment != nil || a.currentGlobalFragment != nil {
 		t.Errorf("fragment was not reset after write to storage")
 	}
 
@@ -471,7 +509,7 @@ func TestActivityLog_SaveEntitiesToStorage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("got error writing entities to storage: %v", err)
 	}
-	if a.fragment != nil {
+	if a.fragment != nil || a.currentGlobalFragment != nil {
 		t.Errorf("fragment was not reset after write to storage")
 	}
 
@@ -1252,6 +1290,8 @@ func (a *ActivityLog) resetEntitiesInMemory(t *testing.T) {
 	defer a.l.Unlock()
 	a.fragmentLock.Lock()
 	defer a.fragmentLock.Unlock()
+	a.globalFragmentLock.Lock()
+	defer a.globalFragmentLock.Unlock()
 	a.currentSegment = segmentInfo{
 		startTimestamp: time.Time{}.Unix(),
 		currentClients: &activity.EntityActivityLog{
@@ -1262,6 +1302,7 @@ func (a *ActivityLog) resetEntitiesInMemory(t *testing.T) {
 	}
 
 	a.partialMonthClientTracker = make(map[string]*activity.EntityRecord)
+	a.globalPartialMonthClientTracker = make(map[string]*activity.EntityRecord)
 }
 
 // TestActivityLog_loadCurrentClientSegment writes entity segments and calls loadCurrentClientSegment, then verifies
@@ -4767,15 +4808,26 @@ func TestAddActivityToFragment(t *testing.T) {
 			numClientsBefore := len(a.fragment.Clients)
 			a.fragmentLock.RUnlock()
 
+			a.globalFragmentLock.RLock()
+			globalClientsBefore := len(a.currentGlobalFragment.Clients)
+			a.globalFragmentLock.RUnlock()
+
 			a.AddActivityToFragment(tc.id, ns, 0, tc.activityType, mount)
 			a.fragmentLock.RLock()
 			defer a.fragmentLock.RUnlock()
 			numClientsAfter := len(a.fragment.Clients)
+			a.globalFragmentLock.RLock()
+			defer a.globalFragmentLock.RUnlock()
+			globalClientsAfter := len(a.currentGlobalFragment.Clients)
 
 			if tc.isAdded {
 				require.Equal(t, numClientsBefore+1, numClientsAfter)
+				if tc.activityType != nonEntityTokenActivityType {
+					require.Equal(t, globalClientsBefore+1, globalClientsAfter)
+				}
 			} else {
 				require.Equal(t, numClientsBefore, numClientsAfter)
+				require.Equal(t, globalClientsBefore, globalClientsAfter)
 			}
 
 			require.Contains(t, a.partialMonthClientTracker, tc.expectedID)
@@ -4787,6 +4839,17 @@ func TestAddActivityToFragment(t *testing.T) {
 				MountAccessor: mount,
 				ClientType:    tc.activityType,
 			}, a.partialMonthClientTracker[tc.expectedID]))
+			if tc.activityType != nonEntityTokenActivityType {
+				require.Contains(t, a.globalPartialMonthClientTracker, tc.expectedID)
+				require.True(t, proto.Equal(&activity.EntityRecord{
+					ClientID:      tc.expectedID,
+					NamespaceID:   ns,
+					Timestamp:     0,
+					NonEntity:     tc.isNonEntity,
+					MountAccessor: mount,
+					ClientType:    tc.activityType,
+				}, a.globalPartialMonthClientTracker[tc.expectedID]))
+			}
 		})
 	}
 }
