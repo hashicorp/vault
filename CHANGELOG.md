@@ -2,6 +2,41 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
+## 1.18.1
+### October 30, 2024
+
+SECURITY:
+* core/raft: Add raft join limits [[GH-28790](https://github.com/hashicorp/vault/pull/28790), [HCSEC-2024-26](https://discuss.hashicorp.com/t/hcsec-2024-26-vault-vulnerable-to-denial-of-service-through-memory-exhaustion-when-processing-raft-cluster-join-requests)]
+
+CHANGES:
+
+* auth/azure: Update plugin to v0.19.1 [[GH-28712](https://github.com/hashicorp/vault/pull/28712)]
+* secrets/azure: Update plugin to v0.20.1 [[GH-28699](https://github.com/hashicorp/vault/pull/28699)]
+* secrets/openldap: Update plugin to v0.14.1 [[GH-28479](https://github.com/hashicorp/vault/pull/28479)]
+* secrets/openldap: Update plugin to v0.14.2 [[GH-28704](https://github.com/hashicorp/vault/pull/28704)]
+* secrets/openldap: Update plugin to v0.14.3 [[GH-28780](https://github.com/hashicorp/vault/pull/28780)]
+
+IMPROVEMENTS:
+
+* core: Add a mount tuneable that trims trailing slashes of request paths during POST.  Needed to support CMPv2 in PKI. [[GH-28752](https://github.com/hashicorp/vault/pull/28752)]
+* raft/snapshotagent (enterprise): upgrade raft-snapshotagent to v0.0.0-20241003195753-88fef418d705
+* ui: Add button to copy secret path in kv v1 and v2 secrets engines [[GH-28629](https://github.com/hashicorp/vault/pull/28629)]
+* ui: Adds copy button to identity entity, alias and mfa method IDs [[GH-28742](https://github.com/hashicorp/vault/pull/28742)]
+
+BUG FIXES:
+
+* agent: Fix chown error running agent on Windows with an auto-auth file sinks. [[GH-28748](https://github.com/hashicorp/vault/pull/28748)]
+* audit: Prevent users from enabling multiple audit devices of file type with the same file_path to write to. [[GH-28751](https://github.com/hashicorp/vault/pull/28751)]
+* cli: Fixed a CLI precedence issue where -agent-address didn't override VAULT_AGENT_ADDR as it should [[GH-28574](https://github.com/hashicorp/vault/pull/28574)]
+* core/seal (enterprise): Fix bug that caused seal generation information to be replicated, which prevented disaster recovery and performance replication clusters from using their own seal high-availability configuration.
+* core/seal: Fix an issue that could cause reading from sys/seal-backend-status to return stale information. [[GH-28631](https://github.com/hashicorp/vault/pull/28631)]
+* core: Fixed panic seen when performing help requests without /v1/ in the URL. [[GH-28669](https://github.com/hashicorp/vault/pull/28669)]
+* kmip (enterprise): Use the default KMIP port for IPv6 addresses missing a port, for the listen_addrs configuration field, in order to match the existing IPv4 behavior
+* namespaces (enterprise): Fix issue where namespace patch requests to a performance secondary would not patch the namespace's metadata.
+* proxy: Fix chown error running proxy on Windows with an auto-auth file sink. [[GH-28748](https://github.com/hashicorp/vault/pull/28748)]
+* secrets/pki: Address issue with ACME HTTP-01 challenges failing for IPv6 IPs due to improperly formatted URLs [[GH-28718](https://github.com/hashicorp/vault/pull/28718)]
+* ui: No longer running decodeURIComponent on KVv2 list view allowing percent encoded data-octets in path name. [[GH-28698](https://github.com/hashicorp/vault/pull/28698)]
+  
 ## 1.18.0 
 ## October 9, 2024
 
@@ -212,6 +247,32 @@ use versioned plugins. [[GH-27881](https://github.com/hashicorp/vault/pull/27881
 * ui: fix namespace picker not working when in small screen where the sidebar is collapsed by default. [[GH-27728](https://github.com/hashicorp/vault/pull/27728)]
 * ui: fixes renew-self being called right after login for non-renewable tokens [[GH-28204](https://github.com/hashicorp/vault/pull/28204)]
 * ui: fixes toast (flash) alert message saying "created" when deleting a kv v2 secret [[GH-28093](https://github.com/hashicorp/vault/pull/28093)]
+
+## 1.17.8 Enterprise
+### October 30, 2024
+
+SECURITY:
+* core/raft: Add raft join limits [[GH-28790](https://github.com/hashicorp/vault/pull/28790), [HCSEC-2024-26](https://discuss.hashicorp.com/t/hcsec-2024-26-vault-vulnerable-to-denial-of-service-through-memory-exhaustion-when-processing-raft-cluster-join-requests)]
+
+CHANGES:
+
+* auth/azure: Update plugin to v0.18.1
+* secrets/openldap: update plugin to v0.13.2
+
+IMPROVEMENTS:
+
+* ui: Add button to copy secret path in kv v1 and v2 secrets engines [[GH-28629](https://github.com/hashicorp/vault/pull/28629)]
+* ui: Adds copy button to identity entity, alias and mfa method IDs [[GH-28742](https://github.com/hashicorp/vault/pull/28742)]
+
+BUG FIXES:
+
+* audit: Prevent users from enabling multiple audit devices of file type with the same file_path to write to. [[GH-28751](https://github.com/hashicorp/vault/pull/28751)]
+* core/seal (enterprise): Fix bug that caused seal generation information to be replicated, which prevented disaster recovery and performance replication clusters from using their own seal high-availability configuration.
+* core/seal: Fix an issue that could cause reading from sys/seal-backend-status to return stale information. [[GH-28631](https://github.com/hashicorp/vault/pull/28631)]
+* core: Fixed panic seen when performing help requests without /v1/ in the URL. [[GH-28669](https://github.com/hashicorp/vault/pull/28669)]
+* namespaces (enterprise): Fix issue where namespace patch requests to a performance secondary would not patch the namespace's metadata.
+* secrets/pki: Address issue with ACME HTTP-01 challenges failing for IPv6 IPs due to improperly formatted URLs [[GH-28718](https://github.com/hashicorp/vault/pull/28718)]
+* ui: No longer running decodeURIComponent on KVv2 list view allowing percent encoded data-octets in path name. [[GH-28698](https://github.com/hashicorp/vault/pull/28698)]
 
 ## 1.17.7 Enterprise
 ### October 09, 2024
@@ -592,6 +653,32 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 * ui: fixed a bug where the replication pages did not update display when navigating between DR and performance [[GH-26325](https://github.com/hashicorp/vault/pull/26325)]
 * ui: fixes undefined start time in filename for downloaded client count attribution csv [[GH-26485](https://github.com/hashicorp/vault/pull/26485)]
 
+## 1.16.12 Enterprise
+### October 30, 2024
+
+**Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
+SECURITY:
+* core/raft: Add raft join limits [[GH-28790](https://github.com/hashicorp/vault/pull/28790), [HCSEC-2024-26](https://discuss.hashicorp.com/t/hcsec-2024-26-vault-vulnerable-to-denial-of-service-through-memory-exhaustion-when-processing-raft-cluster-join-requests)]
+CHANGES:
+
+* auth/azure: Update plugin to v0.17.1
+* secrets/openldap: Update plugin to v0.12.2
+
+IMPROVEMENTS:
+
+* ui: Add button to copy secret path in kv v1 and v2 secrets engines [[GH-28629](https://github.com/hashicorp/vault/pull/28629)]
+* ui: Adds copy button to identity entity, alias and mfa method IDs [[GH-28742](https://github.com/hashicorp/vault/pull/28742)]
+
+BUG FIXES:
+
+* core/seal (enterprise): Fix bug that caused seal generation information to be replicated, which prevented disaster recovery and performance replication clusters from using their own seal high-availability configuration.
+* core/seal: Fix an issue that could cause reading from sys/seal-backend-status to return stale information. [[GH-28631](https://github.com/hashicorp/vault/pull/28631)]
+* core: Fixed panic seen when performing help requests without /v1/ in the URL. [[GH-28669](https://github.com/hashicorp/vault/pull/28669)]
+* namespaces (enterprise): Fix issue where namespace patch requests to a performance secondary would not patch the namespace's metadata.
+* secrets/pki: Address issue with ACME HTTP-01 challenges failing for IPv6 IPs due to improperly formatted URLs [[GH-28718](https://github.com/hashicorp/vault/pull/28718)]
+* ui: No longer running decodeURIComponent on KVv2 list view allowing percent encoded data-octets in path name. [[GH-28698](https://github.com/hashicorp/vault/pull/28698)]
+  
 ## 1.16.11 Enterprise
 ### October 09, 2024
 
