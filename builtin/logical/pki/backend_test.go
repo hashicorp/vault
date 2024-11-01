@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"github.com/hashicorp/vault/helper/constants"
 	"math"
 	"math/big"
 	mathrand "math/rand"
@@ -7086,6 +7087,7 @@ func TestPatchIssuer(t *testing.T) {
 
 	type TestCase struct {
 		Field   string
+		IsEnt   bool
 		Before  interface{}
 		Patched interface{}
 	}
@@ -7135,10 +7137,35 @@ func TestPatchIssuer(t *testing.T) {
 			Before:  []string(nil),
 			Patched: []string{"self"},
 		},
+		{
+			Field:   "allow_disable_critical_extension_checks",
+			IsEnt:   true,
+			Before:  false,
+			Patched: true,
+		},
+		{
+			Field:   "allow_disable_path_length_checks",
+			IsEnt:   true,
+			Before:  false,
+			Patched: true,
+		},
+		{
+			Field:   "allow_disable_name_checks",
+			IsEnt:   true,
+			Before:  false,
+			Patched: true,
+		},
+		{
+			Field:   "allow_disable_name_constraint_checks",
+			IsEnt:   true,
+			Before:  false,
+			Patched: true,
+		},
 	}
-
-	for index, testCase := range testCases {
-		t.Logf("index: %v / tc: %v", index, testCase)
+	for _, testCase := range testCases {
+		if testCase.IsEnt && !constants.IsEnterprise {
+			continue
+		}
 
 		b, s := CreateBackendWithStorage(t)
 
@@ -7195,6 +7222,20 @@ func TestPatchIssuer(t *testing.T) {
 			// self->id
 			require.Equal(t, []string{id}, resp.Data[testCase.Field], "failed persisting value")
 		}
+
+		// 7. Patch it back
+		resp, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+			testCase.Field: testCase.Before,
+		})
+		requireSuccessNonNilResponse(t, resp, err, "failed patching root issuer")
+
+		require.Equal(t, testCase.Before, resp.Data[testCase.Field], "failed persisting value")
+
+		// 8. Ensure it stuck
+		resp, err = CBRead(b, s, "issuer/default")
+		requireSuccessNonNilResponse(t, resp, err, "failed reading root issuer after")
+
+		require.Equal(t, testCase.Before, resp.Data[testCase.Field])
 	}
 }
 

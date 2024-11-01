@@ -209,90 +209,24 @@ and using '{{cluster_aia_path}}' requires /config/cluster's 'aia_path' member
 to be set on all PR secondary clusters.`,
 		Default: false,
 	}
+	addEntPathIssuerFields(fields)
+	updateIssuerFields := commonIssuerResponseFields()
+	// TODO: Why aren't these on the revoke response? Should they be?
+	updateIssuerFields["enable_aia_url_templating"] = &framework.FieldSchema{
+		Type:        framework.TypeBool,
+		Description: `Whether or not templating is enabled for AIA fields`,
+		Required:    false,
+	}
+	updateIssuerFields["allow_disable_critical_extension_checks"] = &framework.FieldSchema{
+		Type:        framework.TypeBool,
+		Description: `Whether parameter disable_critical_extension_checks can be used when issuing certificates`,
+		Required:    false,
+	}
 
 	updateIssuerSchema := map[int][]framework.Response{
 		http.StatusOK: {{
 			Description: "OK",
-			Fields: map[string]*framework.FieldSchema{
-				"issuer_id": {
-					Type:        framework.TypeString,
-					Description: `Issuer Id`,
-					Required:    false,
-				},
-				"issuer_name": {
-					Type:        framework.TypeString,
-					Description: `Issuer Name`,
-					Required:    false,
-				},
-				"key_id": {
-					Type:        framework.TypeString,
-					Description: `Key Id`,
-					Required:    false,
-				},
-				"certificate": {
-					Type:        framework.TypeString,
-					Description: `Certificate`,
-					Required:    false,
-				},
-				"manual_chain": {
-					Type:        framework.TypeStringSlice,
-					Description: `Manual Chain`,
-					Required:    false,
-				},
-				"ca_chain": {
-					Type:        framework.TypeStringSlice,
-					Description: `CA Chain`,
-					Required:    false,
-				},
-				"leaf_not_after_behavior": {
-					Type:        framework.TypeString,
-					Description: `Leaf Not After Behavior`,
-					Required:    false,
-				},
-				"usage": {
-					Type:        framework.TypeString,
-					Description: `Usage`,
-					Required:    false,
-				},
-				"revocation_signature_algorithm": {
-					Type:        framework.TypeString,
-					Description: `Revocation Signature Alogrithm`,
-					Required:    false,
-				},
-				"revoked": {
-					Type:        framework.TypeBool,
-					Description: `Revoked`,
-					Required:    false,
-				},
-				"revocation_time": {
-					Type:     framework.TypeInt,
-					Required: false,
-				},
-				"revocation_time_rfc3339": {
-					Type:     framework.TypeString,
-					Required: false,
-				},
-				"issuing_certificates": {
-					Type:        framework.TypeStringSlice,
-					Description: `Issuing Certificates`,
-					Required:    false,
-				},
-				"crl_distribution_points": {
-					Type:        framework.TypeStringSlice,
-					Description: `CRL Distribution Points`,
-					Required:    false,
-				},
-				"ocsp_servers": {
-					Type:        framework.TypeStringSlice,
-					Description: `OCSP Servers`,
-					Required:    false,
-				},
-				"enable_aia_url_templating": {
-					Type:        framework.TypeBool,
-					Description: `Whether or not templating is enabled for AIA fields`,
-					Required:    false,
-				},
-			},
+			Fields:      updateIssuerFields,
 		}},
 	}
 
@@ -338,6 +272,88 @@ to be set on all PR secondary clusters.`,
 		HelpSynopsis:    pathGetIssuerHelpSyn,
 		HelpDescription: pathGetIssuerHelpDesc,
 	}
+}
+
+func commonIssuerResponseFields() map[string]*framework.FieldSchema {
+	fields := map[string]*framework.FieldSchema{
+		"issuer_id": {
+			Type:        framework.TypeString,
+			Description: `Issuer Id`,
+			Required:    false,
+		},
+		"issuer_name": {
+			Type:        framework.TypeString,
+			Description: `Issuer Name`,
+			Required:    false,
+		},
+		"key_id": {
+			Type:        framework.TypeString,
+			Description: `Key Id`,
+			Required:    false,
+		},
+		"certificate": {
+			Type:        framework.TypeString,
+			Description: `Certificate`,
+			Required:    false,
+		},
+		"manual_chain": {
+			Type:        framework.TypeStringSlice,
+			Description: `Manual Chain`,
+			Required:    false,
+		},
+		"ca_chain": {
+			Type:        framework.TypeStringSlice,
+			Description: `CA Chain`,
+			Required:    false,
+		},
+		"leaf_not_after_behavior": {
+			Type:        framework.TypeString,
+			Description: `Leaf Not After Behavior`,
+			Required:    false,
+		},
+		"usage": {
+			Type:        framework.TypeString,
+			Description: `Usage`,
+			Required:    false,
+		},
+		"revocation_signature_algorithm": {
+			Type:        framework.TypeString,
+			Description: `Revocation Signature Alogrithm`,
+			Required:    false,
+		},
+		"revoked": {
+			Type:        framework.TypeBool,
+			Description: `Revoked`,
+			Required:    false,
+		},
+		"revocation_time": {
+			Type:     framework.TypeInt,
+			Required: false,
+		},
+		"revocation_time_rfc3339": {
+			Type:     framework.TypeString,
+			Required: false,
+		},
+		"issuing_certificates": {
+			Type:        framework.TypeStringSlice,
+			Description: `Issuing Certificates`,
+			Required:    false,
+		},
+		"crl_distribution_points": {
+			Type:        framework.TypeStringSlice,
+			Description: `CRL Distribution Points`,
+			Required:    false,
+		},
+		"ocsp_servers": {
+			Type:        framework.TypeStringSlice,
+			Description: `OCSP Servers`,
+			Required:    false,
+		},
+	}
+
+	addEntPathIssuerResponseFields(fields)
+
+	return fields
 }
 
 func buildPathGetIssuer(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
@@ -454,6 +470,7 @@ func respondReadIssuer(issuer *issuing.IssuerEntry) (*logical.Response, error) {
 		"crl_distribution_points":        []string{},
 		"ocsp_servers":                   []string{},
 	}
+	setEntIssuerData(data, issuer)
 
 	if issuer.Revoked {
 		data["revocation_time"] = issuer.RevocationTime
@@ -660,6 +677,10 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		if len(issuer.AIAURIs.IssuingCertificates) == 0 && len(issuer.AIAURIs.CRLDistributionPoints) == 0 && len(issuer.AIAURIs.OCSPServers) == 0 {
 			issuer.AIAURIs = nil
 		}
+	}
+
+	if updateEntIssuerFields(issuer, data, false) {
+		modified = true
 	}
 
 	// Updating the chain should be the last modification as there's a chance
@@ -894,7 +915,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 	if enableTemplatingRaw, ok := data.GetOk("enable_aia_url_templating"); ok {
 		enableTemplating := enableTemplatingRaw.(bool)
 		if enableTemplating != issuer.AIAURIs.EnableTemplating {
-			issuer.AIAURIs.EnableTemplating = true
+			issuer.AIAURIs.EnableTemplating = enableTemplating // TODO: Is this correct? If it is, does it need to be backported?
 			modified = true
 		}
 	}
@@ -963,6 +984,10 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 				return nil, err
 			}
 		}
+	}
+
+	if updateEntIssuerFields(issuer, data, true) {
+		modified = true
 	}
 
 	if modified {
