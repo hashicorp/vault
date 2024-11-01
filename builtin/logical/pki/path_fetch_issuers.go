@@ -316,12 +316,14 @@ func issuerResponseFields() map[string]*framework.FieldSchema {
 			Required:    false,
 		},
 		"revocation_time": {
-			Type:     framework.TypeInt,
-			Required: false,
+			Type:        framework.TypeInt,
+			Description: `Revocation time`,
+			Required:    false,
 		},
 		"revocation_time_rfc3339": {
-			Type:     framework.TypeString,
-			Required: false,
+			Type:        framework.TypeString,
+			Description: `Revocation time RFC 3339 formatted`,
+			Required:    false,
 		},
 		"issuing_certificates": {
 			Type:        framework.TypeStringSlice,
