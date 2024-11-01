@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Replace KVv2 json secret details view with Hds::CodeBlock component allowing users to search full secret height.
+```
