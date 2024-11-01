@@ -94,11 +94,9 @@ None.
   with the default `""` being equivalent to `"hidden"`.
 
 
-- `-local` `(bool: false)` - Mark the auth method as local-only. Local auth
-  methods are not replicated nor removed by replication.
+@include 'cli/shared/flags/local.mdx'
 
-- `-max-lease-ttl` `(string: "")` - The maximum lease duration, specified as
-  a string duration like "5s" or "30m".
+@include 'cli/shared/flags/max-lease-ttl.mdx'
 
 @include 'cli/shared/flags/path.mdx'
 
