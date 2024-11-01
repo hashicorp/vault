@@ -10,6 +10,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/ecdsa"
+	stdlibEd25519 "crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/hmac"
 	"crypto/rand"
@@ -133,6 +134,7 @@ type SigningOptions struct {
 	Marshaling       MarshalingType
 	SaltLength       int
 	SigAlgorithm     string
+	SigContext       string // Provide a context for Ed25519ctx signatures
 	ManagedKeyParams ManagedKeyParameters
 }
 
@@ -1300,9 +1302,12 @@ func (p *Policy) SignWithOptions(ver int, context, input []byte, options *Signin
 			key = ed25519.PrivateKey(keyParams.Key)
 		}
 
+		opts := genEd25519Options(hashAlgorithm, options.SigContext)
+
 		// Per docs, do not pre-hash ed25519; it does two passes and performs
-		// its own hashing
-		sig, err = key.Sign(rand.Reader, input, crypto.Hash(0))
+		// its own hashing when we specify crypto.Hash(0). Ed25519Ph assumes
+		// pre-hashed with SHA512
+		sig, err = key.Sign(rand.Reader, input, opts)
 		if err != nil {
 			return nil, err
 		}
@@ -1498,7 +1503,13 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 			pub = ed25519.PublicKey(raw)
 		}
 
-		return ed25519.Verify(pub, input, sigBytes), nil
+		opts := genEd25519Options(hashAlgorithm, options.SigContext)
+		if err := stdlibEd25519.VerifyWithOptions(pub, input, sigBytes, opts); err != nil {
+			// We drop the error, just report back that we failed signature verification
+			return false, nil
+		}
+
+		return true, nil
 
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		keyEntry, err := p.safeGetKeyEntry(ver)
@@ -1548,6 +1559,20 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 	default:
 		return false, errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
 	}
+}
+
+func genEd25519Options(hashAlgorithm HashType, sigContext string) *stdlibEd25519.Options {
+	opts := &stdlibEd25519.Options{
+		Hash: crypto.Hash(0),
+	}
+	if hashAlgorithm == HashTypeSHA2512 {
+		// activate ph mode, we assume input is prehashed
+		opts.Hash = crypto.SHA512
+	}
+	if len(sigContext) > 0 {
+		opts.Context = sigContext
+	}
+	return opts
 }
 
 func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte, randReader io.Reader) error {
