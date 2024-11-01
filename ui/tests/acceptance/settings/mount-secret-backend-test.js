@@ -338,9 +338,9 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
         assert
           .dom(GENERAL.searchSelect.selectedOption())
           .hasText('some-key', 'some-key was selected and displays in the search select');
+        await click(GENERAL.backButton);
       }
-      // Go back and choose a non-wif engine type
-      await click(GENERAL.backButton);
+      // Choose a non-wif engine
       await click(MOUNT_BACKEND_FORM.mountType('ssh'));
       assert
         .dom('[data-test-search-select-with-modal]')
@@ -350,9 +350,11 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     });
 
     test('it allows a user with permissions to oidc/key to create an identity_token_key', async function (assert) {
+      await logout.visit(); // logout to start so you can login for the first iteration and subsequent iterations
       for (const engine of WIF_ENGINES) {
+        await authPage.login();
         const path = `secrets-adminPolicy-${engine}`;
-        const newKey = `key-${uuidv4()}`;
+        const newKey = `key-${engine}-${uuidv4()}`;
         const secrets_admin_policy = adminOidcCreateRead(path);
         const secretsAdminToken = await runCmd(
           tokenWithPolicyCmd(`secrets-admin-${path}`, secrets_admin_policy)
@@ -360,7 +362,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
 
         await logout.visit();
         await authPage.login(secretsAdminToken);
-        await page.visit();
+        await visit('/vault/settings/mount-secret-backend');
         await click(MOUNT_BACKEND_FORM.mountType(engine));
         await fillIn(GENERAL.inputByAttr('path'), path);
         await click(GENERAL.toggleGroup('Method Options'));
@@ -368,28 +370,42 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
         // create new key
         await fillIn(GENERAL.searchSelect.searchInput, newKey);
         await click(GENERAL.searchSelect.options);
-        assert.dom('#search-select-modal').exists('modal with form opens');
-        assert.dom('[data-test-modal-title]').hasText('Create new key', 'Create key modal renders');
+        assert.dom('#search-select-modal').exists(`modal with form opens for engine ${engine}`);
+        assert
+          .dom('[data-test-modal-title]')
+          .hasText('Create new key', `Create key modal renders for engine: ${engine}`);
 
         await click(OIDC.keySaveButton);
-        assert.dom('#search-select-modal').doesNotExist('modal disappears onSave');
+        assert.dom('#search-select-modal').doesNotExist(`modal disappears onSave for engine ${engine}`);
         assert.dom(GENERAL.searchSelect.selectedOption()).hasText(newKey, `${newKey} is now selected`);
 
         await click(GENERAL.saveButton);
         await visit(`/vault/secrets/${path}/configuration`);
-        await click(SES.configurationToggle);
-        assert
-          .dom(GENERAL.infoRowValue('Identity Token Key'))
-          .hasText(newKey, 'shows identity token key on configuration page');
+        // TODO: remove conditional once GCP and Azure configuration pages match the newer pattern.
+        if (engine === 'aws') {
+          await click(SES.configurationToggle);
+          assert
+            .dom(GENERAL.infoRowValue('Identity Token Key'))
+            .hasText(newKey, `shows identity token key on configuration page for engine: ${engine}`);
+        } else {
+          await visit(`/vault/secrets/${path}/configuration`);
+          assert
+            .dom(GENERAL.infoRowValue('Identity token key'))
+            .hasText(newKey, `shows identity token key on configuration page for engine: ${engine}`);
+        }
+
         // cleanup
         await runCmd(`delete sys/mounts/${path}`);
-        await runCmd(`delete identity/oidc/key/some-key`);
         await runCmd(`delete identity/oidc/key/${newKey}`);
+        await runCmd(`delete identity/oidc/key/some-key`);
+        await logout.visit();
       }
     });
 
     test('it allows user with NO access to oidc/key to manually input an identity_token_key', async function (assert) {
+      await logout.visit();
       for (const engine of WIF_ENGINES) {
+        await authPage.login();
         const path = `secrets-noOidcAdmin-${engine}`;
         const secretsNoOidcAdminPolicy = adminOidcCreate(path);
         const secretsNoOidcAdminToken = await runCmd(
@@ -409,15 +425,23 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
         await click(GENERAL.saveButton);
         assert
           .dom(GENERAL.latestFlashContent)
-          .hasText(`Successfully mounted the aws secrets engine at ${path}.`);
+          .hasText(`Successfully mounted the ${engine} secrets engine at ${path}.`);
 
         await visit(`/vault/secrets/${path}/configuration`);
-        await click(SES.configurationToggle);
-        assert
-          .dom(GENERAL.infoRowValue('Identity Token Key'))
-          .hasText('general-key', 'shows identity token key on configuration page');
+        // TODO: remove conditional once GCP and Azure configuration pages match the newer pattern.
+        if (engine === 'aws') {
+          await click(SES.configurationToggle);
+          assert
+            .dom(GENERAL.infoRowValue('Identity Token Key'))
+            .hasText('general-key', `shows identity token key on configuration page for engine: ${engine}`);
+        } else {
+          assert
+            .dom(GENERAL.infoRowValue('Identity token key'))
+            .hasText('general-key', `shows identity token key on configuration page for engine: ${engine}`);
+        }
         // cleanup
         await runCmd(`delete sys/mounts/${path}`);
+        await logout.visit();
       }
     });
   });
