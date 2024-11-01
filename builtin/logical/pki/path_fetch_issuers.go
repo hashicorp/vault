@@ -210,18 +210,7 @@ to be set on all PR secondary clusters.`,
 		Default: false,
 	}
 	addEntPathIssuerFields(fields)
-	updateIssuerFields := commonIssuerResponseFields()
-	// TODO: Why aren't these on the revoke response? Should they be?
-	updateIssuerFields["enable_aia_url_templating"] = &framework.FieldSchema{
-		Type:        framework.TypeBool,
-		Description: `Whether or not templating is enabled for AIA fields`,
-		Required:    false,
-	}
-	updateIssuerFields["allow_disable_critical_extension_checks"] = &framework.FieldSchema{
-		Type:        framework.TypeBool,
-		Description: `Whether parameter disable_critical_extension_checks can be used when issuing certificates`,
-		Required:    false,
-	}
+	updateIssuerFields := issuerResponseFields()
 
 	updateIssuerSchema := map[int][]framework.Response{
 		http.StatusOK: {{
@@ -274,7 +263,7 @@ to be set on all PR secondary clusters.`,
 	}
 }
 
-func commonIssuerResponseFields() map[string]*framework.FieldSchema {
+func issuerResponseFields() map[string]*framework.FieldSchema {
 	fields := map[string]*framework.FieldSchema{
 		"issuer_id": {
 			Type:        framework.TypeString,
@@ -347,6 +336,16 @@ func commonIssuerResponseFields() map[string]*framework.FieldSchema {
 		"ocsp_servers": {
 			Type:        framework.TypeStringSlice,
 			Description: `OCSP Servers`,
+			Required:    false,
+		},
+		"enable_aia_url_templating": {
+			Type:        framework.TypeBool,
+			Description: `Whether or not templating is enabled for AIA fields`,
+			Required:    false,
+		},
+		"allow_disable_critical_extension_checks": {
+			Type:        framework.TypeBool,
+			Description: `Whether parameter disable_critical_extension_checks can be used when issuing certificates`,
 			Required:    false,
 		},
 	}
