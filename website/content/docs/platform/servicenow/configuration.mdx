@@ -99,9 +99,10 @@ In the ServiceNow UI:
 1. Navigate to "Discovery - Credentials &rarr; New".
 1. Choose a type from the list.
 1. Select "External credential store".
+1. Provide a meaningful name.
 1. Provide a fully qualified collection name (FQCN):
     - **Xanadu (Q4-2024) or newer**:  use `com.snc.discovery.CredentialResolver`
-    - **Versions prior to Xanadu (Q4-2024)**: use a meaningful name
+    - **Versions prior to Xanadu (Q4-2024)**: leave blank or use "None"
 1. Set "Credential ID" to the
    [ReadSecretVersion endpoint](/vault/api-docs/secret/kv/kv-v2#read-secret-version)
    of your secrets plugin and credential. For example, the endpoint
