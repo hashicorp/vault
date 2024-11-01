@@ -64,7 +64,7 @@
           />
         </div>
         <div class="control">
-          <Hds::Button @text="Back" @color="secondary" data-test-back-button {{on "click" (fn this.setMountType "")}} />
+          <Hds::Button @text="Back" @color="secondary" data-test-back-button {{on "click" (fn this.resetForm "")}} />
         </div>
         {{#if this.invalidFormAlert}}
           <div class="control">
