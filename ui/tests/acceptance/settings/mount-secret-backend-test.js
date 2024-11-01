@@ -350,7 +350,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     });
 
     test('it allows a user with permissions to oidc/key to create an identity_token_key', async function (assert) {
-      await logout.visit(); // logout to start so you can login for the first iteration and subsequent iterations
+      logout.visit();
       for (const engine of WIF_ENGINES) {
         await authPage.login();
         const path = `secrets-adminPolicy-${engine}`;
@@ -396,8 +396,8 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
 
         // cleanup
         await runCmd(`delete sys/mounts/${path}`);
-        await runCmd(`delete identity/oidc/key/${newKey}`);
         await runCmd(`delete identity/oidc/key/some-key`);
+        await runCmd(`delete identity/oidc/key/${newKey}`);
         await logout.visit();
       }
     });
