@@ -5,7 +5,6 @@
 
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
-import { tracked } from '@glimmer/tracking';
 
 /**
  * @module JsonEditor
@@ -33,16 +32,6 @@ import { tracked } from '@glimmer/tracking';
  */
 
 export default class JsonEditorComponent extends Component {
-  @tracked showExpandedView = false;
-
-  get isExpanded() {
-    return this.showExpandedView ? 'expanded-codemirror' : '';
-  }
-
-  get isReadOnly() {
-    return this.args.readOnly ? 'readonly-codemirror' : '';
-  }
-
   get getShowToolbar() {
     return this.args.showToolbar === false ? false : true;
   }
@@ -66,12 +55,6 @@ export default class JsonEditorComponent extends Component {
     if (this.args.onFocusOut) {
       this.args.onFocusOut(...args);
     }
-  }
-
-  @action
-  toggleExpandView() {
-    // adds or removes the class 'expanded' to .cm-s-hashi .CodeMirror
-    this.args.valueUpdated(null, this._codemirrorEditor);
   }
 
   @action

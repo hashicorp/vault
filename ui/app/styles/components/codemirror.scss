@@ -172,12 +172,6 @@ $gutter-grey: #2a2f36;
   }
 }
 
-.expanded-codemirror > .cm-s-hashi {
-  &.CodeMirror {
-    height: 100%;
-  }
-}
-
 .readonly-codemirror {
   .CodeMirror-code {
     cursor: default;
