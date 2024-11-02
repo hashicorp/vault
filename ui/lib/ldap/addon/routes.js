@@ -9,6 +9,8 @@ export default buildRoutes(function () {
   this.route('overview');
   this.route('roles', function () {
     this.route('create');
+    // wildcard route so we can traverse hierarchical roles i.e. prod/admin/my-role
+    this.route('subdirectory', { path: '/:type/subdirectory/*path_to_role' });
     this.route('role', { path: '/:type/:name' }, function () {
       this.route('details');
       this.route('edit');
