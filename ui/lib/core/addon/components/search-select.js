@@ -218,6 +218,7 @@ export default class SearchSelect extends Component {
     if (this.args.disallowNewItems && !existingOption) {
       return false;
     }
+    return !existingOption;
   }
 
   // ----- adapted from ember-power-select-with-create
