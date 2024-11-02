@@ -25,44 +25,39 @@ export default class LdapRoleAdapter extends ApplicationAdapter {
     return { id: ldapRoleID(type, name), backend, name, type };
   }
 
-  getURL(backend, path, name) {
+  _getURL(backend, path, name) {
     const base = `${this.buildURL()}/${encodePath(backend)}/${path}`;
     return name ? `${base}/${name}` : base;
   }
 
-  pathForRoleType(type, isCred) {
+  _pathForRoleType(type, isCred) {
     const staticPath = isCred ? 'static-cred' : 'static-role';
     const dynamicPath = isCred ? 'creds' : 'role';
     return type === 'static' ? staticPath : dynamicPath;
   }
 
-  createOrUpdate(store, modelSchema, snapshot) {
+  _createOrUpdate(store, modelSchema, snapshot) {
     const { backend, name, type } = snapshot.record;
     const data = snapshot.serialize();
-    return this.ajax(this.getURL(backend, this.pathForRoleType(type), name), 'POST', {
+    return this.ajax(this._getURL(backend, this._pathForRoleType(type), name), 'POST', {
       data,
     }).then(() => {
       // add ID to response because ember data dislikes 204s...
-      return {
-        data: {
-          ...data,
-          ...this._constructRecord({ backend, name, type }),
-        },
-      };
+      return { data: this._constructRecord({ backend, name, type }) };
     });
   }
 
   createRecord() {
-    return this.createOrUpdate(...arguments);
+    return this._createOrUpdate(...arguments);
   }
 
   updateRecord() {
-    return this.createOrUpdate(...arguments);
+    return this._createOrUpdate(...arguments);
   }
 
   urlForDeleteRecord(id, modelName, snapshot) {
     const { backend, type, name } = snapshot.record;
-    return this.getURL(backend, this.pathForRoleType(type), name);
+    return this._getURL(backend, this._pathForRoleType(type), name);
   }
 
   /* 
@@ -85,7 +80,7 @@ export default class LdapRoleAdapter extends ApplicationAdapter {
     const errors = [];
 
     for (const roleType of ['static', 'dynamic']) {
-      const url = this.getURL(backend, this.pathForRoleType(roleType));
+      const url = this._getURL(backend, this._pathForRoleType(roleType));
       try {
         const models = await this.ajax(url, 'GET', { data: { list: true } }).then((resp) => {
           return resp.data.keys.map((name) => this._constructRecord({ backend, name, type: roleType }));
@@ -126,7 +121,7 @@ export default class LdapRoleAdapter extends ApplicationAdapter {
   async _querySubdirectory(backend, roleAncestry) {
     // path_to_role is the ancestral path
     const { path_to_role, type: roleType } = roleAncestry;
-    const url = `${this.getURL(backend, this.pathForRoleType(roleType))}/${path_to_role}`;
+    const url = `${this._getURL(backend, this._pathForRoleType(roleType))}/${path_to_role}`;
     const roles = await this.ajax(url, 'GET', { data: { list: true } }).then((resp) => {
       return resp.data.keys.map((name) => ({
         ...this._constructRecord({ backend, name, type: roleType }),
@@ -138,7 +133,7 @@ export default class LdapRoleAdapter extends ApplicationAdapter {
 
   queryRecord(store, type, query) {
     const { backend, name, type: roleType } = query;
-    const url = this.getURL(backend, this.pathForRoleType(roleType), name);
+    const url = this._getURL(backend, this._pathForRoleType(roleType), name);
     return this.ajax(url, 'GET').then((resp) => ({
       ...resp.data,
       ...this._constructRecord({ backend, name, type: roleType }),
@@ -146,7 +141,7 @@ export default class LdapRoleAdapter extends ApplicationAdapter {
   }
 
   fetchCredentials(backend, type, name) {
-    const url = this.getURL(backend, this.pathForRoleType(type, true), name);
+    const url = this._getURL(backend, this._pathForRoleType(type, true), name);
     return this.ajax(url, 'GET').then((resp) => {
       if (type === 'dynamic') {
         const { lease_id, lease_duration, renewable } = resp;
@@ -156,7 +151,7 @@ export default class LdapRoleAdapter extends ApplicationAdapter {
     });
   }
   rotateStaticPassword(backend, name) {
-    const url = this.getURL(backend, 'rotate-role', name);
+    const url = this._getURL(backend, 'rotate-role', name);
     return this.ajax(url, 'POST');
   }
 }
