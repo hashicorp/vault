@@ -5,6 +5,7 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+import { ldapBreadcrumbs } from 'ldap/utils/ldap-breadcrumbs';
 
 import type Store from '@ember-data/store';
 import type LdapRoleModel from 'vault/models/ldap/role';
@@ -62,10 +63,11 @@ export default class LdapRoleCredentialsRoute extends Route {
 
     const role = this.modelFor('roles.role') as LdapRoleModel;
     controller.breadcrumbs = [
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: role.backend, route: 'overview' },
-      { label: 'roles', route: 'roles' },
-      { label: role.name, route: 'roles.role' },
-      { label: 'credentials' },
+      { label: 'Roles', route: 'roles' },
+      ...ldapBreadcrumbs(role.name, role.type, role.backend),
+      { label: 'Credentials' },
     ];
   }
 }
