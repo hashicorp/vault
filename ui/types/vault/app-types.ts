@@ -73,12 +73,6 @@ export interface TtlEvent {
   goSafeTimeString: string;
 }
 
-export interface Breadcrumb {
-  label: string;
-  route?: string;
-  linkExternal?: boolean;
-}
-
 export interface EngineOwner extends Owner {
   mountPoint: string;
 }
