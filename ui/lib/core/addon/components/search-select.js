@@ -210,14 +210,14 @@ export default class SearchSelect extends Component {
   }
 
   shouldShowCreate(id, searchResults) {
-    if (this.args.disallowNewItems) return false;
-
-    if (searchResults?.length && searchResults[0].groupName) {
+    if (searchResults && searchResults.length && searchResults[0].groupName) {
       return !searchResults.some((group) => group.options.find((opt) => opt.id === id));
     }
     const existingOption =
-      this.dropdownOptions && this.dropdownOptions.some((opt) => opt.id === id || opt.name === id);
-    return !existingOption;
+      this.dropdownOptions && this.dropdownOptions.find((opt) => opt.id === id || opt.name === id);
+    if (this.args.disallowNewItems && !existingOption) {
+      return false;
+    }
   }
 
   // ----- adapted from ember-power-select-with-create
