@@ -51,12 +51,14 @@ module('Integration | Component | page/pki-tidy-auto-settings', function (hooks)
       .hasText('Edit auto-tidy', 'toolbar edit link has correct text');
 
     assert.dom('[data-test-row="enabled"] [data-test-label-div]').hasText('Automatic tidy enabled');
-    assert.dom('[data-test-row="intervalDuration"] [data-test-label-div]').hasText('Automatic tidy duration');
+    assert.dom('[data-test-value-div="Automatic tidy enabled"]').hasText('No');
+    assert.dom('[data-test-value-div="Interval duration"]').hasText('2 days');
     // Universal operations
     assert.dom('[data-test-group-title="Universal operations"]').hasText('Universal operations');
     assert
       .dom('[data-test-value-div="Tidy the certificate store"]')
       .exists('Renders universal field when value exists');
+    assert.dom('[data-test-value-div="Tidy the certificate store"]').hasText('No');
     assert
       .dom('[data-test-value-div="Tidy revoked certificates"]')
       .doesNotExist('Does not render universal field when value null');
@@ -65,6 +67,7 @@ module('Integration | Component | page/pki-tidy-auto-settings', function (hooks)
     assert
       .dom('[data-test-value-div="Tidy expired issuers"]')
       .exists('Renders issuer op field when value exists');
+    assert.dom('[data-test-value-div="Tidy expired issuers"]').hasText('Yes');
     assert
       .dom('[data-test-value-div="Tidy legacy CA bundle"]')
       .doesNotExist('Does not render issuer op field when value null');

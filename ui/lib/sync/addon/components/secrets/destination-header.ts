@@ -10,7 +10,7 @@ import errorMessage from 'vault/utils/error-message';
 
 import type SyncDestinationModel from 'vault/models/sync/destination';
 import type RouterService from '@ember/routing/router-service';
-import type StoreService from 'vault/services/store';
+import type PaginationService from 'vault/services/pagination';
 import type FlashMessageService from 'vault/services/flash-messages';
 
 interface Args {
@@ -18,8 +18,8 @@ interface Args {
 }
 
 export default class DestinationsTabsToolbar extends Component<Args> {
-  @service declare readonly router: RouterService;
-  @service declare readonly store: StoreService;
+  @service('app-router') declare readonly router: RouterService;
+  @service declare readonly pagination: PaginationService;
   @service declare readonly flashMessages: FlashMessageService;
 
   @action
@@ -28,7 +28,7 @@ export default class DestinationsTabsToolbar extends Component<Args> {
       const { destination } = this.args;
       const message = `Destination ${destination.name} has been queued for deletion.`;
       await destination.destroyRecord();
-      this.store.clearDataset('sync/destination');
+      this.pagination.clearDataset('sync/destination');
       this.router.transitionTo('vault.cluster.sync.secrets.overview');
       this.flashMessages.success(message);
     } catch (error) {

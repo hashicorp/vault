@@ -3,7 +3,10 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<form {{on "submit" (fn @doSubmit (hash param=@param context=@context nonce=@nonce bits=@bits))}} ...attributes>
+<form
+  {{on "submit" (fn @doSubmit (hash param=@param context=@context padding_scheme=@padding_scheme nonce=@nonce bits=@bits))}}
+  ...attributes
+>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="perform" @noun="datakey creation" />
     <div class="content has-bottom-margin-l">
@@ -65,6 +68,27 @@
         </div>
       </div>
     </div>
+    {{#if (includes @key.type (array "rsa-2048" "rsa-3072" "rsa-4096"))}}
+      <div class="field">
+        <label for="padding_scheme" class="is-label">Padding scheme</label>
+        <div class="control is-expanded">
+          <div class="select is-fullwidth">
+            <select
+              name="padding_scheme"
+              id="padding_scheme"
+              data-test-padding-scheme
+              onchange={{action (mut @padding_scheme) value="target.value"}}
+            >
+              {{#each (array "oaep" "pkcs1v15") as |scheme|}}
+                <option selected={{eq @padding_scheme scheme}} value={{scheme}}>
+                  {{scheme}}
+                </option>
+              {{/each}}
+            </select>
+          </div>
+        </div>
+      </div>
+    {{/if}}
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">

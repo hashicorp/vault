@@ -5,30 +5,28 @@
 
 import Engine from 'ember-engines/engine';
 import loadInitializers from 'ember-load-initializers';
-import Resolver from './resolver';
+import Resolver from 'ember-resolver';
 import config from './config/environment';
 
 const { modulePrefix } = config;
-/* eslint-disable ember/avoid-leaking-state-in-ember-objects */
-const Eng = Engine.extend({
-  modulePrefix,
-  Resolver,
-  dependencies: {
+export default class KmipEngine extends Engine {
+  modulePrefix = modulePrefix;
+  Resolver = Resolver;
+  dependencies = {
     services: [
       'auth',
       'download',
       'flash-messages',
       'namespace',
       'path-help',
-      'router',
+      'app-router',
       'store',
+      'pagination',
       'version',
       'secret-mount-path',
     ],
     externalRoutes: ['secrets'],
-  },
-});
+  };
+}
 
-loadInitializers(Eng, modulePrefix);
-
-export default Eng;
+loadInitializers(KmipEngine, modulePrefix);

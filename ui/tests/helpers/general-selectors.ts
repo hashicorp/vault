@@ -94,7 +94,7 @@ export const GENERAL = {
   navLink: (label: string) => `[data-test-sidebar-nav-link="${label}"]`,
   cancelButton: '[data-test-cancel]',
   saveButton: '[data-test-save]',
-  maskedInput: (name: string) => `[data-test-textarea="${name}"]`,
+  backButton: '[data-test-back-button]',
   codemirror: `[data-test-component="code-mirror-modifier"]`,
   codemirrorTextarea: `[data-test-component="code-mirror-modifier"] textarea`,
 };

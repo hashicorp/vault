@@ -16,6 +16,7 @@ import { runCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import {
   createConfig,
   expectedConfigKeys,
@@ -46,9 +47,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       const path = `aws-${this.uid}`;
       // in this test go through the full mount process. Bypass this step in later tests.
       await visit('/vault/settings/mount-secret-backend');
-      await click(SES.mountType('aws'));
-      await fillIn(GENERAL.inputByAttr('path'), path);
-      await click(SES.mountSubmit);
+      await mountBackend('aws', path);
       await click(SES.configTab);
       assert.dom(GENERAL.emptyStateTitle).hasText('AWS not configured');
       assert.dom(GENERAL.emptyStateActions).hasText('Configure AWS');
@@ -368,11 +367,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       // check all the form fields are present
       await click(GENERAL.toggleGroup('Root config options'));
       for (const key of expectedConfigKeys('aws-root-create')) {
-        if (key === 'secretKey') {
-          assert.dom(GENERAL.maskedInput(key)).exists(`${key} shows for root section.`);
-        } else {
-          assert.dom(GENERAL.inputByAttr(key)).exists(`${key} shows for root section.`);
-        }
+        assert.dom(GENERAL.inputByAttr(key)).exists(`${key} shows for root section.`);
       }
       for (const key of expectedConfigKeys('aws-lease')) {
         assert.dom(`[data-test-ttl-form-label="${key}"]`).exists(`${key} shows for Lease section.`);

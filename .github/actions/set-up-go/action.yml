@@ -8,14 +8,11 @@ description: Set up Go with a shared module cache.
 inputs:
   github-token:
     description: An elevated Github token to access private modules if necessary.
-    type: string
   no-restore:
     description: Whether or not to restore the Go module cache on a cache hit
-    type: boolean
-    default: false
+    default: "false"
   go-version:
     description: "Override .go-version"
-    type: string
     default: ""
 
 outputs:

@@ -12,4 +12,5 @@ export const AUTH_FORM = {
   input: (item: string) => `[data-test-${item}]`, // i.e. jwt, role, token, password or username
   mountPathInput: '[data-test-auth-form-mount-path]',
   moreOptions: '[data-test-auth-form-options-toggle]',
+  namespaceInput: '[data-test-auth-form-ns-input]',
 };

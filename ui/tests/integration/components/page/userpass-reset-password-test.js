@@ -14,7 +14,7 @@ const S = {
   infoBanner: '[data-test-current-user-banner]',
   save: '[data-test-reset-password-save]',
   error: '[data-test-reset-password-error]',
-  input: '[data-test-textarea]',
+  input: '[data-test-input="reset-password"]',
 };
 module('Integration | Component | page/userpass-reset-password', function (hooks) {
   setupRenderingTest(hooks);

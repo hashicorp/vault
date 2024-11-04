@@ -24,20 +24,19 @@
 
 This README outlines the details of collaborating on this Ember application.
 
-## Ember CLI Version Upgrade Matrix
+## Ember Version Upgrade Matrix
 
-| Vault Version | Ember Version |
-| ------------- | ------------- |
-| 1.17.x        | 5.4.2         |
-| 1.15.x        | 4.12.0        |
-| 1.14.x        | 4.4.0         |
-| 1.13.x        | 4.4.0         |
-| 1.12.x        | 3.28.5        |
-| 1.11.x        | 3.28.5        |
-| 1.10.x        | 3.28.5        |
-| 1.9.x         | 3.22.0        |
-| 1.8.x         | 3.22.0        |
-| 1.7.x         | 3.11.0        |
+Respective versions for `ember-cli`, `ember-source` and `ember-data` for each version of Vault that contains an upgrade.
+
+| Vault Version | Ember CLI | Ember Source | Ember Data |
+| ------------- | --------- | ------------ | ---------- |
+| 1.19.x        | 5.8.0     | 5.8.0        | 5.3.2      |
+| 1.17.x        | 5.4.2     | 5.4.0        | 4.12.4     |
+| 1.15.x        | 4.12.1    | 4.12.0       | 4.11.3     |
+| 1.13.x        | 4.4.0     | 4.4.4        | 4.5.0      |
+| 1.11.x        | 3.28.5    | 3.28.10      | 3.28.6     |
+| 1.10.x        | 3.24.0    | 3.24.7       | 3.24.0     |
+| 1.9.x         | 3.22.0    | 3.22.0       | 3.22.0     |
 
 ## Prerequisites
 
@@ -89,9 +88,12 @@ _All of the commands below assume you're in the `ui/` directory._
 [Mirage](https://miragejs.com/docs/getting-started/introduction/) can be helpful for mocking backend endpoints.
 Look in [mirage/handlers](mirage/handlers/) for existing mocked backends.
 
-Run yarn with mirage: `export MIRAGE_DEV_HANDLER=<handler> yarn start`
+Run yarn with mirage: `export MIRAGE_DEV_HANDLER=<handler> && yarn start`
 
 Where `handlername` is one of the options exported in [mirage/handlers/index](mirage/handlers/index.js)
+
+To stop using the handler, kill the yarn process (Ctrl+c) and then unset the environment variable.
+`unset MIRAGE_DEV_HANDLER`
 
 ## Building Vault UI into a Vault Binary
 

@@ -12,10 +12,9 @@
       data-test-popup-menu-trigger
     />
     <dd.Interactive
-      @text="Details"
       @route="vault.cluster.access.identity.aliases.show"
       @models={{array (pluralize @item.parentType) @item.id "details"}}
-    />
+    >Details</dd.Interactive>
     {{#if @item.updatePath.isPending}}
       <dd.Generic class="has-text-center">
         <LoadingDropdownOption />
@@ -23,18 +22,16 @@
     {{else}}
       {{#if @item.canEdit}}
         <dd.Interactive
-          @text="Edit"
           @route="vault.cluster.access.identity.aliases.edit"
           @models={{array (pluralize @item.parentType) @item.id}}
-        />
+        >Edit</dd.Interactive>
       {{/if}}
       {{#if @item.canDelete}}
         <dd.Interactive
-          @text="Remove"
           @color="critical"
           {{on "click" (fn (mut this.showConfirmModal) true)}}
           data-test-popup-menu="delete"
-        />
+        >Remove</dd.Interactive>
       {{/if}}
     {{/if}}
   </Hds::Dropdown>

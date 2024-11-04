@@ -33,10 +33,10 @@
               data-test-popup-menu-trigger
             />
             {{#if @item.updatePath.canRead}}
-              <dd.Interactive @text="Details" @route="vault.cluster.secrets.backend.show" @model={{@itemPath}} />
+              <dd.Interactive @route="vault.cluster.secrets.backend.show" @model={{@itemPath}}>Details</dd.Interactive>
             {{/if}}
             {{#if @item.updatePath.canUpdate}}
-              <dd.Interactive @text="Edit" @route="vault.cluster.secrets.backend.edit" @model={{@itemPath}} />
+              <dd.Interactive @route="vault.cluster.secrets.backend.edit" @model={{@itemPath}}>Edit</dd.Interactive>
             {{/if}}
           </Hds::Dropdown>
         {{/if}}

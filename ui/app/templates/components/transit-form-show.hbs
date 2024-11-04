@@ -63,7 +63,7 @@
         />
       {{/if}}
       {{#if (eq @mode "show")}}
-        {{#if (or @capabilities.canUpdate @capabilities.canDelete)}}
+        {{#if (or @model.canUpdate @model.canDelete)}}
           <ToolbarSecretLink @secret={{@key.id}} @backend={{@key.backend}} @mode="edit" replace={{true}}>
             Edit key
           </ToolbarSecretLink>

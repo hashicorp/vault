@@ -11,6 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import backendsPage from 'vault/tests/pages/secrets/backends';
 import authPage from 'vault/tests/pages/auth';
+import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 
 module('Acceptance | alicloud/enable', function (hooks) {
   setupApplicationTest(hooks);
@@ -24,10 +25,7 @@ module('Acceptance | alicloud/enable', function (hooks) {
     const enginePath = `alicloud-${this.uid}`;
     await mountSecrets.visit();
     await settled();
-    await mountSecrets.selectType('alicloud');
-    await settled();
-    await mountSecrets.path(enginePath).submit();
-    await settled();
+    await mountBackend('alicloud', enginePath);
 
     assert.strictEqual(
       currentRouteName(),

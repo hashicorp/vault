@@ -47,7 +47,7 @@ module('Integration | Component | sync | Secrets::DestinationHeader', function (
     assert.expect(3);
 
     const transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
-    const clearDatasetStub = sinon.stub(this.store, 'clearDataset');
+    const clearDatasetStub = sinon.stub(this.owner.lookup('service:pagination'), 'clearDataset');
 
     this.server.delete('/sys/sync/destinations/aws-sm/us-west-1', () => {
       assert.ok(true, 'Request made to delete destination');

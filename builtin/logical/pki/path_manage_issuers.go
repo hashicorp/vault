@@ -117,6 +117,7 @@ func buildPathGenerateRoot(b *backend, pattern string, displayAttrs *framework.D
 	ret.Fields = addCACommonFields(map[string]*framework.FieldSchema{})
 	ret.Fields = addCAKeyGenerationFields(ret.Fields)
 	ret.Fields = addCAIssueFields(ret.Fields)
+	ret.Fields = addCACertKeyUsage(ret.Fields)
 	return ret
 }
 
@@ -197,6 +198,7 @@ extension with CA: true. Only needed as a
 workaround in some compatibility scenarios
 with Active Directory Certificate Services.`,
 	}
+	ret.Fields = addCaCsrKeyUsage(ret.Fields)
 
 	// At this time Go does not support signing CSRs using PSS signatures, see
 	// https://github.com/golang/go/issues/45990
@@ -514,6 +516,7 @@ secret-keys.
 
 func pathRevokeIssuer(b *backend) *framework.Path {
 	fields := addIssuerRefField(map[string]*framework.FieldSchema{})
+	responseFields := issuerResponseFields(true)
 
 	return &framework.Path{
 		Pattern: "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/revoke",
@@ -532,83 +535,7 @@ func pathRevokeIssuer(b *backend) *framework.Path {
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
-						Fields: map[string]*framework.FieldSchema{
-							"issuer_id": {
-								Type:        framework.TypeString,
-								Description: `ID of the issuer`,
-								Required:    true,
-							},
-							"issuer_name": {
-								Type:        framework.TypeString,
-								Description: `Name of the issuer`,
-								Required:    true,
-							},
-							"key_id": {
-								Type:        framework.TypeString,
-								Description: `ID of the Key`,
-								Required:    true,
-							},
-							"certificate": {
-								Type:        framework.TypeString,
-								Description: `Certificate`,
-								Required:    true,
-							},
-							"manual_chain": {
-								Type:        framework.TypeCommaStringSlice,
-								Description: `Manual Chain`,
-								Required:    true,
-							},
-							"ca_chain": {
-								Type:        framework.TypeCommaStringSlice,
-								Description: `Certificate Authority Chain`,
-								Required:    true,
-							},
-							"leaf_not_after_behavior": {
-								Type:        framework.TypeString,
-								Description: ``,
-								Required:    true,
-							},
-							"usage": {
-								Type:        framework.TypeString,
-								Description: `Allowed usage`,
-								Required:    true,
-							},
-							"revocation_signature_algorithm": {
-								Type:        framework.TypeString,
-								Description: `Which signature algorithm to use when building CRLs`,
-								Required:    true,
-							},
-							"revoked": {
-								Type:        framework.TypeBool,
-								Description: `Whether the issuer was revoked`,
-								Required:    true,
-							},
-							"issuing_certificates": {
-								Type:        framework.TypeCommaStringSlice,
-								Description: `Specifies the URL values for the Issuing Certificate field`,
-								Required:    true,
-							},
-							"crl_distribution_points": {
-								Type:        framework.TypeStringSlice,
-								Description: `Specifies the URL values for the CRL Distribution Points field`,
-								Required:    true,
-							},
-							"ocsp_servers": {
-								Type:        framework.TypeStringSlice,
-								Description: `Specifies the URL values for the OCSP Servers field`,
-								Required:    true,
-							},
-							"revocation_time": {
-								Type:        framework.TypeInt64,
-								Description: `Time of revocation`,
-								Required:    false,
-							},
-							"revocation_time_rfc3339": {
-								Type:        framework.TypeTime,
-								Description: `RFC formatted time of revocation`,
-								Required:    false,
-							},
-						},
+						Fields:      responseFields,
 					}},
 				},
 				// Read more about why these flags are set in backend.go
