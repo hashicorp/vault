@@ -7,7 +7,7 @@ export const ldapBreadcrumbs = (
   path: string, // i.e. path/to/item
   roleType: string,
   mountPath: string,
-  isCurrent: boolean = false
+  isCurrent = false
 ) => {
   const ancestry = path.split('/').filter(Boolean); // remove last empty string
 
