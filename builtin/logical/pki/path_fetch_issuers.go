@@ -913,7 +913,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 	if enableTemplatingRaw, ok := data.GetOk("enable_aia_url_templating"); ok {
 		enableTemplating := enableTemplatingRaw.(bool)
 		if enableTemplating != issuer.AIAURIs.EnableTemplating {
-			issuer.AIAURIs.EnableTemplating = enableTemplating // TODO: Is this correct? If it is, does it need to be backported?
+			issuer.AIAURIs.EnableTemplating = enableTemplating
 			modified = true
 		}
 	}
