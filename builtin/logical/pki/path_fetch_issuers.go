@@ -210,7 +210,7 @@ to be set on all PR secondary clusters.`,
 		Default: false,
 	}
 	addEntPathIssuerFields(fields)
-	updateIssuerFields := issuerResponseFields()
+	updateIssuerFields := issuerResponseFields(false)
 
 	updateIssuerSchema := map[int][]framework.Response{
 		http.StatusOK: {{
@@ -263,92 +263,92 @@ to be set on all PR secondary clusters.`,
 	}
 }
 
-func issuerResponseFields() map[string]*framework.FieldSchema {
+func issuerResponseFields(required bool) map[string]*framework.FieldSchema {
 	fields := map[string]*framework.FieldSchema{
 		"issuer_id": {
 			Type:        framework.TypeString,
 			Description: `Issuer Id`,
-			Required:    false,
+			Required:    required,
 		},
 		"issuer_name": {
 			Type:        framework.TypeString,
 			Description: `Issuer Name`,
-			Required:    false,
+			Required:    required,
 		},
 		"key_id": {
 			Type:        framework.TypeString,
 			Description: `Key Id`,
-			Required:    false,
+			Required:    required,
 		},
 		"certificate": {
 			Type:        framework.TypeString,
 			Description: `Certificate`,
-			Required:    false,
+			Required:    required,
 		},
 		"manual_chain": {
 			Type:        framework.TypeStringSlice,
 			Description: `Manual Chain`,
-			Required:    false,
+			Required:    required,
 		},
 		"ca_chain": {
 			Type:        framework.TypeStringSlice,
 			Description: `CA Chain`,
-			Required:    false,
+			Required:    required,
 		},
 		"leaf_not_after_behavior": {
 			Type:        framework.TypeString,
 			Description: `Leaf Not After Behavior`,
-			Required:    false,
+			Required:    required,
 		},
 		"usage": {
 			Type:        framework.TypeString,
 			Description: `Usage`,
-			Required:    false,
+			Required:    required,
 		},
 		"revocation_signature_algorithm": {
 			Type:        framework.TypeString,
 			Description: `Revocation Signature Alogrithm`,
-			Required:    false,
+			Required:    required,
 		},
 		"revoked": {
 			Type:        framework.TypeBool,
 			Description: `Revoked`,
-			Required:    false,
+			Required:    required,
 		},
 		"revocation_time": {
 			Type:        framework.TypeInt,
 			Description: `Revocation time`,
-			Required:    false,
+			Required:    required,
 		},
 		"revocation_time_rfc3339": {
 			Type:        framework.TypeString,
 			Description: `Revocation time RFC 3339 formatted`,
-			Required:    false,
+			Required:    required,
 		},
 		"issuing_certificates": {
 			Type:        framework.TypeStringSlice,
 			Description: `Issuing Certificates`,
-			Required:    false,
+			Required:    required,
 		},
 		"crl_distribution_points": {
 			Type:        framework.TypeStringSlice,
 			Description: `CRL Distribution Points`,
-			Required:    false,
+			Required:    required,
 		},
 		"ocsp_servers": {
 			Type:        framework.TypeStringSlice,
 			Description: `OCSP Servers`,
-			Required:    false,
+			Required:    required,
 		},
 		"enable_aia_url_templating": {
 			Type:        framework.TypeBool,
 			Description: `Whether or not templating is enabled for AIA fields`,
-			Required:    false,
+			Required:    required,
 		},
 		"allow_disable_critical_extension_checks": {
 			Type:        framework.TypeBool,
 			Description: `Whether parameter disable_critical_extension_checks can be used when issuing certificates`,
-			Required:    false,
+			Required:    required,
 		},
 	}
 
