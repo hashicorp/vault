@@ -77,6 +77,9 @@ module('Integration | Component | ldap | Page::Library::Details::Accounts', func
 
     assert
       .dom('[data-test-accounts-code-block] code')
-      .hasText('vault lease renew ad/library/test-library/check-out/:lease_id', 'Renew cli command renders');
+      .hasText(
+        'vault lease renew ldap-test/library/test-library/check-out/:lease_id',
+        'Renew cli command renders with backend path'
+      );
   });
 });

@@ -22,6 +22,7 @@ export const GENERAL = {
 
   filter: (name: string) => `[data-test-filter="${name}"]`,
   filterInput: '[data-test-filter-input]',
+  inputSearch: (attr: string) => `[data-test-input-search="${attr}"]`,
   filterInputExplicit: '[data-test-filter-input-explicit]',
   filterInputExplicitSearch: '[data-test-filter-input-explicit-search]',
   confirmModalInput: '[data-test-confirmation-modal-input]',
@@ -72,6 +73,7 @@ export const GENERAL = {
     selectedOption: (index = 0) => `[data-test-selected-option="${index}"]`,
     noMatch: '.ember-power-select-option--no-matches-message',
     removeSelected: '[data-test-selected-list-button="delete"]',
+    searchInput: '.ember-power-select-search-input',
   },
   overviewCard: {
     container: (title: string) => `[data-test-overview-card-container="${title}"]`,
@@ -92,7 +94,7 @@ export const GENERAL = {
   navLink: (label: string) => `[data-test-sidebar-nav-link="${label}"]`,
   cancelButton: '[data-test-cancel]',
   saveButton: '[data-test-save]',
-  maskedInput: (name: string) => `[data-test-textarea="${name}"]`,
+  backButton: '[data-test-back-button]',
   codemirror: `[data-test-component="code-mirror-modifier"]`,
   codemirrorTextarea: `[data-test-component="code-mirror-modifier"] textarea`,
 };

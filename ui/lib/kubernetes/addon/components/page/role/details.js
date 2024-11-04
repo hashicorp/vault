@@ -17,7 +17,7 @@ import errorMessage from 'vault/utils/error-message';
  */
 
 export default class RoleDetailsPageComponent extends Component {
-  @service router;
+  @service('app-router') router;
   @service flashMessages;
 
   get extraFields() {

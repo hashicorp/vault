@@ -29,7 +29,6 @@ scenario "upgrade" {
     consul_version  = global.consul_versions
     distro          = global.distros
     edition         = global.editions
-    initial_version = global.upgrade_initial_versions_ce
     ip_version      = global.ip_versions
     seal            = global.seals
 
@@ -37,19 +36,6 @@ scenario "upgrade" {
     exclude {
       artifact_source = ["local"]
       artifact_type   = ["package"]
-    }
-
-    // Don't upgrade from super-ancient versions in CI because there are known reliability issues
-    // in those versions that have already been fixed.
-    exclude {
-      initial_version = [for e in matrix.initial_version : e if semverconstraint(e, "<1.11.0-0")]
-    }
-
-    // FIPS 140-2 editions were not supported until 1.11.x, even though there are 1.10.x binaries
-    // published.
-    exclude {
-      edition         = ["ent.fips1402", "ent.hsm.fips1402"]
-      initial_version = [for e in matrix.initial_version : e if semverconstraint(e, "<1.11.0-0")]
     }
 
     // There are no published versions of these artifacts yet. We'll update this to exclude older
@@ -314,7 +300,7 @@ scenario "upgrade" {
       packages             = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       release = {
         edition = matrix.edition
-        version = matrix.initial_version
+        version = var.vault_upgrade_initial_version
       }
       seal_attributes = step.create_seal_key.attributes
       seal_type       = matrix.seal
@@ -379,9 +365,9 @@ scenario "upgrade" {
     }
   }
 
-  step "verify_write_test_data" {
-    description = global.description.verify_write_test_data
-    module      = module.vault_verify_write_data
+  step "verify_secrets_engines_create" {
+    description = global.description.verify_secrets_engines_create
+    module      = module.vault_verify_secrets_engines_create
     depends_on = [
       step.create_vault_cluster,
       step.get_vault_cluster_ips,
@@ -392,9 +378,21 @@ scenario "upgrade" {
     }
 
     verifies = [
+      quality.vault_api_auth_userpass_login_write,
+      quality.vault_api_auth_userpass_user_write,
+      quality.vault_api_identity_entity_write,
+      quality.vault_api_identity_entity_alias_write,
+      quality.vault_api_identity_group_write,
+      quality.vault_api_identity_oidc_config_write,
+      quality.vault_api_identity_oidc_introspect_write,
+      quality.vault_api_identity_oidc_key_write,
+      quality.vault_api_identity_oidc_key_rotate_write,
+      quality.vault_api_identity_oidc_role_write,
+      quality.vault_api_identity_oidc_token_read,
+      quality.vault_api_sys_auth_userpass_user_write,
+      quality.vault_api_sys_policy_write,
       quality.vault_mount_auth,
       quality.vault_mount_kv,
-      quality.vault_secrets_auth_user_policy_write,
       quality.vault_secrets_kv_write,
     ]
 
@@ -418,7 +416,7 @@ scenario "upgrade" {
     module      = module.vault_upgrade
     depends_on = [
       step.create_vault_cluster,
-      step.verify_write_test_data,
+      step.verify_secrets_engines_create,
     ]
 
     providers = {
@@ -571,7 +569,7 @@ scenario "upgrade" {
 
   step "verify_vault_unsealed" {
     description = global.description.verify_vault_unsealed
-    module      = module.vault_verify_unsealed
+    module      = module.vault_wait_for_cluster_unsealed
     depends_on = [
       step.get_updated_vault_cluster_ips,
     ]
@@ -622,11 +620,11 @@ scenario "upgrade" {
     }
   }
 
-  step "verify_read_test_data" {
-    description = global.description.verify_write_test_data
-    module      = module.vault_verify_read_data
+  step "verify_secrets_engines_read" {
+    description = global.description.verify_secrets_engines_read
+    module      = module.vault_verify_secrets_engines_read
     depends_on = [
-      step.verify_write_test_data,
+      step.verify_secrets_engines_create,
       step.verify_vault_unsealed
     ]
 
@@ -635,13 +633,16 @@ scenario "upgrade" {
     }
 
     verifies = [
-      quality.vault_mount_auth,
-      quality.vault_mount_kv,
-      quality.vault_secrets_auth_user_policy_write,
-      quality.vault_secrets_kv_write,
+      quality.vault_api_auth_userpass_login_write,
+      quality.vault_api_identity_entity_read,
+      quality.vault_api_identity_oidc_config_read,
+      quality.vault_api_identity_oidc_key_read,
+      quality.vault_api_identity_oidc_role_read,
+      quality.vault_secrets_kv_read
     ]
 
     variables {
+      create_state      = step.verify_secrets_engines_create.state
       hosts             = step.get_updated_vault_cluster_ips.follower_hosts
       vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
@@ -698,7 +699,7 @@ scenario "upgrade" {
     depends_on = [
       step.get_updated_vault_cluster_ips,
       step.verify_vault_unsealed,
-      step.verify_read_test_data,
+      step.verify_secrets_engines_read,
     ]
 
     providers = {
@@ -782,6 +783,11 @@ scenario "upgrade" {
   output "seal_name" {
     description = "The Vault cluster seal attributes"
     value       = step.create_seal_key.attributes
+  }
+
+  output "secrets_engines_state" {
+    description = "The state of configured secrets engines"
+    value       = step.verify_secrets_engines_create.state
   }
 
   output "unseal_keys_b64" {

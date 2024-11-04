@@ -4114,6 +4114,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			"tidy_revocation_queue":                 false,
 			"tidy_cross_cluster_revoked_certs":      false,
 			"tidy_cert_metadata":                    false,
+			"tidy_cmpv2_nonce_store":                false,
 			"pause_duration":                        "0s",
 			"state":                                 "Finished",
 			"error":                                 nil,
@@ -4136,6 +4137,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			"acme_account_deleted_count":            json.Number("0"),
 			"total_acme_account_count":              json.Number("0"),
 			"cert_metadata_deleted_count":           json.Number("0"),
+			"cmpv2_nonce_deleted_count":             json.Number("0"),
 		}
 		// Let's copy the times from the response so that we can use deep.Equal()
 		timeStarted, ok := tidyStatus.Data["time_started"]
@@ -6101,6 +6103,7 @@ func TestPKI_EmptyCRLConfigUpgraded(t *testing.T) {
 	require.Equal(t, resp.Data["auto_rebuild_grace_period"], pki_backend.DefaultCrlConfig.AutoRebuildGracePeriod)
 	require.Equal(t, resp.Data["enable_delta"], pki_backend.DefaultCrlConfig.EnableDelta)
 	require.Equal(t, resp.Data["delta_rebuild_interval"], pki_backend.DefaultCrlConfig.DeltaRebuildInterval)
+	require.Equal(t, resp.Data["max_crl_entries"], pki_backend.DefaultCrlConfig.MaxCRLEntries)
 }
 
 func TestPKI_ListRevokedCerts(t *testing.T) {
@@ -7078,15 +7081,16 @@ func TestProperAuthing(t *testing.T) {
 	}
 }
 
+type patchIssuerTestCase struct {
+	Field   string
+	Before  interface{}
+	Patched interface{}
+}
+
 func TestPatchIssuer(t *testing.T) {
 	t.Parallel()
 
-	type TestCase struct {
-		Field   string
-		Before  interface{}
-		Patched interface{}
-	}
-	testCases := []TestCase{
+	testCases := []patchIssuerTestCase{
 		{
 			Field:   "issuer_name",
 			Before:  "root",
@@ -7133,65 +7137,82 @@ func TestPatchIssuer(t *testing.T) {
 			Patched: []string{"self"},
 		},
 	}
+	testPatchIssuer(t, testCases)
+}
 
-	for index, testCase := range testCases {
-		t.Logf("index: %v / tc: %v", index, testCase)
+func testPatchIssuer(t *testing.T, testCases []patchIssuerTestCase) {
+	for _, testCase := range testCases {
+		t.Run(testCase.Field, func(t *testing.T) {
+			b, s := CreateBackendWithStorage(t)
 
-		b, s := CreateBackendWithStorage(t)
+			// 1. Setup root issuer.
+			resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+				"common_name": "Vault Root CA",
+				"key_type":    "ec",
+				"ttl":         "7200h",
+				"issuer_name": "root",
+			})
+			requireSuccessNonNilResponse(t, resp, err, "failed generating root issuer")
+			id := string(resp.Data["issuer_id"].(issuing.IssuerID))
 
-		// 1. Setup root issuer.
-		resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
-			"common_name": "Vault Root CA",
-			"key_type":    "ec",
-			"ttl":         "7200h",
-			"issuer_name": "root",
+			// 2. Enable Cluster paths
+			resp, err = CBWrite(b, s, "config/urls", map[string]interface{}{
+				"path":     "https://localhost/v1/pki",
+				"aia_path": "http://localhost/v1/pki",
+			})
+			requireSuccessNonNilResponse(t, resp, err, "failed updating AIA config")
+
+			// 3. Add AIA information
+			resp, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+				"issuing_certificates":    "http://localhost/v1/pki-1/ca",
+				"crl_distribution_points": "http://localhost/v1/pki-1/crl",
+				"ocsp_servers":            "http://localhost/v1/pki-1/ocsp",
+			})
+			requireSuccessNonNilResponse(t, resp, err, "failed setting up issuer")
+
+			// 4. Read the issuer before.
+			resp, err = CBRead(b, s, "issuer/default")
+			requireSuccessNonNilResponse(t, resp, err, "failed reading root issuer before")
+			require.Equal(t, testCase.Before, resp.Data[testCase.Field], "bad expectations")
+
+			// 5. Perform modification.
+			resp, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+				testCase.Field: testCase.Patched,
+			})
+			requireSuccessNonNilResponse(t, resp, err, "failed patching root issuer")
+
+			if testCase.Field != "manual_chain" {
+				require.Equal(t, testCase.Patched, resp.Data[testCase.Field], "failed persisting value")
+			} else {
+				// self->id
+				require.Equal(t, []string{id}, resp.Data[testCase.Field], "failed persisting value")
+			}
+
+			// 6. Ensure it stuck
+			resp, err = CBRead(b, s, "issuer/default")
+			requireSuccessNonNilResponse(t, resp, err, "failed reading root issuer after")
+
+			if testCase.Field != "manual_chain" {
+				require.Equal(t, testCase.Patched, resp.Data[testCase.Field])
+			} else {
+				// self->id
+				require.Equal(t, []string{id}, resp.Data[testCase.Field], "failed persisting value")
+			}
+
+			// 7. Patch it back
+			resp, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+				testCase.Field: testCase.Before,
+			})
+			requireSuccessNonNilResponse(t, resp, err, "failed patching root issuer")
+
+			require.Equal(t, testCase.Before, resp.Data[testCase.Field], "failed persisting value")
+
+			// 8. Ensure it stuck
+			resp, err = CBRead(b, s, "issuer/default")
+			requireSuccessNonNilResponse(t, resp, err, "failed reading root issuer after")
+
+			require.Equal(t, testCase.Before, resp.Data[testCase.Field])
 		})
-		requireSuccessNonNilResponse(t, resp, err, "failed generating root issuer")
-		id := string(resp.Data["issuer_id"].(issuing.IssuerID))
-
-		// 2. Enable Cluster paths
-		resp, err = CBWrite(b, s, "config/urls", map[string]interface{}{
-			"path":     "https://localhost/v1/pki",
-			"aia_path": "http://localhost/v1/pki",
-		})
-		requireSuccessNonNilResponse(t, resp, err, "failed updating AIA config")
-
-		// 3. Add AIA information
-		resp, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
-			"issuing_certificates":    "http://localhost/v1/pki-1/ca",
-			"crl_distribution_points": "http://localhost/v1/pki-1/crl",
-			"ocsp_servers":            "http://localhost/v1/pki-1/ocsp",
-		})
-		requireSuccessNonNilResponse(t, resp, err, "failed setting up issuer")
-
-		// 4. Read the issuer before.
-		resp, err = CBRead(b, s, "issuer/default")
-		requireSuccessNonNilResponse(t, resp, err, "failed reading root issuer before")
-		require.Equal(t, testCase.Before, resp.Data[testCase.Field], "bad expectations")
-
-		// 5. Perform modification.
-		resp, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
-			testCase.Field: testCase.Patched,
-		})
-		requireSuccessNonNilResponse(t, resp, err, "failed patching root issuer")
-
-		if testCase.Field != "manual_chain" {
-			require.Equal(t, testCase.Patched, resp.Data[testCase.Field], "failed persisting value")
-		} else {
-			// self->id
-			require.Equal(t, []string{id}, resp.Data[testCase.Field], "failed persisting value")
-		}
-
-		// 6. Ensure it stuck
-		resp, err = CBRead(b, s, "issuer/default")
-		requireSuccessNonNilResponse(t, resp, err, "failed reading root issuer after")
-
-		if testCase.Field != "manual_chain" {
-			require.Equal(t, testCase.Patched, resp.Data[testCase.Field])
-		} else {
-			// self->id
-			require.Equal(t, []string{id}, resp.Data[testCase.Field], "failed persisting value")
-		}
 	}
 }
 

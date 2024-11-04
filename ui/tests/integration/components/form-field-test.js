@@ -250,10 +250,14 @@ module('Integration | Component | form field', function (hooks) {
     assert.strictEqual(component.fields.objectAt(0).labelValue, 'Not Foo', 'renders the label from options');
   });
 
-  test('it renders a help tooltip', async function (assert) {
-    await setup.call(this, createAttr('foo', 'string', { helpText: 'Here is some help text' }));
+  test('it renders a help tooltip and placeholder', async function (assert) {
+    await setup.call(
+      this,
+      createAttr('foo', 'string', { helpText: 'Here is some help text', placeholder: 'example::value' })
+    );
     await component.tooltipTrigger();
     assert.ok(component.hasTooltip, 'renders the tooltip component');
+    assert.dom('[data-test-input="foo"]').hasAttribute('placeholder', 'example::value');
   });
 
   test('it should not expand and toggle ttl when default 0s value is present', async function (assert) {

@@ -9,7 +9,7 @@ import ClusterRoute from 'vault/mixins/cluster-route';
 import ListRoute from 'core/mixins/list-route';
 
 export default Route.extend(ClusterRoute, ListRoute, {
-  store: service(),
+  pagination: service(),
   version: service(),
 
   shouldReturnEmptyModel(policyType, version) {
@@ -21,7 +21,7 @@ export default Route.extend(ClusterRoute, ListRoute, {
     if (this.shouldReturnEmptyModel(policyType, this.version)) {
       return;
     }
-    return this.store
+    return this.pagination
       .lazyPaginatedQuery(`policy/${policyType}`, {
         page: params.page,
         pageFilter: params.pageFilter,
@@ -65,12 +65,12 @@ export default Route.extend(ClusterRoute, ListRoute, {
     willTransition(transition) {
       window.scrollTo(0, 0);
       if (!transition || transition.targetName !== this.routeName) {
-        this.store.clearAllDatasets();
+        this.pagination.clearDataset();
       }
       return true;
     },
     reload() {
-      this.store.clearAllDatasets();
+      this.pagination.clearDataset();
       this.refresh();
     },
   },

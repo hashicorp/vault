@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<OverviewCard @cardTitle="Subkeys" class="has-top-margin-l">
+<OverviewCard @cardTitle="Subkeys" class="has-top-margin-l" {{style max-height="325px" overflow-y="auto"}}>
   <:customSubtext>
     <Hds::Text::Body @tag="p" @color="faint" data-test-overview-card-subtitle="Subkeys">
       {{#if this.showJson}}
@@ -14,6 +14,7 @@
           @icon="docs-link"
           @iconPosition="trailing"
           @href={{doc-link "/vault/api-docs/secret/kv/kv-v2#read-secret-subkeys"}}
+          @isHrefExternal={{true}}
         >API documentation</Hds::Link::Inline>.
       {{else}}
         The table is displaying the top level subkeys. Toggle on the JSON view to see the full depth.
@@ -21,10 +22,28 @@
     </Hds::Text::Body>
   </:customSubtext>
   <:action>
-    <div>
-      <Toggle @name="kv-subkeys" @checked={{this.showJson}} @onChange={{fn (mut this.showJson)}}>
-        <p class="has-text-grey">JSON</p>
-      </Toggle>
+    <div class="flex column-gap-16">
+      <div class="top-padding-4">
+        <Hds::Form::Toggle::Field
+          checked={{this.showJson}}
+          {{on "change" this.toggleJson}}
+          data-test-toggle-input="kv-subkeys"
+          as |F|
+        >
+          <F.Label>JSON</F.Label>
+        </Hds::Form::Toggle::Field>
+      </div>
+      {{#if @isPatchAllowed}}
+        <Hds::Link::Standalone
+          @text="Patch secret"
+          @route="secret.patch"
+          @models={{array @backend @path}}
+          @icon="arrow-right"
+          @iconPosition="trailing"
+          @isFullWidth={{true}}
+          data-test-action-text="Patch secret"
+        />
+      {{/if}}
     </div>
   </:action>
   <:content>

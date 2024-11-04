@@ -17,13 +17,12 @@ Vault returns a `503 - Service Unavailable` response to indicate that a request
 was rejected because there was not enough capacity to service it in a timely way:
 
 ```
-Error making API request.
+Error authenticating: Error making API request.
 
-URL: PUT https://127.0.0.1:61555/v1/auth/userpass/login/foo
+URL: PUT http://127.0.0.1:8200/v1/auth/userpass/login/foo
 Code: 503. Errors:
 
-* 1 error occurred:
-	* Vault server temporarily overloaded
+* failed to create token: failed to persist accessor index entry: overloaded, try again later: internal error
 ```
 
 `503 - Service Unavailable` is a retryable HTTP error.

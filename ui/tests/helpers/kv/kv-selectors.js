@@ -9,6 +9,8 @@ export const PAGE = {
   breadcrumbs: '[data-test-breadcrumbs]',
   breadcrumb: '[data-test-breadcrumbs] li',
   breadcrumbAtIdx: (idx) => `[data-test-breadcrumbs] li:nth-child(${idx + 1}) a`,
+  breadcrumbCurrentAtIdx: (idx) =>
+    `[data-test-breadcrumbs] li:nth-child(${idx + 1}) .hds-breadcrumb__current`,
   infoRow: '[data-test-component="info-table-row"]',
   infoRowValue: (label) => `[data-test-value-div="${label}"]`,
   infoRowToggleMasked: (label) => `[data-test-value-div="${label}"] [data-test-button="toggle-masked"]`,
@@ -29,6 +31,7 @@ export const PAGE = {
     link: (backend) => `[data-test-secrets-backend-link="${backend}"]`,
   },
   metadata: {
+    requestData: '[data-test-request-data]',
     editBtn: '[data-test-edit-metadata]',
     addCustomMetadataBtn: '[data-test-add-custom-metadata]',
     customMetadataSection: '[data-test-kv-custom-metadata-section]',
@@ -40,6 +43,7 @@ export const PAGE = {
     versionDropdown: '[data-test-version-dropdown]',
     version: (number) => `[data-test-version="${number}"]`,
     createNewVersion: '[data-test-create-new-version]',
+    patchLatest: '[data-test-patch-latest-version]',
     delete: '[data-test-kv-delete="delete"]',
     destroy: '[data-test-kv-delete="destroy"]',
     undelete: '[data-test-kv-delete="undelete"]',
@@ -61,10 +65,9 @@ export const PAGE = {
     item: (secret) => (!secret ? '[data-test-list-item]' : `[data-test-list-item="${secret}"]`),
     filter: `[data-test-kv-list-filter]`,
     listMenuDelete: `[data-test-popup-metadata-delete]`,
-    listMenuCreate: `[data-test-popup-create-new-version]`,
     overviewCard: '[data-test-overview-card-container="View secret"]',
     overviewInput: '[data-test-view-secret] input',
-    overviewButton: '[data-test-get-secret-detail]',
+    overviewButton: '[data-test-submit-button]',
     pagination: '[data-test-pagination]',
     paginationInfo: '.hds-pagination-info',
     paginationNext: '.hds-pagination-nav__arrow--direction-next',
@@ -97,7 +100,6 @@ export const FORM = {
   inputByAttr: (attr) => `[data-test-input="${attr}"]`,
   fieldByAttr: (attr) => `[data=test=field="${attr}"]`, // formfield
   toggleJson: '[data-test-toggle-input="json"]',
-  toggleJsonValues: '[data-test-toggle-input="revealValues"]',
   toggleMasked: '[data-test-button="toggle-masked"]',
   toggleMetadata: '[data-test-metadata-toggle]',
   jsonEditor: '[data-test-component="code-mirror-modifier"]',
@@ -110,7 +112,7 @@ export const FORM = {
   kvRow: '[data-test-kv-row]',
   keyInput: (idx = 0) => `[data-test-kv-key="${idx}"]`,
   valueInput: (idx = 0) => `[data-test-kv-value="${idx}"]`,
-  maskedValueInput: (idx = 0) => `[data-test-kv-value="${idx}"] [data-test-textarea]`,
+  maskedValueInput: (idx = 0) => `[data-test-kv-value="${idx}"] [data-test-input]`,
   addRow: (idx = 0) => `[data-test-kv-add-row="${idx}"]`,
   deleteRow: (idx = 0) => `[data-test-kv-delete-row="${idx}"]`,
   // <KvPatchEditor>

@@ -129,7 +129,7 @@ module('Acceptance | pki tidy', function (hooks) {
     await click(PKI_TIDY.tidyEmptyStateConfigure);
     await click(PKI_TIDY.tidyConfigureModal.tidyModalAutoButton);
     assert.dom(PKI_TIDY_FORM.tidyFormName('auto')).exists('Auto tidy form exists');
-    await click(PKI_TIDY_FORM.toggleLabel('Automatic tidy disabled'));
+    await click(GENERAL.ttl.toggle('enabled'));
     assert
       .dom(PKI_TIDY_FORM.tidySectionHeader('ACME operations'))
       .exists('Auto tidy form enabled shows ACME operations field');
@@ -192,7 +192,7 @@ module('Acceptance | pki tidy', function (hooks) {
     await click(PKI_TIDY.tidyConfigureModal.tidyOptionsModal);
     assert.dom(PKI_TIDY.tidyConfigureModal.configureTidyModal).exists('Configure tidy modal exists');
     await click(PKI_TIDY.tidyConfigureModal.tidyModalAutoButton);
-    await click(PKI_TIDY_FORM.toggleLabel('Automatic tidy disabled'));
+    await click(GENERAL.ttl.toggle('enabled'));
     await click(PKI_TIDY_FORM.inputByAttr('tidyCertStore'));
     await click(PKI_TIDY_FORM.inputByAttr('tidyRevokedCerts'));
     await click(PKI_TIDY_FORM.tidySave);

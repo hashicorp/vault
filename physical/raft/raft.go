@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -74,7 +75,10 @@ const (
 	defaultMaxBatchSize = 128 * 1024
 )
 
-var getMmapFlags = func(string) int { return 0 }
+var (
+	getMmapFlags     = func(string) int { return 0 }
+	usingMapPopulate = func(int) bool { return false }
+)
 
 // Verify RaftBackend satisfies the correct interfaces
 var (
@@ -83,6 +87,7 @@ var (
 	_ physical.TransactionalLimits       = (*RaftBackend)(nil)
 	_ physical.HABackend                 = (*RaftBackend)(nil)
 	_ physical.MountTableLimitingBackend = (*RaftBackend)(nil)
+	_ physical.RemovableNodeHABackend    = (*RaftBackend)(nil)
 	_ physical.Lock                      = (*RaftLock)(nil)
 )
 
@@ -251,6 +256,30 @@ type RaftBackend struct {
 	// specialPathLimits is a map of special paths to their configured entrySize
 	// limits.
 	specialPathLimits map[string]uint64
+
+	removed atomic.Bool
+}
+
+func (b *RaftBackend) IsNodeRemoved(ctx context.Context, nodeID string) (bool, error) {
+	conf, err := b.GetConfiguration(ctx)
+	if err != nil {
+		return false, err
+	}
+	for _, srv := range conf.Servers {
+		if srv.NodeID == nodeID {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+func (b *RaftBackend) IsRemoved() bool {
+	return b.removed.Load()
+}
+
+func (b *RaftBackend) RemoveSelf() error {
+	b.removed.Store(true)
+	return nil
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
@@ -447,6 +476,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		}
 	}
 
+	// Create the log store.
 	// Build an all in-memory setup for dev mode, otherwise prepare a full
 	// disk-based setup.
 	var logStore raft.LogStore
@@ -473,6 +503,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		if err != nil {
 			return nil, fmt.Errorf("failed to check if raft.db already exists: %w", err)
 		}
+
 		if backendConfig.RaftWal && raftDbExists {
 			logger.Warn("raft is configured to use raft-wal for storage but existing raft.db detected. raft-wal config will be ignored.")
 			backendConfig.RaftWal = false
@@ -502,6 +533,10 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 				Path:                    dbPath,
 				BoltOptions:             opts,
 				MsgpackUseNewTimeFormat: true,
+			}
+
+			if runtime.GOOS == "linux" && raftDbExists && !usingMapPopulate(opts.MmapFlags) {
+				logger.Warn("the MAP_POPULATE mmap flag has not been set before opening the log store database. This may be due to the database file being larger than the available memory on the system, or due to the VAULT_RAFT_DISABLE_MAP_POPULATE environment variable being set. As a result, Vault may be slower to start up.")
 			}
 
 			store, err := raftboltdb.New(raftOptions)
@@ -687,6 +722,12 @@ func (b *RaftBackend) UpgradeVersion() string {
 		return b.upgradeVersion
 	}
 
+	return b.effectiveSDKVersion
+}
+
+func (b *RaftBackend) SDKVersion() string {
+	b.l.RLock()
+	defer b.l.RUnlock()
 	return b.effectiveSDKVersion
 }
 
@@ -1374,6 +1415,8 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		}
 	}
 
+	b.StartRemovedChecker(ctx)
+
 	b.logger.Trace("finished setting up raft cluster")
 	return nil
 }
@@ -1405,6 +1448,34 @@ func (b *RaftBackend) TeardownCluster(clusterListener cluster.ClusterHook) error
 	}
 
 	return nil
+}
+
+func (b *RaftBackend) StartRemovedChecker(ctx context.Context) {
+	go func() {
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
+
+		logger := b.logger.Named("removed.checker")
+		for {
+			select {
+			case <-ticker.C:
+				removed, err := b.IsNodeRemoved(ctx, b.localID)
+				if err != nil {
+					logger.Error("failed to check if node is removed", "node ID", b.localID, "error", err)
+					continue
+				}
+				if removed {
+					err := b.RemoveSelf()
+					if err != nil {
+						logger.Error("failed to remove self", "node ID", b.localID, "error", err)
+					}
+					return
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 }
 
 // CommittedIndex returns the latest index committed to stable storage

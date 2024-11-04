@@ -30,7 +30,7 @@
 {{#if (eq this.mode "show")}}
   <Toolbar>
     <ToolbarActions>
-      {{#if this.capabilities.canDelete}}
+      {{#if this.model.updatePath.canDelete}}
         <Hds::Button
           @text="Delete alphabet"
           @color="secondary"
@@ -40,7 +40,7 @@
         />
         <div class="toolbar-separator"></div>
       {{/if}}
-      {{#if this.capabilities.canUpdate}}
+      {{#if this.model.updatePath.canUpdate}}
         <ToolbarSecretLink
           @secret={{concat this.model.idPrefix this.model.id}}
           @mode="edit"

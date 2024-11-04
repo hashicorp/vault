@@ -38,7 +38,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
       },
       quux: null,
     };
-    this.subkeyMeta = {
+    this.subkeysMeta = {
       created_time: '2021-12-14T20:28:00.773477Z',
       custom_metadata: null,
       deletion_time: '',
@@ -94,7 +94,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
     const [route] = this.transitionStub.lastCall.args;
     assert.strictEqual(
       route,
-      'vault.cluster.secrets.backend.kv.secret',
+      'vault.cluster.secrets.backend.kv.secret.index',
       `it transitions on cancel to: ${route}`
     );
   });
@@ -150,7 +150,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
       const [route] = this.transitionStub.lastCall.args;
       assert.strictEqual(
         route,
-        'vault.cluster.secrets.backend.kv.secret',
+        'vault.cluster.secrets.backend.kv.secret.index',
         `it transitions on save to: ${route}`
       );
     });
@@ -181,7 +181,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
       const [route] = this.transitionStub.lastCall.args;
       assert.strictEqual(
         route,
-        'vault.cluster.secrets.backend.kv.secret',
+        'vault.cluster.secrets.backend.kv.secret.index',
         `it transitions on save to: ${route}`
       );
     });
@@ -244,6 +244,38 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
       await codemirror().setValue('{ "foo": "" }');
       await click(FORM.saveBtn);
     });
+
+    test('patch data without metadata permissions', async function (assert) {
+      assert.expect(3);
+      this.metadata = null;
+      this.server.patch(this.endpoint, (schema, req) => {
+        const payload = JSON.parse(req.requestBody);
+        const expected = {
+          data: { aKey: '1' },
+          options: {
+            cas: this.subkeysMeta.version,
+          },
+        };
+        assert.true(true, `PATCH request made to ${this.endpoint}`);
+        assert.propEqual(
+          payload,
+          expected,
+          `payload: ${JSON.stringify(payload)} matches expected: ${JSON.stringify(payload)}`
+        );
+        return EXAMPLE_KV_DATA_CREATE_RESPONSE;
+      });
+
+      await this.renderComponent();
+      await fillIn(FORM.keyInput('new'), 'aKey');
+      await fillIn(FORM.valueInput('new'), '1');
+      await click(FORM.saveBtn);
+      const [route] = this.transitionStub.lastCall.args;
+      assert.strictEqual(
+        route,
+        'vault.cluster.secrets.backend.kv.secret.index',
+        `it transitions on save to: ${route}`
+      );
+    });
   });
 
   module('it does not submit', function (hooks) {
@@ -264,7 +296,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
       const flash = this.flashSpy.lastCall?.args[0] || '';
       assert.strictEqual(
         route,
-        'vault.cluster.secrets.backend.kv.secret',
+        'vault.cluster.secrets.backend.kv.secret.index',
         `it transitions to overview route: ${route}`
       );
       assert.strictEqual(
@@ -288,7 +320,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
       const flash = this.flashSpy.lastCall?.args[0] || '';
       assert.strictEqual(
         route,
-        'vault.cluster.secrets.backend.kv.secret',
+        'vault.cluster.secrets.backend.kv.secret.index',
         `it transitions to overview route: ${route}`
       );
       assert.strictEqual(

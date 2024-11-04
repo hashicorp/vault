@@ -34,6 +34,13 @@ const ssh = {
       fieldGroup: 'default',
       type: 'boolean',
     },
+    allowEmptyPrincipals: {
+      editType: 'boolean',
+      fieldGroup: 'default',
+      helpText:
+        'Whether to allow issuing certificates with no valid principals (meaning any valid principal). Exists for backwards compatibility only, the default of false is highly recommended.',
+      type: 'boolean',
+    },
     allowHostCertificates: {
       editType: 'boolean',
       helpText:
@@ -1249,6 +1256,12 @@ const pki = {
       fieldGroup: 'default',
       type: 'string',
     },
+    keyUsage: {
+      editType: 'stringArray',
+      fieldGroup: 'default',
+      helpText:
+        'This list of key usages (not extended key usages) will be added to the existing set of key usages, CRL,CertSign, on the generated certificate. Valid values can be found at https://golang.org/pkg/crypto/x509/#KeyUsage -- simply drop the "KeyUsage" part of the name. To use the issuer for CMPv2, DigitalSignature must be set.',
+    },
     locality: {
       editType: 'stringArray',
       helpText: 'If set, Locality will be set to this value.',
@@ -1393,6 +1406,16 @@ const pki = {
         'Interval at which to run an auto-tidy operation. This is the time between tidy invocations (after one finishes to the start of the next). Running a manual tidy will reset this duration.',
       fieldGroup: 'default',
     },
+    minStartupBackoffDuration: {
+      editType: 'ttl',
+      helpText: 'The minimum amount of time in seconds auto-tidy will be delayed after startup.',
+      fieldGroup: 'default',
+    },
+    maxStartupBackoffDuration: {
+      editType: 'ttl',
+      helpText: 'The maximum amount of time in seconds auto-tidy will be delayed after startup.',
+      fieldGroup: 'default',
+    },
     issuerSafetyBuffer: {
       editType: 'ttl',
       helpText:
@@ -1449,6 +1472,12 @@ const pki = {
       editType: 'boolean',
       helpText: 'Set to true to enable tidying up the certificate store',
       fieldGroup: 'default',
+      type: 'boolean',
+    },
+    tidyCmpv2NonceStore: {
+      editType: 'boolean',
+      fieldGroup: 'default',
+      helpText: 'Set to true to enable tidying up the CMPv2 nonce store',
       type: 'boolean',
     },
     tidyCrossClusterRevokedCerts: {

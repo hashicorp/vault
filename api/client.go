@@ -1467,6 +1467,12 @@ START:
 	}
 
 	if outputCurlString {
+		// Note that although we're building this up here and returning it as an error object, the Error()
+		// interface method on it only gets called in a context where the actual string returned from that
+		// method is irrelevant, because it gets swallowed by an error buffer that's never output to the user.
+		// That's on purpose, not a bug, because in this case, OutputStringError is not really an _error_, per se.
+		// It's just a way of aborting the control flow so that requests don't actually execute, and instead,
+		// we can detect what's happened back in the CLI machinery and show the actual curl string to the user.
 		LastOutputStringError = &OutputStringError{
 			Request:       req,
 			TLSSkipVerify: c.config.HttpClient.Transport.(*http.Transport).TLSClientConfig.InsecureSkipVerify,

@@ -60,18 +60,17 @@
       <Item.menu>
         <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
           <dd.ToggleIcon @icon="more-horizontal" @text="More options" @hasChevron={{false}} data-test-popup-menu-trigger />
-          <dd.Interactive @text="View scope" @route="scope" @model={{list.item.id}} />
+          <dd.Interactive @route="scope" @model={{list.item.id}}>View scope</dd.Interactive>
           {{#if list.item.updatePath.isPending}}
             <dd.Generic>
               <LoadingDropdownOption />
             </dd.Generic>
           {{else if list.item.updatePath.canDelete}}
             <dd.Interactive
-              @text="Delete scope"
               @color="critical"
               {{on "click" (fn (mut this.scopeToDelete) list.item)}}
               data-test-confirm-action-trigger
-            />
+            >Delete scope</dd.Interactive>
           {{/if}}
         </Hds::Dropdown>
         {{#if (eq this.scopeToDelete list.item)}}

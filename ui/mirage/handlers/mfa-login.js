@@ -5,7 +5,6 @@
 
 import { Response } from 'miragejs';
 import Ember from 'ember';
-import fetch from 'fetch';
 
 // initial auth response cache -- lookup by mfa_request_id key
 const authResponses = {};

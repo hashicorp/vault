@@ -26,13 +26,13 @@ import { tracked } from '@glimmer/tracking';
 
 export default class GeneratedItemList extends Component {
   @service router;
-  @service store;
+  @service pagination;
   @tracked itemToDelete = null;
 
   @action
   refreshItemList() {
     const route = getOwner(this).lookup(`route:${this.router.currentRouteName}`);
-    this.store.clearAllDatasets();
+    this.pagination.clearDataset();
     route.refresh();
   }
 }

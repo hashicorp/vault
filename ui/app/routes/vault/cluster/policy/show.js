@@ -24,7 +24,6 @@ export default Route.extend(UnloadModelRoute, {
     const type = this.policyType();
     return hash({
       policy: this.store.findRecord(`policy/${type}`, params.policy_name),
-      capabilities: this.store.findRecord('capabilities', `sys/policies/${type}/${params.policy_name}`),
     });
   },
 

@@ -118,6 +118,18 @@ func (d *autoSeal) SetStoredKeys(ctx context.Context, keys [][]byte) error {
 	return writeStoredKeys(ctx, d.core.physical, d.Access, keys)
 }
 
+func (d *autoSeal) SetInitializationFlag(ctx context.Context) error {
+	return writeInitializationFlag(ctx, d.core.physical, true)
+}
+
+func (d *autoSeal) ClearInitializationFlag(ctx context.Context) error {
+	return writeInitializationFlag(ctx, d.core.physical, false)
+}
+
+func (d *autoSeal) IsInitializationFlagSet(ctx context.Context) (bool, error) {
+	return isInitializationFlagSet(ctx, d.core.physical)
+}
+
 // GetStoredKeys retrieves the key shares by unwrapping the encrypted key using the
 // autoseal.
 func (d *autoSeal) GetStoredKeys(ctx context.Context) ([][]byte, error) {
@@ -517,7 +529,7 @@ error and restart Vault.`)
 				d.core.MetricSink().SetGauge(autoSealUnavailableDuration, 0)
 			} else {
 				if lastTestOk && allUnhealthy {
-					d.logger.Info("seal backend is completely unhealthy (all seal wrappers all unhealthy)", "downtime", now.Sub(lastSeenOk).String())
+					d.logger.Error("seal backend is completely unhealthy (all seal wrappers all unhealthy)", "downtime", now.Sub(lastSeenOk).String())
 				}
 				lastTestOk = false
 				healthCheck.Reset(seal.HealthTestIntervalUnhealthy)

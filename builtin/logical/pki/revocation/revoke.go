@@ -10,11 +10,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/logical"
-
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -22,12 +21,17 @@ const (
 )
 
 type RevokerFactory interface {
-	GetRevoker(context.Context, logical.Storage) Revoker
+	GetRevoker(context.Context, logical.Storage) (Revoker, error)
+}
+
+type RevokeCertInfo struct {
+	RevocationTime time.Time
+	Warnings       []string
 }
 
 type Revoker interface {
-	RevokeCert(cert *x509.Certificate) (*logical.Response, error)
-	RevokeCertBySerial(serial string) (*logical.Response, error)
+	RevokeCert(cert *x509.Certificate) (RevokeCertInfo, error)
+	RevokeCertBySerial(serial string) (RevokeCertInfo, error)
 }
 
 type RevocationInfo struct {

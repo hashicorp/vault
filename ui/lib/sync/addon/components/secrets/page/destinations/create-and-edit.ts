@@ -15,7 +15,7 @@ import type SyncDestinationModel from 'vault/models/sync/destination';
 import { ValidationMap } from 'vault/vault/app-types';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type RouterService from '@ember/routing/router-service';
-import type StoreService from 'vault/services/store';
+import type PaginationService from 'vault/services/pagination';
 
 interface Args {
   destination: SyncDestinationModel;
@@ -23,8 +23,8 @@ interface Args {
 
 export default class DestinationsCreateForm extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
-  @service declare readonly router: RouterService;
-  @service declare readonly store: StoreService;
+  @service('app-router') declare readonly router: RouterService;
+  @service declare readonly pagination: PaginationService;
 
   @tracked modelValidations: ValidationMap | null = null;
   @tracked invalidFormMessage = '';
@@ -95,7 +95,7 @@ export default class DestinationsCreateForm extends Component<Args> {
           // if the user then attempts to update the record the credential will get overwritten with the masked placeholder value
           // since the record will be fetched from the details route we can safely unload it to avoid the aforementioned issue
           destination.unloadRecord();
-          this.store.clearDataset('sync/destination');
+          this.pagination.clearDataset('sync/destination');
         }
         this.router.transitionTo(
           'vault.cluster.sync.secrets.destinations.destination.details',

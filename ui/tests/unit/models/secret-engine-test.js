@@ -109,13 +109,37 @@ module('Unit | Model | secret-engine', function (hooks) {
         'config.allowedResponseHeaders',
       ]);
     });
+
+    test('it returns correct fields for aws', function (assert) {
+      assert.expect(1);
+      const model = this.store.createRecord('secret-engine', {
+        type: 'aws',
+      });
+
+      assert.deepEqual(model.get('formFields'), [
+        'type',
+        'path',
+        'description',
+        'accessor',
+        'local',
+        'sealWrap',
+        'config.defaultLeaseTtl',
+        'config.maxLeaseTtl',
+        'config.allowedManagedKeys',
+        'config.auditNonHmacRequestKeys',
+        'config.auditNonHmacResponseKeys',
+        'config.passthroughRequestHeaders',
+        'config.allowedResponseHeaders',
+        'config.identityTokenKey',
+      ]);
+    });
   });
 
   module('formFieldGroups', function () {
     test('returns correct values by default', function (assert) {
       assert.expect(1);
       const model = this.store.createRecord('secret-engine', {
-        type: 'aws',
+        type: 'cubbyhole',
       });
 
       assert.deepEqual(model.get('formFieldGroups'), [
@@ -252,6 +276,33 @@ module('Unit | Model | secret-engine', function (hooks) {
             'config.listingVisibility',
             'local',
             'sealWrap',
+            'config.allowedManagedKeys',
+            'config.auditNonHmacRequestKeys',
+            'config.auditNonHmacResponseKeys',
+            'config.passthroughRequestHeaders',
+            'config.allowedResponseHeaders',
+          ],
+        },
+      ]);
+    });
+
+    test('returns correct values for aws', function (assert) {
+      assert.expect(1);
+      const model = this.store.createRecord('secret-engine', {
+        type: 'aws',
+      });
+
+      assert.deepEqual(model.get('formFieldGroups'), [
+        { default: ['path'] },
+        {
+          'Method Options': [
+            'description',
+            'config.listingVisibility',
+            'local',
+            'sealWrap',
+            'config.defaultLeaseTtl',
+            'config.maxLeaseTtl',
+            'config.identityTokenKey',
             'config.allowedManagedKeys',
             'config.auditNonHmacRequestKeys',
             'config.auditNonHmacResponseKeys',
