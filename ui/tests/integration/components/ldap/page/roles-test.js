@@ -122,6 +122,8 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
     const currentRouteName = 'vault.cluster.secrets.backend.ldap.roles';
     this.router = this.owner.lookup('service:router');
     const transitionStub = sinon.stub(this.router, 'transitionTo');
+    // stub because the component calls either "roles.subdirectory" or "roles.index"
+    // depending on where it renders
     sinon.stub(this.router, 'currentRoute').value({
       name: currentRouteName,
     });
