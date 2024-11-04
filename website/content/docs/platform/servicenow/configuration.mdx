@@ -88,15 +88,25 @@ authPriv      | MD5 or SHA     | DES        | Auth based on HMAC-MD5 or HMAC-SHA
 
 ### Configuring the resolver to use a secret
 
+<ImageConfig hideBorder caption="Vault credential resolver">
+
+![Partial screenshot of the ServiceNow UI showing the search dialog for adding a Vault configuration by name](/img/service-now/vault-credential-resolver-fqcn.png)
+
+</ImageConfig>
+
 In the ServiceNow UI:
 
-* Navigate to "Discovery - Credentials" -> New
-  * Select a type from the list
-  * Tick "External credential store"
-  * Fill in a meaningful name
-  * Set "Credential ID" to the path in Vault where your secret is located, e.g.
-    for a KV v2 secret engine mounted at "secret", you might have a secret stored
-    under "ssh": `secret/data/ssh`. Check the [API docs](/vault/api-docs/secret/) for
-    your secret engine if you are unsure of the path to use
-  * **Optional:** Click "Test credential" and select a MID server and a target
-    to test against to test everything is working
+1. Navigate to "Discovery - Credentials &rarr; New".
+1. Choose a type from the list.
+1. Select "External credential store".
+1. Provide a fully qualified collection name (FQCN):
+    - **Xanadu (Q4-2024) or newer**:  use `com.snc.discovery.CredentialResolver`
+    - **Versions prior to Xanadu (Q4-2024)**: leave blank or use "None"
+1. Provide a meaningful name for the resolver.
+1. Set "Credential ID" to the
+   [ReadSecretVersion endpoint](/vault/api-docs/secret/kv/kv-v2#read-secret-version)
+   of your secrets plugin and credential. For example, the endpoint
+   for a secret stored on the path `ssh` under a KV v2 secret engine mounted at
+   `secret` is `/secret/data/ssh`.
+1. Click "Test credential" then select a MID server and target to test your
+   configuration.
