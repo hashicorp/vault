@@ -345,11 +345,6 @@ func issuerResponseFields(required bool) map[string]*framework.FieldSchema {
 			Description: `Whether or not templating is enabled for AIA fields`,
 			Required:    required,
 		},
-		"allow_disable_critical_extension_checks": {
-			Type:        framework.TypeBool,
-			Description: `Whether parameter disable_critical_extension_checks can be used when issuing certificates`,
-			Required:    required,
-		},
 	}
 
 	addEntPathIssuerResponseFields(fields)
@@ -483,6 +478,8 @@ func respondReadIssuer(issuer *issuing.IssuerEntry) (*logical.Response, error) {
 		data["crl_distribution_points"] = issuer.AIAURIs.CRLDistributionPoints
 		data["ocsp_servers"] = issuer.AIAURIs.OCSPServers
 		data["enable_aia_url_templating"] = issuer.AIAURIs.EnableTemplating
+	} else {
+		data["enable_aia_url_templating"] = false
 	}
 
 	response := &logical.Response{
