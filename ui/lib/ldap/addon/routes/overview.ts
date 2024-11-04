@@ -61,6 +61,8 @@ export default class LdapOverviewRoute extends Route {
       promptConfig: this.promptConfig,
       backendModel: this.modelFor('application'),
       roles: this.store.query('ldap/role', { backend }).catch(() => []),
+      staticRoles: this.store.query('ldap/role/static', { backend }).catch(() => []),
+      dynamicRoles: this.store.query('ldap/role/dynamic', { backend }).catch(() => []),
       libraries,
       librariesStatus: this.fetchLibrariesStatus(libraries as Array<LdapLibraryModel>),
     });

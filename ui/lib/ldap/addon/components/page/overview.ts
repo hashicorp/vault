@@ -17,6 +17,8 @@ import { LdapLibraryAccountStatus } from 'vault/vault/adapters/ldap/library';
 
 interface Args {
   roles: Array<LdapRoleModel>;
+  staticRoles: Array<LdapRoleModel>;
+  dynamicRoles: Array<LdapRoleModel>;
   libraries: Array<LdapLibraryModel>;
   librariesStatus: Array<LdapLibraryAccountStatus>;
   promptConfig: boolean;
@@ -24,20 +26,38 @@ interface Args {
   breadcrumbs: Array<Breadcrumb>;
 }
 
+interface Option {
+  type: string;
+  id: string;
+}
+
 export default class LdapLibrariesPageComponent extends Component<Args> {
   @service('app-router') declare readonly router: RouterService;
 
-  @tracked selectedRole: LdapRoleModel | undefined;
+  @tracked selectedRole: Option | undefined;
+
+  get roleOptions() {
+    const mapOptions = (roles: LdapRoleModel[]) =>
+      roles
+        .filter((r: LdapRoleModel) => !r.name.endsWith('/'))
+        .map((r: LdapRoleModel) => {
+          if (r.name.endsWith('/')) return;
+          return { id: r.name, type: r.type };
+        });
+    return [
+      { groupName: 'Static', options: mapOptions(this.args.staticRoles) },
+      { groupName: 'Dynamic', options: mapOptions(this.args.dynamicRoles) },
+    ];
+  }
 
   @action
-  selectRole([roleName]: Array<string>) {
-    const model = this.args.roles.find((role) => role.name === roleName);
-    this.selectedRole = model;
+  selectRole([role]: Array<Option>) {
+    this.selectedRole = role;
   }
 
   @action
   generateCredentials() {
-    const { type, name } = this.selectedRole as LdapRoleModel;
+    const { type, id: name } = this.selectedRole as Option;
     this.router.transitionTo('vault.cluster.secrets.backend.ldap.roles.role.credentials', type, name);
   }
 }
