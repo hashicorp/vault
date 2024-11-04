@@ -137,11 +137,7 @@ type IssuerEntry struct {
 	AIAURIs              *AiaConfigEntry           `json:"aia_uris,omitempty"`
 	LastModified         time.Time                 `json:"last_modified"`
 	Version              uint                      `json:"version"`
-	/* The AllowDisable* fields are for an ENT feature. */
-	AllowDisableCriticalExtensionChecks bool `json:"allow_disable_critical_extension_checks"`
-	AllowDisablePathLengthChecks        bool `json:"allow_disable_path_length_checks"`
-	AllowDisableNameChecks              bool `json:"allow_disable_name_checks"`
-	AllowDisableNameConstraintChecks    bool `json:"allow_disable_name_constraint_checks"`
+	entIssuerEntry
 }
 
 // GetCertificate returns a x509.Certificate of the CA certificate
