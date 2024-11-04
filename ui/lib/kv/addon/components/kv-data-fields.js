@@ -41,6 +41,13 @@ export default class KvDataFields extends Component {
     return this.args.secret?.secretData ? stringify([this.args.secret.secretData], {}) : this.startingValue;
   }
 
+  get viewportMargin() {
+    if (!this.args.secret || !this.args.secret.secretData) return 10;
+    const jsonHeight = Object.keys(this.args.secret.secretData).length;
+    // return the higher of default 10 or the number of lines in the json
+    return Math.max(jsonHeight, 10);
+  }
+
   @action
   handleJson(value, codemirror) {
     codemirror.performLint();

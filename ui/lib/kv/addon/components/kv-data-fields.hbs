@@ -26,7 +26,12 @@
       </CB.Title>
     </Hds::CodeBlock>
   {{else}}
-    <JsonEditor @title="Secret data" @value={{this.stringifiedSecretData}} @valueUpdated={{this.handleJson}} />
+    <JsonEditor
+      @title="Secret data"
+      @value={{this.stringifiedSecretData}}
+      @valueUpdated={{this.handleJson}}
+      @viewportMargin={{this.viewportMargin}}
+    />
   {{/if}}
   {{#if (or @modelValidations.secretData.errors this.lintingErrors)}}
     <AlertInline
