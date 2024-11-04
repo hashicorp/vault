@@ -61,8 +61,9 @@ func (b *backend) rotateCredential(ctx context.Context, storage logical.Storage)
 
 	cfg := item.Value.(staticRoleEntry)
 
-	err = b.createCredential(ctx, storage, cfg, true)
+	creds, err := b.createCredential(ctx, storage, cfg, true)
 	if err != nil {
+		b.Logger().Error("failed to create credential, re-queueing", "error", err)
 		// put it back in the queue with a backoff
 		item.Priority = time.Now().Add(10 * time.Second).Unix()
 		innerErr := b.credRotationQueue.Push(item)
@@ -74,7 +75,7 @@ func (b *backend) rotateCredential(ctx context.Context, storage logical.Storage)
 	}
 
 	// set new priority and re-queue
-	item.Priority = time.Now().Add(cfg.RotationPeriod).Unix()
+	item.Priority = creds.priority(cfg)
 	err = b.credRotationQueue.Push(item)
 	if err != nil {
 		return true, fmt.Errorf("failed to add item into the rotation queue for role %q: %w", cfg.Name, err)
@@ -84,10 +85,10 @@ func (b *backend) rotateCredential(ctx context.Context, storage logical.Storage)
 }
 
 // createCredential will create a new iam credential, deleting the oldest one if necessary.
-func (b *backend) createCredential(ctx context.Context, storage logical.Storage, cfg staticRoleEntry, shouldLockStorage bool) error {
+func (b *backend) createCredential(ctx context.Context, storage logical.Storage, cfg staticRoleEntry, shouldLockStorage bool) (*awsCredentials, error) {
 	iamClient, err := b.clientIAM(ctx, storage)
 	if err != nil {
-		return fmt.Errorf("unable to get the AWS IAM client: %w", err)
+		return nil, fmt.Errorf("unable to get the AWS IAM client: %w", err)
 	}
 
 	// IAM users can have a most 2 sets of keys at a time.
@@ -97,14 +98,14 @@ func (b *backend) createCredential(ctx context.Context, storage logical.Storage,
 
 	err = b.validateIAMUserExists(ctx, storage, &cfg, false)
 	if err != nil {
-		return fmt.Errorf("iam user didn't exist, or username/userid didn't match: %w", err)
+		return nil, fmt.Errorf("iam user didn't exist, or username/userid didn't match: %w", err)
 	}
 
 	accessKeys, err := iamClient.ListAccessKeys(&iam.ListAccessKeysInput{
 		UserName: aws.String(cfg.Username),
 	})
 	if err != nil {
-		return fmt.Errorf("unable to list existing access keys for IAM user %q: %w", cfg.Username, err)
+		return nil, fmt.Errorf("unable to list existing access keys for IAM user %q: %w", cfg.Username, err)
 	}
 
 	// If we have the maximum number of keys, we have to delete one to make another (so we can get the credentials).
@@ -127,7 +128,7 @@ func (b *backend) createCredential(ctx context.Context, storage logical.Storage,
 			UserName:    oldestKey.UserName,
 		})
 		if err != nil {
-			return fmt.Errorf("unable to delete oldest access keys for user %q: %w", cfg.Username, err)
+			return nil, fmt.Errorf("unable to delete oldest access keys for user %q: %w", cfg.Username, err)
 		}
 	}
 
@@ -136,16 +137,19 @@ func (b *backend) createCredential(ctx context.Context, storage logical.Storage,
 		UserName: aws.String(cfg.Username),
 	})
 	if err != nil {
-		return fmt.Errorf("unable to create new access keys for user %q: %w", cfg.Username, err)
+		return nil, fmt.Errorf("unable to create new access keys for user %q: %w", cfg.Username, err)
 	}
+	expiration := time.Now().UTC().Add(cfg.RotationPeriod)
 
-	// Persist new keys
-	entry, err := logical.StorageEntryJSON(formatCredsStoragePath(cfg.Name), &awsCredentials{
+	creds := &awsCredentials{
 		AccessKeyID:     *out.AccessKey.AccessKeyId,
 		SecretAccessKey: *out.AccessKey.SecretAccessKey,
-	})
+		Expiration:      &expiration,
+	}
+	// Persist new keys
+	entry, err := logical.StorageEntryJSON(formatCredsStoragePath(cfg.Name), creds)
 	if err != nil {
-		return fmt.Errorf("failed to marshal object to JSON: %w", err)
+		return nil, fmt.Errorf("failed to marshal object to JSON: %w", err)
 	}
 	if shouldLockStorage {
 		b.roleMutex.Lock()
@@ -153,10 +157,10 @@ func (b *backend) createCredential(ctx context.Context, storage logical.Storage,
 	}
 	err = storage.Put(ctx, entry)
 	if err != nil {
-		return fmt.Errorf("failed to save object in storage: %w", err)
+		return nil, fmt.Errorf("failed to save object in storage: %w", err)
 	}
 
-	return nil
+	return creds, nil
 }
 
 // delete credential will remove the credential associated with the role from storage.

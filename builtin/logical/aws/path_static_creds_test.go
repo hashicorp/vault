@@ -7,10 +7,12 @@ import (
 	"context"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 )
 
 // TestStaticCredsRead verifies that we can correctly read a cred that exists, and correctly _not read_
@@ -90,4 +92,23 @@ func staticCredsFieldData(data map[string]interface{}) *framework.FieldData {
 		Raw:    data,
 		Schema: schema,
 	}
+}
+
+// Test_awsCredentials_priority verifies that the expiration in the credentials
+// is returned as the priority value when it is present, but otherwise the
+// priority is now + the rotation period
+func Test_awsCredentials_priority(t *testing.T) {
+	expiration := time.Date(2023, 10, 24, 15, 21, 0o0, 0o0, time.UTC)
+	roleConfig := staticRoleEntry{RotationPeriod: time.Hour}
+	t.Run("use credential value", func(t *testing.T) {
+		creds := &awsCredentials{
+			Expiration: &expiration,
+		}
+		require.Equal(t, expiration.Unix(), creds.priority(roleConfig))
+	})
+	t.Run("use role value", func(t *testing.T) {
+		hourUnix := time.Now().Add(time.Hour).Unix()
+		creds := &awsCredentials{}
+		require.InDelta(t, hourUnix, creds.priority(roleConfig), float64(time.Minute/time.Second))
+	})
 }
