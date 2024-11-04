@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -272,6 +273,10 @@ func (b *SystemBackend) handleRaftRemovePeerUpdate() framework.OperationFunc {
 	}
 }
 
+const answerSize = 16
+
+var answerMaxEncodedSize = base64.StdEncoding.EncodedLen(answerSize)
+
 func (b *SystemBackend) handleRaftBootstrapChallengeWrite(makeSealer func() snapshot.Sealer) framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 		serverID := d.Get("server_id").(string)
@@ -280,25 +285,42 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite(makeSealer func() snap
 		}
 
 		var answer []byte
-		answerRaw, ok := b.Core.pendingRaftPeers.Load(serverID)
+		b.Core.pendingRaftPeersLock.RLock()
+		challenge, ok := b.Core.pendingRaftPeers.Get(serverID)
+		b.Core.pendingRaftPeersLock.RUnlock()
 		if !ok {
-			var err error
-			answer, err = uuid.GenerateRandomBytes(16)
-			if err != nil {
-				return nil, err
+			if !b.raftChallengeLimiter.Allow() {
+				return logical.RespondWithStatusCode(logical.ErrorResponse("too many raft challenges in flight"), req, http.StatusTooManyRequests)
 			}
-			b.Core.pendingRaftPeers.Store(serverID, answer)
-		} else {
-			answer = answerRaw.([]byte)
-		}
 
-		sealer := makeSealer()
-		if sealer == nil {
-			return nil, errors.New("core has no seal Access to write raft bootstrap challenge")
-		}
-		protoBlob, err := sealer.Seal(ctx, answer)
-		if err != nil {
-			return nil, err
+			b.Core.pendingRaftPeersLock.Lock()
+			defer b.Core.pendingRaftPeersLock.Unlock()
+
+			challenge, ok = b.Core.pendingRaftPeers.Get(serverID)
+			if !ok {
+
+				var err error
+				answer, err = uuid.GenerateRandomBytes(answerSize)
+				if err != nil {
+					return nil, err
+				}
+
+				sealer := makeSealer()
+				if sealer == nil {
+					return nil, errors.New("core has no seal access to write raft bootstrap challenge")
+				}
+				protoBlob, err := sealer.Seal(ctx, answer)
+				if err != nil {
+					return nil, err
+				}
+
+				challenge = &raftBootstrapChallenge{
+					serverID:  serverID,
+					answer:    answer,
+					challenge: protoBlob,
+				}
+				b.Core.pendingRaftPeers.Add(serverID, challenge)
+			}
 		}
 
 		sealConfig, err := b.Core.seal.BarrierConfig(ctx)
@@ -308,7 +330,7 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite(makeSealer func() snap
 
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"challenge":   base64.StdEncoding.EncodeToString(protoBlob),
+				"challenge":   base64.StdEncoding.EncodeToString(challenge.challenge),
 				"seal_config": sealConfig,
 			},
 		}, nil
@@ -330,6 +352,9 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 		if len(answerRaw) == 0 {
 			return logical.ErrorResponse("no answer provided"), logical.ErrInvalidRequest
 		}
+		if len(answerRaw) > answerMaxEncodedSize {
+			return logical.ErrorResponse("answer is too long"), logical.ErrInvalidRequest
+		}
 		clusterAddr := d.Get("cluster_addr").(string)
 		if len(clusterAddr) == 0 {
 			return logical.ErrorResponse("no cluster_addr provided"), logical.ErrInvalidRequest
@@ -342,14 +367,17 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			return logical.ErrorResponse("could not base64 decode answer"), logical.ErrInvalidRequest
 		}
 
-		expectedAnswerRaw, ok := b.Core.pendingRaftPeers.Load(serverID)
+		b.Core.pendingRaftPeersLock.Lock()
+		expectedChallenge, ok := b.Core.pendingRaftPeers.Get(serverID)
 		if !ok {
+			b.Core.pendingRaftPeersLock.Unlock()
 			return logical.ErrorResponse("no expected answer for the server id provided"), logical.ErrInvalidRequest
 		}
 
-		b.Core.pendingRaftPeers.Delete(serverID)
+		b.Core.pendingRaftPeers.Remove(serverID)
+		b.Core.pendingRaftPeersLock.Unlock()
 
-		if subtle.ConstantTimeCompare(answer, expectedAnswerRaw.([]byte)) == 0 {
+		if subtle.ConstantTimeCompare(answer, expectedChallenge.answer) == 0 {
 			return logical.ErrorResponse("invalid answer given"), logical.ErrInvalidRequest
 		}
 

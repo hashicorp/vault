@@ -373,23 +373,30 @@ func (r *Router) MatchingMountByAccessor(mountAccessor string) *MountEntry {
 // MatchingMount returns the mount prefix that would be used for a path
 func (r *Router) MatchingMount(ctx context.Context, path string) string {
 	r.l.RLock()
-	mount := r.matchingMountInternal(ctx, path)
+	mount, _ := r.matchingMountInternal(ctx, path)
 	r.l.RUnlock()
 	return mount
 }
 
-func (r *Router) matchingMountInternal(ctx context.Context, path string) string {
+// MatchingMountAndEntry returns the mount prefix and MountEntry used for a path
+func (r *Router) MatchingMountAndEntry(ctx context.Context, path string) (string, *MountEntry) {
+	r.l.RLock()
+	defer r.l.RUnlock()
+	return r.matchingMountInternal(ctx, path)
+}
+
+func (r *Router) matchingMountInternal(ctx context.Context, path string) (string, *MountEntry) {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
-		return ""
+		return "", nil
 	}
 	path = ns.Path + path
 
-	mount, _, ok := r.root.LongestPrefix(path)
+	mount, raw, ok := r.root.LongestPrefix(path)
 	if !ok {
-		return ""
+		return "", nil
 	}
-	return mount
+	return mount, raw.(*routeEntry).mountEntry
 }
 
 // matchingPrefixInternal returns a mount prefix that a path may be a part of
@@ -416,7 +423,7 @@ func (r *Router) matchingPrefixInternal(ctx context.Context, path string) string
 func (r *Router) MountConflict(ctx context.Context, path string) string {
 	r.l.RLock()
 	defer r.l.RUnlock()
-	if exactMatch := r.matchingMountInternal(ctx, path); exactMatch != "" {
+	if exactMatch, _ := r.matchingMountInternal(ctx, path); exactMatch != "" {
 		return exactMatch
 	}
 	if prefixMatch := r.matchingPrefixInternal(ctx, path); prefixMatch != "" {

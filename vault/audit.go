@@ -115,6 +115,13 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 		case strings.HasPrefix(entry.Path, ent.Path):
 			return fmt.Errorf("path already in use: %w", audit.ErrExternalOptions)
 		}
+
+		// Ensure that the provided file_path argument isn't already used for another audit device's file_path.
+		if entry.Type == "file" {
+			if entry.Options["file_path"] == ent.Options["file_path"] {
+				return fmt.Errorf("file_path already in use: %w", audit.ErrExternalOptions)
+			}
+		}
 	}
 
 	// Generate a new UUID and view
