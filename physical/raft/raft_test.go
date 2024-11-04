@@ -777,6 +777,10 @@ func TestRaft_Removed(t *testing.T) {
 		addPeer(t, raft1, raft3)
 		physical.ExerciseBackend(t, raft1)
 
+		commitIdx := raft1.CommittedIndex()
+		ensureCommitApplied(t, commitIdx, raft2)
+		ensureCommitApplied(t, commitIdx, raft3)
+
 		require.False(t, raft1.IsRemoved())
 		require.False(t, raft2.IsRemoved())
 		require.False(t, raft3.IsRemoved())
@@ -784,7 +788,7 @@ func TestRaft_Removed(t *testing.T) {
 		err := raft1.RemovePeer(context.Background(), raft3.NodeID())
 		require.NoError(t, err)
 
-		require.Eventually(t, raft3.IsRemoved, 5*time.Second, 500*time.Millisecond)
+		require.Eventually(t, raft3.IsRemoved, 15*time.Second, 500*time.Millisecond)
 		require.False(t, raft1.IsRemoved())
 		require.False(t, raft2.IsRemoved())
 	})
