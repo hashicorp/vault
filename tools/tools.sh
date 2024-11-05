@@ -7,6 +7,9 @@ set -euo pipefail
 # Determine the root directory of the repository
 repo_root() {
   git rev-parse --show-toplevel
+  if [ $? -ne 0 ]; then
+        echo "."
+  fi
 }
 
 # Install an external Go tool.
