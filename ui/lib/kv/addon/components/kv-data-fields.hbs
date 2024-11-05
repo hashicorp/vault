@@ -15,6 +15,7 @@
 {{#if @showJson}}
   {{#if (eq @type "details")}}
     <Hds::CodeBlock
+      data-test-code-block="secret-data"
       @value={{this.stringifiedSecretData}}
       @language="json"
       @hasCopyButton={{true}}
@@ -27,7 +28,7 @@
     </Hds::CodeBlock>
   {{else}}
     <JsonEditor
-      @title="Secret data"
+      @title="{{if (eq @type 'create') 'Secret' 'Version'}} data"
       @value={{this.stringifiedSecretData}}
       @valueUpdated={{this.handleJson}}
       @viewportMargin={{this.viewportMargin}}

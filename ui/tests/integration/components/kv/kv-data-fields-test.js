@@ -11,6 +11,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { fillIn, render, click } from '@ember/test-helpers';
 import codemirror from 'vault/tests/helpers/codemirror';
 import { PAGE, FORM } from 'vault/tests/helpers/kv/kv-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
   setupRenderingTest(hooks);
@@ -88,7 +89,7 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
     assert.dom(PAGE.infoRowValue('foo')).hasText('bar', 'secret value shows after toggle');
   });
 
-  test('it shows readonly json editor when viewing secret details of complex secret', async function (assert) {
+  test('it shows hds codeblock when viewing secret details of complex secret', async function (assert) {
     this.secret.secretData = {
       foo: {
         bar: 'baz',
@@ -100,7 +101,9 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
       owner: this.engine,
     });
     assert.dom(PAGE.infoRowValue('foo')).doesNotExist('does not render rows of secret data');
-    assert.dom('[data-test-component="code-mirror-modifier"]').hasClass('readonly-codemirror');
-    assert.dom('[data-test-component="code-mirror-modifier"]').includesText(`{ "foo": { "bar": "baz" }}`);
+    assert.dom(GENERAL.codeBlock('secret-data')).exists('hds codeBlock exists');
+    assert
+      .dom(GENERAL.codeBlock('secret-data'))
+      .hasText(`Version data { "foo": { "bar": "baz" }} `, 'Json data is displayed');
   });
 });
