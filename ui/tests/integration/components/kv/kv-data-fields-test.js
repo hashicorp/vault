@@ -104,6 +104,6 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
     assert.dom(GENERAL.codeBlock('secret-data')).exists('hds codeBlock exists');
     assert
       .dom(GENERAL.codeBlock('secret-data'))
-      .hasText(`Version data { "foo": { "bar": "baz" }} `, 'Json data is displayed');
+      .hasText(`Version data { "foo": { "bar": "baz" } } `, 'Json data is displayed');
   });
 });
