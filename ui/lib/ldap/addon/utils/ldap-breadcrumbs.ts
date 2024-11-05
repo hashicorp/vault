@@ -2,33 +2,35 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
+import type { Breadcrumb } from 'vault/vault/app-types';
 
 export const ldapBreadcrumbs = (
-  path: string, // i.e. path/to/item
+  fullPath: string | undefined, // i.e. path/to/item
   roleType: string,
   mountPath: string,
-  isCurrent = false
-) => {
-  const ancestry = path.split('/').filter(Boolean); // remove last empty string
+  lastItemCurrent = false // this array of objects can be spread anywhere within the crumbs array
+): Breadcrumb[] => {
+  if (!fullPath) return [];
+  const ancestry = fullPath.split('/').filter((path) => path !== '');
+  const isDirectory = fullPath.endsWith('/');
 
   return ancestry.map((name: string, idx: number) => {
     const isLast = ancestry.length === idx + 1;
     // if the end of the path is the current route, don't return a route link
-    if (isLast && isCurrent) return { label: name };
+    if (isLast && lastItemCurrent) return { label: name };
+
     // each segment is a continued concatenation of ancestral paths.
     // for example, if the full path to an item is "prod/admin/west"
     // the segments will be: prod/, prod/admin/, prod/admin/west.
     // LIST or GET requests can then be made for each crumb accordingly.
-    let segment = ancestry.slice(0, idx + 1).join('/');
-    // although the trailing slash in the URL isn't ideal, it allows us to keep the path name consistent
-    // otherwise we have to manually keep track of whether we're in a directory or at the end of the path.
-    segment = isLast ? segment : `${segment}/`;
-    const models = [mountPath, roleType, segment];
+    const segment = ancestry.slice(0, idx + 1).join('/');
+
+    const itemPath = isLast && !isDirectory ? segment : `${segment}/`;
+    const routeParams = [mountPath, roleType, itemPath];
     return {
       label: name,
-      // if the last crumb is a subdirectory path, it's also the current route so we return above
-      route: isLast ? 'roles.role.details' : 'roles.subdirectory',
-      models,
+      route: isLast && !isDirectory ? 'roles.role.details' : 'roles.subdirectory',
+      models: routeParams,
     };
   });
 };
