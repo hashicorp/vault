@@ -4,6 +4,7 @@
  */
 
 import Route from '@ember/routing/route';
+import { ldapBreadcrumbs } from 'ldap/utils/ldap-breadcrumbs';
 
 import type LdapRoleModel from 'vault/models/ldap/role';
 import type Controller from '@ember/controller';
@@ -20,9 +21,10 @@ export default class LdapRoleEditRoute extends Route {
     super.setupController(controller, resolvedModel, transition);
 
     controller.breadcrumbs = [
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backend, route: 'overview' },
       { label: 'Roles', route: 'roles' },
-      { label: resolvedModel.name, route: 'roles.role' },
+      ...ldapBreadcrumbs(resolvedModel.name, resolvedModel.type, resolvedModel.backend),
       { label: 'Edit' },
     ];
   }
