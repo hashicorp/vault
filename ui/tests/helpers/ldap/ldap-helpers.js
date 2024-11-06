@@ -35,6 +35,10 @@ export const isURL = (uri) => {
   return currentURL() === `${baseURL}${stripLeadingSlash(uri)}`;
 };
 
-export const visitURL = (uri) => {
-  return visit(`${baseURL}${stripLeadingSlash(uri)}`);
+export const assertURL = (assert, backend, path) => {
+  assert.strictEqual(currentURL(), baseURL(backend) + path, `url is ${path}`);
+};
+
+export const visitURL = (uri, backend = 'ldap-test') => {
+  return visit(`${baseURL(backend)}${stripLeadingSlash(uri)}`);
 };
