@@ -23,6 +23,7 @@ interface RouteController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
   model: RouteModel;
 }
+
 interface RouteParams {
   page?: string;
   pageFilter: string;

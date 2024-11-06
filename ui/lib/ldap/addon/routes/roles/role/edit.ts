@@ -11,13 +11,13 @@ import type Controller from '@ember/controller';
 import type Transition from '@ember/routing/transition';
 import type { Breadcrumb } from 'vault/vault/app-types';
 
-interface LdapRoleEditController extends Controller {
+interface RouteController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
   model: LdapRoleModel;
 }
 
 export default class LdapRoleEditRoute extends Route {
-  setupController(controller: LdapRoleEditController, resolvedModel: LdapRoleModel, transition: Transition) {
+  setupController(controller: RouteController, resolvedModel: LdapRoleModel, transition: Transition) {
     super.setupController(controller, resolvedModel, transition);
 
     controller.breadcrumbs = [

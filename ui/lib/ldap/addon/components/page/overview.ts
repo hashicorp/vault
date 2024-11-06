@@ -40,7 +40,8 @@ export default class LdapLibrariesPageComponent extends Component<Args> {
       // hierarchical roles are not selectable
       .filter((r: LdapRoleModel) => !r.name.endsWith('/'))
       // *hack alert* - type is set as id so it renders beside name in search select
-      // this is to avoid more changes to search select and is okay because we are only selecting one item
+      // this is to avoid more changes to search select and is okay here because
+      // we use the type and name to select the item below, not the id
       .map((r: LdapRoleModel) => ({ id: r.type, name: r.name, type: r.type }));
     return options;
   }

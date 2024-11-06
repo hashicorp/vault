@@ -13,7 +13,7 @@ import type LdapRoleModel from 'vault/models/ldap/role';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type Transition from '@ember/routing/transition';
 
-interface LdapRoleDetailsController extends Controller {
+interface RouteController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
   model: LdapRoleModel;
 }
@@ -21,11 +21,7 @@ interface LdapRoleDetailsController extends Controller {
 export default class LdapRolesRoleDetailsRoute extends Route {
   @service declare readonly secretMountPath: SecretMountPath;
 
-  setupController(
-    controller: LdapRoleDetailsController,
-    resolvedModel: LdapRoleModel,
-    transition: Transition
-  ) {
+  setupController(controller: RouteController, resolvedModel: LdapRoleModel, transition: Transition) {
     super.setupController(controller, resolvedModel, transition);
 
     controller.breadcrumbs = [
