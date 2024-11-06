@@ -18,10 +18,10 @@ import type Controller from '@ember/controller';
 import type { Breadcrumb } from 'vault/vault/app-types';
 import { LdapLibraryAccountStatus } from 'vault/vault/adapters/ldap/library';
 
-interface LdapOverviewController extends Controller {
+interface RouteController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
 }
-interface LdapOverviewRouteModel {
+interface RouteModel {
   backendModel: SecretEngineModel;
   promptConfig: boolean;
   roles: Array<LdapRoleModel>;
@@ -66,11 +66,7 @@ export default class LdapOverviewRoute extends Route {
     });
   }
 
-  setupController(
-    controller: LdapOverviewController,
-    resolvedModel: LdapOverviewRouteModel,
-    transition: Transition
-  ) {
+  setupController(controller: RouteController, resolvedModel: RouteModel, transition: Transition) {
     super.setupController(controller, resolvedModel, transition);
 
     controller.breadcrumbs = [

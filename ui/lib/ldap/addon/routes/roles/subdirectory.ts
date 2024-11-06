@@ -4,20 +4,18 @@
  */
 
 import LdapRolesRoute from '../roles';
-import { service } from '@ember/service';
-import { withConfig } from 'core/decorators/fetch-secrets-engine-config';
 import { hash } from 'rsvp';
+import { ldapBreadcrumbs } from 'ldap/utils/ldap-breadcrumbs';
 
-import type StoreService from 'vault/services/store';
-import type Transition from '@ember/routing/transition';
+import type { Breadcrumb } from 'vault/vault/app-types';
+import type Controller from '@ember/controller';
 import type LdapRoleModel from 'vault/models/ldap/role';
 import type SecretEngineModel from 'vault/models/secret-engine';
-import type Controller from '@ember/controller';
-import type { Breadcrumb } from 'vault/vault/app-types';
+import type Transition from '@ember/routing/transition';
 
 interface RouteModel {
   backendModel: SecretEngineModel;
-  promptConfig: boolean;
+  roleAncestry: { path_to_role: string; type: string };
   roles: Array<LdapRoleModel>;
 }
 
@@ -26,12 +24,14 @@ interface RouteController extends Controller {
   model: RouteModel;
 }
 
-@withConfig('ldap/config')
-export default class LdapRolesIndexRoute extends LdapRolesRoute {
-  @service declare readonly store: StoreService; // necessary for @withConfig decorator
+interface RouteParams {
+  page?: string;
+  pageFilter: string;
+  path_to_role: string;
+  type: string;
+}
 
-  declare promptConfig: boolean;
-
+export default class LdapRolesSubdirectoryRoute extends LdapRolesRoute {
   queryParams = {
     pageFilter: {
       refreshModel: true,
@@ -41,23 +41,29 @@ export default class LdapRolesIndexRoute extends LdapRolesRoute {
     },
   };
 
-  model(params: { page?: string; pageFilter: string }) {
+  model(params: RouteParams) {
     const backendModel = this.modelFor('application') as SecretEngineModel;
+    const { path_to_role, type } = params;
+    const roleAncestry = { path_to_role, type };
     return hash({
       backendModel,
-      promptConfig: this.promptConfig,
-      roles: this.lazyQuery(backendModel.id, params, { showPartialError: true }),
+      roleAncestry,
+      roles: this.lazyQuery(backendModel.id, params, { roleAncestry }),
     });
   }
 
   setupController(controller: RouteController, resolvedModel: RouteModel, transition: Transition) {
     super.setupController(controller, resolvedModel, transition);
-
-    controller.breadcrumbs = [
+    const { backendModel, roleAncestry } = resolvedModel;
+    const crumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backendModel.id, route: 'overview' },
-      { label: 'Roles' },
+      { label: backendModel.id, route: 'overview' },
+      { label: 'Roles', route: 'roles' },
+      ...ldapBreadcrumbs(roleAncestry.path_to_role, roleAncestry.type, backendModel.id, true),
     ];
+
+    // must call 'set' so breadcrumbs update as we navigate through directories
+    controller.set('breadcrumbs', crumbs);
   }
 
   resetController(controller: RouteController, isExiting: boolean) {

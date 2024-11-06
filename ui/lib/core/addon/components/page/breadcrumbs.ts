@@ -6,16 +6,10 @@
 import Component from '@glimmer/component';
 import { assert } from '@ember/debug';
 
+import type { Breadcrumb } from 'vault/vault/app-types';
+
 interface Args {
   breadcrumbs: Array<Breadcrumb>;
-}
-interface Breadcrumb {
-  label: string;
-  route?: string; // Do not provide for current route
-  icon?: string;
-  model?: string;
-  models?: string[];
-  linkToExternal?: boolean;
 }
 
 /**

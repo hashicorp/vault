@@ -53,7 +53,10 @@
       class="is-flex-half"
     />
     <div>
-      <OverviewCard @cardTitle="Generate credentials" @subText="Quickly generate credentials by typing the role name.">
+      <OverviewCard
+        @cardTitle="Generate credentials"
+        @subText="Quickly generate credentials by typing the role name. Only the engine's top-level roles are listed here."
+      >
         <:content>
           <div class="has-top-margin-m is-flex">
             <SearchSelect
@@ -61,11 +64,14 @@
               @ariaLabel="Role"
               @placeholder="Select a role"
               @disallowNewItems={{true}}
-              @options={{@roles}}
+              @options={{this.roleOptions}}
               @selectLimit="1"
               @fallbackComponent="input-search"
               @onChange={{this.selectRole}}
               @renderInPlace={{true}}
+              @passObject={{true}}
+              @objectKeys={{array "id" "name" "type"}}
+              @shouldRenderName={{true}}
             />
             <div>
               <Hds::Button

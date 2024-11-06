@@ -8,6 +8,7 @@ import { setupTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
 import sinon from 'sinon';
+import { ldapRoleID } from 'vault/adapters/ldap/role';
 
 module('Unit | Adapter | ldap/role', function (hooks) {
   setupTest(hooks);
@@ -17,6 +18,18 @@ module('Unit | Adapter | ldap/role', function (hooks) {
     this.store = this.owner.lookup('service:store');
     this.adapter = this.store.adapterFor('ldap/role');
     this.path = 'role';
+
+    this.getModel = (type) => {
+      const name = 'test-role';
+      this.store.pushPayload('ldap/role', {
+        modelName: 'ldap/role',
+        backend: 'ldap-test',
+        name,
+        type,
+        id: ldapRoleID(type, name),
+      });
+      return this.store.peekRecord('ldap/role', ldapRoleID(type, name));
+    };
   });
 
   test('it should make request to correct endpoints when listing records', async function (assert) {
@@ -24,7 +37,7 @@ module('Unit | Adapter | ldap/role', function (hooks) {
 
     const assertRequest = (schema, req) => {
       assert.ok(req.queryParams.list, 'list query param sent when listing roles');
-      const name = req.params.path === 'static-role' ? 'static-test' : 'dynamic-test';
+      const name = req.url.includes('static-role') ? 'static-test' : 'dynamic-test';
       return { data: { keys: [name] } };
     };
 
@@ -176,15 +189,8 @@ module('Unit | Adapter | ldap/role', function (hooks) {
       );
     });
 
-    this.store.pushPayload('ldap/role', {
-      modelName: 'ldap/role',
-      backend: 'ldap-test',
-      name: 'test-role',
-    });
-    const record = this.store.peekRecord('ldap/role', 'test-role');
-
     for (const type of ['dynamic', 'static']) {
-      record.type = type;
+      const record = this.getModel(type);
       await record.save();
       this.path = 'static-role';
     }
@@ -201,18 +207,8 @@ module('Unit | Adapter | ldap/role', function (hooks) {
       );
     });
 
-    const getModel = () => {
-      this.store.pushPayload('ldap/role', {
-        modelName: 'ldap/role',
-        backend: 'ldap-test',
-        name: 'test-role',
-      });
-      return this.store.peekRecord('ldap/role', 'test-role');
-    };
-
     for (const type of ['dynamic', 'static']) {
-      const record = getModel();
-      record.type = type;
+      const record = this.getModel(type);
       await record.destroyRecord();
       this.path = 'static-role';
     }

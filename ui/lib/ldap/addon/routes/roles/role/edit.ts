@@ -4,26 +4,28 @@
  */
 
 import Route from '@ember/routing/route';
+import { ldapBreadcrumbs } from 'ldap/utils/ldap-breadcrumbs';
 
 import type LdapRoleModel from 'vault/models/ldap/role';
 import type Controller from '@ember/controller';
 import type Transition from '@ember/routing/transition';
 import type { Breadcrumb } from 'vault/vault/app-types';
 
-interface LdapRoleEditController extends Controller {
+interface RouteController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
   model: LdapRoleModel;
 }
 
 export default class LdapRoleEditRoute extends Route {
-  setupController(controller: LdapRoleEditController, resolvedModel: LdapRoleModel, transition: Transition) {
+  setupController(controller: RouteController, resolvedModel: LdapRoleModel, transition: Transition) {
     super.setupController(controller, resolvedModel, transition);
 
     controller.breadcrumbs = [
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backend, route: 'overview' },
-      { label: 'roles', route: 'roles' },
-      { label: resolvedModel.name, route: 'roles.role' },
-      { label: 'edit' },
+      { label: 'Roles', route: 'roles' },
+      ...ldapBreadcrumbs(resolvedModel.name, resolvedModel.type, resolvedModel.backend),
+      { label: 'Edit' },
     ];
   }
 }

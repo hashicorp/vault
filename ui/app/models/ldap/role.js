@@ -63,7 +63,8 @@ export const dynamicRoleFields = [
 @withModelValidations(validations)
 @withFormFields()
 export default class LdapRoleModel extends Model {
-  @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord
+  @attr('string') backend; // mount path of ldap engine -- set on response from value passed to queryRecord
+  @attr('string') path_to_role; // ancestral path to the role added in the adapter (only exists for nested roles)
 
   @attr('string', {
     defaultValue: 'static',
