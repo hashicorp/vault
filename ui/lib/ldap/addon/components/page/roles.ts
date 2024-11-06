@@ -16,7 +16,6 @@ import type FlashMessageService from 'vault/services/flash-messages';
 import type { Breadcrumb, EngineOwner } from 'vault/vault/app-types';
 import type RouterService from '@ember/routing/router-service';
 import type StoreService from 'vault/services/store';
-import { tracked } from '@glimmer/tracking';
 
 interface Args {
   roles: Array<LdapRoleModel>;
