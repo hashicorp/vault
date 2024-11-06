@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCoreMetrics_KvSecretGauge(t *testing.T) {
@@ -244,6 +245,32 @@ func TestCoreMetrics_KvSecretGaugeError(t *testing.T) {
 	if counter.Count != 1 {
 		t.Errorf("Counter number of samples %v is not 1.", counter.Count)
 	}
+}
+
+// TestCoreMetrics_KvUsageMetricsHelperFunctions tests the KV Product Usage
+// metrics helper functions designed to be used on the output of GetKvUsageMetrics.
+func TestCoreMetrics_KvUsageMetricsHelperFunctions(t *testing.T) {
+	// This is just "", but it makes it clearer
+	rootNsPath := namespace.RootNamespace.Path
+
+	testMap := map[string]int{
+		rootNsPath: 10,
+		"ns1":      20,
+		"ns3":      30,
+	}
+
+	require.Equal(t, 60, getTotalSecretsAcrossAllNamespaces(testMap))
+	require.Equal(t, 0, getTotalSecretsAcrossAllNamespaces(map[string]int{}))
+	require.Equal(t, 10, getTotalSecretsAcrossAllNamespaces(map[string]int{rootNsPath: 10}))
+	require.Equal(t, 20, getMeanNamespaceSecrets(testMap))
+	require.Equal(t, 0, getMeanNamespaceSecrets(map[string]int{}))
+	require.Equal(t, 10, getMeanNamespaceSecrets(map[string]int{rootNsPath: 10}))
+	require.Equal(t, 30, getMaxNamespaceSecrets(testMap))
+	require.Equal(t, 0, getMaxNamespaceSecrets(map[string]int{}))
+	require.Equal(t, 10, getMaxNamespaceSecrets(map[string]int{rootNsPath: 10}))
+	require.Equal(t, 10, getMinNamespaceSecrets(testMap))
+	require.Equal(t, 0, getMinNamespaceSecrets(map[string]int{}))
+	require.Equal(t, 10, getMinNamespaceSecrets(map[string]int{rootNsPath: 10}))
 }
 
 func metricLabelsMatch(t *testing.T, actual []metrics.Label, expected map[string]string) {
