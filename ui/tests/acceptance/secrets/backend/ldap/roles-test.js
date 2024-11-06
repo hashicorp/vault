@@ -21,6 +21,7 @@ module('Acceptance | ldap | roles', function (hooks) {
   hooks.beforeEach(async function () {
     ldapHandlers(this.server);
     ldapMirageScenario(this.server);
+    this.backend = 'ldap-test';
     await authPage.login();
     return visitURL('roles');
   });
