@@ -30,9 +30,30 @@ export default function (server) {
   };
   const listRecords = (schema, dbKey, query = {}) => {
     const records = schema.db[dbKey].where(query);
+    const keys = records.map(({ name }) => {
+      if (name.includes('/')) {
+        const [parent, child] = name.split('/');
+        // query.name is only passed by listOrGetRecord and means we want to list children of admin/
+        // otherwise this is the request for all roles in an engine so we return the top-level paths
+        return query?.name ? child : `${parent}/`;
+      }
+      return name;
+    });
+
     return {
-      data: { keys: records.map((record) => record.name) },
+      data: { keys },
     };
+  };
+
+  const listOrGetRecord = (schema, req, type) => {
+    // if the param name is admin, we want to LIST admin/ roles
+    if (req.queryParams.list) {
+      // passing a query with specific name is not flexible
+      // but we only seeded the mirage db with one hierarchical role for each type
+      return listRecords(schema, 'ldapRoles', { type, name: `admin/child-${type}-role` });
+    }
+    // otherwise we want to view details for a specific role
+    return getRecord(schema, req, 'ldapRoles', type);
   };
 
   // mount
@@ -52,8 +73,10 @@ export default function (server) {
   // roles
   server.post('/:backend/static-role/:name', (schema, req) => createOrUpdateRecord(schema, req, 'ldapRoles'));
   server.post('/:backend/role/:name', (schema, req) => createOrUpdateRecord(schema, req, 'ldapRoles'));
-  server.get('/:backend/static-role/:name', (schema, req) => getRecord(schema, req, 'ldapRoles', 'static'));
-  server.get('/:backend/role/:name', (schema, req) => getRecord(schema, req, 'ldapRoles', 'dynamic'));
+  // if the role is hierarchical the name ends in a forward slash so we make a list request
+  server.get('/:backend/static-role/*name', (schema, req) => listOrGetRecord(schema, req, 'static'));
+  server.get('/:backend/role/*name', (schema, req) => listOrGetRecord(schema, req, 'dynamic'));
+
   server.get('/:backend/static-role', (schema) => listRecords(schema, 'ldapRoles', { type: 'static' }));
   server.get('/:backend/role', (schema) => listRecords(schema, 'ldapRoles', { type: 'dynamic' }));
   // role credentials

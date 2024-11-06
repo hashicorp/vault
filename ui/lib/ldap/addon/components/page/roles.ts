@@ -8,6 +8,7 @@ import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { getOwner } from '@ember/owner';
 import errorMessage from 'vault/utils/error-message';
+import { tracked } from '@glimmer/tracking';
 
 import type LdapRoleModel from 'vault/models/ldap/role';
 import type SecretEngineModel from 'vault/models/secret-engine';
@@ -15,7 +16,6 @@ import type FlashMessageService from 'vault/services/flash-messages';
 import type { Breadcrumb, EngineOwner } from 'vault/vault/app-types';
 import type RouterService from '@ember/routing/router-service';
 import type StoreService from 'vault/services/store';
-import { tracked } from '@glimmer/tracking';
 
 interface Args {
   roles: Array<LdapRoleModel>;
@@ -32,6 +32,16 @@ export default class LdapRolesPageComponent extends Component<Args> {
   @tracked credsToRotate: LdapRoleModel | null = null;
   @tracked roleToDelete: LdapRoleModel | null = null;
 
+  isHierarchical = (name: string) => name.endsWith('/');
+
+  linkParams = (role: LdapRoleModel) => {
+    const route = this.isHierarchical(role.name) ? 'roles.subdirectory' : 'roles.role.details';
+    // if there is a path_to_role we're in a subdirectory
+    // and must concat the ancestors with the leaf name to get the full role path
+    const roleName = role.path_to_role ? role.path_to_role + role.name : role.name;
+    return [route, role.type, roleName];
+  };
+
   get mountPoint(): string {
     const owner = getOwner(this) as EngineOwner;
     return owner.mountPoint;
@@ -43,7 +53,8 @@ export default class LdapRolesPageComponent extends Component<Args> {
 
   @action
   onFilterChange(pageFilter: string) {
-    this.router.transitionTo('vault.cluster.secrets.backend.ldap.roles', { queryParams: { pageFilter } });
+    // refresh route, which fires off lazyPaginatedQuery to re-request and filter response
+    this.router.transitionTo(this.router?.currentRoute?.name, { queryParams: { pageFilter } });
   }
 
   @action

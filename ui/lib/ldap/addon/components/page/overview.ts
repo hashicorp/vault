@@ -24,15 +24,35 @@ interface Args {
   breadcrumbs: Array<Breadcrumb>;
 }
 
+interface Option {
+  id: string;
+  name: string;
+  type: string;
+}
+
 export default class LdapLibrariesPageComponent extends Component<Args> {
   @service declare readonly router: RouterService;
 
   @tracked selectedRole: LdapRoleModel | undefined;
 
+  get roleOptions() {
+    const options = this.args.roles
+      // hierarchical roles are not selectable
+      .filter((r: LdapRoleModel) => !r.name.endsWith('/'))
+      // *hack alert* - type is set as id so it renders beside name in search select
+      // this is to avoid more changes to search select and is okay here because
+      // we use the type and name to select the item below, not the id
+      .map((r: LdapRoleModel) => ({ id: r.type, name: r.name, type: r.type }));
+    return options;
+  }
+
   @action
-  selectRole([roleName]: Array<string>) {
-    const model = this.args.roles.find((role) => role.name === roleName);
-    this.selectedRole = model;
+  async selectRole([option]: Array<Option>) {
+    if (option) {
+      const { name, type } = option;
+      const model = this.args.roles.find((role) => role.name === name && role.type === type);
+      this.selectedRole = model;
+    }
   }
 
   @action

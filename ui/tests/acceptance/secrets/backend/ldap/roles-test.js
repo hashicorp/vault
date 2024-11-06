@@ -9,8 +9,10 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import ldapMirageScenario from 'vault/mirage/scenarios/ldap';
 import ldapHandlers from 'vault/mirage/handlers/ldap';
 import authPage from 'vault/tests/pages/auth';
-import { click, fillIn } from '@ember/test-helpers';
-import { isURL, visitURL } from 'vault/tests/helpers/ldap/ldap-helpers';
+import { click, fillIn, waitFor } from '@ember/test-helpers';
+import { assertURL, isURL, visitURL } from 'vault/tests/helpers/ldap/ldap-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { LDAP_SELECTORS } from 'vault/tests/helpers/ldap/ldap-selectors';
 
 module('Acceptance | ldap | roles', function (hooks) {
   setupApplicationTest(hooks);
@@ -19,6 +21,7 @@ module('Acceptance | ldap | roles', function (hooks) {
   hooks.beforeEach(async function () {
     ldapHandlers(this.server);
     ldapMirageScenario(this.server);
+    this.backend = 'ldap-test';
     await authPage.login();
     return visitURL('roles');
   });
@@ -29,37 +32,46 @@ module('Acceptance | ldap | roles', function (hooks) {
   });
 
   test('it should transition to role details route on list item click', async function (assert) {
-    await click('[data-test-list-item-link]:nth-of-type(1) a');
-    assert.true(
-      isURL('roles/dynamic/dynamic-role/details'),
-      'Transitions to role details route on list item click'
-    );
+    let path;
 
-    await click('[data-test-breadcrumb="roles"] a');
-    await click('[data-test-list-item-link]:nth-of-type(2) a');
-    assert.true(
-      isURL('roles/static/static-role/details'),
-      'Transitions to role details route on list item click'
-    );
+    await click(LDAP_SELECTORS.roleItem('dynamic', 'dynamic-role'));
+    path = 'roles/dynamic/dynamic-role/details';
+    assertURL(assert, this.backend, path);
+    await click(GENERAL.breadcrumbLink('Roles'));
+
+    await click(LDAP_SELECTORS.roleItem('static', 'static-role'));
+    path = 'roles/static/static-role/details';
+    assertURL(assert, this.backend, path);
+    await click(GENERAL.breadcrumbLink('Roles'));
+
+    // edge case, roles of different type with same name
+    await click(LDAP_SELECTORS.roleItem('dynamic', 'my-role'));
+    path = 'roles/dynamic/my-role/details';
+    assertURL(assert, this.backend, path);
+    await click(GENERAL.breadcrumbLink('Roles'));
+
+    await click(LDAP_SELECTORS.roleItem('static', 'my-role'));
+    path = 'roles/static/my-role/details';
+    assertURL(assert, this.backend, path);
   });
 
   test('it should transition to routes from list item action menu', async function (assert) {
     assert.expect(3);
 
     for (const action of ['edit', 'get-creds', 'details']) {
-      await click('[data-test-popup-menu-trigger]');
-      await click(`[data-test-${action}]`);
+      await click(LDAP_SELECTORS.roleMenu('dynamic', 'dynamic-role'));
+      await click(LDAP_SELECTORS.action(action));
       const uri = action === 'get-creds' ? 'credentials' : action;
       assert.true(
         isURL(`roles/dynamic/dynamic-role/${uri}`),
         `Transitions to ${uri} route on list item action menu click`
       );
-      await click('[data-test-breadcrumb="roles"] a');
+      await click(GENERAL.breadcrumbLink('Roles'));
     }
   });
 
   test('it should transition to routes from role details toolbar links', async function (assert) {
-    await click('[data-test-list-item-link]:nth-of-type(1) a');
+    await click(LDAP_SELECTORS.roleItem('dynamic', 'dynamic-role'));
     await click('[data-test-get-credentials]');
     assert.true(
       isURL('roles/dynamic/dynamic-role/credentials'),
@@ -79,5 +91,61 @@ module('Acceptance | ldap | roles', function (hooks) {
     await click('[data-test-tab="libraries"]');
     await click('[data-test-tab="roles"]');
     assert.dom('[data-test-filter-input]').hasNoValue('Roles page filter value cleared on route exit');
+  });
+
+  module('subdirectory', function () {
+    test('it navigates to hierarchical roles', async function (assert) {
+      let path;
+      // hierarchical paths
+      await click(LDAP_SELECTORS.roleItem('dynamic', 'admin/'));
+      path = 'roles/dynamic/subdirectory/admin/';
+      assertURL(assert, this.backend, path);
+
+      await click(LDAP_SELECTORS.roleItem('dynamic', 'child-dynamic-role'));
+      path = 'roles/dynamic/admin%2Fchild-dynamic-role/details';
+      assertURL(assert, this.backend, path);
+
+      // navigate out via breadcrumbs to test
+      await click(GENERAL.breadcrumbLink('admin'));
+      path = 'roles/dynamic/subdirectory/admin/';
+      assertURL(assert, this.backend, path);
+
+      await click(GENERAL.breadcrumbLink('Roles'));
+
+      await click(LDAP_SELECTORS.roleItem('static', 'admin/'));
+      path = 'roles/static/subdirectory/admin/';
+      assertURL(assert, this.backend, path);
+      await click(LDAP_SELECTORS.roleItem('static', 'child-static-role'));
+      path = 'roles/static/admin%2Fchild-static-role/details';
+      assertURL(assert, this.backend, path);
+
+      // navigate out via breadcrumbs to test
+      await click(GENERAL.breadcrumbLink('admin'));
+      path = 'roles/static/subdirectory/admin/';
+      assertURL(assert, this.backend, path);
+    });
+
+    test('it should transition to subdirectory from hierarchical role popup menu', async function (assert) {
+      assert.expect(4);
+
+      await click(LDAP_SELECTORS.roleMenu('dynamic', 'admin/'));
+      for (const action of ['edit', 'get-creds', 'details']) {
+        assert.dom(LDAP_SELECTORS.action(action)).doesNotExist(`${action} does not render in popup menu`);
+      }
+      await click(LDAP_SELECTORS.action('subdirectory'));
+      assertURL(assert, this.backend, 'roles/dynamic/subdirectory/admin/');
+    });
+
+    test('it should clear roles page filter value on route exit', async function (assert) {
+      await visitURL('roles/static/subdirectory/admin/', this.backend);
+      await fillIn('[data-test-filter-input]', 'foo');
+      assert
+        .dom('[data-test-filter-input]')
+        .hasValue('foo', 'Roles page filter value set after model refresh and rerender');
+      await waitFor(GENERAL.emptyStateTitle);
+      await click('[data-test-tab="libraries"]');
+      await click('[data-test-tab="roles"]');
+      assert.dom('[data-test-filter-input]').hasNoValue('Roles page filter value cleared on route exit');
+    });
   });
 });

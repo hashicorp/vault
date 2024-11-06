@@ -43,48 +43,62 @@
 {{else}}
   <div class="has-bottom-margin-s">
     {{#each @roles as |role|}}
-      <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{array "roles.role.details" role.type role.name}} as |Item|>
+      <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{this.linkParams role}} as |Item|>
         <Item.content>
           <Icon @name="user" />
-          <span data-test-role={{role.name}}>{{role.name}}</span>
+          <span data-test-role="{{role.type}} {{role.name}}">{{role.name}}</span>
           <Hds::Badge @text={{role.type}} data-test-role-type-badge={{role.name}} />
         </Item.content>
         <Item.menu>
           <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
-            <dd.ToggleIcon @icon="more-horizontal" @text="More options" @hasChevron={{false}} data-test-popup-menu-trigger />
-            {{#if role.canEdit}}
-              <dd.Interactive @text="Edit" data-test-edit @route="roles.role.edit" @models={{array role.type role.name}} />
-            {{/if}}
-            {{#if role.canReadCreds}}
+            <dd.ToggleIcon
+              @icon="more-horizontal"
+              @text="More options"
+              @hasChevron={{false}}
+              data-test-popup-menu-trigger="{{role.type}} {{role.name}}"
+            />
+            {{#if (this.isHierarchical role.name)}}
               <dd.Interactive
-                @text="Get credentials"
-                data-test-get-creds
-                @route="roles.role.credentials"
+                @text="Content"
+                data-test-subdirectory
+                @route="roles.subdirectory"
+                @models={{array role.type (concat role.path_to_role role.name)}}
+              />
+            {{else}}
+              {{#if role.canEdit}}
+                <dd.Interactive @text="Edit" data-test-edit @route="roles.role.edit" @models={{array role.type role.name}} />
+              {{/if}}
+              {{#if role.canReadCreds}}
+                <dd.Interactive
+                  @text="Get credentials"
+                  data-test-get-creds
+                  @route="roles.role.credentials"
+                  @models={{array role.type role.name}}
+                />
+              {{/if}}
+              {{#if role.canRotateStaticCreds}}
+                <dd.Interactive
+                  @text="Rotate credentials"
+                  data-test-rotate-creds
+                  @color="critical"
+                  {{on "click" (fn (mut this.credsToRotate) role)}}
+                />
+              {{/if}}
+              <dd.Interactive
+                @text="Details"
+                data-test-details
+                @route="roles.role.details"
+                {{! this will force the roles.role model hook to fire since we may only have a partial model loaded in the list view }}
                 @models={{array role.type role.name}}
               />
-            {{/if}}
-            {{#if role.canRotateStaticCreds}}
-              <dd.Interactive
-                @text="Rotate credentials"
-                data-test-rotate-creds
-                @color="critical"
-                {{on "click" (fn (mut this.credsToRotate) role)}}
-              />
-            {{/if}}
-            <dd.Interactive
-              @text="Details"
-              data-test-details
-              @route="roles.role.details"
-              {{! this will force the roles.role model hook to fire since we may only have a partial model loaded in the list view }}
-              @models={{array role.type role.name}}
-            />
-            {{#if role.canDelete}}
-              <dd.Interactive
-                @text="Delete"
-                data-test-delete
-                @color="critical"
-                {{on "click" (fn (mut this.roleToDelete) role)}}
-              />
+              {{#if role.canDelete}}
+                <dd.Interactive
+                  @text="Delete"
+                  data-test-delete
+                  @color="critical"
+                  {{on "click" (fn (mut this.roleToDelete) role)}}
+                />
+              {{/if}}
             {{/if}}
           </Hds::Dropdown>
         </Item.menu>
@@ -110,7 +124,9 @@
     <Hds::Pagination::Numbered
       @currentPage={{@roles.meta.currentPage}}
       @currentPageSize={{@roles.meta.pageSize}}
-      @route="roles"
+      {{! localName will be either "index" or "subdirectory" }}
+      @route="roles.{{this.router.currentRoute.localName}}"
+      @models={{@currentRouteParams}}
       @showSizeSelector={{false}}
       @totalItems={{@roles.meta.filteredTotal}}
       @queryFunction={{this.paginationQueryParams}}
