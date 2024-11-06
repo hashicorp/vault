@@ -2962,6 +2962,10 @@
               "type": "outlined",
               "color": "neutral"
             }
+          },
+          {
+            "title": "Structure guide",
+            "path": "enterprise/namespaces/namespace-structure"
           }
         ]
       },
