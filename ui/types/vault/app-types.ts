@@ -63,6 +63,9 @@ export interface WithFormFieldsAndValidationsModel extends WithFormFieldsModel, 
 export interface Breadcrumb {
   label: string;
   route?: string;
+  icon?: string;
+  model?: string;
+  models?: string[];
   linkExternal?: boolean;
 }
 
@@ -71,12 +74,6 @@ export interface TtlEvent {
   seconds: number;
   timeString: string;
   goSafeTimeString: string;
-}
-
-export interface Breadcrumb {
-  label: string;
-  route?: string;
-  linkExternal?: boolean;
 }
 
 export interface EngineOwner extends Owner {
