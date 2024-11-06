@@ -411,6 +411,10 @@
             "path": "configuration/seal"
           },
           {
+            "title": "Seal best practices",
+            "path": "configuration/seal/seal-best-practices"
+          },
+          {
             "title": "High Availability",
             "badge": {
               "text": "ENTERPRISE",
@@ -451,6 +455,10 @@
           {
             "title": "Vault Transit",
             "path": "configuration/seal/transit"
+          },
+          {
+            "title": "Transit best practices",
+            "path": "configuration/seal/transit-best-practices"
           }
         ]
       },
@@ -644,7 +652,7 @@
           {
             "title": "<code>generate-config</code>",
             "path": "commands/agent/generate-config"
-          }    
+          }
         ]
       },
       {
@@ -1950,7 +1958,6 @@
                 "path": "auth/saml/troubleshoot-adfs/adfs-event-320"
               }
             ]
-            
           }
         ]
       },
