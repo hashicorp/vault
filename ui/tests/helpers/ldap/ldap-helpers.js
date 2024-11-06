@@ -28,11 +28,11 @@ export const generateBreadcrumbs = (backend, childRoute) => {
   return breadcrumbs;
 };
 
-const baseURL = '/vault/secrets/ldap-test/ldap/';
+const baseURL = (backend) => `/vault/secrets/${backend}/ldap/`;
 const stripLeadingSlash = (uri) => (uri.charAt(0) === '/' ? uri.slice(1) : uri);
 
-export const isURL = (uri) => {
-  return currentURL() === `${baseURL}${stripLeadingSlash(uri)}`;
+export const isURL = (uri, backend = 'ldap-test') => {
+  return currentURL() === `${baseURL(backend)}${stripLeadingSlash(uri)}`;
 };
 
 export const assertURL = (assert, backend, path) => {
