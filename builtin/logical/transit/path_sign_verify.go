@@ -120,7 +120,101 @@ func (b *backend) pathSign() *framework.Path {
 			OperationSuffix: "|with-algorithm",
 		},
 
-		Fields: pathSignFieldArgs(),
+		Fields: map[string]*framework.FieldSchema{
+			"name": {
+				Type:        framework.TypeString,
+				Description: "The key to use",
+			},
+
+			"input": {
+				Type:        framework.TypeString,
+				Description: "The base64-encoded input data",
+			},
+
+			"context": {
+				Type: framework.TypeString,
+				Description: `Base64 encoded context for key derivation. Required if key
+derivation is enabled; currently only available with ed25519 keys.`,
+			},
+
+			"signature_context": {
+				Type: framework.TypeString,
+				Description: `Base64 encoded context for Ed25519ph and Ed25519ctx signatures.
+Currently only available with Ed25519 keys. (Enterprise Only)`,
+			},
+
+			"hash_algorithm": {
+				Type:    framework.TypeString,
+				Default: defaultHashAlgorithm,
+				Description: `Hash algorithm to use (POST body parameter). Valid values are:
+
+* sha1
+* sha2-224
+* sha2-256
+* sha2-384
+* sha2-512
+* sha3-224
+* sha3-256
+* sha3-384
+* sha3-512
+* none
+
+Defaults to "sha2-256". Not valid for all key types,
+including ed25519. Using none requires setting prehashed=true and
+signature_algorithm=pkcs1v15, yielding a PKCSv1_5_NoOID instead of
+the usual PKCSv1_5_DERnull signature.`,
+			},
+
+			"algorithm": {
+				Type:        framework.TypeString,
+				Default:     defaultHashAlgorithm,
+				Description: `Deprecated: use "hash_algorithm" instead.`,
+			},
+
+			"urlalgorithm": {
+				Type:        framework.TypeString,
+				Description: `Hash algorithm to use (POST URL parameter)`,
+			},
+
+			"key_version": {
+				Type: framework.TypeInt,
+				Description: `The version of the key to use for signing.
+Must be 0 (for latest) or a value greater than or equal
+to the min_encryption_version configured on the key.`,
+			},
+
+			"prehashed": {
+				Type:        framework.TypeBool,
+				Description: `Set to 'true' when the input is already hashed. If the key type is 'rsa-2048', 'rsa-3072' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter.`,
+			},
+
+			"signature_algorithm": {
+				Type: framework.TypeString,
+				Description: `The signature algorithm to use for signing. Currently only applies to RSA key types.
+Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
+			},
+
+			"marshaling_algorithm": {
+				Type:        framework.TypeString,
+				Default:     "asn1",
+				Description: `The method by which to marshal the signature. The default is 'asn1' which is used by openssl and X.509. It can also be set to 'jws' which is used for JWT signatures; setting it to this will also cause the encoding of the signature to be url-safe base64 instead of using standard base64 encoding. Currently only valid for ECDSA P-256 key types".`,
+			},
+
+			"salt_length": {
+				Type:    framework.TypeString,
+				Default: "auto",
+				Description: `The salt length used to sign. Currently only applies to the RSA PSS signature scheme.
+Options are 'auto' (the default used by Golang, causing the salt to be as large as possible when signing), 'hash' (causes the salt length to equal the length of the hash used in the signature), or an integer between the minimum and the maximum permissible salt lengths for the given RSA key size. Defaults to 'auto'.`,
+			},
+
+			"batch_input": {
+				Type: framework.TypeSlice,
+				Description: `Specifies a list of items for processing. When this parameter is set,
+any supplied 'input' or 'context' parameters will be ignored. Responses are returned in the
+'batch_results' array component of the 'data' element of the response. Any batch output will
+preserve the order of the batch input`,
+			},
+		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathSignWrite,
@@ -141,154 +235,58 @@ func (b *backend) pathVerify() *framework.Path {
 			OperationSuffix: "|with-algorithm",
 		},
 
-		Fields: pathVerifyFieldArgs(),
+		Fields: map[string]*framework.FieldSchema{
+			"name": {
+				Type:        framework.TypeString,
+				Description: "The key to use",
+			},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathVerifyWrite,
-		},
-
-		HelpSynopsis:    pathVerifyHelpSyn,
-		HelpDescription: pathVerifyHelpDesc,
-	}
-}
-
-func pathSignFieldArgs() map[string]*framework.FieldSchema {
-	fields := map[string]*framework.FieldSchema{
-		"name": {
-			Type:        framework.TypeString,
-			Description: "The key to use",
-		},
-
-		"input": {
-			Type:        framework.TypeString,
-			Description: "The base64-encoded input data",
-		},
-
-		"context": {
-			Type: framework.TypeString,
-			Description: `Base64 encoded context for key derivation. Required if key
+			"context": {
+				Type: framework.TypeString,
+				Description: `Base64 encoded context for key derivation. Required if key
 derivation is enabled; currently only available with ed25519 keys.`,
-		},
+			},
 
-		"hash_algorithm": {
-			Type:    framework.TypeString,
-			Default: defaultHashAlgorithm,
-			Description: `Hash algorithm to use (POST body parameter). Valid values are:
+			"signature_context": {
+				Type: framework.TypeString,
+				Description: `Base64 encoded context for Ed25519ph and Ed25519ctx signatures. 
+Currently only available with Ed25519 keys. (Enterprise Only)`,
+			},
 
-* sha1
-* sha2-224
-* sha2-256
-* sha2-384
-* sha2-512
-* sha3-224
-* sha3-256
-* sha3-384
-* sha3-512
-* none
+			"signature": {
+				Type:        framework.TypeString,
+				Description: "The signature, including vault header/key version",
+			},
 
-Defaults to "sha2-256". Not valid for all key types,
-including ed25519. Using none requires setting prehashed=true and
-signature_algorithm=pkcs1v15, yielding a PKCSv1_5_NoOID instead of
-the usual PKCSv1_5_DERnull signature.`,
-		},
+			"hmac": {
+				Type:        framework.TypeString,
+				Description: "The HMAC, including vault header/key version",
+			},
 
-		"algorithm": {
-			Type:        framework.TypeString,
-			Default:     defaultHashAlgorithm,
-			Description: `Deprecated: use "hash_algorithm" instead.`,
-		},
+			"cmac": {
+				Type:        framework.TypeString,
+				Description: "The CMAC, including vault header/key version (Enterprise only)",
+			},
 
-		"urlalgorithm": {
-			Type:        framework.TypeString,
-			Description: `Hash algorithm to use (POST URL parameter)`,
-		},
+			"input": {
+				Type:        framework.TypeString,
+				Description: "The base64-encoded input data to verify",
+			},
 
-		"key_version": {
-			Type: framework.TypeInt,
-			Description: `The version of the key to use for signing.
-Must be 0 (for latest) or a value greater than or equal
-to the min_encryption_version configured on the key.`,
-		},
+			"urlalgorithm": {
+				Type:        framework.TypeString,
+				Description: `Hash algorithm to use (POST URL parameter)`,
+			},
 
-		"prehashed": {
-			Type:        framework.TypeBool,
-			Description: `Set to 'true' when the input is already hashed. If the key type is 'rsa-2048', 'rsa-3072' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter.`,
-		},
+			"mac_length": {
+				Type:        framework.TypeInt,
+				Description: `MAC length to use (POST body parameter). Valid values are:`,
+			},
 
-		"signature_algorithm": {
-			Type: framework.TypeString,
-			Description: `The signature algorithm to use for signing. Currently only applies to RSA key types.
-Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
-		},
-
-		"marshaling_algorithm": {
-			Type:        framework.TypeString,
-			Default:     "asn1",
-			Description: `The method by which to marshal the signature. The default is 'asn1' which is used by openssl and X.509. It can also be set to 'jws' which is used for JWT signatures; setting it to this will also cause the encoding of the signature to be url-safe base64 instead of using standard base64 encoding. Currently only valid for ECDSA P-256 key types".`,
-		},
-
-		"salt_length": {
-			Type:    framework.TypeString,
-			Default: "auto",
-			Description: `The salt length used to sign. Currently only applies to the RSA PSS signature scheme.
-Options are 'auto' (the default used by Golang, causing the salt to be as large as possible when signing), 'hash' (causes the salt length to equal the length of the hash used in the signature), or an integer between the minimum and the maximum permissible salt lengths for the given RSA key size. Defaults to 'auto'.`,
-		},
-
-		"batch_input": {
-			Type: framework.TypeSlice,
-			Description: `Specifies a list of items for processing. When this parameter is set,
-any supplied 'input' or 'context' parameters will be ignored. Responses are returned in the
-'batch_results' array component of the 'data' element of the response. Any batch output will
-preserve the order of the batch input`,
-		},
-	}
-
-	addEntSignFieldArgs(fields)
-	return fields
-}
-
-func pathVerifyFieldArgs() map[string]*framework.FieldSchema {
-	fields := map[string]*framework.FieldSchema{
-		"name": {
-			Type:        framework.TypeString,
-			Description: "The key to use",
-		},
-
-		"context": {
-			Type: framework.TypeString,
-			Description: `Base64 encoded context for key derivation. Required if key
-derivation is enabled; currently only available with ed25519 keys.`,
-		},
-
-		"signature": {
-			Type:        framework.TypeString,
-			Description: "The signature, including vault header/key version",
-		},
-
-		"hmac": {
-			Type:        framework.TypeString,
-			Description: "The HMAC, including vault header/key version",
-		},
-
-		"input": {
-			Type:        framework.TypeString,
-			Description: "The base64-encoded input data to verify",
-		},
-
-		"urlalgorithm": {
-			Type:        framework.TypeString,
-			Description: `Hash algorithm to use (POST URL parameter)`,
-		},
-
-		"mac_length": {
-			Type:        framework.TypeInt,
-			Description: `MAC length to use (POST body parameter). Valid values are:`,
-		},
-
-		"hash_algorithm": {
-			Type:    framework.TypeString,
-			Default: defaultHashAlgorithm,
-			Description: `Hash algorithm to use (POST body parameter). Valid values are:
+			"hash_algorithm": {
+				Type:    framework.TypeString,
+				Default: defaultHashAlgorithm,
+				Description: `Hash algorithm to use (POST body parameter). Valid values are:
 
 * sha1
 * sha2-224
@@ -303,49 +301,54 @@ derivation is enabled; currently only available with ed25519 keys.`,
 
 Defaults to "sha2-256". Not valid for all key types. See note about
 none on signing path.`,
-		},
+			},
 
-		"algorithm": {
-			Type:        framework.TypeString,
-			Default:     defaultHashAlgorithm,
-			Description: `Deprecated: use "hash_algorithm" instead.`,
-		},
+			"algorithm": {
+				Type:        framework.TypeString,
+				Default:     defaultHashAlgorithm,
+				Description: `Deprecated: use "hash_algorithm" instead.`,
+			},
 
-		"prehashed": {
-			Type:        framework.TypeBool,
-			Description: `Set to 'true' when the input is already hashed. If the key type is 'rsa-2048', 'rsa-3072' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter.`,
-		},
+			"prehashed": {
+				Type:        framework.TypeBool,
+				Description: `Set to 'true' when the input is already hashed. If the key type is 'rsa-2048', 'rsa-3072' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter.`,
+			},
 
-		"signature_algorithm": {
-			Type: framework.TypeString,
-			Description: `The signature algorithm to use for signature verification. Currently only applies to RSA key types.
+			"signature_algorithm": {
+				Type: framework.TypeString,
+				Description: `The signature algorithm to use for signature verification. Currently only applies to RSA key types.
 Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
-		},
+			},
 
-		"marshaling_algorithm": {
-			Type:        framework.TypeString,
-			Default:     "asn1",
-			Description: `The method by which to unmarshal the signature when verifying. The default is 'asn1' which is used by openssl and X.509; can also be set to 'jws' which is used for JWT signatures in which case the signature is also expected to be url-safe base64 encoding instead of standard base64 encoding. Currently only valid for ECDSA P-256 key types".`,
-		},
+			"marshaling_algorithm": {
+				Type:        framework.TypeString,
+				Default:     "asn1",
+				Description: `The method by which to unmarshal the signature when verifying. The default is 'asn1' which is used by openssl and X.509; can also be set to 'jws' which is used for JWT signatures in which case the signature is also expected to be url-safe base64 encoding instead of standard base64 encoding. Currently only valid for ECDSA P-256 key types".`,
+			},
 
-		"salt_length": {
-			Type:    framework.TypeString,
-			Default: "auto",
-			Description: `The salt length used to sign. Currently only applies to the RSA PSS signature scheme.
+			"salt_length": {
+				Type:    framework.TypeString,
+				Default: "auto",
+				Description: `The salt length used to sign. Currently only applies to the RSA PSS signature scheme.
 Options are 'auto' (the default used by Golang, causing the salt to be as large as possible when signing), 'hash' (causes the salt length to equal the length of the hash used in the signature), or an integer between the minimum and the maximum permissible salt lengths for the given RSA key size. Defaults to 'auto'.`,
-		},
+			},
 
-		"batch_input": {
-			Type: framework.TypeSlice,
-			Description: `Specifies a list of items for processing. When this parameter is set,
+			"batch_input": {
+				Type: framework.TypeSlice,
+				Description: `Specifies a list of items for processing. When this parameter is set,
 any supplied  'input', 'hmac', 'cmac' or 'signature' parameters will be ignored. Responses are returned in the
 'batch_results' array component of the 'data' element of the response. Any batch output will
 preserve the order of the batch input`,
+			},
 		},
-	}
 
-	addEntVerifyFieldArgs(fields)
-	return fields
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.UpdateOperation: b.pathVerifyWrite,
+		},
+
+		HelpSynopsis:    pathVerifyHelpSyn,
+		HelpDescription: pathVerifyHelpDesc,
+	}
 }
 
 func getSaltLength(d *framework.FieldData) (int, error) {
@@ -527,7 +530,7 @@ func (b *backend) getPolicySignArgs(ctx context.Context, p *keysutil.Policy, arg
 	}
 
 	if err := b.populateEntPolicySigningOptions(ctx, p, args, item, &psa); err != nil {
-		return policySignArgs{}, nil
+		return policySignArgs{}, fmt.Errorf("failed to parse batch item: %s", err)
 	}
 	return psa, nil
 }
