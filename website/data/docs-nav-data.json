@@ -644,7 +644,7 @@
           {
             "title": "<code>generate-config</code>",
             "path": "commands/agent/generate-config"
-          }    
+          }
         ]
       },
       {
@@ -1950,7 +1950,6 @@
                 "path": "auth/saml/troubleshoot-adfs/adfs-event-320"
               }
             ]
-            
           }
         ]
       },
@@ -2418,6 +2417,10 @@
       {
         "title": "Upgrade to Raft WAL",
         "path": "upgrading/raft-wal"
+      },
+      {
+        "title": "Upgrade to 1.19.x",
+        "path": "upgrading/upgrade-to-1.19.x"
       },
       {
         "title": "Upgrade to 1.18.x",
