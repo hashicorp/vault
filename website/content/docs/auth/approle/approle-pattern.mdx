@@ -1,11 +1,11 @@
 ---
 layout: docs
-page_title: AppRole best practices
+page_title: AppRole recommended pattern
 description: >-
   The recommended pattern and best practices when you are using AppRole auth method to validate the identity of your application workloads.
 ---
 
-# AppRole auth method best practices
+# AppRole recommended pattern
 
 At the core of Vault's usage is authentication and authorization. Understanding the methods that Vault surfaces these to the client is the key to understanding how to configure and manage Vault.
 
@@ -37,7 +37,7 @@ When Vault verifies an entity's identity, Vault then provides that entity with a
 - **SecretID** - The secret identifier for the role that will authenticate to Vault. Think of this as the password portion of an authentication pair.
 - **AppRole role** - The role configured in Vault that contains the authorization and usage parameters for the authentication.
 
-## AppRole overview
+## AppRole auth method overview
 
 The AppRole authentication method is for machine authentication to Vault. Because AppRole is designed to be flexible, it has many ways to be configured. The burden of security is on the configurator rather than a trusted third party, as is the case in other Vault auth methods.
 
