@@ -1793,7 +1793,16 @@
       },
       {
         "title": "AppRole",
-        "path": "auth/approle"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "auth/approle"
+          },
+          {
+            "title": "AppRole best practices",
+            "path": "auth/approle/approle-best-practices"
+          }
+        ]
       },
       {
         "title": "AliCloud",
