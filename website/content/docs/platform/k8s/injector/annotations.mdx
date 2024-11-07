@@ -60,14 +60,14 @@ them, optional commands to run, etc.
   `vault.hashicorp.com/agent-template-left-delim-`, such as
   `vault.hashicorp.com/agent-template-left-delim-foobar`. This should map to the same unique value
   provided in `vault.hashicorp.com/agent-inject-template-`. If not provided, a default left
-  delimiter is used as defined by https://www.vaultproject.io/docs/agent/template#left_delimiter.
+  delimiter is used as defined by [Vault Agent Template Config](/vault/docs/agent-and-proxy/agent/template#left_delimiter).
 
 - `vault.hashicorp.com/agent-template-right-delim` - configures the right delimiter for Vault Agent
   to use when rendering a secret template. The name of the template is any unique string after
   `vault.hashicorp.com/agent-template-right-delim-`, such as
   `vault.hashicorp.com/agent-template-right-delim-foobar`. This should map to the same unique value
   provided in `vault.hashicorp.com/agent-inject-template-`. If not provided, a default right
-  delimiter is used as defined by https://www.vaultproject.io/docs/agent/template#right_delimiter.
+  delimiter is used as defined by [Vault Agent Template Config](/vault/docs/agent-and-proxy/agent/template#right_delimiter).
 
 - `vault.hashicorp.com/error-on-missing-key` - configures whether Vault Agent
   should exit with an error when accessing a struct or map field/key that does
