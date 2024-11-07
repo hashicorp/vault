@@ -24,7 +24,7 @@ import { action } from '@ember/object';
  * @param {Boolean} [readOnly] - Sets the view to readOnly, allowing for copying but no editing. It also hides the cursor. Defaults to false.
  * @param {String} [theme] - Specify or customize the look via a named "theme" class in scss.
  * @param {String} [value] - Value within the display. Generally, a json string.
- * @param {String} [viewportMargin] - Specifies the amount of lines that are rendered above and below the part of the document that's currently scrolled into view. Determines how much of the json object is rendered and what in the object can be searched using cntrl + f.
+ * @param {String} [viewportMargin] - Specifies the amount of lines rendered on the DOM (this is not the editor display height).
  * @param {string} [example] - Example to show when value is null -- when example is provided a restore action will render in the toolbar to clear the current value and show the example after input
  * @param {string} [screenReaderLabel] - This label is read by the screen readers when CodeMirror text area is focused. This is helpful for accessibility.
  * @param {string} [container] - **REQUIRED if rendering within a modal** Selector string or element object of containing element, set the focused element as the container value. This is for the Hds::Copy::Button and to set `autoRefresh=true` so content renders https://hds-website-hashicorp.vercel.app/components/copy/button?tab=code
