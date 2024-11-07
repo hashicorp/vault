@@ -2,7 +2,7 @@
 layout: docs
 page_title: Product usage reporting
 description: >-
-Learn what anonymous usage data HashiCorp collects as part of Enterprise utilization reporting. Enable or disable collection.
+  Learn what anonymous usage data HashiCorp collects as part of Enterprise utilization reporting. Enable or disable collection.
 ---
 
 # Product usage reporting
@@ -22,7 +22,7 @@ While none of the collected usage metrics are sensitive in any way, if you are s
 about these usage metrics being reported, then you can opt-out of them being collected.
 
 If you are considering opting out because you’re worried about the data, we
-strongly recommend that you review the [example usage metrics](#example-usage-metrics)
+strongly recommend that you review the [usage metrics list](#usage-metrics-list)
 before opting out. If you have concerns with any of the automatically-reported
 data please bring them to your account manager.
 
@@ -100,16 +100,32 @@ You will find the following entries in the server log.
 If your configuration file and environment variable differ, the environment
 variable setting will take precedence.
 
-## Example usage metrics
+## Usage metrics list
 
 HashiCorp collects the following product usage metrics as part of the `metrics` part of the
-[JSON payload that it collects for licence utilization](https://developer.hashicorp.com/vault/docs/enterprise/license/utilization-reporting#example-payloads):
+[JSON payload that it collects for licence utilization](/vault/docs/enterprise/license/utilization-reporting#example-payloads).
+All of these metrics are numerical, and contain no sensitive values or additional metadata:
 
-TODO VIOLET
+| Metric Name                                | Description                                                              |
+|--------------------------------------------|--------------------------------------------------------------------------|
+| `vault.namespaces.count`                   | Total number of namespaces.                                              |
+| `vault.leases.count`                       | Total number of leases within Vault.                                     |
+| `vault.quotas.ratelimit.count`             | Total number of rate limit quotas within Vault.                          |
+| `vault.quotas.leasecount.count`            | Total number of lease count quotas within Vault.                         |
+| `vault.kv.version1.secrets.count`          | Total number of KVv1 secrets within Vault.                               |
+| `vault.kv.version2.secrets.count`          | Total number of KVv2 secrets within Vault.                               |
+| `vault.kv.version1.secrets.namespace.max`  | The highest number of KVv1 secrets in a namespace in Vault, e.g. `1000`. |
+| `vault.kv.version2.secrets.namespace.max`  | The highest number of KVv2 secrets in a namespace in Vault, e.g. `1000`. |
+| `vault.kv.version1.secrets.namespace.min`  | The lowest number of KVv1 secrets in a namespace in Vault, e.g. `2`.     |
+| `vault.kv.version2.secrets.namespace.min`  | The highest number of KVv2 secrets in a namespace in Vault, e.g. `1000`. |
+| `vault.kv.version1.secrets.namespace.mean` | The mean number of KVv1 secrets in namespaces in Vault, e.g. `52.8`.     |
+| `vault.kv.version1.secrets.namespace.mean` | The mean number of KVv2 secrets in namespaces in Vault, e.g. `52.8`.     |
 
-## Example usage metadata
+## Usage metadata list
 
 HashiCorp collects the following product usage metadata as part of the `metadata` part of the
-[JSON payload that it collects for licence utilization](https://developer.hashicorp.com/vault/docs/enterprise/license/utilization-reporting#example-payloads):
+[JSON payload that it collects for licence utilization](/vault/docs/enterprise/license/utilization-reporting#example-payloads):
 
-TODO Violet
+| Metadata Name        | Description                                                          |
+|----------------------|----------------------------------------------------------------------|
+| `replication_status` | Replication status of this cluster, e.g. `perf-disabled,dr-disabled` |

@@ -12,8 +12,8 @@ description: |-
 The `reporting` stanza specifies various parameters for tuning replication related values.
 
 Please see the pages relating to
-[license utilization reporting](https://developer.hashicorp.com/vault/docs/enterprise/license/utilization-reporting)
-and [product usage reporting](https://developer.hashicorp.com/vault/docs/enterprise/license/product-usage-reporting)
+[license utilization reporting](/vault/docs/enterprise/license/utilization-reporting)
+and [product usage reporting](/vault/docs/enterprise/license/product-usage-reporting)
 for more information regarding the license reporting.
 
 ```hcl
@@ -30,13 +30,13 @@ reporting {
 
 - `snapshot_retention_time` `(duration: 9600h)` - The retention time for manual reporting snapshots in hours. Defaults to 9600 (400 days).
 Uses [duration format strings](/vault/docs/concepts/duration-format).
-- `disable_product_usage_reporting` `(boolean: false)` - Determines whether [product usage reporting](https://developer.hashicorp.com/vault/docs/enterprise/license/product-usage-reporting)
+- `disable_product_usage_reporting` `(boolean: false)` - Determines whether [product usage reporting](/vault/docs/enterprise/license/product-usage-reporting)
 is enabled.
 
 ## `license` parameters
 
 - `enabled` `(boolean: true)` - Toggles automatic reporting of license utilization. See the
-[license utilization reporting](https://developer.hashicorp.com/vault/docs/enterprise/license/utilization-reporting)
+[license utilization reporting](/vault/docs/enterprise/license/utilization-reporting)
 page for more details.
 - `billing_start_timestamp` `(timestamp)` - The start timestamp for billing for license reporting (manual and automated).
 Defaults to the license start timestamp.
