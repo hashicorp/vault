@@ -420,6 +420,10 @@
             "path": "configuration/seal"
           },
           {
+            "title": "Seal best practices",
+            "path": "configuration/seal/seal-best-practices"
+          },
+          {
             "title": "High Availability",
             "badge": {
               "text": "ENTERPRISE",
@@ -460,6 +464,10 @@
           {
             "title": "Vault Transit",
             "path": "configuration/seal/transit"
+          },
+          {
+            "title": "Transit best practices",
+            "path": "configuration/seal/transit-best-practices"
           }
         ]
       },
@@ -1799,7 +1807,16 @@
       },
       {
         "title": "AppRole",
-        "path": "auth/approle"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "auth/approle"
+          },
+          {
+            "title": "Recommended pattern",
+            "path": "auth/approle/approle-pattern"
+          }
+        ]
       },
       {
         "title": "AliCloud",
@@ -1964,7 +1981,6 @@
                 "path": "auth/saml/troubleshoot-adfs/adfs-event-320"
               }
             ]
-
           }
         ]
       },
@@ -2964,6 +2980,10 @@
               "type": "outlined",
               "color": "neutral"
             }
+          },
+          {
+            "title": "Structure guide",
+            "path": "enterprise/namespaces/namespace-structure"
           }
         ]
       },
