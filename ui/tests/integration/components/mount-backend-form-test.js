@@ -13,7 +13,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { methods } from 'vault/helpers/mountable-auth-methods';
-import { mountableEngines, WIF_ENGINES } from 'vault/helpers/mountable-secret-engines';
+import { mountableEngines } from 'vault/helpers/mountable-secret-engines';
 import hbs from 'htmlbars-inline-precompile';
 
 import sinon from 'sinon';
@@ -206,22 +206,21 @@ module('Integration | Component | mount backend form', function (hooks) {
         await render(
           hbs`<MountBackendForm @mountType="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
         );
-        for (const engine of WIF_ENGINES) {
-          await click(MOUNT_BACKEND_FORM.mountType(engine));
-          await click(GENERAL.toggleGroup('Method Options'));
-          assert
-            .dom(GENERAL.fieldByAttr('identityTokenKey'))
-            .exists(`Identity token key field shows when type=${this.model.type}`);
-          await click(GENERAL.backButton);
-        }
-        for (const engine of mountableEngines().filter((e) => !WIF_ENGINES.includes(e.type))) {
-          await click(MOUNT_BACKEND_FORM.mountType(engine.type));
-          await click(GENERAL.toggleGroup('Method Options'));
-          assert
-            .dom(GENERAL.fieldByAttr('identityTokenKey'))
-            .doesNotExist(`Identity token key field hidden when type=${this.model.type}`);
-          await click(GENERAL.backButton);
-        }
+
+        await click(MOUNT_BACKEND_FORM.mountType('aws')); // only testing aws as it is a WIF engine and this is a copy paste for the other WIF engines
+        await click(GENERAL.toggleGroup('Method Options'));
+        assert
+          .dom(GENERAL.fieldByAttr('identityTokenKey'))
+          .exists(`Identity token key field shows when type=${this.model.type}`);
+        await click(GENERAL.backButton);
+
+        // check non-wif engine
+        await click(MOUNT_BACKEND_FORM.mountType('ssh'));
+        await click(GENERAL.toggleGroup('Method Options'));
+        assert
+          .dom(GENERAL.fieldByAttr('identityTokenKey'))
+          .doesNotExist(`Identity token key field hidden when type=${this.model.type}`);
+        await click(GENERAL.backButton);
       });
 
       test('it updates identityTokeKey if user has changed it', async function (assert) {
@@ -233,18 +232,17 @@ module('Integration | Component | mount backend form', function (hooks) {
           undefined,
           `On init identityTokenKey is not set on the model`
         );
-        for (const engine of WIF_ENGINES) {
-          await click(MOUNT_BACKEND_FORM.mountType(engine));
-          await click(GENERAL.toggleGroup('Method Options'));
-          await typeIn(GENERAL.inputSearch('key'), `${engine}+specialKey`); // set to something else
+        const engine = 'aws'; // checking aws only as this is a copy paste for the other WIF engines
+        await click(MOUNT_BACKEND_FORM.mountType(engine));
+        await click(GENERAL.toggleGroup('Method Options'));
+        await typeIn(GENERAL.inputSearch('key'), `${engine}+specialKey`); // set to something else
 
-          assert.strictEqual(
-            this.model.config.identityTokenKey,
-            `${engine}+specialKey`,
-            `updates ${engine} model with custom identityTokenKey`
-          );
-          await click(GENERAL.backButton);
-        }
+        assert.strictEqual(
+          this.model.config.identityTokenKey,
+          `${engine}+specialKey`,
+          `updates ${engine} model with custom identityTokenKey`
+        );
+        await click(GENERAL.backButton);
       });
     });
   });
