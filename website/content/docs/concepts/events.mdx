@@ -131,7 +131,7 @@ Here is an example event notification in JSON format:
 
 ## Subscribing to event notifications
 
-~> **NOTE**: When using event notifications with a Vault architecture that leverages performance replication, you will only be able to subscribe to events on the primary performance replication cluster.  Subscribing to events on the performance secondary cluster will yield no results.
+~> **NOTE**: When using event notifications with a Vault architecture that leverages performance replication, you will only be able to subscribe to events on the primary performance replication cluster.  Subscribing to events on the secondary performance cluster will yield no results.
 
 Vault has an API endpoint, `/v1/sys/events/subscribe/{eventType}`, that allows users to subscribe to event notifications via a
 WebSocket stream.
