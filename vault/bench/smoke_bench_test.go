@@ -25,7 +25,7 @@ var secretData = map[string]interface{}{
 	"foo": "bar",
 }
 
-// BenchmarkSmoke_KVV2 runs some basic benchmark on KVV2
+// BenchmarkSmoke_KVV2 runs basic benchmarks on writes and reads to KVV2 on an inmem test cluster.
 func BenchmarkSmoke_KVV2(b *testing.B) {
 	cluster := vault.NewTestCluster(b, &vault.CoreConfig{}, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
