@@ -76,7 +76,6 @@ func BenchmarkSmoke_ClusterCreation(b *testing.B) {
 			cluster := vault.NewTestCluster(b, &vault.CoreConfig{}, &vault.TestClusterOptions{
 				HandlerFunc: vaulthttp.Handler,
 			})
-			cluster.Start()
 			cluster.Cleanup()
 		}
 	}
