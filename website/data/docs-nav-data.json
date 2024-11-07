@@ -404,6 +404,15 @@
         "path": "configuration/replication"
       },
       {
+        "title": "<code>reporting</code>",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
+        "path": "configuration/reporting"
+      },
+      {
         "title": "<code>seal</code>",
         "routes": [
           {
@@ -456,6 +465,11 @@
       },
       {
         "title": "<code>sentinel</code>",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "path": "configuration/sentinel"
       },
       {
@@ -644,7 +658,7 @@
           {
             "title": "<code>generate-config</code>",
             "path": "commands/agent/generate-config"
-          }    
+          }
         ]
       },
       {
@@ -1950,7 +1964,7 @@
                 "path": "auth/saml/troubleshoot-adfs/adfs-event-320"
               }
             ]
-            
+
           }
         ]
       },
@@ -2815,6 +2829,10 @@
           {
             "title": "Manual license utilization reporting",
             "path": "enterprise/license/manual-reporting"
+          },
+          {
+            "title": "Product usage reporting",
+            "path": "enterprise/license/product-usage-reporting"
           },
           {
             "title": "FAQ",
