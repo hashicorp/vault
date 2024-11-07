@@ -152,7 +152,7 @@ type ActivityLog struct {
 	// standbyLocalFragmentsReceived.
 	localFragmentLock sync.RWMutex
 
-	// globalFragmentLock protects enable secondaryGlobalClientFragments, currentGlobalFragment
+	// globalFragmentLock protects enable secondaryGlobalClientFragments, standbyGlobalFragmentsReceived, currentGlobalFragment
 	// and globalPartialMonthClientTracker
 	globalFragmentLock sync.RWMutex
 
