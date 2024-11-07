@@ -42,7 +42,7 @@ export default class KvDataFields extends Component {
   }
 
   get viewportMargin() {
-    if (!this.args.secret || !this.args.secret.secretData) return 10;
+    if (!this.args?.secret?.secretData) return 10;
     const jsonHeight = Object.keys(this.args.secret.secretData).length;
     // return the higher of: 10 or the approimated number of lines in the json. jsonHeight only includes the first level of keys, so for objects
     // with lots of nested values, it will undercount.
