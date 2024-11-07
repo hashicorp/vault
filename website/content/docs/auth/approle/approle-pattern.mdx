@@ -1,0 +1,188 @@
+---
+layout: docs
+page_title: AppRole recommended pattern
+description: >-
+  The recommended pattern and best practices when you are using AppRole auth method to validate the identity of your application workloads.
+---
+
+# AppRole recommended pattern
+
+At the core of Vault's usage is authentication and authorization. Understanding the methods that Vault surfaces these to the client is the key to understanding how to configure and manage Vault.
+
+- Vault provides authentication to a client by the use of [auth methods](/vault/docs/concepts/auth).
+
+- Vault provides authorization to a client by the use of [policies](/vault/docs/concepts/policies).
+
+Vault provides several internal and external authentication methods. External methods are called _trusted third-party authenticators_ such as AWS, LDAP, GitHub, and so on. A trusted third-party authenticator is not available in some situations, so Vault has an alternate approach which is **AppRole**. If another platform method of authentication is available via a trusted third-party authenticator, the best practice is to use that instead of AppRole.
+
+This guide will detail the high-level concepts of AppRole and outline two detailed uses following the recommended patterns explored in the high-level concepts. This guide will also detail anti-patterns to help readers avoid insecure use of this feature.
+
+## Vault best practice
+
+This guide relies heavily on two fundamental principles for Vault: limiting both the blast-radius of an identity and the duration of authentication.
+
+### Blast-radius of an identity
+
+Vault is an identity-based secrets management solution, where access to a secret is based on the known and verified identity of a client. It is crucial that authenticating identities to Vault are identifiable and only have access to the secrets they are the users of. Secrets should never be proxied between Vault and the secret end-user and a client should never have access to secrets they are not the end-user of.
+
+### Duration of authentication
+
+When Vault verifies an entity's identity, Vault then provides that entity with a [token](/vault/docs/concepts/tokens). The client uses this token for all subsequent interactions with Vault to prove authentication, so this token should be both handled securely and have a limited lifetime. A token should only live for as long as access to the secrets it authorizes access to are needed.
+
+## Glossary
+
+- **Authentication** - The process of confirming identity. Often abbreviated to _AuthN_
+- **Authorization** - The process of verifying what an entity has access to and at what level. Often abbreviated to _AuthZ_
+- **RoleID** - The semi-secret identifier for the role that will authenticate to Vault. Think of this as the username portion of an authentication pair.
+- **SecretID** - The secret identifier for the role that will authenticate to Vault. Think of this as the password portion of an authentication pair.
+- **AppRole role** - The role configured in Vault that contains the authorization and usage parameters for the authentication.
+
+## AppRole auth method overview
+
+The AppRole authentication method is for machine authentication to Vault. Because AppRole is designed to be flexible, it has many ways to be configured. The burden of security is on the configurator rather than a trusted third party, as is the case in other Vault auth methods.
+
+AppRole is not a trusted third-party authenticator, but a _trusted broker_ method. The difference is that in AppRole authentication, the onus of trust rests in a securely-managed broker system that brokers authentication between clients and Vault.
+
+The central tenet of this security is that during the brokering of the authentication to Vault, the RoleID and SecretID are only ever together on the end-user system that needs to consume the secret.
+
+In an AppRole authentication, there are three players:
+
+- **Vault** - The Vault service
+- **The broker** - This is the trusted and secured system that brokers the authentication.
+- **The secret consumer** - This is the final consumer of the secret from Vault.
+
+## AppRole in a CI pipeline
+
+In this scenario, the CI needs to run a job requiring some data classified as secret and stored in Vault. The CI has a master and a worker node (such as Jenkins). The worker node runs jobs on spawned container runners that are short-lived. The process here should be:
+
+1. CI Worker authenticates to Vault
+2. Vault returns a token
+3. Worker uses token to retrieve a wrapped secretID for the **role** of the job it will spawn
+4. Wrapped secretID returned by Vault
+5. Worker spawns job runner and passes wrapped secretID as a variable to the job
+6. Runner container requests unwrap of secretID
+7. Vault returns SecretID
+8. Runner uses RoleID and SecretID to authenticate to Vault
+9. Vault returns a token with policies that allow read of the required secrets
+10. Runner uses the token to get secrets from Vault
+
+![AppRole Example](/img/approle-best-practices.png)
+
+Here are more details on the more complicated steps of that process.
+
+<Note title="Secrets wrapping">
+
+If you are unfamiliar with secrets wrapping, refer to the [response wraping](/vault/docs/concepts/response-wrapping) documentation and the [Cubbyhole response wrapping](/vault/tutorials/secrets-management/cubbyhole-response-wrapping) tutorial.
+
+</Note>
+
+#### CI worker authenticates to Vault
+
+The CI worker will need to authenticate to Vault to retrieve wrapped SecretIDs for the AppRoles of the jobs it will spawn.
+
+If the worker can use a platform method of authentication, then the worker should use that. Otherwise, the only option is to pre-authenticate the worker to Vault in some other way.
+
+#### Vault returns a token
+
+The worker's Vault token should be of limited scope and should only retrieve wrapped SecretIDs. Because of this the worker could be pre-seeded with a long-lived Vault token or use a hard-coded RoleID and SecretID as this would present only a minor risk.
+
+The policy the worker should have would be:
+
+```hcl
+path "auth/approle/role/+/secret*" {
+  capabilities = [ "create", "read", "update" ]
+  min_wrapping_ttl = "100s"
+  max_wrapping_ttl = "300s"
+}
+```
+
+#### Worker uses token to retrieve a wrapped SecretID
+
+The CI worker now needs to be able to retrieve a wrapped SecretID.
+This command would be something like:
+
+```shell-session
+$ vault write -wrap-ttl=120s -f auth/approle/role/my-role/secret-id
+```
+
+Notice that the worker only needs to know the **role** for the job it is spawning. In the example above, that is `my-role` but not the RoleID.
+
+#### Worker spawns job runner and passes wrapped SecretID
+
+This could be achieved by passing the wrapped token as an environment variable. Below is an example of how to do this in Jenkins:
+
+```plaintext
+environment {
+   WRAPPED_SID = """$s{sh(
+                    returnStdout: true,
+                    Script: ‘curl --header "X-Vault-Token: $VAULT_TOKEN"
+       --header "X-Vault-Namespace: ${PROJ_NAME}_namespace"
+       --header "X-Vault-Wrap-Ttl: 300s"
+         $VAULT_ADDR/v1/auth/approle/role/$JOB_NAME/secret-id’
+         | jq -r '.wrap_info.token'
+                 )}"""
+  }
+```
+
+#### Runner uses RoleID and SecretID to authenticate to Vault
+
+The runner would authenticate to Vault and it would only receive the policy to read the exact secrets it needed. It could not get anything else. An example policy would be:
+
+```hcl
+path "kv/my-role_secrets/*" {
+  capabilities = [ "read" ]
+}
+```
+
+#### Implementation specifics
+
+As additional security measures, create the required role for the App bearing in mind the following:
+
+- [`secret_id_bound_cidrs` (array: [])](/vault/api-docs/auth/approle#secret_id_bound_cidrs) - Comma-separated string or list of CIDR blocks; if set, specifies blocks of IP addresses which can perform the login operation.
+- [`secret_id_num_uses` (integer: 0)](/vault/api-docs/auth/approle#secret_id_num_uses) - Number of times any particular SecretID can be used to fetch a token from this [AppRole](#vault-approle-overview), after which the SecretID will expire. A value of zero will allow unlimited uses.
+
+<Note title="Recommendation">
+
+ For best security, set `secret_id_num_uses` to `1` use. Also, consider changing `secret_id_bound_cidrs` to restrict the source IP range of the connecting devices.
+
+</Note>
+
+## Anti-patterns
+
+Consider avoiding these anti-patterns when using Vault's AppRole auth method.
+
+### CI worker retrieves secrets
+
+The CI worker could just authenticate to Vault and retrieve the secrets for the job and pass these to the runner, but this would break the first of the two best practices listed above.
+
+The CI worker may likely have to run many different types of jobs, many of which require secrets. If you use this method, the worker would have to have the authorization (policy) to retrieve many secrets, none of which is the consumer. Additionally, if a single secret were to become compromised, then there would be no way to tie an identity to it and initiate break-glass procedures on that identity. So all secrets would have to be considered compromised.
+
+### CI worker passes RoleID and SecretID to the runner
+
+The worker could be authorized to Vault to retrieve the RoleId and SecretID and pass both to the runner to use. While this prevents the worker from having Vault's authorization to retrieve all secrets, it has that capability as it has both RoleID and SecretID. This is against best practice.
+
+### CI worker passes a Vault token to the runner
+
+The worker could be authorized to Vault to generate child tokens that have the authorization to retrieve secrets for the pipeline.
+
+Again, this avoids authorization to Vault to retrieve secrets for the worker, but the worker will have access to the child tokens that would have authorization and so it is against best practices.
+
+## Security considerations
+
+In any trusted broker situation, the broker (in this case, the Jenkins worker) must be secured and treated as a critical system. This means that users should have minimal access to it and the access should be closely monitored and audited.
+
+Also, as the Vault audit logs provide time-stamped events, monitor the whole process with alerts on two events:
+
+- When a wrapped SecretID is requested for an AppRole, and no Jenkins job is running
+- When the Jenkins slave attempts to unwrap the token and Vault refuses as the token has already been used
+
+In both cases, this shows that the trusted-broker workflow has likely been compromised and the event should investigated.
+
+## Reference materials
+
+- [How (and Why) to Use AppRole Correctly in HashiCorp Vault](https://www.hashicorp.com/blog/how-and-why-to-use-approle-correctly-in-hashicorp-vault)
+- [AppRole pull authentication](/vault/tutorials/auth-methods/approle) tutorial
+- [Response wrapping concept](/vault/docs/concepts/response-wrapping)
+- [Cubbyhole response wrapping](/vault/tutorials/secrets-management/cubbyhole-response-wrapping) tutorial
+- [ACL policies](/vault/tutorials/policies/policies)
+- [Token periods and TTLs](/vault/docs/concepts/tokens#token-time-to-live-periodic-tokens-and-explicit-max-ttls)
