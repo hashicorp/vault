@@ -66,6 +66,24 @@ resource quotas by updating the `rate_limit_exempt_paths` configuration field.
 - `sys/seal-status`
 - `sys/unseal`
 
+## Replication
+
+When creating or modifying a quota on a performance secondary cluster, the path
+referred to by the quota must exist on the secondary cluster. Vault will error if
+you attempt to create or update a quota for a path that doesn't exist.
+
+Quotas are stored on the primary cluster and all requests to create, update, or
+delete quotas get forwarded to the primary cluster. This has several implications:
+
+1. It is not possible to create a quota for local mount on a performance secondary
+cluster.
+1. Quotas can be read on a performance secondary cluster, even when the path
+referred to by the quota is local to the primary cluster.
+1. If you create a performance primary and performance secondary cluster and
+set up a local mount on both clusters with the same path, a user that only has
+access to the performance secondary cluster can create/update a quota for this
+path that will apply to the performance primary cluster.
+
 ## Tutorial
 
 Refer to [Protecting Vault with Resource
@@ -74,5 +92,7 @@ step-by-step tutorial.
 
 ## API
 
-Rate limit quotas can be managed over the HTTP API. Please see
-[Rate Limit Quotas API](/vault/api-docs/system/rate-limit-quotas) for more details.
+Resource quotas can be managed over the HTTP API. Please see
+[Rate Limit Quotas API](/vault/api-docs/system/rate-limit-quotas),
+[Lease Count Quotas API](/vault/api-docs/system/lease-count-quotas), and [Quotas
+Config API](/vault/api-docs/system/quotas-config) for more details.

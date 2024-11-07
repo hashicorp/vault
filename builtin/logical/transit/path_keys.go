@@ -260,9 +260,10 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 	if p == nil {
 		return nil, fmt.Errorf("error generating key: returned policy was nil")
 	}
-	if b.System().CachingDisabled() {
-		p.Unlock()
+	if !b.System().CachingDisabled() {
+		p.Lock(true)
 	}
+	defer p.Unlock()
 
 	resp, err := b.formatKeyPolicy(p, nil)
 	if err != nil {
