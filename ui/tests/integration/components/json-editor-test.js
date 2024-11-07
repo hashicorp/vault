@@ -134,7 +134,7 @@ module('Integration | Component | json-editor', function (hooks) {
     );
   });
 
-  test('when @viewportMargin is not set user is unable to search a long secret', async function (assert) {
+  test('no viewportMargin renders only default 10 lines of data on the DOM', async function (assert) {
     await render(hbs`
       <JsonEditor
         @value={{this.long_json}}
@@ -147,7 +147,7 @@ module('Integration | Component | json-editor', function (hooks) {
       .doesNotIncludeText('key-9', 'Without viewportMargin, user cannot search for key-9');
   });
 
-  test('when @viewportMargin is set user is able to search a long secret', async function (assert) {
+  test('when viewportMargin is set user is able to search a long secret', async function (assert) {
     await render(hbs`
       <JsonEditor
         @value={{this.long_json}}
