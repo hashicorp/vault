@@ -68,7 +68,8 @@ func BenchmarkSmoke_KVV2(b *testing.B) {
 	b.Run("kv-puts-and-gets", func(b *testing.B) { bench(b, 1024) })
 }
 
-// BenchmarkSmoke_ClusterCreation runs some basic benchmarking on NewTestCluster
+// BenchmarkSmoke_ClusterCreation benchmarks the creation, start, and a cleanup of a vault.TestCluster.
+// Note that the cluster created here uses inmem Physical and HAPhysical backends.```
 func BenchmarkSmoke_ClusterCreation(b *testing.B) {
 	bench := func(b *testing.B) {
 		b.ResetTimer()
