@@ -192,13 +192,6 @@ export default class MountBackendForm extends Component<Args> {
   }
 
   @action
-  resetForm(value: string) {
-    // clears the identityTokenKey and path, not the entire form.
-    this.args.mountModel.config.identityTokenKey = value;
-    this.setMountType(value);
-  }
-
-  @action
   handleIdentityTokenKeyChange(value: string[] | string): void {
     // if array, it's coming from the search-select component, otherwise it hit the fallback component and will come in as a string.
     this.args.mountModel.config.identityTokenKey = Array.isArray(value) ? value[0] : value;
