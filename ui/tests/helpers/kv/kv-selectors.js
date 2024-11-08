@@ -90,8 +90,8 @@ export const PAGE = {
   },
   paths: {
     copyButton: (label) => `${PAGE.infoRowValue(label)} button`,
-    codeSnippet: (section) => `[data-test-commands="${section}"] code`,
-    snippetCopy: (section) => `[data-test-commands="${section}"] button`,
+    codeSnippet: (section) => `[data-test-code-block="${section}"] code`,
+    snippetCopy: (section) => `[data-test-code-block="${section}"] button`,
   },
 };
 

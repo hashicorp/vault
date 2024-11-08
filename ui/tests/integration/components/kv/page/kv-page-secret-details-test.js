@@ -7,13 +7,14 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { click, find, render } from '@ember/test-helpers';
+import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { kvDataPath } from 'vault/utils/kv-path';
-import { FORM, PAGE, parseJsonEditor } from 'vault/tests/helpers/kv/kv-selectors';
+import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import { syncStatusResponse } from 'vault/mirage/handlers/sync';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { baseSetup } from 'vault/tests/helpers/kv/kv-run-commands';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | kv-v2 | Page::Secret::Details', function (hooks) {
   setupRenderingTest(hooks);
@@ -126,19 +127,24 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
     await click(FORM.toggleMasked);
     assert.dom(PAGE.infoRowValue('foo')).hasText('bar', 'renders secret value');
     await click(FORM.toggleJson);
-    assert.propEqual(parseJsonEditor(find), this.secretData, 'json editor renders secret data');
+    assert.dom(GENERAL.codeBlock('secret-data')).hasText(
+      `Version data {
+  "foo": "bar"
+}`,
+      'json editor renders secret data'
+    );
     assert
       .dom(PAGE.detail.versionTimestamp)
       .includesText(`Version ${this.version} created`, 'renders version and time created');
   });
 
-  test('it renders json view when secret is complex', async function (assert) {
+  test('it renders hds codeblock view when secret is complex', async function (assert) {
     assert.expect(4);
     await this.renderComponent(this.modelComplex);
     assert.dom(PAGE.infoRowValue('foo')).doesNotExist('does not render rows of secret data');
     assert.dom(FORM.toggleJson).isChecked();
     assert.dom(FORM.toggleJson).isNotDisabled();
-    assert.dom('[data-test-component="code-mirror-modifier"]').exists('shows json editor');
+    assert.dom(GENERAL.codeBlock('secret-data')).exists('hds codeBlock exists');
   });
 
   test('it renders deleted empty state', async function (assert) {
