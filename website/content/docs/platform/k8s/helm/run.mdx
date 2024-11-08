@@ -416,7 +416,7 @@ Next, test the upgrade with `--dry-run` first to verify the changes sent to the
 Kubernetes cluster.
 
 ```shell-session
-$ helm upgrade vault hashicorp/vault --version=0.28.1 \
+$ helm upgrade vault hashicorp/vault --version=0.29.0 \
     --set='server.image.repository=vault' \
     --set='server.image.tag=123.456' \
     --dry-run
