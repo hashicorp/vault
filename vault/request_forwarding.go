@@ -22,12 +22,112 @@ import (
 	"github.com/hashicorp/vault/helper/forwarding"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/replication"
 	"golang.org/x/net/http2"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
+
+var (
+	NotHAMember       = "node is not in HA cluster membership"
+	StatusNotHAMember = status.Errorf(codes.FailedPrecondition, NotHAMember)
+)
+
+const haNodeIDKey = "ha_node_id"
+
+func haIDFromContext(ctx context.Context) (string, bool) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return "", false
+	}
+	res := md.Get(haNodeIDKey)
+	if len(res) == 0 {
+		return "", false
+	}
+	return res[0], true
+}
+
+func haMembershipServerInterceptor(c *Core, haBackend physical.RemovableNodeHABackend) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
+		if haBackend == nil {
+			return handler(ctx, req)
+		}
+		nodeID, ok := haIDFromContext(ctx)
+		if !ok {
+			return handler(ctx, req)
+		}
+		removed, err := haBackend.IsNodeRemoved(ctx, nodeID)
+		if err != nil {
+			c.logger.Error("failed to check if node is removed", "error", err)
+		}
+		if removed {
+			return nil, StatusNotHAMember
+		}
+		return handler(ctx, req)
+	}
+}
+
+func haMembershipClientInterceptor(c *Core, haBackend physical.RemovableNodeHABackend) grpc.UnaryClientInterceptor {
+	return func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+		if haBackend == nil {
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}
+		ctx = metadata.AppendToOutgoingContext(ctx, haNodeIDKey, haBackend.NodeID())
+		err := invoker(ctx, method, req, reply, cc, opts...)
+		if errors.Is(err, StatusNotHAMember) {
+			removeErr := haBackend.RemoveSelf()
+			if removeErr != nil {
+				c.logger.Debug("failed to remove self", "error", removeErr)
+			}
+			go c.ShutdownCoreError(errors.New("node removed from HA configuration"))
+		}
+		return err
+	}
+}
+
+func haMembershipStreamServerInterceptor(c *Core, haBackend physical.RemovableNodeHABackend) grpc.StreamServerInterceptor {
+	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+		if haBackend == nil {
+			return handler(srv, ss)
+		}
+		haNodeID, ok := haIDFromContext(ss.Context())
+		if !ok {
+			return handler(srv, ss)
+		}
+
+		removed, err := haBackend.IsNodeRemoved(ss.Context(), haNodeID)
+		if err != nil {
+			c.logger.Error("failed to check if node is removed", "error", err)
+		}
+		if removed {
+			return StatusNotHAMember
+		}
+		return handler(srv, ss)
+	}
+}
+
+func haMembershipStreamClientInterceptor(c *Core, haBackend physical.RemovableNodeHABackend) grpc.StreamClientInterceptor {
+	return func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
+		if haBackend == nil {
+			return streamer(ctx, desc, cc, method, opts...)
+		}
+		ctx = metadata.AppendToOutgoingContext(ctx, haNodeIDKey, haBackend.NodeID())
+		stream, err := streamer(ctx, desc, cc, method, opts...)
+		if errors.Is(err, StatusNotHAMember) {
+			removeErr := haBackend.RemoveSelf()
+			if removeErr != nil {
+				c.logger.Debug("failed to remove self", "error", removeErr)
+			}
+			go c.ShutdownCoreError(errors.New("node removed from raft configuration"))
+		}
+		return stream, err
+	}
+}
 
 type requestForwardingHandler struct {
 	fws         *http2.Server
@@ -54,6 +154,8 @@ func NewRequestForwardingHandler(c *Core, fws *http2.Server, perfStandbySlots ch
 		}),
 		grpc.MaxRecvMsgSize(math.MaxInt32),
 		grpc.MaxSendMsgSize(math.MaxInt32),
+		grpc.StreamInterceptor(haMembershipStreamServerInterceptor(c, c.getRemovableHABackend())),
+		grpc.UnaryInterceptor(haMembershipServerInterceptor(c, c.getRemovableHABackend())),
 	)
 
 	if ha && c.clusterHandler != nil {
@@ -285,6 +387,8 @@ func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAd
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
 			Time: 2 * c.clusterHeartbeatInterval,
 		}),
+		grpc.WithStreamInterceptor(haMembershipStreamClientInterceptor(c, c.getRemovableHABackend())),
+		grpc.WithUnaryInterceptor(haMembershipClientInterceptor(c, c.getRemovableHABackend())),
 		grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(math.MaxInt32),
 			grpc.MaxCallSendMsgSize(math.MaxInt32),

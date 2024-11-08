@@ -1223,3 +1223,18 @@ func (c *Core) SetNeverBecomeActive(on bool) {
 		atomic.StoreUint32(c.neverBecomeActive, 0)
 	}
 }
+
+// getRaftBackend returns the RaftBackend from the HA or physical backend,
+// in that order of preference, or nil if not of type RaftBackend.
+func (c *Core) getRemovableHABackend() physical.RemovableNodeHABackend {
+	var haBackend physical.RemovableNodeHABackend
+	if removableHA, ok := c.ha.(physical.RemovableNodeHABackend); ok {
+		haBackend = removableHA
+	}
+
+	if removableHA, ok := c.underlyingPhysical.(physical.RemovableNodeHABackend); ok {
+		haBackend = removableHA
+	}
+
+	return haBackend
+}
