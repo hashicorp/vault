@@ -489,6 +489,9 @@ func TestRequestHandling_SecretLeaseMetric(t *testing.T) {
 func TestRequestHandling_isRetryableRPCError(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
+
+	deadlineCtx, deadlineCancel := context.WithDeadline(context.Background(), time.Now().Add(-1*time.Second))
+	defer deadlineCancel()
 	testCases := []struct {
 		name string
 		ctx  context.Context
@@ -496,8 +499,14 @@ func TestRequestHandling_isRetryableRPCError(t *testing.T) {
 		want bool
 	}{
 		{
-			name: "req context canceled",
+			name: "req context canceled, not deadline",
 			ctx:  ctx,
+			err:  status.Error(codes.Canceled, "context canceled"),
+			want: true,
+		},
+		{
+			name: "req context deadline exceeded",
+			ctx:  deadlineCtx,
 			err:  status.Error(codes.Canceled, "context canceled"),
 			want: false,
 		},
