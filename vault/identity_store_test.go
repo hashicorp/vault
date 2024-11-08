@@ -21,11 +21,9 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
-	"github.com/hashicorp/vault/vault/replication"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
@@ -1527,44 +1525,7 @@ func TestEntityStoreLoadingIsDeterministic(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	// Simulate some "recent" writes to local aliases on a perf secondary that
-	// have not yet had their global entities replicated back. That means they
-	// have "cached" entities in the local alias packer but not in the entities
-	// packer.
-	for i := 0; i <= 10; i++ {
-		id := fmt.Sprintf("localalias-not-replicated-%d", i)
-		entityID := fmt.Sprintf("entity-not-replicated-%d", i)
-		e := makeEntityForPacker(t, entityID, c.identityStore.entityPacker)
-		attachAlias(t, e, id, localMe)
-		err = TestHelperWriteToStoragePacker(ctx, c.identityStore.localAliasPacker, entityID+tmpSuffix, e)
-		require.NoError(t, err)
-		// It's unlikely but possible that there could be entities in local cache
-		// with duplicate aliases which might be merged non-deterministically since
-		// the code to load these is different form entities. Add duplicates to
-		// exercise that case.
-		pDup := 0.3
-		dupeNum := 1
-		rnd := rand.Float64()
-		for rnd < pDup && dupeNum < 10 {
-			e := makeEntityForPacker(t, fmt.Sprintf("entity-not-replicated-%d-localdup-%d", i, dupeNum), c.identityStore.entityPacker)
-			attachAlias(t, e, id, localMe)
-			err = TestHelperWriteToStoragePacker(ctx, c.identityStore.localAliasPacker, e.ID+tmpSuffix, e)
-			require.NoError(t, err)
-			rnd = rand.Float64()
-			dupeNum++
-		}
-	}
-
-	// We also need to fake the replication state so that the core will think it's
-	// a perf secondary during unseal and to actually try to load the local
-	// aliases.
-	clusters := replication.Clusters{
-		Performance: &replication.Cluster{
-			State: consts.ReplicationPerformanceSecondary,
-			// Not bothering to fake the rest as it's not needed here.
-		},
-	}
-	require.NoError(t, clusters.Persist(ctx, c.barrier))
+	entIdentityStoreDeterminismTestSetup(t, ctx, c, upme, localMe)
 
 	// Storage is now primed for the test.
 
@@ -1593,15 +1554,11 @@ func TestEntityStoreLoadingIsDeterministic(t *testing.T) {
 		// Entities + their aliases
 		iter, err := tx.LowerBound(entitiesTable, "id", "")
 		require.NoError(t, err)
-		seenCachedEntity := false
 		for item := iter.Next(); item != nil; item = iter.Next() {
 			// We already added "type" prefixes to the IDs when creating them so just
 			// append here.
 			e := item.(*identity.Entity)
 			loadedIDs = append(loadedIDs, e.ID)
-			if strings.HasPrefix(e.ID, "entity-not-replicated-") {
-				seenCachedEntity = true
-			}
 			for _, a := range e.Aliases {
 				loadedIDs = append(loadedIDs, a.ID)
 			}
@@ -1626,9 +1583,7 @@ func TestEntityStoreLoadingIsDeterministic(t *testing.T) {
 		groupsLoaded := len(loadedIDs) - numLoaded
 		require.Greater(t, groupsLoaded, 140, "not enough groups and aliases loaded on attempt %d", i)
 
-		// Cached Entities and local aliases in the local alias packer will have
-		// been loaded as entities/aliases already and added to the loadedIDs list.
-		require.True(t, seenCachedEntity, "cached entity not loaded on attempt %d", i)
+		entIdentityStoreDeterminismAssert(t, i, loadedIDs, lastIDs)
 
 		if i > 0 {
 			// Should be in the same order if we are deterministic since MemDB has strong ordering.
