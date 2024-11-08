@@ -2121,11 +2121,14 @@ func isRetryableRPCError(ctx context.Context, err error) bool {
 	case codes.Unavailable:
 		return true
 	case codes.Canceled:
-		// if the request context is canceled, we want to return false
-		// but if the request context hasn't been canceled, then there was
-		// either an EOF or the RPC client context has been canceled which
-		// should be retried
-		return ctx.Err() == nil
+		// if the request context is canceled through a deadline exceeded, we
+		// want to return false. But otherwise, there could have been an EOF or
+		// the RPC client context has been canceled which should be retried
+		ctxErr := ctx.Err()
+		if ctxErr == nil {
+			return true
+		}
+		return !errors.Is(ctxErr, context.DeadlineExceeded)
 	case codes.Unknown:
 		// sometimes a missing HTTP content-type error can happen when multiple
 		// HTTP statuses have been written. This can happen when the error
