@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Add identity_token_key to mount view for the GCP and Azure Secret engines.
+```

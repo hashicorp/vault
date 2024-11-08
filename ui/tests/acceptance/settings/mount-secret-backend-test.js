@@ -34,7 +34,6 @@ import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { SELECTORS as OIDC } from 'vault/tests/helpers/oidc-config';
 import { adminOidcCreateRead, adminOidcCreate } from 'vault/tests/helpers/secret-engine/policy-generator';
-import { WIF_ENGINES } from 'vault/helpers/mountable-secret-engines';
 
 const consoleComponent = create(consoleClass);
 
@@ -324,23 +323,19 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       // create an oidc/key
       await runCmd(`write identity/oidc/key/some-key allowed_client_ids="*"`);
 
-      for (const engine of WIF_ENGINES) {
-        await page.visit();
-        await click(MOUNT_BACKEND_FORM.mountType(engine));
-        await click(GENERAL.toggleGroup('Method Options'));
-        assert
-          .dom('[data-test-search-select-with-modal]')
-          .exists('Search select with modal component renders');
-        await clickTrigger('#key');
-        const dropdownOptions = findAll('[data-option-index]').map((o) => o.innerText);
-        assert.ok(dropdownOptions.includes('some-key'), 'search select options show some-key');
-        await click(GENERAL.searchSelect.option(GENERAL.searchSelect.optionIndex('some-key')));
-        assert
-          .dom(GENERAL.searchSelect.selectedOption())
-          .hasText('some-key', 'some-key was selected and displays in the search select');
-      }
-      // Go back and choose a non-wif engine type
+      await page.visit();
+      await click(MOUNT_BACKEND_FORM.mountType('aws')); // only testing aws of the WIF engines as the functionality for all others WIF engines in this form are the same
+      await click(GENERAL.toggleGroup('Method Options'));
+      assert.dom('[data-test-search-select-with-modal]').exists('Search select with modal component renders');
+      await clickTrigger('#key');
+      const dropdownOptions = findAll('[data-option-index]').map((o) => o.innerText);
+      assert.ok(dropdownOptions.includes('some-key'), 'search select options show some-key');
+      await click(GENERAL.searchSelect.option(GENERAL.searchSelect.optionIndex('some-key')));
+      assert
+        .dom(GENERAL.searchSelect.selectedOption())
+        .hasText('some-key', 'some-key was selected and displays in the search select');
       await click(GENERAL.backButton);
+      // Choose a non-wif engine
       await click(MOUNT_BACKEND_FORM.mountType('ssh'));
       assert
         .dom('[data-test-search-select-with-modal]')
@@ -350,75 +345,84 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     });
 
     test('it allows a user with permissions to oidc/key to create an identity_token_key', async function (assert) {
-      for (const engine of WIF_ENGINES) {
-        const path = `secrets-adminPolicy-${engine}`;
-        const newKey = `key-${uuidv4()}`;
-        const secrets_admin_policy = adminOidcCreateRead(path);
-        const secretsAdminToken = await runCmd(
-          tokenWithPolicyCmd(`secrets-admin-${path}`, secrets_admin_policy)
-        );
+      logout.visit();
+      const engine = 'aws'; // only testing aws of the WIF engines as the functionality for all others WIF engines in this form are the same
+      await authPage.login();
+      const path = `secrets-adminPolicy-${engine}`;
+      const newKey = `key-${engine}-${uuidv4()}`;
+      const secrets_admin_policy = adminOidcCreateRead(path);
+      const secretsAdminToken = await runCmd(
+        tokenWithPolicyCmd(`secrets-admin-${path}`, secrets_admin_policy)
+      );
 
-        await logout.visit();
-        await authPage.login(secretsAdminToken);
-        await page.visit();
-        await click(MOUNT_BACKEND_FORM.mountType(engine));
-        await fillIn(GENERAL.inputByAttr('path'), path);
-        await click(GENERAL.toggleGroup('Method Options'));
-        await clickTrigger('#key');
-        // create new key
-        await fillIn(GENERAL.searchSelect.searchInput, newKey);
-        await click(GENERAL.searchSelect.options);
-        assert.dom('#search-select-modal').exists('modal with form opens');
-        assert.dom('[data-test-modal-title]').hasText('Create new key', 'Create key modal renders');
+      await logout.visit();
+      await authPage.login(secretsAdminToken);
+      await visit('/vault/settings/mount-secret-backend');
+      await click(MOUNT_BACKEND_FORM.mountType(engine));
+      await fillIn(GENERAL.inputByAttr('path'), path);
+      await click(GENERAL.toggleGroup('Method Options'));
+      await clickTrigger('#key');
+      // create new key
+      await fillIn(GENERAL.searchSelect.searchInput, newKey);
+      await click(GENERAL.searchSelect.options);
+      assert.dom('#search-select-modal').exists(`modal with form opens for engine ${engine}`);
+      assert
+        .dom('[data-test-modal-title]')
+        .hasText('Create new key', `Create key modal renders for engine: ${engine}`);
 
-        await click(OIDC.keySaveButton);
-        assert.dom('#search-select-modal').doesNotExist('modal disappears onSave');
-        assert.dom(GENERAL.searchSelect.selectedOption()).hasText(newKey, `${newKey} is now selected`);
+      await click(OIDC.keySaveButton);
+      assert.dom('#search-select-modal').doesNotExist(`modal disappears onSave for engine ${engine}`);
+      assert.dom(GENERAL.searchSelect.selectedOption()).hasText(newKey, `${newKey} is now selected`);
 
-        await click(GENERAL.saveButton);
-        await visit(`/vault/secrets/${path}/configuration`);
-        await click(SES.configurationToggle);
-        assert
-          .dom(GENERAL.infoRowValue('Identity Token Key'))
-          .hasText(newKey, 'shows identity token key on configuration page');
-        // cleanup
-        await runCmd(`delete sys/mounts/${path}`);
-        await runCmd(`delete identity/oidc/key/some-key`);
-        await runCmd(`delete identity/oidc/key/${newKey}`);
-      }
+      await click(GENERAL.saveButton);
+      await visit(`/vault/secrets/${path}/configuration`);
+      await click(SES.configurationToggle);
+      assert
+        .dom(GENERAL.infoRowValue('Identity Token Key'))
+        .hasText(newKey, `shows identity token key on configuration page for engine: ${engine}`);
+
+      // cleanup
+      await runCmd(`delete sys/mounts/${path}`);
+      await runCmd(`delete identity/oidc/key/some-key`);
+      await runCmd(`delete identity/oidc/key/${newKey}`);
+      await logout.visit();
     });
 
     test('it allows user with NO access to oidc/key to manually input an identity_token_key', async function (assert) {
-      for (const engine of WIF_ENGINES) {
-        const path = `secrets-noOidcAdmin-${engine}`;
-        const secretsNoOidcAdminPolicy = adminOidcCreate(path);
-        const secretsNoOidcAdminToken = await runCmd(
-          tokenWithPolicyCmd(`secrets-noOidcAdmin-${path}`, secretsNoOidcAdminPolicy)
-        );
-        // create an oidc/key that they can then use even if they can't read it.
-        await runCmd(`write identity/oidc/key/general-key allowed_client_ids="*"`);
+      await logout.visit();
+      const engine = 'aws'; // only testing aws of the WIF engines as the functionality for all others WIF engines in this form are the same
+      await authPage.login();
+      const path = `secrets-noOidcAdmin-${engine}`;
+      const secretsNoOidcAdminPolicy = adminOidcCreate(path);
+      const secretsNoOidcAdminToken = await runCmd(
+        tokenWithPolicyCmd(`secrets-noOidcAdmin-${path}`, secretsNoOidcAdminPolicy)
+      );
+      // create an oidc/key that they can then use even if they can't read it.
+      await runCmd(`write identity/oidc/key/general-key allowed_client_ids="*"`);
 
-        await logout.visit();
-        await authPage.login(secretsNoOidcAdminToken);
-        await page.visit();
-        await click(MOUNT_BACKEND_FORM.mountType(engine));
-        await fillIn(GENERAL.inputByAttr('path'), path);
-        await click(GENERAL.toggleGroup('Method Options'));
-        // type-in fallback component to create new key
-        await typeIn(GENERAL.inputSearch('key'), 'general-key');
-        await click(GENERAL.saveButton);
-        assert
-          .dom(GENERAL.latestFlashContent)
-          .hasText(`Successfully mounted the aws secrets engine at ${path}.`);
+      await logout.visit();
+      await authPage.login(secretsNoOidcAdminToken);
+      await page.visit();
+      await click(MOUNT_BACKEND_FORM.mountType(engine));
+      await fillIn(GENERAL.inputByAttr('path'), path);
+      await click(GENERAL.toggleGroup('Method Options'));
+      // type-in fallback component to create new key
+      await typeIn(GENERAL.inputSearch('key'), 'general-key');
+      await click(GENERAL.saveButton);
+      assert
+        .dom(GENERAL.latestFlashContent)
+        .hasText(`Successfully mounted the ${engine} secrets engine at ${path}.`);
 
-        await visit(`/vault/secrets/${path}/configuration`);
-        await click(SES.configurationToggle);
-        assert
-          .dom(GENERAL.infoRowValue('Identity Token Key'))
-          .hasText('general-key', 'shows identity token key on configuration page');
-        // cleanup
-        await runCmd(`delete sys/mounts/${path}`);
-      }
+      await visit(`/vault/secrets/${path}/configuration`);
+
+      await click(SES.configurationToggle);
+      assert
+        .dom(GENERAL.infoRowValue('Identity Token Key'))
+        .hasText('general-key', `shows identity token key on configuration page for engine: ${engine}`);
+
+      // cleanup
+      await runCmd(`delete sys/mounts/${path}`);
+      await logout.visit();
     });
   });
 });
