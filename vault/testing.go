@@ -31,7 +31,6 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
-	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
@@ -60,6 +59,7 @@ import (
 	"github.com/mitchellh/copystructure"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/net/http2"
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
@@ -2215,17 +2215,29 @@ var (
 	_ testcluster.VaultClusterNode = &TestClusterCore{}
 )
 
+func TestUserpassMount(c *Core, local bool) (*MountEntry, error) {
+	name := "userpass"
+	if local {
+		name += "-local"
+	}
+	userpassMe := &MountEntry{
+		Table:       credentialTableType,
+		Path:        name + "/",
+		Type:        "userpass",
+		Description: name,
+		Accessor:    name,
+		Local:       local,
+	}
+	if err := c.enableCredential(namespace.RootContext(nil), userpassMe); err != nil {
+		return nil, err
+	}
+	return userpassMe, nil
+}
+
 // TestCreateDuplicateEntityAliasesInStorage creates n entities with a duplicate alias in storage
 // This should only be used in testing
 func TestCreateDuplicateEntityAliasesInStorage(ctx context.Context, c *Core, n int) ([]string, error) {
-	userpassMe := &MountEntry{
-		Table:       credentialTableType,
-		Path:        "userpass/",
-		Type:        "userpass",
-		Description: "userpass",
-		Accessor:    "userpass1",
-	}
-	err := c.enableCredential(namespace.RootContext(nil), userpassMe)
+	userpassMe, err := TestUserpassMount(c, false)
 	if err != nil {
 		return nil, err
 	}
@@ -2250,21 +2262,28 @@ func TestCreateDuplicateEntityAliasesInStorage(ctx context.Context, c *Core, n i
 			NamespaceID: namespace.RootNamespaceID,
 			BucketKey:   c.identityStore.entityPacker.BucketKey(entityID),
 		}
-
-		entity, err := ptypes.MarshalAny(e)
-		if err != nil {
-			return nil, err
-		}
-		item := &storagepacker.Item{
-			ID:      e.ID,
-			Message: entity,
-		}
-		if err = c.identityStore.entityPacker.PutItem(ctx, item); err != nil {
+		if err := TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e.ID, e); err != nil {
 			return nil, err
 		}
 	}
 
 	return entityIDs, nil
+}
+
+// TestHelperWriteToStoragePacker takes care of boiler place to insert into a
+// storage packer. Just provide the raw protobuf object e.g. &identity.Entity{}
+// and it is wrapped and inserted for you. You still need to populate BucketKey
+// in the object if applicable before passing it.
+func TestHelperWriteToStoragePacker(ctx context.Context, p *storagepacker.StoragePacker, id string, m protoreflect.ProtoMessage) error {
+	a, err := anypb.New(m)
+	if err != nil {
+		return err
+	}
+	i := &storagepacker.Item{
+		ID:      id,
+		Message: a,
+	}
+	return p.PutItem(context.Background(), i)
 }
 
 // TestCreateStorageGroup creates a group in storage only to bypass checks that the entities exist in memdb
