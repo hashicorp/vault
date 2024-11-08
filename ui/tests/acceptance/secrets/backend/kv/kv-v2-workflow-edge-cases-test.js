@@ -299,22 +299,34 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       codemirror().getValue(),
       `{
   \"\": \"\"
-}`
+}`,
+      'JSON editor displays correct empty object'
     );
     codemirror().setValue('{ "foo3": { "name": "bar3" } }');
     await click(FORM.saveBtn);
 
     // Details view
     await click(PAGE.secretTab('Secret'));
-    assert.dom(FORM.toggleJson).isNotDisabled();
-    assert.dom(FORM.toggleJson).isChecked();
-    assert.false(codemirror().getValue().includes('*'), 'Values are not obscured on details view');
+    assert.dom(FORM.toggleJson).isNotDisabled('JSON toggle is not disabled');
+    assert.dom(FORM.toggleJson).isChecked("JSON toggle is checked 'on'");
+
+    assert
+      .dom(GENERAL.codeBlock('secret-data'))
+      .hasText('Version data { "foo3": { "name": "bar3" } }', 'Values are displayed in the details view');
 
     // New version view
     await click(PAGE.detail.createNewVersion);
     assert.dom(FORM.toggleJson).isNotDisabled();
     assert.dom(FORM.toggleJson).isChecked();
-    assert.false(codemirror().getValue().includes('*'), 'Values are not obscured on edit view');
+    assert.deepEqual(
+      codemirror().getValue(),
+      `{
+  "foo3": {
+    "name": "bar3"
+  }
+}`,
+      'Values are displayed in the new version view'
+    );
   });
 
   test('on enter the JSON editor cursor goes to the next line', async function (assert) {
@@ -359,12 +371,16 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await click(PAGE.secretTab('Secret'));
     await click(PAGE.detail.versionDropdown);
     await click(`${PAGE.detail.version(1)} a`);
-    assert.strictEqual(codemirror().getValue(), expectedDataV1, 'Version one data is displayed');
+    assert
+      .dom(GENERAL.codeBlock('secret-data'))
+      .hasText(`Version data ${expectedDataV1}`, 'Version one data is displayed');
 
     // Navigate back the second version and make sure the secret data is correct
     await click(PAGE.detail.versionDropdown);
     await click(`${PAGE.detail.version(2)} a`);
-    assert.strictEqual(codemirror().getValue(), expectedDataV2, 'Version two data is displayed');
+    assert
+      .dom(GENERAL.codeBlock('secret-data'))
+      .hasText(`Version data ${expectedDataV2}`, 'Version two data is displayed');
   });
 
   test('does not register as advanced when value includes {', async function (assert) {
