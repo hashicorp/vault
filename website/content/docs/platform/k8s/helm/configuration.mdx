@@ -930,7 +930,7 @@ and consider if they're appropriate for your deployment.
   - `ha` - This configures `ha` mode for the Vault server.
 
     - `enabled` (`boolean: false`) -
-      Enables `ha` mode for the Vault server. This mode uses a highly available backend storage (such as Consul) to store Vault's data. By default this is configured to use [Consul Helm](https://github.com/hashicorp/consul-helm). For a complete list of storage backends, see the [Vault documentation](/vault/docs/configuration).
+      Enables `ha` mode for the Vault server. This mode uses a highly available backend storage (such as Consul) to store Vault's data. By default this is configured to use [Consul Helm](https://github.com/hashicorp/consul-k8s). For a complete list of storage backends, see the [Vault documentation](/vault/docs/configuration).
 
     - `apiAddr`: (`string: "{}"`) -
       Set the API address configuration for a Vault cluster. If set to an empty string, the pod IP address is used.
