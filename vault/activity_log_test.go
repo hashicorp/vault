@@ -23,6 +23,7 @@ import (
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/timeutil"
@@ -34,7 +35,16 @@ import (
 
 // TestActivityLog_Creation calls AddEntityToFragment and verifies that it appears correctly in a.fragment.
 func TestActivityLog_Creation(t *testing.T) {
-	core, _, _ := TestCoreUnsealed(t)
+	storage := &logical.InmemStorage{}
+	coreConfig := &CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": userpass.Factory,
+		},
+		Physical: storage.Underlying(),
+	}
+
+	cluster := NewTestCluster(t, coreConfig, nil)
+	core := cluster.Cores[0].Core
 
 	a := core.activityLog
 	a.SetEnable(true)
@@ -47,6 +57,10 @@ func TestActivityLog_Creation(t *testing.T) {
 	}
 	if a.fragment != nil || a.currentGlobalFragment != nil {
 		t.Fatal("activity log already has fragment")
+	}
+
+	if a.localFragment != nil {
+		t.Fatal("activity log already has a local fragment")
 	}
 
 	const entity_id = "entity_id_75432"
@@ -118,6 +132,49 @@ func TestActivityLog_Creation(t *testing.T) {
 	if actual != 1 {
 		t.Errorf("mismatched number of tokens, %v vs %v", actual, 1)
 	}
+
+	// test local fragment
+	localMe := &MountEntry{
+		Table:    credentialTableType,
+		Path:     "userpass-local/",
+		Type:     "userpass",
+		Local:    true,
+		Accessor: "local_mount_accessor",
+	}
+	err := core.enableCredential(namespace.RootContext(nil), localMe)
+	require.NoError(t, err)
+
+	const local_entity_id = "entity_id_75434"
+	local_ts := time.Now()
+
+	a.AddClientToFragment(local_entity_id, "root", local_ts.Unix(), false, "local_mount_accessor")
+
+	if a.localFragment.OriginatingNode != a.nodeID {
+		t.Errorf("mismatched node ID, %q vs %q", a.localFragment.OriginatingNode, a.nodeID)
+	}
+
+	if a.localFragment.Clients == nil {
+		t.Fatal("no local fragment entity slice")
+	}
+
+	if a.localFragment.NonEntityTokens == nil {
+		t.Fatal("no local fragment token map")
+	}
+
+	if len(a.localFragment.Clients) != 1 {
+		t.Fatalf("wrong number of entities %v", len(a.localFragment.Clients))
+	}
+
+	er = a.localFragment.Clients[0]
+	if er.ClientID != local_entity_id {
+		t.Errorf("mimatched entity ID, %q vs %q", er.ClientID, local_entity_id)
+	}
+	if er.NamespaceID != "root" {
+		t.Errorf("mimatched namespace ID, %q vs %q", er.NamespaceID, "root")
+	}
+	if er.Timestamp != ts.Unix() {
+		t.Errorf("mimatched timestamp, %v vs %v", er.Timestamp, ts.Unix())
+	}
 }
 
 // TestActivityLog_Creation_WrappingTokens calls HandleTokenUsage for two wrapping tokens, and verifies that this
@@ -139,6 +196,13 @@ func TestActivityLog_Creation_WrappingTokens(t *testing.T) {
 		t.Fatal("activity log already has fragment")
 	}
 	a.fragmentLock.Unlock()
+
+	a.localFragmentLock.Lock()
+	if a.localFragment != nil {
+		t.Fatal("activity log already has local fragment")
+	}
+	a.localFragmentLock.Unlock()
+
 	const namespace_id = "ns123"
 
 	te := &logical.TokenEntry{
@@ -349,6 +413,10 @@ func TestActivityLog_SaveTokensToStorage(t *testing.T) {
 		t.Errorf("fragment was not reset after write to storage")
 	}
 
+	if a.localFragment != nil {
+		t.Errorf("local fragment was not reset after write to storage")
+	}
+
 	out := &activity.TokenCount{}
 	protoSegment := readSegmentFromStorage(t, core, path)
 	err = proto.Unmarshal(protoSegment.Value, out)
@@ -379,6 +447,10 @@ func TestActivityLog_SaveTokensToStorage(t *testing.T) {
 	}
 	if a.fragment != nil || a.currentGlobalFragment != nil {
 		t.Errorf("fragment was not reset after write to storage")
+	}
+
+	if a.localFragment != nil {
+		t.Errorf("local fragment was not reset after write to storage")
 	}
 
 	protoSegment = readSegmentFromStorage(t, core, path)
@@ -450,6 +522,10 @@ func TestActivityLog_SaveTokensToStorageDoesNotUpdateTokenCount(t *testing.T) {
 		t.Errorf("fragment was not reset after write to storage")
 	}
 
+	if a.localFragment != nil {
+		t.Errorf("local fragment was not reset after write to storage")
+	}
+
 	// Assert that no tokens have been written to the fragment
 	readSegmentFromStorageNil(t, core, tokenPath)
 
@@ -513,6 +589,9 @@ func TestActivityLog_SaveEntitiesToStorage(t *testing.T) {
 		t.Errorf("fragment was not reset after write to storage")
 	}
 
+	if a.localFragment != nil {
+		t.Errorf("local fragment was not reset after write to storage")
+	}
 	protoSegment := readSegmentFromStorage(t, core, path)
 	out := &activity.EntityActivityLog{}
 	err = proto.Unmarshal(protoSegment.Value, out)
@@ -601,8 +680,8 @@ func TestModifyResponseMonthsNilAppend(t *testing.T) {
 }
 
 // TestActivityLog_ReceivedFragment calls receivedFragment with a fragment and verifies it gets added to
-// standbyFragmentsReceived. Send the same fragment again and then verify that it doesn't change the entity map but does
-// get added to standbyFragmentsReceived.
+// standbyFragmentsReceived and standbyGlobalFragmentsReceived. Send the same fragment again and then verify that it doesn't change the entity map but does
+// get added to standbyFragmentsReceived and standbyGlobalFragmentsReceived.
 func TestActivityLog_ReceivedFragment(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
@@ -644,6 +723,10 @@ func TestActivityLog_ReceivedFragment(t *testing.T) {
 		t.Fatalf("fragment count is %v, expected 1", len(a.standbyFragmentsReceived))
 	}
 
+	if len(a.standbyGlobalFragmentsReceived) != 1 {
+		t.Fatalf("fragment count is %v, expected 1", len(a.standbyGlobalFragmentsReceived))
+	}
+
 	// Send a duplicate, should be stored but not change entity map
 	a.receivedFragment(fragment)
 
@@ -651,6 +734,9 @@ func TestActivityLog_ReceivedFragment(t *testing.T) {
 
 	if len(a.standbyFragmentsReceived) != 2 {
 		t.Fatalf("fragment count is %v, expected 2", len(a.standbyFragmentsReceived))
+	}
+	if len(a.standbyGlobalFragmentsReceived) != 2 {
+		t.Fatalf("fragment count is %v, expected 2", len(a.standbyGlobalFragmentsReceived))
 	}
 }
 
@@ -1288,10 +1374,16 @@ func (a *ActivityLog) resetEntitiesInMemory(t *testing.T) {
 
 	a.l.Lock()
 	defer a.l.Unlock()
+
 	a.fragmentLock.Lock()
 	defer a.fragmentLock.Unlock()
+
+	a.localFragmentLock.Lock()
+	defer a.localFragmentLock.Unlock()
+
 	a.globalFragmentLock.Lock()
 	defer a.globalFragmentLock.Unlock()
+
 	a.currentSegment = segmentInfo{
 		startTimestamp: time.Time{}.Unix(),
 		currentClients: &activity.EntityActivityLog{
@@ -1302,6 +1394,7 @@ func (a *ActivityLog) resetEntitiesInMemory(t *testing.T) {
 	}
 
 	a.partialMonthClientTracker = make(map[string]*activity.EntityRecord)
+	a.partialMonthLocalClientTracker = make(map[string]*activity.EntityRecord)
 	a.globalPartialMonthClientTracker = make(map[string]*activity.EntityRecord)
 }
 
@@ -1498,9 +1591,12 @@ func TestActivityLog_loadPriorEntitySegment(t *testing.T) {
 		if tc.refresh {
 			a.l.Lock()
 			a.fragmentLock.Lock()
+			a.localFragmentLock.Lock()
 			a.partialMonthClientTracker = make(map[string]*activity.EntityRecord)
+			a.partialMonthLocalClientTracker = make(map[string]*activity.EntityRecord)
 			a.currentSegment.startTimestamp = tc.time
 			a.fragmentLock.Unlock()
+			a.localFragmentLock.Unlock()
 			a.l.Unlock()
 		}
 
@@ -4745,14 +4841,44 @@ func TestActivityLog_HandleEndOfMonth(t *testing.T) {
 // clients and verifies that they are added correctly to the tracking data
 // structures
 func TestAddActivityToFragment(t *testing.T) {
-	core, _, _ := TestCoreUnsealed(t)
+	storage := &logical.InmemStorage{}
+	coreConfig := &CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": userpass.Factory,
+		},
+		Physical: storage.Underlying(),
+	}
+
+	cluster := NewTestCluster(t, coreConfig, nil)
+	core := cluster.Cores[0].Core
 	a := core.activityLog
 	a.SetEnable(true)
 
+	require.Nil(t, a.fragment)
+	require.Nil(t, a.localFragment)
+	require.Nil(t, a.currentGlobalFragment)
+
 	mount := "mount"
+	localMount := "localMount"
 	ns := "root"
 	id := "id1"
+
+	// keeps track of the number of clients added to localFragment
+	localCount := 0
+
+	// add a client to regular fragment
 	a.AddActivityToFragment(id, ns, 0, entityActivityType, mount)
+
+	// create a local mount accessor for local clients
+	localMe := &MountEntry{
+		Table:    credentialTableType,
+		Path:     "userpass-local/",
+		Type:     "userpass",
+		Local:    true,
+		Accessor: localMount,
+	}
+	err := core.enableCredential(namespace.RootContext(nil), localMe)
+	require.NoError(t, err)
 
 	testCases := []struct {
 		name         string
@@ -4761,6 +4887,7 @@ func TestAddActivityToFragment(t *testing.T) {
 		isAdded      bool
 		expectedID   string
 		isNonEntity  bool
+		isLocal      bool
 	}{
 		{
 			name:         "duplicate",
@@ -4768,6 +4895,7 @@ func TestAddActivityToFragment(t *testing.T) {
 			activityType: entityActivityType,
 			isAdded:      false,
 			expectedID:   id,
+			isLocal:      false,
 		},
 		{
 			name:         "new entity",
@@ -4775,6 +4903,7 @@ func TestAddActivityToFragment(t *testing.T) {
 			activityType: entityActivityType,
 			isAdded:      true,
 			expectedID:   "new-id",
+			isLocal:      false,
 		},
 		{
 			name:         "new nonentity",
@@ -4783,6 +4912,7 @@ func TestAddActivityToFragment(t *testing.T) {
 			isAdded:      true,
 			expectedID:   "new-nonentity",
 			isNonEntity:  true,
+			isLocal:      true,
 		},
 		{
 			name:         "new acme",
@@ -4791,6 +4921,7 @@ func TestAddActivityToFragment(t *testing.T) {
 			isAdded:      true,
 			expectedID:   "pki-acme.new-acme",
 			isNonEntity:  true,
+			isLocal:      false,
 		},
 		{
 			name:         "new secret sync",
@@ -4799,11 +4930,22 @@ func TestAddActivityToFragment(t *testing.T) {
 			isAdded:      true,
 			expectedID:   "new-secret-sync",
 			isNonEntity:  true,
+			isLocal:      false,
+		},
+		{
+			name:         "new local entity",
+			id:           "new-local-id",
+			activityType: entityActivityType,
+			isAdded:      true,
+			expectedID:   "new-local-id",
+			isNonEntity:  false,
+			isLocal:      true,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			var mountAccessor string
 			a.fragmentLock.RLock()
 			numClientsBefore := len(a.fragment.Clients)
 			a.fragmentLock.RUnlock()
@@ -4812,7 +4954,25 @@ func TestAddActivityToFragment(t *testing.T) {
 			globalClientsBefore := len(a.currentGlobalFragment.Clients)
 			a.globalFragmentLock.RUnlock()
 
-			a.AddActivityToFragment(tc.id, ns, 0, tc.activityType, mount)
+			numLocalClientsBefore := 0
+
+			// add client to the fragment
+			if tc.isLocal {
+				// data already present in local fragment, get client count before adding activity to fragment
+				a.localFragmentLock.RLock()
+				numLocalClientsBefore = len(a.localFragment.Clients)
+				a.localFragmentLock.RUnlock()
+
+				mountAccessor = localMount
+				a.AddActivityToFragment(tc.id, ns, 0, tc.activityType, localMount)
+
+				require.NotNil(t, a.localFragment)
+				localCount++
+			} else {
+				mountAccessor = mount
+				a.AddActivityToFragment(tc.id, ns, 0, tc.activityType, mount)
+			}
+
 			a.fragmentLock.RLock()
 			defer a.fragmentLock.RUnlock()
 			numClientsAfter := len(a.fragment.Clients)
@@ -4820,14 +4980,36 @@ func TestAddActivityToFragment(t *testing.T) {
 			defer a.globalFragmentLock.RUnlock()
 			globalClientsAfter := len(a.currentGlobalFragment.Clients)
 
-			if tc.isAdded {
-				require.Equal(t, numClientsBefore+1, numClientsAfter)
-				if tc.activityType != nonEntityTokenActivityType {
-					require.Equal(t, globalClientsBefore+1, globalClientsAfter)
+			// if local client, verify if local fragment is updated
+			if tc.isLocal {
+				a.localFragmentLock.RLock()
+				defer a.localFragmentLock.RUnlock()
+
+				numLocalClientsAfter := len(a.localFragment.Clients)
+				switch tc.isAdded {
+				case true:
+					require.Equal(t, numLocalClientsBefore+1, numLocalClientsAfter)
+				default:
+					require.Equal(t, numLocalClientsBefore, numLocalClientsAfter)
 				}
 			} else {
+				// verify global clients
+				switch tc.isAdded {
+				case true:
+					if tc.activityType != nonEntityTokenActivityType {
+						require.Equal(t, globalClientsBefore+1, globalClientsAfter)
+					}
+				default:
+					require.Equal(t, globalClientsBefore, globalClientsAfter)
+				}
+			}
+
+			// for now local clients are added to both regular fragment and local fragment.
+			// this will be modified in ticket vault-31234
+			if tc.isAdded {
+				require.Equal(t, numClientsBefore+1, numClientsAfter)
+			} else {
 				require.Equal(t, numClientsBefore, numClientsAfter)
-				require.Equal(t, globalClientsBefore, globalClientsAfter)
 			}
 
 			require.Contains(t, a.partialMonthClientTracker, tc.expectedID)
@@ -4836,10 +5018,21 @@ func TestAddActivityToFragment(t *testing.T) {
 				NamespaceID:   ns,
 				Timestamp:     0,
 				NonEntity:     tc.isNonEntity,
-				MountAccessor: mount,
+				MountAccessor: mountAccessor,
 				ClientType:    tc.activityType,
 			}, a.partialMonthClientTracker[tc.expectedID]))
-			if tc.activityType != nonEntityTokenActivityType {
+
+			if tc.isLocal {
+				require.Contains(t, a.partialMonthLocalClientTracker, tc.expectedID)
+				require.True(t, proto.Equal(&activity.EntityRecord{
+					ClientID:      tc.expectedID,
+					NamespaceID:   ns,
+					Timestamp:     0,
+					NonEntity:     tc.isNonEntity,
+					MountAccessor: mountAccessor,
+					ClientType:    tc.activityType,
+				}, a.partialMonthLocalClientTracker[tc.expectedID]))
+			} else {
 				require.Contains(t, a.globalPartialMonthClientTracker, tc.expectedID)
 				require.True(t, proto.Equal(&activity.EntityRecord{
 					ClientID:      tc.expectedID,
@@ -4852,6 +5045,81 @@ func TestAddActivityToFragment(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestGetAllPartialMonthClients adds activity for a local and regular clients and verifies that
+// GetAllPartialMonthClients returns the right local and global clients
+func TestGetAllPartialMonthClients(t *testing.T) {
+	storage := &logical.InmemStorage{}
+	coreConfig := &CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": userpass.Factory,
+		},
+		Physical: storage.Underlying(),
+	}
+
+	cluster := NewTestCluster(t, coreConfig, nil)
+	core := cluster.Cores[0].Core
+	a := core.activityLog
+	a.SetEnable(true)
+
+	require.Nil(t, a.fragment)
+	require.Nil(t, a.localFragment)
+	require.Nil(t, a.currentGlobalFragment)
+
+	ns := "root"
+	mount := "mount"
+	localMount := "localMount"
+	clientID := "id1"
+	localClientID := "new-local-id"
+
+	// add a client to regular fragment, this should be added to globalPartialMonthClientTracker
+	a.AddActivityToFragment(clientID, ns, 0, entityActivityType, mount)
+
+	require.NotNil(t, a.localFragment)
+	require.NotNil(t, a.fragment)
+	require.NotNil(t, a.currentGlobalFragment)
+
+	// create a local mount accessor
+	localMe := &MountEntry{
+		Table:    credentialTableType,
+		Path:     "userpass-local/",
+		Type:     "userpass",
+		Local:    true,
+		Accessor: localMount,
+	}
+	err := core.enableCredential(namespace.RootContext(nil), localMe)
+	require.NoError(t, err)
+
+	// add client to local fragment, this should be added to partialMonthLocalClientTracker
+	a.AddActivityToFragment(localClientID, ns, 0, entityActivityType, localMount)
+
+	require.NotNil(t, a.localFragment)
+
+	// GetAllPartialMonthClients returns the partialMonthLocalClientTracker and globalPartialMonthClientTracker
+	localClients, globalClients := a.GetAllPartialMonthClients()
+
+	// verify the returned localClients
+	require.Len(t, localClients, 1)
+	require.Contains(t, localClients, localClientID)
+	require.True(t, proto.Equal(&activity.EntityRecord{
+		ClientID:      localClientID,
+		NamespaceID:   ns,
+		Timestamp:     0,
+		MountAccessor: localMount,
+		ClientType:    entityActivityType,
+	}, localClients[localClientID]))
+
+	// verify the returned globalClients
+	require.Len(t, globalClients, 1)
+	require.Contains(t, globalClients, clientID)
+	require.True(t, proto.Equal(&activity.EntityRecord{
+		ClientID:      clientID,
+		NamespaceID:   ns,
+		Timestamp:     0,
+		MountAccessor: mount,
+		ClientType:    entityActivityType,
+	}, globalClients[clientID]))
 }
 
 // TestActivityLog_reportPrecomputedQueryMetrics creates 3 clients per type and
