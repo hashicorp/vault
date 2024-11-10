@@ -60,6 +60,15 @@ export default class AuthLoginFormComponent extends Component {
       } else {
         this.delayAuthMessageReminder.perform();
       }
+
+      if (data?.mfa_requirement) {
+        const mfa_requirement = this.auth._parseMfaResponse(data.mfa_requirement);
+        // calls onAuthResponse in auth/page.js
+        this.args.onSuccess(mfa_requirement, backendType, data);
+        // return here because mfa-form.js will finish login flow after mfa validation
+        return;
+      }
+
       const authResponse = yield this.auth.authenticate({
         clusterId,
         backend: backendType,
@@ -67,6 +76,7 @@ export default class AuthLoginFormComponent extends Component {
         selectedAuth,
       });
 
+      // calls onAuthResponse in auth/page.js
       this.args.onSuccess(authResponse, backendType, data);
     } catch (e) {
       if (!this.auth.mfaError) {
