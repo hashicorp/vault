@@ -1224,8 +1224,6 @@ func (c *Core) SetNeverBecomeActive(on bool) {
 	}
 }
 
-// getRaftBackend returns the RaftBackend from the HA or physical backend,
-// in that order of preference, or nil if not of type RaftBackend.
 func (c *Core) getRemovableHABackend() physical.RemovableNodeHABackend {
 	var haBackend physical.RemovableNodeHABackend
 	if removableHA, ok := c.ha.(physical.RemovableNodeHABackend); ok {
