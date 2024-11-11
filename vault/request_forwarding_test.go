@@ -14,6 +14,8 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+// Test_haIDFromContext verifies that the HA node ID gets correctly extracted
+// from a gRPC context
 func Test_haIDFromContext(t *testing.T) {
 	testCases := []struct {
 		name   string
@@ -76,6 +78,8 @@ func newMockHARemovableNodeBackend(isRemoved func(context.Context, string) (bool
 	return &mockHARemovableNodeBackend{isRemoved: isRemoved}
 }
 
+// Test_haMembershipServerCheck verifies that the correct error is returned
+// when the context contains a removed node ID
 func Test_haMembershipServerCheck(t *testing.T) {
 	nodeIDCtx := metadata.NewIncomingContext(context.Background(), metadata.MD{haNodeIDKey: {"node_id"}})
 	testCases := []struct {
