@@ -1407,6 +1407,13 @@ func TestIdentityStoreInvalidate_TemporaryEntity(t *testing.T) {
 	assert.Nil(t, item)
 }
 
+// TestEntityStoreLoadingIsDeterministic is a property-based test that ensures
+// the loading logic of the entity store is deterministic. This is important
+// because we perform certain merges and corrections of duplicates on load and
+// non-deterministic order can cause divergence between different nodes or even
+// after seal/unseal cycles on one node. Loading _should_ be deterministic
+// anyway if all data in storage was correct see comments inline for examples of
+// ways storage can be corrupt with respect to the expected schema invariants.
 func TestEntityStoreLoadingIsDeterministic(t *testing.T) {
 	// Create some state in store that could trigger non-deterministic behavior.
 	// The nature of the identity store schema is such that the order of loading
