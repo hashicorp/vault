@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"testing"
 	"time"
 
 	metrics "github.com/armon/go-metrics"
@@ -2627,4 +2628,26 @@ func (i *IdentityStore) countEntitiesByMountAccessor(ctx context.Context) (map[s
 	}
 
 	return byMountAccessor, nil
+}
+
+func makeEntityForPacker(_t *testing.T, id string, p *storagepacker.StoragePacker) *identity.Entity {
+	return &identity.Entity{
+		ID:          id,
+		Name:        id,
+		NamespaceID: namespace.RootNamespaceID,
+		BucketKey:   p.BucketKey(id),
+	}
+}
+
+func attachAlias(t *testing.T, e *identity.Entity, name string, me *MountEntry) *identity.Alias {
+	t.Helper()
+	a := &identity.Alias{
+		ID:            name,
+		Name:          name,
+		CanonicalID:   e.ID,
+		MountType:     me.Type,
+		MountAccessor: me.Accessor,
+	}
+	e.UpsertAlias(a)
+	return a
 }

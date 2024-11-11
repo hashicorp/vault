@@ -1600,27 +1600,6 @@ func TestEntityStoreLoadingIsDeterministic(t *testing.T) {
 	}
 }
 
-func makeEntityForPacker(t *testing.T, id string, p *storagepacker.StoragePacker) *identity.Entity {
-	return &identity.Entity{
-		ID:          id,
-		Name:        id,
-		NamespaceID: namespace.RootNamespaceID,
-		BucketKey:   p.BucketKey(id),
-	}
-}
-
-func attachAlias(t *testing.T, e *identity.Entity, name string, me *MountEntry) *identity.Alias {
-	a := &identity.Alias{
-		ID:            name,
-		Name:          name,
-		CanonicalID:   e.ID,
-		MountType:     me.Type,
-		MountAccessor: me.Accessor,
-	}
-	e.UpsertAlias(a)
-	return a
-}
-
 func makeGroupWithIDAndAlias(t *testing.T, id, alias, bucketKey string, me *MountEntry) *identity.Group {
 	g := &identity.Group{
 		ID:          id,
