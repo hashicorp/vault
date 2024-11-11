@@ -6168,8 +6168,15 @@ func sanitizePath(path string) string {
 		path += "/"
 	}
 
-	for strings.HasPrefix(path, "/") {
-		path = path[1:]
+	// Remove any leading slashes, double slashes, or slash-backslash combinations
+	for len(path) > 0 && (strings.HasPrefix(path, "/") || strings.HasPrefix(path, "//") || strings.HasPrefix(path, "/\\")) {
+		if strings.HasPrefix(path, "//") {
+			path = path[2:]
+		} else if strings.HasPrefix(path, "/\\") {
+			path = path[2:]
+		} else {
+			path = path[1:]
+		}
 	}
 
 	return path
