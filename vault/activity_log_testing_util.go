@@ -57,17 +57,27 @@ func (c *Core) InjectActivityLogDataThisMonth(t *testing.T) map[string]*activity
 	return c.activityLog.partialMonthClientTracker
 }
 
-// GetActiveClients returns the in-memory partialMonthClientTracker from an
+// GetActiveClients returns the in-memory globalPartialMonthClientTracker and  partialMonthLocalClientTracker from an
 // activity log.
 func (c *Core) GetActiveClients() map[string]*activity.EntityRecord {
 	out := make(map[string]*activity.EntityRecord)
 
 	c.stateLock.RLock()
-	c.activityLog.fragmentLock.RLock()
-	for k, v := range c.activityLog.partialMonthClientTracker {
+	c.activityLog.globalFragmentLock.RLock()
+	c.activityLog.localFragmentLock.RLock()
+
+	// add active global clients
+	for k, v := range c.activityLog.globalPartialMonthClientTracker {
 		out[k] = v
 	}
-	c.activityLog.fragmentLock.RUnlock()
+
+	// add active local clients
+	for k, v := range c.activityLog.partialMonthLocalClientTracker {
+		out[k] = v
+	}
+
+	c.activityLog.globalFragmentLock.RUnlock()
+	c.activityLog.localFragmentLock.RUnlock()
 	c.stateLock.RUnlock()
 
 	return out
@@ -168,6 +178,9 @@ func (a *ActivityLog) ExpectCurrentSegmentRefreshed(t *testing.T, expectedStart 
 	if a.partialMonthClientTracker == nil {
 		t.Errorf("expected non-nil partialMonthClientTracker")
 	}
+	if a.partialMonthLocalClientTracker == nil {
+		t.Errorf("expected non-nil partialMonthLocalClientTracker")
+	}
 	if len(a.currentSegment.currentClients.Clients) > 0 {
 		t.Errorf("expected no current entity segment to be loaded. got: %v", a.currentSegment.currentClients)
 	}
@@ -176,6 +189,9 @@ func (a *ActivityLog) ExpectCurrentSegmentRefreshed(t *testing.T, expectedStart 
 	}
 	if len(a.partialMonthClientTracker) > 0 {
 		t.Errorf("expected no active entity segment to be loaded. got: %v", a.partialMonthClientTracker)
+	}
+	if len(a.partialMonthLocalClientTracker) > 0 {
+		t.Errorf("expected no active entity segment to be loaded. got: %v", a.partialMonthLocalClientTracker)
 	}
 
 	if verifyTimeNotZero {
@@ -246,4 +262,28 @@ func (a *ActivityLog) GetEnabled() bool {
 // Note: you must do the usual locking scheme when modifying the ActivityLog
 func (c *Core) GetActivityLog() *ActivityLog {
 	return c.activityLog
+}
+
+func (c *Core) GetActiveGlobalFragment() *activity.LogFragment {
+	c.activityLog.globalFragmentLock.RLock()
+	defer c.activityLog.globalFragmentLock.RUnlock()
+	return c.activityLog.currentGlobalFragment
+}
+
+func (c *Core) GetSecondaryGlobalFragments() []*activity.LogFragment {
+	c.activityLog.globalFragmentLock.RLock()
+	defer c.activityLog.globalFragmentLock.RUnlock()
+	return c.activityLog.secondaryGlobalClientFragments
+}
+
+func (c *Core) GetActiveLocalFragment() *activity.LogFragment {
+	c.activityLog.localFragmentLock.RLock()
+	defer c.activityLog.localFragmentLock.RUnlock()
+	return c.activityLog.localFragment
+}
+
+func (c *Core) GetActiveFragment() *activity.LogFragment {
+	c.activityLog.fragmentLock.RLock()
+	defer c.activityLog.fragmentLock.RUnlock()
+	return c.activityLog.fragment
 }

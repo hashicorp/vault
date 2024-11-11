@@ -28,6 +28,8 @@ $ curl \
 
 ### Sample response
 
+<CodeBlockConfig hideClipboard>
+
 ```json
 {
   "request_id": "75cbaa46-e741-3eba-2be2-325b1ba8f03f",
@@ -46,6 +48,8 @@ $ curl \
   "auth": null
 }
 ```
+
+</CodeBlockConfig>
 
 ## Tokens
 
@@ -66,6 +70,8 @@ $ curl \
 
 ### Sample response
 
+<CodeBlockConfig hideClipboard>
+
 ```json
 {
   "request_id": "75cbaa46-e741-3eba-2be2-325b1ba8f03f",
@@ -85,6 +91,8 @@ $ curl \
 }
 ```
 
+</CodeBlockConfig>
+
 ## Client count
 
 This endpoint returns client activity information for a given billing
@@ -97,108 +105,59 @@ Vault lead to that top-level activity count. First-level of attribution
 breakdowns are by namespaces and months, under the `by_namespaces` and `months`
 JSON block, respectively.
 
-```json
-{
-   "by_namespace":[],
-   "months":[]
-}
-```
+   <CodeBlockConfig hideClipboard>
+
+   ```json
+   {
+      "by_namespace":[],
+      "months":[]
+   }
+   ```
+
+   </CodeBlockConfig>
 
 - `by_namespaces` breakdowns provide attributions of each namespace to the total
 activity count. Mount level attributions further break down these namespaces
 attributions, wherein information can be found on the attributions of each mount
 path within a given namespace to the overall activity of the namespace.
 
-```json
-{
-   "by_namespace":[
-      {
-         "namespace_id":"root",
-         "namespace_path":"",
-         "counts":{},
-         "mounts":[
-            {
-               "path":"auth/up1/",
-               "counts":{}
-            },
-            {
-               "path":"auth/up2/",
-               "counts":{}
-            }
-         ]
-      }
-   ]
-}
-```
+   <CodeBlockConfig hideClipboard>
+
+   ```json
+   {
+      "by_namespace":[
+         {
+            "namespace_id":"root",
+            "namespace_path":"",
+            "counts":{},
+            "mounts":[
+               {
+                  "path":"auth/up1/",
+                  "counts":{}
+               },
+               {
+                  "path":"auth/up2/",
+                  "counts":{}
+               }
+            ]
+         }
+      ]
+   }
+   ```
+
+   </CodeBlockConfig>
 
 - `months` breakdowns provide attributions of each month to the total activity
 count. These month-level attributions are further broken down into namespace and mount
 level attributions for each month.
 
-```json
-{
-   "months":[
-      {
-         "timestamp":"2021-05-01T00:00:00Z",
-         "counts":{},
-         "namespaces":[
-            {
-               "namespace_id":"root",
-               "namespace_path":"",
-               "counts":{},
-               "mounts":[
-                  {
-                     "path":"auth/up2/",
-                     "counts":{}
-                  },
-                  {
-                     "path":"auth/up1/",
-                     "counts":{}
-                  }
-               ]
-            },
-            {
-               "namespace_id":"s07UR",
-               "namespace_path":"ns1/",
-               "counts":{},
-               "mounts":[
-                  {
-                     "path":"auth/up1/",
-                     "counts":{}
-                  },
-                  {
-                     "path":"auth/up2/",
-                     "counts":{}
-                  }
-               ]
-            }
-         ],
-         "new_clients":{}
-      }
-   ],
-}
-```
+   <CodeBlockConfig hideClipboard>
 
-- Each entry in the `months` breakdown contains a `new_clients` block. When a
-token is first used within a billing period, it is considered a new client for
-that billing period. This means that all the active clients in the first month
-of the billing period will be considered new clients for that billing period.
-While these tokens could be generated and counted in the previous billing
-period, they are still considered new clients in the context of the given
-billing period. For each subsequent month in the same billing period, the tokens
-used in those months that were unused in previous months of the same billing
-period are considered new clients for that month. Hence, the computation of new
-clients differs for each combination of `start_time` and `end_time`.
-
-- The `new_clients` block within the `months` breakdown will also be further
-broken down by namespaces and mounts for visibility into which components in
-Vault lead to the new clients for each month.
-
-```json
-{
-   "months":[
-      {
-         "new_clients":{
+   ```json
+   {
+      "months":[
+         {
+            "timestamp":"2021-05-01T00:00:00Z",
             "counts":{},
             "namespaces":[
                {
@@ -215,13 +174,78 @@ Vault lead to the new clients for each month.
                         "counts":{}
                      }
                   ]
+               },
+               {
+                  "namespace_id":"s07UR",
+                  "namespace_path":"ns1/",
+                  "counts":{},
+                  "mounts":[
+                     {
+                        "path":"auth/up1/",
+                        "counts":{}
+                     },
+                     {
+                        "path":"auth/up2/",
+                        "counts":{}
+                     }
+                  ]
                }
-            ]
+            ],
+            "new_clients":{}
          }
-      }
-   ],
-}
-```
+      ],
+   }
+   ```
+
+   </CodeBlockConfig>
+
+- Each entry in the `months` breakdown contains a `new_clients` block. When a
+token is first used within a billing period, it is considered a new client for
+that billing period. This means that all the active clients in the first month
+of the billing period will be considered new clients for that billing period.
+While these tokens could be generated and counted in the previous billing
+period, they are still considered new clients in the context of the given
+billing period. For each subsequent month in the same billing period, the tokens
+used in those months that were unused in previous months of the same billing
+period are considered new clients for that month. Hence, the computation of new
+clients differs for each combination of `start_time` and `end_time`.
+
+- The `new_clients` block within the `months` breakdown will also be further
+broken down by namespaces and mounts for visibility into which components in
+Vault lead to the new clients for each month.
+
+   <CodeBlockConfig hideClipboard>
+
+   ```json
+   {
+      "months":[
+         {
+            "new_clients":{
+               "counts":{},
+               "namespaces":[
+                  {
+                     "namespace_id":"root",
+                     "namespace_path":"",
+                     "counts":{},
+                     "mounts":[
+                        {
+                           "path":"auth/up2/",
+                           "counts":{}
+                        },
+                        {
+                           "path":"auth/up1/",
+                           "counts":{}
+                        }
+                     ]
+                  }
+               ]
+            }
+         }
+      ],
+   }
+   ```
+
+   </CodeBlockConfig>
 
 - The response includes month data for the entire queried period, but may
 not exactly match the `start_time` and `end_time` returned in the response.
@@ -236,8 +260,9 @@ current month. The last element in the `months` response stanza will signify the
 
 The following is an example of the `months` breakdown with just the current month information.
 
+@include 'auto-roll-billing-start-example.mdx'
 
-  @include 'auto-roll-billing-start-example.mdx'
+<CodeBlockConfig hideClipboard>
 
 ```json
 {
@@ -319,15 +344,16 @@ The following is an example of the `months` breakdown with just the current mont
 }
 ```
 
+</CodeBlockConfig>
 
-Please visit the [client count](/vault/docs/concepts/client-count) concepts page for
+Refer to the [client count](/vault/docs/concepts/client-count) concepts page for
 more information on how clients map to these client IDs and how they are
 counted, or for more information about how the new clients for the current month
 are estimated in a billing period.
 
 The response will include all child namespaces of the namespace in which the
 request was made. If some namespace has subsequently been deleted, its path will
-be listed as "deleted namespace :ID:." Deleted namespaces are reported only for
+be listed as `deleted namespace :ID:`. Deleted namespaces are reported only for
 queries in the root namespace because the information about the namespace path
 is unknown.
 
@@ -351,7 +377,7 @@ is unknown.
 - `current_billing_period` `(bool, optional)` - **DEPRECATED** Uses the builtin billing start
   timestamp as `start_time` and the current time as the `end_time`, returning a
   response with the current billing period information without having to
-  explicitly provide a start and end time.
+  explicitly provide a start and end time. This parameter is deprecated, as this option is now the default, so no parameter is needed to specify.
 
 
 ### Sample request
@@ -364,6 +390,8 @@ $ curl \
 ```
 
 ### Sample response
+
+<CodeBlockConfig hideClipboard>
 
 ```json
 {
@@ -816,7 +844,11 @@ $ curl \
 }
 ```
 
-### Sample request for a single month
+</CodeBlockConfig>
+
+### Sample request 
+
+The following example retrieves the client count for a single month.
 
 ```shell-session
 $ curl \
@@ -825,7 +857,10 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/internal/counters/activity?end_time=2020-06-30T00%3A00%3A00Z&start_time=2020-06-01T00%3A00%3A00Z
 ```
 
-### Sample request to get client counts for top 2 namespaces with highest activity for a usage period
+### Sample request
+
+The following example retrieves the client counts for top 2 namespaces with
+highest activity for a usage period.
 
 ```shell-session
 $ curl \
@@ -843,9 +878,13 @@ and new clients information.
 The time period is from the start of the current month, up until the time that
 this request was made.
 
-Note: the client count may be inaccurate in the moments following a Vault
+<Note>
+
+The client count may be inaccurate in the moments following a Vault
 reboot, or leadership change. The estimate will stabilize when background
 loading of client data has completed.
+
+</Note>
 
 @include 'alerts/restricted-root.mdx'
 
@@ -863,6 +902,8 @@ $ curl \
 ```
 
 ### Sample response
+
+<CodeBlockConfig hideClipboard>
 
 ```json
 {
@@ -977,6 +1018,8 @@ $ curl \
 }
 ```
 
+</CodeBlockConfig>
+
 ## Update the client count configuration
 
 @include 'alerts/restricted-root.mdx'
@@ -1040,6 +1083,8 @@ $ curl \
 
 ### Sample response
 
+<CodeBlockConfig hideClipboard>
+
 ```json
 {
   "request_id": "25a94b99-b49a-c4ac-cb7b-5ba0eb390a25",
@@ -1057,15 +1102,17 @@ $ curl \
 }
 ```
 
+</CodeBlockConfig>
+
 <Note title="Important change to supported versions">
-   As of 1.16.7, 1.17.3 and later,
-   the <a href="/vault/docs/concepts/billing-start-date">billing start date</a> automatically
-   rolls over to the latest billing year at the end of the last cycle.
 
-   For more information, refer to the upgrade guide for your Vault version:
+As of 1.16.7, 1.17.3 and later,
+the <a href="/vault/docs/concepts/billing-start-date">billing start date</a> automatically
+rolls over to the latest billing year at the end of the last cycle.
 
-   [Vault v1.16.x](/vault/docs/upgrading/upgrade-to-1.16.x#auto-rolled-billing-start-date),
-   [Vault v1.17.x](/vault/docs/upgrading/upgrade-to-1.17.x#auto-rolled-billing-start-date)
+For more information, refer to the upgrade guide for your Vault version:
+- [Vault v1.16.x](/vault/docs/upgrading/upgrade-to-1.16.x#auto-rolled-billing-start-date)
+- [Vault v1.17.x](/vault/docs/upgrading/upgrade-to-1.17.x#auto-rolled-billing-start-date)
 
 </Note>
 
@@ -1076,7 +1123,11 @@ provided start and end times. The returned set of client information will be
 deduplicated over the time window and will show the earliest activity logged for
 each client. The output will be ordered chronologically by month of activity.
 
-~> **NOTE**: This endpoint is currently in tech preview status.
+<Note title="Techn preview">
+
+This endpoint is currently in tech preview status.
+
+</Note>
 
 There are a few things to keep in mind while using this API.
 
@@ -1110,7 +1161,7 @@ it may be up to 20 minutes delayed.
 
 The response will include all child namespaces of the namespace in which the
 request was made. If some namespace has subsequently been deleted, its path will
-be listed as "deleted namespace :ID:"
+be listed as `deleted namespace :ID:`.
 
 ### Sample request
 
@@ -1130,8 +1181,16 @@ or [ec2_alias](/vault/api-docs/auth/aws#ec2_alias) configuration parameters. In 
 alias name has been populated with the service account ID though this can be configured via the
 [alias_name_source](/vault/api-docs/auth/kubernetes#alias_name_source) configuration parameter.
 
-~> **NOTE**: The activity records below are pretty-printed to improve readability. The API returns
-   JSON lines and will thus be compacted so that each record consumes a single line.
+<Tip title="Formatted for readability">
+
+The activity records below are pretty-printed to improve readability. The API
+returns JSON lines and will thus be compacted so that each record consumes a
+single line.
+
+</Tip>
+
+
+<CodeBlockConfig hideClipboard>
 
 ```json
 {
@@ -1286,12 +1345,19 @@ alias name has been populated with the service account ID though this can be con
 }
 ```
 
+</CodeBlockConfig>
+
 ### Sample CSV response
+
 Nested fields within the exported records will be flattened into individual CSV columns. Columns for arrays (`policies` and `entity_group_ids`)
 will be named using the field name and underlying index (e.g. `policies.0`, `policies.1`). Columns for key-value pairs
 (`entity_metadata`, `entity_alias_metadata`, and `entity_alias_custom_metadata`) will be named using the field name and underlying key
 (e.g. `entity_metadata.email_address`, `entity_alias_metadata.region`). A flattened field will only be added if at least one record contains
-it. If a top-level field (e.g. `entity_metadata`) is not populated in any of the records then there will not be any flattened fields of prefix `enttiy_metadata.`.
+it. If a top-level field (e.g. `entity_metadata`) is not populated in any of the
+records then there will not be any flattened fields of prefix
+`enttiy_metadata.`.
+
+<CodeBlockConfig hideClipboard>
 
 ```text
 entity_name,entity_alias_name,client_id,client_type,local_entity_alias,namespace_id,namespace_path,mount_accessor,mount_path,mount_type,timestamp,entity_alias_custom_metadata.contact_email,entity_alias_custom_metadata.group,entity_alias_custom_metadata.region,entity_metadata.email_address,entity_group_ids.0,policies.0,policies.1,policies.2,policies.4
@@ -1299,5 +1365,6 @@ admin,admin,3f210722-7210-98e8-1f0d-e6a39ffb29c6,entity,false,root,,auth_userpas
 ,,590198f7-9178-57d6-c345-48746bb438d8,non-entity-token,false,YWZzu,ns1/a/,auth_ns_token_e3119312,auth/token/,ns_token,2024-07-08T11:35:23Z,,,,,,,,,
 jdoe,jdoe,665a54bf-8652-c0c5-8121-40adf0d9786a,entity,false,wOsmr,ns1/a,auth_ldap_a005db73,auth/ldap/,ldap,2024-07-08T11:47:57Z,jdoe@example.com,new_york,east,,9f18cd4a-4e64-a2b2-b001-7b6b0dfb1270,secret-read,,,
 jdoe,jdoe,0640a8f0-b315-cc8a-c0c2-713f663774df,entity,false,oIiGy,ns1/b,auth_userpass_01a6ea85,auth/userpass/,userpass,2024-07-21T14:51:36Z,,new_york,east,,76a374a1-72fd-30ca-2455-f51dfeaa805e,secret-read,,,
-
 ```
+
+</CodeBlockConfig>

@@ -3,40 +3,32 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Route from '@ember/routing/route';
+import LdapRolesRoute from '../roles';
 import { service } from '@ember/service';
 import { withConfig } from 'core/decorators/fetch-secrets-engine-config';
 import { hash } from 'rsvp';
 
 import type StoreService from 'vault/services/store';
-import type SecretMountPath from 'vault/services/secret-mount-path';
 import type Transition from '@ember/routing/transition';
 import type LdapRoleModel from 'vault/models/ldap/role';
 import type SecretEngineModel from 'vault/models/secret-engine';
 import type Controller from '@ember/controller';
 import type { Breadcrumb } from 'vault/vault/app-types';
 
-interface LdapRolesRouteModel {
+interface RouteModel {
   backendModel: SecretEngineModel;
   promptConfig: boolean;
   roles: Array<LdapRoleModel>;
 }
-interface LdapRolesController extends Controller {
-  breadcrumbs: Array<Breadcrumb>;
-  model: LdapRolesRouteModel;
-  pageFilter: string | undefined;
-  page: number | undefined;
-}
 
-interface LdapRolesRouteParams {
-  page?: string;
-  pageFilter: string;
+interface RouteController extends Controller {
+  breadcrumbs: Array<Breadcrumb>;
+  model: RouteModel;
 }
 
 @withConfig('ldap/config')
-export default class LdapRolesRoute extends Route {
-  @service declare readonly store: StoreService;
-  @service declare readonly secretMountPath: SecretMountPath;
+export default class LdapRolesIndexRoute extends LdapRolesRoute {
+  @service declare readonly store: StoreService; // necessary for @withConfig decorator
 
   declare promptConfig: boolean;
 
@@ -49,39 +41,26 @@ export default class LdapRolesRoute extends Route {
     },
   };
 
-  model(params: LdapRolesRouteParams) {
+  model(params: { page?: string; pageFilter: string }) {
     const backendModel = this.modelFor('application') as SecretEngineModel;
     return hash({
       backendModel,
       promptConfig: this.promptConfig,
-      roles: this.store.lazyPaginatedQuery(
-        'ldap/role',
-        {
-          backend: backendModel.id,
-          page: Number(params.page) || 1,
-          pageFilter: params.pageFilter,
-          responsePath: 'data.keys',
-        },
-        { adapterOptions: { showPartialError: true } }
-      ),
+      roles: this.lazyQuery(backendModel.id, params, { showPartialError: true }),
     });
   }
 
-  setupController(
-    controller: LdapRolesController,
-    resolvedModel: LdapRolesRouteModel,
-    transition: Transition
-  ) {
+  setupController(controller: RouteController, resolvedModel: RouteModel, transition: Transition) {
     super.setupController(controller, resolvedModel, transition);
 
     controller.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backendModel.id, route: 'overview', model: resolvedModel.backend },
+      { label: resolvedModel.backendModel.id, route: 'overview' },
       { label: 'Roles' },
     ];
   }
 
-  resetController(controller: LdapRolesController, isExiting: boolean) {
+  resetController(controller: RouteController, isExiting: boolean) {
     if (isExiting) {
       controller.set('pageFilter', undefined);
       controller.set('page', undefined);

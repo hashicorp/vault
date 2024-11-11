@@ -9,6 +9,8 @@ export const PAGE = {
   breadcrumbs: '[data-test-breadcrumbs]',
   breadcrumb: '[data-test-breadcrumbs] li',
   breadcrumbAtIdx: (idx) => `[data-test-breadcrumbs] li:nth-child(${idx + 1}) a`,
+  breadcrumbCurrentAtIdx: (idx) =>
+    `[data-test-breadcrumbs] li:nth-child(${idx + 1}) .hds-breadcrumb__current`,
   infoRow: '[data-test-component="info-table-row"]',
   infoRowValue: (label) => `[data-test-value-div="${label}"]`,
   infoRowToggleMasked: (label) => `[data-test-value-div="${label}"] [data-test-button="toggle-masked"]`,
@@ -88,8 +90,8 @@ export const PAGE = {
   },
   paths: {
     copyButton: (label) => `${PAGE.infoRowValue(label)} button`,
-    codeSnippet: (section) => `[data-test-commands="${section}"] code`,
-    snippetCopy: (section) => `[data-test-commands="${section}"] button`,
+    codeSnippet: (section) => `[data-test-code-block="${section}"] code`,
+    snippetCopy: (section) => `[data-test-code-block="${section}"] button`,
   },
 };
 

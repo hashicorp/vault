@@ -206,3 +206,49 @@ export const fillInAwsConfig = async (situation = 'withAccess') => {
     await fillIn(GENERAL.ttl.input('Identity token TTL'), '7200');
   }
 };
+
+// Example usage
+// createLongJson (2, 3) will create a json object with 2 original keys, each with 3 nested keys
+// {
+// 	"key-0": {
+// 		"nested-key-0": {
+// 			"nested-key-1": {
+// 				"nested-key-2": "nested-value"
+// 			}
+// 		}
+// 	},
+// 	"key-1": {
+// 		"nested-key-0": {
+// 			"nested-key-1": {
+// 				"nested-key-2": "nested-value"
+// 			}
+// 		}
+// 	}
+// }
+
+export function createLongJson(lines = 10, nestLevel = 3) {
+  const keys = Array.from({ length: nestLevel }, (_, i) => `nested-key-${i}`);
+  const jsonObject = {};
+
+  for (let i = 0; i < lines; i++) {
+    nestLevel > 0
+      ? (jsonObject[`key-${i}`] = createNestedObject({}, keys, 'nested-value'))
+      : (jsonObject[`key-${i}`] = 'non-nested-value');
+  }
+  return jsonObject;
+}
+
+function createNestedObject(obj = {}, keys, value) {
+  let current = obj;
+
+  for (let i = 0; i < keys.length - 1; i++) {
+    const key = keys[i];
+    if (!current[key]) {
+      current[key] = {};
+    }
+    current = current[key];
+  }
+
+  current[keys[keys.length - 1]] = value;
+  return obj;
+}

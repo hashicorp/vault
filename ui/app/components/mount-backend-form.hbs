@@ -5,7 +5,7 @@
 
 <PageHeader as |p|>
   <p.levelLeft>
-    <h1 class="title is-3 title-with-icon" data-test-mount-form-header="true">
+    <h1 class="title is-3 title-with-icon" data-test-page-title>
       {{#if this.showEnable}}
         {{#let (find-by "type" @mountModel.type @mountTypes) as |typeInfo|}}
           <Icon @name={{typeInfo.glyph}} @size="24" class="has-text-grey-light" />
@@ -59,12 +59,12 @@
             @text={{if (eq @mountType "secret") "Enable engine" "Enable method"}}
             @icon={{if this.mountBackend.isRunning "loading"}}
             type="submit"
-            data-test-mount-submit="true"
+            data-test-save
             disabled={{this.mountBackend.isRunning}}
           />
         </div>
         <div class="control">
-          <Hds::Button @text="Back" @color="secondary" data-test-mount-back {{on "click" (fn this.setMountType "")}} />
+          <Hds::Button @text="Back" @color="secondary" data-test-back-button {{on "click" (fn this.setMountType "")}} />
         </div>
         {{#if this.invalidFormAlert}}
           <div class="control">

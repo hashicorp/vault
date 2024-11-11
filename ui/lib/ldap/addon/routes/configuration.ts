@@ -16,14 +16,14 @@ import type Controller from '@ember/controller';
 import type { Breadcrumb } from 'vault/vault/app-types';
 import type AdapterError from 'ember-data/adapter'; // eslint-disable-line ember/use-ember-data-rfc-395-imports
 
-interface LdapConfigurationRouteModel {
+interface RouteModel {
   backendModel: SecretEngineModel;
   configModel: LdapConfigModel;
   configError: AdapterError;
 }
-interface LdapConfigurationController extends Controller {
+interface RouteController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
-  model: LdapConfigurationRouteModel;
+  model: RouteModel;
 }
 
 @withConfig('ldap/config')
@@ -42,11 +42,7 @@ export default class LdapConfigurationRoute extends Route {
     };
   }
 
-  setupController(
-    controller: LdapConfigurationController,
-    resolvedModel: LdapConfigurationRouteModel,
-    transition: Transition
-  ) {
+  setupController(controller: RouteController, resolvedModel: RouteModel, transition: Transition) {
     super.setupController(controller, resolvedModel, transition);
 
     controller.breadcrumbs = [
