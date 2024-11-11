@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fixes auth workflow for OIDC methods configured with MFA 
+```
