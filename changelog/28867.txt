@@ -1,0 +1,4 @@
+```release-note:bug
+core: Fix an issue where duplicate identity aliases in storage could be merged
+inconsistently during different unseal events or on different servers.
+```
