@@ -5,6 +5,8 @@ package vault
 
 import (
 	"context"
+	"fmt"
+	"math/rand"
 	"strings"
 	"testing"
 	"time"
@@ -13,11 +15,15 @@ import (
 	"github.com/go-test/deep"
 	uuid "github.com/hashicorp/go-uuid"
 	credGithub "github.com/hashicorp/vault/builtin/credential/github"
+	"github.com/hashicorp/vault/builtin/credential/userpass"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
@@ -1399,4 +1405,251 @@ func TestIdentityStoreInvalidate_TemporaryEntity(t *testing.T) {
 	item, err := lap.GetItem(lap.BucketKey(entityID) + tmpSuffix)
 	assert.NoError(t, err)
 	assert.Nil(t, item)
+}
+
+// TestEntityStoreLoadingIsDeterministic is a property-based test that ensures
+// the loading logic of the entity store is deterministic. This is important
+// because we perform certain merges and corrections of duplicates on load and
+// non-deterministic order can cause divergence between different nodes or even
+// after seal/unseal cycles on one node. Loading _should_ be deterministic
+// anyway if all data in storage was correct see comments inline for examples of
+// ways storage can be corrupt with respect to the expected schema invariants.
+func TestEntityStoreLoadingIsDeterministic(t *testing.T) {
+	// Create some state in store that could trigger non-deterministic behavior.
+	// The nature of the identity store schema is such that the order of loading
+	// entities etc shouldn't matter even if it was non-deterministic, however due
+	// to many and varied historical (and possibly current/future) bugs, we have
+	// seen many cases where storage ends up with duplicates persisted. This is
+	// not ideal of course and our code attempts to "fix" on the fly with merges
+	// on load. But it's hampered by the fact that the current implementation does
+	// not load entities in a deterministic order. which means that different
+	// nodes potentially resolve merges differently. This test proves that that
+	// happens and should hopefully provide some confidence that we don't
+	// introduce non-determinism in the future somehow. It's a bit odd we have to
+	// inject essentially invalid data into storage to trigger the issue but
+	// that's what we get in real life sometimes!
+	logger := corehelpers.NewTestLogger(t)
+	ims, err := inmem.NewTransactionalInmemHA(nil, logger)
+	require.NoError(t, err)
+
+	cfg := &CoreConfig{
+		Physical:        ims,
+		HAPhysical:      ims.(physical.HABackend),
+		Logger:          logger,
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": userpass.Factory,
+		},
+	}
+
+	c, sealKeys, rootToken := TestCoreUnsealedWithConfig(t, cfg)
+
+	// Inject values into storage
+	upme, err := TestUserpassMount(c, false)
+	require.NoError(t, err)
+	localMe, err := TestUserpassMount(c, true)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	// We create 100 entities each with 1 non-local alias and 1 local alias. We
+	// then randomly create duplicate alias or local alias entries with a
+	// probability that is unrealistic but ensures we have duplicates on every
+	// test run with high probability and more than 1 duplicate often.
+	for i := 0; i <= 100; i++ {
+		id := fmt.Sprintf("entity-%d", i)
+		alias := fmt.Sprintf("alias-%d", i)
+		localAlias := fmt.Sprintf("localalias-%d", i)
+		e := makeEntityForPacker(t, id, c.identityStore.entityPacker)
+		attachAlias(t, e, alias, upme)
+		attachAlias(t, e, localAlias, localMe)
+		err = TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e.ID, e)
+		require.NoError(t, err)
+
+		// Subset of entities get a duplicate alias and/or duplicate local alias.
+		// We'll use a probability of 0.3 for each dup so that we expect at least a
+		// few double and maybe triple duplicates of each type every few test runs
+		// and may have duplicates of both types or neither etc.
+		pDup := 0.3
+		rnd := rand.Float64()
+		dupeNum := 1
+		for rnd < pDup && dupeNum < 10 {
+			e := makeEntityForPacker(t, fmt.Sprintf("entity-%d-dup-%d", i, dupeNum), c.identityStore.entityPacker)
+			attachAlias(t, e, alias, upme)
+			err = TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e.ID, e)
+			require.NoError(t, err)
+			// Toss again to see if we continue
+			rnd = rand.Float64()
+			dupeNum++
+		}
+		// Toss the coin again to see if there are any local dupes
+		dupeNum = 1
+		rnd = rand.Float64()
+		for rnd < pDup && dupeNum < 10 {
+			e := makeEntityForPacker(t, fmt.Sprintf("entity-%d-localdup-%d", i, dupeNum), c.identityStore.entityPacker)
+			attachAlias(t, e, localAlias, localMe)
+			err = TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e.ID, e)
+			require.NoError(t, err)
+			rnd = rand.Float64()
+			dupeNum++
+		}
+		// One more edge case is that it's currently possible as of the time of
+		// writing for a failure during entity invalidation to result in a permanent
+		// "cached" entity in the local alias packer even though we do have the
+		// replicated entity in the entity packer too. This is a bug and will
+		// hopefully be fixed at some point soon, but even after it is it's
+		// important that we still test for it since existing clusters may still
+		// have this persistent state. Pick a low probability but one we're very
+		// likely to hit in 100 iterations and write the entity to the local alias
+		// table too (this mimics the behavior of cacheTemporaryEntity).
+		pFailedLocalAliasInvalidation := 0.02
+		if rand.Float64() < pFailedLocalAliasInvalidation {
+			err = TestHelperWriteToStoragePacker(ctx, c.identityStore.localAliasPacker, e.ID+tmpSuffix, e)
+			require.NoError(t, err)
+		}
+	}
+
+	// Create some groups
+	for i := 0; i <= 100; i++ {
+		id := fmt.Sprintf("group-%d", i)
+		bucketKey := c.identityStore.groupPacker.BucketKey(id)
+		// Add an alias to every other group
+		alias := ""
+		if i%2 == 0 {
+			alias = fmt.Sprintf("groupalias-%d", i)
+		}
+		e := makeGroupWithIDAndAlias(t, id, alias, bucketKey, upme)
+		err = TestHelperWriteToStoragePacker(ctx, c.identityStore.groupPacker, e.ID, e)
+		require.NoError(t, err)
+	}
+	// Now add 10 groups with the same alias to ensure duplicates don't cause
+	// non-deterministic behavior.
+	for i := 0; i <= 10; i++ {
+		id := fmt.Sprintf("group-dup-%d", i)
+		bucketKey := c.identityStore.groupPacker.BucketKey(id)
+		e := makeGroupWithIDAndAlias(t, id, "groupalias-dup", bucketKey, upme)
+		err = TestHelperWriteToStoragePacker(ctx, c.identityStore.groupPacker, e.ID, e)
+		require.NoError(t, err)
+	}
+
+	entIdentityStoreDeterminismTestSetup(t, ctx, c, upme, localMe)
+
+	// Storage is now primed for the test.
+
+	// To test that this is deterministic we need to load from storage a bunch of
+	// times and make sure we get the same result. For easier debugging we'll
+	// build a list of human readable ids that we can compare.
+	lastIDs := []string{}
+	for i := 0; i < 10; i++ {
+		// Seal and unseal to reload the identity store
+		require.NoError(t, c.Seal(rootToken))
+		require.True(t, c.Sealed())
+		for _, key := range sealKeys {
+			unsealed, err := c.Unseal(key)
+			require.NoError(t, err)
+			if unsealed {
+				break
+			}
+		}
+		require.False(t, c.Sealed())
+
+		// Identity store should be loaded now. Check it's contents.
+		loadedIDs := []string{}
+
+		tx := c.identityStore.db.Txn(false)
+
+		// Entities + their aliases
+		iter, err := tx.LowerBound(entitiesTable, "id", "")
+		require.NoError(t, err)
+		for item := iter.Next(); item != nil; item = iter.Next() {
+			// We already added "type" prefixes to the IDs when creating them so just
+			// append here.
+			e := item.(*identity.Entity)
+			loadedIDs = append(loadedIDs, e.ID)
+			for _, a := range e.Aliases {
+				loadedIDs = append(loadedIDs, a.ID)
+			}
+		}
+		// This is a non-triviality check to make sure we actually loaded stuff and
+		// are not just passing because of a bug in the test.
+		numLoaded := len(loadedIDs)
+		require.Greater(t, numLoaded, 300, "not enough entities and aliases loaded on attempt %d", i)
+
+		// Groups
+		iter, err = tx.LowerBound(groupsTable, "id", "")
+		require.NoError(t, err)
+		for item := iter.Next(); item != nil; item = iter.Next() {
+			g := item.(*identity.Group)
+			loadedIDs = append(loadedIDs, g.ID)
+			if g.Alias != nil {
+				loadedIDs = append(loadedIDs, g.Alias.ID)
+			}
+		}
+		// This is a non-triviality check to make sure we actually loaded stuff and
+		// are not just passing because of a bug in the test.
+		groupsLoaded := len(loadedIDs) - numLoaded
+		require.Greater(t, groupsLoaded, 140, "not enough groups and aliases loaded on attempt %d", i)
+
+		entIdentityStoreDeterminismAssert(t, i, loadedIDs, lastIDs)
+
+		if i > 0 {
+			// Should be in the same order if we are deterministic since MemDB has strong ordering.
+			require.Equal(t, lastIDs, loadedIDs, "different result on attempt %d", i)
+		}
+		lastIDs = loadedIDs
+	}
+}
+
+func makeEntityForPacker(t *testing.T, id string, p *storagepacker.StoragePacker) *identity.Entity {
+	return &identity.Entity{
+		ID:          id,
+		Name:        id,
+		NamespaceID: namespace.RootNamespaceID,
+		BucketKey:   p.BucketKey(id),
+	}
+}
+
+func attachAlias(t *testing.T, e *identity.Entity, name string, me *MountEntry) *identity.Alias {
+	a := &identity.Alias{
+		ID:            name,
+		Name:          name,
+		CanonicalID:   e.ID,
+		MountType:     me.Type,
+		MountAccessor: me.Accessor,
+	}
+	e.UpsertAlias(a)
+	return a
+}
+
+func makeGroupWithIDAndAlias(t *testing.T, id, alias, bucketKey string, me *MountEntry) *identity.Group {
+	g := &identity.Group{
+		ID:          id,
+		Name:        id,
+		NamespaceID: namespace.RootNamespaceID,
+		BucketKey:   bucketKey,
+	}
+	if alias != "" {
+		g.Alias = &identity.Alias{
+			ID:            id,
+			Name:          alias,
+			CanonicalID:   id,
+			MountType:     me.Type,
+			MountAccessor: me.Accessor,
+		}
+	}
+	return g
+}
+
+func makeLocalAliasWithID(t *testing.T, id, entityID string, bucketKey string, me *MountEntry) *identity.LocalAliases {
+	return &identity.LocalAliases{
+		Aliases: []*identity.Alias{
+			{
+				ID:            id,
+				Name:          id,
+				CanonicalID:   entityID,
+				MountType:     me.Type,
+				MountAccessor: me.Accessor,
+			},
+		},
+	}
 }
