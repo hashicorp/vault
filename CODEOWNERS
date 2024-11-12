@@ -4,7 +4,7 @@
 #
 # More on CODEOWNERS files: https://help.github.com/en/github/creating-cloning-and-archiving-repositories/about-code-owners
 # Default CODEOWNER primarily for contact purposes
-* @hashicorp/contact-vault-team
+* @hashicorp/vault
 
 # Select Auth engines are owned by Ecosystem
 /builtin/credential/aws/      @hashicorp/vault-ecosystem
