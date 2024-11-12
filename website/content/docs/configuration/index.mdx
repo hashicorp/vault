@@ -80,6 +80,9 @@ to specify where the configuration is.
   auto-unsealing, as well as for
   [seal wrapping][sealwrap] as an additional layer of data protection.
 
+- `reporting` `([Reporting][reporting]: nil)` -
+  Configures options relating to license reporting in Vault.
+
 - `cluster_name` `(string: <generated>)` – Specifies a human-readable
   identifier for the Vault cluster. If omitted, Vault will generate a value.
   The cluster name is included as a label in some [telemetry metrics](/vault/docs/internals/telemetry/metrics/).
@@ -309,6 +312,7 @@ The following parameters are only used with Vault Enterprise
 
 [storage-backend]: /vault/docs/configuration/storage
 [listener]: /vault/docs/configuration/listener
+[reporting]: /vault/docs/configuration/reporting
 [seal]: /vault/docs/configuration/seal
 [sealwrap]: /vault/docs/enterprise/sealwrap
 [telemetry]: /vault/docs/configuration/telemetry
