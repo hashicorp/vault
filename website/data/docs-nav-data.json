@@ -2436,6 +2436,10 @@
         "path": "upgrading/raft-wal"
       },
       {
+        "title": "Upgrade to 1.19.x",
+        "path": "upgrading/upgrade-to-1.19.x"
+      },
+      {
         "title": "Upgrade to 1.18.x",
         "path": "upgrading/upgrade-to-1.18.x"
       },
