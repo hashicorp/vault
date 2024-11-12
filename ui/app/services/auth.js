@@ -210,6 +210,12 @@ export default Service.extend({
     return this.ajax(url, 'POST', { namespace });
   },
 
+  lookupSelf() {
+    const namespace = this.authData.userRootNamespace;
+    const url = '/v1/auth/token/lookup-self';
+    return this.ajax(url, 'GET', { namespace });
+  },
+
   revokeCurrentToken() {
     const namespace = this.authData.userRootNamespace;
     const url = '/v1/auth/token/revoke-self';
@@ -312,9 +318,9 @@ export default Service.extend({
     // this is intentionally not included in setExpirationSettings so we can unit test that method
     if (Ember.testing) this.set('allowExpiration', false);
 
-    if (!data.displayName) {
-      data.displayName = (this.getTokenData(tokenName) || {}).displayName;
-    }
+    // if (!data.displayName) {
+    //   data.displayName = (this.getTokenData(tokenName) || {}).displayName;
+    // }
 
     this.set('tokens', addToArray(this.tokens, tokenName));
     this.setTokenData(tokenName, data);
