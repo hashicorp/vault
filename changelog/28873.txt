@@ -1,3 +1,6 @@
 ```release-note:bug
-ui: Fixes auth workflow for OIDC methods configured with MFA 
+ui: Fixes login to web UI for OIDC methods configured with MFA 
+```
+```release-note:bug
+ui (enterprise): Fixes login to web UI for SAML methods configured with MFA 
 ```
