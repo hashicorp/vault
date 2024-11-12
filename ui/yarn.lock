@@ -2029,7 +2029,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@embroider/addon-shim@npm:^1.0.0, @embroider/addon-shim@npm:^1.2.0, @embroider/addon-shim@npm:^1.6.0, @embroider/addon-shim@npm:^1.8.0, @embroider/addon-shim@npm:^1.8.3, @embroider/addon-shim@npm:^1.8.4, @embroider/addon-shim@npm:^1.8.6, @embroider/addon-shim@npm:^1.8.7, @embroider/addon-shim@npm:^1.8.9":
+"@embroider/addon-shim@npm:^1.0.0, @embroider/addon-shim@npm:^1.2.0, @embroider/addon-shim@npm:^1.6.0, @embroider/addon-shim@npm:^1.8.0, @embroider/addon-shim@npm:^1.8.3, @embroider/addon-shim@npm:^1.8.6, @embroider/addon-shim@npm:^1.8.7, @embroider/addon-shim@npm:^1.8.9":
   version: 1.8.9
   resolution: "@embroider/addon-shim@npm:1.8.9"
   dependencies:
@@ -2458,25 +2458,24 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hashicorp/design-system-components@npm:~4.7.0":
-  version: 4.7.0
-  resolution: "@hashicorp/design-system-components@npm:4.7.0"
+"@hashicorp/design-system-components@npm:~4.12.0":
+  version: 4.12.0
+  resolution: "@hashicorp/design-system-components@npm:4.12.0"
   dependencies:
     "@ember/render-modifiers": ^2.0.5
     "@ember/string": ^3.1.1
     "@ember/test-waiters": ^3.1.0
     "@embroider/addon-shim": ^1.8.7
     "@floating-ui/dom": ^1.6.3
-    "@hashicorp/design-system-tokens": ^2.1.0
-    "@hashicorp/ember-flight-icons": ^5.1.3
-    "@hashicorp/flight-icons": ^3.5.0
+    "@hashicorp/design-system-tokens": ^2.2.1
+    "@hashicorp/flight-icons": ^3.6.0
     decorator-transforms: ^1.1.0
-    ember-a11y-refocus: ^4.1.0
+    ember-a11y-refocus: ^4.1.3
     ember-cli-sass: ^11.0.1
     ember-composable-helpers: ^5.0.0
     ember-element-helper: ^0.8.5
     ember-focus-trap: ^1.1.0
-    ember-keyboard: ^8.2.1
+    ember-get-config: ^2.1.1
     ember-modifier: ^4.1.0
     ember-power-select: ^8.2.0
     ember-stargate: ^0.4.3
@@ -2487,14 +2486,14 @@ __metadata:
     tippy.js: ^6.3.7
   peerDependencies:
     ember-source: ^3.28.0 || ^4.0.0 || ^5.3.0
-  checksum: 88cafa21f11d761a226d9b065af715d632b1ea38699aac8294d035a7f7ab5518263c894813d0d4dc23f11dea440aaf6e58408531c7bbb3d9b2455a9dc9a9ba5c
+  checksum: ed7c79a43e3b286b5a4d543064dc566159909bee7052700eebe160a93f99b64dfc41291cd4d81c5dd558b415fc9033bc8937b0d751b191283ce404c407d1388b
   languageName: node
   linkType: hard
 
-"@hashicorp/design-system-tokens@npm:^2.1.0":
-  version: 2.2.0
-  resolution: "@hashicorp/design-system-tokens@npm:2.2.0"
-  checksum: 654978be98a94c1f478e472793b9c1b62762bb30f9e0a097c2e1effd4fb2b4619eeef347e39599aea4dd63c451e0f41e698d887827ca2496de83a9e1e1dd8525
+"@hashicorp/design-system-tokens@npm:^2.2.1":
+  version: 2.2.1
+  resolution: "@hashicorp/design-system-tokens@npm:2.2.1"
+  checksum: 0e4348ab27b2da4725068b5dab83474ad496895d2b422708b2c08cfc39289830f3756a1b352aff6e6095f64e3476ac227034ab02c7d2e0cc49d13a81ef69f6f3
   languageName: node
   linkType: hard
 
@@ -2514,6 +2513,13 @@ __metadata:
   version: 3.5.0
   resolution: "@hashicorp/flight-icons@npm:3.5.0"
   checksum: a06f6606d4df682d2756eddebf92765b18774cdcc8e2050e440c85cff16126ae72455869b967e2aef15d97a5caf517578d66cf6fc098f1d3564a9deec9a95ebf
+  languageName: node
+  linkType: hard
+
+"@hashicorp/flight-icons@npm:^3.6.0":
+  version: 3.6.0
+  resolution: "@hashicorp/flight-icons@npm:3.6.0"
+  checksum: 5c09574c3e44b5662665271f4aaec8e9d50d0eecb858ba5e9d4d669baf0d98d0e875ce440d84ea7911bf81ff35a01440f79dd27cb78af706ca85341101d61073
   languageName: node
   linkType: hard
 
@@ -7445,13 +7451,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-a11y-refocus@npm:^4.1.0":
-  version: 4.1.1
-  resolution: "ember-a11y-refocus@npm:4.1.1"
+"ember-a11y-refocus@npm:^4.1.3":
+  version: 4.1.4
+  resolution: "ember-a11y-refocus@npm:4.1.4"
   dependencies:
     ember-cli-babel: ^7.26.11
     ember-cli-htmlbars: ^6.0.1
-  checksum: b9f861f1359e8c720bf844161da3eecbe2218149739211961d216b6fcaec5e78dfd51debe5ec2707ae0d31fdbbd9cf692349e3f0f5b47d1f12bd963c021494ac
+  checksum: c1a79f9b7792f3bac674e010b231561da4ca5fc2f3f6a9a6e2263908a6c781546e1baccdb84838f367ac9104e2c76b7f688a57f06f0bd6c194a6f1a71910e422
   languageName: node
   linkType: hard
 
@@ -7607,7 +7613,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-cli-babel@npm:^7.1.2, ember-cli-babel@npm:^7.1.3, ember-cli-babel@npm:^7.10.0, ember-cli-babel@npm:^7.13.0, ember-cli-babel@npm:^7.18.0, ember-cli-babel@npm:^7.20.0, ember-cli-babel@npm:^7.22.1, ember-cli-babel@npm:^7.23.0, ember-cli-babel@npm:^7.26.11, ember-cli-babel@npm:^7.26.3, ember-cli-babel@npm:^7.26.4, ember-cli-babel@npm:^7.26.5, ember-cli-babel@npm:^7.26.6, ember-cli-babel@npm:^7.26.8, ember-cli-babel@npm:^7.5.0, ember-cli-babel@npm:^7.7.3":
+"ember-cli-babel@npm:^7.1.2, ember-cli-babel@npm:^7.1.3, ember-cli-babel@npm:^7.10.0, ember-cli-babel@npm:^7.13.0, ember-cli-babel@npm:^7.18.0, ember-cli-babel@npm:^7.22.1, ember-cli-babel@npm:^7.23.0, ember-cli-babel@npm:^7.26.11, ember-cli-babel@npm:^7.26.3, ember-cli-babel@npm:^7.26.4, ember-cli-babel@npm:^7.26.5, ember-cli-babel@npm:^7.26.6, ember-cli-babel@npm:^7.26.8, ember-cli-babel@npm:^7.5.0, ember-cli-babel@npm:^7.7.3":
   version: 7.26.11
   resolution: "ember-cli-babel@npm:7.26.11"
   dependencies:
@@ -8283,7 +8289,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-destroyable-polyfill@npm:^2.0.1, ember-destroyable-polyfill@npm:^2.0.3":
+"ember-destroyable-polyfill@npm:^2.0.1":
   version: 2.0.3
   resolution: "ember-destroyable-polyfill@npm:2.0.3"
   dependencies:
@@ -8425,23 +8431,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-keyboard@npm:^8.2.1":
-  version: 8.2.1
-  resolution: "ember-keyboard@npm:8.2.1"
-  dependencies:
-    "@embroider/addon-shim": ^1.8.4
-    ember-destroyable-polyfill: ^2.0.3
-    ember-modifier: ^2.1.2 || ^3.1.0 || ^4.0.0
-    ember-modifier-manager-polyfill: ^1.2.0
-  peerDependencies:
-    "@ember/test-helpers": ^2.6.0 || ^3.0.0
-  peerDependenciesMeta:
-    "@ember/test-helpers":
-      optional: true
-  checksum: cfb4120aaf3b1ff3aba8ba1619b0597c6738abde31d1e0719d8bbf69512fb9967fc76bc85557351ec42856bb9b6c47354634f22f0accab0e15743d9f0e3f2be4
-  languageName: node
-  linkType: hard
-
 "ember-lifeline@npm:^7.0.0":
   version: 7.0.0
   resolution: "ember-lifeline@npm:7.0.0"
@@ -8497,7 +8486,20 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-modifier@npm:^2.1.2 || ^3.1.0 || ^4.0.0, ember-modifier@npm:^3.2.7 || ^4.0.0, ember-modifier@npm:^4.1.0":
+"ember-modifier@npm:^3.2.0, ember-modifier@npm:^3.2.7":
+  version: 3.2.7
+  resolution: "ember-modifier@npm:3.2.7"
+  dependencies:
+    ember-cli-babel: ^7.26.6
+    ember-cli-normalize-entity-name: ^1.0.0
+    ember-cli-string-utils: ^1.1.0
+    ember-cli-typescript: ^5.0.0
+    ember-compatibility-helpers: ^1.2.5
+  checksum: 2e96d9ec3939de178a9ce704d5a9360fd73f0276ffa4a9cce9f100a4087fdc8fae4a8b28bf1be22b05a4d1c61e1bb1ab93ca60576810c6556bc4d9323864c66a
+  languageName: node
+  linkType: hard
+
+"ember-modifier@npm:^3.2.7 || ^4.0.0, ember-modifier@npm:^4.1.0":
   version: 4.2.0
   resolution: "ember-modifier@npm:4.2.0"
   dependencies:
@@ -8511,19 +8513,6 @@ __metadata:
     ember-source:
       optional: true
   checksum: 5fcea62029ddc880cbfc519f9e5abf33564ecce3c5cbdd54b6b293313df558febe171de5308e5b0d81da284b6914e169412d9e1893e48a45dc51f77214efe65d
-  languageName: node
-  linkType: hard
-
-"ember-modifier@npm:^3.2.0, ember-modifier@npm:^3.2.7":
-  version: 3.2.7
-  resolution: "ember-modifier@npm:3.2.7"
-  dependencies:
-    ember-cli-babel: ^7.26.6
-    ember-cli-normalize-entity-name: ^1.0.0
-    ember-cli-string-utils: ^1.1.0
-    ember-cli-typescript: ^5.0.0
-    ember-compatibility-helpers: ^1.2.5
-  checksum: 2e96d9ec3939de178a9ce704d5a9360fd73f0276ffa4a9cce9f100a4087fdc8fae4a8b28bf1be22b05a4d1c61e1bb1ab93ca60576810c6556bc4d9323864c66a
   languageName: node
   linkType: hard
 
@@ -8660,15 +8649,6 @@ __metadata:
     "@babel/traverse": ^7.4.5
     recast: ^0.18.1
   checksum: e163e0d68e49a942658aee7c05638dd5c2db939753b51efc9c6d9f0e582953be185daf4cdd569c1b8a35ed47f35f4cb18067a6a1db68e135d7464bbad6ef9d93
-  languageName: node
-  linkType: hard
-
-"ember-router-helpers@npm:^0.4.0":
-  version: 0.4.0
-  resolution: "ember-router-helpers@npm:0.4.0"
-  dependencies:
-    ember-cli-babel: ^7.20.0
-  checksum: e847ceb1061f87416d6bb5d72ef539fda738a24086051bc94d740117c6353b3406c65247ac8190b8572df008a70d9f801e224d38489170129c5ca6c4ec7f206e
   languageName: node
   linkType: hard
 
@@ -18776,7 +18756,7 @@ __metadata:
     "@ember/test-waiters": ^3.1.0
     "@glimmer/component": ^1.1.2
     "@glimmer/tracking": ^1.1.2
-    "@hashicorp/design-system-components": ~4.7.0
+    "@hashicorp/design-system-components": ~4.12.0
     "@hashicorp/ember-flight-icons": ^5.1.3
     "@icholy/duration": ^5.1.0
     "@lineal-viz/lineal": ^0.5.1
@@ -18840,7 +18820,6 @@ __metadata:
     ember-qunit: ^8.0.1
     ember-resolver: ^11.0.1
     ember-responsive: 5.0.0
-    ember-router-helpers: ^0.4.0
     ember-service-worker: "meirish/ember-service-worker#configurable-scope"
     ember-sinon-qunit: ^7.4.0
     ember-source: ~5.4.0

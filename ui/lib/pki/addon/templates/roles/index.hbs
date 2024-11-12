@@ -44,15 +44,13 @@
                   data-test-popup-menu-trigger
                 />
                 <dd.Interactive
-                  @text="Details"
                   @route="roles.role.details"
                   @models={{array this.model.parentModel.id pkiRole.id}}
-                />
+                >Details</dd.Interactive>
                 <dd.Interactive
-                  @text="Edit"
                   @route="roles.role.edit"
                   @models={{array this.model.parentModel.id pkiRole.id}}
-                />
+                >Edit</dd.Interactive>
               </Hds::Dropdown>
             </div>
           </div>

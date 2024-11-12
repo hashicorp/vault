@@ -319,6 +319,40 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 		SecretShares: [][]byte{},
 	}
 
+	// Write an entry to storage to indicate that initialization is in progress.
+	// It is used to prevent that nodes use stored keys to unseal while initialization
+	// is still in progress. This can happen when using the Consul backend (maybe others?).
+	if err := c.seal.SetInitializationFlag(ctx); err != nil {
+		c.logger.Error("failed to write initialization flag to storage", "error", err)
+		return nil, fmt.Errorf("failed to write initialization flag to storage: %w", err)
+	}
+
+	// If we are storing shares, pop them out of the returned results and push
+	// them through the seal
+	switch c.seal.StoredKeysSupported() {
+	case seal.StoredKeysSupportedShamirRoot:
+		keysToStore := [][]byte{barrierKey}
+		if err := c.seal.GetAccess().SetShamirSealKey(sealKey); err != nil {
+			c.logger.Error("failed to set seal key", "error", err)
+			return nil, fmt.Errorf("failed to set seal key: %w", err)
+		}
+		if err := c.seal.SetStoredKeys(ctx, keysToStore); err != nil {
+			c.logger.Error("failed to store keys", "error", err)
+			return nil, fmt.Errorf("failed to store keys: %w", err)
+		}
+		results.SecretShares = sealKeyShares
+	case seal.StoredKeysSupportedGeneric:
+		keysToStore := [][]byte{barrierKey}
+		if err := c.seal.SetStoredKeys(ctx, keysToStore); err != nil {
+			c.logger.Error("failed to store keys", "error", err)
+			return nil, fmt.Errorf("failed to store keys: %w", err)
+		}
+	default:
+		// We don't support initializing an old-style Shamir seal anymore, so
+		// this case is only reachable by tests.
+		results.SecretShares = barrierKeyShares
+	}
+
 	// Perform initial setup
 	if err := c.setupCluster(ctx); err != nil {
 		c.logger.Error("cluster setup failed during init", "error", err)
@@ -329,12 +363,6 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	if initPTCleanup != nil {
 		initPTCleanup()
 	}
-
-	// Save in a variable whether stored keys are supported before calling postUnsea(), as postUnseal()
-	// clears the barrier config. For a defaultSeal with a "legacy seal" (i.e. barrier config has StoredShares == 0),
-	// this will cause StoredKeysSupported() to go from StoredKeysNotSupported to StoredKeysSupportedShamirRoot.
-	// This would be a problem below when we determine whether to call SetStoredKeys.
-	storedKeysSupported := c.seal.StoredKeysSupported()
 
 	activeCtx, ctxCancel := context.WithCancel(namespace.RootContext(nil))
 	if err := c.postUnseal(activeCtx, ctxCancel, standardUnsealStrategy{}); err != nil {
@@ -393,30 +421,9 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 		}
 	}
 
-	// If we are storing shares, pop them out of the returned results and push
-	// them through the seal
-	switch storedKeysSupported {
-	case seal.StoredKeysSupportedShamirRoot:
-		keysToStore := [][]byte{barrierKey}
-		if err := c.seal.GetAccess().SetShamirSealKey(sealKey); err != nil {
-			c.logger.Error("failed to set seal key", "error", err)
-			return nil, fmt.Errorf("failed to set seal key: %w", err)
-		}
-		if err := c.seal.SetStoredKeys(ctx, keysToStore); err != nil {
-			c.logger.Error("failed to store keys", "error", err)
-			return nil, fmt.Errorf("failed to store keys: %w", err)
-		}
-		results.SecretShares = sealKeyShares
-	case seal.StoredKeysSupportedGeneric:
-		keysToStore := [][]byte{barrierKey}
-		if err := c.seal.SetStoredKeys(ctx, keysToStore); err != nil {
-			c.logger.Error("failed to store keys", "error", err)
-			return nil, fmt.Errorf("failed to store keys: %w", err)
-		}
-	default:
-		// We don't support initializing an old-style Shamir seal anymore, so
-		// this case is only reachable by tests.
-		results.SecretShares = barrierKeyShares
+	if err := c.seal.ClearInitializationFlag(ctx); err != nil {
+		c.logger.Error("Error clearing initialization flag", "error", err)
+		return nil, fmt.Errorf("error clearing initialization flag: %w", err)
 	}
 
 	// Prepare to re-seal
@@ -467,6 +474,16 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 	keys, err := c.seal.GetStoredKeys(ctx)
 	if err != nil {
 		return NewNonFatalError(fmt.Errorf("fetching stored unseal keys failed: %w", err))
+	}
+
+	// Check whether Vault initialization is still in progress. If it is is, then
+	// bail out to give it a chance to complete.
+	isInitializing, err := c.seal.IsInitializationFlagSet(ctx)
+	if err != nil {
+		return NewNonFatalError(fmt.Errorf("fetching seal initialization flag failed: %w", err))
+	}
+	if isInitializing {
+		return NewNonFatalError(errors.New("stored unseal keys found, but flag indicates Vault initialization is still in progress"))
 	}
 
 	// This usually happens when auto-unseal is configured, but the servers have

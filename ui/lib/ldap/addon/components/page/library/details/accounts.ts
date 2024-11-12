@@ -21,7 +21,7 @@ interface Args {
 
 export default class LdapLibraryDetailsAccountsPageComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
-  @service declare readonly router: RouterService;
+  @service('app-router') declare readonly router: RouterService;
 
   @tracked showCheckOutPrompt = false;
   @tracked checkOutTtl: string | null = null;
