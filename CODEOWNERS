@@ -31,7 +31,7 @@
 /vault/plugin_catalog.go      @hashicorp/vault-ecosystem
 
 /website/content/ @hashicorp/vault-education-approvers
-/website/content/docs/plugin-portal.mdx   @acahn @hashicorp/vault-education-approvers
+/website/content/docs/plugin-portal.mdx   @hashicorp/vault-education-approvers
 
 # Plugin docs
 /website/content/docs/plugins/              @hashicorp/vault-ecosystem @hashicorp/vault-education-approvers
