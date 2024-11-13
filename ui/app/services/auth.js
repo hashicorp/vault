@@ -29,6 +29,7 @@ export default Service.extend({
   permissions: service(),
   currentCluster: service(),
   router: service(),
+  store: service(),
   namespaceService: service('namespace'),
 
   IDLE_TIMEOUT: 3 * 60e3,
@@ -210,10 +211,14 @@ export default Service.extend({
     return this.ajax(url, 'POST', { namespace });
   },
 
-  lookupSelf() {
-    const namespace = this.authData.userRootNamespace;
-    const url = '/v1/auth/token/lookup-self';
-    return this.ajax(url, 'GET', { namespace });
+  async lookupSelf(token) {
+    try {
+      return this.store
+        .adapterFor('application')
+        .ajax('/v1/auth/token/lookup-self', 'GET', { headers: { 'X-Vault-Token': token } });
+    } catch {
+      // swallow error
+    }
   },
 
   revokeCurrentToken() {
@@ -261,7 +266,7 @@ export default Service.extend({
     return userRootNamespace;
   },
 
-  persistAuthData() {
+  async persistAuthData() {
     const [firstArg, resp] = arguments;
     const currentNamespace = this.namespaceService.path || '';
     // dropdown vs tab format
@@ -281,19 +286,12 @@ export default Service.extend({
       mountPath,
       ...BACKENDS.find((b) => b.type === backend),
     };
-    // TODO: displayName is not populated correctly with OIDC + totp (likely all MFA methods)
-    let displayName;
-    if (isArray(currentBackend.displayNamePath)) {
-      displayName = currentBackend.displayNamePath.map((name) => get(resp, name)).join('/');
-    } else {
-      displayName = get(resp, currentBackend.displayNamePath);
-    }
 
     const { entity_id, policies, renewable, namespace_path } = resp;
     const userRootNamespace = this.calculateRootNamespace(currentNamespace, namespace_path, backend);
     const data = {
       userRootNamespace,
-      displayName,
+      displayName: null, // set below
       backend: currentBackend,
       token: resp.client_token || get(resp, currentBackend.tokenPath),
       policies,
@@ -318,9 +316,7 @@ export default Service.extend({
     // this is intentionally not included in setExpirationSettings so we can unit test that method
     if (Ember.testing) this.set('allowExpiration', false);
 
-    // if (!data.displayName) {
-    //   data.displayName = (this.getTokenData(tokenName) || {}).displayName;
-    // }
+    data.displayName = await this.setDisplayName(resp, currentBackend.displayNamePath, tokenName);
 
     this.set('tokens', addToArray(this.tokens, tokenName));
     this.setTokenData(tokenName, data);
@@ -330,6 +326,27 @@ export default Service.extend({
       token: tokenName,
       isRoot: policies.includes('root'),
     });
+  },
+
+  async setDisplayName(resp, displayNamePath, tokenName) {
+    let displayName;
+
+    // first check if auth response includes a display name
+    displayName = isArray(displayNamePath)
+      ? displayNamePath.map((name) => get(resp, name)).join('/')
+      : get(resp, displayNamePath);
+
+    // if not, check stored token data
+    if (!displayName) {
+      displayName = (this.getTokenData(tokenName) || {}).displayName;
+    }
+
+    // if still nothing, request token data as a last resort
+    if (!displayName) {
+      const { data } = await this.lookupSelf(resp.client_token);
+      displayName = data.display_name;
+    }
+    return displayName;
   },
 
   setTokenData(token, data) {
