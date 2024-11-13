@@ -50,6 +50,7 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/osutil"
+	"github.com/hashicorp/vault/helper/trace"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -140,6 +141,8 @@ const (
 		"file."
 
 	WellKnownPrefix = "/.well-known/"
+
+	enableUnsealTraceEnvVar = "VAULT_ENABLE_UNSEAL_TRACE"
 )
 
 var (
@@ -2019,6 +2022,21 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 // unsealInternal takes in the master key and attempts to unseal the barrier.
 // N.B.: This must be called with the state write lock held.
 func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) error {
+	unsealTraceEnabled, err := isUnsealTraceEnabledByEnv()
+	if err != nil {
+		c.logger.Warn("failed to determine if unseal trace is enabled", "error", err)
+	}
+
+	if unsealTraceEnabled {
+		file, stop, err := trace.StartDebugTrace("trace_unsealInternal")
+		if err == nil {
+			c.logger.Info("unseal trace started", "file", file)
+			defer stop()
+		} else {
+			c.logger.Warn("failed to start unseal trace", "error", err)
+		}
+	}
+
 	// Attempt to unlock
 	if err := c.barrier.Unseal(ctx, masterKey); err != nil {
 		return err
@@ -2101,6 +2119,20 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) error {
 		}
 	}
 	return nil
+}
+
+func isUnsealTraceEnabledByEnv() (bool, error) {
+	enableUnsealTraceRaw, ok := os.LookupEnv(enableUnsealTraceEnvVar)
+	if !ok {
+		return false, nil
+	}
+
+	enableUnsealTrace, err := strconv.ParseBool(enableUnsealTraceRaw)
+	if err != nil {
+		return false, fmt.Errorf("failed to parse %s: %w", enableUnsealTraceEnvVar, err)
+	}
+
+	return enableUnsealTrace, nil
 }
 
 // SealWithRequest takes in a logical.Request, acquires the lock, and passes
