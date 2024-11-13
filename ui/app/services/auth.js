@@ -212,13 +212,9 @@ export default Service.extend({
   },
 
   async lookupSelf(token) {
-    try {
-      return this.store
-        .adapterFor('application')
-        .ajax('/v1/auth/token/lookup-self', 'GET', { headers: { 'X-Vault-Token': token } });
-    } catch {
-      // swallow error
-    }
+    return this.store
+      .adapterFor('application')
+      .ajax('/v1/auth/token/lookup-self', 'GET', { headers: { 'X-Vault-Token': token } });
   },
 
   revokeCurrentToken() {
@@ -341,10 +337,17 @@ export default Service.extend({
       displayName = (this.getTokenData(tokenName) || {}).displayName;
     }
 
-    // if still nothing, request token data as a last resort
+    // this is a workaround for OIDC/SAML methods WITH mfa configured. at this time mfa/validate endpoint does not
+    // return display_name (or metadata that includes it) for this auth combination.
+    // this if block can be removed if/when the API returns display_name on the mfa/validate response.
     if (!displayName) {
-      const { data } = await this.lookupSelf(resp.client_token);
-      displayName = data.display_name;
+      // if still nothing, request token data as a last resort
+      try {
+        const { data } = await this.lookupSelf(resp.client_token);
+        displayName = data.display_name;
+      } catch {
+        // silently fail since we're just trying to set a display name
+      }
     }
     return displayName;
   },
