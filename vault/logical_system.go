@@ -5503,24 +5503,25 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 }
 
 type SealStatusResponse struct {
-	Type              string   `json:"type"`
-	Initialized       bool     `json:"initialized"`
-	Sealed            bool     `json:"sealed"`
-	T                 int      `json:"t"`
-	N                 int      `json:"n"`
-	Progress          int      `json:"progress"`
-	Nonce             string   `json:"nonce"`
-	Version           string   `json:"version"`
-	BuildDate         string   `json:"build_date"`
-	Migration         bool     `json:"migration"`
-	ClusterName       string   `json:"cluster_name,omitempty"`
-	ClusterID         string   `json:"cluster_id,omitempty"`
-	RecoverySeal      bool     `json:"recovery_seal"`
-	StorageType       string   `json:"storage_type,omitempty"`
-	HCPLinkStatus     string   `json:"hcp_link_status,omitempty"`
-	HCPLinkResourceID string   `json:"hcp_link_resource_ID,omitempty"`
-	Warnings          []string `json:"warnings,omitempty"`
-	RecoverySealType  string   `json:"recovery_seal_type,omitempty"`
+	Type               string   `json:"type"`
+	Initialized        bool     `json:"initialized"`
+	Sealed             bool     `json:"sealed"`
+	T                  int      `json:"t"`
+	N                  int      `json:"n"`
+	Progress           int      `json:"progress"`
+	Nonce              string   `json:"nonce"`
+	Version            string   `json:"version"`
+	BuildDate          string   `json:"build_date"`
+	Migration          bool     `json:"migration"`
+	ClusterName        string   `json:"cluster_name,omitempty"`
+	ClusterID          string   `json:"cluster_id,omitempty"`
+	RecoverySeal       bool     `json:"recovery_seal"`
+	StorageType        string   `json:"storage_type,omitempty"`
+	HCPLinkStatus      string   `json:"hcp_link_status,omitempty"`
+	HCPLinkResourceID  string   `json:"hcp_link_resource_ID,omitempty"`
+	Warnings           []string `json:"warnings,omitempty"`
+	RecoverySealType   string   `json:"recovery_seal_type,omitempty"`
+	RemovedFromCluster *bool    `json:"removed_from_cluster,omitempty"`
 }
 
 type SealBackendStatus struct {
@@ -5606,23 +5607,29 @@ func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResp
 	}
 
 	progress, nonce := core.SecretProgress(lock)
+	var removed *bool
+	if haBackend := core.getRemovableHABackend(); haBackend != nil {
+		r := haBackend.IsRemoved()
+		removed = &r
+	}
 
 	s := &SealStatusResponse{
-		Type:             sealType,
-		Initialized:      initialized,
-		Sealed:           sealed,
-		T:                sealConfig.SecretThreshold,
-		N:                sealConfig.SecretShares,
-		Progress:         progress,
-		Nonce:            nonce,
-		Version:          version.GetVersion().VersionNumber(),
-		BuildDate:        version.BuildDate,
-		Migration:        core.IsInSealMigrationMode(lock) && !core.IsSealMigrated(lock),
-		ClusterName:      clusterName,
-		ClusterID:        clusterID,
-		RecoverySeal:     core.SealAccess().RecoveryKeySupported(),
-		RecoverySealType: recoverySealType,
-		StorageType:      core.StorageType(),
+		Type:               sealType,
+		Initialized:        initialized,
+		Sealed:             sealed,
+		T:                  sealConfig.SecretThreshold,
+		N:                  sealConfig.SecretShares,
+		Progress:           progress,
+		Nonce:              nonce,
+		Version:            version.GetVersion().VersionNumber(),
+		BuildDate:          version.BuildDate,
+		Migration:          core.IsInSealMigrationMode(lock) && !core.IsSealMigrated(lock),
+		RemovedFromCluster: removed,
+		ClusterName:        clusterName,
+		ClusterID:          clusterID,
+		RecoverySeal:       core.SealAccess().RecoveryKeySupported(),
+		RecoverySealType:   recoverySealType,
+		StorageType:        core.StorageType(),
 	}
 
 	if resourceIDonHCP != "" {
