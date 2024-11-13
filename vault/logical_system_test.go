@@ -7258,6 +7258,22 @@ func Test_sanitizePath(t *testing.T) {
 			want: "mount/path/",
 		},
 		{
+			path: "//mount/path/",
+			want: "mount/path/",
+		},
+		{
+			path: "/\\mount/path/",
+			want: "mount/path/",
+		},
+		{
+			path: "\\mount/path/",
+			want: "\\mount/path/",
+		},
+		{
+			path: "\\//mount/path/",
+			want: "\\//mount/path/",
+		},
+		{
 			path: "",
 			want: "",
 		},
@@ -7267,6 +7283,18 @@ func Test_sanitizePath(t *testing.T) {
 		},
 		{
 			path: "///",
+			want: "",
+		},
+		{
+			path: "\\",
+			want: "\\/",
+		},
+		{
+			path: "\\/",
+			want: "\\/",
+		},
+		{
+			path: "/\\",
 			want: "",
 		},
 	}
