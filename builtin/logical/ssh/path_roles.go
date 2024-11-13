@@ -698,6 +698,7 @@ func (b *backend) parseRole(role *sshRole) (map[string]interface{}, error) {
 			"allowed_user_key_lengths":    role.AllowedUserKeyTypesLengths,
 			"algorithm_signer":            role.AlgorithmSigner,
 			"not_before_duration":         int64(role.NotBeforeDuration.Seconds()),
+			"allow_empty_principals":      role.AllowEmptyPrincipals,
 		}
 	case KeyTypeDynamic:
 		return nil, fmt.Errorf("dynamic key type roles are no longer supported")
