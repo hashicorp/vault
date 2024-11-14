@@ -4579,16 +4579,8 @@ func (c *Core) setupAuditedHeadersConfig(ctx context.Context) error {
 // RemovableNodeHABackend interface. The value of the `ok` result will be false
 // if the HA and underlyingPhysical backends are nil or do not support this operation.
 func (c *Core) IsRemovedFromCluster() (removed, ok bool) {
-	var haBackend any
-	if c.ha != nil {
-		haBackend = c.ha
-	} else if c.underlyingPhysical != nil {
-		haBackend = c.underlyingPhysical
-	} else {
-		return false, false
-	}
-	removableNodeHA, ok := haBackend.(physical.RemovableNodeHABackend)
-	if !ok {
+	removableNodeHA := c.getRemovableHABackend()
+	if removableNodeHA == nil {
 		return false, false
 	}
 
