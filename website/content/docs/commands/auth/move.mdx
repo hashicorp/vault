@@ -28,7 +28,21 @@ Move the existing auth method at ns1/approle/ to ns2/new-approle/:
 $ vault auth move ns1/auth/approle/ ns2/auth/new-approle/
 ```
 
+Move the existing auth method `auth/userpass` to the `education/certification/approle` namespace.
+
+```shell-session
+$ vault auth move auth/userpass education/certification/auth/userpass
+```
+
 ## Usage
 
 There are no flags beyond the [standard set of flags](/vault/docs/commands)
 included on all commands.
+
+## Post-move considerations
+
+Each namespace has its own policies, auth methods, secrets engines, tokens,
+identity entities and groups. You must consider the following after moving a mount across namespaces:
+
+- Necessary policies exist in the target namespace
+- Entities and groups might need updates after an auth method move
