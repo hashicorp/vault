@@ -82,38 +82,37 @@ func newMockHARemovableNodeBackend(isRemoved func(context.Context, string) (bool
 // when the context contains a removed node ID
 func Test_haMembershipServerCheck(t *testing.T) {
 	nodeIDCtx := metadata.NewIncomingContext(context.Background(), metadata.MD{haNodeIDKey: {"node_id"}})
+	otherErr := errors.New("error checking")
 	testCases := []struct {
 		name      string
 		nodeIDCtx context.Context
 		haBackend physical.RemovableNodeHABackend
-		wantError bool
+		wantError error
 	}{
 		{
 			name:      "nil backend",
 			haBackend: nil,
 			nodeIDCtx: nodeIDCtx,
-			wantError: false,
 		}, {
 			name: "no node ID context",
 			haBackend: newMockHARemovableNodeBackend(func(ctx context.Context, s string) (bool, error) {
 				return false, nil
 			}),
 			nodeIDCtx: context.Background(),
-			wantError: false,
 		}, {
 			name: "node removed",
 			haBackend: newMockHARemovableNodeBackend(func(ctx context.Context, s string) (bool, error) {
 				return true, nil
 			}),
 			nodeIDCtx: nodeIDCtx,
-			wantError: true,
+			wantError: StatusNotHAMember,
 		}, {
 			name: "node removed err",
 			haBackend: newMockHARemovableNodeBackend(func(ctx context.Context, s string) (bool, error) {
-				return false, errors.New("error checking")
+				return false, otherErr
 			}),
 			nodeIDCtx: nodeIDCtx,
-			wantError: false,
+			wantError: otherErr,
 		},
 	}
 	for _, tc := range testCases {
@@ -122,8 +121,8 @@ func Test_haMembershipServerCheck(t *testing.T) {
 				logger: hclog.NewNullLogger(),
 			}
 			err := haMembershipServerCheck(tc.nodeIDCtx, c, tc.haBackend)
-			if tc.wantError {
-				require.Error(t, err)
+			if tc.wantError != nil {
+				require.EqualError(t, err, tc.wantError.Error())
 			} else {
 				require.NoError(t, err)
 			}

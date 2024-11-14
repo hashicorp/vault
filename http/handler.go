@@ -993,7 +993,7 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 			core.Logger().Trace("cannot forward request (possibly disabled on active node), falling back to redirection to standby")
 		case errors.Is(err, vault.StatusNotHAMember):
 			core.Logger().Trace("this node is not a member of the HA cluster", "error", err)
-			respondError(w, http.StatusServiceUnavailable, err)
+			respondError(w, http.StatusInternalServerError, err)
 			return
 		default:
 			core.Logger().Error("forward request error", "error", err)

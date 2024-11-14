@@ -66,7 +66,7 @@ func haMembershipServerCheck(ctx context.Context, c *Core, haBackend physical.Re
 	removed, err := haBackend.IsNodeRemoved(ctx, nodeID)
 	if err != nil {
 		c.logger.Error("failed to check if node is removed", "error", err)
-		return nil
+		return err
 	}
 	if removed {
 		return StatusNotHAMember
