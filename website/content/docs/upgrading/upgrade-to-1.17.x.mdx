@@ -81,6 +81,50 @@ Users may not be able to log into Vault if the JWT role is configured
 incorrectly. For additional details, refer to the
 [JWT auth method (API)](/vault/api-docs/auth/jwt) documentation.
 
+### Activity Log Changes
+
+#### Default Activity Log Querying Period
+
+As of 1.17.9 and later, the field `default_report_months` can no longer be configured or read. Any previously set values
+will be ignored by the system.
+
+
+Attempts to modify `default_report_months` through the
+[/sys/internal/counters/config](/vault/api-docs/system/internal-counters#update-the-client-count-configuration)
+endpoint, will result in the following warning from Vault:
+
+<CodeBlockConfig hideClipboard>
+
+  ```shell-session
+
+  WARNING! The following warnings were returned from Vault:
+
+  * default_report_months is deprecated: defaulting to billing start time
+
+
+  ```
+
+</CodeBlockConfig>
+
+
+The `current_billing_period` toggle for `/sys/internal/counters/activity` is also deprecated, as this will be set
+true by default.
+
+Attempts to set `current_billing_period` will result in the following warning from Vault:
+
+<CodeBlockConfig hideClipboard>
+
+  ```shell-session
+
+  WARNING! The following warnings were returned from Vault:
+
+  * current_billing_period is deprecated; unless otherwise specified, all requests will default to the current billing period
+
+
+  ```
+
+</CodeBlockConfig>
+
 ### Auto-rolled billing start date
 
 As of 1.17.3 and later, the billing start date (license start date if not configured) rolls over to the latest billing year at the end of the last cycle.
@@ -128,6 +172,15 @@ kubectl exec -ti <NAME> -- wget https://github.com/moparisthebest/static-curl/re
 ```
 
 **NOTE:** When using this option you'll want to verify that the static binary comes from a trusted source.
+
+### Product usage reporting
+
+As of 1.17.9, Vault will collect anonymous product usage metrics for HashiCorp. This information will be collected
+alongside activity information, and will be sent automatically if automated reporting is configured, or added to manual
+reports if manual reporting is preferred.
+
+See the main page for [Vault product usage metrics reporting](/vault/docs/enterprise/license/product-usage-reporting) for
+more details, and information about opt-out.
 
 ## Known issues and workarounds
 
