@@ -5558,16 +5558,22 @@ func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResp
 	hcpLinkStatus, resourceIDonHCP := core.GetHCPLinkStatus()
 
 	redactVersion, _, redactClusterName, _ := logical.CtxRedactionSettingsValue(ctx)
+	var removed *bool
+	isRemoved, shouldInclude := core.IsRemovedFromCluster()
+	if shouldInclude {
+		removed = &isRemoved
+	}
 
 	if sealConfig == nil {
 		s := &SealStatusResponse{
-			Type:         core.SealAccess().BarrierSealConfigType().String(),
-			Initialized:  initialized,
-			Sealed:       true,
-			RecoverySeal: core.SealAccess().RecoveryKeySupported(),
-			StorageType:  core.StorageType(),
-			Version:      version.GetVersion().VersionNumber(),
-			BuildDate:    version.BuildDate,
+			Type:               core.SealAccess().BarrierSealConfigType().String(),
+			Initialized:        initialized,
+			Sealed:             true,
+			RecoverySeal:       core.SealAccess().RecoveryKeySupported(),
+			StorageType:        core.StorageType(),
+			Version:            version.GetVersion().VersionNumber(),
+			BuildDate:          version.BuildDate,
+			RemovedFromCluster: removed,
 		}
 
 		if redactVersion {
@@ -5607,11 +5613,6 @@ func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResp
 	}
 
 	progress, nonce := core.SecretProgress(lock)
-	var removed *bool
-	if haBackend := core.getRemovableHABackend(); haBackend != nil {
-		r := haBackend.IsRemoved()
-		removed = &r
-	}
 
 	s := &SealStatusResponse{
 		Type:               sealType,
