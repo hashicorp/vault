@@ -115,6 +115,8 @@ type Config struct {
 	License          string `hcl:"-"`
 	LicensePath      string `hcl:"license_path"`
 	DisableSSCTokens bool   `hcl:"-"`
+
+	EnableUnsealTrace bool `hcl:"enable_unseal_trace"`
 }
 
 const (
@@ -1150,6 +1152,8 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"detect_deadlocks": c.DetectDeadlocks,
 
 		"imprecise_lease_role_tracking": c.ImpreciseLeaseRoleTracking,
+
+		"enable_unseal_trace": c.EnableUnsealTrace,
 	}
 	for k, v := range sharedResult {
 		result[k] = v

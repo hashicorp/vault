@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func StartDebugTrace(filePrefix string) (file string, stop func(), err error) {
+func StartDebugTrace(filePrefix string) (file string, stop func() error, err error) {
 	path := fmt.Sprintf("%s/%s_%s", os.TempDir(), filePrefix, time.Now().Format(time.RFC3339))
 	traceFile, err := os.Create(path)
 	if err != nil {
@@ -19,9 +19,9 @@ func StartDebugTrace(filePrefix string) (file string, stop func(), err error) {
 		return "", nil, fmt.Errorf("failed to start trace: %s", err)
 	}
 
-	stop = func() {
+	stop = func() error {
 		trace.Stop()
-		traceFile.Close()
+		return traceFile.Close()
 	}
 
 	return traceFile.Name(), stop, nil

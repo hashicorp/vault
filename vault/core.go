@@ -2022,19 +2022,8 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 // unsealInternal takes in the master key and attempts to unseal the barrier.
 // N.B.: This must be called with the state write lock held.
 func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) error {
-	unsealTraceEnabled, err := isUnsealTraceEnabledByEnv()
-	if err != nil {
-		c.logger.Warn("failed to determine if unseal trace is enabled", "error", err)
-	}
-
-	if unsealTraceEnabled {
-		file, stop, err := trace.StartDebugTrace("trace_unsealInternal")
-		if err == nil {
-			c.logger.Info("unseal trace started", "file", file)
-			defer stop()
-		} else {
-			c.logger.Warn("failed to start unseal trace", "error", err)
-		}
+	if stopTrace := c.traceUnsealIfEnabled(); stopTrace != nil {
+		defer stopTrace()
 	}
 
 	// Attempt to unlock
@@ -2121,18 +2110,35 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) error {
 	return nil
 }
 
-func isUnsealTraceEnabledByEnv() (bool, error) {
-	enableUnsealTraceRaw, ok := os.LookupEnv(enableUnsealTraceEnvVar)
-	if !ok {
-		return false, nil
+// traceUnsealIfEnabled checks if unseal tracing is enabled in the server config
+// and starts a go trace if it is, returning a stop function to be called once
+// the unseal process is complete.
+func (c *Core) traceUnsealIfEnabled() (stop func()) {
+	// use rawConfig to allow config hot-reload of EnableUnsealTrace via SIGHUP
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		c.logger.Warn("failed to get raw config to check enable_unseal_trace")
+		return nil
 	}
 
-	enableUnsealTrace, err := strconv.ParseBool(enableUnsealTraceRaw)
+	if !conf.(*server.Config).EnableUnsealTrace {
+		return nil
+	}
+
+	file, stopTrace, err := trace.StartDebugTrace("trace_unsealInternal")
 	if err != nil {
-		return false, fmt.Errorf("failed to parse %s: %w", enableUnsealTraceEnvVar, err)
+		c.logger.Warn("failed to start unseal trace", "error", err)
 	}
 
-	return enableUnsealTrace, nil
+	c.logger.Info("unseal trace started", "file", file)
+
+	return func() {
+		err := stopTrace()
+		if err != nil {
+			c.logger.Warn("failure when stopping unseal trace", "error", err)
+		}
+		c.logger.Info("unseal trace completed", "file", file)
+	}
 }
 
 // SealWithRequest takes in a logical.Request, acquires the lock, and passes
@@ -3594,6 +3600,7 @@ func (c *Core) SanitizedConfig() map[string]interface{} {
 
 // LogFormat returns the log format current in use.
 func (c *Core) LogFormat() string {
+	// reference?
 	conf := c.rawConfig.Load()
 	return conf.(*server.Config).LogFormat
 }
