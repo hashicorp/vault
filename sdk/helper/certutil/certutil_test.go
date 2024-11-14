@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
-	"github.com/hashicorp/go-secure-stdlib/cryptoutil"
+	"github.com/hashicorp/vault/helper/cryptoutil"
 )
 
 // Tests converting back and forth between a CertBundle and a ParsedCertBundle.

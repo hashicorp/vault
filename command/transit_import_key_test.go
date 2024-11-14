@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-secure-stdlib/cryptoutil"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/cryptoutil"
 	"github.com/stretchr/testify/require"
 )
 

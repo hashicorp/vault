@@ -33,7 +33,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/go-secure-stdlib/cryptoutil"
+	"github.com/hashicorp/vault/helper/cryptoutil"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
