@@ -15,6 +15,7 @@ func StartDebugTrace(filePrefix string) (file string, stop func(), err error) {
 	}
 
 	if err := trace.Start(traceFile); err != nil {
+		traceFile.Close()
 		return "", nil, fmt.Errorf("failed to start trace: %s", err)
 	}
 
