@@ -85,6 +85,14 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 			return
 		}
 
+		// Check if this node was removed from the cluster. If so, respond with an error and return,
+		// since we don't want a removed node to be able to unseal.
+		removed, ok := core.IsRemovedFromCluster()
+		if ok && removed {
+			respondError(w, http.StatusInternalServerError, errors.New("node was removed from a HA cluster"))
+			return
+		}
+
 		// Parse the request
 		var req UnsealRequest
 		if _, err := parseJSONRequest(core.PerfStandby(), r, w, &req); err != nil {
