@@ -2315,3 +2315,44 @@ func TestCreateStorageGroup(ctx context.Context, c *Core, entityIDs []string) er
 	}
 	return nil
 }
+
+// Mock HABackend is a non-functional HABackend for testing purposes
+type MockHABackend struct {
+	physical.HABackend
+	physical.Backend
+}
+
+func (m *MockHABackend) HAEnabled() bool {
+	return true
+}
+
+// MockRemovableNodeHABackend is a barely functional RemovableNodeHABackend for testing purposes.
+// It has a functional IsRemoved method and an exported Removed field so that the desired state can be easily set.
+type MockRemovableNodeHABackend struct {
+	physical.RemovableNodeHABackend
+	physical.Backend
+	Removed bool
+}
+
+func (m *MockRemovableNodeHABackend) HAEnabled() bool {
+	return true
+}
+
+func (m *MockRemovableNodeHABackend) IsRemoved() bool {
+	return m.Removed
+}
+
+func TestCoreWithMockRemovableNodeHABackend(t *testing.T, removed bool) (*Core, error) {
+	t.Helper()
+	logger := corehelpers.NewTestLogger(t)
+	inmha, err := physInmem.NewInmemHA(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	conf := testCoreConfig(t, inmha, logger)
+	mockHABackend := &MockRemovableNodeHABackend{Removed: removed}
+	conf.HAPhysical = mockHABackend
+	conf.RedirectAddr = "http://127.0.0.1:8200"
+
+	return NewCore(conf)
+}
