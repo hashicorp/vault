@@ -22,7 +22,6 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
-	bolt "github.com/hashicorp-forge/bbolt"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-raftchunking"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
@@ -41,7 +40,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/version"
-	etcdbolt "go.etcd.io/bbolt"
+	bolt "go.etcd.io/bbolt"
 )
 
 const (
@@ -528,7 +527,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 			logStore = wal
 		} else {
 			// use the traditional BoltDB setup
-			opts := etcdboltOptions(dbPath)
+			opts := boltOptions(dbPath)
 			raftOptions := raftboltdb.Options{
 				Path:                    dbPath,
 				BoltOptions:             opts,
@@ -864,7 +863,7 @@ func makeLogVerifyReportFn(logger log.Logger) verifier.ReportFn {
 
 func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
 	var stats map[string]string
-	var logStoreStats *etcdbolt.Stats
+	var logStoreStats *bolt.Stats
 
 	b.l.RLock()
 	if boltStore, ok := b.stableStore.(*raftboltdb.BoltStore); ok {
@@ -924,7 +923,7 @@ func (b *RaftBackend) collectMetricsWithStats(stats bolt.Stats, sink *metricsuti
 	sink.IncrCounterWithLabels([]string{"raft_storage", "bolt", "write", "time"}, float32(txstats.GetWriteTime().Milliseconds()), labels)
 }
 
-func (b *RaftBackend) collectEtcdBoltMetricsWithStats(stats etcdbolt.Stats, sink *metricsutil.ClusterMetricSink, database string) {
+func (b *RaftBackend) collectEtcdBoltMetricsWithStats(stats bolt.Stats, sink *metricsutil.ClusterMetricSink, database string) {
 	txstats := stats.TxStats
 	labels := []metricsutil.Label{{"database", database}}
 	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "freelist", "free_pages"}, float32(stats.FreePageN), labels)
