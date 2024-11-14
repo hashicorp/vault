@@ -11,7 +11,7 @@ import (
 	"crypto/rand"
 	"testing"
 
-	"github.com/hashicorp/go-secure-stdlib/cryptoutil"
+	"github.com/hashicorp/vault/helper/cryptoutil"
 )
 
 func TestGetPrivateKeyTypeFromPublicKey(t *testing.T) {

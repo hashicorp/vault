@@ -17,7 +17,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-secure-stdlib/cryptoutil"
+	"github.com/hashicorp/vault/helper/cryptoutil"
 )
 
 type certBuilder struct {

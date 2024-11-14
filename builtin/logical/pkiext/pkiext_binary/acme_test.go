@@ -24,9 +24,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-secure-stdlib/cryptoutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/logical/pkiext"
+	"github.com/hashicorp/vault/helper/cryptoutil"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
