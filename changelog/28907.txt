@@ -1,0 +1,3 @@
+```release-note:improvement
+secret/pki: Introduce a new value `always_enforce_err` within `leaf_not_after_behavior` to force the error in all circumstances such as CA issuance and ACME requests if requested TTL values are beyond the issuer's NotAfter.
+```
