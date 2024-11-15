@@ -7224,6 +7224,94 @@ func TestGenerateRootCAWithAIA(t *testing.T) {
 	requireSuccessNonNilResponse(t, resp, err, "expected root generation to succeed")
 }
 
+// TestIssuance_AlwaysEnforceErr validates that we properly return an error in all request
+// types that go beyond the issuer's NotAfter
+func TestIssuance_AlwaysEnforceErr(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"key_type":    "ec",
+		"ttl":         "10h",
+		"issuer_name": "root-ca",
+		"key_name":    "root-key",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "expected root generation to succeed")
+
+	resp, err = CBPatch(b, s, "issuer/root-ca", map[string]interface{}{
+		"leaf_not_after_behavior": "always_enforce_err",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed updating root issuer with always_enforce_err")
+
+	resp, err = CBWrite(b, s, "roles/test-role", map[string]interface{}{
+		"allow_any_name":         true,
+		"key_type":               "ec",
+		"allowed_serial_numbers": "*",
+	})
+
+	expectedErrContains := "cannot satisfy request, as TTL would result in notAfter"
+
+	// Make sure we fail on CA issuance requests now
+	t.Run("ca-issuance", func(t *testing.T) {
+		resp, err = CBWrite(b, s, "intermediate/generate/internal", map[string]interface{}{
+			"common_name": "myint.com",
+		})
+		requireSuccessNonNilResponse(t, resp, err, "failed generating intermediary CSR")
+		requireFieldsSetInResp(t, resp, "csr")
+		csr := resp.Data["csr"]
+
+		_, err = CBWrite(b, s, "issuer/root-ca/sign-intermediate", map[string]interface{}{
+			"csr":            csr,
+			"use_csr_values": true,
+			"ttl":            "60h",
+		})
+		require.ErrorContains(t, err, expectedErrContains, "sign-intermediate should have failed as root issuer leaf behavior is set to always_enforce_err")
+
+		// Make sure it works if we are under
+		resp, err = CBWrite(b, s, "issuer/root-ca/sign-intermediate", map[string]interface{}{
+			"csr":            csr,
+			"use_csr_values": true,
+			"ttl":            "30m",
+		})
+		requireSuccessNonNilResponse(t, resp, err, "sign-intermediate should have passed with a lower TTL value and always_enforce_err")
+	})
+
+	// Make sure we fail on leaf csr signing leaf as we always did for 'err'
+	t.Run("sign-leaf-csr", func(t *testing.T) {
+		_, csrPem := generateTestCsr(t, certutil.ECPrivateKey, 256)
+
+		resp, err = CBWrite(b, s, "issuer/root-ca/sign/test-role", map[string]interface{}{
+			"ttl": "60h",
+			"csr": csrPem,
+		})
+		require.ErrorContains(t, err, expectedErrContains, "expected error from sign csr got: %v", resp)
+
+		// Make sure it works if we are under
+		resp, err = CBWrite(b, s, "issuer/root-ca/sign/test-role", map[string]interface{}{
+			"ttl": "30m",
+			"csr": csrPem,
+		})
+		requireSuccessNonNilResponse(t, resp, err, "sign should have succeeded with a lower TTL and always_enforce_err")
+	})
+
+	// Make sure we fail on leaf csr signing leaf as we always did for 'err'
+	t.Run("issue-leaf-csr", func(t *testing.T) {
+		resp, err = CBWrite(b, s, "issuer/root-ca/issue/test-role", map[string]interface{}{
+			"ttl":         "60h",
+			"common_name": "leaf.example.com",
+		})
+		require.ErrorContains(t, err, expectedErrContains, "expected error from issue got: %v", resp)
+
+		// Make sure it works if we are under
+		resp, err = CBWrite(b, s, "issuer/root-ca/issue/test-role", map[string]interface{}{
+			"ttl":         "30m",
+			"common_name": "leaf.example.com",
+		})
+		requireSuccessNonNilResponse(t, resp, err, "issue should have worked with a lower TTL and always_enforce_err")
+	})
+}
+
 var (
 	initTest  sync.Once
 	rsaCAKey  string
