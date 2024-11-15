@@ -18,6 +18,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/hashicorp/go-secure-stdlib/cryptoutil"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/logical"

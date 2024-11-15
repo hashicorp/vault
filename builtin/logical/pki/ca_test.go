@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/go-secure-stdlib/cryptoutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/cryptoutil"
 	vaulthttp "github.com/hashicorp/vault/http"

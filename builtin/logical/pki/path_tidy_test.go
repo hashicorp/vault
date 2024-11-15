@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/go-secure-stdlib/cryptoutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/cryptoutil"
 	"github.com/hashicorp/vault/helper/testhelpers"
