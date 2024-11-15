@@ -54,26 +54,26 @@ import (
 func newFullAddonRegistry() *registry {
 	return &registry{
 		credentialBackends: map[string]credentialBackend{
-			"alicloud": {Factory: credAliCloud.Factory},
-			"app-id": {
+			AuthTypeAliCloud: {Factory: credAliCloud.Factory},
+			AuthTypeAppId: {
 				Factory:           removedFactory,
 				DeprecationStatus: consts.Removed,
 			},
-			"aws":        {Factory: credAws.Factory},
-			"azure":      {Factory: credAzure.Factory},
-			"cf":         {Factory: credCF.Factory},
-			"gcp":        {Factory: credGcp.Factory},
-			"github":     {Factory: credGitHub.Factory},
-			"kerberos":   {Factory: credKerb.Factory},
-			"kubernetes": {Factory: credKube.Factory},
-			"ldap":       {Factory: credLdap.Factory},
-			"oci":        {Factory: credOCI.Factory},
-			"okta":       {Factory: credOkta.Factory},
-			"pcf": {
+			AuthTypeAWS:        {Factory: credAws.Factory},
+			AuthTypeAzure:      {Factory: credAzure.Factory},
+			AuthTypeCF:         {Factory: credCF.Factory},
+			AuthTypeGCP:        {Factory: credGcp.Factory},
+			AuthTypeGitHub:     {Factory: credGitHub.Factory},
+			AuthTypeKerberos:   {Factory: credKerb.Factory},
+			AuthTypeKubernetes: {Factory: credKube.Factory},
+			AuthTypeLDAP:       {Factory: credLdap.Factory},
+			AuthTypeOCI:        {Factory: credOCI.Factory},
+			AuthTypeOkta:       {Factory: credOkta.Factory},
+			AuthTypePCF: {
 				Factory:           credCF.Factory,
 				DeprecationStatus: consts.Deprecated,
 			},
-			"radius": {Factory: credRadius.Factory},
+			AuthTypeRadius: {Factory: credRadius.Factory},
 		},
 		databasePlugins: map[string]databasePlugin{
 			// These four plugins all use the same mysql implementation but with

@@ -19,6 +19,30 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+const (
+	AuthTypeAliCloud   = "alicloud"
+	AuthTypeAppId      = "app-id"
+	AuthTypeAWS        = "aws"
+	AuthTypeAzure      = "azure"
+	AuthTypeCF         = "cf"
+	AuthTypeGCP        = "gcp"
+	AuthTypeGitHub     = "github"
+	AuthTypeKerberos   = "kerberos"
+	AuthTypeKubernetes = "kubernetes"
+	AuthTypeLDAP       = "ldap"
+	AuthTypeOCI        = "oci"
+	AuthTypeOkta       = "okta"
+	AuthTypePCF        = "pcf"
+	AuthTypeRadius     = "radius"
+	AuthTypeToken      = "token"
+	AuthTypeCert       = "cert"
+	AuthTypeOIDC       = "oidc"
+	AuthTypeUserpass   = "userpass"
+	AuthTypeSAML       = "saml"
+	AuthTypeApprole    = "approle"
+	AuthTypeJWT        = "jwt"
+)
+
 // Registry is inherently thread-safe because it's immutable.
 // Thus, rather than creating multiple instances of it, we only need one.
 var Registry = newRegistry()
