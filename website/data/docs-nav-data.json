@@ -1542,7 +1542,16 @@
           },
           {
             "title": "Azure Key Vault",
-            "path": "secrets/key-management/azurekeyvault"
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "secrets/key-management/azurekeyvault"
+              },
+              {
+                "title": "Setup guide",
+                "path": "secrets/key-management/azurekeyvault/setup"
+              }
+            ]
           },
           {
             "title": "AWS KMS",
@@ -1550,7 +1559,16 @@
           },
           {
             "title": "GCP Cloud KMS",
-            "path": "secrets/key-management/gcpkms"
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "secrets/key-management/gcpkms"
+              },
+              {
+                "title": "Setup guide",
+                "path": "secrets/key-management/gcpkms/setup"
+              }
+            ]
           }
         ]
       },
