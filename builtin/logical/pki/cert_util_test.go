@@ -364,7 +364,7 @@ func TestParseCertificate(t *testing.T) {
 				"other_sans":            "1.3.6.1.4.1.311.20.2.3;utf8:caadmin@example.com",
 				"ttl":                   "2h",
 				"max_path_length":       2,
-				"permitted_dns_domains": ".example.com,.www.example.com",
+				"permitted_dns_domains": "example.com,.example.com,.www.example.com",
 				"ou":                    "unit1, unit2",
 				"organization":          "org1, org2",
 				"country":               "US, CA",
@@ -409,7 +409,7 @@ func TestParseCertificate(t *testing.T) {
 				UsePSS:                        true,
 				ForceAppendCaChain:            false,
 				UseCSRValues:                  false,
-				PermittedDNSDomains:           []string{".example.com", ".www.example.com"},
+				PermittedDNSDomains:           []string{"example.com", ".example.com", ".www.example.com"},
 				URLs:                          nil,
 				MaxPathLength:                 2,
 				NotBeforeDuration:             45 * time.Second,
@@ -433,7 +433,7 @@ func TestParseCertificate(t *testing.T) {
 				"serial_number":         "",
 				"ttl":                   "2h0m45s",
 				"max_path_length":       2,
-				"permitted_dns_domains": ".example.com,.www.example.com",
+				"permitted_dns_domains": "example.com,.example.com,.www.example.com",
 				"use_pss":               true,
 				"key_type":              "rsa",
 				"key_bits":              2048,
@@ -532,49 +532,50 @@ func TestParseCertificate(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b, s := CreateBackendWithStorage(t)
 
-		b, s := CreateBackendWithStorage(t)
+			var cert *x509.Certificate
+			issueTime := time.Now()
+			if tt.wantParams.IsCA {
+				resp, err := CBWrite(b, s, "root/generate/internal", tt.data)
+				require.NoError(t, err)
+				require.NotNil(t, resp)
 
-		var cert *x509.Certificate
-		issueTime := time.Now()
-		if tt.wantParams.IsCA {
-			resp, err := CBWrite(b, s, "root/generate/internal", tt.data)
-			require.NoError(t, err)
-			require.NotNil(t, resp)
+				certData := resp.Data["certificate"].(string)
+				cert, err = parsing.ParseCertificateFromString(certData)
+				require.NoError(t, err)
+				require.NotNil(t, cert)
+			} else {
+				// use the "simple CA" data to create the internal CA
+				caData := tests[1].data
+				caData["ttl"] = "3h"
+				resp, err := CBWrite(b, s, "root/generate/internal", caData)
+				require.NoError(t, err)
+				require.NotNil(t, resp)
 
-			certData := resp.Data["certificate"].(string)
-			cert, err = parsing.ParseCertificateFromString(certData)
-			require.NoError(t, err)
-			require.NotNil(t, cert)
-		} else {
-			// use the "simple CA" data to create the internal CA
-			caData := tests[1].data
-			caData["ttl"] = "3h"
-			resp, err := CBWrite(b, s, "root/generate/internal", caData)
-			require.NoError(t, err)
-			require.NotNil(t, resp)
+				// create a role
+				resp, err = CBWrite(b, s, "roles/test", tt.roleData)
+				require.NoError(t, err)
+				require.NotNil(t, resp)
 
-			// create a role
-			resp, err = CBWrite(b, s, "roles/test", tt.roleData)
-			require.NoError(t, err)
-			require.NotNil(t, resp)
+				// create the cert
+				resp, err = CBWrite(b, s, "issue/test", tt.data)
+				require.NoError(t, err)
+				require.NotNil(t, resp)
 
-			// create the cert
-			resp, err = CBWrite(b, s, "issue/test", tt.data)
-			require.NoError(t, err)
-			require.NotNil(t, resp)
+				certData := resp.Data["certificate"].(string)
+				cert, err = parsing.ParseCertificateFromString(certData)
+				require.NoError(t, err)
+				require.NotNil(t, cert)
+			}
 
-			certData := resp.Data["certificate"].(string)
-			cert, err = parsing.ParseCertificateFromString(certData)
-			require.NoError(t, err)
-			require.NotNil(t, cert)
-		}
-
-		t.Run(tt.name+" parameters", func(t *testing.T) {
-			testParseCertificateToCreationParameters(t, issueTime, tt, cert)
-		})
-		t.Run(tt.name+" fields", func(t *testing.T) {
-			testParseCertificateToFields(t, issueTime, tt, cert)
+			t.Run(tt.name+" parameters", func(t *testing.T) {
+				testParseCertificateToCreationParameters(t, issueTime, tt, cert)
+			})
+			t.Run(tt.name+" fields", func(t *testing.T) {
+				testParseCertificateToFields(t, issueTime, tt, cert)
+			})
 		})
 	}
 }

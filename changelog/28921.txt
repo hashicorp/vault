@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: Perform certificate validation when issuing or signing leaf certificates.
+```
