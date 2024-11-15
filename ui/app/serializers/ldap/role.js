@@ -6,8 +6,6 @@
 import ApplicationSerializer from '../application';
 
 export default class LdapRoleSerializer extends ApplicationSerializer {
-  primaryKey = 'name';
-
   serialize(snapshot) {
     // remove all fields that are not relevant to specified role type
     const { fieldsForType } = snapshot.record;

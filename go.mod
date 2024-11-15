@@ -81,7 +81,7 @@ require (
 	github.com/hashicorp/go-bexpr v0.1.12
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-discover v0.0.0-20210818145131-c573d69da192
-	github.com/hashicorp/go-gcp-common v0.9.0
+	github.com/hashicorp/go-gcp-common v0.9.1
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-kms-wrapping/entropy/v2 v2.0.1
 	github.com/hashicorp/go-kms-wrapping/v2 v2.0.16
@@ -128,9 +128,9 @@ require (
 	github.com/hashicorp/raft-wal v0.4.0
 	github.com/hashicorp/vault-hcp-lib v0.0.0-20240704151836-a5c058ac604c
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.19.0
-	github.com/hashicorp/vault-plugin-auth-azure v0.19.1
+	github.com/hashicorp/vault-plugin-auth-azure v0.19.2
 	github.com/hashicorp/vault-plugin-auth-cf v0.19.0
-	github.com/hashicorp/vault-plugin-auth-gcp v0.19.0
+	github.com/hashicorp/vault-plugin-auth-gcp v0.19.1
 	github.com/hashicorp/vault-plugin-auth-jwt v0.22.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.13.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.20.0
@@ -145,12 +145,12 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-ad v0.19.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.18.0
 	github.com/hashicorp/vault-plugin-secrets-azure v0.20.1
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.20.0
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.20.1
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.19.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.9.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.20.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.13.0
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.14.2
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.14.3
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.10.0
 	github.com/hashicorp/vault-testing-stepwise v0.3.2
 	github.com/hashicorp/vault/api v1.15.0
@@ -525,7 +525,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/mod v0.21.0 // indirect
-	golang.org/x/time v0.6.0 // indirect
+	golang.org/x/time v0.6.0
 	google.golang.org/genproto v0.0.0-20240903143218-8af14fe29dc1 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240903143218-8af14fe29dc1 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240903143218-8af14fe29dc1 // indirect; indirect\

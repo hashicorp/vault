@@ -11,6 +11,7 @@ import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { duration } from 'core/helpers/format-duration';
+import { ldapRoleID } from 'vault/adapters/ldap/role';
 
 module('Integration | Component | ldap | Page::Role::Details', function (hooks) {
   setupRenderingTest(hooks);
@@ -25,6 +26,7 @@ module('Integration | Component | ldap | Page::Role::Details', function (hooks) 
     }));
     this.renderComponent = (type) => {
       const data = this.server.create('ldap-role', type);
+      data.id = ldapRoleID(type, data.name);
       const store = this.owner.lookup('service:store');
       store.pushPayload('ldap/role', {
         modelName: 'ldap/role',
@@ -32,7 +34,7 @@ module('Integration | Component | ldap | Page::Role::Details', function (hooks) 
         type,
         ...data,
       });
-      this.model = store.peekRecord('ldap/role', data.name);
+      this.model = store.peekRecord('ldap/role', ldapRoleID(type, data.name));
       this.breadcrumbs = [
         { label: this.model.backend, route: 'overview' },
         { label: 'roles', route: 'roles' },

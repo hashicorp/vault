@@ -723,6 +723,7 @@ func SetNonRootToken(client *api.Client) error {
 func RetryUntilAtCadence(t testing.TB, timeout, sleepTime time.Duration, f func() error) {
 	t.Helper()
 	fail := func(err error) {
+		t.Helper()
 		t.Fatalf("did not complete before deadline, err: %v", err)
 	}
 	RetryUntilAtCadenceWithHandler(t, timeout, sleepTime, fail, f)

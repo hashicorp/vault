@@ -1,0 +1,4 @@
+```release-note:bug
+core: Improved an internal helper function that sanitizes paths by adding a check for leading backslashes 
+in addition to the existing check for leading slashes.
+```

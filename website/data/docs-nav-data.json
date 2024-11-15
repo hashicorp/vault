@@ -404,11 +404,24 @@
         "path": "configuration/replication"
       },
       {
+        "title": "<code>reporting</code>",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
+        "path": "configuration/reporting"
+      },
+      {
         "title": "<code>seal</code>",
         "routes": [
           {
             "title": "Overview",
             "path": "configuration/seal"
+          },
+          {
+            "title": "Seal best practices",
+            "path": "configuration/seal/seal-best-practices"
           },
           {
             "title": "High Availability",
@@ -451,11 +464,20 @@
           {
             "title": "Vault Transit",
             "path": "configuration/seal/transit"
+          },
+          {
+            "title": "Transit best practices",
+            "path": "configuration/seal/transit-best-practices"
           }
         ]
       },
       {
         "title": "<code>sentinel</code>",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "path": "configuration/sentinel"
       },
       {
@@ -635,8 +657,17 @@
       { "divider": true },
       { "heading": "CLI commands" },
       {
-        "title": "<code>agent</code>",
-        "path": "commands/agent"
+        "title": "Vault Agent",
+        "routes": [
+          {
+            "title": "<code>agent</code>",
+            "path": "commands/agent"
+          },
+          {
+            "title": "<code>generate-config</code>",
+            "path": "commands/agent/generate-config"
+          }
+        ]
       },
       {
         "title": "<code>audit</code>",
@@ -1776,7 +1807,16 @@
       },
       {
         "title": "AppRole",
-        "path": "auth/approle"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "auth/approle"
+          },
+          {
+            "title": "Recommended pattern",
+            "path": "auth/approle/approle-pattern"
+          }
+        ]
       },
       {
         "title": "AliCloud",
@@ -1903,12 +1943,46 @@
       },
       {
         "title": "SAML",
-        "path": "auth/saml",
         "badge": {
           "text": "ENTERPRISE",
           "type": "outlined",
           "color": "neutral"
-        }
+        },
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "auth/saml"
+          },
+          {
+            "title": "Use AD FS for SAML authN",
+            "path": "auth/saml/adfs"
+          },
+          {
+            "title": "Link SAML AD groups to Vault",
+            "path": "auth/saml/link-vault-group-to-ad"
+          },
+          {
+            "title": "Troubleshoot SAML+ADFS",
+            "routes": [
+              {
+                "title": "Before you start",
+                "path": "auth/saml/troubleshoot-adfs"
+              },
+              {
+                "title": "Bad mapping",
+                "path": "auth/saml/troubleshoot-adfs/bad-mapping"
+              },
+              {
+                "title": "Invalid `BoundSubjects`",
+                "path": "auth/saml/troubleshoot-adfs/boundsubjects"
+              },
+              {
+                "title": "AD FS event 320",
+                "path": "auth/saml/troubleshoot-adfs/adfs-event-320"
+              }
+            ]
+          }
+        ]
       },
       {
         "title": "TLS Certificates",
@@ -2376,6 +2450,10 @@
         "path": "upgrading/raft-wal"
       },
       {
+        "title": "Upgrade to 1.19.x",
+        "path": "upgrading/upgrade-to-1.19.x"
+      },
+      {
         "title": "Upgrade to 1.18.x",
         "path": "upgrading/upgrade-to-1.18.x"
       },
@@ -2773,6 +2851,10 @@
             "path": "enterprise/license/manual-reporting"
           },
           {
+            "title": "Product usage reporting",
+            "path": "enterprise/license/product-usage-reporting"
+          },
+          {
             "title": "FAQ",
             "path": "enterprise/license/faq"
           }
@@ -2902,6 +2984,10 @@
               "type": "outlined",
               "color": "neutral"
             }
+          },
+          {
+            "title": "Structure guide",
+            "path": "enterprise/namespaces/namespace-structure"
           }
         ]
       },

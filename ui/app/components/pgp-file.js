@@ -64,6 +64,9 @@ export default Component.extend({
   ),
 
   actions: {
+    handleToggle(e) {
+      set(this.key, 'enterAsText', e.target.checked);
+    },
     pickedFile(e) {
       const { files } = e.target;
       if (!files.length) {
