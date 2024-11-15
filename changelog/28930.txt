@@ -1,0 +1,3 @@
+```release-note:improvement
+website/docs: Correct typo in AWS Secrets Engine documentation
+```
