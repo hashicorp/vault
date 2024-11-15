@@ -46,18 +46,33 @@ jobs:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     outputs:
       build-date: ${{ steps.metadata.outputs.build-date }}
+      is-enterprise: ${{ steps.metadata.outputs.is-enterprise }}
       sample: ${{ steps.metadata.outputs.sample }}
       vault-version: ${{ steps.metadata.outputs.vault-version }}
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           ref: ${{ inputs.vault-revision }}
+      - if: inputs.vault-edition != 'ce'
+        id: vault-auth
+        name: Vault Authenticate
+        run: vault-auth
+      - if: inputs.vault-edition != 'ce'
+        id: vault-secrets
+        name: Fetch Vault Secrets
+        uses: hashicorp/vault-action@d1720f055e0635fd932a1d2a48f87a666a57906c # v3.0.0
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          secrets: |
+            kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
       - uses: hashicorp/action-setup-enos@v1
         with:
-          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          github-token: ${{ inputs.vault-edition == 'ce' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
       - uses: ./.github/actions/create-dynamic-config
         with:
-          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          github-token: ${{ inputs.vault-edition == 'ce' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
           vault-version: ${{ inputs.vault-version }}
           vault-edition: ${{ inputs.vault-edition }}
       - id: metadata
@@ -78,9 +93,10 @@ jobs:
           sample=$(enos scenario sample observe "${{ inputs.sample-name }}" --chdir ./enos --min 1 --max "${{ inputs.sample-max }}" --seed "${sample_seed}" --format json | jq -c ".observation.elements")
           {
             echo "build-date=${build_date}"
-            echo "vault-version=${vault_version}"
+            echo "is-enterprise=${{ inputs.vault-edition != 'ce' }}"
             echo "sample=${sample}"
             echo "sample-seed=${sample_seed}" # This isn't used outside of here but is nice to know for duplicating observations
+            echo "vault-version=${vault_version}"
           } | tee -a "$GITHUB_OUTPUT"
 
   # Run the Enos test scenario(s)
@@ -92,33 +108,93 @@ jobs:
       matrix:
         include: ${{ fromJSON(needs.metadata.outputs.sample) }}
     runs-on: ${{ fromJSON(inputs.runs-on) }}
-    env:
-      GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
-      # Pass in enos variables
-      ENOS_VAR_aws_region: ${{ matrix.attributes.aws_region }}
-      ENOS_VAR_aws_ssh_keypair_name: ${{ inputs.ssh-key-name }}
-      ENOS_VAR_aws_ssh_private_key_path: ./support/private_key.pem
-      ENOS_VAR_tfc_api_token: ${{ secrets.TF_API_TOKEN }}
-      ENOS_VAR_artifactory_username: ${{ secrets.ARTIFACTORY_USER }}
-      ENOS_VAR_artifactory_token: ${{ secrets.ARTIFACTORY_TOKEN }}
-      ENOS_VAR_terraform_plugin_cache_dir: ./support/terraform-plugin-cache
-      ENOS_VAR_vault_artifact_path: ./support/downloads/${{ inputs.build-artifact-name }}
-      ENOS_VAR_vault_build_date: ${{ needs.metadata.outputs.build-date }}
-      ENOS_VAR_vault_product_version: ${{ needs.metadata.outputs.vault-version }}
-      ENOS_VAR_vault_revision: ${{ inputs.vault-revision }}
-      ENOS_VAR_vault_upgrade_initial_version: ${{ matrix.attributes.upgrade_initial_version }}
-      ENOS_VAR_consul_license_path: ./support/consul.hclic
-      ENOS_VAR_vault_license_path: ./support/vault.hclic
-      ENOS_VAR_distro_version_amzz: ${{ matrix.attributes.distro_version_amzn }}
-      ENOS_VAR_distro_version_leap: ${{ matrix.attributes.distro_version_leap }}
-      ENOS_VAR_distro_version_rhel: ${{ matrix.attributes.distro_version_rhel }}
-      ENOS_VAR_distro_version_sles: ${{ matrix.attributes.distro_version_sles }}
-      ENOS_VAR_distro_version_ubuntu: ${{ matrix.attributes.distro_version_ubuntu }}
-      ENOS_DEBUG_DATA_ROOT_DIR: /tmp/enos-debug-data
+    permissions: write-all # Ensure we have id-token:write access for vault-auth.
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           ref: ${{ inputs.vault-revision }}
+      - if: needs.metadata.outputs.is-enterprise == 'true'
+        id: vault-auth
+        name: Vault Authenticate
+        run: vault-auth
+      - if: needs.metadata.outputs.is-enterprise == 'true'
+        id: vault-secrets
+        name: Fetch Vault Secrets
+        uses: hashicorp/vault-action@d1720f055e0635fd932a1d2a48f87a666a57906c # v3.0.0
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          secrets: |
+            kv/data/github/${{ github.repository }}/artifactory token | ARTIFACTORY_TOKEN;
+            kv/data/github/${{ github.repository }}/artifactory user | ARTIFACTORY_USER;
+            kv/data/github/${{ github.repository }}/aws access-key-id | AWS_ACCESS_KEY_ID_CI;
+            kv/data/github/${{ github.repository }}/aws secret-access-key | AWS_SECRET_ACCESS_KEY_CI;
+            kv/data/github/${{ github.repository }}/aws role-arn | AWS_ROLE_ARN_CI;
+            kv/data/github/${{ github.repository }}/consul license | CONSUL_LICENSE;
+            kv/data/github/${{ github.repository }}/vault-radar license | RADAR_LICENSE;
+            kv/data/github/${{ github.repository }}/enos slack-webhook-url | SLACK_WEBHOOK_URL;
+            kv/data/github/${{ github.repository }}/enos ssh-key | SSH_KEY_PRIVATE_CI;
+            kv/data/github/${{ github.repository }}/license license_1 | VAULT_LICENSE;
+            kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
+      - id: secrets
+        run: |
+          if [[ "${{ needs.metadata.outputs.is-enterprise }}" != 'true' ]]; then
+            {
+              echo "artifactory-user=${{ secrets.ARTIFACTORY_USER }}"
+              echo "artifactory-token=${{ secrets.ARTIFACTORY_TOKEN }}"
+              echo "aws-access-key-id=${{ secrets.AWS_ACCESS_KEY_ID_CI }}"
+              echo "aws-secret-access-key=${{ secrets.AWS_SECRET_ACCESS_KEY_CI }}"
+              echo "aws-role-arn=${{ secrets.AWS_ROLE_ARN_CI }}"
+              echo "consul-license=${{ secrets.CONSUL_LICENSE }}"
+              echo "github-token=${{ secrets.ELEVATED_GITHUB_TOKEN }}"
+              echo "radar-license=${{ secrets.RADAR_LICENSE }}"
+              echo "slack-webhook-url=${{ secrets.SLACK_WEBHOOK_URL }}"
+              echo "ssh-key=${{ secrets.SSH_KEY_PRIVATE_CI }}"
+              echo "vault-license=${{ secrets.VAULT_LICENSE }}"
+           } | tee -a "$GITHUB_OUTPUT"
+          else
+            {
+              echo "artifactory-user=${{ steps.vault-secrets.outputs.ARTIFACTORY_USER }}"
+              echo "artifactory-token=${{ steps.vault-secrets.outputs.ARTIFACTORY_TOKEN }}"
+              echo "aws-access-key-id=${{ steps.vault-secrets.outputs.AWS_ACCESS_KEY_ID_CI }}"
+              echo "aws-secret-access-key=${{ steps.vault-secrets.outputs.AWS_SECRET_ACCESS_KEY_CI }}"
+              echo "aws-role-arn=${{ steps.vault-secrets.outputs.AWS_ROLE_ARN_CI }}"
+              echo "consul-license=${{ steps.vault-secrets.outputs.CONSUL_LICENSE }}"
+              echo "github-token=${{ steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}"
+              echo "radar-license=${{ steps.vault-secrets.outputs.RADAR_LICENSE }}"
+              echo "slack-webhook-url=${{ steps.vault-secrets.outputs.SLACK_WEBHOOK_URL }}"
+              echo "ssh-key=${{ steps.vault-secrets.outputs.SSH_KEY_PRIVATE_CI }}"
+              echo "vault-license=${{ steps.vault-secrets.outputs.VAULT_LICENSE }}"
+            } | tee -a "$GITHUB_OUTPUT"
+          fi
+      - id: env
+        run: |
+          # Configure input environment variables.
+          {
+            echo "GITHUB_TOKEN=${{ steps.secrets.outputs.github-token }}"
+            echo "ENOS_DEBUG_DATA_ROOT_DIR=/tmp/enos-debug-data"
+            echo "ENOS_VAR_artifactory_username=${{ steps.secrets.outputs.artifactory-user }}"
+            echo "ENOS_VAR_artifactory_token=${{ steps.secrets.outputs.artifactory-token }}"
+            echo "ENOS_VAR_aws_region=${{ matrix.attributes.aws_region }}"
+            echo "ENOS_VAR_aws_ssh_keypair_name=${{ inputs.ssh-key-name }}"
+            echo "ENOS_VAR_aws_ssh_private_key_path=./support/private_key.pem"
+            echo "ENOS_VAR_consul_license_path=./support/consul.hclic"
+            echo "ENOS_VAR_distro_version_amzn=${{ matrix.attributes.distro_version_amzn }}"
+            echo "ENOS_VAR_distro_version_leap=${{ matrix.attributes.distro_version_leap }}"
+            echo "ENOS_VAR_distro_version_rhel=${{ matrix.attributes.distro_version_rhel }}"
+            echo "ENOS_VAR_distro_version_sles=${{ matrix.attributes.distro_version_sles }}"
+            echo "ENOS_VAR_distro_version_ubuntu=${{ matrix.attributes.distro_version_ubuntu }}"
+            echo "ENOS_VAR_terraform_plugin_cache_dir=./support/terraform-plugin-cache"
+            echo "ENOS_VAR_vault_artifact_path=./support/downloads/${{ inputs.build-artifact-name }}"
+            echo "ENOS_VAR_vault_build_date=${{ needs.metadata.outputs.build-date }}"
+            echo "ENOS_VAR_vault_license_path=./support/vault.hclic"
+            echo "ENOS_VAR_vault_product_version=${{ needs.metadata.outputs.vault-version }}"
+            echo "ENOS_VAR_vault_radar_license_path=./support/vault-radar.hclic"
+            echo "ENOS_VAR_vault_revision=${{ inputs.vault-revision }}"
+            echo "ENOS_VAR_vault_upgrade_initial_version=${{ matrix.attributes.upgrade_initial_version }}"
+            echo "ENOS_VAR_verify_log_secrets=true"
+          } | tee -a "$GITHUB_ENV"
       - uses: hashicorp/setup-terraform@v3
         with:
           # the Terraform wrapper will break Terraform execution in Enos because
@@ -126,25 +202,26 @@ jobs:
           terraform_wrapper: false
       - uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI }}
+          aws-access-key-id: ${{ steps.secrets.outputs.aws-access-key-id }}
+          aws-secret-access-key: ${{ steps.secrets.outputs.aws-secret-access-key }}
           aws-region: ${{ matrix.attributes.aws_region }}
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN_CI }}
+          role-to-assume: ${{ steps.secrets.outputs.aws-role-arn }}
           role-skip-session-tagging: true
-          role-duration-seconds: 3600
+          # Stay valid longer that our max timeout to allow destroy actions to always have a valid token
+          role-duration-seconds: 3800
       - uses: hashicorp/action-setup-enos@v1
         with:
-          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          github-token: ${{ steps.secrets.outputs.github-token }}
       - uses: ./.github/actions/create-dynamic-config
         with:
-          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          github-token: ${{ steps.secrets.outputs.github-token }}
           vault-version: ${{ inputs.vault-version }}
           vault-edition: ${{ inputs.vault-edition }}
       - name: Prepare scenario dependencies
         id: prepare_scenario
         run: |
           mkdir -p "./enos/support/terraform-plugin-cache"
-          echo "${{ secrets.SSH_KEY_PRIVATE_CI }}" > "./enos/support/private_key.pem"
+          echo "${{ steps.secrets.outputs.ssh-key }}" > "./enos/support/private_key.pem"
           chmod 600 "./enos/support/private_key.pem"
           echo "debug_data_artifact_name=enos-debug-data_$(echo "${{ matrix.scenario }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')" >> "$GITHUB_OUTPUT"
       - if: contains(inputs.sample-name, 'build')
@@ -154,12 +231,14 @@ jobs:
           path: ./enos/support/downloads
       - if: contains(inputs.sample-name, 'ent')
         name: Configure Vault license
-        run: echo "${{ secrets.VAULT_LICENSE }}" > ./enos/support/vault.hclic || true
+        run: echo "${{ steps.secrets.outputs.vault-license }}" > ./enos/support/vault.hclic || true
       - if: contains(matrix.scenario.id.filter, 'consul_edition:ent')
         name: Configure Consul license
         run: |
-          echo "matrix.scenario.id.filter: ${{ matrix.scenario.id.filter }}"
-          echo "${{ secrets.CONSUL_LICENSE }}" > ./enos/support/consul.hclic || true
+          echo "${{ steps.secrets.outputs.consul-license }}" > ./enos/support/consul.hclic || true
+      - name: Configure Vault Radar license
+        run: |
+          echo "${{ steps.secrets.outputs.radar-license }}" > ./enos/support/radar.hclic || true
       - id: launch
         name: enos scenario launch ${{ matrix.scenario.id.filter }}
         # Continue once and retry to handle occasional blips when creating infrastructure.
@@ -205,25 +284,25 @@ jobs:
         with:
           failure-message: "enos scenario launch ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
           status: ${{ steps.launch.outcome }}
-          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          slack-webhook-url: ${{ steps.secrets.outputs.slack-webhook-url }}
       - if: ${{ always() && ! cancelled() }}
         name: Notify retry launch failed
         uses: hashicorp/actions-slack-status@v2.0.1
         with:
           failure-message: "retry enos scenario launch ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
           status: ${{ steps.launch_retry.outcome }}
-          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          slack-webhook-url: ${{ steps.secrets.outputs.slack-webhook-url }}
       - if: ${{ always() && ! cancelled() }}
         name: Notify destroy failed
         uses: hashicorp/actions-slack-status@v2.0.1
         with:
           failure-message: "enos scenario destroy ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
           status: ${{ steps.destroy.outcome }}
-          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          slack-webhook-url: ${{ steps.secrets.outputs.slack-webhook-url }}
       - if: ${{ always() && ! cancelled() }}
         name: Notify retry destroy failed
         uses: hashicorp/actions-slack-status@v2.0.1
         with:
           failure-message: "retry enos scenario destroy ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
           status: ${{ steps.destroy_retry.outcome }}
-          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          slack-webhook-url: ${{ steps.secrets.outputs.slack-webhook-url }}
