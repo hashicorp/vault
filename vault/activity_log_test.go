@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"reflect"
 	"sort"
@@ -578,6 +579,7 @@ func TestActivityLog_SaveEntitiesToStorage(t *testing.T) {
 		now.Add(2 * time.Second).Unix(),
 	}
 	path := fmt.Sprintf("%sentity/%d/0", ActivityLogPrefix, a.GetStartTimestamp())
+	globalPath := fmt.Sprintf("%sentity/%d/0", ActivityGlobalLogPrefix, a.GetStartTimestamp())
 
 	a.AddEntityToFragment(ids[0], "root", times[0])
 	a.AddEntityToFragment(ids[1], "root2", times[1])
@@ -608,6 +610,14 @@ func TestActivityLog_SaveEntitiesToStorage(t *testing.T) {
 	}
 
 	protoSegment = readSegmentFromStorage(t, core, path)
+	out = &activity.EntityActivityLog{}
+	err = proto.Unmarshal(protoSegment.Value, out)
+	if err != nil {
+		t.Fatalf("could not unmarshal protobuf: %v", err)
+	}
+	expectedEntityIDs(t, out, ids)
+
+	protoSegment = readSegmentFromStorage(t, core, globalPath)
 	out = &activity.EntityActivityLog{}
 	err = proto.Unmarshal(protoSegment.Value, out)
 	if err != nil {
@@ -1211,45 +1221,55 @@ func TestActivityLog_getLastEntitySegmentNumber(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
 	paths := [...]string{"entity/992/0", "entity/1000/-1", "entity/1001/foo", "entity/1111/0", "entity/1111/1"}
+	globalPaths := [...]string{"entity/992/0", "entity/1000/-1", "entity/1001/foo", "entity/1111/1"}
 	for _, path := range paths {
 		WriteToStorage(t, core, ActivityLogPrefix+path, []byte("test"))
 	}
+	for _, path := range globalPaths {
+		WriteToStorage(t, core, ActivityGlobalLogPrefix+path, []byte("test"))
+	}
 
 	testCases := []struct {
-		input        int64
-		expectedVal  uint64
-		expectExists bool
+		input             int64
+		expectedVal       uint64
+		expectedGlobalVal uint64
+		expectExists      bool
 	}{
 		{
-			input:        992,
-			expectedVal:  0,
-			expectExists: true,
+			input:             992,
+			expectedVal:       0,
+			expectedGlobalVal: 0,
+			expectExists:      true,
 		},
 		{
-			input:        1000,
-			expectedVal:  0,
-			expectExists: false,
+			input:             1000,
+			expectedVal:       0,
+			expectedGlobalVal: 0,
+			expectExists:      false,
 		},
 		{
-			input:        1001,
-			expectedVal:  0,
-			expectExists: false,
+			input:             1001,
+			expectedVal:       0,
+			expectedGlobalVal: 0,
+			expectExists:      false,
 		},
 		{
-			input:        1111,
-			expectedVal:  1,
-			expectExists: true,
+			input:             1111,
+			expectedVal:       1,
+			expectedGlobalVal: 1,
+			expectExists:      true,
 		},
 		{
-			input:        2222,
-			expectedVal:  0,
-			expectExists: false,
+			input:             2222,
+			expectedVal:       0,
+			expectedGlobalVal: 0,
+			expectExists:      false,
 		},
 	}
 
 	ctx := context.Background()
 	for _, tc := range testCases {
-		result, exists, err := a.getLastEntitySegmentNumber(ctx, time.Unix(tc.input, 0))
+		result, globalSegmentNumber, exists, err := a.getLastEntitySegmentNumber(ctx, time.Unix(tc.input, 0))
 		if err != nil {
 			t.Fatalf("unexpected error for input %d: %v", tc.input, err)
 		}
@@ -1259,6 +1279,10 @@ func TestActivityLog_getLastEntitySegmentNumber(t *testing.T) {
 		if result != tc.expectedVal {
 			t.Errorf("expected: %d got: %d for input: %d", tc.expectedVal, result, tc.input)
 		}
+		if globalSegmentNumber != tc.expectedGlobalVal {
+			t.Errorf("expected: %d got: %d for input: %d", tc.expectedGlobalVal, globalSegmentNumber, tc.input)
+		}
+
 	}
 }
 
@@ -1471,16 +1495,19 @@ func TestActivityLog_loadCurrentClientSegment(t *testing.T) {
 			t.Fatalf(err.Error())
 		}
 		WriteToStorage(t, core, ActivityLogPrefix+tc.path, data)
+		WriteToStorage(t, core, ActivityGlobalLogPrefix+tc.path, data)
 	}
 
 	ctx := context.Background()
 	for _, tc := range testCases {
 		a.l.Lock()
 		a.fragmentLock.Lock()
+		a.globalFragmentLock.Lock()
 		// loadCurrentClientSegment requires us to grab the fragment lock and the
 		// activityLog lock, as per the comment in the loadCurrentClientSegment
 		// function
-		err := a.loadCurrentClientSegment(ctx, time.Unix(tc.time, 0), tc.seqNum)
+		err := a.loadCurrentClientSegment(ctx, time.Unix(tc.time, 0), tc.seqNum, tc.seqNum)
+		a.globalFragmentLock.Unlock()
 		a.fragmentLock.Unlock()
 		a.l.Unlock()
 
@@ -1505,6 +1532,11 @@ func TestActivityLog_loadCurrentClientSegment(t *testing.T) {
 		currentEntities := a.GetCurrentEntities()
 		if !entityRecordsEqual(t, currentEntities.Clients, tc.entities.Clients) {
 			t.Errorf("bad data loaded. expected: %v, got: %v for path %q", tc.entities.Clients, currentEntities, tc.path)
+		}
+
+		currentGlobalEntities := a.GetCurrentGlobalEntities()
+		if !entityRecordsEqual(t, currentGlobalEntities.Clients, tc.entities.Clients) {
+			t.Errorf("bad data loaded. expected: %v, got: %v for path %q", tc.entities.Clients, currentGlobalEntities, tc.path)
 		}
 
 		activeClients := core.GetActiveClientsList()
@@ -1584,6 +1616,7 @@ func TestActivityLog_loadPriorEntitySegment(t *testing.T) {
 			t.Fatalf(err.Error())
 		}
 		WriteToStorage(t, core, ActivityLogPrefix+tc.path, data)
+		WriteToStorage(t, core, ActivityGlobalLogPrefix+tc.path, data)
 	}
 
 	ctx := context.Background()
@@ -1594,7 +1627,9 @@ func TestActivityLog_loadPriorEntitySegment(t *testing.T) {
 			a.localFragmentLock.Lock()
 			a.partialMonthClientTracker = make(map[string]*activity.EntityRecord)
 			a.partialMonthLocalClientTracker = make(map[string]*activity.EntityRecord)
+			a.globalPartialMonthClientTracker = make(map[string]*activity.EntityRecord)
 			a.currentSegment.startTimestamp = tc.time
+			a.currentGlobalSegment.startTimestamp = tc.time
 			a.fragmentLock.Unlock()
 			a.localFragmentLock.Unlock()
 			a.l.Unlock()
@@ -1768,8 +1803,10 @@ func setupActivityRecordsInStorage(t *testing.T, base time.Time, includeEntities
 			}
 			if i == 0 {
 				WriteToStorage(t, core, ActivityLogPrefix+"entity/"+fmt.Sprint(monthsAgo.Unix())+"/0", entityData)
+				WriteToStorage(t, core, ActivityGlobalLogPrefix+"entity/"+fmt.Sprint(monthsAgo.Unix())+"/0", entityData)
 			} else {
 				WriteToStorage(t, core, ActivityLogPrefix+"entity/"+fmt.Sprint(base.Unix())+"/"+strconv.Itoa(i-1), entityData)
+				WriteToStorage(t, core, ActivityGlobalLogPrefix+"entity/"+fmt.Sprint(base.Unix())+"/"+strconv.Itoa(i-1), entityData)
 			}
 		}
 	}
@@ -1819,7 +1856,7 @@ func TestActivityLog_refreshFromStoredLog(t *testing.T) {
 		Clients: expectedClientRecords[len(expectedClientRecords)-1:],
 	}
 
-	currentEntities := a.GetCurrentEntities()
+	currentEntities := a.GetCurrentGlobalEntities()
 	if !entityRecordsEqual(t, currentEntities.Clients, expectedCurrent.Clients) {
 		// we only expect the newest entity segment to be loaded (for the current month)
 		t.Errorf("bad activity entity logs loaded. expected: %v got: %v", expectedCurrent, currentEntities)
@@ -2312,6 +2349,13 @@ func TestActivityLog_EndOfMonth(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	path = fmt.Sprintf("%ventity/%v/0", ActivityGlobalLogPrefix, segment0)
+	protoSegment = readSegmentFromStorage(t, core, path)
+	out = &activity.EntityActivityLog{}
+	err = proto.Unmarshal(protoSegment.Value, out)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	segment1 := a.GetStartTimestamp()
 	expectedTimestamp := timeutil.StartOfMonth(month1).Unix()
@@ -2369,6 +2413,16 @@ func TestActivityLog_EndOfMonth(t *testing.T) {
 		path := fmt.Sprintf("%ventity/%v/0", ActivityLogPrefix, tc.SegmentTimestamp)
 		protoSegment := readSegmentFromStorage(t, core, path)
 		out := &activity.EntityActivityLog{}
+		err = proto.Unmarshal(protoSegment.Value, out)
+		if err != nil {
+			t.Fatalf("could not unmarshal protobuf: %v", err)
+		}
+		expectedEntityIDs(t, out, tc.ExpectedEntityIDs)
+
+		// Check for global entities at global storage path
+		path = fmt.Sprintf("%ventity/%v/0", ActivityGlobalLogPrefix, tc.SegmentTimestamp)
+		protoSegment = readSegmentFromStorage(t, core, path)
+		out = &activity.EntityActivityLog{}
 		err = proto.Unmarshal(protoSegment.Value, out)
 		if err != nil {
 			t.Fatalf("could not unmarshal protobuf: %v", err)
@@ -5365,4 +5419,213 @@ func TestActivityLog_Export_CSV_Header(t *testing.T) {
 	}
 
 	require.Empty(t, deep.Equal(expectedColumnIndex, encoder.columnIndex))
+}
+
+// TestCreateSegment_StoreSegment verifies that
+// the activity log will correctly create segments from
+// the fragments and store the right number of clients at
+// the proper path. This test should be modified to include local clients.
+func TestCreateSegment_StoreSegment(t *testing.T) {
+	cluster := NewTestCluster(t, nil, nil)
+	core := cluster.Cores[0].Core
+	a := core.activityLog
+	a.SetEnable(true)
+
+	ctx := context.Background()
+	timeStamp := time.Now()
+
+	clientRecords := make([]*activity.EntityRecord, ActivitySegmentClientCapacity*2+1)
+	for i := range clientRecords {
+		clientRecords[i] = &activity.EntityRecord{
+			ClientID:  fmt.Sprintf("111122222-3333-4444-5555-%012v", i),
+			Timestamp: timeStamp.Unix(),
+			NonEntity: false,
+		}
+	}
+
+	startTime := a.GetStartTimestamp()
+	parsedTime := time.Unix(startTime, 0)
+
+	testCases := []struct {
+		testName              string
+		numClients            int
+		pathPrefix            string
+		maxClientsPerFragment int
+		global                bool
+		forceStore            bool
+	}{
+		{
+			testName:              "[global] max client size, drop clients",
+			numClients:            ActivitySegmentClientCapacity*2 + 1,
+			pathPrefix:            activityGlobalPathPrefix,
+			maxClientsPerFragment: ActivitySegmentClientCapacity,
+			global:                true,
+		},
+		{
+			testName:              "[global, no-force] max client size, drop clients",
+			numClients:            ActivitySegmentClientCapacity*2 + 1,
+			pathPrefix:            activityGlobalPathPrefix,
+			maxClientsPerFragment: ActivitySegmentClientCapacity,
+			global:                true,
+			forceStore:            true,
+		},
+		{
+			testName:              "[global] max segment size",
+			numClients:            ActivitySegmentClientCapacity,
+			pathPrefix:            activityGlobalPathPrefix,
+			maxClientsPerFragment: ActivitySegmentClientCapacity,
+			global:                true,
+		},
+		{
+			testName:              "[global, no-force] max segment size",
+			numClients:            ActivitySegmentClientCapacity,
+			pathPrefix:            activityGlobalPathPrefix,
+			maxClientsPerFragment: ActivitySegmentClientCapacity,
+			global:                true,
+			forceStore:            true,
+		},
+		{
+			testName:              "[global] max segment size, multiple fragments",
+			numClients:            ActivitySegmentClientCapacity,
+			pathPrefix:            activityGlobalPathPrefix,
+			maxClientsPerFragment: ActivitySegmentClientCapacity - 1,
+			global:                true,
+		},
+		{
+			testName:              "[global, no-force] max segment size, multiple fragments",
+			numClients:            ActivitySegmentClientCapacity,
+			pathPrefix:            activityGlobalPathPrefix,
+			maxClientsPerFragment: ActivitySegmentClientCapacity - 1,
+			global:                true,
+			forceStore:            true,
+		},
+		{
+			testName:              "[global] roll over",
+			numClients:            ActivitySegmentClientCapacity + 2,
+			pathPrefix:            activityGlobalPathPrefix,
+			maxClientsPerFragment: ActivitySegmentClientCapacity,
+			global:                true,
+		},
+		{
+			testName:              "[global, no-force] roll over",
+			numClients:            ActivitySegmentClientCapacity + 2,
+			pathPrefix:            activityGlobalPathPrefix,
+			maxClientsPerFragment: ActivitySegmentClientCapacity,
+			global:                true,
+			forceStore:            true,
+		},
+		{
+			testName:              "[global] max segment size, rollover multiple fragments",
+			numClients:            ActivitySegmentClientCapacity * 2,
+			pathPrefix:            activityGlobalPathPrefix,
+			maxClientsPerFragment: ActivitySegmentClientCapacity - 1,
+			global:                true,
+		},
+		{
+			testName:              "[global, no-force] max segment size, rollover multiple fragments",
+			numClients:            ActivitySegmentClientCapacity * 2,
+			pathPrefix:            activityGlobalPathPrefix,
+			maxClientsPerFragment: ActivitySegmentClientCapacity - 1,
+			global:                true,
+			forceStore:            true,
+		},
+
+		{
+			testName:              "[non-global] max segment size",
+			numClients:            ActivitySegmentClientCapacity,
+			maxClientsPerFragment: ActivitySegmentClientCapacity,
+			global:                false,
+		},
+		{
+			testName:              "[non-global] max segment size, multiple fragments",
+			numClients:            ActivitySegmentClientCapacity,
+			maxClientsPerFragment: ActivitySegmentClientCapacity - 1,
+			global:                false,
+		},
+		{
+			testName:              "[non-global] roll over",
+			numClients:            ActivitySegmentClientCapacity + 2,
+			maxClientsPerFragment: ActivitySegmentClientCapacity,
+			global:                false,
+		},
+		{
+			testName:              "[non-global] max segment size, rollover multiple fragments",
+			numClients:            ActivitySegmentClientCapacity * 2,
+			maxClientsPerFragment: ActivitySegmentClientCapacity - 1,
+			global:                false,
+		},
+		{
+			testName:              "[non-global] max client size, drop clients",
+			numClients:            ActivitySegmentClientCapacity*2 + 1,
+			maxClientsPerFragment: ActivitySegmentClientCapacity,
+			global:                false,
+		},
+	}
+
+	for _, test := range testCases {
+		t.Run(test.testName, func(t *testing.T) {
+			// Add clients to fragments
+			fragments := make([]*activity.LogFragment, 0)
+			remainder := test.numClients
+			var i int
+			for i = 0; i+test.maxClientsPerFragment < test.numClients; i = i + test.maxClientsPerFragment {
+				clients := clientRecords[i : i+test.maxClientsPerFragment]
+				remainder -= test.maxClientsPerFragment
+				fragments = append(fragments, &activity.LogFragment{Clients: clients})
+			}
+			if remainder > 0 {
+				clients := clientRecords[i : i+remainder]
+				fragments = append(fragments, &activity.LogFragment{Clients: clients})
+
+			}
+
+			segment := &a.currentGlobalSegment
+			if !test.global {
+				segment = &a.currentSegment
+			}
+
+			// Create segments and write to storage
+			require.NoError(t, core.StoreCurrentSegment(ctx, fragments, segment, test.forceStore, test.pathPrefix))
+
+			reader, err := a.NewSegmentFileReader(ctx, parsedTime)
+			require.NoError(t, err)
+			var clientTotal int
+			if test.global {
+				for {
+					entity, err := reader.ReadGlobalEntity(ctx)
+					if errors.Is(err, io.EOF) {
+						break
+					}
+					require.NoError(t, err)
+					clientTotal += len(entity.GetClients())
+				}
+			} else {
+				for {
+					entity, err := reader.ReadEntity(ctx)
+					if errors.Is(err, io.EOF) {
+						break
+					}
+					require.NoError(t, err)
+					clientTotal += len(entity.GetClients())
+				}
+			}
+
+			// The current behavior is that there were greater than 2 * ActivitySegmentClientCapacity seen, then we
+			// drop of the remainder of those clients seen during that time. Let's verify that this is the case
+			expectedTotal := test.numClients
+			if test.numClients > 2*ActivitySegmentClientCapacity {
+				expectedTotal = 2 * ActivitySegmentClientCapacity
+			}
+
+			require.Equal(t, expectedTotal, clientTotal)
+
+			// Delete any logs written in this test
+			core.DeleteLogsAtPath(ctx, t, test.pathPrefix+activityEntityBasePath, startTime)
+			// Reset client sequence number and current client slice back to original values
+			segment.clientSequenceNumber = 0
+			segment.currentClients = &activity.EntityActivityLog{
+				Clients: make([]*activity.EntityRecord, 0),
+			}
+		})
+	}
 }
