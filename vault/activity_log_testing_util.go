@@ -100,6 +100,15 @@ func (a *ActivityLog) GetCurrentEntities() *activity.EntityActivityLog {
 	return a.currentSegment.currentClients
 }
 
+// GetCurrentGlobalEntities returns the current global entity activity log
+func (a *ActivityLog) GetCurrentGlobalEntities() *activity.EntityActivityLog {
+	a.l.RLock()
+	defer a.l.RUnlock()
+	a.globalFragmentLock.RLock()
+	defer a.globalFragmentLock.RUnlock()
+	return a.currentGlobalSegment.currentClients
+}
+
 // WriteToStorage is used to put entity data in storage
 // `path` should be the complete path (not relative to the view)
 func WriteToStorage(t *testing.T, c *Core, path string, data []byte) {
@@ -218,7 +227,12 @@ func ActiveEntitiesEqual(active []*activity.EntityRecord, test []*activity.Entit
 func (a *ActivityLog) GetStartTimestamp() int64 {
 	a.l.RLock()
 	defer a.l.RUnlock()
-	return a.currentSegment.startTimestamp
+	// TODO: We will substitute a.currentSegment with a.currentLocalSegment when we remove
+	// a.currentSegment from the code
+	if a.currentGlobalSegment.startTimestamp != a.currentSegment.startTimestamp {
+		return -1
+	}
+	return a.currentGlobalSegment.startTimestamp
 }
 
 // SetStartTimestamp sets the start timestamp on an activity log
@@ -226,6 +240,7 @@ func (a *ActivityLog) SetStartTimestamp(timestamp int64) {
 	a.l.Lock()
 	defer a.l.Unlock()
 	a.currentSegment.startTimestamp = timestamp
+	a.currentGlobalSegment.startTimestamp = timestamp
 }
 
 // GetStoredTokenCountByNamespaceID returns the count of tokens by namespace ID
@@ -286,4 +301,28 @@ func (c *Core) GetActiveFragment() *activity.LogFragment {
 	c.activityLog.fragmentLock.RLock()
 	defer c.activityLog.fragmentLock.RUnlock()
 	return c.activityLog.fragment
+}
+
+// StoreCurrentSegment is a test only method to create and store
+// segments from fragments. This allows createCurrentSegmentFromFragments to remain
+// private
+func (c *Core) StoreCurrentSegment(ctx context.Context, fragments []*activity.LogFragment, currentSegment *segmentInfo, force bool, storagePathPrefix string) error {
+	return c.activityLog.createCurrentSegmentFromFragments(ctx, fragments, currentSegment, force, storagePathPrefix)
+}
+
+// DeleteLogsAtPath is test helper function deletes all logs at the given path
+func (c *Core) DeleteLogsAtPath(ctx context.Context, t *testing.T, storagePath string, startTime int64) {
+	basePath := storagePath + fmt.Sprint(startTime) + "/"
+	a := c.activityLog
+	segments, err := a.view.List(ctx, basePath)
+	if err != nil {
+		t.Fatalf("could not list path %v", err)
+		return
+	}
+	for _, p := range segments {
+		err = a.view.Delete(ctx, basePath+p)
+		if err != nil {
+			t.Fatalf("could not delete path %v", err)
+		}
+	}
 }

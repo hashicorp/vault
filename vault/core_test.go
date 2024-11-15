@@ -3400,15 +3400,11 @@ func TestDefaultDeadlock(t *testing.T) {
 	InduceDeadlock(t, testCore, 0)
 }
 
-func RestoreDeadlockOpts() func() {
-	opts := deadlock.Opts
-	return func() {
-		deadlock.Opts = opts
-	}
-}
-
 func InduceDeadlock(t *testing.T, vaultcore *Core, expected uint32) {
-	defer RestoreDeadlockOpts()()
+	priorDeadlockFunc := deadlock.Opts.OnPotentialDeadlock
+	defer func() {
+		deadlock.Opts.OnPotentialDeadlock = priorDeadlockFunc
+	}()
 	var deadlocks uint32
 	deadlock.Opts.OnPotentialDeadlock = func() {
 		atomic.AddUint32(&deadlocks, 1)
@@ -3698,5 +3694,61 @@ func TestBarrier_DeadlockDetection(t *testing.T) {
 
 	if !testCore.barrier.DetectDeadlocks() {
 		t.Fatal("barrierLock doesn't have deadlock detection enabled, it should")
+	}
+}
+
+// TestCore_IsRemovedFromCluster exercises all the execution paths in the
+// IsRemovedFromCluster convenience method of the Core struct.
+func TestCore_IsRemovedFromCluster(t *testing.T) {
+	core := &Core{}
+
+	// Test case where both HA and underlying physical backends ares nil
+	removed, ok := core.IsRemovedFromCluster()
+	if removed || ok {
+		t.Fatalf("expected removed and ok to be false, got removed: %v, ok: %v", removed, ok)
+	}
+
+	// Test case where HA backend is nil, but the underlying physical is there and does not support RemovableNodeHABackend
+	core.underlyingPhysical = &MockHABackend{}
+	removed, ok = core.IsRemovedFromCluster()
+	if removed || ok {
+		t.Fatalf("expected removed and ok to be false, got removed: %v, ok: %v", removed, ok)
+	}
+
+	// Test case where HA backend is nil, but the underlying physical is there, supports RemovableNodeHABackend, and is not removed
+	mockHA := &MockRemovableNodeHABackend{}
+	core.underlyingPhysical = mockHA
+	removed, ok = core.IsRemovedFromCluster()
+	if removed || !ok {
+		t.Fatalf("expected removed and ok to be false, got removed: %v, ok: %v", removed, ok)
+	}
+
+	// Test case where HA backend is nil, but the underlying physical is there, supports RemovableNodeHABackend, and is removed
+	mockHA.Removed = true
+	removed, ok = core.IsRemovedFromCluster()
+	if !removed || !ok {
+		t.Fatalf("expected removed to be false and ok to be true, got removed: %v, ok: %v", removed, ok)
+	}
+
+	// Test case where HA backend does not support RemovableNodeHABackend
+	core.ha = &MockHABackend{}
+	removed, ok = core.IsRemovedFromCluster()
+	if removed || ok {
+		t.Fatalf("expected removed and ok to be false, got removed: %v, ok: %v", removed, ok)
+	}
+
+	// Test case where HA backend supports RemovableNodeHABackend and is not removed
+	mockHA.Removed = false
+	core.ha = mockHA
+	removed, ok = core.IsRemovedFromCluster()
+	if removed || !ok {
+		t.Fatalf("expected removed and ok to be true, got removed: %v, ok: %v", removed, ok)
+	}
+
+	// Test case where HA backend supports RemovableNodeHABackend and is removed
+	mockHA.Removed = true
+	removed, ok = core.IsRemovedFromCluster()
+	if !removed || !ok {
+		t.Fatalf("expected removed to be false and ok to be true, got removed: %v, ok: %v", removed, ok)
 	}
 }

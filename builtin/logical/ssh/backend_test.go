@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
@@ -24,6 +25,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ssh"
 )
@@ -210,6 +212,101 @@ func testSSH(user, host string, auth ssh.AuthMethod, command string) error {
 		return fmt.Errorf("command %v failed, error: %v, stderr: %v", command, err, stderr.String())
 	}
 	return nil
+}
+
+// TestBackend_ReadRolesReturnsAllFields validates we did not forget to return a newly added
+// field from the ssh role in the read API.
+func TestBackend_ReadRolesReturnsAllFields(t *testing.T) {
+	t.Parallel()
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+
+	b, err := Backend(config)
+	require.NoError(t, err, "failed creating backend")
+	err = b.Setup(context.Background(), config)
+	require.NoError(t, err, "failed setting up backend")
+
+	tests := []struct {
+		name          string
+		data          map[string]interface{}
+		ignoredFields []string
+	}{
+		{
+			name: "otp",
+			data: map[string]interface{}{
+				"key_type":     "otp",
+				"default_user": "ubuntu",
+			},
+			ignoredFields: []string{
+				"allow_host_certificates", "allow_subdomains",
+				"default_user_template", "allowed_extensions", "allowed_user_key_lengths",
+				"allow_empty_principals", "ttl", "allowed_domains_template",
+				"default_extensions_template", "default_critical_options",
+				"allow_bare_domains", "allowed_domains", "allowed_critical_options",
+				"allow_user_certificates", "allow_user_key_ids", "algorithm_signer",
+				"not_before_duration", "max_ttl", "default_extensions", "allowed_users_template", "key_id_format",
+			},
+		},
+		{
+			name: "ca",
+			data: map[string]interface{}{
+				"key_type":                "ca",
+				"algorithm_signer":        "rsa-sha2-256",
+				"allow_user_certificates": true,
+			},
+			ignoredFields: []string{"port", "cidr_list", "exclude_cidr_list"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var fieldsToIgnore []string
+			fieldsToIgnore = append(fieldsToIgnore, tc.ignoredFields...)
+			// These fields apply to all use cases, role_version is never returned and
+			// allowed_user_key_types_lengths is an internal value for the allowed_user_key_lengths field
+			fieldsToIgnore = append(fieldsToIgnore, "role_version")
+			fieldsToIgnore = append(fieldsToIgnore, "allowed_user_key_types_lengths")
+
+			roleName := fmt.Sprintf("roles/role-%s", tc.name)
+			req := &logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      roleName,
+				Storage:   config.StorageView,
+				Data:      tc.data,
+			}
+			resp, err := b.HandleRequest(context.Background(), req)
+			if err != nil || (resp != nil && resp.IsError()) || resp != nil {
+				t.Fatalf("failed to create role %s: resp:%#v err:%s", roleName, resp, err)
+			}
+
+			req = &logical.Request{
+				Operation: logical.ReadOperation,
+				Path:      roleName,
+				Storage:   config.StorageView,
+			}
+			resp, err = b.HandleRequest(context.Background(), req)
+			if err != nil || (resp != nil && resp.IsError()) || resp == nil {
+				t.Fatalf("failed to read role %s: resp:%#v err:%s", roleName, resp, err)
+			}
+
+			roleMap := map[string]interface{}{}
+			err = mapstructure.Decode(sshRole{}, &roleMap)
+			require.NoError(t, err, "failed getting all fields in ssh role")
+
+			// Identify missing fields from OTP response
+			var missingFields []string
+			for fieldName := range roleMap {
+				if _, ok := resp.Data[fieldName]; !ok {
+					if strutil.StrListContains(fieldsToIgnore, fieldName) {
+						continue
+					}
+					missingFields = append(missingFields, fieldName)
+				}
+			}
+			assert.Empty(t, missingFields, "response was missing fields: %s", missingFields)
+		})
+	}
 }
 
 func TestBackend_AllowedUsers(t *testing.T) {
