@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-// This is policy can mount a secret engine
+// This policy can mount a secret engine
 // and list and create oidc keys, relevant for setting identity_key_token for WIF
 export const adminOidcCreateRead = (mountPath: string) => {
   return `

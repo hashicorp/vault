@@ -9,34 +9,28 @@ description: >-
 
 # What is Vault?
 
-HashiCorp Vault is an identity-based secrets and encryption management system. A _secret_ is anything that you want to tightly control access to, such as API encryption keys, passwords, and certificates. Vault provides encryption services that are gated by authentication and authorization methods. Using Vault’s UI, CLI, or HTTP API, access to secrets and other sensitive data can be securely stored and managed, tightly controlled (restricted), and auditable.
-
-If you are already familiar with the basics of Vault, the
-[documentation](/vault/docs) provides a better reference guide for all
-available features as well as internals.
-
-## What is Vault?
-
 HashiCorp Vault is an identity-based secrets and encryption management system.
 It provides encryption services that are gated by authentication and authorization 
 methods to ensure secure, auditable and restricted access to _secrets_. 
-It is used to secure, store and protect secrets and other sensitive data using a UI, CLI, or HTTP API.
 
-A secret is anything that you
-want to tightly control access to, such as tokens, API keys, passwords, encryption keys or certificates.
-Vault provides a unified interface to any secret, while providing tight access
-control and recording a detailed audit log.
+A secret is anything that you want to tightly control access to, such as tokens,
+API keys, passwords, encryption keys or certificates. Vault provides a unified
+interface to any secret, while providing tight access control and recording a
+detailed audit log.
 
 API keys for external services, credentials for service-oriented architecture
-communication, etc. It can be difficult to understand who is accessing which secrets, especially since this can be platform-specific. Adding on key rolling, secure storage, and
-detailed audit logs is almost impossible without a custom solution. This is
-where Vault steps in.
+communication, etc. It can be difficult to understand who is accessing which
+secrets, especially since this can be platform-specific. Adding on key rolling,
+secure storage, and detailed audit logs is almost impossible without a custom
+solution. This is where Vault steps in.
 
-Vault validates and authorizes clients (users, machines, apps) before providing them access to secrets or stored sensitive data.
+Vault validates and authorizes clients (users, machines, apps) before providing
+them access to secrets or stored sensitive data.
 
 ![How Vault Works](/img/how-vault-works.png)
 
-### How does Vault work?
+
+## How does Vault work?
 
 Vault works primarily with tokens and a token is associated to the client's policy. Each policy is path-based and policy rules constrains the actions and accessibility to the paths for each client. With Vault, you can create tokens manually and assign them to your clients, or the clients can log in and obtain a token. The illustration below displays Vault's core workflow.
 
@@ -44,12 +38,12 @@ Vault works primarily with tokens and a token is associated to the client's poli
 
  The core Vault workflow consists of four stages:
 
-* **Authenticate:** Authentication in Vault is the process by which a client supplies information that Vault uses to determine if they are who they say they are. Once the client is authenticated against an auth method, a token is generated and associated to a policy.
-* **Validation:** Vault validates the client against third-party trusted sources, such as Github, LDAP, AppRole, and more.
-* **Authorize**: A client is matched against the Vault security policy.  This policy is a set of rules defining which API endpoints a client has access to with its Vault token. Policies provide a declarative way to grant or forbid access to certain paths and operations in Vault.
-* **Access**: Vault grants access to secrets, keys, and encryption capabilities by issuing a token based on policies associated with the client’s identity. The client can then use their Vault token for future operations.
+- **Authenticate:** Authentication in Vault is the process by which a client supplies information that Vault uses to determine if they are who they say they are. Once the client is authenticated against an auth method, a token is generated and associated to a policy.
+- **Validation:** Vault validates the client against third-party trusted sources, such as Github, LDAP, AppRole, and more.
+- **Authorize**: A client is matched against the Vault security policy.  This policy is a set of rules defining which API endpoints a client has access to with its Vault token. Policies provide a declarative way to grant or forbid access to certain paths and operations in Vault.
+- **Access**: Vault grants access to secrets, keys, and encryption capabilities by issuing a token based on policies associated with the client’s identity. The client can then use their Vault token for future operations.
 
-### Why Vault?
+## Why Vault?
 
 Most enterprises today have credentials sprawled across their organizations. Passwords, API keys, and credentials are stored in plain text, app source code, config files, and other locations. Because these credentials live everywhere, the sprawl can make it difficult and daunting to really know who has access and authorization to what. Having credentials in plain text also increases the potential for malicious attacks, both by internal and external attackers.
 
@@ -85,18 +79,27 @@ The key features of Vault are:
   Revocation assists in key rolling as well as locking down systems in the
   case of an intrusion.
 
--> **Tip**: Learn more about Vault [use cases](/vault/docs/use-cases).
+<Tip title="Vault use cases">
 
-### What is HCP Vault Dedicated?
+Learn more about Vault [use cases](/vault/docs/use-cases).
+
+</Tip>
+
+## What is HCP Vault Dedicated?
 
 HashiCorp Cloud Platform (HCP) Vault Dedicated is a hosted version of Vault, which is operated by HashiCorp to allow organizations to get up and running quickly. HCP Vault Dedicated uses the same binary as self-hosted Vault, which means you will have a consistent user experience. You can use the same Vault clients to communicate with HCP Vault Dedicated as you use to communicate with a self-hosted Vault. Refer to the [HCP Vault Dedicated](/hcp/docs/vault) documentation to learn more.
 
--> **Hands On:** Try the [Get started](/vault/tutorials/cloud) tutorials to set up a managed Vault cluster.
+<Tip title="Hands-on">
 
-### Community
+Try the [Get started](/vault/tutorials/cloud) tutorials to set up a managed
+Vault cluster.
+
+</Tip>
+
+## Community
 
 We welcome questions, suggestions, and contributions from the community.
 
-* Ask questions in [HashiCorp Discuss](https://discuss.hashicorp.com/c/vault/30).
-* Read our [contributing guide](https://github.com/hashicorp/vault/blob/main/CONTRIBUTING.md).
-* [Submit an issue](https://github.com/hashicorp/vault/issues/new/choose) for bugs and feature requests.
+- Ask questions in [HashiCorp Discuss](https://discuss.hashicorp.com/c/vault/30).
+- Read our [contributing guide](https://github.com/hashicorp/vault/blob/main/CONTRIBUTING.md).
+- [Submit an issue](https://github.com/hashicorp/vault/issues/new/choose) for bugs and feature requests.

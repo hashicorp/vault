@@ -106,6 +106,7 @@ module('Acceptance | ssh | roles', function (hooks) {
       },
     },
   ];
+
   test('it creates roles, generates keys and deletes roles', async function (assert) {
     assert.expect(28);
     const sshPath = `ssh-${this.uid}`;
@@ -150,8 +151,7 @@ module('Acceptance | ssh | roles', function (hooks) {
       await settled(); // eslint-disable-line
       role.assertAfterGenerate(assert, sshPath);
 
-      // click the "Back" button
-      await click(SES.backButton);
+      await click(GENERAL.backButton);
       assert.dom('[data-test-secret-generate-form]').exists(`${role.type}: back takes you back to the form`);
 
       await click(GENERAL.cancelButton);
@@ -175,13 +175,22 @@ module('Acceptance | ssh | roles', function (hooks) {
     await runCmd(`delete sys/mounts/${sshPath}`);
   });
   module('Acceptance | ssh | otp role', function () {
+    const createOTPRole = async (name) => {
+      await fillIn(GENERAL.inputByAttr('name'), name);
+      await fillIn(GENERAL.inputByAttr('keyType'), name);
+      await click(GENERAL.toggleGroup('Options'));
+      await fillIn(GENERAL.inputByAttr('keyType'), 'otp');
+      await fillIn(GENERAL.inputByAttr('defaultUser'), 'admin');
+      await fillIn(GENERAL.inputByAttr('cidrList'), '0.0.0.0/0');
+      await click(SES.ssh.createRole);
+    };
     test('it deletes a role from list view', async function (assert) {
       assert.expect(2);
       const path = `ssh-${this.uid}`;
       await enablePage.enable('ssh', path);
       await settled();
       await editPage.visitRoot({ backend: path });
-      await editPage.createOTPRole('role');
+      await createOTPRole('role');
       await settled();
       await showPage.visit({ backend: path, id: 'role' });
       await settled();
@@ -203,7 +212,7 @@ module('Acceptance | ssh | roles', function (hooks) {
       await enablePage.enable('ssh', path);
       await settled();
       await editPage.visitRoot({ backend: path });
-      await editPage.createOTPRole('role');
+      await createOTPRole('role');
       await settled();
       assert.strictEqual(
         currentRouteName(),
@@ -222,11 +231,11 @@ module('Acceptance | ssh | roles', function (hooks) {
         'navs to the credentials page'
       );
 
-      await generatePage.generateOTP();
-      await settled();
+      await fillIn(GENERAL.inputByAttr('username'), 'admin');
+      await fillIn(GENERAL.inputByAttr('ip'), '192.168.1.1');
+      await click(GENERAL.saveButton);
       assert.ok(generatePage.warningIsPresent, 'shows warning');
-      await generatePage.back();
-      await settled();
+      await click(GENERAL.backButton);
       assert.ok(generatePage.userIsPresent, 'clears generate, shows user input');
       assert.ok(generatePage.ipIsPresent, 'clears generate, shows ip input');
       // cleanup

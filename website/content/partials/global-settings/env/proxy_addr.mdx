@@ -1,0 +1,17 @@
+<a id="global-vault_proxy_addr" />
+
+**`VAULT_PROXY_ADDR (string : "")`**
+
+The HTTPS or HTTP address, including server and port, where clients can access
+Vault. Setting `VAULT_HTTP_PROXY` overrides the default proxy resolution
+behavior and tells Vault to ignore the following proxy-related environment
+variables: `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY`.
+
+**Preferred over `VAULT_HTTP_ADDR`**.
+
+All CLI requests resolve the specified proxy and you cannot exclude domains from
+consulting the proxy server.
+
+**Example**: `export VAULT_PROXY_ADDR="https://gohereforvault:8200"`
+
+

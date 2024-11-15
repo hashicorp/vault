@@ -8,7 +8,8 @@
     @showToolbar={{false}}
     @value={{stringify this.content}}
     @readOnly={{true}}
-    @viewportMargin="Infinity"
+    {{! ideally we calculate the "height" of the json data, but 100 should cover most cases }}
+    @viewportMargin="100"
     @gutters={{false}}
     @theme="hashi auto-height"
   />
