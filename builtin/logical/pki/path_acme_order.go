@@ -529,7 +529,8 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 	}
 
 	// ACME issued cert will override the TTL values to truncate to the issuer's
-	// expiration if we go beyond, no matter the setting
+	// expiration if we go beyond, no matter the setting.
+	// Note that if set to certutil.AlwaysEnforceErr we will error out
 	if signingBundle.LeafNotAfterBehavior == certutil.ErrNotAfterBehavior {
 		signingBundle.LeafNotAfterBehavior = certutil.TruncateNotAfterBehavior
 	}

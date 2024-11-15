@@ -383,8 +383,10 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		// Since we are signing an intermediate, we will by default truncate the
 		// signed intermediary in order to generate a valid intermediary chain. This
 		// was changed in 1.17.x as the default prior was PermitNotAfterBehavior
-		warnAboutTruncate = true
-		signingBundle.LeafNotAfterBehavior = certutil.TruncateNotAfterBehavior
+		if signingBundle.LeafNotAfterBehavior != certutil.AlwaysEnforceErr {
+			warnAboutTruncate = true
+			signingBundle.LeafNotAfterBehavior = certutil.TruncateNotAfterBehavior
+		}
 	}
 
 	useCSRValues := data.Get("use_csr_values").(bool)

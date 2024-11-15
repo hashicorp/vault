@@ -710,6 +710,85 @@ func TestAcmeConfigChecksPublicAcmeEnv(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// TestAcmeHonorsAlwaysEnforceErr verifies that we get an error and not truncated if the issuer's
+// leaf_not_after_behavior is set to always_enforce_err
+func TestAcmeHonorsAlwaysEnforceErr(t *testing.T) {
+	t.Parallel()
+
+	cluster, client, _ := setupAcmeBackend(t)
+	defer cluster.Cleanup()
+
+	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	mount := "pki"
+	resp, err := client.Logical().WriteWithContext(context.Background(), mount+"/issuers/generate/intermediate/internal",
+		map[string]interface{}{
+			"key_name":    "short-key",
+			"key_type":    "ec",
+			"common_name": "test.com",
+		})
+	require.NoError(t, err, "failed creating intermediary CSR")
+	intermediateCSR := resp.Data["csr"].(string)
+
+	// Sign the intermediate CSR using /pki
+	resp, err = client.Logical().Write(mount+"/issuer/root-ca/sign-intermediate", map[string]interface{}{
+		"csr":     intermediateCSR,
+		"ttl":     "10m",
+		"max_ttl": "1h",
+	})
+	require.NoError(t, err, "failed signing intermediary CSR")
+	intermediateCertPEM := resp.Data["certificate"].(string)
+
+	// Configure the intermediate cert as the CA in /pki2
+	resp, err = client.Logical().Write(mount+"/issuers/import/cert", map[string]interface{}{
+		"pem_bundle": intermediateCertPEM,
+	})
+	require.NoError(t, err, "failed importing intermediary cert")
+	importedIssuersRaw := resp.Data["imported_issuers"].([]interface{})
+	require.Len(t, importedIssuersRaw, 1)
+	shortCaUuid := importedIssuersRaw[0].(string)
+
+	_, err = client.Logical().Write(mount+"/issuer/"+shortCaUuid, map[string]interface{}{
+		"leaf_not_after_behavior": "always_enforce_err",
+		"issuer_name":             "short-ca",
+	})
+	require.NoError(t, err, "failed updating issuer name")
+
+	baseAcmeURL := "/v1/pki/issuer/short-ca/acme/"
+	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err, "failed creating rsa key")
+
+	acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)
+
+	// Create new account
+	t.Logf("Testing register on %s", baseAcmeURL)
+	acct, err := acmeClient.Register(testCtx, &acme.Account{}, func(tosURL string) bool { return true })
+	require.NoError(t, err, "failed registering account")
+
+	// Create an order
+	t.Logf("Testing Authorize Order on %s", baseAcmeURL)
+	identifiers := []string{"*.localdomain"}
+	order, err := acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{
+		{Type: "dns", Value: identifiers[0]},
+	})
+	require.NoError(t, err, "failed creating order")
+
+	// HACK: Update authorization/challenge to completed as we can't really do it properly in this workflow
+	//       test.
+	markAuthorizationSuccess(t, client, acmeClient, acct, order)
+
+	// Build a proper CSR, with the correct name and signed with a different key works.
+	goodCr := &x509.CertificateRequest{DNSNames: []string{identifiers[0]}}
+	csrKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err, "failed generated key for CSR")
+	csr, err := x509.CreateCertificateRequest(rand.Reader, goodCr, csrKey)
+	require.NoError(t, err, "failed generating csr")
+
+	_, _, err = acmeClient.CreateOrderCert(testCtx, order.FinalizeURL, csr, true)
+	require.ErrorContains(t, err, "cannot satisfy request, as TTL would result in notAfter", "failed finalizing order")
+}
+
 // TestAcmeTruncatesToIssuerExpiry make sure that if the selected issuer's expiry is shorter than the
 // CSR's selected TTL value in ACME and the issuer's leaf_not_after_behavior setting is set to Err,
 // we will override the configured behavior and truncate to the issuer's NotAfter

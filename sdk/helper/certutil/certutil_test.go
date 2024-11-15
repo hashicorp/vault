@@ -916,6 +916,10 @@ func TestNotAfterValues(t *testing.T) {
 	if PermitNotAfterBehavior != 2 {
 		t.Fatalf("Expected PermitNotAfterBehavior=%v to have value 2", PermitNotAfterBehavior)
 	}
+
+	if AlwaysEnforceErr != 3 {
+		t.Fatalf("Expected AlwaysEnforceErr=%v to have value 3", AlwaysEnforceErr)
+	}
 }
 
 func TestSignatureAlgorithmRoundTripping(t *testing.T) {
