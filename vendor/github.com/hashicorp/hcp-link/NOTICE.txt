@@ -1,0 +1,39 @@
+hcp-link
+Copyright (c) 2022 HashiCorp, Inc.
+
+=============
+
+uuid
+https://github.com/google/uuid
+https://github.com/google/uuid/blob/master/LICENSE
+Copyright (c) 2009,2014 Google Inc. All rights reserved.
+
+go-hclog
+https://github.com/hashicorp/go-hclog
+https://github.com/hashicorp/go-hclog/blob/main/LICENSE
+Copyright (c) 2017 HashiCorp
+
+hcp-sdk-go
+https://github.com/hashicorp/hcp-sdk-go
+https://github.com/hashicorp/hcp-sdk-go/blob/main/LICENSE
+Copyright (c) 2021-2022 HashiCorp, Inc.
+
+testify
+https://github.com/stretchr/testify
+https://github.com/stretchr/testify/blob/master/LICENSE
+Copyright (c) 2012-2020 Mat Ryer, Tyler Bunnell and contributors.
+
+grpc-go
+https://github.com/grpc/grpc-go
+https://github.com/grpc/grpc-go/blob/master/LICENSE
+Copyright (c) 2014-2022 gRPC authors.
+
+protobuf 
+https://github.com/golang/protobuf
+https://github.com/golang/protobuf/blob/master/LICENSE
+Copyright 2010 The Go Authors.  All rights reserved.
+
+hcp-scada-provider
+https://github.com/hashicorp/hcp-scada-provider
+https://github.com/hashicorp/hcp-scada-provider/blob/main/LICENSE
+Copyright (c) 2022 HashiCorp, Inc.

@@ -1,0 +1,6 @@
+pkg/*
+bin/*
+.idea/*
+vault-plugin-auth-kubernetes
+go.work
+scratch/

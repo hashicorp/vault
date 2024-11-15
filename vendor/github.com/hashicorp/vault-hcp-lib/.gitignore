@@ -1,0 +1,7 @@
+.DS_Store
+.idea
+.vscode
+pkg/*
+bin/*
+go.work
+go.work.sum

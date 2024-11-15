@@ -1,0 +1,9 @@
+version: v1
+managed:
+  enabled: true
+  go_package_prefix:
+    default: github.com/hashicorp/go-raftchunking
+plugins:
+  - name: go
+    out: .
+    opt: paths=source_relative

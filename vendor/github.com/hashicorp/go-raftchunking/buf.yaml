@@ -1,0 +1,12 @@
+version: v1
+lint:
+  use:
+    - DEFAULT
+  allow_comment_ignores: true
+  except:
+    - PACKAGE_DIRECTORY_MATCH
+    - PACKAGE_VERSION_SUFFIX
+  service_suffix: ""
+breaking:
+  use:
+    - FILE

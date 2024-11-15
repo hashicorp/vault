@@ -1,0 +1,8 @@
+.DS_Store
+
+# Commonplace IDE output that should never be committed
+.out
+.vscode/*.log
+.vscode/settings.json
+.idea/
+.envrc

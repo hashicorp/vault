@@ -1,0 +1,84 @@
+run:
+  tests: false
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+
+  govet:
+    enable:
+      - atomicalign
+      - shadow
+    enable-all: false
+    disable-all: false
+  gocyclo:
+    min-complexity: 30
+  gocognit:
+    min-complexity: 30
+  dupl:
+    threshold: 100
+
+linters:
+  enable-all: true
+  disable:
+    # deprecated linters
+    - deadcode
+    - ifshort
+    - varcheck
+    - nosnakecase
+    ####################
+
+    # conflicted with go fmt
+    - nolintlint
+
+    # workaround to avoid linter failures of getting malformed json
+    - musttag
+
+    - bodyclose
+    - contextcheck
+    - nilerr
+    - noctx
+    - rowserrcheck
+    - sqlclosecheck
+    - structcheck
+    - tparallel
+    - vetshadow
+    - errname
+    - forcetypeassert
+    - gocyclo
+    - unparam
+    - nakedret
+    - lll
+    - golint
+    - maligned
+    - scopelint
+    - dupl
+    - gosec
+    - gochecknoinits
+    - gochecknoglobals
+    - exhaustruct
+    - nonamedreturns
+    - errcheck
+    - staticcheck
+    - stylecheck
+    - wsl
+    - interfacer
+    - varnamelen
+    - tagliatelle
+    - gomnd
+    - nlreturn
+    - wrapcheck
+    - wastedassign
+    - goerr113
+    - exhaustivestruct
+    - durationcheck
+    - errorlint
+    - cyclop
+    - godot
+    - exhaustive
+    - depguard
+    - tagalign
+    - inamedparam
+    - perfsprint
+  fast: false

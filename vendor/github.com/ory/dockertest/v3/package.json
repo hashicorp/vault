@@ -1,0 +1,9 @@
+{
+  "private": true,
+  "prettier": "ory-prettier-styles",
+  "devDependencies": {
+    "license-checker": "^25.0.1",
+    "ory-prettier-styles": "1.3.0",
+    "prettier": "2.7.1"
+  }
+}

@@ -1,0 +1,23 @@
+run:
+  timeout: 5m
+
+linters-settings:
+  gci:
+    sections:
+      - standard
+      - default
+      - prefix(github.com/go-viper/mapstructure)
+  golint:
+    min-confidence: 0
+  goimports:
+    local-prefixes: github.com/go-viper/maptstructure
+
+linters:
+  disable-all: true
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+    - staticcheck
+    # - stylecheck

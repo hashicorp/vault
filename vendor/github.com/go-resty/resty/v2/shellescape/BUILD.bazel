@@ -1,0 +1,14 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "shellescape",
+    srcs = ["shellescape.go"],
+    importpath = "github.com/go-resty/resty/v2/shellescape",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "go_default_library",
+    actual = ":shellescape",
+    visibility = ["//visibility:public"],
+)

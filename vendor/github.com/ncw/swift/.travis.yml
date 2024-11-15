@@ -1,0 +1,61 @@
+language: go
+sudo: false
+
+arch:
+  - amd64
+  - ppc64le
+
+go_import_path: github.com/ncw/swift
+
+go:
+  - 1.2.x
+  - 1.3.x
+  - 1.4.x
+  - 1.5.x
+  - 1.6.x
+  - 1.7.x
+  - 1.8.x
+  - 1.9.x
+  - 1.10.x
+  - 1.11.x
+  - 1.12.x
+  - 1.13.x
+  - 1.14.x
+  - master
+
+matrix:
+  include:
+  - go: 1.14.x
+    env: TEST_REAL_SERVER=rackspace
+  - go: 1.14.x
+    env: TEST_REAL_SERVER=memset
+  - go: 1.14.x
+    arch: ppc64le
+    env: TEST_REAL_SERVER=rackspace
+  - go: 1.14.x
+    arch: ppc64le
+    env: TEST_REAL_SERVER=memset
+  allow_failures:
+  - go: 1.14.x
+    env: TEST_REAL_SERVER=rackspace
+  - go: 1.14.x
+    env: TEST_REAL_SERVER=memset
+  - go: 1.14.x
+    arch: ppc64le
+    env: TEST_REAL_SERVER=rackspace
+  - go: 1.14.x
+    arch: ppc64le
+    env: TEST_REAL_SERVER=memset
+# Removed unsupported jobs for ppc64le
+  exclude:
+  - go: 1.2.x
+    arch: ppc64le
+  - go: 1.3.x
+    arch: ppc64le
+  - go: 1.4.x
+    arch: ppc64le
+install: go test -i ./...
+script:
+  - test -z "$(go fmt ./...)"
+  - go test
+  - ./travis_realserver.sh

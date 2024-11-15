@@ -1,0 +1,3 @@
+[submodule "e2e_scripts"]
+	path = e2e_scripts
+	url = https://github.com/linode/dx-e2e-test-scripts

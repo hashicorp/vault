@@ -1,0 +1,14 @@
+.DS_Store
+Thumbs.db
+
+.tools/
+venv/
+.idea/
+.vscode/
+*.iml
+*.so
+coverage.*
+go.work
+go.work.sum
+
+gen/

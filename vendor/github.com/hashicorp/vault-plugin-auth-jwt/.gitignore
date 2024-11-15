@@ -1,0 +1,85 @@
+# Compiled Object files, Static and Dynamic libs (Shared Objects)
+*.o
+*.a
+*.so
+
+# Folders
+_obj
+_test
+.cover
+
+# Architecture specific extensions/prefixes
+*.[568vq]
+[568vq].out
+
+*.cgo1.go
+*.cgo2.c
+_cgo_defun.c
+_cgo_gotypes.go
+_cgo_export.*
+
+_testmain.go
+
+*.exe
+*.test
+*.prof
+
+# Other dirs
+/bin/
+/pkg/
+
+# Vault-specific
+example.hcl
+example.vault.d
+
+# Ruby
+website/vendor
+website/.bundle
+website/build
+
+# Vagrant
+.vagrant/
+Vagrantfile
+
+# Configs
+*.hcl
+
+.DS_Store
+.idea
+.vscode
+
+dist/*
+
+tags
+
+# Editor backups
+*~
+*.sw[a-z]
+
+# IntelliJ IDEA project files
+.idea
+*.ipr
+*.iml
+
+# compiled output
+ui/dist
+ui/tmp
+
+# dependencies
+ui/node_modules
+ui/bower_components
+
+# misc
+ui/.DS_Store
+ui/.sass-cache
+ui/connect.lock
+ui/coverage/*
+ui/libpeerconnection.log
+ui/npm-debug.log
+ui/testem.log
+tmp/
+
+scripts/custom.sh
+
+# binary
+cmd/vault-plugin-auth-jwt/vault-plugin-auth-jwt

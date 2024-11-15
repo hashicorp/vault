@@ -1,0 +1,4 @@
+HashiCorp Raft WAL Library
+https://www.hashicorp.com/
+License: Mozilla Public License Version 2.0
+Copyright 2022 HashiCorp, Inc.

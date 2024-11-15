@@ -1,0 +1,28 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
+version: v1
+name: buf.build/hashicorp/go-kms-wrapping
+breaking:
+  use:
+    - FILE
+lint:
+  use:
+    - DEFAULT
+  ignore_only:
+    ENUM_VALUE_PREFIX:
+      - github.com.hashicorp.go.kms.wrapping.v2.types.proto
+    ENUM_VALUE_UPPER_SNAKE_CASE:
+      - github.com.hashicorp.go.kms.wrapping.v2.types.proto
+    ENUM_ZERO_VALUE_SUFFIX:
+      - github.com.hashicorp.go.kms.wrapping.v2.types.proto
+    FILE_LOWER_SNAKE_CASE:
+      - github.com.hashicorp.go.kms.wrapping.v2.types.proto
+      - plugin/github.com.hashicorp.go.kms.wrapping.plugin.v2.proto
+    PACKAGE_DIRECTORY_MATCH:
+      - github.com.hashicorp.go.kms.wrapping.v2.types.proto
+      - plugin/github.com.hashicorp.go.kms.wrapping.plugin.v2.proto
+    PACKAGE_VERSION_SUFFIX:
+      - github.com.hashicorp.go.kms.wrapping.v2.types.proto
+    SERVICE_SUFFIX:
+      - plugin/github.com.hashicorp.go.kms.wrapping.plugin.v2.proto

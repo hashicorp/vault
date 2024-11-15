@@ -1,0 +1,20 @@
+run:
+  tests: false
+  skip-files:
+    - logging.go  # Logging has some utility functions that are useful to have around which get flagged up
+linters:
+  enable:
+    - bodyclose
+    - revive
+    - gosec
+    - unconvert
+linters-settings:
+  revive:
+    set-exit-status: true
+    min-confidence: 0.81
+    rules:
+      - name: var-naming
+        arguments: [["HTTP", "ASCII", "IP", "TTL", "URL", "TLS", "JSON"]]
+  errcheck:
+    check-type-assertions: true
+    check-blank: true

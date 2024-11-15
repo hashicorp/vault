@@ -1,0 +1,129 @@
+// Copyright 2018 gRPC authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+option go_package = "github.com/GoogleCloudPlatform/grpc-gcp-go/grpcgcp/grpc_gcp";
+
+package grpc.gcp;
+
+message ApiConfig {
+  // The channel pool configurations.
+  ChannelPoolConfig channel_pool = 2;
+
+  // The method configurations.
+  repeated MethodConfig method = 1001;
+}
+
+// ChannelPoolConfig are options for configuring the channel pool.
+// RPCs will be scheduled onto existing channels in the pool until all channels
+// have <max_concurrent_streams_low_watermark> number of streams. At this point
+// a new channel is spun out. Once <max_size> channels have been spun out and
+// each has <max_concurrent_streams_low_watermark> streams, subsequent RPCs will
+// hang until any of the in-flight RPCs is finished, freeing up a channel.
+message ChannelPoolConfig {
+  // The max number of channels in the pool.
+  // Default value is 0, meaning 'unlimited' size.
+  uint32 max_size = 1;
+
+  // The idle timeout (seconds) of channels without bound affinity sessions.
+  uint64 idle_timeout = 2;
+
+  // The low watermark of max number of concurrent streams in a channel.
+  // New channel will be created once it get hit, until we reach the max size of the channel pool.
+  // Default value is 100. The valid range is [1, 100]. Any value outside the range will be ignored and the default value will be used.
+  // Note: It is not recommended that users adjust this value, since a single channel should generally have no trouble managing the default (maximum) number of streams.
+  uint32 max_concurrent_streams_low_watermark = 3;
+
+  // The minimum number of channels in the pool.
+  uint32 min_size = 4;
+
+  // If a channel mapped to an affinity key is not ready, temporarily fallback
+  // to another ready channel.
+  // Enabling this fallback is beneficial in scenarios with short RPC timeouts
+  // and rather slow connection establishing or during incidents when new
+  // connections fail but existing connections still operate.
+  bool fallback_to_ready = 5;
+
+  // Enables per channel unresponsive connection detection if > 0 and unresponsive_calls > 0.
+  // If enabled and more than unresponsive_detection_ms passed since the last response from the server,
+  // and >= unresponsive_calls RPC calls (started after last response from the server) timed-out on the client side,
+  // then the connection of that channel will be gracefully refreshed. I.e., a new connection will be created for
+  // that channel and after the new connection is ready it will replace the old connection. The calls on the old
+  // connection will not be interrupted. The unresponsive_detection_ms will be doubled every consecutive refresh
+  // if no response from the server is received.
+  uint32 unresponsive_detection_ms = 6;
+
+  // Enables per channel unresponsive connection detection if > 0 and unresponsive_detection_ms > 0.
+  // If enabled and more than unresponsive_detection_ms passed since the last response from the server,
+  // and >= unresponsive_calls RPC calls (started after last response from the server) timed-out on the client side,
+  // then the connection of that channel will be gracefully refreshed. I.e., a new connection will be created for
+  // that channel and after the new connection is ready it will replace the old connection. The calls on the old
+  // connection will not be interrupted. The unresponsive_detection_ms will be doubled every consecutive refresh
+  // if no response from the server is received.
+  uint32 unresponsive_calls = 7;
+
+  // A selection of strategies for picking a channel for a call with BIND command.
+  enum BindPickStrategy {
+    // No preference -- picking a channel for a BIND call will be no different
+    // than for any other calls.
+    UNSPECIFIED = 0;
+
+    // A channel with the least active streams at the moment of a BIND call
+    // initiation will be picked.
+    LEAST_ACTIVE_STREAMS = 1;
+
+    // Cycle through channels created by the BIND call initiation. I. e. pick
+    // a channel in a round-robin manner. Note that some channels may be
+    // skipped during channel pool resize.
+    ROUND_ROBIN = 2;
+  }
+
+  // The strategy for picking a channel for a call with BIND command.
+  BindPickStrategy bind_pick_strategy = 8;
+}
+
+message MethodConfig {
+  // A fully qualified name of a gRPC method, or a wildcard pattern ending
+  // with .*, such as foo.bar.A, foo.bar.*. Method configs are evaluated
+  // sequentially, and the first one takes precedence.
+  repeated string name = 1;
+
+  // The channel affinity configurations.
+  AffinityConfig affinity = 1001;
+}
+
+message AffinityConfig {
+  enum Command {
+    // The annotated method will be required to be bound to an existing session
+    // to execute the RPC. The corresponding <affinity_key_field_path> will be
+    // used to find the affinity key from the request message.
+    BOUND = 0;
+    // The annotated method will establish the channel affinity with the
+    // channel which is used to execute the RPC. The corresponding
+    // <affinity_key_field_path> will be used to find the affinity key from the
+    // response message.
+    BIND = 1;
+    // The annotated method will remove the channel affinity with the
+    // channel which is used to execute the RPC. The corresponding
+    // <affinity_key_field_path> will be used to find the affinity key from the
+    // request message.
+    UNBIND = 2;
+  }
+  // The affinity command applies on the selected gRPC methods.
+  Command command = 2;
+  // The field path of the affinity key in the request/response message.
+  // For example: "f.a", "f.b.d", etc.
+  string affinity_key = 3;
+}

@@ -1,0 +1,235 @@
+{
+package grammar
+
+import (
+   "strconv"
+   "strings"
+
+   "github.com/mitchellh/pointerstructure"
+)
+}
+
+Input <- _? "(" _? expr:OrExpression _? ")" _? EOF {
+   return expr, nil
+} / _? expr:OrExpression _? EOF {
+   return expr, nil
+}
+
+OrExpression <- left:AndExpression _ "or" _ right:OrExpression {
+   return &BinaryExpression{
+      Operator: BinaryOpOr,
+      Left: left.(Expression),
+      Right: right.(Expression),
+   }, nil
+} / expr:AndExpression {
+   return expr, nil
+} / expr:CollectionExpression {
+   return expr, nil
+}
+
+AndExpression <- left:NotExpression _ "and" _ right:AndExpression {
+   return &BinaryExpression{
+      Operator: BinaryOpAnd,
+      Left: left.(Expression),
+      Right: right.(Expression),
+   }, nil
+} / expr:NotExpression {
+   return expr, nil
+}
+
+NotExpression <- "not" _ expr:NotExpression {
+   if unary, ok := expr.(*UnaryExpression); ok && unary.Operator == UnaryOpNot {
+      // small optimization to get rid unnecessary levels of AST nodes
+      // for things like:  not not foo == 3  which is equivalent to foo == 3
+      return unary.Operand, nil
+   }
+
+   return &UnaryExpression{
+      Operator: UnaryOpNot,
+      Operand: expr.(Expression),
+   }, nil
+} / expr:ParenthesizedExpression {
+   return expr, nil
+}
+
+CollectionExpression <- op:(CollectionOpAny / CollectionOpAll) selector:Selector _ "as" _ binding:CollectionIdentifiers _? "{" _? expr:OrExpression _? "}" {
+   return &CollectionExpression{
+      Op:          op.(CollectionOperator),
+      Selector:    selector.(Selector),
+      NameBinding: binding.(CollectionNameBinding),
+      Inner:       expr.(Expression),
+   }, nil
+}
+
+CollectionIdentifiers "collection-identifiers" <- id1:Identifier _? "," _? id2:Identifier {
+   return CollectionNameBinding{
+      Mode: CollectionBindIndexAndValue,
+      Index: id1.(string),
+      Value: id2.(string),
+   }, nil
+} / id1:Identifier _? "," _? "_" {
+   return CollectionNameBinding{
+      Mode: CollectionBindIndex,
+      Index: id1.(string),
+   }, nil
+} / "_" _? "," _? id2:Identifier {
+   return CollectionNameBinding{
+      Mode: CollectionBindValue,
+      Value: id2.(string),
+   }, nil
+} / id:Identifier {
+   return CollectionNameBinding{
+      Mode: CollectionBindDefault,
+      Default: id.(string),
+   }, nil
+}
+
+CollectionOpAny <- "any" _ {
+   return CollectionOpAny, nil
+}
+
+CollectionOpAll <- "all" _ {
+   return CollectionOpAll, nil
+}
+
+ParenthesizedExpression "grouping" <- "(" _? expr:OrExpression _? ")" {
+   return expr, nil
+} / expr:MatchExpression {
+   return expr, nil
+} / "(" _? OrExpression _? !")" &{
+   return false, errors.New("Unmatched parentheses")
+}
+
+MatchExpression "match" <- MatchSelectorOpValue / MatchSelectorOp / MatchValueOpSelector
+
+MatchSelectorOpValue "match" <- selector:Selector operator:(MatchEqual / MatchNotEqual / MatchContains / MatchNotContains / MatchMatches / MatchNotMatches) value:Value {
+   return &MatchExpression{Selector: selector.(Selector), Operator: operator.(MatchOperator), Value: value.(*MatchValue)}, nil
+}
+
+MatchSelectorOp "match" <- selector:Selector operator:(MatchIsEmpty / MatchIsNotEmpty) {
+   return &MatchExpression{Selector: selector.(Selector), Operator: operator.(MatchOperator), Value: nil}, nil
+}
+
+MatchValueOpSelector "match" <- value:Value operator:(MatchIn / MatchNotIn) selector:Selector {
+   return &MatchExpression{Selector: selector.(Selector), Operator: operator.(MatchOperator), Value: value.(*MatchValue)}, nil
+} / Value operator:(MatchIn / MatchNotIn) !Selector &{
+   return false, errors.New("Invalid selector")
+}
+
+MatchEqual <- _? "==" _? {
+   return MatchEqual, nil
+}
+MatchNotEqual <- _? "!=" _? {
+   return MatchNotEqual, nil
+}
+MatchIsEmpty <- _ "is" _ "empty" {
+   return MatchIsEmpty, nil
+}
+MatchIsNotEmpty <- _"is" _ "not" _ "empty" {
+   return MatchIsNotEmpty, nil
+}
+MatchIn <- _ "in" _ {
+   return MatchIn, nil
+}
+MatchNotIn <- _ "not" _ "in" _ {
+   return MatchNotIn, nil
+}
+MatchContains <- _ "contains" _ {
+   return MatchIn, nil
+}
+MatchNotContains <- _ "not" _ "contains" _ {
+   return MatchNotIn, nil
+}
+MatchMatches <- _ "matches" _ {
+   return MatchMatches, nil
+}
+MatchNotMatches <- _ "not" _ "matches" _ {
+   return MatchNotMatches, nil
+}
+
+Selector "selector" <- first:Identifier rest:SelectorOrIndex* {
+   sel := Selector{
+      Type: SelectorTypeBexpr,
+      Path: []string{first.(string)},
+   }
+   if rest != nil {
+      for _, v := range rest.([]interface{}) {
+        sel.Path = append(sel.Path, v.(string))
+      }
+   }
+   return sel, nil
+} / '"' ptrsegs:JsonPointerSegment* '"' {
+   sel := Selector{
+      Type: SelectorTypeJsonPointer,
+   }
+   if ptrsegs != nil {
+      for _, v := range ptrsegs.([]interface{}) {
+         sel.Path = append(sel.Path, v.(string))
+      }
+   }
+
+   // Validate and cache
+   ptrStr := fmt.Sprintf("/%s", strings.Join(sel.Path, "/"))
+   ptr, err := pointerstructure.Parse(ptrStr)
+   if err != nil {
+      return nil, fmt.Errorf("error validating json pointer: %w", err)
+   }
+   sel.Path = ptr.Parts
+
+   return sel, nil
+}
+
+JsonPointerSegment <- '/' ident:[\pL\pN-_.~:|]+ {
+   return string(c.text)[1:], nil
+}
+
+Identifier <- [a-zA-Z] [a-zA-Z0-9_/]* {
+   return string(c.text), nil
+}
+
+SelectorOrIndex <- "." ident:Identifier {
+   return ident, nil
+} / expr:IndexExpression {
+   return expr, nil
+} / "." idx:[0-9]+ {
+   return string(c.text)[1:], nil
+}
+
+IndexExpression "index" <- "[" _? lit:StringLiteral _? "]" {
+   return lit, nil
+} / "[" _? !StringLiteral &{
+   return false, errors.New("Invalid index")
+} / "[" _? StringLiteral _? !"]" &{
+   return false, errors.New("Unclosed index expression")
+}
+
+Value "value" <- selector:Selector {
+   return &MatchValue{Raw:selector.(Selector).String()}, nil
+} / n:NumberLiteral {
+   return &MatchValue{Raw: n.(string)}, nil
+} / s:StringLiteral {
+   return &MatchValue{Raw: s.(string)}, nil
+}
+
+NumberLiteral "number" <- "-"? IntegerOrFloat &AfterNumbers {
+   return string(c.text), nil
+} / "-"? IntegerOrFloat !AfterNumbers &{
+   return false, errors.New("Invalid number literal")
+}
+
+AfterNumbers <- &(_ / EOF / ")")
+
+IntegerOrFloat <- ("0" / [1-9][0-9]*) ("." [0-9]+)?
+
+StringLiteral "string" <- ('`' RawStringChar* '`' / '"' DoubleStringChar* '"') {
+  return strconv.Unquote(string(c.text))
+} / ('`' RawStringChar* / '"' DoubleStringChar*) EOF &{
+  return false, errors.New("Unterminated string literal")
+}
+
+RawStringChar <- !'`' .
+DoubleStringChar <- !'"' .
+
+_ "whitespace" <- [ \t\r\n]+
+
+EOF <- !.

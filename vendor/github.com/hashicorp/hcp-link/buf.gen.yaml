@@ -1,0 +1,17 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
+version: v1
+managed:
+  enabled: true
+  go_package_prefix:
+    default: github.com/hashicorp/hcp-link/gen/go
+plugins:
+  - name: go
+    out: gen/proto/go
+    opt:
+      - paths=source_relative
+  - name: go-grpc
+    out: gen/proto/go
+    opt:
+      - paths=source_relative

@@ -1,0 +1,5 @@
+{
+    "timeUnit": "ms",
+    "sqlTimeTexts":["query", "prepare", "exec", "call", "fetch", "fetchlob", "rollback", "commit"],
+    "timeUpperBounds": [1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0]
+}

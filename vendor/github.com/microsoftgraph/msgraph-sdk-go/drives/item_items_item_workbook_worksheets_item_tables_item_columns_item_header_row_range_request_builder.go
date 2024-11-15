@@ -1,0 +1,227 @@
+package drives
+
+import (
+    "context"
+    i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f "github.com/microsoft/kiota-abstractions-go"
+    iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242 "github.com/microsoftgraph/msgraph-sdk-go/models"
+    ia572726a95efa92ddd544552cd950653dc691023836923576b2f4bf716cf204a "github.com/microsoftgraph/msgraph-sdk-go/models/odataerrors"
+)
+
+// ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder provides operations to call the headerRowRange method.
+type ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder struct {
+    i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.BaseRequestBuilder
+}
+// ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilderGetRequestConfiguration configuration for the request such as headers, query parameters, and middleware options.
+type ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilderGetRequestConfiguration struct {
+    // Request headers
+    Headers *i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.RequestHeaders
+    // Request options
+    Options []i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.RequestOption
+}
+// BoundingRectWithAnotherRange provides operations to call the boundingRect method.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeBoundingRectWithAnotherRangeRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) BoundingRectWithAnotherRange(anotherRange *string)(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeBoundingRectWithAnotherRangeRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeBoundingRectWithAnotherRangeRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter, anotherRange)
+}
+// CellWithRowWithColumn provides operations to call the cell method.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeCellWithRowWithColumnRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) CellWithRowWithColumn(column *int32, row *int32)(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeCellWithRowWithColumnRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeCellWithRowWithColumnRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter, column, row)
+}
+// Clear provides operations to call the clear method.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeClearRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) Clear()(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeClearRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeClearRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter)
+}
+// ColumnsAfter provides operations to call the columnsAfter method.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeColumnsAfterRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) ColumnsAfter()(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeColumnsAfterRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeColumnsAfterRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter)
+}
+// ColumnsAfterWithCount provides operations to call the columnsAfter method.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeColumnsAfterWithCountRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) ColumnsAfterWithCount(count *int32)(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeColumnsAfterWithCountRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeColumnsAfterWithCountRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter, count)
+}
+// ColumnsBefore provides operations to call the columnsBefore method.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeColumnsBeforeRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) ColumnsBefore()(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeColumnsBeforeRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeColumnsBeforeRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter)
+}
+// ColumnsBeforeWithCount provides operations to call the columnsBefore method.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeColumnsBeforeWithCountRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) ColumnsBeforeWithCount(count *int32)(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeColumnsBeforeWithCountRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeColumnsBeforeWithCountRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter, count)
+}
+// ColumnWithColumn provides operations to call the column method.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeColumnWithColumnRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) ColumnWithColumn(column *int32)(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeColumnWithColumnRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeColumnWithColumnRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter, column)
+}
+// NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilderInternal instantiates a new ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder and sets the default values.
+func NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilderInternal(pathParameters map[string]string, requestAdapter i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.RequestAdapter)(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) {
+    m := &ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder{
+        BaseRequestBuilder: *i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.NewBaseRequestBuilder(requestAdapter, "{+baseurl}/drives/{drive%2Did}/items/{driveItem%2Did}/workbook/worksheets/{workbookWorksheet%2Did}/tables/{workbookTable%2Did}/columns/{workbookTableColumn%2Did}/headerRowRange()", pathParameters),
+    }
+    return m
+}
+// NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder instantiates a new ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder and sets the default values.
+func NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder(rawUrl string, requestAdapter i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.RequestAdapter)(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) {
+    urlParams := make(map[string]string)
+    urlParams["request-raw-url"] = rawUrl
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilderInternal(urlParams, requestAdapter)
+}
+// DeletePath provides operations to call the delete method.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeDeleteRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) DeletePath()(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeDeleteRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeDeleteRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter)
+}
+// EntireColumn provides operations to call the entireColumn method.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeEntireColumnRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) EntireColumn()(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeEntireColumnRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeEntireColumnRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter)
+}
+// EntireRow provides operations to call the entireRow method.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeEntireRowRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) EntireRow()(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeEntireRowRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeEntireRowRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter)
+}
+// Format provides operations to manage the format property of the microsoft.graph.workbookRange entity.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeFormatRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) Format()(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeFormatRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeFormatRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter)
+}
+// Get gets the range object associated with the header row of the column.
+// returns a WorkbookRangeable when successful
+// returns a ODataError error when the service returns a 4XX or 5XX status code
+// [Find more info here]
+// 
+// [Find more info here]: https://learn.microsoft.com/graph/api/tablecolumn-headerrowrange?view=graph-rest-1.0
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) Get(ctx context.Context, requestConfiguration *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilderGetRequestConfiguration)(iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.WorkbookRangeable, error) {
+    requestInfo, err := m.ToGetRequestInformation(ctx, requestConfiguration);
+    if err != nil {
+        return nil, err
+    }
+    errorMapping := i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.ErrorMappings {
+        "XXX": ia572726a95efa92ddd544552cd950653dc691023836923576b2f4bf716cf204a.CreateODataErrorFromDiscriminatorValue,
+    }
+    res, err := m.BaseRequestBuilder.RequestAdapter.Send(ctx, requestInfo, iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.CreateWorkbookRangeFromDiscriminatorValue, errorMapping)
+    if err != nil {
+        return nil, err
+    }
+    if res == nil {
+        return nil, nil
+    }
+    return res.(iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.WorkbookRangeable), nil
+}
+// Insert provides operations to call the insert method.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeInsertRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) Insert()(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeInsertRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeInsertRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter)
+}
+// IntersectionWithAnotherRange provides operations to call the intersection method.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeIntersectionWithAnotherRangeRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) IntersectionWithAnotherRange(anotherRange *string)(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeIntersectionWithAnotherRangeRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeIntersectionWithAnotherRangeRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter, anotherRange)
+}
+// LastCell provides operations to call the lastCell method.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeLastCellRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) LastCell()(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeLastCellRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeLastCellRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter)
+}
+// LastColumn provides operations to call the lastColumn method.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeLastColumnRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) LastColumn()(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeLastColumnRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeLastColumnRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter)
+}
+// LastRow provides operations to call the lastRow method.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeLastRowRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) LastRow()(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeLastRowRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeLastRowRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter)
+}
+// Merge provides operations to call the merge method.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeMergeRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) Merge()(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeMergeRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeMergeRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter)
+}
+// OffsetRangeWithRowOffsetWithColumnOffset provides operations to call the offsetRange method.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeOffsetRangeWithRowOffsetWithColumnOffsetRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) OffsetRangeWithRowOffsetWithColumnOffset(columnOffset *int32, rowOffset *int32)(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeOffsetRangeWithRowOffsetWithColumnOffsetRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeOffsetRangeWithRowOffsetWithColumnOffsetRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter, columnOffset, rowOffset)
+}
+// ResizedRangeWithDeltaRowsWithDeltaColumns provides operations to call the resizedRange method.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeResizedRangeWithDeltaRowsWithDeltaColumnsRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) ResizedRangeWithDeltaRowsWithDeltaColumns(deltaColumns *int32, deltaRows *int32)(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeResizedRangeWithDeltaRowsWithDeltaColumnsRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeResizedRangeWithDeltaRowsWithDeltaColumnsRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter, deltaColumns, deltaRows)
+}
+// RowsAbove provides operations to call the rowsAbove method.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRowsAboveRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) RowsAbove()(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRowsAboveRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRowsAboveRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter)
+}
+// RowsAboveWithCount provides operations to call the rowsAbove method.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRowsAboveWithCountRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) RowsAboveWithCount(count *int32)(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRowsAboveWithCountRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRowsAboveWithCountRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter, count)
+}
+// RowsBelow provides operations to call the rowsBelow method.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRowsBelowRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) RowsBelow()(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRowsBelowRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRowsBelowRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter)
+}
+// RowsBelowWithCount provides operations to call the rowsBelow method.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRowsBelowWithCountRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) RowsBelowWithCount(count *int32)(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRowsBelowWithCountRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRowsBelowWithCountRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter, count)
+}
+// RowWithRow provides operations to call the row method.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRowWithRowRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) RowWithRow(row *int32)(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRowWithRowRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRowWithRowRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter, row)
+}
+// Sort provides operations to manage the sort property of the microsoft.graph.workbookRange entity.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeSortRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) Sort()(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeSortRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeSortRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter)
+}
+// ToGetRequestInformation gets the range object associated with the header row of the column.
+// returns a *RequestInformation when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) ToGetRequestInformation(ctx context.Context, requestConfiguration *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilderGetRequestConfiguration)(*i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.RequestInformation, error) {
+    requestInfo := i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.NewRequestInformationWithMethodAndUrlTemplateAndPathParameters(i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.GET, m.BaseRequestBuilder.UrlTemplate, m.BaseRequestBuilder.PathParameters)
+    if requestConfiguration != nil {
+        requestInfo.Headers.AddAll(requestConfiguration.Headers)
+        requestInfo.AddRequestOptions(requestConfiguration.Options)
+    }
+    requestInfo.Headers.TryAdd("Accept", "application/json")
+    return requestInfo, nil
+}
+// Unmerge provides operations to call the unmerge method.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeUnmergeRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) Unmerge()(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeUnmergeRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeUnmergeRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter)
+}
+// UsedRange provides operations to call the usedRange method.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeUsedRangeRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) UsedRange()(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeUsedRangeRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeUsedRangeRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter)
+}
+// UsedRangeWithValuesOnly provides operations to call the usedRange method.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeUsedRangeWithValuesOnlyRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) UsedRangeWithValuesOnly(valuesOnly *bool)(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeUsedRangeWithValuesOnlyRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeUsedRangeWithValuesOnlyRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter, valuesOnly)
+}
+// VisibleView provides operations to call the visibleView method.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeVisibleViewRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) VisibleView()(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeVisibleViewRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeVisibleViewRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter)
+}
+// WithUrl returns a request builder with the provided arbitrary URL. Using this method means any other path or query parameters are ignored.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) WithUrl(rawUrl string)(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder(rawUrl, m.BaseRequestBuilder.RequestAdapter);
+}
+// Worksheet provides operations to manage the worksheet property of the microsoft.graph.workbookRange entity.
+// returns a *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeWorksheetRequestBuilder when successful
+func (m *ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeRequestBuilder) Worksheet()(*ItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeWorksheetRequestBuilder) {
+    return NewItemItemsItemWorkbookWorksheetsItemTablesItemColumnsItemHeaderRowRangeWorksheetRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter)
+}

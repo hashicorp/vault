@@ -1,0 +1,19 @@
+{{define "time" -}}
+{{printf "%10d" .Count}} {{printf "%12.1f" .Sum}}{{range .Buckets}}{{printf "%10d" .}}{{end -}}
+{{end -}}
+{{define "bounds" -}}{{range $k, $v := . -}}{{printf "%10.1f" $k}}{{end}}{{end -}}
+openConnections        {{.OpenConnections}}
+openTransactions       {{.OpenTransactions}}
+openStatements         {{.OpenStatements}}
+readBytes              {{.ReadBytes}}
+writtenBytes           {{.WrittenBytes}}
+sessionConnects        {{.SessionConnects}}
+timeUnit               {{.TimeUnit}}
+{{printf "%-12s" ""}}{{printf "%10s" "Count"}} {{printf "%12s" "Sum"}}{{template "bounds" .ReadTime.Buckets}}
+{{printf "%-12s" "readTime"}}{{template "time" .ReadTime}}
+{{printf "%-12s" "writeTime"}}{{template "time" .WriteTime}}
+{{printf "%-12s" "authTime"}}{{template "time" .AuthTime}}
+sqlTimes:
+{{range $k, $v := .SQLTimes -}}
+{{printf "  %-10s" $k}}{{template "time" $v}}
+{{end}}

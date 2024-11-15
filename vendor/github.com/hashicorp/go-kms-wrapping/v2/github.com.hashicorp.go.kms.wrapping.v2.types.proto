@@ -1,0 +1,204 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
+syntax = "proto3";
+
+package github.com.hashicorp.go.kms.wrapping.v2.types;
+
+import "google/protobuf/struct.proto";
+
+option go_package = "github.com/hashicorp/go-kms-wrapping/v2;wrapping";
+
+// WrapperConfig is the result of a call to SetConfig on a wrapper, returning
+// relevant information about the wrapper and its updated configuration
+message WrapperConfig {
+  map<string, string> metadata = 10;
+}
+
+// EnvelopeInfo contains the information necessary to perfom encryption or
+// decryption in an envelope fashion
+message EnvelopeInfo {
+  // Ciphertext is the ciphertext from the envelope
+  // @gotags: class:"public"
+  bytes ciphertext = 1;
+
+  // Key is the key used in the envelope
+  // @gotags: class:"secret"
+  bytes key = 2;
+
+  // IV is the initialization value used during encryption in the envelope
+  // @gotags: class:"secret"
+  bytes iv = 3;
+}
+
+// BlobInfo contains information about the encrypted value along with
+// information about the key used to encrypt it
+message BlobInfo {
+  // Ciphertext is the encrypted bytes
+  // @gotags: class:"public"
+  bytes ciphertext = 1;
+
+  // IV is the initialization value used during encryption
+  // @gotags: class:"secret"
+  bytes iv = 2;
+
+  // HMAC is the bytes of the HMAC, if any
+  // @gotags: class:"public"
+  bytes hmac = 3;
+
+  // Wrapped can be used by the client to indicate whether Ciphertext actually
+  // contains wrapped data or not. This can be useful if you want to reuse the
+  // same struct to pass data along before and after wrapping. Deprecated in
+  // favor of plaintext.
+  bool wrapped = 4 [deprecated = true];
+
+  // Plaintext can be used to allow the same struct to be used to pass data
+  // along before and after (un)wrapping.
+  // @gotags: class:"secret"
+  bytes plaintext = 7;
+
+  // KeyInfo contains information about the key that was used to create this value
+  KeyInfo key_info = 5;
+
+  // ValuePath can be used by the client to store information about where the
+  // value came from. Deprecated in favor of client_data.
+  // @gotags: class:"public"
+  string value_path = 6 [deprecated = true];
+
+  // ClientData can be used by the client to store extra information, for
+  // instance, the location/provenance of where an encrypted value came from
+  // (useful for associating AAD to the encrypted value).
+  google.protobuf.Struct client_data = 8;
+}
+
+// KeyInfo contains information regarding which Wrapper key was used to
+// encrypt the entry
+message KeyInfo {
+  // Mechanism is the method used by the wrapper to encrypt and sign the
+  // data as defined by the wrapper. (optional)
+  uint64 mechanism = 1;
+  uint64 hmac_mechanism = 2;
+
+  // This is an opaque ID used by the wrapper to identify the specific key to
+  // use as defined by the wrapper. This could be a version, key label, or
+  // something else. (optional)
+  // @gotags: class:"public"
+  string key_id = 3;
+  // @gotags: class:"public"
+  string hmac_key_id = 4;
+
+  // These value are used when generating our own data encryption keys
+  // and encrypting them using the wrapper (optional)
+  // @gotags: class:"secret"
+  bytes wrapped_key = 5;
+
+  // Mechanism specific flags (optional)
+  uint64 flags = 6;
+
+  // The key type (optional)
+  KeyType key_type = 7;
+  // The key purposes (optional)
+  repeated KeyPurpose key_purposes = 8;
+
+  // plaintext key used when generating our own data encryption
+  // keys (optional)
+  // @gotags: class:"secret"
+  bytes key = 9;
+  // encoding of the key (optional)
+  KeyEncoding key_encoding = 10;
+
+  // encoding of the wrapped_key (optional)
+  KeyEncoding wrapped_key_encoding = 11;
+}
+
+// Options holds options common to all wrappers
+message Options {
+  // The key ID being specified
+  // @gotags: class:"public"
+  string with_key_id = 10;
+
+  // The AAD bytes, if any
+  // @gotags: class:"secret"
+  bytes with_aad = 20;
+
+  // @gotags: class:"secret"
+  bytes with_iv = 12;
+
+  // Wrapper-specific configuration to pass along
+  map<string, string> with_config_map = 30;
+
+  // The purposes of the key being specified
+  repeated KeyPurpose with_key_purposes = 40;
+
+  // The type of the key being specified
+  KeyType with_key_type = 50;
+
+  // optional bytes of entropy
+  // @gotags: class:"secret"
+  bytes with_random_bytes = 60;
+
+  // encoding of the key
+  KeyEncoding with_key_encoding = 70;
+  // encoding of the wrapped_key
+  KeyEncoding with_wrapped_key_encoding = 80;
+
+  bool with_disallow_env_vars = 90;
+
+  // WithoutHmac specifies that an HMAC is not necessary for the mechanism, even if marked as "required"
+  bool without_hmac = 100;
+}
+
+// SigInfo contains information about a cryptographic signature
+message SigInfo {
+  // KeyInfo contains information about the key that was used to create this value
+  KeyInfo key_info = 10;
+
+  // Signature contains the bytes of the signature
+  // @gotags: class:"public"
+  bytes signature = 20;
+
+  // HmacType (optional) defines the hmac algorithm used
+  optional HmacType hmac_type = 30;
+}
+
+// HmacType defines the hmac algorithm type
+enum HmacType {
+  Unknown_HmacType = 0;
+  Sha224 = 1;
+  Sha256 = 2;
+  Sha384 = 3;
+  Sha512 = 4;
+}
+
+// KeyType defines the key's type
+enum KeyType {
+  Unknown_KeyType = 0;
+  Rsa2048 = 1;
+  Rsa3072 = 2;
+  Rsa4096 = 3;
+  Aes256 = 4;
+  EdsaP256 = 5;
+  EdsaP384 = 6;
+  EdsaP521 = 7;
+  HMAC = 8;
+  Ed25519 = 9;
+}
+
+enum KeyEncoding {
+  Unknown_KeyEncoding = 0;
+  Pkix = 1;
+  Pkcs8 = 2;
+  Bytes = 3;
+}
+
+// KeyPurpose defines the cryptographic capabilities of a key.
+enum KeyPurpose {
+  KeyPurpose_Unknown = 0;
+  Encrypt = 1;
+  Decrypt = 2;
+  Sign = 3;
+  Verify = 4;
+  Wrap = 5;
+  Unwrap = 6;
+  MAC = 7;
+}

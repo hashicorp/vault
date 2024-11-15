@@ -1,0 +1,57 @@
+# NOTE: Please refer to https://aka.ms/azsdk/engsys/ci-yaml before editing this file.
+trigger:
+  branches:
+    include:
+      - main
+      - feature/*
+      - hotfix/*
+      - release/*
+  paths:
+    include:
+      - sdk/azidentity/
+
+pr:
+  branches:
+    include:
+      - main
+      - feature/*
+      - hotfix/*
+      - release/*
+  paths:
+    include:
+      - sdk/azidentity/
+
+extends:
+    template: /eng/pipelines/templates/jobs/archetype-sdk-client.yml
+    parameters:
+      CloudConfig:
+        Public:
+          ServiceConnection: azure-sdk-tests
+          SubscriptionConfigurationFilePaths:
+            - eng/common/TestResources/sub-config/AzurePublicMsft.json
+          SubscriptionConfigurations:
+            - $(sub-config-azure-cloud-test-resources)
+            - $(sub-config-identity-test-resources)
+      EnableRaceDetector: true
+      RunLiveTests: true
+      ServiceDirectory: azidentity
+      UsePipelineProxy: false
+
+      ${{ if endsWith(variables['Build.DefinitionName'], 'weekly') }}:
+        PreSteps:
+        - task: AzureCLI@2
+          displayName: Set OIDC token
+          inputs:
+            addSpnToEnvironment: true
+            azureSubscription: azure-sdk-tests
+            inlineScript: Write-Host "##vso[task.setvariable variable=OIDC_TOKEN;]$($env:idToken)"
+            scriptLocation: inlineScript
+            scriptType: pscore
+        MatrixConfigs:
+          - Name: managed_identity_matrix
+            GenerateVMJobs: true
+            Path: sdk/azidentity/managed-identity-matrix.json
+            Selection: sparse
+        MatrixReplace:
+          - Pool=.*LINUXPOOL.*/azsdk-pool-mms-ubuntu-2204-identitymsi
+          - OSVmImage=.*LINUXNEXTVMIMAGE.*/azsdk-pool-mms-ubuntu-2204-1espt

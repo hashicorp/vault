@@ -1,0 +1,6 @@
+# IDEs
+.vscode/
+.idea/
+
+# direnv
+.envrc

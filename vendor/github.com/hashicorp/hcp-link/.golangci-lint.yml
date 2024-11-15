@@ -1,0 +1,37 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
+---
+run:
+  tests: true
+  timeout: 5m
+
+linters:
+  enable:
+  - errcheck
+  - gosimple
+  - govet
+  - ineffassign
+  - typecheck
+  - unused
+  - staticcheck
+  - bodyclose
+  - misspell
+  - unconvert
+  - goimports
+  - depguard
+  - gocritic
+  - stylecheck
+
+linters-settings:
+  goimports:
+    local-prefixes: github.com/hashicorp/hcp-link
+
+issues:
+  exclude-rules:
+    - linters:
+        - stylecheck
+      text: "ST1003"
+    - linters:
+        - staticcheck
+      text: "SA1019"

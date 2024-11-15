@@ -1,0 +1,21 @@
+; https://editorconfig.org/
+
+root = true
+
+[*]
+charset = utf-8
+trim_trailing_whitespace = true
+
+; https://golang.org/doc/effective_go
+[*.go]
+indent_style = tab
+indent_size = 4
+
+; https://developers.google.com/protocol-buffers/docs/style
+[*.proto]
+indent_size = 2
+indent_stlye = space
+
+[go.mod]
+indent_size = 2
+indent_stlye = space

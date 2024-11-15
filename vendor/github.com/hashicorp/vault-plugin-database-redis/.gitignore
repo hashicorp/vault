@@ -1,0 +1,11 @@
+.DS_Store
+.idea
+.vscode
+pkg/*
+bin/*
+
+bootstrap/terraform/.terraform
+bootstrap/terraform/terraform.tfstate
+bootstrap/terraform/terraform.tfstate.backup
+bootstrap/terraform/local_environment_setup.sh
+scripts/tests/tls

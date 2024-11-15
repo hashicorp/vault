@@ -1,0 +1,27 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+package(default_visibility = ["//:__subpackages__"])  # keep
+
+go_library(
+    name = "subtle",
+    srcs = ["kwp.go"],
+    importpath = "github.com/google/tink/go/kwp/subtle",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "subtle_test",
+    srcs = ["kwp_test.go"],
+    data = ["@wycheproof//testvectors:all"],
+    deps = [
+        ":subtle",
+        "//subtle/random",
+        "//testutil",
+    ],
+)
+
+alias(
+    name = "go_default_library",
+    actual = ":subtle",
+    visibility = ["//:__subpackages__"],
+)

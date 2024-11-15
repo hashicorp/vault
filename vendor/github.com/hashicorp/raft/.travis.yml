@@ -1,0 +1,24 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
+language: go
+
+go:
+    # Disabled until https://github.com/armon/go-metrics/issues/59 is fixed
+    # - 1.6
+    - 1.8
+    - 1.9
+    - 1.12
+    - tip
+
+install: 
+    - make deps 
+    - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin latest 
+
+script:
+    - make integ
+
+notifications:
+    flowdock:
+        secure: fZrcf9rlh2IrQrlch1sHkn3YI7SKvjGnAl/zyV5D6NROe1Bbr6d3QRMuCXWWdhJHzjKmXk5rIzbqJhUc0PNF7YjxGNKSzqWMQ56KcvN1k8DzlqxpqkcA3Jbs6fXCWo2fssRtZ7hj/wOP1f5n6cc7kzHDt9dgaYJ6nO2fqNPJiTc=
+

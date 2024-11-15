@@ -1,0 +1,5 @@
+export POSTGRES_USER=some-user
+export POSTGRES_PASS=some-password
+export POSTGRES_DB=some-db-name
+export POSTGRES_CONNECTION_NAME=some-project:some-region:some-instance
+export POSTGRES_USER_IAM=some-iam-user

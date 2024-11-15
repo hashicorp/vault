@@ -1,0 +1,12 @@
+{{define "bindings" -}}
+{{ range $resource,$roleStringSet := . -}}
+resource "{{$resource}}" {
+	roles = [
+	{{- range $role, $v := $roleStringSet -}}
+		"{{ $role }}",
+	{{- end -}}
+	],
+}
+
+{{ end -}}
+{{- end }}

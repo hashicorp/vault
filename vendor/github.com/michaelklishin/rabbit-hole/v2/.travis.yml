@@ -1,0 +1,29 @@
+sudo: required
+dist: bionic
+
+language: go
+
+go:
+  - tip
+  - "1.16"
+  - "1.15"
+
+env:
+  - GO111MODULE=on
+
+services:
+  - rabbitmq
+
+before_script:
+  - ./bin/ci/install_on_debian.sh
+  - ./bin/ci/before_build.sh
+
+script: make
+
+matrix:
+  allow_failures:
+    - go: tip
+
+notifications:
+  email:
+    - michael@rabbitmq.com

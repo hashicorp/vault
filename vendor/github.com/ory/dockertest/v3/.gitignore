@@ -1,0 +1,12 @@
+.bin/
+.idea/
+node_modules/
+*.iml
+*.exe
+.cover/
+vendor/
+go.list
+cover.out
+coverage.out
+.vscode
+.bin/

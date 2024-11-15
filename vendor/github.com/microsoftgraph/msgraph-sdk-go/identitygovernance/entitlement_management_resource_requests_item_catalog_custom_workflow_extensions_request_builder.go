@@ -1,0 +1,152 @@
+package identitygovernance
+
+import (
+    "context"
+    i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f "github.com/microsoft/kiota-abstractions-go"
+    iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242 "github.com/microsoftgraph/msgraph-sdk-go/models"
+    ia572726a95efa92ddd544552cd950653dc691023836923576b2f4bf716cf204a "github.com/microsoftgraph/msgraph-sdk-go/models/odataerrors"
+)
+
+// EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilder provides operations to manage the customWorkflowExtensions property of the microsoft.graph.accessPackageCatalog entity.
+type EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilder struct {
+    i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.BaseRequestBuilder
+}
+// EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilderGetQueryParameters get customWorkflowExtensions from identityGovernance
+type EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilderGetQueryParameters struct {
+    // Include count of items
+    Count *bool `uriparametername:"%24count"`
+    // Expand related entities
+    Expand []string `uriparametername:"%24expand"`
+    // Filter items by property values
+    Filter *string `uriparametername:"%24filter"`
+    // Order items by property values
+    Orderby []string `uriparametername:"%24orderby"`
+    // Search items by search phrases
+    Search *string `uriparametername:"%24search"`
+    // Select properties to be returned
+    Select []string `uriparametername:"%24select"`
+    // Skip the first n items
+    Skip *int32 `uriparametername:"%24skip"`
+    // Show only the first n items
+    Top *int32 `uriparametername:"%24top"`
+}
+// EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilderGetRequestConfiguration configuration for the request such as headers, query parameters, and middleware options.
+type EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilderGetRequestConfiguration struct {
+    // Request headers
+    Headers *i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.RequestHeaders
+    // Request options
+    Options []i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.RequestOption
+    // Request query parameters
+    QueryParameters *EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilderGetQueryParameters
+}
+// EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilderPostRequestConfiguration configuration for the request such as headers, query parameters, and middleware options.
+type EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilderPostRequestConfiguration struct {
+    // Request headers
+    Headers *i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.RequestHeaders
+    // Request options
+    Options []i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.RequestOption
+}
+// ByCustomCalloutExtensionId provides operations to manage the customWorkflowExtensions property of the microsoft.graph.accessPackageCatalog entity.
+// returns a *EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsCustomCalloutExtensionItemRequestBuilder when successful
+func (m *EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilder) ByCustomCalloutExtensionId(customCalloutExtensionId string)(*EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsCustomCalloutExtensionItemRequestBuilder) {
+    urlTplParams := make(map[string]string)
+    for idx, item := range m.BaseRequestBuilder.PathParameters {
+        urlTplParams[idx] = item
+    }
+    if customCalloutExtensionId != "" {
+        urlTplParams["customCalloutExtension%2Did"] = customCalloutExtensionId
+    }
+    return NewEntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsCustomCalloutExtensionItemRequestBuilderInternal(urlTplParams, m.BaseRequestBuilder.RequestAdapter)
+}
+// NewEntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilderInternal instantiates a new EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilder and sets the default values.
+func NewEntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilderInternal(pathParameters map[string]string, requestAdapter i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.RequestAdapter)(*EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilder) {
+    m := &EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilder{
+        BaseRequestBuilder: *i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.NewBaseRequestBuilder(requestAdapter, "{+baseurl}/identityGovernance/entitlementManagement/resourceRequests/{accessPackageResourceRequest%2Did}/catalog/customWorkflowExtensions{?%24count,%24expand,%24filter,%24orderby,%24search,%24select,%24skip,%24top}", pathParameters),
+    }
+    return m
+}
+// NewEntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilder instantiates a new EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilder and sets the default values.
+func NewEntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilder(rawUrl string, requestAdapter i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.RequestAdapter)(*EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilder) {
+    urlParams := make(map[string]string)
+    urlParams["request-raw-url"] = rawUrl
+    return NewEntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilderInternal(urlParams, requestAdapter)
+}
+// Count provides operations to count the resources in the collection.
+// returns a *EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsCountRequestBuilder when successful
+func (m *EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilder) Count()(*EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsCountRequestBuilder) {
+    return NewEntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsCountRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter)
+}
+// Get get customWorkflowExtensions from identityGovernance
+// returns a CustomCalloutExtensionCollectionResponseable when successful
+// returns a ODataError error when the service returns a 4XX or 5XX status code
+func (m *EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilder) Get(ctx context.Context, requestConfiguration *EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilderGetRequestConfiguration)(iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.CustomCalloutExtensionCollectionResponseable, error) {
+    requestInfo, err := m.ToGetRequestInformation(ctx, requestConfiguration);
+    if err != nil {
+        return nil, err
+    }
+    errorMapping := i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.ErrorMappings {
+        "XXX": ia572726a95efa92ddd544552cd950653dc691023836923576b2f4bf716cf204a.CreateODataErrorFromDiscriminatorValue,
+    }
+    res, err := m.BaseRequestBuilder.RequestAdapter.Send(ctx, requestInfo, iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.CreateCustomCalloutExtensionCollectionResponseFromDiscriminatorValue, errorMapping)
+    if err != nil {
+        return nil, err
+    }
+    if res == nil {
+        return nil, nil
+    }
+    return res.(iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.CustomCalloutExtensionCollectionResponseable), nil
+}
+// Post create new navigation property to customWorkflowExtensions for identityGovernance
+// returns a CustomCalloutExtensionable when successful
+// returns a ODataError error when the service returns a 4XX or 5XX status code
+func (m *EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilder) Post(ctx context.Context, body iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.CustomCalloutExtensionable, requestConfiguration *EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilderPostRequestConfiguration)(iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.CustomCalloutExtensionable, error) {
+    requestInfo, err := m.ToPostRequestInformation(ctx, body, requestConfiguration);
+    if err != nil {
+        return nil, err
+    }
+    errorMapping := i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.ErrorMappings {
+        "XXX": ia572726a95efa92ddd544552cd950653dc691023836923576b2f4bf716cf204a.CreateODataErrorFromDiscriminatorValue,
+    }
+    res, err := m.BaseRequestBuilder.RequestAdapter.Send(ctx, requestInfo, iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.CreateCustomCalloutExtensionFromDiscriminatorValue, errorMapping)
+    if err != nil {
+        return nil, err
+    }
+    if res == nil {
+        return nil, nil
+    }
+    return res.(iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.CustomCalloutExtensionable), nil
+}
+// ToGetRequestInformation get customWorkflowExtensions from identityGovernance
+// returns a *RequestInformation when successful
+func (m *EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilder) ToGetRequestInformation(ctx context.Context, requestConfiguration *EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilderGetRequestConfiguration)(*i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.RequestInformation, error) {
+    requestInfo := i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.NewRequestInformationWithMethodAndUrlTemplateAndPathParameters(i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.GET, m.BaseRequestBuilder.UrlTemplate, m.BaseRequestBuilder.PathParameters)
+    if requestConfiguration != nil {
+        if requestConfiguration.QueryParameters != nil {
+            requestInfo.AddQueryParameters(*(requestConfiguration.QueryParameters))
+        }
+        requestInfo.Headers.AddAll(requestConfiguration.Headers)
+        requestInfo.AddRequestOptions(requestConfiguration.Options)
+    }
+    requestInfo.Headers.TryAdd("Accept", "application/json")
+    return requestInfo, nil
+}
+// ToPostRequestInformation create new navigation property to customWorkflowExtensions for identityGovernance
+// returns a *RequestInformation when successful
+func (m *EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilder) ToPostRequestInformation(ctx context.Context, body iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.CustomCalloutExtensionable, requestConfiguration *EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilderPostRequestConfiguration)(*i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.RequestInformation, error) {
+    requestInfo := i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.NewRequestInformationWithMethodAndUrlTemplateAndPathParameters(i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.POST, m.BaseRequestBuilder.UrlTemplate, m.BaseRequestBuilder.PathParameters)
+    if requestConfiguration != nil {
+        requestInfo.Headers.AddAll(requestConfiguration.Headers)
+        requestInfo.AddRequestOptions(requestConfiguration.Options)
+    }
+    requestInfo.Headers.TryAdd("Accept", "application/json")
+    err := requestInfo.SetContentFromParsable(ctx, m.BaseRequestBuilder.RequestAdapter, "application/json", body)
+    if err != nil {
+        return nil, err
+    }
+    return requestInfo, nil
+}
+// WithUrl returns a request builder with the provided arbitrary URL. Using this method means any other path or query parameters are ignored.
+// returns a *EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilder when successful
+func (m *EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilder) WithUrl(rawUrl string)(*EntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilder) {
+    return NewEntitlementManagementResourceRequestsItemCatalogCustomWorkflowExtensionsRequestBuilder(rawUrl, m.BaseRequestBuilder.RequestAdapter);
+}

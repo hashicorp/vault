@@ -1,0 +1,8 @@
+(*github.com/Jeffail/gabs/v2.Container).Array
+(*github.com/Jeffail/gabs/v2.Container).ArrayAppend
+(*github.com/Jeffail/gabs/v2.Container).ArrayAppend
+(*github.com/Jeffail/gabs/v2.Container).ArrayConcat
+(*github.com/Jeffail/gabs/v2.Container).ArrayConcatP
+(*github.com/Jeffail/gabs/v2.Container).ArrayP
+(*github.com/Jeffail/gabs/v2.Container).Set
+(*github.com/Jeffail/gabs/v2.Container).SetIndex

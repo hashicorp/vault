@@ -1,0 +1,6 @@
+pkg/*
+bin/*
+.idea/*
+vendor/*
+.terraform*
+terraform.tfstate*

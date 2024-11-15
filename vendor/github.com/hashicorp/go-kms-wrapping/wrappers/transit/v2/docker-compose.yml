@@ -1,0 +1,21 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
+version: "3.8"
+
+services:
+
+  vault-server:
+    image: vault:1.13.3
+    ports:
+      - "8200:8200"
+    environment:
+      VAULT_ADDR: "http://0.0.0.0:8200"
+      VAULT_DEV_ROOT_TOKEN_ID: "vault-plaintext-root-token"
+    cap_add:
+      - IPC_LOCK
+
+  vault-client:
+    build: .
+    environment:
+      VAULT_ADDR: "http://vault-server:8200"

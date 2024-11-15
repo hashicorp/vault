@@ -1,0 +1,39 @@
+# Binaries for programs and plugins
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test binary, build with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Project-local glide cache, RE: https://github.com/Masterminds/glide/issues/736
+.glide/
+
+# Compiled binaries
+/bin/
+/pkg/
+/dist/
+
+# Local development tmp
+/tmp/
+
+.DS_Store
+.idea
+.vscode
+
+local_environment_setup.sh
+
+# Local .terraform directories
+**/.terraform/*
+.terraform.lock.hcl
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+# azure cli param persist data
+.azure

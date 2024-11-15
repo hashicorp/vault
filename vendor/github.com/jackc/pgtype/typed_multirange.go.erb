@@ -1,0 +1,239 @@
+package pgtype
+
+import (
+	"database/sql/driver"
+	"encoding/binary"
+	"fmt"
+
+	"github.com/jackc/pgio"
+)
+
+type <%= multirange_type %> struct {
+	Ranges 	[]<%= range_type %>
+	Status  Status
+}
+
+func (dst *<%= multirange_type %>) Set(src interface{}) error {
+	//untyped nil and typed nil interfaces are different
+	if src == nil {
+		*dst = <%= multirange_type %>{Status: Null}
+		return nil
+	}
+
+	switch value := src.(type) {
+	case <%= multirange_type %>:
+		*dst = value
+	case *<%= multirange_type %>:
+		*dst = *value
+	case string:
+		return dst.DecodeText(nil, []byte(value))
+	case []<%= range_type %>:
+		if value == nil {
+			*dst = <%= multirange_type %>{Status: Null}
+		} else if len(value) == 0 {
+			*dst = <%= multirange_type %>{Status: Present}
+		} else {
+			elements := make([]<%= range_type %>, len(value))
+			for i := range value {
+				if err := elements[i].Set(value[i]); err != nil {
+					return err
+				}
+			}
+			*dst = <%= multirange_type %>{
+				Ranges: elements,
+				Status:    Present,
+			}
+		}
+	case []*<%= range_type %>:
+		if value == nil {
+			*dst = <%= multirange_type %>{Status: Null}
+		} else if len(value) == 0 {
+			*dst = <%= multirange_type %>{Status: Present}
+		} else {
+			elements := make([]<%= range_type %>, len(value))
+			for i := range value {
+				if err := elements[i].Set(value[i]); err != nil {
+					return err
+				}
+			}
+			*dst = <%= multirange_type %>{
+				Ranges: elements,
+				Status:    Present,
+			}
+		}
+	default:
+		return fmt.Errorf("cannot convert %v to <%= multirange_type %>", src)
+	}
+
+	return nil
+
+}
+
+func (dst <%= multirange_type %>) Get() interface{} {
+	switch dst.Status {
+	case Present:
+		return dst
+	case Null:
+		return nil
+	default:
+		return dst.Status
+	}
+}
+
+func (src *<%= multirange_type %>) AssignTo(dst interface{}) error {
+	return fmt.Errorf("cannot assign %v to %T", src, dst)
+}
+
+func (dst *<%= multirange_type %>) DecodeText(ci *ConnInfo, src []byte) error {
+	if src == nil {
+		*dst = <%= multirange_type %>{Status: Null}
+		return nil
+	}
+
+	utmr, err := ParseUntypedTextMultirange(string(src))
+	if err != nil {
+		return err
+	}
+
+	var elements []<%= range_type %>
+
+	if len(utmr.Elements) > 0 {
+		elements = make([]<%= range_type %>, len(utmr.Elements))
+
+		for i, s := range utmr.Elements {
+			var elem <%= range_type %>
+
+			elemSrc := []byte(s)
+
+			err = elem.DecodeText(ci, elemSrc)
+			if err != nil {
+				return err
+			}
+
+			elements[i] = elem
+		}
+	}
+
+	*dst = <%= multirange_type %>{Ranges: elements, Status: Present}
+
+	return nil
+}
+
+func (dst *<%= multirange_type %>) DecodeBinary(ci *ConnInfo, src []byte) error {
+	if src == nil {
+		*dst = <%= multirange_type %>{Status: Null}
+		return nil
+	}
+
+	rp := 0
+
+	numElems := int(binary.BigEndian.Uint32(src[rp:]))
+	rp += 4
+
+	if numElems == 0 {
+		*dst = <%= multirange_type %>{Status: Present}
+		return nil
+	}
+
+	elements := make([]<%= range_type %>, numElems)
+
+	for i := range elements {
+		elemLen := int(int32(binary.BigEndian.Uint32(src[rp:])))
+		rp += 4
+		var elemSrc []byte
+		if elemLen >= 0 {
+			elemSrc = src[rp : rp+elemLen]
+			rp += elemLen
+		}
+		err := elements[i].DecodeBinary(ci, elemSrc)
+		if err != nil {
+			return err
+		}
+	}
+
+	*dst = <%= multirange_type %>{Ranges: elements, Status: Present}
+	return nil
+}
+
+func (src <%= multirange_type %>) EncodeText(ci *ConnInfo, buf []byte) ([]byte, error) {
+	switch src.Status {
+	case Null:
+		return nil, nil
+	case Undefined:
+		return nil, errUndefined
+	}
+
+	buf = append(buf, '{')
+
+	inElemBuf := make([]byte, 0, 32)
+	for i, elem := range src.Ranges {
+		if i > 0 {
+			buf = append(buf, ',')
+		}
+
+		elemBuf, err := elem.EncodeText(ci, inElemBuf)
+		if err != nil {
+			return nil, err
+		}
+		if elemBuf == nil {
+			return nil, fmt.Errorf("multi-range does not allow null range")
+		} else {
+			buf = append(buf, string(elemBuf)...)
+		}
+
+	}
+
+	buf = append(buf, '}')
+
+	return buf, nil
+}
+
+func (src <%= multirange_type %>) EncodeBinary(ci *ConnInfo, buf []byte) ([]byte, error) {
+	switch src.Status {
+	case Null:
+		return nil, nil
+	case Undefined:
+		return nil, errUndefined
+	}
+
+	buf = pgio.AppendInt32(buf, int32(len(src.Ranges)))
+
+	for i := range src.Ranges {
+		sp := len(buf)
+		buf = pgio.AppendInt32(buf, -1)
+
+		elemBuf, err := src.Ranges[i].EncodeBinary(ci, buf)
+		if err != nil {
+			return nil, err
+		}
+		if elemBuf != nil {
+			buf = elemBuf
+			pgio.SetInt32(buf[sp:], int32(len(buf[sp:])-4))
+		}
+	}
+
+	return buf, nil
+}
+
+// Scan implements the database/sql Scanner interface.
+func (dst *<%= multirange_type %>) Scan(src interface{}) error {
+	if src == nil {
+		return dst.DecodeText(nil, nil)
+	}
+
+	switch src := src.(type) {
+	case string:
+		return dst.DecodeText(nil, []byte(src))
+	case []byte:
+		srcCopy := make([]byte, len(src))
+		copy(srcCopy, src)
+		return dst.DecodeText(nil, srcCopy)
+	}
+
+	return fmt.Errorf("cannot scan %T", src)
+}
+
+// Value implements the database/sql/driver Valuer interface.
+func (src <%= multirange_type %>) Value() (driver.Value, error) {
+	return EncodeValueText(src)
+}

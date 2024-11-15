@@ -1,0 +1,52 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
+run:
+  deadline: 5m
+
+linters-settings:
+  govet:
+    check-shadowing: true
+  golint:
+    min-confidence: 0
+
+linters:
+  disable-all: true
+  enable:
+    - gofmt
+    #- golint
+    - govet
+    #- varcheck
+    #- typecheck
+    #- gosimple
+
+issues:
+  exclude-use-default: false
+  exclude:
+      # ignore the false positive erros resulting from not including a comment above every `package` keyword
+    - should have a package comment, unless it's in another file for this package (golint)
+      # golint: Annoying issue about not having a comment. The rare codebase has such comments
+      # - (comment on exported (method|function|type|const)|should have( a package)? comment|comment should be of the form)
+      # errcheck: Almost all programs ignore errors on these functions and in most cases it's ok
+    - Error return value of .((os\.)?std(out|err)\..*|.*Close|.*Flush|os\.Remove(All)?|.*printf?|os\.(Un)?Setenv). is not checked
+
+      # golint: False positive when tests are defined in package 'test'
+    - func name will be used as test\.Test.* by other packages, and that stutters; consider calling this
+
+      # staticcheck: Developers tend to write in C-style with an 
+      # explicit 'break' in a 'switch', so it's ok to ignore
+    - ineffective break statement. Did you mean to break out of the outer loop
+      # gosec: Too many false-positives on 'unsafe' usage
+    - Use of unsafe calls should be audited
+
+    # gosec: Too many false-positives for parametrized shell calls
+    - Subprocess launch(ed with variable|ing should be audited)
+
+    # gosec: Duplicated errcheck checks
+    - G104
+
+    # gosec: Too many issues in popular repos
+    - (Expect directory permissions to be 0750 or less|Expect file permissions to be 0600 or less)
+
+    # gosec: False positive is triggered by 'src, err := ioutil.ReadFile(filename)'
+    - Potential file inclusion via variable

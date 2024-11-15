@@ -1,0 +1,5 @@
+.vault-master/
+bin/*
+pkg/*
+test/service-account.json
+.idea/

@@ -1,0 +1,41 @@
+run:
+  timeout: 30s
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+linters-settings:
+  errcheck:
+    exclude: .errcheck.txt
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+
+linters:
+  disable-all: true
+  enable:
+    # Default linters reported by golangci-lint help linters` in v1.39.0
+    - gosimple
+    - staticcheck
+    - unused
+    - errcheck
+    - govet
+    - ineffassign
+    - typecheck
+    # Extra linters:
+    - wastedassign
+    - stylecheck
+    - gofmt
+    - goimports
+    - gocritic
+    - revive
+    - unconvert
+    - durationcheck
+    - depguard
+    - gosec
+    - bodyclose

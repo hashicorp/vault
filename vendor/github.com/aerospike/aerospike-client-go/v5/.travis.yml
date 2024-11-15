@@ -1,0 +1,75 @@
+language: go
+os:
+- linux
+dist: xenial
+go:
+- "1.13"
+- "1.14"
+- "1.15"
+- "1.16"
+- tip
+matrix:
+  allow_failures:
+  - go: tip
+install:
+- ifconfig
+- if [ -d "$HOME/gopath/src/github.com/citrusleaf" ]; then mv $HOME/gopath/src/github.com/citrusleaf
+  $HOME/gopath/src/github.com/aerospike; fi
+- export PATH=$PATH:$HOME/gopath/bin
+- go get github.com/onsi/ginkgo/ginkgo
+- go get github.com/onsi/gomega
+- go get .
+- if ! go get code.google.com/p/go.tools/cmd/cover; then go get golang.org/x/tools/cmd/cover;
+  fi
+- wget -O aerospike-server.tgz http://www.aerospike.com/download/server/latest/artifact/tgz
+- tar xvzf aerospike-server.tgz
+- cp -f .travis/aerospike.conf ./aerospike-server/share/etc
+- cd aerospike-server
+- mkdir instance1
+- mkdir instance2
+- ./bin/aerospike init --home instance1 --instance 1 --service-port 3000
+- ./bin/aerospike init --home instance2 --instance 2 --service-port 3010
+- cd instance1
+- sudo ./bin/aerospike start
+- ../../.travis/wait_for_node.sh var/log/aerospike.log
+- cd ../..
+- pwd
+script:
+- ginkgo -cover -race -r -keepGoing -succinct -randomizeSuites internal/lua
+- ginkgo -cover -race -r -keepGoing -succinct -randomizeSuites types
+- ginkgo -cover -race -r -keepGoing -succinct -randomizeSuites pkg
+#- find tools -name "*.go" -type f -print0 | xargs -0 -n1 go build
+- cd tools/benchmark | go build -o benchmark .
+- cd tools/asinfo | go build -o asinfo .
+- chmod +x asinfo
+- cd tools/cli | go build -o cli .
+- find examples -name "*.go" -type f -print0 | xargs -0 -n1 go build
+- ginkgo build -tags="as_performance" .
+- ginkgo build -tags="app_engine" .
+- ginkgo -race -keepGoing -succinct -randomizeSuites -slowSpecThreshold=15
+# - ginkgo -race -keepGoing -succinct -randomizeSuites -slowSpecThreshold=15 -- -use-replicas
+# - ginkgo -race -keepGoing -succinct -randomizeSuites -slowSpecThreshold=15 -tags="as_performance"
+# - ginkgo -race -keepGoing -succinct -randomizeSuites -slowSpecThreshold=15 -tags="app_engine"
+- cd aerospike-server/instance1
+- sudo ./bin/aerospike stop
+- cat /dev/null > var/log/aerospike.log
+- sudo ./bin/aerospike start
+- ../../.travis/wait_for_node.sh var/log/aerospike.log
+- cd ../instance2
+- sudo ./bin/aerospike start
+- ../../.travis/wait_for_node.sh var/log/aerospike.log
+- cd ../..
+- ginkgo -race -keepGoing -succinct -randomizeSuites -slowSpecThreshold=15
+# - ginkgo -race -keepGoing -succinct -randomizeSuites -slowSpecThreshold=15 -- -use-replicas
+# - ginkgo -race -keepGoing -succinct -randomizeSuites -slowSpecThreshold=15 -tags="as_performance"
+# - ginkgo -race -keepGoing -succinct -randomizeSuites -slowSpecThreshold=15 -tags="app_engine"
+- .travis/proxy_check.sh
+notifications:
+  hipchat:
+    rooms:
+      secure: mGFpOr8JWxK0bYj6wK3ur5+qtsfK+Im1njfPgoQ2b/Sudlii/mr2QiHyQRHtstw7tr79nyoMYgQ1lc53pTxUNAVSI/PkTJTBaDE4ZkyUG5+UW8NgMsC6FYhRfgu0xq+SBNn5a6KbrL8puQq0FH6fjEDYC00QqmN5L/967WCxF8g=
+  email:
+  - qe-notices@aerospike.com
+  - qe-notices-clients@aerospike.com
+  slack:
+    secure: FwRNnmQZLVD3ygwu66ujNTsy1rHKFAV01wZJCad+L0r5I54lxFWZxsO0JtRbhFyZ0yb4fhls4dPpczTqQrtlRgUzWW55u2i5T/bkTWxOik8QPJW35n9EvSOMYgiTQs1PQeSYwRmiqn0aDd8Fu1RAvB71nLKeyccYbVMHGyhpAq8=

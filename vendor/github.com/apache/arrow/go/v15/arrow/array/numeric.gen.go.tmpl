@@ -1,0 +1,158 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package array
+
+import (
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/apache/arrow/go/v15/arrow"
+	"github.com/apache/arrow/go/v15/internal/json"
+)
+
+{{range .In}}
+
+// A type which represents an immutable sequence of {{or .QualifiedType .Type}} values.
+type {{.Name}} struct {
+	array
+	values []{{or .QualifiedType .Type}}
+}
+
+// New{{.Name}}Data creates a new {{.Name}}.
+func New{{.Name}}Data(data arrow.ArrayData) *{{.Name}} {
+	a := &{{.Name}}{}
+	a.refCount = 1
+	a.setData(data.(*Data))
+	return a
+}
+
+// Reset resets the array for re-use.
+func (a *{{.Name}}) Reset(data *Data) {
+	a.setData(data)
+}
+
+// Value returns the value at the specified index.
+func (a *{{.Name}}) Value(i int)      {{or .QualifiedType .Type}} { return a.values[i] }
+
+// Values returns the values.
+func (a *{{.Name}}) {{.Name}}Values() []{{or .QualifiedType .Type}} { return a.values }
+
+// String returns a string representation of the array.
+func (a *{{.Name}}) String() string {
+	o := new(strings.Builder)
+	o.WriteString("[")
+	for i, v := range a.values {
+		if i > 0 {
+			fmt.Fprintf(o, " ")
+		}
+		switch {
+		case a.IsNull(i):
+			o.WriteString(NullValueStr)
+		default:
+			fmt.Fprintf(o, "%v", v)
+		}
+	}
+	o.WriteString("]")
+	return o.String()
+}
+
+func (a *{{.Name}}) setData(data *Data) {
+	a.array.setData(data)
+	vals := data.buffers[1]
+	if vals != nil {
+		a.values = arrow.{{.Name}}Traits.CastFromBytes(vals.Bytes())
+		beg := a.array.data.offset
+		end := beg + a.array.data.length
+		a.values = a.values[beg:end]
+	}
+}
+
+func (a *{{.Name}}) ValueStr(i int) string {
+	if a.IsNull(i) {
+		return NullValueStr
+	}
+{{if or (eq .Name "Date32") (eq .Name "Date64") -}}
+  return a.values[i].FormattedString()
+{{else if or (eq .Name "Time32") (eq .Name "Time64") -}}
+  return a.values[i].FormattedString(a.DataType().(*{{.QualifiedType}}Type).Unit)
+{{else if (eq .Name "Duration") -}}
+	// return value and suffix as a string such as "12345ms"
+	return fmt.Sprintf("%d%s", a.values[i], a.DataType().(*{{.QualifiedType}}Type).Unit)
+{{else if or (eq .Name "Int8") (eq .Name "Int16") (eq .Name "Int32") (eq .Name "Int64") -}}
+  return strconv.FormatInt(int64(a.Value(i)), 10)
+{{else if or (eq .Name "Uint8") (eq .Name "Uint16") (eq .Name "Uint32") (eq .Name "Uint64") -}}
+  return strconv.FormatUint(uint64(a.Value(i)), 10)
+{{else if or (eq .Name "Float32") -}}
+  return strconv.FormatFloat(float64(a.Value(i)), 'g', -1, 32)
+{{else if or (eq .Name "Float64") -}}
+  return strconv.FormatFloat(float64(a.Value(i)), 'g', -1, 64)
+{{else}}
+	return fmt.Sprintf("%v", a.values[i])
+{{end -}}
+}
+
+func (a *{{.Name}}) GetOneForMarshal(i int) interface{} {
+	if a.IsNull(i) {
+		return nil
+	}
+{{if or (eq .Name "Date32") (eq .Name "Date64") -}}
+	return a.values[i].ToTime().Format("2006-01-02")
+{{else if or (eq .Name "Time32") (eq .Name "Time64") -}}
+	return a.values[i].ToTime(a.DataType().(*{{.QualifiedType}}Type).Unit).Format("15:04:05.999999999")
+{{else if (eq .Name "Duration") -}}
+	// return value and suffix as a string such as "12345ms"
+	return fmt.Sprintf("%d%s", a.values[i], a.DataType().(*{{.QualifiedType}}Type).Unit.String())
+{{else if (eq .Size "1")}}
+	return float64(a.values[i]) // prevent uint8 from being seen as binary data
+{{else}}
+	return a.values[i]
+{{end -}}
+}
+
+func (a *{{.Name}}) MarshalJSON() ([]byte, error) {
+{{if .QualifiedType -}}
+	vals := make([]interface{}, a.Len())
+	for i := range a.values {
+		vals[i] = a.GetOneForMarshal(i)
+	}
+{{else -}}
+	vals := make([]interface{}, a.Len())
+	for i := 0; i < a.Len(); i++ {
+		if a.IsValid(i) {
+			{{ if (eq .Size "1") }}vals[i] = float64(a.values[i]) // prevent uint8 from being seen as binary data{{ else }}vals[i] = a.values[i]{{ end }}
+		} else {
+			vals[i] = nil
+		}
+	}
+{{end}}
+	return json.Marshal(vals)
+}
+
+func arrayEqual{{.Name}}(left, right *{{.Name}}) bool {
+	for i := 0; i < left.Len(); i++ {
+		if left.IsNull(i) {
+			continue
+		}
+		if left.Value(i) != right.Value(i) {
+			return false
+		}
+	}
+	return true
+}
+
+{{end}}

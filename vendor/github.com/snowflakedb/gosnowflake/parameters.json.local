@@ -1,0 +1,14 @@
+{
+    "testconnection": {
+        "SNOWFLAKE_TEST_HOST":      "snowflake.reg.local",
+        "SNOWFLAKE_TEST_PROTOCOL":  "http",
+        "SNOWFLAKE_TEST_PORT":      "8082",
+        "SNOWFLAKE_TEST_USER":      "snowman",
+        "SNOWFLAKE_TEST_PASSWORD":  "test",
+        "SNOWFLAKE_TEST_ACCOUNT":   "s3testaccount",
+        "SNOWFLAKE_TEST_WAREHOUSE": "regress",
+        "SNOWFLAKE_TEST_DATABASE":  "testdb",
+        "SNOWFLAKE_TEST_SCHEMA":    "testschema",
+        "SNOWFLAKE_TEST_ROLE":      "sysadmin"
+    }
+}
