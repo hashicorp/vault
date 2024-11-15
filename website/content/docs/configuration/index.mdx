@@ -13,6 +13,14 @@ The format of this file is [HCL](https://github.com/hashicorp/hcl) or JSON.
 
 An example configuration is shown below:
 
+<Note>
+
+For multi-node clusters, replace the loopback address with a valid, routable IP address for each Vault node in your network.
+
+Refer to the [Vault HA clustering with integrated storage tutorial](/vault/tutorials/raft/raft-storage) for a complete scenario.
+
+</Note>
+
 ```hcl
 ui            = true
 cluster_addr  = "https://127.0.0.1:8201"
@@ -66,15 +74,19 @@ to specify where the configuration is.
 
 - `user_lockout` `([UserLockout][user-lockout]: nil)` –
   Configures the user-lockout behaviour for failed logins. For more information, please see the
-  [user lockout configuration documentation](/vault/docs/configuration/user-lockout). 
+  [user lockout configuration documentation](/vault/docs/configuration/user-lockout).
 
 - `seal` `([Seal][seal]: nil)` – Configures the seal type to use for
   auto-unsealing, as well as for
   [seal wrapping][sealwrap] as an additional layer of data protection.
 
-- `cluster_name` `(string: <generated>)` – Specifies the identifier for the
-  Vault cluster. If omitted, Vault will generate a value. When connecting to
-  Vault Enterprise, this value will be used in the interface.
+- `reporting` `([Reporting][reporting]: nil)` -
+  Configures options relating to license reporting in Vault.
+
+- `cluster_name` `(string: <generated>)` – Specifies a human-readable
+  identifier for the Vault cluster. If omitted, Vault will generate a value.
+  The cluster name is included as a label in some [telemetry metrics](/vault/docs/internals/telemetry/metrics/).
+  The cluster name is safe to update on an existing Vault cluster.
 
 - `cache_size` `(string: "131072")` – Specifies the size of the read cache used
   by the physical storage subsystem. The value is in number of entries, so the
@@ -115,9 +127,13 @@ to specify where the configuration is.
   sudo setcap cap_ipc_lock=+ep $(readlink -f $(which vault))
   ```
 
-  ~> Note: Since each plugin runs as a separate process, you need to do the same
+  <Note>
+
+  Since each plugin runs as a separate process, you need to do the same
   for each plugin in your [plugins
   directory](/vault/docs/plugins/plugin-architecture#plugin-directory).
+
+  </Note>
 
   If you use a Linux distribution with a modern version of systemd, you can add
   the following directive to the "[Service]" configuration section:
@@ -169,10 +185,10 @@ to specify where the configuration is.
   maximum request duration allowed before Vault cancels the request. This can
   be overridden per listener via the `max_request_duration` value.
 
-- `detect_deadlocks` `(string: "")` - A comma separated string that specifies the internal 
-mutex locks that should be monitored for potential deadlocks. Currently supported values 
+- `detect_deadlocks` `(string: "")` - A comma separated string that specifies the internal
+mutex locks that should be monitored for potential deadlocks. Currently supported values
 include `statelock`, `quotas` and `expiration` which will cause "POTENTIAL DEADLOCK:"
-to be logged when an attempt at a core state lock appears to be deadlocked. Enabling this 
+to be logged when an attempt at a core state lock appears to be deadlocked. Enabling this
 can have a negative effect on performance due to the tracking of each lock attempt.
 
 - `raw_storage_endpoint` `(bool: false)` – Enables the `sys/raw` endpoint which
@@ -210,11 +226,19 @@ can have a negative effect on performance due to the tracking of each lock attem
   Supported values (in order of descending detail) are `trace`, `debug`, `info`, `warn`, and `error`.
   This can also be specified via the `VAULT_LOG_LEVEL` environment variable.
 
-  ~> Note: On SIGHUP (`sudo kill -s HUP` _pid of vault_), if a valid value is specified, Vault will update the existing log level,
+  <Note>
+
+  On SIGHUP (`sudo kill -s HUP` _pid of vault_), if a valid value is specified, Vault will update the existing log level,
   overriding (even if specified) both the CLI flag and environment variable.
 
-  ~> Note: Not all parts of Vault's logging can have its log level be changed dynamically this way; in particular,
+  </Note>
+
+  <Note>
+
+  Not all parts of Vault's logging can have its log level be changed dynamically this way; in particular,
   secrets/auth plugins are currently not updated dynamically.
+
+  </Note>
 
 - `log_format` - Equivalent to the [`-log-format` command-line flag](/vault/docs/commands/server#_log_format).
 
@@ -237,7 +261,7 @@ can have a negative effect on performance due to the tracking of each lock attem
   `imprecise_lease_role_tracking` affects role-based lease count quotas, but reduces latencies when not using role based quotas.
 
 - `request_limiter` `([Request Limiter][request-limiter]: <none>)` – Allows
-  operators to enable Vault's Request Limiter functionality.
+operators to enable Vault's Request Limiter functionality.
 
 ### High availability parameters
 
