@@ -389,6 +389,22 @@ func (p *ParsedCertBundle) Verify() error {
 			if !caCert.Certificate.IsCA {
 				return fmt.Errorf("certificate %d of certificate chain is not a certificate authority", i+1)
 			}
+		}
+	}
+
+	if !bytes.Equal(certPath[1].Certificate.AuthorityKeyId, certPath[0].Certificate.SubjectKeyId) {
+		return fmt.Errorf("first certificate certificate chain ca trust path does not sign next in path (%q/%q) (%X/%X)",
+			certPath[0].Certificate.Subject.CommonName, certPath[1].Certificate.Subject.CommonName,
+			certPath[0].Certificate.AuthorityKeyId, certPath[1].Certificate.SubjectKeyId)
+	}
+
+	return nil
+}
+
+func (p *ParsedCertBundle) VerifySimpleChain() error {
+	certPath := p.GetCertificatePath()
+	if len(certPath) > 1 {
+		for i, caCert := range certPath[1:] {
 			if !bytes.Equal(certPath[i].Certificate.AuthorityKeyId, caCert.Certificate.SubjectKeyId) {
 				return fmt.Errorf("certificate %d of certificate chain ca trust path is incorrect (%q/%q) (%X/%X)",
 					i+1,
@@ -397,7 +413,6 @@ func (p *ParsedCertBundle) Verify() error {
 			}
 		}
 	}
-
 	return nil
 }
 
