@@ -44,13 +44,16 @@ on:
 jobs:
   metadata:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
+    permissions:
+      id-token: write # vault-auth
+      contents: read
     outputs:
       build-date: ${{ steps.metadata.outputs.build-date }}
       is-enterprise: ${{ steps.metadata.outputs.is-enterprise }}
       sample: ${{ steps.metadata.outputs.sample }}
       vault-version: ${{ steps.metadata.outputs.vault-version }}
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ inputs.vault-revision }}
       - if: inputs.vault-edition != 'ce'
@@ -108,9 +111,11 @@ jobs:
       matrix:
         include: ${{ fromJSON(needs.metadata.outputs.sample) }}
     runs-on: ${{ fromJSON(inputs.runs-on) }}
-    permissions: write-all # Ensure we have id-token:write access for vault-auth.
+    permissions:
+      id-token: write # vault-auth
+      contents: read
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ inputs.vault-revision }}
       - if: needs.metadata.outputs.is-enterprise == 'true'
@@ -127,7 +132,7 @@ jobs:
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
             kv/data/github/${{ github.repository }}/artifactory token | ARTIFACTORY_TOKEN;
-            kv/data/github/${{ github.repository }}/artifactory user | ARTIFACTORY_USER;
+            kv/data/github/${{ github.repository }}/artifactory username | ARTIFACTORY_USER;
             kv/data/github/${{ github.repository }}/aws access-key-id | AWS_ACCESS_KEY_ID_CI;
             kv/data/github/${{ github.repository }}/aws secret-access-key | AWS_SECRET_ACCESS_KEY_CI;
             kv/data/github/${{ github.repository }}/aws role-arn | AWS_ROLE_ARN_CI;
@@ -150,7 +155,9 @@ jobs:
               echo "github-token=${{ secrets.ELEVATED_GITHUB_TOKEN }}"
               echo "radar-license=${{ secrets.RADAR_LICENSE }}"
               echo "slack-webhook-url=${{ secrets.SLACK_WEBHOOK_URL }}"
-              echo "ssh-key=${{ secrets.SSH_KEY_PRIVATE_CI }}"
+              echo 'ssh-key<<EOFSSHKEYCE'
+              echo "${{ secrets.SSH_KEY_PRIVATE_CI }}"
+              echo EOFSSHKEYCE
               echo "vault-license=${{ secrets.VAULT_LICENSE }}"
            } | tee -a "$GITHUB_OUTPUT"
           else
@@ -164,7 +171,9 @@ jobs:
               echo "github-token=${{ steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}"
               echo "radar-license=${{ steps.vault-secrets.outputs.RADAR_LICENSE }}"
               echo "slack-webhook-url=${{ steps.vault-secrets.outputs.SLACK_WEBHOOK_URL }}"
-              echo "ssh-key=${{ steps.vault-secrets.outputs.SSH_KEY_PRIVATE_CI }}"
+              echo 'ssh-key<<EOFSSHKEYENT'
+              echo "${{ steps.vault-secrets.outputs.SSH_KEY_PRIVATE_CI }}"
+              echo EOFSSHKEYENT
               echo "vault-license=${{ steps.vault-secrets.outputs.VAULT_LICENSE }}"
             } | tee -a "$GITHUB_OUTPUT"
           fi
@@ -207,8 +216,7 @@ jobs:
           aws-region: ${{ matrix.attributes.aws_region }}
           role-to-assume: ${{ steps.secrets.outputs.aws-role-arn }}
           role-skip-session-tagging: true
-          # Stay valid longer that our max timeout to allow destroy actions to always have a valid token
-          role-duration-seconds: 3800
+          role-duration-seconds: 3600
       - uses: hashicorp/action-setup-enos@v1
         with:
           github-token: ${{ steps.secrets.outputs.github-token }}
@@ -223,6 +231,8 @@ jobs:
           mkdir -p "./enos/support/terraform-plugin-cache"
           echo "${{ steps.secrets.outputs.ssh-key }}" > "./enos/support/private_key.pem"
           chmod 600 "./enos/support/private_key.pem"
+          sha256sum "./enos/support/private_key.pem"
+          du -h "./enos/support/private_key.pem"
           echo "debug_data_artifact_name=enos-debug-data_$(echo "${{ matrix.scenario }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')" >> "$GITHUB_OUTPUT"
       - if: contains(inputs.sample-name, 'build')
         uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
@@ -238,19 +248,19 @@ jobs:
           echo "${{ steps.secrets.outputs.consul-license }}" > ./enos/support/consul.hclic || true
       - name: Configure Vault Radar license
         run: |
-          echo "${{ steps.secrets.outputs.radar-license }}" > ./enos/support/radar.hclic || true
+          echo "${{ steps.secrets.outputs.radar-license }}" > ./enos/support/vault-radar.hclic || true
       - id: launch
         name: enos scenario launch ${{ matrix.scenario.id.filter }}
         # Continue once and retry to handle occasional blips when creating infrastructure.
         continue-on-error: true
-        run: enos scenario launch --timeout 60m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
+        run: enos scenario launch --timeout 45m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
       - if: steps.launch.outcome == 'failure'
         id: launch_retry
         name: Retry enos scenario launch ${{ matrix.scenario.id.filter }}
-        run: enos scenario launch --timeout 60m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
+        run: enos scenario launch --timeout 45m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
       - name: Upload Debug Data
         if: failure()
-        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         with:
           # The name of the artifact is the same as the matrix scenario name with the spaces replaced with underscores and colons replaced by equals.
           name: ${{ steps.prepare_scenario.outputs.debug_data_artifact_name }}
@@ -261,12 +271,12 @@ jobs:
         id: destroy
         name: enos scenario destroy ${{ matrix.scenario.id.filter }}
         continue-on-error: true
-        run: enos scenario destroy --timeout 60m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
+        run: enos scenario destroy --timeout 10m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
       - if: steps.destroy.outcome == 'failure'
         id: destroy_retry
         name: Retry enos scenario destroy ${{ matrix.scenario.id.filter }}
         continue-on-error: true
-        run: enos scenario destroy --timeout 60m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
+        run: enos scenario destroy --timeout 10m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
       - name: Clean up Enos runtime directories
         id: cleanup
         if: ${{ always() }}
