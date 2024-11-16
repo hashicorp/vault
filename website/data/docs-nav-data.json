@@ -1568,6 +1568,10 @@
                 "path": "secrets/kv/kv-v2/setup"
               },
               {
+                "title": "Save random strings",
+                "path": "secrets/kv/kv-v2/random-string"
+              },
+              {
                 "title": "Cookbook",
                 "routes": [
                   {
