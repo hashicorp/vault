@@ -40,6 +40,7 @@ import (
 	logicalNomad "github.com/hashicorp/vault/builtin/logical/nomad"
 	logicalRabbit "github.com/hashicorp/vault/builtin/logical/rabbitmq"
 	logicalTotp "github.com/hashicorp/vault/builtin/logical/totp"
+	"github.com/hashicorp/vault/helper/pluginconsts"
 	dbCass "github.com/hashicorp/vault/plugins/database/cassandra"
 	dbHana "github.com/hashicorp/vault/plugins/database/hana"
 	dbInflux "github.com/hashicorp/vault/plugins/database/influxdb"
@@ -54,26 +55,26 @@ import (
 func newFullAddonRegistry() *registry {
 	return &registry{
 		credentialBackends: map[string]credentialBackend{
-			AuthTypeAliCloud: {Factory: credAliCloud.Factory},
-			AuthTypeAppId: {
+			pluginconsts.AuthTypeAliCloud: {Factory: credAliCloud.Factory},
+			pluginconsts.AuthTypeAppId: {
 				Factory:           removedFactory,
 				DeprecationStatus: consts.Removed,
 			},
-			AuthTypeAWS:        {Factory: credAws.Factory},
-			AuthTypeAzure:      {Factory: credAzure.Factory},
-			AuthTypeCF:         {Factory: credCF.Factory},
-			AuthTypeGCP:        {Factory: credGcp.Factory},
-			AuthTypeGitHub:     {Factory: credGitHub.Factory},
-			AuthTypeKerberos:   {Factory: credKerb.Factory},
-			AuthTypeKubernetes: {Factory: credKube.Factory},
-			AuthTypeLDAP:       {Factory: credLdap.Factory},
-			AuthTypeOCI:        {Factory: credOCI.Factory},
-			AuthTypeOkta:       {Factory: credOkta.Factory},
-			AuthTypePCF: {
+			pluginconsts.AuthTypeAWS:        {Factory: credAws.Factory},
+			pluginconsts.AuthTypeAzure:      {Factory: credAzure.Factory},
+			pluginconsts.AuthTypeCF:         {Factory: credCF.Factory},
+			pluginconsts.AuthTypeGCP:        {Factory: credGcp.Factory},
+			pluginconsts.AuthTypeGitHub:     {Factory: credGitHub.Factory},
+			pluginconsts.AuthTypeKerberos:   {Factory: credKerb.Factory},
+			pluginconsts.AuthTypeKubernetes: {Factory: credKube.Factory},
+			pluginconsts.AuthTypeLDAP:       {Factory: credLdap.Factory},
+			pluginconsts.AuthTypeOCI:        {Factory: credOCI.Factory},
+			pluginconsts.AuthTypeOkta:       {Factory: credOkta.Factory},
+			pluginconsts.AuthTypePCF: {
 				Factory:           credCF.Factory,
 				DeprecationStatus: consts.Deprecated,
 			},
-			AuthTypeRadius: {Factory: credRadius.Factory},
+			pluginconsts.AuthTypeRadius: {Factory: credRadius.Factory},
 		},
 		databasePlugins: map[string]databasePlugin{
 			// These four plugins all use the same mysql implementation but with
