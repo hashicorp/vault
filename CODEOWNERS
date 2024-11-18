@@ -3,6 +3,8 @@
 # those areas of the code.
 #
 # More on CODEOWNERS files: https://help.github.com/en/github/creating-cloning-and-archiving-repositories/about-code-owners
+# Default CODEOWNER primarily for contact purposes
+* @hashicorp/vault
 
 # Select Auth engines are owned by Ecosystem
 /builtin/credential/aws/      @hashicorp/vault-ecosystem
@@ -29,7 +31,7 @@
 /vault/plugin_catalog.go      @hashicorp/vault-ecosystem
 
 /website/content/ @hashicorp/vault-education-approvers
-/website/content/docs/plugin-portal.mdx   @acahn @hashicorp/vault-education-approvers
+/website/content/docs/plugin-portal.mdx   @hashicorp/vault-education-approvers
 
 # Plugin docs
 /website/content/docs/plugins/              @hashicorp/vault-ecosystem @hashicorp/vault-education-approvers
