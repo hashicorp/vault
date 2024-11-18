@@ -33,6 +33,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/cloudflare/circl/sign/mldsa/mldsa44"
+	"github.com/cloudflare/circl/sign/mldsa/mldsa65"
+	"github.com/cloudflare/circl/sign/mldsa/mldsa87"
+
+	"github.com/cloudflare/circl/sign"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -71,7 +76,14 @@ const (
 	KeyType_HMAC
 	KeyType_AES128_CMAC
 	KeyType_AES256_CMAC
+	KeyType_ML_DSA
 	// If adding to this list please update allTestKeyTypes in policy_test.go
+)
+
+const (
+	ParameterSet_ML_DSA_44 = "44"
+	ParameterSet_ML_DSA_65 = "65"
+	ParameterSet_ML_DSA_87 = "87"
 )
 
 const (
@@ -181,7 +193,7 @@ func (kt KeyType) DecryptionSupported() bool {
 
 func (kt KeyType) SigningSupported() bool {
 	switch kt {
-	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_ED25519, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY:
+	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_ED25519, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY, KeyType_ML_DSA:
 		return true
 	}
 	return false
@@ -228,6 +240,15 @@ func (kt KeyType) HMACSupported() bool {
 		return false
 	default:
 		return true
+	}
+}
+
+func (kt KeyType) IsPQC() bool {
+	switch kt {
+	case KeyType_ML_DSA:
+		return true
+	default:
+		return false
 	}
 }
 
@@ -278,6 +299,8 @@ func (kt KeyType) String() string {
 		return "aes128-cmac"
 	case KeyType_AES256_CMAC:
 		return "aes256-cmac"
+	case KeyType_ML_DSA:
+		return "ml-dsa"
 	}
 
 	return "[unknown]"
@@ -322,10 +345,12 @@ type KeyEntry struct {
 	// Key entry certificate chain. If set, leaf certificate key matches the
 	// KeyEntry key
 	CertificateChain [][]byte `json:"certificate_chain"`
+
+	MLDSAPrivateKey sign.PrivateKey `json:"ml_dsa_key"`
 }
 
 func (ke *KeyEntry) IsPrivateKeyMissing() bool {
-	if ke.RSAKey != nil || ke.EC_D != nil || len(ke.Key) != 0 || len(ke.ManagedKeyUUID) != 0 {
+	if ke.RSAKey != nil || ke.EC_D != nil || len(ke.Key) != 0 || len(ke.ManagedKeyUUID) != 0 || ke.MLDSAPrivateKey != nil {
 		return false
 	}
 
@@ -395,6 +420,9 @@ type PolicyConfig struct {
 	// StoragePrefix is used to add a prefix when storing and retrieving the
 	// policy object.
 	StoragePrefix string
+
+	// ParameterSet indicates the parameter set to use with ML-DSA and SLH-DSA keys
+	ParameterSet string
 }
 
 // NewPolicy takes a policy config and returns a Policy with those settings.
@@ -412,6 +440,7 @@ func NewPolicy(config PolicyConfig) *Policy {
 		AllowPlaintextBackup: config.AllowPlaintextBackup,
 		VersionTemplate:      config.VersionTemplate,
 		StoragePrefix:        config.StoragePrefix,
+		ParameterSet:         config.ParameterSet,
 	}
 }
 
@@ -542,6 +571,9 @@ type Policy struct {
 
 	// AllowImportedKeyRotation indicates whether an imported key may be rotated by Vault
 	AllowImportedKeyRotation bool
+
+	// ParameterSet indicates the parameter set to use with ML-DSA and SLH-DSA keys
+	ParameterSet string
 }
 
 func (p *Policy) Lock(exclusive bool) {
@@ -1367,6 +1399,12 @@ func (p *Policy) SignWithOptions(ver int, context, input []byte, options *Signin
 			return nil, err
 		}
 
+	case KeyType_ML_DSA:
+		sig, err = p.signWithMLDSA(input, ver)
+		if err != nil {
+			return nil, err
+		}
+
 	default:
 		return nil, fmt.Errorf("unsupported key type %v", p.Type)
 	}
@@ -1572,6 +1610,9 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 		}
 
 		return p.verifyWithManagedKey(options, keyEntry, input, sigBytes)
+
+	case KeyType_ML_DSA:
+		return p.verifyWithMLDSA(input, sigBytes, ver)
 
 	default:
 		return false, errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
@@ -1824,6 +1865,35 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 		}
 
 		entry.RSAPublicKey = entry.RSAKey.Public().(*rsa.PublicKey)
+	case KeyType_ML_DSA:
+		entry.MLDSAPrivateKey, err = p.generateMLDSAKey(randReader)
+
+		switch entry.MLDSAPrivateKey.(type) {
+		case *mldsa44.PrivateKey:
+			public := entry.MLDSAPrivateKey.Public().(*mldsa44.PublicKey)
+			pkBytes, err := public.MarshalBinary()
+			if err != nil {
+				return fmt.Errorf("error marshaling key: %s", err)
+			}
+
+			entry.FormattedPublicKey = base64.StdEncoding.EncodeToString(pkBytes)
+		case *mldsa65.PrivateKey:
+			public := entry.MLDSAPrivateKey.Public().(*mldsa65.PublicKey)
+			pkBytes, err := public.MarshalBinary()
+			if err != nil {
+				return fmt.Errorf("error marshaling key: %s", err)
+			}
+
+			entry.FormattedPublicKey = base64.StdEncoding.EncodeToString(pkBytes)
+		case *mldsa87.PrivateKey:
+			public := entry.MLDSAPrivateKey.Public().(*mldsa87.PublicKey)
+			pkBytes, err := public.MarshalBinary()
+			if err != nil {
+				return fmt.Errorf("error marshaling key: %s", err)
+			}
+
+			entry.FormattedPublicKey = base64.StdEncoding.EncodeToString(pkBytes)
+		}
 	}
 
 	if p.ConvergentEncryption {
