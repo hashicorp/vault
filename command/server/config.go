@@ -116,7 +116,8 @@ type Config struct {
 	LicensePath      string `hcl:"license_path"`
 	DisableSSCTokens bool   `hcl:"-"`
 
-	EnableUnsealTrace bool `hcl:"enable_unseal_trace"`
+	EnableUnsealTrace bool   `hcl:"enable_unseal_trace"`
+	UnsealTraceDir    string `hcl:"unseal_trace_dir"`
 }
 
 const (
