@@ -1,0 +1,32 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import type Model from '@ember-data/model';
+
+export default class AzureConfig extends Model {
+  backend: string;
+  subscriptionId: string | undefined;
+  tenantId: string | undefined;
+  clientId: string | undefined;
+  clientSecret: string | undefined;
+  identityTokenAudience: string | undefined;
+  identityTokenTtl: any;
+  environment: string | undefined;
+  rootPasswordTtl: string | undefined;
+
+  get attrs(): any;
+  get fieldGroupsWif(): any;
+  get fieldGroupsAzure(): any;
+  formFieldGroups(accessType?: string): {
+    [key: string]: string[];
+  }[];
+  // for some reason the following Model attrs don't exist on the Model definition
+  changedAttributes(): {
+    [key: string]: unknown[];
+  };
+  isNew: boolean;
+  save(): void;
+  unloadRecord(): void;
+}

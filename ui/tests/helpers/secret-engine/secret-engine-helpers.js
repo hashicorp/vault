@@ -143,6 +143,17 @@ export const expectedConfigKeys = (type) => {
       return ['accessKey', 'secretKey'];
     case 'ssh':
       return ['Public key', 'Generate signing key'];
+    case 'azure':
+      return ['subscriptionId', 'tenantId', 'clientId', 'clientSecret', 'rootPasswordTtl', 'environment'];
+    case 'azure-wif':
+      return [
+        'subscriptionId',
+        'tenantId',
+        'clientId',
+        'identityTokenAudience',
+        'Identity token TTL',
+        'environment',
+      ];
   }
 };
 
@@ -202,6 +213,24 @@ export const fillInAwsConfig = async (situation = 'withAccess') => {
     await fillIn(GENERAL.inputByAttr('issuer'), `http://bar.${uuidv4()}`); // make random because global setting
     await fillIn(GENERAL.inputByAttr('roleArn'), 'foo-role');
     await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'foo-audience');
+    await click(GENERAL.ttl.toggle('Identity token TTL'));
+    await fillIn(GENERAL.ttl.input('Identity token TTL'), '7200');
+  }
+};
+
+export const fillInAzureConfig = async (situation = 'azure') => {
+  await fillIn(GENERAL.inputByAttr('subscriptionId'), 'subscription-id');
+  await fillIn(GENERAL.inputByAttr('tenantId'), 'tenant-id');
+  await fillIn(GENERAL.inputByAttr('clientId'), 'client-id');
+  await fillIn(GENERAL.inputByAttr('environment'), 'environment-123');
+
+  if (situation === 'azure') {
+    await fillIn(GENERAL.inputByAttr('clientSecret'), 'client-secret');
+    await click(GENERAL.ttl.toggle('Root password TTL'));
+    await fillIn(GENERAL.ttl.input('Root password TTL'), '5200');
+  }
+  if (situation === 'withWif') {
+    await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'azure-audience');
     await click(GENERAL.ttl.toggle('Identity token TTL'));
     await fillIn(GENERAL.ttl.input('Identity token TTL'), '7200');
   }

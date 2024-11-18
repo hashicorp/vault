@@ -11,7 +11,7 @@ import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import errorMessage from 'vault/utils/error-message';
 
-import type ConfigModel from 'vault/models/azure/config';
+import type ConfigModel from 'vault/vault/models/azure/config';
 import type IdentityOidcConfigModel from 'vault/models/identity/oidc/config';
 import type Router from '@ember/routing/router';
 import type StoreService from 'vault/services/store';
@@ -61,10 +61,10 @@ export default class ConfigureAwsComponent extends Component<Args> {
     super(owner, args);
     // the following checks are only relevant to enterprise users and those editing an existing configuration.
     if (this.version.isCommunity || this.args.model.isNew) return;
-    const { identityTokenAudience, identityTokenTtl, subscriptionId } = this.args.model;
+    const { identityTokenAudience, identityTokenTtl, clientSecret, rootPasswordTtl } = this.args.model;
     // do not include issuer in this check. Issuer is a global endpoint and can bet set even if we're not editing wif attributes
     const wifAttributesSet = !!identityTokenAudience || !!identityTokenTtl;
-    const azureAttributesSet = !!subscriptionId;
+    const azureAttributesSet = !!clientSecret || !!rootPasswordTtl;
     // If any WIF attributes have been set in the model, set accessType to 'wif'.
     this.accessType = wifAttributesSet ? 'wif' : 'azure';
     // If there are either WIF or azure attributes set then disable user's ability to change accessType.
@@ -168,14 +168,8 @@ export default class ConfigureAwsComponent extends Component<Args> {
       this.args.issuerConfig.rollbackAttributes();
     }
     if (accessType === 'wif') {
-      // reset all IAM attributes
-      model.subscriptionId =
-        model.clientId =
-        model.tenantId =
-        model.clientSecret =
-        model.environment =
-        model.rootPasswordTtl =
-          undefined;
+      // reset all Azure attributes
+      model.clientSecret = model.rootPasswordTtl = undefined;
     }
   }
 

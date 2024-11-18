@@ -6,13 +6,20 @@
 import Model, { attr } from '@ember-data/model';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
-// TODO add validations
-// there are more options available on the API, but the UI does not support them yet.
 export default class AzureConfig extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord
-  @attr('string') subscriptionId; // JSON string
-  @attr('string') tenantId;
-  @attr('string') clientId;
+  @attr('string', {
+    label: 'Subscription ID',
+  })
+  subscriptionId;
+  @attr('string', {
+    label: 'Tenant ID',
+  })
+  tenantId;
+  @attr('string', {
+    label: 'Client ID',
+  })
+  clientId;
   @attr('string') clientSecret;
   @attr('string', {
     subText:
@@ -60,15 +67,17 @@ export default class AzureConfig extends Model {
 
   formFieldGroups(accessType = 'azure') {
     const formFieldGroups = [];
+    formFieldGroups.push({
+      default: ['subscriptionId', 'tenantId', 'clientId', 'environment'],
+    });
     if (accessType === 'wif') {
       formFieldGroups.push({
-        default: ['tenantId', 'identityTokenAudience', 'identityTokenTtl'], // ARG TODO follow up if we need client id or not, did not include because not including client secret
+        default: ['identityTokenAudience', 'identityTokenTtl'],
       });
     }
     if (accessType === 'azure') {
       formFieldGroups.push({
-        default: ['subscriptionId', 'tenantId', 'clientId', 'clientSecret'],
-        'More options': ['environment', 'rootPasswordTtl'],
+        default: ['clientSecret', 'rootPasswordTtl'],
       });
     }
     return formFieldGroups;
@@ -83,6 +92,8 @@ export default class AzureConfig extends Model {
       'clientSecret',
       'identityTokenAudience',
       'identityTokenTtl',
+      'rootPasswordTtl',
+      'environment',
     ];
     return expandAttributeMeta(this, keys);
   }
