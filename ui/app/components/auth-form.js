@@ -45,6 +45,7 @@ export default Component.extend(DEFAULTS, {
   store: service(),
   csp: service('csp-event'),
   version: service(),
+  api: service('__api'),
 
   // set by query params, passed from parent Auth::Page component
   selectedAuth: null,
@@ -196,30 +197,21 @@ export default Component.extend(DEFAULTS, {
 
   fetchMethods: task(
     waitFor(function* () {
-      const store = this.store;
-      try {
-        const methods = yield store.findAll('auth-method', {
-          adapterOptions: {
-            unauthenticated: true,
-          },
-        });
-        this.set(
-          'methods',
-          methods.map((m) => {
-            const method = m.serialize({ includeId: true });
-            return {
-              ...method,
-              mountDescription: method.description,
-            };
-          })
-        );
-        // without unloading the records there will be an issue where all methods set to list when unauthenticated will appear for all namespaces
-        // if possible, it would be more reliable to add a namespace attr to the model so we could filter against the current namespace rather than unloading all
-        next(() => {
-          store.unloadAll('auth-method');
-        });
-      } catch (e) {
-        this.set('error', `There was an error fetching Auth Methods: ${e.errors[0]}`);
+      const { data, error } = yield this.api.get('/sys/internal/ui/mounts');
+
+      if (error) {
+        this.set('error', `There was an error fetching Auth Methods: ${error.errors[0]}`);
+      } else {
+        const methods = [];
+        for (const key in data.auth) {
+          const method = data.auth[key];
+          methods.push({
+            ...method,
+            path: key,
+            mountDescription: method.description,
+          });
+        }
+        this.set('methods', methods);
       }
     })
   ),
