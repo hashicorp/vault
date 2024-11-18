@@ -1360,3 +1360,33 @@ func TestRaft_Join_InitStatus(t *testing.T) {
 		verifyInitStatus(i, true)
 	}
 }
+
+// TestRaftCluster_Removed creates a 3 node raft cluster and then removes one of
+// the nodes. The test verifies that a write on the removed node errors, and that
+// the removed node is sealed.
+func TestRaftCluster_Removed(t *testing.T) {
+	t.Parallel()
+	cluster, _ := raftCluster(t, nil)
+	defer cluster.Cleanup()
+
+	follower := cluster.Cores[2]
+	followerClient := follower.Client
+	_, err := followerClient.Logical().Write("secret/foo", map[string]interface{}{
+		"test": "data",
+	})
+	require.NoError(t, err)
+
+	_, err = cluster.Cores[0].Client.Logical().Write("/sys/storage/raft/remove-peer", map[string]interface{}{
+		"server_id": follower.NodeID,
+	})
+	followerClient.SetCheckRedirect(func(request *http.Request, requests []*http.Request) error {
+		require.Fail(t, "request caused a redirect", request.URL.Path)
+		return fmt.Errorf("no redirects allowed")
+	})
+	require.NoError(t, err)
+	_, err = followerClient.Logical().Write("secret/foo", map[string]interface{}{
+		"test": "other_data",
+	})
+	require.Error(t, err)
+	require.True(t, follower.Sealed())
+}
