@@ -1,0 +1,26 @@
+name: Bench
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  bench:
+    name: Bench
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          fetch-depth: 0
+          fetch-tags: false
+      - name: Set up go
+        uses: ./.github/actions/set-up-go
+        with:
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+      - name: Configure Git
+        run: git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN }}:@github.com".insteadOf "https://github.com"
+      - name: Install cob
+        run: sh -s -- -b /usr/local/bin -d v0.0.8 < ./.github/scripts/install-cob.sh
+      - name: Run Benchmark
+        run: cob --base ${{ github.event.pull_request.base.sha }} -threshold 0.1 -bench-args "test -bench . -benchtime 3s -benchmem -v ./vault/bench ${{ github.repository == 'hashicorp/vault-enterprise' && '-tags testonly,enterprise' || '-tags testonly'  }}"
