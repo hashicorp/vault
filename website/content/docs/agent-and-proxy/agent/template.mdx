@@ -115,8 +115,8 @@ failures.
   engine should wait to refresh dynamic, non-renewable leases, measured as
   a fraction of the lease duration. For certificates rendered using the `pkiCert`
   template function without leases, the `Not After` attribute is treated as the
-  lease end time, and the certificate will rotate at 70% of the difference between
-  the `Not Before` and `Not After` attributes.
+  lease end time, and the certificate will rotate at the configured percentage
+  of the difference between the `Not Before` and `Not After` attributes.
 
 ### `template_config` stanza example
 
