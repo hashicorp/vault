@@ -1,0 +1,3 @@
+```release-note: bug
+api/auth: Upgraded github.com/go-jose/go-jose/v3 dependency to the latest version.
+```
