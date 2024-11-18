@@ -19,6 +19,19 @@ To use this feature, you must have an active or trial license for Vault
 Enterprise Plus (HSMs). To start a trial, contact [HashiCorp
 sales](mailto:sales@hashicorp.com).
 
+## Seal Wrap benefits
+
+Your Vault deployments can gain the following benefits by enabling seal wrapping:
+
+- Conformance with FIPS 140-2 directives on Key Storage and Key Transport as [certified by Leidos](/vault/docs/enterprise/sealwrap#fips-140-2-compliance)
+- Supports FIPS level of security equal to HSM
+  - For example, if you use Level 3 hardware encryption on an HSM, Vault will be
+    using FIPS 140-2 Level 3 cryptography
+- Enables Vault deployments in high security [GRC](https://en.wikipedia.org/wiki/Governance,_risk_management,_and_compliance)
+  environments (e.g. PCI-DSS, HIPAA) where FIPS guidelines important for external audits
+- Pathway to use Vault for managing Department of Defense (DOD) or North
+  Atlantic Treaty Organization (NATO) military secrets
+
 ## Enabling/Disabling
 
 Seal Wrap is enabled by default on supporting seals. This implies that the seal
@@ -26,6 +39,12 @@ must be available throughout Vault's runtime. Most cloud-based seals should be
 quite reliable, but, for instance, if using an HSM in a non-HA setup a
 connection interruption to the HSM will result in issues with Vault
 functionality.
+
+<Tip>
+
+Having Vault generate its own key is the easiest way to get up and running, but for security, Vault marks the key as non-exportable. If your HSM key backup strategy requires the key to be exportable, you should generate the key yourself. Refer to the [key generation attributes](/vault/docs/configuration/seal/pkcs11#vault-key-generation-attributes).
+
+</Tip>
 
 To disable seal wrapping, set `disable_sealwrap = true` in Vault's
 [configuration file][configuration]. This will not affect auto-unsealing functionality; Vault's
