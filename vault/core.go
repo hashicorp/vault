@@ -141,8 +141,6 @@ const (
 		"file."
 
 	WellKnownPrefix = "/.well-known/"
-
-	enableUnsealTraceEnvVar = "VAULT_ENABLE_UNSEAL_TRACE"
 )
 
 var (
@@ -2022,10 +2020,6 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 // unsealInternal takes in the master key and attempts to unseal the barrier.
 // N.B.: This must be called with the state write lock held.
 func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) error {
-	if stopTrace := c.traceUnsealIfEnabled(); stopTrace != nil {
-		defer stopTrace()
-	}
-
 	// Attempt to unlock
 	if err := c.barrier.Unseal(ctx, masterKey); err != nil {
 		return err
@@ -2108,40 +2102,6 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) error {
 		}
 	}
 	return nil
-}
-
-// traceUnsealIfEnabled checks if unseal tracing is enabled in the server config
-// and starts a go trace if it is, returning a stop function to be called once
-// the unseal process is complete.
-func (c *Core) traceUnsealIfEnabled() (stop func()) {
-	// use rawConfig to allow config hot-reload of EnableUnsealTrace via SIGHUP
-	conf := c.rawConfig.Load()
-	if conf == nil {
-		c.logger.Warn("failed to get raw config to check enable_unseal_trace")
-		return nil
-	}
-
-	if !conf.(*server.Config).EnableUnsealTrace {
-		return nil
-	}
-
-	dir := conf.(*server.Config).UnsealTraceDir
-
-	traceFile, stopTrace, err := trace.StartDebugTrace(dir, "unsealInternal-")
-	if err != nil {
-		c.logger.Warn("failed to start unseal trace", "error", err)
-		return nil
-	}
-
-	c.logger.Info("unseal trace started", "file", traceFile)
-
-	return func() {
-		err := stopTrace()
-		if err != nil {
-			c.logger.Warn("failure when stopping unseal trace", "error", err)
-		}
-		c.logger.Info("unseal trace completed", "file", traceFile)
-	}
 }
 
 // SealWithRequest takes in a logical.Request, acquires the lock, and passes
@@ -2745,6 +2705,10 @@ func (c *Core) runUnsealSetupForPrimary(ctx context.Context, logger log.Logger) 
 // requires the Vault to be unsealed such as mount tables, logical backends,
 // credential stores, etc.
 func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc, unsealer UnsealStrategy) (retErr error) {
+	if stopTrace := c.tracePostUnsealIfEnabled(); stopTrace != nil {
+		defer stopTrace()
+	}
+
 	defer metrics.MeasureSince([]string{"core", "post_unseal"}, time.Now())
 
 	// Clear any out
@@ -2858,6 +2822,41 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 	}
 	c.logger.Info("post-unseal setup complete")
 	return nil
+}
+
+// tracePostUnsealIfEnabled checks if post-unseal tracing is enabled in the server
+// config and starts a go trace if it is, returning a stop function to be called once
+// the post-unseal process is complete.
+func (c *Core) tracePostUnsealIfEnabled() (stop func()) {
+	// use rawConfig to allow config hot-reload of EnablePostUnsealTrace via SIGHUP
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		c.logger.Warn("failed to get raw config to check enable_post_unseal_trace")
+		return nil
+	}
+
+	if !conf.(*server.Config).EnablePostUnsealTrace {
+		return nil
+	}
+
+	dir := conf.(*server.Config).PostUnsealTraceDir
+
+	traceFile, stopTrace, err := trace.StartDebugTrace(dir, "post-unseal")
+	if err != nil {
+		c.logger.Warn("failed to start post-unseal trace", "error", err)
+		return nil
+	}
+
+	c.logger.Info("post-unseal trace started", "file", traceFile)
+
+	return func() {
+		err := stopTrace()
+		if err != nil {
+			c.logger.Warn("failure when stopping post-unseal trace", "error", err)
+			return
+		}
+		c.logger.Info("post-unseal trace completed", "file", traceFile)
+	}
 }
 
 // preSeal is invoked before the barrier is sealed, allowing

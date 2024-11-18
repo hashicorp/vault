@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime/trace"
 	"time"
 )
@@ -31,7 +32,10 @@ func StartDebugTrace(dir string, filePrefix string) (file string, stop func() er
 		}
 	}
 
-	traceFile := fmt.Sprintf("%s/%s_%s.trace", dir, filePrefix, time.Now().Format(time.RFC3339))
+	traceFile, err := filepath.Abs(fmt.Sprintf("%s/%s-%s.trace", dir, filePrefix, time.Now().Format(time.RFC3339)))
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to get absolute path for trace file: %s", err)
+	}
 	f, err := os.Create(traceFile)
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to create trace file %q: %s", traceFile, err)

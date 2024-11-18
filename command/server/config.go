@@ -116,8 +116,8 @@ type Config struct {
 	LicensePath      string `hcl:"license_path"`
 	DisableSSCTokens bool   `hcl:"-"`
 
-	EnableUnsealTrace bool   `hcl:"enable_unseal_trace"`
-	UnsealTraceDir    string `hcl:"unseal_trace_dir"`
+	EnablePostUnsealTrace bool   `hcl:"enable_post_unseal_trace"`
+	PostUnsealTraceDir    string `hcl:"post_unseal_trace_dir"`
 }
 
 const (
@@ -1154,7 +1154,8 @@ func (c *Config) Sanitized() map[string]interface{} {
 
 		"imprecise_lease_role_tracking": c.ImpreciseLeaseRoleTracking,
 
-		"enable_unseal_trace": c.EnableUnsealTrace,
+		"enable_post_unseal_trace": c.EnablePostUnsealTrace,
+		"post_unseal_trace_dir":    c.PostUnsealTraceDir,
 	}
 	for k, v := range sharedResult {
 		result[k] = v
