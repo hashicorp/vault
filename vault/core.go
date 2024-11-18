@@ -21,7 +21,6 @@ import (
 	paths "path"
 	"path/filepath"
 	"runtime"
-	"runtime/trace"
 	"slices"
 	"strconv"
 	"strings"
@@ -51,6 +50,7 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/osutil"
+	"github.com/hashicorp/vault/helper/trace"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -2126,41 +2126,21 @@ func (c *Core) traceUnsealIfEnabled() (stop func()) {
 	}
 
 	dir := conf.(*server.Config).UnsealTraceDir
-	if dir == "" {
-		dir = os.TempDir()
-	} else {
-		info, err := os.Stat(dir)
-		if err != nil {
-			c.logger.Error("cannot stat unseal trace directory", "path", dir, "error", err)
-			return nil
-		}
-		if !info.IsDir() {
-			c.logger.Error("unseal trace directory is not a directory", "path", dir)
-			return nil
-		}
-	}
 
-	path := filepath.Join(dir, fmt.Sprintf("unseal-trace-%s.trace", time.Now().Format(time.RFC3339)))
-	f, err := os.Create(path)
+	traceFile, stopTrace, err := trace.StartDebugTrace(dir, "unsealInternal-")
 	if err != nil {
-		c.logger.Error("failed to create unseal trace file", "path", path, "error", err)
+		c.logger.Warn("failed to start unseal trace", "error", err)
 		return nil
 	}
 
-	if err := trace.Start(f); err != nil {
-		c.logger.Error("failed to start unseal trace", "error", err)
-		f.Close()
-		return nil
-	}
-
-	c.logger.Info("unseal trace started", "file", f)
+	c.logger.Info("unseal trace started", "file", traceFile)
 
 	return func() {
-		trace.Stop()
-		if err := f.Close(); err != nil {
-			c.logger.Warn("failed to close unseal trace file", "path", path, "error", err)
+		err := stopTrace()
+		if err != nil {
+			c.logger.Warn("failure when stopping unseal trace", "error", err)
 		}
-		c.logger.Info("unseal trace completed", "file", f)
+		c.logger.Info("unseal trace completed", "file", traceFile)
 	}
 }
 
