@@ -10,10 +10,50 @@ description: |-
 
 # token renew
 
-The `token renew` renews a token's lease, extending the amount of time it can be
+Renews a token's lease.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault token renew [flags] <token>
+
+$ vault token renew [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`token renew` renews a token's lease, extending the amount of time it can be
 used. If a TOKEN is not provided, the locally authenticated token is used. Lease
 renewal will fail if the token is not renewable, the token has already been
 revoked, or if the token has already reached its maximum TTL.
+
+## Command arguments
+
+<br />
+
+@include 'cli/token/args/token.mdx'
+
+## Command options
+
+- None
+
+## Command flags
+
+<br />
+
+@include 'cli/token/flags/increment.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/token/flags/format.mdx'
+
+## Standard flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags-but-format.mdx'
 
 ## Examples
 
@@ -35,21 +75,3 @@ Renew a token requesting a specific increment value:
 ```shell-session
 $ vault token renew -increment=30m 96ddf4bc-d217-f3ba-f9bd-017055595017
 ```
-
-## Usage
-
-The following flags are available in addition to the [standard set of
-flags](/vault/docs/commands) included on all commands.
-
-### Output options
-
-- `-format` `(default: "table")` - Print the output in the given format. Valid
-  formats are "table", "json", or "yaml". This can also be specified via the
-  `VAULT_FORMAT` environment variable.
-
-### Command options
-
-- `-increment` `(duration: "")` - Request a specific increment for renewal.
-  Vault will not honor this request for periodic tokens. If not supplied, Vault will use
-  the default TTL. This is specified as a numeric string with suffix like "30s"
-  or "5m". This is aliased as "-i".

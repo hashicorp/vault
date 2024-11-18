@@ -1,0 +1,10 @@
+<a id="token-mode" />
+
+**`-mode (string : "")`**
+
+Type of revocation to perform. If unspecified, Vault will revoke the token and 
+all of the token's children. If `"orphan"`, Vault will revoke only the token, 
+leaving the children as orphans. If `"path"`, tokens created from the given 
+authentication path prefix are deleted along with their children.
+
+**Example**: `-mode="orphan"`

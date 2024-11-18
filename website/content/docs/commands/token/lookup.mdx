@@ -8,8 +8,46 @@ description: |-
 
 # token lookup
 
+Displays information about a token or accessor.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault token lookup [flags] <token>
+
+$ vault token lookup [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
 The `token lookup` displays information about a token or accessor. If a TOKEN is
 not provided, the locally authenticated token is used.
+
+## Command arguments
+
+<br />
+
+@include 'cli/token/args/token.mdx'
+
+## Command options
+
+- None
+
+## Command flags
+
+<br />
+
+@include 'cli/token/flags/accessor.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/token/flags/format.mdx'
+
+## Standard flags
+
+@include 'cli/standard-settings/all-standard-flags-but-format.mdx'
 
 ## Examples
 
@@ -32,19 +70,3 @@ Get information about a token via its accessor:
 ```shell-session
 $ vault token lookup -accessor 9793c9b3-e04a-46f3-e7b8-748d7da248da
 ```
-
-## Usage
-
-The following flags are available in addition to the [standard set of
-flags](/vault/docs/commands) included on all commands.
-
-### Output options
-
-- `-format` `(default: "table")` - Print the output in the given format. Valid
-  formats are "table", "json", or "yaml". This can also be specified via the
-  `VAULT_FORMAT` environment variable.
-
-### Command options
-
-- `-accessor` `(bool: false)` - Treat the argument as an accessor instead of a
-  token. When this option is selected, the output will NOT include the token.

@@ -8,9 +8,53 @@ description: |-
 
 # token revoke
 
-The `token revoke` revokes authentication tokens and their children. If a TOKEN
-is not provided, the locally authenticated token is used. The `-mode` flag can
-be used to control the behavior of the revocation.
+Revokes authentication tokens and their children.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault token revoke [flags] <token>
+
+$ vault token revoke [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`token revoke` revokes authentication tokens and their children. If you do not 
+provide a token, Vault will use the locally authenticated token. You can use the
+ `-mode` flag to control the revocation behavior.
+
+## Command arguments
+
+<br />
+
+@include 'cli/token/args/token.mdx'
+
+## Command options
+
+- None
+
+## Command flags
+
+<br />
+
+@include 'cli/token/flags/accessor.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/token/flags/mode.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/token/flags/self.mdx'
+
+## Standard flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags.mdx'
 
 ## Examples
 
@@ -34,19 +78,3 @@ Revoke a token by accessor:
 $ vault token revoke -accessor 9793c9b3-e04a-46f3-e7b8-748d7da248da
 Success! Revoked token (if it existed)
 ```
-
-## Usage
-
-The following flags are available in addition to the [standard set of
-flags](/vault/docs/commands) included on all commands.
-
-- `-accessor` `(bool: false)` - Treat the argument as an accessor instead of a
-  token.
-
-- `-mode` `(string: "")` - Type of revocation to perform. If unspecified, Vault
-  will revoke the token and all of the token's children. If "orphan", Vault will
-  revoke only the token, leaving the children as orphans. If "path", tokens
-  created from the given authentication path prefix are deleted along with their
-  children.
-
-- `-self` - Perform the revocation on the currently authenticated token.
