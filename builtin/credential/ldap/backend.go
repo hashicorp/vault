@@ -83,6 +83,9 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 
 	ldapClient, err := ldap.NewClient(ctx, ldaputil.ConvertConfig(cfg.ConfigEntry))
 	if err != nil {
+		if b.Logger().IsDebug() {
+			b.Logger().Debug("error creating client", "error", err)
+		}
 		return "", nil, logical.ErrorResponse(err.Error()), nil, nil
 	}
 
@@ -93,10 +96,17 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	if err != nil {
 		if strings.Contains(err.Error(), "discovery of user bind DN failed") ||
 			strings.Contains(err.Error(), "unable to bind user") {
+			if b.Logger().IsDebug() {
+				b.Logger().Debug("error getting user bind DN", "error", err)
+			}
 			return "", nil, logical.ErrorResponse(errUserBindFailed), nil, logical.ErrInvalidCredentials
 		}
 
 		return "", nil, logical.ErrorResponse(err.Error()), nil, nil
+	}
+
+	if b.Logger().IsDebug() {
+		b.Logger().Debug("user binddn fetched", "username", username, "binddn", c.UserDN)
 	}
 
 	ldapGroups := c.Groups
@@ -107,10 +117,17 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		errString := fmt.Sprintf(
 			"no LDAP groups found in groupDN %q; only policies from locally-defined groups available",
 			cfg.GroupDN)
+
+		if b.Logger().IsDebug() {
+			b.Logger().Debug(errString)
+		}
 		ldapResponse.AddWarning(errString)
 	}
 
 	for _, warning := range c.Warnings {
+		if b.Logger().IsDebug() {
+			b.Logger().Debug(string(warning))
+		}
 		ldapResponse.AddWarning(string(warning))
 	}
 
@@ -160,6 +177,9 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 
 	userAttrValues := c.UserAttributes[cfg.UserAttr]
 	if len(userAttrValues) == 0 {
+		if b.Logger().IsDebug() {
+			b.Logger().Debug("missing entity alias attribute value")
+		}
 		return "", nil, logical.ErrorResponse("missing entity alias attribute value"), nil, nil
 	}
 	entityAliasAttribute := userAttrValues[0]

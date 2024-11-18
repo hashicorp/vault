@@ -51,6 +51,10 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 
 	u, p := cfg.BindDN, cfg.BindPassword
 	if u == "" || p == "" {
+		// Logging this is as it may be useful to know that the binddn/bindpass is not set.
+		if b.Logger().IsDebug() {
+			b.Logger().Debug("auth is not using authenticated search, no root to rotate")
+		}
 		return logical.ErrorResponse("auth is not using authenticated search, no root to rotate"), nil
 	}
 
