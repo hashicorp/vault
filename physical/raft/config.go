@@ -11,13 +11,12 @@ import (
 	"strconv"
 	"time"
 
-	bolt "github.com/hashicorp-forge/bbolt"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-uuid"
 	goversion "github.com/hashicorp/go-version"
 	autopilot "github.com/hashicorp/raft-autopilot"
-	etcdbolt "go.etcd.io/bbolt"
+	bolt "go.etcd.io/bbolt"
 )
 
 type RaftBackendConfig struct {
@@ -257,42 +256,6 @@ func boltOptions(path string) *bolt.Options {
 
 	if os.Getenv("VAULT_RAFT_FREELIST_TYPE") == "array" {
 		o.FreelistType = bolt.FreelistArrayType
-	}
-
-	if os.Getenv("VAULT_RAFT_FREELIST_SYNC") != "" {
-		o.NoFreelistSync = false
-	}
-
-	// By default, we want to set InitialMmapSize to 100GB, but only on 64bit platforms.
-	// Otherwise, we set it to whatever the value of VAULT_RAFT_INITIAL_MMAP_SIZE
-	// is, assuming it can be parsed as an int. Bolt itself sets this to 0 by default,
-	// so if users are wanting to turn this off, they can also set it to 0. Setting it
-	// to a negative value is the same as not setting it at all.
-	if os.Getenv("VAULT_RAFT_INITIAL_MMAP_SIZE") == "" {
-		o.InitialMmapSize = initialMmapSize
-	} else {
-		imms, err := strconv.Atoi(os.Getenv("VAULT_RAFT_INITIAL_MMAP_SIZE"))
-
-		// If there's an error here, it means they passed something that's not convertible to
-		// a number. Rather than fail startup, just ignore it.
-		if err == nil && imms > 0 {
-			o.InitialMmapSize = imms
-		}
-	}
-
-	return o
-}
-
-func etcdboltOptions(path string) *etcdbolt.Options {
-	o := &etcdbolt.Options{
-		Timeout:        1 * time.Second,
-		FreelistType:   etcdbolt.FreelistMapType,
-		NoFreelistSync: true,
-		MmapFlags:      getMmapFlags(path),
-	}
-
-	if os.Getenv("VAULT_RAFT_FREELIST_TYPE") == "array" {
-		o.FreelistType = etcdbolt.FreelistArrayType
 	}
 
 	if os.Getenv("VAULT_RAFT_FREELIST_SYNC") != "" {

@@ -20,7 +20,6 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/proto"
-	bolt "github.com/hashicorp-forge/bbolt"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/go-uuid"
@@ -28,6 +27,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/stretchr/testify/require"
+	bolt "go.etcd.io/bbolt"
 )
 
 func testBothRaftBackends(t *testing.T, f func(t *testing.T, raftWALValue string)) {

@@ -70,7 +70,6 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
-	github.com/hashicorp-forge/bbolt v1.3.8-hc3
 	github.com/hashicorp/cap v0.7.0
 	github.com/hashicorp/cap/ldap v0.0.0-20240403125925-c0418810d10e
 	github.com/hashicorp/cli v1.1.6
@@ -198,7 +197,7 @@ require (
 	github.com/shirou/gopsutil/v3 v3.22.6
 	github.com/stretchr/testify v1.9.0
 	github.com/tink-crypto/tink-go/v2 v2.2.0
-	go.etcd.io/bbolt v1.3.10
+	go.etcd.io/bbolt v1.4.0-beta.0
 	go.etcd.io/etcd/client/pkg/v3 v3.5.13
 	go.etcd.io/etcd/client/v2 v2.305.5
 	go.etcd.io/etcd/client/v3 v3.5.13
@@ -214,7 +213,7 @@ require (
 	golang.org/x/net v0.29.0
 	golang.org/x/oauth2 v0.23.0
 	golang.org/x/sync v0.8.0
-	golang.org/x/sys v0.25.0
+	golang.org/x/sys v0.27.0
 	golang.org/x/term v0.24.0
 	golang.org/x/text v0.18.0
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d
