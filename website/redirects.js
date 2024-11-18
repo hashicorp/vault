@@ -131,8 +131,18 @@ module.exports = [
     permanent: true,
   },
   {
-    source: '/vault/docs/command/web',
+    source: '/vault/docs/commands/web',
     destination: '/vault/docs/ui/web-cli',
+    permanent: true,
+  },
+  {
+    source: '/vault/docs/commands/audit',
+    destination: '/vault/docs/commands/audit/enable',
+    permanent: true,
+  },
+  {
+    source: '/vault/docs/commands/auth',
+    destination: '/vault/docs/commands/auth/enable',
     permanent: true,
   }
 ]

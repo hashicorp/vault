@@ -1,0 +1,11 @@
+<a id="shared-flag-default-lease-ttl" />
+
+**`-default-lease-ttl (string : "")`**
+
+Default time-to-live in `<number>[s|m|h|d]` format for the associated lease.
+
+When left unset, Vault uses the value of the global configuration setting
+`default_lease_ttl` as the default. If the global configuration setting is also
+unset, the default is "768h".
+
+**Example**: `-default-lease-ttl "5m"`

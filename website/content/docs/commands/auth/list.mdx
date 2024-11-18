@@ -32,6 +32,12 @@ SHA256 sum of the running plugin's binary. This may be different from the SHA256
 registered in the catalog if the plugin hasn't been reloaded since the plugin
 version was overwritten in the catalog.
 
+## Standard flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags-but-format.mdx'
+
 ## Examples
 
 List all auth methods:
@@ -53,6 +59,16 @@ Path        Plugin     Accessor                 Default TTL    Max TTL    Token 
 app-id/     app-id     auth_app-id_c88ad56f     system         system     default-service    replicated     false        false                      map[]      n/a                        a7c702b4-0dba-02b6-483c-2fd6be33240a    pending removal
 approle/    approle    auth_approle_95df932e    system         system     default-service    replicated     false        false                      map[]      n/a                        931df9d1-8737-b7dc-4ca2-3e0e892fce92    supported
 token/      token      auth_token_aafab997      system         system     default-service    replicated     false        false                      map[]      token based credentials    6eb5db7b-ac7f-4304-1f52-9b802c6f06c1    n/a
+```
+
+List all auth methods:
+
+```shell-session
+$ vault auth list
+Path         Type        Description
+----         ----        -----------
+token/       token       token based credentials
+userpass/    userpass    n/a
 ```
 
 ## Usage

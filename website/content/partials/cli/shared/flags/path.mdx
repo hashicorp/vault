@@ -1,0 +1,15 @@
+
+<a id="shared-flag-path" />
+
+**`-path (string : "<type_default>")`**
+
+Mount path for a plugin. Paths must be unique across all plugins.
+
+Plugin type          | Default path
+-------------------- | -----------
+Authentication       | `auth/<plugin_name>/`
+Secret plugin        | `<plugin_name>/`
+DB credential plugin | `database/`
+
+
+**Example**: `-path admin-kv`

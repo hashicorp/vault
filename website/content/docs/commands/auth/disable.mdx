@@ -17,6 +17,31 @@ Once an auth method is disabled, it can no longer be used for authentication.
 **All access tokens generated via the disabled auth method are immediately
 revoked.** This command will block until all tokens are revoked.
 
+## Arguments
+
+TBD
+
+
+
+## Options
+
+TBD
+
+
+
+## Command flags
+
+TBD
+
+
+
+## Standard flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags-but-format.mdx'
+
+
 ## Examples
 
 Disable the auth method enabled at "userpass/":
@@ -26,7 +51,9 @@ $ vault auth disable userpass/
 Success! Disabled the auth method (if it existed) at: userpass/
 ```
 
-## Usage
+Disable an auth method:
 
-There are no flags beyond the [standard set of flags](/vault/docs/commands)
-included on all commands.
+```shell-session
+$ vault auth disable userpass/
+Success! Disabled the auth method (if it existed) at: userpass/
+```

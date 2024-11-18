@@ -187,3 +187,20 @@ flags](/vault/docs/commands) included on all commands.
 
 - `-user-lockout-disable` `(bool: false)` - Disables the user lockout feature if set to true. User lockout feature was added in Vault 1.13.
 
+## Standard flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags-but-format.mdx'
+
+## Examples
+
+
+## Examples
+
+Tune an auth method:
+
+```shell-session
+$ vault auth tune -max-lease-ttl=30m userpass/
+Success! Tuned the auth method at: userpass/
+```

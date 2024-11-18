@@ -1,0 +1,12 @@
+<a id="shared-flag-max-lease-ttl" />
+
+**`-max-lease-ttl (string : "")`**
+
+Maximum time-to-live allowed in `<number>[s|m|h|d]` format for the associated
+lease.
+
+When left unset, Vault uses the value of the global configuration setting
+`max_lease_ttl` as the default. If the global configuration setting is also
+unset, the default is "768h".
+
+**Example**: `-max-lease-ttl "5m"`
