@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/aws/aws-sdk-go v1.49.22
+	github.com/go-jose/go-jose/v3 v3.0.3 // indirect
 	github.com/hashicorp/go-hclog v0.16.2
 	github.com/hashicorp/go-secure-stdlib/awsutil v0.1.6
 	github.com/hashicorp/go-uuid v1.0.2
