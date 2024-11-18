@@ -424,14 +424,16 @@ type singleTypeSegmentReader struct {
 	a                *ActivityLog
 }
 type segmentReader struct {
-	tokens   *singleTypeSegmentReader
-	entities *singleTypeSegmentReader
+	tokens         *singleTypeSegmentReader
+	entities       *singleTypeSegmentReader
+	globalEntities *singleTypeSegmentReader
 }
 
 // SegmentReader is an interface that provides methods to read tokens and entities in order
 type SegmentReader interface {
 	ReadToken(ctx context.Context) (*activity.TokenCount, error)
 	ReadEntity(ctx context.Context) (*activity.EntityActivityLog, error)
+	ReadGlobalEntity(ctx context.Context) (*activity.EntityActivityLog, error)
 }
 
 func (a *ActivityLog) NewSegmentFileReader(ctx context.Context, startTime time.Time) (SegmentReader, error) {
@@ -439,11 +441,15 @@ func (a *ActivityLog) NewSegmentFileReader(ctx context.Context, startTime time.T
 	if err != nil {
 		return nil, err
 	}
+	globalEntities, err := a.newSingleTypeSegmentReader(ctx, startTime, activityGlobalPathPrefix+activityEntityBasePath)
+	if err != nil {
+		return nil, err
+	}
 	tokens, err := a.newSingleTypeSegmentReader(ctx, startTime, activityTokenLocalBasePath)
 	if err != nil {
 		return nil, err
 	}
-	return &segmentReader{entities: entities, tokens: tokens}, nil
+	return &segmentReader{entities: entities, globalEntities: globalEntities, tokens: tokens}, nil
 }
 
 func (a *ActivityLog) newSingleTypeSegmentReader(ctx context.Context, startTime time.Time, prefix string) (*singleTypeSegmentReader, error) {
@@ -503,6 +509,17 @@ func (e *segmentReader) ReadToken(ctx context.Context) (*activity.TokenCount, er
 func (e *segmentReader) ReadEntity(ctx context.Context) (*activity.EntityActivityLog, error) {
 	out := &activity.EntityActivityLog{}
 	err := e.entities.nextValue(ctx, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ReadGlobalEntity reads a global entity from the global segment
+// If there is none available, then the error will be io.EOF
+func (e *segmentReader) ReadGlobalEntity(ctx context.Context) (*activity.EntityActivityLog, error) {
+	out := &activity.EntityActivityLog{}
+	err := e.globalEntities.nextValue(ctx, out)
 	if err != nil {
 		return nil, err
 	}

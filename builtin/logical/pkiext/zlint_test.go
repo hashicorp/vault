@@ -7,6 +7,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
+	"runtime"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -20,14 +23,23 @@ import (
 var (
 	zRunner        *docker.Runner
 	buildZLintOnce sync.Once
+	releaseRegex   = regexp.MustCompile(`^go\d+\.\d+\.\d+$`)
 )
 
 func buildZLintContainer(t *testing.T) {
-	containerfile := `
-FROM docker.mirror.hashicorp.services/library/golang:latest
-
+	// Leverage the Go version running the test to pull a version tagged image
+	// to avoid the issues we sometimes encounter pulling images with the latest tag
+	runtimeVer := runtime.Version()
+	goVersion := "latest"
+	// The version returned from Go might not be a release tag such as go1.23.2, if it
+	// isn't fallback to latest
+	if releaseRegex.MatchString(runtimeVer) {
+		goVersion = strings.TrimPrefix(runtime.Version(), "go")
+	}
+	containerfile := fmt.Sprintf(`
+FROM docker.mirror.hashicorp.services/library/golang:%s
 RUN go install github.com/zmap/zlint/v3/cmd/zlint@v3.6.2
-`
+`, goVersion)
 
 	bCtx := docker.NewBuildContext()
 

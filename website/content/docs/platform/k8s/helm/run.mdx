@@ -117,7 +117,7 @@ $ helm install vault hashicorp/vault
 The Helm chart may be run in high availability (HA) mode. This installs three
 Vault servers with an existing Consul storage backend. It is suggested that
 Consul is installed via the [Consul Helm
-chart](https://github.com/hashicorp/consul-helm).
+chart](https://github.com/hashicorp/consul-k8s).
 
 Install the latest Vault Helm chart in HA mode.
 
@@ -409,14 +409,14 @@ Next, list the Helm versions and choose the desired version to install.
 ```bash
 $ helm search repo hashicorp/vault
 NAME           	CHART VERSION	APP VERSION	DESCRIPTION
-hashicorp/vault	0.28.1       	1.17.2     	Official HashiCorp Vault Chart
+hashicorp/vault	0.29.0       	1.18.1     	Official HashiCorp Vault Chart
 ```
 
 Next, test the upgrade with `--dry-run` first to verify the changes sent to the
 Kubernetes cluster.
 
 ```shell-session
-$ helm upgrade vault hashicorp/vault --version=0.28.1 \
+$ helm upgrade vault hashicorp/vault --version=0.29.0 \
     --set='server.image.repository=vault' \
     --set='server.image.tag=123.456' \
     --dry-run

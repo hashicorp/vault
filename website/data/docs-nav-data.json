@@ -404,11 +404,24 @@
         "path": "configuration/replication"
       },
       {
+        "title": "<code>reporting</code>",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
+        "path": "configuration/reporting"
+      },
+      {
         "title": "<code>seal</code>",
         "routes": [
           {
             "title": "Overview",
             "path": "configuration/seal"
+          },
+          {
+            "title": "Seal best practices",
+            "path": "configuration/seal/seal-best-practices"
           },
           {
             "title": "High Availability",
@@ -451,11 +464,20 @@
           {
             "title": "Vault Transit",
             "path": "configuration/seal/transit"
+          },
+          {
+            "title": "Transit best practices",
+            "path": "configuration/seal/transit-best-practices"
           }
         ]
       },
       {
         "title": "<code>sentinel</code>",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "path": "configuration/sentinel"
       },
       {
@@ -644,7 +666,7 @@
           {
             "title": "<code>generate-config</code>",
             "path": "commands/agent/generate-config"
-          }    
+          }
         ]
       },
       {
@@ -1520,7 +1542,16 @@
           },
           {
             "title": "Azure Key Vault",
-            "path": "secrets/key-management/azurekeyvault"
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "secrets/key-management/azurekeyvault"
+              },
+              {
+                "title": "Setup guide",
+                "path": "secrets/key-management/azurekeyvault/setup"
+              }
+            ]
           },
           {
             "title": "AWS KMS",
@@ -1528,12 +1559,21 @@
           },
           {
             "title": "GCP Cloud KMS",
-            "path": "secrets/key-management/gcpkms"
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "secrets/key-management/gcpkms"
+              },
+              {
+                "title": "Setup guide",
+                "path": "secrets/key-management/gcpkms/setup"
+              }
+            ]
           }
         ]
       },
       {
-        "title": "Key Value",
+        "title": "Key/Value",
         "routes": [
           {
             "title": "Overview",
@@ -1545,7 +1585,62 @@
           },
           {
             "title": "KV version  2",
-            "path": "secrets/kv/kv-v2"
+            "routes":
+            [
+              {
+                "title": "Overview",
+                "path": "secrets/kv/kv-v2"
+              },
+              {
+                "title": "Upgrade from v1",
+                "path": "secrets/kv/kv-v2/upgrade"
+              },
+              {
+                "title": "Setup",
+                "path": "secrets/kv/kv-v2/setup"
+              },
+              {
+                "title": "Save random strings",
+                "path": "secrets/kv/kv-v2/random-string"
+              },
+              {
+                "title": "Cookbook",
+                "routes": [
+                  {
+                    "title": "Read data",
+                    "path": "secrets/kv/kv-v2/cookbook/read-data"
+                  },
+                  {
+                    "title": "Set max data versions",
+                    "path": "secrets/kv/kv-v2/cookbook/max-versions"
+                  },
+                  {
+                    "title": "Write data",
+                    "path": "secrets/kv/kv-v2/cookbook/write-data"
+                  },
+                  {
+                    "title": "Patch/update data",
+                    "path": "secrets/kv/kv-v2/cookbook/patch-data"
+                  },
+                  {
+                    "title": "Soft delete data",
+                    "path": "secrets/kv/kv-v2/cookbook/delete-data"
+                  },
+                  {
+                    "title": "Restore soft deleted data",
+                    "path": "secrets/kv/kv-v2/cookbook/undelete-data"
+                  },
+                  {
+                    "title": "Destroy data",
+                    "path": "secrets/kv/kv-v2/cookbook/destroy-data"
+                  },
+                  {
+                    "title": "Write custom metadata",
+                    "path": "secrets/kv/kv-v2/cookbook/custom-metadata"
+                  }
+                ]
+              }
+            ]
           }
         ]
       },
@@ -1785,7 +1880,16 @@
       },
       {
         "title": "AppRole",
-        "path": "auth/approle"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "auth/approle"
+          },
+          {
+            "title": "Recommended pattern",
+            "path": "auth/approle/approle-pattern"
+          }
+        ]
       },
       {
         "title": "AliCloud",
@@ -1950,7 +2054,6 @@
                 "path": "auth/saml/troubleshoot-adfs/adfs-event-320"
               }
             ]
-            
           }
         ]
       },
@@ -2420,6 +2523,10 @@
         "path": "upgrading/raft-wal"
       },
       {
+        "title": "Upgrade to 1.19.x",
+        "path": "upgrading/upgrade-to-1.19.x"
+      },
+      {
         "title": "Upgrade to 1.18.x",
         "path": "upgrading/upgrade-to-1.18.x"
       },
@@ -2817,6 +2924,10 @@
             "path": "enterprise/license/manual-reporting"
           },
           {
+            "title": "Product usage reporting",
+            "path": "enterprise/license/product-usage-reporting"
+          },
+          {
             "title": "FAQ",
             "path": "enterprise/license/faq"
           }
@@ -2946,6 +3057,10 @@
               "type": "outlined",
               "color": "neutral"
             }
+          },
+          {
+            "title": "Structure guide",
+            "path": "enterprise/namespaces/namespace-structure"
           }
         ]
       },

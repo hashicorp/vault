@@ -90,6 +90,20 @@ const (
 	PaddingScheme_PKCS1v15 = PaddingScheme("pkcs1v15")
 )
 
+var genEd25519Options = func(hashAlgorithm HashType, signatureContext string) (*stdlibEd25519.Options, error) {
+	if signatureContext != "" {
+		return nil, fmt.Errorf("signature context is not supported feature")
+	}
+
+	if hashAlgorithm == HashTypeSHA2512 {
+		return nil, fmt.Errorf("hash algorithm of SHA2 512 is not supported feature")
+	}
+
+	return &stdlibEd25519.Options{
+		Hash: crypto.Hash(0),
+	}, nil
+}
+
 func (p PaddingScheme) String() string {
 	return string(p)
 }
@@ -1302,11 +1316,11 @@ func (p *Policy) SignWithOptions(ver int, context, input []byte, options *Signin
 			key = ed25519.PrivateKey(keyParams.Key)
 		}
 
-		opts := genEd25519Options(hashAlgorithm, options.SigContext)
+		opts, err := genEd25519Options(hashAlgorithm, options.SigContext)
+		if err != nil {
+			return nil, errutil.UserError{Err: fmt.Sprintf("error generating Ed25519 options: %v", err)}
+		}
 
-		// Per docs, do not pre-hash ed25519; it does two passes and performs
-		// its own hashing when we specify crypto.Hash(0). Ed25519Ph assumes
-		// pre-hashed with SHA512
 		sig, err = key.Sign(rand.Reader, input, opts)
 		if err != nil {
 			return nil, err
@@ -1503,7 +1517,10 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 			pub = ed25519.PublicKey(raw)
 		}
 
-		opts := genEd25519Options(hashAlgorithm, options.SigContext)
+		opts, err := genEd25519Options(hashAlgorithm, options.SigContext)
+		if err != nil {
+			return false, errutil.UserError{Err: fmt.Sprintf("error generating Ed25519 options: %v", err)}
+		}
 		if err := stdlibEd25519.VerifyWithOptions(pub, input, sigBytes, opts); err != nil {
 			// We drop the error, just report back that we failed signature verification
 			return false, nil
@@ -1559,20 +1576,6 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 	default:
 		return false, errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
 	}
-}
-
-func genEd25519Options(hashAlgorithm HashType, sigContext string) *stdlibEd25519.Options {
-	opts := &stdlibEd25519.Options{
-		Hash: crypto.Hash(0),
-	}
-	if hashAlgorithm == HashTypeSHA2512 {
-		// activate ph mode, we assume input is prehashed
-		opts.Hash = crypto.SHA512
-	}
-	if len(sigContext) > 0 {
-		opts.Context = sigContext
-	}
-	return opts
 }
 
 func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte, randReader io.Reader) error {
