@@ -3720,7 +3720,7 @@ func TestCore_IsRemovedFromCluster(t *testing.T) {
 	core.underlyingPhysical = mockHA
 	removed, ok = core.IsRemovedFromCluster()
 	if removed || !ok {
-		t.Fatalf("expected removed and ok to be false, got removed: %v, ok: %v", removed, ok)
+		t.Fatalf("expected removed to be false and ok to be true, got removed: %v, ok: %v", removed, ok)
 	}
 
 	// Test case where HA backend is nil, but the underlying physical is there, supports RemovableNodeHABackend, and is removed
@@ -3731,6 +3731,7 @@ func TestCore_IsRemovedFromCluster(t *testing.T) {
 	}
 
 	// Test case where HA backend does not support RemovableNodeHABackend
+	core.underlyingPhysical = &MockHABackend{}
 	core.ha = &MockHABackend{}
 	removed, ok = core.IsRemovedFromCluster()
 	if removed || ok {
