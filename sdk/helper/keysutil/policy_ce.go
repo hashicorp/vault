@@ -14,6 +14,10 @@ import (
 
 type entKeyEntry struct{}
 
+func (e entKeyEntry) IsPrivateKeyMissing() bool {
+	return true
+}
+
 func entSignWithOptions(p *Policy, input []byte, ver int, options *SigningOptions) ([]byte, error) {
 	return nil, fmt.Errorf("unsupported key type %v", p.Type)
 }

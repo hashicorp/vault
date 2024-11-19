@@ -345,7 +345,7 @@ type KeyEntry struct {
 }
 
 func (ke *KeyEntry) IsPrivateKeyMissing() bool {
-	if ke.RSAKey != nil || ke.EC_D != nil || len(ke.Key) != 0 || len(ke.ManagedKeyUUID) != 0 || ke.MLDSAPrivateKey != nil {
+	if ke.RSAKey != nil || ke.EC_D != nil || len(ke.Key) != 0 || len(ke.ManagedKeyUUID) != 0 || !ke.entKeyEntry.IsPrivateKeyMissing() {
 		return false
 	}
 
