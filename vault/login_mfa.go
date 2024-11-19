@@ -2051,7 +2051,7 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 	}
 
 	if result.GetFactorResult() != "WAITING" {
-		return fmt.Errorf("expected WAITING status for push status, got %q", result.FactorResult)
+		return fmt.Errorf("expected WAITING status for push status, got %q", result.GetFactorResult())
 	}
 
 	// Parse links to get polling link
