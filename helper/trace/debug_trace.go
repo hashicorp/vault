@@ -6,7 +6,6 @@ package trace
 import (
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime/trace"
 	"time"
@@ -14,22 +13,18 @@ import (
 
 func StartDebugTrace(dir string, filePrefix string) (file string, stop func() error, err error) {
 	if dir == "" {
-		dir = path.Join(os.TempDir(), "vault-traces")
+		// avoid permission concerns of using /tmp as a default dir
+		return "", nil, fmt.Errorf("trace directory is required")
 	}
 
 	d, err := os.Stat(dir)
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil {
+		// also fails if dir doesn't already exist
 		return "", nil, fmt.Errorf("failed to stat trace directory %q: %s", dir, err)
 	}
 
-	if !os.IsNotExist(err) && !d.IsDir() {
+	if !d.IsDir() {
 		return "", nil, fmt.Errorf("trace directory %q is not a directory", dir)
-	}
-
-	if os.IsNotExist(err) {
-		if err := os.Mkdir(dir, 0o755); err != nil {
-			return "", nil, fmt.Errorf("failed to create trace directory %q: %s", dir, err)
-		}
 	}
 
 	fileName := fmt.Sprintf("%s-%s.trace", filePrefix, time.Now().Format(time.RFC3339))
