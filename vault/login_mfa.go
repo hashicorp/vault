@@ -13,6 +13,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -38,7 +39,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/quotas"
 	"github.com/mitchellh/mapstructure"
-	"github.com/okta/okta-sdk-golang/v4/okta"
+	"github.com/okta/okta-sdk-golang/v5/okta"
 	"github.com/patrickmn/go-cache"
 	otplib "github.com/pquerna/otp"
 	totplib "github.com/pquerna/otp/totp"
@@ -2069,22 +2070,38 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 		return err
 	}
 
+	// Okta doesn't return the transactionID as a parameter in the response, but it's encoded in the URL
+	// this approach comes from: https://github.com/okta/okta-sdk-golang/issues/300, but it's not ideal.
+	// It is, however, what the dotnet library by okta does.
+	txRx := regexp.MustCompile(".*/transactions/(.*)")
+	matches := txRx.FindStringSubmatch(url.Path)
+	if len(matches) != 2 {
+		return fmt.Errorf("couldn't determine transaction id from url")
+	}
+	transactionID := matches[1]
+
+	// poll verifyfactor until termination (e.g., the user responds to the push factor
 	for {
 		// Okta provides an SDK method `GetFactorTransactionStatus` but does not provide the transaction id in
 		// the VerifyFactor respone. This code effectively reimplements that method.
 		// client.UserFactorAPI.GetFactorTransactionStatus(client.GetConfig().Context, user.GetId(), userFactor.GetId())
 
-		req, err := rq.WithAccept("application/json").WithContentType("application/json").NewRequest("GET", url.String(), nil)
-		if err != nil {
-			return err
-		}
-		var result *okta.VerifyUserFactorResponse
-		_, err = rq.Do(ctx, req, &result)
+		//req, err := rq.WithAccept("application/json").WithContentType("application/json").NewRequest("GET", url.String(), nil)
+		//if err != nil {
+		//	return err
+		//}
+		//var result *okta.VerifyUserFactorResponse
+		//_, err = rq.Do(ctx, req, &result)
+		//if err != nil {
+		//	return err
+		//}
+		//
+		result, _, err := client.UserFactorAPI.GetFactorTransactionStatus(client.GetConfig().Context, user.GetId(), userFactor.GetId(), transactionID).Execute()
 		if err != nil {
 			return err
 		}
 
-		switch result.FactorResult {
+		switch result.UserFactorPushTransaction.GetFactorResult() {
 		case "WAITING":
 		case "SUCCESS":
 			return nil

@@ -10,9 +10,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/releases"
+	"github.com/stretchr/testify/require"
 )
 
 var testAPIVersions = []string{
