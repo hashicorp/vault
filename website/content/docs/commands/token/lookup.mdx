@@ -25,6 +25,14 @@ $ vault token lookup [-help | -h]
 The `token lookup` displays information about a token or accessor. If a TOKEN is
 not provided, the locally authenticated token is used.
 
+<Tip title="Related API endpoints">
+
+  LookupToken - [`POST:/auth/token/lookup`](/vault/api-docs/auth/token#lookup-a-token)
+  LookupTokenSelf - [`GET:/auth/token/lookup-self`](/vault/api-docs/auth/token#lookup-a-token-self)
+  LookupTokenAccessor - [`POST:/auth/token/lookup-accessor`](/vault/api-docs/auth/token#lookup-a-token-accessor)
+
+</Tip>
+
 ## Command arguments
 
 <br />
@@ -33,7 +41,7 @@ not provided, the locally authenticated token is used.
 
 ## Command options
 
-- None
+None.
 
 ## Command flags
 

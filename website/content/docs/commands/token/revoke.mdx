@@ -24,7 +24,16 @@ $ vault token revoke [-help | -h]
 
 `token revoke` revokes authentication tokens and their children. If you do not 
 provide a token, Vault will use the locally authenticated token. You can use the
- `-mode` flag to control the revocation behavior.
+`-mode` flag to control the revocation behavior.
+
+<Tip title="Related API endpoints">
+
+  RevokeToken - [`POST:/auth/token/revoke`](/vault/api-docs/auth/token#revoke-a-token)
+  RevokeTokenSelf - [`POST:/auth/token/revoke-self`](/vault/api-docs/auth/token#revoke-a-token-self)
+  RevokeTokenAccessor - [`POST:/auth/token/revoke-accessor`](/vault/api-docs/auth/token#revoke-a-token-accessor)
+  RevokeTokenOrphanChildren - [`POST:/auth/token/revoke-orphan`](/vault/api-docs/auth/token#revoke-token-and-orphan-children)
+
+</Tip>
 
 ## Command arguments
 
@@ -34,7 +43,7 @@ provide a token, Vault will use the locally authenticated token. You can use the
 
 ## Command options
 
-- None
+None.
 
 ## Command flags
 

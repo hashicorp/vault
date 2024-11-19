@@ -29,6 +29,14 @@ used. If a TOKEN is not provided, the locally authenticated token is used. Lease
 renewal will fail if the token is not renewable, the token has already been
 revoked, or if the token has already reached its maximum TTL.
 
+<Tip title="Related API endpoints">
+
+  RenewToken - [`POST:/auth/token/renew`](/vault/api-docs/auth/token#renew-a-token)
+  RenewTokenSelf - [`POST:/auth/token/renew-self`](/vault/api-docs/auth/token#renew-a-token-self)
+  RenewTokenAccessor - [`POST:/auth/token/renew-accessor`](/vault/api-docs/auth/token#renew-a-token-accessor)
+
+</Tip>
+
 ## Command arguments
 
 <br />
@@ -37,7 +45,7 @@ revoked, or if the token has already reached its maximum TTL.
 
 ## Command options
 
-- None
+None.
 
 ## Command flags
 
