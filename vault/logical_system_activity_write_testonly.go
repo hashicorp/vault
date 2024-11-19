@@ -85,7 +85,7 @@ func (b *SystemBackend) handleActivityWriteData(ctx context.Context, request *lo
 	for _, opt := range input.Write {
 		opts[opt] = struct{}{}
 	}
-	paths, globalPaths, err := generated.write(ctx, opts, b.Core.activityLog, now)
+	paths, localPaths, globalPaths, err := generated.write(ctx, opts, b.Core.activityLog, now)
 	if err != nil {
 		b.logger.Debug("failed to write activity log data", "error", err.Error())
 		return logical.ErrorResponse("failed to write data"), err
@@ -93,6 +93,7 @@ func (b *SystemBackend) handleActivityWriteData(ctx context.Context, request *lo
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"paths":        paths,
+			"local_paths":  localPaths,
 			"global_paths": globalPaths,
 		},
 	}, nil
@@ -104,12 +105,17 @@ type singleMonthActivityClients struct {
 	clients []*activity.EntityRecord
 	// globalClients are indexed by ID
 	globalClients []*activity.EntityRecord
+	// localClients are indexed by ID
+	localClients []*activity.EntityRecord
 	// predefinedSegments map from the segment number to the client's index in
 	// the clients slice
 	predefinedSegments map[int][]int
 	// predefinedGlobalSegments map from the segment number to the client's index in
 	// the clients slice
 	predefinedGlobalSegments map[int][]int
+	// predefinedLocalSegments map from the segment number to the client's index in
+	// the clients slice
+	predefinedLocalSegments map[int][]int
 	// generationParameters holds the generation request
 	generationParameters *generation.Data
 }
@@ -125,6 +131,8 @@ func (s *singleMonthActivityClients) addEntityRecord(core *Core, record *activit
 	local, _ := core.activityLog.isClientLocal(record)
 	if !local {
 		s.globalClients = append(s.globalClients, record)
+	} else {
+		s.localClients = append(s.localClients, record)
 	}
 	if segmentIndex != nil {
 		index := len(s.clients) - 1
@@ -132,6 +140,9 @@ func (s *singleMonthActivityClients) addEntityRecord(core *Core, record *activit
 		if !local {
 			globalIndex := len(s.globalClients) - 1
 			s.predefinedGlobalSegments[*segmentIndex] = append(s.predefinedGlobalSegments[*segmentIndex], globalIndex)
+		} else {
+			localIndex := len(s.localClients) - 1
+			s.predefinedLocalSegments[*segmentIndex] = append(s.predefinedLocalSegments[*segmentIndex], localIndex)
 		}
 	}
 }
@@ -384,9 +395,10 @@ func (m *multipleMonthsActivityClients) timestampForMonth(i int, now time.Time) 
 	return now
 }
 
-func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[generation.WriteOptions]struct{}, activityLog *ActivityLog, now time.Time) ([]string, []string, error) {
+func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[generation.WriteOptions]struct{}, activityLog *ActivityLog, now time.Time) ([]string, []string, []string, error) {
 	paths := []string{}
 	globalPaths := []string{}
+	localPaths := []string{}
 
 	_, writePQ := opts[generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES]
 	_, writeDistinctClients := opts[generation.WriteOptions_WRITE_DISTINCT_CLIENTS]
@@ -401,7 +413,7 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 		timestamp := m.timestampForMonth(i, now)
 		segments, err := month.populateSegments(month.predefinedSegments, month.clients)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		for segmentIndex, segment := range segments {
 			if segment == nil {
@@ -415,14 +427,14 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 				tokenCount:           &activity.TokenCount{},
 			}, true, "")
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 			paths = append(paths, entityPath)
 		}
 		if len(month.globalClients) > 0 {
 			globalSegments, err := month.populateSegments(month.predefinedGlobalSegments, month.globalClients)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 			for segmentIndex, segment := range globalSegments {
 				if segment == nil {
@@ -436,9 +448,31 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 					tokenCount:           &activity.TokenCount{},
 				}, true, activityGlobalPathPrefix)
 				if err != nil {
-					return nil, nil, err
+					return nil, nil, nil, err
 				}
 				globalPaths = append(globalPaths, entityPath)
+			}
+		}
+		if len(month.localClients) > 0 {
+			localSegments, err := month.populateSegments(month.predefinedLocalSegments, month.localClients)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			for segmentIndex, segment := range localSegments {
+				if segment == nil {
+					// skip the index
+					continue
+				}
+				entityPath, err := activityLog.saveSegmentEntitiesInternal(ctx, segmentInfo{
+					startTimestamp:       timestamp.Unix(),
+					currentClients:       &activity.EntityActivityLog{Clients: segment},
+					clientSequenceNumber: uint64(segmentIndex),
+					tokenCount:           &activity.TokenCount{},
+				}, true, activityLocalPathPrefix)
+				if err != nil {
+					return nil, nil, nil, err
+				}
+				localPaths = append(localPaths, entityPath)
 			}
 		}
 	}
@@ -461,16 +495,16 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 	if writeIntentLog {
 		err := activityLog.writeIntentLog(ctx, m.latestTimestamp(now, false).Unix(), m.latestTimestamp(now, true).UTC())
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 	wg := sync.WaitGroup{}
 	err := activityLog.refreshFromStoredLog(ctx, &wg, now)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	wg.Wait()
-	return paths, globalPaths, nil
+	return paths, localPaths, globalPaths, nil
 }
 
 func (m *multipleMonthsActivityClients) latestTimestamp(now time.Time, includeCurrentMonth bool) time.Time {
@@ -500,6 +534,7 @@ func newMultipleMonthsActivityClients(numberOfMonths int) *multipleMonthsActivit
 		m.months[i] = &singleMonthActivityClients{
 			predefinedSegments:       make(map[int][]int),
 			predefinedGlobalSegments: make(map[int][]int),
+			predefinedLocalSegments:  make(map[int][]int),
 		}
 	}
 	return m
@@ -526,6 +561,17 @@ type sliceSegmentReader struct {
 // ReadGlobalEntity here is a dummy implementation.
 // Segment reader is never used when writing using the ClientCountUtil library
 func (p *sliceSegmentReader) ReadGlobalEntity(ctx context.Context) (*activity.EntityActivityLog, error) {
+	if p.i == len(p.records) {
+		return nil, io.EOF
+	}
+	record := p.records[p.i]
+	p.i++
+	return &activity.EntityActivityLog{Clients: record}, nil
+}
+
+// ReadLocalEntity here is a dummy implementation.
+// Segment reader is never used when writing using the ClientCountUtil library
+func (p *sliceSegmentReader) ReadLocalEntity(ctx context.Context) (*activity.EntityActivityLog, error) {
 	if p.i == len(p.records) {
 		return nil, io.EOF
 	}
