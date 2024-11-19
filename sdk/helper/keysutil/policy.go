@@ -33,7 +33,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/cloudflare/circl/sign"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -309,6 +308,8 @@ type KeyData struct {
 
 // KeyEntry stores the key and metadata
 type KeyEntry struct {
+	entKeyEntry
+
 	// AES or some other kind that is a pure byte slice like ED25519
 	Key []byte `json:"key"`
 
@@ -341,8 +342,6 @@ type KeyEntry struct {
 	// Key entry certificate chain. If set, leaf certificate key matches the
 	// KeyEntry key
 	CertificateChain [][]byte `json:"certificate_chain"`
-
-	MLDSAPrivateKey sign.PrivateKey `json:"ml_dsa_key"`
 }
 
 func (ke *KeyEntry) IsPrivateKeyMissing() bool {
@@ -1580,6 +1579,7 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 		}
 
 		return err == nil, nil
+
 	default:
 		return entVerifySignatureWithOptions(p, input, sigBytes, ver, options)
 	}
@@ -1831,6 +1831,7 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 		}
 
 		entry.RSAPublicKey = entry.RSAKey.Public().(*rsa.PublicKey)
+
 	default:
 		if err := entRotateInMemory(p, &entry, randReader); err != nil {
 			return err

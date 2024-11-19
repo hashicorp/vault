@@ -12,6 +12,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 )
 
+type entKeyEntry struct{}
+
 func entSignWithOptions(p *Policy, input []byte, ver int, options *SigningOptions) ([]byte, error) {
 	return nil, fmt.Errorf("unsupported key type %v", p.Type)
 }
