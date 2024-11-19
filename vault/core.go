@@ -4617,3 +4617,16 @@ func (c *Core) setupAuditedHeadersConfig(ctx context.Context) error {
 
 	return nil
 }
+
+// IsRemovedFromCluster checks whether this node has been removed from the
+// cluster. This is only applicable to physical HA backends that satisfy the
+// RemovableNodeHABackend interface. The value of the `ok` result will be false
+// if the HA and underlyingPhysical backends are nil or do not support this operation.
+func (c *Core) IsRemovedFromCluster() (removed, ok bool) {
+	removableNodeHA := c.getRemovableHABackend()
+	if removableNodeHA == nil {
+		return false, false
+	}
+
+	return removableNodeHA.IsRemoved(), true
+}

@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -403,7 +404,7 @@ func (c *Core) findKvMounts() []*kvMount {
 	for _, entry := range c.mounts.Entries {
 		if entry.Type == "kv" || entry.Type == "generic" {
 			version, ok := entry.Options["version"]
-			if !ok {
+			if !ok || version == "" {
 				version = "1"
 			}
 			mounts = append(mounts, &kvMount{
@@ -452,9 +453,13 @@ func (c *Core) walkKvMountSecrets(ctx context.Context, m *kvMount) {
 		resp, err := c.router.Route(ctx, listRequest)
 		if err != nil {
 			c.kvCollectionErrorCount()
-			// ErrUnsupportedPath probably means that the mount is not there any more,
+			// ErrUnsupportedPath probably means that the mount is not there anymore,
 			// don't log those cases.
-			if !strings.Contains(err.Error(), logical.ErrUnsupportedPath.Error()) {
+			if !strings.Contains(err.Error(), logical.ErrUnsupportedPath.Error()) &&
+				// ErrSetupReadOnly means the mount's currently being set up.
+				// Nothing is wrong and there's no cause for alarm, just that we can't get data from it
+				// yet. We also shouldn't log these cases
+				!strings.Contains(err.Error(), logical.ErrSetupReadOnly.Error()) {
 				c.logger.Error("failed to perform internal KV list", "mount_point", m.MountPoint, "error", err)
 				break
 			}
@@ -483,6 +488,115 @@ func (c *Core) walkKvMountSecrets(ctx context.Context, m *kvMount) {
 			}
 		}
 	}
+}
+
+// getMinNamespaceSecrets is expected to be called on the output
+// of GetKvUsageMetrics to get the min number of secrets in a single namespace.
+func getMinNamespaceSecrets(mapOfNamespacesToSecrets map[string]int) int {
+	currentMin := 0
+	for _, n := range mapOfNamespacesToSecrets {
+		if n < currentMin || currentMin == 0 {
+			currentMin = n
+		}
+	}
+	return currentMin
+}
+
+// getMaxNamespaceSecrets is expected to be called on the output
+// of GetKvUsageMetrics to get the max number of secrets in a single namespace.
+func getMaxNamespaceSecrets(mapOfNamespacesToSecrets map[string]int) int {
+	currentMax := 0
+	for _, n := range mapOfNamespacesToSecrets {
+		if n > currentMax {
+			currentMax = n
+		}
+	}
+	return currentMax
+}
+
+// getTotalSecretsAcrossAllNamespaces is expected to be called on the output
+// of GetKvUsageMetrics to get the total number of secrets across namespaces.
+func getTotalSecretsAcrossAllNamespaces(mapOfNamespacesToSecrets map[string]int) int {
+	total := 0
+	for _, n := range mapOfNamespacesToSecrets {
+		total += n
+	}
+	return total
+}
+
+// getMeanNamespaceSecrets is expected to be called on the output
+// of GetKvUsageMetrics to get the mean number of secrets across namespaces.
+func getMeanNamespaceSecrets(mapOfNamespacesToSecrets map[string]int) int {
+	length := len(mapOfNamespacesToSecrets)
+	// Avoid divide by zero:
+	if length == 0 {
+		return length
+	}
+	return getTotalSecretsAcrossAllNamespaces(mapOfNamespacesToSecrets) / length
+}
+
+// GetAuthMethodUsageMetrics returns a map of auth mount types to the number of those mounts that exist.
+func (c *Core) GetAuthMethodUsageMetrics() map[string]int {
+	mounts := make(map[string]int)
+
+	c.authLock.RLock()
+	defer c.authLock.RUnlock()
+
+	// we don't grab the statelock, so this code might run during or after the seal process.
+	// Therefore, we need to check if c.auth is nil. If we do not, this will panic when
+	// run after seal.
+	if c.auth == nil {
+		return mounts
+	}
+
+	for _, entry := range c.auth.Entries {
+		authType := entry.Type
+		if _, ok := mounts[authType]; !ok {
+			mounts[authType] = 1
+		} else {
+			mounts[authType] += 1
+		}
+	}
+	return mounts
+}
+
+// GetKvUsageMetrics returns a map of namespace paths to KV secret counts within those namespaces.
+func (c *Core) GetKvUsageMetrics(ctx context.Context, kvVersion string) (map[string]int, error) {
+	mounts := c.findKvMounts()
+	results := make(map[string]int)
+
+	if kvVersion == "1" || kvVersion == "2" {
+		var newMounts []*kvMount
+		for _, mount := range mounts {
+			if mount.Version == kvVersion {
+				newMounts = append(newMounts, mount)
+			}
+		}
+		mounts = newMounts
+	} else if kvVersion != "0" {
+		return results, fmt.Errorf("kv version %s not supported, must be 0, 1, or 2", kvVersion)
+	}
+
+	for _, m := range mounts {
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("context expired")
+		default:
+			break
+		}
+
+		c.walkKvMountSecrets(ctx, m)
+
+		_, ok := results[m.Namespace.Path]
+		if ok {
+			// we need to add, not overwrite
+			results[m.Namespace.Path] += m.NumSecrets
+		} else {
+			results[m.Namespace.Path] = m.NumSecrets
+		}
+	}
+
+	return results, nil
 }
 
 func (c *Core) kvSecretGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {

@@ -59,14 +59,14 @@ module('Integration | Component | kv | kv-patch/editor/json-form', function (hoo
     await this.renderComponent();
 
     assert.dom(GENERAL.toggleInput('Reveal subkeys')).isNotChecked('toggle is initially unchecked');
-    assert.dom('[data-test-subkeys]').doesNotExist();
+    assert.dom(GENERAL.codeBlock('subkeys')).doesNotExist();
     await click(GENERAL.toggleInput('Reveal subkeys'));
     assert.dom(GENERAL.toggleInput('Reveal subkeys')).isChecked();
-    assert.dom('[data-test-subkeys]').hasText(JSON.stringify(this.subkeys, null, 2));
+    assert.dom(GENERAL.codeBlock('subkeys')).hasText(JSON.stringify(this.subkeys, null, 2));
 
     await click(GENERAL.toggleInput('Reveal subkeys'));
     assert.dom(GENERAL.toggleInput('Reveal subkeys')).isNotChecked();
-    assert.dom('[data-test-subkeys]').doesNotExist('unchecking re-hides subkeys');
+    assert.dom(GENERAL.codeBlock('subkeys')).doesNotExist('unchecking re-hides subkeys');
   });
 
   test('it renders linting errors', async function (assert) {

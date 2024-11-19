@@ -95,6 +95,7 @@ export const GENERAL = {
   cancelButton: '[data-test-cancel]',
   saveButton: '[data-test-save]',
   backButton: '[data-test-back-button]',
+  codeBlock: (label: string) => `[data-test-code-block="${label}"]`,
   codemirror: `[data-test-component="code-mirror-modifier"]`,
   codemirrorTextarea: `[data-test-component="code-mirror-modifier"] textarea`,
 };

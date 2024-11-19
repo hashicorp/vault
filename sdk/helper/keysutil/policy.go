@@ -10,6 +10,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/ecdsa"
+	stdlibEd25519 "crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/hmac"
 	"crypto/rand"
@@ -89,6 +90,20 @@ const (
 	PaddingScheme_PKCS1v15 = PaddingScheme("pkcs1v15")
 )
 
+var genEd25519Options = func(hashAlgorithm HashType, signatureContext string) (*stdlibEd25519.Options, error) {
+	if signatureContext != "" {
+		return nil, fmt.Errorf("signature context is not supported feature")
+	}
+
+	if hashAlgorithm == HashTypeSHA2512 {
+		return nil, fmt.Errorf("hash algorithm of SHA2 512 is not supported feature")
+	}
+
+	return &stdlibEd25519.Options{
+		Hash: crypto.Hash(0),
+	}, nil
+}
+
 func (p PaddingScheme) String() string {
 	return string(p)
 }
@@ -133,6 +148,7 @@ type SigningOptions struct {
 	Marshaling       MarshalingType
 	SaltLength       int
 	SigAlgorithm     string
+	SigContext       string // Provide a context for Ed25519ctx signatures
 	ManagedKeyParams ManagedKeyParameters
 }
 
@@ -1300,9 +1316,12 @@ func (p *Policy) SignWithOptions(ver int, context, input []byte, options *Signin
 			key = ed25519.PrivateKey(keyParams.Key)
 		}
 
-		// Per docs, do not pre-hash ed25519; it does two passes and performs
-		// its own hashing
-		sig, err = key.Sign(rand.Reader, input, crypto.Hash(0))
+		opts, err := genEd25519Options(hashAlgorithm, options.SigContext)
+		if err != nil {
+			return nil, errutil.UserError{Err: fmt.Sprintf("error generating Ed25519 options: %v", err)}
+		}
+
+		sig, err = key.Sign(rand.Reader, input, opts)
 		if err != nil {
 			return nil, err
 		}
@@ -1498,7 +1517,16 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 			pub = ed25519.PublicKey(raw)
 		}
 
-		return ed25519.Verify(pub, input, sigBytes), nil
+		opts, err := genEd25519Options(hashAlgorithm, options.SigContext)
+		if err != nil {
+			return false, errutil.UserError{Err: fmt.Sprintf("error generating Ed25519 options: %v", err)}
+		}
+		if err := stdlibEd25519.VerifyWithOptions(pub, input, sigBytes, opts); err != nil {
+			// We drop the error, just report back that we failed signature verification
+			return false, nil
+		}
+
+		return true, nil
 
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		keyEntry, err := p.safeGetKeyEntry(ver)
