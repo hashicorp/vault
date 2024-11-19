@@ -20,7 +20,7 @@ export default class AzureConfig extends Model {
     label: 'Client ID',
   })
   clientId;
-  @attr('string') clientSecret;
+  @attr('string', { sensitive: true }) clientSecret; // obfuscated, never returned by API
   @attr('string', {
     subText:
       'The audience claim value for plugin identity tokens. Must match an allowed audience configured for the target IAM OIDC identity provider.',

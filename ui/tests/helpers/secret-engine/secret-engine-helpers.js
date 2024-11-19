@@ -99,6 +99,50 @@ const createSshCaConfig = (store, backend) => {
   return store.peekRecord('ssh/ca-config', backend);
 };
 
+const createAzureConfig = (store, backend, accessType = 'generic') => {
+  // clear any records first
+  store.unloadAll('azure/config');
+  if (accessType === 'azure') {
+    store.pushPayload('azure/config', {
+      id: backend,
+      modelName: 'azure/config',
+      data: {
+        backend,
+        client_secret: 'client-secret',
+        subscription_id: 'subscription-id',
+        tenant_id: 'tenant-id',
+        client_id: 'client-id',
+        root_password_ttl: '182d',
+      },
+    });
+  } else if (accessType === 'wif') {
+    store.pushPayload('azure/config', {
+      id: backend,
+      modelName: 'azure/config',
+      data: {
+        backend,
+        subscription_id: 'subscription-id',
+        tenant_id: 'tenant-id',
+        client_id: 'client-id',
+        identity_token_audience: 'audience',
+        identity_token_ttl: 7200,
+      },
+    });
+  } else {
+    store.pushPayload('azure/config', {
+      id: backend,
+      modelName: 'azure/config',
+      data: {
+        backend,
+        subscription_id: 'subscription-id-2',
+        tenant_id: 'tenant-id-2',
+        client_id: 'client-id-2',
+      },
+    });
+  }
+  return store.peekRecord('azure/config', backend);
+};
+
 export function configUrl(type, backend) {
   switch (type) {
     case 'aws':
@@ -121,11 +165,17 @@ export const createConfig = (store, backend, type) => {
     case 'aws-no-access':
       return createAwsRootConfig(store, backend, 'no-access');
     case 'issuer':
-      return createIssuerConfig(store, backend);
+      return createIssuerConfig(store);
     case 'aws-lease':
       return createAwsLeaseConfig(store, backend);
     case 'ssh':
       return createSshCaConfig(store, backend);
+    case 'azure':
+      return createAzureConfig(store, backend, 'azure');
+    case 'azure-wif':
+      return createAzureConfig(store, backend, 'wif');
+    case 'azure-generic':
+      return createAzureConfig(store, backend, 'generic');
   }
 };
 // Used in tests to assert the expected keys in the config details of configurable secret engines
@@ -209,7 +259,7 @@ export const fillInAwsConfig = async (situation = 'withAccess') => {
     await fillIn(GENERAL.ttl.input('Max Lease TTL'), '44');
   }
   if (situation === 'withWif') {
-    await click(SES.aws.accessType('wif')); // toggle to wif
+    await click(SES.wif.accessType('wif')); // toggle to wif
     await fillIn(GENERAL.inputByAttr('issuer'), `http://bar.${uuidv4()}`); // make random because global setting
     await fillIn(GENERAL.inputByAttr('roleArn'), 'foo-role');
     await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'foo-audience');
@@ -230,6 +280,7 @@ export const fillInAzureConfig = async (situation = 'azure') => {
     await fillIn(GENERAL.ttl.input('Root password TTL'), '5200');
   }
   if (situation === 'withWif') {
+    await click(SES.wif.accessType('wif')); // toggle to wif
     await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'azure-audience');
     await click(GENERAL.ttl.toggle('Identity token TTL'));
     await fillIn(GENERAL.ttl.input('Identity token TTL'), '7200');

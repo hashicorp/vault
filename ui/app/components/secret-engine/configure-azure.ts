@@ -138,7 +138,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
     const { backendPath, model } = this.args;
     try {
       await model.save();
-      this.flashMessages.success(`Successfully saved ${backendPath}'s root configuration.`);
+      this.flashMessages.success(`Successfully saved ${backendPath}'s configuration.`);
       return true;
     } catch (error) {
       this.errorMessage = errorMessage(error);
@@ -154,7 +154,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
   }
 
   transition() {
-    this.router.transitionTo('vault.cluster.secrets.backend', this.args.backendPath);
+    this.router.transitionTo('vault.cluster.secrets.backend.configuration', this.args.backendPath);
   }
 
   @action
