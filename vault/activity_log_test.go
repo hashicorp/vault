@@ -646,6 +646,7 @@ func TestActivityLog_SaveEntitiesToStorageCommon(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 
 	a := core.activityLog
+	a.SetEnable(true)
 	a.SetStartTimestamp(time.Now().Unix()) // set a nonzero segment
 
 	var err error
@@ -1923,7 +1924,7 @@ func setupActivityRecordsInStorage(t *testing.T, base time.Time, includeEntities
 		// append some local entity data
 		entityRecords = append(entityRecords, &activity.EntityRecord{
 			ClientID:    "44444444-4444-4444-4444-444444444444",
-			NamespaceID: "ns1",
+			NamespaceID: namespace.RootNamespaceID,
 			Timestamp:   time.Now().Unix(),
 		})
 
