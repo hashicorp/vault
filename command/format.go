@@ -357,6 +357,10 @@ func (t TableFormatter) OutputSealStatusStruct(ui cli.Ui, secret *api.Secret, da
 		out = append(out, fmt.Sprintf("Cluster ID | %s", status.ClusterID))
 	}
 
+	if status.RemovedFromCluster != nil {
+		out = append(out, fmt.Sprintf("Removed From Cluster | %t", *status.RemovedFromCluster))
+	}
+
 	// Output if HCP link is configured
 	if status.HCPLinkStatus != "" {
 		out = append(out, fmt.Sprintf("HCP Link Status | %s", status.HCPLinkStatus))
