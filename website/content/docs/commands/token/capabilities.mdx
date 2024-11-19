@@ -24,16 +24,18 @@ $ vault token capabilities [-help | -h]
 
 `token capabilities` lists the capabilities of a token for a given path.
 
-If you pass a token value as an argument, this command uses the
-`/sys/capabilities` endpoint and permission. In the absence of an explicit token
-value, this command uses the `/sys/capabilities-self` endpoint and permission
-with the locally authenticated token.
+If you provide a token value as an argument, this command uses the
+`/sys/capabilities` endpoint and permission. 
+
+If you do not provide an explicit token value, this command uses the 
+`/sys/capabilities-self` endpoint and permission with the locally authenticated 
+token.
 
 <Tip title="Related API endpoints">
 
-  ListTokenCapabilities - [`POST:/sys/capabilities`](/vault/api-docs/system/capabilities)
-  ListTokenCapabilitiesSelf - [`POST:/sys/capabilities-self`](/vault/api-docs/system/capabilities-self)
-  ListTokenCapabilitiesAccessor - [`POST:/sys/capabilities-accessor`](/vault/api-docs/system/capabilities-accessor)
+  CreateToken - [`POST:/sys/capabilities`](/vault/api-docs/auth/token#create-token)
+  CreateTokenOrphan - [`POST:/auth/token/create-orphan`](/vault/api-docs/auth/token#create-token)
+  CreateTokenWithRole - [`POST:/auth/token/create/:role_name`](/vault/api-docs/auth/token#create-token)
 
 </Tip>
 
@@ -53,13 +55,15 @@ None.
 
 ## Command flags
 
-<br />
-
-@include 'cli/token/flags/format.mdx'
+None.
 
 ## Standard flags
 
 <br />
+
+@include 'cli/token/flags/format.mdx'
+
+<br /><hr /><br />
 
 @include 'cli/standard-settings/all-standard-flags-but-format.mdx'
 

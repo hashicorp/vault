@@ -22,8 +22,8 @@ $ vault token lookup [-help | -h]
 
 ## Description
 
-The `token lookup` displays information about a token or accessor. If a TOKEN is
-not provided, the locally authenticated token is used.
+`token lookup` displays information about a token or accessor. If you do not 
+provide a token, Vault will use your locally authenticated token.
 
 <Tip title="Related API endpoints">
 
@@ -49,11 +49,13 @@ None.
 
 @include 'cli/token/flags/accessor.mdx'
 
-<br /><hr /><br />
+## Standard flags
+
+<br />
 
 @include 'cli/token/flags/format.mdx'
 
-## Standard flags
+<br /><hr /><br />
 
 @include 'cli/standard-settings/all-standard-flags-but-format.mdx'
 

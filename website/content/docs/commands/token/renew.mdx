@@ -24,10 +24,13 @@ $ vault token renew [-help | -h]
 
 ## Description
 
-`token renew` renews the lease for the given token. Renewing extends the amount of time the token can be
-used. If a TOKEN is not provided, the locally authenticated token is used. Lease
-renewal will fail if the token is not renewable, the token has already been
-revoked, or if the token has already reached its maximum TTL.
+`token renew` extends the lease duration of a token. You can specify which token 
+to renew, or Vault will use your locally authenticated token if you do not
+provide one. The renewal will fail if:
+
+- The token is not renewable
+- Someone has already revoked the token
+- The token has reached its maximum TTL
 
 <Tip title="Related API endpoints">
 
@@ -53,13 +56,13 @@ None.
 
 @include 'cli/token/flags/increment.mdx'
 
-<br /><hr /><br />
-
-@include 'cli/token/flags/format.mdx'
-
 ## Standard flags
 
 <br />
+
+@include 'cli/token/flags/format.mdx'
+
+<br /><hr /><br />
 
 @include 'cli/standard-settings/all-standard-flags-but-format.mdx'
 
