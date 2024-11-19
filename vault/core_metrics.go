@@ -535,6 +535,31 @@ func getMeanNamespaceSecrets(mapOfNamespacesToSecrets map[string]int) int {
 	return getTotalSecretsAcrossAllNamespaces(mapOfNamespacesToSecrets) / length
 }
 
+// GetAuthMethodUsageMetrics returns a map of auth mount types to the number of those mounts that exist.
+func (c *Core) GetAuthMethodUsageMetrics() map[string]int {
+	mounts := make(map[string]int)
+
+	c.authLock.RLock()
+	defer c.authLock.RUnlock()
+
+	// we don't grab the statelock, so this code might run during or after the seal process.
+	// Therefore, we need to check if c.auth is nil. If we do not, this will panic when
+	// run after seal.
+	if c.auth == nil {
+		return mounts
+	}
+
+	for _, entry := range c.auth.Entries {
+		authType := entry.Type
+		if _, ok := mounts[authType]; !ok {
+			mounts[authType] = 1
+		} else {
+			mounts[authType] += 1
+		}
+	}
+	return mounts
+}
+
 // GetKvUsageMetrics returns a map of namespace paths to KV secret counts within those namespaces.
 func (c *Core) GetKvUsageMetrics(ctx context.Context, kvVersion string) (map[string]int, error) {
 	mounts := c.findKvMounts()
