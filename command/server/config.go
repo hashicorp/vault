@@ -428,6 +428,16 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.LicensePath = c2.LicensePath
 	}
 
+	result.EnablePostUnsealTrace = c.EnablePostUnsealTrace
+	if c2.EnablePostUnsealTrace {
+		result.EnablePostUnsealTrace = c2.EnablePostUnsealTrace
+	}
+
+	result.PostUnsealTraceDir = c.PostUnsealTraceDir
+	if c2.PostUnsealTraceDir != "" {
+		result.PostUnsealTraceDir = c2.PostUnsealTraceDir
+	}
+
 	// Use values from top-level configuration for storage if set
 	if storage := result.Storage; storage != nil {
 		if result.APIAddr != "" {

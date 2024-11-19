@@ -32,7 +32,8 @@ func StartDebugTrace(dir string, filePrefix string) (file string, stop func() er
 		}
 	}
 
-	traceFile, err := filepath.Abs(fmt.Sprintf("%s/%s-%s.trace", dir, filePrefix, time.Now().Format(time.RFC3339)))
+	fileName := fmt.Sprintf("%s-%s.trace", filePrefix, time.Now().Format(time.RFC3339))
+	traceFile, err := filepath.Abs(filepath.Join(dir, fileName))
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to get absolute path for trace file: %s", err)
 	}
