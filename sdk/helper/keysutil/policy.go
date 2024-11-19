@@ -33,10 +33,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/cloudflare/circl/sign/mldsa/mldsa44"
-	"github.com/cloudflare/circl/sign/mldsa/mldsa65"
-	"github.com/cloudflare/circl/sign/mldsa/mldsa87"
-
 	"github.com/cloudflare/circl/sign"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
@@ -1387,26 +1383,8 @@ func (p *Policy) SignWithOptions(ver int, context, input []byte, options *Signin
 		default:
 			return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported rsa signature algorithm %s", sigAlgorithm)}
 		}
-
-	case KeyType_MANAGED_KEY:
-		keyEntry, err := p.safeGetKeyEntry(ver)
-		if err != nil {
-			return nil, err
-		}
-
-		sig, err = p.signWithManagedKey(options, keyEntry, input)
-		if err != nil {
-			return nil, err
-		}
-
-	case KeyType_ML_DSA:
-		sig, err = p.signWithMLDSA(input, ver)
-		if err != nil {
-			return nil, err
-		}
-
 	default:
-		return nil, fmt.Errorf("unsupported key type %v", p.Type)
+		sig, err = entSignWithOptions(p, input, ver, options)
 	}
 
 	// Convert to base64
@@ -1602,20 +1580,8 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 		}
 
 		return err == nil, nil
-
-	case KeyType_MANAGED_KEY:
-		keyEntry, err := p.safeGetKeyEntry(ver)
-		if err != nil {
-			return false, err
-		}
-
-		return p.verifyWithManagedKey(options, keyEntry, input, sigBytes)
-
-	case KeyType_ML_DSA:
-		return p.verifyWithMLDSA(input, sigBytes, ver)
-
 	default:
-		return false, errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
+		return entVerifySignatureWithOptions(p, input, sigBytes, ver, options)
 	}
 }
 
@@ -1865,34 +1831,9 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 		}
 
 		entry.RSAPublicKey = entry.RSAKey.Public().(*rsa.PublicKey)
-	case KeyType_ML_DSA:
-		entry.MLDSAPrivateKey, err = p.generateMLDSAKey(randReader)
-
-		switch entry.MLDSAPrivateKey.(type) {
-		case *mldsa44.PrivateKey:
-			public := entry.MLDSAPrivateKey.Public().(*mldsa44.PublicKey)
-			pkBytes, err := public.MarshalBinary()
-			if err != nil {
-				return fmt.Errorf("error marshaling key: %s", err)
-			}
-
-			entry.FormattedPublicKey = base64.StdEncoding.EncodeToString(pkBytes)
-		case *mldsa65.PrivateKey:
-			public := entry.MLDSAPrivateKey.Public().(*mldsa65.PublicKey)
-			pkBytes, err := public.MarshalBinary()
-			if err != nil {
-				return fmt.Errorf("error marshaling key: %s", err)
-			}
-
-			entry.FormattedPublicKey = base64.StdEncoding.EncodeToString(pkBytes)
-		case *mldsa87.PrivateKey:
-			public := entry.MLDSAPrivateKey.Public().(*mldsa87.PublicKey)
-			pkBytes, err := public.MarshalBinary()
-			if err != nil {
-				return fmt.Errorf("error marshaling key: %s", err)
-			}
-
-			entry.FormattedPublicKey = base64.StdEncoding.EncodeToString(pkBytes)
+	default:
+		if err := entRotateInMemory(p, &entry, randReader); err != nil {
+			return err
 		}
 	}
 
