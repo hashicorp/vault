@@ -332,7 +332,9 @@ etc.
 - `vault.hashicorp.com/service` - configures the Vault address for the injected
   Vault Agent to use. This value overrides the default Vault address configured
   in the injector, and may either be the address of a Vault service within the
-  same Kubernetes cluster as the injector, or an external Vault URL.
+  same Kubernetes cluster as the injector, or an external Vault URL.  Also available as
+  an environment variable (`AGENT_INJECT_VAULT_ADDR`) to set the default for all
+  injected agents.
 
 - `vault.hashicorp.com/tls-secret` - name of the Kubernetes secret containing TLS
   Client and CA certificates and keys. This is mounted to `/vault/tls`.
