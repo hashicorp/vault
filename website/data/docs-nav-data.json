@@ -1097,10 +1097,6 @@
         "title": "<code>token</code>",
         "routes": [
           {
-            "title": "Overview",
-            "path": "commands/token"
-          },
-          {
             "title": "<code>capabilities</code>",
             "path": "commands/token/capabilities"
           },
