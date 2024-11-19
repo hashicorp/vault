@@ -14,7 +14,7 @@ import (
 
 type entKeyEntry struct{}
 
-func (e entKeyEntry) IsPrivateKeyMissing() bool {
+func (e entKeyEntry) IsEntPrivateKeyMissing() bool {
 	return true
 }
 
