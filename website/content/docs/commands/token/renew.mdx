@@ -24,7 +24,7 @@ $ vault token renew [-help | -h]
 
 ## Description
 
-`token renew` renews a token's lease, extending the amount of time it can be
+`token renew` renews the lease for the given token. Renewing extends the amount of time the token can be
 used. If a TOKEN is not provided, the locally authenticated token is used. Lease
 renewal will fail if the token is not renewable, the token has already been
 revoked, or if the token has already reached its maximum TTL.
