@@ -1,0 +1,14 @@
+<a id="write-arg-path" />
+
+**`path (string : <required>)`**
+
+The path to the key to write. The data can be credentials, secrets, 
+configuration, or arbitrary data. The specific behavior of the `write` 
+command is determined at the thing mounted at the path.
+
+This path consists of two parts: `<mount>`, which is the path to the mount, and 
+`<key-name>`, which is the desired name of the key. You can optionally specify a 
+namespace in the `<mount>` path using the `-namespace=<ns>` flag.
+
+**Example**: `auth/token/create`, `cubbyhole/git-credentials`, 
+`transit/keys/my-key`, `aws/roles/ops`
