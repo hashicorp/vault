@@ -1,10 +1,10 @@
-<a id="token-wrap-ttl" />
+<a id="token-flag-wrap-ttl" />
 
-**`-wrap-ttl (duration: "")`**
+**`-wrap-ttl (string : "")`**
 
 Wraps the response in a cubbyhole token with the requested TTL. The response is 
 available via the `vault unwrap` command. The TTL is specified as a numeric 
 string with suffix like "30s" or "5m". You can also specify this via the 
 `VAULT_WRAP_TTL` environment variable.
 
-**Example**: `-wrap-ttl=1h`
+**Example**: `-wrap-ttl "1h"`

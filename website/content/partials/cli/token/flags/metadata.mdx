@@ -1,9 +1,9 @@
-<a id="token-metadata" />
+<a id="token-flag-metadata" />
 
-`-metadata (k=v: "")`**
+`-metadata (string : "")`**
 
-Arbitrary key=value metadata to associate with the token. This metadata will show 
+Custom metadata associated with the token in `"key=value"` format. The metadata shows up
 in the audit log when the token is used. You can specify this flag multiple times 
 to add multiple pieces of metadata.
 
-**Example**: `-metadata=env=dev`
+**Example**: `-metadata "environment=sandbox"`
