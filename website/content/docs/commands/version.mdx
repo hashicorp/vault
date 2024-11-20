@@ -6,16 +6,46 @@ description: The "version" command prints the version of Vault.
 
 # version
 
-The `version` command prints the Vault version:
+Prints the Vault version.
+
+<CodeBlockConfig hideClipboard>
 
 ```shell-session
 $ vault version
-Vault v1.2.3
+
+$ vault version [-help | -h]
 ```
 
-It can also be printed by adding the flags `--version` or `-v` to the `vault` command:
+</CodeBlockConfig>
+
+## Description
+
+`version` prints the version of the Vault CLI. This does not print the target 
+Vault server version.
+
+This command is aliased as `-v` or `--version`.
+
+## Command arguments
+
+None.
+
+## Command options
+
+None.
+
+## Command flags
+
+None.
+
+## Global flags
+
+None.
+
+## Examples
+
+Print the version of the Vault CLI:
 
 ```shell-session
-$ vault -v
-Vault v1.2.3, built 2022-05-03T08:34:11Z
+$ vault version
+Vault v1.18.1 (f479e5c85462477c9334564bc8f69531cdb03b65), built 2024-10-29T14:21:31Z
 ```
