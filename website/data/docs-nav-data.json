@@ -1338,21 +1338,21 @@
             "path": "agent-and-proxy/agent/apiproxy"
           },
           {
-            "title": "Caching",
+            "title": "Vault Agent caching",
             "routes": [
               {
                 "title": "Overview",
                 "path": "agent-and-proxy/agent/caching"
               },
               {
-                "title": "Persistent Caching",
+                "title": "Persistent caching",
                 "routes": [
                   {
-                    "title": "Overview",
+                    "title": "Use built-in persistent caching",
                     "path": "agent-and-proxy/agent/caching/persistent-caches"
                   },
                   {
-                    "title": "Kubernetes",
+                    "title": "Use Kubernetes persistent cache",
                     "path": "agent-and-proxy/agent/caching/persistent-caches/kubernetes"
                   }
                 ]
