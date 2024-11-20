@@ -137,6 +137,7 @@ const createAzureConfig = (store, backend, accessType = 'generic') => {
         subscription_id: 'subscription-id-2',
         tenant_id: 'tenant-id-2',
         client_id: 'client-id-2',
+        environment: 'AZUREPUBLICCLOUD', // allowed environment vars for testing https://github.com/hashicorp/vault-plugin-secrets-azure/blob/main/client.go#L35-L37
       },
     });
   }

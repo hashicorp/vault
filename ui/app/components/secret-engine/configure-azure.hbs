@@ -6,7 +6,7 @@
 <form {{on "submit" (perform this.submitForm)}} aria-label="save azure creds" data-test-configure-form>
 
   <NamespaceReminder @mode="save" @noun="configuration" />
-  <MessageError @errorMessage={{this.errorMessageRoot}} />
+  <MessageError @errorMessage={{this.errorMessage}} />
 
   <div class="box is-fullwidth is-sideless">
     {{! WIF is an enterprise only feature. We default to IAM access type for community users and display only those related form fields. }}
