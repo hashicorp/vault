@@ -104,19 +104,19 @@ synchronize_repos() {
 # so it doesn't race with any of our package installations.
 # We run as sudo because Amazon Linux 2 throws Python 2.7 errors when running `cloud-init status` as
 # non-root user (known bug).
-check_cloud_init() {
+wait_for_cloud_init() {
   sudo cloud-init status --wait
   exit_code=$?
+  # We are not failing exit status 2 because cloud-init is up to date
   if [ "$exit_code" -ne 0 ] && [ "$exit_code" -ne 2 ]; then
     echo "cloud-init did not complete successfully. Exit code: $exit_code" 1>&2
     echo "Here are the logs for the failure:"
-    cat /var/log/cloud-init-* | grep "Failed"
-    exit 1
+    cat /var/log/cloud-init-*
   fi
 }
 
-# Checking cloud-init
-check_cloud_init
+# Wait for cloud-init
+wait_for_cloud_init
 
 # Synchronizing repos
 begin_time=$(date +%s)
