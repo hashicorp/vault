@@ -242,6 +242,18 @@ func TestTransit_CreateKey(t *testing.T) {
 			creationParams: map[string]interface{}{"type": "aes256-cmac"},
 			entOnly:        true,
 		},
+		"ML-DSA-44": {
+			creationParams: map[string]interface{}{"type": "ml-dsa", "parameter_set": "44"},
+			entOnly:        true,
+		},
+		"ML-DSA-65": {
+			creationParams: map[string]interface{}{"type": "ml-dsa", "parameter_set": "65"},
+			entOnly:        true,
+		},
+		"ML-DSA-87": {
+			creationParams: map[string]interface{}{"type": "ml-dsa", "parameter_set": "87"},
+			entOnly:        true,
+		},
 		"bad key type": {
 			creationParams: map[string]interface{}{"type": "fake-key-type"},
 			shouldError:    true,
