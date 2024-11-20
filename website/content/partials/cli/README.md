@@ -21,9 +21,9 @@ root command is runnable.
 We document CLI command arguments, options, and flags as partials:
 
 - as a first step toward templatizing and autogenerating the CLI command pages.
-- to make it easier to include and maintain elements shared across commands in
+- to make it easier to include and maintain parameters shared across commands in
   the same family.
-- to make it easier to include and maintain elements shared across command
+- to make it easier to include and maintain parameters shared across command
   families.
 - to make it easier to include information about standard flags on the command
   pages.
@@ -36,36 +36,72 @@ partials/cli/<command-family>/args     command-family arguments
 partials/cli/<command-family>/flags    command-family flags
 partials/cli/<command-family>/options  command-family options
 
-partials/cli/shared          partials for elements shared across command families
+partials/cli/shared          partials for parameters shared across some, but not all, command families
 partials/cli/shared/args     shared arguments (does not exist yet)
 partials/cli/shared/flags    shared flags
 partials/cli/shared/options  shared options (does not exist yet)
 
-partials/global-settings      partials for standard/global elements
+partials/global-settings        partials for standard/global parameters
 partials/global-settings/flags  global flags (e.g., `-header`)
 partials/global-settings/env    global environment variables (e.g., `VAULT_LICENSE`)
-partials/global-settings/both  elements that exits as flags and variables
+partials/global-settings/both   parameters that exits as flags and variables
 
 ## Partial templates
 
-- If the element is shared across command families, but not applicable to **all**
+- Use the parameter name as the file name and "NAME" in the anchor definition,
+  even if the use of dashes or underscores is inconsistent with other parameters
+  or partial names. For example, if the flag is `-my_weird_flag`, make the
+  partial filename `my_weird_flag.mdx` and the anchor ID
+  `COMMAND-flag-my_weird_flag`.
+- If the parameter is shared across command families, but not applicable to **all**
   command families, it belongs under `partials/cli/shared`
-- If the element is a flag with a cooresponding environment variable but **does not**
-  apply to all commands, talk with a technical writer before creating your
-  partials.
-- If the element is required, use `<required>` for the default entry.
+- If the parameter is a flag with a cooresponding environment variable but
+  **does not** apply to all commands, talk with a technical writer before
+  creating your partials.
+- If the parameter is required, use `<required>` for the default entry.
 - Include `-` as part of the name for flag names **except for anchor IDs**.
 - Use `=` in example text for options
 - Omit `=` in example text for flags
 
-### Template 1
+### Template 1 - command-specific parameters
 
-Use the following template for elements that exist exclusively as arguments,
-flags, or options:
+Use the following template for parameters that exist as command-exclusively
+arguments, flags, or options. "ANCHOR_ID" is the ID defined in the `<a id=...>`
+HTML tag.
+
+-- Template (start) --
 
 <a id="COMMAND_ROOT-[arg | option | flag]-NAME" />
 
+
+<a href="#ANCHOR_ID" style={{textDecorationLine:'none'}}>
+
 **`NAME (TYPE : DEFAULT)`**
+
+</a>
+
+DESCRIPTION
+
+**Example**: `EXAMPLE_OF_VALID_USE`
+
+-- Template (end) --
+
+
+
+### Template 2 - shared parameters
+
+Use the following template for parameters that exist as arguments, flags, or
+options that are not global but are shared across more than one command family.
+"ANCHOR_ID" is the ID defined in the `<a id=...>` HTML tag.
+
+<a id="shared-[arg | option | flag]-NAME" />
+
+
+<a href="#ANCHOR_ID" style={{textDecorationLine:'none'}}>
+
+**`NAME (TYPE : DEFAULT)`**
+
+</a>
 
 DESCRIPTION
 
