@@ -1360,23 +1360,23 @@
             ]
           },
           {
-            "title": "generate-config",
+            "title": "Generate a development config file",
             "path": "agent-and-proxy/agent/generate-config"
           },
           {
-            "title": "Process Supervisor Mode",
+            "title": "Run in process supervisor mode",
             "path": "agent-and-proxy/agent/process-supervisor"
           },
           {
-            "title": "Templates",
+            "title": "Use Vault Agent templates",
             "path": "agent-and-proxy/agent/template"
           },
           {
-            "title": "Windows service",
+            "title": "Run Vault Agent as a Windows service",
             "path": "agent-and-proxy/agent/winsvc"
           },
           {
-            "title": "Version compatibility",
+            "title": "Risks of inconsistent Agent and Vault versions",
             "path": "agent-and-proxy/agent/versions"
           }
         ]
