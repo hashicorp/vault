@@ -1,0 +1,10 @@
+<a id="transit-arg-key" />
+
+**`key (string : <required>)`**
+
+The key material to import, encoded in base64 format. For symmetric keys like 
+AES, this is the raw key material. For asymmetric keys like RSA, this is the 
+DER-encoded format. If the value starts with `@`, it is treated as a path to a 
+file containing the key material.
+
+**Example**: `@/path/to/key`

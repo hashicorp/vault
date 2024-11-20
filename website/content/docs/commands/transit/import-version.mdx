@@ -1,31 +1,29 @@
 ---
 layout: docs
-page_title: transit import - Command
+page_title: transit import-version - Command
 description: |-
-  The "transit import" command imports key material into a new transit-managed 
-  encryption key via the Transit BYOK mechanism.
+  The "transit import-version" command imports new key material into an existing transit-managed encryption key via the Transit BYOK mechanism.
 ---
 
-# transit import
+# transit import-version
 
-Imports key material into a new transit-managed encryption key.
+Imports new key material into an existing transit-managed encryption key.
 
 <CodeBlockConfig hideClipboard>
 
 ```shell-session
-$ vault transit import [flags] <path> <key> [options]
+$ vault transit import-version [flags] <path> <key> [options]
 
-$ vault transit import [-help | -h]
+$ vault transit import-version [-help | -h]
 ```
 
 </CodeBlockConfig>
 
 ## Description
 
-`transit import` imports key material into a new transit-managed encryption key 
-via the [Transit BYOK mechanism](/vault/docs/secrets/transit#bring-your-own-key-byok). 
-This command will fail if the key already exists. To import key material into 
-an existing key, use the `transit import-version` command instead.
+`transit import-version` imports new key material into an existing transit-managed 
+encryption key via the [Transit BYOK mechanism](/vault/docs/secrets/transit#bring-your-own-key-byok). 
+To import a completely new key, use the `transit import` command instead.
 
 If your system or device natively supports the RSA AES key wrap mechanism
 (such as the PKCS#11 mechanism `CKM_RSA_AES_KEY_WRAP`), you should use it
@@ -34,11 +32,11 @@ directly rather than this command.
 To use this command, you need:
 
 - Read access to the transit mount's wrapping key at `transit/wrapping_key`
-- Write access to the import endpoints at `transit/keys/:name/import`
+- Write access to the import endpoints at `transit/keys/:name/import_version`
 
 <Tip title="Related API endpoints">
 
-  ImportKey - [`POST:/transit/keys/:name/import`](/vault/api-docs/secret/transit#import-key)
+  ImportKeyVersion - [`POST:/transit/keys/:name/import_version`](/vault/api-docs/secret/transit#import-key-version)
 
 </Tip>
 
@@ -72,10 +70,10 @@ None.
 
 ## Examples
 
-Imports a 2048-bit RSA key as a new key:
+Imports a new version of an existing key:
 
 ```shell-session
-$ vault transit import transit/keys/test-key @test-key type=rsa-2048
+$ vault transit import-version transit/keys/test-key @test-key-updated
 Retrieving transit wrapping key.
 Wrapping source key with ephemeral key.
 Encrypting ephemeral key with transit wrapping key.

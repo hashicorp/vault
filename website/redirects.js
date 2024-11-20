@@ -134,5 +134,20 @@ module.exports = [
     source: '/vault/docs/command/web',
     destination: '/vault/docs/ui/web-cli',
     permanent: true,
-  }
+  },
+  {
+    source: '/vault/docs/commands/token',
+    destination: '/vault/docs/commands/token/create',
+    permanent: true,
+  },
+  {
+    source: '/vault/docs/commands/transform',
+    destination: '/vault/docs/commands/transform/import',
+    permanent: true,
+  },
+  {
+    source: '/vault/docs/commands/transit',
+    destination: '/vault/docs/commands/transit/import',
+    permanent: true,
+  },
 ]
