@@ -117,7 +117,7 @@ type Config struct {
 	DisableSSCTokens bool   `hcl:"-"`
 
 	EnablePostUnsealTrace bool   `hcl:"enable_post_unseal_trace"`
-	PostUnsealTraceDir    string `hcl:"post_unseal_trace_dir"`
+	PostUnsealTraceDir    string `hcl:"post_unseal_trace_directory"`
 }
 
 const (
@@ -1164,8 +1164,8 @@ func (c *Config) Sanitized() map[string]interface{} {
 
 		"imprecise_lease_role_tracking": c.ImpreciseLeaseRoleTracking,
 
-		"enable_post_unseal_trace": c.EnablePostUnsealTrace,
-		"post_unseal_trace_dir":    c.PostUnsealTraceDir,
+		"enable_post_unseal_trace":    c.EnablePostUnsealTrace,
+		"post_unseal_trace_directory": c.PostUnsealTraceDir,
 	}
 	for k, v := range sharedResult {
 		result[k] = v
