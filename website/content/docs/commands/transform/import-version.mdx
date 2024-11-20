@@ -1,31 +1,30 @@
 ---
 layout: docs
-page_title: transform import - Command
+page_title: transform import-version - Command
 description: |-
-  The "transform import" command imports key material into a new transform-managed 
-  encryption key via the Transform BYOK mechanism.
+  The "transform import-version" command imports new key material into an 
+  existing transform-managed encryption key via the Transform BYOK mechanism.
 ---
 
-# transform import
+# transform import-version
 
-Imports key material into a new transform-managed encryption key.
+Imports new key material into an existing transform-managed encryption key.
 
 <CodeBlockConfig hideClipboard>
 
 ```shell-session
-$ vault transform import [flags] <path> <key> [options]
+$ vault transform import-version [flags] <path> <key> [options]
 
-$ vault transform import [-help | -h]
+$ vault transform import-version [-help | -h]
 ```
 
 </CodeBlockConfig>
 
 ## Description
 
-`transform import` imports key material into a new transform-managed encryption 
-key via the [Transform BYOK mechanism](/vault/docs/secrets/transform#bring-your-own-key-byok). 
-This command will fail if the key already exists. To import key material into 
-an existing key, use the `transform import-version` command instead.
+`transform import-version` imports new key material into an existing 
+transform-managed encryption key via the [Transform BYOK mechanism](/vault/docs/secrets/transform#bring-your-own-key-byok). 
+To import a completely new key, use the `transform import` command instead.
 
 To use this command, you need:
 
@@ -34,8 +33,7 @@ To use this command, you need:
 
 <Tip title="Related API endpoints">
 
-  - ImportKeyFPETransform - [`POST:/transform/transformations/fpe/:name/import`](/vault/api-docs/secret/transform#import-key-for-fpe-transformation)
-  - ImportKeyTokenTransform - [`POST:/transform/transformations/tokenization/:name/import`](/vault/api-docs/secret/transform#import-key-for-tokenization-transformation)
+  ImportKeyVersionTransform - [`POST:/transform/transformations/tokenization/:name/import_version`](/vault/api-docs/secret/transform#import-key-version-for-tokenization-transformation)
 
 </Tip>
 
@@ -69,10 +67,10 @@ None.
 
 ## Examples
 
-Imports a 2048-bit RSA key as a new key:
+Imports a new version of an existing key:
 
 ```shell-session
-$ vault transform import transform/keys/test-key @test-key type=rsa-2048
+$ vault transform import-version transform/keys/test-key @test-key-updated
 Retrieving transform wrapping key.
 Wrapping source key with ephemeral key.
 Encrypting ephemeral key with transform wrapping key.
