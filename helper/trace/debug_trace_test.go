@@ -6,22 +6,17 @@ package trace
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
 func TestStartDebugTrace(t *testing.T) {
-	t.Run("error_on_empty_dir", func(t *testing.T) {
-		_, _, err := StartDebugTrace("", "filePrefix")
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "trace directory is required")
-	})
-
 	t.Run("error_on_non_existent_dir", func(t *testing.T) {
 		_, _, err := StartDebugTrace("non-existent-dir", "filePrefix")
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "failed to stat trace directory")
+		require.Contains(t, err.Error(), "does not exist")
 	})
 
 	t.Run("error_on_non_dir", func(t *testing.T) {
@@ -46,6 +41,41 @@ func TestStartDebugTrace(t *testing.T) {
 		require.Contains(t, err.Error(), "failed to create trace file")
 	})
 
+	t.Run("error_trying_to_start_second_concurrent_trace", func(t *testing.T) {
+		dir, err := os.MkdirTemp("", "")
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			os.RemoveAll(dir)
+		})
+		_, stop, err := StartDebugTrace(dir, "filePrefix")
+		require.NoError(t, err)
+		_, stopNil, err := StartDebugTrace(dir, "filePrefix")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "failed to start trace")
+		require.NoError(t, stop())
+		require.Nil(t, stopNil)
+	})
+
+	t.Run("error_when_stating_tmp_dir_with_restricted_permissions", func(t *testing.T) {
+		// this test relies on setting TMPDIR so skip it if we're not on a Unix system
+		if runtime.GOOS == "windows" {
+			t.Skip("skipping test on Windows")
+		}
+
+		err := os.Mkdir(filepath.Join(os.TempDir(), "missing_permissions"), 0o000)
+		t.Cleanup(func() {
+			os.RemoveAll(filepath.Join(os.TempDir(), "missing_permissions"))
+		})
+		require.NoError(t, err)
+		os.Setenv("TMPDIR", "/tmp/missing_permissions")
+		t.Cleanup(func() {
+			os.Unsetenv("TMPDIR")
+		})
+		_, _, err = StartDebugTrace("", "filePrefix")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "failed to stat trace directory")
+	})
+
 	t.Run("successful_trace_generates_non_empty_file", func(t *testing.T) {
 		dir, err := os.MkdirTemp("", "")
 		require.NoError(t, err)
@@ -54,9 +84,31 @@ func TestStartDebugTrace(t *testing.T) {
 		})
 		file, stop, err := StartDebugTrace(dir, "filePrefix")
 		require.NoError(t, err)
-		stop()
+		require.NoError(t, stop())
 		f, err := os.Stat(file)
 		require.NoError(t, err)
-		require.True(t, f.Size() > 0)
+		require.Greater(t, f.Size(), int64(0))
+	})
+
+	t.Run("successful_creation_of_tmp_dir", func(t *testing.T) {
+		os.RemoveAll(filepath.Join(os.TempDir(), "vault-traces"))
+		file, stop, err := StartDebugTrace("", "filePrefix")
+		require.NoError(t, err)
+		require.NoError(t, stop())
+		require.Contains(t, file, filepath.Join(os.TempDir(), "vault-traces", "filePrefix"))
+		f, err := os.Stat(file)
+		require.NoError(t, err)
+		require.Greater(t, f.Size(), int64(0))
+	})
+
+	t.Run("successful_trace_with_existing_tmp_dir", func(t *testing.T) {
+		os.Mkdir(filepath.Join(os.TempDir(), "vault-traces"), 0o700)
+		file, stop, err := StartDebugTrace("", "filePrefix")
+		require.NoError(t, err)
+		require.NoError(t, stop())
+		require.Contains(t, file, filepath.Join(os.TempDir(), "vault-traces", "filePrefix"))
+		f, err := os.Stat(file)
+		require.NoError(t, err)
+		require.Greater(t, f.Size(), int64(0))
 	})
 }

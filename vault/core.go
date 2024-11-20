@@ -2840,10 +2840,6 @@ func (c *Core) tracePostUnsealIfEnabled() (stop func()) {
 	}
 
 	dir := conf.(*server.Config).PostUnsealTraceDir
-	if dir == "" {
-		c.logger.Warn("enable_post_unseal_trace is true but post_unseal_trace_dir is not set or empty, post-unseal trace won't be triggered")
-		return nil
-	}
 
 	traceFile, stopTrace, err := trace.StartDebugTrace(dir, "post-unseal")
 	if err != nil {
