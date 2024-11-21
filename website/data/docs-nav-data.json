@@ -1189,26 +1189,22 @@
     ]
   },
   {
-    "title": "Vault Agent and Vault Proxy",
+    "title": "Vault tools: Agent and Proxy",
     "routes": [
       {
-        "title": "Overview",
+        "title": "Why use Agent or Proxy?",
         "path": "agent-and-proxy"
       },
       {
-        "title": "Auto-Auth",
+        "title": "Auto-authentication",
         "routes": [
           {
-            "title": "Overview",
+            "title": "What is auto-authentication?",
             "path": "agent-and-proxy/autoauth"
           },
           {
-            "title": "Methods",
+            "title": "Auto-auth methods",
             "routes": [
-              {
-                "title": "Overview",
-                "path": "agent-and-proxy/autoauth/methods"
-              },
               {
                 "title": "AliCloud",
                 "path": "agent-and-proxy/autoauth/methods/alicloud"
@@ -1226,11 +1222,11 @@
                 "path": "agent-and-proxy/autoauth/methods/azure"
               },
               {
-                "title": "Cert",
+                "title": "TLS certificates",
                 "path": "agent-and-proxy/autoauth/methods/cert"
               },
               {
-                "title": "CF",
+                "title": "Cloud Foundry (CF)",
                 "path": "agent-and-proxy/autoauth/methods/cf"
               },
               {
@@ -1254,11 +1250,11 @@
                 "path": "agent-and-proxy/autoauth/methods/kubernetes"
               },
               {
-                "title": "Oracle Cloud Infrastructure",
+                "title": "Oracle Cloud Infrastructure (OCI",
                 "path": "agent-and-proxy/autoauth/methods/oci"
               },
               {
-                "title": "Token File",
+                "title": "Token file",
                 "path": "agent-and-proxy/autoauth/methods/token_file"
               }
             ]
@@ -1266,10 +1262,6 @@
           {
             "title": "Sinks",
             "routes": [
-              {
-                "title": "Overview",
-                "path": "agent-and-proxy/autoauth/sinks"
-              },
               {
                 "title": "File",
                 "path": "agent-and-proxy/autoauth/sinks/file"
