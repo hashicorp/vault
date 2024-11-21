@@ -62,22 +62,22 @@ export default class ConfigureAwsComponent extends Component<Args> {
     // the following checks are only relevant to enterprise users and those editing an existing configuration.
     if (this.version.isCommunity || this.args.model.isNew) return;
     const { identityTokenAudience, identityTokenTtl, clientSecret, rootPasswordTtl } = this.args.model;
-    // do not include issuer in this check. Issuer is a global endpoint and can bet set even if we're not editing wif attributes
+    // do not include issuer in this check. Issuer is a global endpoint and can be set even if we're not editing wif attributes
     const wifAttributesSet = !!identityTokenAudience || !!identityTokenTtl;
     const azureAttributesSet = !!clientSecret || !!rootPasswordTtl;
-    // If any WIF attributes have been set in the model, set accessType to 'wif'.
+    // if any WIF attributes have been set in the model, set accessType to 'wif'
     this.accessType = wifAttributesSet ? 'wif' : 'azure';
-    // If there are either WIF or azure attributes set then disable user's ability to change accessType.
+    // if there are either WIF or azure attributes, disable user's ability to change accessType
     this.disableAccessType = wifAttributesSet || azureAttributesSet;
   }
 
   @action continueSubmitForm() {
-    // called when the user confirms they are okay with the issuer change
+    // Called when the user confirms they are okay with the issuer change
     this.saveIssuerWarning = '';
     this.save.perform();
   }
 
-  // on form submit check for issuer changes then save model and issuer
+  // On form submit check for issuer changes then save model and issuer
   submitForm = task(
     waitFor(async (event: Event) => {
       event?.preventDefault();
@@ -100,10 +100,10 @@ export default class ConfigureAwsComponent extends Component<Args> {
   save = task(
     waitFor(async () => {
       const { model, issuerConfig } = this.args;
-      // Check if any of the model attributes have changed.
-      // If no changes, transition and notify user.
-      // If changes, save the model and notify user.
-      // Note: "backend" dirties model state so explicity ignore it here.
+      // check if any of the model attributes have changed
+      // if no changes, transition and notify user
+      // if changes, save the model and notify user
+      // note: "backend" dirties model state so explicity ignore it here
       const attrChanged = Object.keys(model?.changedAttributes()).some((item) => item !== 'backend');
       const issuerAttrChanged = issuerConfig?.hasDirtyAttributes;
       if (!attrChanged && !issuerAttrChanged) {
@@ -118,7 +118,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
       if (modelSaved || issuerSaved) {
         this.transition();
       } else {
-        // otherwise there was a failure and we should not transition and exit the function.
+        // otherwise there was a failure and we should not transition and exit the function
         return;
       }
     })
@@ -176,7 +176,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
 
   @action
   onCancel() {
-    // clear errors because they're canceling out of the workflow.
+    // clear errors because they're canceling out of the workflow
     this.resetErrors();
     this.args.model.unloadRecord();
     this.transition();

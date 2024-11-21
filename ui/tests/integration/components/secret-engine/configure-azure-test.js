@@ -286,14 +286,14 @@ module('Integration | Component | SecretEngine/ConfigureAzure', function (hooks)
         this.version.type = 'community';
       });
       test('it renders fields', async function (assert) {
-        assert.expect(9);
+        assert.expect(8);
         await this.renderComponent();
-        assert.dom(SES.configureForm).exists('it lands on the Azure configuration form.');
+        assert.dom(SES.configureForm).exists('t lands on the Azure configuration form');
         assert
           .dom(SES.wif.accessTypeSection)
           .doesNotExist('Access type section does not render for a community user');
         // check all the form fields are present
-        for (const key of expectedConfigKeys('azure')) {
+        for (const key of expectedConfigKeys('azure-camelCase')) {
           assert.dom(GENERAL.inputByAttr(key)).exists(`${key} shows for azure account creds section.`);
         }
         assert.dom(GENERAL.inputByAttr('issuer')).doesNotExist();

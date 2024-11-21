@@ -33,7 +33,6 @@ export default class AzureConfig extends Model {
     helperTextDisabled:
       'The TTL of generated tokens. Defaults to 1 hour, turn on the toggle to specify a different value.',
     helperTextEnabled: 'The TTL of generated tokens.',
-    subText: '',
     editType: 'ttl',
   })
   identityTokenTtl;
@@ -88,7 +87,7 @@ export default class AzureConfig extends Model {
     return formFieldGroups;
   }
 
-  // return client and secret key for edit/create view
+  // return client secret for edit/create view
   get formFields() {
     const keys = [
       'subscriptionId',

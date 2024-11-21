@@ -198,6 +198,8 @@ export const expectedConfigKeys = (type) => {
       return ['Public key', 'Generate signing key'];
     case 'azure':
       return ['Subscription ID', 'Tenant ID', 'Client ID', 'Root password TTL', 'Environment'];
+    case 'azure-camelCase':
+      return ['subscriptionId', 'tenantId', 'clientId', 'rootPasswordTtl', 'environment'];
     case 'azure-wif':
       return [
         'Subscription ID',

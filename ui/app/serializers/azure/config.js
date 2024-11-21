@@ -10,7 +10,7 @@ export default class AzureConfigSerializer extends ApplicationSerializer {
     if (!payload.data) {
       return super.normalizeResponse(...arguments);
     }
-    // remove rootPasswordTtl and identityTokenT if the API's default value of 0. We don't want to display this value on configuration details if they haven't changed the default value
+    // remove rootPasswordTtl and identityTokenTtl if the API's default value of 0. We don't want to display this value on configuration details if they haven't changed the default value
     if (payload.data.root_password_ttl === 0) {
       delete payload.data.root_password_ttl;
     }

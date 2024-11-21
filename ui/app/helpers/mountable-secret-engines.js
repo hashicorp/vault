@@ -134,21 +134,22 @@ const MOUNTABLE_SECRET_ENGINES = [
   },
 ];
 
-// A list of Workflow Identity Federation engines.
+// A list of Workload Identity Federation engines.
 export const WIF_ENGINES = ['aws', 'azure'];
 
 export function wifEngines() {
   return WIF_ENGINES.slice();
 }
 
-// A list of configuration only secret engines. These engines do not have a list of secrets, etc. The UX is the mount the engine and when they click on the engine they are directed to a configuration.index view with a link to configuration.edit
+// A list of configuration only secret engines. These engines do not have a list view or CRUD actions for anything other than configuration. The only tab they see is configuration.
+// Will eventually include gcp.
 export const CONFIGURATION_ONLY = ['azure'];
 
 export function configurationOnly() {
   return CONFIGURATION_ONLY.slice();
 }
 
-// Secret Engines that have their own configuration page and actions
+// Secret engines that have their own configuration page and actions
 // These engines do not exist in their own Ember engine.
 export const CONFIGURABLE_SECRET_ENGINES = ['aws', 'ssh', 'azure'];
 

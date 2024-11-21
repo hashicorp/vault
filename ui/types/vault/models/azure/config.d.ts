@@ -23,7 +23,6 @@ export default class AzureConfig extends Model {
   formFieldGroups(accessType?: string): {
     [key: string]: string[];
   }[];
-  // for some reason the following Model attrs don't exist on the Model definition
   changedAttributes(): {
     [key: string]: unknown[];
   };
