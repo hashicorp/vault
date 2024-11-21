@@ -7349,3 +7349,48 @@ func TestFuzz_sanitizePath(t *testing.T) {
 		require.True(t, valid(path, newPath), `"%s" not sanitized correctly, got "%s"`, path, newPath)
 	}
 }
+
+// TestSealStatus_Removed checks if the seal-status endpoint returns the
+// correct value for RemovedFromCluster when provided with different backends
+func TestSealStatus_Removed(t *testing.T) {
+	removedCore, err := TestCoreWithMockRemovableNodeHABackend(t, true)
+	require.NoError(t, err)
+	notRemovedCore, err := TestCoreWithMockRemovableNodeHABackend(t, false)
+	require.NoError(t, err)
+	testCases := []struct {
+		name      string
+		core      *Core
+		wantField bool
+		wantTrue  bool
+	}{
+		{
+			name:      "removed",
+			core:      removedCore,
+			wantField: true,
+			wantTrue:  true,
+		},
+		{
+			name:      "not removed",
+			core:      notRemovedCore,
+			wantField: true,
+			wantTrue:  false,
+		},
+		{
+			name:      "different backend",
+			core:      TestCore(t),
+			wantField: false,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			status, err := tc.core.GetSealStatus(context.Background(), true)
+			require.NoError(t, err)
+			if tc.wantField {
+				require.NotNil(t, status.RemovedFromCluster)
+				require.Equal(t, tc.wantTrue, *status.RemovedFromCluster)
+			} else {
+				require.Nil(t, status.RemovedFromCluster)
+			}
+		})
+	}
+}
