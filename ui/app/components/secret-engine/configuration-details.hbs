@@ -27,7 +27,8 @@
           @alwaysRender={{not (is-empty-value (get @model attr.name))}}
           @label={{or attr.options.label (to-label attr.name)}}
           @value={{get configModel (or attr.options.fieldValue attr.name)}}
-          @formatTtl={{true}}
+          {{! careful to only format engines that have ttl values that need formatting (ex: aws has a maxRetries that does not) }}
+          @formatTtl={{if (eq @typeDisplay "Azure") true false}}
         />
       {{/if}}
     {{/each}}

@@ -164,6 +164,8 @@ export function allEngines() {
   return [...MOUNTABLE_SECRET_ENGINES, ...ENTERPRISE_SECRET_ENGINES];
 }
 
+export const allEnginesArray = allEngines();
+
 export function isAddonEngine(type, version) {
   if (type === 'kv' && version === 1) return false;
   const engineRoute = allEngines().find((engine) => engine.type === type)?.engineRoute;

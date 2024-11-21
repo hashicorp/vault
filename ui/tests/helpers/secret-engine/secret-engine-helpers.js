@@ -112,7 +112,8 @@ const createAzureConfig = (store, backend, accessType = 'generic') => {
         subscription_id: 'subscription-id',
         tenant_id: 'tenant-id',
         client_id: 'client-id',
-        root_password_ttl: '182d',
+        root_password_ttl: '500h',
+        environment: 'AZUREPUBLICCLOUD',
       },
     });
   } else if (accessType === 'wif') {
@@ -126,6 +127,7 @@ const createAzureConfig = (store, backend, accessType = 'generic') => {
         client_id: 'client-id',
         identity_token_audience: 'audience',
         identity_token_ttl: 7200,
+        environment: 'AZUREPUBLICCLOUD',
       },
     });
   } else {
@@ -195,15 +197,16 @@ export const expectedConfigKeys = (type) => {
     case 'ssh':
       return ['Public key', 'Generate signing key'];
     case 'azure':
-      return ['subscriptionId', 'tenantId', 'clientId', 'clientSecret', 'rootPasswordTtl', 'environment'];
+      return ['Subscription ID', 'Tenant ID', 'Client ID', 'Root password TTL', 'Environment'];
     case 'azure-wif':
       return [
-        'subscriptionId',
-        'tenantId',
-        'clientId',
+        'Subscription ID',
+        'Tenant ID',
+        'Client ID',
+        'Root password TTL',
+        'Environment',
         'identityTokenAudience',
         'Identity token TTL',
-        'environment',
       ];
   }
 };
@@ -223,6 +226,21 @@ const valueOfAwsKeys = (string) => {
   }
 };
 
+const valueOfAzureKeys = (string) => {
+  switch (string) {
+    case 'Subscription ID':
+      return 'subscription-id';
+    case 'Tenant ID':
+      return 'tenant-id';
+    case 'Client ID':
+      return 'client-id';
+    case 'Environment':
+      return 'AZUREPUBLICCLOUD';
+    case 'Root password TTL':
+      return '20 days 20 hours';
+  }
+};
+
 const valueOfSshKeys = (string) => {
   switch (string) {
     case 'Public key':
@@ -236,6 +254,8 @@ export const expectedValueOfConfigKeys = (type, string) => {
   switch (type) {
     case 'aws':
       return valueOfAwsKeys(string);
+    case 'azure':
+      return valueOfAzureKeys(string);
     case 'ssh':
       return valueOfSshKeys(string);
   }

@@ -6,6 +6,7 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { allEnginesArray } from 'vault/helpers/mountable-secret-engines';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { CONFIGURABLE_SECRET_ENGINES } from 'vault/helpers/mountable-secret-engines';
@@ -33,12 +34,16 @@ module('Integration | Component | SecretEngine/ConfigurationDetails', function (
   });
 
   test('it shows config details if configModel(s) are passed in', async function (assert) {
-    assert.expect(21);
+    assert.expect(36);
+
     for (const type of CONFIGURABLE_SECRET_ENGINES) {
       const backend = `test-${type}`;
       this.configModels = createConfig(this.store, backend, type);
+      this.typeDisplay = allEnginesArray.find((engine) => engine.type === type)?.displayName;
+      await render(
+        hbs`<SecretEngine::ConfigurationDetails @configModels={{array this.configModels}} @typeDisplay={{this.typeDisplay}}/>`
+      );
 
-      await render(hbs`<SecretEngine::ConfigurationDetails @configModels={{array this.configModels}}/>`);
       for (const key of expectedConfigKeys(type)) {
         assert.dom(GENERAL.infoRowLabel(key)).exists(`${key} on the ${type} config details exists.`);
         const responseKeyAndValue = expectedValueOfConfigKeys(type, key);
