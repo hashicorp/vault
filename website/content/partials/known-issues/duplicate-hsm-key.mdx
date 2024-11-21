@@ -1,14 +1,14 @@
 ### Duplicate HSM Keys and KV Read Failures
 
 #### Affected Versions
-- All versions that support HSM seal integration with HSM HA configurations.
+- All versions that support migration from Shamir to HSM-backed unseal in HA configurations using HSMs.
 
 #### Issue
-Clusters using HSM for sealing in HA configurations may experience unexpected behavior under certain conditions:
+During a migration from Shamir to an HSM-backed unseal configuration with High Availability (HA), duplicate HSM keys may be created. This issue has been observed specifically in setups using **Thales Luna HSM**, but it is not confirmed whether other HSM providers are unaffected.
 - Duplicate HSM keys: These may be created, resulting in intermittent KV read failures with errors such as CKR_SIGNATURE_INVALID and CKR_KEY_HANDLE_INVALID.
 - Unseal failures: Nodes may fail to unseal after a restart, with errors such as CKR_DATA_INVALID.
 - Node risk: While remaining nodes may stay operational, restarting them could lead to similar unseal failures.
 These issues can occur even after a seal migration to HSM that initially appeared successful. The root cause is under investigation, with potential links to key handling during HA configuration or migration processes.
 
 #### Workaround
-As a workaround, always run Vault with generate_key = false, creating the required keys within the HSM manually during the setup process.
+As a workaround, always run Vault with `generate_key = false`, creating the required keys within the HSM manually during the setup process.
