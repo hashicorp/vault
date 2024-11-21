@@ -1,6 +1,11 @@
-<a id="audit-exclude" />
+<a id="audit-option-exclude" />
 
-**`exclude (string : "")`** <EnterpriseAlert inline="true" />
+<a href="#audit-option-exclude" style={{textDecorationLine:'none'}}>
+
+**`exclude (string : "")`**
+
+</a><EnterpriseAlert inline="true" />
+
 
 Remove any fields matching the provided
 [exclusion filtering rules](/vault/docs/enterprise/audit/exclusion) from the
@@ -14,8 +19,9 @@ audit entry before writing to the audit device.
   definitions to `exclude`:
 
   ```
-  $  vault audit enable exclude=@rules.json file file_path="/var/logs/vault/audit.log"'
+  $ vault audit enable    \
+      exclude=@rules.json \
+      file file_path="/var/logs/vault/audit.log"'
   ```
 
 </Tip>
-
