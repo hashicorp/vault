@@ -1330,11 +1330,11 @@
         "title": "Vault Agent",
         "routes": [
           {
-            "title": "Overview",
+            "title": "What is Vault Agent?",
             "path": "agent-and-proxy/agent"
           },
           {
-            "title": "API Proxy",
+            "title": "Vault Agent as Vault API proxy",
             "path": "agent-and-proxy/agent/apiproxy"
           },
           {
