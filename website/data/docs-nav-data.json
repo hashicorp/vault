@@ -1330,29 +1330,29 @@
         "title": "Vault Agent",
         "routes": [
           {
-            "title": "Overview",
+            "title": "What is Vault Agent?",
             "path": "agent-and-proxy/agent"
           },
           {
-            "title": "API Proxy",
+            "title": "Vault Agent as Vault API proxy",
             "path": "agent-and-proxy/agent/apiproxy"
           },
           {
-            "title": "Caching",
+            "title": "Vault Agent caching",
             "routes": [
               {
                 "title": "Overview",
                 "path": "agent-and-proxy/agent/caching"
               },
               {
-                "title": "Persistent Caching",
+                "title": "Persistent caching",
                 "routes": [
                   {
-                    "title": "Overview",
+                    "title": "Use built-in persistent caching",
                     "path": "agent-and-proxy/agent/caching/persistent-caches"
                   },
                   {
-                    "title": "Kubernetes",
+                    "title": "Use Kubernetes persistent cache",
                     "path": "agent-and-proxy/agent/caching/persistent-caches/kubernetes"
                   }
                 ]
@@ -1360,23 +1360,23 @@
             ]
           },
           {
-            "title": "generate-config",
+            "title": "Generate a development config file",
             "path": "agent-and-proxy/agent/generate-config"
           },
           {
-            "title": "Process Supervisor Mode",
+            "title": "Run in process supervisor mode",
             "path": "agent-and-proxy/agent/process-supervisor"
           },
           {
-            "title": "Templates",
+            "title": "Use Vault Agent templates",
             "path": "agent-and-proxy/agent/template"
           },
           {
-            "title": "Windows service",
+            "title": "Run Vault Agent as a Windows service",
             "path": "agent-and-proxy/agent/winsvc"
           },
           {
-            "title": "Version compatibility",
+            "title": "Risks of inconsistent Agent and Vault versions",
             "path": "agent-and-proxy/agent/versions"
           }
         ]
