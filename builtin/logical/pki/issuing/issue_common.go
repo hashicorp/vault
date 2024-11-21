@@ -1008,7 +1008,7 @@ func ApplyIssuerLeafNotAfterBehavior(caSign *certutil.CAInfoBundle, notAfter tim
 			// Explicitly do nothing.
 		case certutil.TruncateNotAfterBehavior:
 			notAfter = caSign.Certificate.NotAfter
-		case certutil.ErrNotAfterBehavior:
+		case certutil.ErrNotAfterBehavior, certutil.AlwaysEnforceErr:
 			fallthrough
 		default:
 			return time.Time{}, errutil.UserError{Err: fmt.Sprintf(

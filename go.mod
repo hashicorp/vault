@@ -10,7 +10,7 @@ module github.com/hashicorp/vault
 // semantic related to Go module handling), this comment should be updated to explain that.
 //
 // Whenever this value gets updated, sdk/go.mod should be updated to the same value.
-go 1.22.5
+go 1.23.3
 
 replace github.com/hashicorp/vault/api => ./api
 
@@ -70,7 +70,6 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
-	github.com/hashicorp-forge/bbolt v1.3.8-hc3
 	github.com/hashicorp/cap v0.7.0
 	github.com/hashicorp/cap/ldap v0.0.0-20240403125925-c0418810d10e
 	github.com/hashicorp/cli v1.1.6
@@ -193,12 +192,12 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/ryanuber/columnize v2.1.2+incompatible
 	github.com/ryanuber/go-glob v1.0.0
-	github.com/sasha-s/go-deadlock v0.2.0
+	github.com/sasha-s/go-deadlock v0.3.5
 	github.com/sethvargo/go-limiter v0.7.1
 	github.com/shirou/gopsutil/v3 v3.22.6
 	github.com/stretchr/testify v1.9.0
 	github.com/tink-crypto/tink-go/v2 v2.2.0
-	go.etcd.io/bbolt v1.3.10
+	go.etcd.io/bbolt v1.4.0-beta.0
 	go.etcd.io/etcd/client/pkg/v3 v3.5.13
 	go.etcd.io/etcd/client/v2 v2.305.5
 	go.etcd.io/etcd/client/v3 v3.5.13
@@ -214,7 +213,7 @@ require (
 	golang.org/x/net v0.29.0
 	golang.org/x/oauth2 v0.23.0
 	golang.org/x/sync v0.8.0
-	golang.org/x/sys v0.25.0
+	golang.org/x/sys v0.27.0
 	golang.org/x/term v0.24.0
 	golang.org/x/text v0.18.0
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d
@@ -320,7 +319,7 @@ require (
 	github.com/circonus-labs/circonus-gometrics v2.3.1+incompatible // indirect
 	github.com/circonus-labs/circonusllhist v0.1.3 // indirect
 	github.com/cjlapao/common-go v0.0.39 // indirect
-	github.com/cloudflare/circl v1.3.7 // indirect
+	github.com/cloudflare/circl v1.5.0 // indirect
 	github.com/cloudfoundry-community/go-cfclient v0.0.0-20220930021109-9c4e6c59ccf1 // indirect
 	github.com/cncf/xds/go v0.0.0-20240423153145-555b57ec207b // indirect
 	github.com/containerd/continuity v0.4.3 // indirect
@@ -475,7 +474,7 @@ require (
 	github.com/oracle/oci-go-sdk/v59 v59.0.0 // indirect
 	github.com/oracle/oci-go-sdk/v60 v60.0.0 // indirect
 	github.com/packethost/packngo v0.1.1-0.20180711074735-b9cb5096f54c // indirect
-	github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5 // indirect
+	github.com/petermattis/goid v0.0.0-20240813172612-4fcff4a6cae7 // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
 	github.com/pierrec/lz4/v4 v4.1.18 // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
