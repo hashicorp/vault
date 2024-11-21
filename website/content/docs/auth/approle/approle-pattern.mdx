@@ -175,7 +175,7 @@ A key benefit of AppRole for applications is that it enables you to more easily 
 
 When you use an AppRole for the application, the best practice is to obscure the RoleID from Jenkins but allow Jenkins to deliver a wrapped SecretID to the application. 
 
-### Example scenario
+### Usage workflow
 
 Jenkins needs to run a job requiring some data classified as secret and stored in Vault. It has a master and a worker node where the worker node runs jobs on spawned container runners that are short-lived. 
 
