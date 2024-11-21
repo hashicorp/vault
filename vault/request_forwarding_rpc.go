@@ -201,6 +201,7 @@ func (c *forwardingClient) startHeartbeat() {
 				c.core.logger.Debug("forwarding: error sending echo request to active node", "error", err)
 				return
 			}
+			c.core.rpcLastSuccessfulHeartbeat.Store(now)
 			if resp == nil {
 				c.core.logger.Debug("forwarding: empty echo response from active node")
 				return
