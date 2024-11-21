@@ -25,6 +25,16 @@ const CONFIG_ADAPTERS_PATHS: Record<string, string[]> = {
   ssh: ['ssh/ca-config'],
 };
 
+const POSSIBLE_AZURE_CONFIG_PROPS = [
+  'subscriptionId',
+  'tenantId',
+  'clientId',
+  'identityTokenAudience',
+  'identityTokenTtl',
+  'environment',
+  'rootPasswordTtl',
+];
+
 export default class SecretsBackendConfigurationEdit extends Route {
   @service declare readonly store: Store;
   @service declare readonly version: VersionService;
@@ -52,9 +62,9 @@ export default class SecretsBackendConfigurationEdit extends Route {
           backend,
           type,
         });
-        if (type === 'azure' && !response.tenantId) {
-          // Azure API returns 200 for a record that doesn't exist (GRR!!).
-          // Thus, check if the tenantId has been set to determine if we should create the record or not.
+        if (type === 'azure' && !this.isAzureConfigSet(response)) {
+          // Azure will return a 200 if the config has not been set (grr)
+          // Use isAzureConfigSet to check every possible field for a value and if none are set, create a new record.
           model[standardizedKey] = await this.store.createRecord(adapterPath, {
             backend,
             type,
@@ -91,6 +101,16 @@ export default class SecretsBackendConfigurationEdit extends Route {
       }
     }
     return model;
+  }
+
+  isAzureConfigSet(response: Record<string, unknown>) {
+    let isConfigSet = false;
+    for (const property of POSSIBLE_AZURE_CONFIG_PROPS) {
+      if (response[property]) {
+        isConfigSet = true;
+      }
+    }
+    return isConfigSet;
   }
 
   @action

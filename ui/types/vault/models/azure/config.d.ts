@@ -4,6 +4,7 @@
  */
 
 import type Model from '@ember-data/model';
+import type { ModelValidations } from 'vault/app-types';
 
 export default class AzureConfig extends Model {
   backend: string;
@@ -29,4 +30,5 @@ export default class AzureConfig extends Model {
   isNew: boolean;
   save(): void;
   unloadRecord(): void;
+  validate(): ModelValidations;
 }

@@ -6,6 +6,8 @@
 import Model, { attr } from '@ember-data/model';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
+// Note: while the API docs indicate subscriptionId and tenantId are required, the UI does not enforce this because the user may pass these values in as environment variables.
+// https://developer.hashicorp.com/vault/api-docs/secret/azure#configure-access
 export default class AzureConfig extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord
   @attr('string', {
@@ -39,15 +41,18 @@ export default class AzureConfig extends Model {
   @attr({
     label: 'Root password TTL',
     editType: 'ttl',
+    helperTextDisabled:
+      'Specifies how long the root password is valid for in Azure when rotate-root generates a new client secret. Defaults to 182 days or 6 months, 1 day and 13 hours.',
   })
   rootPasswordTtl;
 
+  // for configuration details view
+  // do not include clientSecret because it is never returned by the API
   get attrs() {
     const keys = [
       'subscriptionId',
       'tenantId',
       'clientId',
-      'clientSecret',
       'identityTokenAudience',
       'identityTokenTtl',
       'environment',

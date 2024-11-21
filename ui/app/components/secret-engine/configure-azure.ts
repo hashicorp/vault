@@ -83,6 +83,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
       event?.preventDefault();
       this.resetErrors();
       const { issuerConfig } = this.args;
+
       if (issuerConfig?.hasDirtyAttributes) {
         // if the issuer has changed show modal with warning that the config will change
         // if the modal is shown, the user has to click confirm to continue save

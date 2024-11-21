@@ -15,6 +15,16 @@ import { reject } from 'rsvp';
  * As well as any additional configuration models if the engine is a configurable engine.
  */
 
+const POSSIBLE_AZURE_CONFIG_PROPS = [
+  'subscriptionId',
+  'tenantId',
+  'clientId',
+  'identityTokenAudience',
+  'identityTokenTtl',
+  'environment',
+  'rootPasswordTtl',
+];
+
 export default class SecretsBackendConfigurationRoute extends Route {
   @service store;
   @service version;
@@ -130,8 +140,15 @@ export default class SecretsBackendConfigurationRoute extends Route {
   async fetchAzureConfig(id) {
     try {
       let response = await this.store.queryRecord('azure/config', { backend: id });
-      // Azure will return a 200 if the config has not been set. The only way to check if it's been configured or not is to check the response for tenantId which is a required field for both wif and azure account access types.
-      response = response.tenantId ? response : null;
+      let isConfigSet = false;
+      // Azure will return a 200 if the config has not been set.
+      // Thus, we check every possible field and if any of them return a value we can assume the config has been set.
+      for (const property of POSSIBLE_AZURE_CONFIG_PROPS) {
+        if (response[property]) {
+          isConfigSet = true;
+        }
+      }
+      response = isConfigSet ? response : null;
       const configArray = [];
       let issuer = null;
       if (this.version.isEnterprise && response) {

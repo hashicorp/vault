@@ -27,6 +27,7 @@
           @alwaysRender={{not (is-empty-value (get @model attr.name))}}
           @label={{or attr.options.label (to-label attr.name)}}
           @value={{get configModel (or attr.options.fieldValue attr.name)}}
+          @formatTtl={{true}}
         />
       {{/if}}
     {{/each}}

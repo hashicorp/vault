@@ -52,18 +52,12 @@
       {{#each @issuerConfig.attrs as |attr|}}
         <FormField @attr={{attr}} @model={{@issuerConfig}} />
       {{/each}}
-      <FormFieldGroups
-        @model={{@model}}
-        @mode={{if @model.isNew "create" "edit"}}
-        @modelValidations={{this.modelValidations}}
-        @groupName="fieldGroupsWif"
-      />
+      <FormFieldGroups @model={{@model}} @mode={{if @model.isNew "create" "edit"}} @groupName="fieldGroupsWif" />
     {{else}}
       {{! Azure Account Fields }}
       <FormFieldGroups
         @model={{@model}}
         @mode={{if @model.isNew "create" "edit"}}
-        @modelValidations={{this.modelValidations}}
         @useEnableInput={{true}}
         @groupName="fieldGroupsAzure"
       />
