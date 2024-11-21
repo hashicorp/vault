@@ -1,7 +1,7 @@
 ### Duplicate HSM Keys and KV Read Failures
 
 #### Affected Versions
-- All versions that support HSM seal integration with HA configurations.
+- All versions that support HSM seal integration with HA HSM configurations.
 
 #### Issue
 Clusters using HSM for sealing in HA configurations may experience unexpected behavior under certain conditions:
@@ -11,4 +11,4 @@ Clusters using HSM for sealing in HA configurations may experience unexpected be
 These issues can occur even after a seal migration to HSM that initially appeared successful. The root cause is under investigation, with potential links to key handling during HA configuration or migration processes.
 
 #### Workaround
-To minimize the risk of encountering this issue, avoid running Vault with generate_key = true after the initial initialization of the cluster. This setting should only be used during the initial setup to prevent unintended key generation or duplication.
+As a workaround, always run Vault with generate_key = false, creating the required keys within the HSM manually during the setup process.
