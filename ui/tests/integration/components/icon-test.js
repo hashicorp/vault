@@ -54,11 +54,11 @@ module('Integration | Component | icon', function (hooks) {
     );
   });
 
-  test('it should render FlightIcon', async function (assert) {
+  test('it should render Hds::Icon', async function (assert) {
     assert.expect(3);
 
     await render(hbs`<Icon @name="x" />`);
-    assert.dom('.hds-icon').exists('FlightIcon renders when provided name of icon in set');
+    assert.dom('.hds-icon').exists('Hds::Icon renders when provided name of icon in set');
     assert.dom('.hds-icon').hasAttribute('width', '16', 'Default size applied svg');
 
     await render(hbs`<Icon @name="x" @size="24" />`);
