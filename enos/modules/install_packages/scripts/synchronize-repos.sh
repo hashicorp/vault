@@ -130,7 +130,7 @@ wait_for_cloud_init() {
         cat /var/log/cloud-init-*
       } 1>&2
       return 1
-    ;;
+      ;;
   esac
 }
 
