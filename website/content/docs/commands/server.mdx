@@ -9,6 +9,18 @@ description: |-
 
 # server
 
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault server [flags]
+
+$ vault server [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
 The `server` command starts a Vault server that responds to API requests. By
 default, Vault will start in a "sealed" state. The Vault cluster must be
 initialized before use, usually by the `vault operator init` command. Each Vault

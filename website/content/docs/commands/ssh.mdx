@@ -13,7 +13,7 @@ Establishes an SSH connection with the target machine.
 <CodeBlockConfig hideClipboard>
 
 ```shell-session
-$ vault ssh [flags] <username@ip> [options]
+$ vault ssh [flags] <ssh_destination> [options]
 
 $ vault ssh [-help | -h]
 ```
@@ -37,7 +37,9 @@ engine](/vault/docs/secrets/ssh).
 
 ## Command arguments
 
-None.
+<br />
+
+@include 'cli/ssh/args/ssh_destination.mdx'
 
 ## Command options
 
