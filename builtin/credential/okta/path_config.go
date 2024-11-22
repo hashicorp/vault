@@ -402,9 +402,19 @@ func (new *oktaShimNew) Do(req *http.Request, v interface{}) (interface{}, error
 		return nil, err
 	}
 
+	if resp.Body == nil {
+		return nil, nil
+	}
 	defer resp.Body.Close()
 
-	return nil, nil
+	bt, err := io.ReadAll(resp.Body)
+	err = json.Unmarshal(bt, v)
+	if err != nil {
+		return nil, err
+	}
+
+	// as far as i can tell, we only use the first return to check if it is nil, and assume that means an error happened.
+	return resp, nil
 }
 
 type oktaShimOld struct {
