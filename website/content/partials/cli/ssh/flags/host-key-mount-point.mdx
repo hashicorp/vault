@@ -1,0 +1,13 @@
+<a id="ssh-flag-host-key-mount-point" />
+
+**`-host-key-mount-point (string : "")`**
+
+Mount point to the SSH secrets engine where host keys are signed. When given a
+value, Vault will generate a custom `known_hosts` file with delegation to the
+CA at the provided mount point to verify the SSH connection's host keys against
+the provided CA. By default, host keys are validated against the user's local
+"known_hosts" file. This flag forces strict key host checking and ignores a
+custom user known hosts file. You can also specify this via the
+`VAULT_SSH_HOST_KEY_MOUNT_POINT` environment variable.
+
+**Example**: `-host-key-mount-point custom-ssh/`
