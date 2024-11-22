@@ -115,6 +115,10 @@ globals {
       Vault running in Agent mode uses templates to create log output.
     EOF
 
+    verify_log_secrets = <<-EOF
+      Verify that the vault audit log and systemd journal do not leak secret values.
+    EOF
+
     verify_raft_cluster_all_nodes_are_voters = <<-EOF
       When configured with a 'backend:raft' variant, verify that all nodes in the cluster are
       healthy and are voters.
@@ -198,7 +202,7 @@ globals {
     EOF
 
     verify_billing_start_date = <<-EOF
-      Verify that the billing start date has successfully rolled over to the latest billing year if needed.  
+      Verify that the billing start date has successfully rolled over to the latest billing year if needed.
     EOF
 
   }
