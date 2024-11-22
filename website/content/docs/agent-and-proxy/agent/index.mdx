@@ -298,6 +298,18 @@ runtime metrics about its performance, the auto-auth and the cache status:
 | `vault.agent.cache.hit`          | Number of cache hits                                 | counter |
 | `vault.agent.cache.miss`         | Number of cache misses                               | counter |
 
+### IMPORTANT: `VAULT_ADDR` usage
+
+If you export the `VAULT_ADDR` environment variable on the Vault Agent instance, that value takes precedence over the value in the configuration file. The Vault Agent uses that to connect to Vault and this can create an infinite loop where the value of `VAULT_ADDR` is used to make a connection, and the Vault Agent ends up trying to connect to itself instead of the server.
+
+When the connection fails, the Vault Agent increments the port and tries again. The agent repeats these attempts, which leads to port exhaustion.
+
+This problem is a result of the precedence order of the 3 different ways to configure the Vault address. They are, in increasing order of priority:
+
+1. Configuration files
+1. Environment variables
+1. CLI flags
+
 ## Start Vault Agent
 
 To run Vault Agent:
