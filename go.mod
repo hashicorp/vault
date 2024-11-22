@@ -177,7 +177,6 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.2
 	github.com/ncw/swift v1.0.47
 	github.com/oklog/run v1.1.0
-	github.com/okta/okta-sdk-golang/v4 v4.1.2
 	github.com/okta/okta-sdk-golang/v5 v5.0.2
 	github.com/oracle/oci-go-sdk v24.3.0+incompatible
 	github.com/ory/dockertest v3.3.5+incompatible
