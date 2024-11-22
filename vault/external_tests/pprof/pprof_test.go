@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -15,14 +16,22 @@ import (
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/net/http2"
 )
 
 func TestSysPprof(t *testing.T) {
 	t.Parallel()
+
+	// trace test setup
+	dir, err := os.MkdirTemp("", "vault-trace-test")
+	require.NoError(t, err)
+
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc:             vaulthttp.Handler,
 		RequestResponseCallback: schema.ResponseValidatingCallback(t),
+		EnablePostUnsealTrace:   true,
+		PostUnsealTraceDir:      dir,
 	})
 	cluster.Start()
 	defer cluster.Cleanup()
@@ -30,6 +39,14 @@ func TestSysPprof(t *testing.T) {
 	core := cluster.Cores[0].Core
 	vault.TestWaitActive(t, core)
 	SysPprof_Test(t, cluster)
+
+	// draft trace test onto pprof one to avoid increasing test runtime with additional clusters
+	files, err := os.ReadDir(dir)
+	require.NoError(t, err)
+	require.Greater(t, len(files), 0)
+	traceFile, err := files[0].Info()
+	require.NoError(t, err)
+	require.Greater(t, traceFile.Size(), int64(0))
 }
 
 func TestSysPprof_MaxRequestDuration(t *testing.T) {
