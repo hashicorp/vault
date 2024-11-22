@@ -251,6 +251,10 @@
           {
             "title": "Autopilot",
             "path": "concepts/integrated-storage/autopilot"
+          },
+          {
+            "title": "Migration checklist",
+            "path": "concepts/integrated-storage/migration-checklist"
           }
         ]
       },
