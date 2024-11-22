@@ -334,8 +334,6 @@ func (new *oktaShimNew) NewRequest(method string, url string, body interface{}) 
 	}
 
 	url = new.cfg.Okta.Client.OrgUrl + url
-	//url = re.config.Okta.Client.OrgUrl + url
-	//
 	req, err := http.NewRequest(method, url, buff)
 	if err != nil {
 		return nil, err
@@ -443,7 +441,7 @@ func (c *ConfigEntry) OktaConfiguration(ctx context.Context) (*oktanew.Configura
 	return cfg, nil
 }
 
-// OktaClient creates a basic okta client connection
+// OktaClient returns an OktaShim, based on the presence of a token in the ConfigEntry.
 func (c *ConfigEntry) OktaClient(ctx context.Context) (oktaShim, error) {
 	baseURL := defaultBaseURL
 	if c.Production != nil {
