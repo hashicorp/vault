@@ -19,4 +19,4 @@ binpath=${VAULT_INSTALL_DIR}/vault
 test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
 export VAULT_FORMAT=json
-"$binpath" secrets enable -path="$MOUNT" "$ENGINE"
+eval "$binpath" secrets enable -path="$MOUNT" "$SECRETS_META" "$ENGINE"

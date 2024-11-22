@@ -188,6 +188,12 @@ variable "vault_product_version" {
   default     = null
 }
 
+variable "vault_radar_license_path" {
+  description = "The license for vault-radar which is used to verify the audit log"
+  type        = string
+  default     = null
+}
+
 variable "vault_revision" {
   description = "The git sha of Vault artifact we are testing"
   type        = string
@@ -198,4 +204,10 @@ variable "vault_upgrade_initial_version" {
   description = "The Vault release to deploy before upgrading"
   type        = string
   default     = "1.13.13"
+}
+
+variable "verify_log_secrets" {
+  description = "If true and var.vault_enable_audit_devices is true we'll verify that the audit log does not contain unencrypted secrets. Requires var.vault_radar_license_path to be set to a valid license file."
+  type        = bool
+  default     = false
 }
