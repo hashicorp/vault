@@ -1087,6 +1087,9 @@ func TestBackend_StaticRole_Role_name_check(t *testing.T) {
 	}
 }
 
+// TestStaticRole_NewCredentialGeneration verifies that new
+// credentials are generated if a retried credential continues
+// to fail
 func TestStaticRole_NewCredentialGeneration(t *testing.T) {
 	ctx := context.Background()
 	b, storage, mockDB := getBackend(t)
