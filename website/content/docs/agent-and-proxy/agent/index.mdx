@@ -300,7 +300,7 @@ runtime metrics about its performance, the auto-auth and the cache status:
 
 ### IMPORTANT: `VAULT_ADDR` usage
 
-If the `VAULT_ADDR` environment variable on the Vault Agent instance, that value takes precedence over the value in the configuration file. The Vault Agent uses that to connect to Vault and this can create an infinite loop where the value of `VAULT_ADDR` is used to make a connection, and the Vault Agent ends up trying to connect to itself instead of the server.
+If you export the `VAULT_ADDR` environment variable on the Vault Agent instance, that value takes precedence over the value in the configuration file. The Vault Agent uses that to connect to Vault and this can create an infinite loop where the value of `VAULT_ADDR` is used to make a connection, and the Vault Agent ends up trying to connect to itself instead of the server.
 
 When the connection fails, the Vault Agent increments the port and tries again. The agent repeats these attempts, which leads to port exhaustion.
 
