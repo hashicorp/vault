@@ -238,6 +238,7 @@ jobs:
         include: ${{ fromJSON(needs.artifacts.outputs.testable-packages) }}
     with:
       build-artifact-name: ${{ matrix.artifact }}
+      runs-on: ${{ github.repository == 'hashicorp/vault' && '"ubuntu-latest"' || '["self-hosted","linux","small"]' }}
       sample-max: 1
       sample-name: ${{ matrix.sample }}
       ssh-key-name: ${{ github.event.repository.name }}-ci-ssh-key
