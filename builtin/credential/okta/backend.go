@@ -90,7 +90,6 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username, pas
 	}
 
 	shim, err := cfg.OktaClient(ctx)
-	// oktaCfg, err := cfg.OktaConfiguration(ctx)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -131,9 +130,6 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username, pas
 	var result authResult
 	rsp, err := shim.Do(authReq, &result)
 	if err != nil {
-		//if oe, ok := err; ok {
-		//	return nil, logical.ErrorResponse("Okta auth failed: %v (code=%v)", err, oe.ErrorCode), nil, nil
-		//}
 		return nil, logical.ErrorResponse(fmt.Sprintf("Okta auth failed: %v", err)), nil, nil
 	}
 	if rsp == nil {

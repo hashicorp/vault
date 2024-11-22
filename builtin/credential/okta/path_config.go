@@ -362,7 +362,6 @@ func (new *oktaShimNew) NewRequest(method string, url string, body interface{}) 
 		})
 	case "JWT":
 		auth = oktanew.NewJWTAuth(oktanew.JWTAuthConfig{
-			// TokenCache:      new.cfg.etokenCache,
 			HttpClient:      new.cfg.HTTPClient,
 			OrgURL:          new.cfg.Okta.Client.OrgUrl,
 			Scopes:          new.cfg.Okta.Client.Scopes,
@@ -386,12 +385,6 @@ func (new *oktaShimNew) NewRequest(method string, url string, body interface{}) 
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	//
-	//// Force reset defaults
-	//re.binary = false
-	//re.headerAccept = "application/json"
-	//re.headerContentType = "application/json"
-	//return req, nil
 
 	return req, nil
 }
