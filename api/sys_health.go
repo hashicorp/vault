@@ -55,7 +55,7 @@ type HealthResponse struct {
 	EchoDurationMillis                   int64  `json:"echo_duration_ms"`
 	ClockSkewMillis                      int64  `json:"clock_skew_ms"`
 	ReplicationPrimaryCanaryAgeMillis    int64  `json:"replication_primary_canary_age_ms"`
-	RemovedFromCluster                   bool   `json:"removed_from_cluster"`
-	HAConnectionHealthy                  bool   `json:"ha_connection_healthy"`
+	RemovedFromCluster                   *bool  `json:"removed_from_cluster,omitempty"`
+	HAConnectionHealthy                  *bool  `json:"ha_connection_healthy,omitempty"`
 	LastRequestForwardingHeartbeatMillis int64  `json:"last_request_forwarding_heartbeat_ms,omitempty"`
 }

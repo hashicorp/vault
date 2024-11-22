@@ -1239,14 +1239,18 @@ func (c *Core) getRemovableHABackend() physical.RemovableNodeHABackend {
 	return haBackend
 }
 
+// GetHAHeartbeatHealth returns whether a node's last successful heartbeat was
+// more than 2 intervals ago. If the node's request forwarding clients were
+// cleared (due to the node being sealed or finding a new leader), or the node
+// is uninitialized, healthy will be false.
 func (c *Core) GetHAHeartbeatHealth() (healthy bool, sinceLastHeartbeat *time.Duration) {
 	heartbeat := c.rpcLastSuccessfulHeartbeat.Load()
 	if heartbeat == nil {
-		return true, nil
+		return false, nil
 	}
 	lastHeartbeat := heartbeat.(time.Time)
 	if lastHeartbeat.IsZero() {
-		return true, nil
+		return false, nil
 	}
 	diff := time.Now().Sub(lastHeartbeat)
 	heartbeatInterval := c.clusterHeartbeatInterval

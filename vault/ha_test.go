@@ -111,7 +111,7 @@ func TestGetHAHeartbeatHealth(t *testing.T) {
 			name:              "no heartbeat",
 			lastHeartbeat:     nil,
 			heartbeatInterval: 5 * time.Second,
-			wantHealthy:       true,
+			wantHealthy:       false,
 		},
 		{
 			name:              "recent heartbeat",
@@ -135,7 +135,7 @@ func TestGetHAHeartbeatHealth(t *testing.T) {
 			name:              "zero value heartbeat",
 			lastHeartbeat:     &zeroHeartbeat,
 			heartbeatInterval: 5 * time.Second,
-			wantHealthy:       true,
+			wantHealthy:       false,
 		},
 	}
 	for _, tc := range testCases {

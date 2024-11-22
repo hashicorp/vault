@@ -215,6 +215,9 @@ func (c *forwardingClient) startHeartbeat() {
 			atomic.StoreUint32(c.core.activeNodeReplicationState, resp.ReplicationState)
 		}
 
+		// store a value before the first tick to indicate that we've started
+		// sending heartbeats
+		c.core.rpcLastSuccessfulHeartbeat.Store(time.Now())
 		tick()
 
 		for {

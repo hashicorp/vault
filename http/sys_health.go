@@ -202,7 +202,7 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		code = removedCode
 	case sealed:
 		code = sealedCode
-	case !haHealthy:
+	case !haHealthy && lastHeartbeat != nil:
 		code = haUnhealthyCode
 	case replicationState.HasState(consts.ReplicationDRSecondary):
 		code = drSecondaryCode
@@ -248,7 +248,6 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 	}
 	if standby {
 		body.ReplicationPrimaryCanaryAgeMillis = core.GetReplicationLagMillisIgnoreErrs()
-		body.HAConnectionHealthy = &haHealthy
 	}
 
 	licenseState, err := core.EntGetLicenseState()
@@ -262,6 +261,7 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 
 	if lastHeartbeat != nil {
 		body.LastRequestForwardingHeartbeatMillis = lastHeartbeat.Milliseconds()
+		body.HAConnectionHealthy = &haHealthy
 	}
 
 	if licenseState != nil {
