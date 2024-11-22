@@ -12,6 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestStartDebugTrace tests the debug trace functionality creating real
+// files and traces.
 func TestStartDebugTrace(t *testing.T) {
 	t.Run("error_on_non_existent_dir", func(t *testing.T) {
 		_, _, err := StartDebugTrace("non-existent-dir", "filePrefix")
