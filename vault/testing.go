@@ -977,6 +977,10 @@ func (c *TestClusterCore) ClusterListener() *cluster.Listener {
 	return c.getClusterListener()
 }
 
+func (c *TestClusterCore) NetworkLayer() cluster.NetworkLayer {
+	return c.Core.clusterNetworkLayer
+}
+
 func (c *TestCluster) Cleanup() {
 	c.Logger.Info("cleaning up vault cluster")
 	if tl, ok := c.Logger.(*corehelpers.TestLogger); ok {
@@ -1451,6 +1455,7 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 	}
 
 	if base != nil {
+		coreConfig.ClusterHeartbeatInterval = base.ClusterHeartbeatInterval
 		coreConfig.DetectDeadlocks = TestDeadlockDetection
 		coreConfig.RawConfig = base.RawConfig
 		coreConfig.DisableCache = base.DisableCache

@@ -31,8 +31,10 @@ import (
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/physical/raft"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/vault/cluster"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/http2"
@@ -1389,4 +1391,121 @@ func TestRaftCluster_Removed(t *testing.T) {
 	})
 	require.Error(t, err)
 	require.True(t, follower.Sealed())
+}
+
+// TestSysHealth_Raft creates a raft cluster and verifies that the health status
+// is OK for a healthy follower. The test partitions one of the nodes so that it
+// can't send request forwarding RPCs. The test verifies that the status
+// endpoint  shows that HA isn't healthy. Finally, the test removes the
+// partitioned follower and unpartitions it. The follower will learn that it has
+// been removed, and should return the removed status.
+func TestSysHealth_Raft(t *testing.T) {
+	parseHealthBody := func(t *testing.T, resp *api.Response) *vaulthttp.HealthResponse {
+		t.Helper()
+		health := vaulthttp.HealthResponse{}
+		defer resp.Body.Close()
+		require.NoError(t, jsonutil.DecodeJSONFromReader(resp.Body, &health))
+		return &health
+	}
+
+	opts := &vault.TestClusterOptions{
+		HandlerFunc:        vaulthttp.Handler,
+		NumCores:           3,
+		InmemClusterLayers: true,
+	}
+	heartbeat := 500 * time.Millisecond
+	teststorage.RaftBackendSetup(nil, opts)
+	conf := &vault.CoreConfig{
+		ClusterHeartbeatInterval: heartbeat,
+	}
+	vaultCluster := vault.NewTestCluster(t, conf, opts)
+	defer vaultCluster.Cleanup()
+	testhelpers.WaitForActiveNodeAndStandbys(t, vaultCluster)
+	followerClient := vaultCluster.Cores[1].Client
+
+	t.Run("healthy", func(t *testing.T) {
+		resp, err := followerClient.Logical().ReadRawWithData("sys/health", map[string][]string{
+			"perfstandbyok": {"true"},
+			"standbyok":     {"true"},
+		})
+		require.NoError(t, err)
+		require.Equal(t, resp.StatusCode, 200)
+		r := parseHealthBody(t, resp)
+		require.False(t, *r.RemovedFromCluster)
+		require.True(t, *r.HAConnectionHealthy)
+		require.Less(t, r.LastRequestForwardingHeartbeatMillis, 2*heartbeat.Milliseconds())
+	})
+	nl := vaultCluster.Cores[1].NetworkLayer()
+	inmem, ok := nl.(*cluster.InmemLayer)
+	require.True(t, ok)
+	unpartition := inmem.Partition()
+
+	t.Run("partition", func(t *testing.T) {
+		time.Sleep(2 * heartbeat)
+		var erroredResponse *api.Response
+		// the node isn't able to send/receive heartbeats, so it will have
+		// haunhealthy status.
+		testhelpers.RetryUntil(t, 3*time.Second, func() error {
+			resp, err := followerClient.Logical().ReadRawWithData("sys/health", map[string][]string{
+				"perfstandbyok": {"true"},
+				"standbyok":     {"true"},
+			})
+			if err == nil {
+				return errors.New("expected error")
+			}
+			if resp.StatusCode != 474 {
+				resp.Body.Close()
+				return fmt.Errorf("status code %d", resp.StatusCode)
+			}
+			erroredResponse = resp
+			return nil
+		})
+		r := parseHealthBody(t, erroredResponse)
+		require.False(t, *r.RemovedFromCluster)
+		require.False(t, *r.HAConnectionHealthy)
+		require.Greater(t, r.LastRequestForwardingHeartbeatMillis, 2*heartbeat.Milliseconds())
+
+		// ensure haunhealthycode is respected
+		resp, err := followerClient.Logical().ReadRawWithData("sys/health", map[string][]string{
+			"perfstandbyok":   {"true"},
+			"standbyok":       {"true"},
+			"haunhealthycode": {"299"},
+		})
+		require.NoError(t, err)
+		require.Equal(t, 299, resp.StatusCode)
+		resp.Body.Close()
+	})
+
+	t.Run("remove and unpartition", func(t *testing.T) {
+		leaderClient := vaultCluster.Cores[0].Client
+		_, err := leaderClient.Logical().Write("sys/storage/raft/remove-peer", map[string]interface{}{
+			"server_id": vaultCluster.Cores[1].NodeID,
+		})
+		require.NoError(t, err)
+		unpartition()
+
+		var erroredResponse *api.Response
+
+		// now that the node can connect again, it will start getting the removed
+		// error when trying to connect. The code should be removed, and the ha
+		// connection should be unhealthy
+		testhelpers.RetryUntil(t, 10*time.Second, func() error {
+			resp, err := followerClient.Logical().ReadRawWithData("sys/health", map[string][]string{
+				"perfstandbyok": {"true"},
+				"standbyok":     {"true"},
+			})
+			if err == nil {
+				return fmt.Errorf("expected error")
+			}
+			if resp.StatusCode != 530 {
+				resp.Body.Close()
+				return fmt.Errorf("status code %d", resp.StatusCode)
+			}
+			erroredResponse = resp
+			return nil
+		})
+		r := parseHealthBody(t, erroredResponse)
+		require.True(t, true, *r.RemovedFromCluster)
+		require.False(t, false, *r.HAConnectionHealthy)
+	})
 }
