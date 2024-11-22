@@ -1,0 +1,17 @@
+<a id="server-flag-experiment" />
+
+**`-experiment (string array: [])`**
+
+The name of an experiment to enable. You should not use experiments in
+production. Associated APIs may have backwards incompatible changes between
+releases.
+
+You can specify this flag multiple times to enable multiple experiments.
+Alternatively, you can specify experiments via the `VAULT_EXPERIMENTS`
+environment variable or the [`experiments`](/vault/docs/configuration#experiments)
+config key.
+
+Valid experiments are: `events.alpha1`, `core.audit.events.alpha1`,
+`secrets.import.alpha1`.
+
+**Example**: `-experiment [events.alpha1]`

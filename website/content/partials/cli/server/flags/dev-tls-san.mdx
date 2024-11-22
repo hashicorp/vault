@@ -1,0 +1,11 @@
+<a id="server-flag-dev-tls-san" />
+
+**`-dev-tls-san (string: "")`**
+
+Additional Subject Alternative Name (as a DNS name or IP address) to generate
+the certificate with if `-dev-tls` is specified. The certificate will always
+use `localhost`, `localhost4`, `localhost6`, `localhost.localdomain`, and the
+host name as alternate DNS names, and `127.0.0.1` as an alternate IP address.
+You can specify this flag multiple times to specify multiple SANs.
+
+**Example**: `-dev-tls-san 10.0.0.1`

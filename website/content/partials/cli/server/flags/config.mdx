@@ -1,0 +1,11 @@
+<a id="server-flag-config" />
+
+**`-config (string : "")`**
+
+Path to a single
+[Vault Agent configuration file](/vault/docs/agent-and-proxy/agent#configuration-file-options)
+or directory of configuration files with agent directives. Repeat the `-config`
+flag as needed to specify more than one discrete configuration file. If the path
+is a directory, all files which end in `.hcl` or `.json` are loaded.
+
+**Example**: `-config /path/to/file.hcl`
