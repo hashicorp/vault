@@ -62,15 +62,10 @@ func TestStartDebugTrace(t *testing.T) {
 			t.Skip("skipping test on Windows")
 		}
 
-		err := os.Mkdir(filepath.Join(os.TempDir(), "missing_permissions"), 0o000)
-		t.Cleanup(func() {
-			os.RemoveAll(filepath.Join(os.TempDir(), "missing_permissions"))
-		})
+		tmpMissingPermissions := filepath.Join(t.TempDir(), "missing_permissions")
+		err := os.Mkdir(tmpMissingPermissions, 0o000)
 		require.NoError(t, err)
-		os.Setenv("TMPDIR", "/tmp/missing_permissions")
-		t.Cleanup(func() {
-			os.Unsetenv("TMPDIR")
-		})
+		t.Setenv("TMPDIR", tmpMissingPermissions)
 		_, _, err = StartDebugTrace("", "filePrefix")
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to stat trace directory")

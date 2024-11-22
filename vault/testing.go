@@ -1154,9 +1154,6 @@ type TestClusterOptions struct {
 
 	// ABCDLoggerNames names the loggers according to our ABCD convention when generating 4 clusters
 	ABCDLoggerNames bool
-
-	EnablePostUnsealTrace bool
-	PostUnsealTraceDir    string
 }
 
 type TestPluginConfig struct {
@@ -1564,12 +1561,6 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		c := new(server.Config)
 		c.SharedConfig = &configutil.SharedConfig{LogFormat: logging.UnspecifiedFormat.String()}
 		coreConfig.RawConfig = c
-	}
-	if opts.EnablePostUnsealTrace {
-		coreConfig.RawConfig.EnablePostUnsealTrace = true
-	}
-	if opts.PostUnsealTraceDir != "" {
-		coreConfig.RawConfig.PostUnsealTraceDir = opts.PostUnsealTraceDir
 	}
 
 	if coreConfig.Physical == nil && (opts == nil || opts.PhysicalFactory == nil) {

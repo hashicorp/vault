@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/vault/command/server"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/vault"
@@ -27,11 +28,14 @@ func TestSysPprof(t *testing.T) {
 	dir, err := os.MkdirTemp("", "vault-trace-test")
 	require.NoError(t, err)
 
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		RawConfig: &server.Config{
+			EnablePostUnsealTrace: true,
+			PostUnsealTraceDir:    dir,
+		},
+	}, &vault.TestClusterOptions{
 		HandlerFunc:             vaulthttp.Handler,
 		RequestResponseCallback: schema.ResponseValidatingCallback(t),
-		EnablePostUnsealTrace:   true,
-		PostUnsealTraceDir:      dir,
 	})
 	cluster.Start()
 	defer cluster.Cleanup()
