@@ -8,8 +8,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/releases"
 	"github.com/spf13/cobra"
+
+	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/releases"
 )
 
 var listReleaseVersionsReq = &releases.ListVersionsReq{
