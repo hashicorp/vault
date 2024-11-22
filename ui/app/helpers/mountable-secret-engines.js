@@ -135,7 +135,8 @@ const MOUNTABLE_SECRET_ENGINES = [
 ];
 
 // A list of Workload Identity Federation engines.
-export const WIF_ENGINES = ['aws', 'azure', 'gcp'];
+// Will eventually include Azure and GCP.
+export const WIF_ENGINES = ['aws'];
 
 export function wifEngines() {
   return WIF_ENGINES.slice();
@@ -156,8 +157,6 @@ export function mountableEngines() {
 export function allEngines() {
   return [...MOUNTABLE_SECRET_ENGINES, ...ENTERPRISE_SECRET_ENGINES];
 }
-
-export const allEnginesArray = allEngines();
 
 export function isAddonEngine(type, version) {
   if (type === 'kv' && version === 1) return false;
