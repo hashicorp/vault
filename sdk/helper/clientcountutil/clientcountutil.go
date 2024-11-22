@@ -282,42 +282,53 @@ func (d *ActivityLogDataGenerator) ToProto() *generation.ActivityLogMockInput {
 // Write writes the data to the API with the given write options. The method
 // returns the new paths that have been written. Note that the API endpoint will
 // only be present when Vault has been compiled with the "testonly" flag.
-func (d *ActivityLogDataGenerator) Write(ctx context.Context, writeOptions ...generation.WriteOptions) ([]string, []string, error) {
+func (d *ActivityLogDataGenerator) Write(ctx context.Context, writeOptions ...generation.WriteOptions) ([]string, []string, []string, error) {
 	d.data.Write = writeOptions
 	err := VerifyInput(d.data)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	data, err := d.ToJSON()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	resp, err := d.client.Logical().WriteWithContext(ctx, "sys/internal/counters/activity/write", map[string]interface{}{"input": string(data)})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	if resp.Data == nil {
-		return nil, nil, fmt.Errorf("received no data")
+		return nil, nil, nil, fmt.Errorf("received no data")
 	}
 	paths := resp.Data["paths"]
 	castedPaths, ok := paths.([]interface{})
 	if !ok {
-		return nil, nil, fmt.Errorf("invalid paths data: %v", paths)
+		return nil, nil, nil, fmt.Errorf("invalid paths data: %v", paths)
 	}
 	returnPaths := make([]string, 0, len(castedPaths))
 	for _, path := range castedPaths {
 		returnPaths = append(returnPaths, path.(string))
 	}
+
+	localPaths := resp.Data["local_paths"]
+	localCastedPaths, ok := localPaths.([]interface{})
+	if !ok {
+		return nil, nil, nil, fmt.Errorf("invalid local paths data: %v", localPaths)
+	}
+	returnLocalPaths := make([]string, 0, len(localCastedPaths))
+	for _, path := range localCastedPaths {
+		returnLocalPaths = append(returnLocalPaths, path.(string))
+	}
+
 	globalPaths := resp.Data["global_paths"]
 	globalCastedPaths, ok := globalPaths.([]interface{})
 	if !ok {
-		return nil, nil, fmt.Errorf("invalid global paths data: %v", globalPaths)
+		return nil, nil, nil, fmt.Errorf("invalid global paths data: %v", globalPaths)
 	}
 	returnGlobalPaths := make([]string, 0, len(globalCastedPaths))
 	for _, path := range globalCastedPaths {
 		returnGlobalPaths = append(returnGlobalPaths, path.(string))
 	}
-	return returnPaths, returnGlobalPaths, nil
+	return returnPaths, returnLocalPaths, returnGlobalPaths, nil
 }
 
 // VerifyInput checks that the input data is valid
