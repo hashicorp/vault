@@ -63,8 +63,8 @@ module('Integration | Component | SecretEngine/ConfigureAzure', function (hooks)
         assert.dom(SES.wif.accessType('azure')).isChecked('defaults to showing Azure access type checked');
         assert.dom(SES.wif.accessType('wif')).isNotChecked('wif access type is not checked');
         // check all the form fields are present
-        for (const key of expectedConfigKeys('azure')) {
-          assert.dom(GENERAL.inputByAttr(key)).exists(`${key} shows for root section.`);
+        for (const key of expectedConfigKeys('azure-camelCase')) {
+          assert.dom(GENERAL.inputByAttr(key)).exists(`${key} shows for root section`);
         }
         assert.dom(GENERAL.inputByAttr('issuer')).doesNotExist();
       });
@@ -73,13 +73,14 @@ module('Integration | Component | SecretEngine/ConfigureAzure', function (hooks)
         await this.renderComponent();
         await click(SES.wif.accessType('wif'));
         // check for the wif fields only
-        for (const key of expectedConfigKeys('azure-wif')) {
+        for (const key of expectedConfigKeys('azure-wif-camelCase')) {
           if (key === 'Identity token TTL') {
             assert.dom(GENERAL.ttl.toggle(key)).exists(`${key} shows for wif section.`);
           } else {
             assert.dom(GENERAL.inputByAttr(key)).exists(`${key} shows for wif section.`);
           }
         }
+        assert.dom(GENERAL.inputByAttr('issuer')).exists('issuer shows for wif section.');
       });
 
       test('it clears wif/iam inputs after toggling accessType', async function (assert) {

@@ -26,7 +26,7 @@ import authPage from 'vault/tests/pages/auth';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import logout from 'vault/tests/pages/logout';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
-import { mountableEngines } from 'vault/helpers/mountable-secret-engines'; // allEngines() includes enterprise engines, those are tested elsewhere
+import { CONFIGURATION_ONLY, mountableEngines } from 'vault/helpers/mountable-secret-engines';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
@@ -250,11 +250,13 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       }
       await click(GENERAL.saveButton);
 
+      const route = CONFIGURATION_ONLY.includes(engine.type) ? 'configuration.index' : 'list-root';
       assert.strictEqual(
         currentRouteName(),
-        `vault.cluster.secrets.backend.list-root`,
-        `${engine.type} navigates to list view`
+        `vault.cluster.secrets.backend.${route}`,
+        `${engine.type} navigates to the correct view (either list if not configuration only or configuration if it is).`
       );
+
       await consoleComponent.runCommands([
         // cleanup after
         `delete sys/mounts/${engine.type}`,

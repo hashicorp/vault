@@ -210,6 +210,15 @@ export const expectedConfigKeys = (type) => {
         'identityTokenAudience',
         'Identity token TTL',
       ];
+    case 'azure-wif-camelCase':
+      return [
+        'subscriptionId',
+        'tenantId',
+        'clientId',
+        'environment',
+        'identityTokenAudience',
+        'Identity token TTL',
+      ];
   }
 };
 
