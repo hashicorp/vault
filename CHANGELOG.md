@@ -2,6 +2,46 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
+## 1.18.2
+### November 21, 2024
+
+SECURITY:
+
+* raft/snapshotagent (enterprise): upgrade raft-snapshotagent to v0.0.0-20241115202008-166203013d8e
+
+CHANGES:
+
+* auth/azure: Update plugin to v0.19.2 [[GH-28848](https://github.com/hashicorp/vault/pull/28848)]
+* core/ha (enterprise): Failed attempts to become a performance standby node are now using an exponential backoff instead of a
+10 second delay in between retries. The backoff starts at 2s and increases by a factor of two until reaching
+the maximum of 16s. This should make unsealing of the node faster in some cases.
+* login (enterprise): Return a 500 error during logins when performance standby nodes make failed gRPC requests to the active node. [[GH-28807](https://github.com/hashicorp/vault/pull/28807)]
+
+FEATURES:
+
+* **Product Usage Reporting**: Added product usage reporting, which collects anonymous, numerical, non-sensitive data about Vault secrets usage, and adds it to the existing utilization reports. See the [[docs](https://developer.hashicorp.com/vault/docs/enterprise/license/product-usage-reporting)] for more info [[GH-28858](https://github.com/hashicorp/vault/pull/28858)]
+
+IMPROVEMENTS:
+
+* secret/pki: Introduce a new value `always_enforce_err` within `leaf_not_after_behavior` to force the error in all circumstances such as CA issuance and ACME requests if requested TTL values are beyond the issuer's NotAfter. [[GH-28907](https://github.com/hashicorp/vault/pull/28907)]
+* secrets-sync (enterprise): No longer attempt to unsync a random UUID secret name in GCP upon destination creation.
+* ui: Adds navigation for LDAP hierarchical roles [[GH-28824](https://github.com/hashicorp/vault/pull/28824)]
+* website/docs: changed outdated reference to consul-helm repository to consul-k8s repository. [[GH-28825](https://github.com/hashicorp/vault/pull/28825)]
+
+BUG FIXES:
+
+* auth/ldap: Fixed an issue where debug level logging was not emitted. [[GH-28881](https://github.com/hashicorp/vault/pull/28881)]
+* core: Improved an internal helper function that sanitizes paths by adding a check for leading backslashes 
+in addition to the existing check for leading slashes. [[GH-28878](https://github.com/hashicorp/vault/pull/28878)]
+* secret/pki: Fix a bug that prevents PKI issuer field enable_aia_url_templating
+to be set to false. [[GH-28832](https://github.com/hashicorp/vault/pull/28832)]
+* secrets-sync (enterprise): Fixed issue where secret-key granularity destinations could sometimes cause a panic when loading a sync status.
+* secrets/aws: Fix issue with static credentials not rotating after restart or leadership change. [[GH-28775](https://github.com/hashicorp/vault/pull/28775)]
+* secrets/ssh: Return the flag `allow_empty_principals` in the read role api when key_type is "ca" [[GH-28901](https://github.com/hashicorp/vault/pull/28901)]
+* secrets/transform (enterprise): Fix nil panic when accessing a partially setup database store.
+* secrets/transit: Fix a race in which responses from the key update api could contain results from another subsequent update [[GH-28839](https://github.com/hashicorp/vault/pull/28839)]
+* ui: Fixes rendering issues of LDAP dynamic and static roles with the same name [[GH-28824](https://github.com/hashicorp/vault/pull/28824)]
+
 ## 1.18.1
 ### October 30, 2024
 
@@ -247,6 +287,44 @@ use versioned plugins. [[GH-27881](https://github.com/hashicorp/vault/pull/27881
 * ui: fix namespace picker not working when in small screen where the sidebar is collapsed by default. [[GH-27728](https://github.com/hashicorp/vault/pull/27728)]
 * ui: fixes renew-self being called right after login for non-renewable tokens [[GH-28204](https://github.com/hashicorp/vault/pull/28204)]
 * ui: fixes toast (flash) alert message saying "created" when deleting a kv v2 secret [[GH-28093](https://github.com/hashicorp/vault/pull/28093)]
+
+## 1.17.9 Enterprise
+### November 21, 2024
+
+SECURITY:
+
+* raft/snapshotagent (enterprise): upgrade raft-snapshotagent to v0.0.0-20241115202008-166203013d8e
+
+CHANGES:
+
+* activity log: Deprecated the field "default_report_months". Instead, the billing start time will be used to determine the start time
+when querying the activity log endpoints. [[GH-27350](https://github.com/hashicorp/vault/pull/27350)]
+* core/ha (enterprise): Failed attempts to become a performance standby node are now using an exponential backoff instead of a
+10 second delay in between retries. The backoff starts at 2s and increases by a factor of two until reaching
+the maximum of 16s. This should make unsealing of the node faster in some cases.
+* login (enterprise): Return a 500 error during logins when performance standby nodes make failed gRPC requests to the active node. [[GH-28807](https://github.com/hashicorp/vault/pull/28807)]
+
+FEATURES:
+
+* **Product Usage Reporting**: Added product usage reporting, which collects anonymous, numerical, non-sensitive data about Vault secrets usage, and adds it to the existing utilization reports. See the [[docs](https://developer.hashicorp.com/vault/docs/enterprise/license/product-usage-reporting)] for more info [[GH-28858](https://github.com/hashicorp/vault/pull/28858)]
+
+IMPROVEMENTS:
+
+* secrets-sync (enterprise): No longer attempt to unsync a random UUID secret name in GCP upon destination creation.
+* ui: Adds navigation for LDAP hierarchical roles [[GH-28824](https://github.com/hashicorp/vault/pull/28824)]
+
+BUG FIXES:
+
+* core: Improved an internal helper function that sanitizes paths by adding a check for leading backslashes 
+in addition to the existing check for leading slashes. [[GH-28878](https://github.com/hashicorp/vault/pull/28878)]
+* secret/pki: Fix a bug that prevents PKI issuer field enable_aia_url_templating
+to be set to false. [[GH-28832](https://github.com/hashicorp/vault/pull/28832)]
+* secrets-sync (enterprise): Fixed issue where secret-key granularity destinations could sometimes cause a panic when loading a sync status.
+* secrets/aws: Fix issue with static credentials not rotating after restart or leadership change. [[GH-28775](https://github.com/hashicorp/vault/pull/28775)]
+* secrets/ssh: Return the flag `allow_empty_principals` in the read role api when key_type is "ca" [[GH-28901](https://github.com/hashicorp/vault/pull/28901)]
+* secrets/transform (enterprise): Fix nil panic when accessing a partially setup database store.
+* secrets/transit: Fix a race in which responses from the key update api could contain results from another subsequent update [[GH-28839](https://github.com/hashicorp/vault/pull/28839)]
+* ui: Fixes rendering issues of LDAP dynamic and static roles with the same name [[GH-28824](https://github.com/hashicorp/vault/pull/28824)]
 
 ## 1.17.8 Enterprise
 ### October 30, 2024
@@ -652,6 +730,46 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 * ui: fix issue where a month without new clients breaks the client count dashboard [[GH-27352](https://github.com/hashicorp/vault/pull/27352)]
 * ui: fixed a bug where the replication pages did not update display when navigating between DR and performance [[GH-26325](https://github.com/hashicorp/vault/pull/26325)]
 * ui: fixes undefined start time in filename for downloaded client count attribution csv [[GH-26485](https://github.com/hashicorp/vault/pull/26485)]
+
+## 1.16.13 Enterprise
+### November 21, 2024
+
+**Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
+SECURITY:
+
+* raft/snapshotagent (enterprise): upgrade raft-snapshotagent to v0.0.0-20241115202008-166203013d8e
+
+CHANGES:
+
+* activity log: Deprecated the field "default_report_months". Instead, the billing start time will be used to determine the start time
+when querying the activity log endpoints. [[GH-27350](https://github.com/hashicorp/vault/pull/27350)]
+* core/ha (enterprise): Failed attempts to become a performance standby node are now using an exponential backoff instead of a
+10 second delay in between retries. The backoff starts at 2s and increases by a factor of two until reaching
+the maximum of 16s. This should make unsealing of the node faster in some cases.
+* login (enterprise): Return a 500 error during logins when performance standby nodes make failed gRPC requests to the active node. [[GH-28807](https://github.com/hashicorp/vault/pull/28807)]
+
+FEATURES:
+
+* **Product Usage Reporting**: Added product usage reporting, which collects anonymous, numerical, non-sensitive data about Vault secrets usage, and adds it to the existing utilization reports. See the [[docs](https://developer.hashicorp.com/vault/docs/enterprise/license/product-usage-reporting)] for more info [[GH-28858](https://github.com/hashicorp/vault/pull/28858)]
+
+IMPROVEMENTS:
+
+* raft-snapshot (enterprise): add support for managed identity credentials for azure snapshots
+* secrets-sync (enterprise): No longer attempt to unsync a random UUID secret name in GCP upon destination creation.
+
+BUG FIXES:
+
+* auth/ldap: Fixed an issue where debug level logging was not emitted. [[GH-28881](https://github.com/hashicorp/vault/pull/28881)]
+* core: Improved an internal helper function that sanitizes paths by adding a check for leading backslashes 
+in addition to the existing check for leading slashes. [[GH-28878](https://github.com/hashicorp/vault/pull/28878)]
+* secret/pki: Fix a bug that prevents PKI issuer field enable_aia_url_templating
+to be set to false. [[GH-28832](https://github.com/hashicorp/vault/pull/28832)]
+* secrets-sync (enterprise): Fixed issue where secret-key granularity destinations could sometimes cause a panic when loading a sync status.
+* secrets/aws: Fix issue with static credentials not rotating after restart or leadership change. [[GH-28775](https://github.com/hashicorp/vault/pull/28775)]
+* secrets/ssh: Return the flag `allow_empty_principals` in the read role api when key_type is "ca" [[GH-28901](https://github.com/hashicorp/vault/pull/28901)]
+* secrets/transform (enterprise): Fix nil panic when accessing a partially setup database store.
+* secrets/transit: Fix a race in which responses from the key update api could contain results from another subsequent update [[GH-28839](https://github.com/hashicorp/vault/pull/28839)]
 
 ## 1.16.12 Enterprise
 ### October 30, 2024
