@@ -288,36 +288,6 @@ use versioned plugins. [[GH-27881](https://github.com/hashicorp/vault/pull/27881
 * ui: fixes renew-self being called right after login for non-renewable tokens [[GH-28204](https://github.com/hashicorp/vault/pull/28204)]
 * ui: fixes toast (flash) alert message saying "created" when deleting a kv v2 secret [[GH-28093](https://github.com/hashicorp/vault/pull/28093)]
 
-## 1.17.8 Enterprise
-### October 30, 2024
-
-SECURITY:
-* core/raft: Add raft join limits [[GH-28790](https://github.com/hashicorp/vault/pull/28790), [HCSEC-2024-26](https://discuss.hashicorp.com/t/hcsec-2024-26-vault-vulnerable-to-denial-of-service-through-memory-exhaustion-when-processing-raft-cluster-join-requests)]
-
-CHANGES:
-
-* auth/azure: Update plugin to v0.18.1
-* secrets/openldap: update plugin to v0.13.2
-
-FEATURES:
-
-* **Product Usage Reporting**: Added product usage reporting, which collects anonymous, numerical, non-sensitive data about Vault secrets usage, and adds it to the existing utilization reports. See the [[docs](https://developer.hashicorp.com/vault/docs/enterprise/license/product-usage-reporting)] for more info [[GH-28858](https://github.com/hashicorp/vault/pull/28858)]
-
-IMPROVEMENTS:
-
-* ui: Add button to copy secret path in kv v1 and v2 secrets engines [[GH-28629](https://github.com/hashicorp/vault/pull/28629)]
-* ui: Adds copy button to identity entity, alias and mfa method IDs [[GH-28742](https://github.com/hashicorp/vault/pull/28742)]
-
-BUG FIXES:
-
-* audit: Prevent users from enabling multiple audit devices of file type with the same file_path to write to. [[GH-28751](https://github.com/hashicorp/vault/pull/28751)]
-* core/seal (enterprise): Fix bug that caused seal generation information to be replicated, which prevented disaster recovery and performance replication clusters from using their own seal high-availability configuration.
-* core/seal: Fix an issue that could cause reading from sys/seal-backend-status to return stale information. [[GH-28631](https://github.com/hashicorp/vault/pull/28631)]
-* core: Fixed panic seen when performing help requests without /v1/ in the URL. [[GH-28669](https://github.com/hashicorp/vault/pull/28669)]
-* namespaces (enterprise): Fix issue where namespace patch requests to a performance secondary would not patch the namespace's metadata.
-* secrets/pki: Address issue with ACME HTTP-01 challenges failing for IPv6 IPs due to improperly formatted URLs [[GH-28718](https://github.com/hashicorp/vault/pull/28718)]
-* ui: No longer running decodeURIComponent on KVv2 list view allowing percent encoded data-octets in path name. [[GH-28698](https://github.com/hashicorp/vault/pull/28698)]
-
 ## 1.17.9 Enterprise
 ### November 21, 2024
 
@@ -333,6 +303,10 @@ when querying the activity log endpoints. [[GH-27350](https://github.com/hashico
 10 second delay in between retries. The backoff starts at 2s and increases by a factor of two until reaching
 the maximum of 16s. This should make unsealing of the node faster in some cases.
 * login (enterprise): Return a 500 error during logins when performance standby nodes make failed gRPC requests to the active node. [[GH-28807](https://github.com/hashicorp/vault/pull/28807)]
+
+FEATURES:
+
+* **Product Usage Reporting**: Added product usage reporting, which collects anonymous, numerical, non-sensitive data about Vault secrets usage, and adds it to the existing utilization reports. See the [[docs](https://developer.hashicorp.com/vault/docs/enterprise/license/product-usage-reporting)] for more info [[GH-28858](https://github.com/hashicorp/vault/pull/28858)]
 
 IMPROVEMENTS:
 
@@ -351,6 +325,32 @@ to be set to false. [[GH-28832](https://github.com/hashicorp/vault/pull/28832)]
 * secrets/transform (enterprise): Fix nil panic when accessing a partially setup database store.
 * secrets/transit: Fix a race in which responses from the key update api could contain results from another subsequent update [[GH-28839](https://github.com/hashicorp/vault/pull/28839)]
 * ui: Fixes rendering issues of LDAP dynamic and static roles with the same name [[GH-28824](https://github.com/hashicorp/vault/pull/28824)]
+
+## 1.17.8 Enterprise
+### October 30, 2024
+
+SECURITY:
+* core/raft: Add raft join limits [[GH-28790](https://github.com/hashicorp/vault/pull/28790), [HCSEC-2024-26](https://discuss.hashicorp.com/t/hcsec-2024-26-vault-vulnerable-to-denial-of-service-through-memory-exhaustion-when-processing-raft-cluster-join-requests)]
+
+CHANGES:
+
+* auth/azure: Update plugin to v0.18.1
+* secrets/openldap: update plugin to v0.13.2
+
+IMPROVEMENTS:
+
+* ui: Add button to copy secret path in kv v1 and v2 secrets engines [[GH-28629](https://github.com/hashicorp/vault/pull/28629)]
+* ui: Adds copy button to identity entity, alias and mfa method IDs [[GH-28742](https://github.com/hashicorp/vault/pull/28742)]
+
+BUG FIXES:
+
+* audit: Prevent users from enabling multiple audit devices of file type with the same file_path to write to. [[GH-28751](https://github.com/hashicorp/vault/pull/28751)]
+* core/seal (enterprise): Fix bug that caused seal generation information to be replicated, which prevented disaster recovery and performance replication clusters from using their own seal high-availability configuration.
+* core/seal: Fix an issue that could cause reading from sys/seal-backend-status to return stale information. [[GH-28631](https://github.com/hashicorp/vault/pull/28631)]
+* core: Fixed panic seen when performing help requests without /v1/ in the URL. [[GH-28669](https://github.com/hashicorp/vault/pull/28669)]
+* namespaces (enterprise): Fix issue where namespace patch requests to a performance secondary would not patch the namespace's metadata.
+* secrets/pki: Address issue with ACME HTTP-01 challenges failing for IPv6 IPs due to improperly formatted URLs [[GH-28718](https://github.com/hashicorp/vault/pull/28718)]
+* ui: No longer running decodeURIComponent on KVv2 list view allowing percent encoded data-octets in path name. [[GH-28698](https://github.com/hashicorp/vault/pull/28698)]
 
 ## 1.17.7 Enterprise
 ### October 09, 2024
