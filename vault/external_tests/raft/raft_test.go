@@ -1506,6 +1506,6 @@ func TestSysHealth_Raft(t *testing.T) {
 		})
 		r := parseHealthBody(t, erroredResponse)
 		require.True(t, true, *r.RemovedFromCluster)
-		require.Nil(t, false, r.HAConnectionHealthy)
+		require.Nil(t, r.HAConnectionHealthy)
 	})
 }
