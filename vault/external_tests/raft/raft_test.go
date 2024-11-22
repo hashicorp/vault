@@ -1488,7 +1488,7 @@ func TestSysHealth_Raft(t *testing.T) {
 
 		// now that the node can connect again, it will start getting the removed
 		// error when trying to connect. The code should be removed, and the ha
-		// connection should be unhealthy
+		// connection will be nil because there is no ha connection
 		testhelpers.RetryUntil(t, 10*time.Second, func() error {
 			resp, err := followerClient.Logical().ReadRawWithData("sys/health", map[string][]string{
 				"perfstandbyok": {"true"},
@@ -1506,6 +1506,6 @@ func TestSysHealth_Raft(t *testing.T) {
 		})
 		r := parseHealthBody(t, erroredResponse)
 		require.True(t, true, *r.RemovedFromCluster)
-		require.False(t, false, *r.HAConnectionHealthy)
+		require.Nil(t, false, r.HAConnectionHealthy)
 	})
 }
