@@ -8,6 +8,7 @@ locals {
   kv_write_policy_name      = "kv_writer"  # sys/policy/kv_writer
   kv_test_data_path_prefix  = "smoke"
   kv_test_data_value_prefix = "fire"
+  kv_version                = 2
 
   // Response data
   identity_group_kv_writers_data = jsondecode(enos_remote_exec.identity_group_kv_writers.stdout).data
@@ -17,6 +18,7 @@ locals {
     reader_group_name  = local.group_name_kv_writers
     writer_policy_name = local.kv_write_policy_name
     mount              = local.kv_mount
+    version            = local.kv_version
     test = {
       path_prefix  = local.kv_test_data_path_prefix
       value_prefix = local.kv_test_data_value_prefix
@@ -36,6 +38,7 @@ resource "enos_remote_exec" "secrets_enable_kv_secret" {
   environment = {
     ENGINE            = "kv"
     MOUNT             = local.kv_mount
+    SECRETS_META      = "-version=${local.kv_version}"
     VAULT_ADDR        = var.vault_addr
     VAULT_TOKEN       = var.vault_root_token
     VAULT_INSTALL_DIR = var.vault_install_dir
