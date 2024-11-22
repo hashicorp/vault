@@ -119,7 +119,7 @@ func createOktaGroups(t *testing.T, username string, token string, org string) [
 	client := okta.NewAPIClient(cfg)
 	ctx := context.Background()
 
-	users, _, err := client.UserAPI.ListUsers(ctx).Filter(username).Execute()
+	users, _, err := client.UserAPI.ListUsers(ctx).Q(username).Execute()
 	require.Nil(t, err)
 	require.Len(t, users, 1)
 	userID := users[0].GetId()
@@ -132,7 +132,7 @@ func createOktaGroups(t *testing.T, username string, token string, org string) [
 	// only 200 results are returned for most orgs."
 	for i := 0; i < 201; i++ {
 		name := fmt.Sprintf("TestGroup%d", i)
-		groups, _, err := client.GroupAPI.ListGroups(ctx).Filter(name).Execute()
+		groups, _, err := client.GroupAPI.ListGroups(ctx).Q(name).Execute()
 		require.Nil(t, err)
 
 		var groupID string
