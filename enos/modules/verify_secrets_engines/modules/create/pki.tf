@@ -6,11 +6,8 @@ locals {
   pki_mount                  = "pki_secret"     # secret
   pki_issuer_name            = "issuer"
   pki_common_name            = "common"
-  pki_default_ttl            = "8760h"
-  pki_ca_version             = "root_2023_ca.crt"
-  pki_field                  = "certificate"
+  pki_default_ttl            = "72h"
   pki_test_data_path_prefix  = "smoke"
-  pki_ttl                    = "8760h"
 
   // Response data
 #   identity_group_kv_writers_data = jsondecode(enos_remote_exec.identity_group_kv_writers.stdout).data
@@ -18,10 +15,8 @@ locals {
   // Output
   pki_output = {
     mount              = local.pki_mount
-    issuer_name    = local.pki_issuer_name
-    common_name    = local.pki_common_name
-    ca_version     = local.pki_ca_version
-    field          = local.pki_field
+    issuer_name        = local.pki_issuer_name
+    common_name        = local.pki_common_name
   }
   test = {
     path_prefix  = local.pki_test_data_path_prefix
@@ -56,10 +51,10 @@ resource "enos_remote_exec" "pki_issue_rsa_cert" {
   environment = {
     MOUNT             = local.pki_mount
     VAULT_ADDR        = var.vault_addr
-    VAULT_TOKEN       = var.vault_root_token
     VAULT_INSTALL_DIR = var.vault_install_dir
+    VAULT_TOKEN       = var.vault_root_token
     COMMON_NAME       = local.pki_common_name
-    TTL               = local.pki_ttl
+    TTL               = local.pki_default_ttl
   }
 
   scripts = [abspath("${path.module}/../../scripts/kv-issue-rsa-certificate.sh")]
