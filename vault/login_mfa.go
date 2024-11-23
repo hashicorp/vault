@@ -1976,8 +1976,6 @@ func (c *Core) validateDuo(ctx context.Context, mfaFactors *MFAFactor, mConfig *
 }
 
 func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username string) error {
-	fmt.Println("!!!!!!!!!!")
-
 	oktaConfig := mConfig.GetOktaConfig()
 	if oktaConfig == nil {
 		return fmt.Errorf("failed to get Okta configuration for method %q", mConfig.Name)
