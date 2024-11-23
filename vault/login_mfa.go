@@ -1976,6 +1976,8 @@ func (c *Core) validateDuo(ctx context.Context, mfaFactors *MFAFactor, mConfig *
 }
 
 func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username string) error {
+	fmt.Println("!!!!!!!!!!")
+
 	oktaConfig := mConfig.GetOktaConfig()
 	if oktaConfig == nil {
 		return fmt.Errorf("failed to get Okta configuration for method %q", mConfig.Name)
@@ -2006,7 +2008,6 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 		filterField = "profile.email"
 	}
 	filterQuery := fmt.Sprintf("%s eq %q", filterField, username)
-	// filter := query.NewQueryParams(query.WithFilter(filterQuery))
 
 	users, _, err := client.UserAPI.ListUsers(client.GetConfig().Context).Filter(filterQuery).Execute()
 	if err != nil {
@@ -2088,13 +2089,16 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 			return err
 		}
 
-		switch result.UserFactorPushTransaction.GetFactorResult() {
-		case "WAITING":
-		case "SUCCESS":
+		// the transaction status returns an inner object set based on what the factor status is.
+		// the other ones are nil. This is (probably) because the structure of the returned JSON
+		// varies based on what the factor status is.
+		switch {
+		case result.UserFactorPushTransactionWaiting != nil:
+		case result.UserFactorPushTransaction != nil:
 			return nil
-		case "REJECTED":
+		case result.UserFactorPushTransactionRejected != nil:
 			return fmt.Errorf("push verification explicitly rejected")
-		case "TIMEOUT":
+		case result.UserFactorPushTransactionTimeout != nil:
 			return fmt.Errorf("push verification timed out")
 		default:
 			return fmt.Errorf("unknown status code")
