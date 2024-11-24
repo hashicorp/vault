@@ -9,12 +9,54 @@ description: |-
 
 # policy write
 
-The `policy write` command uploads a policy with name NAME from the contents of
-a local file PATH or stdin. If PATH is "-", the policy is read from stdin.
-Otherwise, it is loaded from the file at the given path on the local disk.
+Upload a policy with name `name` from the contents of a local file `path` or 
+stdin.
 
-For details on the policy syntax, please see the [policy
-documentation](/vault/docs/concepts/policies).
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault policy write [flags] <name> <path>
+
+$ vault policy write [-help | -h]
+```
+
+</CodeBlockConfig>
+
+`policy write` uploads a policy with name `name` from the contents of a local 
+file `path` or stdin. If `path` is `-`, the policy is read from stdin. Otherwise, 
+it is loaded from the file at the given path on the local disk.
+
+For details on the policy syntax, refer to the [policy documentation](/vault/docs/concepts/policies).
+
+<Tip title="Related API endpoints">
+
+CreateUpdatePolicy - [`POST: /sys/policy/:name`](/vault/api-docs/system/policy#create-update-policy)
+
+</Tip>
+
+## Command arguments
+
+<br />
+
+@include 'cli/policy/args/name.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/policy/args/path.mdx'
+
+## Command options
+
+None.
+
+## Command flags
+
+None.
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags-but-format.mdx'
 
 ## Examples
 
@@ -29,8 +71,3 @@ Upload a policy from stdin:
 ```shell-session
 $ cat my-policy.hcl | vault policy write my-policy -
 ```
-
-## Usage
-
-There are no flags beyond the [standard set of flags](/vault/docs/commands)
-included on all commands.

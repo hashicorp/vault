@@ -155,4 +155,9 @@ module.exports = [
     destination: '/vault/docs/commands/secrets/enable',
     permanent: true,
   },
+  {
+    source: '/vault/docs/commands/policy',
+    destination: '/vault/docs/commands/policy/write',
+    permanent: true,
+  },
 ]

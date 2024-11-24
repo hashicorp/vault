@@ -1015,10 +1015,6 @@
         "title": "<code>policy</code>",
         "routes": [
           {
-            "title": "Overview",
-            "path": "commands/policy"
-          },
-          {
             "title": "<code>delete</code>",
             "path": "commands/policy/delete"
           },

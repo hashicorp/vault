@@ -9,22 +9,57 @@ description: |-
 
 # policy delete
 
-The `policy delete` command deletes the policy named NAME in the Vault server.
-Once the policy is deleted, all tokens associated with the policy are affected
+Delete a policy.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault policy delete [flags] <name>
+
+$ vault policy delete [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`policy delete` deletes the policy named `name` in the Vault server. Once the 
+policy is deleted, all tokens associated with the policy are affected
 immediately.
 
-Note that it is not possible to delete the "default" or "root" policies. These
-are built-in policies.
+You cannot delete the `"default"` or `"root"` policies. These are built-in 
+policies.
+
+<Tip title="Related API endpoints">
+
+DeletePolicy - [`DELETE: /sys/policy/:name`](/vault/api-docs/system/policy#delete-policy)
+
+</Tip>
+
+## Command arguments
+
+<br />
+
+@include 'cli/policy/args/name.mdx'
+
+## Command options
+
+None.
+
+## Command flags
+
+None.
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags-but-format.mdx'
 
 ## Examples
 
-Delete the policy named "my-policy":
+Delete the policy named `my-policy`:
 
 ```shell-session
 $ vault policy delete my-policy
 ```
-
-## Usage
-
-There are no flags beyond the [standard set of flags](/vault/docs/commands)
-included on all commands.

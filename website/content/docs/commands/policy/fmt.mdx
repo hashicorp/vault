@@ -9,9 +9,43 @@ description: |-
 
 # policy fmt
 
-The `policy fmt` formats a local policy file to the policy specification. This
-command will overwrite the file at the given PATH with the properly-formatted
+Format a local policy file to the policy specification.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault policy fmt [flags] <path>
+
+$ vault policy fmt [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`policy fmt` formats a local policy file to the policy specification. This
+command will overwrite the file at the given `path` with the properly-formatted
 policy file contents.
+
+## Command arguments
+
+<br />
+
+@include 'cli/policy/args/path.mdx'
+
+## Command options
+
+None.
+
+## Command flags
+
+None.
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags-but-format.mdx'
 
 ## Examples
 
@@ -20,8 +54,3 @@ Format the local file "my-policy.hcl":
 ```shell-session
 $ vault policy fmt my-policy.hcl
 ```
-
-## Usage
-
-There are no flags beyond the [standard set of flags](/vault/docs/commands)
-included on all commands.

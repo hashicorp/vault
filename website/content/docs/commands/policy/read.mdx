@@ -8,24 +8,51 @@ description: |-
 
 # policy read
 
-The `policy read` command prints the contents and metadata of the Vault policy
-named NAME. If the policy does not exist, an error is returned.
+Prints the contents and metadata of the Vault policy.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault policy read [flags] <name>
+
+$ vault policy read [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`policy read` prints the contents and metadata of the Vault policy named `name`. 
+If the policy does not exist, Vault returns an error is returned.
+
+<Tip title="Related API endpoints">
+
+ReadPolicy - [`GET: /sys/policy/:name`](/vault/api-docs/system/policy#read-policy)
+
+</Tip>
+
+## Command arguments
+
+None.
+
+## Command options
+
+None.
+
+## Command flags
+
+None.
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags.mdx'
 
 ## Examples
 
-Read the policy named "my-policy":
+Read the policy named `my-policy`:
 
 ```shell-session
 $ vault policy read my-policy
 ```
-
-## Usage
-
-The following flags are available in addition to the [standard set of
-flags](/vault/docs/commands) included on all commands.
-
-### Output options
-
-- `-format` `(string: "table")` - Print the output in the given format. Valid
-  formats are "table", "json", or "yaml". This can also be specified via the
-  `VAULT_FORMAT` environment variable.
