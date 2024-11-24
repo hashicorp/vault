@@ -1056,10 +1056,6 @@
         "title": "<code>secrets</code>",
         "routes": [
           {
-            "title": "Overview",
-            "path": "commands/secrets"
-          },
-          {
             "title": "<code>disable</code>",
             "path": "commands/secrets/disable"
           },

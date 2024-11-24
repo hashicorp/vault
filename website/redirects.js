@@ -150,4 +150,9 @@ module.exports = [
     destination: '/vault/docs/commands/transit/import',
     permanent: true,
   },
+  {
+    source: '/vault/docs/commands/secrets',
+    destination: '/vault/docs/commands/secrets/enable',
+    permanent: true,
+  },
 ]
