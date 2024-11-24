@@ -7,13 +7,66 @@ description: |-
 
 # plugin reload
 
-The `plugin reload` command is used to reload mounted plugin backends. Either
-the plugin name (`plugin`) or the desired plugin backend mounts (`mounts`)
-must be provided, but not both. In the case that the plugin name is provided,
-all mounted paths that use that plugin backend will be reloaded.
+Reloads mounted plugin backends.
 
-If run with a Vault namespace other than the root namespace, only plugins
-running in the same namespace will be reloaded.
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault plugin reload [flags]
+
+$ vault plugin reload [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`plugin reload` reloads mounted plugin backends. You must specify either the 
+plugin name (`plugin`) or the desired plugin backend mounts (`mounts`), but not 
+both. If you provide the plugin name, all mounted paths that use that plugin 
+backend will be reloaded.
+
+If you run this command with a Vault namespace other than the root namespace, 
+only plugins running in the same namespace will be reloaded.
+
+<Tip title="Related API endpoints">
+
+- ReloadPlugin - [`POST: /sys/plugins/reload`](/vault/api-docs/system/plugins-reload#reload-plugin)
+- ReloadPluginNamespace - [`POST: /sys/plugins/reload/backend`](/vault/api-docs/system/plugins-reload#reload-plugins-within-a-namespace)
+
+</Tip>
+
+## Command arguments
+
+None.
+
+## Command options
+
+None.
+
+## Command flags
+
+<br />
+
+@include 'cli/plugin/flags/mounts.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/plugin/flags/plugin.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/plugin/flags/scope.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/plugin/flags/type.mdx'
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags-but-format.mdx'
 
 ## Examples
 
@@ -50,23 +103,3 @@ $ vault plugin reload \
   -plugin=my-custom-plugin \
   -scope=global
 ```
-
-## Usage
-
-The following flags are available in addition to the [standard set of
-flags](/vault/docs/commands) included on all commands.
-
-### Command options
-
-- `-plugin` `(string: "")` - The name of the plugin to reload, as registered in
-  the plugin catalog.
-
-- `-type` `(string: "")` - The type of plugin to reload, one of auth, secret, or
-  database. Mutually exclusive with `-mounts`. If not provided, all plugins
-  with a matching name will be reloaded.
-
-- `-mounts` `(array: [])` - Array or comma-separated string mount paths of the
-  plugin backends to reload.
-
-- `-scope` `(string: "")` - The scope of the reload. For local reloads, omit this flag.
-  For reloads that span multiple Vault clusters, use `global`.

@@ -8,14 +8,81 @@ description: |-
 
 # plugin runtime register
 
+Register a new plugin runtime in the plugin runtime catalog.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault plugin runtime register [flags] <name>
+
+$ vault plugin runtime register [-help | -h]
+```
+
+</CodeBlockConfig>
+
 Register a new plugin runtime in the plugin runtime catalog of your Vault instance.
 
-<Note title="Limited type support">
-  Support for runtime types is currently limited to `container`.
-</Note>
+If you register a container plugin without referencing a plugin runtime, it will
+use [gVisor's](https://gvisor.dev/) OCI runtime `runsc` by default, with no
+resource limits. You can use plugin runtimes to configure other OCI-compliant
+runtimes such as `runc`. Vault does not come packaged with any supporting
+container runtimes, and you must separately install whichever you want to use.
 
 To use a registered plugin runtime, use the `-runtime` option with the
-[plugin registration command](/vault/docs/commands/plugin/register).
+[plugin registration command](/vault/docs/commands/plugin/register). Refer to
+[containerized plugins](/vault/docs/plugins/containerized-plugins) for more
+details on running external plugins in containers.
+
+Support for runtime types is currently limited to `container`. Support for the
+`container` runtime is currently limited to Linux.
+
+<Tip title="Related API endpoints">
+
+RegisterPluginRuntime - [`POST: /sys/plugins/runtimes/catalog/:type/:name`](/vault/api-docs/system/plugins-runtimes-catalog#register-plugin-runtime)
+
+</Tip>
+
+## Command arguments
+
+<br />
+
+@include 'cli/plugin/args/runtime-name.mdx'
+
+## Command options
+
+None.
+
+## Command flags
+
+<br />
+
+@include 'cli/plugin/flags/cgroup_parent.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/plugin/flags/cpu_nanos.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/plugin/flags/memory_bytes.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/plugin/flags/oci_runtime.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/plugin/flags/rootless.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/plugin/flags/runtime-type.mdx'
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags-but-format.mdx'
 
 ## Examples
 
@@ -29,34 +96,8 @@ Success! Registered plugin runtime: runc
 Register a plugin runtime with resource limits:
 
 ```shell-session
-vault plugin runtime register \
+$ vault plugin runtime register \
     -type=container \
     -cpu_nanos=100000000 \
-  runsc
+    runsc
 ```
-
-## Usage
-
-The following flags are available in addition to the [standard set of
-flags](/vault/docs/commands) included on all commands.
-
-### Command options
-
-- `-type` `(string: <required>)` - Plugin runtime type. Vault currently only
-  supports `container` as a runtime type.
-
-- `-rootless` `(bool: false)` - Whether the container runtime is running as a
-  non-privileged user. Must be set if plugin container images are also configured
-  to run as a non-root user.
-
-- `-cgroup_parent` `(string: "")` - Parent cgroup to set for each container.
-  Use `cgroup_parent` to control the total resource usage for a group of plugins.
-
-- `-cpu_nanos` `(int: 0)` - CPU limit to set per container in billionths of a
-  CPU core. Defaults to no limit.
-
-- `-memory_bytes` `(int: 0)` - Memory limit to set per container in bytes.
-  Defaults to no limit.
-
-- `-oci_runtime` `(string: "")` - Open Container Initiative (OCI) compliant
-  container runtime to use. Default is the gVisor OCI runtime, `runsc`.

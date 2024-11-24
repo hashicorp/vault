@@ -6,16 +6,60 @@ description: The "plugin runtime info" command displays information about a plug
 
 # plugin runtime info
 
-Displays information about a plugin runtime in the catalog with the given name. If
-the plugin runtime does not exist, an error is returned.
+Displays information about a plugin runtime in the catalog with the given name.
 
-<Note title="Limited type support">
-  Support for runtime types is currently limited to `container`.
-</Note>
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault plugin runtime info [flags] <type> <name>
+
+$ vault plugin runtime info [-help | -h]
+```
+
+</CodeBlockConfig>
+
+`plugin runtime info` displays information about a plugin runtime in the
+catalog with the given name. If the plugin runtime does not exist, Vault returns
+an error.
+
+Support for runtime types is currently limited to `container`. Support for the
+`container` runtime is currently limited to Linux.
+
+<Tip title="Related API endpoints">
+
+ReadPluginRuntime - [`GET: /sys/plugins/runtimes/catalog/:type/:name`](/vault/api-docs/system/plugins-runtimes-catalog#read-plugin-runtime)
+
+</Tip>
+
+## Command arguments
+
+<br />
+
+@include 'cli/plugin/args/runtime-name.mdx'
+
+## Command options
+
+None.
+
+## Command flags
+
+<br />
+
+@include 'cli/plugin/flags/field.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/plugin/flags/runtime-type.mdx'
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags.mdx'
 
 ## Examples
 
-Display information about a plugin
+Display information about a plugin:
 
 ```shell-session
 $ vault plugin runtime info -type=container runc
@@ -28,23 +72,3 @@ name             runc
 oci_runtime      runc
 type             container
 ```
-
-## Usage
-
-The following flags are available in addition to the [standard set of
-flags](/vault/docs/commands) included on all commands.
-
-### Output options
-
-- `-field` `(string: "")` - Print information for the named field without a
-  trailing newline. The `-field` parameter takes precedence over other
-  formatting directives.
-
-- `-format` `(string: "table")` - Print the output for the current command in
-  the given format. Valid formats are `table`, `json`, or `yaml`. Use the
-  `VAULT_FORMAT` environment variable to set your output preferences globally.
-
-### Command options
-
-- `-type` `(string: "")` - Plugin runtime type. Vault currently only supports
-  `container` runtime type.

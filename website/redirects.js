@@ -160,4 +160,14 @@ module.exports = [
     destination: '/vault/docs/commands/policy/write',
     permanent: true,
   },
+  {
+    source: '/vault/docs/commands/plugin',
+    destination: '/vault/docs/commands/plugin/register',
+    permanent: true,
+  },
+  {
+    source: '/vault/docs/commands/plugin/runtime',
+    destination: '/vault/docs/commands/plugin/runtime/register',
+    permanent: true,
+  },
 ]

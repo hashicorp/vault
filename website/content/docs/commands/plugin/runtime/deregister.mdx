@@ -9,12 +9,57 @@ description: |-
 # plugin runtime deregister
 
 Deregister an existing plugin runtime in the catalog with the given name.
-Returns an error if a registered plugin references the named plugin runtime or
-the named runtime does not exist.
 
-<Note title="Limited type support">
-  Support for runtime types is currently limited to `container`.
-</Note>
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault plugin runtime deregister [flags] <name>
+
+$ vault plugin runtime deregister [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`plugin runtime deregister` deregisters an existing plugin runtime in the
+catalog with the given name. Returns an error if a registered plugin references
+the named plugin runtime or the named runtime does not exist.
+
+Support for runtime types is currently limited to `container`. Support for the
+`container` runtime is currently limited to Linux.
+
+<Tip title="Related API endpoints">
+
+RemovePluginRuntime - [`DELETE: /sys/plugins/runtimes/catalog/:type/:name`](/vault/api-docs/system/plugins-runtimes-catalog#remove-plugin-runtime-from-catalog)
+
+</Tip>
+
+## Command arguments
+
+<br />
+
+@include 'cli/plugin/args/runtime-name.mdx'
+
+## Command options
+
+None.
+
+## Command flags
+
+<br />
+
+@include 'cli/plugin/flags/field.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/plugin/flags/runtime-type.mdx'
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags.mdx'
 
 ## Examples
 
@@ -24,11 +69,3 @@ Deregister a plugin:
 $ vault plugin runtime deregister -type=container my-plugin-runtime
 Success! Deregistered plugin runtime: my-plugin-runtime
 ```
-
-## Usage
-
-The following flags are available in addition to the [standard set of
-flags](/vault/docs/commands) included on all commands.
-
-- `-type` `(string: <required>)` - Plugin runtime type. Vault currently only supports
-  `container` runtime type.

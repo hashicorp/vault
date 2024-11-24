@@ -961,10 +961,6 @@
         "title": "<code>plugin</code>",
         "routes": [
           {
-            "title": "Overview",
-            "path": "commands/plugin"
-          },
-          {
             "title": "<code>deregister</code>",
             "path": "commands/plugin/deregister"
           },
@@ -987,10 +983,6 @@
           {
             "title": "<code>runtime</code>",
             "routes": [
-              {
-                "title": "Overview",
-                "path": "commands/plugin/runtime"
-              },
               {
                 "title": "<code>deregister</code>",
                 "path": "commands/plugin/runtime/deregister"
