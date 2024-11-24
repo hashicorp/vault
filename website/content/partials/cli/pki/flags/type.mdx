@@ -1,0 +1,23 @@
+<a id="pki-arg-type" />
+
+**`type (string : "internal")`**
+
+This determines the type of key use for the newly created certificate. Valid 
+types are:
+
+| Type | Description |
+|------|-------------|
+| `existing` | Links to a key that already exists in the Vault backend |
+| `internal` | Generates a new key pair within Vault for this certificate |
+| `kms` | Links to an external key management system (KMS). You cannot use exported keys |
+
+<Note>
+
+When using an existing key, the key must be present in the same mount where 
+you are generating the new certificate. The command will fail if you specify a 
+template from a different mount with type `existing` without providing a valid 
+`key_ref` that exists in the target mount.
+
+</Note>
+
+**Example**: `-type= "existing"`

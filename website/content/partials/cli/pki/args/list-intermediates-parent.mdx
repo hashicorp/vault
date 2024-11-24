@@ -1,0 +1,10 @@
+<a id="pki-arg-parent" />
+
+**`parent (string : <required>)`**
+
+The fully qualified path to a certificate in Vault that will be used as the
+reference issuer. All certificates in the specified child paths will be verified
+against this parent certificate to determine their relationship in the certificate
+chain.
+
+**Example**: `/pki_root/issuer/default`

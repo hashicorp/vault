@@ -1,0 +1,15 @@
+<a id="pki-arg-return-indicator" />
+
+**`return_indicator (string : "default")`**
+
+Behavior of the return value (exit code):
+
+- `permission`: Exit with non-zero code if the tool lacks permissions or has a version 
+  mismatch with the server
+- `critical`: Exit with non-zero code for critical status checks and permission issues
+- `warning`: Exit with non-zero code for warning status checks and above conditions
+- `informational`: Exit with non-zero code for informational status checks and above conditions  
+- `default`: Use default behavior based on message severity - only return zero exit status
+  when all checks pass and no execution errors occur
+
+**Example**: `-return_indicator "permission"`

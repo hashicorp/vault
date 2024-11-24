@@ -8,60 +8,83 @@ description: |-
 
 # pki issue
 
-This command creates a intermediate certificate authority certificate signed by
-the `<parent>` in the `<child_mount>`, using the options to determine the fields
+Issues a new intermediate ("issuer") certificate using a parent certificate in Vault.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault pki issue [flags] <parent> <child_mount> [options]
+
+$ vault pki issue [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`pki issue` creates a intermediate certificate authority certificate signed by
+the `parent` in the `child_mount` using the options to determine the fields
 on that certificate.
 
-## Usage
+<Tip title="Related API endpoints">
 
-Usage: `vault pki issue [flags] <parent> <child_mount> [options]`
+The Vault user running this command needs to have access to the following API 
+endpoints, each representing a step in the process:
 
-- `[flags]` are optional arguments described below
+TODO: These links don't map to any API docs. Usually they're `/pki/issuer/...`
 
-- `<parent>` is the fully qualified path of the Certificate Authority in vault
-  which will issue the new intermediate certificate.
+- `READ /:parent` - used to check validity
+- `WRITE /:child_mount/intermediate/generate/:type` - used to generate the csr
+- `WRITE /:parent/sign-intermediate` - used to sign the csr
+- `WRITE /:child_mount/issuers/import/cert` - used to import the new issuer,
+and the issuer chain
+- `UPDATE /:child_mount/issuer/:issuer_refs` - used to both name the new
+issuer, and also set the name of the parent in the issuer chain
+- `READ /:child_mount/issuer/:new_issuer_ref` - used to verify completion,
+generate the output
 
-- `<child_mount>` is the path of the mount in vault where the new issuer is saved.
+</Tip>
 
-- `[options]` are the superset of the k=v options passed to generate-intermediate-csr
-  and sign-intermediate commands.  At least one option must be set.
-  See [below](/vault/docs/commands/pki/issue#options).
+## Command arguments
 
-### Flags
+<br />
 
-- `-type` `(string: "internal")` - This determines the type of key use for the
-   newly created certificate.  Valid types are `"existing"` - where we link to
-   a key already present in the vault-backend to be used (and expect option
-   arguments `"key_ref"`) - `"internal"` - to generate a new key for this
-   certificate - or `"kms"` - to link to an external key.  Exported keys are not
-   available through this API.
+@include 'cli/pki/args/parent.mdx'
 
-- `-issuer_name` `(string: "")` - If present, the newly created issuer will be
-   given this name.
 
-### Options
+<br /><hr /><br />
 
-Other than `type` (which is passed as a flag, see above), this command accepts
-all options provided to the
+@include 'cli/pki/args/child_mount.mdx'
+
+## Command options
+
+The superset of the `k=v` options passed to the 
 [Generate CSR](/vault/api-docs/secret/pki#generate-intermediate-csr) and
 [Sign Intermediate](/vault/api-docs/secret/pki#sign-intermediate) endpoints.
 
-### Accessed APIs
+You must set at least one option.
 
-Note that the vault user running this command will need to have access to the
-following API endpoints, each representing a step in the process:
+**Example:** `-common_name="first-department.example.com"`
 
- - `READ /:parent` - used to check validity
- - `WRITE /:child_mount/intermediate/generate/:type` - used to generate the csr
- - `WRITE /:parent/sign-intermediate` - used to sign the csr
- - `WRITE /:child_mount/issuers/import/cert` - used to import the new issuer,
- and the issuer chain
- - `UPDATE /:child_mount/issuer/:issuer_refs` - used to both name the new
- issuer, and also set the name of the parent in the issuer chain
- - `READ /:child_mount/issuer/:new_issuer_ref` - used to verify completion,
- generate the output
+## Command flags
+
+<br />
+
+@include 'cli/pki/flags/type.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/pki/flags/issuer_name.mdx'
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags.mdx'
 
 ## Examples
+
+Issue a new intermediate certificate using the default issuer:
 
 ```shell-session
 $ vault pki issue -issuer_name="FirstDepartment" /pki_root/issuer/default /pki_int/ common_name="first-department.example.com"

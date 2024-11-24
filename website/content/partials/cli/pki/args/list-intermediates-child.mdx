@@ -1,0 +1,12 @@
+<a id="pki-arg-child" />
+
+**`child (string : "")`**
+
+An optional path to a certificate to be compared to the `parent`, or PKI mounts
+to look for certificates on. To specify multiple child paths, specify this
+argument multiple times. 
+
+If you omit `child` entirely, Vault will construct the list from all accessible
+PKI mounts.
+
+**Example**: `/pki_int_2`

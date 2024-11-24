@@ -932,28 +932,24 @@
         "title": "<code>pki</code>",
         "routes": [
           {
-            "title": "Overview",
-            "path": "commands/pki"
-          },
-          {
             "title": "<code>health-check</code>",
             "path": "commands/pki/health-check"
-          },
-          {
-            "title": "<code>verify-sign</code>",
-            "path": "commands/pki/verify-sign"
-          },
-          {
-            "title": "<code>list-intermediates</code>",
-            "path": "commands/pki/list-intermediates"
           },
           {
             "title": "<code>issue</code>",
             "path": "commands/pki/issue"
           },
           {
+            "title": "<code>list-intermediates</code>",
+            "path": "commands/pki/list-intermediates"
+          },
+          {
             "title": "<code>reissue</code>",
             "path": "commands/pki/reissue"
+          },
+          {
+            "title": "<code>verify-sign</code>",
+            "path": "commands/pki/verify-sign"
           }
         ]
       },
@@ -1680,6 +1676,10 @@
           {
             "title": "Rotation Primitives",
             "path": "secrets/pki/rotation-primitives"
+          },
+          {
+            "title": "Health checks",
+            "path": "secrets/pki/health-checks"
           },
           {
             "title": "Certificate Issuance External Policy Service (CIEPS)",

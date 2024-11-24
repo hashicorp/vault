@@ -8,38 +8,70 @@ description: |-
 
 # pki verify-sign
 
-This command verifies whether the listed issuer has signed the listed issued
-certificate.
+Verifies whether the listed issuer has signed the listed issued certificate.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault pki verify-sign [flags] <issuer> <issued>
+
+$ vault pki verify-sign [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`pki verify-sign` verifies whether the listed issuer has signed the listed issued
+certificate..
+
+`issuer` and `issued` are the fully name-spaced path to an issuer certificate.
+
+### Output format
 
 This command returns five fields of information:
 
-- `signature_match`: was the key of the issuer used to sign the issued.
+1. `signature_match`: indicates whether the issuer's key was used to sign the
+issued certificate.
 
-- `path_match`: the possible issuer appears in the valid certificate chain
-	of the issued.
+1. `path_match`: indicates whether the issuer certificate exists in the valid
+certificate chain of the issued certificate.
 
-- `key_id_match`: does the [key id](https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.1)
-  of the issuer match the key_id of the subject.
+1. `key_id_match`: indicates whether the [`key id`](https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.1)
+  of the issuer match the `key_id` of the issued.
 
-- `subject_match`: does the subject name of the issuer match the issuer
-	subject of the issued.
+1. `subject_match`: indicates whether the subject name of the issuer matches the
+	issuer subject field of the issued certificate.
 
-- `trust_match`: if someone trusted the parent issuer, is the chain
-  provided sufficient to trust the child issued.
+1. `trust_match`: indicates whether trusting the parent issuer would be sufficient
+  to establish trust in the child certificate through the provided chain.
+## Command arguments
 
-## Usage
+<br />
 
-Usage: `vault pki verify-sign <parent> <child>`
+@include 'cli/pki/args/issuer.mdx'
 
-- `<parent>` is the fully name-spaced path to the issuer certificate which will be
-used to verify the `<child>` certificate
+<br /><hr /><br />
 
-- `<child>` is the fully name-spaced path to the potential child-certificate to be
-verified
+@include 'cli/pki/args/issued.mdx'
 
-A fully namespaced path looks like, for instance, 'ns1/mount1/issuer/issuerName/json'.
+## Command options
 
-## Example
+None.
+
+## Command flags
+
+None.
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags.mdx'
+
+## Examples
+
+Verify the signature between two certificates:
 
 ```shell-session
 $ vault pki verify-sign pki_root/issuer/root pki_int/issuer/FirstDepartment

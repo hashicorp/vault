@@ -9,74 +9,82 @@ description: |-
 
 # pki reissue
 
-Frequently, a reissued CA certificate is to be very similar to another.
-This command enables reissuing a CA, using an existing issuer within
-Vault as a template, but allowing modifications to the desired attributes.
+Issues a new intermediate ("issuer") certificate, using an existing certificate 
+in Vault as a template, and using a parent certificate in Vault to issue the 
+new certificate.
 
-## Usage
+<CodeBlockConfig hideClipboard>
 
-Usage: `vault pki reissue [flags] <parent> <template> <child_mount> [options]`
+```shell-session
+$ vault pki reissue [flags] <parent> <template> <child_mount> [options]
 
-- `[flags]` are optional arguments described below.
+$ vault pki reissue [-help | -h]
+```
 
-- `<parent>` is the fully qualified path of the Certificate Authority in vault
-  which will issue the new intermediate certificate.
+</CodeBlockConfig>
 
-- `<template>` is the fully qualified path of an intermediate certificate in vault
-  which will be used to populate certificate fields not overridden by `[options]`.
+## Description
 
-~> **Note**: not all possible certificate fields are supported by Vault, and
-  this template reader covers only those vault generates as a best effort.  If
-  unknown fields are set, such as when an external CA was imported into Vault,
-  there may not be a warning that those are missing from the new issuer.
+`pki reissue` reissues CA certificates using an existing issuer certificate in 
+Vault as a template and lets you customize specific attributes as needed.
 
-- `<child_mount>` is the path of the mount in vault where the new issuer is saved.
+<Tip title="Related API endpoints">
 
-- `[options]` are the superset of the k=v options passed to generate/intermediate
-  and sign-intermediate commands.  See [below](/vault/docs/commands/pki/reissue#options).
+The Vault user running this command needs to have access to the following API 
+endpoints, each representing a step in the process:
 
-The output of this command when it is successful is to read the resulting new
-issuer entry.
+TODO: These links don't map to any API docs. Usually they're `/pki/issuer/...`
 
-### Flags
+- `READ /:parent` - used to check validity
+- `READ /:template` - used to generate the options for the new certificate
+- `WRITE /:child_mount/intermediate/generate/:type` - used to generate the csr
+- `WRITE /:parent/sign-intermediate` - used to sign the csr
+- `WRITE /:child_mount/issuers/import/cert` - used to import the new issuer,
+  and the issuer chain
+- `UPDATE /:child_mount/issuer/:issuer_refs` - used to both name the new
+ issuer, and also set the name of the parent in the issuer chain
+- `READ /:child_mount/issuer/:new_issuer_ref` - used to verify completion,
+ generate the output
 
-- `-type` `(string: "internal")` - This determines the type of key use for the
-   newly created certificate.  Valid types are `"existing"` - where we link to
-   a key already present in the vault-backend to be used - `"internal"` - to
-   generate a new key for this certificate - or `"kms"` - to link to an external
-   key.  Exported keys are not available through this API.
+</Tip>
 
-~> **Note**: It is only possible to generate a new certificate with an existing
-   key that exists in the same mount where that key-material exists.  This
-   command is expected to fail should the template exist on a different mount,
-   `existing` is the selected type, and no `key_ref` for a key in the new issuer
-   mount is provided.
+## Command arguments
 
-- `-issuer_name` `(string: "")` - If present, the newly created issuer will be
-   given this name.
+<br />
 
-### Options
+@include 'cli/pki/args/parent.mdx'
 
-Other than `type` (which is passed as a flag, see above), this command accepts
-all options provided to the
+<br /><hr /><br />
+
+@include 'cli/pki/args/template.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/pki/args/child_mount.mdx'
+
+## Command options
+
+The superset of the `k=v` options passed to the 
 [Generate CSR](/vault/api-docs/secret/pki#generate-intermediate-csr) and
 [Sign Intermediate](/vault/api-docs/secret/pki#sign-intermediate) endpoints.
 
-### Accessed APIs
+**Example:** `-common_name="second-department.example.com"`
 
-Note that the vault user running this command will need to have access to the
-following API endpoints, each representing a step in the process:
+## Command flags
 
- - `READ /:parent` - used to check validity
- - `READ /:template` - used to generate the options for the new certificate
- - `WRITE /:child_mount/intermediate/generate/:type` - used to generate the csr
- - `WRITE /:parent/sign-intermediate` - used to sign the csr
- - `WRITE /:child_mount/issuers/import/cert` - used to import the new issuer,
- and the issuer chain
- - `UPDATE /:child_mount/issuer/:issuer_refs` - used to both name the new
- issuer, and also set the name of the parent in the issuer chain
- - `READ /:child_mount/issuer/:new_issuer_ref` - used to verify completion,
- generate the output
+<br />
+
+@include 'cli/pki/flags/type.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/pki/flags/issuer_name.mdx'
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags.mdx'
 
 ## Examples
 
@@ -85,4 +93,5 @@ $ vault pki reissue -issuer_name="SecondDepartment" /pki_root/issuer/default /pk
 Key                               Value
 ---                               -----
 ca_chain                          [-----BEGIN CERTIFICATE-----
-MIID0DCCArigAwIBAgIUdfRe05B5eRXsg3pvsJ/g94eYuWkwDQYJKoZIhvcNAQEL```
+MIID0DCCArigAwIBAgIUdfRe05B5eRXsg3pvsJ/g94eYuWkwDQYJKoZIhvcNAQEL
+```

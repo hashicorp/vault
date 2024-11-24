@@ -170,4 +170,9 @@ module.exports = [
     destination: '/vault/docs/commands/plugin/runtime/register',
     permanent: true,
   },
+  {
+    source: '/vault/docs/commands/pki',
+    destination: '/vault/docs/commands/pki/issue',
+    permanent: true,
+  },
 ]
