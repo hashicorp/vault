@@ -12,7 +12,7 @@ import { isPresent } from '@ember/utils';
 const METHOD_PROPS = {
   common: [],
   duo: ['username_format', 'secret_key', 'integration_key', 'api_hostname', 'push_info', 'use_passcode'],
-  okta: ['username_format', 'mount_accessor', 'org_name', 'api_token', 'base_url', 'primary_email'],
+  okta: ['username_format', 'mount_accessor', 'org_name', 'api_token', 'base_url', 'primary_email', 'use_passcode'],
   totp: ['issuer', 'period', 'key_size', 'qr_size', 'algorithm', 'digits', 'skew', 'max_validation_attempts'],
   pingid: [
     'username_format',
