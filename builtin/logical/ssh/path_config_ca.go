@@ -16,8 +16,9 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
+
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mikesmitty/edkey"

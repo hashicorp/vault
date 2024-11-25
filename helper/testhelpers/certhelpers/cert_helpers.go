@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/cryptoutil"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 )
 
 type CertBuilder struct {

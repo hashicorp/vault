@@ -14,7 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/helper/cryptoutil"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
+
 	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
