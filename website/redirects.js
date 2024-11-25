@@ -185,4 +185,9 @@ module.exports = [
     destination: '/vault/docs/enterprise/license',
     permanent: true,
   },
+  {
+    source: '/vault/docs/commands/lease',
+    destination: '/vault/docs/commands/lease/lookup',
+    permanent: true,
+  },
 ]

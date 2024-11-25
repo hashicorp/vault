@@ -8,12 +8,72 @@ description: |-
 
 # lease revoke
 
-The `lease revoke` command revokes the lease on a secret, invalidating the
-underlying secret.
+Revokes the lease on a secret, invalidating the underlying secret.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault lease revoke [flags] <id>
+
+$ vault lease revoke [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`lease revoke` revokes the lease on a secret, invalidating the underlying secret.
+
+This command can revoke a single secret or multiple secrets based on a
+path-matched prefix.
+
+The default behavior when not using `-force` is to revoke asynchronously. Vault
+will queue the revocation and keep trying if it fails (including across
+restarts). You can use the `-sync` flag to force a synchronous operation, but
+it is then up to the caller to retry on failure. Force mode always operates
+synchronously.
+
+<Tip title="Related API endpoints">
+
+- RevokeLease - [`POST: /sys/leases/revoke`](/vault/api-docs/system/leases#revoke-lease)
+- RevokeLeaseForce - [`POST: /sys/leases/revoke-force/:prefix`](/vault/api-docs/system/leases#revoke-force)
+- RevokeLeasePrefix - [`POST: /sys/leases/revoke-prefix/:prefix`](/vault/api-docs/system/leases#revoke-prefix)
+
+</Tip>
+
+## Command arguments
+
+<br />
+
+@include 'cli/lease/args/revoke-id.mdx'
+
+## Command options
+
+None.
+
+## Command flags
+
+<br />
+
+@include 'cli/lease/flags/force.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/lease/flags/prefix.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/lease/flags/sync.mdx'
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags-but-format.mdx'
 
 ## Examples
 
-Revoke a lease:
+Revoke a single lease:
 
 ```shell-session
 $ vault lease revoke database/creds/readonly/27e1b9a1-27b8-83d9-9fe0-d99d786bdc83
@@ -27,19 +87,9 @@ $ vault lease revoke -prefix database/creds
 Success! Revoked any leases with prefix: database/creds
 ```
 
-## Usage
+Force delete leases from Vault even if secret engine revocation fails:
 
-The following flags are available in addition to the [standard set of
-flags](/vault/docs/commands) included on all commands.
-
-- `-force` `(bool: false)` - Delete the lease from Vault even if the secret
-  engine revocation fails. This is meant for recovery situations where the
-  secret in the target secrets engine was manually removed. If this flag is
-  specified, -prefix is also required. This is aliased as "-f". The default is
-  false.
-
-- `-prefix` `(bool: false)` - Treat the ID as a prefix instead of an exact lease
-  ID. This can revoke multiple leases simultaneously. The default is false.
-
-- `-sync` `(bool: false)` - Make the operation synchronous instead of queuing the
-revocations to be done in the background.
+```shell-session
+$ vault lease revoke -force -prefix consul/creds
+Success! Revoked any leases with prefix: consul/creds
+```

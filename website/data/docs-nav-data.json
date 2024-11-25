@@ -801,10 +801,6 @@
         "title": "<code>lease</code>",
         "routes": [
           {
-            "title": "Overview",
-            "path": "commands/lease"
-          },
-          {
             "title": "<code>lookup</code>",
             "path": "commands/lease/lookup"
           },

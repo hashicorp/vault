@@ -7,10 +7,50 @@ description: |-
 
 # lease lookup
 
-The `lease lookup` command retrieves information on the lease of a secret.
+Retrieves information about a lease.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault lease lookup [flags] <id>
+
+$ vault lease lookup [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`lease lookup` retrieves information on the lease of a secret.
 
 Every secret in Vault has a lease associated with it. Users can look up
 information on the lease by referencing the lease ID.
+
+<Tip title="Related API endpoints">
+
+ReadLease - [`POST: /sys/leases/lookup`](/vault/api-docs/system/leases#read-lease)
+
+</Tip>
+
+## Command arguments
+
+<br />
+
+@include 'cli/lease/args/id.mdx'
+
+## Command options
+
+None.
+
+## Command flags
+
+None.
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags.mdx'
 
 ## Examples
 
@@ -27,8 +67,3 @@ last_renewal    <nil>
 renewable       true
 ttl             9m52s
 ```
-
-## Usage
-
-There are no flags beyond the [standard set of flags](/vault/docs/commands)
-included on all commands.
