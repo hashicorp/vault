@@ -190,4 +190,9 @@ module.exports = [
     destination: '/vault/docs/commands/lease/lookup',
     permanent: true,
   },
+  {
+    source: '/vault/docs/commands/kv',
+    destination: '/vault/docs/commands/namespace/put',
+    permanent: true,
+  },
 ]

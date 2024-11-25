@@ -752,10 +752,6 @@
         "title": "<code>kv</code>",
         "routes": [
           {
-            "title": "Overview",
-            "path": "commands/kv"
-          },
-          {
             "title": "<code>delete</code>",
             "path": "commands/kv/delete"
           },
