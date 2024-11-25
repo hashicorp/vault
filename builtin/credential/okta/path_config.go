@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	gocache "github.com/patrickmn/go-cache"
+
 	oktaold "github.com/chrismalek/oktasdk-go/okta"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -302,6 +304,7 @@ type oktaShimNew struct {
 	cfg    *oktanew.Configuration
 	client *oktanew.APIClient
 	ctx    context.Context
+	cache  *gocache.Cache // cache used to hold authorization values created for NewRequests
 }
 
 func (new *oktaShimNew) Client() (*oktanew.APIClient, context.Context) {
@@ -338,9 +341,12 @@ func (new *oktaShimNew) NewRequest(method string, url string, body interface{}) 
 	if err != nil {
 		return nil, err
 	}
-	//
+
+	// construct an authorization header for the request using our okta config
 	var auth oktanew.Authorization
-	//
+	// I think the only usage of the shim is in credential/okta/backend.go, and in that case, the
+	// AuthorizationMode is only ever SSWS (since OktaClient() below never overrides the default authorization
+	// mode. This function will faithfully replicate the old RequestExecutor code, though.
 	switch new.cfg.Okta.Client.AuthorizationMode {
 	case "SSWS":
 		auth = oktanew.NewSSWSAuth(new.cfg.Okta.Client.Token, req)
@@ -348,7 +354,7 @@ func (new *oktaShimNew) NewRequest(method string, url string, body interface{}) 
 		auth = oktanew.NewBearerAuth(new.cfg.Okta.Client.Token, req)
 	case "PrivateKey":
 		auth = oktanew.NewPrivateKeyAuth(oktanew.PrivateKeyAuthConfig{
-			// TokenCache:       new.cfg., hmm
+			TokenCache:       new.cache,
 			HttpClient:       new.cfg.HTTPClient,
 			PrivateKeySigner: new.cfg.PrivateKeySigner,
 			PrivateKey:       new.cfg.Okta.Client.PrivateKey,
@@ -362,6 +368,7 @@ func (new *oktaShimNew) NewRequest(method string, url string, body interface{}) 
 		})
 	case "JWT":
 		auth = oktanew.NewJWTAuth(oktanew.JWTAuthConfig{
+			TokenCache:      new.cache,
 			HttpClient:      new.cfg.HTTPClient,
 			OrgURL:          new.cfg.Okta.Client.OrgUrl,
 			Scopes:          new.cfg.Okta.Client.Scopes,
@@ -374,12 +381,12 @@ func (new *oktaShimNew) NewRequest(method string, url string, body interface{}) 
 		return nil, fmt.Errorf("unknown authorization mode %v", new.cfg.Okta.Client.AuthorizationMode)
 	}
 
+	// Authorize adds a header based on the contents of the Authorization struct
 	err = auth.Authorize("POST", url)
 	if err != nil {
 		return nil, err
 	}
 
-	// req.Header.Add("User-Agent", NewUserAgent(re.config).String())
 	req.Header.Add("Accept", "application/json")
 
 	if body != nil {
@@ -463,7 +470,12 @@ func (c *ConfigEntry) OktaClient(ctx context.Context) (oktaShim, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &oktaShimNew{cfg, oktanew.NewAPIClient(cfg), ctx}, nil
+		return &oktaShimNew{
+			cfg:    cfg,
+			client: oktanew.NewAPIClient(cfg),
+			ctx:    ctx,
+			cache:  gocache.New(gocache.DefaultExpiration, 1*time.Second),
+		}, nil
 	}
 	client, err := oktaold.NewClientWithDomain(cleanhttp.DefaultClient(), c.Org, baseURL, "")
 	if err != nil {
