@@ -1,0 +1,22 @@
+<a id="operator-flag-dead-server-last-contact-threshold" />
+
+**`-dead-server-last-contact-threshold (string : "24h")`**
+
+Limit on the amount of time a server can go without leader contact before being 
+considered failed. This takes effect only when `cleanup_dead_servers` is set. 
+When adding new nodes to your cluster, the `dead_server_last_contact_threshold` 
+needs to be larger than the amount of time that it takes to load a Raft snapshot, 
+otherwise the newly added nodes will be removed from your cluster before they have 
+finished loading the snapshot and starting up. If you are using an 
+[HSM](/vault/docs/enterprise/hsm), your `dead_server_last_contact_threshold`
+needs to be larger than the response time of the HSM.
+
+<Warning>
+
+We strongly recommend keeping `dead_server_last_contact_threshold` at a high
+duration, such as a day, as it being too low could result in removal of nodes
+that aren't actually dead.
+
+</Warning>
+
+**Example**: `-dead-server-last-contact-threshold 48h`

@@ -1,0 +1,14 @@
+<a id="operator-flag-recovery-pgp-keys" />
+
+**`-recovery-pgp-keys (string : "")`**
+
+Behaves like `-pgp-keys`, but for the recovery key shares. This is only available 
+with [Auto Unseal](/vault/docs/concepts/seal#auto-unseal) seals (HSM, KMS and 
+Transit seals).
+
+Comma-separated list of paths to files on disk containing public PGP keys OR 
+a comma-separated list of Keybase usernames using the format `keybase:<username>`. 
+When supplied, Vault will encrypt and base64-encode the generated root token with 
+the given public key.
+
+**Example**: `-recovery-pgp-keys "keybase:hashicorp"`

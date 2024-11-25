@@ -1,0 +1,10 @@
+<a id="operator-flag-root-token-pgp-key" />
+
+**`-root-token-pgp-key (string : "")`**
+
+Path to a file on disk containing a binary or base64-encoded public PGP
+key. This can also be specified as a Keybase username using the format
+`keybase:<username>`. When supplied, Vault will encrypt and base64-encode the 
+generated root token with the given public key.
+
+**Example**: `-root-token-pgp-key "keybase:hashicorp"`

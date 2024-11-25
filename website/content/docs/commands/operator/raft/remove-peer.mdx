@@ -1,0 +1,68 @@
+---
+layout: docs
+page_title: operator raft remove-peer - Command
+description: >-
+  The "operator raft remove-peer" command removes a node from the Raft cluster.
+---
+
+# operator raft join
+
+Removes a node from the Raft cluster.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault operator raft remove-peer [flags] <server-id>
+
+$ vault operator raft remove-peer [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`operator raft remove-peer` removes a node from the Raft cluster.
+
+This command is useful when a server node is no longer available or accessible,
+but remains in the Raft configuration. By removing the failed server from the
+configuration, you ensure it no longer impacts the Raft quorum requirements
+for cluster operations. This helps maintain proper cluster functionality even
+after node failures.
+
+<Note>
+
+Once a node is removed, its Raft data needs to be deleted before it may be 
+joined back into an existing cluster. This requires shutting down the Vault 
+process, deleting the data, then restarting the Vault process on the removed node.
+
+</Note>
+
+## Command arguments
+
+<br />
+
+@include 'cli/operator/args/server-id.mdx'
+
+## Command options
+
+None.
+
+## Command flags
+
+<br />
+
+@include 'cli/operator/flags/raft-dr-token.mdx'
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags.mdx'
+
+## Examples
+
+Remove a node from the Raft cluster:
+
+```shell-session
+$ vault operator raft remove-peer node1
+```

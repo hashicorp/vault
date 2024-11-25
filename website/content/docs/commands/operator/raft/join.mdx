@@ -1,0 +1,136 @@
+---
+layout: docs
+page_title: operator raft join - Command
+description: >-
+  The "operator raft join" command joins the current node as a peer to the Raft
+  cluster.
+---
+
+# operator raft join
+
+Join the current node as a peer to the Raft cluster.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault operator raft join [flags] <leader-api-addr|auto-join-configuration>
+
+$ vault operator raft join [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`operator raft join` joins a new node as a peer to the Raft cluster. In order
+to join, there must be at least one existing member of the cluster. If Shamir
+seal is in use, then unseal keys are to be supplied before or after the
+join process, depending on whether it's being used exclusively for HA.
+
+If raft is used for `storage`, the node must be joined before unsealing and the
+`leader-api-addr` argument must be provided. If raft is used for `ha_storage`,
+the node must be first unsealed before joining and the `leader-api-addr` must
+_not_ be provided.
+
+The `join` command also lets you specify cloud auto-join configuration instead 
+of a static IP address or hostname. When provided, Vault will attempt to
+automatically discover and resolve potential leader addresses based on the 
+provided auto-join configuration.
+
+Vault uses go-discover to support the auto-join functionality. Refer to the
+[go-discover README](https://github.com/hashicorp/go-discover/blob/master/README.md)
+for details on the format.
+
+By default, Vault will attempt to reach discovered peers using HTTPS and port 8200.
+Operators may override these through the `--auto-join-scheme` and `--auto-join-port`
+CLI flags respectively.
+
+<Tip title="Related API endpoints">
+
+JoinRaftCluster - [`POST: /sys/storage/raft/join`](/vault/api-docs/system/storage/raft#join-a-raft-cluster)
+
+</Tip>
+
+## Command arguments
+
+<br />
+
+@include 'cli/operator/args/leader-api-addr.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/operator/args/auto-join-configuration.mdx'
+
+## Command options
+
+None.
+
+## Command flags
+
+<br />
+
+@include 'cli/operator/flags/auto-join-port.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/operator/flags/auto-join-scheme.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/operator/flags/leader-ca-cert.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/operator/flags/leader-client-cert.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/operator/flags/leader-client-key.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/operator/flags/non-voter.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/operator/flags/retry.mdx'
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags.mdx'
+
+## Examples
+
+Join the current node as a peer to the Raft cluster by providing the address
+of the Raft leader node:
+
+```shell-session
+$ vault operator raft join "http://127.0.0.2:8200"
+```
+
+Join the current node as a peer to the Raft cluster by providing cloud auto-join
+configuration:
+
+```shell-session
+$ vault operator raft join "provider=aws region=eu-west-1 ..."
+```
+
+Join the current node as a peer to the Raft cluster by providing cloud auto-join
+configuration with an explicit URI scheme and port:
+
+```shell-session
+$ vault operator raft join -auto-join-scheme="http" -auto-join-port=8201 \
+  "provider=aws region=eu-west-1 ..."
+```
+
+You can also consume TLS certificate data from a file on disk by prefixing
+with the "@" symbol:
+
+```shell-session
+$ vault operator raft join "http://127.0.0.2:8200" \
+  -leader-ca-cert=@leader_ca.crt \
+  -leader-client-cert=@leader_client.crt \
+  -leader-client-key=@leader.key
+```

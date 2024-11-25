@@ -1,0 +1,170 @@
+---
+layout: docs
+page_title: operator raft autopilot state - Command
+description: >-
+  The "operator raft autopilot state" command displays the state of the raft 
+  cluster under integrated storage as seen by autopilot.
+---
+
+# operator raft autopilot state
+
+Displays the state of the raft cluster under integrated storage as seen by
+autopilot.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault operator raft autopilot state [flags]
+
+$ vault operator raft autopilot state [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`operator raft autopilot state` displays the state of the raft cluster under 
+integrated storage as seen by autopilot. It shows whether autopilot thinks the 
+cluster is healthy or not.
+
+State includes a list of all servers by nodeID and IP address.
+
+<Tip title="Related API endpoints">
+
+GetClusterState - [`GET: /sys/storage/raft/autopilot/state`](/vault/api-docs/system/storage/raftautopilot#get-cluster-state)
+
+</Tip>
+
+### Return format
+
+This command returns a JSON object with the following fields:
+
+- Healthy: Whether Autopilot considers the cluster healthy or not
+- Failure Tolerance: The number of nodes in the cluster that could fail gradually without causing an outage.
+- Leader: The nodeID of the leader
+- Voters: A list of nodeIDs that are voters
+- Servers: A list of all servers by nodeID and IP address
+
+When verifying the health of your cluster, check the following fields of each 
+server:
+
+- Healthy: Whether Autopilot considers this node healthy or not
+- Status: The voting status of the node. This will be `voter`, `leader`, or 
+  [`non-voter`](/vault/docs/concepts/integrated-storage#non-voting-nodes-enterprise-only).
+- Last Index: The index of the last applied Raft log. This should be close to the 
+  "Last Index" value of the leader.
+- Version: The version of Vault running on the server
+- Node Type: The type of node. On CE, this will always be `voter`. See below for 
+  an explanation of Enterprise node types.
+
+Vault Enterprise will include additional output related to automated upgrades,
+optimistic failure tolerance, and redundancy zones.
+
+"Optimistic Failure Tolerance" describes the number of healthy active and
+back-up voting servers that can fail gradually without causing an outage.
+
+@include 'autopilot/node-types.mdx'
+
+## Command arguments
+
+None.
+
+## Command options
+
+None.
+
+## Command flags
+
+<br />
+
+@include 'cli/operator/flags/raft-drtoken.mdx'
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags.mdx'
+
+## Examples
+
+Displays the state of the raft cluster under integrated storage as seen by
+autopilot:
+
+```shell-session
+$ vault operator raft autopilot state
+Healthy:                         true
+Failure Tolerance:               1
+Leader:                          vault_1
+Voters:
+   vault_1
+   vault_2
+   vault_3
+Servers:
+   vault_1
+      Name:              vault_1
+      Address:           127.0.0.1:8201
+      Status:            leader
+      Node Status:       alive
+      Healthy:           true
+      Last Contact:      0s
+      Last Term:         3
+      Last Index:        61
+      Version:           1.17.3
+      Node Type:         voter
+   vault_2
+      Name:              vault_2
+      Address:           127.0.0.1:8203
+      Status:            voter
+      Node Status:       alive
+      Healthy:           true
+      Last Contact:      564.765375ms
+      Last Term:         3
+      Last Index:        61
+      Version:           1.17.3
+      Node Type:         voter
+   vault_3
+      Name:              vault_3
+      Address:           127.0.0.1:8205
+      Status:            voter
+      Node Status:       alive
+      Healthy:           true
+      Last Contact:      3.814017875s
+      Last Term:         3
+      Last Index:        61
+      Version:           1.17.3
+      Node Type:         voter
+```
+
+Vault Enterprise will include additional output related to automated upgrades, 
+optimistic failure tolerance, and redundancy zones.
+
+```shell-session
+$ vault operator raft autopilot state
+Redundancy Zones:
+   a
+      Servers: vault_1, vault_2, vault_5
+      Voters: vault_1
+      Failure Tolerance: 2
+   b
+      Servers: vault_3, vault_4
+      Voters: vault_3
+      Failure Tolerance: 1
+Upgrade Info:
+   Status: await-new-voters
+   Target Version: 1.17.5
+   Target Version Voters:
+   Target Version Non-Voters: vault_5
+   Other Version Voters: vault_1, vault_3
+   Other Version Non-Voters: vault_2, vault_4
+   Redundancy Zones:
+      a
+         Target Version Voters:
+         Target Version Non-Voters: vault_5
+         Other Version Voters: vault_1
+         Other Version Non-Voters: vault_2
+      b
+         Target Version Voters:
+         Target Version Non-Voters:
+         Other Version Voters: vault_3
+         Other Version Non-Voters: vault_4
+```

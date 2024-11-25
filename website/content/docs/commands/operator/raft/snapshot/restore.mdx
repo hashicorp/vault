@@ -1,0 +1,56 @@
+---
+layout: docs
+page_title: operator raft snapshot restore - Command
+description: >-
+  The "operator raft snapshot restore" command installs the provided snapshot, 
+  returning the cluster to the state defined in it.
+---
+
+# operator raft snapshot restore
+
+Installs the provided snapshot, returning the cluster to the state defined in it.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault operator raft snapshot restore [flags] <snapshot-file>
+
+$ vault operator raft snapshot restore [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`operator raft snapshot restore` installs the provided snapshot, returning the 
+cluster to the state defined in it.
+
+## Command arguments
+
+<br />
+
+@include 'cli/operator/args/snapshot-file.mdx'
+
+## Command options
+
+None.
+
+## Command flags
+
+<br />
+
+@include 'cli/operator/flags/force.mdx'
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags.mdx'
+
+## Examples
+
+Restore Raft cluster to the state defined in `raft.snap`:
+
+```shell-session
+$ vault operator raft snapshot restore raft.snap
+```

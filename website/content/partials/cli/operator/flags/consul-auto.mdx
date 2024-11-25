@@ -1,0 +1,14 @@
+<a id="operator-flag-consul-auto" />
+
+**`-consul-auto (boolean : false)`**
+
+Perform automatic service discovery using Consul in HA mode. When all nodes in 
+a Vault HA cluster are registered with Consul, enabling this option will
+trigger automatic service discovery based on the provided `-consul-service` 
+value. When Consul is Vault's HA backend, this functionality is automatically 
+enabled. Ensure the proper Consul environment variables are set 
+(`CONSUL_HTTP_ADDR`, etc). When only one Vault server is discovered, it will be 
+initialized automatically. When more than one Vault server is discovered, they 
+will each be output for selection.
+
+**Example**: `-consul-auto`

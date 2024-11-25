@@ -200,4 +200,24 @@ module.exports = [
     destination: '/vault/docs/commands/namespace/create',
     permanent: true,
   },
+  {
+    source: '/vault/docs/commands/operator/import',
+    destination: '/vault/docs/commands/operator/init',
+    permanent: true,
+  },
+  {
+    source: '/vault/docs/commands/operator',
+    destination: '/vault/docs/commands/operator/diagnose',
+    permanent: true,
+  },
+  {
+    source: '/vault/docs/commands/operator/raft/snapshot',
+    destination: '/vault/docs/commands/operator/raft/snapshot/save',
+    permanent: true,
+  },
+  {
+    source: '/vault/docs/commands/operator/raft/autopilot',
+    destination: '/vault/docs/commands/operator/raft/autopilot/set-config',
+    permanent: true,
+  },
 ]

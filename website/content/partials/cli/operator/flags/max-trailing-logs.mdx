@@ -1,0 +1,12 @@
+<a id="operator-flag-max-trailing-logs" />
+
+**`-max-trailing-logs (integer : 1000)`**
+
+Amount of entries in the Raft Log that a server can be behind before being 
+considered unhealthy. If this value is too low, it can cause the cluster to 
+lose quorum if a follower falls behind. This value only needs to be increased 
+from the default if you have a very high write load on Vault and you see that 
+it takes a long time to promote new servers to becoming voters. This is an 
+unlikely scenario and most users should not modify this value.
+
+**Example**: `-max-trailing-logs 1000`

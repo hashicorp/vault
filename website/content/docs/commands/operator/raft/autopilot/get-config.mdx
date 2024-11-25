@@ -1,0 +1,60 @@
+---
+layout: docs
+page_title: operator raft - Command
+description: >-
+  The "operator raft autopilot get-config" command returns the configuration of
+  the autopilot subsystem under integrated storage.
+---
+
+# operator raft autopilot get-config
+
+Returns the configuration of the autopilot subsystem under integrated storage.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault operator raft autopilot get-config [flags]
+
+$ vault operator raft autopilot get-config [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`operator raft autopilot get-config` returns the configuration of the autopilot
+subsystem under integrated storage.
+
+<Tip title="Related API endpoints">
+
+GetConfig - [`GET: /sys/storage/raft/autopilot/configuration`](/vault/api-docs/system/storage/raftautopilot#get-configuration)
+
+</Tip>
+
+## Command arguments
+
+None.
+
+## Command options
+
+None.
+
+## Command flags
+
+<br />
+
+@include 'cli/operator/flags/raft-drtoken.mdx'
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags.mdx'
+
+## Examples
+
+Get the configuration of the autopilot subsystem:
+
+```shell-session
+$ vault operator raft autopilot get-config
+```

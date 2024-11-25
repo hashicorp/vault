@@ -876,20 +876,12 @@
         "title": "<code>operator</code>",
         "routes": [
           {
-            "title": "Overview",
-            "path": "commands/operator"
-          },
-          {
             "title": "<code>diagnose</code>",
             "path": "commands/operator/diagnose"
           },
           {
             "title": "<code>generate-root</code>",
             "path": "commands/operator/generate-root"
-          },
-          {
-            "title": "<code>import</code>",
-            "path": "commands/operator/import"
           },
           {
             "title": "<code>init</code>",
@@ -909,7 +901,54 @@
           },
           {
             "title": "<code>raft</code>",
-            "path": "commands/operator/raft"
+            "routes": [
+              {
+                "title": "<code>autopilot</code>",
+                "routes": [
+                  {
+                    "title": "<code>get-config</code>",
+                    "path": "commands/operator/raft/autopilot/get-config"
+                  },
+                  {
+                    "title": "<code>set-config</code>",
+                    "path": "commands/operator/raft/autopilot/set-config"
+                  },
+                  {
+                    "title": "<code>state</code>",
+                    "path": "commands/operator/raft/autopilot/state"
+                  }
+                ]
+              },
+              {
+                "title": "<code>join</code>",
+                "path": "commands/operator/raft/join"
+              },
+              {
+                "title": "<code>list-peers</code>",
+                "path": "commands/operator/raft/list-peers"
+              },
+              {
+                "title": "<code>remove-peer</code>",
+                "path": "commands/operator/raft/remove-peer"
+              },
+              {
+                "title": "<code>snapshot</code>",
+                "routes": [
+                  {
+                    "title": "<code>inspect</code>",
+                    "path": "commands/operator/raft/snapshot/inspect"
+                  },
+                  {
+                    "title": "<code>restore</code>",
+                    "path": "commands/operator/raft/snapshot/restore"
+                  },
+                  {
+                    "title": "<code>save</code>",
+                    "path": "commands/operator/raft/snapshot/save"
+                  }
+                ]
+              }
+            ]
           },
           {
             "title": "<code>rekey</code>",

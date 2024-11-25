@@ -1,0 +1,11 @@
+<a id="operator-flag-backup" />
+
+**`-backup (boolean : false)`**
+
+Store a backup of the current PGP encrypted unseal or recovery keys in Vault's 
+core. The encrypted values can be recovered in the event of failure or discarded 
+after success. Refer to the `-backup-delete` and `-backup-retrieve` options for 
+more information. This option only applies when the existing unseal or recovery 
+keys were PGP encrypted.
+
+**Example**: `-backup`

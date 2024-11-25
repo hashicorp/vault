@@ -1,0 +1,64 @@
+---
+layout: docs
+page_title: operator raft snapshot inspect - Command
+description: >-
+  The "operator raft snapshot inspect" command inspects a snapshot file.
+---
+
+# operator raft snapshot inspect
+
+Inspects a snapshot file.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault operator raft snapshot inspect [flags] <snapshot-file>
+
+$ vault operator raft snapshot inspect [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`operator raft snapshot inspect` inspects a snapshot file taken from a Vault 
+Raft cluster and prints a table showing the number of keys and the amount of 
+space used.
+
+## Command arguments
+
+<br />
+
+@include 'cli/operator/args/snapshot-file.mdx'
+
+## Command options
+
+None.
+
+## Command flags
+
+<br />
+
+@include 'cli/operator/flags/depth.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/operator/flags/details.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/operator/flags/filter.mdx'
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags.mdx'
+
+## Examples
+
+Inspects a snapshot file.
+
+```shell-session
+$ vault operator raft snapshot inspect raft.snap
+```

@@ -7,12 +7,43 @@ description: |-
 
 # operator members
 
-The `operator members` lists the active node and the peers that it's heard from
-since it became active.
+Provides the details of all the nodes in the cluster.
 
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault operator members [flags]
+
+$ vault operator members [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`operator members` provides the details of all the nodes in the cluster.
+
+## Command arguments
+
+None.
+
+## Command options
+
+None.
+
+## Command flags
+
+None.
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags.mdx'
 ## Examples
 
-Get the key status:
+Get the key status. In the following output, `Upgrade Version` and 
+`Redundancy Zone` are Enterprise-only fields.
 
 ```shell-session
 $ vault operator members
@@ -23,17 +54,4 @@ josh-C02ZT9DYMD6R    http://127.0.0.2:8200    https://127.0.0.2:8201    false   
 josh-C02ZT9DYMD6R    http://127.0.0.3:8200    https://127.0.0.3:8201    false          1.11.0     1.11.0             b                  2022-05-23T15:51:19-07:00
 josh-C02ZT9DYMD6R    http://127.0.0.4:8200    https://127.0.0.4:8201    false          1.11.0     1.11.0             b                  2022-05-23T15:51:22-07:00
 josh-C02ZT9DYMD6R    http://127.0.0.5:8200    https://127.0.0.5:8201    false          1.11.0     1.12.0             a                  2022-05-23T15:51:20-07:00
-~
 ```
-Note that in the above output, `Upgrade Version` and `Redundancy Zone` are Enterprise-only fields.
-
-## Usage
-
-The following flags are available in addition to the [standard set of
-flags](/vault/docs/commands) included on all commands.
-
-### Output options
-
-- `-format` `(string: "table")` - Print the output in the given format. Valid
-  formats are "table", "json", or "yaml". This can also be specified via the
-  `VAULT_FORMAT` environment variable.

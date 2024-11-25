@@ -10,18 +10,49 @@ description: |-
 
 # operator rotate
 
-The `operator rotate` command rotates the underlying encryption key, which
-secures data written to storage. This installs a new key in the key ring. 
-This new key encrypts new data, while older keys in the ring decrypt
-older data.
+Rotates the underlying encryption key which is used to secure data written
+to the storage backend.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault operator rotate [flags]
+
+$ vault operator rotate [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`operator rotate` rotates the underlying encryption key, which secures data
+written to storage. This installs a new key in the key ring. This new key
+encrypts new data, while older keys in the ring decrypt older data.
 
 This is an online operation and does not cause downtime. This command runs
 per-cluster (not per-server), since Vault servers in HA mode share the same
 storage.
 
-As of **Vault 1.7**, Vault will automatically rotate the encryption key before
-reaching 2<sup>32</sup> encryption operations, in adherence with NIST SP800-32D
-guidelines.
+Vault will automatically rotate the encryption key before reaching 2<sup>32</sup>
+encryption operations, in adherence with NIST SP800-32D guidelines.
+
+## Command arguments
+
+None.
+
+## Command options
+
+None.
+
+## Command flags
+
+None.
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags.mdx'
 
 ## Examples
 
@@ -52,14 +83,3 @@ Configure the maximum number of encryption operations per key:
 $ vault write sys/rotate/config max_operations=123456789
 Success! Data written to: sys/rotate/config
 ```
-
-## Usage
-
-The following flags are available in addition to the [standard set of
-flags](/vault/docs/commands) included on all commands.
-
-### Output options
-
-- `-format` `(string: "table")` - Print the output in the given format. Valid
-  formats are "table", "json", or "yaml". This can also be specified via the
-  `VAULT_FORMAT` environment variable.

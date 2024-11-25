@@ -7,19 +7,59 @@ description: |-
 
 # operator usage
 
-The `operator usage` command allows an administrator to retrieve a
-[client count](/vault/docs/concepts/client-count) report
-for the default reporting period, or for a specific time range of months.
+Retrieve a client count report for the default reporting period or a specific
+time range.
 
-The command output will list clients by distinct entities, non-entity tokens, ACME clients,
-secret sync clients, and total active clients for each namespace, and the total
-for the entire cluster. It may indicate that no data is available for the
-requested time range, which may be because the client count reporting is
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault operator usage [flags]
+
+$ vault operator usage [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`operator usage` retrieves a [client count](/vault/docs/concepts/client-count)
+report for the default reporting period, or for a specific time range of
+months.
+
+The command output will list clients by distinct entities, non-entity tokens,
+ACME clients, secret sync clients, and total active clients for each namespace,
+and the total for the entire cluster. It may indicate that no data is available
+for the requested time range, which may be because the client count reporting is
 disabled, the time range is too far in the past, or no data has yet been
 collected since the feature was enabled.
 
-> Refer to the [Vault Usage Metrics](/vault/tutorials/monitoring/usage-metrics) tutorial to learn more about usage metrics,
-> including required policy and data collection details.
+Refer to the [Vault Usage Metrics](/vault/tutorials/monitoring/usage-metrics)
+tutorial to learn more about usage metrics, including required policy and data
+collection details.
+
+## Command arguments
+
+None.
+
+## Command options
+
+None.
+
+## Command flags
+
+<br />
+
+@include 'cli/operator/flags/start-time.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/operator/flags/end-time.mdx'
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags.mdx'
 
 ## Examples
 
@@ -40,7 +80,7 @@ Total            1541                332                 40             60      
 Retrieve the client counts for a specific month in the past:
 
 ```shell-session
-$ vault operator usage -start-time=2020-01 -end-time=2020-01
+$ vault operator usage -start-time "2020-01" -end-time "2020-01"
 Period start: 2020-01-01T00:00:00Z
 Period end: 2020-01-31T23:59:59Z
 
@@ -50,26 +90,3 @@ Namespace path   Distinct entities   Non-Entity tokens   Secret syncs   ACME cli
 
 Total            934                 176                 20             30             1160
 ```
-
-## Usage
-
-The following flags are available in addition to the [standard set of
-flags](/vault/docs/commands) included on all commands.
-
-### Output options
-
-- `-format` `(string: "table")` - Print the output in the given format. Valid
-  formats are "table", "json", or "yaml". This can also be specified via the
-  `VAULT_FORMAT` environment variable.
-
-### Command options
-
-- `-start-time` `(date)` - Start month of the report to generate. May be given as YYYY-MM-DD, YYYY-MM-DD,
-  a full RFC3339 timestamp, or a Unix epoch timestamp. Defaults to the configurable `default_report_months`
-  prior to `end-time`.
-
-- `-end-time` `(date: previous month)` - End month of the report to generate. Defaults to the end of the
-  previous calendar month.
-
-The output shows the exact time range being reported, which may not match the input parameters if a full
-month is not available, or if the available reports are a subset of the months requested.

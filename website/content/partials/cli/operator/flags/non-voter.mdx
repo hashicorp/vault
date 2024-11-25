@@ -1,0 +1,16 @@
+<a id="operator-flag-non-voter" />
+
+**`-non-voter (boolean : false)`**
+
+This flag is used to make the server not participate in the Raft quorum, and 
+have it only receive the data replication stream. This can be used to add 
+read scalability to a cluster in cases where a high volume of reads to servers 
+are needed.
+
+<Note title="Enterprise only">
+
+This flag is only available in Vault Enterprise.
+
+</Note>
+
+**Example**: `-non-voter`

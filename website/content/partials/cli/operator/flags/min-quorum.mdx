@@ -1,0 +1,15 @@
+<a id="operator-flag-min-quorum" />
+
+**`-min-quorum (integer : -1)`**
+
+The minimum number of servers that should always be present in a cluster. 
+Autopilot will not prune servers below this number.
+
+**There is no default for this value** and it should be set to the expected
+number of voters in your cluster when `cleanup_dead_servers` is set as `true`.
+
+Use the [quorum size guidance](/vault/docs/internals/integrated-storage#quorum-size-and-failure-tolerance)
+to determine the proper minimum quorum size for your cluster. This value should
+be at least 3.
+
+**Example**: `-min-quorum 3`

@@ -1,0 +1,10 @@
+<a id="operator-flag-pgp-key" />
+
+**`-pgp-key (string : "")`**
+
+Comma-separated list of paths to files on disk containing public PGP keys OR 
+a comma-separated list of Keybase usernames using the format `keybase:<username>`. 
+When supplied, Vault will encrypt and base64-encode the generated root token with 
+the given public key. Must be used with `-init`.
+
+**Example**: `-pgp-key "keybase:hashicorp"`

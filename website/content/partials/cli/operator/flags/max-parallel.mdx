@@ -1,0 +1,19 @@
+<a id="operator-flag-max-parallel" />
+
+**`-max-parallel (integer : 10)`**
+
+Allows the operator to specify the maximum number of lightweight threads 
+(goroutines) which may be used to migrate data in parallel. This can potentially 
+speed up migration on slower backends at the cost of more resources (e.g. CPU, 
+memory). Permitted values range from `1` (synchronous) to the maximum value for 
+an `integer`. 
+
+<Note>
+
+The maximum number of concurrent requests handled by a storage backend is 
+ultimately governed by the storage backend configuration setting, which enforces 
+a maximum number of concurrent requests (`max_parallel`).
+
+</Note>
+
+**Example**: `-max-parallel 20`

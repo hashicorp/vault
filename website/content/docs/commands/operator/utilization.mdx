@@ -2,15 +2,29 @@
 layout: docs
 page_title: operator utilization - Command
 description: |-
-  The "operator utilization" generates license utilization reporting bundles for the Vault Enterprise users.
+  The "operator utilization" generates license utilization reporting bundles for
+  the Vault Enterprise users.
 ---
 
 # operator utilization
 
-The `operator utilization` allows the Vault Enterprise users to generate license
-utilization reporting bundles. When users have disabled automated license
-reporting, use this command to manually generate the report and send it to
-HashiCorp.
+Produces a bundle of snapshots that contains license utilization data.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault operator utilization [flags]
+
+$ vault operator utilization [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`operator utilization` produces a bundle of snapshots that contains license
+utilization data. If no snapshots were persisted in the last 24 hrs, it takes a
+snapshot and includes it in the bundle to prevent stale data.
 
 <Note title="Vault Enterprise">
 
@@ -20,11 +34,39 @@ about reporting your Vault Enterprise license utilization.
 
 </Note>
 
+
+## Command arguments
+
+None.
+
+## Command options
+
+None.
+
+## Command flags
+
+<br />
+
+@include 'cli/operator/flags/message.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/operator/flags/output.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/operator/flags/today-only.mdx'
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags-but-format.mdx'
+
 ## Examples
 
 Create a license utilization bundle that includes all persisted historical
-snapshots and has the default bundle name
-(`vault-utilization-<time_stamp>.json`):
+snapshots and has the default bundle name (`vault-utilization-<time_stamp>.json`):
 
 ```shell-session
 $ vault operator utilization
@@ -53,8 +95,6 @@ Success! License utilization reporting bundle written to: /utilization/reports/l
 The message, `Change Control 654987`, is included in the _server log_, but not
 in the bundle.
 
-**Example entry in the server log:**
-
 <CodeBlockConfig hideClipboard>
 
 ```plaintext
@@ -64,20 +104,14 @@ in the bundle.
 
 </CodeBlockConfig>
 
-## Usage
+Create a license utilization bundle with only today's snapshot:
 
-The following flags are available in addition to the [standard set of
-flags](/vault/docs/commands) included on all commands.
+```shell-session
+$ vault operator utilization -today-only
+```
 
-### Command options
+Create a license utilization bundle with a specific name:
 
-- `-message` `(string; "")` - Provide context about the conditions under which
-the report was generated and submitted. This message is not included in the
-license utilization bundle but will be included in the vault server logs.
-
-- `-output` `(string; "")` - Specifies the output path for the bundle. Defaults
-to a time-based generated file name.
-
-- `-today-only` `(bool: false)` - To include only today’s snapshot, no
-historical snapshots. If no snapshots were persisted in the last 24 hrs, it
-takes a snapshot and exports it to a bundle.
+```shell-session
+$ vault operator utilization -output="/utilization/reports/latest.json"
+```

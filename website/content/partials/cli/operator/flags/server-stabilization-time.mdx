@@ -1,0 +1,9 @@
+<a id="operator-flag-server-stabilization-time" />
+
+**`-server-stabilization-time (string : "10s")`**
+
+Minimum amount of time a server must be in a healthy state before it can become 
+a voter. Until that happens, it will be visible as a peer in the cluster, but 
+as a non-voter, meaning it won't contribute to quorum.
+
+**Example**: `-server-stabilization-time 20s`

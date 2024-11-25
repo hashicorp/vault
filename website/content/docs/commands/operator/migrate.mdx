@@ -3,53 +3,45 @@ layout: docs
 page_title: operator migrate - Command
 description: >-
   The "operator migrate" command copies data between storage backends to
-  facilitate
-
-  migrating Vault between configurations. It operates directly at the storage
-
-  level, with no decryption involved.
+  facilitate migrating Vault between configurations. It operates directly at the 
+  storage level, with no decryption involved.
 ---
 
 # operator migrate
 
-The `operator migrate` command copies data between storage backends to facilitate
-migrating Vault between configurations. It operates directly at the storage
-level, with no decryption involved. Keys in the destination storage backend will
-be overwritten, and the destination should _not_ be initialized prior to the
-migrate operation. The source data is not modified, with the exception of a small lock
-key added during migration.
+Starts a storage backend migration process to copy all data from one backend to
+another.
 
-This is intended to be an offline operation to ensure data consistency, and Vault
-will not allow starting the server if a migration is in progress.
-
-## Examples
-
-Migrate all keys:
+<CodeBlockConfig hideClipboard>
 
 ```shell-session
-$ vault operator migrate -config migrate.hcl
+$ vault operator migrate [flags]
 
-2018-09-20T14:23:23.656-0700 [INFO ] copied key: data/core/seal-config
-2018-09-20T14:23:23.657-0700 [INFO ] copied key: data/core/wrapping/jwtkey
-2018-09-20T14:23:23.658-0700 [INFO ] copied key: data/logical/fd1bed89-ffc4-d631-00dd-0696c9f930c6/31c8e6d9-2a17-d98f-bdf1-aa868afa1291/archive/metadata
-2018-09-20T14:23:23.660-0700 [INFO ] copied key: data/logical/fd1bed89-ffc4-d631-00dd-0696c9f930c6/31c8e6d9-2a17-d98f-bdf1-aa868afa1291/metadata/5kKFZ4YnzgNfy9UcWOzxxzOMpqlp61rYuq6laqpLQDnB3RawKpqi7yBTrawj1P
-...
+$ vault operator migrate [-help | -h]
 ```
 
-Migration is done in a consistent, sorted order. If the migration is halted or
-exits before completion (e.g. due to a connection error with a storage backend),
-it may be resumed from an arbitrary key prefix:
+</CodeBlockConfig>
 
-```shell-session
-$ vault operator migrate -config migrate.hcl -start "data/logical/fd"
-```
+## Description
 
-## Configuration
+`operator migrate` copies data between storage backends to facilitate migrating
+Vault between configurations. This operates directly on encrypted data and does
+not require a Vault server, nor any unsealing.
 
-The `operator migrate` command uses a dedicated configuration file to specify the source
+Keys in the destination storage backend will be overwritten, and the destination
+should _not_ be initialized prior to the migrate operation. The source data is
+not modified, with the exception of a small lock key added during migration.
+
+This is intended to be an offline operation to ensure data consistency, and 
+Vault will not allow starting the server if a migration is in progress.
+
+### Configuration format
+
+`operator migrate` uses a dedicated configuration file to specify the source
 and destination storage backends. The format of the storage stanzas is identical
 to that used to [configure Vault](/vault/docs/configuration/storage),
-with the only difference being that two stanzas are required: `storage_source` and `storage_destination`.
+with the only difference being that two stanzas are required: 
+`storage_source` and `storage_destination`.
 
 ```hcl
 storage_source "mysql" {
@@ -64,11 +56,9 @@ storage_destination "consul" {
 }
 ```
 
-## Migrating to integrated raft storage
+### Migrate to integrated raft storage
 
-### Example configuration
-
-The below configuration will migrate away from Consul storage to integrated
+The following configuration will migrate from Consul storage to integrated
 raft storage. The raft data will be stored on the local filesystem in the
 defined `path`. `node_id` can optionally be set to identify this node.
 [cluster_addr](/vault/docs/configuration#cluster_addr) must be set to the
@@ -92,9 +82,7 @@ storage_destination "raft" {
 cluster_addr = "http://127.0.0.1:8201"
 ```
 
-### Run the migration
-
-Vault will need to be offline during the migration process. First, stop Vault.
+Vault needs to be offline during the migration process. First, stop Vault.
 Then, run the migration on the server you wish to become a the new Vault node.
 
 ```shell-session
@@ -113,30 +101,63 @@ described in the [raft storage configuration
 documentation](/vault/docs/configuration/storage/raft). Then start and unseal the
 vault server.
 
-### Join additional nodes
-
-After migration the raft cluster will only have a single node. Additional peers
+After migration, the Raft cluster will only have a single node. Additional peers
 should be joined to this node.
 
 If the cluster was previously HA-enabled using "raft" as the `ha_storage`, the
 nodes will have to re-join to the migrated node before unsealing.
 
-## Usage
+## Command arguments
 
-The following flags are available for the `operator migrate` command.
+None.
 
-- `-config` `(string: <required>)` - Path to the migration configuration file.
+## Command options
 
-- `-start` `(string: "")` - Migration starting key prefix. Only keys at or after this value will be copied.
+None.
 
-- `-reset` - Reset the migration lock. A lock file is added during migration to prevent
-  starting the Vault server or another migration. The `-reset` option can be used to
-  remove a stale lock file if present.
+## Command flags
 
-- `-max-parallel` `int: 10` - Allows the operator to specify the maximum number of lightweight threads (goroutines)
-  which may be used to migrate data in parallel. This can potentially speed up migration on slower backends at
-  the cost of more resources (e.g. CPU, memory). Permitted values range from `1` (synchronous) to the maximum value
-  for an `integer`. If not supplied, a default of `10` parallel goroutines will be used.
+<br />
 
-  ~> Note: The maximum number of concurrent requests handled by a storage backend is ultimately governed by the
-  storage backend configuration setting, which enforces a maximum number of concurrent requests (`max_parallel`).
+@include 'cli/operator/flags/migrate-config.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/operator/flags/log-level.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/operator/flags/max-parallel.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/operator/flags/reset.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/operator/flags/start.mdx'
+
+## Global flags
+
+None.
+
+## Examples
+
+Migrate all keys:
+
+```shell-session
+$ vault operator migrate -config migrate.hcl
+2018-09-20T14:23:23.656-0700 [INFO ] copied key: data/core/seal-config
+2018-09-20T14:23:23.657-0700 [INFO ] copied key: data/core/wrapping/jwtkey
+2018-09-20T14:23:23.658-0700 [INFO ] copied key: data/logical/fd1bed89-ffc4-d631-00dd-0696c9f930c6/31c8e6d9-2a17-d98f-bdf1-aa868afa1291/archive/metadata
+2018-09-20T14:23:23.660-0700 [INFO ] copied key: data/logical/fd1bed89-ffc4-d631-00dd-0696c9f930c6/31c8e6d9-2a17-d98f-bdf1-aa868afa1291/metadata/5kKFZ4YnzgNfy9UcWOzxxzOMpqlp61rYuq6laqpLQDnB3RawKpqi7yBTrawj1P
+# ...
+```
+
+Migration is done in a consistent, sorted order. If the migration is halted or
+exits before completion (e.g. due to a connection error with a storage backend),
+it may be resumed from an arbitrary key prefix:
+
+```shell-session
+$ vault operator migrate -config migrate.hcl -start "data/logical/fd"
+```

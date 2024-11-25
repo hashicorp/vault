@@ -1,0 +1,85 @@
+---
+layout: docs
+page_title: operator raft list-peers - Command
+description: >-
+  The "operator raft list-peers" command provides the details of all the peers
+  in the Raft cluster.
+---
+
+# operator raft join
+
+Provides the details of all the peers in the Raft cluster.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault operator raft list-peers [flags]
+
+$ vault operator raft list-peers [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`operator raft list-peers` provides the details of all the peers in the Raft 
+cluster.
+
+Use the output of `list-peers` to ensure that your cluster is in an expected 
+state. If you have removed a server using `remove-peer`, the server should no
+longer be listed in the `list-peers` output. If you have added a server using 
+`add-peer` or through `retry_join`, check the `list-peers` output to see that 
+it has been added to the cluster and (if the node has not been added as a 
+non-voter) it has been promoted to a voter.
+
+## Command arguments
+
+None.
+
+## Command options
+
+None.
+
+## Command flags
+
+<br />
+
+@include 'cli/operator/flags/raft-dr-token.mdx'
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags.mdx'
+
+## Examples
+
+List the full set of peers in the Raft cluster:
+
+```shell-session
+$ vault operator raft list-peers
+{
+ ...
+  "data": {
+    "config": {
+      "index": 62,
+      "servers": [
+        {
+          "address": "127.0.0.2:8201",
+          "leader": true,
+          "node_id": "node1",
+          "protocol_version": "3",
+          "voter": true
+        },
+        {
+          "address": "127.0.0.4:8201",
+          "leader": false,
+          "node_id": "node3",
+          "protocol_version": "3",
+          "voter": true
+        }
+      ]
+    }
+  }
+}
+```
