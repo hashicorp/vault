@@ -8,7 +8,7 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
-	rsa "crypto/rsa"
+	"crypto/rsa"
 	"crypto/subtle"
 	"crypto/x509"
 	"encoding/pem"
