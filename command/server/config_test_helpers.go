@@ -854,6 +854,8 @@ func testConfig_Sanitized(t *testing.T) {
 		},
 		"administrative_namespace_path": "admin/",
 		"imprecise_lease_role_tracking": false,
+		"enable_post_unseal_trace":      true,
+		"post_unseal_trace_directory":   "/tmp",
 	}
 
 	addExpectedEntSanitizedConfig(expected, []string{"http"})
