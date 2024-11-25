@@ -9,13 +9,77 @@ description: |-
 
 # kv get
 
-The `kv get` command retrieves the value from KV secrets engine at the given
-key name. If no key exists with that name, an error is returned. If a key exists
-with the name but has no data, nothing is returned.
+Retrieves the value from Vault's key-value store at the given key name.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault kv get [flags] <kv>
+
+$ vault kv get [-help | -h]
+```
+
+</CodeBlockConfig>
+
+`kv get` retrieves the value from KV secrets engine at the given key name. If no 
+key exists with that name, an error is returned. If a key exists with the name 
+but has no data, nothing is returned.
+
+<Tip title="Related API endpoints">
+
+- ReadSecret (v1) - [`GET: /secret/:path`](/vault/api-docs/secret/kv/kv-v1#read-secret)
+- ReadSecretVersion (v2) - [`GET: /:secret-mount-path/data/:path?version=:version-number`](/vault/api-docs/secret/kv/kv-v2#read-secret-version)
+
+</Tip>
+
+### Exit codes
+
+The Vault CLI follows consistent exit code conventions to indicate different 
+types of errors:
+
+- Exit code 1 indicates local errors, such as invalid flags, validation 
+  failures, or incorrect number of arguments.
+
+- Exit code 2 indicates remote errors, such as API failures, TLS issues, or 
+  invalid API parameters.
+
+Some commands may use different exit codes for specific scenarios. When this 
+occurs, the different behavior is clearly documented in the command's 
+documentation.
+
+## Command arguments
+
+<br />
+
+@include 'cli/kv/args/key.mdx'
+
+## Command options
+
+None.
+
+## Command flags
+
+<br />
+
+@include 'cli/shared/flags/field.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/kv/flags/mount.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/kv/flags/version.mdx'
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags.mdx'
 
 ## Examples
 
-Retrieve the data of the key "creds":
+Retrieve the data of the key `creds`:
 
 ```shell-session
 $ vault kv get -mount=secret creds
@@ -37,7 +101,7 @@ Key         Value
 passcode    my-long-passcode
 ```
 
-If KV version 1 secrets engine is enabled at "secret", the output has no
+If KV version 1 secrets engine is enabled at `secret`, the output has no
 metadata since there is no versioning information associated with the data:
 
 ```shell-session
@@ -48,33 +112,9 @@ Key         Value
 passcode    my-long-passcode
 ```
 
-Return only the "creds" "passcode" key:
+Return only the `creds` `passcode` key:
 
 ```shell-session
 $ vault kv get -mount=secret -field=passcode creds
 my-long-passcode
 ```
-
-## Usage
-
-### Output options
-
-- `-field` `(string: "")` - Print only the field with the given name. Specifying
-  this option will take precedence over other formatting directives. The result
-  will not have a trailing newline making it ideal for piping to other
-  processes.
-
-- `-format` `(string: "table")` - Print the output in the given format. Valid
-  formats are "table", "json", or "yaml". This can also be specified via the
-  `VAULT_FORMAT` environment variable.
-
-### Command options
-
-- `-mount` `(string: "")` - Specifies the path where the KV backend is mounted. 
-  If specified, the next argument will be interpreted as the secret path. If 
-  this flag is not specified, the next argument will be interpreted as the 
-  combined mount path and secret path, with /data/ automatically inserted for 
-  KV v2 secrets.
-
-- `-version` `(int: 0)` - Specifies the version to return. If not set the
-  latest version is returned.

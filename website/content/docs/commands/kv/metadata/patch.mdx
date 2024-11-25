@@ -1,0 +1,136 @@
+---
+layout: docs
+page_title: kv metadata patch - Command
+description: |-
+  The "kv metadata patch" command updates an existing metadata entry of a secret 
+  at the specified location.
+---
+
+# kv metadata patch
+
+<Note>
+
+This is a [KV version 2](/vault/docs/secrets/kv/kv-v2) secrets engine command,
+and not available for Version 1.
+
+</Note>
+
+Updates an existing metadata entry of a secret at the specified location.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault kv metadata patch [flags] <key>
+
+$ vault kv metadata patch [-help | -h]
+```
+
+</CodeBlockConfig>
+
+`kv metadata patch` updates an existing metadata entry of a secret at the 
+specified location. 
+
+Unlike the `kv metadata put` command, the `patch` command combines the change 
+with existing data instead of replacing them. Therefore, this command makes it 
+easy to make a partial updates to an existing data.
+
+<Tip title="Related API endpoints">
+
+PatchMetadata (v2) - [`PATCH: /:secret-mount-path/metadata/:path`](/vault/api-docs/secret/kv/kv-v2#patch-metadata)
+
+</Tip>
+
+### Exit codes
+
+The Vault CLI follows consistent exit code conventions to indicate different 
+types of errors:
+
+- Exit code 1 indicates local errors, such as invalid flags, validation 
+  failures, or incorrect number of arguments.
+
+- Exit code 2 indicates remote errors, such as API failures, TLS issues, or 
+  invalid API parameters.
+
+Some commands may use different exit codes for specific scenarios. When this 
+occurs, the different behavior is clearly documented in the command's 
+documentation.
+
+## Command arguments
+
+<br />
+
+@include 'cli/kv/args/key.mdx'
+
+## Command options
+
+None.
+
+## Command flags
+
+<br />
+
+@include 'cli/kv/flags/cas-required.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/kv/flags/custom-metadata.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/kv/flags/delete-version-after.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/kv/flags/max-versions.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/kv/flags/mount.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/kv/flags/remove-custom-metadata.mdx'
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags.mdx'
+
+## Examples
+
+Create a key, `foo`, in the key-value store with no data:
+
+```shell-session
+$ vault kv metadata patch -mount=secret foo
+```
+
+Set a max versions setting on the `foo` key:
+
+```shell-session
+$ vault kv metadata patch -mount=secret -max-versions=5 foo
+```
+
+Set delete-version-after on the `foo` key:
+
+```shell-session
+$ vault kv metadata patch -mount=secret -delete-version-after "3h25m19s" foo
+```
+
+Require check-and-set for the `foo` key:
+
+```shell-session
+$ vault kv metadata patch -mount=secret -cas-required foo
+```
+
+Set custom metadata on the `foo`key:
+
+```shell-session
+$ vault kv metadata patch -mount=secret -custom-metadata "foo=abc" -custom-metadata "bar=123" foo
+```
+
+Remove custom meta data `bar` from the `foo` key:
+
+```shell-session
+$ vault kv metadata patch -mount=secret -remove-custom-metadata=bar foo
+```

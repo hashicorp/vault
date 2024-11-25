@@ -1,0 +1,148 @@
+---
+layout: docs
+page_title: kv metadata put - Command
+description: |-
+  The "kv metadata put" command creates a blank key in the KV v2 secrets engine 
+  or updates a key configuration for a specified key.
+---
+
+# kv metadata put
+
+<Note>
+
+This is a [KV version 2](/vault/docs/secrets/kv/kv-v2) secrets engine command,
+and not available for Version 1.
+
+</Note>
+
+Create a blank key in the KV v2 secrets engine or update a key configuration 
+for a specified key.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault kv metadata put [flags] <key>
+
+$ vault kv metadata put [-help | -h]
+```
+
+</CodeBlockConfig>
+
+`kv metadata put` creates a blank key in the KV v2 secrets engine or updates a 
+key configuration for a specified key.
+
+<Tip title="Related API endpoints">
+
+CreateUpdateMetadata (v2) - [`POST: /:secret-mount-path/metadata/:path`](/vault/api-docs/secret/kv/kv-v2#create-update-metadata)
+
+</Tip>
+
+### Exit codes
+
+The Vault CLI follows consistent exit code conventions to indicate different 
+types of errors:
+
+- Exit code 1 indicates local errors, such as invalid flags, validation 
+  failures, or incorrect number of arguments.
+
+- Exit code 2 indicates remote errors, such as API failures, TLS issues, or 
+  invalid API parameters.
+
+Some commands may use different exit codes for specific scenarios. When this 
+occurs, the different behavior is clearly documented in the command's 
+documentation.
+
+## Command arguments
+
+<br />
+
+@include 'cli/kv/args/key.mdx'
+
+## Command options
+
+None.
+
+## Command flags
+
+<br />
+
+@include 'cli/kv/flags/cas-required.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/kv/flags/custom-metadata.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/kv/flags/delete-version-after.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/kv/flags/max-versions.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/kv/flags/mount.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/kv/flags/remove-custom-metadata.mdx'
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags.mdx'
+
+## Examples
+
+Create a key in the KV v2 with no data at the key `creds`:
+
+```shell-session
+$ vault kv metadata put -mount=secret creds
+Success! Data written to: secret/metadata/creds
+```
+
+Set the maximum number of versions to keep for the key `creds`:
+
+```shell-session
+$ vault kv metadata put -mount=secret -max-versions=5 creds
+Success! Data written to: secret/metadata/creds
+```
+
+<Note>
+
+If not set, Vault uses the backend's configured max version. Once a key has 
+more than the configured allowed versions, Vault will permanently delete the 
+oldest version.
+
+</Note>
+
+Require check-and-set for the key `creds`:
+
+```shell-session
+$ vault kv metadata put -mount=secret -cas-required creds
+```
+
+<Note>
+  
+When check-and-set is required, the key will require the `cas` parameter to 
+be set on all write requests. Otherwise, Vault will use the backend's 
+configuration.
+
+</Note>
+
+Set the length of time before a version is deleted for the key "creds":
+
+```shell-session
+$ vault kv metadata put -mount=secret -delete-version-after="3h25m19s" creds
+```
+
+<Note>
+  
+If not set, Vault will use the backend's configured Delete-Version-After. If
+set to a duration greater than the backend's, Vault will use the backend's 
+Delete-Version-After setting. Any changes to the Delete-Version-After setting 
+will only be applied to new versions.
+
+</Note>

@@ -8,17 +8,72 @@ description: |-
 
 # kv list
 
-The `kv list` command returns a list of key names at the specified location.
-Folders are suffixed with /. The input must be a folder; list on a file will not
-return a value. Note that no policy-based filtering is performed on keys; do not
-encode sensitive information in key names. The values themselves are not
-accessible via this command.
+Lists data from Vault's KV secrets engine at the given path.
 
-Use this command to list all existing key names at a specific path.
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault kv list [flags] <path>
+
+$ vault kv list [-help | -h]
+```
+
+</CodeBlockConfig>
+
+`kv list` returns a list of key names at the specified path. Folders are suffixed
+with `/`. The input must be a folder; list on a file will not return a value.
+
+Note that no policy-based filtering is performed on keys. Do not encode sensitive
+information in key names. The values themselves are not accessible via this
+command.
+
+<Tip title="Related API endpoints">
+
+- ListSecrets (v1) - [`LIST: /secret/:path`](/vault/api-docs/secret/kv/kv-v1#list-secrets)
+- ListSecrets (v2) - [`LIST: /:secret-mount-path/metadata/:path`](/vault/api-docs/secret/kv/kv-v2#list-secrets)
+
+</Tip>
+
+### Exit codes
+
+The Vault CLI follows consistent exit code conventions to indicate different 
+types of errors:
+
+- Exit code 1 indicates local errors, such as invalid flags, validation 
+  failures, or incorrect number of arguments.
+
+- Exit code 2 indicates remote errors, such as API failures, TLS issues, or 
+  invalid API parameters.
+
+Some commands may use different exit codes for specific scenarios. When this 
+occurs, the different behavior is clearly documented in the command's 
+documentation.
+
+## Command arguments
+
+<br />
+
+@include 'cli/kv/args/path.mdx'
+
+## Command options
+
+None.
+
+## Command flags
+
+<br />
+
+@include 'cli/kv/flags/mount.mdx'
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags.mdx'
 
 ## Examples
 
-List values under the key "my-app":
+List values under the key `my-app`:
 
 ```shell-session
 $ vault kv list -mount=secret my-app/
@@ -30,20 +85,3 @@ eng_creds
 qa_creds
 release
 ```
-
-## Usage
-
-There are no flags beyond the [standard set of flags](/vault/docs/commands)
-included on all commands.
-
-### Output options
-
-- `-mount` `(string: "")` - Specifies the path where the KV backend is mounted.
-  If specified, the next argument will be interpreted as the secret path. If
-  this flag is not specified, the next argument will be interpreted as the
-  combined mount path and secret path, with /data/ automatically inserted for
-  KV v2 secrets.
-
-- `-format` `(string: "table")` - Print the output in the given format. Valid
-  formats are "table", "json", or "yaml". This can also be specified via the
-  `VAULT_FORMAT` environment variable.

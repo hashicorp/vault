@@ -1,0 +1,14 @@
+<a id="kv-flag-versions" />
+
+**`-versions (int : <required>)`**
+
+The versions to be deleted. The versioned data will not be deleted, but it will 
+no longer be returned in normal get requests.
+
+<Note>
+
+The `-versions` flag is only available for KV v2 secrets.
+
+</Note>
+
+**Example**: `-versions 10`

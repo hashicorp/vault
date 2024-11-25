@@ -1,12 +1,12 @@
 ---
 layout: docs
-page_title: kv destroy - Command
+page_title: kv metadata delete - Command
 description: |-
-  The "kv destroy" command permanently removes the specified version data for
-  the provided key and version numbers from the key-value store.
+  The "kv metadata delete" command deletes all versions and metadata for the 
+  provided key.
 ---
 
-# kv destroy
+# kv metadata delete
 
 <Note>
 
@@ -15,27 +15,24 @@ and not available for Version 1.
 
 </Note>
 
-Permanently removes the specified version data for the provided key and version 
-numbers from the key-value store.
+Deletes all versions and metadata for the provided key.
 
 <CodeBlockConfig hideClipboard>
 
 ```shell-session
-$ vault kv destroy [flags] <key>
+$ vault kv metadata delete [flags] <key>
 
-$ vault kv destroy [-help | -h]
+$ vault kv metadata delete [-help | -h]
 ```
 
 </CodeBlockConfig>
 
-## Description
+`kv metadata delete` deletes all versions and metadata for the provided key.
 
-`kv destroy` permanently removes the specified versions' data from the key/value
-secrets engine. If no key exists at the path, Vault takes no action.
 
 <Tip title="Related API endpoints">
 
-DestroySecretVersions - [`PUT: /:secret-mount-path/destroy/:path`](/vault/api-docs/secret/kv/kv-v2#destroy-secret-versions)
+DeleteMetadataAndAllVersions (v2) - [`DELETE: /:secret-mount-path/metadata/:path`](/vault/api-docs/secret/kv/kv-v2#delete-metadata-and-all-versions)
 
 </Tip>
 
@@ -70,21 +67,17 @@ None.
 
 @include 'cli/kv/flags/mount.mdx'
 
-<br /><hr /><br />
-
-@include 'cli/kv/flags/destroy-versions.mdx'
-
 ## Global flags
 
 <br />
 
-@include 'cli/standard-settings/all-standard-flags.mdx'
+@include 'cli/standard-settings/all-standard-flags-but-format.mdx'
 
 ## Examples
 
-Destroy version 11 of the key `creds`:
+Deletes all versions and metadata of the key "creds":
 
 ```shell-session
-$ vault kv destroy -mount=secret -versions=11 creds
-Success! Data written to: secret/destroy/creds
+$ vault kv metadata delete -mount=secret creds
+Success! Data deleted (if it existed) at: secret/metadata/creds
 ```

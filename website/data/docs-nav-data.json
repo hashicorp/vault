@@ -777,7 +777,24 @@
           },
           {
             "title": "<code>metadata</code>",
-            "path": "commands/kv/metadata"
+            "routes": [
+              {
+                "title": "<code>delete</code>",
+                "path": "commands/kv/metadata/delete"
+              },
+              {
+                "title": "<code>get</code>",
+                "path": "commands/kv/metadata/get"
+              },
+              {
+                "title": "<code>patch</code>",
+                "path": "commands/kv/metadata/patch"
+              },
+              {
+                "title": "<code>put</code>",
+                "path": "commands/kv/metadata/put"
+              }
+            ]
           },
           {
             "title": "<code>patch</code>",

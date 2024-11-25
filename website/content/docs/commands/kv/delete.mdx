@@ -2,47 +2,97 @@
 layout: docs
 page_title: kv delete - Command
 description: |-
-  The "kv delete" command deletes the data for the provided path in the key/value secrets engine.
+  The "kv delete" command deletes the data for the provided path in the 
+  key/value secrets engine.
 ---
 
 # kv delete
 
-The `kv delete` command deletes the data for the provided path in
-the key/value secrets engine. If using KV version 2, its versioned data will
-not be fully removed, but marked as deleted and will no longer be returned in
-normal get requests.
+Delete the data for the provided path in the key/value secrets engine.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault kv delete [flags] <path>
+
+$ vault kv delete [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`kv delete` deletes the data for the provided path in the key/value secrets
+engine. If you are using KV version 2, its versioned data will not be fully
+removed, but marked as deleted and will no longer be returned in normal get
+requests.
+
+<Tip title="Related API endpoints">
+
+- DeleteSecret (v1) - [`DELETE: /secret/:path`](/vault/api-docs/secret/kv/kv-v1#delete-secret)
+- DeleteSecretLatestVersion (v2) - [`DELETE: /:secret-mount-path/data/:path`](/vault/api-docs/secret/kv/kv-v2#delete-latest-version-of-secret)
+- DeleteSecretVersion (v2) - [`POST: /:secret-mount-path/delete/:path`](/vault/api-docs/secret/kv/kv-v2#delete-secret-versions)
+
+</Tip>
+
+### Exit codes
+
+The Vault CLI follows consistent exit code conventions to indicate different 
+types of errors:
+
+- Exit code 1 indicates local errors, such as invalid flags, validation 
+  failures, or incorrect number of arguments.
+
+- Exit code 2 indicates remote errors, such as API failures, TLS issues, or 
+  invalid API parameters.
+
+Some commands may use different exit codes for specific scenarios. When this 
+occurs, the different behavior is clearly documented in the command's 
+documentation.
+
+## Command arguments
+
+<br />
+
+@include 'cli/kv/args/path.mdx'
+
+## Command options
+
+None.
+
+## Command flags
+
+<br />
+
+@include 'cli/shared/flags/field.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/kv/flags/mount.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/kv/flags/versions.mdx'
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags.mdx'
 
 ## Examples
 
-Delete the latest version of the key "creds":
+Delete the latest version of the key `creds`:
 
 ```shell-session
 $ vault kv delete -mount=secret creds
 Success! Data deleted (if it existed) at: secret/creds
 ```
 
-**[KV version 2]** Delete version 11 of key "creds":
+If you use KV version 2, you can delete specific versions. Delete version 11 of 
+key `creds`:
 
 ```shell-session
 $ vault kv delete -mount=secret -versions=11 creds
 Success! Data deleted (if it existed) at: secret/data/creds
 ```
-
-## Usage
-
-There are no flags beyond the [standard set of flags](/vault/docs/commands)
-included on all commands.
-
-### Command options
-
-- `-mount` `(string: "")` - Specifies the path where the KV backend is mounted.
-  If specified, the next argument will be interpreted as the secret path. If
-  this flag is not specified, the next argument will be interpreted as the
-  combined mount path and secret path, with /data/ automatically inserted for
-  KV v2 secrets.
-
-- `-versions` `([]int: <required>)` - The versions to be deleted. The versioned
-  data will not be deleted, but it will no longer be returned in normal get
-  requests.
-
-~> **NOTE:** The `-versions` command option is only for KV v2.

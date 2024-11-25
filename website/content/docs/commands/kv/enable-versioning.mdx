@@ -8,26 +8,64 @@ description: |-
 
 # kv enable-versioning
 
-The `kv enable-versioning` command turns on versioning for an existing
-non-versioned key/value secrets engine (KV version 1) at its path.
+Turns on versioning for the backend at the provided path.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault kv enable-versioning [flags] <key>
+
+$ vault kv enable-versioning [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`kv enable-versioning` turns on versioning for an existing non-versioned 
+key/value secrets engine (KV version 1) at its path.
+
+### Exit codes
+
+The Vault CLI follows consistent exit code conventions to indicate different 
+types of errors:
+
+- Exit code 1 indicates local errors, such as invalid flags, validation 
+  failures, or incorrect number of arguments.
+
+- Exit code 2 indicates remote errors, such as API failures, TLS issues, or 
+  invalid API parameters.
+
+Some commands may use different exit codes for specific scenarios. When this 
+occurs, the different behavior is clearly documented in the command's 
+documentation.
+
+## Command arguments
+
+<br />
+
+@include 'cli/kv/args/key.mdx'
+
+## Command options
+
+None.
+
+## Command flags
+
+None.
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags.mdx'
 
 ## Examples
 
 This command turns on versioning for the KV version 1 secrets engine enabled at
-"secret".
+`secret`.
 
 ```shell-session
 $ vault kv enable-versioning secret
 Success! Tuned the secrets engine at: secret/
 ```
-
-## Usage
-
-There are no flags beyond the [standard set of flags](/vault/docs/commands)
-included on all commands.
-
-### Output options
-
-- `-format` `(string: "table")` - Print the output in the given format. Valid
-  formats are "table", "json", or "yaml". This can also be specified via the
-  `VAULT_FORMAT` environment variable.
