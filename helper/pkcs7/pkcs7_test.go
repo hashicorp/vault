@@ -6,6 +6,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
@@ -16,11 +17,11 @@ import (
 	"time"
 )
 
-var test1024Key, test2048Key, test3072Key, test4096Key *rsa2.PrivateKey
+var test1024Key, test2048Key, test3072Key, test4096Key *rsa.PrivateKey
 
 func init() {
-	test1024Key = &rsa2.PrivateKey{
-		PublicKey: rsa2.PublicKey{
+	test1024Key = &rsa.PrivateKey{
+		PublicKey: rsa.PublicKey{
 			N: fromBase10("123024078101403810516614073341068864574068590522569345017786163424062310013967742924377390210586226651760719671658568413826602264886073432535341149584680111145880576802262550990305759285883150470245429547886689754596541046564560506544976611114898883158121012232676781340602508151730773214407220733898059285561"),
 			E: 65537,
 		},
@@ -31,8 +32,8 @@ func init() {
 		},
 	}
 	test1024Key.Precompute()
-	test2048Key = &rsa2.PrivateKey{
-		PublicKey: rsa2.PublicKey{
+	test2048Key = &rsa.PrivateKey{
+		PublicKey: rsa.PublicKey{
 			N: fromBase10("14314132931241006650998084889274020608918049032671858325988396851334124245188214251956198731333464217832226406088020736932173064754214329009979944037640912127943488972644697423190955557435910767690712778463524983667852819010259499695177313115447116110358524558307947613422897787329221478860907963827160223559690523660574329011927531289655711860504630573766609239332569210831325633840174683944553667352219670930408593321661375473885147973879086994006440025257225431977751512374815915392249179976902953721486040787792801849818254465486633791826766873076617116727073077821584676715609985777563958286637185868165868520557"),
 			E: 3,
 		},
@@ -43,8 +44,8 @@ func init() {
 		},
 	}
 	test2048Key.Precompute()
-	test3072Key = &rsa2.PrivateKey{
-		PublicKey: rsa2.PublicKey{
+	test3072Key = &rsa.PrivateKey{
+		PublicKey: rsa.PublicKey{
 			N: fromBase10("4799422180968749215324244710281712119910779465109490663934897082847293004098645365195947978124390029272750644394844443980065532911010718425428791498896288210928474905407341584968381379157418577471272697781778686372450913810019702928839200328075568223462554606149618941566459398862673532997592879359280754226882565483298027678735544377401276021471356093819491755877827249763065753555051973844057308627201762456191918852016986546071426986328720794061622370410645440235373576002278045257207695462423797272017386006110722769072206022723167102083033531426777518054025826800254337147514768377949097720074878744769255210076910190151785807232805749219196645305822228090875616900385866236956058984170647782567907618713309775105943700661530312800231153745705977436176908325539234432407050398510090070342851489496464612052853185583222422124535243967989533830816012180864309784486694786581956050902756173889941244024888811572094961378021"),
 			E: 65537,
 		},
@@ -55,8 +56,8 @@ func init() {
 		},
 	}
 	test3072Key.Precompute()
-	test4096Key = &rsa2.PrivateKey{
-		PublicKey: rsa2.PublicKey{
+	test4096Key = &rsa.PrivateKey{
+		PublicKey: rsa.PublicKey{
 			N: fromBase10("633335480064287130853997429184971616419051348693342219741748040433588285601270210251206421401040394238592139790962887290698043839174341843721930134010306454716566698330215646704263665452264344664385995704186692432827662862845900348526672531755932642433662686500295989783595767573119607065791980381547677840410600100715146047382485989885183858757974681241303484641390718944520330953604501686666386926996348457928415093305041429178744778762826377713889019740060910363468343855830206640274442887621960581569183233822878661711798998132931623726434336448716605363514220760343097572198620479297583609779817750646169845195672483600293522186340560792255595411601450766002877850696008003794520089358819042318331840490155176019070646738739580486357084733208876620846449161909966690602374519398451042362690200166144326179405976024265116931974936425064291406950542193873313447617169603706868220189295654943247311295475722243471700112334609817776430552541319671117235957754556272646031356496763094955985615723596562217985372503002989591679252640940571608314743271809251568670314461039035793703429977801961867815257832671786542212589906513979094156334941265621017752516999186481477500481433634914622735206243841674973785078408289183000133399026553"),
 			E: 65537,
 		},
@@ -127,7 +128,7 @@ func createTestCertificateByIssuer(name string, issuer *certKeyPair, sigAlg x509
 	case x509.SHA256WithRSA:
 		priv = test2048Key
 		switch issuerKey.(type) {
-		case *rsa2.PrivateKey:
+		case *rsa.PrivateKey:
 			template.SignatureAlgorithm = x509.SHA256WithRSA
 		case *ecdsa.PrivateKey:
 			template.SignatureAlgorithm = x509.ECDSAWithSHA256
@@ -137,7 +138,7 @@ func createTestCertificateByIssuer(name string, issuer *certKeyPair, sigAlg x509
 	case x509.SHA384WithRSA:
 		priv = test3072Key
 		switch issuerKey.(type) {
-		case *rsa2.PrivateKey:
+		case *rsa.PrivateKey:
 			template.SignatureAlgorithm = x509.SHA384WithRSA
 		case *ecdsa.PrivateKey:
 			template.SignatureAlgorithm = x509.ECDSAWithSHA384
@@ -147,7 +148,7 @@ func createTestCertificateByIssuer(name string, issuer *certKeyPair, sigAlg x509
 	case x509.SHA512WithRSA:
 		priv = test4096Key
 		switch issuerKey.(type) {
-		case *rsa2.PrivateKey:
+		case *rsa.PrivateKey:
 			template.SignatureAlgorithm = x509.SHA512WithRSA
 		case *ecdsa.PrivateKey:
 			template.SignatureAlgorithm = x509.ECDSAWithSHA512
@@ -160,7 +161,7 @@ func createTestCertificateByIssuer(name string, issuer *certKeyPair, sigAlg x509
 			return nil, err
 		}
 		switch issuerKey.(type) {
-		case *rsa2.PrivateKey:
+		case *rsa.PrivateKey:
 			template.SignatureAlgorithm = x509.SHA256WithRSA
 		case *ecdsa.PrivateKey:
 			template.SignatureAlgorithm = x509.ECDSAWithSHA256
@@ -173,7 +174,7 @@ func createTestCertificateByIssuer(name string, issuer *certKeyPair, sigAlg x509
 			return nil, err
 		}
 		switch issuerKey.(type) {
-		case *rsa2.PrivateKey:
+		case *rsa.PrivateKey:
 			template.SignatureAlgorithm = x509.SHA384WithRSA
 		case *ecdsa.PrivateKey:
 			template.SignatureAlgorithm = x509.ECDSAWithSHA384
@@ -186,7 +187,7 @@ func createTestCertificateByIssuer(name string, issuer *certKeyPair, sigAlg x509
 			return nil, err
 		}
 		switch issuerKey.(type) {
-		case *rsa2.PrivateKey:
+		case *rsa.PrivateKey:
 			template.SignatureAlgorithm = x509.SHA512WithRSA
 		case *ecdsa.PrivateKey:
 			template.SignatureAlgorithm = x509.ECDSAWithSHA512
@@ -207,19 +208,19 @@ func createTestCertificateByIssuer(name string, issuer *certKeyPair, sigAlg x509
 
 	log.Println("creating cert", name, "issued by", issuerCert.Subject.CommonName, "with sigalg", sigAlg)
 	switch priv.(type) {
-	case *rsa2.PrivateKey:
+	case *rsa.PrivateKey:
 		switch issuerKey.(type) {
-		case *rsa2.PrivateKey:
-			derCert, err = x509.CreateCertificate(rand.Reader, &template, issuerCert, priv.(*rsa2.PrivateKey).Public(), issuerKey.(*rsa2.PrivateKey))
+		case *rsa.PrivateKey:
+			derCert, err = x509.CreateCertificate(rand.Reader, &template, issuerCert, priv.(*rsa.PrivateKey).Public(), issuerKey.(*rsa.PrivateKey))
 		case *ecdsa.PrivateKey:
-			derCert, err = x509.CreateCertificate(rand.Reader, &template, issuerCert, priv.(*rsa2.PrivateKey).Public(), issuerKey.(*ecdsa.PrivateKey))
+			derCert, err = x509.CreateCertificate(rand.Reader, &template, issuerCert, priv.(*rsa.PrivateKey).Public(), issuerKey.(*ecdsa.PrivateKey))
 		case *dsa.PrivateKey:
-			derCert, err = x509.CreateCertificate(rand.Reader, &template, issuerCert, priv.(*rsa2.PrivateKey).Public(), issuerKey.(*dsa.PrivateKey))
+			derCert, err = x509.CreateCertificate(rand.Reader, &template, issuerCert, priv.(*rsa.PrivateKey).Public(), issuerKey.(*dsa.PrivateKey))
 		}
 	case *ecdsa.PrivateKey:
 		switch issuerKey.(type) {
-		case *rsa2.PrivateKey:
-			derCert, err = x509.CreateCertificate(rand.Reader, &template, issuerCert, priv.(*ecdsa.PrivateKey).Public(), issuerKey.(*rsa2.PrivateKey))
+		case *rsa.PrivateKey:
+			derCert, err = x509.CreateCertificate(rand.Reader, &template, issuerCert, priv.(*ecdsa.PrivateKey).Public(), issuerKey.(*rsa.PrivateKey))
 		case *ecdsa.PrivateKey:
 			derCert, err = x509.CreateCertificate(rand.Reader, &template, issuerCert, priv.(*ecdsa.PrivateKey).Public(), issuerKey.(*ecdsa.PrivateKey))
 		case *dsa.PrivateKey:
@@ -228,7 +229,7 @@ func createTestCertificateByIssuer(name string, issuer *certKeyPair, sigAlg x509
 	case *dsa.PrivateKey:
 		pub := &priv.(*dsa.PrivateKey).PublicKey
 		switch issuerKey := issuerKey.(type) {
-		case *rsa2.PrivateKey:
+		case *rsa.PrivateKey:
 			derCert, err = x509.CreateCertificate(rand.Reader, &template, issuerCert, pub, issuerKey)
 		case *ecdsa.PrivateKey:
 			derCert, err = x509.CreateCertificate(rand.Reader, &template, issuerCert, priv.(*dsa.PublicKey), issuerKey)
@@ -256,7 +257,7 @@ func createTestCertificateByIssuer(name string, issuer *certKeyPair, sigAlg x509
 type TestFixture struct {
 	Input       []byte
 	Certificate *x509.Certificate
-	PrivateKey  *rsa2.PrivateKey
+	PrivateKey  *rsa.PrivateKey
 }
 
 func UnmarshalTestFixture(testPEMBlock string) TestFixture {

@@ -10,6 +10,7 @@ import (
 	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
@@ -469,7 +470,7 @@ func TestGetPublicKeySize(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if GetPublicKeySize(&rsa2.PublicKey) != 3072 {
+	if GetPublicKeySize(&rsa.PublicKey) != 3072 {
 		t.Fatal("unexpected rsa key size")
 	}
 	ecdsa, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)

@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha1"
 	"crypto/tls"
 	"crypto/x509"
@@ -25,7 +26,7 @@ type certBuilder struct {
 	parentTmpl *x509.Certificate
 
 	selfSign  bool
-	parentKey *rsa2.PrivateKey
+	parentKey *rsa.PrivateKey
 
 	isCA bool
 }
@@ -148,7 +149,7 @@ func newCert(t *testing.T, opts ...certOpt) (cert certificate) {
 // Private Key
 // ////////////////////////////////////////////////////////////////////////////
 type keyWrapper struct {
-	privKey *rsa2.PrivateKey
+	privKey *rsa.PrivateKey
 	pem     []byte
 }
 
