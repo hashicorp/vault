@@ -175,4 +175,14 @@ module.exports = [
     destination: '/vault/docs/commands/pki/issue',
     permanent: true,
   },
+  {
+    source: '/vault/docs/commands/license',
+    destination: '/vault/docs/enterprise/license',
+    permanent: true,
+  },
+  {
+    source: '/vault/docs/commands/license/*',
+    destination: '/vault/docs/enterprise/license',
+    permanent: true,
+  },
 ]
