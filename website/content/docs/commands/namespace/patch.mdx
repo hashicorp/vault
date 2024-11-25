@@ -1,98 +1,78 @@
 ---
 layout: docs
-page_title: namespace - Command
-description: The "namespace" command groups subcommands for interacting with namespaces.
+page_title: namespace patch - Command
+description: |-
+  The "namespace patch" command patches a namespace.
 ---
 
-# namespace
+# namespace patch
 
-The `namespace` command groups subcommands for interacting with namespaces.
+Patch an existing namespace.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault namespace patch [flags] <path>
+
+$ vault namespace patch [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+Patch an existing namespace. Vault will update the information you provide,
+leaving the other information unchanged. Vault will patch the namespace relative
+to the namespace provided in either the `VAULT_NAMESPACE` environment variable or
+`-namespace` CLI flag.
+
+<Tip title="Related API endpoints">
+
+PatchNamespace - [`PATCH: /sys/namespaces/:path`](/vault/api-docs/system/namespaces#patch-namespace)
+
+</Tip>
+
+## Command arguments
+
+<br />
+
+@include 'cli/namespace/args/required-path.mdx'
+
+## Command options
+
+None.
+
+## Command flags
+
+<br />
+
+@include 'cli/shared/flags/field.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/namespace/flags/custom-metadata.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/namespace/flags/remove-custom-metadata.mdx'
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags.mdx'
 
 ## Examples
 
-List all namespaces:
-
-```shell-session
-$ vault namespace list
-```
-
-List all namespaces with additional details such as namespace ID and custom metadata:
-
-```shell-session
-$ vault namespace list -detailed
-```
-
-Create a namespace at the path `ns1/` with no custom metadata:
-
-```shell-session
-$ vault namespace create ns1/
-```
-
-Create a namespace at the path `ns1/` with multiple custom metadata keys:
-
-```shell-session
-$ vault namespace create -custom-metadata=foo=abc -custom-metadata=bar=123 ns1/
-```
-
-Patch an existing namespace at the path `ns1/` to add custom metadata key `bar` and remove key `foo`
+Patch an existing namespace at the path `ns1/` to add custom metadata key `bar`
+and remove key `foo`:
 
 ```shell-session
 $ vault namespace patch -custom-metadata=bar=123 -remove-custom-metadata=foo ns1/
 ```
 
-Delete the namespace at path `ns1/`:
+Patch an existing child namespace from a parent namespace (for example, `ns1/ns2/`):
 
 ```shell-session
-$ vault namespace delete ns1/
+$ vault namespace patch -namespace=ns1 -custom-metadata=foo=abc ns2
 ```
-
-Lookup the namespace information at path `ns1/`:
-
-```shell-session
-$ vault namespace lookup ns1/
-```
-
-Lock the API for the current namespace:
-
-```shell-session
-$ vault namespace lock
-```
-
-Lock the API for a descendant namespace at path `current/namespace/ns1/`:
-
-```shell-session
-$ vault namespace lock ns1/
-```
-
-Unlock the API for the current namespace:
-
-```shell-session
-$ vault namespace unlock -unlock-key <unlock key>
-```
-
-Unlock the API for a descendant namespace at path `current/namespacens1/`:
-
-```shell-session
-$ vault namespace unlock -unlock-key <unlock key> ns1/
-```
-
-## Usage
-
-```text
-Usage: vault namespace <subcommand> [options] [args]
-
-  This command groups subcommands for interacting with Vault namespaces.
-  These set of subcommands operate on the context of the namespace that the
-  current logged in token belongs to.
-
-Subcommands:
-    create   Create a new namespace
-    delete   Delete an existing namespace
-    list     List child namespaces
-    lookup   Look up an existing namespace
-    lock     Lock the API for a namespace
-    unlock   Unlock the API for a namespace
-```
-
-For more information, examples, and usage about a subcommand, click on the name
-of the subcommand in the sidebar.

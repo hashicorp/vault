@@ -1,26 +1,63 @@
 ---
 layout: docs
-page_title: namespace - Command
-description: The "namespace" command groups subcommands for interacting with namespaces.
+page_title: namespace create - Command
+description: |-
+  The "namespace create" command creates a new namespace.
 ---
 
-# namespace
+# namespace create
 
-The `namespace` command groups subcommands for interacting with namespaces.
+Create a child namespace.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault namespace create [flags] <path>
+
+$ vault namespace create [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+Create a child namespace. Vault will create the namespace relative to the
+namespace provided in either the `VAULT_NAMESPACE` environment variable or
+`-namespace` CLI flag.
+
+<Tip title="Related API endpoints">
+
+CreateNamespace - [`POST: /sys/namespaces/:path`](/vault/api-docs/system/namespaces#create-namespace)
+
+</Tip>
+
+## Command arguments
+
+<br />
+
+@include 'cli/namespace/args/required-path.mdx'
+
+## Command options
+
+None.
+
+## Command flags
+
+<br />
+
+@include 'cli/shared/flags/field.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/namespace/flags/custom-metadata.mdx'
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags.mdx'
 
 ## Examples
-
-List all namespaces:
-
-```shell-session
-$ vault namespace list
-```
-
-List all namespaces with additional details such as namespace ID and custom metadata:
-
-```shell-session
-$ vault namespace list -detailed
-```
 
 Create a namespace at the path `ns1/` with no custom metadata:
 
@@ -28,71 +65,14 @@ Create a namespace at the path `ns1/` with no custom metadata:
 $ vault namespace create ns1/
 ```
 
+Create a child namespace from a parent namespace (for example, `ns1/ns2/`):
+
+```shell-session
+$ vault namespace create -namespace=ns1 ns2
+```
+
 Create a namespace at the path `ns1/` with multiple custom metadata keys:
 
 ```shell-session
 $ vault namespace create -custom-metadata=foo=abc -custom-metadata=bar=123 ns1/
 ```
-
-Patch an existing namespace at the path `ns1/` to add custom metadata key `bar` and remove key `foo`
-
-```shell-session
-$ vault namespace patch -custom-metadata=bar=123 -remove-custom-metadata=foo ns1/
-```
-
-Delete the namespace at path `ns1/`:
-
-```shell-session
-$ vault namespace delete ns1/
-```
-
-Lookup the namespace information at path `ns1/`:
-
-```shell-session
-$ vault namespace lookup ns1/
-```
-
-Lock the API for the current namespace:
-
-```shell-session
-$ vault namespace lock
-```
-
-Lock the API for a descendant namespace at path `current/namespace/ns1/`:
-
-```shell-session
-$ vault namespace lock ns1/
-```
-
-Unlock the API for the current namespace:
-
-```shell-session
-$ vault namespace unlock -unlock-key <unlock key>
-```
-
-Unlock the API for a descendant namespace at path `current/namespacens1/`:
-
-```shell-session
-$ vault namespace unlock -unlock-key <unlock key> ns1/
-```
-
-## Usage
-
-```text
-Usage: vault namespace <subcommand> [options] [args]
-
-  This command groups subcommands for interacting with Vault namespaces.
-  These set of subcommands operate on the context of the namespace that the
-  current logged in token belongs to.
-
-Subcommands:
-    create   Create a new namespace
-    delete   Delete an existing namespace
-    list     List child namespaces
-    lookup   Look up an existing namespace
-    lock     Lock the API for a namespace
-    unlock   Unlock the API for a namespace
-```
-
-For more information, examples, and usage about a subcommand, click on the name
-of the subcommand in the sidebar.
