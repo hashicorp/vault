@@ -695,7 +695,7 @@ func Test_rsaKeyGenerator_generate(t *testing.T) {
 			pub, err := x509.ParsePKIXPublicKey(pubBlock.Bytes)
 			assert.NoError(t, err)
 			assert.NotNil(t, pub)
-			assert.IsType(t, &rsa2.PublicKey{}, pub)
+			assert.IsType(t, &rsa.PublicKey{}, pub)
 
 			// Assert that we can parse the private key PEM block in
 			// the configured format
@@ -704,7 +704,7 @@ func Test_rsaKeyGenerator_generate(t *testing.T) {
 				priv, err := x509.ParsePKCS8PrivateKey(privBlock.Bytes)
 				assert.NoError(t, err)
 				assert.NotNil(t, priv)
-				assert.IsType(t, &rsa2.PrivateKey{}, priv)
+				assert.IsType(t, &rsa.PrivateKey{}, priv)
 			default:
 				t.Fatal("unknown format")
 			}

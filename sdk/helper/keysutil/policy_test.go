@@ -969,7 +969,7 @@ func Test_RSA_PSS(t *testing.T) {
 		tabs[i] = strings.Repeat("\t", i)
 	}
 
-	test_RSA_PSS := func(t *testing.T, p *Policy, rsaKey *rsa2.PrivateKey, hashType HashType,
+	test_RSA_PSS := func(t *testing.T, p *Policy, rsaKey *rsa.PrivateKey, hashType HashType,
 		marshalingType MarshalingType,
 	) {
 		unsaltedOptions := SigningOptions{
@@ -1084,7 +1084,7 @@ func Test_RSA_PSS(t *testing.T) {
 		if err != nil {
 			t.Fatalf("error parsing test keys: %s", err)
 		}
-		rsaKey := rsaKeyAny.(*rsa2.PrivateKey)
+		rsaKey := rsaKeyAny.(*rsa.PrivateKey)
 
 		// 2. For each hash algorithm...
 		for hashAlgorithm, hashType := range HashTypeMap {
@@ -1117,7 +1117,7 @@ func Test_RSA_PKCS1Encryption(t *testing.T) {
 		tabs[i] = strings.Repeat("\t", i)
 	}
 
-	test_RSA_PKCS1 := func(t *testing.T, p *Policy, rsaKey *rsa2.PrivateKey, padding PaddingScheme) {
+	test_RSA_PKCS1 := func(t *testing.T, p *Policy, rsaKey *rsa.PrivateKey, padding PaddingScheme) {
 		// 1. Make a signature with the given key size and hash algorithm.
 		t.Log(tabs[3], "Make an automatic signature")
 		ct, err := p.EncryptWithFactory(0, nil, nil, string(input), padding)
@@ -1152,7 +1152,7 @@ func Test_RSA_PKCS1Encryption(t *testing.T) {
 		if err != nil {
 			t.Fatalf("error parsing test keys: %s", err)
 		}
-		rsaKey := rsaKeyAny.(*rsa2.PrivateKey)
+		rsaKey := rsaKeyAny.(*rsa.PrivateKey)
 		for _, padding := range []PaddingScheme{PaddingScheme_OAEP, PaddingScheme_PKCS1v15, ""} {
 			t.Run(fmt.Sprintf("%s/%s", rsaKeyType.String(), padding), func(t *testing.T) { test_RSA_PKCS1(t, p, rsaKey, padding) })
 		}
@@ -1173,7 +1173,7 @@ func Test_RSA_PKCS1Signing(t *testing.T) {
 		tabs[i] = strings.Repeat("\t", i)
 	}
 
-	test_RSA_PKCS1 := func(t *testing.T, p *Policy, rsaKey *rsa2.PrivateKey, hashType HashType,
+	test_RSA_PKCS1 := func(t *testing.T, p *Policy, rsaKey *rsa.PrivateKey, hashType HashType,
 		marshalingType MarshalingType,
 	) {
 		unsaltedOptions := SigningOptions{
@@ -1229,7 +1229,7 @@ func Test_RSA_PKCS1Signing(t *testing.T) {
 		if err != nil {
 			t.Fatalf("error parsing test keys: %s", err)
 		}
-		rsaKey := rsaKeyAny.(*rsa2.PrivateKey)
+		rsaKey := rsaKeyAny.(*rsa.PrivateKey)
 
 		// 2. For each hash algorithm...
 		for hashAlgorithm, hashType := range HashTypeMap {

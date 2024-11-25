@@ -39,7 +39,7 @@ func TestTransitImport(t *testing.T) {
 		t.Fatalf("transit failed generating wrapping key: %#v", err)
 	}
 
-	rsa1, rsa2, aes128, aes256 := generateKeys(t)
+	rsa1, rsa, aes128, aes256 := generateKeys(t)
 
 	type testCase struct {
 		variant    string
@@ -59,28 +59,28 @@ func TestTransitImport(t *testing.T) {
 		{
 			"import",
 			"transit/keys/rsa1",
-			rsa2,
+			rsa,
 			[]string{"type=rsa-2048"},
 			true, /* already exists */
 		},
 		{
 			"import-version",
 			"transit/keys/rsa1",
-			rsa2,
+			rsa,
 			[]string{"type=rsa-2048"},
 			false, /* new version */
 		},
 		{
 			"import",
-			"transit/keys/rsa2",
-			rsa2,
+			"transit/keys/rsa",
+			rsa,
 			[]string{"type=rsa-4096"},
 			true, /* wrong type */
 		},
 		{
 			"import",
-			"transit/keys/rsa2",
-			rsa2,
+			"transit/keys/rsa",
+			rsa,
 			[]string{"type=rsa-2048"},
 			false, /* new name */
 		},
@@ -168,7 +168,7 @@ func execTransitImport(t *testing.T, client *api.Client, method string, path str
 	}
 }
 
-func generateKeys(t *testing.T) (rsa1 []byte, rsa2 []byte, aes128 []byte, aes256 []byte) {
+func generateKeys(t *testing.T) (rsa1 []byte, rsa []byte, aes128 []byte, aes256 []byte) {
 	t.Helper()
 
 	priv1, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
@@ -183,8 +183,8 @@ func generateKeys(t *testing.T) (rsa1 []byte, rsa2 []byte, aes128 []byte, aes256
 	require.NotNil(t, priv2, "failed generating RSA 2 key")
 	require.NoError(t, err, "failed generating RSA 2 key")
 
-	rsa2, err = x509.MarshalPKCS8PrivateKey(priv2)
-	require.NotNil(t, rsa2, "failed marshaling RSA 2 key")
+	rsa, err = x509.MarshalPKCS8PrivateKey(priv2)
+	require.NotNil(t, rsa, "failed marshaling RSA 2 key")
 	require.NoError(t, err, "failed marshaling RSA 2 key")
 
 	aes128 = make([]byte, 128/8)

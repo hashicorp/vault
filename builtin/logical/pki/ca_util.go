@@ -7,7 +7,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
-	rsa2 "crypto/rsa"
+	"crypto/rsa"
 	"errors"
 	"fmt"
 	"io"
@@ -229,7 +229,7 @@ func getKeyTypeAndBitsFromPublicKeyForRole(pubKey crypto.PublicKey) (certutil.Pr
 	var keyBits int
 
 	switch pubKey.(type) {
-	case *rsa2.PublicKey:
+	case *rsa.PublicKey:
 		keyType = certutil.RSAPrivateKey
 		keyBits = certutil.GetPublicKeySize(pubKey)
 	case *ecdsa.PublicKey:

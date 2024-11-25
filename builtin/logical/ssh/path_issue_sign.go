@@ -9,7 +9,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rand"
-	rsa "crypto/rsa"
+	"crypto/rsa"
 	"crypto/sha256"
 	"errors"
 	"fmt"

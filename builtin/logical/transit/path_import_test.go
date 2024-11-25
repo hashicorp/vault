@@ -948,7 +948,7 @@ func TestTransit_ImportVersionWithPublicKeys(t *testing.T) {
 	)
 }
 
-func wrapTargetKeyForImport(t *testing.T, wrappingKey *rsa2.PublicKey, targetKey interface{}, targetKeyType string, hashFnName string) string {
+func wrapTargetKeyForImport(t *testing.T, wrappingKey *rsa.PublicKey, targetKey interface{}, targetKeyType string, hashFnName string) string {
 	t.Helper()
 
 	// Format target key for wrapping
@@ -971,7 +971,7 @@ func wrapTargetKeyForImport(t *testing.T, wrappingKey *rsa2.PublicKey, targetKey
 	return wrapTargetPKCS8ForImport(t, wrappingKey, preppedTargetKey, hashFnName)
 }
 
-func wrapTargetPKCS8ForImport(t *testing.T, wrappingKey *rsa2.PublicKey, preppedTargetKey []byte, hashFnName string) string {
+func wrapTargetPKCS8ForImport(t *testing.T, wrappingKey *rsa.PublicKey, preppedTargetKey []byte, hashFnName string) string {
 	t.Helper()
 
 	// Generate an ephemeral AES-256 key
@@ -1042,7 +1042,7 @@ func getPublicKey(privateKey crypto.PrivateKey, keyType string) ([]byte, error) 
 	var publicKeyBytes []byte
 	switch keyType {
 	case "rsa-2048", "rsa-3072", "rsa-4096":
-		publicKey = privateKey.(*rsa2.PrivateKey).Public()
+		publicKey = privateKey.(*rsa.PrivateKey).Public()
 	case "ecdsa-p256", "ecdsa-p384", "ecdsa-p521":
 		publicKey = privateKey.(*ecdsa.PrivateKey).Public()
 	case "ed25519":

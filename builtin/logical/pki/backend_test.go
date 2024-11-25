@@ -12,7 +12,7 @@ import (
 	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
-	rsa2 "crypto/rsa"
+	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/base64"
@@ -410,7 +410,7 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage x509.KeyUs
 		case "rsa":
 			parsedCertBundle.PrivateKeyType = certutil.RSAPrivateKey
 			parsedCertBundle.PrivateKey = key
-			parsedCertBundle.PrivateKeyBytes = x509.MarshalPKCS1PrivateKey(key.(*rsa2.PrivateKey))
+			parsedCertBundle.PrivateKeyBytes = x509.MarshalPKCS1PrivateKey(key.(*rsa.PrivateKey))
 		case "ec":
 			parsedCertBundle.PrivateKeyType = certutil.ECPrivateKey
 			parsedCertBundle.PrivateKey = key
