@@ -50,7 +50,7 @@ func TestTransit_WrappingKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to parse public wrapping key: %s", err)
 	}
-	wrappingKey, ok := rawPubKey.(*rsa.PublicKey)
+	wrappingKey, ok := rawPubKey.(*rsa2.PublicKey)
 	if !ok || wrappingKey.Size() != 512 {
 		t.Fatal("public wrapping key is not a 4096-bit RSA key")
 	}

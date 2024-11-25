@@ -68,7 +68,7 @@ func isEd25519OID(oid asn1.ObjectIdentifier) bool {
 
 // ParsePKCS8Ed25519PrivateKey parses an unencrypted private key in PKCS #8, ASN.1 DER form.
 //
-// It returns a *rsa.PrivateKey, a *ecdsa.PrivateKey, or a ed25519.PrivateKey.
+// It returns a *rsa2.PrivateKey, a *ecdsa.PrivateKey, or a ed25519.PrivateKey.
 // More types might be supported in the future.
 //
 // This kind of key is commonly encoded in PEM blocks of type "PRIVATE KEY".
@@ -125,7 +125,7 @@ func ParsePKCS8Ed25519PrivateKey(der []byte) (key interface{}, err error) {
 //
 // This helper only supports RSA/PSS keys (with OID 1.2.840.113549.1.1.10).
 //
-// It returns a *rsa.PrivateKey, a *ecdsa.PrivateKey, or a ed25519.PrivateKey.
+// It returns a *rsa2.PrivateKey, a *ecdsa.PrivateKey, or a ed25519.PrivateKey.
 // More types might be supported in the future.
 //
 // This kind of key is commonly encoded in PEM blocks of type "PRIVATE KEY".

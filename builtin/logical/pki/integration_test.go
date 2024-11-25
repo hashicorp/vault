@@ -8,7 +8,7 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
-	"crypto/rsa"
+	rsa2 "crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -331,11 +331,11 @@ func TestIntegration_CSRGeneration(t *testing.T) {
 		expectedPublicKeyType crypto.PublicKey
 		expectedSignature     x509.SignatureAlgorithm
 	}{
-		{"rsa", false, 2048, 0, &rsa.PublicKey{}, x509.SHA256WithRSA},
-		{"rsa", false, 2048, 384, &rsa.PublicKey{}, x509.SHA384WithRSA},
+		{"rsa", false, 2048, 0, &rsa2.PublicKey{}, x509.SHA256WithRSA},
+		{"rsa", false, 2048, 384, &rsa2.PublicKey{}, x509.SHA384WithRSA},
 		// Add back once https://github.com/golang/go/issues/45990 is fixed.
-		// {"rsa", true, 2048, 0, &rsa.PublicKey{}, x509.SHA256WithRSAPSS},
-		// {"rsa", true, 2048, 512, &rsa.PublicKey{}, x509.SHA512WithRSAPSS},
+		// {"rsa", true, 2048, 0, &rsa2.PublicKey{}, x509.SHA256WithRSAPSS},
+		// {"rsa", true, 2048, 512, &rsa2.PublicKey{}, x509.SHA512WithRSAPSS},
 		{"ec", false, 224, 0, &ecdsa.PublicKey{}, x509.ECDSAWithSHA256},
 		{"ec", false, 256, 0, &ecdsa.PublicKey{}, x509.ECDSAWithSHA256},
 		{"ec", false, 384, 0, &ecdsa.PublicKey{}, x509.ECDSAWithSHA384},

@@ -13,6 +13,7 @@ import (
 	"net"
 	"strings"
 
+	"github.com/hashicorp/go-secure-stdlib/cryptoutil"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/logical"

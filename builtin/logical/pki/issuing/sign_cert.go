@@ -6,7 +6,7 @@ package issuing
 import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
-	"crypto/rsa"
+	rsa2 "crypto/rsa"
 	"crypto/x509"
 	"fmt"
 
@@ -139,7 +139,7 @@ func SignCert(b logical.SystemView, role *RoleEntry, entityInfo EntityInfo, caSi
 			return nil, nil, errutil.UserError{Err: fmt.Sprintf("role requires keys of type %s", role.KeyType)}
 		}
 
-		pubKey, ok := csr.PublicKey.(*rsa.PublicKey)
+		pubKey, ok := csr.PublicKey.(*rsa2.PublicKey)
 		if !ok {
 			return nil, nil, errutil.UserError{Err: "could not parse CSR's public key"}
 		}
@@ -180,7 +180,7 @@ func SignCert(b logical.SystemView, role *RoleEntry, entityInfo EntityInfo, caSi
 		// validate minimums and SignatureBits below.
 		switch csr.PublicKeyAlgorithm {
 		case x509.RSA:
-			pubKey, ok := csr.PublicKey.(*rsa.PublicKey)
+			pubKey, ok := csr.PublicKey.(*rsa2.PublicKey)
 			if !ok {
 				return nil, nil, errutil.UserError{Err: "could not parse CSR's public key"}
 			}

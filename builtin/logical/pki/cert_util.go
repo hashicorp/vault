@@ -321,6 +321,15 @@ func validateSerialNumber(data *inputBundle, serialNumber string) string {
 	return issuing.ValidateSerialNumber(data.role, serialNumber)
 }
 
+type slowRand struct {
+	r io.Reader
+}
+
+func (s *slowRand) Read(p []byte) (n int, err error) {
+	time.Sleep(50 * time.Millisecond)
+	return s.r.Read(p)
+}
+
 func generateCert(sc *storageContext,
 	input *inputBundle,
 	caSign *certutil.CAInfoBundle,
@@ -391,7 +400,7 @@ func generateCert(sc *storageContext,
 		}
 	}
 
-	parsedBundle, err := generateCABundle(sc, input, data, randomSource)
+	parsedBundle, err := generateCABundle(sc, input, data, &slowRand{randomSource})
 	if err != nil {
 		return nil, nil, err
 	}

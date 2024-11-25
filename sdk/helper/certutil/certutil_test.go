@@ -469,7 +469,7 @@ func TestGetPublicKeySize(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if GetPublicKeySize(&rsa.PublicKey) != 3072 {
+	if GetPublicKeySize(&rsa2.PublicKey) != 3072 {
 		t.Fatal("unexpected rsa key size")
 	}
 	ecdsa, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)

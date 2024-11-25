@@ -7,7 +7,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/rand"
-	"crypto/rsa"
+	rsa2 "crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
@@ -117,7 +117,7 @@ func requireMatchingPublicKeys(t *testing.T, cert *x509.Certificate, key crypto.
 	require.True(t, areEqual, "public keys mismatched: got: %v, expected: %v", certPubKey, key)
 }
 
-func getSelfSigned(t *testing.T, subject, issuer *x509.Certificate, key *rsa.PrivateKey) (string, *x509.Certificate) {
+func getSelfSigned(t *testing.T, subject, issuer *x509.Certificate, key *rsa2.PrivateKey) (string, *x509.Certificate) {
 	t.Helper()
 	selfSigned, err := x509.CreateCertificate(rand.Reader, subject, issuer, key.Public(), key)
 	if err != nil {

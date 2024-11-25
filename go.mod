@@ -22,8 +22,6 @@ replace github.com/hashicorp/vault/api/auth/userpass => ./api/auth/userpass
 
 replace github.com/hashicorp/vault/sdk => ./sdk
 
-replace github.com/hashicorp/go-secure-stdlib/cryptoutil => ../go-secure-stdlib/cryptoutil
-
 require (
 	cloud.google.com/go/cloudsqlconn v1.4.3
 	cloud.google.com/go/monitoring v1.21.0

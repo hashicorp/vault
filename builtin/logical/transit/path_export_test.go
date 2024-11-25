@@ -600,7 +600,7 @@ func testTransit_exportCertificateChain(t *testing.T, apiClient *api.Client, key
 	pubWrappingKey, err := x509.ParsePKIXPublicKey(wrappingKeyPemBlock.Bytes)
 	require.NoError(t, err, "failed to parse wrapping key")
 
-	blob := wrapTargetPKCS8ForImport(t, pubWrappingKey.(*rsa.PublicKey), privKeyBytes, "SHA256")
+	blob := wrapTargetPKCS8ForImport(t, pubWrappingKey.(*rsa2.PublicKey), privKeyBytes, "SHA256")
 
 	// Import key
 	_, err = apiClient.Logical().Write(fmt.Sprintf("/transit/keys/%s/import", keyName), map[string]interface{}{

@@ -12,7 +12,7 @@ import (
 	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
+	rsa2 "crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/base64"
@@ -38,6 +38,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/fatih/structs"
 	"github.com/go-test/deep"
+	"github.com/hashicorp/go-secure-stdlib/cryptoutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
 	auth "github.com/hashicorp/vault/api/auth/userpass"
@@ -410,7 +411,7 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage x509.KeyUs
 		case "rsa":
 			parsedCertBundle.PrivateKeyType = certutil.RSAPrivateKey
 			parsedCertBundle.PrivateKey = key
-			parsedCertBundle.PrivateKeyBytes = x509.MarshalPKCS1PrivateKey(key.(*rsa.PrivateKey))
+			parsedCertBundle.PrivateKeyBytes = x509.MarshalPKCS1PrivateKey(key.(*rsa2.PrivateKey))
 		case "ec":
 			parsedCertBundle.PrivateKeyType = certutil.ECPrivateKey
 			parsedCertBundle.PrivateKey = key

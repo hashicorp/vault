@@ -26,7 +26,7 @@ type CertBuilder struct {
 	parentTmpl *x509.Certificate
 
 	selfSign  bool
-	parentKey *rsa.PrivateKey
+	parentKey *rsa2.PrivateKey
 
 	isCA bool
 }
@@ -160,7 +160,7 @@ func NewCert(t *testing.T, opts ...CertOpt) (cert Certificate) {
 // Private Key
 // ////////////////////////////////////////////////////////////////////////////
 type KeyWrapper struct {
-	PrivKey *rsa.PrivateKey
+	PrivKey *rsa2.PrivateKey
 	Pem     []byte
 }
 
