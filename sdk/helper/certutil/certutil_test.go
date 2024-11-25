@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
-	"github.com/hashicorp/vault/helper/cryptoutil"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 )
 
 // Tests converting back and forth between a CertBundle and a ParsedCertBundle.

@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/cryptoutil"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"

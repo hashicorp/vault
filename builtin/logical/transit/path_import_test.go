@@ -20,7 +20,7 @@ import (
 
 	"github.com/hashicorp/go-secure-stdlib/cryptoutil"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/cryptoutil"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/tink-crypto/tink-go/v2/kwp/subtle"
 )
