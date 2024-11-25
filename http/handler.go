@@ -988,9 +988,14 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	// ErrCannotForward and we simply fall back
 	statusCode, header, retBytes, err := core.ForwardRequest(r)
 	if err != nil {
-		if err == vault.ErrCannotForward {
+		switch {
+		case errors.Is(err, vault.ErrCannotForward):
 			core.Logger().Trace("cannot forward request (possibly disabled on active node), falling back to redirection to standby")
-		} else {
+		case errors.Is(err, vault.StatusNotHAMember):
+			core.Logger().Trace("this node is not a member of the HA cluster", "error", err)
+			respondError(w, http.StatusInternalServerError, err)
+			return
+		default:
 			core.Logger().Error("forward request error", "error", err)
 		}
 

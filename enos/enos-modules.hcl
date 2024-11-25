@@ -350,6 +350,12 @@ module "vault_wait_for_seal_rewrap" {
   vault_install_dir = var.vault_install_dir
 }
 
+module "verify_log_secrets" {
+  source = "./modules/verify_log_secrets"
+
+  radar_license_path = var.vault_radar_license_path != null ? abspath(var.vault_radar_license_path) : null
+}
+
 module "verify_seal_type" {
   source = "./modules/verify_seal_type"
 
@@ -363,4 +369,3 @@ module "vault_verify_billing_start_date" {
   vault_instance_count    = var.vault_instance_count
   vault_cluster_addr_port = global.ports["vault_cluster"]["port"]
 }
-

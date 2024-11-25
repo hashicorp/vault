@@ -1,0 +1,12 @@
+<a id="global-wrap-ttl" />
+
+**`[-wrap-ttl | VAULT_WRAP_TTL] (string : "")`**
+
+Default time-to-live in `<number>[s|m|h|d]` format for the Cubbyhole token used
+to wrap CLI responses. You must use `vault unwrap` to view response data before
+the duration expires. Leave `wrap_ttl` unset to leave CLI responses unwrapped.
+
+**Examples**:
+
+- CLI flag: `-wrap-ttl "5m"`
+- Environment variable: `export VAULT_WRAP_TTL="5m"`

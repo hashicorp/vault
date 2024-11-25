@@ -4,7 +4,6 @@
  */
 
 export const SECRET_ENGINE_SELECTORS = {
-  backButton: '[data-test-back-button]',
   configTab: '[data-test-configuration-tab]',
   configure: '[data-test-secret-backend-configure]',
   configureTitle: (type: string) => `[data-test-backend-configure-title="${type}"]`,
@@ -15,8 +14,6 @@ export const SECRET_ENGINE_SELECTORS = {
     title: '[data-test-backend-error-title]',
   },
   generateLink: '[data-test-backend-credentials]',
-  mountType: (name: string) => `[data-test-mount-type="${name}"]`,
-  mountSubmit: '[data-test-mount-submit]',
   secretHeader: '[data-test-secret-header]',
   secretLink: (name: string) => (name ? `[data-test-secret-link="${name}"]` : '[data-test-secret-link]'),
   secretLinkMenu: (name: string) => `[data-test-secret-link="${name}"] [data-test-popup-menu-trigger]`,

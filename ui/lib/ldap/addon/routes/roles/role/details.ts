@@ -4,29 +4,31 @@
  */
 
 import Route from '@ember/routing/route';
+import { service } from '@ember/service';
+import { ldapBreadcrumbs } from 'ldap/utils/ldap-breadcrumbs';
 
-import type LdapRoleModel from 'vault/models/ldap/role';
-import type Controller from '@ember/controller';
-import type Transition from '@ember/routing/transition';
 import type { Breadcrumb } from 'vault/vault/app-types';
+import type Controller from '@ember/controller';
+import type LdapRoleModel from 'vault/models/ldap/role';
+import type SecretMountPath from 'vault/services/secret-mount-path';
+import type Transition from '@ember/routing/transition';
 
-interface LdapRoleDetailsController extends Controller {
+interface RouteController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
   model: LdapRoleModel;
 }
 
-export default class LdapRoleEditRoute extends Route {
-  setupController(
-    controller: LdapRoleDetailsController,
-    resolvedModel: LdapRoleModel,
-    transition: Transition
-  ) {
+export default class LdapRolesRoleDetailsRoute extends Route {
+  @service declare readonly secretMountPath: SecretMountPath;
+
+  setupController(controller: RouteController, resolvedModel: LdapRoleModel, transition: Transition) {
     super.setupController(controller, resolvedModel, transition);
 
     controller.breadcrumbs = [
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backend, route: 'overview' },
-      { label: 'roles', route: 'roles' },
-      { label: resolvedModel.name },
+      { label: 'Roles', route: 'roles' },
+      ...ldapBreadcrumbs(resolvedModel.name, resolvedModel.type, this.secretMountPath.currentPath, true),
     ];
   }
 }

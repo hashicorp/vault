@@ -56,6 +56,7 @@ import (
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/crypto/sha3"
+	"golang.org/x/time/rate"
 )
 
 const (
@@ -94,11 +95,12 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 	}
 
 	b := &SystemBackend{
-		Core:        core,
-		db:          db,
-		logger:      logger,
-		mfaBackend:  NewPolicyMFABackend(core, logger),
-		syncBackend: syncBackend,
+		Core:                 core,
+		db:                   db,
+		logger:               logger,
+		mfaBackend:           NewPolicyMFABackend(core, logger),
+		syncBackend:          syncBackend,
+		raftChallengeLimiter: rate.NewLimiter(rate.Limit(RaftChallengesPerSecond), RaftInitialChallengeLimit),
 	}
 
 	b.Backend = &framework.Backend{
@@ -270,11 +272,12 @@ func (b *SystemBackend) rawPaths() []*framework.Path {
 type SystemBackend struct {
 	*framework.Backend
 	entSystemBackend
-	Core        *Core
-	db          *memdb.MemDB
-	logger      log.Logger
-	mfaBackend  *PolicyMFABackend
-	syncBackend *SecretsSyncBackend
+	Core                 *Core
+	db                   *memdb.MemDB
+	logger               log.Logger
+	mfaBackend           *PolicyMFABackend
+	syncBackend          *SecretsSyncBackend
+	raftChallengeLimiter *rate.Limiter
 }
 
 // handleConfigStateSanitized returns the current configuration state. The configuration
@@ -1389,7 +1392,9 @@ func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry, legacy
 			entryConfig["max_lease_ttl"] = coreMaxTTL
 		}
 	}
-
+	if entry.Config.TrimRequestTrailingSlashes {
+		entryConfig["trim_request_trailing_slashes"] = true
+	}
 	if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
 		entryConfig["audit_non_hmac_request_keys"] = rawVal.([]string)
 	}
@@ -1611,6 +1616,10 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	// Copy over the force no cache if set
 	if apiConfig.ForceNoCache {
 		config.ForceNoCache = true
+	}
+
+	if apiConfig.TrimRequestTrailingSlashes {
+		config.TrimRequestTrailingSlashes = true
 	}
 
 	if err := checkListingVisibility(apiConfig.ListingVisibility); err != nil {
@@ -2147,6 +2156,10 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 
 	if rawVal, ok := mountEntry.synthesizedConfigCache.Load("identity_token_key"); ok {
 		resp.Data["identity_token_key"] = rawVal.(string)
+	}
+
+	if mountEntry.Config.TrimRequestTrailingSlashes {
+		resp.Data["trim_request_trailing_slashes"] = mountEntry.Config.TrimRequestTrailingSlashes
 	}
 
 	if mountEntry.Config.UserLockoutConfig != nil {
@@ -2753,6 +2766,30 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 	}
 
+	if rawVal, ok := data.GetOk("trim_request_trailing_slashes"); ok {
+		trimRequestTrailingSlashes := rawVal.(bool)
+
+		oldVal := mountEntry.Config.TrimRequestTrailingSlashes
+		mountEntry.Config.TrimRequestTrailingSlashes = trimRequestTrailingSlashes
+
+		// Update the mount table
+		var err error
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Config.TrimRequestTrailingSlashes = oldVal
+			return handleError(err)
+		}
+
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("mount tuning of trim_request_trailing_slashes successful", "path", path)
+		}
+	}
+
 	var err error
 	var resp *logical.Response
 	var options map[string]string
@@ -3269,6 +3306,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse(fmt.Sprintf("invalid listing_visibility %s", apiConfig.ListingVisibility)), nil
 	}
 	config.ListingVisibility = apiConfig.ListingVisibility
+	config.TrimRequestTrailingSlashes = apiConfig.TrimRequestTrailingSlashes
 
 	if len(apiConfig.AuditNonHMACRequestKeys) > 0 {
 		config.AuditNonHMACRequestKeys = apiConfig.AuditNonHMACRequestKeys
@@ -5465,24 +5503,25 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 }
 
 type SealStatusResponse struct {
-	Type              string   `json:"type"`
-	Initialized       bool     `json:"initialized"`
-	Sealed            bool     `json:"sealed"`
-	T                 int      `json:"t"`
-	N                 int      `json:"n"`
-	Progress          int      `json:"progress"`
-	Nonce             string   `json:"nonce"`
-	Version           string   `json:"version"`
-	BuildDate         string   `json:"build_date"`
-	Migration         bool     `json:"migration"`
-	ClusterName       string   `json:"cluster_name,omitempty"`
-	ClusterID         string   `json:"cluster_id,omitempty"`
-	RecoverySeal      bool     `json:"recovery_seal"`
-	StorageType       string   `json:"storage_type,omitempty"`
-	HCPLinkStatus     string   `json:"hcp_link_status,omitempty"`
-	HCPLinkResourceID string   `json:"hcp_link_resource_ID,omitempty"`
-	Warnings          []string `json:"warnings,omitempty"`
-	RecoverySealType  string   `json:"recovery_seal_type,omitempty"`
+	Type               string   `json:"type"`
+	Initialized        bool     `json:"initialized"`
+	Sealed             bool     `json:"sealed"`
+	T                  int      `json:"t"`
+	N                  int      `json:"n"`
+	Progress           int      `json:"progress"`
+	Nonce              string   `json:"nonce"`
+	Version            string   `json:"version"`
+	BuildDate          string   `json:"build_date"`
+	Migration          bool     `json:"migration"`
+	ClusterName        string   `json:"cluster_name,omitempty"`
+	ClusterID          string   `json:"cluster_id,omitempty"`
+	RecoverySeal       bool     `json:"recovery_seal"`
+	StorageType        string   `json:"storage_type,omitempty"`
+	HCPLinkStatus      string   `json:"hcp_link_status,omitempty"`
+	HCPLinkResourceID  string   `json:"hcp_link_resource_ID,omitempty"`
+	Warnings           []string `json:"warnings,omitempty"`
+	RecoverySealType   string   `json:"recovery_seal_type,omitempty"`
+	RemovedFromCluster *bool    `json:"removed_from_cluster,omitempty"`
 }
 
 type SealBackendStatus struct {
@@ -5519,16 +5558,22 @@ func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResp
 	hcpLinkStatus, resourceIDonHCP := core.GetHCPLinkStatus()
 
 	redactVersion, _, redactClusterName, _ := logical.CtxRedactionSettingsValue(ctx)
+	var removed *bool
+	isRemoved, shouldInclude := core.IsRemovedFromCluster()
+	if shouldInclude {
+		removed = &isRemoved
+	}
 
 	if sealConfig == nil {
 		s := &SealStatusResponse{
-			Type:         core.SealAccess().BarrierSealConfigType().String(),
-			Initialized:  initialized,
-			Sealed:       true,
-			RecoverySeal: core.SealAccess().RecoveryKeySupported(),
-			StorageType:  core.StorageType(),
-			Version:      version.GetVersion().VersionNumber(),
-			BuildDate:    version.BuildDate,
+			Type:               core.SealAccess().BarrierSealConfigType().String(),
+			Initialized:        initialized,
+			Sealed:             true,
+			RecoverySeal:       core.SealAccess().RecoveryKeySupported(),
+			StorageType:        core.StorageType(),
+			Version:            version.GetVersion().VersionNumber(),
+			BuildDate:          version.BuildDate,
+			RemovedFromCluster: removed,
 		}
 
 		if redactVersion {
@@ -5570,21 +5615,22 @@ func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResp
 	progress, nonce := core.SecretProgress(lock)
 
 	s := &SealStatusResponse{
-		Type:             sealType,
-		Initialized:      initialized,
-		Sealed:           sealed,
-		T:                sealConfig.SecretThreshold,
-		N:                sealConfig.SecretShares,
-		Progress:         progress,
-		Nonce:            nonce,
-		Version:          version.GetVersion().VersionNumber(),
-		BuildDate:        version.BuildDate,
-		Migration:        core.IsInSealMigrationMode(lock) && !core.IsSealMigrated(lock),
-		ClusterName:      clusterName,
-		ClusterID:        clusterID,
-		RecoverySeal:     core.SealAccess().RecoveryKeySupported(),
-		RecoverySealType: recoverySealType,
-		StorageType:      core.StorageType(),
+		Type:               sealType,
+		Initialized:        initialized,
+		Sealed:             sealed,
+		T:                  sealConfig.SecretThreshold,
+		N:                  sealConfig.SecretShares,
+		Progress:           progress,
+		Nonce:              nonce,
+		Version:            version.GetVersion().VersionNumber(),
+		BuildDate:          version.BuildDate,
+		Migration:          core.IsInSealMigrationMode(lock) && !core.IsSealMigrated(lock),
+		RemovedFromCluster: removed,
+		ClusterName:        clusterName,
+		ClusterID:          clusterID,
+		RecoverySeal:       core.SealAccess().RecoveryKeySupported(),
+		RecoverySealType:   recoverySealType,
+		StorageType:        core.StorageType(),
 	}
 
 	if resourceIDonHCP != "" {
@@ -6130,8 +6176,14 @@ func sanitizePath(path string) string {
 		path += "/"
 	}
 
-	for strings.HasPrefix(path, "/") {
-		path = path[1:]
+	// Check for the specified prefixes and trim them if present
+	for strings.HasPrefix(path, "/") || strings.HasPrefix(path, "/\\") {
+		switch {
+		case strings.HasPrefix(path, "/\\"):
+			path = path[2:]
+		case strings.HasPrefix(path, "/"):
+			path = path[1:]
+		}
 	}
 
 	return path
@@ -7154,6 +7206,10 @@ This path responds to the following HTTP methods.
 
 	"well-known-label": {
 		`The label representing a path-prefix within the /.well-known/ path`,
+		"",
+	},
+	"trim_request_trailing_slashes": {
+		`Whether to trim a trailing slash on incoming requests to this mount`,
 		"",
 	},
 }

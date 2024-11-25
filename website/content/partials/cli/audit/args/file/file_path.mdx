@@ -1,0 +1,15 @@
+<a id="audit-arg-file-file_path" />
+
+**`file_path (string : <required>)`**
+
+Location on the audit log on the Vault server. Must be one of the following:
+
+Value                     | Description
+------------------------- | -----------
+Relative or absolute path | Write or append audit entries to the target file
+`stdout`                  | Streams audit data to `stdout` on the Vault server
+`discard`                 |  Discards audit output instead of writing to a device
+
+**Example**: `file_path='/logs/kv-audit.log'`
+
+

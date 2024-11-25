@@ -1,0 +1,4 @@
+```release-note:bug
+secret/pki: Fix a bug that prevents PKI issuer field enable_aia_url_templating
+to be set to false.
+```

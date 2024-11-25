@@ -23,7 +23,7 @@
         name={{concat "useText-" this.elementId}}
         class="toggle is-success is-small"
         checked={{this.key.enterAsText}}
-        onchange={{action (toggle "enterAsText" this.key)}}
+        onchange={{action "handleToggle"}}
       />
       <label for={{concat "useText-" this.elementId}} class="has-text-weight-bold is-size-8">
         Enter as text

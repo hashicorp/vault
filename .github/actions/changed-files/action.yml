@@ -19,6 +19,9 @@ outputs:
   ui-changed:
     description: Whether or not the web UI was modified.
     value: ${{ steps.changed-files.outputs.ui-changed }}
+  autopilot-changed:
+    description: Whether or not files pertaining to Autopilot were modified.
+    value: ${{ steps.changed-files.outputs.autopilot-changed }}
   files:
     description: All of the file names that changed.
     value: ${{ steps.changed-files.outputs.files }}

@@ -194,12 +194,13 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 
 	// Bootstrap initial set of keys if they did not exist before. AWS Secret Access Keys can only be obtained on creation,
 	// so we need to boostrap new roles with a new initial set of keys to be able to serve valid credentials to Vault clients.
-	existingCreds, err := req.Storage.Get(ctx, formatCredsStoragePath(config.Name))
+	credsPath := formatCredsStoragePath(config.Name)
+	existingCredsEntry, err := req.Storage.Get(ctx, credsPath)
 	if err != nil {
 		return nil, fmt.Errorf("unable to verify if credentials already exist for role %q: %w", config.Name, err)
 	}
-	if existingCreds == nil {
-		err := b.createCredential(ctx, req.Storage, config, false)
+	if existingCredsEntry == nil {
+		creds, err := b.createCredential(ctx, req.Storage, config, false)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create new credentials for role %q: %w", config.Name, err)
 		}
@@ -207,12 +208,17 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 		err = b.credRotationQueue.Push(&queue.Item{
 			Key:      config.Name,
 			Value:    config,
-			Priority: time.Now().Add(config.RotationPeriod).Unix(),
+			Priority: creds.priority(config),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to add item into the rotation queue for role %q: %w", config.Name, err)
 		}
 	} else {
+		var existingCreds awsCredentials
+		err := existingCredsEntry.DecodeJSON(&existingCreds)
+		if err != nil {
+			return nil, fmt.Errorf("unable to decode existing credentials for role %s: %w", config.Name, err)
+		}
 		// creds already exist, so all we need to do is update the rotation
 		// what here stays the same and what changes? Can we change the name?
 		i, err := b.credRotationQueue.PopByKey(config.Name)
@@ -227,7 +233,14 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 		}
 		i.Value = config
 		// update the next rotation to occur at now + the new rotation period
-		i.Priority = time.Now().Add(config.RotationPeriod).Unix()
+		newExpiration := time.Now().Add(config.RotationPeriod)
+		existingCreds.Expiration = &newExpiration
+		_, err = logical.StorageEntryJSON(credsPath, &existingCreds)
+		if err != nil {
+			return nil, fmt.Errorf("error updating credentials for role %s: %w", config.Name, err)
+		}
+		i.Priority = existingCreds.priority(config)
+
 		err = b.credRotationQueue.Push(i)
 		if err != nil {
 			return nil, fmt.Errorf("failed to add updated item into the rotation queue for role %q: %w", config.Name, err)
@@ -318,8 +331,8 @@ const (
 )
 
 func (b *backend) validateRotationPeriod(period time.Duration) error {
-	if period < minAllowableRotationPeriod {
-		return fmt.Errorf("role rotation period out of range: must be greater than %.2f seconds", minAllowableRotationPeriod.Seconds())
+	if period < b.minAllowableRotationPeriod {
+		return fmt.Errorf("role rotation period out of range: must be greater than %.2f seconds", b.minAllowableRotationPeriod.Seconds())
 	}
 	return nil
 }

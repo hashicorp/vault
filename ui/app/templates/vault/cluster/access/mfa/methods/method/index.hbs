@@ -60,6 +60,7 @@
     </ToolbarActions>
   </Toolbar>
   <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+    <InfoTableRow @label="ID" @value={{this.model.method.id}} @addCopyButton={{true}} />
     {{#each this.model.method.attrs as |attr|}}
       {{#if (eq attr.type "object")}}
         <InfoTableRow

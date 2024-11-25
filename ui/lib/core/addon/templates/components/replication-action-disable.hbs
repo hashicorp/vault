@@ -50,7 +50,6 @@
   <ul class="bullet">
     {{#if this.model.replicationAttrs.isPrimary}}
       <li>Secondaries will no longer be able to connect</li>
-      <li>We will wipe the underlying storage of connected secondaries</li>
       <li>Secondaries connecting back to the cluster will require a wipe of the underlying storage</li>
     {{else}}
       <li>We will wipe the underlying storage of this secondary when connected to a primary</li>

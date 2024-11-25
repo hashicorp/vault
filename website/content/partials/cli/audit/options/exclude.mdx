@@ -1,0 +1,22 @@
+<a id="audit-option-exclude" />
+
+**`exclude (string : "")`** <EnterpriseAlert inline="true" />
+
+Remove any fields matching the provided
+[exclusion filtering rules](/vault/docs/enterprise/audit/exclusion) from the
+audit entry before writing to the audit device.
+
+**Example**: `exclude='[{ "condition": "/request/mount_type" == transit", "fields": [ "request/data" ] }]'`
+
+<Tip>
+
+  Write your exclude rules to a JSON file and use `@` notation to pass the rule
+  definitions to `exclude`:
+
+  ```
+  $ vault audit enable    \
+      exclude=@rules.json \
+      file file_path="/var/logs/vault/audit.log"'
+  ```
+
+</Tip>

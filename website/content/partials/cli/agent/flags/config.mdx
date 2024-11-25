@@ -1,0 +1,12 @@
+<a id="agent-flag-config" />
+
+**`-config (string : <required>)`**
+
+Path to a single
+[Vault Agent configuration file](/vault/docs/agent-and-proxy/agent#configuration-file-options)
+or directory of configuration files with agent directives. Repeat the `-config`
+flag as needed to specify more than one discrete configuration file. If you
+specify more than one configuration file, Agent composes the source files into
+a single configuration file at runtime.
+
+**Example**: `-config /path/to/file.hcl`

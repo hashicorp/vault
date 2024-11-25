@@ -1,0 +1,115 @@
+---
+layout: docs
+page_title: "agent generate-config - Vault CLI"
+description: >-
+  Use vault agent generate-config to generate a basic Vault Agent configuration
+  file from secrets plugin data.
+---
+
+# `agent generate-config`
+
+Use secrets plugin data to generate a basic
+[configuration file](/vault/docs/agent-and-proxy/agent#configuration-file-options)
+for running Vault Agent in [process supervisor mode](/vault/docs/agent-and-proxy/agent/process-supervisor).
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault agent generate-config -type <config_file_type> [options] [<file_path>]
+```
+
+</CodeBlockConfig>
+
+## Description 
+
+`agent generate-config` composes configuration details for Vault Agent
+based on the configuration `type` and writes a local configuration file for
+running Vault agent in process supervisor mode.
+
+<Tip title="Related API endpoints">
+
+  - None
+
+</Tip>
+
+### Limitations and warnings
+
+Limitations:
+
+- Plugin support limited to KV plugins.
+- Configuration type limited to environment variable templates.
+
+<Warning title="Not appropriate for production">
+
+  The file created by `agent generate-config` includes an `auto_auth` section
+  configured to use the `token_file` authentication method.
+
+  Token files are convenient for local testing, but **are not** appropriates for
+  production use. Refer to the full list of Vault Agent
+  [autoAuth methods](/vault/docs/agent-and-proxy/autoauth/methods) for available
+  production-ready authentication methods.
+
+</Warning>
+
+## Arguments
+
+<br />
+
+@include 'cli/agent/args/file_path.mdx'
+
+
+
+## Options
+
+None.
+
+
+
+## Command Flags
+
+<br />
+
+@include 'cli/agent/flags/exec.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/agent/flags/path.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/agent/flags/type.mdx'
+
+
+
+## Global flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags-but-format.mdx'
+
+
+
+## Examples
+
+Generate an environment variable template configuration for the `foo` secrets
+plugin:
+
+```shell-session
+$ vault agent generate-config  \
+    -type="env-template"       \
+    -exec="./my-app arg1 arg2" \
+    -path="secret/foo"
+
+Command output
+```
+
+Generate an environment variable template configuration for more than one
+secrets plugin:
+
+```shell-session
+$ vault agent generate-config -type="env-template" \
+    -exec="./my-app arg1 arg2" \
+    -path="secret/foo" \
+    -path="secret/bar" \
+    -path="secret/my-app/*"
+```

@@ -1,0 +1,6 @@
+```release-note:improvement
+ui: Adds navigation for LDAP hierarchical roles
+```
+```release-note:bug
+ui: Fixes rendering issues of LDAP dynamic and static roles with the same name
+```
