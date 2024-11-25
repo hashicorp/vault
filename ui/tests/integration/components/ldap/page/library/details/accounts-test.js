@@ -11,7 +11,6 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import sinon from 'sinon';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | ldap | Page::Library::Details::Accounts', function (hooks) {
   setupRenderingTest(hooks);
@@ -77,10 +76,7 @@ module('Integration | Component | ldap | Page::Library::Details::Accounts', func
     assert.dom('[data-test-checked-out-card]').exists('Accounts checked out card renders');
 
     assert
-      .dom(`${GENERAL.codeBlock('accounts')} code`)
-      .hasText(
-        'vault lease renew ldap-test/library/test-library/check-out/:lease_id',
-        'Renew cli command renders with backend path'
-      );
+      .dom('[data-test-accounts-code-block] code')
+      .hasText('vault lease renew ad/library/test-library/check-out/:lease_id', 'Renew cli command renders');
   });
 });
