@@ -14,6 +14,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/pluginconsts"
 	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -402,7 +403,7 @@ func (c *Core) findKvMounts() []*kvMount {
 	}
 
 	for _, entry := range c.mounts.Entries {
-		if entry.Type == "kv" || entry.Type == "generic" {
+		if entry.Type == pluginconsts.SecretEngineKV || entry.Type == pluginconsts.SecretEngineGeneric {
 			version, ok := entry.Options["version"]
 			if !ok || version == "" {
 				version = "1"
@@ -533,6 +534,31 @@ func getMeanNamespaceSecrets(mapOfNamespacesToSecrets map[string]int) int {
 		return length
 	}
 	return getTotalSecretsAcrossAllNamespaces(mapOfNamespacesToSecrets) / length
+}
+
+// GetSecretEngineUsageMetrics returns a map of secret engine mount types to the number of those mounts that exist.
+func (c *Core) GetSecretEngineUsageMetrics() map[string]int {
+	mounts := make(map[string]int)
+
+	c.authLock.RLock()
+	defer c.authLock.RUnlock()
+
+	// we don't grab the statelock, so this code might run during or after the seal process.
+	// Therefore, we need to check if c.auth is nil. If we do not, this will panic when
+	// run after seal.
+	if c.auth == nil {
+		return mounts
+	}
+
+	for _, entry := range c.mounts.Entries {
+		authType := entry.Type
+		if _, ok := mounts[authType]; !ok {
+			mounts[authType] = 1
+		} else {
+			mounts[authType] += 1
+		}
+	}
+	return mounts
 }
 
 // GetAuthMethodUsageMetrics returns a map of auth mount types to the number of those mounts that exist.
