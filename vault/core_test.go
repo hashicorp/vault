@@ -3400,15 +3400,11 @@ func TestDefaultDeadlock(t *testing.T) {
 	InduceDeadlock(t, testCore, 0)
 }
 
-func RestoreDeadlockOpts() func() {
-	opts := deadlock.Opts
-	return func() {
-		deadlock.Opts = opts
-	}
-}
-
 func InduceDeadlock(t *testing.T, vaultcore *Core, expected uint32) {
-	defer RestoreDeadlockOpts()()
+	priorDeadlockFunc := deadlock.Opts.OnPotentialDeadlock
+	defer func() {
+		deadlock.Opts.OnPotentialDeadlock = priorDeadlockFunc
+	}()
 	var deadlocks uint32
 	deadlock.Opts.OnPotentialDeadlock = func() {
 		atomic.AddUint32(&deadlocks, 1)

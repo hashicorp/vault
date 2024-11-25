@@ -529,6 +529,8 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	switch rawLeafBehavior {
 	case "err":
 		newLeafBehavior = certutil.ErrNotAfterBehavior
+	case "always_enforce_err":
+		newLeafBehavior = certutil.AlwaysEnforceErr
 	case "truncate":
 		newLeafBehavior = certutil.TruncateNotAfterBehavior
 	case "permit":
@@ -797,6 +799,8 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 		switch rawLeafBehavior {
 		case "err":
 			newLeafBehavior = certutil.ErrNotAfterBehavior
+		case "always_enforce_err":
+			newLeafBehavior = certutil.AlwaysEnforceErr
 		case "truncate":
 			newLeafBehavior = certutil.TruncateNotAfterBehavior
 		case "permit":
