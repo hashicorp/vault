@@ -9,14 +9,15 @@ fail() {
   exit 1
 }
 
-#MOUNT=pki_secret
-#ISSUER=issuer
-#COMMON_NAME=common
-#TTL=8760h
-#VAULT_ADDR=http://127.0.0.1:8200
-#VAULT_INSTALL_DIR=/opt/homebrew/bin
-#VAULT_TOKEN=root
-#vault secrets enable --path=${MOUNT} pki > /dev/null 2>&1  || echo "PKI already enabled!"
+MOUNT=pki_secret
+ISSUER=issuer
+COMMON_NAME=common
+TTL=8760h
+VAULT_ADDR=http://127.0.0.1:8200
+VAULT_INSTALL_DIR=/opt/homebrew/bin
+VAULT_TOKEN=root
+TMP_TEST_RESULTS="pki_tmp_results"
+vault secrets enable --path=${MOUNT} pki > /dev/null 2>&1  || echo "PKI already enabled!"
 
 [[ -z "$MOUNT" ]] && fail "MOUNT env variable has not been set"
 [[ -z "$VAULT_ADDR" ]] && fail "VAULT_ADDR env variable has not been set"
@@ -47,8 +48,6 @@ mkdir "${TMP_TEST_RESULTS}"
 openssl req -new -newkey rsa:2048 -nodes -subj "/CN=www.${COMMON_NAME}.com" -keyout "${TMP_TEST_RESULTS}/${PRIV_KEY_NAME}" -out "${TMP_TEST_RESULTS}/${CSR_NAME}"
 # Sign Certificate
 "$binpath" write ${MOUNT}/sign/${ROLE_NAME} csr="@${TMP_TEST_RESULTS}/${CSR_NAME}" format=pem ttl="${TTL+5}" | jq -r '.data.certificate' > "${TMP_TEST_RESULTS}/${SIGNED_CRT_NAME}"
-## Validate cert details:
-#openssl x509 -in "${TMP_TEST_RESULTS}/${SIGNED_CRT_NAME}" -text -noout
 
 # ------ Generate and sign intermediate ------
 INTERMEDIATE_COMMON_NAME="intermediate_${COMMON_NAME}"
@@ -62,8 +61,7 @@ INTERMEDIATE_SIGNED_CRT_NAME="${MOUNT}_${INTERMEDIATE_COMMON_NAME}_signed.crt"
 "$binpath" write ${MOUNT}/root/sign-intermediate csr="@${TMP_TEST_RESULTS}/${INTERMEDIATE_CSR_NAME}" format=pem_bundle ttl="${TTL}" | jq -r '.data.certificate' > "${TMP_TEST_RESULTS}/${INTERMEDIATE_SIGNED_CRT_NAME}"
 # Import Signed Intermediate Certificate into Vault
 "$binpath" write ${MOUNT}/intermediate/set-signed certificate="@${TMP_TEST_RESULTS}/${INTERMEDIATE_SIGNED_CRT_NAME}"
-## Validate cert details:
-#openssl x509 -in "${TMP_TEST_RESULTS}/${INTERMEDIATE_SIGNED_CRT_NAME}" -text -noout || fail "The intermediate certificate appears to be improperly configured or contains errors"
+
 
 
 
