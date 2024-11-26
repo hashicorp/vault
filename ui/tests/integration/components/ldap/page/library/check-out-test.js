@@ -76,7 +76,7 @@ module('Integration | Component | ldap | Page::Library::CheckOut', function (hoo
       .hasText('ldap/library/test/check-out/123', 'Lease ID renders');
     assert
       .dom('[data-test-value-div="Lease renewable"] svg')
-      .hasClass('flight-icon-check-circle', 'Lease renewable true icon renders');
+      .hasClass('hds-icon-check-circle', 'Lease renewable true icon renders');
     assert
       .dom('[data-test-value-div="Lease renewable"] svg')
       .hasClass('has-text-success', 'Lease renewable true icon color renders');
@@ -86,7 +86,7 @@ module('Integration | Component | ldap | Page::Library::CheckOut', function (hoo
     await this.renderComponent();
     assert
       .dom('[data-test-value-div="Lease renewable"] svg')
-      .hasClass('flight-icon-x-circle', 'Lease renewable false icon renders');
+      .hasClass('hds-icon-x-circle', 'Lease renewable false icon renders');
     assert
       .dom('[data-test-value-div="Lease renewable"] svg')
       .hasClass('has-text-danger', 'Lease renewable false icon color renders');

@@ -53,7 +53,7 @@ module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
   test('it should render tab page header and config cta', async function (assert) {
     this.promptConfig = true;
     await this.renderComponent();
-    assert.dom('.title svg').hasClass('flight-icon-kubernetes-color', 'Kubernetes icon renders in title');
+    assert.dom('.title svg').hasClass('hds-icon-kubernetes-color', 'Kubernetes icon renders in title');
     assert.dom('.title').hasText('kubernetes-test', 'Mount path renders in title');
     assert
       .dom('[data-test-toolbar-roles-action]')
@@ -70,7 +70,7 @@ module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
     assert.dom('[data-test-toolbar-roles-action]').hasText('Create role', 'Toolbar action has correct text');
     assert
       .dom('[data-test-toolbar-roles-action] svg')
-      .hasClass('flight-icon-plus', 'Toolbar action has correct icon');
+      .hasClass('hds-icon-plus', 'Toolbar action has correct icon');
     assert.dom(GENERAL.filterInputExplicit).exists('Roles filter input renders');
     assert.dom('[data-test-empty-state-title]').hasText('No roles yet', 'Title renders');
     assert
@@ -92,7 +92,7 @@ module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
 
   test('it should render roles list', async function (assert) {
     await this.renderComponent();
-    assert.dom('[data-test-list-item-content] svg').hasClass('flight-icon-user', 'List item icon renders');
+    assert.dom('[data-test-list-item-content] svg').hasClass('hds-icon-user', 'List item icon renders');
     assert.dom('[data-test-list-item-content]').hasText(this.roles[0].name, 'List item name renders');
     await click('[data-test-popup-menu-trigger]');
     assert.dom('[data-test-details]').hasText('Details', 'Details link renders in menu');

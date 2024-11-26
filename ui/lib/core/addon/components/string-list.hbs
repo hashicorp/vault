@@ -53,7 +53,7 @@
         {{/if}}
       </div>
       {{#if (includes index this.indicesWithComma)}}
-        <FlightIcon @name="alert-triangle" @color="var(--token-color-foreground-warning)" @size="24" />
+        <Hds::Icon @name="alert-triangle" @color="var(--token-color-foreground-warning)" @size="24" @isInline={{true}} />
       {{/if}}
     </div>
   {{/each}}
