@@ -17,8 +17,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/okta/okta-sdk-golang/v2/okta"
-	"github.com/okta/okta-sdk-golang/v2/okta/query"
+	"github.com/okta/okta-sdk-golang/v5/okta"
 	"github.com/stretchr/testify/require"
 )
 
@@ -115,15 +114,15 @@ func TestBackend_Config(t *testing.T) {
 
 func createOktaGroups(t *testing.T, username string, token string, org string) []string {
 	orgURL := "https://" + org + "." + previewBaseURL
-	ctx, client, err := okta.NewClient(context.Background(), okta.WithOrgUrl(orgURL), okta.WithToken(token))
+	cfg, err := okta.NewConfiguration(okta.WithOrgUrl(orgURL), okta.WithToken(token))
 	require.Nil(t, err)
+	client := okta.NewAPIClient(cfg)
+	ctx := context.Background()
 
-	users, _, err := client.User.ListUsers(ctx, &query.Params{
-		Q: username,
-	})
+	users, _, err := client.UserAPI.ListUsers(ctx).Q(username).Execute()
 	require.Nil(t, err)
 	require.Len(t, users, 1)
-	userID := users[0].Id
+	userID := users[0].GetId()
 	var groupIDs []string
 
 	// Verify that login's call to list the groups of the user logging in will page
@@ -133,26 +132,24 @@ func createOktaGroups(t *testing.T, username string, token string, org string) [
 	// only 200 results are returned for most orgs."
 	for i := 0; i < 201; i++ {
 		name := fmt.Sprintf("TestGroup%d", i)
-		groups, _, err := client.Group.ListGroups(ctx, &query.Params{
-			Q: name,
-		})
+		groups, _, err := client.GroupAPI.ListGroups(ctx).Q(name).Execute()
 		require.Nil(t, err)
 
 		var groupID string
 		if len(groups) == 0 {
-			group, _, err := client.Group.CreateGroup(ctx, okta.Group{
+			group, _, err := client.GroupAPI.CreateGroup(ctx).Group(okta.Group{
 				Profile: &okta.GroupProfile{
-					Name: fmt.Sprintf("TestGroup%d", i),
+					Name: okta.PtrString(fmt.Sprintf("TestGroup%d", i)),
 				},
-			})
+			}).Execute()
 			require.Nil(t, err)
-			groupID = group.Id
+			groupID = group.GetId()
 		} else {
-			groupID = groups[0].Id
+			groupID = groups[0].GetId()
 		}
 		groupIDs = append(groupIDs, groupID)
 
-		_, err = client.Group.AddUserToGroup(ctx, groupID, userID)
+		_, err = client.GroupAPI.AssignUserToGroup(ctx, groupID, userID).Execute()
 		require.Nil(t, err)
 	}
 	return groupIDs
@@ -160,11 +157,12 @@ func createOktaGroups(t *testing.T, username string, token string, org string) [
 
 func deleteOktaGroups(t *testing.T, token string, org string, groupIDs []string) {
 	orgURL := "https://" + org + "." + previewBaseURL
-	ctx, client, err := okta.NewClient(context.Background(), okta.WithOrgUrl(orgURL), okta.WithToken(token))
+	cfg, err := okta.NewConfiguration(okta.WithOrgUrl(orgURL), okta.WithToken(token))
 	require.Nil(t, err)
+	client := okta.NewAPIClient(cfg)
 
 	for _, groupID := range groupIDs {
-		_, err := client.Group.DeleteGroup(ctx, groupID)
+		_, err := client.GroupAPI.DeleteGroup(context.Background(), groupID).Execute()
 		require.Nil(t, err)
 	}
 }
