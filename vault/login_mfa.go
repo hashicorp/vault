@@ -2020,7 +2020,7 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 
 	user := users[0]
 
-	factors, _, err := client.UserFactorAPI.ListFactors(ctx, *user.Id).Execute()
+	factors, _, err := client.UserFactorAPI.ListFactors(ctx, user.GetId()).Execute()
 	if err != nil {
 		return err
 	}
@@ -2030,11 +2030,10 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 	}
 
 	var factorFound bool
-	var userFactor *okta.UserFactor
+	var userFactor *okta.UserFactorPush
 	for _, factor := range factors {
-		f := factor.GetActualInstance()
-		userFactor = f.(*okta.UserFactor)
-		if *userFactor.FactorType == "push" {
+		if factor.UserFactorPush != nil {
+			userFactor = factor.UserFactorPush
 			factorFound = true
 			break
 		}
@@ -2081,7 +2080,6 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 
 	// poll verifyfactor until termination (e.g., the user responds to the push factor)
 	for {
-
 		result, _, err := client.UserFactorAPI.GetFactorTransactionStatus(client.GetConfig().Context, user.GetId(), userFactor.GetId(), transactionID).Execute()
 		if err != nil {
 			return err
