@@ -115,6 +115,9 @@ type Config struct {
 	License          string `hcl:"-"`
 	LicensePath      string `hcl:"license_path"`
 	DisableSSCTokens bool   `hcl:"-"`
+
+	EnablePostUnsealTrace bool   `hcl:"enable_post_unseal_trace"`
+	PostUnsealTraceDir    string `hcl:"post_unseal_trace_directory"`
 }
 
 const (
@@ -423,6 +426,16 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.LicensePath = c.LicensePath
 	if c2.LicensePath != "" {
 		result.LicensePath = c2.LicensePath
+	}
+
+	result.EnablePostUnsealTrace = c.EnablePostUnsealTrace
+	if c2.EnablePostUnsealTrace {
+		result.EnablePostUnsealTrace = c2.EnablePostUnsealTrace
+	}
+
+	result.PostUnsealTraceDir = c.PostUnsealTraceDir
+	if c2.PostUnsealTraceDir != "" {
+		result.PostUnsealTraceDir = c2.PostUnsealTraceDir
 	}
 
 	// Use values from top-level configuration for storage if set
@@ -1150,6 +1163,9 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"detect_deadlocks": c.DetectDeadlocks,
 
 		"imprecise_lease_role_tracking": c.ImpreciseLeaseRoleTracking,
+
+		"enable_post_unseal_trace":    c.EnablePostUnsealTrace,
+		"post_unseal_trace_directory": c.PostUnsealTraceDir,
 	}
 	for k, v := range sharedResult {
 		result[k] = v
