@@ -22,6 +22,7 @@ import type VersionService from 'vault/services/version';
 const CONFIG_ADAPTERS_PATHS: Record<string, string[]> = {
   aws: ['aws/lease-config', 'aws/root-config'],
   ssh: ['ssh/ca-config'],
+  cubbyhole: ['cubbyhole/config'],
 };
 
 export default class SecretsBackendConfigurationEdit extends Route {

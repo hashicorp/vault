@@ -90,6 +90,13 @@ export default class SecretEngineModel extends Model {
       'If checked, all keys will require the cas parameter to be set on all write requests. A key’s metadata settings can overwrite this value.',
   })
   casRequired;
+  @attr('boolean', {
+    defaultValue: false,
+    label: 'Private secret engine',
+    subText:
+      'If checked, the engine\'s content will be scoped to ',
+  })
+  casRequired;
   @attr({
     defaultValue: 0,
     editType: 'ttl',

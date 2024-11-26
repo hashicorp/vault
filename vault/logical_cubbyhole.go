@@ -7,13 +7,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
-
 	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"strings"
+)
+
+const (
+	scopeToken  = "per-token"
+	scopeEntity = "per-entity"
 )
 
 // CubbyholeBackendFactory constructs a new cubbyhole backend
@@ -47,6 +51,38 @@ type CubbyholeBackend struct {
 
 func (b *CubbyholeBackend) paths() []*framework.Path {
 	return []*framework.Path{
+
+		{
+			Pattern: "config/scope",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "cubbyhole",
+			},
+
+			Fields: map[string]*framework.FieldSchema{
+				"scope": {
+					Type:        framework.TypeString,
+					Description: `Defines the behavior of the physical storage used for cubbyhole\'s secrets. If per token, cubbyhole is destroyed after the token\'s expiration. If per entity, secrets are persisted and are linked to user\'s identity lifetime`,
+					Default:     "per-token",
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.pathScopeWrite,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "write",
+						OperationSuffix: "scope",
+					},
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathScopeRead,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "scope",
+					},
+				},
+			},
+		},
 		{
 			Pattern: framework.MatchAllRegex("path"),
 
@@ -131,8 +167,24 @@ func (b *CubbyholeBackend) handleExistenceCheck(ctx context.Context, req *logica
 }
 
 func (b *CubbyholeBackend) handleRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	if req.ClientToken == "" {
-		return nil, fmt.Errorf("client token empty")
+	var pathPrefix string
+
+	scope, err := b.Scope(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	switch scope {
+	case scopeToken:
+		if req.ClientToken == "" {
+			return nil, fmt.Errorf("client token empty")
+		}
+		pathPrefix = req.ClientToken
+	case scopeEntity:
+		if req.EntityID == "" {
+			return nil, fmt.Errorf("entity ID empty")
+		}
+		pathPrefix = req.EntityID
 	}
 
 	path := data.Get("path").(string)
@@ -142,7 +194,7 @@ func (b *CubbyholeBackend) handleRead(ctx context.Context, req *logical.Request,
 	}
 
 	// Read the path
-	out, err := req.Storage.Get(ctx, req.ClientToken+"/"+path)
+	out, err := req.Storage.Get(ctx, pathPrefix+"/"+path)
 	if err != nil {
 		return nil, fmt.Errorf("read failed: %w", err)
 	}
@@ -167,8 +219,24 @@ func (b *CubbyholeBackend) handleRead(ctx context.Context, req *logical.Request,
 }
 
 func (b *CubbyholeBackend) handleWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	if req.ClientToken == "" {
-		return nil, fmt.Errorf("client token empty")
+	var pathPrefix string
+
+	scope, err := b.Scope(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	switch scope {
+	case scopeToken:
+		if req.ClientToken == "" {
+			return nil, fmt.Errorf("client token empty")
+		}
+		pathPrefix = req.ClientToken
+	case scopeEntity:
+		if req.EntityID == "" {
+			return nil, fmt.Errorf("entity ID empty")
+		}
+		pathPrefix = req.EntityID
 	}
 	// Check that some fields are given
 	if len(req.Data) == 0 {
@@ -189,7 +257,7 @@ func (b *CubbyholeBackend) handleWrite(ctx context.Context, req *logical.Request
 
 	// Write out a new key
 	entry := &logical.StorageEntry{
-		Key:   req.ClientToken + "/" + path,
+		Key:   pathPrefix + "/" + path,
 		Value: buf,
 	}
 	if req.WrapInfo != nil && req.WrapInfo.SealWrap {
@@ -244,6 +312,52 @@ func (b *CubbyholeBackend) handleList(ctx context.Context, req *logical.Request,
 
 	// Generate the response
 	return logical.ListResponse(strippedKeys), nil
+}
+
+// Scope returns the lease
+func (b *CubbyholeBackend) Scope(ctx context.Context, s logical.Storage) (string, error) {
+	entry, err := s.Get(ctx, "config/scope")
+	if err != nil {
+		return scopeToken, err
+	}
+	if entry == nil {
+		return scopeToken, nil
+	}
+
+	var result string
+	if err := entry.DecodeJSON(&result); err != nil {
+		return scopeToken, err
+	}
+
+	return result, nil
+}
+
+func (b *CubbyholeBackend) pathScopeWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	scopeRaw := d.Get("scope").(string)
+
+	// Store it
+	entry, err := logical.StorageEntryJSON("config/scope", scopeRaw)
+	if err != nil {
+		return nil, err
+	}
+	if err := req.Storage.Put(ctx, entry); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (b *CubbyholeBackend) pathScopeRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	scope, err := b.Scope(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"scope": scope,
+		},
+	}, nil
 }
 
 const cubbyholeHelp = `
