@@ -251,6 +251,10 @@
           {
             "title": "Autopilot",
             "path": "concepts/integrated-storage/autopilot"
+          },
+          {
+            "title": "Migration checklist",
+            "path": "concepts/integrated-storage/migration-checklist"
           }
         ]
       },
@@ -1189,26 +1193,22 @@
     ]
   },
   {
-    "title": "Vault Agent and Vault Proxy",
+    "title": "Vault tools: Agent and Proxy",
     "routes": [
       {
-        "title": "Overview",
+        "title": "Why use Agent or Proxy?",
         "path": "agent-and-proxy"
       },
       {
-        "title": "Auto-Auth",
+        "title": "Auto-authentication",
         "routes": [
           {
-            "title": "Overview",
+            "title": "What is auto-authentication?",
             "path": "agent-and-proxy/autoauth"
           },
           {
-            "title": "Methods",
+            "title": "Auto-auth methods",
             "routes": [
-              {
-                "title": "Overview",
-                "path": "agent-and-proxy/autoauth/methods"
-              },
               {
                 "title": "AliCloud",
                 "path": "agent-and-proxy/autoauth/methods/alicloud"
@@ -1226,11 +1226,11 @@
                 "path": "agent-and-proxy/autoauth/methods/azure"
               },
               {
-                "title": "Cert",
+                "title": "TLS certificates",
                 "path": "agent-and-proxy/autoauth/methods/cert"
               },
               {
-                "title": "CF",
+                "title": "Cloud Foundry (CF)",
                 "path": "agent-and-proxy/autoauth/methods/cf"
               },
               {
@@ -1254,11 +1254,11 @@
                 "path": "agent-and-proxy/autoauth/methods/kubernetes"
               },
               {
-                "title": "Oracle Cloud Infrastructure",
+                "title": "Oracle Cloud Infrastructure (OCI",
                 "path": "agent-and-proxy/autoauth/methods/oci"
               },
               {
-                "title": "Token File",
+                "title": "Token file",
                 "path": "agent-and-proxy/autoauth/methods/token_file"
               }
             ]
@@ -1266,10 +1266,6 @@
           {
             "title": "Sinks",
             "routes": [
-              {
-                "title": "Overview",
-                "path": "agent-and-proxy/autoauth/sinks"
-              },
               {
                 "title": "File",
                 "path": "agent-and-proxy/autoauth/sinks/file"
@@ -1282,22 +1278,22 @@
         "title": "Vault Proxy",
         "routes": [
           {
-            "title": "Overview",
+            "title": "What is Vault Proxy?",
             "path": "agent-and-proxy/proxy"
           },
           {
-            "title": "API Proxy",
+            "title": "Vault Proxy as Vault API proxy",
             "path": "agent-and-proxy/proxy/apiproxy"
           },
           {
-            "title": "Caching",
+            "title": "Vault Proxy caching",
             "routes": [
               {
                 "title": "Overview",
                 "path": "agent-and-proxy/proxy/caching"
               },
               {
-                "title": "Static Secret Caching",
+                "title": "Improve Vault traffic resiliency",
                 "path": "agent-and-proxy/proxy/caching/static-secret-caching",
                 "badge": {
                   "text": "ENTERPRISE",
@@ -1309,11 +1305,11 @@
                 "title": "Persistent Caching",
                 "routes": [
                   {
-                    "title": "Overview",
+                    "title": "Use built-in persistent caching",
                     "path": "agent-and-proxy/proxy/caching/persistent-caches"
                   },
                   {
-                    "title": "Kubernetes",
+                    "title": "Use Kubernetes persistent cache",
                     "path": "agent-and-proxy/proxy/caching/persistent-caches/kubernetes"
                   }
                 ]
@@ -1321,7 +1317,7 @@
             ]
           },
           {
-            "title": "Version compatibility",
+            "title": "Risks of inconsistent Proxy and Vault versions",
             "path": "agent-and-proxy/proxy/versions"
           }
         ]

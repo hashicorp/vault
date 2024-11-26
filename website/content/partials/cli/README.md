@@ -16,6 +16,7 @@ The `agent` family of commands is malformed. Rather than having a root node
 root command is runnable.
 
 
+
 ## Why partials?
 
 We document CLI command arguments, options, and flags as partials:
@@ -66,19 +67,14 @@ partials/global-settings/both   parameters that exits as flags and variables
 ### Template 1 - command-specific parameters
 
 Use the following template for parameters that exist as command-exclusively
-arguments, flags, or options. "ANCHOR_ID" is the ID defined in the `<a id=...>`
-HTML tag.
+arguments, flags, or options.
 
 -- Template (start) --
 
 <a id="COMMAND_ROOT-[arg | option | flag]-NAME" />
 
 
-<a href="#ANCHOR_ID" style={{textDecorationLine:'none'}}>
-
 **`NAME (TYPE : DEFAULT)`**
-
-</a>
 
 DESCRIPTION
 
@@ -87,22 +83,19 @@ DESCRIPTION
 -- Template (end) --
 
 
-
 ### Template 2 - shared parameters
 
 Use the following template for parameters that exist as arguments, flags, or
 options that are not global but are shared across more than one command family.
-"ANCHOR_ID" is the ID defined in the `<a id=...>` HTML tag.
+
+-- Template (start) --
 
 <a id="shared-[arg | option | flag]-NAME" />
 
-
-<a href="#ANCHOR_ID" style={{textDecorationLine:'none'}}>
-
 **`NAME (TYPE : DEFAULT)`**
-
-</a>
 
 DESCRIPTION
 
 **Example**: `EXAMPLE_OF_VALID_USE`
+
+-- Template (end) --
