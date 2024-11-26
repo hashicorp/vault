@@ -13,7 +13,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/go-secure-stdlib/cryptoutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	vaulthttp "github.com/hashicorp/vault/http"
