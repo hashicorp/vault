@@ -8,6 +8,7 @@ locals {
   pki_common_name            = "common"
   pki_default_ttl            = "72h"
   pki_test_data_path_prefix  = "smoke"
+  tmp_test_results           = "tmp_test_results"
 
   // Response data
 #   identity_group_kv_writers_data = jsondecode(enos_remote_exec.identity_group_kv_writers.stdout).data
@@ -48,6 +49,8 @@ resource "enos_remote_exec" "secrets_enable_pki_secret" {
 
 # Issue RSA Certificate
 resource "enos_remote_exec" "pki_issue_rsa_cert" {
+  depends_on = [enos_remote_exec.secrets_enable_pki_secret]
+
   environment = {
     MOUNT             = local.pki_mount
     VAULT_ADDR        = var.vault_addr
@@ -55,9 +58,10 @@ resource "enos_remote_exec" "pki_issue_rsa_cert" {
     VAULT_TOKEN       = var.vault_root_token
     COMMON_NAME       = local.pki_common_name
     TTL               = local.pki_default_ttl
+    TMP_TEST_RESULTS  = local.tmp_test_results
   }
 
-  scripts = [abspath("${path.module}/../../scripts/kv-issue-rsa-certificate.sh")]
+  scripts = [abspath("${path.module}/../../scripts/kv-pki-issue-certificates.sh")]
 
   transport = {
     ssh = {
