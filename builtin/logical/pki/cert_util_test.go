@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -275,6 +276,112 @@ type parseCertificateTestCase struct {
 	wantErr    bool
 }
 
+// TestDisableVerifyCertificateEnvVar verifies that env var VAULT_DISABLE_ISSUING_VERIFICATION
+// can be used to disable cert verification.
+func TestDisableVerifyCertificateEnvVar(t *testing.T) {
+	caData := map[string]any{
+		// Copied from the "full CA" test case of TestParseCertificate,
+		// with tweaked permitted_dns_domains and ttl
+		"common_name":           "the common name",
+		"alt_names":             "user@example.com,admin@example.com,example.com,www.example.com",
+		"ip_sans":               "1.2.3.4,1.2.3.5",
+		"uri_sans":              "https://example.com,https://www.example.com",
+		"other_sans":            "1.3.6.1.4.1.311.20.2.3;utf8:caadmin@example.com",
+		"ttl":                   "3h",
+		"max_path_length":       2,
+		"permitted_dns_domains": ".example.com,.www.example.com",
+		"ou":                    "unit1, unit2",
+		"organization":          "org1, org2",
+		"country":               "US, CA",
+		"locality":              "locality1, locality2",
+		"province":              "province1, province2",
+		"street_address":        "street_address1, street_address2",
+		"postal_code":           "postal_code1, postal_code2",
+		"not_before_duration":   "45s",
+		"key_type":              "rsa",
+		"use_pss":               true,
+		"key_bits":              2048,
+		"signature_bits":        384,
+	}
+
+	roleData := map[string]any{
+		"allow_any_name":      true,
+		"cn_validations":      "disabled",
+		"allow_ip_sans":       true,
+		"allowed_other_sans":  "1.3.6.1.4.1.311.20.2.3;utf8:*@example.com",
+		"allowed_uri_sans":    "https://example.com,https://www.example.com",
+		"allowed_user_ids":    "*",
+		"not_before_duration": "45s",
+		"signature_bits":      384,
+		"key_usage":           "KeyAgreement",
+		"ext_key_usage":       "ServerAuth",
+		"ext_key_usage_oids":  "1.3.6.1.5.5.7.3.67,1.3.6.1.5.5.7.3.68",
+		"client_flag":         false,
+		"server_flag":         false,
+		"policy_identifiers":  "1.2.3.4.5.6.7.8.9.0",
+	}
+
+	certData := map[string]any{
+		// using the same order as in https://developer.hashicorp.com/vault/api-docs/secret/pki#generate-certificate-and-key
+		"common_name": "the common name non ca",
+		"alt_names":   "user@example.com,admin@example.com,example.com,www.example.com",
+		"ip_sans":     "1.2.3.4,1.2.3.5",
+		"uri_sans":    "https://example.com,https://www.example.com",
+		"other_sans":  "1.3.6.1.4.1.311.20.2.3;utf8:caadmin@example.com",
+		"ttl":         "2h",
+		// format
+		// private_key_format
+		"exclude_cn_from_sans": true,
+		// not_after
+		// remove_roots_from_chain
+		"user_ids": "humanoid,robot",
+	}
+
+	defer func() {
+		os.Unsetenv("VAULT_DISABLE_ISSUING_VERIFICATION")
+	}()
+
+	b, s := CreateBackendWithStorage(t)
+
+	// Create the CA
+	resp, err := CBWrite(b, s, "root/generate/internal", caData)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	// Create the role
+	resp, err = CBWrite(b, s, "roles/test", roleData)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	// Try to create the cert -- should fail verification, since example.com is not allowed
+	t.Run("no VAULT_DISABLE_ISSUING_VERIFICATION env var", func(t *testing.T) {
+		resp, err = CBWrite(b, s, "issue/test", certData)
+		require.ErrorContains(t, err, `DNS name "example.com" is not permitted by any constraint`)
+	})
+
+	// Try to create the cert -- should fail verification, since example.com is not allowed
+	t.Run("VAULT_DISABLE_ISSUING_VERIFICATION=false", func(t *testing.T) {
+		os.Setenv("VAULT_DISABLE_ISSUING_VERIFICATION", "false")
+		resp, err = CBWrite(b, s, "issue/test", certData)
+		require.ErrorContains(t, err, `DNS name "example.com" is not permitted by any constraint`)
+	})
+
+	// Create the cert, should succeed with the disable env var set
+	t.Run("VAULT_DISABLE_ISSUING_VERIFICATION=true", func(t *testing.T) {
+		os.Setenv("VAULT_DISABLE_ISSUING_VERIFICATION", "true")
+		resp, err = CBWrite(b, s, "issue/test", certData)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+	})
+
+	// Invalid env var
+	t.Run("invalid VAULT_DISABLE_ISSUING_VERIFICATION", func(t *testing.T) {
+		os.Setenv("VAULT_DISABLE_ISSUING_VERIFICATION", "invalid")
+		resp, err = CBWrite(b, s, "issue/test", certData)
+		require.ErrorContains(t, err, "failed parsing environment variable VAULT_DISABLE_ISSUING_VERIFICATION")
+	})
+}
+
 func TestParseCertificate(t *testing.T) {
 	t.Parallel()
 
@@ -364,7 +471,7 @@ func TestParseCertificate(t *testing.T) {
 				"other_sans":            "1.3.6.1.4.1.311.20.2.3;utf8:caadmin@example.com",
 				"ttl":                   "2h",
 				"max_path_length":       2,
-				"permitted_dns_domains": ".example.com,.www.example.com",
+				"permitted_dns_domains": "example.com,.example.com,.www.example.com",
 				"ou":                    "unit1, unit2",
 				"organization":          "org1, org2",
 				"country":               "US, CA",
@@ -409,7 +516,7 @@ func TestParseCertificate(t *testing.T) {
 				UsePSS:                        true,
 				ForceAppendCaChain:            false,
 				UseCSRValues:                  false,
-				PermittedDNSDomains:           []string{".example.com", ".www.example.com"},
+				PermittedDNSDomains:           []string{"example.com", ".example.com", ".www.example.com"},
 				URLs:                          nil,
 				MaxPathLength:                 2,
 				NotBeforeDuration:             45 * time.Second,
@@ -433,7 +540,7 @@ func TestParseCertificate(t *testing.T) {
 				"serial_number":         "",
 				"ttl":                   "2h0m45s",
 				"max_path_length":       2,
-				"permitted_dns_domains": ".example.com,.www.example.com",
+				"permitted_dns_domains": "example.com,.example.com,.www.example.com",
 				"use_pss":               true,
 				"key_type":              "rsa",
 				"key_bits":              2048,
@@ -532,49 +639,50 @@ func TestParseCertificate(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b, s := CreateBackendWithStorage(t)
 
-		b, s := CreateBackendWithStorage(t)
+			var cert *x509.Certificate
+			issueTime := time.Now()
+			if tt.wantParams.IsCA {
+				resp, err := CBWrite(b, s, "root/generate/internal", tt.data)
+				require.NoError(t, err)
+				require.NotNil(t, resp)
 
-		var cert *x509.Certificate
-		issueTime := time.Now()
-		if tt.wantParams.IsCA {
-			resp, err := CBWrite(b, s, "root/generate/internal", tt.data)
-			require.NoError(t, err)
-			require.NotNil(t, resp)
+				certData := resp.Data["certificate"].(string)
+				cert, err = parsing.ParseCertificateFromString(certData)
+				require.NoError(t, err)
+				require.NotNil(t, cert)
+			} else {
+				// use the "simple CA" data to create the internal CA
+				caData := tests[1].data
+				caData["ttl"] = "3h"
+				resp, err := CBWrite(b, s, "root/generate/internal", caData)
+				require.NoError(t, err)
+				require.NotNil(t, resp)
 
-			certData := resp.Data["certificate"].(string)
-			cert, err = parsing.ParseCertificateFromString(certData)
-			require.NoError(t, err)
-			require.NotNil(t, cert)
-		} else {
-			// use the "simple CA" data to create the internal CA
-			caData := tests[1].data
-			caData["ttl"] = "3h"
-			resp, err := CBWrite(b, s, "root/generate/internal", caData)
-			require.NoError(t, err)
-			require.NotNil(t, resp)
+				// create a role
+				resp, err = CBWrite(b, s, "roles/test", tt.roleData)
+				require.NoError(t, err)
+				require.NotNil(t, resp)
 
-			// create a role
-			resp, err = CBWrite(b, s, "roles/test", tt.roleData)
-			require.NoError(t, err)
-			require.NotNil(t, resp)
+				// create the cert
+				resp, err = CBWrite(b, s, "issue/test", tt.data)
+				require.NoError(t, err)
+				require.NotNil(t, resp)
 
-			// create the cert
-			resp, err = CBWrite(b, s, "issue/test", tt.data)
-			require.NoError(t, err)
-			require.NotNil(t, resp)
+				certData := resp.Data["certificate"].(string)
+				cert, err = parsing.ParseCertificateFromString(certData)
+				require.NoError(t, err)
+				require.NotNil(t, cert)
+			}
 
-			certData := resp.Data["certificate"].(string)
-			cert, err = parsing.ParseCertificateFromString(certData)
-			require.NoError(t, err)
-			require.NotNil(t, cert)
-		}
-
-		t.Run(tt.name+" parameters", func(t *testing.T) {
-			testParseCertificateToCreationParameters(t, issueTime, tt, cert)
-		})
-		t.Run(tt.name+" fields", func(t *testing.T) {
-			testParseCertificateToFields(t, issueTime, tt, cert)
+			t.Run(tt.name+" parameters", func(t *testing.T) {
+				testParseCertificateToCreationParameters(t, issueTime, tt, cert)
+			})
+			t.Run(tt.name+" fields", func(t *testing.T) {
+				testParseCertificateToFields(t, issueTime, tt, cert)
+			})
 		})
 	}
 }
