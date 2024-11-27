@@ -93,8 +93,8 @@ module('Acceptance | aws | configuration', function (hooks) {
       await click(SES.configure);
       await fillInAwsConfig('withWif');
       await click(GENERAL.saveButton);
-      assert.dom(SES.aws.issuerWarningModal).exists('issue warning modal exists');
-      await click(SES.aws.issuerWarningSave);
+      assert.dom(SES.wif.issuerWarningModal).exists('issue warning modal exists');
+      await click(SES.wif.issuerWarningSave);
       // three flash messages, the first is about mounting the engine, only care about the last two
       assert.strictEqual(
         this.flashSuccessSpy.args[1][0],
@@ -174,7 +174,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       await click(SES.configTab);
       await click(SES.configure);
       // manually fill in attrs without using helper so we can exclude identityTokenTtl and maxRetries.
-      await click(SES.aws.accessType('wif')); // toggle to wif
+      await click(SES.wif.accessType('wif')); // toggle to wif
       await fillIn(GENERAL.inputByAttr('roleArn'), 'foo-role');
       await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'foo-audience');
       // manually fill in non-access type specific fields on root config so we can exclude Max Retries.
@@ -362,7 +362,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       await click(SES.configTab);
       await click(SES.configure);
       assert
-        .dom(SES.aws.accessTypeSection)
+        .dom(SES.wif.accessTypeSection)
         .doesNotExist('Access type section does not render for a community user');
       // check all the form fields are present
       await click(GENERAL.toggleGroup('Root config options'));

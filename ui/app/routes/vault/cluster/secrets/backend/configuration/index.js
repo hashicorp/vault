@@ -5,8 +5,7 @@
 
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
-import { CONFIGURABLE_SECRET_ENGINES } from 'vault/helpers/mountable-secret-engines';
-import { allEngines } from 'vault/helpers/mountable-secret-engines';
+import { CONFIGURABLE_SECRET_ENGINES, allEngines } from 'vault/helpers/mountable-secret-engines';
 import { reject } from 'rsvp';
 
 /**

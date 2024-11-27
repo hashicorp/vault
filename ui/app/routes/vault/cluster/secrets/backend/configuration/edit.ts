@@ -7,7 +7,7 @@ import AdapterError from '@ember-data/adapter/error';
 import { set } from '@ember/object';
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { CONFIGURABLE_SECRET_ENGINES } from 'vault/helpers/mountable-secret-engines';
+import { CONFIGURABLE_SECRET_ENGINES, WIF_ENGINES } from 'vault/helpers/mountable-secret-engines';
 import errorMessage from 'vault/utils/error-message';
 import { action } from '@ember/object';
 
@@ -68,9 +68,9 @@ export default class SecretsBackendConfigurationEdit extends Route {
         }
       }
     }
-    // if the type is AWS and it's enterprise, we also fetch the issuer
+    // if the type is a WIF engine and it's enterprise, we also fetch the issuer
     // from a global endpoint which has no associated model/adapter
-    if (type === 'aws' && this.version.isEnterprise) {
+    if (WIF_ENGINES.includes(type) && this.version.isEnterprise) {
       try {
         const response = await this.store.queryRecord('identity/oidc/config', {});
         model['identity-oidc-config'] = response;

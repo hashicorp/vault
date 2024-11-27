@@ -30,7 +30,6 @@ export default class AwsRootConfig extends Model {
     helperTextDisabled:
       'The TTL of generated tokens. Defaults to 1 hour, turn on the toggle to specify a different value.',
     helperTextEnabled: 'The TTL of generated tokens.',
-    subText: '',
     editType: 'ttl',
   })
   identityTokenTtl;

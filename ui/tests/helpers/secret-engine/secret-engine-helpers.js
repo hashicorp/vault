@@ -121,7 +121,7 @@ export const createConfig = (store, backend, type) => {
     case 'aws-no-access':
       return createAwsRootConfig(store, backend, 'no-access');
     case 'issuer':
-      return createIssuerConfig(store, backend);
+      return createIssuerConfig(store);
     case 'aws-lease':
       return createAwsLeaseConfig(store, backend);
     case 'ssh':
@@ -198,7 +198,7 @@ export const fillInAwsConfig = async (situation = 'withAccess') => {
     await fillIn(GENERAL.ttl.input('Max Lease TTL'), '44');
   }
   if (situation === 'withWif') {
-    await click(SES.aws.accessType('wif')); // toggle to wif
+    await click(SES.wif.accessType('wif')); // toggle to wif
     await fillIn(GENERAL.inputByAttr('issuer'), `http://bar.${uuidv4()}`); // make random because global setting
     await fillIn(GENERAL.inputByAttr('roleArn'), 'foo-role');
     await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'foo-audience');
