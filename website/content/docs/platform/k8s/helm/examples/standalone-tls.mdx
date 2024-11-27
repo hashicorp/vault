@@ -151,9 +151,7 @@ e is 65537 (0x10001)
 3. Retrieve Kubernetes CA.
 
    ```bash
-   kubectl get secret \
-     -o jsonpath="{.items[?(@.type==\"kubernetes.io/service-account-token\")].data['ca\.crt']}" \
-     | base64 --decode > ${TMPDIR}/vault.ca
+   kubectl get cm kube-root-ca.crt -o jsonpath="{['data']['ca\.crt']}" > ${TMPDIR}/vault.ca
    ```
 
 4. Create the namespace.
