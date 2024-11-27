@@ -12,7 +12,7 @@
     {{@label}}
     {{#if @tooltipText}}
       <Hds::TooltipButton @text={{@tooltipText}} aria-label="more information about {{@label}}">
-        <FlightIcon @name="info" />
+        <Hds::Icon @name="info" @isInline={{true}} />
       </Hds::TooltipButton>
     {{/if}}
   </div>
