@@ -312,8 +312,8 @@ func (b *backend) pathLoginIamGetRoleNameCallerIdAndEntity(ctx context.Context, 
 				return "", nil, nil, logical.ErrorResponse(err.Error()), nil
 			}
 		}
-		if config.STSEndpoint != "" {
-			endpoint = config.STSEndpoint
+		if len(config.STSEndpoint) > 0 {
+			endpoint = config.STSEndpoint[0]
 		}
 		if config.MaxRetries >= 0 {
 			maxRetries = config.MaxRetries

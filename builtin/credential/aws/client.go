@@ -53,11 +53,12 @@ func (b *backend) getRawClientConfig(ctx context.Context, s logical.Storage, reg
 		case clientType == "iam" && config.IAMEndpoint != "":
 			endpoint = aws.String(config.IAMEndpoint)
 		case clientType == "sts":
-			if config.STSEndpoint != "" {
-				endpoint = aws.String(config.STSEndpoint)
+			if len(config.STSEndpoint) > 0 {
+				endpoint = aws.String(config.STSEndpoint[0])
 			}
-			if config.STSRegion != "" {
-				region = config.STSRegion
+			if len(config.STSRegion) > 0 {
+				region = config.STSRegion[0]
+				//credsConfig.Region = region
 			}
 		}
 
