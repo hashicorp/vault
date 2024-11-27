@@ -16,7 +16,7 @@ import Component from '@glimmer/component';
  * ```
  *
  * @param {object} model - Model used to pull information about icon and title and backend type for navigation.
- * @param {boolean} isConfigure=false - Boolean to determine if the configure tab should be shown.
+ * @param {boolean} [isConfigure=false] - Boolean to determine if the configure tab should be shown.
  */
 
 export default class SecretListHeader extends Component {
