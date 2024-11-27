@@ -1,0 +1,3 @@
+```release-note:bug
+COMPONENT: Updates the command to pull the Kubernetes root CA certificate for the Standalone Server w/ TLS example doc
+```
