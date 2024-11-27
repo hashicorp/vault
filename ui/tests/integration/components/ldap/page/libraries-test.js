@@ -58,7 +58,7 @@ module('Integration | Component | ldap | Page::Libraries', function (hooks) {
 
     await this.renderComponent();
 
-    assert.dom('.title svg').hasClass('flight-icon-folder-users', 'LDAP icon renders in title');
+    assert.dom('.title svg').hasClass('hds-icon-folder-users', 'LDAP icon renders in title');
     assert.dom('.title').hasText('ldap-test', 'Mount path renders in title');
     assert
       .dom('[data-test-toolbar-action="config"]')
@@ -76,7 +76,7 @@ module('Integration | Component | ldap | Page::Libraries', function (hooks) {
       .hasText('Create library', 'Toolbar action has correct text');
     assert
       .dom('[data-test-toolbar-action="library"] svg')
-      .hasClass('flight-icon-plus', 'Toolbar action has correct icon');
+      .hasClass('hds-icon-plus', 'Toolbar action has correct icon');
     assert
       .dom('[data-test-filter-input]')
       .doesNotExist('Libraries filter input is hidden when libraries have not been created');
@@ -92,7 +92,7 @@ module('Integration | Component | ldap | Page::Libraries', function (hooks) {
   test('it should render libraries list', async function (assert) {
     await this.renderComponent();
 
-    assert.dom('[data-test-list-item-content] svg').hasClass('flight-icon-folder', 'List item icon renders');
+    assert.dom('[data-test-list-item-content] svg').hasClass('hds-icon-folder', 'List item icon renders');
     assert.dom('[data-test-library]').hasText(this.libraries[0].name, 'List item name renders');
 
     await click('[data-test-popup-menu-trigger]');
