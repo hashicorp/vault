@@ -432,6 +432,10 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		}
 	}
 
+	if err := issuing.VerifyCertificate(parsedBundle); err != nil {
+		return nil, err
+	}
+
 	generateLease := false
 	if role.GenerateLease != nil && *role.GenerateLease {
 		generateLease = true
