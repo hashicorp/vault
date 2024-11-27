@@ -87,7 +87,7 @@ export default class AzureConfig extends Model {
     return formFieldGroups;
   }
 
-  // return client secret for edit/create view
+  // formFields are iterated through to generate the edit/create view
   get formFields() {
     const keys = [
       'subscriptionId',
