@@ -1,3 +1,0 @@
-```release-note:change
-secrets/pki: Enforce the issuer constraint extensions (extended key usage, name constraints, issuer name) when issuing or signing leaf certificates.
-```
