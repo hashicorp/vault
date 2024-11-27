@@ -1264,7 +1264,7 @@
             ]
           },
           {
-            "title": "Sinks",
+            "title": "Token sinks",
             "routes": [
               {
                 "title": "File",
