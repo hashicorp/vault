@@ -21,8 +21,19 @@ import type VersionService from 'vault/services/version';
 
 const CONFIG_ADAPTERS_PATHS: Record<string, string[]> = {
   aws: ['aws/lease-config', 'aws/root-config'],
+  azure: ['azure/config'],
   ssh: ['ssh/ca-config'],
 };
+
+const POSSIBLE_AZURE_CONFIG_PROPS = [
+  'subscriptionId',
+  'tenantId',
+  'clientId',
+  'identityTokenAudience',
+  'identityTokenTtl',
+  'environment',
+  'rootPasswordTtl',
+];
 
 export default class SecretsBackendConfigurationEdit extends Route {
   @service declare readonly store: Store;
@@ -47,10 +58,20 @@ export default class SecretsBackendConfigurationEdit extends Route {
       // ex: adapterPath = ssh/ca-config, convert to: ssh-ca-config so that you can pass to component @model={{this.model.ssh-ca-config}}
       const standardizedKey = adapterPath.replace(/\//g, '-');
       try {
-        model[standardizedKey] = await this.store.queryRecord(adapterPath, {
+        const response = await this.store.queryRecord(adapterPath, {
           backend,
           type,
         });
+        if (type === 'azure' && !this.isAzureConfigSet(response)) {
+          // Azure will return a 200 if the config has not been set (grr)
+          // Use isAzureConfigSet to check every possible field for a value and if none are set, create a new record.
+          model[standardizedKey] = await this.store.createRecord(adapterPath, {
+            backend,
+            type,
+          });
+        } else {
+          model[standardizedKey] = response;
+        }
       } catch (e: AdapterError) {
         // For most models if the adapter returns a 404, we want to create a new record.
         // The ssh secret engine however returns a 400 if the CA is not configured.
@@ -80,6 +101,16 @@ export default class SecretsBackendConfigurationEdit extends Route {
       }
     }
     return model;
+  }
+
+  isAzureConfigSet(response: Record<string, unknown>) {
+    let isConfigSet = false;
+    for (const property of POSSIBLE_AZURE_CONFIG_PROPS) {
+      if (response[property]) {
+        isConfigSet = true;
+      }
+    }
+    return isConfigSet;
   }
 
   @action

@@ -14,6 +14,16 @@ import { reject } from 'rsvp';
  * As well as any additional configuration models if the engine is a configurable engine.
  */
 
+const POSSIBLE_AZURE_CONFIG_PROPS = [
+  'subscriptionId',
+  'tenantId',
+  'clientId',
+  'identityTokenAudience',
+  'identityTokenTtl',
+  'environment',
+  'rootPasswordTtl',
+];
+
 export default class SecretsBackendConfigurationRoute extends Route {
   @service store;
   @service version;
@@ -68,6 +78,8 @@ export default class SecretsBackendConfigurationRoute extends Route {
         return this.fetchAwsConfigs(id);
       case 'ssh':
         return this.fetchSshCaConfig(id);
+      case 'azure':
+        return this.fetchAzureConfig(id);
       default:
         return reject({ httpStatus: 404, message: 'not found', path: id });
     }
@@ -118,6 +130,37 @@ export default class SecretsBackendConfigurationRoute extends Route {
       if (e.httpStatus === 400 && e.errors[0] === `keys haven't been configured yet`) {
         // When first mounting a SSH engine it throws a 400 error with this specific message.
         // We want to catch this situation and return nothing so that the component can handle it correctly.
+        return;
+      }
+      throw e;
+    }
+  }
+
+  async fetchAzureConfig(id) {
+    try {
+      let response = await this.store.queryRecord('azure/config', { backend: id });
+      let isConfigSet = false;
+      // Azure will return a 200 if the config has not been set.
+      // Thus, we check every possible field and if any of them return a value we can assume the config has been set.
+      for (const property of POSSIBLE_AZURE_CONFIG_PROPS) {
+        if (response[property]) {
+          isConfigSet = true;
+        }
+      }
+      response = isConfigSet ? response : null;
+      const configArray = [];
+      let issuer = null;
+      if (this.version.isEnterprise && response) {
+        // Issuer is an enterprise only related feature
+        // Issuer is also a global endpoint that doesn't mean anything in the Azure secret details context if WIF related fields on the azureConfig have not been set.
+        const WIF_FIELDS = ['identityTokenAudience', 'identityTokenTtl'];
+        WIF_FIELDS.some((field) => response[field]) ? (issuer = await this.fetchIssuer()) : null;
+      }
+      configArray.push(response, issuer);
+      return configArray;
+    } catch (e) {
+      if (e.httpStatus === 404) {
+        // a 404 error is thrown when Azure's config hasn't been set yet.
         return;
       }
       throw e;
