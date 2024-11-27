@@ -607,6 +607,11 @@ message GenerateIdentityTokenResponse {
   int64 ttl = 2;
 }
 
+message VaultInfoReply {
+  google.protobuf.Timestamp buildDate = 2;
+  repeated string builtin_public_keys = 3;
+}
+
 // SystemView exposes system configuration information in a safe way for plugins
 // to consume. Plugins should implement the client for this service.
 service SystemView {
@@ -665,6 +670,9 @@ service SystemView {
 
   // GenerateIdentityToken returns an identity token for the requesting plugin.
   rpc GenerateIdentityToken(GenerateIdentityTokenRequest) returns (GenerateIdentityTokenResponse);
+
+  // VaultInfo returns license checking information for the currently running Vault.
+  rpc VaultInfo(Empty) returns (VaultInfoReply);
 }
 
 message Connection {

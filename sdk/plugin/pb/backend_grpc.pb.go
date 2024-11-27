@@ -688,6 +688,7 @@ const (
 	SystemView_GeneratePasswordFromPolicy_FullMethodName = "/pb.SystemView/GeneratePasswordFromPolicy"
 	SystemView_ClusterInfo_FullMethodName                = "/pb.SystemView/ClusterInfo"
 	SystemView_GenerateIdentityToken_FullMethodName      = "/pb.SystemView/GenerateIdentityToken"
+	SystemView_VaultInfo_FullMethodName                  = "/pb.SystemView/VaultInfo"
 )
 
 // SystemViewClient is the client API for SystemView service.
@@ -739,6 +740,8 @@ type SystemViewClient interface {
 	ClusterInfo(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ClusterInfoReply, error)
 	// GenerateIdentityToken returns an identity token for the requesting plugin.
 	GenerateIdentityToken(ctx context.Context, in *GenerateIdentityTokenRequest, opts ...grpc.CallOption) (*GenerateIdentityTokenResponse, error)
+	// VaultInfo returns license checking information for the currently running Vault.
+	VaultInfo(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*VaultInfoReply, error)
 }
 
 type systemViewClient struct {
@@ -889,6 +892,16 @@ func (c *systemViewClient) GenerateIdentityToken(ctx context.Context, in *Genera
 	return out, nil
 }
 
+func (c *systemViewClient) VaultInfo(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*VaultInfoReply, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VaultInfoReply)
+	err := c.cc.Invoke(ctx, SystemView_VaultInfo_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SystemViewServer is the server API for SystemView service.
 // All implementations must embed UnimplementedSystemViewServer
 // for forward compatibility.
@@ -938,6 +951,8 @@ type SystemViewServer interface {
 	ClusterInfo(context.Context, *Empty) (*ClusterInfoReply, error)
 	// GenerateIdentityToken returns an identity token for the requesting plugin.
 	GenerateIdentityToken(context.Context, *GenerateIdentityTokenRequest) (*GenerateIdentityTokenResponse, error)
+	// VaultInfo returns license checking information for the currently running Vault.
+	VaultInfo(context.Context, *Empty) (*VaultInfoReply, error)
 	mustEmbedUnimplementedSystemViewServer()
 }
 
@@ -989,6 +1004,9 @@ func (UnimplementedSystemViewServer) ClusterInfo(context.Context, *Empty) (*Clus
 }
 func (UnimplementedSystemViewServer) GenerateIdentityToken(context.Context, *GenerateIdentityTokenRequest) (*GenerateIdentityTokenResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GenerateIdentityToken not implemented")
+}
+func (UnimplementedSystemViewServer) VaultInfo(context.Context, *Empty) (*VaultInfoReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method VaultInfo not implemented")
 }
 func (UnimplementedSystemViewServer) mustEmbedUnimplementedSystemViewServer() {}
 func (UnimplementedSystemViewServer) testEmbeddedByValue()                    {}
@@ -1263,6 +1281,24 @@ func _SystemView_GenerateIdentityToken_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SystemView_VaultInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemViewServer).VaultInfo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemView_VaultInfo_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemViewServer).VaultInfo(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SystemView_ServiceDesc is the grpc.ServiceDesc for SystemView service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1325,6 +1361,10 @@ var SystemView_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GenerateIdentityToken",
 			Handler:    _SystemView_GenerateIdentityToken_Handler,
+		},
+		{
+			MethodName: "VaultInfo",
+			Handler:    _SystemView_VaultInfo_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
