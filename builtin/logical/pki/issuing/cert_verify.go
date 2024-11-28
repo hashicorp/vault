@@ -6,13 +6,13 @@ package issuing
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/logical"
 	"os"
 	"strconv"
 	"time"
 
 	ctx509 "github.com/google/certificate-transparency-go/x509"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // disableVerifyCertificateEnvVar is an environment variable that can be used to disable the
