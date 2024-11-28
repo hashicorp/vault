@@ -53,13 +53,13 @@ func (b *backend) pathConfigClient() *framework.Path {
 			},
 
 			"sts_endpoint": {
-				Type:        framework.TypeCommaStringSlice,
+				Type:        framework.TypeString,
 				Default:     "",
 				Description: "URL to override the default generated endpoint for making AWS STS API calls.",
 			},
 
 			"sts_region": {
-				Type:        framework.TypeCommaStringSlice,
+				Type:        framework.TypeString,
 				Default:     "",
 				Description: "The region ID for the sts_endpoint, if set.",
 			},
@@ -281,26 +281,26 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 
 	stsEndpointStr, ok := data.GetOk("sts_endpoint")
 	if ok {
-		vals := stsEndpointStr.([]string)
-		if !strutil.EquivalentSlices(configEntry.STSEndpoint, vals) {
+		if configEntry.STSEndpoint != stsEndpointStr.(string) {
 			// We don't directly cache STS clients as they are never directly used.
 			// However, they are potentially indirectly used as credential providers
 			// for the EC2 and IAM clients, and thus we would be indirectly caching
 			// them there. So, if we change the STS endpoint, we should flush those
 			// cached clients.
 			changedCreds = true
-			configEntry.STSEndpoint = vals
+			configEntry.STSEndpoint = stsEndpointStr.(string)
 		}
-	} // TODO: I don't think the second clause checking for a create operation is needed?
+	} else if req.Operation == logical.CreateOperation {
+		configEntry.STSEndpoint = data.Get("sts_endpoint").(string)
+	}
 
 	stsRegionStr, ok := data.GetOk("sts_region")
 	if ok {
-		vals := stsRegionStr.([]string)
-		if !strutil.EquivalentSlices(configEntry.STSRegion, vals) {
+		if configEntry.STSRegion != stsRegionStr.(string) {
 			// Region is used when building STS clients. As such, all the comments
 			// regarding the sts_endpoint changing apply here as well.
 			changedCreds = true
-			configEntry.STSRegion = stsRegionStr.([]string)
+			configEntry.STSRegion = stsRegionStr.(string)
 		}
 	}
 
@@ -429,8 +429,8 @@ type clientConfig struct {
 	SecretKey              string   `json:"secret_key"`
 	Endpoint               string   `json:"endpoint"`
 	IAMEndpoint            string   `json:"iam_endpoint"`
-	STSEndpoint            []string `json:"sts_endpoint"`
-	STSRegion              []string `json:"sts_region"`
+	STSEndpoint            string   `json:"sts_endpoint"`
+	STSRegion              string   `json:"sts_region"`
 	UseSTSRegionFromClient bool     `json:"use_sts_region_from_client"`
 	IAMServerIdHeaderValue string   `json:"iam_server_id_header_value"`
 	AllowedSTSHeaderValues []string `json:"allowed_sts_header_values"`
