@@ -92,12 +92,20 @@ func (b *backend) getRootConfig(ctx context.Context, s logical.Storage, clientTy
 	maxRetries = config.MaxRetries
 	if clientType == "iam" && config.IAMEndpoint != "" {
 		endpoints = append(endpoints, config.IAMEndpoint)
-	} else if clientType == "sts" && len(config.STSEndpoint) > 0 {
-		endpoints = append(endpoints, config.STSEndpoint...)
-		regions = append(regions, config.STSRegion...)
+	} else if clientType == "sts" && config.STSEndpoint != "" {
+		endpoints = append(endpoints, config.STSEndpoint)
+		if config.STSRegion != "" {
+			regions = append(regions, config.STSRegion)
+		}
+
+		if len(config.STSFallbackEndpoints) > 0 {
+			endpoints = append(endpoints, config.STSFallbackEndpoints...)
+		}
+
+		if len(config.STSFallbackRegions) > 0 {
+			regions = append(regions, config.STSFallbackRegions...)
+		}
 	}
-	// len(endpoints) is zero here if no specific endpoints were set
-	// len(regions) is zero if no specific sts regions were set
 
 	if config.IdentityTokenAudience != "" {
 		ns, err := namespace.FromContext(ctx)
@@ -128,15 +136,19 @@ func (b *backend) getRootConfig(ctx context.Context, s logical.Storage, clientTy
 		return nil, errors.New("number of regions does not match number of endpoints")
 	}
 
-	for i := 0; i < len(regions); i++ {
-		credsConfig.Region = regions[i]
+	for i := 0; i < len(endpoints); i++ {
+		if len(regions) > i {
+			credsConfig.Region = regions[i]
+		} else {
+			credsConfig.Region = fallbackRegion
+		}
 		creds, err := credsConfig.GenerateCredentialChain()
 		if err != nil {
 			return nil, err
 		}
 		configs = append(configs, &aws.Config{
 			Credentials: creds,
-			Region:      aws.String(regions[i]),
+			Region:      aws.String(credsConfig.Region),
 			Endpoint:    aws.String(endpoints[i]),
 			MaxRetries:  aws.Int(maxRetries),
 			HTTPClient:  cleanhttp.DefaultClient(),

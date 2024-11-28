@@ -45,12 +45,20 @@ func pathConfigRoot(b *backend) *framework.Path {
 				Description: "Endpoint to custom IAM server URL",
 			},
 			"sts_endpoint": {
-				Type:        framework.TypeCommaStringSlice,
+				Type:        framework.TypeString,
 				Description: "Endpoint to custom STS server URL",
 			},
 			"sts_region": {
-				Type:        framework.TypeCommaStringSlice,
+				Type:        framework.TypeString,
 				Description: "Specific region for STS API calls.",
+			},
+			"sts_fallback_endpoints": {
+				Type:        framework.TypeCommaStringSlice,
+				Description: "Fallback endpoints if sts_endpoint is unreachable",
+			},
+			"sts_fallback_regions": {
+				Type:        framework.TypeCommaStringSlice,
+				Description: "Fallback regions if sts_region is unreachable",
 			},
 			"max_retries": {
 				Type:        framework.TypeInt,
@@ -110,14 +118,16 @@ func (b *backend) pathConfigRootRead(ctx context.Context, req *logical.Request, 
 	}
 
 	configData := map[string]interface{}{
-		"access_key":        config.AccessKey,
-		"region":            config.Region,
-		"iam_endpoint":      config.IAMEndpoint,
-		"sts_endpoint":      config.STSEndpoint,
-		"sts_region":        config.STSRegion,
-		"max_retries":       config.MaxRetries,
-		"username_template": config.UsernameTemplate,
-		"role_arn":          config.RoleARN,
+		"access_key":             config.AccessKey,
+		"region":                 config.Region,
+		"iam_endpoint":           config.IAMEndpoint,
+		"sts_endpoint":           config.STSEndpoint,
+		"sts_region":             config.STSRegion,
+		"sts_fallback_endpoints": config.STSFallbackEndpoints,
+		"sts_fallback_regions":   config.STSFallbackRegions,
+		"max_retries":            config.MaxRetries,
+		"username_template":      config.UsernameTemplate,
+		"role_arn":               config.RoleARN,
 	}
 
 	config.PopulatePluginIdentityTokenData(configData)
@@ -129,8 +139,8 @@ func (b *backend) pathConfigRootRead(ctx context.Context, req *logical.Request, 
 func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	region := data.Get("region").(string)
 	iamendpoint := data.Get("iam_endpoint").(string)
-	stsendpoint := data.Get("sts_endpoint").([]string)
-	stsregion := data.Get("sts_region").([]string)
+	stsendpoint := data.Get("sts_endpoint").(string)
+	stsregion := data.Get("sts_region").(string)
 	maxretries := data.Get("max_retries").(int)
 	roleARN := data.Get("role_arn").(string)
 	usernameTemplate := data.Get("username_template").(string)
@@ -138,19 +148,24 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 		usernameTemplate = defaultUserNameTemplate
 	}
 
+	stsFallbackEndpoints := data.Get("sts_fallback_endpoints").([]string)
+	stsFallbackRegions := data.Get("sts_fallback_regions").([]string)
+
 	b.clientMutex.Lock()
 	defer b.clientMutex.Unlock()
 
 	rc := rootConfig{
-		AccessKey:        data.Get("access_key").(string),
-		SecretKey:        data.Get("secret_key").(string),
-		IAMEndpoint:      iamendpoint,
-		STSEndpoint:      stsendpoint,
-		STSRegion:        stsregion,
-		Region:           region,
-		MaxRetries:       maxretries,
-		UsernameTemplate: usernameTemplate,
-		RoleARN:          roleARN,
+		AccessKey:            data.Get("access_key").(string),
+		SecretKey:            data.Get("secret_key").(string),
+		IAMEndpoint:          iamendpoint,
+		STSEndpoint:          stsendpoint,
+		STSRegion:            stsregion,
+		STSFallbackEndpoints: stsFallbackEndpoints,
+		STSFallbackRegions:   stsFallbackRegions,
+		Region:               region,
+		MaxRetries:           maxretries,
+		UsernameTemplate:     usernameTemplate,
+		RoleARN:              roleARN,
 	}
 	if err := rc.ParsePluginIdentityTokenFields(data); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -196,15 +211,17 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 type rootConfig struct {
 	pluginidentityutil.PluginIdentityTokenParams
 
-	AccessKey        string   `json:"access_key"`
-	SecretKey        string   `json:"secret_key"`
-	IAMEndpoint      string   `json:"iam_endpoint"`
-	STSEndpoint      []string `json:"sts_endpoint"`
-	STSRegion        []string `json:"sts_region"`
-	Region           string   `json:"region"`
-	MaxRetries       int      `json:"max_retries"`
-	UsernameTemplate string   `json:"username_template"`
-	RoleARN          string   `json:"role_arn"`
+	AccessKey            string   `json:"access_key"`
+	SecretKey            string   `json:"secret_key"`
+	IAMEndpoint          string   `json:"iam_endpoint"`
+	STSEndpoint          string   `json:"sts_endpoint"`
+	STSRegion            string   `json:"sts_region"`
+	STSFallbackEndpoints []string `json:"sts_fallback_endpoints"`
+	STSFallbackRegions   []string `json:"sts_fallback_regions"`
+	Region               string   `json:"region"`
+	MaxRetries           int      `json:"max_retries"`
+	UsernameTemplate     string   `json:"username_template"`
+	RoleARN              string   `json:"role_arn"`
 }
 
 const pathConfigRootHelpSyn = `
