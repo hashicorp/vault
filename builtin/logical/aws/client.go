@@ -28,15 +28,6 @@ import (
 // Return a slice of *aws.Config, based on descending configuration priority. STS endpoints are the only place this is used.
 // NOTE: The caller is required to ensure that b.clientMutex is at least read locked
 func (b *backend) getRootConfig(ctx context.Context, s logical.Storage, clientType string, logger hclog.Logger) ([]*aws.Config, error) {
-	// to make an aws config we need:
-	// credsConfig (to call generateCredentialsChain)
-	//   - accessKey (string)
-	//   - secretKey (string)
-	//   - Region (string)
-	//   - RoleSessionName (string) (if identtyTokenAudience not empty)
-	//   - WebIdentityTokenFactor
-	//
-
 	// set fallback region (we can overwrite later)
 	fallbackRegion := os.Getenv("AWS_REGION")
 	if fallbackRegion == "" {
@@ -163,6 +154,9 @@ func (b *backend) nonCachedClientIAM(ctx context.Context, s logical.Storage, log
 	if err != nil {
 		return nil, err
 	}
+	if len(awsConfig) != 1 {
+		return nil, errors.New("could not obtain aws config")
+	}
 	sess, err := session.NewSession(awsConfig[0])
 	if err != nil {
 		return nil, err
@@ -197,7 +191,7 @@ func (b *backend) nonCachedClientSTS(ctx context.Context, s logical.Storage, log
 		if err == nil {
 			return client, nil
 		} else {
-			fmt.Println("couldn't connect with config, trying the next one")
+			b.Logger().Debug("couldn't connect with first config, trying next")
 		}
 	}
 
