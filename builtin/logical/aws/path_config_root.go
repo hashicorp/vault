@@ -45,11 +45,11 @@ func pathConfigRoot(b *backend) *framework.Path {
 				Description: "Endpoint to custom IAM server URL",
 			},
 			"sts_endpoint": {
-				Type:        framework.TypeString,
+				Type:        framework.TypeCommaStringSlice,
 				Description: "Endpoint to custom STS server URL",
 			},
 			"sts_region": {
-				Type:        framework.TypeString,
+				Type:        framework.TypeCommaStringSlice,
 				Description: "Specific region for STS API calls.",
 			},
 			"max_retries": {
@@ -129,8 +129,8 @@ func (b *backend) pathConfigRootRead(ctx context.Context, req *logical.Request, 
 func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	region := data.Get("region").(string)
 	iamendpoint := data.Get("iam_endpoint").(string)
-	stsendpoint := data.Get("sts_endpoint").(string)
-	stsregion := data.Get("sts_region").(string)
+	stsendpoint := data.Get("sts_endpoint").([]string)
+	stsregion := data.Get("sts_region").([]string)
 	maxretries := data.Get("max_retries").(int)
 	roleARN := data.Get("role_arn").(string)
 	usernameTemplate := data.Get("username_template").(string)
@@ -196,15 +196,15 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 type rootConfig struct {
 	pluginidentityutil.PluginIdentityTokenParams
 
-	AccessKey        string `json:"access_key"`
-	SecretKey        string `json:"secret_key"`
-	IAMEndpoint      string `json:"iam_endpoint"`
-	STSEndpoint      string `json:"sts_endpoint"`
-	STSRegion        string `json:"sts_region"`
-	Region           string `json:"region"`
-	MaxRetries       int    `json:"max_retries"`
-	UsernameTemplate string `json:"username_template"`
-	RoleARN          string `json:"role_arn"`
+	AccessKey        string   `json:"access_key"`
+	SecretKey        string   `json:"secret_key"`
+	IAMEndpoint      string   `json:"iam_endpoint"`
+	STSEndpoint      []string `json:"sts_endpoint"`
+	STSRegion        []string `json:"sts_region"`
+	Region           string   `json:"region"`
+	MaxRetries       int      `json:"max_retries"`
+	UsernameTemplate string   `json:"username_template"`
+	RoleARN          string   `json:"role_arn"`
 }
 
 const pathConfigRootHelpSyn = `

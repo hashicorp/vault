@@ -309,6 +309,7 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	}
 	assumeRoleInput.SetTags(tags)
 	tokenResp, err := stsClient.AssumeRoleWithContext(ctx, assumeRoleInput)
+	// if sts is down, for some reason, this is the first place it will fail
 	if err != nil {
 		return logical.ErrorResponse("Error assuming role: %s", err), awsutil.CheckAWSError(err)
 	}
