@@ -479,3 +479,15 @@ func (d dynamicSystemView) GenerateIdentityToken(ctx context.Context, req *plugi
 		TTL:   ttl,
 	}, nil
 }
+
+func (d dynamicSystemView) VaultInfo(_ context.Context) (*logical.VaultInfo, error) {
+	buildDate, err := time.Parse(time.RFC3339, version.BuildDate)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse build date: %w", err)
+	}
+
+	return &logical.VaultInfo{
+		BuildDate:         buildDate,
+		BuiltinPublicKeys: BuiltinPublicKeys,
+	}, nil
+}

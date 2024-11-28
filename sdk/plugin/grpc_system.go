@@ -19,6 +19,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var errMissingSystemView = errors.New("missing system view implementation: this method should not be called during plugin Setup, but only during and after Initialize")
@@ -226,6 +227,18 @@ func (s *gRPCSystemViewClient) GenerateIdentityToken(ctx context.Context, req *p
 	}, nil
 }
 
+func (s *gRPCSystemViewClient) VaultInfo(ctx context.Context) (*logical.VaultInfo, error) {
+	reply, err := s.client.VaultInfo(ctx, &pb.Empty{})
+	if err != nil {
+		return nil, err
+	}
+
+	return &logical.VaultInfo{
+		BuildDate:         reply.BuildDate.AsTime(),
+		BuiltinPublicKeys: reply.BuiltinPublicKeys,
+	}, nil
+}
+
 type gRPCSystemViewServer struct {
 	pb.UnimplementedSystemViewServer
 
@@ -427,5 +440,22 @@ func (s *gRPCSystemViewServer) GenerateIdentityToken(ctx context.Context, req *p
 	return &pb.GenerateIdentityTokenResponse{
 		Token: res.Token.Token(),
 		TTL:   int64(res.TTL.Seconds()),
+	}, nil
+}
+
+func (s *gRPCSystemViewServer) VaultInfo(ctx context.Context, _ *pb.Empty) (*pb.VaultInfoReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
+
+	info, err := s.impl.VaultInfo(ctx)
+	if err != nil {
+		return &pb.VaultInfoReply{}, status.Errorf(codes.Internal,
+			err.Error())
+	}
+
+	return &pb.VaultInfoReply{
+		BuildDate:         timestamppb.New(info.BuildDate),
+		BuiltinPublicKeys: info.BuiltinPublicKeys,
 	}, nil
 }
