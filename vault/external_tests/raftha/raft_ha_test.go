@@ -219,6 +219,11 @@ func testRaftHARecoverCluster(t *testing.T, physBundle *vault.PhysicalBackendBun
 	dataAsMap := data.(map[string]interface{})
 	require.NotNil(t, dataAsMap)
 	require.Equal(t, "awesome", dataAsMap["kittens"])
+
+	// Ensure no writes are happening before we try to clean it up, to prevent
+	// issues deleting the files.
+	clusterRestored.EnsureCoresSealed(t)
+	clusterRestored.Cleanup()
 }
 
 func TestRaft_HA_ExistingCluster(t *testing.T) {
