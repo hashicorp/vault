@@ -1607,6 +1607,10 @@
                     "path": "secrets/kv/kv-v2/cookbook/read-data"
                   },
                   {
+                    "title": "Read subkeys",
+                    "path": "secrets/kv/kv-v2/cookbook/read-subkey"
+                  },
+                  {
                     "title": "Set max data versions",
                     "path": "secrets/kv/kv-v2/cookbook/max-versions"
                   },
