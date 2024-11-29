@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/ptypes"
-	memdb "github.com/hashicorp/go-memdb"
+	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/identity"
@@ -286,14 +286,7 @@ func (i *IdentityStore) pathEntityMergeID() framework.OperationFunc {
 				return logical.ErrorResponse(userErr.Error()), nil
 			}
 			// Alias clash error, so include additional details
-			resp := &logical.Response{
-				Data: map[string]interface{}{
-					"error": userErr.Error(),
-					"data":  aliases,
-				},
-			}
-
-			return resp, nil
+			return logical.ErrorResponseWithData(aliases, userErr.Error()), nil
 		}
 		if intErr != nil {
 			return nil, intErr
