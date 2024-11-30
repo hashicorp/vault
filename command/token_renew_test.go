@@ -56,6 +56,18 @@ func TestTokenRenewCommand_Run(t *testing.T) {
 			"",
 			0,
 		},
+		{
+			"fail_if_not_fulfilled_exceeds_max_ttl",
+			[]string{"-increment", "33d", "--fail-if-not-fulfilled"},
+			"Token renewal completed with capped duration, failing the command because of --fail-if-not-fulfilled",
+			1,
+		},
+		{
+			"fail_if_not_fulfilled_within_max_ttl",
+			[]string{"-increment", "30m", "--fail-if-not-fulfilled"},
+			"",
+			0,
+		},
 	}
 
 	t.Run("validations", func(t *testing.T) {

@@ -21,8 +21,9 @@ var (
 type TokenRenewCommand struct {
 	*BaseCommand
 
-	flagAccessor  bool
-	flagIncrement time.Duration
+	flagAccessor           bool
+	flagIncrement          time.Duration
+	flagFailIfNotFulfilled bool
 }
 
 func (c *TokenRenewCommand) Synopsis() string {
@@ -86,6 +87,15 @@ func (c *TokenRenewCommand) Flags() *FlagSets {
 			"numeric string with suffix like \"30s\" or \"5m\".",
 	})
 
+	f.BoolVar(&BoolVar{
+		Name:       "fail-if-not-fulfilled",
+		Target:     &c.flagFailIfNotFulfilled,
+		Default:    false,
+		EnvVar:     "",
+		Completion: complete.PredictNothing,
+		Usage:      "Fail if the requested TTL increment cannot be fully fulfilled.",
+	})
+
 	return set
 }
 
@@ -138,6 +148,11 @@ func (c *TokenRenewCommand) Run(args []string) int {
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error renewing token: %s", err))
 		return 2
+	}
+
+	if c.flagFailIfNotFulfilled && secret.Auth.LeaseDuration < int(increment.Seconds()) {
+		c.UI.Info("Token renewal completed with capped duration, failing the command because of --fail-if-not-fulfilled")
+		return 1
 	}
 
 	return OutputSecret(c.UI, secret)
