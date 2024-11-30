@@ -31,30 +31,42 @@ func TestTokenRenewCommand_Run(t *testing.T) {
 		args []string
 		out  string
 		code int
+		fail bool
 	}{
 		{
 			"too_many_args",
 			[]string{"foo", "bar", "baz"},
 			"Too many arguments",
 			1,
+			false,
 		},
 		{
 			"default",
 			nil,
 			"",
 			0,
+			false,
 		},
 		{
 			"increment",
 			[]string{"-increment", "60s"},
 			"",
 			0,
+			false,
 		},
 		{
 			"increment_no_suffix",
 			[]string{"-increment", "60"},
 			"",
 			0,
+			false,
+		},
+		{
+			"fail_if_not_fullfilled",
+			[]string{"-increment", "30m", "--fail-if-not-fullfilled"},
+			"Token renewal failed: requested increment could not be fully fulfilled",
+			1,
+			true,
 		},
 	}
 
@@ -76,6 +88,10 @@ func TestTokenRenewCommand_Run(t *testing.T) {
 
 				ui, cmd := testTokenRenewCommand(t)
 				cmd.client = client
+
+				if tc.fail {
+					client.Auth().Token().Renew(token, 1)
+				}
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
