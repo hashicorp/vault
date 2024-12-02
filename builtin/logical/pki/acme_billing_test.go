@@ -104,15 +104,17 @@ func TestACMEBilling(t *testing.T) {
 	expectedCount = validateClientCount(t, client, "ns2/pki", expectedCount+1, "unique identifier in a different namespace")
 
 	// Check the current fragment
-	fragment := cluster.Cores[0].Core.ResetActivityLog()[0]
-	if fragment == nil {
+	localFragment, globalFragment := cluster.Cores[0].Core.ResetActivityLog()
+	if globalFragment == nil || localFragment == nil {
 		t.Fatal("no fragment created")
 	}
-	validateAcmeClientTypes(t, fragment, expectedCount)
+	validateAcmeClientTypes(t, localFragment[0], 0)
+	validateAcmeClientTypes(t, globalFragment[0], expectedCount)
 }
 
 func validateAcmeClientTypes(t *testing.T, fragment *activity.LogFragment, expectedCount int64) {
 	t.Helper()
+
 	if int64(len(fragment.Clients)) != expectedCount {
 		t.Fatalf("bad number of entities, expected %v: got %v, entities are: %v", expectedCount, len(fragment.Clients), fragment.Clients)
 	}
