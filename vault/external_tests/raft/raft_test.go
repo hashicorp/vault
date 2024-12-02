@@ -1388,7 +1388,7 @@ func TestRaftCluster_Removed(t *testing.T) {
 		"test": "other_data",
 	})
 	require.Error(t, err)
-	require.True(t, follower.Sealed())
+	require.Eventually(t, follower.Sealed, 3*time.Second, 250*time.Millisecond)
 }
 
 // TestRaftCluster_Removed_RaftConfig creates a 3 node raft cluster with an extremely long
