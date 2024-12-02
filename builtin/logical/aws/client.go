@@ -25,7 +25,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-// Return a slice of *aws.Config, based on descending configuration priority. STS endpoints are the only place this is used.
+// Return a slice of *aws.Config, based on descending configuration priority. STS endpoints are the only place more than one config is used.
 // NOTE: The caller is required to ensure that b.clientMutex is at least read locked
 func (b *backend) getRootConfig(ctx context.Context, s logical.Storage, clientType string, logger hclog.Logger) ([]*aws.Config, error) {
 	// set fallback region (we can overwrite later)
