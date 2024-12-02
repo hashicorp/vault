@@ -14,6 +14,16 @@ import { reject } from 'rsvp';
  * As well as any additional configuration models if the engine is a configurable engine.
  */
 
+const POSSIBLE_AZURE_CONFIG_PROPS = [
+  'subscriptionId',
+  'tenantId',
+  'clientId',
+  'identityTokenAudience',
+  'identityTokenTtl',
+  'environment',
+  'rootPasswordTtl',
+];
+
 export default class SecretsBackendConfigurationRoute extends Route {
   @service store;
   @service version;
@@ -41,7 +51,7 @@ export default class SecretsBackendConfigurationRoute extends Route {
       }
     }
     // If the engine is configurable fetch the config model(s) for the engine and return it alongside the model
-    if (CONFIGURABLE_SECRET_ENGINES.includes(secretEngineModel.type)) {
+    if (CONFIGURABLE_SECRET_ENGINES.includes(secretEngineModel.type) || secretEngineModel.type === 'azure') {
       let configModels = await this.fetchConfig(secretEngineModel.type, secretEngineModel.id);
       configModels = this.standardizeConfigModels(configModels);
 
@@ -68,6 +78,8 @@ export default class SecretsBackendConfigurationRoute extends Route {
         return this.fetchAwsConfigs(id);
       case 'ssh':
         return this.fetchSshCaConfig(id);
+      case 'azure':
+        return this.fetchAzureConfig(id);
       default:
         return reject({ httpStatus: 404, message: 'not found', path: id });
     }
@@ -81,8 +93,8 @@ export default class SecretsBackendConfigurationRoute extends Route {
     const configLease = await this.fetchAwsConfig(id, 'aws/lease-config');
     let issuer = null;
     if (this.version.isEnterprise && configRoot) {
-      // Issuer is an enterprise only related feature
-      // Issuer is also a global endpoint that doesn't mean anything in the AWS secret details context if WIF related fields on the rootConfig have not been set.
+      // issuer is an enterprise only related feature
+      // issuer is also a global endpoint that doesn't mean anything in the AWS secret details context if WIF related fields on the rootConfig have not been set.
       const WIF_FIELDS = ['roleArn', 'identityTokenAudience', 'identityTokenTtl'];
       WIF_FIELDS.some((field) => configRoot[field]) ? (issuer = await this.fetchIssuer()) : null;
     }
@@ -124,6 +136,37 @@ export default class SecretsBackendConfigurationRoute extends Route {
     }
   }
 
+  async fetchAzureConfig(id) {
+    try {
+      let response = await this.store.queryRecord('azure/config', { backend: id });
+      let isConfigSet = false;
+      // Azure will return a 200 if the config has not been set.
+      // Thus, we check every possible field and if any of them return a value we can assume the config has been set.
+      for (const property of POSSIBLE_AZURE_CONFIG_PROPS) {
+        if (response[property]) {
+          isConfigSet = true;
+        }
+      }
+      response = isConfigSet ? response : null;
+      const configArray = [];
+      let issuer = null;
+      if (this.version.isEnterprise && response) {
+        // Issuer is an enterprise only related feature
+        // Issuer is also a global endpoint that doesn't mean anything in the Azure secret details context if WIF related fields on the azureConfig have not been set.
+        const WIF_FIELDS = ['identityTokenAudience', 'identityTokenTtl'];
+        WIF_FIELDS.some((field) => response[field]) ? (issuer = await this.fetchIssuer()) : null;
+      }
+      configArray.push(response, issuer);
+      return configArray;
+    } catch (e) {
+      if (e.httpStatus === 404) {
+        // a 404 error is thrown when Azure's config hasn't been set yet.
+        return;
+      }
+      throw e;
+    }
+  }
+
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
     controller.typeDisplay = allEngines().find(
@@ -131,5 +174,8 @@ export default class SecretsBackendConfigurationRoute extends Route {
     )?.displayName;
     controller.isConfigurable = CONFIGURABLE_SECRET_ENGINES.includes(resolvedModel.secretEngineModel.type);
     controller.modelId = resolvedModel.secretEngineModel.id;
+    // Azure configuration TTLs are in seconds, so we want to format them to a readable timestamp, ex: 15768000 -> 6 months 1 day 13 hours
+    // Other engines have TTLs returned in strings that do not need formatting, ex: maxLease on aws "12h15m10s"
+    controller.formatTtl = resolvedModel.secretEngineModel.type === 'azure';
   }
 }

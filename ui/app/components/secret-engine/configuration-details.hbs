@@ -27,6 +27,7 @@
           @alwaysRender={{not (is-empty-value (get @model attr.name))}}
           @label={{or attr.options.label (to-label attr.name)}}
           @value={{get configModel (or attr.options.fieldValue attr.name)}}
+          @formatTtl={{@formatTtl}}
         />
       {{/if}}
     {{/each}}
@@ -38,12 +39,14 @@
     @title="{{@typeDisplay}} not configured"
     @message="Get started by configuring your {{@typeDisplay}} engine."
   >
-    <Hds::Link::Standalone
-      @icon="chevron-right"
-      @iconPosition="trailing"
-      @text="Configure {{@typeDisplay}}"
-      @route="vault.cluster.secrets.backend.configuration.edit"
-      @model={{@id}}
-    />
+    {{#unless (eq @typeDisplay "Azure")}}
+      <Hds::Link::Standalone
+        @icon="chevron-right"
+        @iconPosition="trailing"
+        @text="Configure {{@typeDisplay}}"
+        @route="vault.cluster.secrets.backend.configuration.edit"
+        @model={{@id}}
+      />
+    {{/unless}}
   </EmptyState>
 {{/if}}
