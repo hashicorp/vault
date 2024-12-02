@@ -9,16 +9,6 @@ fail() {
   exit 1
 }
 
-#MOUNT=pki_secret
-#ISSUER=issuer
-#COMMON_NAME=common
-#TTL=8760h
-#VAULT_ADDR=http://127.0.0.1:8200
-#VAULT_INSTALL_DIR=/opt/homebrew/bin
-#VAULT_TOKEN=root
-#TMP_TEST_RESULTS="pki_tmp_results"
-#vault secrets enable --path=${MOUNT} pki > /dev/null 2>&1  || echo "PKI already enabled!"
-
 [[ -z "$MOUNT" ]] && fail "MOUNT env variable has not been set"
 [[ -z "$VAULT_ADDR" ]] && fail "VAULT_ADDR env variable has not been set"
 [[ -z "$VAULT_INSTALL_DIR" ]] && fail "VAULT_INSTALL_DIR env variable has not been set"
@@ -29,7 +19,6 @@ fail() {
 
 binpath=${VAULT_INSTALL_DIR}/vault
 test -x "$binpath" || fail "unable to locate vault binary at $binpath"
-
 export VAULT_FORMAT=json
 
 # ------ Generate and sign certificate ------
