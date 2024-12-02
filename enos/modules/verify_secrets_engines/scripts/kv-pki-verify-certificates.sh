@@ -29,23 +29,17 @@ fail() {
 
 binpath=${VAULT_INSTALL_DIR}/vault
 test -x "$binpath" || fail "unable to locate vault binary at $binpath" || fail "The certificate appears to be improperly configured or contains errors"
-
 export VAULT_FORMAT=json
 
-# Validate cert details:
-SIGNED_CRT_NAME="${MOUNT}_signed.pem"
-openssl x509 -in "${TMP_TEST_RESULTS}/${SIGNED_CRT_NAME}" -text -noout || fail "The certificate appears to be improperly configured or contains errors"
-
-# Validate intermediate cert details:
-INTERMEDIATE_COMMON_NAME="intermediate_${COMMON_NAME}"
-INTERMEDIATE_SIGNED_CRT_NAME="${MOUNT}_${INTERMEDIATE_COMMON_NAME}_signed.crt"
-openssl x509 -in "${TMP_TEST_RESULTS}/${INTERMEDIATE_SIGNED_CRT_NAME}" -text -noout || fail "The intermediate certificate appears to be improperly configured or contains errors"
+# Getting Certificates:
+VAULT_CERTS=$("$binpath" list -format=json ${MOUNT}/certs | jq -r '.[]')
+[[ -z "$VAULT_CERTS" ]] && fail "VAULT_CERTS should include vault certificates"
 
 
-
-
-
-
-
-
+for CERT in $VAULT_CERTS; do
+  echo "Getting Certificate from Vault PKI: ${CERT}"
+  "$binpath" read ${MOUNT}/cert/$CERT | jq -r '.data.certificate' > "${TMP_TEST_RESULTS}/tmp_vault_cert.pem"
+  echo "Verifying Certificate..."
+  openssl x509 -in "${TMP_TEST_RESULTS}/tmp_vault_cert.pem" -text -noout || fail "The certificate appears to be improperly configured or contains errors"
+done
 
