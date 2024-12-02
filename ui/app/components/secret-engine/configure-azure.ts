@@ -57,8 +57,9 @@ export default class ConfigureAwsComponent extends Component<Args> {
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
-    // the following checks are only relevant to enterprise users and those editing an existing configuration.
-    if (this.version.isCommunity || this.args.model.isNew) return;
+
+    if (this.version.isCommunity || this.args.model.isNew) return; // the following checks are relevant only to enterprise users and those editing an existing configuration.
+
     const { identityTokenAudience, identityTokenTtl, clientSecret, rootPasswordTtl } = this.args.model;
     const wifAttributesSet = !!identityTokenAudience || !!identityTokenTtl;
     const azureAttributesSet = !!clientSecret || !!rootPasswordTtl;
@@ -69,12 +70,12 @@ export default class ConfigureAwsComponent extends Component<Args> {
   }
 
   @action continueSubmitForm() {
-    // Called when the user confirms they are okay with the issuer change
     this.saveIssuerWarning = '';
     this.save.perform();
   }
 
-  // On form submit check for issuer changes then save model and issuer
+  // check if the issuer has been changed to show issuer modal
+  // continue saving the configuration
   submitForm = task(
     waitFor(async (event: Event) => {
       event?.preventDefault();
@@ -162,7 +163,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
     if (accessType === 'azure') {
       // reset all WIF attributes
       model.identityTokenAudience = model.identityTokenTtl = undefined;
-      // for the issuer return to the globally set value (if there is one) on toggle
+      // return the issuer to the globally set value (if there is one) on toggle
       this.args.issuerConfig.rollbackAttributes();
     }
     if (accessType === 'wif') {
