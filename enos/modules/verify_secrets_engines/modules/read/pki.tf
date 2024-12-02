@@ -1,9 +1,32 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
+locals {
+  // Variables
+  pki_mount                  = "pki_secret"     # secret
+  pki_issuer_name            = "issuer"
+  pki_common_name            = "common"
+  pki_default_ttl            = "72h"
+  pki_test_data_path_prefix  = "smoke"
+  tmp_test_results           = "tmp_test_results"
+
+  // Response data
+  #   identity_group_kv_writers_data = jsondecode(enos_remote_exec.identity_group_kv_writers.stdout).data
+
+  // Output
+  pki_output = {
+    mount              = local.pki_mount
+    common_name        = local.pki_common_name
+    test_results       = local.tmp_test_results
+  }
+  test = {
+    path_prefix  = local.pki_test_data_path_prefix
+  }
+}
 
 # Verify PKI Certificate
 resource "enos_remote_exec" "pki_issue_certificates" {
   depends_on = [enos_remote_exec.pki_issue_certificates]
+  for_each = var.hosts
 
   environment = {
     MOUNT             = local.pki_mount
@@ -12,14 +35,14 @@ resource "enos_remote_exec" "pki_issue_certificates" {
     VAULT_TOKEN       = var.vault_root_token
     COMMON_NAME       = local.pki_common_name
     TTL               = local.pki_default_ttl
-    TMP_TEST_RESULTS  = local.pki_tmp_results
+    TMP_TEST_RESULTS  = local.tmp_test_results
   }
 
   scripts = [abspath("${path.module}/../../scripts/kv-pki-verify-certificates.sh")]
 
   transport = {
     ssh = {
-      host = var.leader_host.public_ip
+      host = each.value.public_ip
     }
   }
 }

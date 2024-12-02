@@ -50,6 +50,7 @@ resource "enos_remote_exec" "secrets_enable_pki_secret" {
 # Issue RSA Certificate
 resource "enos_remote_exec" "pki_issue_rsa_cert" {
   depends_on = [enos_remote_exec.secrets_enable_pki_secret]
+  for_each = var.hosts
 
   environment = {
     MOUNT             = local.pki_mount
@@ -65,7 +66,7 @@ resource "enos_remote_exec" "pki_issue_rsa_cert" {
 
   transport = {
     ssh = {
-      host = var.leader_host.public_ip
+      host = each.value.public_ip
     }
   }
 }
