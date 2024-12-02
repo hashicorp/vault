@@ -11,9 +11,8 @@ import (
 	"slices"
 
 	"github.com/Masterminds/semver"
-	slogctx "github.com/veqryn/slog-context"
-
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/metadata"
+	slogctx "github.com/veqryn/slog-context"
 )
 
 // ListVersionsReq is a request to list versions from the releases API.
