@@ -977,6 +977,10 @@ func (c *TestClusterCore) ClusterListener() *cluster.Listener {
 	return c.getClusterListener()
 }
 
+// NetworkLayer returns the network layer for the cluster core. This can be used
+// in conjunction with the cluster.InmemLayer to disconnect specific nodes from
+// the cluster when we need to simulate abrupt node failure or a network
+// partition in NewTestCluster tests.
 func (c *TestClusterCore) NetworkLayer() cluster.NetworkLayer {
 	return c.Core.clusterNetworkLayer
 }
