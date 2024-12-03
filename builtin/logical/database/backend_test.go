@@ -211,6 +211,7 @@ func TestBackend_config_connection(t *testing.T) {
 			"password_policy":                    "",
 			"plugin_version":                     "",
 			"verify_connection":                  false,
+			"skip_static_role_import_rotation":   false,
 		}
 		configReq.Operation = logical.ReadOperation
 		resp, err = b.HandleRequest(namespace.RootContext(nil), configReq)
@@ -266,6 +267,7 @@ func TestBackend_config_connection(t *testing.T) {
 			"password_policy":                    "",
 			"plugin_version":                     "",
 			"verify_connection":                  false,
+			"skip_static_role_import_rotation":   false,
 		}
 		configReq.Operation = logical.ReadOperation
 		resp, err = b.HandleRequest(namespace.RootContext(nil), configReq)
@@ -310,6 +312,7 @@ func TestBackend_config_connection(t *testing.T) {
 			"password_policy":                    "",
 			"plugin_version":                     "",
 			"verify_connection":                  false,
+			"skip_static_role_import_rotation":   false,
 		}
 		configReq.Operation = logical.ReadOperation
 		resp, err = b.HandleRequest(namespace.RootContext(nil), configReq)
@@ -768,6 +771,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 		"password_policy":                    "",
 		"plugin_version":                     "",
 		"verify_connection":                  false,
+		"skip_static_role_import_rotation":   false,
 	}
 	resp, err = client.Read("database/config/plugin-test")
 	if err != nil {
