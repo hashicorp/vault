@@ -9,12 +9,6 @@ locals {
   kv_test_data_path_prefix  = "smoke"
   kv_test_data_value_prefix = "fire"
   kv_version                = 2
-  pki_mount                 = "pki_secret" # pki secret
-  pki_issuer_name           = "issuer"
-  pki_common_name           = "common"
-  pki_default_ttl           = "72h"
-  pki_tmp_results           = "pki_tmp_results"
-
   // Response data
   identity_group_kv_writers_data = jsondecode(enos_remote_exec.identity_group_kv_writers.stdout).data
 
