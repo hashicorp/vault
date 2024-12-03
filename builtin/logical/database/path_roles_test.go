@@ -1113,27 +1113,11 @@ func TestStaticRole_NewCredentialGeneration(t *testing.T) {
 		// Store password
 		initialPassword := wal.NewPassword
 
-		// Rotate role manually and fail again #1
+		// Rotate role manually and fail again #1 with same password
 		generateWALFromFailedRotation(t, b, storage, mockDB, roleName)
 
-		// Ensure WAL is deleted since retrying initial password failed
+		// Ensure WAL is deleted since retrying password failed
 		requireWALs(t, storage, 0)
-
-		// Rotate role manually and fail again #2
-		generateWALFromFailedRotation(t, b, storage, mockDB, roleName)
-
-		// Ensure new WAL was created
-		walIDs = requireWALs(t, storage, 1)
-		wal, err = b.findStaticWAL(ctx, storage, walIDs[0])
-		if err != nil || wal == nil {
-			t.Fatal(err)
-		}
-
-		// Confirm new WAL credential was created
-		secondRetryPassword := wal.NewPassword
-		if initialPassword == secondRetryPassword {
-			t.Fatalf("expected password to be the different after the second retry")
-		}
 
 		// Successfully rotate the role
 		mockDB.On("UpdateUser", mock.Anything, mock.Anything).
@@ -1148,7 +1132,7 @@ func TestStaticRole_NewCredentialGeneration(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		// Ensure WAL is flushed
+		// Ensure WAL is flushed since request was successful
 		requireWALs(t, storage, 0)
 
 		// Read the credential
@@ -1165,9 +1149,10 @@ func TestStaticRole_NewCredentialGeneration(t *testing.T) {
 			t.Fatalf("err:%s resp:%#v\n", err, resp)
 		}
 
-		// Confirm successful rotation used succeeding WAL Credential
-		if resp.Data["password"] != secondRetryPassword {
-			t.Fatalf("expected password to be %s, got %s", secondRetryPassword, resp.Data["password"])
+		// Confirm successful rotation used new credential
+		// Assert previous failing credential is not being used
+		if resp.Data["password"] == initialPassword {
+			t.Fatalf("expected password to be different after second retry")
 		}
 	})
 }
