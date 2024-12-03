@@ -30,12 +30,12 @@
 /plugins/                     @hashicorp/vault-ecosystem
 /vault/plugin_catalog.go      @hashicorp/vault-ecosystem
 
-/website/content/ @hashicorp/vault-education-approvers
-/website/content/docs/plugin-portal.mdx   @hashicorp/vault-education-approvers
+# Content on developer.hashicorp.com
+/website/ @hashicorp/vault-education-approvers
 
 # Plugin docs
-/website/content/docs/plugins/              @hashicorp/vault-ecosystem @hashicorp/vault-education-approvers
-/website/content/docs/upgrading/plugins.mdx @hashicorp/vault-ecosystem @hashicorp/vault-education-approvers
+/website/content/docs/plugins/              @hashicorp/vault-ecosystem
+/website/content/docs/upgrading/plugins.mdx @hashicorp/vault-ecosystem
 
 /ui/  @hashicorp/vault-ui
 # UI code related to Vault's JWT/OIDC auth method and OIDC provider.
