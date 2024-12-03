@@ -9,6 +9,11 @@ locals {
   kv_test_data_path_prefix  = "smoke"
   kv_test_data_value_prefix = "fire"
   kv_version                = 2
+  pki_mount                 = "pki_secret" # pki secret
+  pki_issuer_name           = "issuer"
+  pki_common_name           = "common"
+  pki_default_ttl           = "72h"
+  pki_tmp_results           = "pki_tmp_results"
 
   // Response data
   identity_group_kv_writers_data = jsondecode(enos_remote_exec.identity_group_kv_writers.stdout).data
@@ -39,6 +44,25 @@ resource "enos_remote_exec" "secrets_enable_kv_secret" {
     ENGINE            = "kv"
     MOUNT             = local.kv_mount
     SECRETS_META      = "-version=${local.kv_version}"
+    VAULT_ADDR        = var.vault_addr
+    VAULT_TOKEN       = var.vault_root_token
+    VAULT_INSTALL_DIR = var.vault_install_dir
+  }
+
+  scripts = [abspath("${path.module}/../../scripts/secrets-enable.sh")]
+
+  transport = {
+    ssh = {
+      host = var.leader_host.public_ip
+    }
+  }
+}
+
+# Enable pki secrets engine
+resource "enos_remote_exec" "secrets_enable_pki_secret" {
+  environment = {
+    ENGINE            = "pki"
+    MOUNT             = local.pki_mount
     VAULT_ADDR        = var.vault_addr
     VAULT_TOKEN       = var.vault_root_token
     VAULT_INSTALL_DIR = var.vault_install_dir
