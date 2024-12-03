@@ -1451,6 +1451,9 @@ func TestSysHealth_Raft(t *testing.T) {
 				"standbyok":     {"true"},
 			})
 			if err == nil {
+				if resp != nil && resp.Body != nil {
+					resp.Body.Close()
+				}
 				return errors.New("expected error")
 			}
 			if resp.StatusCode != 474 {
@@ -1495,6 +1498,9 @@ func TestSysHealth_Raft(t *testing.T) {
 				"standbyok":     {"true"},
 			})
 			if err == nil {
+				if resp != nil && resp.Body != nil {
+					resp.Body.Close()
+				}
 				return fmt.Errorf("expected error")
 			}
 			if resp.StatusCode != 530 {
