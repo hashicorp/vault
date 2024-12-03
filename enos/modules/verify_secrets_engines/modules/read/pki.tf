@@ -24,8 +24,7 @@ locals {
 }
 
 # Verify PKI Certificate
-resource "enos_remote_exec" "pki_issue_certificates" {
-  depends_on = [enos_remote_exec.pki_issue_certificates]
+resource "enos_remote_exec" "pki_verify_certificates" {
   for_each = var.hosts
 
   environment = {

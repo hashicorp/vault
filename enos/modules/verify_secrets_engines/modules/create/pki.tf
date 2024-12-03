@@ -48,7 +48,7 @@ resource "enos_remote_exec" "secrets_enable_pki_secret" {
 }
 
 # Issue RSA Certificate
-resource "enos_remote_exec" "pki_issue_rsa_cert" {
+resource "enos_remote_exec" "pki_issue_certificates" {
   depends_on = [enos_remote_exec.secrets_enable_pki_secret]
   for_each = var.hosts
 
@@ -71,28 +71,3 @@ resource "enos_remote_exec" "pki_issue_rsa_cert" {
   }
 }
 
-# # Configure AIA
-# resource "enos_remote_exec" "policy_write_kv_writer" {
-#   depends_on = [
-#     enos_remote_exec.secrets_enable_kv_secret,
-#   ]
-#   environment = {
-#     POLICY_NAME       = local.kv_write_policy_name
-#     POLICY_CONFIG     = <<-EOF
-#       path "${local.kv_mount}/*" {
-#         capabilities = ["create", "update", "read", "delete", "list"]
-#       }
-#     EOF
-#     VAULT_ADDR        = var.vault_addr
-#     VAULT_TOKEN       = var.vault_root_token
-#     VAULT_INSTALL_DIR = var.vault_install_dir
-#   }
-#
-#   scripts = [abspath("${path.module}/../../scripts/policy-write.sh")]
-#
-#   transport = {
-#     ssh = {
-#       host = var.leader_host.public_ip
-#     }
-#   }
-# }
