@@ -1,19 +1,23 @@
 ---
 layout: docs
-page_title: Multi-Factor Authentication (MFA) for Login - Auth Methods
-description: |-
-  Multi-factor authentication (MFA) is supported for several authentication
-  methods.
+page_title: Set up login MFA
+description: >-
+  Use basic multi-factor authentication (MFA) with Vault to add an extra level
+  of user verification to your authentication workflow for Vault.
 ---
 
-# Login MFA
+# Set up login MFA
 
-Vault supports Multi-factor Authentication (MFA) for authenticating to
-an auth method using different authentication types. We use the term `Login MFA` to distinguish
-this feature and the [Vault Enterprise MFA](/vault/docs/enterprise/mfa).
-Login MFA is built on top of the Identity system of Vault.
+The underlying identity system in Vault supports multi-factor authentication
+(MFA) for authenticating to an auth method using different authentication types.
 
-## MFA types
+MFA implementation                        | Required Vault edition
+----------------------------------------- | -----------------------
+Login MFA                                 | Vault Community
+[Step-up MFA](/vault/docs/enterprise/mfa) | Vault Enterprise
+
+
+## Login MFA types
 
 MFA in Vault includes the following login types:
 
