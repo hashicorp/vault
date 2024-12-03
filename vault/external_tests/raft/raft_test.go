@@ -1388,5 +1388,29 @@ func TestRaftCluster_Removed(t *testing.T) {
 		"test": "other_data",
 	})
 	require.Error(t, err)
-	require.True(t, follower.Sealed())
+	require.Eventually(t, follower.Sealed, 3*time.Second, 250*time.Millisecond)
+}
+
+// TestRaftCluster_Removed_RaftConfig creates a 3 node raft cluster with an extremely long
+// heartbeat interval, and then removes one of the nodes. The test verifies that
+// removed node discovers that it has been removed (via not being present in the
+// raft config) and seals.
+func TestRaftCluster_Removed_RaftConfig(t *testing.T) {
+	t.Parallel()
+	conf, opts := raftClusterBuilder(t, nil)
+	conf.ClusterHeartbeatInterval = 5 * time.Minute
+	cluster := vault.NewTestCluster(t, conf, &opts)
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+
+	follower := cluster.Cores[2]
+	followerClient := follower.Client
+	_, err := followerClient.Logical().Write("secret/foo", map[string]interface{}{
+		"test": "data",
+	})
+	require.NoError(t, err)
+
+	_, err = cluster.Cores[0].Client.Logical().Write("/sys/storage/raft/remove-peer", map[string]interface{}{
+		"server_id": follower.NodeID,
+	})
+	require.Eventually(t, follower.Sealed, 10*time.Second, 500*time.Millisecond)
 }

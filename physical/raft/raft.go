@@ -256,7 +256,8 @@ type RaftBackend struct {
 	// limits.
 	specialPathLimits map[string]uint64
 
-	removed atomic.Bool
+	removed         atomic.Bool
+	removedCallback func()
 }
 
 func (b *RaftBackend) IsNodeRemoved(ctx context.Context, nodeID string) (bool, error) {
@@ -1030,6 +1031,12 @@ func (b *RaftBackend) SetRestoreCallback(restoreCb restoreCallback) {
 	b.fsm.l.Unlock()
 }
 
+func (b *RaftBackend) SetRemovedCallback(cb func()) {
+	b.l.Lock()
+	defer b.l.Unlock()
+	b.removedCallback = cb
+}
+
 func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 	config.Logger = b.logger
 	multiplierRaw, ok := b.conf["performance_multiplier"]
@@ -1107,9 +1114,12 @@ type SetupOpts struct {
 	// We pass it in though because it can be overridden in tests or via ENV in
 	// core.
 	EffectiveSDKVersion string
+
+	// RemovedCallback is the function to call when the node has been removed
+	RemovedCallback func()
 }
 
-func (b *RaftBackend) StartRecoveryCluster(ctx context.Context, peer Peer) error {
+func (b *RaftBackend) StartRecoveryCluster(ctx context.Context, peer Peer, removedCallback func()) error {
 	recoveryModeConfig := &raft.Configuration{
 		Servers: []raft.Server{
 			{
@@ -1122,6 +1132,7 @@ func (b *RaftBackend) StartRecoveryCluster(ctx context.Context, peer Peer) error
 	return b.SetupCluster(context.Background(), SetupOpts{
 		StartAsLeader:      true,
 		RecoveryModeConfig: recoveryModeConfig,
+		RemovedCallback:    removedCallback,
 	})
 }
 
@@ -1391,6 +1402,9 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		}
 	}
 
+	if opts.RemovedCallback != nil {
+		b.removedCallback = opts.RemovedCallback
+	}
 	b.StartRemovedChecker(ctx)
 
 	b.logger.Trace("finished setting up raft cluster")
@@ -1430,6 +1444,7 @@ func (b *RaftBackend) StartRemovedChecker(ctx context.Context) {
 	go func() {
 		ticker := time.NewTicker(time.Second)
 		defer ticker.Stop()
+		hasBeenPresent := false
 
 		logger := b.logger.Named("removed.checker")
 		for {
@@ -1440,11 +1455,21 @@ func (b *RaftBackend) StartRemovedChecker(ctx context.Context) {
 					logger.Error("failed to check if node is removed", "node ID", b.localID, "error", err)
 					continue
 				}
-				if removed {
+				if !removed {
+					hasBeenPresent = true
+				}
+				// the node must have been previously present in the config,
+				// only then should we consider it removed and shutdown
+				if removed && hasBeenPresent {
 					err := b.RemoveSelf()
 					if err != nil {
 						logger.Error("failed to remove self", "node ID", b.localID, "error", err)
 					}
+					b.l.RLock()
+					if b.removedCallback != nil {
+						b.removedCallback()
+					}
+					b.l.RUnlock()
 					return
 				}
 			case <-ctx.Done():
