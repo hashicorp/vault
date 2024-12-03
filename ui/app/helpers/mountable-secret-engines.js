@@ -153,12 +153,14 @@ export function configurationOnly() {
 // These engines do not exist in their own Ember engine.
 export const CONFIGURABLE_SECRET_ENGINES = ['aws', 'azure', 'ssh'];
 
-export function configurableSecretEngines() {
-  return MOUNTABLE_SECRET_ENGINES.slice();
-}
-
 export function mountableEngines() {
   return MOUNTABLE_SECRET_ENGINES.slice();
+}
+// Secret Engines that can be mounted but have no other type of configuration or actions available via the UI.
+export const UN_SUPPORTED_ENGINES = ['alicloud', 'consul', 'gcp', 'gcpkms', 'nomad', 'rabbitmq', 'totp'];
+
+export function unSupportedEngines() {
+  return UN_SUPPORTED_ENGINES.slice();
 }
 
 export function allEngines() {

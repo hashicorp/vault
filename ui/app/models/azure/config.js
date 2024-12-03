@@ -4,7 +4,7 @@
  */
 
 import Model, { attr } from '@ember-data/model';
-import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
+import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 // Note: while the API docs indicate subscriptionId and tenantId are required, the UI does not enforce this because the user may pass these values in as environment variables.
 // https://developer.hashicorp.com/vault/api-docs/secret/azure#configure-access
@@ -56,6 +56,48 @@ export default class AzureConfig extends Model {
       'identityTokenTtl',
       'environment',
       'rootPasswordTtl',
+    ];
+    return expandAttributeMeta(this, keys);
+  }
+
+  // "filedGroupsWif" and "fieldGroupsAzure" are passed to the FormFieldGroups component to determine which group to show in the form (ex: @groupName="fieldGroupsWif")
+  get fieldGroupsWif() {
+    return fieldToAttrs(this, this.formFieldGroups('wif'));
+  }
+
+  get fieldGroupsAzure() {
+    return fieldToAttrs(this, this.formFieldGroups('azure'));
+  }
+
+  formFieldGroups(accessType = 'azure') {
+    const formFieldGroups = [];
+    formFieldGroups.push({
+      default: ['subscriptionId', 'tenantId', 'clientId', 'environment'],
+    });
+    if (accessType === 'wif') {
+      formFieldGroups.push({
+        default: ['identityTokenAudience', 'identityTokenTtl'],
+      });
+    }
+    if (accessType === 'azure') {
+      formFieldGroups.push({
+        default: ['clientSecret', 'rootPasswordTtl'],
+      });
+    }
+    return formFieldGroups;
+  }
+
+  // formFields are iterated through to generate the edit/create view
+  get formFields() {
+    const keys = [
+      'subscriptionId',
+      'tenantId',
+      'clientId',
+      'clientSecret',
+      'identityTokenAudience',
+      'identityTokenTtl',
+      'rootPasswordTtl',
+      'environment',
     ];
     return expandAttributeMeta(this, keys);
   }

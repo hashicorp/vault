@@ -12,6 +12,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
+import { UN_SUPPORTED_ENGINES, allEngines } from 'vault/helpers/mountable-secret-engines';
+import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 
 const SELECTORS = {
   backendLink: (path) =>
@@ -45,25 +47,32 @@ module('Acceptance | secret-engine list view', function (hooks) {
   });
 
   test('it adds disabled css styling to unsupported secret engines', async function (assert) {
-    assert.expect(2);
-    // first mount engine that is not supported
-    const enginePath = `nomad-${this.uid}`;
-    await runCmd(mountEngineCmd('nomad', enginePath));
-    await visit('/vault/secrets');
+    assert.expect(19);
+    const allEnginesArray = allEngines();
 
-    const rows = findAll(SELECTORS.backendLink());
-    const rowUnsupported = Array.from(rows).filter((row) => row.innerText.includes('nomad'));
-    const rowSupported = Array.from(rows).filter((row) => row.innerText.includes('cubbyhole'));
-    assert
-      .dom(rowUnsupported[0])
-      .doesNotHaveClass(
-        'linked-block',
-        `the linked-block class is not added to unsupported engines, which effectively disables it.`
-      );
-    assert.dom(rowSupported[0]).hasClass('linked-block', `linked-block class is added to supported engines.`);
+    for (const engineObject of allEnginesArray) {
+      const engine = engineObject.type;
+      const enginePath = `${engine}-${this.uid}`;
+      await runCmd(mountEngineCmd(engine, enginePath));
+      // TODO: fix, the list view does not refresh after mounting an engine through the console. Toggle to another page and back to refresh model.
+      await visit('/vault/cluster/dashboard');
+      await visit('/vault/secrets');
 
-    // cleanup
-    await runCmd(deleteEngineCmd(enginePath));
+      if (UN_SUPPORTED_ENGINES.includes(engine)) {
+        assert
+          .dom(PAGE.backends.link(enginePath))
+          .doesNotHaveClass(
+            'linked-block',
+            `the linked-block class is not added to the unsupported ${engine}, which effectively disables it.`
+          );
+      } else {
+        assert
+          .dom(PAGE.backends.link(enginePath))
+          .hasClass('linked-block', `linked-block class is added to supported ${engine} engines.`);
+      }
+      // cleanup
+      await runCmd(deleteEngineCmd(enginePath));
+    }
   });
 
   test('it filters by name and engine type', async function (assert) {

@@ -19,4 +19,25 @@ export default class AzureConfig extends ApplicationAdapter {
       };
     });
   }
+
+  createOrUpdate(store, type, snapshot) {
+    const serializer = store.serializerFor(type.modelName);
+    const data = serializer.serialize(snapshot);
+    const backend = snapshot.record.backend;
+    return this.ajax(`${this.buildURL()}/${backend}/config`, 'POST', { data }).then((resp) => {
+      // ember data requires an id on the response
+      return {
+        ...resp,
+        id: backend,
+      };
+    });
+  }
+
+  createRecord() {
+    return this.createOrUpdate(...arguments);
+  }
+
+  updateRecord() {
+    return this.createOrUpdate(...arguments);
+  }
 }
