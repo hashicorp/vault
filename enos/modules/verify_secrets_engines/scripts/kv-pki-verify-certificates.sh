@@ -32,4 +32,3 @@ for CERT in $VAULT_CERTS; do
   echo "Verifying Certificate..."
   openssl x509 -in "${TMP_TEST_RESULTS}/tmp_vault_cert.pem" -text -noout || fail "The certificate appears to be improperly configured or contains errors"
 done
-
