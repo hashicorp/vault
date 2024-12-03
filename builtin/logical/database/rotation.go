@@ -421,6 +421,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 	// Use credential from input if available. This happens if we're restoring from
 	// a WAL item or processing the rotation queue with an item that has a WAL
 	// associated with it
+	var usedCredentialFromPreviousRotation bool
 	if output.WALID != "" {
 		wal, err := b.findStaticWAL(ctx, s, output.WALID)
 		if err != nil {
@@ -448,6 +449,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 				Statements:  statements,
 			}
 			input.Role.StaticAccount.Password = wal.NewPassword
+			usedCredentialFromPreviousRotation = true
 		case wal.CredentialType == v5.CredentialTypeRSAPrivateKey:
 			// Roll forward by using the credential in the existing WAL entry
 			updateReq.CredentialType = v5.CredentialTypeRSAPrivateKey
@@ -456,6 +458,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 				Statements:   statements,
 			}
 			input.Role.StaticAccount.PrivateKey = wal.NewPrivateKey
+			usedCredentialFromPreviousRotation = true
 		}
 	}
 
@@ -530,6 +533,15 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 	_, err = dbi.database.UpdateUser(ctx, updateReq, false)
 	if err != nil {
 		b.CloseIfShutdown(dbi, err)
+		if usedCredentialFromPreviousRotation {
+			b.Logger().Debug("credential stored in WAL failed, deleting WAL", "role", input.RoleName, "WAL ID", output.WALID)
+			if err := framework.DeleteWAL(ctx, s, output.WALID); err != nil {
+				b.Logger().Warn("failed to delete WAL", "error", err, "WAL ID", output.WALID)
+			}
+
+			// Generate a new WAL entry and credential for next attempt
+			output.WALID = ""
+		}
 		return output, fmt.Errorf("error setting credentials: %w", err)
 	}
 	modified = true
