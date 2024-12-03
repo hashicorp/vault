@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/axiomhq/hyperloglog"
+	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/vault/activity"
 	"github.com/stretchr/testify/require"
@@ -1014,6 +1015,14 @@ func writeTokenSegment(t *testing.T, core *Core, ts time.Time, index int, item *
 	WriteToStorage(t, core, makeSegmentPath(t, activityTokenLocalBasePath, ts, index), protoItem)
 }
 
+// writeTokenSegmentOldPath writes a single segment file with the given time and index for a token at the old path
+func writeTokenSegmentOldPath(t *testing.T, core *Core, ts time.Time, index int, item *activity.TokenCount) {
+	t.Helper()
+	protoItem, err := proto.Marshal(item)
+	require.NoError(t, err)
+	WriteToStorage(t, core, makeSegmentPath(t, activityTokenBasePath, ts, index), protoItem)
+}
+
 // makeSegmentPath formats the path for a segment at a particular time and index
 func makeSegmentPath(t *testing.T, typ string, ts time.Time, index int) string {
 	t.Helper()
@@ -1211,5 +1220,52 @@ func TestSegmentFileReader(t *testing.T) {
 		require.True(t, proto.Equal(gotGlobalEntities[i], entities[i]))
 		require.True(t, proto.Equal(gotLocalEntities[i], entities[i]))
 		require.True(t, proto.Equal(gotTokens[i], tokens[i]))
+	}
+}
+
+// TestExtractTokens_OldStoragePaths verifies that the correct tokens are extracted
+// from the old token paths in storage. These old storage paths were used in <=1.9 to
+// store tokens without clientIds (non-entity tokens).
+func TestExtractTokens_OldStoragePaths(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	now := time.Now()
+
+	// write token at index 3
+	token := &activity.TokenCount{CountByNamespaceID: map[string]uint64{
+		"ns":  10,
+		"ns3": 1,
+		"ns1": 2,
+	}}
+
+	lastMonth := timeutil.StartOfPreviousMonth(now)
+	twoMonthsAgo := timeutil.StartOfPreviousMonth(lastMonth)
+
+	thisMonthData := []map[string]uint64{token.CountByNamespaceID, token.CountByNamespaceID}
+	lastMonthData := []map[string]uint64{token.CountByNamespaceID, token.CountByNamespaceID, token.CountByNamespaceID, token.CountByNamespaceID}
+	twoMonthsAgoData := []map[string]uint64{token.CountByNamespaceID}
+
+	expected := map[int64][]map[string]uint64{
+		now.Unix():          thisMonthData,
+		lastMonth.Unix():    lastMonthData,
+		twoMonthsAgo.Unix(): twoMonthsAgoData,
+	}
+
+	// This month's token data is at broken segment sequences
+	writeTokenSegmentOldPath(t, core, now, 1, token)
+	writeTokenSegmentOldPath(t, core, now, 3, token)
+	// Last months token data is at normal segment sequences
+	writeTokenSegmentOldPath(t, core, lastMonth, 0, token)
+	writeTokenSegmentOldPath(t, core, lastMonth, 1, token)
+	writeTokenSegmentOldPath(t, core, lastMonth, 2, token)
+	writeTokenSegmentOldPath(t, core, lastMonth, 3, token)
+	// Month before is at only one random segment sequence
+	writeTokenSegmentOldPath(t, core, twoMonthsAgo, 2, token)
+
+	tokens, err := core.activityLog.extractTokensDeprecatedStoragePath(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, 3, len(tokens))
+
+	if diff := deep.Equal(expected, tokens); diff != nil {
+		t.Fatal(diff)
 	}
 }

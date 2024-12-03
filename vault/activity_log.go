@@ -46,7 +46,9 @@ const (
 	activityGlobalPathPrefix   = "global/"
 	activityLocalPathPrefix    = "local/"
 
-	activityACMERegenerationKey = "acme-regeneration"
+	activityACMERegenerationKey     = "acme-regeneration"
+	activityDeduplicationUpgradeKey = "deduplication-upgrade"
+
 	// sketch for each month that stores hash of client ids
 	distinctClientsBasePath = "log/distinctclients/"
 
@@ -114,6 +116,8 @@ const (
 	// CSV encoder. Indexes will be generated to ensure that values are slotted into the
 	// correct column. This initial value is used prior to finalizing the CSV header.
 	exportCSVFlatteningInitIndex = -1
+
+	DeduplicatedClientMinimumVersion = "1.19.0"
 )
 
 var (
@@ -196,6 +200,11 @@ type ActivityLog struct {
 	// Channel to stop background processing
 	doneCh chan struct{}
 
+	// Channel to signal global clients have received by the primary from the secondary, during upgrade to 1.19
+	dedupUpgradeGlobalClientsReceivedCh chan struct{}
+	// track whether the current cluster is in the middle of an upgrade to 1.19
+	dedupClientsUpgradeComplete *atomic.Bool
+
 	// track metadata and contents of the most recent log segment
 	currentSegment segmentInfo
 
@@ -224,8 +233,18 @@ type ActivityLog struct {
 
 	// channel closed when deletion at startup is done
 	// (for unit test robustness)
-	retentionDone         chan struct{}
+	retentionDone chan struct{}
+	// This channel is relevant for upgrades to 1.17. It indicates whether precomputed queries have been
+	// generated for ACME clients.
 	computationWorkerDone chan struct{}
+	// This channel is relevant for upgrades to 1.19+ (version with deduplication of clients)
+	// This indicates that paths that were used before 1.19 to store clients have been cleaned
+	oldStoragePathsCleaned chan struct{}
+
+	// channel to indicate that a global clients have been
+	// sent to the primary from a secondary
+	globalClientsSent           chan struct{}
+	clientsReceivedForMigration map[int64][]*activity.LogFragment
 
 	// for testing: is config currently being invalidated. protected by l
 	configInvalidationInProgress bool
@@ -350,19 +369,21 @@ func NewActivityLog(core *Core, logger log.Logger, view *BarrierView, metrics me
 		clock = timeutil.DefaultClock{}
 	}
 	a := &ActivityLog{
-		core:                            core,
-		configOverrides:                 &core.activityLogConfig,
-		logger:                          logger,
-		view:                            view,
-		metrics:                         metrics,
-		nodeID:                          hostname,
-		newFragmentCh:                   make(chan struct{}, 1),
-		sendCh:                          make(chan struct{}, 1), // buffered so it can be triggered by fragment size
-		doneCh:                          make(chan struct{}, 1),
-		partialMonthLocalClientTracker:  make(map[string]*activity.EntityRecord),
-		newGlobalClientFragmentCh:       make(chan struct{}, 1),
-		globalPartialMonthClientTracker: make(map[string]*activity.EntityRecord),
-		clock:                           clock,
+		core:                                core,
+		configOverrides:                     &core.activityLogConfig,
+		logger:                              logger,
+		view:                                view,
+		metrics:                             metrics,
+		nodeID:                              hostname,
+		newFragmentCh:                       make(chan struct{}, 1),
+		sendCh:                              make(chan struct{}, 1), // buffered so it can be triggered by fragment size
+		doneCh:                              make(chan struct{}, 1),
+		partialMonthLocalClientTracker:      make(map[string]*activity.EntityRecord),
+		newGlobalClientFragmentCh:           make(chan struct{}, 1),
+		dedupUpgradeGlobalClientsReceivedCh: make(chan struct{}, 1),
+		clientsReceivedForMigration:         make(map[int64][]*activity.LogFragment),
+		globalPartialMonthClientTracker:     make(map[string]*activity.EntityRecord),
+		clock:                               clock,
 		currentSegment: segmentInfo{
 			startTimestamp: 0,
 			currentClients: &activity.EntityActivityLog{
@@ -407,6 +428,7 @@ func NewActivityLog(core *Core, logger log.Logger, view *BarrierView, metrics me
 		secondaryGlobalClientFragments: make([]*activity.LogFragment, 0),
 		inprocessExport:                atomic.NewBool(false),
 		precomputedQueryWritten:        make(chan struct{}),
+		dedupClientsUpgradeComplete:    atomic.NewBool(false),
 	}
 
 	config, err := a.loadConfigOrDefault(core.activeContext)
@@ -459,6 +481,8 @@ func (a *ActivityLog) saveCurrentSegmentToStorageLocked(ctx context.Context, for
 	a.currentGlobalFragment = nil
 	a.globalFragmentLock.Unlock()
 
+	globalFragments := append(append(secondaryGlobalClients, globalClients), standbyGlobalClients...)
+
 	if !a.core.IsPerfSecondary() {
 		if a.currentGlobalFragment != nil {
 			a.metrics.IncrCounterWithLabels([]string{"core", "activity", "global_fragment_size"},
@@ -467,19 +491,24 @@ func (a *ActivityLog) saveCurrentSegmentToStorageLocked(ctx context.Context, for
 					{"type", "client"},
 				})
 		}
-		var globalReceivedFragmentTotal int
-		for _, globalReceivedFragment := range secondaryGlobalClients {
-			globalReceivedFragmentTotal += len(globalReceivedFragment.Clients)
-		}
-		for _, globalReceivedFragment := range standbyGlobalClients {
-			globalReceivedFragmentTotal += len(globalReceivedFragment.Clients)
-		}
 		a.metrics.IncrCounterWithLabels([]string{"core", "activity", "global_received_fragment_size"},
-			float32(globalReceivedFragmentTotal),
+			float32(len(globalFragments)),
 			[]metricsutil.Label{
 				{"type", "client"},
 			})
 
+		// Since we are the primary, store global clients
+		// Create fragments from global clients and store the segment
+		if ret := a.createCurrentSegmentFromFragments(ctx, globalFragments, &a.currentGlobalSegment, force, activityGlobalPathPrefix); ret != nil {
+			return ret
+		}
+
+	} else if !a.dedupClientsUpgradeComplete.Load() {
+		// We are the secondary, and an upgrade is in progress. In this case we will temporarily store the data at this old path
+		// This data will be garbage collected after the upgrade has completed
+		if ret := a.createCurrentSegmentFromFragments(ctx, globalFragments, &a.currentSegment, force, ""); ret != nil {
+			return ret
+		}
 	}
 
 	// If segment start time is zero, do not update or write
@@ -487,15 +516,6 @@ func (a *ActivityLog) saveCurrentSegmentToStorageLocked(ctx context.Context, for
 	// disabled after a save as been triggered.
 	if a.currentGlobalSegment.startTimestamp == 0 {
 		return nil
-	}
-
-	// If we are the primary, store global clients
-	// Create fragments from global clients and store the segment
-	if !a.core.IsPerfSecondary() {
-		globalFragments := append(append(secondaryGlobalClients, globalClients), standbyGlobalClients...)
-		if ret := a.createCurrentSegmentFromFragments(ctx, globalFragments, &a.currentGlobalSegment, force, activityGlobalPathPrefix); ret != nil {
-			return ret
-		}
 	}
 
 	// Swap out the pending local fragments
@@ -615,6 +635,74 @@ func (a *ActivityLog) createCurrentSegmentFromFragments(ctx context.Context, fra
 	return nil
 }
 
+func (a *ActivityLog) savePreviousTokenSegments(ctx context.Context, startTime int64, pathPrefix string, fragments []*activity.LogFragment) error {
+	tokenByNamespace := make(map[string]uint64)
+	for _, fragment := range fragments {
+		// As of 1.9, a fragment should no longer have any NonEntityTokens. However
+		// in order to not lose any information about the current segment during the
+		// month when the client upgrades to 1.9, we must retain this functionality.
+		for ns, val := range fragment.NonEntityTokens {
+			// We track these pre-1.9 values in the old location, which is
+			// a.currentSegment.tokenCount, as opposed to the counter that stores tokens
+			// without entities that have client IDs, namely
+			// a.partialMonthClientTracker.nonEntityCountByNamespaceID. This preserves backward
+			// compatibility for the precomputedQueryWorkers and the segment storing
+			// logic.
+			tokenByNamespace[ns] += val
+		}
+	}
+	segmentToStore := segmentInfo{
+		startTimestamp:       startTime,
+		clientSequenceNumber: 0,
+		currentClients: &activity.EntityActivityLog{
+			Clients: make([]*activity.EntityRecord, 0),
+		},
+		tokenCount: &activity.TokenCount{CountByNamespaceID: tokenByNamespace},
+	}
+
+	if _, err := a.saveSegmentEntitiesInternal(ctx, segmentToStore, false, pathPrefix); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (a *ActivityLog) savePreviousEntitySegments(ctx context.Context, startTime int64, pathPrefix string, allFragments []*activity.LogFragment) error {
+	deduplicatedClients := make(map[string]*activity.EntityRecord)
+	for _, f := range allFragments {
+		for _, entity := range f.GetClients() {
+			deduplicatedClients[entity.ClientID] = entity
+		}
+	}
+
+	segmentToStore := segmentInfo{
+		startTimestamp:       startTime,
+		clientSequenceNumber: 0,
+		currentClients: &activity.EntityActivityLog{
+			Clients: make([]*activity.EntityRecord, 0),
+		},
+	}
+	incrementSegmentNum := func() {
+		segmentToStore.clientSequenceNumber = segmentToStore.clientSequenceNumber + 1
+		segmentToStore.currentClients.Clients = make([]*activity.EntityRecord, 0)
+	}
+	numAddedClients := 0
+	for _, entity := range deduplicatedClients {
+		segmentToStore.currentClients.Clients = append(segmentToStore.currentClients.Clients, entity)
+		numAddedClients++
+		if numAddedClients%ActivitySegmentClientCapacity == 0 {
+			if _, err := a.saveSegmentEntitiesInternal(ctx, segmentToStore, false, pathPrefix); err != nil {
+				return err
+			}
+			incrementSegmentNum()
+		}
+	}
+	// Store any remaining clients if they exist
+	if _, err := a.saveSegmentEntitiesInternal(ctx, segmentToStore, false, pathPrefix); err != nil {
+		return err
+	}
+	return nil
+}
+
 // :force: forces a save of tokens/entities even if the in-memory log is empty
 func (a *ActivityLog) saveCurrentSegmentInternal(ctx context.Context, force bool, currentSegment segmentInfo, storagePathPrefix string) error {
 	_, err := a.saveSegmentEntitiesInternal(ctx, currentSegment, force, storagePathPrefix)
@@ -711,28 +799,30 @@ func parseSegmentNumberFromPath(path string) (int, bool) {
 // availableLogs returns the start_time(s) (in UTC) associated with months for which logs exist,
 // sorted last to first
 func (a *ActivityLog) availableLogs(ctx context.Context, upTo time.Time) ([]time.Time, error) {
-	paths := make([]string, 0)
-	for _, basePath := range []string{activityLocalPathPrefix + activityEntityBasePath, activityGlobalPathPrefix + activityEntityBasePath, activityTokenLocalBasePath} {
-		p, err := a.view.List(ctx, basePath)
-		if err != nil {
-			return nil, err
-		}
-
-		paths = append(paths, p...)
-	}
-
 	pathSet := make(map[time.Time]struct{})
 	out := make([]time.Time, 0)
-	for _, path := range paths {
-		// generate a set of unique start times
-		segmentTime, err := timeutil.ParseTimeFromPath(path)
-		if err != nil {
-			return nil, err
-		}
-		if segmentTime.After(upTo) {
-			continue
-		}
+	availableTimes := make([]time.Time, 0)
 
+	times, err := a.availableTimesAtPath(ctx, upTo, activityTokenLocalBasePath)
+	if err != nil {
+		return nil, err
+	}
+	availableTimes = append(availableTimes, times...)
+
+	times, err = a.availableTimesAtPath(ctx, upTo, activityGlobalPathPrefix+activityEntityBasePath)
+	if err != nil {
+		return nil, err
+	}
+	availableTimes = append(availableTimes, times...)
+
+	times, err = a.availableTimesAtPath(ctx, upTo, activityLocalPathPrefix+activityEntityBasePath)
+	if err != nil {
+		return nil, err
+	}
+	availableTimes = append(availableTimes, times...)
+
+	// Remove duplicate start times
+	for _, segmentTime := range availableTimes {
 		if _, present := pathSet[segmentTime]; !present {
 			pathSet[segmentTime] = struct{}{}
 			out = append(out, segmentTime)
@@ -746,6 +836,27 @@ func (a *ActivityLog) availableLogs(ctx context.Context, upTo time.Time) ([]time
 
 	a.logger.Trace("scanned existing logs", "out", out, "up to", upTo)
 
+	return out, nil
+}
+
+// availableTimesAtPath returns a sorted list of all available times at the pathPrefix up until the provided time.
+func (a *ActivityLog) availableTimesAtPath(ctx context.Context, onlyIncludeTimesUpTo time.Time, path string) ([]time.Time, error) {
+	paths, err := a.view.List(ctx, path)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]time.Time, 0)
+	for _, path := range paths {
+		// generate a set of unique start times
+		segmentTime, err := timeutil.ParseTimeFromPath(path)
+		if err != nil {
+			return nil, err
+		}
+		if segmentTime.After(onlyIncludeTimesUpTo) {
+			continue
+		}
+		out = append(out, segmentTime)
+	}
 	return out, nil
 }
 
@@ -877,54 +988,42 @@ func (a *ActivityLog) loadPriorEntitySegment(ctx context.Context, startTime time
 	// load all the active global clients
 	if !isLocal {
 		globalPath := activityGlobalPathPrefix + activityEntityBasePath + fmt.Sprint(startTime.Unix()) + "/" + strconv.FormatUint(sequenceNum, 10)
-		data, err := a.view.Get(ctx, globalPath)
-		if err != nil {
+		out, err := a.readEntitySegmentAtPath(ctx, globalPath)
+		if err != nil && !errors.Is(err, ErrEmptyResponse) {
 			return err
 		}
-		if data == nil {
-			return nil
-		}
-		out := &activity.EntityActivityLog{}
-		err = proto.Unmarshal(data.Value, out)
-		if err != nil {
-			return err
-		}
-		a.globalFragmentLock.Lock()
-		// Handle the (unlikely) case where the end of the month has been reached while background loading.
-		// Or the feature has been disabled.
-		if a.enabled && startTime.Unix() == a.currentGlobalSegment.startTimestamp {
-			for _, ent := range out.Clients {
-				a.globalPartialMonthClientTracker[ent.ClientID] = ent
+		if out != nil {
+			a.globalFragmentLock.Lock()
+			// Handle the (unlikely) case where the end of the month has been reached while background loading.
+			// Or the feature has been disabled.
+			if a.enabled && startTime.Unix() == a.currentGlobalSegment.startTimestamp {
+				for _, ent := range out.Clients {
+					a.globalPartialMonthClientTracker[ent.ClientID] = ent
+				}
 			}
+			a.globalFragmentLock.Unlock()
 		}
-		a.globalFragmentLock.Unlock()
-		return nil
-	}
 
-	// load all the active local clients
-	localPath := activityLocalPathPrefix + activityEntityBasePath + fmt.Sprint(startTime.Unix()) + "/" + strconv.FormatUint(sequenceNum, 10)
-	data, err := a.view.Get(ctx, localPath)
-	if err != nil {
-		return err
-	}
-	if data == nil {
-		return nil
-	}
-	out := &activity.EntityActivityLog{}
-	err = proto.Unmarshal(data.Value, out)
-	if err != nil {
-		return err
-	}
-	a.localFragmentLock.Lock()
-	// Handle the (unlikely) case where the end of the month has been reached while background loading.
-	// Or the feature has been disabled.
-	if a.enabled && startTime.Unix() == a.currentLocalSegment.startTimestamp {
-		for _, ent := range out.Clients {
-			a.partialMonthLocalClientTracker[ent.ClientID] = ent
+	} else {
+		// load all the active local clients
+		localPath := activityLocalPathPrefix + activityEntityBasePath + fmt.Sprint(startTime.Unix()) + "/" + strconv.FormatUint(sequenceNum, 10)
+		out, err := a.readEntitySegmentAtPath(ctx, localPath)
+		if err != nil && !errors.Is(err, ErrEmptyResponse) {
+			return err
 		}
-	}
-	a.localFragmentLock.Unlock()
+		if out != nil {
+			a.localFragmentLock.Lock()
+			// Handle the (unlikely) case where the end of the month has been reached while background loading.
+			// Or the feature has been disabled.
+			if a.enabled && startTime.Unix() == a.currentLocalSegment.startTimestamp {
+				for _, ent := range out.Clients {
+					a.partialMonthLocalClientTracker[ent.ClientID] = ent
+				}
+			}
+			a.localFragmentLock.Unlock()
+		}
 
+	}
 	return nil
 }
 
@@ -932,23 +1031,17 @@ func (a *ActivityLog) loadPriorEntitySegment(ctx context.Context, startTime time
 // into memory (to append new entries), and to the globalPartialMonthClientTracker and  partialMonthLocalClientTracker to
 // avoid duplication call with fragmentLock, globalFragmentLock, localFragmentLock and l held.
 func (a *ActivityLog) loadCurrentClientSegment(ctx context.Context, startTime time.Time, localSegmentSequenceNumber uint64, globalSegmentSequenceNumber uint64) error {
-	// load current global segment
-	path := activityGlobalPathPrefix + activityEntityBasePath + fmt.Sprint(startTime.Unix()) + "/" + strconv.FormatUint(globalSegmentSequenceNumber, 10)
-
 	// setting a.currentSegment timestamp to support upgrades
 	a.currentSegment.startTimestamp = startTime.Unix()
 
-	data, err := a.view.Get(ctx, path)
-	if err != nil {
+	// load current global segment
+	path := activityGlobalPathPrefix + activityEntityBasePath + fmt.Sprint(startTime.Unix()) + "/" + strconv.FormatUint(globalSegmentSequenceNumber, 10)
+
+	out, err := a.readEntitySegmentAtPath(ctx, path)
+	if err != nil && !errors.Is(err, ErrEmptyResponse) {
 		return err
 	}
-	if data != nil {
-		out := &activity.EntityActivityLog{}
-		err = proto.Unmarshal(data.Value, out)
-		if err != nil {
-			return err
-		}
-
+	if out != nil {
 		if !a.core.perfStandby {
 			a.currentGlobalSegment = segmentInfo{
 				startTimestamp: startTime.Unix(),
@@ -971,17 +1064,11 @@ func (a *ActivityLog) loadCurrentClientSegment(ctx context.Context, startTime ti
 
 	// load current local segment
 	path = activityLocalPathPrefix + activityEntityBasePath + fmt.Sprint(startTime.Unix()) + "/" + strconv.FormatUint(localSegmentSequenceNumber, 10)
-	data, err = a.view.Get(ctx, path)
-	if err != nil {
+	out, err = a.readEntitySegmentAtPath(ctx, path)
+	if err != nil && !errors.Is(err, ErrEmptyResponse) {
 		return err
 	}
-	if data != nil {
-		out := &activity.EntityActivityLog{}
-		err = proto.Unmarshal(data.Value, out)
-		if err != nil {
-			return err
-		}
-
+	if out != nil {
 		if !a.core.perfStandby {
 			a.currentLocalSegment = segmentInfo{
 				startTimestamp: startTime.Unix(),
@@ -998,10 +1085,41 @@ func (a *ActivityLog) loadCurrentClientSegment(ctx context.Context, startTime ti
 		for _, client := range out.Clients {
 			a.partialMonthLocalClientTracker[client.ClientID] = client
 		}
-
 	}
 
 	return nil
+}
+
+func (a *ActivityLog) readEntitySegmentAtPath(ctx context.Context, path string) (*activity.EntityActivityLog, error) {
+	data, err := a.view.Get(ctx, path)
+	if err != nil {
+		return nil, err
+	}
+	if data == nil {
+		return nil, ErrEmptyResponse
+	}
+	out := &activity.EntityActivityLog{}
+	err = proto.Unmarshal(data.Value, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (a *ActivityLog) readTokenSegmentAtPath(ctx context.Context, path string) (*activity.TokenCount, error) {
+	data, err := a.view.Get(ctx, path)
+	if err != nil {
+		return nil, err
+	}
+	if data == nil {
+		return nil, ErrEmptyResponse
+	}
+	out := &activity.TokenCount{}
+	err = proto.Unmarshal(data.Value, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 // tokenCountExists checks if there's a token log for :startTime:
@@ -1168,6 +1286,26 @@ func (a *ActivityLog) deleteLogWorker(ctx context.Context, startTimestamp int64,
 	}
 	// Allow whoever started this as a goroutine to wait for it to finish.
 	close(whenDone)
+}
+
+func (a *ActivityLog) deleteOldStoragePathWorker(ctx context.Context, pathPrefix string) {
+	pathTimes, err := a.view.List(ctx, pathPrefix)
+	if err != nil {
+		a.logger.Error("could not list segment paths", "error", err)
+		return
+	}
+	for _, pathTime := range pathTimes {
+		segments, err := a.view.List(ctx, pathPrefix+pathTime)
+		if err != nil {
+			a.logger.Error("could not list segment path", "error", err)
+		}
+		for _, seqNum := range segments {
+			err = a.view.Delete(ctx, pathPrefix+pathTime+seqNum)
+			if err != nil {
+				a.logger.Error("could not delete log", "error", err)
+			}
+		}
+	}
 }
 
 func (a *ActivityLog) WaitForDeletion() {
@@ -1508,9 +1646,76 @@ func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup, r
 			manager.retentionWorker(ctx, manager.clock.Now(), months)
 			close(manager.retentionDone)
 		}(manager.retentionMonths)
+
+		// We do not want to hold up unseal, and we need access to
+		// the replicationRpcClient in order for the secondary to migrate data.
+		// This client is only reliable preset after unseal.
+		c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
+			c.activityLogMigrationTask(ctx)
+		})
+
+	}
+	return nil
+}
+
+// secondaryDuplicateClientMigrationWorker will attempt to send global data living on the
+// current cluster to the primary cluster. This routine will only exit when its connected primary
+// has reached version 1.19+, and this cluster has completed sending any global data that lives at the old storage paths
+func (c *Core) secondaryDuplicateClientMigrationWorker(ctx context.Context) {
+	manager := c.activityLog
+	manager.logger.Trace("started secondary activity log migration worker")
+	storageMigrationComplete := atomic.NewBool(false)
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		if !c.IsPerfSecondary() {
+			// TODO: Create function for the secondary to continuously attempt to send data to the primary
+		}
+
+		wg.Done()
+	}()
+	wg.Add(1)
+	go func() {
+		localClients, _, err := manager.extractLocalGlobalClientsDeprecatedStoragePath(ctx)
+		if err != nil {
+			return
+		}
+		// Store local clients at new path
+		for month, entitiesForMonth := range localClients {
+			logFragments := []*activity.LogFragment{{
+				Clients: entitiesForMonth,
+			}}
+			if err = manager.savePreviousEntitySegments(ctx, month, activityLocalPathPrefix, logFragments); err != nil {
+				manager.logger.Error("failed to write local segment", "error", err, "month", month)
+				return
+			}
+		}
+		storageMigrationComplete.Store(true)
+		// TODO: generate/store PCQs for these local clients
+		wg.Done()
+	}()
+	wg.Wait()
+	if !storageMigrationComplete.Load() {
+		manager.logger.Error("could not complete migration of duplicate clients on cluster")
+		return
+	}
+	// We have completed the vital portions of the storage migration
+	if err := manager.writeDedupClientsUpgrade(ctx); err != nil {
+		manager.logger.Error("could not complete migration of duplicate clients on cluster")
+		return
 	}
 
-	return nil
+	// Now that all the clients have been migrated and PCQs have been created, remove all clients at old storage paths
+	manager.oldStoragePathsCleaned = make(chan struct{})
+	go func() {
+		defer close(manager.oldStoragePathsCleaned)
+		manager.deleteOldStoragePathWorker(ctx, activityEntityBasePath)
+		manager.deleteOldStoragePathWorker(ctx, activityTokenBasePath)
+		// TODO: Delete old PCQs
+	}()
+
+	manager.dedupClientsUpgradeComplete.Store(true)
+	manager.logger.Trace("completed secondary activity log migration worker")
 }
 
 func (a *ActivityLog) hasRegeneratedACME(ctx context.Context) bool {
@@ -1522,8 +1727,25 @@ func (a *ActivityLog) hasRegeneratedACME(ctx context.Context) bool {
 	return regenerated != nil
 }
 
+func (a *ActivityLog) hasDedupClientsUpgrade(ctx context.Context) bool {
+	regenerated, err := a.view.Get(ctx, activityDeduplicationUpgradeKey)
+	if err != nil {
+		a.logger.Error("unable to access deduplication regeneration key")
+		return false
+	}
+	return regenerated != nil
+}
+
 func (a *ActivityLog) writeRegeneratedACME(ctx context.Context) error {
 	regeneratedEntry, err := logical.StorageEntryJSON(activityACMERegenerationKey, true)
+	if err != nil {
+		return err
+	}
+	return a.view.Put(ctx, regeneratedEntry)
+}
+
+func (a *ActivityLog) writeDedupClientsUpgrade(ctx context.Context) error {
+	regeneratedEntry, err := logical.StorageEntryJSON(activityDeduplicationUpgradeKey, true)
 	if err != nil {
 		return err
 	}
@@ -1696,7 +1918,12 @@ func (a *ActivityLog) secondaryFragmentWorker(ctx context.Context) {
 					<-timer.C
 				}
 			}
-			sendFunc()
+			// Only send data if no upgrade is in progress. Else, the active worker will
+			// store the data in a temporary location until it is garbage collected
+			if a.dedupClientsUpgradeComplete.Load() {
+				sendFunc()
+			}
+
 		case <-endOfMonth.C:
 			a.logger.Trace("sending global fragment on end of month")
 			// Flush the current fragment, if any
@@ -1706,13 +1933,16 @@ func (a *ActivityLog) secondaryFragmentWorker(ctx context.Context) {
 					<-timer.C
 				}
 			}
-			sendFunc()
+			// If an upgrade is in progress, don't do anything
+			// The active fragmentWorker will take care of flushing the clients to a temporary location
+			if a.dedupClientsUpgradeComplete.Load() {
+				sendFunc()
+				// clear active entity set
+				a.globalFragmentLock.Lock()
+				a.globalPartialMonthClientTracker = make(map[string]*activity.EntityRecord)
 
-			// clear active entity set
-			a.globalFragmentLock.Lock()
-			a.globalPartialMonthClientTracker = make(map[string]*activity.EntityRecord)
-
-			a.globalFragmentLock.Unlock()
+				a.globalFragmentLock.Unlock()
+			}
 
 			// Set timer for next month.
 			// The current segment *probably* hasn't been set yet (via invalidation),
@@ -3795,6 +4025,110 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 		return fmt.Errorf("failed to flush export encoding: %w", err)
 	}
 
+	return nil
+}
+
+func (c *Core) activityLogMigrationTask(ctx context.Context) {
+	manager := c.activityLog
+	if !c.IsPerfSecondary() {
+		// If the oldest version is less than 1.19 and no migrations tasks have been run, kick off the migration task
+		if !manager.OldestVersionHasDeduplicatedClients(ctx) && !manager.hasDedupClientsUpgrade(ctx) {
+			go c.primaryDuplicateClientMigrationWorker(ctx)
+		} else {
+			// Store that upgrade processes have already been completed
+			manager.writeDedupClientsUpgrade(ctx)
+			manager.dedupClientsUpgradeComplete.Store(true)
+		}
+	} else {
+		// We kick off the secondary migration worker in any chance that the primary has not yet upgraded.
+		// If we have already completed the migration task, it indicates that the cluster has completed sending data to an
+		// already upgraded primary
+		if !manager.hasDedupClientsUpgrade(ctx) {
+			go c.secondaryDuplicateClientMigrationWorker(ctx)
+		} else {
+			// Store that upgrade processes have already been completed
+			manager.writeDedupClientsUpgrade(ctx)
+			manager.dedupClientsUpgradeComplete.Store(true)
+
+		}
+	}
+}
+
+// primaryDuplicateClientMigrationWorker will attempt to receive global data living on the
+// connected secondary clusters. Once the data has been received, it will combine it with
+// its own global data at old storage paths, and migrate all of it to new storage paths on the
+// current cluster. This method wil only exit once all connected secondary clusters have
+// upgraded to 1.19, and this cluster receives global data from all of them.
+func (c *Core) primaryDuplicateClientMigrationWorker(ctx context.Context) error {
+	a := c.activityLog
+	a.logger.Trace("started primary activity log migration worker")
+
+	// Collect global clients from secondary
+	err := a.waitForSecondaryGlobalClients(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Get local and global entities from previous months
+	clusterLocalClients, clusterGlobalClients, err := a.extractLocalGlobalClientsDeprecatedStoragePath(ctx)
+	if err != nil {
+		a.logger.Error("could not extract local and global clients from storage", "error", err)
+		return err
+	}
+	// Get tokens from previous months at old storage paths
+	clusterTokens, err := a.extractTokensDeprecatedStoragePath(ctx)
+
+	// TODO: Collect clients from secondaries into slice of fragments
+
+	// Store global clients at new path
+	for month, entitiesForMonth := range clusterGlobalClients {
+		logFragments := []*activity.LogFragment{{
+			Clients: entitiesForMonth,
+		}}
+		if err = a.savePreviousEntitySegments(ctx, month, activityGlobalPathPrefix, logFragments); err != nil {
+			a.logger.Error("failed to write global segment", "error", err, "month", month)
+			return err
+		}
+	}
+	// Store local clients at new path
+	for month, entitiesForMonth := range clusterLocalClients {
+		logFragments := []*activity.LogFragment{{
+			Clients: entitiesForMonth,
+		}}
+		if err = a.savePreviousEntitySegments(ctx, month, activityLocalPathPrefix, logFragments); err != nil {
+			a.logger.Error("failed to write local segment", "error", err, "month", month)
+			return err
+		}
+	}
+	// Store tokens at new path
+	for month, tokenCount := range clusterTokens {
+		// Combine all token counts from all clusters
+		logFragments := make([]*activity.LogFragment, len(tokenCount))
+		for i, tokens := range tokenCount {
+			logFragments[i] = &activity.LogFragment{NonEntityTokens: tokens}
+		}
+		if err = a.savePreviousTokenSegments(ctx, month, activityLocalPathPrefix+activityTokenBasePath, logFragments); err != nil {
+			a.logger.Error("failed to write token segment", "error", err, "month", month)
+			return err
+		}
+	}
+
+	// TODO: After data has been migrated to new locations, we will regenerate all the global and local PCQs
+
+	if err := a.writeDedupClientsUpgrade(ctx); err != nil {
+		a.logger.Error("could not complete migration of duplicate clients on cluster")
+		return err
+	}
+	// Garbage collect data at old paths
+	a.oldStoragePathsCleaned = make(chan struct{})
+	go func() {
+		defer close(a.oldStoragePathsCleaned)
+		a.deleteOldStoragePathWorker(ctx, activityEntityBasePath)
+		a.deleteOldStoragePathWorker(ctx, activityTokenBasePath)
+		// We will also need to delete old PCQs
+	}()
+	a.dedupClientsUpgradeComplete.Store(true)
+	a.logger.Trace("completed primary activity log migration worker")
 	return nil
 }
 
