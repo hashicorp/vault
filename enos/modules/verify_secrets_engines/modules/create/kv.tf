@@ -58,25 +58,6 @@ resource "enos_remote_exec" "secrets_enable_kv_secret" {
   }
 }
 
-# Enable pki secrets engine
-resource "enos_remote_exec" "secrets_enable_pki_secret" {
-  environment = {
-    ENGINE            = "pki"
-    MOUNT             = local.pki_mount
-    VAULT_ADDR        = var.vault_addr
-    VAULT_TOKEN       = var.vault_root_token
-    VAULT_INSTALL_DIR = var.vault_install_dir
-  }
-
-  scripts = [abspath("${path.module}/../../scripts/secrets-enable.sh")]
-
-  transport = {
-    ssh = {
-      host = var.leader_host.public_ip
-    }
-  }
-}
-
 # Create a group policy that allows writing to our kv store
 resource "enos_remote_exec" "policy_write_kv_writer" {
   depends_on = [
