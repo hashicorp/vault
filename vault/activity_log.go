@@ -4062,34 +4062,11 @@ func (c *Core) activityLogMigrationTask(ctx context.Context) {
 func (c *Core) primaryDuplicateClientMigrationWorker(ctx context.Context) error {
 	a := c.activityLog
 	a.logger.Trace("started primary activity log migration worker")
-	repClusters := a.core.performanceSecondaries.Cache.ItemCount()
-	a.l.Lock()
-	doneCh := a.doneCh
-	a.l.Unlock()
-	var receivedFrom int
 
-	// Every 10 seconds, we will poll to verify that the number of connected secondary clusters has changed
-	ticker := time.NewTicker(10 * time.Second)
-
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case <-doneCh:
-			return nil
-		case <-ticker.C:
-		case <-a.dedupUpgradeGlobalClientsReceivedCh:
-			receivedFrom++
-		}
-		// If we have received data from the correct number of secondary clusters, then we can exit
-		if receivedFrom >= repClusters {
-			// Close the ticker
-			ticker.Stop()
-			break
-		}
-		// Update the number of secondaries, in case it has changed
-		repClusters = a.core.performanceSecondaries.Cache.ItemCount()
-
+	// Collect global clients from secondary
+	err := a.waitForSecondaryGlobalClients(ctx)
+	if err != nil {
+		return err
 	}
 
 	// Get local and global entities from previous months
