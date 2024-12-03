@@ -58,7 +58,7 @@ module('Integration | Component | kubernetes | Page::Configuration', function (h
 
   test('it should render tab page header, config cta and mount config', async function (assert) {
     await this.renderComponent();
-    assert.dom('.title svg').hasClass('flight-icon-kubernetes-color', 'Kubernetes icon renders in title');
+    assert.dom('.title svg').hasClass('hds-icon-kubernetes-color', 'Kubernetes icon renders in title');
     assert.dom('.title').hasText('kubernetes-test', 'Mount path renders in title');
     assert
       .dom('[data-test-toolbar-config-action]')
@@ -72,7 +72,7 @@ module('Integration | Component | kubernetes | Page::Configuration', function (h
     await this.renderComponent();
     assert
       .dom('[data-test-inferred-message] svg')
-      .hasClass('flight-icon-check-circle-fill', 'Inferred message icon renders');
+      .hasClass('hds-icon-check-circle-fill', 'Inferred message icon renders');
     const message =
       'These details were successfully inferred from Vault’s kubernetes environment and were not explicity set in this config.';
     assert.dom('[data-test-inferred-message]').hasText(message, 'Inferred message renders');
@@ -91,9 +91,7 @@ module('Integration | Component | kubernetes | Page::Configuration', function (h
 
     assert.dom('[data-test-row-label="Certificate"]').exists('Certificate label renders');
     assert.dom('[data-test-certificate-card]').exists('Certificate card component renders');
-    assert
-      .dom('[data-test-certificate-icon]')
-      .hasClass('flight-icon-certificate', 'Certificate icon renders');
+    assert.dom('[data-test-certificate-icon]').hasClass('hds-icon-certificate', 'Certificate icon renders');
     assert
       .dom('[data-test-certificate-card] [data-test-copy-button]')
       .exists('Certificate copy button renders');

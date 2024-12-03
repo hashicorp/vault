@@ -68,7 +68,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
     // the following checks are only relevant to enterprise users and those editing an existing root configuration.
     if (this.version.isCommunity || this.args.rootConfig.isNew) return;
     const { roleArn, identityTokenAudience, identityTokenTtl, accessKey } = this.args.rootConfig;
-    // do not include issuer in this check. Issuer is a global endpoint and can bet set even if we're not editing wif attributes
+    // do not include issuer in this check. Issuer is a global endpoint and can be set even if we're not editing wif attributes
     const wifAttributesSet = !!roleArn || !!identityTokenAudience || !!identityTokenTtl;
     const iamAttributesSet = !!accessKey;
     // If any WIF attributes have been set in the rootConfig model, set accessType to 'wif'.
