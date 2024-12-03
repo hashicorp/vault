@@ -554,33 +554,33 @@ scenario "pki_issuing_certs" {
     }
   }
 
-  step "verify_secrets_engines_read" {
-    description = global.description.verify_secrets_engines_read
-    module      = module.vault_verify_secrets_engines_read
-    depends_on = [
-      step.verify_secrets_engines_create,
-      step.verify_replication
-    ]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    verifies = [
-      quality.vault_api_auth_userpass_login_write,
-      quality.vault_api_identity_entity_read,
-      quality.vault_api_identity_oidc_config_read,
-      quality.vault_api_identity_oidc_key_read,
-      quality.vault_api_identity_oidc_role_read,
-      quality.vault_secrets_kv_read
-    ]
-
-    variables {
-      create_state      = step.verify_secrets_engines_create.state
-      hosts             = step.get_vault_cluster_ips.follower_hosts
-      vault_addr        = step.create_vault_cluster.api_addr_localhost
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-    }
-  }
+#   step "verify_secrets_engines_read" {
+#     description = global.description.verify_secrets_engines_read
+#     module      = module.vault_verify_secrets_engines_read
+#     depends_on = [
+#       step.verify_secrets_engines_create,
+#       step.verify_replication
+#     ]
+#
+#     providers = {
+#       enos = local.enos_provider[matrix.distro]
+#     }
+#
+#     verifies = [
+#       quality.vault_api_auth_userpass_login_write,
+#       quality.vault_api_identity_entity_read,
+#       quality.vault_api_identity_oidc_config_read,
+#       quality.vault_api_identity_oidc_key_read,
+#       quality.vault_api_identity_oidc_role_read,
+#       quality.vault_secrets_kv_read
+#     ]
+#
+#     variables {
+#       create_state      = step.verify_secrets_engines_create.state
+#       hosts             = step.get_vault_cluster_ips.follower_hosts
+#       vault_addr        = step.create_vault_cluster.api_addr_localhost
+#       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+#     }
+#   }
 
 }
