@@ -3,12 +3,15 @@
 
 scenario "pki_issuing_certs" {
   description = <<-EOF
-    The smoke scenario verifies a Vault cluster in a fresh installation. The build can be a local
-    branch, any CRT built Vault artifact saved to the local machine, or any CRT built Vault artifact
-    in the stable channel in Artifactory.
+    The Public Key Infrastructure (PKI) issuing certificates scenario workflow involves the end-to-end
+    process of generating, signing, and validating digital certificates. This ensures the integrity and
+    authenticity of the certificates used for secure communications and identity verification.
 
-    The scenario deploys a Vault cluster with the candidate build performs an extended set of
-    baseline verification.
+    The scenario also includes the generation of individual certificates, which can be used for various
+    purposes such as securing web servers, authenticating users, or encrypting data. Each certificate
+    is cryptographically signed to validate its authenticity and to ensure it can be trusted within
+    the specified PKI domain. After signing, the certificates undergo a verification process to confirm
+    their validity and compliance with the defined policies and requirements.
 
     If you want to use the 'distro:leap' variant you must first accept SUSE's terms for the AWS
     account. To verify that your account has agreed, sign-in to your AWS through Doormat,

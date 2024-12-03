@@ -3,24 +3,21 @@
 
 locals {
   // Variables
-  pki_mount                  = "pki_secret"     # secret
-  pki_issuer_name            = "issuer"
-  pki_common_name            = "common"
-  pki_default_ttl            = "72h"
-  pki_test_data_path_prefix  = "smoke"
-  tmp_test_results           = "tmp_test_results"
-
-  // Response data
-#   identity_group_kv_writers_data = jsondecode(enos_remote_exec.identity_group_kv_writers.stdout).data
+  pki_mount                 = "pki_secret" # secret
+  pki_issuer_name           = "issuer"
+  pki_common_name           = "common"
+  pki_default_ttl           = "72h"
+  pki_test_data_path_prefix = "smoke"
+  tmp_test_results          = "tmp_test_results"
 
   // Output
   pki_output = {
-    mount              = local.pki_mount
-    common_name        = local.pki_common_name
-    test_results       = local.tmp_test_results
+    mount        = local.pki_mount
+    common_name  = local.pki_common_name
+    test_results = local.tmp_test_results
   }
   test = {
-    path_prefix  = local.pki_test_data_path_prefix
+    path_prefix = local.pki_test_data_path_prefix
   }
 }
 
@@ -50,7 +47,7 @@ resource "enos_remote_exec" "secrets_enable_pki_secret" {
 # Issue RSA Certificate
 resource "enos_remote_exec" "pki_issue_certificates" {
   depends_on = [enos_remote_exec.secrets_enable_pki_secret]
-  for_each = var.hosts
+  for_each   = var.hosts
 
   environment = {
     MOUNT             = local.pki_mount
