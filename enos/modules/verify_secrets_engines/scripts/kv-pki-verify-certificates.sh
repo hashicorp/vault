@@ -22,13 +22,13 @@ test -x "$binpath" || fail "unable to locate vault binary at $binpath" || fail "
 export VAULT_FORMAT=json
 
 # Getting Certificates
-VAULT_CERTS=$("$binpath" list -format=json ${MOUNT}/certs | jq -r '.[]')
+VAULT_CERTS=$("$binpath" list -format=json "${MOUNT}/certs" | jq -r '.[]')
 [[ -z "$VAULT_CERTS" ]] && fail "VAULT_CERTS should include vault certificates"
 
 # Verifying Certificates
 for CERT in $VAULT_CERTS; do
   echo "Getting Certificate from Vault PKI: ${CERT}"
-  "$binpath" read ${MOUNT}/cert/$CERT | jq -r '.data.certificate' > "${TMP_TEST_RESULTS}/tmp_vault_cert.pem"
+  "$binpath" read "${MOUNT}/cert/${CERT}" | jq -r '.data.certificate' > "${TMP_TEST_RESULTS}/tmp_vault_cert.pem"
   echo "Verifying Certificate..."
   openssl x509 -in "${TMP_TEST_RESULTS}/tmp_vault_cert.pem" -text -noout || fail "The certificate appears to be improperly configured or contains errors"
 done
