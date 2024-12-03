@@ -7,4 +7,6 @@ package vault
 
 //go:generate go run github.com/hashicorp/vault/tools/stubmaker
 
-var BuiltinPublicKeys []string
+func GetBuiltinPublicKeys() []string {
+	return nil
+}
