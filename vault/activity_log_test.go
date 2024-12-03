@@ -34,7 +34,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestActivityLog_Creation calls AddEntityToFragment and verifies that it appears correctly in a.fragment.
+// TestActivityLog_Creation calls AddEntityToFragment and verifies that it appears correctly in a.currentGlobalFragment.
 func TestActivityLog_Creation(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	coreConfig := &CoreConfig{
@@ -56,11 +56,13 @@ func TestActivityLog_Creation(t *testing.T) {
 	if a.logger == nil || a.view == nil {
 		t.Fatal("activity log not initialized")
 	}
-	if a.fragment != nil || a.currentGlobalFragment != nil {
-		t.Fatal("activity log already has fragment")
+	currentGlobalFragment := core.GetActiveGlobalFragment()
+	if currentGlobalFragment != nil {
+		t.Fatal("activity log already has global fragment")
 	}
 
-	if a.localFragment != nil {
+	localFragment := core.GetActiveLocalFragment()
+	if localFragment != nil {
 		t.Fatal("activity log already has a local fragment")
 	}
 
@@ -69,44 +71,29 @@ func TestActivityLog_Creation(t *testing.T) {
 	ts := time.Now()
 
 	a.AddEntityToFragment(entity_id, namespace_id, ts.Unix())
-	if a.fragment == nil || a.currentGlobalFragment == nil {
+	currentGlobalFragment = core.GetActiveGlobalFragment()
+	localFragment = core.GetActiveLocalFragment()
+
+	if currentGlobalFragment == nil {
 		t.Fatal("no fragment created")
 	}
 
-	if a.fragment.OriginatingNode != a.nodeID {
-		t.Errorf("mismatched node ID, %q vs %q", a.fragment.OriginatingNode, a.nodeID)
+	if a.currentGlobalFragment.OriginatingNode != a.nodeID {
+		t.Errorf("mismatched node ID, %q vs %q", currentGlobalFragment.OriginatingNode, a.nodeID)
 	}
-	if a.currentGlobalFragment.OriginatingCluster != a.core.ClusterID() {
-		t.Errorf("mismatched cluster ID, %q vs %q", a.currentGlobalFragment.GetOriginatingCluster(), a.core.ClusterID())
+	if currentGlobalFragment.OriginatingCluster != a.core.ClusterID() {
+		t.Errorf("mismatched cluster ID, %q vs %q", currentGlobalFragment.GetOriginatingCluster(), a.core.ClusterID())
 	}
 
-	if a.fragment.Clients == nil || a.currentGlobalFragment.Clients == nil {
+	if currentGlobalFragment.Clients == nil {
 		t.Fatal("no fragment entity slice")
 	}
 
-	if a.fragment.NonEntityTokens == nil {
-		t.Fatal("no fragment token map")
+	if len(currentGlobalFragment.Clients) != 1 {
+		t.Fatalf("wrong number of entities %v", len(currentGlobalFragment.Clients))
 	}
 
-	if len(a.fragment.Clients) != 1 {
-		t.Fatalf("wrong number of entities %v", len(a.fragment.Clients))
-	}
-	if len(a.currentGlobalFragment.Clients) != 1 {
-		t.Fatalf("wrong number of entities %v", len(a.currentGlobalFragment.Clients))
-	}
-
-	er := a.fragment.Clients[0]
-	if er.ClientID != entity_id {
-		t.Errorf("mimatched entity ID, %q vs %q", er.ClientID, entity_id)
-	}
-	if er.NamespaceID != namespace_id {
-		t.Errorf("mimatched namespace ID, %q vs %q", er.NamespaceID, namespace_id)
-	}
-	if er.Timestamp != ts.Unix() {
-		t.Errorf("mimatched timestamp, %v vs %v", er.Timestamp, ts.Unix())
-	}
-
-	er = a.currentGlobalFragment.Clients[0]
+	er := currentGlobalFragment.Clients[0]
 	if er.ClientID != entity_id {
 		t.Errorf("mimatched entity ID, %q vs %q", er.ClientID, entity_id)
 	}
@@ -118,20 +105,12 @@ func TestActivityLog_Creation(t *testing.T) {
 	}
 
 	// Reset and test the other code path
-	a.fragment = nil
 	a.AddTokenToFragment(namespace_id)
+	currentGlobalFragment = core.GetActiveGlobalFragment()
+	localFragment = core.GetActiveLocalFragment()
 
-	if a.fragment == nil {
+	if currentGlobalFragment == nil {
 		t.Fatal("no fragment created")
-	}
-
-	if a.fragment.NonEntityTokens == nil {
-		t.Fatal("no fragment token map")
-	}
-
-	actual := a.fragment.NonEntityTokens[namespace_id]
-	if actual != 1 {
-		t.Errorf("mismatched number of tokens, %v vs %v", actual, 1)
 	}
 
 	// test local fragment
@@ -149,24 +128,25 @@ func TestActivityLog_Creation(t *testing.T) {
 	local_ts := time.Now()
 
 	a.AddClientToFragment(local_entity_id, "root", local_ts.Unix(), false, "local_mount_accessor")
+	localFragment = core.GetActiveLocalFragment()
 
-	if a.localFragment.OriginatingNode != a.nodeID {
-		t.Errorf("mismatched node ID, %q vs %q", a.localFragment.OriginatingNode, a.nodeID)
+	if localFragment.OriginatingNode != a.nodeID {
+		t.Errorf("mismatched node ID, %q vs %q", localFragment.OriginatingNode, a.nodeID)
 	}
 
-	if a.localFragment.Clients == nil {
+	if localFragment.Clients == nil {
 		t.Fatal("no local fragment entity slice")
 	}
 
-	if a.localFragment.NonEntityTokens == nil {
+	if localFragment.NonEntityTokens == nil {
 		t.Fatal("no local fragment token map")
 	}
 
-	if len(a.localFragment.Clients) != 1 {
-		t.Fatalf("wrong number of entities %v", len(a.localFragment.Clients))
+	if len(localFragment.Clients) != 1 {
+		t.Fatalf("wrong number of entities %v", len(localFragment.Clients))
 	}
 
-	er = a.localFragment.Clients[0]
+	er = localFragment.Clients[0]
 	if er.ClientID != local_entity_id {
 		t.Errorf("mimatched entity ID, %q vs %q", er.ClientID, local_entity_id)
 	}
@@ -192,17 +172,13 @@ func TestActivityLog_Creation_WrappingTokens(t *testing.T) {
 	if a.logger == nil || a.view == nil {
 		t.Fatal("activity log not initialized")
 	}
-	a.fragmentLock.Lock()
-	if a.fragment != nil || a.currentGlobalFragment != nil {
+	if core.GetActiveGlobalFragment() != nil {
 		t.Fatal("activity log already has fragment")
 	}
-	a.fragmentLock.Unlock()
 
-	a.localFragmentLock.Lock()
-	if a.localFragment != nil {
+	if core.GetActiveLocalFragment() != nil {
 		t.Fatal("activity log already has local fragment")
 	}
-	a.localFragmentLock.Unlock()
 
 	const namespace_id = "ns123"
 
@@ -220,11 +196,9 @@ func TestActivityLog_Creation_WrappingTokens(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	a.fragmentLock.Lock()
-	if a.fragment != nil || a.currentGlobalFragment != nil {
+	if core.GetActiveGlobalFragment() != nil {
 		t.Fatal("fragment created")
 	}
-	a.fragmentLock.Unlock()
 
 	teNew := &logical.TokenEntry{
 		Path:         "test",
@@ -240,11 +214,9 @@ func TestActivityLog_Creation_WrappingTokens(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	a.fragmentLock.Lock()
-	if a.fragment != nil || a.currentGlobalFragment != nil {
+	if core.GetActiveGlobalFragment() != nil {
 		t.Fatal("fragment created")
 	}
-	a.fragmentLock.Unlock()
 }
 
 func checkExpectedEntitiesInMap(t *testing.T, a *ActivityLog, entityIDs []string) {
@@ -280,36 +252,15 @@ func TestActivityLog_UniqueEntities(t *testing.T) {
 	a.AddEntityToFragment(id2, "root", t3.Unix())
 	a.AddEntityToFragment(id1, "root", t3.Unix())
 
-	if a.fragment == nil || a.currentGlobalFragment == nil {
-		t.Fatal("no current fragment")
+	currentGlobalFragment := core.GetActiveGlobalFragment()
+	if currentGlobalFragment == nil {
+		t.Fatal("no current global fragment")
+	}
+	if len(currentGlobalFragment.Clients) != 2 {
+		t.Fatalf("number of entities is %v", len(currentGlobalFragment.Clients))
 	}
 
-	if len(a.fragment.Clients) != 2 {
-		t.Fatalf("number of entities is %v", len(a.fragment.Clients))
-	}
-	if len(a.currentGlobalFragment.Clients) != 2 {
-		t.Fatalf("number of entities is %v", len(a.currentGlobalFragment.Clients))
-	}
-
-	for i, e := range a.fragment.Clients {
-		expectedID := id1
-		expectedTime := t1.Unix()
-		expectedNS := "root"
-		if i == 1 {
-			expectedID = id2
-			expectedTime = t2.Unix()
-		}
-		if e.ClientID != expectedID {
-			t.Errorf("%v: expected %q, got %q", i, expectedID, e.ClientID)
-		}
-		if e.NamespaceID != expectedNS {
-			t.Errorf("%v: expected %q, got %q", i, expectedNS, e.NamespaceID)
-		}
-		if e.Timestamp != expectedTime {
-			t.Errorf("%v: expected %v, got %v", i, expectedTime, e.Timestamp)
-		}
-	}
-	for i, e := range a.currentGlobalFragment.Clients {
+	for i, e := range currentGlobalFragment.Clients {
 		expectedID := id1
 		expectedTime := t1.Unix()
 		expectedNS := "root"
@@ -410,11 +361,11 @@ func TestActivityLog_SaveTokensToStorage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("got error writing tokens to storage: %v", err)
 	}
-	if a.fragment != nil || a.currentGlobalFragment != nil {
+	if core.GetActiveGlobalFragment() != nil {
 		t.Errorf("fragment was not reset after write to storage")
 	}
 
-	if a.localFragment != nil {
+	if core.GetActiveLocalFragment() != nil {
 		t.Errorf("local fragment was not reset after write to storage")
 	}
 
@@ -446,11 +397,12 @@ func TestActivityLog_SaveTokensToStorage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("got error writing tokens to storage: %v", err)
 	}
-	if a.fragment != nil || a.currentGlobalFragment != nil {
+
+	if core.GetActiveGlobalFragment() != nil {
 		t.Errorf("fragment was not reset after write to storage")
 	}
 
-	if a.localFragment != nil {
+	if core.GetActiveLocalFragment() != nil {
 		t.Errorf("local fragment was not reset after write to storage")
 	}
 
@@ -492,7 +444,8 @@ func TestActivityLog_SaveTokensToStorageDoesNotUpdateTokenCount(t *testing.T) {
 	a.SetStartTimestamp(time.Now().Unix()) // set a nonzero segment
 
 	tokenPath := fmt.Sprintf("%sdirecttokens/%d/0", ActivityLogLocalPrefix, a.GetStartTimestamp())
-	clientPath := fmt.Sprintf("sys/counters/activity/log/entity/%d/0", a.GetStartTimestamp())
+	clientPath := fmt.Sprintf("sys/counters/activity/global/log/entity/%d/0", a.GetStartTimestamp())
+	localPath := fmt.Sprintf("sys/counters/activity/local/log/entity/%d/0", a.GetStartTimestamp())
 	// Create some entries without entityIDs
 	tokenEntryOne := logical.TokenEntry{NamespaceID: namespace.RootNamespaceID, Policies: []string{"hi"}}
 	entityEntry := logical.TokenEntry{EntityID: "foo", NamespaceID: namespace.RootNamespaceID, Policies: []string{"hi"}}
@@ -506,6 +459,9 @@ func TestActivityLog_SaveTokensToStorageDoesNotUpdateTokenCount(t *testing.T) {
 		}
 	}
 
+	// verify that the client got added to a local fragment
+	require.Len(t, core.GetActiveLocalFragment().Clients, 1)
+
 	idEntity, isTWE := entityEntry.CreateClientID()
 	for i := 0; i < 2; i++ {
 		err := a.HandleTokenUsage(ctx, &entityEntry, idEntity, isTWE)
@@ -513,35 +469,53 @@ func TestActivityLog_SaveTokensToStorageDoesNotUpdateTokenCount(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+
+	// verify that the client got added to the global fragment
+	require.Len(t, core.GetActiveGlobalFragment().Clients, 1)
+
 	err := a.saveCurrentSegmentToStorage(ctx, false)
 	if err != nil {
 		t.Fatalf("got error writing TWEs to storage: %v", err)
 	}
 
 	// Assert that new elements have been written to the fragment
-	if a.fragment != nil || a.currentGlobalFragment != nil {
+	if core.GetActiveGlobalFragment() != nil {
 		t.Errorf("fragment was not reset after write to storage")
 	}
 
-	if a.localFragment != nil {
+	if core.GetActiveLocalFragment() != nil {
 		t.Errorf("local fragment was not reset after write to storage")
 	}
 
 	// Assert that no tokens have been written to the fragment
 	readSegmentFromStorageNil(t, core, tokenPath)
 
+	allClients := make([]*activity.EntityRecord, 0)
 	e := readSegmentFromStorage(t, core, clientPath)
 	out := &activity.EntityActivityLog{}
 	err = proto.Unmarshal(e.Value, out)
 	if err != nil {
 		t.Fatalf("could not unmarshal protobuf: %v", err)
 	}
-	if len(out.Clients) != 2 {
-		t.Fatalf("added 3 distinct TWEs and 2 distinct entity tokens that should all result in the same ID, got: %d", len(out.Clients))
+	if len(out.Clients) != 1 {
+		t.Fatalf("added 2 distinct entity tokens that should all result in the same ID, got: %d", len(out.Clients))
 	}
+	allClients = append(allClients, out.Clients...)
+
+	e = readSegmentFromStorage(t, core, localPath)
+	out = &activity.EntityActivityLog{}
+	err = proto.Unmarshal(e.Value, out)
+	if err != nil {
+		t.Fatalf("could not unmarshal protobuf: %v", err)
+	}
+	if len(out.Clients) != 1 {
+		t.Fatalf("added 3 distinct TWEs that should all result in the same ID, got: %d", len(out.Clients))
+	}
+	allClients = append(allClients, out.Clients...)
+
 	nonEntityTokenFlag := false
 	entityTokenFlag := false
-	for _, client := range out.Clients {
+	for _, client := range allClients {
 		if client.NonEntity == true {
 			nonEntityTokenFlag = true
 			if client.ClientID != idNonEntity {
@@ -578,7 +552,6 @@ func TestActivityLog_SaveEntitiesToStorage(t *testing.T) {
 		now.Add(1 * time.Second).Unix(),
 		now.Add(2 * time.Second).Unix(),
 	}
-	path := fmt.Sprintf("%sentity/%d/0", ActivityLogPrefix, a.GetStartTimestamp())
 	globalPath := fmt.Sprintf("%sentity/%d/0", ActivityGlobalLogPrefix, a.GetStartTimestamp())
 
 	a.AddEntityToFragment(ids[0], "root", times[0])
@@ -587,14 +560,14 @@ func TestActivityLog_SaveEntitiesToStorage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("got error writing entities to storage: %v", err)
 	}
-	if a.fragment != nil || a.currentGlobalFragment != nil {
+	if core.GetActiveGlobalFragment() != nil {
 		t.Errorf("fragment was not reset after write to storage")
 	}
 
-	if a.localFragment != nil {
+	if core.GetActiveLocalFragment() != nil {
 		t.Errorf("local fragment was not reset after write to storage")
 	}
-	protoSegment := readSegmentFromStorage(t, core, path)
+	protoSegment := readSegmentFromStorage(t, core, globalPath)
 	out := &activity.EntityActivityLog{}
 	err = proto.Unmarshal(protoSegment.Value, out)
 	if err != nil {
@@ -608,14 +581,6 @@ func TestActivityLog_SaveEntitiesToStorage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("got error writing segments to storage: %v", err)
 	}
-
-	protoSegment = readSegmentFromStorage(t, core, path)
-	out = &activity.EntityActivityLog{}
-	err = proto.Unmarshal(protoSegment.Value, out)
-	if err != nil {
-		t.Fatalf("could not unmarshal protobuf: %v", err)
-	}
-	expectedEntityIDs(t, out, ids)
 
 	protoSegment = readSegmentFromStorage(t, core, globalPath)
 	out = &activity.EntityActivityLog{}
@@ -686,7 +651,7 @@ func TestActivityLog_SaveEntitiesToStorageCommon(t *testing.T) {
 	if err != nil {
 		t.Fatalf("got error writing entities to storage: %v", err)
 	}
-	if a.fragment != nil {
+	if core.GetActiveGlobalFragment() != nil || core.GetActiveLocalFragment() != nil {
 		t.Errorf("fragment was not reset after write to storage")
 	}
 
@@ -775,8 +740,8 @@ func TestModifyResponseMonthsNilAppend(t *testing.T) {
 }
 
 // TestActivityLog_ReceivedFragment calls receivedFragment with a fragment and verifies it gets added to
-// standbyFragmentsReceived and standbyGlobalFragmentsReceived. Send the same fragment again and then verify that it doesn't change the entity map but does
-// get added to standbyFragmentsReceived and standbyGlobalFragmentsReceived.
+// standbyGlobalFragmentsReceived. Send the same fragment again and then verify that it doesn't change the entity map but does
+// get added to standbyGlobalFragmentsReceived.
 func TestActivityLog_ReceivedFragment(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
@@ -806,17 +771,13 @@ func TestActivityLog_ReceivedFragment(t *testing.T) {
 		NonEntityTokens: make(map[string]uint64),
 	}
 
-	if len(a.standbyFragmentsReceived) != 0 {
+	if len(a.standbyGlobalFragmentsReceived) != 0 {
 		t.Fatalf("fragment already received")
 	}
 
 	a.receivedFragment(fragment)
 
 	checkExpectedEntitiesInMap(t, a, ids)
-
-	if len(a.standbyFragmentsReceived) != 1 {
-		t.Fatalf("fragment count is %v, expected 1", len(a.standbyFragmentsReceived))
-	}
 
 	if len(a.standbyGlobalFragmentsReceived) != 1 {
 		t.Fatalf("fragment count is %v, expected 1", len(a.standbyGlobalFragmentsReceived))
@@ -827,9 +788,6 @@ func TestActivityLog_ReceivedFragment(t *testing.T) {
 
 	checkExpectedEntitiesInMap(t, a, ids)
 
-	if len(a.standbyFragmentsReceived) != 2 {
-		t.Fatalf("fragment count is %v, expected 2", len(a.standbyFragmentsReceived))
-	}
 	if len(a.standbyGlobalFragmentsReceived) != 2 {
 		t.Fatalf("fragment count is %v, expected 2", len(a.standbyGlobalFragmentsReceived))
 	}
@@ -856,12 +814,17 @@ func TestActivityLog_availableLogs(t *testing.T) {
 	// set up a few files in storage
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
-	paths := [...]string{"entity/1111/1", "entity/992/3"}
+	globalPaths := [...]string{"entity/1111/1", "entity/992/3", "entity/991/1"}
+	localPaths := [...]string{"entity/1111/1", "entity/992/3", "entity/990/1"}
 	tokenPaths := [...]string{"directtokens/1111/1", "directtokens/1000000/1", "directtokens/992/1"}
-	expectedTimes := [...]time.Time{time.Unix(1000000, 0), time.Unix(1111, 0), time.Unix(992, 0)}
+	expectedTimes := [...]time.Time{time.Unix(1000000, 0), time.Unix(1111, 0), time.Unix(992, 0), time.Unix(991, 0), time.Unix(990, 0)}
 
-	for _, path := range paths {
-		WriteToStorage(t, core, ActivityLogPrefix+path, []byte("test"))
+	for _, path := range globalPaths {
+		WriteToStorage(t, core, ActivityGlobalLogPrefix+path, []byte("test"))
+	}
+
+	for _, path := range localPaths {
+		WriteToStorage(t, core, ActivityLogLocalPrefix+path, []byte("test"))
 	}
 
 	for _, path := range tokenPaths {
@@ -950,7 +913,7 @@ func TestActivityLog_createRegenerationIntentLog(t *testing.T) {
 			}
 
 			for _, subPath := range paths {
-				fullPath := ActivityLogPrefix + subPath
+				fullPath := ActivityGlobalLogPrefix + subPath
 				WriteToStorage(t, core, fullPath, []byte("test"))
 				deletePaths = append(deletePaths, fullPath)
 			}
@@ -999,9 +962,9 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 	a.SetStartTimestamp(time.Now().Unix()) // set a nonzero segment
 
 	startTimestamp := a.GetStartTimestamp()
-	path0 := fmt.Sprintf("sys/counters/activity/log/entity/%d/0", startTimestamp)
-	path1 := fmt.Sprintf("sys/counters/activity/log/entity/%d/1", startTimestamp)
-	path2 := fmt.Sprintf("sys/counters/activity/log/entity/%d/2", startTimestamp)
+	path0 := fmt.Sprintf("sys/counters/activity/global/log/entity/%d/0", startTimestamp)
+	path1 := fmt.Sprintf("sys/counters/activity/global/log/entity/%d/1", startTimestamp)
+	path2 := fmt.Sprintf("sys/counters/activity/global/log/entity/%d/2", startTimestamp)
 	tokenPath := fmt.Sprintf("sys/counters/activity/local/log/directtokens/%d/0", startTimestamp)
 
 	genID := func(i int) string {
@@ -1092,11 +1055,6 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 	err = a.saveCurrentSegmentToStorage(context.Background(), false)
 	if err != nil {
 		t.Fatalf("got error writing entities to storage: %v", err)
-	}
-
-	seqNum := a.GetEntitySequenceNumber()
-	if seqNum != 2 {
-		t.Fatalf("expected sequence number 2, got %v", seqNum)
 	}
 
 	protoSegment0 = readSegmentFromStorage(t, core, path0)
@@ -1305,12 +1263,8 @@ func TestActivityLog_parseSegmentNumberFromPath(t *testing.T) {
 func TestActivityLog_getLastEntitySegmentNumber(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
-	paths := [...]string{"entity/992/0", "entity/1000/-1", "entity/1001/foo", "entity/1111/0", "entity/1111/1"}
 	globalPaths := [...]string{"entity/992/0", "entity/1000/-1", "entity/1001/foo", "entity/1111/1"}
 	localPaths := [...]string{"entity/992/0", "entity/1000/-1", "entity/1001/foo", "entity/1111/0", "entity/1111/1"}
-	for _, path := range paths {
-		WriteToStorage(t, core, ActivityLogPrefix+path, []byte("test"))
-	}
 	for _, path := range globalPaths {
 		WriteToStorage(t, core, ActivityGlobalLogPrefix+path, []byte("test"))
 	}
@@ -1320,42 +1274,36 @@ func TestActivityLog_getLastEntitySegmentNumber(t *testing.T) {
 
 	testCases := []struct {
 		input             int64
-		expectedVal       uint64
 		expectedGlobalVal uint64
 		expectedLocalVal  uint64
 		expectExists      bool
 	}{
 		{
 			input:             992,
-			expectedVal:       0,
 			expectedGlobalVal: 0,
 			expectedLocalVal:  0,
 			expectExists:      true,
 		},
 		{
 			input:             1000,
-			expectedVal:       0,
 			expectedGlobalVal: 0,
 			expectedLocalVal:  0,
 			expectExists:      false,
 		},
 		{
 			input:             1001,
-			expectedVal:       0,
 			expectedGlobalVal: 0,
 			expectedLocalVal:  0,
 			expectExists:      false,
 		},
 		{
 			input:             1111,
-			expectedVal:       1,
 			expectedGlobalVal: 1,
 			expectedLocalVal:  1,
 			expectExists:      true,
 		},
 		{
 			input:             2222,
-			expectedVal:       0,
 			expectedGlobalVal: 0,
 			expectedLocalVal:  0,
 			expectExists:      false,
@@ -1364,15 +1312,12 @@ func TestActivityLog_getLastEntitySegmentNumber(t *testing.T) {
 
 	ctx := context.Background()
 	for _, tc := range testCases {
-		result, localSegmentNumber, globalSegmentNumber, exists, err := a.getLastEntitySegmentNumber(ctx, time.Unix(tc.input, 0))
+		localSegmentNumber, globalSegmentNumber, exists, err := a.getLastEntitySegmentNumber(ctx, time.Unix(tc.input, 0))
 		if err != nil {
 			t.Fatalf("unexpected error for input %d: %v", tc.input, err)
 		}
 		if exists != tc.expectExists {
 			t.Errorf("expected result exists: %t, got: %t for input: %d", tc.expectExists, exists, tc.input)
-		}
-		if result != tc.expectedVal {
-			t.Errorf("expected: %d got: %d for input: %d", tc.expectedVal, result, tc.input)
 		}
 		if globalSegmentNumber != tc.expectedGlobalVal {
 			t.Errorf("expected: %d got: %d for input: %d", tc.expectedGlobalVal, globalSegmentNumber, tc.input)
@@ -1505,15 +1450,6 @@ func (a *ActivityLog) resetEntitiesInMemory(t *testing.T) {
 	a.globalFragmentLock.Lock()
 	defer a.globalFragmentLock.Unlock()
 
-	a.currentSegment = segmentInfo{
-		startTimestamp: time.Time{}.Unix(),
-		currentClients: &activity.EntityActivityLog{
-			Clients: make([]*activity.EntityRecord, 0),
-		},
-		tokenCount:           a.currentSegment.tokenCount,
-		clientSequenceNumber: 0,
-	}
-
 	a.currentGlobalSegment = segmentInfo{
 		startTimestamp: time.Time{}.Unix(),
 		currentClients: &activity.EntityActivityLog{
@@ -1532,7 +1468,6 @@ func (a *ActivityLog) resetEntitiesInMemory(t *testing.T) {
 		clientSequenceNumber: 0,
 	}
 
-	a.partialMonthClientTracker = make(map[string]*activity.EntityRecord)
 	a.partialMonthLocalClientTracker = make(map[string]*activity.EntityRecord)
 	a.globalPartialMonthClientTracker = make(map[string]*activity.EntityRecord)
 }
@@ -1549,7 +1484,6 @@ func TestActivityLog_loadCurrentClientSegment(t *testing.T) {
 		CountByNamespaceID: tokenRecords,
 	}
 	a.l.Lock()
-	a.currentSegment.tokenCount = tokenCount
 	a.currentLocalSegment.tokenCount = tokenCount
 	a.l.Unlock()
 
@@ -1610,7 +1544,6 @@ func TestActivityLog_loadCurrentClientSegment(t *testing.T) {
 		if err != nil {
 			t.Fatalf(err.Error())
 		}
-		WriteToStorage(t, core, ActivityLogPrefix+tc.path, data)
 		WriteToStorage(t, core, ActivityGlobalLogPrefix+tc.path, data)
 		WriteToStorage(t, core, ActivityLogLocalPrefix+tc.path, data)
 	}
@@ -1624,7 +1557,7 @@ func TestActivityLog_loadCurrentClientSegment(t *testing.T) {
 		// loadCurrentClientSegment requires us to grab the fragment lock and the
 		// activityLog lock, as per the comment in the loadCurrentClientSegment
 		// function
-		err := a.loadCurrentClientSegment(ctx, time.Unix(tc.time, 0), tc.seqNum, tc.seqNum, tc.seqNum)
+		err := a.loadCurrentClientSegment(ctx, time.Unix(tc.time, 0), tc.seqNum, tc.seqNum)
 		a.localFragmentLock.Unlock()
 		a.globalFragmentLock.Unlock()
 		a.fragmentLock.Unlock()
@@ -1639,14 +1572,8 @@ func TestActivityLog_loadCurrentClientSegment(t *testing.T) {
 
 		// verify accurate data in in-memory current segment
 		require.Equal(t, tc.time, a.GetStartTimestamp())
-		require.Equal(t, tc.seqNum, a.GetEntitySequenceNumber())
 		require.Equal(t, tc.seqNum, a.GetGlobalEntitySequenceNumber())
 		require.Equal(t, tc.seqNum, a.GetLocalEntitySequenceNumber())
-
-		currentEntities := a.GetCurrentEntities()
-		if !entityRecordsEqual(t, currentEntities.Clients, tc.entities.Clients) {
-			t.Errorf("bad data loaded. expected: %v, got: %v for path %q", tc.entities.Clients, currentEntities, tc.path)
-		}
 
 		globalClients := core.GetActiveGlobalClientsList()
 		if err := ActiveEntitiesEqual(globalClients, tc.entities.Clients); err != nil {
@@ -1739,7 +1666,6 @@ func TestActivityLog_loadPriorEntitySegment(t *testing.T) {
 		if err != nil {
 			t.Fatalf(err.Error())
 		}
-		WriteToStorage(t, core, ActivityLogPrefix+tc.path, data)
 		WriteToStorage(t, core, ActivityGlobalLogPrefix+tc.path, data)
 		WriteToStorage(t, core, ActivityLogLocalPrefix+tc.path, data)
 	}
@@ -1748,20 +1674,22 @@ func TestActivityLog_loadPriorEntitySegment(t *testing.T) {
 	for _, tc := range testCases {
 		if tc.refresh {
 			a.l.Lock()
-			a.fragmentLock.Lock()
 			a.localFragmentLock.Lock()
-			a.partialMonthClientTracker = make(map[string]*activity.EntityRecord)
 			a.partialMonthLocalClientTracker = make(map[string]*activity.EntityRecord)
 			a.globalPartialMonthClientTracker = make(map[string]*activity.EntityRecord)
-			a.currentSegment.startTimestamp = tc.time
 			a.currentGlobalSegment.startTimestamp = tc.time
 			a.currentLocalSegment.startTimestamp = tc.time
-			a.fragmentLock.Unlock()
 			a.localFragmentLock.Unlock()
 			a.l.Unlock()
 		}
 
-		err := a.loadPriorEntitySegment(ctx, time.Unix(tc.time, 0), tc.seqNum)
+		// load global segments
+		err := a.loadPriorEntitySegment(ctx, time.Unix(tc.time, 0), tc.seqNum, false)
+		if err != nil {
+			t.Fatalf("got error loading data for %q: %v", tc.path, err)
+		}
+		// load local segments
+		err = a.loadPriorEntitySegment(ctx, time.Unix(tc.time, 0), tc.seqNum, true)
 		if err != nil {
 			t.Fatalf("got error loading data for %q: %v", tc.path, err)
 		}
@@ -1937,14 +1865,12 @@ func setupActivityRecordsInStorage(t *testing.T, base time.Time, includeEntities
 			}
 			switch i {
 			case 0:
-				WriteToStorage(t, core, ActivityLogPrefix+"entity/"+fmt.Sprint(monthsAgo.Unix())+"/0", entityData)
 				WriteToStorage(t, core, ActivityGlobalLogPrefix+"entity/"+fmt.Sprint(monthsAgo.Unix())+"/0", entityData)
 
 			case len(entityRecords) - 1:
 				// local data
 				WriteToStorage(t, core, ActivityLogLocalPrefix+"entity/"+fmt.Sprint(base.Unix())+"/"+strconv.Itoa(i-1), entityData)
 			default:
-				WriteToStorage(t, core, ActivityLogPrefix+"entity/"+fmt.Sprint(base.Unix())+"/"+strconv.Itoa(i-1), entityData)
 				WriteToStorage(t, core, ActivityGlobalLogPrefix+"entity/"+fmt.Sprint(base.Unix())+"/"+strconv.Itoa(i-1), entityData)
 			}
 		}
@@ -1988,14 +1914,22 @@ func TestActivityLog_refreshFromStoredLog(t *testing.T) {
 	}
 	wg.Wait()
 
+	// active clients for the entire month
 	expectedActive := &activity.EntityActivityLog{
 		Clients: expectedClientRecords[1:],
 	}
-	expectedCurrent := &activity.EntityActivityLog{
-		Clients: expectedClientRecords[len(expectedClientRecords)-2 : len(expectedClientRecords)-1],
+	expectedActiveGlobal := &activity.EntityActivityLog{
+		Clients: expectedClientRecords[1 : len(expectedClientRecords)-1],
 	}
+
+	// local client is only added to the newest segment for the current month. This should also appear in the active clients for the entire month.
 	expectedCurrentLocal := &activity.EntityActivityLog{
 		Clients: expectedClientRecords[len(expectedClientRecords)-1:],
+	}
+
+	// global clients added to the newest local entity segment
+	expectedCurrent := &activity.EntityActivityLog{
+		Clients: expectedClientRecords[len(expectedClientRecords)-2 : len(expectedClientRecords)-1],
 	}
 
 	currentEntities := a.GetCurrentGlobalEntities()
@@ -2020,6 +1954,19 @@ func TestActivityLog_refreshFromStoredLog(t *testing.T) {
 	if err := ActiveEntitiesEqual(activeClients, expectedActive.Clients); err != nil {
 		// we expect activeClients to be loaded for the entire month
 		t.Errorf("bad data loaded into active entities. expected only set of EntityID from %v in %v: %v", expectedActive.Clients, activeClients, err)
+	}
+
+	// verify active global clients list
+	activeGlobalClients := a.core.GetActiveGlobalClientsList()
+	if err := ActiveEntitiesEqual(activeGlobalClients, expectedActiveGlobal.Clients); err != nil {
+		// we expect activeClients to be loaded for the entire month
+		t.Errorf("bad data loaded into active global entities. expected only set of EntityID from %v in %v: %v", expectedActiveGlobal.Clients, activeGlobalClients, err)
+	}
+	// verify active local clients list
+	activeLocalClients := a.core.GetActiveLocalClientsList()
+	if err := ActiveEntitiesEqual(activeLocalClients, expectedCurrentLocal.Clients); err != nil {
+		// we expect activeClients to be loaded for the entire month
+		t.Errorf("bad data loaded into active local entities. expected only set of EntityID from %v in %v: %v", expectedCurrentLocal.Clients, activeLocalClients, err)
 	}
 }
 
@@ -2082,6 +2029,18 @@ func TestActivityLog_refreshFromStoredLogWithBackgroundLoadingCancelled(t *testi
 		// we only expect activeClients to be loaded for the newest segment (for the current month)
 		t.Error(err)
 	}
+
+	// verify if the right global clients are loaded for the newest segment (for the current month)
+	activeGlobalClients := a.core.GetActiveGlobalClientsList()
+	if err := ActiveEntitiesEqual(activeGlobalClients, expectedCurrent.Clients); err != nil {
+		t.Error(err)
+	}
+
+	// the right local clients are loaded for the newest segment (for the current month)
+	activeLocalClients := a.core.GetActiveLocalClientsList()
+	if err := ActiveEntitiesEqual(activeLocalClients, currentLocalEntities.Clients); err != nil {
+		t.Error(err)
+	}
 }
 
 // TestActivityLog_refreshFromStoredLogContextCancelled writes data from 3 months ago to this month and calls
@@ -2115,20 +2074,11 @@ func TestActivityLog_refreshFromStoredLogNoTokens(t *testing.T) {
 	expectedActive := &activity.EntityActivityLog{
 		Clients: expectedClientRecords[1:],
 	}
-	expectedCurrent := &activity.EntityActivityLog{
-		Clients: expectedClientRecords[len(expectedClientRecords)-2 : len(expectedClientRecords)-1],
-	}
 	expectedCurrentGlobal := &activity.EntityActivityLog{
 		Clients: expectedClientRecords[len(expectedClientRecords)-2 : len(expectedClientRecords)-1],
 	}
 	expectedCurrentLocal := &activity.EntityActivityLog{
 		Clients: expectedClientRecords[len(expectedClientRecords)-1:],
-	}
-
-	currentEntities := a.GetCurrentEntities()
-	if !entityRecordsEqual(t, currentEntities.Clients, expectedCurrent.Clients) {
-		// we expect all segments for the current month to be loaded
-		t.Errorf("bad activity entity logs loaded. expected: %v got: %v", expectedCurrent, currentEntities)
 	}
 
 	currentGlobalEntities := a.GetCurrentGlobalEntities()
@@ -2174,7 +2124,7 @@ func TestActivityLog_refreshFromStoredLogNoEntities(t *testing.T) {
 		t.Errorf("bad activity token counts loaded. expected: %v got: %v", expectedTokenCounts, nsCount)
 	}
 
-	currentEntities := a.GetCurrentEntities()
+	currentEntities := a.GetCurrentGlobalEntities()
 	if len(currentEntities.Clients) > 0 {
 		t.Errorf("expected no current entity segment to be loaded. got: %v", currentEntities)
 	}
@@ -2245,7 +2195,7 @@ func TestActivityLog_refreshFromStoredLogPreviousMonth(t *testing.T) {
 		Clients: expectedClientRecords[len(expectedClientRecords)-2 : len(expectedClientRecords)-1],
 	}
 
-	currentEntities := a.GetCurrentEntities()
+	currentEntities := a.GetCurrentGlobalEntities()
 	if !entityRecordsEqual(t, currentEntities.Clients, expectedCurrent.Clients) {
 		// we only expect the newest entity segment to be loaded (for the current month)
 		t.Errorf("bad activity entity logs loaded. expected: %v got: %v", expectedCurrent, currentEntities)
@@ -2343,16 +2293,7 @@ func TestActivityLog_DeleteWorker(t *testing.T) {
 		"entity/1112/1",
 	}
 	for _, path := range paths {
-		WriteToStorage(t, core, ActivityLogPrefix+path, []byte("test"))
-	}
-
-	localPaths := []string{
-		"entity/1111/1",
-		"entity/1111/2",
-		"entity/1111/3",
-		"entity/1112/1",
-	}
-	for _, path := range localPaths {
+		WriteToStorage(t, core, ActivityGlobalLogPrefix+path, []byte("test"))
 		WriteToStorage(t, core, ActivityLogLocalPrefix+path, []byte("test"))
 	}
 
@@ -2376,14 +2317,14 @@ func TestActivityLog_DeleteWorker(t *testing.T) {
 	}
 
 	// Check segments still present
-	readSegmentFromStorage(t, core, ActivityLogPrefix+"entity/1112/1")
+	readSegmentFromStorage(t, core, ActivityGlobalLogPrefix+"entity/1112/1")
 	readSegmentFromStorage(t, core, ActivityLogLocalPrefix+"entity/1112/1")
 	readSegmentFromStorage(t, core, ActivityLogLocalPrefix+"directtokens/1112/1")
 
 	// Check other segments not present
-	expectMissingSegment(t, core, ActivityLogPrefix+"entity/1111/1")
-	expectMissingSegment(t, core, ActivityLogPrefix+"entity/1111/2")
-	expectMissingSegment(t, core, ActivityLogPrefix+"entity/1111/3")
+	expectMissingSegment(t, core, ActivityGlobalLogPrefix+"entity/1111/1")
+	expectMissingSegment(t, core, ActivityGlobalLogPrefix+"entity/1111/2")
+	expectMissingSegment(t, core, ActivityGlobalLogPrefix+"entity/1111/3")
 	expectMissingSegment(t, core, ActivityLogLocalPrefix+"entity/1111/1")
 	expectMissingSegment(t, core, ActivityLogLocalPrefix+"entity/1111/2")
 	expectMissingSegment(t, core, ActivityLogLocalPrefix+"entity/1111/3")
@@ -2473,7 +2414,7 @@ func TestActivityLog_EnableDisable(t *testing.T) {
 	}
 
 	// verify segment exists
-	path := fmt.Sprintf("%ventity/%v/0", ActivityLogPrefix, seg1)
+	path := fmt.Sprintf("%ventity/%v/0", ActivityGlobalLogPrefix, seg1)
 	readSegmentFromStorage(t, core, path)
 
 	// Add in-memory fragment
@@ -2503,7 +2444,7 @@ func TestActivityLog_EnableDisable(t *testing.T) {
 		}
 
 		// Verify empty segments are present
-		path = fmt.Sprintf("%ventity/%v/0", ActivityLogPrefix, seg2)
+		path = fmt.Sprintf("%ventity/%v/0", ActivityGlobalLogPrefix, seg2)
 		readSegmentFromStorage(t, core, path)
 
 		path = fmt.Sprintf("%vdirecttokens/%v/0", ActivityLogLocalPrefix, seg2)
@@ -2544,6 +2485,8 @@ func TestActivityLog_EndOfMonth(t *testing.T) {
 	id2 := "22222222-2222-2222-2222-222222222222"
 	id3 := "33333333-3333-3333-3333-333333333333"
 	id4 := "44444444-4444-4444-4444-444444444444"
+
+	// add global data
 	a.AddEntityToFragment(id1, "root", time.Now().Unix())
 
 	// add local data
@@ -2567,18 +2510,9 @@ func TestActivityLog_EndOfMonth(t *testing.T) {
 	a.HandleEndOfMonth(ctx, month1)
 
 	// Check segment is present, with 1 entity
-	path := fmt.Sprintf("%ventity/%v/0", ActivityLogPrefix, segment0)
+	path := fmt.Sprintf("%ventity/%v/0", ActivityGlobalLogPrefix, segment0)
 	protoSegment := readSegmentFromStorage(t, core, path)
 	out := &activity.EntityActivityLog{}
-	err = proto.Unmarshal(protoSegment.Value, out)
-	if err != nil {
-		t.Fatal(err)
-	}
-	expectedEntityIDs(t, out, []string{id1, id4})
-
-	path = fmt.Sprintf("%ventity/%v/0", ActivityGlobalLogPrefix, segment0)
-	protoSegment = readSegmentFromStorage(t, core, path)
-	out = &activity.EntityActivityLog{}
 	err = proto.Unmarshal(protoSegment.Value, out)
 	if err != nil {
 		t.Fatal(err)
@@ -2648,18 +2582,6 @@ func TestActivityLog_EndOfMonth(t *testing.T) {
 
 	for i, tc := range testCases {
 		t.Logf("checking segment %v timestamp %v", i, tc.SegmentTimestamp)
-
-		expectedAllEntities := make([]string, 0)
-		expectedAllEntities = append(expectedAllEntities, tc.ExpectedGlobalEntityIDs...)
-		expectedAllEntities = append(expectedAllEntities, tc.ExpectedLocalEntityIDs...)
-		path := fmt.Sprintf("%ventity/%v/0", ActivityLogPrefix, tc.SegmentTimestamp)
-		protoSegment := readSegmentFromStorage(t, core, path)
-		out := &activity.EntityActivityLog{}
-		err = proto.Unmarshal(protoSegment.Value, out)
-		if err != nil {
-			t.Fatalf("could not unmarshal protobuf: %v", err)
-		}
-		expectedEntityIDs(t, out, expectedAllEntities)
 
 		// Check for global entities at global storage path
 		path = fmt.Sprintf("%ventity/%v/0", ActivityGlobalLogPrefix, tc.SegmentTimestamp)
@@ -2844,7 +2766,7 @@ func TestActivityLog_CalculatePrecomputedQueriesWithMixedTWEs(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		path := fmt.Sprintf("%ventity/%v/%v", ActivityLogPrefix, segment.StartTime, segment.Segment)
+		path := fmt.Sprintf("%ventity/%v/%v", ActivityGlobalLogPrefix, segment.StartTime, segment.Segment)
 		WriteToStorage(t, core, path, data)
 	}
 	expectedCounts := []struct {
@@ -3125,10 +3047,10 @@ func TestActivityLog_SaveAfterDisable(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	path := ActivityLogPrefix + "entity/0/0"
+	path := ActivityGlobalLogPrefix + "entity/0/0"
 	expectMissingSegment(t, core, path)
 
-	path = fmt.Sprintf("%ventity/%v/0", ActivityLogPrefix, startTimestamp)
+	path = fmt.Sprintf("%ventity/%v/0", ActivityGlobalLogPrefix, startTimestamp)
 	expectMissingSegment(t, core, path)
 }
 
@@ -3229,7 +3151,7 @@ func TestActivityLog_Precompute(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		path := fmt.Sprintf("%ventity/%v/%v", ActivityLogPrefix, segment.StartTime, segment.Segment)
+		path := fmt.Sprintf("%ventity/%v/%v", ActivityGlobalLogPrefix, segment.StartTime, segment.Segment)
 		WriteToStorage(t, core, path, data)
 	}
 
@@ -3540,7 +3462,7 @@ func TestActivityLog_Precompute_SkipMonth(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		path := fmt.Sprintf("%ventity/%v/%v", ActivityLogPrefix, segment.StartTime, segment.Segment)
+		path := fmt.Sprintf("%ventity/%v/%v", ActivityGlobalLogPrefix, segment.StartTime, segment.Segment)
 		WriteToStorage(t, core, path, data)
 	}
 
@@ -3757,7 +3679,7 @@ func TestActivityLog_PrecomputeNonEntityTokensWithID(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		path := fmt.Sprintf("%ventity/%v/%v", ActivityLogPrefix, segment.StartTime, segment.Segment)
+		path := fmt.Sprintf("%ventity/%v/%v", ActivityGlobalLogPrefix, segment.StartTime, segment.Segment)
 		WriteToStorage(t, core, path, data)
 	}
 
@@ -4146,7 +4068,7 @@ func TestActivityLog_Deletion(t *testing.T) {
 	for i, start := range times {
 		// no entities in some months, just for fun
 		for j := 0; j < (i+3)%5; j++ {
-			entityPath := fmt.Sprintf("%ventity/%v/%v", ActivityLogPrefix, start.Unix(), j)
+			entityPath := fmt.Sprintf("%ventity/%v/%v", ActivityGlobalLogPrefix, start.Unix(), j)
 			paths[i] = append(paths[i], entityPath)
 			WriteToStorage(t, core, entityPath, []byte("test"))
 		}
@@ -4522,7 +4444,7 @@ func TestActivityLog_partialMonthClientCountWithMultipleMountPaths(t *testing.T)
 		if err != nil {
 			t.Fatalf(err.Error())
 		}
-		storagePath := fmt.Sprintf("%sentity/%d/%d", ActivityLogPrefix, timeutil.StartOfMonth(now).Unix(), i)
+		storagePath := fmt.Sprintf("%sentity/%d/%d", ActivityGlobalLogPrefix, timeutil.StartOfMonth(now).Unix(), i)
 		WriteToStorage(t, core, storagePath, entityData)
 	}
 
@@ -5162,7 +5084,6 @@ func TestAddActivityToFragment(t *testing.T) {
 	a := core.activityLog
 	a.SetEnable(true)
 
-	require.Nil(t, a.fragment)
 	require.Nil(t, a.localFragment)
 	require.Nil(t, a.currentGlobalFragment)
 
@@ -5254,10 +5175,6 @@ func TestAddActivityToFragment(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var mountAccessor string
-			a.fragmentLock.RLock()
-			numClientsBefore := len(a.fragment.Clients)
-			a.fragmentLock.RUnlock()
-
 			a.globalFragmentLock.RLock()
 			globalClientsBefore := len(a.currentGlobalFragment.Clients)
 			a.globalFragmentLock.RUnlock()
@@ -5281,9 +5198,6 @@ func TestAddActivityToFragment(t *testing.T) {
 				a.AddActivityToFragment(tc.id, ns, 0, tc.activityType, mount)
 			}
 
-			a.fragmentLock.RLock()
-			defer a.fragmentLock.RUnlock()
-			numClientsAfter := len(a.fragment.Clients)
 			a.globalFragmentLock.RLock()
 			defer a.globalFragmentLock.RUnlock()
 			globalClientsAfter := len(a.currentGlobalFragment.Clients)
@@ -5311,24 +5225,6 @@ func TestAddActivityToFragment(t *testing.T) {
 					require.Equal(t, globalClientsBefore, globalClientsAfter)
 				}
 			}
-
-			// for now local clients are added to both regular fragment and local fragment.
-			// this will be modified in ticket vault-31234
-			if tc.isAdded {
-				require.Equal(t, numClientsBefore+1, numClientsAfter)
-			} else {
-				require.Equal(t, numClientsBefore, numClientsAfter)
-			}
-
-			require.Contains(t, a.partialMonthClientTracker, tc.expectedID)
-			require.True(t, proto.Equal(&activity.EntityRecord{
-				ClientID:      tc.expectedID,
-				NamespaceID:   ns,
-				Timestamp:     0,
-				NonEntity:     tc.isNonEntity,
-				MountAccessor: mountAccessor,
-				ClientType:    tc.activityType,
-			}, a.partialMonthClientTracker[tc.expectedID]))
 
 			if tc.isLocal {
 				require.Contains(t, a.partialMonthLocalClientTracker, tc.expectedID)
@@ -5371,7 +5267,6 @@ func TestGetAllPartialMonthClients(t *testing.T) {
 	a := core.activityLog
 	a.SetEnable(true)
 
-	require.Nil(t, a.fragment)
 	require.Nil(t, a.localFragment)
 	require.Nil(t, a.currentGlobalFragment)
 
@@ -5385,7 +5280,6 @@ func TestGetAllPartialMonthClients(t *testing.T) {
 	a.AddActivityToFragment(clientID, ns, 0, entityActivityType, mount)
 
 	require.NotNil(t, a.localFragment)
-	require.NotNil(t, a.fragment)
 	require.NotNil(t, a.currentGlobalFragment)
 
 	// create a local mount accessor
@@ -5783,37 +5677,6 @@ func TestCreateSegment_StoreSegment(t *testing.T) {
 			global:                true,
 			forceStore:            true,
 		},
-
-		{
-			testName:              "[non-global] max segment size",
-			numClients:            ActivitySegmentClientCapacity,
-			maxClientsPerFragment: ActivitySegmentClientCapacity,
-			global:                false,
-		},
-		{
-			testName:              "[non-global] max segment size, multiple fragments",
-			numClients:            ActivitySegmentClientCapacity,
-			maxClientsPerFragment: ActivitySegmentClientCapacity - 1,
-			global:                false,
-		},
-		{
-			testName:              "[non-global] roll over",
-			numClients:            ActivitySegmentClientCapacity + 2,
-			maxClientsPerFragment: ActivitySegmentClientCapacity,
-			global:                false,
-		},
-		{
-			testName:              "[non-global] max segment size, rollover multiple fragments",
-			numClients:            ActivitySegmentClientCapacity * 2,
-			maxClientsPerFragment: ActivitySegmentClientCapacity - 1,
-			global:                false,
-		},
-		{
-			testName:              "[non-global] max client size, drop clients",
-			numClients:            ActivitySegmentClientCapacity*2 + 1,
-			maxClientsPerFragment: ActivitySegmentClientCapacity,
-			global:                false,
-		},
 		{
 			testName:              "[local] max client size, drop clients",
 			numClients:            ActivitySegmentClientCapacity*2 + 1,
@@ -5910,10 +5773,7 @@ func TestCreateSegment_StoreSegment(t *testing.T) {
 
 			segment := &a.currentGlobalSegment
 			if !test.global {
-				segment = &a.currentSegment
-				if test.pathPrefix == activityLocalPathPrefix {
-					segment = &a.currentLocalSegment
-				}
+				segment = &a.currentLocalSegment
 			}
 
 			// Create segments and write to storage
@@ -5932,24 +5792,13 @@ func TestCreateSegment_StoreSegment(t *testing.T) {
 					clientTotal += len(entity.GetClients())
 				}
 			} else {
-				if test.pathPrefix == activityLocalPathPrefix {
-					for {
-						entity, err := reader.ReadLocalEntity(ctx)
-						if errors.Is(err, io.EOF) {
-							break
-						}
-						require.NoError(t, err)
-						clientTotal += len(entity.GetClients())
+				for {
+					entity, err := reader.ReadLocalEntity(ctx)
+					if errors.Is(err, io.EOF) {
+						break
 					}
-				} else {
-					for {
-						entity, err := reader.ReadEntity(ctx)
-						if errors.Is(err, io.EOF) {
-							break
-						}
-						require.NoError(t, err)
-						clientTotal += len(entity.GetClients())
-					}
+					require.NoError(t, err)
+					clientTotal += len(entity.GetClients())
 				}
 			}
 
@@ -5971,4 +5820,281 @@ func TestCreateSegment_StoreSegment(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestActivityLog_PrimaryDuplicateClientMigrationWorker verifies that the primary
+// migration worker correctly moves data from old location to the new location
+func TestActivityLog_PrimaryDuplicateClientMigrationWorker(t *testing.T) {
+	cluster := NewTestCluster(t, nil, nil)
+	core := cluster.Cores[0].Core
+	a := core.activityLog
+	a.SetEnable(true)
+
+	ctx := context.Background()
+	timeStamp := time.Now()
+	startOfMonth := timeutil.StartOfMonth(timeStamp)
+	oneMonthAgo := timeutil.StartOfPreviousMonth(timeStamp)
+	twoMonthsAgo := timeutil.StartOfPreviousMonth(oneMonthAgo)
+
+	clientRecordsGlobal := make([]*activity.EntityRecord, ActivitySegmentClientCapacity*2+1)
+	for i := range clientRecordsGlobal {
+		clientRecordsGlobal[i] = &activity.EntityRecord{
+			ClientID:  fmt.Sprintf("111122222-3333-4444-5555-%012v", i),
+			Timestamp: timeStamp.Unix(),
+			NonEntity: false,
+		}
+	}
+	clientRecordsLocal := make([]*activity.EntityRecord, ActivitySegmentClientCapacity*2+1)
+	for i := range clientRecordsGlobal {
+		clientRecordsLocal[i] = &activity.EntityRecord{
+			ClientID:  fmt.Sprintf("011122222-3333-4444-5555-%012v", i),
+			Timestamp: timeStamp.Unix(),
+			// This is to trick the system into believing this a local client when parsing data
+			ClientType: nonEntityTokenActivityType,
+		}
+	}
+
+	tokenCounts := map[string]uint64{
+		"ns1": 10,
+		"ns2": 11,
+		"ns3": 12,
+	}
+
+	// Write global and local clients to old path
+	a.savePreviousEntitySegments(ctx, twoMonthsAgo.Unix(), "", []*activity.LogFragment{{Clients: append(clientRecordsLocal, clientRecordsGlobal...)}})
+	a.savePreviousEntitySegments(ctx, oneMonthAgo.Unix(), "", []*activity.LogFragment{{Clients: append(clientRecordsLocal[1:], clientRecordsGlobal[1:]...)}})
+	a.savePreviousEntitySegments(ctx, startOfMonth.Unix(), "", []*activity.LogFragment{{Clients: append(clientRecordsLocal[2:], clientRecordsGlobal[2:]...)}})
+
+	// Assert that the migration workers have not been run
+	require.True(t, a.hasDedupClientsUpgrade(ctx))
+	require.True(t, a.dedupClientsUpgradeComplete.Load())
+
+	// Resetting this to false so that we can
+	// verify that after the migrations is completed, the correct values have been stored
+	a.dedupClientsUpgradeComplete.Store(false)
+	require.NoError(t, a.view.Delete(ctx, activityDeduplicationUpgradeKey))
+
+	// Forcefully run the primary migration worker
+	core.primaryDuplicateClientMigrationWorker(ctx)
+
+	// Verify that we have the correct number of global clients at the new storage paths
+	times := []time.Time{twoMonthsAgo, oneMonthAgo, startOfMonth}
+	for index, time := range times {
+		reader, err := a.NewSegmentFileReader(ctx, time)
+		require.NoError(t, err)
+		globalClients := make([]*activity.EntityRecord, 0)
+		for {
+			segment, err := reader.ReadGlobalEntity(ctx)
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			require.NoError(t, err)
+			globalClients = append(globalClients, segment.GetClients()...)
+		}
+		require.Equal(t, len(clientRecordsGlobal)-index, len(globalClients))
+	}
+
+	// Verify local clients
+	for index, time := range times {
+		reader, err := a.NewSegmentFileReader(ctx, time)
+		require.NoError(t, err)
+		localClients := make([]*activity.EntityRecord, 0)
+		for {
+			segment, err := reader.ReadLocalEntity(ctx)
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			require.NoError(t, err)
+			localClients = append(localClients, segment.GetClients()...)
+		}
+		require.Equal(t, len(clientRecordsLocal)-index, len(localClients))
+	}
+
+	// Verify non-entity tokens have been correctly migrated
+	for _, time := range times {
+		reader, err := a.NewSegmentFileReader(ctx, time)
+		require.NoError(t, err)
+		for {
+			segment, err := reader.ReadToken(ctx)
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			require.NoError(t, err)
+			// Verify that the data is correct
+			deep.Equal(segment.GetCountByNamespaceID(), tokenCounts)
+		}
+	}
+
+	// Check that the storage key has been updated
+	require.True(t, a.hasDedupClientsUpgrade(ctx))
+	// Check that the bool has been updated
+	require.True(t, a.dedupClientsUpgradeComplete.Load())
+
+	// Wait for the deletion of old logs to complete
+	timeout := time.After(25 * time.Second)
+	// Wait for channel indicating deletion to be written
+	select {
+	case <-timeout:
+		t.Fatal("timed out waiting for deletion to complete")
+	case <-a.oldStoragePathsCleaned:
+		break
+	}
+
+	// Verify there is no data at the old paths
+	times, err := a.availableTimesAtPath(ctx, time.Now(), activityEntityBasePath)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(times))
+
+	// Verify there is no data at the old token paths
+	times, err = a.availableTimesAtPath(ctx, time.Now(), activityTokenBasePath)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(times))
+}
+
+// TestActivityLog_SecondaryDuplicateClientMigrationWorker verifies that the secondary
+// migration worker correctly moves local data from old location to the new location
+func TestActivityLog_SecondaryDuplicateClientMigrationWorker(t *testing.T) {
+	cluster := NewTestCluster(t, nil, nil)
+	core := cluster.Cores[0].Core
+	a := core.activityLog
+	a.SetEnable(true)
+
+	ctx := context.Background()
+	timeStamp := time.Now()
+	startOfMonth := timeutil.StartOfMonth(timeStamp)
+	oneMonthAgo := timeutil.StartOfPreviousMonth(timeStamp)
+	twoMonthsAgo := timeutil.StartOfPreviousMonth(oneMonthAgo)
+
+	clientRecordsGlobal := make([]*activity.EntityRecord, ActivitySegmentClientCapacity*2+1)
+	for i := range clientRecordsGlobal {
+		clientRecordsGlobal[i] = &activity.EntityRecord{
+			ClientID:  fmt.Sprintf("111122222-3333-4444-5555-%012v", i),
+			Timestamp: timeStamp.Unix(),
+			NonEntity: false,
+		}
+	}
+	clientRecordsLocal := make([]*activity.EntityRecord, ActivitySegmentClientCapacity*2+1)
+	for i := range clientRecordsGlobal {
+		clientRecordsLocal[i] = &activity.EntityRecord{
+			ClientID:  fmt.Sprintf("011122222-3333-4444-5555-%012v", i),
+			Timestamp: timeStamp.Unix(),
+			// This is to trick the system into believing this a local client when parsing data
+			ClientType: nonEntityTokenActivityType,
+		}
+	}
+
+	tokenCounts := map[string]uint64{
+		"ns1": 10,
+		"ns2": 11,
+		"ns3": 12,
+	}
+
+	// Write global and local clients to old path
+	a.savePreviousEntitySegments(ctx, twoMonthsAgo.Unix(), "", []*activity.LogFragment{{Clients: append(clientRecordsLocal, clientRecordsGlobal...)}})
+	a.savePreviousEntitySegments(ctx, oneMonthAgo.Unix(), "", []*activity.LogFragment{{Clients: append(clientRecordsLocal[1:], clientRecordsGlobal[1:]...)}})
+	a.savePreviousEntitySegments(ctx, startOfMonth.Unix(), "", []*activity.LogFragment{{Clients: append(clientRecordsLocal[2:], clientRecordsGlobal[2:]...)}})
+
+	// Write tokens to old path
+	a.savePreviousTokenSegments(ctx, twoMonthsAgo.Unix(), "", []*activity.LogFragment{{NonEntityTokens: tokenCounts}})
+	a.savePreviousTokenSegments(ctx, oneMonthAgo.Unix(), "", []*activity.LogFragment{{NonEntityTokens: tokenCounts}})
+	a.savePreviousTokenSegments(ctx, startOfMonth.Unix(), "", []*activity.LogFragment{{NonEntityTokens: tokenCounts}})
+
+	// Assert that the migration workers have not been run
+	require.True(t, a.hasDedupClientsUpgrade(ctx))
+	require.True(t, a.dedupClientsUpgradeComplete.Load())
+
+	// Resetting this to false so that we can
+	// verify that after the migrations is completed, the correct values have been stored
+	a.dedupClientsUpgradeComplete.Store(false)
+	require.NoError(t, a.view.Delete(ctx, activityDeduplicationUpgradeKey))
+
+	// Forcefully run the secondary migration worker
+	core.secondaryDuplicateClientMigrationWorker(ctx)
+
+	// Wait for the storage migration to complete
+	ticker := time.NewTicker(100 * time.Millisecond)
+	timeout := time.After(25 * time.Second)
+	for {
+		select {
+		case <-timeout:
+			t.Fatal("timed out waiting for migration to complete")
+		case <-ticker.C:
+		}
+		if a.dedupClientsUpgradeComplete.Load() {
+			break
+		}
+	}
+
+	// Verify that no global clients have been migrated
+	times := []time.Time{twoMonthsAgo, oneMonthAgo, startOfMonth}
+	for _, time := range times {
+		reader, err := a.NewSegmentFileReader(ctx, time)
+		require.NoError(t, err)
+		globalClients := make([]*activity.EntityRecord, 0)
+		for {
+			segment, err := reader.ReadGlobalEntity(ctx)
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			require.NoError(t, err)
+			globalClients = append(globalClients, segment.GetClients()...)
+		}
+		require.Equal(t, 0, len(globalClients))
+	}
+
+	// Verify local clients have been correctly migrated
+	for index, time := range times {
+		reader, err := a.NewSegmentFileReader(ctx, time)
+		require.NoError(t, err)
+		localClients := make([]*activity.EntityRecord, 0)
+		for {
+			segment, err := reader.ReadLocalEntity(ctx)
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			require.NoError(t, err)
+			localClients = append(localClients, segment.GetClients()...)
+		}
+		require.Equal(t, len(clientRecordsLocal)-index, len(localClients))
+	}
+
+	// Verify non-entity tokens have been correctly migrated
+	for _, time := range times {
+		reader, err := a.NewSegmentFileReader(ctx, time)
+		require.NoError(t, err)
+		for {
+			segment, err := reader.ReadToken(ctx)
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			require.NoError(t, err)
+			// Verify that the data is correct
+			deep.Equal(segment.GetCountByNamespaceID(), tokenCounts)
+		}
+	}
+
+	// Check that the storage key has been updated
+	require.True(t, a.hasDedupClientsUpgrade(ctx))
+	// Check that the bool has been updated
+	require.True(t, a.dedupClientsUpgradeComplete.Load())
+
+	// Wait for the deletion of old logs to complete
+	timeout = time.After(25 * time.Second)
+	// Wait for channel indicating deletion to be written
+	select {
+	case <-timeout:
+		t.Fatal("timed out waiting for deletion to complete")
+	case <-a.oldStoragePathsCleaned:
+		break
+	}
+
+	// Verify there is no data at the old entity paths
+	times, err := a.availableTimesAtPath(ctx, time.Now(), activityEntityBasePath)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(times))
+
+	// Verify there is no data at the old token paths
+	times, err = a.availableTimesAtPath(ctx, time.Now(), activityTokenBasePath)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(times))
 }

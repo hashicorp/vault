@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/axiomhq/hyperloglog"
+	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/vault/activity"
 	"github.com/stretchr/testify/require"
@@ -1006,20 +1007,20 @@ func writeLocalEntitySegment(t *testing.T, core *Core, ts time.Time, index int, 
 	WriteToStorage(t, core, makeSegmentPath(t, activityLocalPathPrefix+activityEntityBasePath, ts, index), protoItem)
 }
 
-// writeEntitySegment writes a single segment file with the given time and index for an entity
-func writeEntitySegment(t *testing.T, core *Core, ts time.Time, index int, item *activity.EntityActivityLog) {
-	t.Helper()
-	protoItem, err := proto.Marshal(item)
-	require.NoError(t, err)
-	WriteToStorage(t, core, makeSegmentPath(t, activityEntityBasePath, ts, index), protoItem)
-}
-
 // writeTokenSegment writes a single segment file with the given time and index for a token
 func writeTokenSegment(t *testing.T, core *Core, ts time.Time, index int, item *activity.TokenCount) {
 	t.Helper()
 	protoItem, err := proto.Marshal(item)
 	require.NoError(t, err)
 	WriteToStorage(t, core, makeSegmentPath(t, activityTokenLocalBasePath, ts, index), protoItem)
+}
+
+// writeTokenSegmentOldPath writes a single segment file with the given time and index for a token at the old path
+func writeTokenSegmentOldPath(t *testing.T, core *Core, ts time.Time, index int, item *activity.TokenCount) {
+	t.Helper()
+	protoItem, err := proto.Marshal(item)
+	require.NoError(t, err)
+	WriteToStorage(t, core, makeSegmentPath(t, activityTokenBasePath, ts, index), protoItem)
 }
 
 // makeSegmentPath formats the path for a segment at a particular time and index
@@ -1037,7 +1038,6 @@ func TestSegmentFileReader_BadData(t *testing.T) {
 
 	// write bad data that won't be able to be unmarshaled at index 0
 	WriteToStorage(t, core, makeSegmentPath(t, activityTokenLocalBasePath, now, 0), []byte("fake data"))
-	WriteToStorage(t, core, makeSegmentPath(t, activityEntityBasePath, now, 0), []byte("fake data"))
 	WriteToStorage(t, core, makeSegmentPath(t, activityGlobalPathPrefix+activityEntityBasePath, now, 0), []byte("fake data"))
 	WriteToStorage(t, core, makeSegmentPath(t, activityLocalPathPrefix+activityEntityBasePath, now, 0), []byte("fake data"))
 
@@ -1047,8 +1047,6 @@ func TestSegmentFileReader_BadData(t *testing.T) {
 			ClientID: "id",
 		},
 	}}
-	writeEntitySegment(t, core, now, 1, entity)
-
 	// write global data at index 1
 	writeGlobalEntitySegment(t, core, now, 1, entity)
 
@@ -1063,25 +1061,19 @@ func TestSegmentFileReader_BadData(t *testing.T) {
 	reader, err := core.activityLog.NewSegmentFileReader(context.Background(), now)
 	require.NoError(t, err)
 
-	// first the bad entity is read, which returns an error
-	_, err = reader.ReadEntity(context.Background())
-	require.Error(t, err)
-	// then, the reader can read the good entity at index 1
-	gotEntity, err := reader.ReadEntity(context.Background())
-	require.True(t, proto.Equal(gotEntity, entity))
-	require.Nil(t, err)
-
 	// first the bad global entity is read, which returns an error
 	_, err = reader.ReadGlobalEntity(context.Background())
 	require.Error(t, err)
+
 	// then, the reader can read the good entity at index 1
-	gotEntity, err = reader.ReadGlobalEntity(context.Background())
+	gotEntity, err := reader.ReadGlobalEntity(context.Background())
 	require.True(t, proto.Equal(gotEntity, entity))
 	require.Nil(t, err)
 
 	// first the bad local entity is read, which returns an error
 	_, err = reader.ReadLocalEntity(context.Background())
 	require.Error(t, err)
+
 	// then, the reader can read the good entity at index 1
 	gotEntity, err = reader.ReadLocalEntity(context.Background())
 	require.True(t, proto.Equal(gotEntity, entity))
@@ -1090,6 +1082,7 @@ func TestSegmentFileReader_BadData(t *testing.T) {
 	// the bad token causes an error
 	_, err = reader.ReadToken(context.Background())
 	require.Error(t, err)
+
 	// but the good token is able to be read
 	gotToken, err := reader.ReadToken(context.Background())
 	require.True(t, proto.Equal(gotToken, token))
@@ -1104,9 +1097,7 @@ func TestSegmentFileReader_MissingData(t *testing.T) {
 	// write entities and tokens at indexes 0, 1, 2
 	for i := 0; i < 3; i++ {
 		WriteToStorage(t, core, makeSegmentPath(t, activityTokenLocalBasePath, now, i), []byte("fake data"))
-		WriteToStorage(t, core, makeSegmentPath(t, activityEntityBasePath, now, i), []byte("fake data"))
 		WriteToStorage(t, core, makeSegmentPath(t, activityGlobalPathPrefix+activityEntityBasePath, now, i), []byte("fake data"))
-
 	}
 	// write entity at index 3
 	entity := &activity.EntityActivityLog{Clients: []*activity.EntityRecord{
@@ -1114,7 +1105,6 @@ func TestSegmentFileReader_MissingData(t *testing.T) {
 			ClientID: "id",
 		},
 	}}
-	writeEntitySegment(t, core, now, 3, entity)
 
 	// write global entity at index 3
 	writeGlobalEntitySegment(t, core, now, 3, entity)
@@ -1133,25 +1123,18 @@ func TestSegmentFileReader_MissingData(t *testing.T) {
 	// delete the indexes 0, 1, 2
 	for i := 0; i < 3; i++ {
 		require.NoError(t, core.barrier.Delete(context.Background(), makeSegmentPath(t, activityTokenLocalBasePath, now, i)))
-		require.NoError(t, core.barrier.Delete(context.Background(), makeSegmentPath(t, activityEntityBasePath, now, i)))
 		require.NoError(t, core.barrier.Delete(context.Background(), makeSegmentPath(t, activityGlobalPathPrefix+activityEntityBasePath, now, i)))
 		require.NoError(t, core.barrier.Delete(context.Background(), makeSegmentPath(t, activityLocalPathPrefix+activityEntityBasePath, now, i)))
 	}
 
 	// we expect the reader to only return the data at index 3, and then be done
-	gotEntity, err := reader.ReadEntity(context.Background())
-	require.NoError(t, err)
-	require.True(t, proto.Equal(gotEntity, entity))
-	_, err = reader.ReadEntity(context.Background())
-	require.Equal(t, err, io.EOF)
-
 	gotToken, err := reader.ReadToken(context.Background())
 	require.NoError(t, err)
 	require.True(t, proto.Equal(gotToken, token))
 	_, err = reader.ReadToken(context.Background())
 	require.Equal(t, err, io.EOF)
 
-	gotEntity, err = reader.ReadGlobalEntity(context.Background())
+	gotEntity, err := reader.ReadGlobalEntity(context.Background())
 	require.NoError(t, err)
 	require.True(t, proto.Equal(gotEntity, entity))
 	_, err = reader.ReadGlobalEntity(context.Background())
@@ -1170,7 +1153,7 @@ func TestSegmentFileReader_NoData(t *testing.T) {
 	now := time.Now()
 	reader, err := core.activityLog.NewSegmentFileReader(context.Background(), now)
 	require.NoError(t, err)
-	entity, err := reader.ReadEntity(context.Background())
+	entity, err := reader.ReadGlobalEntity(context.Background())
 	require.Nil(t, entity)
 	require.Equal(t, err, io.EOF)
 	token, err := reader.ReadToken(context.Background())
@@ -1196,7 +1179,8 @@ func TestSegmentFileReader(t *testing.T) {
 		token := &activity.TokenCount{CountByNamespaceID: map[string]uint64{
 			fmt.Sprintf("ns-%d", i): uint64(i),
 		}}
-		writeEntitySegment(t, core, now, i, entity)
+		writeGlobalEntitySegment(t, core, now, i, entity)
+		writeLocalEntitySegment(t, core, now, i, entity)
 		writeTokenSegment(t, core, now, i, token)
 		entities = append(entities, entity)
 		tokens = append(tokens, token)
@@ -1205,13 +1189,20 @@ func TestSegmentFileReader(t *testing.T) {
 	reader, err := core.activityLog.NewSegmentFileReader(context.Background(), now)
 	require.NoError(t, err)
 
-	gotEntities := make([]*activity.EntityActivityLog, 0, 3)
+	gotGlobalEntities := make([]*activity.EntityActivityLog, 0, 3)
+	gotLocalEntities := make([]*activity.EntityActivityLog, 0, 3)
 	gotTokens := make([]*activity.TokenCount, 0, 3)
 
-	// read the entities from the reader
-	for entity, err := reader.ReadEntity(context.Background()); !errors.Is(err, io.EOF); entity, err = reader.ReadEntity(context.Background()) {
+	// read the global entities from the reader
+	for entity, err := reader.ReadGlobalEntity(context.Background()); !errors.Is(err, io.EOF); entity, err = reader.ReadGlobalEntity(context.Background()) {
 		require.NoError(t, err)
-		gotEntities = append(gotEntities, entity)
+		gotGlobalEntities = append(gotGlobalEntities, entity)
+	}
+
+	// read the local entities from the reader
+	for entity, err := reader.ReadLocalEntity(context.Background()); !errors.Is(err, io.EOF); entity, err = reader.ReadLocalEntity(context.Background()) {
+		require.NoError(t, err)
+		gotLocalEntities = append(gotLocalEntities, entity)
 	}
 
 	// read the tokens from the reader
@@ -1219,13 +1210,62 @@ func TestSegmentFileReader(t *testing.T) {
 		require.NoError(t, err)
 		gotTokens = append(gotTokens, token)
 	}
-	require.Len(t, gotEntities, 3)
+	require.Len(t, gotGlobalEntities, 3)
+	require.Len(t, gotLocalEntities, 3)
 	require.Len(t, gotTokens, 3)
 
 	// verify that the entities and tokens we got from the reader are correct
 	// we can't use require.Equals() here because there are protobuf differences in unexported fields
 	for i := 0; i < 3; i++ {
-		require.True(t, proto.Equal(gotEntities[i], entities[i]))
+		require.True(t, proto.Equal(gotGlobalEntities[i], entities[i]))
+		require.True(t, proto.Equal(gotLocalEntities[i], entities[i]))
 		require.True(t, proto.Equal(gotTokens[i], tokens[i]))
+	}
+}
+
+// TestExtractTokens_OldStoragePaths verifies that the correct tokens are extracted
+// from the old token paths in storage. These old storage paths were used in <=1.9 to
+// store tokens without clientIds (non-entity tokens).
+func TestExtractTokens_OldStoragePaths(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	now := time.Now()
+
+	// write token at index 3
+	token := &activity.TokenCount{CountByNamespaceID: map[string]uint64{
+		"ns":  10,
+		"ns3": 1,
+		"ns1": 2,
+	}}
+
+	lastMonth := timeutil.StartOfPreviousMonth(now)
+	twoMonthsAgo := timeutil.StartOfPreviousMonth(lastMonth)
+
+	thisMonthData := []map[string]uint64{token.CountByNamespaceID, token.CountByNamespaceID}
+	lastMonthData := []map[string]uint64{token.CountByNamespaceID, token.CountByNamespaceID, token.CountByNamespaceID, token.CountByNamespaceID}
+	twoMonthsAgoData := []map[string]uint64{token.CountByNamespaceID}
+
+	expected := map[int64][]map[string]uint64{
+		now.Unix():          thisMonthData,
+		lastMonth.Unix():    lastMonthData,
+		twoMonthsAgo.Unix(): twoMonthsAgoData,
+	}
+
+	// This month's token data is at broken segment sequences
+	writeTokenSegmentOldPath(t, core, now, 1, token)
+	writeTokenSegmentOldPath(t, core, now, 3, token)
+	// Last months token data is at normal segment sequences
+	writeTokenSegmentOldPath(t, core, lastMonth, 0, token)
+	writeTokenSegmentOldPath(t, core, lastMonth, 1, token)
+	writeTokenSegmentOldPath(t, core, lastMonth, 2, token)
+	writeTokenSegmentOldPath(t, core, lastMonth, 3, token)
+	// Month before is at only one random segment sequence
+	writeTokenSegmentOldPath(t, core, twoMonthsAgo, 2, token)
+
+	tokens, err := core.activityLog.extractTokensDeprecatedStoragePath(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, 3, len(tokens))
+
+	if diff := deep.Equal(expected, tokens); diff != nil {
+		t.Fatal(diff)
 	}
 }
