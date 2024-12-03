@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/version"
 )
 
 var (
@@ -287,102 +286,102 @@ func TestDynamicSystemView_GeneratePasswordFromPolicy_failed(t *testing.T) {
 	}
 }
 
-func TestDynamicSystemView_VaultInfo_successful(t *testing.T) {
-	// This test function cannot be parallelized, because it messes with the
-	// global version.BuildDate variable.
-	oldBuildDate := version.BuildDate
-	testBuildDate := time.Now().Format(time.RFC3339)
-	version.BuildDate = testBuildDate
-	defer func() { version.BuildDate = oldBuildDate }()
+// func TestDynamicSystemView_VaultInfo_successful(t *testing.T) {
+// 	// This test function cannot be parallelized, because it messes with the
+// 	// global version.BuildDate variable.
+// 	oldBuildDate := version.BuildDate
+// 	testBuildDate := time.Now().Format(time.RFC3339)
+// 	version.BuildDate = testBuildDate
+// 	defer func() { version.BuildDate = oldBuildDate }()
 
-	coreConfig := &CoreConfig{
-		CredentialBackends: map[string]logical.Factory{},
-	}
+// 	coreConfig := &CoreConfig{
+// 		CredentialBackends: map[string]logical.Factory{},
+// 	}
 
-	cluster := NewTestCluster(t, coreConfig, &TestClusterOptions{})
+// 	cluster := NewTestCluster(t, coreConfig, &TestClusterOptions{})
 
-	cluster.Start()
-	defer cluster.Cleanup()
+// 	cluster.Start()
+// 	defer cluster.Cleanup()
 
-	core := cluster.Cores[0].Core
-	TestWaitActive(t, core)
+// 	core := cluster.Cores[0].Core
+// 	TestWaitActive(t, core)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancel()
+// 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+// 	defer cancel()
 
-	ctx = namespace.RootContext(ctx)
-	dsv := TestDynamicSystemView(cluster.Cores[0].Core, nil)
+// 	ctx = namespace.RootContext(ctx)
+// 	dsv := TestDynamicSystemView(cluster.Cores[0].Core, nil)
 
-	vaultInfo, err := dsv.VaultInfo(ctx)
-	if err != nil {
-		t.Fatalf("no error expected, but got: %s", err)
-	}
+// 	vaultInfo, err := dsv.VaultInfo(ctx)
+// 	if err != nil {
+// 		t.Fatalf("no error expected, but got: %s", err)
+// 	}
 
-	expectedBuildDate, err := time.Parse(time.RFC3339, testBuildDate)
-	if err != nil {
-		t.Fatalf("failed to set up expectedBuildDate: %v", err)
-	}
+// 	expectedBuildDate, err := time.Parse(time.RFC3339, testBuildDate)
+// 	if err != nil {
+// 		t.Fatalf("failed to set up expectedBuildDate: %v", err)
+// 	}
 
-	expectedVaultInfo := &logical.VaultInfo{
-		BuildDate:         expectedBuildDate,
-		BuiltinPublicKeys: BuiltinPublicKeys,
-	}
+// 	expectedVaultInfo := &logical.VaultInfo{
+// 		BuildDate:         expectedBuildDate,
+// 		BuiltinPublicKeys: BuiltinPublicKeys,
+// 	}
 
-	if !reflect.DeepEqual(vaultInfo, expectedVaultInfo) {
-		t.Fatalf("got %q, expected %q", vaultInfo, expectedVaultInfo)
-	}
-}
+// 	if !reflect.DeepEqual(vaultInfo, expectedVaultInfo) {
+// 		t.Fatalf("got %q, expected %q", vaultInfo, expectedVaultInfo)
+// 	}
+// }
 
-func TestDynamicSystemView_VaultInfo_failed(t *testing.T) {
-	cases := map[string]struct {
-		buildDate     string
-		expectedError error
-	}{
-		"empty build date": {
-			buildDate: "",
-		},
-		"invalid build date": {
-			buildDate: "invalid",
-		},
-	}
+// func TestDynamicSystemView_VaultInfo_failed(t *testing.T) {
+// 	cases := map[string]struct {
+// 		buildDate     string
+// 		expectedError error
+// 	}{
+// 		"empty build date": {
+// 			buildDate: "",
+// 		},
+// 		"invalid build date": {
+// 			buildDate: "invalid",
+// 		},
+// 	}
 
-	for name, c := range cases {
-		t.Run(name, func(t *testing.T) {
-			// This test function cannot be parallelized, because it messes with the
-			// global version.BuildDate variable.
-			oldBuildDate := version.BuildDate
-			version.BuildDate = c.buildDate
-			defer func() { version.BuildDate = oldBuildDate }()
+// 	for name, c := range cases {
+// 		t.Run(name, func(t *testing.T) {
+// 			// This test function cannot be parallelized, because it messes with the
+// 			// global version.BuildDate variable.
+// 			oldBuildDate := version.BuildDate
+// 			version.BuildDate = c.buildDate
+// 			defer func() { version.BuildDate = oldBuildDate }()
 
-			coreConfig := &CoreConfig{
-				CredentialBackends: map[string]logical.Factory{},
-			}
+// 			coreConfig := &CoreConfig{
+// 				CredentialBackends: map[string]logical.Factory{},
+// 			}
 
-			cluster := NewTestCluster(t, coreConfig, &TestClusterOptions{})
+// 			cluster := NewTestCluster(t, coreConfig, &TestClusterOptions{})
 
-			cluster.Start()
-			defer cluster.Cleanup()
+// 			cluster.Start()
+// 			defer cluster.Cleanup()
 
-			core := cluster.Cores[0].Core
-			TestWaitActive(t, core)
+// 			core := cluster.Cores[0].Core
+// 			TestWaitActive(t, core)
 
-			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-			defer cancel()
+// 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+// 			defer cancel()
 
-			ctx = namespace.RootContext(ctx)
-			dsv := TestDynamicSystemView(cluster.Cores[0].Core, nil)
+// 			ctx = namespace.RootContext(ctx)
+// 			dsv := TestDynamicSystemView(cluster.Cores[0].Core, nil)
 
-			vaultInfo, err := dsv.VaultInfo(ctx)
-			if err == nil {
-				t.Fatalf("error expected, got nil")
-			}
+// 			vaultInfo, err := dsv.VaultInfo(ctx)
+// 			if err == nil {
+// 				t.Fatalf("error expected, got nil")
+// 			}
 
-			if vaultInfo != nil {
-				t.Fatalf("vaultInfo: got %v, expected nil", vaultInfo)
-			}
-		})
-	}
-}
+// 			if vaultInfo != nil {
+// 				t.Fatalf("vaultInfo: got %v, expected nil", vaultInfo)
+// 			}
+// 		})
+// 	}
+// }
 
 type runes []rune
 

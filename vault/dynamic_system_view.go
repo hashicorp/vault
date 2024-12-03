@@ -488,15 +488,3 @@ func (d dynamicSystemView) GenerateIdentityToken(ctx context.Context, req *plugi
 		TTL:   ttl,
 	}, nil
 }
-
-func (d dynamicSystemView) VaultInfo(_ context.Context) (*logical.VaultInfo, error) {
-	buildDate, err := version.GetVaultBuildDate()
-	if err != nil {
-		return nil, err
-	}
-
-	return &logical.VaultInfo{
-		BuildDate:         buildDate,
-		BuiltinPublicKeys: BuiltinPublicKeys,
-	}, nil
-}
