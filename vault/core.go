@@ -4626,3 +4626,9 @@ func (c *Core) IsRemovedFromCluster() (removed, ok bool) {
 
 	return removableNodeHA.IsRemoved(), true
 }
+
+func (c *Core) shutdownRemovedNode() {
+	go func() {
+		c.ShutdownCoreError(errors.New("node has been removed from cluster"))
+	}()
+}
