@@ -289,14 +289,8 @@ func TestDynamicSystemView_GeneratePasswordFromPolicy_failed(t *testing.T) {
 	}
 }
 
+// TestDynamicSystemView_PluginEnv_successful checks that the PluginEnv method returns the expected values in a successful case.
 func TestDynamicSystemView_PluginEnv_successful(t *testing.T) {
-	// This test function cannot be parallelized, because it messes with the
-	// global version.BuildDate variable.
-	oldBuildDate := version.BuildDate
-	testBuildDate := time.Now().Format(time.RFC3339)
-	version.BuildDate = testBuildDate
-	defer func() { version.BuildDate = oldBuildDate }()
-
 	coreConfig := &CoreConfig{
 		CredentialBackends: map[string]logical.Factory{},
 	}
@@ -322,7 +316,7 @@ func TestDynamicSystemView_PluginEnv_successful(t *testing.T) {
 
 	expectedVersionInfo := version.GetVersion()
 
-	expectedBuildDate, err := time.Parse(time.RFC3339, testBuildDate)
+	expectedBuildDate, err := version.GetVaultBuildDate()
 	if err != nil {
 		t.Fatalf("failed to set up expectedBuildDate: %v", err)
 	}
@@ -340,6 +334,7 @@ func TestDynamicSystemView_PluginEnv_successful(t *testing.T) {
 	}
 }
 
+// TestDynamicSystemView_PluginEnv_failed checks that the PluginEnv method returns the expected outputs in failure cases.
 func TestDynamicSystemView_PluginEnv_failed(t *testing.T) {
 	cases := map[string]struct {
 		buildDate           string
