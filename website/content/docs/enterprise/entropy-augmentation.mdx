@@ -21,6 +21,34 @@ interface. While the system entropy used by Vault is more than capable of
 operating in most threat models, there are some situations where additional
 entropy from hardware-based random number generators is desirable.
 
+With Entropy Augmentation enabled, the following keys and tokens leverage the
+configured external entropy source.
+
+| Operation                | Description                                                                          |
+| ------------------------ | ------------------------------------------------------------------------------------ |
+| Root Key               | AES key that is encrypted by the seal mechanism. This encrypts the key ring.         |
+| Key Ring Encryption Keys | The keys embedded in Vault's keyring which encrypt all of Vault's storage.           |
+| Recovery Key             | With auto-unseal, use the recovery keys to regenerate root token, key rotation, etc. |
+| TLS Private Keys         | For HA leader, Raft and Enterprise Replications.                                     |
+| MFA TOTP Keys            | The keys used for TOTP in Vault Enterprise MFA                                       |
+| JWT Signing Keys         | The keys used to sign wrapping token JWTs.                                           |
+| Root Tokens              | Superuser tokens granting access to all operations in Vault.                         |
+| DR Operation Tokens      | Token that allows certain actions to be performed on a DR secondary.                 |
+
+The [transit secrets engine](/vault/docs/secrets/transit) manages a number of 
+different key types and leverages the
+[`keysutil`](https://godoc.org/github.com/hashicorp/vault/sdk/helper/keysutil)
+package to generate keys. It will use the external entropy source for key
+generation.
+
+<Warning>
+
+When you enable the external entropy source, Vault requires connectivity to the
+HSM. If the HSM becomes unreachable for any reason, the transit secrets engine
+can't generate new keys or rotate existing keys.
+
+</Warning>
+
 To use this feature, you must have an active or trial license for Vault
 Enterprise. To start a trial, contact [HashiCorp sales](mailto:sales@hashicorp.com).
 
@@ -38,7 +66,7 @@ These CSPs have been selected from our previous work in [evaluating Vault for co
 FIPS 140-2 guidelines for key storage and key transport](https://www.datocms-assets.com/2885/1510600487-vault_compliance_letter_fips_140-2.pdf)
 and include (but not limited to) the following:
 
-- Vault’s root key
+- Vault's root key
 - Keyring encryption keys
 - Auto Unseal recovery keys
 - TLS private keys for inter-node and inter cluster communication (HA leader, raft, and replication)
@@ -62,8 +90,3 @@ Entropy augmentation is disabled by default. To enable entropy augmentation Vaul
 for a supported seal type.
 
 [configuration]: /vault/docs/configuration
-
-## Tutorial
-
-Refer to the [HSM Integration - Entropy Augmentation](/vault/tutorials/enterprise/hsm-entropy) tutorial
-to learn how to use the Entropy Augmentation function to leverage an external Hardware Security Module to augment system entropy.

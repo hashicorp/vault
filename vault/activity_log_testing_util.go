@@ -36,7 +36,7 @@ func (c *Core) InjectActivityLogDataThisMonth(t *testing.T) map[string]*activity
 			Timestamp:     c.activityLog.clock.Now().Unix(),
 			NonEntity:     i%2 == 0,
 		}
-		c.activityLog.partialMonthClientTracker[er.ClientID] = er
+		c.activityLog.globalPartialMonthClientTracker[er.ClientID] = er
 	}
 
 	if constants.IsEnterprise {
@@ -49,12 +49,12 @@ func (c *Core) InjectActivityLogDataThisMonth(t *testing.T) map[string]*activity
 					Timestamp:     c.activityLog.clock.Now().Unix(),
 					NonEntity:     i%2 == 0,
 				}
-				c.activityLog.partialMonthClientTracker[er.ClientID] = er
+				c.activityLog.globalPartialMonthClientTracker[er.ClientID] = er
 			}
 		}
 	}
 
-	return c.activityLog.partialMonthClientTracker
+	return c.activityLog.globalPartialMonthClientTracker
 }
 
 // GetActiveClients returns the in-memory globalPartialMonthClientTracker and  partialMonthLocalClientTracker from an
@@ -93,11 +93,42 @@ func (c *Core) GetActiveClientsList() []*activity.EntityRecord {
 	return out
 }
 
-// GetCurrentEntities returns the current entity activity log
-func (a *ActivityLog) GetCurrentEntities() *activity.EntityActivityLog {
+// GetActiveLocalClientsList returns the active clients from globalPartialMonthClientTracker in activity log
+func (c *Core) GetActiveGlobalClientsList() []*activity.EntityRecord {
+	out := []*activity.EntityRecord{}
+	c.activityLog.globalFragmentLock.RLock()
+	// add active global clients
+	for _, v := range c.activityLog.globalPartialMonthClientTracker {
+		out = append(out, v)
+	}
+	c.activityLog.globalFragmentLock.RUnlock()
+	return out
+}
+
+// GetActiveLocalClientsList returns the active clients from partialMonthLocalClientTracker in activity log
+func (c *Core) GetActiveLocalClientsList() []*activity.EntityRecord {
+	out := []*activity.EntityRecord{}
+	c.activityLog.localFragmentLock.RLock()
+	// add active global clients
+	for _, v := range c.activityLog.partialMonthLocalClientTracker {
+		out = append(out, v)
+	}
+	c.activityLog.localFragmentLock.RUnlock()
+	return out
+}
+
+// GetCurrentGlobalEntities returns the current clients from currentGlobalSegment in activity log
+func (a *ActivityLog) GetCurrentGlobalEntities() *activity.EntityActivityLog {
 	a.l.RLock()
 	defer a.l.RUnlock()
-	return a.currentSegment.currentClients
+	return a.currentGlobalSegment.currentClients
+}
+
+// GetCurrentLocalEntities returns the current clients from currentLocalSegment in activity log
+func (a *ActivityLog) GetCurrentLocalEntities() *activity.EntityActivityLog {
+	a.l.RLock()
+	defer a.l.RUnlock()
+	return a.currentLocalSegment.currentClients
 }
 
 // WriteToStorage is used to put entity data in storage
@@ -133,8 +164,11 @@ func (a *ActivityLog) SetStandbyEnable(ctx context.Context, enabled bool) {
 // NOTE: AddTokenToFragment is deprecated and can no longer be used, except for
 // testing backward compatibility. Please use AddClientToFragment instead.
 func (a *ActivityLog) AddTokenToFragment(namespaceID string) {
-	a.fragmentLock.Lock()
-	defer a.fragmentLock.Unlock()
+	a.globalFragmentLock.Lock()
+	defer a.globalFragmentLock.Unlock()
+
+	a.localFragmentLock.Lock()
+	defer a.localFragmentLock.Unlock()
 
 	if !a.enabled {
 		return
@@ -142,7 +176,7 @@ func (a *ActivityLog) AddTokenToFragment(namespaceID string) {
 
 	a.createCurrentFragment()
 
-	a.fragment.NonEntityTokens[namespaceID] += 1
+	a.localFragment.NonEntityTokens[namespaceID] += 1
 }
 
 func RandStringBytes(n int) string {
@@ -163,43 +197,63 @@ func (a *ActivityLog) ExpectCurrentSegmentRefreshed(t *testing.T, expectedStart 
 	defer a.l.RUnlock()
 	a.fragmentLock.RLock()
 	defer a.fragmentLock.RUnlock()
-	if a.currentSegment.currentClients == nil {
+	if a.currentGlobalSegment.currentClients == nil {
 		t.Fatalf("expected non-nil currentSegment.currentClients")
 	}
-	if a.currentSegment.currentClients.Clients == nil {
+	if a.currentGlobalSegment.currentClients.Clients == nil {
 		t.Errorf("expected non-nil currentSegment.currentClients.Entities")
 	}
-	if a.currentSegment.tokenCount == nil {
+	if a.currentGlobalSegment.tokenCount == nil {
 		t.Fatalf("expected non-nil currentSegment.tokenCount")
 	}
-	if a.currentSegment.tokenCount.CountByNamespaceID == nil {
+	if a.currentGlobalSegment.tokenCount.CountByNamespaceID == nil {
 		t.Errorf("expected non-nil currentSegment.tokenCount.CountByNamespaceID")
 	}
-	if a.partialMonthClientTracker == nil {
-		t.Errorf("expected non-nil partialMonthClientTracker")
+	if a.currentLocalSegment.currentClients == nil {
+		t.Fatalf("expected non-nil currentSegment.currentClients")
+	}
+	if a.currentLocalSegment.currentClients.Clients == nil {
+		t.Errorf("expected non-nil currentSegment.currentClients.Entities")
+	}
+	if a.currentLocalSegment.tokenCount == nil {
+		t.Fatalf("expected non-nil currentSegment.tokenCount")
+	}
+	if a.currentLocalSegment.tokenCount.CountByNamespaceID == nil {
+		t.Errorf("expected non-nil currentSegment.tokenCount.CountByNamespaceID")
 	}
 	if a.partialMonthLocalClientTracker == nil {
 		t.Errorf("expected non-nil partialMonthLocalClientTracker")
 	}
-	if len(a.currentSegment.currentClients.Clients) > 0 {
-		t.Errorf("expected no current entity segment to be loaded. got: %v", a.currentSegment.currentClients)
+	if a.globalPartialMonthClientTracker == nil {
+		t.Errorf("expected non-nil globalPartialMonthClientTracker")
 	}
-	if len(a.currentSegment.tokenCount.CountByNamespaceID) > 0 {
-		t.Errorf("expected no token counts to be loaded. got: %v", a.currentSegment.tokenCount.CountByNamespaceID)
+	if len(a.currentGlobalSegment.currentClients.Clients) > 0 {
+		t.Errorf("expected no current entity segment to be loaded. got: %v", a.currentGlobalSegment.currentClients)
 	}
-	if len(a.partialMonthClientTracker) > 0 {
-		t.Errorf("expected no active entity segment to be loaded. got: %v", a.partialMonthClientTracker)
+	if len(a.currentLocalSegment.currentClients.Clients) > 0 {
+		t.Errorf("expected no current entity segment to be loaded. got: %v", a.currentLocalSegment.currentClients)
+	}
+	if len(a.currentLocalSegment.tokenCount.CountByNamespaceID) > 0 {
+		t.Errorf("expected no token counts to be loaded. got: %v", a.currentLocalSegment.tokenCount.CountByNamespaceID)
 	}
 	if len(a.partialMonthLocalClientTracker) > 0 {
 		t.Errorf("expected no active entity segment to be loaded. got: %v", a.partialMonthLocalClientTracker)
 	}
+	if len(a.globalPartialMonthClientTracker) > 0 {
+		t.Errorf("expected no active entity segment to be loaded. got: %v", a.globalPartialMonthClientTracker)
+	}
 
 	if verifyTimeNotZero {
-		if a.currentSegment.startTimestamp == 0 {
+		if a.currentGlobalSegment.startTimestamp == 0 {
 			t.Error("bad start timestamp. expected no reset but timestamp was reset")
 		}
-	} else if a.currentSegment.startTimestamp != expectedStart {
-		t.Errorf("bad start timestamp. expected: %v got: %v", expectedStart, a.currentSegment.startTimestamp)
+		if a.currentLocalSegment.startTimestamp == 0 {
+			t.Error("bad start timestamp. expected no reset but timestamp was reset")
+		}
+	} else if a.currentGlobalSegment.startTimestamp != expectedStart {
+		t.Errorf("bad start timestamp. expected: %v got: %v", expectedStart, a.currentGlobalSegment.startTimestamp)
+	} else if a.currentLocalSegment.startTimestamp != expectedStart {
+		t.Errorf("bad start timestamp. expected: %v got: %v", expectedStart, a.currentLocalSegment.startTimestamp)
 	}
 }
 
@@ -218,28 +272,39 @@ func ActiveEntitiesEqual(active []*activity.EntityRecord, test []*activity.Entit
 func (a *ActivityLog) GetStartTimestamp() int64 {
 	a.l.RLock()
 	defer a.l.RUnlock()
-	return a.currentSegment.startTimestamp
+	if a.currentGlobalSegment.startTimestamp != a.currentLocalSegment.startTimestamp {
+		return -1
+	}
+	return a.currentGlobalSegment.startTimestamp
 }
 
 // SetStartTimestamp sets the start timestamp on an activity log
 func (a *ActivityLog) SetStartTimestamp(timestamp int64) {
 	a.l.Lock()
 	defer a.l.Unlock()
-	a.currentSegment.startTimestamp = timestamp
+	a.currentGlobalSegment.startTimestamp = timestamp
+	a.currentLocalSegment.startTimestamp = timestamp
 }
 
 // GetStoredTokenCountByNamespaceID returns the count of tokens by namespace ID
 func (a *ActivityLog) GetStoredTokenCountByNamespaceID() map[string]uint64 {
 	a.l.RLock()
 	defer a.l.RUnlock()
-	return a.currentSegment.tokenCount.CountByNamespaceID
+	return a.currentLocalSegment.tokenCount.CountByNamespaceID
 }
 
-// GetEntitySequenceNumber returns the current entity sequence number
-func (a *ActivityLog) GetEntitySequenceNumber() uint64 {
+// GetGlobalEntitySequenceNumber returns the current entity sequence number
+func (a *ActivityLog) GetGlobalEntitySequenceNumber() uint64 {
 	a.l.RLock()
 	defer a.l.RUnlock()
-	return a.currentSegment.clientSequenceNumber
+	return a.currentGlobalSegment.clientSequenceNumber
+}
+
+// GetLocalEntitySequenceNumber returns the current entity sequence number
+func (a *ActivityLog) GetLocalEntitySequenceNumber() uint64 {
+	a.l.RLock()
+	defer a.l.RUnlock()
+	return a.currentLocalSegment.clientSequenceNumber
 }
 
 // SetEnable sets the enabled flag on the activity log
@@ -282,8 +347,26 @@ func (c *Core) GetActiveLocalFragment() *activity.LogFragment {
 	return c.activityLog.localFragment
 }
 
-func (c *Core) GetActiveFragment() *activity.LogFragment {
-	c.activityLog.fragmentLock.RLock()
-	defer c.activityLog.fragmentLock.RUnlock()
-	return c.activityLog.fragment
+// StoreCurrentSegment is a test only method to create and store
+// segments from fragments. This allows createCurrentSegmentFromFragments to remain
+// private
+func (c *Core) StoreCurrentSegment(ctx context.Context, fragments []*activity.LogFragment, currentSegment *segmentInfo, force bool, storagePathPrefix string) error {
+	return c.activityLog.createCurrentSegmentFromFragments(ctx, fragments, currentSegment, force, storagePathPrefix)
+}
+
+// DeleteLogsAtPath is test helper function deletes all logs at the given path
+func (c *Core) DeleteLogsAtPath(ctx context.Context, t *testing.T, storagePath string, startTime int64) {
+	basePath := storagePath + fmt.Sprint(startTime) + "/"
+	a := c.activityLog
+	segments, err := a.view.List(ctx, basePath)
+	if err != nil {
+		t.Fatalf("could not list path %v", err)
+		return
+	}
+	for _, p := range segments {
+		err = a.view.Delete(ctx, basePath+p)
+		if err != nil {
+			t.Fatalf("could not delete path %v", err)
+		}
+	}
 }

@@ -71,7 +71,14 @@ const (
 	KeyType_HMAC
 	KeyType_AES128_CMAC
 	KeyType_AES256_CMAC
+	KeyType_ML_DSA
 	// If adding to this list please update allTestKeyTypes in policy_test.go
+)
+
+const (
+	ParameterSet_ML_DSA_44 = "44"
+	ParameterSet_ML_DSA_65 = "65"
+	ParameterSet_ML_DSA_87 = "87"
 )
 
 const (
@@ -181,7 +188,7 @@ func (kt KeyType) DecryptionSupported() bool {
 
 func (kt KeyType) SigningSupported() bool {
 	switch kt {
-	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_ED25519, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY:
+	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_ED25519, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY, KeyType_ML_DSA:
 		return true
 	}
 	return false
@@ -228,6 +235,15 @@ func (kt KeyType) HMACSupported() bool {
 		return false
 	default:
 		return true
+	}
+}
+
+func (kt KeyType) IsPQC() bool {
+	switch kt {
+	case KeyType_ML_DSA:
+		return true
+	default:
+		return false
 	}
 }
 
@@ -278,6 +294,8 @@ func (kt KeyType) String() string {
 		return "aes128-cmac"
 	case KeyType_AES256_CMAC:
 		return "aes256-cmac"
+	case KeyType_ML_DSA:
+		return "ml-dsa"
 	}
 
 	return "[unknown]"
@@ -290,6 +308,8 @@ type KeyData struct {
 
 // KeyEntry stores the key and metadata
 type KeyEntry struct {
+	entKeyEntry
+
 	// AES or some other kind that is a pure byte slice like ED25519
 	Key []byte `json:"key"`
 
@@ -325,7 +345,7 @@ type KeyEntry struct {
 }
 
 func (ke *KeyEntry) IsPrivateKeyMissing() bool {
-	if ke.RSAKey != nil || ke.EC_D != nil || len(ke.Key) != 0 || len(ke.ManagedKeyUUID) != 0 {
+	if ke.RSAKey != nil || ke.EC_D != nil || len(ke.Key) != 0 || len(ke.ManagedKeyUUID) != 0 || !ke.IsEntPrivateKeyMissing() {
 		return false
 	}
 
@@ -395,6 +415,9 @@ type PolicyConfig struct {
 	// StoragePrefix is used to add a prefix when storing and retrieving the
 	// policy object.
 	StoragePrefix string
+
+	// ParameterSet indicates the parameter set to use with ML-DSA and SLH-DSA keys
+	ParameterSet string
 }
 
 // NewPolicy takes a policy config and returns a Policy with those settings.
@@ -412,6 +435,7 @@ func NewPolicy(config PolicyConfig) *Policy {
 		AllowPlaintextBackup: config.AllowPlaintextBackup,
 		VersionTemplate:      config.VersionTemplate,
 		StoragePrefix:        config.StoragePrefix,
+		ParameterSet:         config.ParameterSet,
 	}
 }
 
@@ -542,6 +566,9 @@ type Policy struct {
 
 	// AllowImportedKeyRotation indicates whether an imported key may be rotated by Vault
 	AllowImportedKeyRotation bool
+
+	// ParameterSet indicates the parameter set to use with ML-DSA and SLH-DSA keys
+	ParameterSet string
 }
 
 func (p *Policy) Lock(exclusive bool) {
@@ -1355,20 +1382,8 @@ func (p *Policy) SignWithOptions(ver int, context, input []byte, options *Signin
 		default:
 			return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported rsa signature algorithm %s", sigAlgorithm)}
 		}
-
-	case KeyType_MANAGED_KEY:
-		keyEntry, err := p.safeGetKeyEntry(ver)
-		if err != nil {
-			return nil, err
-		}
-
-		sig, err = p.signWithManagedKey(options, keyEntry, input)
-		if err != nil {
-			return nil, err
-		}
-
 	default:
-		return nil, fmt.Errorf("unsupported key type %v", p.Type)
+		sig, err = entSignWithOptions(p, input, ver, options)
 	}
 
 	// Convert to base64
@@ -1565,16 +1580,8 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 
 		return err == nil, nil
 
-	case KeyType_MANAGED_KEY:
-		keyEntry, err := p.safeGetKeyEntry(ver)
-		if err != nil {
-			return false, err
-		}
-
-		return p.verifyWithManagedKey(options, keyEntry, input, sigBytes)
-
 	default:
-		return false, errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
+		return entVerifySignatureWithOptions(p, input, sigBytes, ver, options)
 	}
 }
 
@@ -1824,6 +1831,11 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 		}
 
 		entry.RSAPublicKey = entry.RSAKey.Public().(*rsa.PublicKey)
+
+	default:
+		if err := entRotateInMemory(p, &entry, randReader); err != nil {
+			return err
+		}
 	}
 
 	if p.ConvergentEncryption {

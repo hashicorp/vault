@@ -60,7 +60,7 @@ func (b *backend) pathKeys() *framework.Path {
 				Description: `
 The type of key to create. Currently, "aes128-gcm96" (symmetric), "aes256-gcm96" (symmetric), "ecdsa-p256"
 (asymmetric), "ecdsa-p384" (asymmetric), "ecdsa-p521" (asymmetric), "ed25519" (asymmetric), "rsa-2048" (asymmetric), "rsa-3072"
-(asymmetric), "rsa-4096" (asymmetric) are supported.  Defaults to "aes256-gcm96".
+(asymmetric), "rsa-4096" (asymmetric), "ml-dsa" (asymmetric) are supported.  Defaults to "aes256-gcm96".
 `,
 			},
 
@@ -130,6 +130,11 @@ key.`,
 				Type:        framework.TypeString,
 				Description: "The UUID of the managed key to use for this transit key",
 			},
+			"parameter_set": {
+				Type: framework.TypeString,
+				Description: `The parameter set to use. Applies to ML-DSA and SLH-DSA key types.
+For ML-DSA key types, valid values are 44, 65, or 87.`,
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -178,6 +183,7 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 	autoRotatePeriod := time.Second * time.Duration(d.Get("auto_rotate_period").(int))
 	managedKeyName := d.Get("managed_key_name").(string)
 	managedKeyId := d.Get("managed_key_id").(string)
+	parameterSet := d.Get("parameter_set").(string)
 
 	if autoRotatePeriod != 0 && autoRotatePeriod < time.Hour {
 		return logical.ErrorResponse("auto rotate period must be 0 to disable or at least an hour"), nil
@@ -227,6 +233,15 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		polReq.KeyType = keysutil.KeyType_AES128_CMAC
 	case "aes256-cmac":
 		polReq.KeyType = keysutil.KeyType_AES256_CMAC
+	case "ml-dsa":
+		polReq.KeyType = keysutil.KeyType_ML_DSA
+		if parameterSet != keysutil.ParameterSet_ML_DSA_44 &&
+			parameterSet != keysutil.ParameterSet_ML_DSA_65 &&
+			parameterSet != keysutil.ParameterSet_ML_DSA_87 {
+			return logical.ErrorResponse(fmt.Sprintf("invalid parameter set %s for key type %s", parameterSet, keyType)), logical.ErrInvalidRequest
+		}
+
+		polReq.ParameterSet = parameterSet
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
 	}
@@ -251,6 +266,10 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 
 	if polReq.KeyType.CMACSupported() && !constants.IsEnterprise {
 		return logical.ErrorResponse(ErrCmacEntOnly.Error()), logical.ErrInvalidRequest
+	}
+
+	if polReq.KeyType.IsPQC() && !constants.IsEnterprise {
+		return logical.ErrorResponse(ErrPQCEntOnly.Error()), logical.ErrInvalidRequest
 	}
 
 	p, upserted, err := b.GetPolicy(ctx, polReq, b.GetRandomReader())
@@ -370,6 +389,10 @@ func (b *backend) formatKeyPolicy(p *keysutil.Policy, context []byte) (*logical.
 		}
 	}
 
+	if p.ParameterSet != "" {
+		resp.Data["parameter_set"] = p.ParameterSet
+	}
+
 	switch p.Type {
 	case keysutil.KeyType_AES128_GCM96, keysutil.KeyType_AES256_GCM96, keysutil.KeyType_ChaCha20_Poly1305:
 		retKeys := map[string]int64{}
@@ -378,7 +401,7 @@ func (b *backend) formatKeyPolicy(p *keysutil.Policy, context []byte) (*logical.
 		}
 		resp.Data["keys"] = retKeys
 
-	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521, keysutil.KeyType_ED25519, keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096:
+	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521, keysutil.KeyType_ED25519, keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096, keysutil.KeyType_ML_DSA:
 		retKeys := map[string]map[string]interface{}{}
 		for k, v := range p.Keys {
 			key := asymKey{
@@ -441,6 +464,8 @@ func (b *backend) formatKeyPolicy(p *keysutil.Policy, context []byte) (*logical.
 					return nil, err
 				}
 				key.PublicKey = pubKey
+			case keysutil.KeyType_ML_DSA:
+				key.Name = "ml-dsa-" + p.ParameterSet
 			}
 
 			retKeys[k] = structs.New(key).Map()

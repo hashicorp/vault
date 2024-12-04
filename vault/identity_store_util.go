@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"testing"
 	"time"
 
 	metrics "github.com/armon/go-metrics"
@@ -218,12 +219,20 @@ func (i *IdentityStore) loadCachedEntitiesOfLocalAliases(ctx context.Context) er
 	i.logger.Debug("cached entities of local alias entries", "num_buckets", len(existing))
 
 	// Make the channels used for the worker pool
-	broker := make(chan string)
+	broker := make(chan int)
 	quit := make(chan bool)
 
-	// Buffer these channels to prevent deadlocks
-	errs := make(chan error, len(existing))
-	result := make(chan *storagepacker.Bucket, len(existing))
+	// We want to process the buckets in deterministic order so that duplicate
+	// merging is deterministic. We still want to load in parallel though so
+	// create a slice of result channels, one for each bucket. We need each result
+	// and err chan to be 1 buffered so we can leave a result there even if the
+	// processing loop is blocking on an earlier bucket still.
+	results := make([]chan *storagepacker.Bucket, len(existing))
+	errs := make([]chan error, len(existing))
+	for j := range existing {
+		results[j] = make(chan *storagepacker.Bucket, 1)
+		errs[j] = make(chan error, 1)
+	}
 
 	// Use a wait group
 	wg := &sync.WaitGroup{}
@@ -236,20 +245,21 @@ func (i *IdentityStore) loadCachedEntitiesOfLocalAliases(ctx context.Context) er
 
 			for {
 				select {
-				case key, ok := <-broker:
+				case idx, ok := <-broker:
 					// broker has been closed, we are done
 					if !ok {
 						return
 					}
+					key := existing[idx]
 
 					bucket, err := i.localAliasPacker.GetBucket(ctx, localAliasesBucketsPrefix+key)
 					if err != nil {
-						errs <- err
+						errs[idx] <- err
 						continue
 					}
 
 					// Write results out to the result channel
-					result <- bucket
+					results[idx] <- bucket
 
 				// quit early
 				case <-quit:
@@ -263,7 +273,7 @@ func (i *IdentityStore) loadCachedEntitiesOfLocalAliases(ctx context.Context) er
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		for j, key := range existing {
+		for j := range existing {
 			if j%500 == 0 {
 				i.logger.Debug("cached entities of local aliases loading", "progress", j)
 			}
@@ -273,7 +283,7 @@ func (i *IdentityStore) loadCachedEntitiesOfLocalAliases(ctx context.Context) er
 				return
 
 			default:
-				broker <- key
+				broker <- j
 			}
 		}
 
@@ -288,16 +298,16 @@ func (i *IdentityStore) loadCachedEntitiesOfLocalAliases(ctx context.Context) er
 		i.logger.Info("cached entities of local aliases restored")
 	}()
 
-	// Restore each key by pulling from the result chan
-	for j := 0; j < len(existing); j++ {
+	// Restore each key by pulling from the slice of result chans
+	for j := range existing {
 		select {
-		case err := <-errs:
+		case err := <-errs[j]:
 			// Close all go routines
 			close(quit)
 
 			return err
 
-		case bucket := <-result:
+		case bucket := <-results[j]:
 			// If there is no entry, nothing to restore
 			if bucket == nil {
 				continue
@@ -338,13 +348,24 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 	i.logger.Debug("entities collected", "num_existing", len(existing))
 
 	duplicatedAccessors := make(map[string]struct{})
-	// Make the channels used for the worker pool
-	broker := make(chan string)
+	// Make the channels used for the worker pool. We send the index into existing
+	// so that we can keep results in the same order as inputs. Note that this is
+	// goroutine safe as long as we never mutate existing again in this method
+	// which we don't.
+	broker := make(chan int)
 	quit := make(chan bool)
 
-	// Buffer these channels to prevent deadlocks
-	errs := make(chan error, len(existing))
-	result := make(chan *storagepacker.Bucket, len(existing))
+	// We want to process the buckets in deterministic order so that duplicate
+	// merging is deterministic. We still want to load in parallel though so
+	// create a slice of result channels, one for each bucket. We need each result
+	// and err chan to be 1 buffered so we can leave a result there even if the
+	// processing loop is blocking on an earlier bucket still.
+	results := make([]chan *storagepacker.Bucket, len(existing))
+	errs := make([]chan error, len(existing))
+	for j := range existing {
+		results[j] = make(chan *storagepacker.Bucket, 1)
+		errs[j] = make(chan error, 1)
+	}
 
 	// Use a wait group
 	wg := &sync.WaitGroup{}
@@ -357,20 +378,21 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 
 			for {
 				select {
-				case key, ok := <-broker:
+				case idx, ok := <-broker:
 					// broker has been closed, we are done
 					if !ok {
 						return
 					}
+					key := existing[idx]
 
 					bucket, err := i.entityPacker.GetBucket(ctx, storagepacker.StoragePackerBucketsPrefix+key)
 					if err != nil {
-						errs <- err
+						errs[idx] <- err
 						continue
 					}
 
 					// Write results out to the result channel
-					result <- bucket
+					results[idx] <- bucket
 
 				// quit early
 				case <-quit:
@@ -384,17 +406,13 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		for j, key := range existing {
-			if j%500 == 0 {
-				i.logger.Debug("entities loading", "progress", j)
-			}
-
+		for j := range existing {
 			select {
 			case <-quit:
 				return
 
 			default:
-				broker <- key
+				broker <- j
 			}
 		}
 
@@ -404,14 +422,14 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 
 	// Restore each key by pulling from the result chan
 LOOP:
-	for j := 0; j < len(existing); j++ {
+	for j := range existing {
 		select {
-		case err = <-errs:
+		case err = <-errs[j]:
 			// Close all go routines
 			close(quit)
 			break LOOP
 
-		case bucket := <-result:
+		case bucket := <-results[j]:
 			// If there is no entry, nothing to restore
 			if bucket == nil {
 				continue
@@ -2610,4 +2628,26 @@ func (i *IdentityStore) countEntitiesByMountAccessor(ctx context.Context) (map[s
 	}
 
 	return byMountAccessor, nil
+}
+
+func makeEntityForPacker(_t *testing.T, id string, p *storagepacker.StoragePacker) *identity.Entity {
+	return &identity.Entity{
+		ID:          id,
+		Name:        id,
+		NamespaceID: namespace.RootNamespaceID,
+		BucketKey:   p.BucketKey(id),
+	}
+}
+
+func attachAlias(t *testing.T, e *identity.Entity, name string, me *MountEntry) *identity.Alias {
+	t.Helper()
+	a := &identity.Alias{
+		ID:            name,
+		Name:          name,
+		CanonicalID:   e.ID,
+		MountType:     me.Type,
+		MountAccessor: me.Accessor,
+	}
+	e.UpsertAlias(a)
+	return a
 }

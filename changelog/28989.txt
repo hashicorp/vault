@@ -1,0 +1,3 @@
+```release-note:bug
+secret/db: Update static role rotation to generate a new password after 2 failed attempts.
+```

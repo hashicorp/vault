@@ -572,6 +572,34 @@ scenario "autopilot" {
     }
   }
 
+  step "verify_log_secrets" {
+    skip_step = !var.vault_enable_audit_devices || !var.verify_log_secrets
+
+    description = global.description.verify_log_secrets
+    module      = module.verify_log_secrets
+    depends_on = [
+      step.verify_secrets_engines_read,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_audit_log_secrets,
+      quality.vault_journal_secrets,
+      quality.vault_radar_index_create,
+      quality.vault_radar_scan_file,
+    ]
+
+    variables {
+      audit_log_file_path = step.create_vault_cluster.audit_device_file_path
+      leader_host         = step.get_updated_vault_cluster_ips.leader_host
+      vault_addr          = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
+      vault_root_token    = step.create_vault_cluster.root_token
+    }
+  }
+
   step "raft_remove_peers" {
     description = <<-EOF
       Remove the nodes that were running the prior version of Vault from the raft cluster
