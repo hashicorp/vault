@@ -1,0 +1,3 @@
+```release-note:bug
+core/metrics: Fix unlocked mounts read for usage reporting.
+```

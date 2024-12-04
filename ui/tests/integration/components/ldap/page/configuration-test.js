@@ -68,7 +68,7 @@ module('Integration | Component | ldap | Page::Configuration', function (hooks) 
 
     await this.renderComponent();
 
-    assert.dom('.title svg').hasClass('flight-icon-folder-users', 'LDAP icon renders in title');
+    assert.dom('.title svg').hasClass('hds-icon-folder-users', 'LDAP icon renders in title');
     assert.dom('.title').hasText('ldap-test', 'Mount path renders in title');
     assert
       .dom(selectors.rotateAction)

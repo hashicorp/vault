@@ -166,6 +166,7 @@ func (c *Core) startRaftBackend(ctx context.Context) (retErr error) {
 			ClusterListener:     c.getClusterListener(),
 			StartAsLeader:       creating,
 			EffectiveSDKVersion: c.effectiveSDKVersion,
+			RemovedCallback:     c.shutdownRemovedNode,
 		}); err != nil {
 			return err
 		}
@@ -1417,6 +1418,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess seal.Access, r
 	opts := raft.SetupOpts{
 		TLSKeyring:      answerResp.Data.TLSKeyring,
 		ClusterListener: c.getClusterListener(),
+		RemovedCallback: c.shutdownRemovedNode,
 	}
 	err = raftBackend.SetupCluster(ctx, opts)
 	if err != nil {
@@ -1472,7 +1474,8 @@ func (c *Core) RaftBootstrap(ctx context.Context, onInit bool) error {
 	}
 
 	raftOpts := raft.SetupOpts{
-		StartAsLeader: true,
+		StartAsLeader:   true,
+		RemovedCallback: c.shutdownRemovedNode,
 	}
 
 	if !onInit {

@@ -50,6 +50,7 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/osutil"
+	"github.com/hashicorp/vault/helper/trace"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -528,6 +529,8 @@ type Core struct {
 	rpcClientConn *grpc.ClientConn
 	// The grpc forwarding client
 	rpcForwardingClient *forwardingClient
+	// The time of the last successful request forwarding heartbeat
+	rpcLastSuccessfulHeartbeat *atomic.Value
 	// The UUID used to hold the leader lock. Only set on active node
 	leaderUUID string
 
@@ -1091,6 +1094,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		echoDuration:                   uberAtomic.NewDuration(0),
 		activeNodeClockSkewMillis:      uberAtomic.NewInt64(0),
 		periodicLeaderRefreshInterval:  conf.PeriodicLeaderRefreshInterval,
+		rpcLastSuccessfulHeartbeat:     new(atomic.Value),
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
@@ -2704,6 +2708,10 @@ func (c *Core) runUnsealSetupForPrimary(ctx context.Context, logger log.Logger) 
 // requires the Vault to be unsealed such as mount tables, logical backends,
 // credential stores, etc.
 func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc, unsealer UnsealStrategy) (retErr error) {
+	if stopTrace := c.tracePostUnsealIfEnabled(); stopTrace != nil {
+		defer stopTrace()
+	}
+
 	defer metrics.MeasureSince([]string{"core", "post_unseal"}, time.Now())
 
 	// Clear any out
@@ -2819,6 +2827,41 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 	return nil
 }
 
+// tracePostUnsealIfEnabled checks if post-unseal tracing is enabled in the server
+// config and starts a go trace if it is, returning a stop function to be called once
+// the post-unseal process is complete.
+func (c *Core) tracePostUnsealIfEnabled() (stop func()) {
+	// use rawConfig to allow config hot-reload of EnablePostUnsealTrace via SIGHUP
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		c.logger.Warn("failed to get raw config to check enable_post_unseal_trace")
+		return nil
+	}
+
+	if !conf.(*server.Config).EnablePostUnsealTrace {
+		return nil
+	}
+
+	dir := conf.(*server.Config).PostUnsealTraceDir
+
+	traceFile, stopTrace, err := trace.StartDebugTrace(dir, "post-unseal")
+	if err != nil {
+		c.logger.Warn("failed to start post-unseal trace", "error", err)
+		return nil
+	}
+
+	c.logger.Info("post-unseal trace started", "file", traceFile)
+
+	return func() {
+		err := stopTrace()
+		if err != nil {
+			c.logger.Warn("failure when stopping post-unseal trace", "error", err)
+			return
+		}
+		c.logger.Info("post-unseal trace completed", "file", traceFile)
+	}
+}
+
 // preSeal is invoked before the barrier is sealed, allowing
 // for any state teardown required.
 func (c *Core) preSeal() error {
@@ -2855,13 +2898,16 @@ func (c *Core) preSeal() error {
 	if err := c.teardownAudits(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down audits: %w", err))
 	}
-	if err := c.stopExpiration(); err != nil {
-		result = multierror.Append(result, fmt.Errorf("error stopping expiration: %w", err))
-	}
+	// Ensure that the ActivityLog and CensusManager are both completely torn
+	// down before stopping the ExpirationManager. This ordering is critical,
+	// due to a tight coupling between the ActivityLog, CensusManager, and
+	// ExpirationManager for product usage reporting.
 	c.stopActivityLog()
-	// Clean up census on seal
 	if err := c.teardownCensusManager(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down reporting agent: %w", err))
+	}
+	if err := c.stopExpiration(); err != nil {
+		result = multierror.Append(result, fmt.Errorf("error stopping expiration: %w", err))
 	}
 	if err := c.teardownCredentials(context.Background()); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down credentials: %w", err))
@@ -4585,4 +4631,10 @@ func (c *Core) IsRemovedFromCluster() (removed, ok bool) {
 	}
 
 	return removableNodeHA.IsRemoved(), true
+}
+
+func (c *Core) shutdownRemovedNode() {
+	go func() {
+		c.ShutdownCoreError(errors.New("node has been removed from cluster"))
+	}()
 }

@@ -649,6 +649,37 @@ scenario "upgrade" {
     }
   }
 
+  step "verify_log_secrets" {
+    // Only verify log secrets if the audit devices are turned on and we've enabled the check (as
+    // it requires a radar license). Some older versions have known issues so we'll skip this step
+    // in the event that we're upgrading from them, see VAULT-30557 for more information.
+    skip_step = !var.vault_enable_audit_devices || !var.verify_log_secrets || semverconstraint(var.vault_upgrade_initial_version, "=1.17.3 || =1.17.4 || =1.16.7 || =1.16.8")
+
+    description = global.description.verify_log_secrets
+    module      = module.verify_log_secrets
+    depends_on = [
+      step.verify_secrets_engines_read,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_audit_log_secrets,
+      quality.vault_journal_secrets,
+      quality.vault_radar_index_create,
+      quality.vault_radar_scan_file,
+    ]
+
+    variables {
+      audit_log_file_path = step.create_vault_cluster.audit_device_file_path
+      leader_host         = step.get_updated_vault_cluster_ips.leader_host
+      vault_addr          = step.create_vault_cluster.api_addr_localhost
+      vault_root_token    = step.create_vault_cluster.root_token
+    }
+  }
+
   step "verify_raft_auto_join_voter" {
     description = global.description.verify_raft_cluster_all_nodes_are_voters
     skip_step   = matrix.backend != "raft"

@@ -251,6 +251,10 @@
           {
             "title": "Autopilot",
             "path": "concepts/integrated-storage/autopilot"
+          },
+          {
+            "title": "Migration checklist",
+            "path": "concepts/integrated-storage/migration-checklist"
           }
         ]
       },
@@ -1260,7 +1264,7 @@
             ]
           },
           {
-            "title": "Sinks",
+            "title": "Token sinks",
             "routes": [
               {
                 "title": "File",
@@ -1603,6 +1607,10 @@
                     "path": "secrets/kv/kv-v2/cookbook/read-data"
                   },
                   {
+                    "title": "Read subkeys",
+                    "path": "secrets/kv/kv-v2/cookbook/read-subkey"
+                  },
+                  {
                     "title": "Set max data versions",
                     "path": "secrets/kv/kv-v2/cookbook/max-versions"
                   },
@@ -1864,7 +1872,7 @@
     ]
   },
   {
-    "title": "Auth Methods",
+    "title": "AuthN methods",
     "routes": [
       {
         "title": "Overview",
@@ -1874,11 +1882,11 @@
         "title": "AppRole",
         "routes": [
           {
-            "title": "Overview",
+            "title": "Use AppRole authN",
             "path": "auth/approle"
           },
           {
-            "title": "Recommended pattern",
+            "title": "AppRole best practices",
             "path": "auth/approle/approle-pattern"
           }
         ]
@@ -1911,14 +1919,14 @@
         "title": "JWT/OIDC",
         "routes": [
           {
-            "title": "Overview",
+            "title": "Use JWT/OIDC",
             "path": "auth/jwt"
           },
           {
-            "title": "OIDC Providers",
+            "title": "OIDC providers",
             "routes": [
               {
-                "title": "Overview",
+                "title": "OIDC provider list",
                 "path": "auth/jwt/oidc-providers"
               },
               {
@@ -1962,7 +1970,7 @@
                 "path": "auth/jwt/oidc-providers/secureauth"
               },
               {
-                "title": "IBM ISAM",
+                "title": "IBM Verify",
                 "path": "auth/jwt/oidc-providers/ibmisam"
               }
             ]
@@ -1985,11 +1993,11 @@
         "title": "Login MFA",
         "routes": [
           {
-            "title": "Overview",
+            "title": "Setup login MFA",
             "path": "auth/login-mfa"
           },
           {
-            "title": "FAQ",
+            "title": "Login MFA FAQ",
             "path": "auth/login-mfa/faq"
           }
         ]
@@ -2007,7 +2015,7 @@
         "path": "auth/radius"
       },
       {
-        "title": "SAML",
+        "title": "Use SAML authentication",
         "badge": {
           "text": "ENTERPRISE",
           "type": "outlined",
@@ -2015,7 +2023,7 @@
         },
         "routes": [
           {
-            "title": "Overview",
+            "title": "Set up SAML authN",
             "path": "auth/saml"
           },
           {

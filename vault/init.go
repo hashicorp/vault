@@ -62,7 +62,7 @@ func (c *Core) InitializeRecovery(ctx context.Context) error {
 		return raftStorage.StartRecoveryCluster(context.Background(), raft.Peer{
 			ID:      raftStorage.NodeID(),
 			Address: parsedClusterAddr.Host,
-		})
+		}, c.shutdownRemovedNode)
 	})
 
 	return nil

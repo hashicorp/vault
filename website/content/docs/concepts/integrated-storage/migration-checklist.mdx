@@ -1,0 +1,180 @@
+---
+layout: docs
+page_title: Migration checklist
+description: Use this checklist for decision making related to migrating your Vault deployment to Integrated Storage.
+---
+
+# Migration checklist
+
+<Tip title="This is a decision-making checklist">
+
+The purpose of this checklist is not to walk you through the storage
+migration steps. This content provides a quick self-check whether it is your
+best interest to migrate your Vault storage from an external system to
+Integrated Storage.
+
+</Tip>
+
+## Who should use this checklist?
+
+Integrated Storage is a recommended storage option, made available in
+Vault 1.4. Vault continues to also support other storage solutions
+like Consul.
+
+You should use this checklist if you are operating a Vault deployment backed
+by external storage like Consul, and you are considering migration to
+Integrated Storage.
+
+## Understand architectural differences
+
+It is important that you understand the differences between operating Vault
+with external storage and operating with Integrated Storage. The following
+sections detail key differences in architecture between Vault with Consul
+storage, and Vault with Integrated Storage to help inform your decision.
+
+### Reference architecture with Consul
+
+The recommended number of Vault instances is **3** in a cluster which connects
+to a Consul cluster which may have **5** or more nodes as shown in the diagram.
+
+A total of 8 virtual machines hosts this Vault highly available architecture.
+
+<ImageConfig hideBorder>
+
+![Reference Diagram](/img/diagram-vault-ra-3-az.png)
+
+</ImageConfig>
+
+The processing requirements depend on the encryption and messaging workloads.
+Memory requirements are dependant on the total size of secrets stored in
+memory. The Vault server itself has minimal storage requirements, but 
+the Consul nodes should have a high-performance physical storage system.
+
+### Reference architecture with Integrated Storage
+
+The recommended number of Vault instances is **5** in a cluster. In a single HA
+cluster, all Vault nodes share the data while an active node holds the lock;
+therefore, only the active node has write access. To achieve n-2 redundancy,
+(meaning that the cluster can still function after losing 2 nodes),
+an ideal size for a Vault HA cluster is 5 nodes.
+
+<Tip title="More deployment details in the documentation">
+
+Refer to the [Integrated
+Storage](/vault/docs/internals/integrated-storage#deployment-table)
+documentation for more deployment details.
+
+</Tip>
+
+<ImageConfig hideBorder>
+
+![Reference Diagram Details](/img/diagram-vault-integrated-ra-3_az.png)
+
+</ImageConfig>
+
+Because the data gets persisted on the same host, the Vault server should be
+hosted on a relatively high-performance hard disk system.
+
+## Consul vs. Integrated Storage
+
+The Integrated Storage eliminates the need for external storage; therefore,
+Vault is the only software you need to stand up a cluster. This indicates that
+the host machine must have disk capacity in an amount equal or
+greater to that of the existing external storage backend.
+
+### System requirements comparison
+
+The fundamental difference between Vault's Integrated Storage and Consul is
+that the Integrated Storage stores everything on disk while [Consul
+KV](/consul/docs/dynamic-app-config/kv) stores everything in its memory
+which impacts the host's RAM.
+
+#### Machine sizes for Vault - Consul as its storage backend
+
+It is recommended to avoid hosting Consul on an instance with burstable CPU.
+
+| Size  | CPU      | Memory       | Disk  | Typical Cloud Instance Types              |
+| ----- | -------- | ------------ | ----- | ----------------------------------------- |
+| Small | 2 core   | 4-8 GB RAM   | 25 GB | **AWS:** m5.large                         |
+|       |          |              |       | **Azure:** Standard_D2_v3                 |
+|       |          |              |       | **GCE:** n1-standard-2, n1-standard-4     |
+| Large | 4-8 core | 16-32 GB RAM | 50 GB | **AWS:** m5.xlarge, m5.2xlarge            |
+|       |          |              |       | **Azure:** Standard_D4_v3, Standard_D8_v3 |
+|       |          |              |       | **GCE:** n1-standard-8, n1-standard-16    |
+
+#### Machine sizes for Vault with Integrated Storage
+
+| Size  | CPU      | Memory       | Disk   | Typical Cloud Instance Types               |
+| ----- | -------- | ------------ | ------ | ------------------------------------------ |
+| Small | 2 core   | 8-16 GB RAM  | 100 GB | **AWS:** m5.large, m5.xlarge               |
+|       |          |              |        | **Azure:** Standard_D2_v3, Standard_D4_v3  |
+|       |          |              |        | **GCE:** n2-standard-2, n2-standard-4      |
+| Large | 4-8 core | 32-64 GB RAM | 200 GB | **AWS:** m5.2xlarge, m5.4xlarge            |
+|       |          |              |        | **Azure:** Standard_D8_v3, Standard_D16_v3 |
+|       |          |              |        | **GCE:** n2-standard-8, n2-standard-16     |
+
+If many secrets are being generated or rotated frequently, this information will
+need to be flushed to the disk often. Therefore, the infrastructure should have
+a relatively high-performance hard disk system when using the integrated
+storage.
+
+<Note title="A note about the importance of IOPS">
+
+ Vault's Integrated Storage is disk-bound; therefore, care should be taken when planning storage volume size and performance. For cloud providers, IOPS can be dependent on volume size and/or provisioned IOPS. It is recommended to provision IOPS and avoid burstable IOPS. Monitoring of IOPS performance should be implemented in order to tune the storage volume to the IOPS load.
+
+</Note>
+
+### Performance considerations
+
+Because Consul KV is memory-bound, it is necessary to take a snapshot frequently.
+However, Vault's Integrated Storage persists everything on the disk which eliminates
+the need for such frequent snapshot operations. Take snapshots to back up the data
+so that you can restore them in case of data loss. This reduces the performance cost
+introduced by the frequent snapshot operations.
+
+In considering disk performance, since Vault data changes are immediately written to disk,
+rather than in batched snapshots as Consul does, it is important to monitor IOPS as well
+as disk queues to limit storage bottlenecks.
+
+
+### Inspect Vault data
+
+Inspection of Vault data differs considerably from the `consul kv` commands used
+to inspect Consul's KV store.
+Consult the [Inspect Data in Integrated Storage](/vault/tutorials/monitoring/inspect-data-integrated-storage)
+tutorial to learn more about querying Integrated Storage data.
+
+### Summary
+
+The table below highlights the differences between Consul and integrated
+storage.
+
+| Consideration       | Consul as storage backend                                                  | Vault Integrated Storage                                                                     |
+| ------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| System requirement  | Memory optimized machine                                                   | Storage optimized high IOPS machine                                                          |
+| Data snapshot       | Frequent snapshots                                                         | Normal data backup strategy                                                                  |
+| Snapshot automation | Snapshot agent (**Consul Enterprise only**)                                | Automatic snapshot (**Vault Enterprise v1.6.0 and later**)                                   |
+| Data inspection     | [Online, use `consul kv` command](/vault/tutorials/monitoring/inspecting-data-consul) | [Offline, requires using recovery mode](/vault/tutorials/monitoring/inspect-data-integrated-storage) |
+| Autopilot           | Supported                                                                  | Supported (**Vault 1.7.0 and later**)                                  |
+
+## Self-check questions
+
+- [ ] Where is the product expertise?
+  - [ ] Do you already have Consul expertise?
+  - [ ] Are you concerned about lack of Consul knowledge?
+- [ ] Do you experience any technical issues with Consul?
+- [ ] What motivates the data migration from the current storage to Integrated Storage?
+  - [ ] Reduce the operational overhead?
+  - [ ] Reduce the number of machines to run?
+  - [ ] Reduce the cloud infrastructure cost?
+- [ ] Do you have a staging environment where you can run production loads and verify that everything works as you expect?
+- [ ] Have you thought through the storage backup process or workflow after migrating to the Integrated Storage?
+- [ ] Do you currently rely heavily on using Consul to inspect Vault data?
+
+## Tutorials
+
+If you are ready to migrate the current storage backend to Integrated Storage,
+refer to the [Storage Migration Tutorial - Consul to Integrated Storage](/vault/tutorials/raft/raft-migration).
+
+To deploy a new cluster with Integrated Storage, refer to the [Vault HA Cluster
+with Integrated Storage](/vault/tutorials/raft/raft-storage) tutorial.

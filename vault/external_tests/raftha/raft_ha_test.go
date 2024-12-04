@@ -177,9 +177,6 @@ func testRaftHARecoverCluster(t *testing.T, physBundle *vault.PhysicalBackendBun
 	_, err = leaderClient.Logical().Write("kv/data/test_known_data", kvData)
 	require.NoError(t, err)
 
-	// We delete the current cluster. We keep the storage backend so we can recover the cluster
-	cluster.Cleanup()
-
 	// We now have a raft HA cluster with a KVv2 backend enabled and a test data.
 	// We're now going to delete the cluster and create a new raft HA cluster with the same backend storage
 	// and ensure we can recover to a working vault cluster and don't lose the data from the backend storage.
@@ -219,6 +216,11 @@ func testRaftHARecoverCluster(t *testing.T, physBundle *vault.PhysicalBackendBun
 	dataAsMap := data.(map[string]interface{})
 	require.NotNil(t, dataAsMap)
 	require.Equal(t, "awesome", dataAsMap["kittens"])
+
+	// Ensure no writes are happening before we try to clean it up, to prevent
+	// issues deleting the files.
+	clusterRestored.EnsureCoresSealed(t)
+	clusterRestored.Cleanup()
 }
 
 func TestRaft_HA_ExistingCluster(t *testing.T) {

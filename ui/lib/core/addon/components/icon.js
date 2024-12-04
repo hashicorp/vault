@@ -34,8 +34,8 @@ export default class IconComponent extends Component {
     return this.args.size || '16';
   }
 
-  // favor flight icon set and fall back to structure icons if not found
-  get isFlightIcon() {
+  // favor HDS icon set and fall back to structure icons if not found
+  get isHdsIcon() {
     return this.args.name ? flightIconNames.includes(this.args.name) : false;
   }
 
