@@ -25,7 +25,7 @@ resource "enos_remote_exec" "pki_verify_certificates" {
   for_each = var.hosts
 
   environment = {
-    MOUNT             = local.pki_mount
+    MOUNT             = "pki_secret"
     VAULT_ADDR        = var.vault_addr
     VAULT_INSTALL_DIR = var.vault_install_dir
     VAULT_TOKEN       = var.vault_root_token
