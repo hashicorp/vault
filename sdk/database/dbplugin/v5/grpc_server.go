@@ -290,25 +290,35 @@ func (g *gRPCServer) Type(ctx context.Context, _ *proto.Empty) (*proto.TypeRespo
 
 func (g *gRPCServer) Close(ctx context.Context, _ *proto.Empty) (*proto.Empty, error) {
 	g.Lock()
-	defer g.Unlock()
 
 	impl, err := g.getDatabaseInternal(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	err = impl.Close()
-	if err != nil {
-		return &proto.Empty{}, status.Errorf(codes.Internal, "unable to close database plugin: %s", err)
-	}
-
+	var id string
 	if g.singleImpl == nil {
 		// only cleanup instances map when multiplexing is supported
-		id, err := pluginutil.GetMultiplexIDFromContext(ctx)
+		id, err = pluginutil.GetMultiplexIDFromContext(ctx)
 		if err != nil {
 			return nil, err
 		}
 		delete(g.instances, id)
+	}
+
+	// unlock here so that the subsequent call to Close() does not hold the
+	// lock in case the DB is slow to respond
+	g.Unlock()
+
+	err = impl.Close()
+	if err != nil {
+		// call to Close failed, so we will put the DB instance back in the map
+		g.Lock()
+		defer g.Unlock()
+		if g.singleImpl == nil {
+			g.instances[id] = impl
+		}
+		return &proto.Empty{}, status.Errorf(codes.Internal, "unable to close database plugin: %s", err)
 	}
 
 	return &proto.Empty{}, nil
