@@ -97,6 +97,7 @@ func TestBackend_RoleUpgrade(t *testing.T) {
 	backend := &databaseBackend{}
 
 	roleExpected := &roleEntry{
+		Name: "test",
 		Statements: v4.Statements{
 			CreationStatements: "test",
 			Creation:           []string{"test"},
