@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn, visit, currentURL } from '@ember/test-helpers';
+import { click, visit, currentURL } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -129,30 +129,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
       await runCmd(`delete sys/mounts/${path}`);
     });
 
-    test('it should not show identityTokenTtl or maxRetries if they have not been set', async function (assert) {
-      const path = `aws-${this.uid}`;
-      await enablePage.enable('aws', path);
-
-      await click(SES.configTab);
-      await click(SES.configure);
-      // manually fill in attrs without using helper so we can exclude identityTokenTtl and maxRetries.
-      await click(SES.wif.accessType('wif')); // toggle to wif
-      await fillIn(GENERAL.inputByAttr('roleArn'), 'foo-role');
-      await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'foo-audience');
-      // manually fill in non-access type specific fields on root config so we can exclude Max Retries.
-      await click(GENERAL.toggleGroup('Root config options'));
-      await fillIn(GENERAL.inputByAttr('region'), 'eu-central-1');
-      await click(GENERAL.saveButton);
-      // the Serializer removes these two from the payload if the API returns their default value.
-      assert
-        .dom(GENERAL.infoRowValue('Identity token TTL'))
-        .doesNotExist('Identity token TTL does not show.');
-      assert.dom(GENERAL.infoRowValue('Maximum retries')).doesNotExist('Maximum retries does not show.');
-      // cleanup
-      await runCmd(`delete sys/mounts/${path}`);
-    });
-
-    test('it should show API error when Azure configuration read fails', async function (assert) {
+    test('it should show API error when configuration read fails', async function (assert) {
       assert.expect(1);
       const path = `azure-${this.uid}`;
       const type = 'azure';

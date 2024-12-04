@@ -99,8 +99,9 @@ const createSshCaConfig = (store, backend) => {
   return store.peekRecord('ssh/ca-config', backend);
 };
 
-const createAzureConfig = (store, backend, accessType = 'generic') => {
+const createAzureConfig = (store, backend, accessType) => {
   // clear any records first
+  // note: allowed "environment" params for testing https://github.com/hashicorp/vault-plugin-secrets-azure/blob/main/client.go#L35-L37
   store.unloadAll('azure/config');
   if (accessType === 'azure') {
     store.pushPayload('azure/config', {
@@ -116,20 +117,6 @@ const createAzureConfig = (store, backend, accessType = 'generic') => {
         environment: 'AZUREPUBLICCLOUD',
       },
     });
-  } else if (accessType === 'wif') {
-    store.pushPayload('azure/config', {
-      id: backend,
-      modelName: 'azure/config',
-      data: {
-        backend,
-        subscription_id: 'subscription-id',
-        tenant_id: 'tenant-id',
-        client_id: 'client-id',
-        identity_token_audience: 'audience',
-        identity_token_ttl: 720000,
-        environment: 'AZUREPUBLICCLOUD',
-      },
-    });
   } else {
     store.pushPayload('azure/config', {
       id: backend,
@@ -139,7 +126,7 @@ const createAzureConfig = (store, backend, accessType = 'generic') => {
         subscription_id: 'subscription-id-2',
         tenant_id: 'tenant-id-2',
         client_id: 'client-id-2',
-        environment: 'AZUREPUBLICCLOUD', // allowed environment vars for testing https://github.com/hashicorp/vault-plugin-secrets-azure/blob/main/client.go#L35-L37
+        environment: 'AZUREPUBLICCLOUD',
       },
     });
   }
@@ -175,10 +162,6 @@ export const createConfig = (store, backend, type) => {
       return createSshCaConfig(store, backend);
     case 'azure':
       return createAzureConfig(store, backend, 'azure');
-    case 'azure-wif':
-      return createAzureConfig(store, backend, 'wif');
-    case 'azure-generic':
-      return createAzureConfig(store, backend, 'generic');
   }
 };
 // Used in tests to assert the expected keys in the config details of configurable secret engines

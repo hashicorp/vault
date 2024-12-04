@@ -54,7 +54,6 @@ module('Acceptance | secret-engine list view', function (hooks) {
       const engine = engineObject.type;
       const enginePath = `${engine}-${this.uid}`;
       await runCmd(mountEngineCmd(engine, enginePath));
-      // TODO: fix, the list view does not refresh after mounting an engine through the console. Toggle to another page and back to refresh model.
       await visit('/vault/cluster/dashboard');
       await visit('/vault/secrets');
 
