@@ -39,6 +39,7 @@
     @title="{{@typeDisplay}} not configured"
     @message="Get started by configuring your {{@typeDisplay}} secrets engine."
   >
+    {{! TODO: short-term conditional to be removed once configuration for azure is merged. }}
     {{#unless (eq @typeDisplay "Azure")}}
       <Hds::Link::Standalone
         @icon="chevron-right"

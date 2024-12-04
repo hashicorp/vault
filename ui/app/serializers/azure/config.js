@@ -27,14 +27,4 @@ export default class AzureConfigSerializer extends ApplicationSerializer {
     };
     return super.normalizeResponse(store, primaryModelClass, normalizedPayload, id, requestType);
   }
-
-  serialize() {
-    const json = super.serialize(...arguments);
-    // if the environment variable was initially set and then deleted we do not want to send an empty string
-    // the backend see this and throw an error.
-    if (json.environment === '') {
-      delete json.environment;
-    }
-    return json;
-  }
 }

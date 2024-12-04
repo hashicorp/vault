@@ -9,35 +9,18 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
 export default class AzureConfig extends ApplicationAdapter {
   namespace = 'v1';
 
+  _url(backend) {
+    return `${this.buildURL()}/${encodePath(backend)}/config`;
+  }
+
   queryRecord(store, type, query) {
     const { backend } = query;
-    return this.ajax(`${this.buildURL()}/${encodePath(backend)}/config`, 'GET').then((resp) => {
+    return this.ajax(this._url(backend), 'GET').then((resp) => {
       return {
         ...resp,
         id: backend,
         backend,
       };
     });
-  }
-
-  createOrUpdate(store, type, snapshot) {
-    const serializer = store.serializerFor(type.modelName);
-    const data = serializer.serialize(snapshot);
-    const backend = snapshot.record.backend;
-    return this.ajax(`${this.buildURL()}/${backend}/config`, 'POST', { data }).then((resp) => {
-      // ember data requires an id on the response
-      return {
-        ...resp,
-        id: backend,
-      };
-    });
-  }
-
-  createRecord() {
-    return this.createOrUpdate(...arguments);
-  }
-
-  updateRecord() {
-    return this.createOrUpdate(...arguments);
   }
 }
