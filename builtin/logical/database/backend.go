@@ -261,6 +261,11 @@ func (b *databaseBackend) roleAtPath(ctx context.Context, s logical.Storage, rol
 		return nil, err
 	}
 
+	// handle upgrade for new field Name
+	if result.Name == "" {
+		result.Name = roleName
+	}
+
 	switch {
 	case upgradeCh.Statements != nil:
 		var stmts v4.Statements

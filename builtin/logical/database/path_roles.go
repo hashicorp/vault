@@ -543,6 +543,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	createRole := (req.Operation == logical.CreateOperation)
 	if role == nil {
 		role = &roleEntry{
+			Name:          name,
 			StaticAccount: &staticAccount{},
 		}
 		createRole = true
