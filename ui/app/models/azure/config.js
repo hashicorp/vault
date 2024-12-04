@@ -41,15 +41,21 @@ export default class AzureConfig extends Model {
 
   // for configuration details view
   // do not include clientSecret because it is never returned by the API
-  get attrs() {
+  get displayAttrs() {
+    return this.formFields.filter((attr) => attr.name !== 'clientSecret');
+  }
+
+  // formFields are iterated through to generate the edit/create view
+  get formFields() {
     const keys = [
       'subscriptionId',
       'tenantId',
       'clientId',
+      'clientSecret',
       'identityTokenAudience',
       'identityTokenTtl',
-      'environment',
       'rootPasswordTtl',
+      'environment',
     ];
     return expandAttributeMeta(this, keys);
   }

@@ -156,7 +156,7 @@ export const CONFIGURABLE_SECRET_ENGINES = ['aws', 'azure', 'ssh'];
 export function mountableEngines() {
   return MOUNTABLE_SECRET_ENGINES.slice();
 }
-// Secret Engines that can be mounted but have no other type of configuration or actions available via the UI.
+// secret engines that have not other views than the mount view and mount details view
 export const UN_SUPPORTED_ENGINES = ['alicloud', 'consul', 'gcp', 'gcpkms', 'nomad', 'rabbitmq', 'totp'];
 
 export function unSupportedEngines() {

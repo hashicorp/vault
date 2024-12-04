@@ -5,7 +5,7 @@
 
 {{#if @configModels.length}}
   {{#each @configModels as |configModel|}}
-    {{#each configModel.attrs as |attr|}}
+    {{#each configModel.displayAttrs as |attr|}}
       {{! public key while not sensitive when editing/creating, should be hidden by default on viewing }}
       {{#if (or attr.options.sensitive (eq attr.name "publicKey"))}}
         <InfoTableRow
