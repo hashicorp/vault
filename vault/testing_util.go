@@ -17,7 +17,7 @@ func init() {
 	// The BuildDate is set as part of the build process in CI so we need to
 	// initialize it for testing.
 	if version.BuildDate == "" {
-		version.BuildDate = time.Now().UTC().Format(time.RFC3339)
+		version.BuildDate = time.Now().UTC().AddDate(-1, 0, 0).Format(time.RFC3339)
 	}
 }
 
