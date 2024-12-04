@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<form {{on "submit" (perform this.submitForm)}} aria-label="save azure creds" data-test-configure-form>
+<form {{on "submit" (perform this.submitForm)}} aria-label="configure azure credentials" data-test-configure-form>
 
   <NamespaceReminder @mode="save" @noun="configuration" />
   <MessageError @errorMessage={{this.errorMessage}} />
