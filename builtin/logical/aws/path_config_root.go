@@ -151,6 +151,10 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 	stsFallbackEndpoints := data.Get("sts_fallback_endpoints").([]string)
 	stsFallbackRegions := data.Get("sts_fallback_regions").([]string)
 
+	if len(stsFallbackEndpoints) != len(stsFallbackRegions) {
+		return logical.ErrorResponse("fallback endpoints and fallback regions must be the same length"), nil
+	}
+
 	b.clientMutex.Lock()
 	defer b.clientMutex.Unlock()
 
