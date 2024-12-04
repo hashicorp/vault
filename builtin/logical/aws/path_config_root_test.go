@@ -68,6 +68,7 @@ func TestBackend_PathConfigRoot(t *testing.T) {
 	}
 }
 
+// TestBackend_PathConfigRoot_STSFallback tests valid versions of STS fallback parameters - slice and csv
 func TestBackend_PathConfigRoot_STSFallback(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -168,6 +169,8 @@ func TestBackend_PathConfigRoot_STSFallback(t *testing.T) {
 	}
 }
 
+// TestBackend_PathConfigRoot_STSFallback_mismatchedfallback ensures configuration writing will fail if the
+// region/endpoint entries are different lengths
 func TestBackend_PathConfigRoot_STSFallback_mismatchedfallback(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
