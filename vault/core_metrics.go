@@ -540,22 +540,15 @@ func getMeanNamespaceSecrets(mapOfNamespacesToSecrets map[string]int) int {
 func (c *Core) GetSecretEngineUsageMetrics() map[string]int {
 	mounts := make(map[string]int)
 
-	c.authLock.RLock()
-	defer c.authLock.RUnlock()
-
-	// we don't grab the statelock, so this code might run during or after the seal process.
-	// Therefore, we need to check if c.auth is nil. If we do not, this will panic when
-	// run after seal.
-	if c.auth == nil {
-		return mounts
-	}
+	c.mountsLock.RLock()
+	defer c.mountsLock.RUnlock()
 
 	for _, entry := range c.mounts.Entries {
-		authType := entry.Type
-		if _, ok := mounts[authType]; !ok {
-			mounts[authType] = 1
+		mountType := entry.Type
+		if _, ok := mounts[mountType]; !ok {
+			mounts[mountType] = 1
 		} else {
-			mounts[authType] += 1
+			mounts[mountType] += 1
 		}
 	}
 	return mounts
@@ -567,13 +560,6 @@ func (c *Core) GetAuthMethodUsageMetrics() map[string]int {
 
 	c.authLock.RLock()
 	defer c.authLock.RUnlock()
-
-	// we don't grab the statelock, so this code might run during or after the seal process.
-	// Therefore, we need to check if c.auth is nil. If we do not, this will panic when
-	// run after seal.
-	if c.auth == nil {
-		return mounts
-	}
 
 	for _, entry := range c.auth.Entries {
 		authType := entry.Type
