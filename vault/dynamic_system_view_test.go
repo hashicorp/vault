@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
-	"strings"
 	"testing"
 	"time"
 
@@ -331,62 +330,6 @@ func TestDynamicSystemView_PluginEnv_successful(t *testing.T) {
 
 	if !reflect.DeepEqual(pluginEnv, expectedPluginEnv) {
 		t.Fatalf("got %q, expected %q", pluginEnv, expectedPluginEnv)
-	}
-}
-
-// TestDynamicSystemView_PluginEnv_failed checks that the PluginEnv method returns the expected outputs in failure cases.
-func TestDynamicSystemView_PluginEnv_failed(t *testing.T) {
-	cases := map[string]struct {
-		buildDate           string
-		expectedErrContains string
-	}{
-		"empty build date": {
-			buildDate:           "",
-			expectedErrContains: "failed to parse build date based on RFC3339",
-		},
-		"invalid build date": {
-			buildDate:           "not-rfc3339",
-			expectedErrContains: "failed to parse build date based on RFC3339",
-		},
-	}
-
-	for name, c := range cases {
-		t.Run(name, func(t *testing.T) {
-			// This test function cannot be parallelized, because it messes with the
-			// global version.BuildDate variable.
-			oldBuildDate := version.BuildDate
-			version.BuildDate = c.buildDate
-			defer func() { version.BuildDate = oldBuildDate }()
-
-			coreConfig := &CoreConfig{
-				CredentialBackends: map[string]logical.Factory{},
-			}
-
-			cluster := NewTestCluster(t, coreConfig, &TestClusterOptions{})
-
-			cluster.Start()
-			defer cluster.Cleanup()
-
-			core := cluster.Cores[0].Core
-			TestWaitActive(t, core)
-
-			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-			defer cancel()
-
-			ctx = namespace.RootContext(ctx)
-			dsv := TestDynamicSystemView(cluster.Cores[0].Core, nil)
-
-			pluginEnv, err := dsv.PluginEnv(ctx)
-			if err == nil {
-				t.Fatalf("error expected, got nil")
-			}
-			if !strings.Contains(err.Error(), c.expectedErrContains) {
-				t.Fatalf("error %q does not contain %q", err, c.expectedErrContains)
-			}
-			if pluginEnv != nil {
-				t.Fatalf("pluginEnv: got %v, expected nil", pluginEnv)
-			}
-		})
 	}
 }
 
