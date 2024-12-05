@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -810,7 +811,7 @@ func Test_Import(t *testing.T) {
 func generateTestKeys() (map[KeyType][]byte, error) {
 	keyMap := make(map[KeyType][]byte)
 
-	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	rsaKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	if err != nil {
 		return nil, err
 	}
@@ -820,7 +821,7 @@ func generateTestKeys() (map[KeyType][]byte, error) {
 	}
 	keyMap[KeyType_RSA2048] = rsaKeyBytes
 
-	rsaKey, err = rsa.GenerateKey(rand.Reader, 3072)
+	rsaKey, err = cryptoutil.GenerateRSAKey(rand.Reader, 3072)
 	if err != nil {
 		return nil, err
 	}
@@ -830,7 +831,7 @@ func generateTestKeys() (map[KeyType][]byte, error) {
 	}
 	keyMap[KeyType_RSA3072] = rsaKeyBytes
 
-	rsaKey, err = rsa.GenerateKey(rand.Reader, 4096)
+	rsaKey, err = cryptoutil.GenerateRSAKey(rand.Reader, 4096)
 	if err != nil {
 		return nil, err
 	}
