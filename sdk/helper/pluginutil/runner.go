@@ -54,9 +54,12 @@ type PluginClient interface {
 
 const MultiplexingCtxKey string = "multiplex_id"
 
+type EntPluginRunner struct{}
+
 // PluginRunner defines the metadata needed to run a plugin securely with
 // go-plugin.
 type PluginRunner struct {
+	EntPluginRunner
 	Name           string                      `json:"name" structs:"name"`
 	Type           consts.PluginType           `json:"type" structs:"type"`
 	Version        string                      `json:"version" structs:"version"`
@@ -67,6 +70,7 @@ type PluginRunner struct {
 	Env            []string                    `json:"env" structs:"env"`
 	Sha256         []byte                      `json:"sha256" structs:"sha256"`
 	Builtin        bool                        `json:"builtin" structs:"builtin"`
+	Enterprise     bool                        `json:"enterprise" structs:"enterprise"`
 	BuiltinFactory func() (interface{}, error) `json:"-" structs:"-"`
 	RuntimeConfig  *prutil.PluginRuntimeConfig `json:"-" structs:"-"`
 	Tmpdir         string                      `json:"-" structs:"-"`
