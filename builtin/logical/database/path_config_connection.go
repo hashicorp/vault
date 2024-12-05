@@ -45,7 +45,7 @@ type DatabaseConfig struct {
 
 	// SkipStaticRoleImportRotation is a flag to toggle wether or not a given
 	// static account's password should be rotated on creation of the static
-	// roles associated with this DB config. This is can be overridden at the
+	// roles associated with this DB config. This can be overridden at the
 	// role-level by the role's skip_import_rotation field. The default is
 	// false. Enterprise only.
 	SkipStaticRoleImportRotation bool `json:"skip_static_role_import_rotation" structs:"skip_static_role_import_rotation" mapstructure:"skip_static_role_import_rotation"`

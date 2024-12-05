@@ -7,7 +7,7 @@ package database
 
 import "github.com/hashicorp/vault/sdk/framework"
 
-// AddConnectionFieldsEnt is a no-op for comminuty edition
+// AddConnectionFieldsEnt is a no-op for community edition
 func AddConnectionFieldsEnt(fields map[string]*framework.FieldSchema) {
 	// no-op
 }
