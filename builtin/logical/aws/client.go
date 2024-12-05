@@ -26,7 +26,7 @@ import (
 
 // Return a slice of *aws.Config, based on descending configuration priority. STS endpoints are the only place this is used.
 // NOTE: The caller is required to ensure that b.clientMutex is at least read locked
-func (b *backend) getRootConfig(ctx context.Context, s logical.Storage, clientType string, logger hclog.Logger) ([]*aws.Config, error) {
+func (b *backend) getRootConfigs(ctx context.Context, s logical.Storage, clientType string, logger hclog.Logger) ([]*aws.Config, error) {
 	// set fallback region (we can overwrite later)
 	fallbackRegion := os.Getenv("AWS_REGION")
 	if fallbackRegion == "" {
@@ -44,7 +44,7 @@ func (b *backend) getRootConfig(ctx context.Context, s logical.Storage, clientTy
 	}
 	var configs []*aws.Config
 
-	// I'm not sure this is a valid scenario, but the previous code had it as a case.
+	// ensure the nil case uses defaults
 	if entry == nil {
 		ccfg := awsutil.CredentialsConfig{
 			HTTPClient: cleanhttp.DefaultClient(),
@@ -149,7 +149,7 @@ func (b *backend) getRootConfig(ctx context.Context, s logical.Storage, clientTy
 }
 
 func (b *backend) nonCachedClientIAM(ctx context.Context, s logical.Storage, logger hclog.Logger) (*iam.IAM, error) {
-	awsConfig, err := b.getRootConfig(ctx, s, "iam", logger)
+	awsConfig, err := b.getRootConfigs(ctx, s, "iam", logger)
 	if err != nil {
 		return nil, err
 	}
@@ -168,7 +168,7 @@ func (b *backend) nonCachedClientIAM(ctx context.Context, s logical.Storage, log
 }
 
 func (b *backend) nonCachedClientSTS(ctx context.Context, s logical.Storage, logger hclog.Logger) (*sts.STS, error) {
-	awsConfig, err := b.getRootConfig(ctx, s, "sts", logger)
+	awsConfig, err := b.getRootConfigs(ctx, s, "sts", logger)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +190,7 @@ func (b *backend) nonCachedClientSTS(ctx context.Context, s logical.Storage, log
 		if err == nil {
 			return client, nil
 		} else {
-			b.Logger().Debug("couldn't connect with first config, trying next")
+			b.Logger().Debug("couldn't connect with config trying next", "failed endpoint", cfg.Endpoint, "failed region", cfg.Region)
 		}
 	}
 
