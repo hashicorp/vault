@@ -2898,13 +2898,16 @@ func (c *Core) preSeal() error {
 	if err := c.teardownAudits(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down audits: %w", err))
 	}
-	if err := c.stopExpiration(); err != nil {
-		result = multierror.Append(result, fmt.Errorf("error stopping expiration: %w", err))
-	}
+	// Ensure that the ActivityLog and CensusManager are both completely torn
+	// down before stopping the ExpirationManager. This ordering is critical,
+	// due to a tight coupling between the ActivityLog, CensusManager, and
+	// ExpirationManager for product usage reporting.
 	c.stopActivityLog()
-	// Clean up census on seal
 	if err := c.teardownCensusManager(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down reporting agent: %w", err))
+	}
+	if err := c.stopExpiration(); err != nil {
+		result = multierror.Append(result, fmt.Errorf("error stopping expiration: %w", err))
 	}
 	if err := c.teardownCredentials(context.Background()); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down credentials: %w", err))
