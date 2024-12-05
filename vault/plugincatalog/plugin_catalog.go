@@ -45,18 +45,12 @@ var (
 	ErrPluginUnableToRun        = errors.New("unable to run plugin")
 )
 
-// EntCoreGetter is an interface that allows the plugin catalog to only access entCore getter functions
-type EntCoreGetter interface {
-	EntGetLicense() (string, error)
-}
-
 // PluginCatalog keeps a record of plugins known to vault. External plugins need
 // to be registered to the catalog before they can be used in backends. Builtin
 // plugins are automatically detected and included in the catalog.
 type PluginCatalog struct {
 	builtinRegistry BuiltinRegistry
 	catalogView     logical.Storage
-	entCoreGetter   EntCoreGetter
 	directory       string
 	tmpdir          string
 	logger          log.Logger
@@ -153,7 +147,6 @@ type PluginCatalogInput struct {
 	Logger               log.Logger
 	BuiltinRegistry      BuiltinRegistry
 	CatalogView          logical.Storage
-	EntCoreGetter        EntCoreGetter
 	PluginDirectory      string
 	Tmpdir               string
 	EnableMlock          bool
@@ -165,7 +158,6 @@ func SetupPluginCatalog(ctx context.Context, in *PluginCatalogInput) (*PluginCat
 	catalog := &PluginCatalog{
 		builtinRegistry: in.BuiltinRegistry,
 		catalogView:     in.CatalogView,
-		entCoreGetter:   in.EntCoreGetter,
 		directory:       in.PluginDirectory,
 		tmpdir:          in.Tmpdir,
 		logger:          logger,
