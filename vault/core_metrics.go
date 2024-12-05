@@ -533,8 +533,9 @@ func (c *Core) GetTotalPkiIssuers(ctx context.Context) int {
 		secretType := entry.Type
 		if secretType == pluginconsts.SecretEnginePki {
 			listRequest := &logical.Request{
-				Operation: logical.ListOperation,
+				Operation: logical.ListOperation,=
 				Path:      entry.namespace.Path + entry.Path + "issuers",
+				Path:      entry.namespace.Path + entry.Path + "certs",
 			}
 			resp, err := c.router.Route(ctx, listRequest)
 			if err != nil || resp == nil {
