@@ -969,12 +969,17 @@ func (c *PluginCatalog) Set(ctx context.Context, plugin pluginutil.SetPluginInpu
 
 func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPluginInput) (*pluginutil.PluginRunner, error) {
 	command := plugin.Command
+	var enterprise bool
 
 	if plugin.OCIImage == "" {
 		command = filepath.Join(c.directory, plugin.Command)
 
 		if _, err := os.Stat(command); os.IsNotExist(err) {
 			// Best effort to unpack the plugin artifact
+			enterprise, command, err = c.unpackPluginArtifact(ctx, plugin)
+			if err != nil {
+				return nil, fmt.Errorf("failed to unpack plugin artifact: %w", err)
+			}
 		} else {
 			// Best effort check to make sure the command isn't breaking out of the
 			// configured plugin directory.
@@ -997,15 +1002,17 @@ func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPl
 	// full command instead of the relative command because get() normally prepends
 	// the plugin directory to the command, but we can't use get() here.
 	entryTmp := &pluginutil.PluginRunner{
-		Name:     plugin.Name,
-		Command:  command,
-		OCIImage: plugin.OCIImage,
-		Runtime:  plugin.Runtime,
-		Args:     plugin.Args,
-		Env:      plugin.Env,
-		Sha256:   plugin.Sha256,
-		Builtin:  false,
+		Name:       plugin.Name,
+		Command:    command,
+		OCIImage:   plugin.OCIImage,
+		Runtime:    plugin.Runtime,
+		Args:       plugin.Args,
+		Env:        plugin.Env,
+		Sha256:     plugin.Sha256,
+		Builtin:    false,
+		Enterprise: enterprise,
 	}
+	c.setEntPluginRunner(ctx, entryTmp)
 
 	if entryTmp.OCIImage != "" && entryTmp.Runtime != "" {
 		var err error
@@ -1056,17 +1063,19 @@ func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPl
 	}
 
 	entry := &pluginutil.PluginRunner{
-		Name:     plugin.Name,
-		Type:     plugin.Type,
-		Version:  plugin.Version,
-		Command:  plugin.Command,
-		OCIImage: plugin.OCIImage,
-		Runtime:  plugin.Runtime,
-		Args:     plugin.Args,
-		Env:      plugin.Env,
-		Sha256:   plugin.Sha256,
-		Builtin:  false,
+		Name:       plugin.Name,
+		Type:       plugin.Type,
+		Version:    plugin.Version,
+		Command:    plugin.Command,
+		OCIImage:   plugin.OCIImage,
+		Runtime:    plugin.Runtime,
+		Args:       plugin.Args,
+		Env:        plugin.Env,
+		Sha256:     plugin.Sha256,
+		Builtin:    false,
+		Enterprise: enterprise,
 	}
+	c.setEntPluginRunner(ctx, entry)
 
 	buf, err := json.Marshal(entry)
 	if err != nil {
