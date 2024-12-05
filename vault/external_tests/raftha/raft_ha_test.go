@@ -4,6 +4,8 @@
 package raftha
 
 import (
+	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -351,11 +353,19 @@ func TestRaftHACluster_Removed_ReAdd(t *testing.T) {
 	require.NoError(t, err)
 
 	testhelpers.RetryUntil(t, 3*time.Second, func() error {
-		return testhelpers.VerifyRaftPeers(t, leader.Client, map[string]bool{
-			"core-0": true,
-			"core-1": true,
-			"core-2": true,
-		})
+		resp, err := leader.Client.Sys().RaftAutopilotState()
+		if err != nil {
+			return err
+		}
+		if len(resp.Servers) != 3 {
+			return errors.New("need 3 servers")
+		}
+		for serverID, server := range resp.Servers {
+			if !server.Healthy {
+				return fmt.Errorf("server %s is unhealthy", serverID)
+			}
+		}
+		return nil
 	})
 	_, err = leader.Client.Logical().Write("/sys/storage/raft/remove-peer", map[string]interface{}{
 		"server_id": follower.NodeID,
