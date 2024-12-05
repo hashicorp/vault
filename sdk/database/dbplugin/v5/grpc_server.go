@@ -293,6 +293,7 @@ func (g *gRPCServer) Close(ctx context.Context, _ *proto.Empty) (*proto.Empty, e
 
 	impl, err := g.getDatabaseInternal(ctx)
 	if err != nil {
+		g.Unlock()
 		return nil, err
 	}
 
@@ -301,6 +302,7 @@ func (g *gRPCServer) Close(ctx context.Context, _ *proto.Empty) (*proto.Empty, e
 		// only cleanup instances map when multiplexing is supported
 		id, err = pluginutil.GetMultiplexIDFromContext(ctx)
 		if err != nil {
+			g.Unlock()
 			return nil, err
 		}
 		delete(g.instances, id)
@@ -312,11 +314,18 @@ func (g *gRPCServer) Close(ctx context.Context, _ *proto.Empty) (*proto.Empty, e
 
 	err = impl.Close()
 	if err != nil {
-		// call to Close failed, so we will put the DB instance back in the map
+		// The call to Close failed, so we will put the DB instance back in the
+		// map. This might not be necessary, but we do this in case anything
+		// relies on being able to retry Close.
 		g.Lock()
 		defer g.Unlock()
 		if g.singleImpl == nil {
-			g.instances[id] = impl
+			// There is a chance that while we were calling Close another DB
+			// config was created for the old ID. So we only put it back if
+			// it's not set.
+			if _, ok := g.instances[id]; !ok {
+				g.instances[id] = impl
+			}
 		}
 		return &proto.Empty{}, status.Errorf(codes.Internal, "unable to close database plugin: %s", err)
 	}
