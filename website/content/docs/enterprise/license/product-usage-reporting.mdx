@@ -130,7 +130,7 @@ All of these metrics are numerical, and contain no sensitive values or additiona
 | `vault.auth.method.gcp.count`                        | The total number of GCP auth mounts in Vault.                                      |
 | `vault.auth.method.jwt.count`                        | The total number of JWT auth mounts in Vault.                                      |
 | `vault.auth.method.kerberos.count`                   | The total number of Kerberos auth mounts in Vault.                                 |
-| `vault.auth.method.kubernetes.count`                 | The total number of kubernetes auth mounts in Vault.                               |
+| `vault.auth.method.kubernetes.count`                 | The total number of Kubernetes auth mounts in Vault.                               |
 | `vault.auth.method.ldap.count`                       | The total number of LDAP auth mounts in Vault.                                     |
 | `vault.auth.method.oci.count`                        | The total number of OCI auth mounts in Vault.                                      |
 | `vault.auth.method.okta.count`                       | The total number of Okta auth mounts in Vault.                                     |
@@ -152,7 +152,7 @@ All of these metrics are numerical, and contain no sensitive values or additiona
 | `vault.secret.engine.kubernetes.count`               | The total number of Kubernetes secret engines in Vault.                            |
 | `vault.secret.engine.cassandra.count`                | The total number of Cassandra secret engines in Vault.                             |
 | `vault.secret.engine.keymgmt.count`                  | The total number of Keymgmt secret engines in Vault.                               |
-| `vault.secret.engine.kv.count`                       | The total number of kv secret engines in Vault.                                    |
+| `vault.secret.engine.kv.count`                       | The total number of KV secret engines in Vault.                                    |
 | `vault.secret.engine.kmip.count`                     | The total number of KMIP secret engines in Vault.                                  |
 | `vault.secret.engine.mongodb.count`                  | The total number of MongoDB secret engines in Vault.                               |
 | `vault.secret.engine.mongodbatlas.count`             | The total number of MongoDBAtlas secret engines in Vault.                          |
@@ -180,6 +180,8 @@ All of these metrics are numerical, and contain no sensitive values or additiona
 | `vault.secretsync.destinations.terraform.count`      | The total number of Terraform secret destinations configured for secret sync.      |
 | `vault.secretsync.destinations.gitlab.count`         | The total number of GitLab secret destinations configured for secret sync.         |
 | `vault.secretsync.destinations.inmem.count`          | The total number of InMem secret destinations configured for secret sync.          |
+| `vault.pki.roles.count`                              | The total roles in all PKI mounts across all namespaces.                           |
+| `vault.pki.issuers.count`                            | The total issuers from all PKI mounts across all namespaces.                       |
 
 ## Usage metadata list
 
