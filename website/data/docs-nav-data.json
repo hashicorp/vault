@@ -1581,8 +1581,7 @@
           },
           {
             "title": "KV version  2",
-            "routes":
-            [
+            "routes": [
               {
                 "title": "Overview",
                 "path": "secrets/kv/kv-v2"
@@ -1823,23 +1822,23 @@
         "path": "sync"
       },
       {
-        "title": "AWS Secrets Manager",
+        "title": "Sync to AWS Secrets Manager",
         "path": "sync/awssm"
       },
       {
-        "title": "Azure Key Vault",
+        "title": "Sync to Azure Key Vault",
         "path": "sync/azurekv"
       },
       {
-        "title": "GCP Secret Manager",
+        "title": "Sync to GCP Secret Manager",
         "path": "sync/gcpsm"
       },
       {
-        "title": "GitHub",
+        "title": "Sync to GitHub",
         "path": "sync/github"
       },
       {
-        "title": "Vercel Project",
+        "title": "Sync to Vercel Project",
         "path": "sync/vercelproject"
       }
     ]
