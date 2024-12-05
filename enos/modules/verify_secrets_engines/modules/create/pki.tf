@@ -16,6 +16,7 @@ locals {
     common_name  = local.pki_common_name
     test_results = local.tmp_test_results
   }
+
   test = {
     path_prefix = local.pki_test_data_path_prefix
   }

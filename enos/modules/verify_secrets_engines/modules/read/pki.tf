@@ -1,5 +1,6 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
+
 locals {
   // Variables
   pki_mount                 = "pki_secret" # secret
