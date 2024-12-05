@@ -522,8 +522,8 @@ func (c *Core) GetTotalPkiRoles(ctx context.Context) int {
 	return numRoles
 }
 
-// GetTotalPkiCerts returns the total certs across all PKI mounts in Vault
-func (c *Core) GetTotalPkiCerts(ctx context.Context) int {
+// GetTotalPkiIssuers returns the total issuers across all PKI mounts in Vault
+func (c *Core) GetTotalPkiIssuers(ctx context.Context) int {
 	c.mountsLock.RLock()
 	defer c.mountsLock.RUnlock()
 
@@ -534,7 +534,7 @@ func (c *Core) GetTotalPkiCerts(ctx context.Context) int {
 		if secretType == pluginconsts.SecretEnginePki {
 			listRequest := &logical.Request{
 				Operation: logical.ListOperation,
-				Path:      entry.namespace.Path + entry.Path + "certs",
+				Path:      entry.namespace.Path + entry.Path + "issuers",
 			}
 			resp, err := c.router.Route(ctx, listRequest)
 			if err != nil || resp == nil {
