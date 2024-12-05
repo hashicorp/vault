@@ -31,13 +31,13 @@ resource "enos_remote_exec" "pki_verify_certificates" {
   for_each = var.hosts
 
   environment = {
-    MOUNT             = local.pki_mount
+    MOUNT             = "pki_secret"
     VAULT_ADDR        = var.vault_addr
     VAULT_INSTALL_DIR = var.vault_install_dir
     VAULT_TOKEN       = var.vault_root_token
-    COMMON_NAME       = local.pki_common_name
-    TTL               = local.pki_default_ttl
-    TMP_TEST_RESULTS  = local.tmp_test_results
+    COMMON_NAME       = "common"
+    TTL               = "72h"
+    TMP_TEST_RESULTS  = "tmp_test_results"
   }
 
   scripts = [abspath("${path.module}/../../scripts/kv-pki-verify-certificates.sh")]
