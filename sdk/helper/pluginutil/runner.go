@@ -54,12 +54,9 @@ type PluginClient interface {
 
 const MultiplexingCtxKey string = "multiplex_id"
 
-type EntPluginRunner struct{}
-
 // PluginRunner defines the metadata needed to run a plugin securely with
 // go-plugin.
 type PluginRunner struct {
-	EntPluginRunner
 	Name           string                      `json:"name" structs:"name"`
 	Type           consts.PluginType           `json:"type" structs:"type"`
 	Version        string                      `json:"version" structs:"version"`

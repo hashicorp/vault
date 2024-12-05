@@ -1004,7 +1004,6 @@ func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPl
 		Builtin:    false,
 		Enterprise: enterprise,
 	}
-	c.setEntPluginRunner(ctx, entryTmp)
 
 	if entryTmp.OCIImage != "" && entryTmp.Runtime != "" {
 		var err error
@@ -1067,7 +1066,6 @@ func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPl
 		Builtin:    false,
 		Enterprise: enterprise,
 	}
-	c.setEntPluginRunner(ctx, entry)
 
 	buf, err := json.Marshal(entry)
 	if err != nil {

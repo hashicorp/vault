@@ -15,5 +15,3 @@ import (
 func (c *PluginCatalog) unpackPluginArtifact(context.Context, pluginutil.SetPluginInput) (bool, string, error) {
 	return false, "", fmt.Errorf("enterprise-only feature: plugin artifact unpacking")
 }
-
-func (c *PluginCatalog) setEntPluginRunner(context.Context, *pluginutil.PluginRunner) {}
