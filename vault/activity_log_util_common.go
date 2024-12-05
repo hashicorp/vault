@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/axiomhq/hyperloglog"
+	semver "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
@@ -425,7 +426,6 @@ type singleTypeSegmentReader struct {
 }
 type segmentReader struct {
 	tokens         *singleTypeSegmentReader
-	entities       *singleTypeSegmentReader
 	globalEntities *singleTypeSegmentReader
 	localEntities  *singleTypeSegmentReader
 }
@@ -433,16 +433,11 @@ type segmentReader struct {
 // SegmentReader is an interface that provides methods to read tokens and entities in order
 type SegmentReader interface {
 	ReadToken(ctx context.Context) (*activity.TokenCount, error)
-	ReadEntity(ctx context.Context) (*activity.EntityActivityLog, error)
 	ReadGlobalEntity(ctx context.Context) (*activity.EntityActivityLog, error)
 	ReadLocalEntity(ctx context.Context) (*activity.EntityActivityLog, error)
 }
 
 func (a *ActivityLog) NewSegmentFileReader(ctx context.Context, startTime time.Time) (SegmentReader, error) {
-	entities, err := a.newSingleTypeSegmentReader(ctx, startTime, activityEntityBasePath)
-	if err != nil {
-		return nil, err
-	}
 	globalEntities, err := a.newSingleTypeSegmentReader(ctx, startTime, activityGlobalPathPrefix+activityEntityBasePath)
 	if err != nil {
 		return nil, err
@@ -455,7 +450,7 @@ func (a *ActivityLog) NewSegmentFileReader(ctx context.Context, startTime time.T
 	if err != nil {
 		return nil, err
 	}
-	return &segmentReader{entities: entities, globalEntities: globalEntities, localEntities: localEntities, tokens: tokens}, nil
+	return &segmentReader{globalEntities: globalEntities, localEntities: localEntities, tokens: tokens}, nil
 }
 
 func (a *ActivityLog) newSingleTypeSegmentReader(ctx context.Context, startTime time.Time, prefix string) (*singleTypeSegmentReader, error) {
@@ -510,17 +505,6 @@ func (e *segmentReader) ReadToken(ctx context.Context) (*activity.TokenCount, er
 	return out, nil
 }
 
-// ReadEntity reads an entity from the segment
-// If there is none available, then the error will be io.EOF
-func (e *segmentReader) ReadEntity(ctx context.Context) (*activity.EntityActivityLog, error) {
-	out := &activity.EntityActivityLog{}
-	err := e.entities.nextValue(ctx, out)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // ReadGlobalEntity reads a global entity from the global segment
 // If there is none available, then the error will be io.EOF
 func (e *segmentReader) ReadGlobalEntity(ctx context.Context) (*activity.EntityActivityLog, error) {
@@ -568,4 +552,99 @@ func (a *ActivityLog) namespaceRecordToCountsResponse(record *activity.Namespace
 		SecretSyncs:      int(record.SecretSyncs),
 		ACMEClients:      int(record.ACMEClients),
 	}
+}
+
+func (a *ActivityLog) extractLocalGlobalClientsDeprecatedStoragePath(ctx context.Context) (map[int64][]*activity.EntityRecord, map[int64][]*activity.EntityRecord, error) {
+	clusterGlobalClients := make(map[int64][]*activity.EntityRecord)
+	clusterLocalClients := make(map[int64][]*activity.EntityRecord)
+
+	// Extract global clients on the current cluster per month store them in a map
+	times, err := a.availableTimesAtPath(ctx, time.Now(), activityEntityBasePath)
+	if err != nil {
+		a.logger.Error("could not list available logs until now")
+		return clusterLocalClients, clusterGlobalClients, fmt.Errorf("could not list available logs on the cluster")
+	}
+	for _, time := range times {
+		entityPath := activityEntityBasePath + fmt.Sprint(time.Unix()) + "/"
+		segmentPaths, err := a.view.List(ctx, entityPath)
+		if err != nil {
+			return nil, nil, err
+		}
+		for _, seqNumber := range segmentPaths {
+			segment, err := a.readEntitySegmentAtPath(ctx, entityPath+seqNumber)
+			if segment == nil {
+				continue
+			}
+			if err != nil {
+				a.logger.Warn("failed to read segment", "error", err)
+				return clusterLocalClients, clusterGlobalClients, err
+			}
+			for _, entity := range segment.GetClients() {
+				// If the client is not local, then add it to a map
+				if local, _ := a.isClientLocal(entity); !local {
+					if _, ok := clusterGlobalClients[time.Unix()]; !ok {
+						clusterGlobalClients[time.Unix()] = make([]*activity.EntityRecord, 0)
+					}
+					clusterGlobalClients[time.Unix()] = append(clusterGlobalClients[time.Unix()], entity)
+				} else {
+					if _, ok := clusterLocalClients[time.Unix()]; !ok {
+						clusterLocalClients[time.Unix()] = make([]*activity.EntityRecord, 0)
+					}
+					clusterLocalClients[time.Unix()] = append(clusterLocalClients[time.Unix()], entity)
+				}
+			}
+		}
+	}
+
+	return clusterLocalClients, clusterGlobalClients, nil
+}
+
+func (a *ActivityLog) extractTokensDeprecatedStoragePath(ctx context.Context) (map[int64][]map[string]uint64, error) {
+	tokensByMonth := make(map[int64][]map[string]uint64)
+	times, err := a.availableTimesAtPath(ctx, time.Now(), activityTokenBasePath)
+	if err != nil {
+		return nil, err
+	}
+	for _, monthTime := range times {
+		tokenPath := activityTokenBasePath + fmt.Sprint(monthTime.Unix()) + "/"
+		segmentPaths, err := a.view.List(ctx, tokenPath)
+		if err != nil {
+			return nil, err
+		}
+		tokensByMonth[monthTime.Unix()] = make([]map[string]uint64, 0)
+		for _, seqNum := range segmentPaths {
+			tokenCount, err := a.readTokenSegmentAtPath(ctx, tokenPath+seqNum)
+			if tokenCount == nil {
+				a.logger.Error("data at path has been unexpectedly deleted", "path", tokenPath+seqNum)
+				continue
+			}
+			if err != nil {
+				return nil, err
+			}
+			tokensByMonth[monthTime.Unix()] = append(tokensByMonth[monthTime.Unix()], tokenCount.CountByNamespaceID)
+		}
+	}
+	return tokensByMonth, nil
+}
+
+// OldestVersionHasDeduplicatedClients returns whether this cluster is 1.19+, and
+// hence supports deduplicated clients
+func (a *ActivityLog) OldestVersionHasDeduplicatedClients(ctx context.Context) bool {
+	oldestVersionIsDedupClients := a.core.IsNewInstall(ctx)
+	if !oldestVersionIsDedupClients {
+		if v, _, err := a.core.FindOldestVersionTimestamp(); err == nil {
+			oldestVersion, err := semver.NewSemver(v)
+			if err != nil {
+				a.core.logger.Debug("could not extract version instance", "version", v)
+				return false
+			}
+			dedupChangeVersion, err := semver.NewSemver(DeduplicatedClientMinimumVersion)
+			if err != nil {
+				a.core.logger.Debug("could not extract version instance", "version", DeduplicatedClientMinimumVersion)
+				return false
+			}
+			oldestVersionIsDedupClients = oldestVersionIsDedupClients || oldestVersion.GreaterThanOrEqual(dedupChangeVersion)
+		}
+	}
+	return oldestVersionIsDedupClients
 }

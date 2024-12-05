@@ -105,7 +105,7 @@ func haMembershipClientCheck(err error, c *Core, haBackend physical.RemovableNod
 	if removeErr != nil {
 		c.logger.Debug("failed to remove self", "error", removeErr)
 	}
-	go c.ShutdownCoreError(errors.New("node removed from HA configuration"))
+	c.shutdownRemovedNode()
 }
 
 func haMembershipUnaryClientInterceptor(c *Core, haBackend physical.RemovableNodeHABackend) grpc.UnaryClientInterceptor {
@@ -442,6 +442,7 @@ func (c *Core) clearForwardingClients() {
 		clusterListener.RemoveClient(consts.RequestForwardingALPN)
 	}
 	c.clusterLeaderParams.Store((*ClusterLeaderParams)(nil))
+	c.rpcLastSuccessfulHeartbeat.Store(time.Time{})
 }
 
 // ForwardRequest forwards a given request to the active node and returns the
