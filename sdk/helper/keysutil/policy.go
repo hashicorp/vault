@@ -35,6 +35,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/kdf"
@@ -1825,7 +1826,7 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 			bitSize = 4096
 		}
 
-		entry.RSAKey, err = rsa.GenerateKey(randReader, bitSize)
+		entry.RSAKey, err = cryptoutil.GenerateRSAKey(randReader, bitSize)
 		if err != nil {
 			return err
 		}
