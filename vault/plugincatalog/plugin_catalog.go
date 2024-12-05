@@ -45,12 +45,18 @@ var (
 	ErrPluginUnableToRun        = errors.New("unable to run plugin")
 )
 
+// EntCoreGetter is an interface that allows the plugin catalog to only access entCore getter functions
+type EntCoreGetter interface {
+	EntGetLicense() (string, error)
+}
+
 // PluginCatalog keeps a record of plugins known to vault. External plugins need
 // to be registered to the catalog before they can be used in backends. Builtin
 // plugins are automatically detected and included in the catalog.
 type PluginCatalog struct {
 	builtinRegistry BuiltinRegistry
 	catalogView     logical.Storage
+	entCoreGetter   EntCoreGetter
 	directory       string
 	tmpdir          string
 	logger          log.Logger
@@ -147,6 +153,7 @@ type PluginCatalogInput struct {
 	Logger               log.Logger
 	BuiltinRegistry      BuiltinRegistry
 	CatalogView          logical.Storage
+	EntCoreGetter        EntCoreGetter
 	PluginDirectory      string
 	Tmpdir               string
 	EnableMlock          bool
@@ -158,6 +165,7 @@ func SetupPluginCatalog(ctx context.Context, in *PluginCatalogInput) (*PluginCat
 	catalog := &PluginCatalog{
 		builtinRegistry: in.BuiltinRegistry,
 		catalogView:     in.CatalogView,
+		entCoreGetter:   in.EntCoreGetter,
 		directory:       in.PluginDirectory,
 		tmpdir:          in.Tmpdir,
 		logger:          logger,
@@ -961,21 +969,27 @@ func (c *PluginCatalog) Set(ctx context.Context, plugin pluginutil.SetPluginInpu
 
 func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPluginInput) (*pluginutil.PluginRunner, error) {
 	command := plugin.Command
-	if plugin.OCIImage == "" {
-		// Best effort check to make sure the command isn't breaking out of the
-		// configured plugin directory.
-		command = filepath.Join(c.directory, plugin.Command)
-		sym, err := filepath.EvalSymlinks(command)
-		if err != nil {
-			return nil, fmt.Errorf("error while validating the command path: %w", err)
-		}
-		symAbs, err := filepath.Abs(filepath.Dir(sym))
-		if err != nil {
-			return nil, fmt.Errorf("error while validating the command path: %w", err)
-		}
 
-		if symAbs != c.directory {
-			return nil, errors.New("cannot execute files outside of configured plugin directory")
+	if plugin.OCIImage == "" {
+		command = filepath.Join(c.directory, plugin.Command)
+
+		if _, err := os.Stat(command); os.IsNotExist(err) {
+			// Best effort to unpack the plugin artifact
+		} else {
+			// Best effort check to make sure the command isn't breaking out of the
+			// configured plugin directory.
+			sym, err := filepath.EvalSymlinks(command)
+			if err != nil {
+				return nil, fmt.Errorf("error while validating the command path: %w", err)
+			}
+			symAbs, err := filepath.Abs(filepath.Dir(sym))
+			if err != nil {
+				return nil, fmt.Errorf("error while validating the command path: %w", err)
+			}
+
+			if symAbs != c.directory {
+				return nil, errors.New("cannot execute files outside of configured plugin directory")
+			}
 		}
 	}
 
@@ -992,6 +1006,7 @@ func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPl
 		Sha256:   plugin.Sha256,
 		Builtin:  false,
 	}
+
 	if entryTmp.OCIImage != "" && entryTmp.Runtime != "" {
 		var err error
 		entryTmp.RuntimeConfig, err = c.runtimeCatalog.Get(ctx, entryTmp.Runtime, consts.PluginRuntimeTypeContainer)
