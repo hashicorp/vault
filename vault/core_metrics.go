@@ -514,7 +514,6 @@ func (c *Core) GetTotalPkiRoles(ctx context.Context) int {
 				continue
 			}
 			keys, ok := rawKeys.([]string)
-			fmt.Printf("Violet keys: %v\n", keys)
 			if ok {
 				numRoles += len(keys)
 			}
