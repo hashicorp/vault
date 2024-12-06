@@ -179,5 +179,6 @@ var jsonConfigDefault = []byte(`
   "CaseSensitiveNames": false,
   "ClientTLSCert": "",
   "ClientTLSKey": ""
+  "enable_samaccountname_login": false
 }
 `)
