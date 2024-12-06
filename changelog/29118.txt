@@ -1,0 +1,3 @@
+```release-note:feature
+auth/ldap: Adds an option to enable sAMAccountname logins when upndomain is set. 
+```
