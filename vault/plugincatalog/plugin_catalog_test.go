@@ -646,7 +646,6 @@ func TestPluginCatalog_ListHandlesPluginNamesWithSlashes(t *testing.T) {
 			Command: command,
 			Args:    nil,
 			Env:     nil,
-			Sha256:  nil,
 		})
 		if err != nil {
 			t.Fatal(err)
