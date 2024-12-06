@@ -1492,8 +1492,8 @@ github.com/hashicorp/go-secure-stdlib/tlsutil v0.1.3/go.mod h1:LWq2Sy8UoKKuK4lFu
 github.com/hashicorp/go-slug v0.15.2 h1:/ioIpE4bWVN/d7pG2qMrax0a7xe9vOA66S+fz7fZmGY=
 github.com/hashicorp/go-slug v0.15.2/go.mod h1:THWVTAXwJEinbsp4/bBRcmbaO5EYNLTqxbG4tZ3gCYQ=
 github.com/hashicorp/go-sockaddr v1.0.0/go.mod h1:7Xibr9yA9JjQq1JpNB2Vw7kxv8xerXegt+ozgdvDeDU=
-github.com/hashicorp/go-sockaddr v1.0.6 h1:RSG8rKU28VTUTvEKghe5gIhIQpv8evvNpnDEyqO4u9I=
-github.com/hashicorp/go-sockaddr v1.0.6/go.mod h1:uoUUmtwU7n9Dv3O4SNLeFvg0SxQ3lyjsj6+CCykpaxI=
+github.com/hashicorp/go-sockaddr v1.0.7 h1:G+pTkSO01HpR5qCxg7lxfsFEZaG+C0VssTy/9dbT+Fw=
+github.com/hashicorp/go-sockaddr v1.0.7/go.mod h1:FZQbEYa1pxkQ7WLpyXJ6cbjpT8q0YgQaK/JakXqGyWw=
 github.com/hashicorp/go-syslog v1.0.0 h1:KaodqZuhUoZereWVIYmpUgZysurB1kBLX2j0MwMrUAE=
 github.com/hashicorp/go-syslog v1.0.0/go.mod h1:qPfqrKkXGihmCqbJM2mZgkZGvKG1dFdvsLplgctolz4=
 github.com/hashicorp/go-tfe v1.64.2 h1:nbK9p5gA7k8/jbqgNpOzs7lG5cGfOhLVCki4bn7PmdQ=
@@ -1564,8 +1564,8 @@ github.com/hashicorp/vault-plugin-auth-cf v0.19.0 h1:/I084ZCypbhTO5ZiYjxhjzokuDq
 github.com/hashicorp/vault-plugin-auth-cf v0.19.0/go.mod h1:LiH/IttNxAgto2ooR9l2g6+CiXc5c/1uPE0pT0hILRg=
 github.com/hashicorp/vault-plugin-auth-gcp v0.19.1 h1:ALSm4IUBRien3uKrdtvihxSwmOaKJxzKqDmTR2WpMG8=
 github.com/hashicorp/vault-plugin-auth-gcp v0.19.1/go.mod h1:NwWKw3t/ZjqDd4PdYe2LVTvX0EAMmwFaexIQQWb+U0U=
-github.com/hashicorp/vault-plugin-auth-jwt v0.22.0 h1:ihjx6HszRSt8Vfknc5t0AKXBQqFhqTQ4Wdd/PK+EboU=
-github.com/hashicorp/vault-plugin-auth-jwt v0.22.0/go.mod h1:+Ne5sCgAza7aDIzxE4aruv6PeQI9ORWIvg/dFe2jlJU=
+github.com/hashicorp/vault-plugin-auth-jwt v0.22.1-0.20241201001147-b82ea98a08d6 h1:boNrHNt29d5umEfbh1FutGFPp/QGvGYYyQ6RavUlMbo=
+github.com/hashicorp/vault-plugin-auth-jwt v0.22.1-0.20241201001147-b82ea98a08d6/go.mod h1:toW4lEi1Z7JenMASsTCp4hPP5S99FpoNtjfDaW+3zZo=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.13.0 h1:KN+nY7XJANb7IRILf0EnaCT04JI9ctiUhq/W9sgyJnk=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.13.0/go.mod h1:tJ4upLp8+7xxNHBFwpXQaQQQjkwSwI4P/Hic9EKkWvQ=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.20.0 h1:C+3gSOE+M1JT/6K/CNbQXCAUAA2wFQ7IFpD9Y9IPXxU=
@@ -2164,8 +2164,9 @@ github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o
 github.com/stretchr/testify v1.8.2/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
 github.com/stretchr/testify v1.8.3/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
 github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
-github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsTg=
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
+github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOfJA=
+github.com/stretchr/testify v1.10.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
 github.com/tencentcloud/tencentcloud-sdk-go v1.0.162 h1:8fDzz4GuVg4skjY2B0nMN7h6uN61EDVkuLyI2+qGHhI=
 github.com/tencentcloud/tencentcloud-sdk-go v1.0.162/go.mod h1:asUz5BPXxgoPGaRgZaVm1iGcUAuHyYUo1nXqKa83cvI=
 github.com/tilinna/clock v1.0.2/go.mod h1:ZsP7BcY7sEEz7ktc0IVy8Us6boDrK8VradlKRUGfOao=
@@ -2852,8 +2853,8 @@ google.golang.org/api v0.108.0/go.mod h1:2Ts0XTHNVWxypznxWOYUeI4g3WdP9Pk2Qk58+a/
 google.golang.org/api v0.110.0/go.mod h1:7FC4Vvx1Mooxh8C5HWjzZHcavuS2f6pmJpZx60ca7iI=
 google.golang.org/api v0.111.0/go.mod h1:qtFHvU9mhgTJegR31csQ+rwxyUTHOKFqCKWp1J0fdw0=
 google.golang.org/api v0.114.0/go.mod h1:ifYI2ZsFK6/uGddGfAD5BMxlnkBqCmqHSDUVi45N5Yg=
-google.golang.org/api v0.207.0 h1:Fvt6IGCYjf7YLcQ+GCegeAI2QSQCfIWhRkmrMPj3JRM=
-google.golang.org/api v0.207.0/go.mod h1:I53S168Yr/PNDNMi5yPnDc0/LGRZO6o7PoEbl/HY3CM=
+google.golang.org/api v0.209.0 h1:Ja2OXNlyRlWCWu8o+GgI4yUn/wz9h/5ZfFbKz+dQX+w=
+google.golang.org/api v0.209.0/go.mod h1:I53S168Yr/PNDNMi5yPnDc0/LGRZO6o7PoEbl/HY3CM=
 google.golang.org/appengine v1.1.0/go.mod h1:EbEs0AVv82hx2wNQdGPgUI5lhzA/G0D9YwlJXL52JkM=
 google.golang.org/appengine v1.4.0/go.mod h1:xpcJRLb0r/rnEns0DIKYYv+WjYCduHsrkT7/EB5XEv4=
 google.golang.org/appengine v1.5.0/go.mod h1:xpcJRLb0r/rnEns0DIKYYv+WjYCduHsrkT7/EB5XEv4=
