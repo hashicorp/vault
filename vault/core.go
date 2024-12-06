@@ -4211,6 +4211,8 @@ func (c *Core) GetHAPeerNodesCached() []PeerNode {
 	return nodes
 }
 
+// TODO VAULT-32686 plugin artifact permission
+
 func (c *Core) CheckPluginPerms(pluginName string) (err error) {
 	var enableFilePermissionsCheck bool
 	if enableFilePermissionsCheckEnv := os.Getenv(consts.VaultEnableFilePermissionsCheckEnv); enableFilePermissionsCheckEnv != "" {
