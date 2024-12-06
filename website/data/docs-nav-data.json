@@ -234,6 +234,10 @@
         "path": "concepts/ha"
       },
       {
+        "title": "Production hardening",
+        "path": "concepts/production-hardening"
+      },
+      {
         "title": "Storage",
         "path": "concepts/storage"
       },
