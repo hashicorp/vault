@@ -27,11 +27,13 @@ The default status codes are:
 - `429` if unsealed and standby
 - `472` if disaster recovery secondary (both active and standby nodes within the DR secondary)
 - `473` if performance standby
+- `474` if standby node but cannot connect to the active node
 - `501` if not initialized
 - `503` if sealed
+- `530` if removed
 
 <Note>
-In rare occasions such as during cluster instability, a node may return 429 even when it was part of a DR secondary (472) or a perf-standby (473). When configuring a Load Balancer based on health status API, it's important to recognize that a 429 indicates a standby node that doesn't process the request itself, read or write.
+  In rare occasions such as during cluster instability, a node may return 429 even when it was part of a DR secondary (472) or a perf-standby (473). When configuring a Load Balancer based on health status API, it's important to recognize that a 429 indicates a standby node that doesn't process the request itself, read or write.
 </Note>
 
 ### Parameters
@@ -55,8 +57,16 @@ In rare occasions such as during cluster instability, a node may return 429 even
 - `drsecondarycode` `(int: 472)` – Specifies the status code that should be
   returned for a DR secondary node.
 
+- `haunhealthycode` `(int: 474)` - Specifies the status code that should be
+  returned when the node is a standby/performance standby node that cannot
+  connect to the active node, so the node isn't able to be part of the high
+  availability cluster.
+
 - `performancestandbycode` `(int: 473)` – Specifies the status code that should be
   returned for a performance standby node.
+
+- `removedcode` `(int: 530)` - Specifies the status code when the node has been
+  removed from the HA cluster.
 
 - `sealedcode` `(int: 503)` – Specifies the status code that should be returned
   for a sealed node.
@@ -101,6 +111,30 @@ date: Wed, 26 Jan 2022 09:21:13 GMT
   "server_time_utc": 1709559327,
   "standby": false,
   "version": "1.16.0-rc2"
+}
+```
+
+### Sample response - CE standby node
+
+```json
+{
+  "clock_skew_ms": 0,
+  "cluster_id": "78d0e173-090f-feae-f245-caa8f39287f6",
+  "cluster_name": "vault-cluster-0f6e3348",
+  "echo_duration_ms": 1,
+  "enterprise": false,
+  "ha_connection_healthy": true,
+  "initialized": true,
+  "last_request_forwarding_heartbeat_ms": 815,
+  "performance_standby": false,
+  "removed_from_cluster": false,
+  "replication_dr_mode": "disabled",
+  "replication_performance_mode": "disabled",
+  "replication_primary_canary_age_ms": 0,
+  "sealed": false,
+  "server_time_utc": 1732544415,
+  "standby": true,
+  "version": "1.19.0-beta1"
 }
 ```
 
