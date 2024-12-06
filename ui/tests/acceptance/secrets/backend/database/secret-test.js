@@ -553,7 +553,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     await visit('/vault/secrets');
   });
 
-  test('connection_url must be decoded', async function (assert) {
+  test('connection_url is decoded', async function (assert) {
     const backend = this.backend;
     const connection = await newConnection(
       backend,
