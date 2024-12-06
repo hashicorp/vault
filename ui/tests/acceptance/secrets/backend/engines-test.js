@@ -12,7 +12,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
-import { UN_SUPPORTED_ENGINES, allEngines } from 'vault/helpers/mountable-secret-engines';
+import { UN_SUPPORTED_ENGINES, mountableEngines } from 'vault/helpers/mountable-secret-engines';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 
 const SELECTORS = {
@@ -47,9 +47,8 @@ module('Acceptance | secret-engine list view', function (hooks) {
   });
 
   test('it adds disabled css styling to unsupported secret engines', async function (assert) {
-    assert.expect(19);
-    const allEnginesArray = allEngines();
-
+    assert.expect(16);
+    const allEnginesArray = mountableEngines();
     for (const engineObject of allEnginesArray) {
       const engine = engineObject.type;
       const enginePath = `${engine}-${this.uid}`;
