@@ -43,6 +43,7 @@ var (
 	ErrPinnedVersion            = errors.New("cannot delete a pinned version")
 	ErrPluginVersionMismatch    = errors.New("plugin version mismatch")
 	ErrPluginUnableToRun        = errors.New("unable to run plugin")
+	ErrEnterpriseFeatureOnly    = errors.New("enterprise only feature")
 )
 
 // PluginCatalog keeps a record of plugins known to vault. External plugins need
@@ -961,21 +962,36 @@ func (c *PluginCatalog) Set(ctx context.Context, plugin pluginutil.SetPluginInpu
 
 func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPluginInput) (*pluginutil.PluginRunner, error) {
 	command := plugin.Command
+	var enterprise bool
+
 	if plugin.OCIImage == "" {
-		// Best effort check to make sure the command isn't breaking out of the
-		// configured plugin directory.
 		command = filepath.Join(c.directory, plugin.Command)
 		sym, err := filepath.EvalSymlinks(command)
 		if err != nil {
-			return nil, fmt.Errorf("error while validating the command path: %w", err)
-		}
-		symAbs, err := filepath.Abs(filepath.Dir(sym))
-		if err != nil {
-			return nil, fmt.Errorf("error while validating the command path: %w", err)
-		}
+			// Enterprise only: unpack the plugin artifact
+			var unpackErr error
+			enterprise, plugin.Command, plugin.Sha256, unpackErr = c.unpackPluginArtifact(plugin)
+			switch {
+			case unpackErr == nil:
+				command = filepath.Join(c.directory, plugin.Command)
+			case errors.Is(unpackErr, ErrEnterpriseFeatureOnly):
+				// Return the error that Vault CE users normally should see
+				// when evaluating symlinks of the command fails
+				return nil, fmt.Errorf("error while validating the command path: %w", err)
+			default:
+				return nil, fmt.Errorf("failed to unpack plugin artifact: %w", err)
+			}
+		} else {
+			// Best effort check to make sure the command isn't breaking out of the
+			// configured plugin directory.
+			symAbs, err := filepath.Abs(filepath.Dir(sym))
+			if err != nil {
+				return nil, fmt.Errorf("error while validating the command path: %w", err)
+			}
 
-		if symAbs != c.directory {
-			return nil, errors.New("cannot execute files outside of configured plugin directory")
+			if symAbs != c.directory {
+				return nil, errors.New("cannot execute files outside of configured plugin directory")
+			}
 		}
 	}
 
@@ -983,15 +999,17 @@ func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPl
 	// full command instead of the relative command because get() normally prepends
 	// the plugin directory to the command, but we can't use get() here.
 	entryTmp := &pluginutil.PluginRunner{
-		Name:     plugin.Name,
-		Command:  command,
-		OCIImage: plugin.OCIImage,
-		Runtime:  plugin.Runtime,
-		Args:     plugin.Args,
-		Env:      plugin.Env,
-		Sha256:   plugin.Sha256,
-		Builtin:  false,
+		Name:       plugin.Name,
+		Command:    command,
+		OCIImage:   plugin.OCIImage,
+		Runtime:    plugin.Runtime,
+		Args:       plugin.Args,
+		Env:        plugin.Env,
+		Sha256:     plugin.Sha256,
+		Builtin:    false,
+		Enterprise: enterprise,
 	}
+
 	if entryTmp.OCIImage != "" && entryTmp.Runtime != "" {
 		var err error
 		entryTmp.RuntimeConfig, err = c.runtimeCatalog.Get(ctx, entryTmp.Runtime, consts.PluginRuntimeTypeContainer)
@@ -1041,16 +1059,17 @@ func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPl
 	}
 
 	entry := &pluginutil.PluginRunner{
-		Name:     plugin.Name,
-		Type:     plugin.Type,
-		Version:  plugin.Version,
-		Command:  plugin.Command,
-		OCIImage: plugin.OCIImage,
-		Runtime:  plugin.Runtime,
-		Args:     plugin.Args,
-		Env:      plugin.Env,
-		Sha256:   plugin.Sha256,
-		Builtin:  false,
+		Name:       plugin.Name,
+		Type:       plugin.Type,
+		Version:    plugin.Version,
+		Command:    plugin.Command,
+		OCIImage:   plugin.OCIImage,
+		Runtime:    plugin.Runtime,
+		Args:       plugin.Args,
+		Env:        plugin.Env,
+		Sha256:     plugin.Sha256,
+		Builtin:    false,
+		Enterprise: enterprise,
 	}
 
 	buf, err := json.Marshal(entry)
