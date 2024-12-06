@@ -1,0 +1,3 @@
+```release-note:bug
+core/seal (enterprise): Fix decryption of the raft bootstrap challenge when using seal high availability.
+```
