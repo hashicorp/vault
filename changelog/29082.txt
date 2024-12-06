@@ -1,3 +1,3 @@
 ```release-note:improvement
-core: Add Vault information (build date and builtin public keys) required for license checking in external plugins to the `SystemView` interface via the `PluginEnv` function.
+sdk: Add Vault build date to system view plugin environment response
 ```
