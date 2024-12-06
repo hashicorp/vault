@@ -43,6 +43,7 @@ var (
 	ErrPinnedVersion            = errors.New("cannot delete a pinned version")
 	ErrPluginVersionMismatch    = errors.New("plugin version mismatch")
 	ErrPluginUnableToRun        = errors.New("unable to run plugin")
+	ErrEnterpriseFeatureOnly    = errors.New("enterprise-only feature")
 )
 
 // PluginCatalog keeps a record of plugins known to vault. External plugins need
@@ -966,19 +967,23 @@ func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPl
 	if plugin.OCIImage == "" {
 		command = filepath.Join(c.directory, plugin.Command)
 
-		if _, err := os.Stat(command); os.IsNotExist(err) {
+		if sym, err := filepath.EvalSymlinks(command); err != nil {
 			// Best effort to unpack the plugin artifact
-			enterprise, command, err = c.unpackPluginArtifact(ctx, plugin)
-			if err != nil {
+			var unpackErr error
+			enterprise, plugin.Command, unpackErr = c.unpackPluginArtifact(plugin)
+			switch {
+			case unpackErr == nil:
+				command = filepath.Join(c.directory, plugin.Command)
+			case errors.Is(unpackErr, ErrEnterpriseFeatureOnly):
+				// Return the error that Vault CE users normally see when evaluating symlinks fails
+				// in the enterprise feature absence
+				return nil, fmt.Errorf("error while validating the command path: %w", err)
+			default:
 				return nil, fmt.Errorf("failed to unpack plugin artifact: %w", err)
 			}
 		} else {
 			// Best effort check to make sure the command isn't breaking out of the
 			// configured plugin directory.
-			sym, err := filepath.EvalSymlinks(command)
-			if err != nil {
-				return nil, fmt.Errorf("error while validating the command path: %w", err)
-			}
 			symAbs, err := filepath.Abs(filepath.Dir(sym))
 			if err != nil {
 				return nil, fmt.Errorf("error while validating the command path: %w", err)
