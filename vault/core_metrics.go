@@ -491,6 +491,68 @@ func (c *Core) walkKvMountSecrets(ctx context.Context, m *kvMount) {
 	}
 }
 
+// GetTotalPkiRoles returns the total roles across all PKI mounts in Vault
+func (c *Core) GetTotalPkiRoles(ctx context.Context) int {
+	c.mountsLock.RLock()
+	defer c.mountsLock.RUnlock()
+
+	numRoles := 0
+
+	for _, entry := range c.mounts.Entries {
+		secretType := entry.Type
+		if secretType == pluginconsts.SecretEnginePki {
+			listRequest := &logical.Request{
+				Operation: logical.ListOperation,
+				Path:      entry.namespace.Path + entry.Path + "roles",
+			}
+			resp, err := c.router.Route(ctx, listRequest)
+			if err != nil || resp == nil {
+				continue
+			}
+			rawKeys, ok := resp.Data["keys"]
+			if !ok {
+				continue
+			}
+			keys, ok := rawKeys.([]string)
+			if ok {
+				numRoles += len(keys)
+			}
+		}
+	}
+	return numRoles
+}
+
+// GetTotalPkiIssuers returns the total issuers across all PKI mounts in Vault
+func (c *Core) GetTotalPkiIssuers(ctx context.Context) int {
+	c.mountsLock.RLock()
+	defer c.mountsLock.RUnlock()
+
+	numRoles := 0
+
+	for _, entry := range c.mounts.Entries {
+		secretType := entry.Type
+		if secretType == pluginconsts.SecretEnginePki {
+			listRequest := &logical.Request{
+				Operation: logical.ListOperation,
+				Path:      entry.namespace.Path + entry.Path + "issuers",
+			}
+			resp, err := c.router.Route(ctx, listRequest)
+			if err != nil || resp == nil {
+				continue
+			}
+			rawKeys, ok := resp.Data["keys"]
+			if !ok {
+				continue
+			}
+			keys, ok := rawKeys.([]string)
+			if ok {
+				numRoles += len(keys)
+			}
+		}
+	}
+	return numRoles
+}
+
 // getMinNamespaceSecrets is expected to be called on the output
 // of GetKvUsageMetrics to get the min number of secrets in a single namespace.
 func getMinNamespaceSecrets(mapOfNamespacesToSecrets map[string]int) int {
