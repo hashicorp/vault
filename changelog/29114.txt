@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Decode database url to fix editing failures for an oracle connection
+```
