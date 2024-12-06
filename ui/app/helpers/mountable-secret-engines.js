@@ -141,7 +141,7 @@ export function wifEngines() {
   return WIF_ENGINES.slice();
 }
 
-// A list of configuration only secret engines. These engines should only see a configuration tab.
+// The UI only supports configuration views for these secrets engines. The CLI must be used to manage other engine resources (i.e. roles, credentials).
 // Will eventually include gcp.
 export const CONFIGURATION_ONLY = ['azure'];
 
