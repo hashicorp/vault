@@ -5,243 +5,29 @@ package diagnose
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"math/big"
-	mathrand2 "math/rand/v2"
-	"net"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
+	pkihelper "github.com/hashicorp/vault/helper/testhelpers/pki"
 	"github.com/hashicorp/vault/internalshared/configutil"
 )
-
-type testLeafWithRoot struct {
-	testCa             generatedCert
-	leafCertFile       string
-	leafCertPem        *pem.Block
-	leafKeyFile        string
-	combinedLeafCaFile string
-}
-
-type generatedCert struct {
-	keyFile  string
-	certFile string
-	certPem  *pem.Block
-	cert     *x509.Certificate
-	key      *ecdsa.PrivateKey
-}
-
-type testLeafWithIntermediary struct {
-	rootCa         generatedCert
-	intCa          generatedCert
-	leaf           generatedCert
-	combinedCaFile string
-}
-
-// generateCertWithIntermediaryRoot generates a leaf certificate signed by an intermediary root CA
-func generateCertWithIntermediaryRoot(t testing.TB) testLeafWithIntermediary {
-	t.Helper()
-	tempDir := t.TempDir()
-	template := &x509.Certificate{
-		Subject: pkix.Name{
-			CommonName: "localhost",
-		},
-		SerialNumber: big.NewInt(mathrand2.Int64()),
-		DNSNames:     []string{"localhost"},
-		IPAddresses:  []net.IP{net.ParseIP("127.0.0.1")},
-		KeyUsage:     x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
-		NotBefore:    time.Now().Add(-30 * time.Second),
-		NotAfter:     time.Now().Add(60 * 24 * time.Hour),
-	}
-
-	ca := generateRootCa(t)
-	caIntTemplate := &x509.Certificate{
-		Subject: pkix.Name{
-			CommonName: "Intermediary CA",
-		},
-		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
-		SerialNumber:          big.NewInt(mathrand2.Int64()),
-		NotBefore:             time.Now().Add(-30 * time.Second),
-		NotAfter:              time.Now().Add(262980 * time.Hour),
-		BasicConstraintsValid: true,
-		IsCA:                  true,
-	}
-	caInt := generateCertAndSign(t, caIntTemplate, ca, tempDir, "int_")
-	leafCert := generateCertAndSign(t, template, caInt, tempDir, "leaf_")
-
-	combinedCasFile := filepath.Join(tempDir, "cas.pem")
-	err := os.WriteFile(combinedCasFile, append(pem.EncodeToMemory(caInt.certPem), pem.EncodeToMemory(ca.certPem)...), 0o644)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return testLeafWithIntermediary{
-		rootCa:         ca,
-		intCa:          caInt,
-		leaf:           leafCert,
-		combinedCaFile: combinedCasFile,
-	}
-}
-
-// generateCertAndSign generates a certificate and associated key signed by a CA
-func generateCertAndSign(t testing.TB, template *x509.Certificate, ca generatedCert, tempDir string, filePrefix string) generatedCert {
-	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
-	certBytes, err := x509.CreateCertificate(rand.Reader, template, ca.cert, key.Public(), ca.key)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cert, err := x509.ParseCertificate(certBytes)
-	if err != nil {
-		t.Fatal(err)
-	}
-	certPEMBlock := &pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: certBytes,
-	}
-	certFile := filepath.Join(tempDir, filePrefix+"cert.pem")
-	err = os.WriteFile(certFile, pem.EncodeToMemory(certPEMBlock), 0o644)
-	if err != nil {
-		t.Fatal(err)
-	}
-	marshaledKey, err := x509.MarshalECPrivateKey(key)
-	if err != nil {
-		t.Fatal(err)
-	}
-	keyPEMBlock := &pem.Block{
-		Type:  "EC PRIVATE KEY",
-		Bytes: marshaledKey,
-	}
-	keyFile := filepath.Join(tempDir, filePrefix+"key.pem")
-	err = os.WriteFile(keyFile, pem.EncodeToMemory(keyPEMBlock), 0o644)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return generatedCert{
-		keyFile:  keyFile,
-		certFile: certFile,
-		certPem:  certPEMBlock,
-		cert:     cert,
-		key:      key,
-	}
-}
-
-// generateCertWithRoot generates a leaf certificate signed by a root CA
-func generateCertWithRoot(t testing.TB) testLeafWithRoot {
-	t.Helper()
-	tempDir := t.TempDir()
-	leafTemplate := &x509.Certificate{
-		Subject: pkix.Name{
-			CommonName: "localhost",
-		},
-		SerialNumber: big.NewInt(mathrand2.Int64()),
-		DNSNames:     []string{"localhost"},
-		IPAddresses:  []net.IP{net.ParseIP("127.0.0.1")},
-		KeyUsage:     x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
-		NotBefore:    time.Now().Add(-30 * time.Second),
-		NotAfter:     time.Now().Add(60 * 24 * time.Hour),
-	}
-
-	ca := generateRootCa(t)
-	leafCert := generateCertAndSign(t, leafTemplate, ca, tempDir, "leaf_")
-
-	combinedCaLeafFile := filepath.Join(tempDir, "leaf-ca.pem")
-	err := os.WriteFile(combinedCaLeafFile, append(pem.EncodeToMemory(leafCert.certPem), pem.EncodeToMemory(ca.certPem)...), 0o644)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return testLeafWithRoot{
-		testCa:             ca,
-		leafCertPem:        leafCert.certPem,
-		leafCertFile:       leafCert.certFile,
-		leafKeyFile:        leafCert.keyFile,
-		combinedLeafCaFile: combinedCaLeafFile,
-	}
-}
-
-// generateRootCa generates a self-signed root CA certificate and key
-func generateRootCa(t testing.TB) generatedCert {
-	t.Helper()
-	tempDir := t.TempDir()
-
-	caCertTemplate := &x509.Certificate{
-		Subject: pkix.Name{
-			CommonName: "Root CA",
-		},
-		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
-		SerialNumber:          big.NewInt(mathrand2.Int64()),
-		NotBefore:             time.Now().Add(-30 * time.Second),
-		NotAfter:              time.Now().Add(262980 * time.Hour),
-		BasicConstraintsValid: true,
-		IsCA:                  true,
-	}
-	caKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
-	caBytes, err := x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, caKey.Public(), caKey)
-	if err != nil {
-		t.Fatal(err)
-	}
-	caCert, err := x509.ParseCertificate(caBytes)
-	if err != nil {
-		t.Fatal(err)
-	}
-	caCertPEMBlock := &pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: caBytes,
-	}
-	caFile := filepath.Join(tempDir, "ca_root_cert.pem")
-	err = os.WriteFile(caFile, pem.EncodeToMemory(caCertPEMBlock), 0o644)
-	if err != nil {
-		t.Fatal(err)
-	}
-	marshaledCAKey, err := x509.MarshalECPrivateKey(caKey)
-	if err != nil {
-		t.Fatal(err)
-	}
-	caKeyPEMBlock := &pem.Block{
-		Type:  "EC PRIVATE KEY",
-		Bytes: marshaledCAKey,
-	}
-	caKeyFile := filepath.Join(tempDir, "ca_root_key.pem")
-	err = os.WriteFile(caKeyFile, pem.EncodeToMemory(caKeyPEMBlock), 0o644)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return generatedCert{
-		certPem:  caCertPEMBlock,
-		certFile: caFile,
-		keyFile:  caKeyFile,
-		cert:     caCert,
-		key:      caKey,
-	}
-}
 
 // TestTLSValidCert is the positive test case to show that specifying a valid cert and key
 // passes all checks.
 func TestTLSValidCert(t *testing.T) {
-	tlsFiles := generateCertWithRoot(t)
+	tlsFiles := pkihelper.GenerateCertWithRoot(t)
 
 	listeners := []*configutil.Listener{
 		{
 			Type:                  "tcp",
 			Address:               "127.0.0.1:443",
 			ClusterAddress:        "127.0.0.1:8201",
-			TLSCertFile:           tlsFiles.combinedLeafCaFile,
-			TLSKeyFile:            tlsFiles.leafKeyFile,
+			TLSCertFile:           tlsFiles.CombinedLeafCaFile,
+			TLSKeyFile:            tlsFiles.LeafKeyFile,
 			TLSMinVersion:         "tls10",
 			TLSDisableClientCerts: true,
 		},
@@ -610,15 +396,15 @@ func TestTLSClientCAVerfiyMutualExclusion(t *testing.T) {
 
 // TestTLSClientCAVerfiy checks that a listener which has TLS client certs checks enabled works as expected
 func TestTLSClientCAFileCheck(t *testing.T) {
-	testCaFiles := generateCertWithRoot(t)
+	testCaFiles := pkihelper.GenerateCertWithRoot(t)
 	listeners := []*configutil.Listener{
 		{
 			Type:                          "tcp",
 			Address:                       "127.0.0.1:443",
 			ClusterAddress:                "127.0.0.1:8201",
-			TLSCertFile:                   testCaFiles.leafCertFile,
-			TLSKeyFile:                    testCaFiles.leafKeyFile,
-			TLSClientCAFile:               testCaFiles.testCa.certFile,
+			TLSCertFile:                   testCaFiles.LeafCertFile,
+			TLSKeyFile:                    testCaFiles.LeafKeyFile,
+			TLSClientCAFile:               testCaFiles.TestCa.CertFile,
 			TLSMaxVersion:                 "tls10",
 			TLSRequireAndVerifyClientCert: true,
 			TLSDisableClientCerts:         false,
@@ -635,13 +421,13 @@ func TestTLSClientCAFileCheck(t *testing.T) {
 
 // TestTLSLeafCertInClientCAFile checks if a leafCert exist in TLSClientCAFile
 func TestTLSLeafCertInClientCAFile(t *testing.T) {
-	testCaFiles := generateCertWithRoot(t)
+	testCaFiles := pkihelper.GenerateCertWithRoot(t)
 
 	tempDir := t.TempDir()
 
-	otherRoot := generateRootCa(t)
+	otherRoot := pkihelper.GenerateRootCa(t)
 	mixedLeafWithRoot := filepath.Join(tempDir, "goodcertbadroot.pem")
-	err := os.WriteFile(mixedLeafWithRoot, append(pem.EncodeToMemory(testCaFiles.leafCertPem), pem.EncodeToMemory(otherRoot.certPem)...), 0o644)
+	err := os.WriteFile(mixedLeafWithRoot, append(pem.EncodeToMemory(testCaFiles.LeafCertPem), pem.EncodeToMemory(otherRoot.CertPem)...), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to write file %s: %v", mixedLeafWithRoot, err)
 	}
@@ -651,8 +437,8 @@ func TestTLSLeafCertInClientCAFile(t *testing.T) {
 			Type:                          "tcp",
 			Address:                       "127.0.0.1:443",
 			ClusterAddress:                "127.0.0.1:8201",
-			TLSCertFile:                   testCaFiles.combinedLeafCaFile,
-			TLSKeyFile:                    testCaFiles.leafKeyFile,
+			TLSCertFile:                   testCaFiles.CombinedLeafCaFile,
+			TLSKeyFile:                    testCaFiles.LeafKeyFile,
 			TLSClientCAFile:               mixedLeafWithRoot,
 			TLSMaxVersion:                 "tls10",
 			TLSRequireAndVerifyClientCert: true,
@@ -677,15 +463,15 @@ func TestTLSLeafCertInClientCAFile(t *testing.T) {
 
 // TestTLSNoRootInClientCAFile checks if no Root cert exist in TLSClientCAFile
 func TestTLSNoRootInClientCAFile(t *testing.T) {
-	testCa := generateCertWithIntermediaryRoot(t)
+	testCa := pkihelper.GenerateCertWithIntermediaryRoot(t)
 	listeners := []*configutil.Listener{
 		{
 			Type:                          "tcp",
 			Address:                       "127.0.0.1:443",
 			ClusterAddress:                "127.0.0.1:8201",
-			TLSCertFile:                   testCa.leaf.certFile,
-			TLSKeyFile:                    testCa.leaf.keyFile,
-			TLSClientCAFile:               testCa.intCa.certFile,
+			TLSCertFile:                   testCa.Leaf.CertFile,
+			TLSKeyFile:                    testCa.Leaf.KeyFile,
+			TLSClientCAFile:               testCa.IntCa.CertFile,
 			TLSMaxVersion:                 "tls10",
 			TLSRequireAndVerifyClientCert: true,
 			TLSDisableClientCerts:         false,
@@ -702,15 +488,15 @@ func TestTLSNoRootInClientCAFile(t *testing.T) {
 
 // TestTLSIntermediateCertInClientCAFile checks if an intermediate cert is included in TLSClientCAFile
 func TestTLSIntermediateCertInClientCAFile(t *testing.T) {
-	testCa := generateCertWithIntermediaryRoot(t)
+	testCa := pkihelper.GenerateCertWithIntermediaryRoot(t)
 	listeners := []*configutil.Listener{
 		{
 			Type:                          "tcp",
 			Address:                       "127.0.0.1:443",
 			ClusterAddress:                "127.0.0.1:8201",
-			TLSCertFile:                   testCa.leaf.certFile,
-			TLSKeyFile:                    testCa.leaf.keyFile,
-			TLSClientCAFile:               testCa.combinedCaFile,
+			TLSCertFile:                   testCa.Leaf.CertFile,
+			TLSKeyFile:                    testCa.Leaf.KeyFile,
+			TLSClientCAFile:               testCa.CombinedCaFile,
 			TLSMaxVersion:                 "tls10",
 			TLSRequireAndVerifyClientCert: true,
 			TLSDisableClientCerts:         false,
@@ -727,11 +513,11 @@ func TestTLSIntermediateCertInClientCAFile(t *testing.T) {
 
 // TestTLSMultipleRootInClientCACert checks if multiple roots included in TLSClientCAFile
 func TestTLSMultipleRootInClientCACert(t *testing.T) {
-	testCa := generateCertWithRoot(t)
-	otherRoot := generateRootCa(t)
+	testCa := pkihelper.GenerateCertWithRoot(t)
+	otherRoot := pkihelper.GenerateRootCa(t)
 	tempDir := t.TempDir()
 	mixedRoots := filepath.Join(tempDir, "twoRootCA.pem")
-	err := os.WriteFile(mixedRoots, append(pem.EncodeToMemory(testCa.testCa.certPem), pem.EncodeToMemory(otherRoot.certPem)...), 0o644)
+	err := os.WriteFile(mixedRoots, append(pem.EncodeToMemory(testCa.TestCa.CertPem), pem.EncodeToMemory(otherRoot.CertPem)...), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to write file %s: %v", mixedRoots, err)
 	}
@@ -741,8 +527,8 @@ func TestTLSMultipleRootInClientCACert(t *testing.T) {
 			Type:                          "tcp",
 			Address:                       "127.0.0.1:443",
 			ClusterAddress:                "127.0.0.1:8201",
-			TLSCertFile:                   testCa.leafCertFile,
-			TLSKeyFile:                    testCa.leafKeyFile,
+			TLSCertFile:                   testCa.LeafCertFile,
+			TLSKeyFile:                    testCa.LeafKeyFile,
 			TLSClientCAFile:               mixedRoots,
 			TLSMinVersion:                 "tls10",
 			TLSRequireAndVerifyClientCert: true,
