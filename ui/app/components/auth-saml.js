@@ -97,8 +97,10 @@ export default class AuthSaml extends Component {
         if (!resp?.auth) {
           continue;
         }
-        // We've obtained the Vault token for the authentication flow, now log in.
-        yield this.args.onSubmit(null, null, resp.auth.client_token);
+        // We've obtained the Vault token for the authentication flow now log in or pass MFA data
+        const { mfa_requirement, client_token } = resp.auth;
+        // onSubmit calls doSubmit in auth-form.js
+        yield this.args.onSubmit({ mfa_requirement }, null, client_token);
         this.closeWindow(samlWindow);
         return;
       } catch (e) {

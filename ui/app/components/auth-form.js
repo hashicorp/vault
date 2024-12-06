@@ -257,6 +257,7 @@ export default Component.extend(DEFAULTS, {
           data.path = 'okta';
         }
       }
+      // calls performAuth in login-form.js which initiates the authenticate @task
       return this.performAuth(backend.type, data);
     },
     handleError(e) {
