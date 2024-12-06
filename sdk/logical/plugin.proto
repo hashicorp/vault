@@ -21,7 +21,4 @@ message PluginEnvironment {
 
   // VaultBuildDate is the build date of the Vault server
   google.protobuf.Timestamp vault_build_date = 4;
-
-  // VaultBuiltinPublicKeys contains the builtin public keys of the Vault server
-  repeated string vault_builtin_public_keys = 5;
 }

@@ -419,7 +419,6 @@ func (d dynamicSystemView) PluginEnv(_ context.Context) (*logical.PluginEnvironm
 		VaultVersionPrerelease: v.VersionPrerelease,
 		VaultVersionMetadata:   v.VersionMetadata,
 		VaultBuildDate:         timestamppb.New(buildDate),
-		VaultBuiltinPublicKeys: GetBuiltinPublicKeys(),
 	}, nil
 }
 

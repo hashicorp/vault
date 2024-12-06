@@ -325,7 +325,6 @@ func TestDynamicSystemView_PluginEnv_successful(t *testing.T) {
 		VaultVersionPrerelease: expectedVersionInfo.VersionPrerelease,
 		VaultVersionMetadata:   expectedVersionInfo.VersionMetadata,
 		VaultBuildDate:         timestamppb.New(expectedBuildDate),
-		VaultBuiltinPublicKeys: GetBuiltinPublicKeys(),
 	}
 
 	if !reflect.DeepEqual(pluginEnv, expectedPluginEnv) {
