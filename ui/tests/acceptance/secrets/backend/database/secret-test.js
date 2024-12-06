@@ -553,6 +553,19 @@ module('Acceptance | secrets/database/*', function (hooks) {
     await visit('/vault/secrets');
   });
 
+  test('connection_url must be decoded', async function (assert) {
+    const backend = this.backend;
+    const connection = await newConnection(
+      backend,
+      'mongodb-database-plugin',
+      '{{username}}/{{password}}@mongo:1521/XEPDB1'
+    );
+    await navToConnection(backend, connection);
+    assert
+      .dom('[data-test-row-value="Connection URL"]')
+      .hasText('{{username}}/{{password}}@mongo:1521/XEPDB1');
+  });
+
   test('Role create form', async function (assert) {
     const backend = this.backend;
     // Connection needed for role fields
