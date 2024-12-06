@@ -100,7 +100,7 @@ jobs:
       matrix: ${{ steps.build.outputs.matrix }}
       matrix_ids: ${{ steps.build.outputs.matrix_ids }}
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ inputs.checkout-ref }}
       - name: Authenticate to Vault
@@ -235,7 +235,7 @@ jobs:
       go-test-results-download-pattern: ${{ steps.metadata.outputs.go-test-results-download-pattern }}
       data-race-log-download-pattern: ${{ steps.metadata.outputs.data-race-log-download-pattern }}
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/set-up-go
