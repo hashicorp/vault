@@ -12,7 +12,7 @@ fail() {
 [[ -z "$MOUNT" ]] && fail "MOUNT env variable has not been set"
 [[ -z "$VAULT_ADDR" ]] && fail "VAULT_ADDR env variable has not been set"
 [[ -z "$VAULT_INSTALL_DIR" ]] && fail "VAULT_INSTALL_DIR env variable has not been set"
-#[[ -z "$VAULT_TOKEN" ]] && fail "VAULT_TOKEN env variable has not been set"
+[[ -z "$VAULT_TOKEN" ]] && fail "VAULT_TOKEN env variable has not been set"
 [[ -z "$COMMON_NAME" ]] && fail "COMMON_NAME env variable has not been set"
 [[ -z "$TTL" ]] && fail "TTL env variable has not been set"
 [[ -z "$TMP_TEST_RESULTS" ]] && fail "TMP_TEST_RESULTS env variable has not been set"
