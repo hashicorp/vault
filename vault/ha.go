@@ -46,6 +46,8 @@ const (
 	// leaderPrefixCleanDelay is how long to wait between deletions
 	// of orphaned leader keys, to prevent slamming the backend.
 	leaderPrefixCleanDelay = 200 * time.Millisecond
+
+	haAllowedMissedHeartbeats = 2
 )
 
 func init() {
@@ -1235,4 +1237,25 @@ func (c *Core) getRemovableHABackend() physical.RemovableNodeHABackend {
 	}
 
 	return haBackend
+}
+
+// GetHAHeartbeatHealth returns whether a node's last successful heartbeat was
+// more than 2 intervals ago. If the node's request forwarding clients were
+// cleared (due to the node being sealed or finding a new leader), or the node
+// is uninitialized, healthy will be false.
+func (c *Core) GetHAHeartbeatHealth() (healthy bool, sinceLastHeartbeat *time.Duration) {
+	heartbeat := c.rpcLastSuccessfulHeartbeat.Load()
+	if heartbeat == nil {
+		return false, nil
+	}
+	lastHeartbeat := heartbeat.(time.Time)
+	if lastHeartbeat.IsZero() {
+		return false, nil
+	}
+	diff := time.Now().Sub(lastHeartbeat)
+	heartbeatInterval := c.clusterHeartbeatInterval
+	if heartbeatInterval <= 0 {
+		heartbeatInterval = 5 * time.Second
+	}
+	return diff < heartbeatInterval*haAllowedMissedHeartbeats, &diff
 }
