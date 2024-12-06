@@ -32,7 +32,7 @@ export default class AwsLeaseConfig extends Model {
   })
   lease;
 
-  get attrs() {
+  get displayAttrs() {
     const keys = ['lease', 'leaseMax'];
     return expandAttributeMeta(this, keys);
   }
