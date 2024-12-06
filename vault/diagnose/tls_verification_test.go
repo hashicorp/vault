@@ -27,7 +27,7 @@ func TestTLSValidCert(t *testing.T) {
 			Address:               "127.0.0.1:443",
 			ClusterAddress:        "127.0.0.1:8201",
 			TLSCertFile:           tlsFiles.CombinedLeafCaFile,
-			TLSKeyFile:            tlsFiles.LeafKeyFile,
+			TLSKeyFile:            tlsFiles.Leaf.KeyFile,
 			TLSMinVersion:         "tls10",
 			TLSDisableClientCerts: true,
 		},
@@ -402,9 +402,9 @@ func TestTLSClientCAFileCheck(t *testing.T) {
 			Type:                          "tcp",
 			Address:                       "127.0.0.1:443",
 			ClusterAddress:                "127.0.0.1:8201",
-			TLSCertFile:                   testCaFiles.LeafCertFile,
-			TLSKeyFile:                    testCaFiles.LeafKeyFile,
-			TLSClientCAFile:               testCaFiles.TestCa.CertFile,
+			TLSCertFile:                   testCaFiles.Leaf.CertFile,
+			TLSKeyFile:                    testCaFiles.Leaf.KeyFile,
+			TLSClientCAFile:               testCaFiles.RootCa.CertFile,
 			TLSMaxVersion:                 "tls10",
 			TLSRequireAndVerifyClientCert: true,
 			TLSDisableClientCerts:         false,
@@ -427,7 +427,7 @@ func TestTLSLeafCertInClientCAFile(t *testing.T) {
 
 	otherRoot := pkihelper.GenerateRootCa(t)
 	mixedLeafWithRoot := filepath.Join(tempDir, "goodcertbadroot.pem")
-	err := os.WriteFile(mixedLeafWithRoot, append(pem.EncodeToMemory(testCaFiles.LeafCertPem), pem.EncodeToMemory(otherRoot.CertPem)...), 0o644)
+	err := os.WriteFile(mixedLeafWithRoot, append(pem.EncodeToMemory(testCaFiles.Leaf.CertPem), pem.EncodeToMemory(otherRoot.CertPem)...), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to write file %s: %v", mixedLeafWithRoot, err)
 	}
@@ -438,7 +438,7 @@ func TestTLSLeafCertInClientCAFile(t *testing.T) {
 			Address:                       "127.0.0.1:443",
 			ClusterAddress:                "127.0.0.1:8201",
 			TLSCertFile:                   testCaFiles.CombinedLeafCaFile,
-			TLSKeyFile:                    testCaFiles.LeafKeyFile,
+			TLSKeyFile:                    testCaFiles.Leaf.KeyFile,
 			TLSClientCAFile:               mixedLeafWithRoot,
 			TLSMaxVersion:                 "tls10",
 			TLSRequireAndVerifyClientCert: true,
@@ -517,7 +517,7 @@ func TestTLSMultipleRootInClientCACert(t *testing.T) {
 	otherRoot := pkihelper.GenerateRootCa(t)
 	tempDir := t.TempDir()
 	mixedRoots := filepath.Join(tempDir, "twoRootCA.pem")
-	err := os.WriteFile(mixedRoots, append(pem.EncodeToMemory(testCa.TestCa.CertPem), pem.EncodeToMemory(otherRoot.CertPem)...), 0o644)
+	err := os.WriteFile(mixedRoots, append(pem.EncodeToMemory(testCa.RootCa.CertPem), pem.EncodeToMemory(otherRoot.CertPem)...), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to write file %s: %v", mixedRoots, err)
 	}
@@ -527,8 +527,8 @@ func TestTLSMultipleRootInClientCACert(t *testing.T) {
 			Type:                          "tcp",
 			Address:                       "127.0.0.1:443",
 			ClusterAddress:                "127.0.0.1:8201",
-			TLSCertFile:                   testCa.LeafCertFile,
-			TLSKeyFile:                    testCa.LeafKeyFile,
+			TLSCertFile:                   testCa.Leaf.CertFile,
+			TLSKeyFile:                    testCa.Leaf.KeyFile,
 			TLSClientCAFile:               mixedRoots,
 			TLSMinVersion:                 "tls10",
 			TLSRequireAndVerifyClientCert: true,
