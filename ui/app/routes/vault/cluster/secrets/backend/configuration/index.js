@@ -51,7 +51,7 @@ export default class SecretsBackendConfigurationRoute extends Route {
       }
     }
     // If the engine is configurable fetch the config model(s) for the engine and return it alongside the model
-    if (CONFIGURABLE_SECRET_ENGINES.includes(secretEngineModel.type) || secretEngineModel.type === 'azure') {
+    if (CONFIGURABLE_SECRET_ENGINES.includes(secretEngineModel.type)) {
       let configModels = await this.fetchConfig(secretEngineModel.type, secretEngineModel.id);
       configModels = this.standardizeConfigModels(configModels);
 
