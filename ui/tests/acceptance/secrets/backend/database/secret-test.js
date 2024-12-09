@@ -6,6 +6,7 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { currentURL, settled, click, visit, fillIn, typeIn, waitFor } from '@ember/test-helpers';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 import { create } from 'ember-cli-page-object';
 import { selectChoose } from 'ember-power-select/test-support';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
@@ -226,6 +227,7 @@ const connectionTests = [
 
 module('Acceptance | secrets/database/*', function (hooks) {
   setupApplicationTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(async function () {
     this.backend = `database-testing`;
@@ -337,9 +339,11 @@ module('Acceptance | secrets/database/*', function (hooks) {
       await visit('/vault/secrets');
     });
   }
-  test('database connection create and edit: vault-plugin-database-oracle', async function (assert) {
+
+  // keep oracle as separate test because it relies on an external plugin that isn't rolled into the vault binary
+  // https://github.com/hashicorp/vault-plugin-database-oracle
+  test('database connection create: vault-plugin-database-oracle', async function (assert) {
     assert.expect(11);
-    // keep oracle as separate test because it behaves differently than the others
     const testCase = {
       name: 'oracle-connection',
       plugin: 'vault-plugin-database-oracle',
@@ -380,7 +384,52 @@ module('Acceptance | secrets/database/*', function (hooks) {
     await connectionPage.connectionUrl(testCase.url);
     testCase.requiredFields(assert, testCase.plugin);
     // Cannot save without plugin mounted
-    // TODO: add fake server response for fuller test coverage
+    // Edit tested separately with mocked server response
+  });
+
+  test('database connection edit: vault-plugin-database-oracle', async function (assert) {
+    assert.expect(2);
+    const connectionName = 'oracle-connection';
+    // mock API so we can test edit (without mounting external oracle plugin)
+    this.server.get(`/${this.backend}/config/${connectionName}`, () => {
+      return {
+        request_id: 'f869f23e-15c0-389b-82ac-84035a2b6079',
+        lease_id: '',
+        renewable: false,
+        lease_duration: 0,
+        data: {
+          allowed_roles: ['*'],
+          connection_details: {
+            backend: 'database',
+            connection_url: '%7B%7Busername%7D%7D/%7B%7Bpassword%7D%7D@//localhost:1521/ORCLPDB1',
+            max_connection_lifetime: '0s',
+            max_idle_connections: 0,
+            max_open_connections: 3,
+            username: 'VAULTADMIN',
+          },
+          password_policy: '',
+          plugin_name: 'vault-plugin-database-oracle',
+          plugin_version: '',
+          root_credentials_rotate_statements: [],
+          verify_connection: true,
+        },
+        wrap_info: null,
+        warnings: null,
+        auth: null,
+        mount_type: 'database',
+      };
+    });
+
+    await visit(`/vault/secrets/${this.backend}/show/${connectionName}`);
+    const decoded = '{{username}}/{{password}}@//localhost:1521/ORCLPDB1';
+    assert
+      .dom('[data-test-row-value="Connection URL"]')
+      .hasText(decoded, 'connection_url is decoded in display');
+
+    await connectionPage.edit();
+    assert
+      .dom('[data-test-input="connection_url"]')
+      .hasValue(decoded, 'connection_url is decoded when editing');
   });
 
   test('Can create and delete a connection', async function (assert) {
@@ -504,17 +553,17 @@ module('Acceptance | secrets/database/*', function (hooks) {
     await visit('/vault/secrets');
   });
 
-  test('connection_url must be decoded', async function (assert) {
+  test('connection_url is decoded', async function (assert) {
     const backend = this.backend;
     const connection = await newConnection(
       backend,
       'mongodb-database-plugin',
-      '{{username}}/{{password}}@oracle-xe:1521/XEPDB1'
+      '{{username}}/{{password}}@mongo:1521/XEPDB1'
     );
     await navToConnection(backend, connection);
     assert
       .dom('[data-test-row-value="Connection URL"]')
-      .hasText('{{username}}/{{password}}@oracle-xe:1521/XEPDB1');
+      .hasText('{{username}}/{{password}}@mongo:1521/XEPDB1');
   });
 
   test('Role create form', async function (assert) {
