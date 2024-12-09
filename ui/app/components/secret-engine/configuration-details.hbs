@@ -5,7 +5,7 @@
 
 {{#if @configModels.length}}
   {{#each @configModels as |configModel|}}
-    {{#each configModel.attrs as |attr|}}
+    {{#each configModel.displayAttrs as |attr|}}
       {{! public key while not sensitive when editing/creating, should be hidden by default on viewing }}
       {{#if (or attr.options.sensitive (eq attr.name "publicKey"))}}
         <InfoTableRow
@@ -27,6 +27,7 @@
           @alwaysRender={{not (is-empty-value (get @model attr.name))}}
           @label={{or attr.options.label (to-label attr.name)}}
           @value={{get configModel (or attr.options.fieldValue attr.name)}}
+          @formatTtl={{eq attr.options.editType "ttl"}}
         />
       {{/if}}
     {{/each}}
@@ -36,14 +37,17 @@
   <EmptyState
     data-test-config-cta
     @title="{{@typeDisplay}} not configured"
-    @message="Get started by configuring your {{@typeDisplay}} engine."
+    @message="Get started by configuring your {{@typeDisplay}} secrets engine."
   >
-    <Hds::Link::Standalone
-      @icon="chevron-right"
-      @iconPosition="trailing"
-      @text="Configure {{@typeDisplay}}"
-      @route="vault.cluster.secrets.backend.configuration.edit"
-      @model={{@id}}
-    />
+    {{! TODO: short-term conditional to be removed once configuration for azure is merged. }}
+    {{#unless (eq @typeDisplay "Azure")}}
+      <Hds::Link::Standalone
+        @icon="chevron-right"
+        @iconPosition="trailing"
+        @text="Configure {{@typeDisplay}}"
+        @route="vault.cluster.secrets.backend.configuration.edit"
+        @model={{@id}}
+      />
+    {{/unless}}
   </EmptyState>
 {{/if}}

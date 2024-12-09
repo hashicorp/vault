@@ -16,7 +16,7 @@ export default class IdentityOidcConfig extends Model {
   })
   issuer;
 
-  get attrs() {
+  get displayAttrs() {
     const keys = ['issuer'];
     return expandAttributeMeta(this, keys);
   }
