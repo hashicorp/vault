@@ -39,24 +39,30 @@ export default class AzureConfig extends Model {
   })
   rootPasswordTtl;
 
+  configurableParams = [
+    'subscriptionId',
+    'tenantId',
+    'clientId',
+    'clientSecret',
+    'identityTokenAudience',
+    'identityTokenTtl',
+    'rootPasswordTtl',
+    'environment',
+  ];
+
   // for configuration details view
   // do not include clientSecret because it is never returned by the API
   get displayAttrs() {
     return this.formFields.filter((attr) => attr.name !== 'clientSecret');
   }
 
+  get isConfigured() {
+    const params = this.displayAttrs.map((attr) => attr.name);
+    return params.some((param) => this[param]);
+  }
+
   // formFields are iterated through to generate the edit/create view
   get formFields() {
-    const keys = [
-      'subscriptionId',
-      'tenantId',
-      'clientId',
-      'clientSecret',
-      'identityTokenAudience',
-      'identityTokenTtl',
-      'rootPasswordTtl',
-      'environment',
-    ];
-    return expandAttributeMeta(this, keys);
+    return expandAttributeMeta(this, this.configurableParams);
   }
 }
