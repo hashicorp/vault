@@ -278,9 +278,9 @@ func NearExpiration(c *x509.Certificate) (bool, time.Duration) {
 	timeToExpiry := c.NotAfter.Sub(now)
 
 	oneMonthFromNow := now.Add(30 * 24 * time.Hour)
-	hasExpired := oneMonthFromNow.After(c.NotAfter)
+	isNearExpiration := oneMonthFromNow.After(c.NotAfter)
 
-	return hasExpired, timeToExpiry
+	return isNearExpiration, timeToExpiry
 }
 
 // TLSMutualExclusionCertCheck returns error if both TLSDisableClientCerts and TLSRequireAndVerifyClientCert are set
