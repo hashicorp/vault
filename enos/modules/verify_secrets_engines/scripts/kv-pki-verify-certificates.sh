@@ -23,6 +23,8 @@ export VAULT_FORMAT=json
 
 # Getting Certificates
 VAULT_CERTS=$("$binpath" list -format=json "${MOUNT}/certs" | jq -r '.[]')
+
+# Verify List Certificate
 [[ -z "$VAULT_CERTS" ]] && fail "VAULT_CERTS should include vault certificates"
 
 # Verifying Certificates
@@ -31,4 +33,16 @@ for CERT in $VAULT_CERTS; do
   "$binpath" read "${MOUNT}/cert/${CERT}" | jq -r '.data.certificate' > "${TMP_TEST_RESULTS}/tmp_vault_cert.pem"
   echo "Verifying Certificate..."
   openssl x509 -in "${TMP_TEST_RESULTS}/tmp_vault_cert.pem" -text -noout || fail "The certificate appears to be improperly configured or contains errors"
+  echo "Verification Successful"
+
+  IS_CA=$(openssl x509 -in "${TMP_TEST_RESULTS}/tmp_vault_cert.pem" -text -noout | grep -q "CA:TRUE" && echo "TRUE" || echo "FALSE")
+  if [[ "${IS_CA}" == "FALSE" ]]; then
+    echo "Revoking Certificate: ${CERT}"
+    "$binpath" write "${MOUNT}/revoke" serial_number="${CERT}" || fail "Could not revoke certificate ${CERT}"
+  else
+    echo "Skipping revoking step for this certificate to being a root CA Cert: ${CERT}"
+  fi
 done
+
+# Verify List Revoked Certificate
+"$binpath" list -format=json "${MOUNT}/certs/revoked" | jq -r '.[]' || fail "There are no revoked certificate listed"
