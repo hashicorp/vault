@@ -10,7 +10,6 @@ import (
 	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
@@ -19,6 +18,7 @@ import (
 
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mikesmitty/edkey"
 	"golang.org/x/crypto/ssh"
@@ -326,7 +326,7 @@ func generateSSHKeyPair(randomSource io.Reader, keyType string, keyBits int) (st
 			return "", "", fmt.Errorf("refusing to generate weak %v key: %v bits < 2048 bits", keyType, keyBits)
 		}
 
-		privateSeed, err := rsa.GenerateKey(randomSource, keyBits)
+		privateSeed, err := cryptoutil.GenerateRSAKey(randomSource, keyBits)
 		if err != nil {
 			return "", "", err
 		}

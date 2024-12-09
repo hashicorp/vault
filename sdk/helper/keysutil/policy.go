@@ -35,6 +35,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/kdf"
@@ -72,6 +73,7 @@ const (
 	KeyType_AES128_CMAC
 	KeyType_AES256_CMAC
 	KeyType_ML_DSA
+	KeyType_HYBRID
 	// If adding to this list please update allTestKeyTypes in policy_test.go
 )
 
@@ -188,7 +190,7 @@ func (kt KeyType) DecryptionSupported() bool {
 
 func (kt KeyType) SigningSupported() bool {
 	switch kt {
-	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_ED25519, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY, KeyType_ML_DSA:
+	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_ED25519, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY, KeyType_ML_DSA, KeyType_HYBRID:
 		return true
 	}
 	return false
@@ -240,7 +242,7 @@ func (kt KeyType) HMACSupported() bool {
 
 func (kt KeyType) IsPQC() bool {
 	switch kt {
-	case KeyType_ML_DSA:
+	case KeyType_ML_DSA, KeyType_HYBRID:
 		return true
 	default:
 		return false
@@ -296,6 +298,8 @@ func (kt KeyType) String() string {
 		return "aes256-cmac"
 	case KeyType_ML_DSA:
 		return "ml-dsa"
+	case KeyType_HYBRID:
+		return "hybrid"
 	}
 
 	return "[unknown]"
@@ -569,6 +573,9 @@ type Policy struct {
 
 	// ParameterSet indicates the parameter set to use with ML-DSA and SLH-DSA keys
 	ParameterSet string
+
+	// HybridConfig contains the key types and parameters for hybrid keys
+	HybridConfig HybridKeyConfig
 }
 
 func (p *Policy) Lock(exclusive bool) {
@@ -1265,69 +1272,7 @@ func (p *Policy) SignWithOptions(ver int, context, input []byte, options *Signin
 
 	switch p.Type {
 	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
-		var curveBits int
-		var curve elliptic.Curve
-		switch p.Type {
-		case KeyType_ECDSA_P384:
-			curveBits = 384
-			curve = elliptic.P384()
-		case KeyType_ECDSA_P521:
-			curveBits = 521
-			curve = elliptic.P521()
-		default:
-			curveBits = 256
-			curve = elliptic.P256()
-		}
-
-		key := &ecdsa.PrivateKey{
-			PublicKey: ecdsa.PublicKey{
-				Curve: curve,
-				X:     keyParams.EC_X,
-				Y:     keyParams.EC_Y,
-			},
-			D: keyParams.EC_D,
-		}
-
-		r, s, err := ecdsa.Sign(rand.Reader, key, input)
-		if err != nil {
-			return nil, err
-		}
-
-		switch marshaling {
-		case MarshalingTypeASN1:
-			// This is used by openssl and X.509
-			sig, err = asn1.Marshal(ecdsaSignature{
-				R: r,
-				S: s,
-			})
-			if err != nil {
-				return nil, err
-			}
-
-		case MarshalingTypeJWS:
-			// This is used by JWS
-
-			// First we have to get the length of the curve in bytes. Although
-			// we only support 256 now, we'll do this in an agnostic way so we
-			// can reuse this marshaling if we support e.g. 521. Getting the
-			// number of bytes without rounding up would be 65.125 so we need
-			// to add one in that case.
-			keyLen := curveBits / 8
-			if curveBits%8 > 0 {
-				keyLen++
-			}
-
-			// Now create the output array
-			sig = make([]byte, keyLen*2)
-			rb := r.Bytes()
-			sb := s.Bytes()
-			copy(sig[keyLen-len(rb):], rb)
-			copy(sig[2*keyLen-len(sb):], sb)
-
-		default:
-			return nil, errutil.UserError{Err: "requested marshaling type is invalid"}
-		}
-
+		sig, err = signWithECDSA(p.Type, keyParams, input, marshaling)
 	case KeyType_ED25519:
 		var key ed25519.PrivateKey
 
@@ -1402,6 +1347,76 @@ func (p *Policy) SignWithOptions(ver int, context, input []byte, options *Signin
 	return res, nil
 }
 
+func signWithECDSA(keyType KeyType, keyParams KeyEntry, input []byte, marshaling MarshalingType) ([]byte, error) {
+	var curveBits int
+	var curve elliptic.Curve
+	switch keyType {
+	case KeyType_ECDSA_P256:
+		curveBits = 256
+		curve = elliptic.P256()
+	case KeyType_ECDSA_P384:
+		curveBits = 384
+		curve = elliptic.P384()
+	case KeyType_ECDSA_P521:
+		curveBits = 521
+		curve = elliptic.P521()
+	default:
+		return nil, fmt.Errorf("invalid key type %s for ECDSA", keyType)
+	}
+
+	key := &ecdsa.PrivateKey{
+		PublicKey: ecdsa.PublicKey{
+			Curve: curve,
+			X:     keyParams.EC_X,
+			Y:     keyParams.EC_Y,
+		},
+		D: keyParams.EC_D,
+	}
+
+	r, s, err := ecdsa.Sign(rand.Reader, key, input)
+	if err != nil {
+		return nil, err
+	}
+
+	var sig []byte
+	switch marshaling {
+	case MarshalingTypeASN1:
+		// This is used by openssl and X.509
+		sig, err = asn1.Marshal(ecdsaSignature{
+			R: r,
+			S: s,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+	case MarshalingTypeJWS:
+		// This is used by JWS
+
+		// First we have to get the length of the curve in bytes. Although
+		// we only support 256 now, we'll do this in an agnostic way so we
+		// can reuse this marshaling if we support e.g. 521. Getting the
+		// number of bytes without rounding up would be 65.125 so we need
+		// to add one in that case.
+		keyLen := curveBits / 8
+		if curveBits%8 > 0 {
+			keyLen++
+		}
+
+		// Now create the output array
+		sig = make([]byte, keyLen*2)
+		rb := r.Bytes()
+		sb := s.Bytes()
+		copy(sig[keyLen-len(rb):], rb)
+		copy(sig[2*keyLen-len(sb):], sb)
+
+	default:
+		return nil, errutil.UserError{Err: "requested marshaling type is invalid"}
+	}
+
+	return sig, nil
+}
+
 func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, sigAlgorithm string, marshaling MarshalingType, sig string) (bool, error) {
 	return p.VerifySignatureWithOptions(context, input, sig, &SigningOptions{
 		HashAlgorithm: hashAlgorithm,
@@ -1464,49 +1479,11 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 
 	switch p.Type {
 	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
-		var curve elliptic.Curve
-		switch p.Type {
-		case KeyType_ECDSA_P384:
-			curve = elliptic.P384()
-		case KeyType_ECDSA_P521:
-			curve = elliptic.P521()
-		default:
-			curve = elliptic.P256()
-		}
-
-		var ecdsaSig ecdsaSignature
-
-		switch marshaling {
-		case MarshalingTypeASN1:
-			rest, err := asn1.Unmarshal(sigBytes, &ecdsaSig)
-			if err != nil {
-				return false, errutil.UserError{Err: "supplied signature is invalid"}
-			}
-			if rest != nil && len(rest) != 0 {
-				return false, errutil.UserError{Err: "supplied signature contains extra data"}
-			}
-
-		case MarshalingTypeJWS:
-			paramLen := len(sigBytes) / 2
-			rb := sigBytes[:paramLen]
-			sb := sigBytes[paramLen:]
-			ecdsaSig.R = new(big.Int)
-			ecdsaSig.R.SetBytes(rb)
-			ecdsaSig.S = new(big.Int)
-			ecdsaSig.S.SetBytes(sb)
-		}
-
-		keyParams, err := p.safeGetKeyEntry(ver)
+		key, err := p.safeGetKeyEntry(ver)
 		if err != nil {
 			return false, err
 		}
-		key := &ecdsa.PublicKey{
-			Curve: curve,
-			X:     keyParams.EC_X,
-			Y:     keyParams.EC_Y,
-		}
-
-		return ecdsa.Verify(key, input, ecdsaSig.R, ecdsaSig.S), nil
+		return verifyWithECDSA(p.Type, key, input, sigBytes, marshaling)
 
 	case KeyType_ED25519:
 		var pub ed25519.PublicKey
@@ -1583,6 +1560,50 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 	default:
 		return entVerifySignatureWithOptions(p, input, sigBytes, ver, options)
 	}
+}
+
+func verifyWithECDSA(keyType KeyType, keyParams KeyEntry, input, sigBytes []byte, marshaling MarshalingType) (bool, error) {
+	var curve elliptic.Curve
+	switch keyType {
+	case KeyType_ECDSA_P256:
+		curve = elliptic.P256()
+	case KeyType_ECDSA_P384:
+		curve = elliptic.P384()
+	case KeyType_ECDSA_P521:
+		curve = elliptic.P521()
+	default:
+		return false, fmt.Errorf("invalid key type %s for ECDSA", keyType)
+	}
+
+	var ecdsaSig ecdsaSignature
+
+	switch marshaling {
+	case MarshalingTypeASN1:
+		rest, err := asn1.Unmarshal(sigBytes, &ecdsaSig)
+		if err != nil {
+			return false, errutil.UserError{Err: "supplied signature is invalid"}
+		}
+		if rest != nil && len(rest) != 0 {
+			return false, errutil.UserError{Err: "supplied signature contains extra data"}
+		}
+
+	case MarshalingTypeJWS:
+		paramLen := len(sigBytes) / 2
+		rb := sigBytes[:paramLen]
+		sb := sigBytes[paramLen:]
+		ecdsaSig.R = new(big.Int)
+		ecdsaSig.R.SetBytes(rb)
+		ecdsaSig.S = new(big.Int)
+		ecdsaSig.S.SetBytes(sb)
+	}
+
+	key := &ecdsa.PublicKey{
+		Curve: curve,
+		X:     keyParams.EC_X,
+		Y:     keyParams.EC_Y,
+	}
+
+	return ecdsa.Verify(key, input, ecdsaSig.R, ecdsaSig.S), nil
 }
 
 func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte, randReader io.Reader) error {
@@ -1771,36 +1792,9 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 		}
 
 	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
-		var curve elliptic.Curve
-		switch p.Type {
-		case KeyType_ECDSA_P384:
-			curve = elliptic.P384()
-		case KeyType_ECDSA_P521:
-			curve = elliptic.P521()
-		default:
-			curve = elliptic.P256()
-		}
-
-		privKey, err := ecdsa.GenerateKey(curve, rand.Reader)
-		if err != nil {
+		if err = generateECDSAKey(p.Type, &entry); err != nil {
 			return err
 		}
-		entry.EC_D = privKey.D
-		entry.EC_X = privKey.X
-		entry.EC_Y = privKey.Y
-		derBytes, err := x509.MarshalPKIXPublicKey(privKey.Public())
-		if err != nil {
-			return errwrap.Wrapf("error marshaling public key: {{err}}", err)
-		}
-		pemBlock := &pem.Block{
-			Type:  "PUBLIC KEY",
-			Bytes: derBytes,
-		}
-		pemBytes := pem.EncodeToMemory(pemBlock)
-		if pemBytes == nil || len(pemBytes) == 0 {
-			return fmt.Errorf("error PEM-encoding public key")
-		}
-		entry.FormattedPublicKey = string(pemBytes)
 
 	case KeyType_ED25519:
 		// Go uses a 64-byte private key for Ed25519 keys (private+public, each
@@ -1825,7 +1819,7 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 			bitSize = 4096
 		}
 
-		entry.RSAKey, err = rsa.GenerateKey(randReader, bitSize)
+		entry.RSAKey, err = cryptoutil.GenerateRSAKey(randReader, bitSize)
 		if err != nil {
 			return err
 		}
@@ -2756,4 +2750,41 @@ func (p *Policy) ValidateAndPersistCertificateChain(ctx context.Context, keyVers
 
 	p.Keys[strconv.Itoa(keyVersion)] = keyEntry
 	return p.Persist(ctx, storage)
+}
+
+func generateECDSAKey(keyType KeyType, entry *KeyEntry) error {
+	var curve elliptic.Curve
+	switch keyType {
+	case KeyType_ECDSA_P256:
+		curve = elliptic.P256()
+	case KeyType_ECDSA_P384:
+		curve = elliptic.P384()
+	case KeyType_ECDSA_P521:
+		curve = elliptic.P521()
+	default:
+		return fmt.Errorf("invalid key type %s for ECDSA", keyType)
+	}
+
+	privKey, err := ecdsa.GenerateKey(curve, rand.Reader)
+	if err != nil {
+		return err
+	}
+	entry.EC_D = privKey.D
+	entry.EC_X = privKey.X
+	entry.EC_Y = privKey.Y
+	derBytes, err := x509.MarshalPKIXPublicKey(privKey.Public())
+	if err != nil {
+		return errwrap.Wrapf("error marshaling public key: {{err}}", err)
+	}
+	pemBlock := &pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: derBytes,
+	}
+	pemBytes := pem.EncodeToMemory(pemBlock)
+	if pemBytes == nil || len(pemBytes) == 0 {
+		return fmt.Errorf("error PEM-encoding public key")
+	}
+	entry.FormattedPublicKey = string(pemBytes)
+
+	return nil
 }

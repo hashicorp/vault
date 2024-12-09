@@ -1414,6 +1414,8 @@ github.com/hashicorp/go-hclog v0.14.1/go.mod h1:whpDNt7SSdeAju8AWKIWsul05p54N/39
 github.com/hashicorp/go-hclog v1.5.0/go.mod h1:W4Qnvbt70Wk/zYJryRzDRU/4r0kIg0PVHBcfoyhpF5M=
 github.com/hashicorp/go-hclog v1.6.3 h1:Qr2kF+eVWjTiYmU7Y31tYlP1h0q/X3Nl3tPGdaB11/k=
 github.com/hashicorp/go-hclog v1.6.3/go.mod h1:W4Qnvbt70Wk/zYJryRzDRU/4r0kIg0PVHBcfoyhpF5M=
+github.com/hashicorp/go-hmac-drbg v0.0.0-20210916214228-a6e5a68489f6 h1:kBoJV4Xl5FLtBfnBjDvBxeNSy2IRITSGs73HQsFUEjY=
+github.com/hashicorp/go-hmac-drbg v0.0.0-20210916214228-a6e5a68489f6/go.mod h1:y+HSOcOGB48PkUxNyLAiCiY6rEENu+E+Ss4LG8QHwf4=
 github.com/hashicorp/go-immutable-radix v1.0.0/go.mod h1:0y9vanUI8NX6FsYoO3zeMjhV/C5i9g4Q3DwcSNZ4P60=
 github.com/hashicorp/go-immutable-radix v1.3.0/go.mod h1:0y9vanUI8NX6FsYoO3zeMjhV/C5i9g4Q3DwcSNZ4P60=
 github.com/hashicorp/go-immutable-radix v1.3.1 h1:DKHmCUm2hRBK510BaiZlwvpD40f8bJFeZnpfm2KLowc=
@@ -1461,6 +1463,8 @@ github.com/hashicorp/go-secure-stdlib/awsutil v0.3.0 h1:I8bynUKMh9I7JdwtW9voJ0xm
 github.com/hashicorp/go-secure-stdlib/awsutil v0.3.0/go.mod h1:oKHSQs4ivIfZ3fbXGQOop1XuDfdSb8RIsWTGaAanSfg=
 github.com/hashicorp/go-secure-stdlib/base62 v0.1.2 h1:ET4pqyjiGmY09R5y+rSd70J2w45CtbWDNvGqWp/R3Ng=
 github.com/hashicorp/go-secure-stdlib/base62 v0.1.2/go.mod h1:EdWO6czbmthiwZ3/PUsDV+UD1D5IRU4ActiaWGwt0Yw=
+github.com/hashicorp/go-secure-stdlib/cryptoutil v0.1.0 h1:4B46+S65WqQUlp0rX2F7TX6/p0HmUZsDD+cVzFTwztw=
+github.com/hashicorp/go-secure-stdlib/cryptoutil v0.1.0/go.mod h1:hH8rgXHh9fPSDPerG6WzABHsHF+9ZpLhRI1LPk4JZ8c=
 github.com/hashicorp/go-secure-stdlib/fileutil v0.1.0 h1:f2mwVgMJjXuX/+eWD6ZW30+oIRgCofL+XMWknFkB1WM=
 github.com/hashicorp/go-secure-stdlib/fileutil v0.1.0/go.mod h1:uwcr2oga9pN5+OkHZyTN5MDk3+1YHOuMukhpnPaQAoI=
 github.com/hashicorp/go-secure-stdlib/gatedwriter v0.1.1 h1:9um9R8i0+HbRHS9d64kdvWR0/LJvo12sIonvR9zr1+U=
