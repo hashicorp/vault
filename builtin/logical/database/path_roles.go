@@ -217,10 +217,12 @@ func staticFields() map[string]*framework.FieldSchema {
 	this functionality. See the plugin's API page for more information on
 	support and formatting for this parameter.`,
 		},
+		// Deprecated: use 'password' instead
 		"self_managed_password": {
 			Type: framework.TypeString,
 			Description: `Used to connect to a self-managed static account. Must
 	be provided by the user when root credentials are not provided.`,
+			Deprecated: true,
 		},
 	}
 	AddStaticFieldsEnt(fields)
