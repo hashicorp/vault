@@ -11,10 +11,10 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 )
 
-func (c *PluginCatalog) unpackPluginArtifact(plugin pluginutil.SetPluginInput) (bool, string, []byte, error) {
+func (c *PluginCatalog) entUnpackArtifact(plugin pluginutil.SetPluginInput) (bool, string, []byte, error) {
 	return false, plugin.Command, plugin.Sha256, fmt.Errorf("enterprise-only feature: plugin artifact unpacking")
 }
 
-func (c *PluginCatalog) sanitize() error {
+func (c *PluginCatalog) entSanitize() error {
 	return nil
 }

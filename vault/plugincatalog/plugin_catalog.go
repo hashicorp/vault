@@ -175,7 +175,7 @@ func SetupPluginCatalog(ctx context.Context, in *PluginCatalogInput) (*PluginCat
 	}
 
 	// Sanitize the plugin catalog
-	err = catalog.sanitize()
+	err = catalog.entSanitize()
 	if err != nil {
 		logger.Error("error while sanitizing plugin storage", "error", err)
 		return nil, err
@@ -977,7 +977,7 @@ func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPl
 		if err != nil {
 			// Enterprise only: unpack the plugin artifact
 			var unpackErr error
-			enterprise, plugin.Command, plugin.Sha256, unpackErr = c.unpackPluginArtifact(plugin)
+			enterprise, plugin.Command, plugin.Sha256, unpackErr = c.entUnpackArtifact(plugin)
 			switch {
 			case unpackErr == nil:
 				command = filepath.Join(c.directory, plugin.Command)
