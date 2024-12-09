@@ -421,7 +421,7 @@ func TestBackend_basic(t *testing.T) {
 	defer b.Cleanup(context.Background())
 
 	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
-	defer cleanup()
+	t.Cleanup(cleanup)
 
 	// Configure a connection
 	data := map[string]interface{}{

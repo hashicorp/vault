@@ -636,13 +636,31 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		}
 	}
 
-	if smPasswordRaw, ok := data.GetOk("self_managed_password"); ok && createRole {
-		role.StaticAccount.SelfManagedPassword = smPasswordRaw.(string)
-	}
-
 	dbConfig, err := b.DatabaseConfig(ctx, req.Storage, role.DBName)
 	if err != nil {
 		return nil, err
+	}
+
+	lastVaultRotation := role.StaticAccount.LastVaultRotation
+	if passwordRaw, ok := data.GetOk("password"); ok {
+		// We will allow users to update the password until the point where
+		// Vault assumes management of the account so that we don't break the
+		// promise of Vault being the source of truth.
+		updateAllowed := lastVaultRotation.IsZero() || lastVaultRotation.After(time.Now())
+		if updateAllowed {
+			role.StaticAccount.Password = passwordRaw.(string)
+			if dbConfig.ConnectionDetails["self_managed"].(bool) {
+				// continue to support the deprecated self_managed_password field
+				role.StaticAccount.SelfManagedPassword = passwordRaw.(string)
+			}
+		} else {
+			return logical.ErrorResponse("update not allowed after rotation", "role", name, "lastVaultRotation", lastVaultRotation), nil
+		}
+	}
+
+	if smPasswordRaw, ok := data.GetOk("self_managed_password"); ok && createRole {
+		role.StaticAccount.SelfManagedPassword = smPasswordRaw.(string)
+		role.StaticAccount.Password = smPasswordRaw.(string)
 	}
 
 	if skipImportRotationRaw, ok := data.GetOk("skip_import_rotation"); ok {
@@ -664,8 +682,6 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	if err := role.setCredentialConfig(credentialConfig); err != nil {
 		return logical.ErrorResponse("credential_config validation failed: %s", err), nil
 	}
-
-	lastVaultRotation := role.StaticAccount.LastVaultRotation
 
 	// Only call setStaticAccount if we're creating the role for the
 	// first time
