@@ -234,13 +234,8 @@ func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storag
 			// write to storage after updating NextVaultRotation so the next
 			// time this item is checked for rotation our role that we retrieve
 			// from storage reflects that change
-			entry, err := logical.StorageEntryJSON(databaseStaticRolePath+input.RoleName, input.Role)
+			err := b.StoreStaticRole(ctx, s, input.Role)
 			if err != nil {
-				logger.Error("unable to encode entry for storage", "error", err)
-				return false
-			}
-			if err := s.Put(ctx, entry); err != nil {
-				logger.Error("unable to write to storage", "error", err)
 				return false
 			}
 		}
@@ -349,9 +344,9 @@ type setStaticAccountOutput struct {
 
 // setStaticAccount sets the credential for a static account associated with a
 // Role. This method does many things:
-// - verifies role exists and is in the allowed roles list
-// - loads an existing WAL entry if WALID input is given, otherwise creates a
-// new WAL entry
+//   - verifies role exists and is in the allowed roles list
+//   - loads an existing WAL entry if WALID input is given, otherwise creates a
+//     new WAL entry
 //   - gets a database connection
 //   - accepts an input credential, otherwise generates a new one for
 //     the role's credential type
@@ -559,11 +554,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 	input.Role.StaticAccount.SetNextVaultRotation(lvr)
 	output.RotationTime = lvr
 
-	entry, err := logical.StorageEntryJSON(databaseStaticRolePath+input.RoleName, input.Role)
-	if err != nil {
-		return output, err
-	}
-	if err := s.Put(ctx, entry); err != nil {
+	if err := b.StoreStaticRole(ctx, s, input.Role); err != nil {
 		return output, err
 	}
 
