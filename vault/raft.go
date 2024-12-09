@@ -16,12 +16,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-discover"
 	discoverk8s "github.com/hashicorp/go-discover/provider/k8s"
 	"github.com/hashicorp/go-hclog"
-	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/go-uuid"
 	goversion "github.com/hashicorp/go-version"
@@ -1023,13 +1021,8 @@ func (c *Core) getRaftChallenge(leaderInfo *raft.LeaderJoinInfo) (*raftInformati
 		return nil, fmt.Errorf("error decoding raft bootstrap challenge: %w", err)
 	}
 
-	eBlob := &wrapping.BlobInfo{}
-	if err := proto.Unmarshal(challengeRaw, eBlob); err != nil {
-		return nil, fmt.Errorf("error decoding raft bootstrap challenge: %w", err)
-	}
-
 	return &raftInformation{
-		challenge:           eBlob,
+		challenge:           challengeRaw,
 		leaderClient:        apiClient,
 		leaderBarrierConfig: &sealConfig,
 	}, nil
@@ -1347,15 +1340,6 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess seal.Access, r
 		return errors.New("raft is already initialized")
 	}
 
-	multiWrapValue := &seal.MultiWrapValue{
-		Generation: sealAccess.Generation(),
-		Slots:      []*wrapping.BlobInfo{raftInfo.challenge},
-	}
-	plaintext, _, err := sealAccess.Decrypt(ctx, multiWrapValue, nil)
-	if err != nil {
-		return fmt.Errorf("error decrypting challenge: %w", err)
-	}
-
 	parsedClusterAddr, err := url.Parse(c.ClusterAddr())
 	if err != nil {
 		return fmt.Errorf("error parsing cluster address: %w", err)
@@ -1369,6 +1353,12 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess seal.Access, r
 		if err != nil {
 			return err
 		}
+	}
+
+	sealer := NewSealAccessSealer(sealAccess, c.logger, "bootstrap_challenge_read")
+	plaintext, err := sealer.Open(context.Background(), raftInfo.challenge)
+	if err != nil {
+		return fmt.Errorf("error decrypting challenge: %w", err)
 	}
 
 	answerReq := raftInfo.leaderClient.NewRequest("PUT", "/v1/sys/storage/raft/bootstrap/answer")
