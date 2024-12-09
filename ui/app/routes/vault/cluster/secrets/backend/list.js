@@ -85,11 +85,11 @@ export default Route.extend({
     const type = secretEngine?.engineType;
     assert('secretEngine.engineType is not defined', !!type);
     // if configuration only, redirect to configuration route
-    CONFIGURATION_ONLY.includes(type) &&
-      this.router.transitionTo('vault.cluster.secrets.backend.configuration', backend);
+    if (CONFIGURATION_ONLY.includes(type)) {
+      return this.router.transitionTo('vault.cluster.secrets.backend.configuration', backend);
+    }
 
     const engineRoute = allEngines().find((engine) => engine.type === type)?.engineRoute;
-
     if (!type || !SUPPORTED_BACKENDS.includes(type)) {
       return this.router.transitionTo('vault.cluster.secrets');
     }
