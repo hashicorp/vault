@@ -161,7 +161,9 @@ export default Component.extend({
       // and show the error on the login screen
       return this.cancelLogin(oidcWindow, e);
     }
-    yield this.onSubmit(null, null, resp.auth.client_token);
+    const { mfa_requirement, client_token } = resp.auth;
+    // onSubmit calls doSubmit in auth-form.js
+    yield this.onSubmit({ mfa_requirement }, null, client_token);
   }),
 
   async startOIDCAuth() {

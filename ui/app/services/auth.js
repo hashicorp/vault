@@ -29,6 +29,7 @@ export default Service.extend({
   permissions: service(),
   currentCluster: service(),
   router: service(),
+  store: service(),
   namespaceService: service('namespace'),
 
   IDLE_TIMEOUT: 3 * 60e3,
@@ -210,6 +211,12 @@ export default Service.extend({
     return this.ajax(url, 'POST', { namespace });
   },
 
+  async lookupSelf(token) {
+    return this.store
+      .adapterFor('application')
+      .ajax('/v1/auth/token/lookup-self', 'GET', { headers: { 'X-Vault-Token': token } });
+  },
+
   revokeCurrentToken() {
     const namespace = this.authData.userRootNamespace;
     const url = '/v1/auth/token/revoke-self';
@@ -255,7 +262,7 @@ export default Service.extend({
     return userRootNamespace;
   },
 
-  persistAuthData() {
+  async persistAuthData() {
     const [firstArg, resp] = arguments;
     const currentNamespace = this.namespaceService.path || '';
     // dropdown vs tab format
@@ -275,18 +282,12 @@ export default Service.extend({
       mountPath,
       ...BACKENDS.find((b) => b.type === backend),
     };
-    let displayName;
-    if (isArray(currentBackend.displayNamePath)) {
-      displayName = currentBackend.displayNamePath.map((name) => get(resp, name)).join('/');
-    } else {
-      displayName = get(resp, currentBackend.displayNamePath);
-    }
 
     const { entity_id, policies, renewable, namespace_path } = resp;
     const userRootNamespace = this.calculateRootNamespace(currentNamespace, namespace_path, backend);
     const data = {
       userRootNamespace,
-      displayName,
+      displayName: null, // set below
       backend: currentBackend,
       token: resp.client_token || get(resp, currentBackend.tokenPath),
       policies,
@@ -311,9 +312,7 @@ export default Service.extend({
     // this is intentionally not included in setExpirationSettings so we can unit test that method
     if (Ember.testing) this.set('allowExpiration', false);
 
-    if (!data.displayName) {
-      data.displayName = (this.getTokenData(tokenName) || {}).displayName;
-    }
+    data.displayName = await this.setDisplayName(resp, currentBackend.displayNamePath, tokenName);
 
     this.set('tokens', addToArray(this.tokens, tokenName));
     this.setTokenData(tokenName, data);
@@ -323,6 +322,34 @@ export default Service.extend({
       token: tokenName,
       isRoot: policies.includes('root'),
     });
+  },
+
+  async setDisplayName(resp, displayNamePath, tokenName) {
+    let displayName;
+
+    // first check if auth response includes a display name
+    displayName = isArray(displayNamePath)
+      ? displayNamePath.map((name) => get(resp, name)).join('/')
+      : get(resp, displayNamePath);
+
+    // if not, check stored token data
+    if (!displayName) {
+      displayName = (this.getTokenData(tokenName) || {}).displayName;
+    }
+
+    // this is a workaround for OIDC/SAML methods WITH mfa configured. at this time mfa/validate endpoint does not
+    // return display_name (or metadata that includes it) for this auth combination.
+    // this if block can be removed if/when the API returns display_name on the mfa/validate response.
+    if (!displayName) {
+      // if still nothing, request token data as a last resort
+      try {
+        const { data } = await this.lookupSelf(resp.client_token);
+        displayName = data.display_name;
+      } catch {
+        // silently fail since we're just trying to set a display name
+      }
+    }
+    return displayName;
   },
 
   setTokenData(token, data) {

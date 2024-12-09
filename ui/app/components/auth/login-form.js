@@ -60,6 +60,22 @@ export default class AuthLoginFormComponent extends Component {
       } else {
         this.delayAuthMessageReminder.perform();
       }
+
+      /*
+      Checking for an mfa_requirement happens in two different places depending which <form> is submitted:
+      Login methods submitted using a child of <AuthForm> have custom auth logic where mfa_requirements are collected, if any. 
+      This mfa data is passed to their respective onSubmit callback functions and is eventually handled here.
+      
+      If doSubmit in <AuthForm> is called directly (by the "default" <form> component) mfa is handled the parent <Auth::Page> component.
+      */
+      if (data?.mfa_requirement) {
+        const mfa_requirement = this.auth._parseMfaResponse(data.mfa_requirement);
+        // calls onAuthResponse in auth/page.js
+        this.args.onSuccess(mfa_requirement, backendType, data);
+        // return here because mfa-form.js will finish login flow after mfa validation
+        return;
+      }
+
       const authResponse = yield this.auth.authenticate({
         clusterId,
         backend: backendType,
@@ -67,6 +83,7 @@ export default class AuthLoginFormComponent extends Component {
         selectedAuth,
       });
 
+      // calls onAuthResponse in auth/page.js
       this.args.onSuccess(authResponse, backendType, data);
     } catch (e) {
       if (!this.auth.mfaError) {
