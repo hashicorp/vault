@@ -9,6 +9,7 @@ locals {
   kv_test_data_path_prefix  = "smoke"
   kv_test_data_value_prefix = "fire"
   kv_version                = 2
+
   // Response data
   identity_group_kv_writers_data = jsondecode(enos_remote_exec.identity_group_kv_writers.stdout).data
 
