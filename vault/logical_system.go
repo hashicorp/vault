@@ -542,8 +542,7 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 	sha256 := d.Get("sha256").(string)
 	if sha256 == "" {
 		sha256 = d.Get("sha_256").(string)
-
-		if licenseState == nil && sha256 == "" {
+		if sha256 == "" && licenseState == nil {
 			return logical.ErrorResponse("missing SHA-256 value, register plugin with artifact and implicit SHA-256 is enterprise only feature"), nil
 		}
 	}
@@ -555,7 +554,7 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 			return logical.ErrorResponse("must provide at least one of command or oci_image"), nil
 		}
 
-		if licenseState != nil && pluginVersion != "" {
+		if licenseState != nil && pluginVersion == "" && sha256 == "" {
 			return logical.ErrorResponse("enterprise only: must provide version to register plugin with artifact"), nil
 		}
 
