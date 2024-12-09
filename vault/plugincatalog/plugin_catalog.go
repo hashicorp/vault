@@ -174,6 +174,13 @@ func SetupPluginCatalog(ctx context.Context, in *PluginCatalogInput) (*PluginCat
 		return nil, err
 	}
 
+	// Sanitize the plugin catalog
+	err = catalog.sanitize()
+	if err != nil {
+		logger.Error("error while sanitizing plugin storage", "error", err)
+		return nil, err
+	}
+
 	if legacy, _ := strconv.ParseBool(os.Getenv(pluginutil.PluginUseLegacyEnvLayering)); legacy {
 		conflicts := false
 		osKeys := envKeys(os.Environ())
@@ -979,7 +986,7 @@ func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPl
 				// when evaluating symlinks of the command fails
 				return nil, fmt.Errorf("error while validating the command path: %w", err)
 			default:
-				return nil, fmt.Errorf("failed to unpack plugin artifact: %w", err)
+				return nil, fmt.Errorf("failed to unpack plugin artifact: %w", unpackErr)
 			}
 		} else {
 			// Best effort check to make sure the command isn't breaking out of the
