@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	scopeToken  = "per-token"
-	scopeEntity = "per-entity"
+	lifetimeSession    = "session"
+	lifetimePersistent = "persistent"
 )
 
 // CubbyholeBackendFactory constructs a new cubbyhole backend
@@ -53,32 +53,32 @@ func (b *CubbyholeBackend) paths() []*framework.Path {
 	return []*framework.Path{
 
 		{
-			Pattern: "config/scope",
+			Pattern: "config/lifetime",
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "cubbyhole",
 			},
 
 			Fields: map[string]*framework.FieldSchema{
-				"scope": {
+				"lifetime": {
 					Type:        framework.TypeString,
-					Description: `Defines the behavior of the physical storage used for cubbyhole\'s secrets. If per token, cubbyhole is destroyed after the token\'s expiration. If per entity, secrets are persisted and are linked to user\'s identity lifetime`,
-					Default:     "per-token",
+					Description: `Defines the behavior of the storage used for cubbyhole\'s secrets. Per default, cubbyhole data is destroyed after the token\'s expiration. If set persistent, secrets are persisted and are linked to user\'s entity`,
+					Default:     "session",
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback: b.pathScopeWrite,
+					Callback: b.pathLifetimeWrite,
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb:   "write",
-						OperationSuffix: "scope",
+						OperationSuffix: "lifetime",
 					},
 				},
 				logical.ReadOperation: &framework.PathOperation{
-					Callback: b.pathScopeRead,
+					Callback: b.pathLifetimeRead,
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb:   "read",
-						OperationSuffix: "scope",
+						OperationSuffix: "lifetime",
 					},
 				},
 			},
@@ -167,24 +167,10 @@ func (b *CubbyholeBackend) handleExistenceCheck(ctx context.Context, req *logica
 }
 
 func (b *CubbyholeBackend) handleRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	var pathPrefix string
+	pathPrefix, err := b.GetPathPrefixFromRequest(ctx, req)
 
-	scope, err := b.Scope(ctx, req.Storage)
 	if err != nil {
 		return nil, err
-	}
-
-	switch scope {
-	case scopeToken:
-		if req.ClientToken == "" {
-			return nil, fmt.Errorf("client token empty")
-		}
-		pathPrefix = req.ClientToken
-	case scopeEntity:
-		if req.EntityID == "" {
-			return nil, fmt.Errorf("entity ID empty")
-		}
-		pathPrefix = req.EntityID
 	}
 
 	path := data.Get("path").(string)
@@ -219,25 +205,12 @@ func (b *CubbyholeBackend) handleRead(ctx context.Context, req *logical.Request,
 }
 
 func (b *CubbyholeBackend) handleWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	var pathPrefix string
+	pathPrefix, err := b.GetPathPrefixFromRequest(ctx, req)
 
-	scope, err := b.Scope(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
 
-	switch scope {
-	case scopeToken:
-		if req.ClientToken == "" {
-			return nil, fmt.Errorf("client token empty")
-		}
-		pathPrefix = req.ClientToken
-	case scopeEntity:
-		if req.EntityID == "" {
-			return nil, fmt.Errorf("entity ID empty")
-		}
-		pathPrefix = req.EntityID
-	}
 	// Check that some fields are given
 	if len(req.Data) == 0 {
 		return nil, fmt.Errorf("missing data fields")
@@ -271,14 +244,16 @@ func (b *CubbyholeBackend) handleWrite(ctx context.Context, req *logical.Request
 }
 
 func (b *CubbyholeBackend) handleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	if req.ClientToken == "" {
-		return nil, fmt.Errorf("client token empty")
+	pathPrefix, err := b.GetPathPrefixFromRequest(ctx, req)
+
+	if err != nil {
+		return nil, err
 	}
 
 	path := data.Get("path").(string)
 
 	// Delete the key at the request path
-	if err := req.Storage.Delete(ctx, req.ClientToken+"/"+path); err != nil {
+	if err := req.Storage.Delete(ctx, pathPrefix+"/"+path); err != nil {
 		return nil, err
 	}
 
@@ -286,8 +261,10 @@ func (b *CubbyholeBackend) handleDelete(ctx context.Context, req *logical.Reques
 }
 
 func (b *CubbyholeBackend) handleList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	if req.ClientToken == "" {
-		return nil, fmt.Errorf("client token empty")
+	pathPrefix, err := b.GetPathPrefixFromRequest(ctx, req)
+
+	if err != nil {
+		return nil, err
 	}
 
 	// Right now we only handle directories, so ensure it ends with / We also
@@ -299,7 +276,7 @@ func (b *CubbyholeBackend) handleList(ctx context.Context, req *logical.Request,
 	}
 
 	// List the keys at the prefix given by the request
-	keys, err := req.Storage.List(ctx, req.ClientToken+"/"+path)
+	keys, err := req.Storage.List(ctx, pathPrefix+"/"+path)
 	if err != nil {
 		return nil, err
 	}
@@ -314,29 +291,56 @@ func (b *CubbyholeBackend) handleList(ctx context.Context, req *logical.Request,
 	return logical.ListResponse(strippedKeys), nil
 }
 
-// Scope returns the lease
-func (b *CubbyholeBackend) Scope(ctx context.Context, s logical.Storage) (string, error) {
-	entry, err := s.Get(ctx, "config/scope")
+// Returns the root path used for cubbyhole storage.
+func (b *CubbyholeBackend) GetPathPrefixFromRequest(ctx context.Context, req *logical.Request) (string, error) {
+	var pathPrefix string
+	lifetime, err := b.Lifetime(ctx, req.Storage)
 	if err != nil {
-		return scopeToken, err
+		return "", err
 	}
+
+	if lifetime == lifetimePersistent {
+		//Cubbyhole Lifetime linked to the user
+		if req.EntityID == "" {
+			return "", fmt.Errorf("entity ID empty")
+		}
+		pathPrefix = req.EntityID
+	} else {
+		//Cubbyhole Lifetime linked to the current session
+		if req.ClientToken == "" {
+			return "", fmt.Errorf("client token empty")
+		}
+		pathPrefix = req.ClientToken
+	}
+
+	return pathPrefix, nil
+}
+
+// Lifetime returns the storage persistence
+func (b *CubbyholeBackend) Lifetime(ctx context.Context, s logical.Storage) (string, error) {
+	entry, err := s.Get(ctx, "config/lifetime")
+	if err != nil {
+		return lifetimeSession, err
+	}
+
+	//Return default configuration
 	if entry == nil {
-		return scopeToken, nil
+		return lifetimeSession, nil
 	}
 
 	var result string
 	if err := entry.DecodeJSON(&result); err != nil {
-		return scopeToken, err
+		return lifetimeSession, err
 	}
 
 	return result, nil
 }
 
-func (b *CubbyholeBackend) pathScopeWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	scopeRaw := d.Get("scope").(string)
+func (b *CubbyholeBackend) pathLifetimeWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	lifetimeRaw := d.Get("lifetime").(string)
 
 	// Store it
-	entry, err := logical.StorageEntryJSON("config/scope", scopeRaw)
+	entry, err := logical.StorageEntryJSON("config/lifetime", lifetimeRaw)
 	if err != nil {
 		return nil, err
 	}
@@ -347,15 +351,15 @@ func (b *CubbyholeBackend) pathScopeWrite(ctx context.Context, req *logical.Requ
 	return nil, nil
 }
 
-func (b *CubbyholeBackend) pathScopeRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	scope, err := b.Scope(ctx, req.Storage)
+func (b *CubbyholeBackend) pathLifetimeRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	lifetime, err := b.Lifetime(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"scope": scope,
+			"lifetime": lifetime,
 		},
 	}, nil
 }

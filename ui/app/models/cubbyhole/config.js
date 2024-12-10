@@ -6,23 +6,36 @@
 import Model, { attr } from '@ember-data/model';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { withModelValidations } from 'vault/decorators/model-validations';
-import {regions} from "vault/helpers/aws-regions";
-import {withFormFields} from "vault/decorators/model-form-fields";
 
-const formFields = ['scope'];
-
-@withFormFields(formFields)
+const lifetimeValues = ['session', 'persistent']
+const validations = {
+  lifetime: [
+    {
+      validator(model) {
+        const { lifetime } = model;
+        return lifetimeValues.includes(lifetime);
+      },
+      message: 'You can choose either session or persistent',
+    },
+  ],
+};
+// there are more options available on the API, but the UI does not support them yet.
+@withModelValidations(validations)
 export default class Config extends Model {
   @attr('string', {
     editType: 'radio',
     label: 'Storage scope',
     subText:
-      'Defines the behavior of the physical storage used for cubbyhole\'s secrets. If per token, cubbyhole is destroyed after the token\'s expiration. If per identity, secrets are persisted and are linked to user\'s identity lifetime',
-    possibleValues: ['per-token', 'per-identity'],
+      "Defines the behavior of the storage used for cubbyhole's secrets. Per default, cubbyhole data is destroyed after the token's expiration. If set persistent, secrets are persisted and are linked to user's entity",
+    possibleValues: lifetimeValues,
     defaultValue: 'per-token',
   })
   scope;
   get attrs() {
+    const keys = ['scope'];
+    return expandAttributeMeta(this, keys);
+  }
+  get formFields() {
     const keys = ['scope'];
     return expandAttributeMeta(this, keys);
   }
