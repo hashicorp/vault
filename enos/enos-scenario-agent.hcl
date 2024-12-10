@@ -559,6 +559,7 @@ scenario "agent" {
     variables {
       create_state      = step.verify_secrets_engines_create.state
       hosts             = step.get_vault_cluster_ips.follower_hosts
+      vault_root_token  = step.create_vault_cluster.root_token
       vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
     }
