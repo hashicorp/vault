@@ -1837,9 +1837,8 @@ func addActivityRecordsOldStoragePath(t *testing.T, core *Core, base time.Time, 
 func setupActivityRecordsInStorage(t *testing.T, base time.Time, includeEntities, includeTokens, addOldStoragePathData bool) (*ActivityLog, []*activity.EntityRecord, map[string]uint64) {
 	t.Helper()
 
-	core, _, _ := TestCoreUnsealed(t)
+	core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{ActivityLogConfig: ActivityLogCoreConfig{ForceEnable: true}})
 	a := core.activityLog
-	a.SetEnable(true)
 	monthsAgo := base.AddDate(0, -3, 0)
 
 	var entityRecords []*activity.EntityRecord
