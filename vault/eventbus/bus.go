@@ -40,7 +40,7 @@ var (
 
 	// these metadata fields will have the plugin mount path prepended to them
 	metadataPrependPathFields = []string{
-		"path",
+		logical.EventMetadataPath,
 		logical.EventMetadataDataPath,
 	}
 )
