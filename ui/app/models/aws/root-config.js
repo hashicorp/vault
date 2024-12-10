@@ -50,7 +50,7 @@ export default class AwsRootConfig extends Model {
   })
   maxRetries;
 
-  get attrs() {
+  get displayAttrs() {
     const keys = [
       'roleArn',
       'identityTokenAudience',

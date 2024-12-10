@@ -113,7 +113,7 @@ module('Acceptance | aws | configuration', function (hooks) {
         .hasText('foo-audience', 'Identity token audience has been set.');
       assert
         .dom(GENERAL.infoRowValue('Identity token TTL'))
-        .hasText('7200', 'Identity token TTL has been set.');
+        .hasText('2 hours', 'Identity token TTL has been set.');
       assert.dom(GENERAL.infoRowValue('Access key')).doesNotExist('Access key—a non-wif attr is not shown.');
       // cleanup
       await runCmd(`delete sys/mounts/${path}`);
@@ -210,8 +210,10 @@ module('Acceptance | aws | configuration', function (hooks) {
         'Success flash message is rendered showing the lease configuration was saved.'
       );
 
-      assert.dom(GENERAL.infoRowValue('Default Lease TTL')).hasText('33s', `Default TTL has been set.`);
-      assert.dom(GENERAL.infoRowValue('Max Lease TTL')).hasText('44s', `Max lease TTL has been set.`);
+      assert
+        .dom(GENERAL.infoRowValue('Default Lease TTL'))
+        .hasText('33 seconds', `Default TTL has been set.`);
+      assert.dom(GENERAL.infoRowValue('Max Lease TTL')).hasText('44 seconds', `Max lease TTL has been set.`);
       // cleanup
       await runCmd(`delete sys/mounts/${path}`);
     });
@@ -272,8 +274,8 @@ module('Acceptance | aws | configuration', function (hooks) {
       assert.dom(GENERAL.infoRowValue('Region')).hasText('ap-southeast-2', 'Region has been added');
       assert
         .dom(GENERAL.infoRowValue('Default Lease TTL'))
-        .hasText('33s', 'Default Lease TTL has been added');
-      assert.dom(GENERAL.infoRowValue('Max Lease TTL')).hasText('44s', 'Max Lease TTL has been added');
+        .hasText('33 seconds', 'Default Lease TTL has been added');
+      assert.dom(GENERAL.infoRowValue('Max Lease TTL')).hasText('44 seconds', 'Max Lease TTL has been added');
       // cleanup
       await runCmd(`delete sys/mounts/${path}`);
     });
