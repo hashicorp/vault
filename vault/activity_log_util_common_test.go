@@ -991,6 +991,22 @@ func Test_ActivityLog_ComputeCurrentMonth_NamespaceMounts(t *testing.T) {
 	}
 }
 
+// writeOldEntityPathSegment writes a single segment to the old storage path with the given time and index for an entity
+func writeOldEntityPathSegment(t *testing.T, core *Core, ts time.Time, index int, item *activity.EntityActivityLog) {
+	t.Helper()
+	protoItem, err := proto.Marshal(item)
+	require.NoError(t, err)
+	WriteToStorage(t, core, makeSegmentPath(t, activityEntityBasePath, ts, index), protoItem)
+}
+
+// writeSecondaryClusterSegment writes a single secondary global segment file with the given time and index for an entity
+func writeSecondaryClusterSegment(t *testing.T, core *Core, ts time.Time, index int, clusterId string, item *activity.EntityActivityLog) {
+	t.Helper()
+	protoItem, err := proto.Marshal(item)
+	require.NoError(t, err)
+	WriteToStorage(t, core, makeSegmentPath(t, fmt.Sprintf("%s%s/%s", activitySecondaryTempDataPathPrefix, clusterId, activityEntityBasePath), ts, index), protoItem)
+}
+
 // writeGlobalEntitySegment writes a single global segment file with the given time and index for an entity
 func writeGlobalEntitySegment(t *testing.T, core *Core, ts time.Time, index int, item *activity.EntityActivityLog) {
 	t.Helper()

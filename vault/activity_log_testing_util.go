@@ -7,13 +7,18 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"sort"
+	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/testing/protocmp"
 )
 
@@ -187,74 +192,134 @@ func RandStringBytes(n int) string {
 	return string(b)
 }
 
-// ExpectCurrentSegmentRefreshed verifies that the current segment has been refreshed
-// non-nil empty components and updated with the `expectedStart` timestamp
+// ExpectOldSegmentRefreshed verifies that the old current segment structure has been refreshed
+// non-nil empty components and updated with the `expectedStart` timestamp. This is expected when
+// an upgrade has not yet completed.
 // Note: if `verifyTimeNotZero` is true, ignore `expectedStart` and just make sure the timestamp isn't 0
-func (a *ActivityLog) ExpectCurrentSegmentRefreshed(t *testing.T, expectedStart int64, verifyTimeNotZero bool) {
+func (a *ActivityLog) ExpectOldSegmentRefreshed(t *testing.T, expectedStart int64, verifyTimeNotZero bool, expectedEntities []*activity.EntityRecord, directTokens map[string]uint64) {
 	t.Helper()
 
 	a.l.RLock()
 	defer a.l.RUnlock()
 	a.fragmentLock.RLock()
 	defer a.fragmentLock.RUnlock()
-	if a.currentGlobalSegment.currentClients == nil {
-		t.Fatalf("expected non-nil currentSegment.currentClients")
+	require.NotNil(t, a.currentSegment.currentClients)
+	require.NotNil(t, a.currentSegment.currentClients.Clients)
+	require.NotNil(t, a.currentSegment.tokenCount)
+	require.NotNil(t, a.currentSegment.tokenCount.CountByNamespaceID)
+	if !EntityRecordsEqual(t, a.currentSegment.currentClients.Clients, expectedEntities) {
+		// we only expect the newest entity segment to be loaded (for the current month)
+		t.Errorf("bad activity entity logs loaded. expected: %v got: %v", a.currentSegment.currentClients.Clients, expectedEntities)
 	}
-	if a.currentGlobalSegment.currentClients.Clients == nil {
-		t.Errorf("expected non-nil currentSegment.currentClients.Entities")
+	require.Equal(t, directTokens, a.currentSegment.tokenCount.CountByNamespaceID)
+	if verifyTimeNotZero {
+		require.NotEqual(t, a.currentSegment.startTimestamp, 0)
+	} else {
+		require.Equal(t, a.currentSegment.startTimestamp, expectedStart)
 	}
-	if a.currentGlobalSegment.tokenCount == nil {
-		t.Fatalf("expected non-nil currentSegment.tokenCount")
-	}
-	if a.currentGlobalSegment.tokenCount.CountByNamespaceID == nil {
-		t.Errorf("expected non-nil currentSegment.tokenCount.CountByNamespaceID")
-	}
-	if a.currentLocalSegment.currentClients == nil {
-		t.Fatalf("expected non-nil currentSegment.currentClients")
-	}
-	if a.currentLocalSegment.currentClients.Clients == nil {
-		t.Errorf("expected non-nil currentSegment.currentClients.Entities")
-	}
-	if a.currentLocalSegment.tokenCount == nil {
-		t.Fatalf("expected non-nil currentSegment.tokenCount")
-	}
-	if a.currentLocalSegment.tokenCount.CountByNamespaceID == nil {
-		t.Errorf("expected non-nil currentSegment.tokenCount.CountByNamespaceID")
-	}
-	if a.partialMonthLocalClientTracker == nil {
-		t.Errorf("expected non-nil partialMonthLocalClientTracker")
-	}
-	if a.globalPartialMonthClientTracker == nil {
-		t.Errorf("expected non-nil globalPartialMonthClientTracker")
-	}
-	if len(a.currentGlobalSegment.currentClients.Clients) > 0 {
-		t.Errorf("expected no current entity segment to be loaded. got: %v", a.currentGlobalSegment.currentClients)
-	}
-	if len(a.currentLocalSegment.currentClients.Clients) > 0 {
-		t.Errorf("expected no current entity segment to be loaded. got: %v", a.currentLocalSegment.currentClients)
-	}
-	if len(a.currentLocalSegment.tokenCount.CountByNamespaceID) > 0 {
-		t.Errorf("expected no token counts to be loaded. got: %v", a.currentLocalSegment.tokenCount.CountByNamespaceID)
-	}
-	if len(a.partialMonthLocalClientTracker) > 0 {
-		t.Errorf("expected no active entity segment to be loaded. got: %v", a.partialMonthLocalClientTracker)
-	}
-	if len(a.globalPartialMonthClientTracker) > 0 {
-		t.Errorf("expected no active entity segment to be loaded. got: %v", a.globalPartialMonthClientTracker)
-	}
+}
+
+// ExpectCurrentSegmentsRefreshed verifies that the current segment has been refreshed
+// non-nil empty components and updated with the `expectedStart` timestamp
+// Note: if `verifyTimeNotZero` is true, ignore `expectedStart` and just make sure the timestamp isn't 0
+func (a *ActivityLog) ExpectCurrentSegmentsRefreshed(t *testing.T, expectedStart int64, verifyTimeNotZero bool) {
+	t.Helper()
+
+	a.l.RLock()
+	defer a.l.RUnlock()
+	a.fragmentLock.RLock()
+	defer a.fragmentLock.RUnlock()
+	require.NotNil(t, a.currentGlobalSegment.currentClients)
+	require.NotNil(t, a.currentGlobalSegment.currentClients.Clients)
+	require.NotNil(t, a.currentGlobalSegment.tokenCount)
+	require.NotNil(t, a.currentGlobalSegment.tokenCount.CountByNamespaceID)
+
+	require.NotNil(t, a.currentLocalSegment.currentClients)
+	require.NotNil(t, a.currentLocalSegment.currentClients.Clients)
+	require.NotNil(t, a.currentLocalSegment.tokenCount)
+	require.NotNil(t, a.currentLocalSegment.tokenCount.CountByNamespaceID)
+
+	require.NotNil(t, a.partialMonthLocalClientTracker)
+	require.NotNil(t, a.globalPartialMonthClientTracker)
+
+	require.Equal(t, 0, len(a.currentGlobalSegment.currentClients.Clients))
+	require.Equal(t, 0, len(a.currentLocalSegment.currentClients.Clients))
+	require.Equal(t, 0, len(a.currentLocalSegment.tokenCount.CountByNamespaceID))
+
+	require.Equal(t, 0, len(a.partialMonthLocalClientTracker))
+	require.Equal(t, 0, len(a.globalPartialMonthClientTracker))
 
 	if verifyTimeNotZero {
-		if a.currentGlobalSegment.startTimestamp == 0 {
-			t.Error("bad start timestamp. expected no reset but timestamp was reset")
-		}
-		if a.currentLocalSegment.startTimestamp == 0 {
-			t.Error("bad start timestamp. expected no reset but timestamp was reset")
-		}
-	} else if a.currentGlobalSegment.startTimestamp != expectedStart {
-		t.Errorf("bad start timestamp. expected: %v got: %v", expectedStart, a.currentGlobalSegment.startTimestamp)
-	} else if a.currentLocalSegment.startTimestamp != expectedStart {
-		t.Errorf("bad start timestamp. expected: %v got: %v", expectedStart, a.currentLocalSegment.startTimestamp)
+		require.NotEqual(t, 0, a.currentGlobalSegment.startTimestamp)
+		require.NotEqual(t, 0, a.currentLocalSegment.startTimestamp)
+		require.NotEqual(t, 0, a.currentSegment.startTimestamp)
+	} else {
+		require.Equal(t, expectedStart, a.currentGlobalSegment.startTimestamp)
+		require.Equal(t, expectedStart, a.currentLocalSegment.startTimestamp)
 	}
+}
+
+// EntityRecordsEqual compares the parts we care about from two activity entity record slices
+// note: this makes a copy of the []*activity.EntityRecord so that misordered slices won't fail the comparison,
+// but the function won't modify the order of the slices to compare
+func EntityRecordsEqual(t *testing.T, record1, record2 []*activity.EntityRecord) bool {
+	t.Helper()
+
+	if record1 == nil {
+		return record2 == nil
+	}
+	if record2 == nil {
+		return record1 == nil
+	}
+
+	if len(record1) != len(record2) {
+		return false
+	}
+
+	// sort first on namespace, then on ID, then on timestamp
+	entityLessFn := func(e []*activity.EntityRecord, i, j int) bool {
+		ei := e[i]
+		ej := e[j]
+
+		nsComp := strings.Compare(ei.NamespaceID, ej.NamespaceID)
+		if nsComp == -1 {
+			return true
+		}
+		if nsComp == 1 {
+			return false
+		}
+
+		idComp := strings.Compare(ei.ClientID, ej.ClientID)
+		if idComp == -1 {
+			return true
+		}
+		if idComp == 1 {
+			return false
+		}
+
+		return ei.Timestamp < ej.Timestamp
+	}
+
+	entitiesCopy1 := make([]*activity.EntityRecord, len(record1))
+	entitiesCopy2 := make([]*activity.EntityRecord, len(record2))
+	copy(entitiesCopy1, record1)
+	copy(entitiesCopy2, record2)
+
+	sort.Slice(entitiesCopy1, func(i, j int) bool {
+		return entityLessFn(entitiesCopy1, i, j)
+	})
+	sort.Slice(entitiesCopy2, func(i, j int) bool {
+		return entityLessFn(entitiesCopy2, i, j)
+	})
+
+	for i, a := range entitiesCopy1 {
+		b := entitiesCopy2[i]
+		if a.ClientID != b.ClientID || a.NamespaceID != b.NamespaceID || a.Timestamp != b.Timestamp {
+			return false
+		}
+	}
+
+	return true
 }
 
 // ActiveEntitiesEqual checks that only the set of `test` exists in `active`
@@ -284,6 +349,7 @@ func (a *ActivityLog) SetStartTimestamp(timestamp int64) {
 	defer a.l.Unlock()
 	a.currentGlobalSegment.startTimestamp = timestamp
 	a.currentLocalSegment.startTimestamp = timestamp
+	a.currentSegment.startTimestamp = timestamp
 }
 
 // GetStoredTokenCountByNamespaceID returns the count of tokens by namespace ID
@@ -369,4 +435,39 @@ func (c *Core) DeleteLogsAtPath(ctx context.Context, t *testing.T, storagePath s
 			t.Fatalf("could not delete path %v", err)
 		}
 	}
+}
+
+// SaveEntitySegment is a test helper function to keep the savePreviousEntitySegments function internal
+func (a *ActivityLog) SaveEntitySegment(ctx context.Context, startTime int64, pathPrefix string, fragments []*activity.LogFragment) error {
+	return a.savePreviousEntitySegments(ctx, startTime, pathPrefix, fragments)
+}
+
+// LaunchMigrationWorker is a test only helper function that launches the migration workers.
+// This allows us to keep the migration worker methods internal
+func (a *ActivityLog) LaunchMigrationWorker(ctx context.Context, isSecondary bool) {
+	if isSecondary {
+		go a.core.secondaryDuplicateClientMigrationWorker(ctx)
+	} else {
+		go a.core.primaryDuplicateClientMigrationWorker(ctx)
+	}
+}
+
+// DedupUpgradeComplete is a test helper function that indicates whether the
+// all correct states have been set after completing upgrade processes to 1.19+
+func (a *ActivityLog) DedupUpgradeComplete(ctx context.Context) bool {
+	return a.hasDedupClientsUpgrade(ctx)
+}
+
+// ResetDedupUpgrade is a test helper function that resets the state to reflect
+// how the system should look before running/completing any upgrade process to 1.19+
+func (a *ActivityLog) ResetDedupUpgrade(ctx context.Context) {
+	a.view.Delete(ctx, activityDeduplicationUpgradeKey)
+	a.view.Delete(ctx, activitySecondaryDataRecCount)
+}
+
+// RefreshActivityLog is a test helper functions that refreshes the activity logs
+// segments and current month data. This allows us to keep the refreshFromStoredLog
+// function internal
+func (a *ActivityLog) RefreshActivityLog(ctx context.Context) {
+	a.refreshFromStoredLog(ctx, &sync.WaitGroup{}, time.Now().UTC())
 }

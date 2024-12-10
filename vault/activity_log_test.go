@@ -12,9 +12,7 @@ import (
 	"io"
 	"net/http"
 	"reflect"
-	"sort"
 	"strconv"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -1372,69 +1370,6 @@ func TestActivityLog_tokenCountExists(t *testing.T) {
 	}
 }
 
-// entityRecordsEqual compares the parts we care about from two activity entity record slices
-// note: this makes a copy of the []*activity.EntityRecord so that misordered slices won't fail the comparison,
-// but the function won't modify the order of the slices to compare
-func entityRecordsEqual(t *testing.T, record1, record2 []*activity.EntityRecord) bool {
-	t.Helper()
-
-	if record1 == nil {
-		return record2 == nil
-	}
-	if record2 == nil {
-		return record1 == nil
-	}
-
-	if len(record1) != len(record2) {
-		return false
-	}
-
-	// sort first on namespace, then on ID, then on timestamp
-	entityLessFn := func(e []*activity.EntityRecord, i, j int) bool {
-		ei := e[i]
-		ej := e[j]
-
-		nsComp := strings.Compare(ei.NamespaceID, ej.NamespaceID)
-		if nsComp == -1 {
-			return true
-		}
-		if nsComp == 1 {
-			return false
-		}
-
-		idComp := strings.Compare(ei.ClientID, ej.ClientID)
-		if idComp == -1 {
-			return true
-		}
-		if idComp == 1 {
-			return false
-		}
-
-		return ei.Timestamp < ej.Timestamp
-	}
-
-	entitiesCopy1 := make([]*activity.EntityRecord, len(record1))
-	entitiesCopy2 := make([]*activity.EntityRecord, len(record2))
-	copy(entitiesCopy1, record1)
-	copy(entitiesCopy2, record2)
-
-	sort.Slice(entitiesCopy1, func(i, j int) bool {
-		return entityLessFn(entitiesCopy1, i, j)
-	})
-	sort.Slice(entitiesCopy2, func(i, j int) bool {
-		return entityLessFn(entitiesCopy2, i, j)
-	})
-
-	for i, a := range entitiesCopy1 {
-		b := entitiesCopy2[i]
-		if a.ClientID != b.ClientID || a.NamespaceID != b.NamespaceID || a.Timestamp != b.Timestamp {
-			return false
-		}
-	}
-
-	return true
-}
-
 func (a *ActivityLog) resetEntitiesInMemory(t *testing.T) {
 	t.Helper()
 
@@ -1586,7 +1521,7 @@ func TestActivityLog_loadCurrentClientSegment(t *testing.T) {
 		}
 
 		currentGlobalEntities := a.GetCurrentGlobalEntities()
-		if !entityRecordsEqual(t, currentGlobalEntities.Clients, tc.entities.Clients) {
+		if !EntityRecordsEqual(t, currentGlobalEntities.Clients, tc.entities.Clients) {
 			t.Errorf("bad data loaded. expected: %v, got: %v for path %q", tc.entities.Clients, currentGlobalEntities, tc.path)
 		}
 
@@ -1742,7 +1677,7 @@ func TestActivityLog_loadTokenCount(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		err := a.loadTokenCount(ctx, time.Unix(tc.time, 0))
+		err := a.loadTokenCount(ctx, time.Unix(tc.time, 0), &a.currentLocalSegment)
 		if err != nil {
 			t.Fatalf("got error loading data for %q: %v", tc.path, err)
 		}
@@ -1810,10 +1745,96 @@ func TestActivityLog_StopAndRestart(t *testing.T) {
 	}
 }
 
+func addActivityRecordsOldStoragePath(t *testing.T, core *Core, base time.Time, includeEntities, includeTokens bool) (*ActivityLog, []*activity.EntityRecord, map[string]uint64) {
+	t.Helper()
+
+	monthsAgo := base.AddDate(0, -3, 0)
+	a := core.activityLog
+	var entityRecords []*activity.EntityRecord
+	if includeEntities {
+		entityRecords = []*activity.EntityRecord{
+			{
+				ClientID:    "11111111-1111-1111-1111-111111111111",
+				NamespaceID: namespace.RootNamespaceID,
+				Timestamp:   time.Now().Unix(),
+			},
+			{
+				ClientID:    "22222222-2222-2222-2222-222222222222",
+				NamespaceID: namespace.RootNamespaceID,
+				Timestamp:   time.Now().Unix(),
+			},
+			{
+				ClientID:    "33333333-2222-2222-2222-222222222222",
+				NamespaceID: namespace.RootNamespaceID,
+				Timestamp:   time.Now().Unix(),
+			},
+		}
+		if constants.IsEnterprise {
+			entityRecords = append(entityRecords, []*activity.EntityRecord{
+				{
+					ClientID:    "44444444-1111-1111-1111-111111111111",
+					NamespaceID: "ns1",
+					Timestamp:   time.Now().Unix(),
+				},
+			}...)
+		}
+
+		// append some local entity data
+		entityRecords = append(entityRecords, &activity.EntityRecord{
+			ClientID:    "44444444-4444-4444-4444-444444444444",
+			NamespaceID: namespace.RootNamespaceID,
+			Timestamp:   time.Now().Unix(),
+		})
+
+		for i, entityRecord := range entityRecords {
+			entityData, err := proto.Marshal(&activity.EntityActivityLog{
+				Clients: []*activity.EntityRecord{entityRecord},
+			})
+			if err != nil {
+				t.Fatalf(err.Error())
+			}
+			switch i {
+			case 0:
+				WriteToStorage(t, core, ActivityPrefix+activityEntityBasePath+fmt.Sprint(monthsAgo.Unix())+"/0", entityData)
+
+			case len(entityRecords) - 1:
+				// local data
+				WriteToStorage(t, core, ActivityPrefix+activityEntityBasePath+fmt.Sprint(base.Unix())+"/"+strconv.Itoa(i-1), entityData)
+			default:
+				WriteToStorage(t, core, ActivityPrefix+activityEntityBasePath+fmt.Sprint(base.Unix())+"/"+strconv.Itoa(i-1), entityData)
+			}
+		}
+	}
+
+	var tokenRecords map[string]uint64
+	if includeTokens {
+		tokenRecords = make(map[string]uint64)
+		tokenRecords[namespace.RootNamespaceID] = uint64(1)
+		if constants.IsEnterprise {
+			for i := 1; i < 4; i++ {
+				nsID := "ns" + strconv.Itoa(i)
+				tokenRecords[nsID] = uint64(i)
+			}
+		}
+		tokenCount := &activity.TokenCount{
+			CountByNamespaceID: tokenRecords,
+		}
+
+		tokenData, err := proto.Marshal(tokenCount)
+		if err != nil {
+			t.Fatalf(err.Error())
+		}
+
+		WriteToStorage(t, core, ActivityPrefix+activityTokenBasePath+fmt.Sprint(base.Unix())+"/0", tokenData)
+	}
+
+	return a, entityRecords, tokenRecords
+}
+
 // :base: is the timestamp to start from for the setup logic (use to simulate newest log from past or future)
 // entity records returned include [0] data from a previous month and [1:] data from the current month
 // token counts returned are from the current month
-func setupActivityRecordsInStorage(t *testing.T, base time.Time, includeEntities, includeTokens bool) (*ActivityLog, []*activity.EntityRecord, map[string]uint64) {
+func setupActivityRecordsInStorage(t *testing.T, base time.Time, includeEntities, includeTokens, addOldStoragePathData bool) (*ActivityLog, []*activity.EntityRecord, map[string]uint64) {
 	t.Helper()
 
 	core, _, _ := TestCoreUnsealed(t)
@@ -1898,13 +1919,17 @@ func setupActivityRecordsInStorage(t *testing.T, base time.Time, includeEntities
 		WriteToStorage(t, core, ActivityLogLocalPrefix+"directtokens/"+fmt.Sprint(base.Unix())+"/0", tokenData)
 	}
 
+	if addOldStoragePathData {
+		return addActivityRecordsOldStoragePath(t, core, base, includeEntities, includeTokens)
+	}
 	return a, entityRecords, tokenRecords
 }
 
-// TestActivityLog_refreshFromStoredLog writes records for 3 months ago and this month, then calls refreshFromStoredLog.
+// TestActivityLog_refreshFromStoredLog_DedupUpgradeComplete writes records for 3 months ago and this month, then calls refreshFromStoredLog.
+// The system believes the upgrade to 1.19+ is already complete. It should not refresh data from old storage paths, only data at the new storage paths.
 // The test verifies that current entities and current tokens are correct.
-func TestActivityLog_refreshFromStoredLog(t *testing.T) {
-	a, expectedClientRecords, expectedTokenCounts := setupActivityRecordsInStorage(t, time.Now().UTC(), true, true)
+func TestActivityLog_refreshFromStoredLog_DedupUpgradeComplete(t *testing.T) {
+	a, expectedClientRecords, expectedTokenCounts := setupActivityRecordsInStorage(t, time.Now().UTC(), true, true, true)
 	a.SetEnable(true)
 
 	var wg sync.WaitGroup
@@ -1933,13 +1958,101 @@ func TestActivityLog_refreshFromStoredLog(t *testing.T) {
 	}
 
 	currentEntities := a.GetCurrentGlobalEntities()
-	if !entityRecordsEqual(t, currentEntities.Clients, expectedCurrent.Clients) {
+	if !EntityRecordsEqual(t, currentEntities.Clients, expectedCurrent.Clients) {
 		// we only expect the newest entity segment to be loaded (for the current month)
 		t.Errorf("bad activity entity logs loaded. expected: %v got: %v", expectedCurrent, currentEntities)
 	}
 
 	currentLocalEntities := a.GetCurrentLocalEntities()
-	if !entityRecordsEqual(t, currentLocalEntities.Clients, expectedCurrentLocal.Clients) {
+	if !EntityRecordsEqual(t, currentLocalEntities.Clients, expectedCurrentLocal.Clients) {
+		// we only expect the newest local entity segment to be loaded (for the current month)
+		t.Errorf("bad activity entity logs loaded. expected: %v got: %v", expectedCurrentLocal, currentLocalEntities)
+	}
+
+	nsCount := a.GetStoredTokenCountByNamespaceID()
+	require.Equal(t, nsCount, expectedTokenCounts)
+
+	activeClients := a.core.GetActiveClientsList()
+	if err := ActiveEntitiesEqual(activeClients, expectedActive.Clients); err != nil {
+		// we expect activeClients to be loaded for the entire month
+		t.Errorf("bad data loaded into active entities. expected only set of EntityID from %v in %v: %v", expectedActive.Clients, activeClients, err)
+	}
+
+	// verify active global clients list
+	activeGlobalClients := a.core.GetActiveGlobalClientsList()
+	if err := ActiveEntitiesEqual(activeGlobalClients, expectedActiveGlobal.Clients); err != nil {
+		// we expect activeClients to be loaded for the entire month
+		t.Errorf("bad data loaded into active global entities. expected only set of EntityID from %v in %v: %v", expectedActiveGlobal.Clients, activeGlobalClients, err)
+	}
+	// verify active local clients list
+	activeLocalClients := a.core.GetActiveLocalClientsList()
+	if err := ActiveEntitiesEqual(activeLocalClients, expectedCurrentLocal.Clients); err != nil {
+		// we expect activeClients to be loaded for the entire month
+		t.Errorf("bad data loaded into active local entities. expected only set of EntityID from %v in %v: %v", expectedCurrentLocal.Clients, activeLocalClients, err)
+	}
+
+	// No data from the old storage paths should have been loaded because the system believes that the upgrade was already complete
+	a.ExpectOldSegmentRefreshed(t, time.Now().UTC().Unix(), false, []*activity.EntityRecord{}, map[string]uint64{})
+}
+
+// TestActivityLog_refreshFromStoredLog_DedupUpgradeIncomplete writes records for 3 months ago and this month, then calls refreshFromStoredLog.
+// The system thinks the upgrade to 1.19+ is incomplete. It should not refresh data from new storage paths, only data at the old storage paths.
+// The test verifies that current entities and current tokens are correct.
+func TestActivityLog_refreshFromStoredLog_DedupUpgradeIncomplete(t *testing.T) {
+	a, expectedClientRecords, expectedTokenCounts := setupActivityRecordsInStorage(t, time.Now().UTC(), true, true, true)
+	a.SetEnable(true)
+
+	// Reset the system to state where the upgrade is incomplete
+	a.ResetDedupUpgrade(context.Background())
+
+	var wg sync.WaitGroup
+	now := time.Now().UTC()
+	err := a.refreshFromStoredLog(context.Background(), &wg, now)
+	if err != nil {
+		t.Fatalf("got error loading stored activity logs: %v", err)
+	}
+	wg.Wait()
+
+	// active clients for the entire month
+	expectedActive := &activity.EntityActivityLog{
+		Clients: expectedClientRecords[1:],
+	}
+
+	// global clients added to the newest local entity segment
+	expectedCurrent := &activity.EntityActivityLog{
+		Clients: expectedClientRecords[len(expectedClientRecords)-2 : len(expectedClientRecords)-1],
+	}
+
+	expectedActiveGlobal := &activity.EntityActivityLog{
+		Clients: expectedClientRecords[1 : len(expectedClientRecords)-1],
+	}
+
+	// local client is only added to the newest segment for the current month. This should also appear in the active clients for the entire month.
+	expectedCurrentLocal := &activity.EntityActivityLog{
+		Clients: expectedClientRecords[len(expectedClientRecords)-1:],
+	}
+
+	// Data should be loaded into the old segment
+	a.ExpectOldSegmentRefreshed(t, now.Unix(), false, expectedCurrentLocal.GetClients(), map[string]uint64{})
+	a.ExpectCurrentSegmentsRefreshed(t, timeutil.StartOfMonth(now).Unix(), false)
+
+	// Simulate the completion of an upgrade
+	a.writeDedupClientsUpgrade(context.Background())
+
+	err = a.refreshFromStoredLog(context.Background(), &wg, now)
+	if err != nil {
+		t.Fatalf("got error loading stored activity logs: %v", err)
+	}
+	wg.Wait()
+
+	currentEntities := a.GetCurrentGlobalEntities()
+	if !EntityRecordsEqual(t, currentEntities.Clients, expectedCurrent.Clients) {
+		// we only expect the newest entity segment to be loaded (for the current month)
+		t.Errorf("bad activity entity logs loaded. expected: %v got: %v", expectedCurrent, currentEntities)
+	}
+
+	currentLocalEntities := a.GetCurrentLocalEntities()
+	if !EntityRecordsEqual(t, currentLocalEntities.Clients, expectedCurrentLocal.Clients) {
 		// we only expect the newest local entity segment to be loaded (for the current month)
 		t.Errorf("bad activity entity logs loaded. expected: %v got: %v", expectedCurrentLocal, currentLocalEntities)
 	}
@@ -1974,7 +2087,7 @@ func TestActivityLog_refreshFromStoredLog(t *testing.T) {
 // test closes a.doneCh and calls refreshFromStoredLog, which will not do any processing because the doneCh is closed.
 // The test verifies that the current data is not loaded.
 func TestActivityLog_refreshFromStoredLogWithBackgroundLoadingCancelled(t *testing.T) {
-	a, expectedClientRecords, expectedTokenCounts := setupActivityRecordsInStorage(t, time.Now().UTC(), true, true)
+	a, expectedClientRecords, expectedTokenCounts := setupActivityRecordsInStorage(t, time.Now().UTC(), true, true, false)
 	a.SetEnable(true)
 
 	var wg sync.WaitGroup
@@ -2007,13 +2120,13 @@ func TestActivityLog_refreshFromStoredLogWithBackgroundLoadingCancelled(t *testi
 	}
 
 	currentEntities := a.GetCurrentGlobalEntities()
-	if !entityRecordsEqual(t, currentEntities.Clients, expectedCurrent.Clients) {
+	if !EntityRecordsEqual(t, currentEntities.Clients, expectedCurrent.Clients) {
 		// we only expect the newest entity segment to be loaded (for the current month)
 		t.Errorf("bad activity entity logs loaded. expected: %v got: %v", expectedCurrent, currentEntities)
 	}
 
 	currentLocalEntities := a.GetCurrentLocalEntities()
-	if !entityRecordsEqual(t, currentLocalEntities.Clients, expectedCurrentLocal.Clients) {
+	if !EntityRecordsEqual(t, currentLocalEntities.Clients, expectedCurrentLocal.Clients) {
 		// we only expect the newest local entity segment to be loaded (for the current month)
 		t.Errorf("bad activity entity logs loaded. expected: %v got: %v", expectedCurrentLocal, currentLocalEntities)
 	}
@@ -2046,7 +2159,7 @@ func TestActivityLog_refreshFromStoredLogWithBackgroundLoadingCancelled(t *testi
 // TestActivityLog_refreshFromStoredLogContextCancelled writes data from 3 months ago to this month and calls
 // refreshFromStoredLog with a canceled context, verifying that the function errors because of the canceled context.
 func TestActivityLog_refreshFromStoredLogContextCancelled(t *testing.T) {
-	a, _, _ := setupActivityRecordsInStorage(t, time.Now().UTC(), true, true)
+	a, _, _ := setupActivityRecordsInStorage(t, time.Now().UTC(), true, true, false)
 
 	var wg sync.WaitGroup
 	ctx, cancelFn := context.WithCancel(context.Background())
@@ -2061,7 +2174,7 @@ func TestActivityLog_refreshFromStoredLogContextCancelled(t *testing.T) {
 // TestActivityLog_refreshFromStoredLogNoTokens writes only entities from 3 months ago to today, then calls
 // refreshFromStoredLog. It verifies that there are no tokens loaded.
 func TestActivityLog_refreshFromStoredLogNoTokens(t *testing.T) {
-	a, expectedClientRecords, _ := setupActivityRecordsInStorage(t, time.Now().UTC(), true, false)
+	a, expectedClientRecords, _ := setupActivityRecordsInStorage(t, time.Now().UTC(), true, false, false)
 	a.SetEnable(true)
 
 	var wg sync.WaitGroup
@@ -2082,13 +2195,13 @@ func TestActivityLog_refreshFromStoredLogNoTokens(t *testing.T) {
 	}
 
 	currentGlobalEntities := a.GetCurrentGlobalEntities()
-	if !entityRecordsEqual(t, currentGlobalEntities.Clients, expectedCurrentGlobal.Clients) {
+	if !EntityRecordsEqual(t, currentGlobalEntities.Clients, expectedCurrentGlobal.Clients) {
 		// we only expect the newest entity segment to be loaded (for the current month)
 		t.Errorf("bad activity entity logs loaded. expected: %v got: %v", expectedCurrentGlobal, currentGlobalEntities)
 	}
 
 	currentLocalEntities := a.GetCurrentLocalEntities()
-	if !entityRecordsEqual(t, currentLocalEntities.Clients, expectedCurrentLocal.Clients) {
+	if !EntityRecordsEqual(t, currentLocalEntities.Clients, expectedCurrentLocal.Clients) {
 		// we only expect the newest local entity segment to be loaded (for the current month)
 		t.Errorf("bad activity entity logs loaded. expected: %v got: %v", expectedCurrentLocal, currentLocalEntities)
 	}
@@ -2108,7 +2221,7 @@ func TestActivityLog_refreshFromStoredLogNoTokens(t *testing.T) {
 // TestActivityLog_refreshFromStoredLogNoEntities writes only direct tokens from 3 months ago to today, and runs
 // refreshFromStoredLog. It verifies that there are no entities or clients loaded.
 func TestActivityLog_refreshFromStoredLogNoEntities(t *testing.T) {
-	a, _, expectedTokenCounts := setupActivityRecordsInStorage(t, time.Now().UTC(), false, true)
+	a, _, expectedTokenCounts := setupActivityRecordsInStorage(t, time.Now().UTC(), false, true, false)
 	a.SetEnable(true)
 
 	var wg sync.WaitGroup
@@ -2138,17 +2251,29 @@ func TestActivityLog_refreshFromStoredLogNoEntities(t *testing.T) {
 // current segment counts are zero.
 func TestActivityLog_refreshFromStoredLogNoData(t *testing.T) {
 	now := time.Now().UTC()
-	a, _, _ := setupActivityRecordsInStorage(t, now, false, false)
+	a, _, _ := setupActivityRecordsInStorage(t, now, false, false, true)
 	a.SetEnable(true)
 
+	// Simulate an upgrade that is incomplete
+	a.ResetDedupUpgrade(context.Background())
 	var wg sync.WaitGroup
 	err := a.refreshFromStoredLog(context.Background(), &wg, now)
 	if err != nil {
 		t.Fatalf("got error loading stored activity logs: %v", err)
 	}
 	wg.Wait()
+	a.ExpectOldSegmentRefreshed(t, timeutil.StartOfMonth(now).Unix(), false, []*activity.EntityRecord{}, map[string]uint64{})
+	a.ExpectCurrentSegmentsRefreshed(t, timeutil.StartOfMonth(now).Unix(), false)
 
-	a.ExpectCurrentSegmentRefreshed(t, now.Unix(), false)
+	// Simulate an upgrade that is complete
+	require.NoError(t, a.writeDedupClientsUpgrade(context.Background()))
+	err = a.refreshFromStoredLog(context.Background(), &wg, now)
+	if err != nil {
+		t.Fatalf("got error loading stored activity logs: %v", err)
+	}
+	wg.Wait()
+	a.ExpectOldSegmentRefreshed(t, timeutil.StartOfMonth(now).Unix(), false, []*activity.EntityRecord{}, map[string]uint64{})
+	a.ExpectCurrentSegmentsRefreshed(t, timeutil.StartOfMonth(now).Unix(), false)
 }
 
 // TestActivityLog_refreshFromStoredLogTwoMonthsPrevious creates segment data from 5 months ago to 2 months ago and
@@ -2157,17 +2282,29 @@ func TestActivityLog_refreshFromStoredLogTwoMonthsPrevious(t *testing.T) {
 	// test what happens when the most recent data is from month M-2 (or earlier - same effect)
 	now := time.Now().UTC()
 	twoMonthsAgoStart := timeutil.StartOfPreviousMonth(timeutil.StartOfPreviousMonth(now))
-	a, _, _ := setupActivityRecordsInStorage(t, twoMonthsAgoStart, true, true)
+	a, _, _ := setupActivityRecordsInStorage(t, twoMonthsAgoStart, true, true, true)
 	a.SetEnable(true)
 
+	// Simulate an upgrade that is incomplete
+	a.ResetDedupUpgrade(context.Background())
 	var wg sync.WaitGroup
 	err := a.refreshFromStoredLog(context.Background(), &wg, now)
 	if err != nil {
 		t.Fatalf("got error loading stored activity logs: %v", err)
 	}
 	wg.Wait()
+	a.ExpectCurrentSegmentsRefreshed(t, timeutil.StartOfMonth(now).Unix(), false)
+	a.ExpectOldSegmentRefreshed(t, timeutil.StartOfMonth(now).Unix(), false, []*activity.EntityRecord{}, map[string]uint64{})
 
-	a.ExpectCurrentSegmentRefreshed(t, now.Unix(), false)
+	// Simulate an upgrade that is complete
+	a.writeDedupClientsUpgrade(context.Background())
+	err = a.refreshFromStoredLog(context.Background(), &wg, now)
+	if err != nil {
+		t.Fatalf("got error loading stored activity logs: %v", err)
+	}
+	wg.Wait()
+	a.ExpectCurrentSegmentsRefreshed(t, timeutil.StartOfMonth(now).Unix(), false)
+	a.ExpectOldSegmentRefreshed(t, timeutil.StartOfMonth(now).Unix(), false, []*activity.EntityRecord{}, map[string]uint64{})
 }
 
 // TestActivityLog_refreshFromStoredLogPreviousMonth creates segment data from 4 months ago to 1 month ago, then calls
@@ -2178,14 +2315,29 @@ func TestActivityLog_refreshFromStoredLogPreviousMonth(t *testing.T) {
 	// can handle end of month rotations
 	monthStart := timeutil.StartOfMonth(time.Now().UTC())
 	oneMonthAgoStart := timeutil.StartOfPreviousMonth(monthStart)
-	a, expectedClientRecords, expectedTokenCounts := setupActivityRecordsInStorage(t, oneMonthAgoStart, true, true)
+	a, expectedClientRecords, expectedTokenCounts := setupActivityRecordsInStorage(t, oneMonthAgoStart, true, true, true)
 	a.SetEnable(true)
+
+	// Reset upgrade attributes to simulate startup
+	a.ResetDedupUpgrade(context.Background())
 
 	var wg sync.WaitGroup
 	err := a.refreshFromStoredLog(context.Background(), &wg, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("got error loading stored activity logs: %v", err)
 	}
+	wg.Wait()
+
+	// Previous month data should not be loaded into the currentSegment
+	a.ExpectOldSegmentRefreshed(t, monthStart.Unix(), false, []*activity.EntityRecord{}, map[string]uint64{})
+	a.ExpectCurrentSegmentsRefreshed(t, monthStart.Unix(), false)
+
+	// Simulate completion of upgrade
+	require.NoError(t, a.writeDedupClientsUpgrade(context.Background()))
+
+	// With a refresh after upgrade is complete, the currentGlobalSegment and currentLocalSegment should contain data
+	err = a.refreshFromStoredLog(context.Background(), &wg, time.Now().UTC())
+	require.NoError(t, err)
 	wg.Wait()
 
 	expectedActive := &activity.EntityActivityLog{
@@ -2196,16 +2348,13 @@ func TestActivityLog_refreshFromStoredLogPreviousMonth(t *testing.T) {
 	}
 
 	currentEntities := a.GetCurrentGlobalEntities()
-	if !entityRecordsEqual(t, currentEntities.Clients, expectedCurrent.Clients) {
+	if !EntityRecordsEqual(t, currentEntities.Clients, expectedCurrent.Clients) {
 		// we only expect the newest entity segment to be loaded (for the current month)
 		t.Errorf("bad activity entity logs loaded. expected: %v got: %v", expectedCurrent, currentEntities)
 	}
 
 	nsCount := a.GetStoredTokenCountByNamespaceID()
-	if !reflect.DeepEqual(nsCount, expectedTokenCounts) {
-		// we expect all token counts to be loaded
-		t.Errorf("bad activity token counts loaded. expected: %v got: %v", expectedTokenCounts, nsCount)
-	}
+	require.Equal(t, expectedTokenCounts, nsCount)
 
 	activeClients := a.core.GetActiveClientsList()
 	if err := ActiveEntitiesEqual(activeClients, expectedActive.Clients); err != nil {
@@ -2433,7 +2582,7 @@ func TestActivityLog_EnableDisable(t *testing.T) {
 		}
 
 		expectMissingSegment(t, core, path)
-		a.ExpectCurrentSegmentRefreshed(t, 0, false)
+		a.ExpectCurrentSegmentsRefreshed(t, 0, false)
 
 		// enable (if not already) which force-writes an empty segment
 		enableRequest()
@@ -4152,7 +4301,7 @@ func TestActivityLog_partialMonthClientCount(t *testing.T) {
 
 	ctx := namespace.RootContext(nil)
 	now := time.Now().UTC()
-	a, clients, _ := setupActivityRecordsInStorage(t, timeutil.StartOfMonth(now), true, true)
+	a, clients, _ := setupActivityRecordsInStorage(t, timeutil.StartOfMonth(now), true, true, false)
 
 	// clients[0] belongs to previous month
 	clients = clients[1:]
@@ -4223,7 +4372,7 @@ func TestActivityLog_partialMonthClientCountUsingHandleQuery(t *testing.T) {
 
 	ctx := namespace.RootContext(nil)
 	now := time.Now().UTC()
-	a, clients, _ := setupActivityRecordsInStorage(t, timeutil.StartOfMonth(now), true, true)
+	a, clients, _ := setupActivityRecordsInStorage(t, timeutil.StartOfMonth(now), true, true, false)
 
 	// clients[0] belongs to previous month
 	clients = clients[1:]
@@ -5831,7 +5980,7 @@ func TestActivityLog_PrimaryDuplicateClientMigrationWorker(t *testing.T) {
 	a.SetEnable(true)
 
 	ctx := context.Background()
-	timeStamp := time.Now()
+	timeStamp := time.Now().UTC()
 	startOfMonth := timeutil.StartOfMonth(timeStamp)
 	oneMonthAgo := timeutil.StartOfPreviousMonth(timeStamp)
 	twoMonthsAgo := timeutil.StartOfPreviousMonth(oneMonthAgo)
@@ -5865,13 +6014,28 @@ func TestActivityLog_PrimaryDuplicateClientMigrationWorker(t *testing.T) {
 	a.savePreviousEntitySegments(ctx, oneMonthAgo.Unix(), "", []*activity.LogFragment{{Clients: append(clientRecordsLocal[1:], clientRecordsGlobal[1:]...)}})
 	a.savePreviousEntitySegments(ctx, startOfMonth.Unix(), "", []*activity.LogFragment{{Clients: append(clientRecordsLocal[2:], clientRecordsGlobal[2:]...)}})
 
+	// Write tokens to old path. We write twice to simulate multiple segments for each month
+	for i := 0; i < 2; i++ {
+		writeTokenSegmentOldPath(t, core, twoMonthsAgo, i, &activity.TokenCount{CountByNamespaceID: tokenCounts})
+		writeTokenSegmentOldPath(t, core, oneMonthAgo, i, &activity.TokenCount{CountByNamespaceID: tokenCounts})
+		writeTokenSegmentOldPath(t, core, startOfMonth, i, &activity.TokenCount{CountByNamespaceID: tokenCounts})
+	}
+
+	// Write secondary cluster data. This is to make sure that the data at these paths are garbage collected at the end of the migration routine
+	numSecondarySegments := 4
+	secondaryIds := make([]string, 0)
+	for i := 0; i < numSecondarySegments; i++ {
+		writeSecondaryClusterSegment(t, core, twoMonthsAgo, i, fmt.Sprintf("cluster_%d", i), &activity.EntityActivityLog{Clients: clientRecordsGlobal[:ActivitySegmentClientCapacity]})
+		writeSecondaryClusterSegment(t, core, oneMonthAgo, i, fmt.Sprintf("cluster_%d", i), &activity.EntityActivityLog{Clients: clientRecordsGlobal[1:ActivitySegmentClientCapacity]})
+		writeSecondaryClusterSegment(t, core, startOfMonth, i, fmt.Sprintf("cluster_%d", i), &activity.EntityActivityLog{Clients: clientRecordsGlobal[2:ActivitySegmentClientCapacity]})
+		secondaryIds = append(secondaryIds, fmt.Sprintf("cluster_%d", i))
+	}
+
 	// Assert that the migration workers have not been run
 	require.True(t, a.hasDedupClientsUpgrade(ctx))
-	require.True(t, a.dedupClientsUpgradeComplete.Load())
 
 	// Resetting this to false so that we can
 	// verify that after the migrations is completed, the correct values have been stored
-	a.dedupClientsUpgradeComplete.Store(false)
 	require.NoError(t, a.view.Delete(ctx, activityDeduplicationUpgradeKey))
 
 	// Forcefully run the primary migration worker
@@ -5891,6 +6055,7 @@ func TestActivityLog_PrimaryDuplicateClientMigrationWorker(t *testing.T) {
 			require.NoError(t, err)
 			globalClients = append(globalClients, segment.GetClients()...)
 		}
+		// We've added duplicate clients from secondaries, so this should not affect the count of the global clients
 		require.Equal(t, len(clientRecordsGlobal)-index, len(globalClients))
 	}
 
@@ -5914,31 +6079,23 @@ func TestActivityLog_PrimaryDuplicateClientMigrationWorker(t *testing.T) {
 	for _, time := range times {
 		reader, err := a.NewSegmentFileReader(ctx, time)
 		require.NoError(t, err)
+		numTokenSegments := 0
 		for {
 			segment, err := reader.ReadToken(ctx)
 			if errors.Is(err, io.EOF) {
 				break
 			}
+			numTokenSegments += 1
 			require.NoError(t, err)
 			// Verify that the data is correct
 			deep.Equal(segment.GetCountByNamespaceID(), tokenCounts)
 		}
+		// All tokens should have been combined into one segment
+		require.Equal(t, 1, numTokenSegments)
 	}
 
 	// Check that the storage key has been updated
 	require.True(t, a.hasDedupClientsUpgrade(ctx))
-	// Check that the bool has been updated
-	require.True(t, a.dedupClientsUpgradeComplete.Load())
-
-	// Wait for the deletion of old logs to complete
-	timeout := time.After(25 * time.Second)
-	// Wait for channel indicating deletion to be written
-	select {
-	case <-timeout:
-		t.Fatal("timed out waiting for deletion to complete")
-	case <-a.oldStoragePathsCleaned:
-		break
-	}
 
 	// Verify there is no data at the old paths
 	times, err := a.availableTimesAtPath(ctx, time.Now(), activityEntityBasePath)
@@ -5949,6 +6106,13 @@ func TestActivityLog_PrimaryDuplicateClientMigrationWorker(t *testing.T) {
 	times, err = a.availableTimesAtPath(ctx, time.Now(), activityTokenBasePath)
 	require.NoError(t, err)
 	require.Equal(t, 0, len(times))
+
+	// Verify there is no data at the secondary cluster paths
+	for _, secondaryId := range secondaryIds {
+		times, err = a.availableTimesAtPath(ctx, time.Now(), activitySecondaryTempDataPathPrefix+secondaryId+activityEntityBasePath)
+		require.NoError(t, err)
+		require.Equal(t, 0, len(times))
+	}
 }
 
 // TestActivityLog_SecondaryDuplicateClientMigrationWorker verifies that the secondary
@@ -5960,7 +6124,7 @@ func TestActivityLog_SecondaryDuplicateClientMigrationWorker(t *testing.T) {
 	a.SetEnable(true)
 
 	ctx := context.Background()
-	timeStamp := time.Now()
+	timeStamp := time.Now().UTC()
 	startOfMonth := timeutil.StartOfMonth(timeStamp)
 	oneMonthAgo := timeutil.StartOfPreviousMonth(timeStamp)
 	twoMonthsAgo := timeutil.StartOfPreviousMonth(oneMonthAgo)
@@ -5995,35 +6159,36 @@ func TestActivityLog_SecondaryDuplicateClientMigrationWorker(t *testing.T) {
 	a.savePreviousEntitySegments(ctx, startOfMonth.Unix(), "", []*activity.LogFragment{{Clients: append(clientRecordsLocal[2:], clientRecordsGlobal[2:]...)}})
 
 	// Write tokens to old path
-	a.savePreviousTokenSegments(ctx, twoMonthsAgo.Unix(), "", []*activity.LogFragment{{NonEntityTokens: tokenCounts}})
-	a.savePreviousTokenSegments(ctx, oneMonthAgo.Unix(), "", []*activity.LogFragment{{NonEntityTokens: tokenCounts}})
-	a.savePreviousTokenSegments(ctx, startOfMonth.Unix(), "", []*activity.LogFragment{{NonEntityTokens: tokenCounts}})
+	for i := 0; i < 2; i++ {
+		writeTokenSegmentOldPath(t, core, twoMonthsAgo, i, &activity.TokenCount{CountByNamespaceID: tokenCounts})
+		writeTokenSegmentOldPath(t, core, oneMonthAgo, i, &activity.TokenCount{CountByNamespaceID: tokenCounts})
+		writeTokenSegmentOldPath(t, core, startOfMonth, i, &activity.TokenCount{CountByNamespaceID: tokenCounts})
+	}
 
 	// Assert that the migration workers have not been run
 	require.True(t, a.hasDedupClientsUpgrade(ctx))
-	require.True(t, a.dedupClientsUpgradeComplete.Load())
 
 	// Resetting this to false so that we can
 	// verify that after the migrations is completed, the correct values have been stored
-	a.dedupClientsUpgradeComplete.Store(false)
 	require.NoError(t, a.view.Delete(ctx, activityDeduplicationUpgradeKey))
 
 	// Forcefully run the secondary migration worker
-	core.secondaryDuplicateClientMigrationWorker(ctx)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		core.secondaryDuplicateClientMigrationWorker(ctx)
+	}()
 
 	// Wait for the storage migration to complete
-	ticker := time.NewTicker(100 * time.Millisecond)
-	timeout := time.After(25 * time.Second)
-	for {
-		select {
-		case <-timeout:
-			t.Fatal("timed out waiting for migration to complete")
-		case <-ticker.C:
-		}
-		if a.dedupClientsUpgradeComplete.Load() {
-			break
-		}
-	}
+	wg.Wait()
+	// The upgrade technically should not have completed because the worker to send
+	// data to the primary should have exited with an error (because replicationRPCClient was not set)
+	require.False(t, a.DedupUpgradeComplete(ctx))
+	// Force set the upgrade to complete so that we can garbage collect
+	a.writeDedupClientsUpgrade(ctx)
+	// Manually refresh the log because
+	a.refreshFromStoredLog(ctx, &wg, timeStamp)
 
 	// Verify that no global clients have been migrated
 	times := []time.Time{twoMonthsAgo, oneMonthAgo, startOfMonth}
@@ -6062,30 +6227,19 @@ func TestActivityLog_SecondaryDuplicateClientMigrationWorker(t *testing.T) {
 	for _, time := range times {
 		reader, err := a.NewSegmentFileReader(ctx, time)
 		require.NoError(t, err)
+		numTokenSegments := 0
 		for {
 			segment, err := reader.ReadToken(ctx)
 			if errors.Is(err, io.EOF) {
 				break
 			}
 			require.NoError(t, err)
+			numTokenSegments += 1
 			// Verify that the data is correct
 			deep.Equal(segment.GetCountByNamespaceID(), tokenCounts)
 		}
-	}
-
-	// Check that the storage key has been updated
-	require.True(t, a.hasDedupClientsUpgrade(ctx))
-	// Check that the bool has been updated
-	require.True(t, a.dedupClientsUpgradeComplete.Load())
-
-	// Wait for the deletion of old logs to complete
-	timeout = time.After(25 * time.Second)
-	// Wait for channel indicating deletion to be written
-	select {
-	case <-timeout:
-		t.Fatal("timed out waiting for deletion to complete")
-	case <-a.oldStoragePathsCleaned:
-		break
+		// All tokens should have been combined into one segment
+		require.Equal(t, 1, numTokenSegments)
 	}
 
 	// Verify there is no data at the old entity paths
