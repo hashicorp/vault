@@ -1,0 +1,3 @@
+```release-note:feature
+CLI: adds an optional flag (--fail-if-not-fullfilled) to the renew command, which lets the renew command fail on unfulfillable requests and allows command chaining to allow further executions.
+```
