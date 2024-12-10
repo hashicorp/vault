@@ -128,23 +128,17 @@ export default class SecretsBackendConfigurationRoute extends Route {
 
   async fetchAzureConfig(id) {
     try {
-      let azureModel = await this.store.queryRecord('azure/config', { backend: id });
+      const azureModel = await this.store.queryRecord('azure/config', { backend: id });
       let issuer = null;
-      if (azureModel.isConfigured) {
-        if (this.version.isEnterprise) {
-          // Issuer is an enterprise only related feature
-          // Issuer is also a global endpoint that doesn't mean anything in the Azure secret details context if WIF related fields on the azureConfig have not been set.
-          const WIF_FIELDS = ['identityTokenAudience', 'identityTokenTtl'];
-          WIF_FIELDS.some((field) => azureModel[field]) ? (issuer = await this.fetchIssuer()) : null;
-        }
-      } else {
-        // azure will return a 200 if the config is set or not set.
-        // thus, we set the model to null if no params have been configured.
-        azureModel = null;
+      if (this.version.isEnterprise) {
+        // Issuer is an enterprise only related feature
+        // Issuer is also a global endpoint that doesn't mean anything in the Azure secret details context if WIF related fields on the azureConfig have not been set.
+        const WIF_FIELDS = ['identityTokenAudience', 'identityTokenTtl'];
+        WIF_FIELDS.some((field) => azureModel[field]) ? (issuer = await this.fetchIssuer()) : null;
       }
-
       const configArray = [];
-      configArray.push(azureModel, issuer);
+      if (azureModel.isConfigured) configArray.push(azureModel);
+      if (issuer) configArray.push(issuer);
       return configArray;
     } catch (e) {
       if (e.httpStatus === 404) {

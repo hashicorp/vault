@@ -10,13 +10,6 @@ export default class AzureConfigSerializer extends ApplicationSerializer {
     if (!payload.data) {
       return super.normalizeResponse(...arguments);
     }
-    // remove rootPasswordTtl and identityTokenTtl if the API's default value of 0. We don't want to display this value on configuration details if they haven't changed the default value
-    if (payload.data.root_password_ttl === 0) {
-      delete payload.data.root_password_ttl;
-    }
-    if (payload.data.identity_token_ttl === 0) {
-      delete payload.data.identity_token_ttl;
-    }
 
     const normalizedPayload = {
       id: payload.id,

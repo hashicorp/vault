@@ -12,7 +12,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
-import { UN_SUPPORTED_ENGINES, mountableEngines } from 'vault/helpers/mountable-secret-engines';
+import { UNSUPPORTED_ENGINES, mountableEngines } from 'vault/helpers/mountable-secret-engines';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 
 const SELECTORS = {
@@ -56,7 +56,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
       await visit('/vault/cluster/dashboard');
       await visit('/vault/secrets');
 
-      if (UN_SUPPORTED_ENGINES.includes(engine)) {
+      if (UNSUPPORTED_ENGINES.includes(engine)) {
         assert
           .dom(PAGE.backends.link(enginePath))
           .doesNotHaveClass(
