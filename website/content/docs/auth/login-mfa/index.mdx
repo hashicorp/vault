@@ -242,7 +242,7 @@ Enable a Login MFA method to enforce TOTP on the LDAP auth method.
 
 </Note>
 
-Configure the Login MFA TOTP method and assign its method ID to the `TOTP_METHOD_ID` environment variable.
+Configure the Login MFA TOTP method and note down the resulting `method_id`.
 
 ```shell-session
 $ vault write identity/mfa/method/totp \
@@ -254,7 +254,7 @@ $ vault write identity/mfa/method/totp \
    digits=6
 ```
 
-Extract the TOTP `method_id` and after a sucessful MFA login authentication extract the `entity_id`.  Use these to generate a QR code.
+Using the TOTP `method_id` and an `entity_id` from after a sucessful MFA login.  Use these to generate a QR code.
 
 ```shell-session
 $ vault write -field=barcode \
@@ -268,16 +268,15 @@ $ vault write -field=barcode \
 Capture the LDAP auth method accessor for use in creating a Login MFA enforcement.
 
 ```shell-session
-$ VAULT_TOKEN=root vault auth list -format=json \
-    --detailed | jq -r '."ldap/".accessor'
+$ vault auth list -format=json --detailed
 ```
 
-Create the enforcement.
+Using the accessor from the previous step and a `method_id` apply the enforcement.
 
 ```shell-session
 $ VAULT_TOKEN=root vault write /identity/mfa/login-enforcement/adtotp \
     mfa_method_ids=$TOTP_METHOD_ID \
-    auth_method_accessors=$LDAP_ACCESSOR
+    auth_method_accessors=$ACCESSOR
 ```
 
 **Successful output example:**
@@ -292,11 +291,12 @@ Success! Data written to: identity/mfa/login-enforcement/adtotp
 
 #### Login with LDAP auth method
 
+Logging in with MFA enforcement will resemble the following:
+
 ```shell-session
 $ vault login -method=ldap username=alice password='password!'
 Enter the passphrase for methodID "01194a79-e2d9-c038-029d-79b0091cafd0" of type "totp":
 ```
-
 
 #### TOTP passcode validation rate limit
 
