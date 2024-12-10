@@ -1,0 +1,4 @@
+```release-note:improvement
+https://github.com/hashicorp/vault/blob/main/website/content/docs/secrets/databases/postgresql.mdx: Updated the static role name in Section "Rootless Configuration and Password Rotation for Static Roles
+" to make the entries consistent
+```
