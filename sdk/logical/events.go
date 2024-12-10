@@ -12,6 +12,10 @@ import (
 
 // common event metadata keys
 const (
+	// EventMetadataPath is used in event metadata to show the API path the client must have the `subscribe` capability
+	// on in order consume the event. It is recommended that the event path metadata field uses that api path that was invoked
+	// in order to generate the event
+	EventMetadataPath = "path"
 	// EventMetadataDataPath is used in event metadata to show the API path that can be used to fetch any underlying
 	// data. For example, the KV plugin would set this to `data/mysecret`. The event system will automatically prepend
 	// the plugin mount to this path, if present, so it would become `secret/data/mysecret`, for example.
