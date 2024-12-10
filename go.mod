@@ -132,7 +132,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-cf v0.19.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.19.1
 	github.com/hashicorp/vault-plugin-auth-jwt v0.22.0
-	github.com/hashicorp/vault-plugin-auth-kerberos v0.13.0
+	github.com/hashicorp/vault-plugin-auth-kerberos v0.13.1-0.20241201002950-e990f5bef9a6
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.20.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.17.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.12.0
@@ -181,7 +181,7 @@ require (
 	github.com/okta/okta-sdk-golang/v5 v5.0.2
 	github.com/oracle/oci-go-sdk v24.3.0+incompatible
 	github.com/ory/dockertest v3.3.5+incompatible
-	github.com/ory/dockertest/v3 v3.10.0
+	github.com/ory/dockertest/v3 v3.11.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pires/go-proxyproto v0.8.0
 	github.com/pkg/errors v0.9.1
