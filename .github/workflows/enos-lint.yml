@@ -17,7 +17,7 @@ jobs:
       runs-on: ${{ steps.metadata.outputs.runs-on }}
       version: ${{ steps.metadata.outputs.version }}
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - id: set-product-version
         uses: hashicorp/actions-set-product-version@v2
       - id: metadata
@@ -37,7 +37,7 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       ENOS_VAR_tfc_api_token: ${{ secrets.TF_API_TOKEN }}
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
         with:
           cache: false # save cache space for vault builds: https://github.com/hashicorp/vault/pull/21764
