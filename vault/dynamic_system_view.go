@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/hashicorp/vault/version"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type ctxKeyForwardedRequestMountAccessor struct{}
@@ -407,10 +408,17 @@ func (d dynamicSystemView) GroupsForEntity(entityID string) ([]*logical.Group, e
 
 func (d dynamicSystemView) PluginEnv(_ context.Context) (*logical.PluginEnvironment, error) {
 	v := version.GetVersion()
+
+	buildDate, err := version.GetVaultBuildDate()
+	if err != nil {
+		return nil, err
+	}
+
 	return &logical.PluginEnvironment{
 		VaultVersion:           v.Version,
 		VaultVersionPrerelease: v.VersionPrerelease,
 		VaultVersionMetadata:   v.VersionMetadata,
+		VaultBuildDate:         timestamppb.New(buildDate),
 	}, nil
 }
 
