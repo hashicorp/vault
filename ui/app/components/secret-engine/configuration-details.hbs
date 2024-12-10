@@ -12,9 +12,7 @@
         @label={{or attr.options.label (to-label attr.name)}}
         @value={{get configModel (or attr.options.fieldValue attr.name)}}
       >
-        {{#if (or attr.options.sensitive (eq attr.name "publicKey"))}}
-          <MaskedInput @value={{get configModel attr.name}} @name={{attr.name}} @displayOnly={{true}} @allowCopy={{true}} />
-        {{/if}}
+        <MaskedInput @value={{get configModel attr.name}} @name={{attr.name}} @displayOnly={{true}} @allowCopy={{true}} />
       </InfoTableRow>
     {{else}}
       <InfoTableRow

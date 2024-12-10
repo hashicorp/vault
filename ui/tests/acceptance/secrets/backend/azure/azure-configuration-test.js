@@ -46,6 +46,11 @@ module('Acceptance | Azure | configuration', function (hooks) {
       await visit('/vault/settings/mount-secret-backend');
       await mountBackend('azure', path);
 
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${path}/configuration`,
+        'navigated to configuration view'
+      );
       assert.dom(GENERAL.emptyStateTitle).hasText('Azure not configured');
       assert.dom(GENERAL.emptyStateActions).doesNotContainText('Configure Azure');
       // cleanup
@@ -56,11 +61,6 @@ module('Acceptance | Azure | configuration', function (hooks) {
       const path = `azure-${this.uid}`;
       await enablePage.enable('azure', path);
       assert.dom(SES.configure).doesNotExist('Configure button does not exist.');
-      assert.strictEqual(
-        currentURL(),
-        `/vault/secrets/${path}/configuration`,
-        'navigated to configuration view'
-      );
       // cleanup
       await runCmd(`delete sys/mounts/${path}`);
     });
@@ -82,7 +82,6 @@ module('Acceptance | Azure | configuration', function (hooks) {
       });
       await enablePage.enable(type, path);
       for (const key of expectedConfigKeys('azure-wif')) {
-        assert.dom(GENERAL.infoRowLabel(key)).exists(`${key} on the ${type} config details exists.`);
         const responseKeyAndValue = expectedValueOfConfigKeys(type, key);
         assert
           .dom(GENERAL.infoRowValue(key))

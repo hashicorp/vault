@@ -159,7 +159,7 @@ export function mountableEngines() {
 // secret engines that have not other views than the mount view and mount details view
 export const UNSUPPORTED_ENGINES = ['alicloud', 'consul', 'gcp', 'gcpkms', 'nomad', 'rabbitmq', 'totp'];
 
-export function unSupportedEngines() {
+export function unsupportedEngines() {
   return UNSUPPORTED_ENGINES.slice();
 }
 

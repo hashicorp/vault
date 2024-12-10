@@ -57,8 +57,8 @@ export default class AzureConfig extends Model {
   }
 
   get isConfigured() {
-    const params = this.displayAttrs.map((attr) => attr.name);
-    return params.some((param) => this[param]);
+    // if every value is falsy, this engine has not been configured yet
+    return !this.configurableParams.every((param) => !this[param]);
   }
 
   // formFields are iterated through to generate the edit/create view
