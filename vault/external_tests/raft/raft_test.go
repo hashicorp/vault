@@ -1539,3 +1539,25 @@ func TestSysHealth_Raft(t *testing.T) {
 		require.Nil(t, r.HAConnectionHealthy)
 	})
 }
+
+// TestRaftCluster_Removed_ReAdd creates a three node raft cluster and then
+// removes one of the nodes. The removed follower tries to re-join, and the test
+// verifies that it errors and cannot join.
+func TestRaftCluster_Removed_ReAdd(t *testing.T) {
+	t.Parallel()
+	cluster, _ := raftCluster(t, nil)
+	defer cluster.Cleanup()
+
+	leader := cluster.Cores[0]
+	follower := cluster.Cores[2]
+
+	_, err := leader.Client.Logical().Write("/sys/storage/raft/remove-peer", map[string]interface{}{
+		"server_id": follower.NodeID,
+	})
+	require.NoError(t, err)
+	require.Eventually(t, follower.Sealed, 3*time.Second, 250*time.Millisecond)
+
+	joinReq := &api.RaftJoinRequest{LeaderAPIAddr: leader.Address.String()}
+	_, err = follower.Client.Sys().RaftJoin(joinReq)
+	require.Error(t, err)
+}
