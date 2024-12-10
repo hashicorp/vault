@@ -4,6 +4,7 @@ go 1.23.2
 
 require (
 	github.com/Masterminds/semver v1.5.0
+	github.com/google/go-github/v68 v68.0.0
 	github.com/hashicorp/hcl/v2 v2.22.0
 	github.com/hashicorp/releases-api v0.1.23
 	github.com/spf13/cobra v1.8.1
@@ -31,6 +32,7 @@ require (
 	github.com/go-openapi/swag v0.23.0 // indirect
 	github.com/go-openapi/validate v0.24.0 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
+	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/go-hclog v1.6.3 // indirect
 	github.com/hashicorp/go-version v1.7.0 // indirect
