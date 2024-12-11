@@ -1,0 +1,3 @@
+```release-note:change
+LDAP auth method no longer returns authentication warnings to client. LDAP auth warnings are logged at the warning log level.
+```
