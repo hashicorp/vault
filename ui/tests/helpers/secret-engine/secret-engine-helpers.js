@@ -101,6 +101,7 @@ const createSshCaConfig = (store, backend) => {
 
 const createAzureConfig = (store, backend, accessType = 'generic') => {
   // clear any records first
+  // note: allowed "environment" params for testing https://github.com/hashicorp/vault-plugin-secrets-azure/blob/main/client.go#L35-L37
   store.unloadAll('azure/config');
   if (accessType === 'azure') {
     store.pushPayload('azure/config', {
@@ -112,7 +113,7 @@ const createAzureConfig = (store, backend, accessType = 'generic') => {
         subscription_id: 'subscription-id',
         tenant_id: 'tenant-id',
         client_id: 'client-id',
-        root_password_ttl: '500h',
+        root_password_ttl: '20 days 20 hours',
         environment: 'AZUREPUBLICCLOUD',
       },
     });
@@ -127,6 +128,7 @@ const createAzureConfig = (store, backend, accessType = 'generic') => {
         client_id: 'client-id',
         identity_token_audience: 'audience',
         identity_token_ttl: 7200,
+        root_password_ttl: '20 days 20 hours',
         environment: 'AZUREPUBLICCLOUD',
       },
     });
@@ -139,7 +141,7 @@ const createAzureConfig = (store, backend, accessType = 'generic') => {
         subscription_id: 'subscription-id-2',
         tenant_id: 'tenant-id-2',
         client_id: 'client-id-2',
-        environment: 'AZUREPUBLICCLOUD', // allowed environment vars for testing https://github.com/hashicorp/vault-plugin-secrets-azure/blob/main/client.go#L35-L37
+        environment: 'AZUREPUBLICCLOUD',
       },
     });
   }
@@ -208,6 +210,8 @@ export const expectedConfigKeys = (type) => {
         'Root password TTL',
         'Environment',
         'identityTokenAudience',
+        'Environment',
+        'Identity token audience',
         'Identity token TTL',
       ];
     case 'azure-wif-camelCase':
@@ -249,6 +253,10 @@ const valueOfAzureKeys = (string) => {
       return 'AZUREPUBLICCLOUD';
     case 'Root password TTL':
       return '20 days 20 hours';
+    case 'Identity token audience':
+      return 'audience';
+    case 'Identity token TTL':
+      return '8 days 8 hours';
   }
 };
 

@@ -14,16 +14,6 @@ import { reject } from 'rsvp';
  * As well as any additional configuration models if the engine is a configurable engine.
  */
 
-const POSSIBLE_AZURE_CONFIG_PROPS = [
-  'subscriptionId',
-  'tenantId',
-  'clientId',
-  'identityTokenAudience',
-  'identityTokenTtl',
-  'environment',
-  'rootPasswordTtl',
-];
-
 export default class SecretsBackendConfigurationRoute extends Route {
   @service store;
   @service version;
@@ -93,8 +83,8 @@ export default class SecretsBackendConfigurationRoute extends Route {
     const configLease = await this.fetchAwsConfig(id, 'aws/lease-config');
     let issuer = null;
     if (this.version.isEnterprise && configRoot) {
-      // Issuer is an enterprise only related feature
-      // Issuer is also a global endpoint that doesn't mean anything in the AWS secret details context if WIF related fields on the rootConfig have not been set.
+      // issuer is an enterprise only related feature
+      // issuer is also a global endpoint that doesn't mean anything in the AWS secret details context if WIF related fields on the rootConfig have not been set.
       const WIF_FIELDS = ['roleArn', 'identityTokenAudience', 'identityTokenTtl'];
       WIF_FIELDS.some((field) => configRoot[field]) ? (issuer = await this.fetchIssuer()) : null;
     }
@@ -138,25 +128,17 @@ export default class SecretsBackendConfigurationRoute extends Route {
 
   async fetchAzureConfig(id) {
     try {
-      let response = await this.store.queryRecord('azure/config', { backend: id });
-      let isConfigSet = false;
-      // Azure will return a 200 if the config has not been set.
-      // Thus, we check every possible field and if any of them return a value we can assume the config has been set.
-      for (const property of POSSIBLE_AZURE_CONFIG_PROPS) {
-        if (response[property]) {
-          isConfigSet = true;
-        }
-      }
-      response = isConfigSet ? response : null;
-      const configArray = [];
+      const azureModel = await this.store.queryRecord('azure/config', { backend: id });
       let issuer = null;
-      if (this.version.isEnterprise && response) {
+      if (this.version.isEnterprise) {
         // Issuer is an enterprise only related feature
         // Issuer is also a global endpoint that doesn't mean anything in the Azure secret details context if WIF related fields on the azureConfig have not been set.
         const WIF_FIELDS = ['identityTokenAudience', 'identityTokenTtl'];
-        WIF_FIELDS.some((field) => response[field]) ? (issuer = await this.fetchIssuer()) : null;
+        WIF_FIELDS.some((field) => azureModel[field]) ? (issuer = await this.fetchIssuer()) : null;
       }
-      configArray.push(response, issuer);
+      const configArray = [];
+      if (azureModel.isConfigured) configArray.push(azureModel);
+      if (issuer) configArray.push(issuer);
       return configArray;
     } catch (e) {
       if (e.httpStatus === 404) {

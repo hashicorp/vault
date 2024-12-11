@@ -30,7 +30,9 @@ module('Integration | Component | SecretEngine/ConfigurationDetails', function (
       <SecretEngine::ConfigurationDetails @typeDisplay="Display Name" />
     `);
     assert.dom(GENERAL.emptyStateTitle).hasText(`Display Name not configured`);
-    assert.dom(GENERAL.emptyStateMessage).hasText(`Get started by configuring your Display Name engine.`);
+    assert
+      .dom(GENERAL.emptyStateMessage)
+      .hasText(`Get started by configuring your Display Name secrets engine.`);
   });
 
   test('it shows config details if configModel(s) are passed in', async function (assert) {
@@ -44,6 +46,7 @@ module('Integration | Component | SecretEngine/ConfigurationDetails', function (
       await render(
         hbs`<SecretEngine::ConfigurationDetails @configModels={{array this.configModels}} @typeDisplay={{this.typeDisplay}}/>`
       );
+
       for (const key of expectedConfigKeys(type)) {
         assert.dom(GENERAL.infoRowLabel(key)).exists(`${key} on the ${type} config details exists.`);
         const responseKeyAndValue = expectedValueOfConfigKeys(type, key);

@@ -10,24 +10,18 @@ import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 // https://developer.hashicorp.com/vault/api-docs/secret/azure#configure-access
 export default class AzureConfig extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord
-  @attr('string', {
-    label: 'Subscription ID',
-  })
-  subscriptionId;
-  @attr('string', {
-    label: 'Tenant ID',
-  })
-  tenantId;
-  @attr('string', {
-    label: 'Client ID',
-  })
-  clientId;
+  @attr('string', { label: 'Subscription ID' }) subscriptionId;
+  @attr('string', { label: 'Tenant ID' }) tenantId;
+  @attr('string', { label: 'Client ID' }) clientId;
   @attr('string', { sensitive: true }) clientSecret; // obfuscated, never returned by API
+  @attr('string') environment;
+
   @attr('string', {
     subText:
       'The audience claim value for plugin identity tokens. Must match an allowed audience configured for the target IAM OIDC identity provider.',
   })
   identityTokenAudience;
+
   @attr({
     label: 'Identity token TTL',
     helperTextDisabled:
@@ -36,7 +30,7 @@ export default class AzureConfig extends Model {
     editType: 'ttl',
   })
   identityTokenTtl;
-  @attr('string') environment;
+
   @attr({
     label: 'Root password TTL',
     editType: 'ttl',
@@ -45,19 +39,31 @@ export default class AzureConfig extends Model {
   })
   rootPasswordTtl;
 
+  configurableParams = [
+    'subscriptionId',
+    'tenantId',
+    'clientId',
+    'clientSecret',
+    'identityTokenAudience',
+    'identityTokenTtl',
+    'rootPasswordTtl',
+    'environment',
+  ];
+
   // for configuration details view
   // do not include clientSecret because it is never returned by the API
-  get attrs() {
-    const keys = [
-      'subscriptionId',
-      'tenantId',
-      'clientId',
-      'identityTokenAudience',
-      'identityTokenTtl',
-      'environment',
-      'rootPasswordTtl',
-    ];
-    return expandAttributeMeta(this, keys);
+  get displayAttrs() {
+    return this.formFields.filter((attr) => attr.name !== 'clientSecret');
+  }
+
+  get isConfigured() {
+    // if every value is falsy, this engine has not been configured yet
+    return !this.configurableParams.every((param) => !this[param]);
+  }
+
+  // formFields are iterated through to generate the edit/create view
+  get formFields() {
+    return expandAttributeMeta(this, this.configurableParams);
   }
 
   // "filedGroupsWif" and "fieldGroupsAzure" are passed to the FormFieldGroups component to determine which group to show in the form (ex: @groupName="fieldGroupsWif")
@@ -85,20 +91,5 @@ export default class AzureConfig extends Model {
       });
     }
     return formFieldGroups;
-  }
-
-  // formFields are iterated through to generate the edit/create view
-  get formFields() {
-    const keys = [
-      'subscriptionId',
-      'tenantId',
-      'clientId',
-      'clientSecret',
-      'identityTokenAudience',
-      'identityTokenTtl',
-      'rootPasswordTtl',
-      'environment',
-    ];
-    return expandAttributeMeta(this, keys);
   }
 }

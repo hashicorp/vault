@@ -17,7 +17,7 @@ export default class AzureConfig extends Model {
   environment: string | undefined;
   rootPasswordTtl: string | undefined;
 
-  get attrs(): any;
+  get displayAttrs(): any;
   get fieldGroupsWif(): any;
   get fieldGroupsAzure(): any;
   formFieldGroups(accessType?: string): {
@@ -29,5 +29,4 @@ export default class AzureConfig extends Model {
   isNew: boolean;
   save(): void;
   unloadRecord(): void;
-  validate(): ModelValidations;
 }

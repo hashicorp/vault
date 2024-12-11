@@ -42,9 +42,8 @@ export default class SshCaConfig extends Model {
   generateSigningKey;
 
   // do not return private key for configuration.index view
-  get attrs() {
-    const keys = ['publicKey', 'generateSigningKey'];
-    return expandAttributeMeta(this, keys);
+  get displayAttrs() {
+    return this.formFields.filter((attr) => attr.name !== 'privateKey');
   }
   // return private key for edit/create view
   get formFields() {
