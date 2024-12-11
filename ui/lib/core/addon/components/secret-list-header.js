@@ -4,6 +4,8 @@
  */
 
 import Component from '@glimmer/component';
+import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
+import { CONFIGURATION_ONLY } from 'vault/helpers/mountable-secret-engines';
 
 /**
  * @module SecretListHeader
@@ -22,5 +24,11 @@ import Component from '@glimmer/component';
 export default class SecretListHeader extends Component {
   get isKV() {
     return ['kv', 'generic'].includes(this.args.model.engineType);
+  }
+
+  get showListTab() {
+    // only show the list tab if the engine is not a configuration only engine and the UI supports it
+    const { engineType } = this.args.model;
+    return supportedSecretBackends().includes(engineType) && !CONFIGURATION_ONLY.includes(engineType);
   }
 }

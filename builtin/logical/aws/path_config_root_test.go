@@ -31,6 +31,8 @@ func TestBackend_PathConfigRoot(t *testing.T) {
 		"iam_endpoint":            "https://iam.amazonaws.com",
 		"sts_endpoint":            "https://sts.us-west-2.amazonaws.com",
 		"sts_region":              "",
+		"sts_fallback_endpoints":  []string{},
+		"sts_fallback_regions":    []string{},
 		"max_retries":             10,
 		"username_template":       defaultUserNameTemplate,
 		"role_arn":                "",
@@ -63,6 +65,152 @@ func TestBackend_PathConfigRoot(t *testing.T) {
 	require.Equal(t, configData, resp.Data)
 	if !reflect.DeepEqual(resp.Data, configData) {
 		t.Errorf("bad: expected to read config root as %#v, got %#v instead", configData, resp.Data)
+	}
+}
+
+// TestBackend_PathConfigRoot_STSFallback tests valid versions of STS fallback parameters - slice and csv
+func TestBackend_PathConfigRoot_STSFallback(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = &testSystemView{}
+
+	b := Backend(config)
+	if err := b.Setup(context.Background(), config); err != nil {
+		t.Fatal(err)
+	}
+
+	configData := map[string]interface{}{
+		"access_key":              "AKIAEXAMPLE",
+		"secret_key":              "RandomData",
+		"region":                  "us-west-2",
+		"iam_endpoint":            "https://iam.amazonaws.com",
+		"sts_endpoint":            "https://sts.us-west-2.amazonaws.com",
+		"sts_region":              "",
+		"sts_fallback_endpoints":  []string{"192.168.1.1", "127.0.0.1"},
+		"sts_fallback_regions":    []string{"my-house-1", "my-house-2"},
+		"max_retries":             10,
+		"username_template":       defaultUserNameTemplate,
+		"role_arn":                "",
+		"identity_token_audience": "",
+		"identity_token_ttl":      int64(0),
+	}
+
+	configReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   config.StorageView,
+		Path:      "config/root",
+		Data:      configData,
+	}
+
+	resp, err := b.HandleRequest(context.Background(), configReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: config writing failed: resp:%#v\n err: %v", resp, err)
+	}
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Storage:   config.StorageView,
+		Path:      "config/root",
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: config reading failed: resp:%#v\n err: %v", resp, err)
+	}
+
+	delete(configData, "secret_key")
+	require.Equal(t, configData, resp.Data)
+	if !reflect.DeepEqual(resp.Data, configData) {
+		t.Errorf("bad: expected to read config root as %#v, got %#v instead", configData, resp.Data)
+	}
+
+	// test we can handle comma separated strings, per CommaStringSlice
+	configData = map[string]interface{}{
+		"access_key":              "AKIAEXAMPLE",
+		"secret_key":              "RandomData",
+		"region":                  "us-west-2",
+		"iam_endpoint":            "https://iam.amazonaws.com",
+		"sts_endpoint":            "https://sts.us-west-2.amazonaws.com",
+		"sts_region":              "",
+		"sts_fallback_endpoints":  "1.1.1.1,8.8.8.8",
+		"sts_fallback_regions":    "zone-1,zone-2",
+		"max_retries":             10,
+		"username_template":       defaultUserNameTemplate,
+		"role_arn":                "",
+		"identity_token_audience": "",
+		"identity_token_ttl":      int64(0),
+	}
+
+	configReq = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   config.StorageView,
+		Path:      "config/root",
+		Data:      configData,
+	}
+
+	resp, err = b.HandleRequest(context.Background(), configReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: config writing failed: resp:%#v\n err: %v", resp, err)
+	}
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Storage:   config.StorageView,
+		Path:      "config/root",
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: config reading failed: resp:%#v\n err: %v", resp, err)
+	}
+
+	delete(configData, "secret_key")
+	configData["sts_fallback_endpoints"] = []string{"1.1.1.1", "8.8.8.8"}
+	configData["sts_fallback_regions"] = []string{"zone-1", "zone-2"}
+	require.Equal(t, configData, resp.Data)
+	if !reflect.DeepEqual(resp.Data, configData) {
+		t.Errorf("bad: expected to read config root as %#v, got %#v instead", configData, resp.Data)
+	}
+}
+
+// TestBackend_PathConfigRoot_STSFallback_mismatchedfallback ensures configuration writing will fail if the
+// region/endpoint entries are different lengths
+func TestBackend_PathConfigRoot_STSFallback_mismatchedfallback(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = &testSystemView{}
+
+	b := Backend(config)
+	if err := b.Setup(context.Background(), config); err != nil {
+		t.Fatal(err)
+	}
+
+	// test we can handle comma separated strings, per CommaStringSlice
+	configData := map[string]interface{}{
+		"access_key":              "AKIAEXAMPLE",
+		"secret_key":              "RandomData",
+		"region":                  "us-west-2",
+		"iam_endpoint":            "https://iam.amazonaws.com",
+		"sts_endpoint":            "https://sts.us-west-2.amazonaws.com",
+		"sts_region":              "",
+		"sts_fallback_endpoints":  "1.1.1.1,8.8.8.8",
+		"sts_fallback_regions":    "zone-1,zone-2",
+		"max_retries":             10,
+		"username_template":       defaultUserNameTemplate,
+		"role_arn":                "",
+		"identity_token_audience": "",
+		"identity_token_ttl":      int64(0),
+	}
+
+	configReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   config.StorageView,
+		Path:      "config/root",
+		Data:      configData,
+	}
+
+	resp, err := b.HandleRequest(context.Background(), configReq)
+	if err != nil {
+		t.Fatalf("bad: config writing failed: err: %v", err)
+	}
+	if resp != nil && !resp.IsError() {
+		t.Fatalf("expected an error, but it successfully wrote")
 	}
 }
 

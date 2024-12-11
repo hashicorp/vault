@@ -10,6 +10,7 @@ import (
 	"io"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -565,32 +566,25 @@ func (a *ActivityLog) extractLocalGlobalClientsDeprecatedStoragePath(ctx context
 		return clusterLocalClients, clusterGlobalClients, fmt.Errorf("could not list available logs on the cluster")
 	}
 	for _, time := range times {
-		entityPath := activityEntityBasePath + fmt.Sprint(time.Unix()) + "/"
-		segmentPaths, err := a.view.List(ctx, entityPath)
+		segments, err := a.getAllEntitySegmentsForMonth(ctx, activityEntityBasePath, time.Unix())
 		if err != nil {
 			return nil, nil, err
 		}
-		for _, seqNumber := range segmentPaths {
-			segment, err := a.readEntitySegmentAtPath(ctx, entityPath+seqNumber)
-			if segment == nil {
-				continue
-			}
-			if err != nil {
-				a.logger.Warn("failed to read segment", "error", err)
-				return clusterLocalClients, clusterGlobalClients, err
-			}
+		for _, segment := range segments {
 			for _, entity := range segment.GetClients() {
 				// If the client is not local, then add it to a map
+				// Normalize month value to the beginning of the month to avoid multiple storage entries for the same month
+				startOfMonth := timeutil.StartOfMonth(time.UTC())
 				if local, _ := a.isClientLocal(entity); !local {
-					if _, ok := clusterGlobalClients[time.Unix()]; !ok {
-						clusterGlobalClients[time.Unix()] = make([]*activity.EntityRecord, 0)
+					if _, ok := clusterGlobalClients[startOfMonth.Unix()]; !ok {
+						clusterGlobalClients[startOfMonth.Unix()] = make([]*activity.EntityRecord, 0)
 					}
-					clusterGlobalClients[time.Unix()] = append(clusterGlobalClients[time.Unix()], entity)
+					clusterGlobalClients[startOfMonth.Unix()] = append(clusterGlobalClients[startOfMonth.Unix()], entity)
 				} else {
-					if _, ok := clusterLocalClients[time.Unix()]; !ok {
-						clusterLocalClients[time.Unix()] = make([]*activity.EntityRecord, 0)
+					if _, ok := clusterLocalClients[startOfMonth.Unix()]; !ok {
+						clusterLocalClients[startOfMonth.Unix()] = make([]*activity.EntityRecord, 0)
 					}
-					clusterLocalClients[time.Unix()] = append(clusterLocalClients[time.Unix()], entity)
+					clusterLocalClients[startOfMonth.Unix()] = append(clusterLocalClients[startOfMonth.Unix()], entity)
 				}
 			}
 		}
@@ -627,6 +621,25 @@ func (a *ActivityLog) extractTokensDeprecatedStoragePath(ctx context.Context) (m
 	return tokensByMonth, nil
 }
 
+func (a *ActivityLog) getAllEntitySegmentsForMonth(ctx context.Context, path string, time int64) ([]*activity.EntityActivityLog, error) {
+	entityPathWithTime := fmt.Sprintf("%s%d/", path, time)
+	segments := make([]*activity.EntityActivityLog, 0)
+	segmentPaths, err := a.view.List(ctx, entityPathWithTime)
+	if err != nil {
+		return segments, err
+	}
+	for _, seqNum := range segmentPaths {
+		segment, err := a.readEntitySegmentAtPath(ctx, entityPathWithTime+seqNum)
+		if err != nil {
+			return segments, err
+		}
+		if segment != nil {
+			segments = append(segments, segment)
+		}
+	}
+	return segments, nil
+}
+
 // OldestVersionHasDeduplicatedClients returns whether this cluster is 1.19+, and
 // hence supports deduplicated clients
 func (a *ActivityLog) OldestVersionHasDeduplicatedClients(ctx context.Context) bool {
@@ -647,4 +660,26 @@ func (a *ActivityLog) OldestVersionHasDeduplicatedClients(ctx context.Context) b
 		}
 	}
 	return oldestVersionIsDedupClients
+}
+
+func (a *ActivityLog) loadClientDataIntoSegment(ctx context.Context, pathPrefix string, startTime time.Time, seqNum uint64, currentSegment *segmentInfo) ([]*activity.EntityRecord, error) {
+	path := pathPrefix + activityEntityBasePath + fmt.Sprint(startTime.Unix()) + "/" + strconv.FormatUint(seqNum, 10)
+	out, err := a.readEntitySegmentAtPath(ctx, path)
+	if err != nil && !errors.Is(err, ErrEmptyResponse) {
+		return nil, err
+	}
+	if out != nil {
+		if !a.core.perfStandby {
+			a.logger.Debug(fmt.Sprintf("loading client data from %s into segment", path))
+			currentSegment.startTimestamp = startTime.Unix()
+			currentSegment.currentClients = &activity.EntityActivityLog{Clients: out.Clients}
+			currentSegment.clientSequenceNumber = seqNum
+
+		} else {
+			// populate this for edge case checking (if end of month passes while background loading on standby)
+			currentSegment.startTimestamp = startTime.Unix()
+		}
+		return out.GetClients(), nil
+	}
+	return []*activity.EntityRecord{}, nil
 }
