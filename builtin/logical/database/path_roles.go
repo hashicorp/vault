@@ -648,19 +648,20 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		// We will allow users to update the password until the point where
 		// Vault assumes management of the account so that we don't break the
 		// promise of Vault being the source of truth.
-		updateAllowed := lastVaultRotation.IsZero() || lastVaultRotation.After(time.Now())
+		updateAllowed := lastVaultRotation.IsZero()
 		if updateAllowed {
 			role.StaticAccount.Password = passwordRaw.(string)
-			if dbConfig.ConnectionDetails["self_managed"].(bool) {
-				// continue to support the deprecated self_managed_password field
+			if selfManaged, ok := dbConfig.ConnectionDetails["self_managed"].(bool); ok && selfManaged {
+				// Password and SelfManagedPassword should map to the same value
 				role.StaticAccount.SelfManagedPassword = passwordRaw.(string)
 			}
 		} else {
-			return logical.ErrorResponse("update not allowed after rotation", "role", name, "lastVaultRotation", lastVaultRotation), nil
+			return logical.ErrorResponse("updating password not allowed after rotation: role=%s, lastVaultRotation=%s", name, lastVaultRotation), nil
 		}
 	}
 
 	if smPasswordRaw, ok := data.GetOk("self_managed_password"); ok && createRole {
+		// Password and SelfManagedPassword should map to the same value
 		role.StaticAccount.SelfManagedPassword = smPasswordRaw.(string)
 		role.StaticAccount.Password = smPasswordRaw.(string)
 	}
@@ -685,17 +686,18 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		return logical.ErrorResponse("credential_config validation failed: %s", err), nil
 	}
 
-	// Only call setStaticAccount if we're creating the role for the
-	// first time
+	// Only call setStaticAccount if we're creating the role for the first time
 	var item *queue.Item
 	switch req.Operation {
 	case logical.CreateOperation:
 		if role.SkipImportRotation {
 			b.Logger().Trace("skipping static role import rotation", "role", name)
-			// synthetically set last vault rotation to now, so that it gets
+			// synthetically set lastVaultRotation to now, so that it gets
 			// queued correctly
 			lastVaultRotation = time.Now()
-			role.StaticAccount.LastVaultRotation = lastVaultRotation
+			// we intentionally do not set role.StaticAccount.LastVaultRotation
+			// because the zero value indicates Vault has not rotated the
+			// password yet
 			role.StaticAccount.SetNextVaultRotation(lastVaultRotation)
 			// we were told to not rotate, just add the entry
 			err := b.StoreStaticRole(ctx, req.Storage, role)
@@ -868,7 +870,8 @@ type staticAccount struct {
 	// CredentialTypeRSAPrivateKey.
 	PrivateKey []byte `json:"private_key"`
 
-	// LastVaultRotation represents the last time Vault rotated the password
+	// LastVaultRotation represents the last time Vault rotated the password.
+	// A zero value indicates that Vault has not rotated this password yet.
 	LastVaultRotation time.Time `json:"last_vault_rotation"`
 
 	// NextVaultRotation represents the next time Vault is expected to rotate
