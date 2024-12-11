@@ -1,7 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: BUSL-1.1
 
-////go:build testonly
+//go:build testonly
 
 package activity_testonly
 
@@ -549,6 +549,7 @@ func getCSVExport(t *testing.T, client *api.Client, monthsPreviousTo int, now ti
 
 	boolFields := map[string]struct{}{
 		"local_entity_alias": {},
+		"local_mount":        {},
 	}
 
 	mapFields := map[string]struct{}{
