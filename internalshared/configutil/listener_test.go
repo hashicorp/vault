@@ -16,15 +16,47 @@ import (
 // ensure that we only attempt to parse templates when the input contains a
 // template placeholder (see: go-sockaddr/template).
 func TestListener_ParseSingleIPTemplate(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		arg             string
 		want            string
 		isErrorExpected bool
 		errorMessage    string
 	}{
-		"test https addr": {
+		"test hostname": {
 			arg:             "https://vaultproject.io:8200",
 			want:            "https://vaultproject.io:8200",
+			isErrorExpected: false,
+		},
+		"test ipv4": {
+			arg:             "https://10.10.1.10:8200",
+			want:            "https://10.10.1.10:8200",
+			isErrorExpected: false,
+		},
+		"test ipv6 RFC-5952 4.1 leading zeroes": {
+			arg:             "https://[2001:0db8::0001]:8200",
+			want:            "https://[2001:db8::1]:8200",
+			isErrorExpected: false,
+		},
+		"test ipv6 RFC-5952 4.2.2 one 16-bit 0 field": {
+			arg:             "https://[2001:db8:0:1:1:1:1:1]:8200",
+			want:            "https://[2001:db8:0:1:1:1:1:1]:8200",
+			isErrorExpected: false,
+		},
+		"test ipv6 RFC-5952 4.2.3 longest run of 0 bits shortened": {
+			arg:             "https://[2001:0:0:1:0:0:0:1]:8200",
+			want:            "https://[2001:0:0:1::1]:8200",
+			isErrorExpected: false,
+		},
+		"test ipv6 RFC-5952 4.2.3 equal runs of 0 bits shortened": {
+			arg:             "https://[2001:db8:0:0:1:0:0:1]:8200",
+			want:            "https://[2001:db8::1:0:0:1]:8200",
+			isErrorExpected: false,
+		},
+		"test ipv6 RFC-5952 4.3 downcase hex letters": {
+			arg:             "https://[2001:DB8:AC3:FE4::1]:8200",
+			want:            "https://[2001:db8:ac3:fe4::1]:8200",
 			isErrorExpected: false,
 		},
 		"test invalid template func": {
@@ -34,8 +66,9 @@ func TestListener_ParseSingleIPTemplate(t *testing.T) {
 			errorMessage:    "unable to parse address template",
 		},
 		"test partial template": {
-			arg:             "{{FooBar",
-			want:            "{{FooBar",
+			arg: "{{FooBar",
+			// Partial templates get treated as literal hostname and get URL encoded
+			want:            "%7B%7BFooBar",
 			isErrorExpected: false,
 		},
 	}
@@ -43,6 +76,7 @@ func TestListener_ParseSingleIPTemplate(t *testing.T) {
 		name := name
 		tc := tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			got, err := ParseSingleIPTemplate(tc.arg)
 
 			if tc.isErrorExpected {

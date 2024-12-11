@@ -6,7 +6,9 @@ package configutil
 import (
 	"errors"
 	"fmt"
+	"net"
 	"net/textproto"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -177,7 +179,7 @@ func (l *Listener) Validate(path string) []ConfigError {
 func ParseSingleIPTemplate(ipTmpl string) (string, error) {
 	r := regexp.MustCompile("{{.*?}}")
 	if !r.MatchString(ipTmpl) {
-		return ipTmpl, nil
+		return normalizeIfURL(ipTmpl), nil
 	}
 
 	out, err := template.Parse(ipTmpl)
@@ -194,6 +196,42 @@ func ParseSingleIPTemplate(ipTmpl string) (string, error) {
 	default:
 		return "", fmt.Errorf("multiple addresses found (%q), please configure one", out)
 	}
+}
+
+// normalizeIfURL takes a URL as a string and returns a conformant copy of the
+// same URL. If the given string is not a URL, or if the URL's Hostname is either
+// a DNS hostname or IPv4 address, the given URL will be returned unchanged.
+// If the URL hostname is an IPv6 address then the address will normalized to
+// conform to RFC-5952.
+// See: https://rfc-editor.org/rfc/rfc5952.html
+func normalizeIfURL(u string) string {
+	pu, err := url.Parse(u)
+	if err != nil {
+		return u
+	}
+
+	ip := net.ParseIP(pu.Hostname())
+	if ip == nil {
+		// We've been given a valid URL but the Hostname is not an IP address.
+		return pu.String()
+	}
+
+	if v4 := ip.To4(); v4 != nil {
+		// We don't need to normalize IPv4 addresses.
+		return pu.String()
+	}
+
+	if v6 := ip.To16(); v6 != nil {
+		// net.IP String() will return IPv6 RFC-5952 conformant addresses.
+		if port := pu.Port(); port != "" {
+			pu.Host = fmt.Sprintf("[%s]:%s", v6.String(), port)
+		} else {
+			pu.Host = fmt.Sprintf("[%s]", v6.String())
+		}
+		return pu.String()
+	}
+
+	return pu.String()
 }
 
 // ParseListeners attempts to parse the AST list of objects into listeners.
