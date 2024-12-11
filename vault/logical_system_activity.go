@@ -29,6 +29,8 @@ const (
 
 	// WarningCurrentMonthIsAnEstimate is a warning string that is used to let the customer know that for this query, the current month's data is estimated.
 	WarningCurrentMonthIsAnEstimate = "Since this usage period includes both the current month and at least one historical month, counts returned in this usage period are an estimate. Client counts for this period will no longer be estimated at the start of the next month."
+
+	ErrorUpgradeInProgress = "Upgrade to 1.19+ is in progress; the activity log is not queryable until the upgrade is complete"
 )
 
 // activityQueryPath is available in every namespace
@@ -293,6 +295,9 @@ func (b *SystemBackend) handleClientExport(ctx context.Context, req *logical.Req
 	if a == nil {
 		return logical.ErrorResponse("no activity log present"), nil
 	}
+	if !a.hasDedupClientsUpgrade(ctx) {
+		return logical.ErrorResponse(ErrorUpgradeInProgress), nil
+	}
 
 	startTime, endTime, err := parseStartEndTimes(d, b.Core.BillingStart())
 	if err != nil {
@@ -338,6 +343,9 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 	b.Core.activityLogLock.RUnlock()
 	if a == nil {
 		return logical.ErrorResponse("no activity log present"), nil
+	}
+	if !a.hasDedupClientsUpgrade(ctx) {
+		return logical.ErrorResponse(ErrorUpgradeInProgress), nil
 	}
 
 	warnings := make([]string, 0)
@@ -385,6 +393,9 @@ func (b *SystemBackend) handleMonthlyActivityCount(ctx context.Context, req *log
 	if a == nil {
 		return logical.ErrorResponse("no activity log present"), nil
 	}
+	if !a.hasDedupClientsUpgrade(ctx) {
+		return logical.ErrorResponse(ErrorUpgradeInProgress), nil
+	}
 
 	results, err := a.partialMonthClientCount(ctx)
 	if err != nil {
@@ -405,6 +416,9 @@ func (b *SystemBackend) handleActivityConfigRead(ctx context.Context, req *logic
 	b.Core.activityLogLock.RUnlock()
 	if a == nil {
 		return logical.ErrorResponse("no activity log present"), nil
+	}
+	if !a.hasDedupClientsUpgrade(ctx) {
+		return logical.ErrorResponse(ErrorUpgradeInProgress), nil
 	}
 
 	config, err := a.loadConfigOrDefault(ctx)
@@ -439,6 +453,9 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 	b.Core.activityLogLock.RUnlock()
 	if a == nil {
 		return logical.ErrorResponse("no activity log present"), nil
+	}
+	if !a.hasDedupClientsUpgrade(ctx) {
+		return logical.ErrorResponse(ErrorUpgradeInProgress), nil
 	}
 
 	warnings := make([]string, 0)
