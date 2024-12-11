@@ -1170,10 +1170,7 @@ func TestTokenStore_CreateLookup_ExpirationInRestoreMode(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	err = c.stopExpiration()
-	if err != nil {
-		t.Fatal(err)
-	}
+	stopExpiration(t, c)
 
 	// Reset expiration manager to restore mode
 	ts.expiration.restoreModeLock.Lock()

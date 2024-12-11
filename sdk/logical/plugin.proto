@@ -5,6 +5,8 @@ syntax = "proto3";
 
 package logical;
 
+import "google/protobuf/timestamp.proto";
+
 option go_package = "github.com/hashicorp/vault/sdk/logical";
 
 message PluginEnvironment {
@@ -16,4 +18,7 @@ message PluginEnvironment {
 
   // VaultVersionMetadata is the version metadata of the Vault server
   string vault_version_metadata = 3;
+
+  // VaultBuildDate is the build date of the Vault server
+  google.protobuf.Timestamp vault_build_date = 4;
 }

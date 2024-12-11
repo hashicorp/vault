@@ -56,7 +56,7 @@
     {{/if}}
     {{#if (eq this.accessType "wif")}}
       {{! WIF Fields }}
-      {{#each @issuerConfig.attrs as |attr|}}
+      {{#each @issuerConfig.displayAttrs as |attr|}}
         <FormField @attr={{attr}} @model={{@issuerConfig}} />
       {{/each}}
       <FormFieldGroups
@@ -82,7 +82,7 @@
     Leases
   </h2>
   <div class="box is-fullwidth is-sideless is-bottomless">
-    {{#each @leaseConfig.attrs as |attr|}}
+    {{#each @leaseConfig.displayAttrs as |attr|}}
       <FormField @attr={{attr}} @model={{@leaseConfig}} @modelValidations={{this.modelValidationsLease}} />
     {{/each}}
   </div>

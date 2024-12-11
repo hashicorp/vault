@@ -14,6 +14,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/pluginconsts"
 	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -402,7 +403,7 @@ func (c *Core) findKvMounts() []*kvMount {
 	}
 
 	for _, entry := range c.mounts.Entries {
-		if entry.Type == "kv" || entry.Type == "generic" {
+		if entry.Type == pluginconsts.SecretEngineKV || entry.Type == pluginconsts.SecretEngineGeneric {
 			version, ok := entry.Options["version"]
 			if !ok || version == "" {
 				version = "1"
@@ -490,6 +491,68 @@ func (c *Core) walkKvMountSecrets(ctx context.Context, m *kvMount) {
 	}
 }
 
+// GetTotalPkiRoles returns the total roles across all PKI mounts in Vault
+func (c *Core) GetTotalPkiRoles(ctx context.Context) int {
+	c.mountsLock.RLock()
+	defer c.mountsLock.RUnlock()
+
+	numRoles := 0
+
+	for _, entry := range c.mounts.Entries {
+		secretType := entry.Type
+		if secretType == pluginconsts.SecretEnginePki {
+			listRequest := &logical.Request{
+				Operation: logical.ListOperation,
+				Path:      entry.namespace.Path + entry.Path + "roles",
+			}
+			resp, err := c.router.Route(ctx, listRequest)
+			if err != nil || resp == nil {
+				continue
+			}
+			rawKeys, ok := resp.Data["keys"]
+			if !ok {
+				continue
+			}
+			keys, ok := rawKeys.([]string)
+			if ok {
+				numRoles += len(keys)
+			}
+		}
+	}
+	return numRoles
+}
+
+// GetTotalPkiIssuers returns the total issuers across all PKI mounts in Vault
+func (c *Core) GetTotalPkiIssuers(ctx context.Context) int {
+	c.mountsLock.RLock()
+	defer c.mountsLock.RUnlock()
+
+	numRoles := 0
+
+	for _, entry := range c.mounts.Entries {
+		secretType := entry.Type
+		if secretType == pluginconsts.SecretEnginePki {
+			listRequest := &logical.Request{
+				Operation: logical.ListOperation,
+				Path:      entry.namespace.Path + entry.Path + "issuers",
+			}
+			resp, err := c.router.Route(ctx, listRequest)
+			if err != nil || resp == nil {
+				continue
+			}
+			rawKeys, ok := resp.Data["keys"]
+			if !ok {
+				continue
+			}
+			keys, ok := rawKeys.([]string)
+			if ok {
+				numRoles += len(keys)
+			}
+		}
+	}
+	return numRoles
+}
+
 // getMinNamespaceSecrets is expected to be called on the output
 // of GetKvUsageMetrics to get the min number of secrets in a single namespace.
 func getMinNamespaceSecrets(mapOfNamespacesToSecrets map[string]int) int {
@@ -533,6 +596,42 @@ func getMeanNamespaceSecrets(mapOfNamespacesToSecrets map[string]int) int {
 		return length
 	}
 	return getTotalSecretsAcrossAllNamespaces(mapOfNamespacesToSecrets) / length
+}
+
+// GetSecretEngineUsageMetrics returns a map of secret engine mount types to the number of those mounts that exist.
+func (c *Core) GetSecretEngineUsageMetrics() map[string]int {
+	mounts := make(map[string]int)
+
+	c.mountsLock.RLock()
+	defer c.mountsLock.RUnlock()
+
+	for _, entry := range c.mounts.Entries {
+		mountType := entry.Type
+		if _, ok := mounts[mountType]; !ok {
+			mounts[mountType] = 1
+		} else {
+			mounts[mountType] += 1
+		}
+	}
+	return mounts
+}
+
+// GetAuthMethodUsageMetrics returns a map of auth mount types to the number of those mounts that exist.
+func (c *Core) GetAuthMethodUsageMetrics() map[string]int {
+	mounts := make(map[string]int)
+
+	c.authLock.RLock()
+	defer c.authLock.RUnlock()
+
+	for _, entry := range c.auth.Entries {
+		authType := entry.Type
+		if _, ok := mounts[authType]; !ok {
+			mounts[authType] = 1
+		} else {
+			mounts[authType] += 1
+		}
+	}
+	return mounts
 }
 
 // GetKvUsageMetrics returns a map of namespace paths to KV secret counts within those namespaces.

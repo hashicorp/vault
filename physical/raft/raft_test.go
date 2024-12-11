@@ -15,12 +15,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/proto"
-	bolt "github.com/hashicorp-forge/bbolt"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/go-uuid"
@@ -28,6 +28,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/stretchr/testify/require"
+	bolt "go.etcd.io/bbolt"
 )
 
 func testBothRaftBackends(t *testing.T, f func(t *testing.T, raftWALValue string)) {
@@ -785,10 +786,15 @@ func TestRaft_Removed(t *testing.T) {
 		require.False(t, raft2.IsRemoved())
 		require.False(t, raft3.IsRemoved())
 
+		callbackCalled := atomic.Bool{}
+		raft3.SetRemovedCallback(func() {
+			callbackCalled.Store(true)
+		})
 		err := raft1.RemovePeer(context.Background(), raft3.NodeID())
 		require.NoError(t, err)
 
 		require.Eventually(t, raft3.IsRemoved, 15*time.Second, 500*time.Millisecond)
+		require.True(t, callbackCalled.Load())
 		require.False(t, raft1.IsRemoved())
 		require.False(t, raft2.IsRemoved())
 	})

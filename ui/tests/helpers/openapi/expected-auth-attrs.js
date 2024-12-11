@@ -180,6 +180,12 @@ const cert = {
       fieldGroup: 'default',
       type: 'boolean',
     },
+    enableMetadataOnFailures: {
+      editType: 'boolean',
+      fieldGroup: 'default',
+      helpText: 'If set, metadata of the client certificate will be returned on authentication failures.',
+      type: 'boolean',
+    },
     ocspCacheSize: {
       editType: 'number',
       helpText: 'The size of the in memory OCSP response cache, shared by all configured certs',

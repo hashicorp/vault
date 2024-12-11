@@ -708,9 +708,11 @@ const (
 	ErrNotAfterBehavior NotAfterBehavior = iota
 	TruncateNotAfterBehavior
 	PermitNotAfterBehavior
+	AlwaysEnforceErr
 )
 
 var notAfterBehaviorNames = map[NotAfterBehavior]string{
+	AlwaysEnforceErr:         "always_enforce_err",
 	ErrNotAfterBehavior:      "err",
 	TruncateNotAfterBehavior: "truncate",
 	PermitNotAfterBehavior:   "permit",

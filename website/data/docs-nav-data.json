@@ -234,6 +234,10 @@
         "path": "concepts/ha"
       },
       {
+        "title": "Production hardening",
+        "path": "concepts/production-hardening"
+      },
+      {
         "title": "Storage",
         "path": "concepts/storage"
       },
@@ -251,6 +255,10 @@
           {
             "title": "Autopilot",
             "path": "concepts/integrated-storage/autopilot"
+          },
+          {
+            "title": "Migration checklist",
+            "path": "concepts/integrated-storage/migration-checklist"
           }
         ]
       },
@@ -404,6 +412,15 @@
         "path": "configuration/replication"
       },
       {
+        "title": "<code>reporting</code>",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
+        "path": "configuration/reporting"
+      },
+      {
         "title": "<code>seal</code>",
         "routes": [
           {
@@ -464,6 +481,11 @@
       },
       {
         "title": "<code>sentinel</code>",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "path": "configuration/sentinel"
       },
       {
@@ -1175,26 +1197,22 @@
     ]
   },
   {
-    "title": "Vault Agent and Vault Proxy",
+    "title": "Vault tools: Agent and Proxy",
     "routes": [
       {
-        "title": "Overview",
+        "title": "Why use Agent or Proxy?",
         "path": "agent-and-proxy"
       },
       {
-        "title": "Auto-Auth",
+        "title": "Auto-authentication",
         "routes": [
           {
-            "title": "Overview",
+            "title": "What is auto-authentication?",
             "path": "agent-and-proxy/autoauth"
           },
           {
-            "title": "Methods",
+            "title": "Auto-auth methods",
             "routes": [
-              {
-                "title": "Overview",
-                "path": "agent-and-proxy/autoauth/methods"
-              },
               {
                 "title": "AliCloud",
                 "path": "agent-and-proxy/autoauth/methods/alicloud"
@@ -1212,11 +1230,11 @@
                 "path": "agent-and-proxy/autoauth/methods/azure"
               },
               {
-                "title": "Cert",
+                "title": "TLS certificates",
                 "path": "agent-and-proxy/autoauth/methods/cert"
               },
               {
-                "title": "CF",
+                "title": "Cloud Foundry (CF)",
                 "path": "agent-and-proxy/autoauth/methods/cf"
               },
               {
@@ -1240,22 +1258,18 @@
                 "path": "agent-and-proxy/autoauth/methods/kubernetes"
               },
               {
-                "title": "Oracle Cloud Infrastructure",
+                "title": "Oracle Cloud Infrastructure (OCI",
                 "path": "agent-and-proxy/autoauth/methods/oci"
               },
               {
-                "title": "Token File",
+                "title": "Token file",
                 "path": "agent-and-proxy/autoauth/methods/token_file"
               }
             ]
           },
           {
-            "title": "Sinks",
+            "title": "Token sinks",
             "routes": [
-              {
-                "title": "Overview",
-                "path": "agent-and-proxy/autoauth/sinks"
-              },
               {
                 "title": "File",
                 "path": "agent-and-proxy/autoauth/sinks/file"
@@ -1268,22 +1282,22 @@
         "title": "Vault Proxy",
         "routes": [
           {
-            "title": "Overview",
+            "title": "What is Vault Proxy?",
             "path": "agent-and-proxy/proxy"
           },
           {
-            "title": "API Proxy",
+            "title": "Vault Proxy as Vault API proxy",
             "path": "agent-and-proxy/proxy/apiproxy"
           },
           {
-            "title": "Caching",
+            "title": "Vault Proxy caching",
             "routes": [
               {
                 "title": "Overview",
                 "path": "agent-and-proxy/proxy/caching"
               },
               {
-                "title": "Static Secret Caching",
+                "title": "Improve Vault traffic resiliency",
                 "path": "agent-and-proxy/proxy/caching/static-secret-caching",
                 "badge": {
                   "text": "ENTERPRISE",
@@ -1295,11 +1309,11 @@
                 "title": "Persistent Caching",
                 "routes": [
                   {
-                    "title": "Overview",
+                    "title": "Use built-in persistent caching",
                     "path": "agent-and-proxy/proxy/caching/persistent-caches"
                   },
                   {
-                    "title": "Kubernetes",
+                    "title": "Use Kubernetes persistent cache",
                     "path": "agent-and-proxy/proxy/caching/persistent-caches/kubernetes"
                   }
                 ]
@@ -1307,7 +1321,7 @@
             ]
           },
           {
-            "title": "Version compatibility",
+            "title": "Risks of inconsistent Proxy and Vault versions",
             "path": "agent-and-proxy/proxy/versions"
           }
         ]
@@ -1316,29 +1330,29 @@
         "title": "Vault Agent",
         "routes": [
           {
-            "title": "Overview",
+            "title": "What is Vault Agent?",
             "path": "agent-and-proxy/agent"
           },
           {
-            "title": "API Proxy",
+            "title": "Vault Agent as Vault API proxy",
             "path": "agent-and-proxy/agent/apiproxy"
           },
           {
-            "title": "Caching",
+            "title": "Vault Agent caching",
             "routes": [
               {
                 "title": "Overview",
                 "path": "agent-and-proxy/agent/caching"
               },
               {
-                "title": "Persistent Caching",
+                "title": "Persistent caching",
                 "routes": [
                   {
-                    "title": "Overview",
+                    "title": "Use built-in persistent caching",
                     "path": "agent-and-proxy/agent/caching/persistent-caches"
                   },
                   {
-                    "title": "Kubernetes",
+                    "title": "Use Kubernetes persistent cache",
                     "path": "agent-and-proxy/agent/caching/persistent-caches/kubernetes"
                   }
                 ]
@@ -1346,23 +1360,23 @@
             ]
           },
           {
-            "title": "generate-config",
+            "title": "Generate a development config file",
             "path": "agent-and-proxy/agent/generate-config"
           },
           {
-            "title": "Process Supervisor Mode",
+            "title": "Run in process supervisor mode",
             "path": "agent-and-proxy/agent/process-supervisor"
           },
           {
-            "title": "Templates",
+            "title": "Use Vault Agent templates",
             "path": "agent-and-proxy/agent/template"
           },
           {
-            "title": "Windows service",
+            "title": "Run Vault Agent as a Windows service",
             "path": "agent-and-proxy/agent/winsvc"
           },
           {
-            "title": "Version compatibility",
+            "title": "Risks of inconsistent Agent and Vault versions",
             "path": "agent-and-proxy/agent/versions"
           }
         ]
@@ -1528,7 +1542,16 @@
           },
           {
             "title": "Azure Key Vault",
-            "path": "secrets/key-management/azurekeyvault"
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "secrets/key-management/azurekeyvault"
+              },
+              {
+                "title": "Setup guide",
+                "path": "secrets/key-management/azurekeyvault/setup"
+              }
+            ]
           },
           {
             "title": "AWS KMS",
@@ -1536,12 +1559,21 @@
           },
           {
             "title": "GCP Cloud KMS",
-            "path": "secrets/key-management/gcpkms"
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "secrets/key-management/gcpkms"
+              },
+              {
+                "title": "Setup guide",
+                "path": "secrets/key-management/gcpkms/setup"
+              }
+            ]
           }
         ]
       },
       {
-        "title": "Key Value",
+        "title": "Key/Value",
         "routes": [
           {
             "title": "Overview",
@@ -1553,7 +1585,65 @@
           },
           {
             "title": "KV version  2",
-            "path": "secrets/kv/kv-v2"
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "secrets/kv/kv-v2"
+              },
+              {
+                "title": "Upgrade from v1",
+                "path": "secrets/kv/kv-v2/upgrade"
+              },
+              {
+                "title": "Setup",
+                "path": "secrets/kv/kv-v2/setup"
+              },
+              {
+                "title": "Save random strings",
+                "path": "secrets/kv/kv-v2/random-string"
+              },
+              {
+                "title": "Cookbook",
+                "routes": [
+                  {
+                    "title": "Read data",
+                    "path": "secrets/kv/kv-v2/cookbook/read-data"
+                  },
+                  {
+                    "title": "Read subkeys",
+                    "path": "secrets/kv/kv-v2/cookbook/read-subkey"
+                  },
+                  {
+                    "title": "Set max data versions",
+                    "path": "secrets/kv/kv-v2/cookbook/max-versions"
+                  },
+                  {
+                    "title": "Write data",
+                    "path": "secrets/kv/kv-v2/cookbook/write-data"
+                  },
+                  {
+                    "title": "Patch/update data",
+                    "path": "secrets/kv/kv-v2/cookbook/patch-data"
+                  },
+                  {
+                    "title": "Soft delete data",
+                    "path": "secrets/kv/kv-v2/cookbook/delete-data"
+                  },
+                  {
+                    "title": "Restore soft deleted data",
+                    "path": "secrets/kv/kv-v2/cookbook/undelete-data"
+                  },
+                  {
+                    "title": "Destroy data",
+                    "path": "secrets/kv/kv-v2/cookbook/destroy-data"
+                  },
+                  {
+                    "title": "Write custom metadata",
+                    "path": "secrets/kv/kv-v2/cookbook/custom-metadata"
+                  }
+                ]
+              }
+            ]
           }
         ]
       },
@@ -1736,23 +1826,23 @@
         "path": "sync"
       },
       {
-        "title": "AWS Secrets Manager",
+        "title": "Sync to AWS Secrets Manager",
         "path": "sync/awssm"
       },
       {
-        "title": "Azure Key Vault",
+        "title": "Sync to Azure Key Vault",
         "path": "sync/azurekv"
       },
       {
-        "title": "GCP Secret Manager",
+        "title": "Sync to GCP Secret Manager",
         "path": "sync/gcpsm"
       },
       {
-        "title": "GitHub",
+        "title": "Sync to GitHub",
         "path": "sync/github"
       },
       {
-        "title": "Vercel Project",
+        "title": "Sync to Vercel Project",
         "path": "sync/vercelproject"
       }
     ]
@@ -1785,7 +1875,7 @@
     ]
   },
   {
-    "title": "Auth Methods",
+    "title": "AuthN methods",
     "routes": [
       {
         "title": "Overview",
@@ -1795,11 +1885,11 @@
         "title": "AppRole",
         "routes": [
           {
-            "title": "Overview",
+            "title": "Use AppRole authN",
             "path": "auth/approle"
           },
           {
-            "title": "Recommended pattern",
+            "title": "AppRole best practices",
             "path": "auth/approle/approle-pattern"
           }
         ]
@@ -1832,14 +1922,14 @@
         "title": "JWT/OIDC",
         "routes": [
           {
-            "title": "Overview",
+            "title": "Use JWT/OIDC",
             "path": "auth/jwt"
           },
           {
-            "title": "OIDC Providers",
+            "title": "OIDC providers",
             "routes": [
               {
-                "title": "Overview",
+                "title": "OIDC provider list",
                 "path": "auth/jwt/oidc-providers"
               },
               {
@@ -1883,7 +1973,7 @@
                 "path": "auth/jwt/oidc-providers/secureauth"
               },
               {
-                "title": "IBM ISAM",
+                "title": "IBM Verify",
                 "path": "auth/jwt/oidc-providers/ibmisam"
               }
             ]
@@ -1906,11 +1996,11 @@
         "title": "Login MFA",
         "routes": [
           {
-            "title": "Overview",
+            "title": "Setup login MFA",
             "path": "auth/login-mfa"
           },
           {
-            "title": "FAQ",
+            "title": "Login MFA FAQ",
             "path": "auth/login-mfa/faq"
           }
         ]
@@ -1928,7 +2018,7 @@
         "path": "auth/radius"
       },
       {
-        "title": "SAML",
+        "title": "Use SAML authentication",
         "badge": {
           "text": "ENTERPRISE",
           "type": "outlined",
@@ -1936,7 +2026,7 @@
         },
         "routes": [
           {
-            "title": "Overview",
+            "title": "Set up SAML authN",
             "path": "auth/saml"
           },
           {
@@ -2436,6 +2526,10 @@
         "path": "upgrading/raft-wal"
       },
       {
+        "title": "Upgrade to 1.19.x",
+        "path": "upgrading/upgrade-to-1.19.x"
+      },
+      {
         "title": "Upgrade to 1.18.x",
         "path": "upgrading/upgrade-to-1.18.x"
       },
@@ -2831,6 +2925,10 @@
           {
             "title": "Manual license utilization reporting",
             "path": "enterprise/license/manual-reporting"
+          },
+          {
+            "title": "Product usage reporting",
+            "path": "enterprise/license/product-usage-reporting"
           },
           {
             "title": "FAQ",
