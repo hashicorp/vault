@@ -33,7 +33,7 @@ for CERT in $VAULT_CERTS; do
   "$binpath" read "${MOUNT}/cert/${CERT}" | jq -r '.data.certificate' > "${TMP_TEST_RESULTS}/tmp_vault_cert.pem"
   echo "Verifying Certificate..."
   openssl x509 -in "${TMP_TEST_RESULTS}/tmp_vault_cert.pem" -text -noout || fail "The certificate appears to be improperly configured or contains errors"
-  echo "Verification Successful"
+  echo "Successfully Verified Certificate"
 
   IS_CA=$(openssl x509 -in "${TMP_TEST_RESULTS}/tmp_vault_cert.pem" -text -noout | grep -q "CA:TRUE" && echo "TRUE" || echo "FALSE")
   if [[ "${IS_CA}" == "FALSE" ]]; then
