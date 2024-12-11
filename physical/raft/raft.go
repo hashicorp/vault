@@ -256,7 +256,7 @@ type RaftBackend struct {
 	// limits.
 	specialPathLimits map[string]uint64
 
-	removed         atomic.Bool
+	removed         *atomic.Bool
 	removedCallback func()
 }
 
@@ -277,9 +277,11 @@ func (b *RaftBackend) IsRemoved() bool {
 	return b.removed.Load()
 }
 
+var removedKey = []byte("removed")
+
 func (b *RaftBackend) RemoveSelf() error {
 	b.removed.Store(true)
-	return nil
+	return b.stableStore.SetUint64(removedKey, 1)
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
@@ -593,6 +595,14 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		snapStore = newSnapshotStoreDelay(snapStore, backendConfig.SnapshotDelay, logger)
 	}
 
+	isRemoved := new(atomic.Bool)
+	removedVal, err := stableStore.GetUint64(removedKey)
+	if err != nil {
+		logger.Error("error checking if this node is removed. continuing under the assumption that it's not", "error", err)
+	}
+	if removedVal == 1 {
+		isRemoved.Store(true)
+	}
 	return &RaftBackend{
 		logger:                        logger,
 		fsm:                           fsm,
@@ -619,6 +629,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		raftLogVerifierEnabled:        backendConfig.RaftLogVerifierEnabled,
 		raftLogVerificationInterval:   backendConfig.RaftLogVerificationInterval,
 		effectiveSDKVersion:           version.GetVersion().Version,
+		removed:                       isRemoved,
 	}, nil
 }
 

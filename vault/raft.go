@@ -1046,6 +1046,13 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 	}
 
 	isRaftHAOnly := c.isRaftHAOnly()
+	if raftBackend.IsRemoved() {
+		if isRaftHAOnly {
+			return false, errors.New("node has been removed from the HA cluster. Raft data for this node must be cleaned up before it can be added back")
+		} else {
+			return false, errors.New("node has been removed from the HA cluster. All vault data for this node must be cleaned up before it can be added back")
+		}
+	}
 	// Prevent join from happening if we're using raft for storage and
 	// it has already been initialized.
 	if init && !isRaftHAOnly {
