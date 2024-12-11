@@ -190,6 +190,27 @@ The configuration map must contain either one or both of the following files:
 
 An example of mounting a Vault Agent configmap [can be found here](/vault/docs/platform/k8s/injector/examples#configmap-example).
 
+### Injector telemetry
+
+Vault Agent Injector collects the following Prometheus metrics (along with the
+default set of golang metrics):
+
+- `vault_agent_injector_request_queue_length` - A gauge of webhook requests in
+  the injector's queue.
+
+- `vault_agent_injector_request_processing_duration_ms` - A histogram of webhook
+  request processing times in milliseconds.
+
+- `vault_agent_injector_injections_by_namespace_total` - The total count of
+  Agent container injections by Kubernetes `namespace` and `injection_type`,
+  where `injection_type` is `init_only`, `sidecar_only`, or `init_and_sidecar`.
+
+- `vault_agent_injector_failed_injections_by_namespace_total` - The total count
+  of failed Agent Sidecar injections by Kubernetes `namespace`.
+
+Enable metrics collection in the injector by setting [`injector.metrics.enabled:
+true`](/vault/docs/platform/k8s/helm/configuration#metrics) in the Helm chart.
+
 ## Tutorial
 
 Refer to the [Injecting Secrets into Kubernetes Pods via Vault Helm
