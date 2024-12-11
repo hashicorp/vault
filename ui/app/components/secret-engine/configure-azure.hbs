@@ -9,7 +9,7 @@
   <MessageError @errorMessage={{this.errorMessage}} />
 
   <div class="box is-fullwidth is-sideless">
-    {{! WIF is an enterprise only feature. We default to Azure access type for community users and display only those related form fields. }}
+    {{! accessType can be "azure" or "wif" - since WIF is an enterprise only feature we default to "azure" for community users and only display those related form fields. }}
     {{#if this.version.isEnterprise}}
       <fieldset class="field form-fieldset" id="protection" data-test-access-type-section>
         <legend class="is-label">Access Type</legend>
@@ -17,9 +17,10 @@
           {{#if this.disableAccessType}}
             You cannot edit Access Type if you have already saved access credentials.
           {{else}}
-            Choose the way to configure access to Azure. Access can be configured either with Azure account, or using Plugin
-            Workload Identity Federation (WIF).
-          {{/if}}</p>
+            Choose the way to configure access to Azure. Access can be configured either using an Azure account or with the
+            Plugin Workload Identity Federation (WIF).
+          {{/if}}
+        </p>
         <div>
           <RadioButton
             id="access-type-azure"
@@ -64,7 +65,7 @@
     {{/if}}
   </div>
 
-  <div class="control">
+  <Hds::ButtonSet>
     <Hds::Button
       @text="Save"
       @icon={{if this.save.isRunning "loading"}}
@@ -80,7 +81,7 @@
       {{on "click" this.onCancel}}
       data-test-cancel
     />
-  </div>
+  </Hds::ButtonSet>
   {{#if this.invalidFormAlert}}
     <AlertInline data-test-invalid-form-alert class="has-top-padding-s" @type="danger" @message={{this.invalidFormAlert}} />
   {{/if}}

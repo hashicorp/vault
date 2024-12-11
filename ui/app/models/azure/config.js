@@ -75,6 +75,16 @@ export default class AzureConfig extends Model {
     return fieldToAttrs(this, this.formFieldGroups('azure'));
   }
 
+  get isWifPluginConfigured() {
+    return !!this.identityTokenAudience || !!this.identityTokenTtl;
+  }
+
+  get isAzureAccountConfigured() {
+    // clientSecret is not checked here because it's never return by the API
+    // however it is an Azure account field
+    return !!this.rootPasswordTtl;
+  }
+
   formFieldGroups(accessType = 'azure') {
     const formFieldGroups = [];
     formFieldGroups.push({

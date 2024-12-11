@@ -19,18 +19,16 @@ import type VersionService from 'vault/services/version';
 import type FlashMessageService from 'vault/services/flash-messages';
 
 /**
- * @module ConfigureAzureComponent is used to configure the Azure secret engine
+ * @module SecretEngineConfigureAzure component is used to configure the Azure secret engine
  * For enterprise users, they will see an additional option to config WIF attributes in place of Azure account attributes.
  * If the user is configuring WIF attributes they will also have the option to update the global issuer config, which is a separate —global— endpoint named identity/oidc/config.
  * @example
- * ```js
  * <SecretEngine::ConfigureAzure
     @model={{this.model.azure-config}}
     @backendPath={{this.model.id}}
     @issuerConfig={{this.model.identity-oidc-config}}
     />
- * ```
- *
+ * 
  * @param {object} model - Azure config model
  * @param {string} backendPath - name of the Azure secret engine, ex: 'azure-123'
  * @param {object} issuerConfigModel - the identity/oidc/config model
@@ -42,15 +40,15 @@ interface Args {
   backendPath: string;
 }
 
-export default class ConfigureAwsComponent extends Component<Args> {
+export default class ConfigureAzureComponent extends Component<Args> {
   @service declare readonly router: Router;
   @service declare readonly store: StoreService;
   @service declare readonly version: VersionService;
   @service declare readonly flashMessages: FlashMessageService;
 
-  @tracked errorMessage: string | null = null;
-  @tracked invalidFormAlert: string | null = null;
   @tracked accessType = 'azure';
+  @tracked errorMessage = '';
+  @tracked invalidFormAlert = '';
   @tracked saveIssuerWarning = '';
 
   disableAccessType = false;
@@ -58,15 +56,11 @@ export default class ConfigureAwsComponent extends Component<Args> {
   constructor(owner: unknown, args: Args) {
     super(owner, args);
 
-    if (this.version.isCommunity || this.args.model.isNew) return; // the following checks are relevant only to enterprise users and those editing an existing configuration.
-
-    const { identityTokenAudience, identityTokenTtl, clientSecret, rootPasswordTtl } = this.args.model;
-    const wifAttributesSet = !!identityTokenAudience || !!identityTokenTtl;
-    const azureAttributesSet = !!clientSecret || !!rootPasswordTtl;
-    // if any WIF attributes have been set in the model, set accessType to 'wif'
-    this.accessType = wifAttributesSet ? 'wif' : 'azure';
+    if (this.version.isEnterprise && !this.args.model.isNew) return;
+    const { isWifPluginConfigured, isAzureAccountConfigured } = this.args.model;
+    this.accessType = isWifPluginConfigured ? 'wif' : 'azure';
     // if there are either WIF or azure attributes, disable user's ability to change accessType
-    this.disableAccessType = wifAttributesSet || azureAttributesSet;
+    this.disableAccessType = isWifPluginConfigured || isAzureAccountConfigured;
   }
 
   @action continueSubmitForm() {
@@ -114,6 +108,9 @@ export default class ConfigureAwsComponent extends Component<Args> {
       const issuerSaved = issuerAttrChanged ? await this.updateIssuer() : false;
 
       if (modelSaved || issuerSaved) {
+        // transition if either model or issuer are saved
+        // there's a chance they wanted to update the issuer and not the model
+        // if both are saved, the user will see two success messages
         this.transition();
       } else {
         // otherwise there was a failure and we should not transition and exit the function
@@ -148,8 +145,8 @@ export default class ConfigureAwsComponent extends Component<Args> {
 
   resetErrors() {
     this.flashMessages.clearMessages();
-    this.errorMessage = null;
-    this.invalidFormAlert = null;
+    this.errorMessage = '';
+    this.invalidFormAlert = '';
   }
 
   transition() {
