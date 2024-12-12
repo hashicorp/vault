@@ -228,6 +228,20 @@ func (b *databaseBackend) StaticRole(ctx context.Context, s logical.Storage, rol
 	return b.roleAtPath(ctx, s, roleName, databaseStaticRolePath)
 }
 
+func (b *databaseBackend) StoreStaticRole(ctx context.Context, s logical.Storage, r *roleEntry) error {
+	logger := b.Logger().With("role", r.Name, "database", r.DBName)
+	entry, err := logical.StorageEntryJSON(databaseStaticRolePath+r.Name, r)
+	if err != nil {
+		logger.Error("unable to encode entry for storage", "error", err)
+		return err
+	}
+	if err := s.Put(ctx, entry); err != nil {
+		logger.Error("unable to write to storage", "error", err)
+		return err
+	}
+	return nil
+}
+
 func (b *databaseBackend) roleAtPath(ctx context.Context, s logical.Storage, roleName string, pathPrefix string) (*roleEntry, error) {
 	entry, err := s.Get(ctx, pathPrefix+roleName)
 	if err != nil {
@@ -245,6 +259,11 @@ func (b *databaseBackend) roleAtPath(ctx context.Context, s logical.Storage, rol
 	var result roleEntry
 	if err := entry.DecodeJSON(&result); err != nil {
 		return nil, err
+	}
+
+	// handle upgrade for new field Name
+	if result.Name == "" {
+		result.Name = roleName
 	}
 
 	switch {

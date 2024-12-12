@@ -64,7 +64,7 @@ func TestBackend_StaticRole_Rotation_basic(t *testing.T) {
 	b.schedule = &TestSchedule{}
 
 	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
-	defer cleanup()
+	t.Cleanup(cleanup)
 
 	// create the database user
 	createTestPGUser(t, connURL, dbUser, dbUserDefaultPassword, testRoleStaticCreate)
