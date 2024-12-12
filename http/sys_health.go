@@ -158,6 +158,20 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		perfStandbyCode = code
 	}
 
+	haUnhealthyCode := 474
+	if code, found, ok := fetchStatusCode(r, "haunhealthycode"); !ok {
+		return http.StatusBadRequest, nil, nil
+	} else if found {
+		haUnhealthyCode = code
+	}
+
+	removedCode := 530
+	if code, found, ok := fetchStatusCode(r, "removedcode"); !ok {
+		return http.StatusBadRequest, nil, nil
+	} else if found {
+		removedCode = code
+	}
+
 	ctx := context.Background()
 
 	// Check system status
@@ -175,13 +189,21 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		return http.StatusInternalServerError, nil, err
 	}
 
+	removed, shouldIncludeRemoved := core.IsRemovedFromCluster()
+
+	haHealthy, lastHeartbeat := core.GetHAHeartbeatHealth()
+
 	// Determine the status code
 	code := activeCode
 	switch {
 	case !init:
 		code = uninitCode
+	case removed:
+		code = removedCode
 	case sealed:
 		code = sealedCode
+	case !haHealthy && lastHeartbeat != nil:
+		code = haUnhealthyCode
 	case replicationState.HasState(consts.ReplicationDRSecondary):
 		code = drSecondaryCode
 	case perfStandby:
@@ -233,6 +255,15 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		return http.StatusInternalServerError, nil, err
 	}
 
+	if shouldIncludeRemoved {
+		body.RemovedFromCluster = &removed
+	}
+
+	if lastHeartbeat != nil {
+		body.LastRequestForwardingHeartbeatMillis = lastHeartbeat.Milliseconds()
+		body.HAConnectionHealthy = &haHealthy
+	}
+
 	if licenseState != nil {
 		body.License = &HealthResponseLicense{
 			State:      licenseState.State,
@@ -257,20 +288,23 @@ type HealthResponseLicense struct {
 }
 
 type HealthResponse struct {
-	Initialized                       bool                   `json:"initialized"`
-	Sealed                            bool                   `json:"sealed"`
-	Standby                           bool                   `json:"standby"`
-	PerformanceStandby                bool                   `json:"performance_standby"`
-	ReplicationPerformanceMode        string                 `json:"replication_performance_mode"`
-	ReplicationDRMode                 string                 `json:"replication_dr_mode"`
-	ServerTimeUTC                     int64                  `json:"server_time_utc"`
-	Version                           string                 `json:"version"`
-	Enterprise                        bool                   `json:"enterprise"`
-	ClusterName                       string                 `json:"cluster_name,omitempty"`
-	ClusterID                         string                 `json:"cluster_id,omitempty"`
-	LastWAL                           uint64                 `json:"last_wal,omitempty"`
-	License                           *HealthResponseLicense `json:"license,omitempty"`
-	EchoDurationMillis                int64                  `json:"echo_duration_ms"`
-	ClockSkewMillis                   int64                  `json:"clock_skew_ms"`
-	ReplicationPrimaryCanaryAgeMillis int64                  `json:"replication_primary_canary_age_ms"`
+	Initialized                          bool                   `json:"initialized"`
+	Sealed                               bool                   `json:"sealed"`
+	Standby                              bool                   `json:"standby"`
+	PerformanceStandby                   bool                   `json:"performance_standby"`
+	ReplicationPerformanceMode           string                 `json:"replication_performance_mode"`
+	ReplicationDRMode                    string                 `json:"replication_dr_mode"`
+	ServerTimeUTC                        int64                  `json:"server_time_utc"`
+	Version                              string                 `json:"version"`
+	Enterprise                           bool                   `json:"enterprise"`
+	ClusterName                          string                 `json:"cluster_name,omitempty"`
+	ClusterID                            string                 `json:"cluster_id,omitempty"`
+	LastWAL                              uint64                 `json:"last_wal,omitempty"`
+	License                              *HealthResponseLicense `json:"license,omitempty"`
+	EchoDurationMillis                   int64                  `json:"echo_duration_ms"`
+	ClockSkewMillis                      int64                  `json:"clock_skew_ms"`
+	ReplicationPrimaryCanaryAgeMillis    int64                  `json:"replication_primary_canary_age_ms"`
+	RemovedFromCluster                   *bool                  `json:"removed_from_cluster,omitempty"`
+	HAConnectionHealthy                  *bool                  `json:"ha_connection_healthy,omitempty"`
+	LastRequestForwardingHeartbeatMillis int64                  `json:"last_request_forwarding_heartbeat_ms,omitempty"`
 }
