@@ -9,7 +9,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -39,6 +38,7 @@ import (
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -658,7 +658,7 @@ func TestBackend_NonCAExpiry(t *testing.T) {
 	template.IPAddresses = []net.IP{parsedIP}
 
 	// Private key for CA cert
-	caPrivateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	caPrivateKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -726,7 +726,7 @@ func TestBackend_NonCAExpiry(t *testing.T) {
 	template.SerialNumber = big.NewInt(5678)
 
 	template.KeyUsage = x509.KeyUsage(x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign)
-	issuedPrivateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	issuedPrivateKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1317,6 +1317,8 @@ func TestBackend_ext_singleCert(t *testing.T) {
 			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{"2-1-1-1": "A UTF8String Extension"}, true),
 			testAccStepCert(t, "web", ca, "foo", allowed{metadata_ext: "1.2.3.45"}, false),
 			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{}, true),
+			testAccStepSetConfig(t, config{EnableMetadataOnFailures: true}, connState),
+			testAccStepReadConfig(t, config{EnableMetadataOnFailures: true}, connState),
 		},
 	})
 }
@@ -1728,6 +1730,7 @@ func testAccStepSetConfig(t *testing.T, conf config, connState tls.ConnectionSta
 		ConnState: &connState,
 		Data: map[string]interface{}{
 			"enable_identity_alias_metadata": conf.EnableIdentityAliasMetadata,
+			"enable_metadata_on_failures":    conf.EnableMetadataOnFailures,
 		},
 	}
 }
@@ -1750,6 +1753,20 @@ func testAccStepReadConfig(t *testing.T, conf config, connState tls.ConnectionSt
 
 			if b != conf.EnableIdentityAliasMetadata {
 				t.Fatalf("bad: expected enable_identity_alias_metadata to be %t, got %t", conf.EnableIdentityAliasMetadata, b)
+			}
+
+			metaValueRaw, ok := resp.Data["enable_metadata_on_failures"]
+			if !ok {
+				t.Fatalf("enable_metadata_on_failures not found in response")
+			}
+
+			metaValue, ok := metaValueRaw.(bool)
+			if !ok {
+				t.Fatalf("bad: expected enable_metadata_on_failures to be a bool")
+			}
+
+			if metaValue != conf.EnableMetadataOnFailures {
+				t.Fatalf("bad: expected enable_metadata_on_failures to be %t, got %t", conf.EnableMetadataOnFailures, metaValue)
 			}
 
 			return nil
@@ -1934,6 +1951,23 @@ type allowed struct {
 
 func testAccStepCert(t *testing.T, name string, cert []byte, policies string, testData allowed, expectError bool) logicaltest.TestStep {
 	return testAccStepCertWithExtraParams(t, name, cert, policies, testData, expectError, nil)
+}
+
+func testStepEnableMetadataFailures() logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		ErrorOk:   false,
+		Data: map[string]interface{}{
+			"enable_metadata_on_failures": true,
+		},
+		Check: func(resp *logical.Response) error {
+			if resp != nil && resp.IsError() {
+				return fmt.Errorf("expected nil response got a response error: %v", resp)
+			}
+			return nil
+		},
+	}
 }
 
 func testAccStepCertWithExtraParams(t *testing.T, name string, cert []byte, policies string, testData allowed, expectError bool, extraParams map[string]interface{}) logicaltest.TestStep {

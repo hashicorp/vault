@@ -13,12 +13,11 @@ import (
 	"slices"
 
 	"github.com/Masterminds/semver"
-	slogctx "github.com/veqryn/slog-context"
-
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/metadata"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/releases"
+	slogctx "github.com/veqryn/slog-context"
 )
 
 // EnosDynamicConfigReq is a request to generate dynamic enos configuration

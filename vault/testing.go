@@ -977,6 +977,14 @@ func (c *TestClusterCore) ClusterListener() *cluster.Listener {
 	return c.getClusterListener()
 }
 
+// NetworkLayer returns the network layer for the cluster core. This can be used
+// in conjunction with the cluster.InmemLayer to disconnect specific nodes from
+// the cluster when we need to simulate abrupt node failure or a network
+// partition in NewTestCluster tests.
+func (c *TestClusterCore) NetworkLayer() cluster.NetworkLayer {
+	return c.Core.clusterNetworkLayer
+}
+
 func (c *TestCluster) Cleanup() {
 	c.Logger.Info("cleaning up vault cluster")
 	if tl, ok := c.Logger.(*corehelpers.TestLogger); ok {
@@ -1451,6 +1459,7 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 	}
 
 	if base != nil {
+		coreConfig.ClusterHeartbeatInterval = base.ClusterHeartbeatInterval
 		coreConfig.DetectDeadlocks = TestDeadlockDetection
 		coreConfig.RawConfig = base.RawConfig
 		coreConfig.DisableCache = base.DisableCache
