@@ -41,6 +41,16 @@ Then install the Operator:
 $ helm install --version 0.9.1 --create-namespace --namespace vault-secrets-operator vault-secrets-operator hashicorp/vault-secrets-operator
 ```
 
+## Updating CRDs when using Helm
+
+<Note title="Important">
+
+  As of VSO 0.8.0, VSO will automatically update its CRDs.
+  The manual upgrade step [Updating CRDs](#updating-crds-when-using-helm-prior-to-vso-0-8-0) below is no longer
+  required before upgrading to VSO 0.8.0+.
+
+</Note>
+
 ## Upgrading using Helm
 
 You can upgrade an existing installation with the `helm upgrade` command.
@@ -55,15 +65,15 @@ Hang tight while we grab the latest from your chart repositories...
 Update Complete. ⎈Happy Helming!⎈
 ```
 
-## Updating CRDs when using Helm
+To upgrade your VSO release, replace `<TARGET_VSO_VERSION>` with the VSO version you are upgrading to:
+```shell-session
+$ helm upgrade --version <TARGET_VSO_VERSION> --namespace vault-secrets-operator vault-secrets-operator hashicorp/vault-secrets-operator
+```
 
-<Note title="Important">
-
-  As of VSO 0.8.0, VSO will automatically update its CRDs.
-  The manual upgrade step [Updating CRDs](#updating-crds-when-using-helm-prior-to-vso-0-8-0) below is no longer required when
-  upgrading to VSO 0.8.0+.
-
-</Note>
+For example, if you are upgrading to VSO 0.9.1:
+```shell-session
+$ helm upgrade --version 0.9.1 --namespace vault-secrets-operator vault-secrets-operator hashicorp/vault-secrets-operator
+```
 
 The VSO Helm chart will automatically upgrade the CRDs to match the VSO version being deployed.
 There should be no need to manually update the CRDs prior to upgrading VSO using Helm.
