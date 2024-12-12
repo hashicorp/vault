@@ -1860,7 +1860,11 @@ func TestVaultOperatorACMEDisableWorkflow(t *testing.T) {
 	require.ErrorContains(t, err, "account in status: revoked", "Requesting an order with a revoked account should have failed")
 
 	// Switch the account back to valid and make sure we can use it again
-	_, err = vaultClient.Logical().WriteWithContext(testCtx, "pki/acme/mgmt/account/keyid/"+kid, map[string]interface{}{"status": "valid"})
+	resp, err = vaultClient.Logical().WriteWithContext(testCtx, "pki/acme/mgmt/account/keyid/"+kid, map[string]interface{}{"status": "valid"})
+	require.NoError(t, err, "failed updating writing ACME with account key")
+	require.Empty(t, resp.Data["revoked_time"], "revoked_time should have been reset")
+	require.Equal(t, "valid", resp.Data["status"], "status should have been reset to valid")
+
 	doACMEOrderWorkflow(t, vaultClient, acmeClient, acct)
 }
 

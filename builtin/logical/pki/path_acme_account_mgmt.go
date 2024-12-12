@@ -122,6 +122,9 @@ func (b *backend) pathAcmeMgmtUpdateAccount(ctx context.Context, r *logical.Requ
 	}
 
 	status, err := convertToAccountStatus(d.Get("status"))
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
 	if status != AccountStatusValid && status != AccountStatusRevoked {
 		return logical.ErrorResponse("invalid status %q", status), logical.ErrInvalidRequest
 	}
