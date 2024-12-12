@@ -6,6 +6,7 @@
 package plugincatalog
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
@@ -15,6 +16,6 @@ func (c *PluginCatalog) entUnpackArtifact(plugin pluginutil.SetPluginInput) (boo
 	return false, plugin.Command, plugin.Sha256, fmt.Errorf("enterprise-only feature: plugin artifact unpacking")
 }
 
-func (c *PluginCatalog) entSanitize() error {
+func (c *PluginCatalog) entSanitize(context.Context) error {
 	return nil
 }

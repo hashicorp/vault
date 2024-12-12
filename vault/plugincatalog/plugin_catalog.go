@@ -175,7 +175,7 @@ func SetupPluginCatalog(ctx context.Context, in *PluginCatalogInput) (*PluginCat
 	}
 
 	// Sanitize the plugin catalog
-	err = catalog.entSanitize()
+	err = catalog.entSanitize(ctx)
 	if err != nil {
 		logger.Error("error while sanitizing plugin storage", "error", err)
 		return nil, err
