@@ -552,6 +552,120 @@ scenario "smoke" {
       vault_root_token  = step.create_vault_cluster.root_token
     }
   }
+  step "create_new_node_target" {
+    skip_step = semverconstraint(var.vault_upgrade_initial_version, "<1.19.0-0") || matrix.backend != "raft"
+    description = global.description.create_vault_cluster_targets
+    module      = module.target_ec2_instances
+    depends_on  = [step.create_vpc, step.verify_raft_auto_join_voter]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      ami_id          = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
+      cluster_tag_key = global.vault_tag_key
+      common_tags     = global.tags
+      instance_count  = 1
+      seal_key_names  = step.create_seal_key.resource_names
+      vpc_id          = step.create_vpc.id
+    }
+  }
+  step "start_vault_new_node" {
+    skip_step = semverconstraint(var.vault_upgrade_initial_version, "<1.19.0-0") || matrix.backend != "raft"
+    module = module.vault_cluster
+    depends_on = [
+      step.build_vault,
+      step.create_vault_cluster,
+      step.verify_secrets_engines_create,
+      step.create_new_node_target,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      artifactory_release         = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
+      cluster_name                = step.create_vault_cluster_targets.cluster_name
+      config_mode                 = matrix.config_mode
+      enable_audit_devices        = var.vault_enable_audit_devices
+      force_unseal                = matrix.seal == "shamir"
+      hosts                       = step.create_new_node_target.hosts
+      initialize_cluster          = false
+      install_dir                 = local.vault_install_dir
+      ip_version                  = matrix.ip_version
+      license                     = matrix.edition != "ce" ? step.read_license.license : null
+      local_artifact_path         = local.artifact_path
+      log_level                   = var.vault_log_level
+      manage_service              = local.manage_service
+      packages                    = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
+      root_token                  = step.create_vault_cluster.root_token
+      seal_attributes             = step.create_seal_key.attributes
+      seal_type                   = matrix.seal
+      shamir_unseal_keys          = matrix.seal == "shamir" ? step.create_vault_cluster.unseal_keys_hex : null
+      storage_backend             = "raft"
+    }
+  }
+ 
+  step "remove_raft_node" {
+    skip_step = semverconstraint(var.vault_upgrade_initial_version, "<1.19.0-0") || matrix.backend != "raft"
+    module = module.vault_raft_remove_peer
+    depends_on = [step.start_vault_new_node]
+    
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+    
+    verifies = [
+      quality.vault_api_sys_storage_raft_remove_peer_write_removes_peer,
+      quality.vault_cli_operator_raft_remove_peer,
+    ]
+
+    variables {
+      hosts                   = step.create_new_node_target.hosts
+      ip_version              = matrix.ip_version
+      operator_instance       = step.get_updated_vault_cluster_ips.leader_public_ip
+      vault_addr              = step.start_vault_new_node.api_addr_localhost
+      vault_cluster_addr_port = step.start_vault_new_node.cluster_port
+      vault_install_dir       = local.vault_install_dir
+      vault_root_token        = step.create_vault_cluster.root_token
+    }
+  }
+  
+  step "verify_removed" {
+    skip_step = semverconstraint(var.vault_upgrade_initial_version, "<1.19.0-0") || matrix.backend != "raft"
+    description = <<-EOF
+      Verify that the removed nodes are marked as such
+    EOF
+    module      = module.vault_verify_raft_removed
+    depends_on = [
+      step.create_vault_cluster_targets,
+      step.get_vault_cluster_ips,
+      verify_raft_auto_join_voter,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_raft_removed_after_restart,
+      quality.vault_raft_removed_statuses,
+      quality.vault_raft_removed_cant_rejoin,
+      quality.vault_raft_removed_rejoin_after_deletion,
+    ]
+
+    variables {
+      hosts              = step.create_new_node_target.hosts
+      leader_host        = step.get_vault_cluster_ips.leader_host
+      vault_root_token   = step.create_vault_cluster_targets.root_token
+      vault_seal_type    = matrix.seal
+      vault_unseal_keys  = matrix.seal == "shamir" ? step.create_vault_cluster.unseal_keys_hex : null
+      add_back_nodes     = true 
+      listener_port      = step.create_new_node_target.listener_port
+    }
+  }
 
   step "verify_replication" {
     description = global.description.verify_replication_status
