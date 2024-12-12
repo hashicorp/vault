@@ -986,7 +986,8 @@ func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPl
 				// when evaluating symlinks of the command fails
 				return nil, fmt.Errorf("error while validating the command path: %w", err)
 			default:
-				return nil, fmt.Errorf("failed to unpack plugin artifact: %w", unpackErr)
+				return nil, fmt.Errorf("failed to unpack plugin artifact plugin %q version %q: %w",
+					plugin.Name, plugin.Version, unpackErr)
 			}
 		} else {
 			// Best effort check to make sure the command isn't breaking out of the
