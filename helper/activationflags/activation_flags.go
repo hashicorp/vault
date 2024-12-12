@@ -14,6 +14,7 @@ import (
 
 const (
 	storagePathActivationFlags = "activation-flags"
+	IdentityCleanup            = "force-identity-deduplication"
 )
 
 type FeatureActivationFlags struct {

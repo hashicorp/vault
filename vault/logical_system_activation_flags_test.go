@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/activationflags"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
@@ -92,7 +93,7 @@ func TestActivationFlags_Write(t *testing.T) {
 			context.Background(),
 			&logical.Request{
 				Operation: logical.UpdateOperation,
-				Path:      fmt.Sprintf("%s/%s/%s", prefixActivationFlags, activationFlagIdentityCleanup, verbActivationFlagsActivate),
+				Path:      fmt.Sprintf("%s/%s/%s", prefixActivationFlags, activationflags.IdentityCleanup, verbActivationFlagsActivate),
 				Storage:   core.systemBarrierView,
 			},
 		)
@@ -101,6 +102,6 @@ func TestActivationFlags_Write(t *testing.T) {
 		require.NotNil(t, resp)
 		require.NotEmpty(t, resp.Data)
 		require.NotNil(t, resp.Data["activated"])
-		require.Contains(t, resp.Data["activated"], activationFlagIdentityCleanup)
+		require.Contains(t, resp.Data["activated"], activationflags.IdentityCleanup)
 	})
 }

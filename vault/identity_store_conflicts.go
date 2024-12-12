@@ -27,7 +27,7 @@ type ConflictResolver interface {
 	ResolveAliases(ctx context.Context, parent *identity.Entity, existing, duplicate *identity.Alias) error
 }
 
-// The errorResolver is a ConflictResolver that logs a warning message when a
+// errorResolver is a ConflictResolver that logs a warning message when a
 // pre-existing Identity artifact is found with the same factors as a new one.
 type errorResolver struct {
 	logger log.Logger
@@ -360,4 +360,71 @@ func (r *duplicateReportingErrorResolver) LogReport(log Warner) {
 	}
 	log.Warn("end of identity duplicate report, refer to " +
 		identityDuplicateReportUrl + " for resolution.")
+}
+
+// renameResolver is a ConflictResolver that appends the pre-existing Identity
+// artifact's UUID to the duplicate artifact's name to resolve potential
+// conflicts. The rename strategy also tags the new would-be duplicate with a
+// metadata field `duplicate_of_canonical_id`.
+type renameResolver struct {
+	logger log.Logger
+}
+
+// ResolveEntities renames an entity duplicate in a deterministic way so that all
+// entities end up addressable by a unique name still. Note that this is
+// potentially destructive but is the best option available to resolve
+// duplicates in storage caused by bugs in our validation. Also note that we
+// have to do this before we upsert the entity below. If we save the ID to fixup
+// later the upsert to rename will remove the good name from the name index in
+// MemDB.
+func (r *renameResolver) ResolveEntities(ctx context.Context, existing, duplicate *identity.Entity) error {
+	if existing == nil {
+		return nil
+	}
+
+	duplicate.Name = duplicate.Name + "-" + duplicate.ID
+	if duplicate.Metadata == nil {
+		duplicate.Metadata = make(map[string]string)
+	}
+	duplicate.Metadata["duplicate_of_canonical_id"] = existing.ID
+
+	r.logger.Warn("renaming entity with duplicate name",
+		"namespace_id", duplicate.NamespaceID,
+		"entity_id", duplicate.ID,
+		"duplicate_of_canonical_id", existing.ID,
+		"renamed_from", duplicate.Name,
+		"renamed_to", duplicate.Name,
+	)
+
+	return nil
+}
+
+// ResolveGroups deals with group name duplicates by renaming those that
+// were "hidden" in memDB so they are queryable. It's important this is
+// deterministic so we don't end up with different group names on different
+// nodes. We use the ID to ensure the new name is unique bit also
+// deterministic. For now, don't persist this. The user can choose to
+// resolve it permanently by renaming or deleting explicitly.
+func (r *renameResolver) ResolveGroups(ctx context.Context, existing, duplicate *identity.Group) error {
+	if existing == nil {
+		return nil
+	}
+
+	duplicate.Name = duplicate.Name + "-" + duplicate.ID
+	if duplicate.Metadata == nil {
+		duplicate.Metadata = make(map[string]string)
+	}
+	duplicate.Metadata["duplicate_of_canonical_id"] = existing.ID
+	r.logger.Warn("renaming group with duplicate name",
+		"namespace_id", duplicate.NamespaceID,
+		"group_id", duplicate.ID,
+		"duplicate_of_canonical_id", existing.ID,
+		"new_name", duplicate.Name,
+	)
+	return nil
+}
+
+// ResolveAliases is a no-op for the renameResolver implementation.
+func (r *renameResolver) ResolveAliases(ctx context.Context, parent *identity.Entity, existing, duplicate *identity.Alias) error {
+	return nil
 }

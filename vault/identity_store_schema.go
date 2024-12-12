@@ -110,6 +110,20 @@ func entitiesTableSchema(lowerCaseName bool) *memdb.TableSchema {
 					},
 				},
 			},
+			"case_name": {
+				Name:   "case_name",
+				Unique: true,
+				Indexer: &memdb.CompoundIndex{
+					Indexes: []memdb.Indexer{
+						&memdb.StringFieldIndex{
+							Field: "NamespaceID",
+						},
+						&memdb.StringFieldIndex{
+							Field: "Name",
+						},
+					},
+				},
+			},
 			"merged_entity_ids": {
 				Name:         "merged_entity_ids",
 				Unique:       true,
