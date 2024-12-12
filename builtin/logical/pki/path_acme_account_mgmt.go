@@ -105,7 +105,13 @@ func (b *backend) pathAcmeMgmtReadAccount(ctx context.Context, r *logical.Reques
 		return nil, fmt.Errorf("failed loading orders for account %q: %w", accountEntry.KeyId, err)
 	}
 
-	dataMap := acmeAccountToDataMap(accountEntry, orders)
+	orderData := make([]map[string]interface{}, 0, len(orders))
+	for _, order := range orders {
+		orderData = append(orderData, acmeOrderToDataMap(order))
+	}
+
+	dataMap := acmeAccountToDataMap(accountEntry)
+	dataMap["orders"] = orderData
 	return &logical.Response{Data: dataMap}, nil
 }
 
@@ -126,19 +132,27 @@ func (b *backend) pathAcmeMgmtUpdateAccount(ctx context.Context, r *logical.Requ
 	accountEntry, err := as.LoadAccountWithoutDirEnforcement(sc, keyId)
 	if err != nil {
 		if errors.Is(err, ErrAccountDoesNotExist) {
-			return logical.ErrorResponse("ACME key id %s did not exist", keyId), logical.ErrNotFound
+			return logical.ErrorResponse("ACME key id %q did not exist", keyId), logical.ErrNotFound
 		}
 		return nil, fmt.Errorf("failed loading ACME account id %q: %w", keyId, err)
 	}
 
 	if accountEntry.Status != status {
 		accountEntry.Status = status
+
+		switch status {
+		case AccountStatusRevoked:
+			accountEntry.AccountRevokedDate = time.Now()
+		case AccountStatusValid:
+			accountEntry.AccountRevokedDate = time.Time{}
+		}
+
 		if err := as.UpdateAccount(sc, accountEntry); err != nil {
 			return nil, fmt.Errorf("failed saving account %q: %w", keyId, err)
 		}
 	}
 
-	dataMap := acmeAccountToDataMap(accountEntry, []*acmeOrder{})
+	dataMap := acmeAccountToDataMap(accountEntry)
 	return &logical.Response{Data: dataMap}, nil
 }
 
@@ -164,12 +178,7 @@ func convertToAccountStatus(status any) (ACMEAccountStatus, error) {
 	}
 }
 
-func acmeAccountToDataMap(accountEntry *acmeAccount, orders []*acmeOrder) map[string]interface{} {
-	orderData := make([]map[string]interface{}, 0, len(orders))
-	for _, order := range orders {
-		orderData = append(orderData, acmeOrderToDataMap(order))
-	}
-
+func acmeAccountToDataMap(accountEntry *acmeAccount) map[string]interface{} {
 	revokedDate := ""
 	if !accountEntry.AccountRevokedDate.IsZero() {
 		revokedDate = accountEntry.AccountRevokedDate.Format(time.RFC3339)
@@ -184,14 +193,13 @@ func acmeAccountToDataMap(accountEntry *acmeAccount, orders []*acmeOrder) map[st
 	}
 
 	return map[string]interface{}{
-		"keyid":        accountEntry.KeyId,
+		"key_id":       accountEntry.KeyId,
 		"status":       accountEntry.Status,
 		"contacts":     accountEntry.Contact,
 		"created_time": accountEntry.AccountCreatedDate.Format(time.RFC3339),
 		"revoked_time": revokedDate,
 		"directory":    accountEntry.AcmeDirectory,
 		"eab":          eab,
-		"orders":       orderData,
 	}
 }
 
