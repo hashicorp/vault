@@ -61,11 +61,11 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
       test('it renders fields ', async function (assert) {
         await this.renderComponent();
         assert.dom(SES.aws.rootForm).exists('it lands on the aws root configuration form.');
-        assert.dom(SES.aws.accessTitle).exists('Access section is rendered');
+        assert.dom(SES.wif.accessTitle).exists('Access section is rendered');
         assert.dom(SES.aws.leaseTitle).exists('Lease section is rendered');
-        assert.dom(SES.aws.accessTypeSection).exists('Access type section is rendered');
-        assert.dom(SES.aws.accessType('iam')).isChecked('defaults to showing IAM access type checked');
-        assert.dom(SES.aws.accessType('wif')).isNotChecked('wif access type is not checked');
+        assert.dom(SES.wif.accessTypeSection).exists('Access type section is rendered');
+        assert.dom(SES.wif.accessType('iam')).isChecked('defaults to showing IAM access type checked');
+        assert.dom(SES.wif.accessType('wif')).isNotChecked('wif access type is not checked');
         // check all the form fields are present
         await click(GENERAL.toggleGroup('Root config options'));
         for (const key of expectedConfigKeys('aws-root-create')) {
@@ -79,7 +79,7 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
 
       test('it renders wif fields when selected', async function (assert) {
         await this.renderComponent();
-        await click(SES.aws.accessType('wif'));
+        await click(SES.wif.accessType('wif'));
         // check for the wif fields only
         for (const key of expectedConfigKeys('aws-root-create-wif')) {
           if (key === 'Identity token TTL') {
@@ -98,9 +98,9 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
         await this.renderComponent();
         await fillInAwsConfig('withAccess');
         await fillInAwsConfig('withLease');
-        await click(SES.aws.accessType('wif')); // toggle to wif
+        await click(SES.wif.accessType('wif')); // toggle to wif
         await fillInAwsConfig('withWif');
-        await click(SES.aws.accessType('iam')); // toggle to wif
+        await click(SES.wif.accessType('iam')); // toggle to wif
         assert
           .dom(GENERAL.inputByAttr('accessKey'))
           .hasValue('', 'accessKey is cleared after toggling accessType');
@@ -108,7 +108,7 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
           .dom(GENERAL.inputByAttr('secretKey'))
           .hasValue('', 'secretKey is cleared after toggling accessType');
 
-        await click(SES.aws.accessType('wif'));
+        await click(SES.wif.accessType('wif'));
         assert
           .dom(GENERAL.inputByAttr('issuer'))
           .hasValue('', 'issue shows no value after toggling accessType');
@@ -133,13 +133,13 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
       test('it does not clear global issuer when toggling accessType', async function (assert) {
         this.issuerConfig = createConfig(this.store, this.id, 'issuer');
         await this.renderComponent();
-        await click(SES.aws.accessType('wif'));
+        await click(SES.wif.accessType('wif'));
         assert
           .dom(GENERAL.inputByAttr('issuer'))
           .hasValue(this.issuerConfig.issuer, 'issuer is what is sent in my the model on first load');
         await fillIn(GENERAL.inputByAttr('issuer'), 'http://ive-changed');
-        await click(SES.aws.accessType('iam'));
-        await click(SES.aws.accessType('wif'));
+        await click(SES.wif.accessType('iam'));
+        await click(SES.wif.accessType('wif'));
         assert
           .dom(GENERAL.inputByAttr('issuer'))
           .hasValue(
@@ -230,7 +230,7 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
         });
         await fillInAwsConfig('withWif');
         await click(GENERAL.saveButton);
-        await click(SES.aws.issuerWarningSave);
+        await click(SES.wif.issuerWarningSave);
 
         assert.true(
           this.flashDangerSpy.calledWith('Issuer was not saved: bad request'),
@@ -285,11 +285,11 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
         test('if issuer API error and user changes issuer value, shows specific warning message', async function (assert) {
           this.issuerConfig.queryIssuerError = true;
           await this.renderComponent();
-          await click(SES.aws.accessType('wif'));
+          await click(SES.wif.accessType('wif'));
           await fillIn(GENERAL.inputByAttr('issuer'), 'http://change.me.no.read');
           await click(GENERAL.saveButton);
           assert
-            .dom(SES.aws.issuerWarningMessage)
+            .dom(SES.wif.issuerWarningMessage)
             .hasText(
               `You are updating the global issuer config. This will overwrite Vault's current issuer if it exists and may affect other configurations using this value. Continue?`,
               'modal shows message about overwriting value if it exists'
@@ -313,22 +313,22 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
             );
           });
           await this.renderComponent();
-          await click(SES.aws.accessType('wif'));
+          await click(SES.wif.accessType('wif'));
           assert
             .dom(GENERAL.inputByAttr('issuer'))
             .hasAttribute('placeholder', 'https://vault-test.com', 'shows issuer placeholder');
           assert.dom(GENERAL.inputByAttr('issuer')).hasValue('', 'shows issuer is empty when not passed');
           await fillIn(GENERAL.inputByAttr('issuer'), 'http://bar.foo');
           await click(GENERAL.saveButton);
-          assert.dom(SES.aws.issuerWarningModal).exists('issuer modal exists');
+          assert.dom(SES.wif.issuerWarningModal).exists('issuer modal exists');
           assert
-            .dom(SES.aws.issuerWarningMessage)
+            .dom(SES.wif.issuerWarningMessage)
             .hasText(
               `You are updating the global issuer config. This will overwrite Vault's current issuer and may affect other configurations using this value. Continue?`,
               'modal shows message about overwriting value without the noRead: "if it exists" adage'
             );
-          await click(SES.aws.issuerWarningCancel);
-          assert.dom(SES.aws.issuerWarningModal).doesNotExist('issuer modal is removed on cancel');
+          await click(SES.wif.issuerWarningCancel);
+          assert.dom(SES.wif.issuerWarningModal).doesNotExist('issuer modal is removed on cancel');
           assert.true(this.flashDangerSpy.notCalled, 'No danger flash messages called.');
           assert.true(this.flashSuccessSpy.notCalled, 'No success flash messages called.');
           assert.true(this.transitionStub.notCalled, 'Does not redirect');
@@ -354,12 +354,12 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
             assert.notOk(true, 'skips request to config/lease due to no changes');
           });
           await this.renderComponent();
-          await click(SES.aws.accessType('wif'));
+          await click(SES.wif.accessType('wif'));
           assert.dom(GENERAL.inputByAttr('issuer')).hasValue('', 'issuer defaults to empty string');
           await fillIn(GENERAL.inputByAttr('issuer'), newIssuer);
           await click(GENERAL.saveButton);
-          assert.dom(SES.aws.issuerWarningModal).exists('issue warning modal exists');
-          await click(SES.aws.issuerWarningSave);
+          assert.dom(SES.wif.issuerWarningModal).exists('issue warning modal exists');
+          await click(SES.wif.issuerWarningSave);
           assert.true(this.flashDangerSpy.notCalled, 'No danger flash messages called.');
           assert.true(
             this.flashSuccessSpy.calledWith('Issuer saved successfully'),
@@ -387,14 +387,14 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
           });
 
           await this.renderComponent();
-          await click(SES.aws.accessType('wif'));
+          await click(SES.wif.accessType('wif'));
           assert.dom(GENERAL.inputByAttr('issuer')).hasValue('');
           await fillIn(GENERAL.inputByAttr('issuer'), this.issuer);
           await fillIn(GENERAL.inputByAttr('roleArn'), 'some-other-value');
           await click(GENERAL.saveButton);
-          assert.dom(SES.aws.issuerWarningModal).exists('issuer warning modal exists');
+          assert.dom(SES.wif.issuerWarningModal).exists('issuer warning modal exists');
 
-          await click(SES.aws.issuerWarningSave);
+          await click(SES.wif.issuerWarningSave);
           assert.true(
             this.flashDangerSpy.calledWith('Issuer was not saved: permission denied'),
             'shows danger flash for issuer save'
@@ -419,10 +419,10 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
         assert.expect(13);
         await this.renderComponent();
         assert.dom(SES.aws.rootForm).exists('it lands on the aws root configuration form.');
-        assert.dom(SES.aws.accessTitle).exists('Access section is rendered');
+        assert.dom(SES.wif.accessTitle).exists('Access section is rendered');
         assert.dom(SES.aws.leaseTitle).exists('Lease section is rendered');
         assert
-          .dom(SES.aws.accessTypeSection)
+          .dom(SES.wif.accessTypeSection)
           .doesNotExist('Access type section does not render for a community user');
         // check all the form fields are present
         await click(GENERAL.toggleGroup('Root config options'));
@@ -446,7 +446,7 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
         await fillInAwsConfig('withAccess');
         await fillInAwsConfig('withLease');
         await click(GENERAL.saveButton);
-        assert.dom(SES.aws.issuerWarningModal).doesNotExist('modal should not render');
+        assert.dom(SES.wif.issuerWarningModal).doesNotExist('modal should not render');
         assert.true(
           this.flashSuccessSpy.calledWith(`Successfully saved ${this.id}'s root configuration.`),
           'Flash message shows that root was saved even if issuer was not'
@@ -470,25 +470,25 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
 
       test('it defaults to IAM accessType if IAM fields are already set', async function (assert) {
         await this.renderComponent();
-        assert.dom(SES.aws.accessType('iam')).isChecked('IAM accessType is checked');
-        assert.dom(SES.aws.accessType('iam')).isDisabled('IAM accessType is disabled');
-        assert.dom(SES.aws.accessType('wif')).isNotChecked('WIF accessType is not checked');
-        assert.dom(SES.aws.accessType('wif')).isDisabled('WIF accessType is disabled');
+        assert.dom(SES.wif.accessType('iam')).isChecked('IAM accessType is checked');
+        assert.dom(SES.wif.accessType('iam')).isDisabled('IAM accessType is disabled');
+        assert.dom(SES.wif.accessType('wif')).isNotChecked('WIF accessType is not checked');
+        assert.dom(SES.wif.accessType('wif')).isDisabled('WIF accessType is disabled');
         assert
-          .dom(SES.aws.accessTypeSubtext)
+          .dom(SES.wif.accessTypeSubtext)
           .hasText('You cannot edit Access Type if you have already saved access credentials.');
       });
 
       test('it defaults to WIF accessType if WIF fields are already set', async function (assert) {
         this.rootConfig = createConfig(this.store, this.id, 'aws-wif');
         await this.renderComponent();
-        assert.dom(SES.aws.accessType('wif')).isChecked('WIF accessType is checked');
-        assert.dom(SES.aws.accessType('wif')).isDisabled('WIF accessType is disabled');
-        assert.dom(SES.aws.accessType('iam')).isNotChecked('IAM accessType is not checked');
-        assert.dom(SES.aws.accessType('iam')).isDisabled('IAM accessType is disabled');
+        assert.dom(SES.wif.accessType('wif')).isChecked('WIF accessType is checked');
+        assert.dom(SES.wif.accessType('wif')).isDisabled('WIF accessType is disabled');
+        assert.dom(SES.wif.accessType('iam')).isNotChecked('IAM accessType is not checked');
+        assert.dom(SES.wif.accessType('iam')).isDisabled('IAM accessType is disabled');
         assert.dom(GENERAL.inputByAttr('roleArn')).hasValue(this.rootConfig.roleArn);
         assert
-          .dom(SES.aws.accessTypeSubtext)
+          .dom(SES.wif.accessTypeSubtext)
           .hasText('You cannot edit Access Type if you have already saved access credentials.');
         assert
           .dom(GENERAL.inputByAttr('identityTokenAudience'))
@@ -500,8 +500,8 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
         this.rootConfig = createConfig(this.store, this.id, 'aws-wif');
         this.issuerConfig = createConfig(this.store, this.id, 'issuer');
         await this.renderComponent();
-        assert.dom(SES.aws.accessType('wif')).isChecked('WIF accessType is checked');
-        assert.dom(SES.aws.accessType('wif')).isDisabled('WIF accessType is disabled');
+        assert.dom(SES.wif.accessType('wif')).isChecked('WIF accessType is checked');
+        assert.dom(SES.wif.accessType('wif')).isDisabled('WIF accessType is disabled');
         assert
           .dom(GENERAL.inputByAttr('issuer'))
           .hasValue(this.issuerConfig.issuer, 'it has the models issuer value');
@@ -512,8 +512,8 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
         // the access type is only disabled if the model has values already set for access type fields.
         this.rootConfig = createConfig(this.store, this.id, 'aws-no-access');
         await this.renderComponent();
-        assert.dom(SES.aws.accessType('wif')).isNotDisabled('WIF accessType is NOT disabled');
-        assert.dom(SES.aws.accessType('iam')).isNotDisabled('IAM accessType is NOT disabled');
+        assert.dom(SES.wif.accessType('wif')).isNotDisabled('WIF accessType is NOT disabled');
+        assert.dom(SES.wif.accessType('iam')).isNotDisabled('IAM accessType is NOT disabled');
       });
 
       test('it shows previously saved root and lease information', async function (assert) {
@@ -558,7 +558,7 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
 
       test('it does not show access types but defaults to iam fields', async function (assert) {
         await this.renderComponent();
-        assert.dom(SES.aws.accessTypeSection).doesNotExist('Access type section does not render');
+        assert.dom(SES.wif.accessTypeSection).doesNotExist('Access type section does not render');
         assert.dom(GENERAL.inputByAttr('accessKey')).hasValue(this.rootConfig.accessKey);
         assert
           .dom(GENERAL.inputByAttr('secretKey'))

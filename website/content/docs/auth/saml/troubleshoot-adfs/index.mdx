@@ -1,0 +1,85 @@
+---
+layout: docs
+page_title: Troubleshoot ADFS and SAML
+description: >-
+  Troubleshoot problems in Vault when using use Active Directory Federation
+  Services (ADFS) as an SAML provider.
+---
+
+# Troubleshoot AD FS: Before you start
+
+Troubleshooting guidance for solving problems with AD FS and SAML.
+
+## Temporarily enable verbose logging
+
+<Warning title="Not appropriate for production">
+
+  Expanding SAML response data is a **temporary** change. Do not leave verbose
+  logging on in production as SAML responses may contain sensitive information.
+
+</Warning>
+
+1. Enable verbose logging for your SAML plugin:
+
+   ```shell-session
+   $ vault write auth/<SAML_PLUGIN_PATH>/config \
+      default_role="<ADFS_ROLE>"                \
+      verbose_logging=true
+   ```
+
+1. Stream the debug logs directly to the terminal:
+
+   ```shell-session
+   $ vault monitor -log-level=debug
+   ```
+
+## Analyze the expanded SAML response 
+
+To debug SAML problems, consider the following fields in the expanded response
+objects:
+
+- **`role`** - the configuration details of your SAML role
+- **`user context`** - details about the client connecting to Vault
+
+When debugging SAML problems, start with the bound subjects and bound attributes
+of your SAML role. The provided values should match the attribute details in the
+user context. For example:
+
+<CodeBlockConfig hideClipboard highlight="2,18">
+
+```json
+[DEBUG] auth.saml.auth_saml_1d2227e7: validating user context for role: api=callback role_name=default-saml
+role="{
+  "token_bound_cidrs":null,
+  "token_explicit_max_ttl":0,
+  "token_max_ttl":0,
+  "token_no_default_policy":false,
+  "token_num_uses":0,
+  "token_period":0,
+  "token_policies":["default"],
+  "token_type":0,
+  "token_ttl":0,
+  "BoundSubjects":["*@example.com","*@ext.example.com"],
+  "BoundSubjectsType":"glob",
+  "BoundAttributes":{"groups":["VaultAdmin","VaultUser"]},
+  "BoundAttributesType":"string",
+  "GroupsAttribute":"groups"
+}"
+user context="{
+  "attributes":
+  {
+    "groups":["Domain Users","VaultAdmin"],
+    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress":["rs@example.com"]
+  },
+  "subject":"rs@example.com"
+}"
+```
+
+</CodeBlockConfig>
+
+
+## Troubleshooting walkthroughs
+
+- [AD FS error 320](/vault/docs/auth/saml/troubleshoot-adfs/adfs-event-320)
+- [Automatic group mapping fails](/vault/docs/auth/saml/troubleshoot-adfs/bad-mapping)
+- Clients cannot connect to Vault: [Invalid `BoundSubjects`](/vault/docs/auth/saml/troubleshoot-adfs/boundsubjects)

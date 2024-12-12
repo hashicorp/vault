@@ -16,15 +16,14 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-discover"
 	discoverk8s "github.com/hashicorp/go-discover/provider/k8s"
 	"github.com/hashicorp/go-hclog"
-	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/go-uuid"
 	goversion "github.com/hashicorp/go-version"
+	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/hashicorp/vault/api"
 	httpPriority "github.com/hashicorp/vault/http/priority"
 	"github.com/hashicorp/vault/physical/raft"
@@ -36,6 +35,9 @@ import (
 )
 
 const (
+	RaftInitialChallengeLimit = 20 // allow an initial burst to 20
+	RaftChallengesPerSecond   = 5  // equating to an average 200ms min time
+
 	// undoLogMonitorInterval is how often the leader checks to see
 	// if all the cluster members it knows about are new enough to support
 	// undo logs.
@@ -55,6 +57,12 @@ var (
 
 	ErrJoinWithoutAutoloading = errors.New("attempt to join a cluster using autoloaded licenses while not using autoloading ourself")
 )
+
+type raftBootstrapChallenge struct {
+	serverID  string
+	answer    []byte // the random answer
+	challenge []byte // the Sealed answer
+}
 
 // GetRaftNodeID returns the raft node ID if there is one, or an empty string if there's not
 func (c *Core) GetRaftNodeID() string {
@@ -156,6 +164,7 @@ func (c *Core) startRaftBackend(ctx context.Context) (retErr error) {
 			ClusterListener:     c.getClusterListener(),
 			StartAsLeader:       creating,
 			EffectiveSDKVersion: c.effectiveSDKVersion,
+			RemovedCallback:     c.shutdownRemovedNode,
 		}); err != nil {
 			return err
 		}
@@ -314,7 +323,11 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 
 	c.logger.Info("starting raft active node")
 
-	c.pendingRaftPeers = &sync.Map{}
+	var err error
+	c.pendingRaftPeers, err = lru.New[string, *raftBootstrapChallenge](RaftInitialChallengeLimit)
+	if err != nil {
+		return err
+	}
 
 	// Reload the raft TLS keys to ensure we are using the latest version.
 	if err := c.checkRaftTLSKeyUpgrades(ctx); err != nil {
@@ -1014,13 +1027,8 @@ func (c *Core) getRaftChallenge(leaderInfo *raft.LeaderJoinInfo) (*raftInformati
 		return nil, fmt.Errorf("error decoding raft bootstrap challenge: %w", err)
 	}
 
-	eBlob := &wrapping.BlobInfo{}
-	if err := proto.Unmarshal(challengeRaw, eBlob); err != nil {
-		return nil, fmt.Errorf("error decoding raft bootstrap challenge: %w", err)
-	}
-
 	return &raftInformation{
-		challenge:           eBlob,
+		challenge:           challengeRaw,
 		leaderClient:        apiClient,
 		leaderBarrierConfig: &sealConfig,
 	}, nil
@@ -1038,6 +1046,13 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 	}
 
 	isRaftHAOnly := c.isRaftHAOnly()
+	if raftBackend.IsRemoved() {
+		if isRaftHAOnly {
+			return false, errors.New("node has been removed from the HA cluster. Raft data for this node must be cleaned up before it can be added back")
+		} else {
+			return false, errors.New("node has been removed from the HA cluster. All vault data for this node must be cleaned up before it can be added back")
+		}
+	}
 	// Prevent join from happening if we're using raft for storage and
 	// it has already been initialized.
 	if init && !isRaftHAOnly {
@@ -1338,15 +1353,6 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess seal.Access, r
 		return errors.New("raft is already initialized")
 	}
 
-	multiWrapValue := &seal.MultiWrapValue{
-		Generation: sealAccess.Generation(),
-		Slots:      []*wrapping.BlobInfo{raftInfo.challenge},
-	}
-	plaintext, _, err := sealAccess.Decrypt(ctx, multiWrapValue, nil)
-	if err != nil {
-		return fmt.Errorf("error decrypting challenge: %w", err)
-	}
-
 	parsedClusterAddr, err := url.Parse(c.ClusterAddr())
 	if err != nil {
 		return fmt.Errorf("error parsing cluster address: %w", err)
@@ -1360,6 +1366,12 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess seal.Access, r
 		if err != nil {
 			return err
 		}
+	}
+
+	sealer := NewSealAccessSealer(sealAccess, c.logger, "bootstrap_challenge_read")
+	plaintext, err := sealer.Open(context.Background(), raftInfo.challenge)
+	if err != nil {
+		return fmt.Errorf("error decrypting challenge: %w", err)
 	}
 
 	answerReq := raftInfo.leaderClient.NewRequest("PUT", "/v1/sys/storage/raft/bootstrap/answer")
@@ -1403,6 +1415,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess seal.Access, r
 	opts := raft.SetupOpts{
 		TLSKeyring:      answerResp.Data.TLSKeyring,
 		ClusterListener: c.getClusterListener(),
+		RemovedCallback: c.shutdownRemovedNode,
 	}
 	err = raftBackend.SetupCluster(ctx, opts)
 	if err != nil {
@@ -1458,7 +1471,8 @@ func (c *Core) RaftBootstrap(ctx context.Context, onInit bool) error {
 	}
 
 	raftOpts := raft.SetupOpts{
-		StartAsLeader: true,
+		StartAsLeader:   true,
+		RemovedCallback: c.shutdownRemovedNode,
 	}
 
 	if !onInit {

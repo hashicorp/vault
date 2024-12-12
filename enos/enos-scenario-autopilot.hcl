@@ -27,14 +27,8 @@ scenario "autopilot" {
     config_mode     = global.config_modes
     distro          = global.distros
     edition         = global.enterprise_editions
-    initial_version = global.upgrade_initial_versions_ent
     ip_version      = global.ip_versions
     seal            = global.seals
-
-    // Autopilot wasn't available before 1.11.x
-    exclude {
-      initial_version = [for e in matrix.initial_version : e if semverconstraint(e, "<1.11.0-0")]
-    }
 
     // Our local builder always creates bundles
     exclude {
@@ -87,7 +81,7 @@ scenario "autopilot" {
     }
     manage_service                     = matrix.artifact_type == "bundle"
     vault_install_dir                  = global.vault_install_dir[matrix.artifact_type]
-    vault_autopilot_default_max_leases = semverconstraint(matrix.initial_version, ">=1.16.0-0") ? "300000" : ""
+    vault_autopilot_default_max_leases = semverconstraint(var.vault_upgrade_initial_version, ">=1.16.0-0") ? "300000" : ""
   }
 
   step "build_vault" {
@@ -251,13 +245,13 @@ scenario "autopilot" {
       packages             = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       release = {
         edition = matrix.edition
-        version = matrix.initial_version
+        version = var.vault_upgrade_initial_version
       }
       seal_attributes = step.create_seal_key.attributes
       seal_type       = matrix.seal
       storage_backend = "raft"
       storage_backend_addl_config = {
-        autopilot_upgrade_version = matrix.initial_version
+        autopilot_upgrade_version = var.vault_upgrade_initial_version
       }
     }
   }
@@ -575,6 +569,34 @@ scenario "autopilot" {
       hosts             = step.get_updated_vault_cluster_ips.follower_hosts
       vault_addr        = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
       vault_install_dir = local.vault_install_dir
+    }
+  }
+
+  step "verify_log_secrets" {
+    skip_step = !var.vault_enable_audit_devices || !var.verify_log_secrets
+
+    description = global.description.verify_log_secrets
+    module      = module.verify_log_secrets
+    depends_on = [
+      step.verify_secrets_engines_read,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_audit_log_secrets,
+      quality.vault_journal_secrets,
+      quality.vault_radar_index_create,
+      quality.vault_radar_scan_file,
+    ]
+
+    variables {
+      audit_log_file_path = step.create_vault_cluster.audit_device_file_path
+      leader_host         = step.get_updated_vault_cluster_ips.leader_host
+      vault_addr          = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
+      vault_root_token    = step.create_vault_cluster.root_token
     }
   }
 

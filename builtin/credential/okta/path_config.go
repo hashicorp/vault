@@ -4,8 +4,11 @@
 package okta
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -16,7 +19,8 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	oktanew "github.com/okta/okta-sdk-golang/v2/okta"
+	oktanew "github.com/okta/okta-sdk-golang/v5/okta"
+	gocache "github.com/patrickmn/go-cache"
 )
 
 const (
@@ -290,17 +294,19 @@ func (b *backend) pathConfigExistenceCheck(ctx context.Context, req *logical.Req
 }
 
 type oktaShim interface {
-	Client() (*oktanew.Client, context.Context)
+	Client() (*oktanew.APIClient, context.Context)
 	NewRequest(method string, url string, body interface{}) (*http.Request, error)
 	Do(req *http.Request, v interface{}) (interface{}, error)
 }
 
 type oktaShimNew struct {
-	client *oktanew.Client
+	cfg    *oktanew.Configuration
+	client *oktanew.APIClient
 	ctx    context.Context
+	cache  *gocache.Cache // cache used to hold authorization values created for NewRequests
 }
 
-func (new *oktaShimNew) Client() (*oktanew.Client, context.Context) {
+func (new *oktaShimNew) Client() (*oktanew.APIClient, context.Context) {
 	return new.client, new.ctx
 }
 
@@ -308,18 +314,113 @@ func (new *oktaShimNew) NewRequest(method string, url string, body interface{}) 
 	if !strings.HasPrefix(url, "/") {
 		url = "/api/v1/" + url
 	}
-	return new.client.GetRequestExecutor().NewRequest(method, url, body)
+
+	// reimplementation of RequestExecutor.NewRequest() in v2 of okta-golang-sdk
+	var buff io.ReadWriter
+	if body != nil {
+		switch v := body.(type) {
+		case []byte:
+			buff = bytes.NewBuffer(v)
+		case *bytes.Buffer:
+			buff = v
+		default:
+			buff = &bytes.Buffer{}
+			// need to create an encoder specifically to disable html escaping
+			encoder := json.NewEncoder(buff)
+			encoder.SetEscapeHTML(false)
+			err := encoder.Encode(body)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	url = new.cfg.Okta.Client.OrgUrl + url
+	req, err := http.NewRequest(method, url, buff)
+	if err != nil {
+		return nil, err
+	}
+
+	// construct an authorization header for the request using our okta config
+	var auth oktanew.Authorization
+	// I think the only usage of the shim is in credential/okta/backend.go, and in that case, the
+	// AuthorizationMode is only ever SSWS (since OktaClient() below never overrides the default authorization
+	// mode. This function will faithfully replicate the old RequestExecutor code, though.
+	switch new.cfg.Okta.Client.AuthorizationMode {
+	case "SSWS":
+		auth = oktanew.NewSSWSAuth(new.cfg.Okta.Client.Token, req)
+	case "Bearer":
+		auth = oktanew.NewBearerAuth(new.cfg.Okta.Client.Token, req)
+	case "PrivateKey":
+		auth = oktanew.NewPrivateKeyAuth(oktanew.PrivateKeyAuthConfig{
+			TokenCache:       new.cache,
+			HttpClient:       new.cfg.HTTPClient,
+			PrivateKeySigner: new.cfg.PrivateKeySigner,
+			PrivateKey:       new.cfg.Okta.Client.PrivateKey,
+			PrivateKeyId:     new.cfg.Okta.Client.PrivateKeyId,
+			ClientId:         new.cfg.Okta.Client.ClientId,
+			OrgURL:           new.cfg.Okta.Client.OrgUrl,
+			Scopes:           new.cfg.Okta.Client.Scopes,
+			MaxRetries:       new.cfg.Okta.Client.RateLimit.MaxRetries,
+			MaxBackoff:       new.cfg.Okta.Client.RateLimit.MaxBackoff,
+			Req:              req,
+		})
+	case "JWT":
+		auth = oktanew.NewJWTAuth(oktanew.JWTAuthConfig{
+			TokenCache:      new.cache,
+			HttpClient:      new.cfg.HTTPClient,
+			OrgURL:          new.cfg.Okta.Client.OrgUrl,
+			Scopes:          new.cfg.Okta.Client.Scopes,
+			ClientAssertion: new.cfg.Okta.Client.ClientAssertion,
+			MaxRetries:      new.cfg.Okta.Client.RateLimit.MaxRetries,
+			MaxBackoff:      new.cfg.Okta.Client.RateLimit.MaxBackoff,
+			Req:             req,
+		})
+	default:
+		return nil, fmt.Errorf("unknown authorization mode %v", new.cfg.Okta.Client.AuthorizationMode)
+	}
+
+	// Authorize adds a header based on the contents of the Authorization struct
+	err = auth.Authorize("POST", url)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Accept", "application/json")
+
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+
+	return req, nil
 }
 
 func (new *oktaShimNew) Do(req *http.Request, v interface{}) (interface{}, error) {
-	return new.client.GetRequestExecutor().Do(new.ctx, req, v)
+	resp, err := new.cfg.HTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.Body == nil {
+		return nil, nil
+	}
+	defer resp.Body.Close()
+
+	bt, err := io.ReadAll(resp.Body)
+	err = json.Unmarshal(bt, v)
+	if err != nil {
+		return nil, err
+	}
+
+	// as far as i can tell, we only use the first return to check if it is nil, and assume that means an error happened.
+	return resp, nil
 }
 
 type oktaShimOld struct {
 	client *oktaold.Client
 }
 
-func (new *oktaShimOld) Client() (*oktanew.Client, context.Context) {
+func (new *oktaShimOld) Client() (*oktanew.APIClient, context.Context) {
 	return nil, nil
 }
 
@@ -331,7 +432,25 @@ func (new *oktaShimOld) Do(req *http.Request, v interface{}) (interface{}, error
 	return new.client.Do(req, v)
 }
 
-// OktaClient creates a basic okta client connection
+func (c *ConfigEntry) OktaConfiguration(ctx context.Context) (*oktanew.Configuration, error) {
+	baseURL := defaultBaseURL
+	if c.Production != nil {
+		if !*c.Production {
+			baseURL = previewBaseURL
+		}
+	}
+	if c.BaseURL != "" {
+		baseURL = c.BaseURL
+	}
+
+	cfg, err := oktanew.NewConfiguration(oktanew.WithOrgUrl("https://"+c.Org+"."+baseURL), oktanew.WithToken(c.Token))
+	if err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
+
+// OktaClient returns an OktaShim, based on the presence of a token in the ConfigEntry.
 func (c *ConfigEntry) OktaClient(ctx context.Context) (oktaShim, error) {
 	baseURL := defaultBaseURL
 	if c.Production != nil {
@@ -344,13 +463,18 @@ func (c *ConfigEntry) OktaClient(ctx context.Context) (oktaShim, error) {
 	}
 
 	if c.Token != "" {
-		ctx, client, err := oktanew.NewClient(ctx,
+		cfg, err := oktanew.NewConfiguration(
 			oktanew.WithOrgUrl("https://"+c.Org+"."+baseURL),
 			oktanew.WithToken(c.Token))
 		if err != nil {
 			return nil, err
 		}
-		return &oktaShimNew{client, ctx}, nil
+		return &oktaShimNew{
+			cfg:    cfg,
+			client: oktanew.NewAPIClient(cfg),
+			ctx:    ctx,
+			cache:  gocache.New(gocache.DefaultExpiration, 1*time.Second),
+		}, nil
 	}
 	client, err := oktaold.NewClientWithDomain(cleanhttp.DefaultClient(), c.Org, baseURL, "")
 	if err != nil {

@@ -13,6 +13,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -38,8 +39,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/quotas"
 	"github.com/mitchellh/mapstructure"
-	"github.com/okta/okta-sdk-golang/v2/okta"
-	"github.com/okta/okta-sdk-golang/v2/okta/query"
+	"github.com/okta/okta-sdk-golang/v5/okta"
 	"github.com/patrickmn/go-cache"
 	otplib "github.com/pquerna/otp"
 	totplib "github.com/pquerna/otp/totp"
@@ -1990,7 +1990,7 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 		return err
 	}
 
-	ctx, client, err := okta.NewClient(ctx,
+	cfg, err := okta.NewConfiguration(
 		okta.WithToken(oktaConfig.APIToken),
 		okta.WithOrgUrl(orgURL.String()),
 		// Do not use cache or polling MFA will not refresh
@@ -1999,15 +1999,15 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 	if err != nil {
 		return fmt.Errorf("error creating client: %s", err)
 	}
+	client := okta.NewAPIClient(cfg)
 
 	filterField := "profile.login"
 	if oktaConfig.PrimaryEmail {
 		filterField = "profile.email"
 	}
 	filterQuery := fmt.Sprintf("%s eq %q", filterField, username)
-	filter := query.NewQueryParams(query.WithFilter(filterQuery))
 
-	users, _, err := client.User.ListUsers(ctx, filter)
+	users, _, err := client.UserAPI.ListUsers(client.GetConfig().Context).Filter(filterQuery).Execute()
 	if err != nil {
 		return err
 	}
@@ -2020,7 +2020,7 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 
 	user := users[0]
 
-	factors, _, err := client.UserFactor.ListFactors(ctx, user.Id)
+	factors, _, err := client.UserFactorAPI.ListFactors(ctx, user.GetId()).Execute()
 	if err != nil {
 		return err
 	}
@@ -2030,14 +2030,12 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 	}
 
 	var factorFound bool
-	var userFactor *okta.UserFactor
+	var userFactor *okta.UserFactorPush
 	for _, factor := range factors {
-		if factor.IsUserFactorInstance() {
-			userFactor = factor.(*okta.UserFactor)
-			if userFactor.FactorType == "push" {
-				factorFound = true
-				break
-			}
+		if factor.UserFactorPush != nil {
+			userFactor = factor.UserFactorPush
+			factorFound = true
+			break
 		}
 	}
 
@@ -2045,13 +2043,13 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 		return fmt.Errorf("no push-type MFA factor found for user")
 	}
 
-	result, _, err := client.UserFactor.VerifyFactor(ctx, user.Id, userFactor.Id, okta.VerifyFactorRequest{}, userFactor, nil)
+	result, _, err := client.UserFactorAPI.VerifyFactor(ctx, user.GetId(), userFactor.GetId()).Execute()
 	if err != nil {
 		return err
 	}
 
-	if result.FactorResult != "WAITING" {
-		return fmt.Errorf("expected WAITING status for push status, got %q", result.FactorResult)
+	if result.GetFactorResult() != "WAITING" {
+		return fmt.Errorf("expected WAITING status for push status, got %q", result.GetFactorResult())
 	}
 
 	// Parse links to get polling link
@@ -2070,27 +2068,33 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 		return err
 	}
 
+	// Okta doesn't return the transactionID as a parameter in the response, but it's encoded in the URL
+	// this approach comes from: https://github.com/okta/okta-sdk-golang/issues/300, but it's not ideal.
+	// It is, however, what the dotnet library by Okta themselves does.
+	txRx := regexp.MustCompile("^.*/transactions/(.*)$")
+	matches := txRx.FindStringSubmatch(url.Path)
+	if len(matches) != 2 {
+		return fmt.Errorf("couldn't determine transaction id from url")
+	}
+	transactionID := matches[1]
+
+	// poll verifyfactor until termination (e.g., the user responds to the push factor)
 	for {
-		// Okta provides an SDK method `GetFactorTransactionStatus` but does not provide the transaction id in
-		// the VerifyFactor respone. This code effectively reimplements that method.
-		rq := client.CloneRequestExecutor()
-		req, err := rq.WithAccept("application/json").WithContentType("application/json").NewRequest("GET", url.String(), nil)
-		if err != nil {
-			return err
-		}
-		var result *okta.VerifyUserFactorResponse
-		_, err = rq.Do(ctx, req, &result)
+		result, _, err := client.UserFactorAPI.GetFactorTransactionStatus(client.GetConfig().Context, user.GetId(), userFactor.GetId(), transactionID).Execute()
 		if err != nil {
 			return err
 		}
 
-		switch result.FactorResult {
-		case "WAITING":
-		case "SUCCESS":
+		// the transaction status returns an inner object set based on what the factor status is.
+		// the other ones are nil. This is (probably) because the structure of the returned JSON
+		// varies based on what the factor status is.
+		switch {
+		case result.UserFactorPushTransactionWaiting != nil:
+		case result.UserFactorPushTransaction != nil:
 			return nil
-		case "REJECTED":
+		case result.UserFactorPushTransactionRejected != nil:
 			return fmt.Errorf("push verification explicitly rejected")
-		case "TIMEOUT":
+		case result.UserFactorPushTransactionTimeout != nil:
 			return fmt.Errorf("push verification timed out")
 		default:
 			return fmt.Errorf("unknown status code")

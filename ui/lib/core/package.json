@@ -24,7 +24,6 @@
     "ember-svg-jar": "*",
     "ember-truth-helpers": "*",
     "escape-string-regexp": "*",
-    "@hashicorp/ember-flight-icons": "*",
     "@hashicorp/flight-icons": "*",
     "@hashicorp/design-system-components": "*",
     "codemirror": "*",

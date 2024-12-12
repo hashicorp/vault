@@ -5,6 +5,7 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+import { ldapBreadcrumbs } from 'ldap/utils/ldap-breadcrumbs';
 
 import type Store from '@ember-data/store';
 import type LdapRoleModel from 'vault/models/ldap/role';
@@ -13,7 +14,7 @@ import type Transition from '@ember/routing/transition';
 import type { Breadcrumb } from 'vault/vault/app-types';
 import type AdapterError from 'ember-data/adapter'; // eslint-disable-line ember/use-ember-data-rfc-395-imports
 
-export interface LdapStaticRoleCredentials {
+export interface StaticCredentials {
   dn: string;
   last_vault_rotation: string;
   password: string;
@@ -23,7 +24,7 @@ export interface LdapStaticRoleCredentials {
   username: string;
   type: string;
 }
-export interface LdapDynamicRoleCredentials {
+export interface DynamicCredentials {
   distinguished_names: Array<string>;
   password: string;
   username: string;
@@ -32,13 +33,13 @@ export interface LdapDynamicRoleCredentials {
   renewable: boolean;
   type: string;
 }
-interface LdapRoleCredentialsRouteModel {
-  credentials: undefined | LdapStaticRoleCredentials | LdapDynamicRoleCredentials;
+interface RouteModel {
+  credentials: undefined | StaticCredentials | DynamicCredentials;
   error: undefined | AdapterError;
 }
-interface LdapRoleCredentialsController extends Controller {
+interface RouteController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
-  model: LdapRoleCredentialsRouteModel;
+  model: RouteModel;
 }
 
 export default class LdapRoleCredentialsRoute extends Route {
@@ -53,19 +54,16 @@ export default class LdapRoleCredentialsRoute extends Route {
       return { error };
     }
   }
-  setupController(
-    controller: LdapRoleCredentialsController,
-    resolvedModel: LdapRoleCredentialsRouteModel,
-    transition: Transition
-  ) {
+  setupController(controller: RouteController, resolvedModel: RouteModel, transition: Transition) {
     super.setupController(controller, resolvedModel, transition);
 
     const role = this.modelFor('roles.role') as LdapRoleModel;
     controller.breadcrumbs = [
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: role.backend, route: 'overview' },
-      { label: 'roles', route: 'roles' },
-      { label: role.name, route: 'roles.role' },
-      { label: 'credentials' },
+      { label: 'Roles', route: 'roles' },
+      ...ldapBreadcrumbs(role.name, role.type, role.backend),
+      { label: 'Credentials' },
     ];
   }
 }

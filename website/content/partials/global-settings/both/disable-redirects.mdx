@@ -1,0 +1,20 @@
+<a id="global-disable-redirects" />
+
+**`[-disable-redirects | VAULT_DISABLE_REDIRECTS] (bool : false)`**
+
+Disable the default CLI redirect behavior so the CLI honors the first redirect
+response from the underlying API instead of following the full HTTP redirect
+chain.
+
+**Examples**:
+
+- CLI flag: `-disable-redirects`
+- Environment variable: `export VAULT_DISABLE_REDIRECTS=1`
+
+<Warning>
+
+  Disabling the default redirect behavior may cause commands that redirect
+  requests to primary cluster notes (like `vault operator raft snapshot`) to
+  misbehave.
+
+</Warning>

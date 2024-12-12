@@ -49,7 +49,7 @@ values.  Because there may be two seals of the same type, one must
 disambiguate the environment variables used.  To do this, in HA setups,
 append an underscore followed by the seal's configured name (matching its
 case) to any environment variable names.  For example, in the sample
-configuration below, the AWS acces skey could be provided as `ACCESS_KEY_aws_east`.  
+configuration below, the AWS access key could be provided as `ACCESS_KEY_aws_east`.
 Keep in mind that the seal name must be valid in an environment variable name to use it.
 
 Priority is mandatory if more than one seal is specified.  Priority tells Vault
@@ -156,6 +156,6 @@ Migrating back to a single seal may result in data loss if an operator does not
 use the HA seal feature. To migrate back to a single seal:
 
 1. Perform a [seal migration](/vault/docs/concepts/seal#seal-migration) as described.
-2. Monitor [`sys/sealwrap/rewrap`](/vault/docs/api-docs/system/sealwrap-rewrap) until the API returns `fully_wrapped=true`.
+2. Monitor [`sys/sealwrap/rewrap`](/vault/api-docs/system/sealwrap-rewrap) until the API returns `fully_wrapped=true`.
 3. Remove `enable_multiseal` from all Vault configuration files in the cluster.
 4. Restart Vault.

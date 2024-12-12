@@ -1,0 +1,251 @@
+---
+layout: docs
+page_title: Use Active Directory Federation Services for SAML
+description: >-
+  Use Active Directory Federation Services (AD FS) as a SAML provider for Vault.
+---
+
+# Use Active Directory Federation Services for SAML
+
+@include 'alerts/enterprise-and-hcp.mdx'
+
+Configure your Vault instance to work with Active Directory Federation Services
+(AD FS) and use AD FS accounts for SAML authentication.
+
+
+
+## Before you start
+
+- **You must have Vault Enterprise or HCP Vault v1.15.5+**.
+- **You must be running AD FS on Windows Server**.
+- **You must have a [SAML plugin](/vault/docs/auth/saml) enabled**.
+- **You must have a Vault admin token**. If you do not have a valid admin
+   token, you can generate a new token in the Vault GUI or using
+   [`vault token create`](/vault/docs/commands/token/create) with the Vault CLI.
+
+
+
+## Step 1: Enable the SAML authN method for Vault
+
+<Tabs>
+
+<Tab heading="Vault CLI" group="cli">
+
+1. Set the `VAULT_ADDR` environment variable to your Vault instance URL. For
+   example:
+
+   ```shell-session
+   $ export VAULT_ADDR="https://myvault.example.com:8200"
+   ```
+
+1. Set the `VAULT_TOKEN` environment variable with your admin token:
+
+   ```shell-session
+   $ export VAULT_TOKEN="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
+   ```
+
+1. Enable the SAML plugin. Use the `-namespace` flag to enable the plugin under
+   a specific namespace. For example:
+
+   ```shell-session
+   $ vault -namespace=ns_admin auth enable saml
+   ```
+
+</Tab>
+
+<Tab heading="Vault GUI" group="gui">
+
+@include 'gui-instructions/enable-authn-plugin.mdx'
+
+- Enable the SAML plugin:
+
+    1. Select the **SAML** token.
+    1. Set the mount path.
+    1. Click **Enable Method**.
+
+</Tab>
+
+</Tabs>
+
+
+
+## Step 2: Create a new relying party trust in AD
+
+1. Open your Windows Server UI.
+
+1. Go to the **Server Manager** screen.
+
+1. Click **Tools** and select **AD FS Management**.
+
+1. Right-click **Relying Party Trusts** and select **Add Relying Party Trust...**.
+
+1. Follow the prompts to create a new party trust with the following settings:
+
+    | Option                                                | Setting
+    | ----------------------------------------------------- | -------
+    | Claims aware                                          | checked
+    | Enter data about relying party manually               | checked
+    | Display name                                          | "Vault"
+    | Certificates                                          | None
+    | Enable support for the SAML 2.0 WebSSO protocol       | checked
+    | SAML callback URL                                     | Callback endpoint for your SAML plugin
+    | Relying party trust identifier                        | Any meaningful, unique string. For example "VaultIdentifier"
+    | Access control policy                                 | Any valid policy or  `Permit everyone`
+    | Configure claims issuance policy for this application | checked
+
+<Tip>
+
+  The callback endpoint for your SAML plugin is:
+
+  `https://${VAULT_ADDRESS}/v1/<NAMESPACE>/<MOUNT_PATH>/auth/<PLUGIN_NAME>/callback`
+  
+  For example, if you mounted the plugin under the `ns_admin` namespace on the
+  path `org/security`, the callback endpoint URL would be:
+
+  `https://${VAULT_ADDRESS}/v1/ns_admin/auth/org/security/saml/callback`
+
+</Tip>
+
+
+
+## Step 3: Configure the claim issuance policy in AD
+
+1. Open your Windows Server UI.
+
+1. Go to the **Server Manager** screen.
+
+1. Click **Tools** and select **AD FS Management**.
+
+1. Right-click your new **Relying Party Trust** entry and select
+   **Edit Claim Issuance Policy...**.
+
+1. Click **Add Rule...** and follow the prompts to create a new **Transform
+   Claim Rule** with the following settings:
+
+    | Option                          | Setting
+    | ------------------------------- | -------
+    | Send LDAP Attributes as Claims  | selected
+    | Rule name                       | Any meaningful string (e.g., "Vault SAML Claims")
+    | Attribute store                 | `Active Directory`.
+
+1. Complete the LDAP attribute array with the following settings:
+
+    | LDAP attribute                     | Outgoing claim type           |
+    |------------------------------------|-------------------------------|
+    | `E-Mail-Addresses`                 | `Name ID`                     |
+    | `E-Mail-Addresses`                 | `E-Mail Address`              |
+    | `Token-Groups - Unqualified Names` | `groups` or `Group`           |
+
+
+
+## Step 4: Update the SAML signature in AD
+
+1. Open a PowerShell terminal on your Windows server.
+
+1. Set the SAML signature for your relying party trust identifier to `false`:
+
+   ```powershell
+   Set-ADFSRelyingPartyTrust `
+    -TargetName "<RELYING_PARTY_TRUST_IDENTIFIER>" `
+    -SignedSamlRequestsRequired $false
+   ```
+
+   For example:
+
+  <CodeBlockConfig hideClipboard>
+
+   ```powershell
+   Set-ADFSRelyingPartyTrust `
+    -TargetName "MyVaultIdentifier" `
+    -SignedSamlRequestsRequired $false
+   ```
+  </CodeBlockConfig>
+
+
+## Step 5: Create a default AD FS role in Vault
+
+Use the Vault CLI to create a default role for users authenticating
+with AD FS where:
+
+- `SAML_PLUGIN_PATH` is the full path (`<NAMESPACE>/MOUNT_PATH/NAME`) to your
+  SAML plugin.
+- `VAULT_ROLE` is the name of your new AD FS role. For example, `adfs-default`.
+- `DOMAIN_LIST` is a comma separated list of target domains in Active Directory.
+  For example: `*@example.com,*@ext.example.com`.
+- `GROUP_ATTRIBUTES_REF` is:
+    - `groups` if your LDAP token group is `groups`
+    - `http://schemas.xmlsoap.org/claims/Group` if your LDAP token group is
+      `Group`
+- `AD_GROUP_LIST` is a comma separated list of Active Directory groups that
+  will authenticate with SAML. For example: `VaultAdmin,VaultUser`.
+
+```shell-session
+$ vault write <SAML_PLUGIN_PATH>/role/<VAULT_ROLE>  \
+    bound_subjects="<DOMAIN_LIST>"                  \
+    bound_subjects_type="glob"                      \
+    groups_attribute=<GROUP_ATTRIBUTES_REF>         \
+    bound_attributes=groups="<AD_GROUP_LIST>"       \
+    token_policies="default"                        \
+    ttl="1h"
+```
+
+For example:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault write auth/saml/role/adfs-default             \
+    bound_subjects="*@example.com,*@ext.example.com"  \
+    bound_subjects_type="glob"                        \
+    groups_attribute=groups                           \
+    bound_attributes=groups="VaultAdmin,VaultUser"    \
+    token_policies="default"                          \
+    ttl="1h"
+```
+
+</CodeBlockConfig>
+
+
+
+## Step 6: Configure the SAML plugin in Vault
+
+Use the Vault CLI to finish configuring the SAML plugin where:
+
+- `SAML_PLUGIN_PATH` is the full path to your SAML plugin:
+  `<NAMESPACE>/auth/<MOUNT_PATH>/<PLUGIN_NAME>`.
+- `VAULT_ROLE` is the name of your new AD FS role in Vault.
+- `TRUST_IDENTIFIER` is the ID of your new relying party trust in AD FS.
+- `SAML_CALLBACK_URL` is the callback endpoint for your SAML plugin:
+  `http://${VAULT_ADDR}/<NAMESPACE>/auth/<MOUNT_PATH>/<PLUGIN_NAME>/callback`.
+- `ADFS_URL` is the discovery URL for your AD FS instance.
+- `METADATA_FILE_PATH` is the path on your AD FS instance to the federation
+  metadata file.
+
+```shell-session
+$ vault write <SAML_PLUGIN_PATH>/config \
+    default_role="<VAULT_ROLE>"         \
+    entity_id="<TRUST_IDENTIFIER>"      \
+    acs_urls="<SAML_CALLBACK_URL>       \
+    idp_metadata_url="<AD FS_URL>/<METADATA_FILE_PATH>"
+```
+
+For example:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault write ns_admin/auth/org/security/saml/config                    \
+  default_role="adfs-default"                                           \
+  entity_id="MyVaultIdentifier"                                         \
+  acs_urls="${VAULT_ADDR}/v1/ns_admin/auth/org/security/saml/callback"  \
+  idp_metadata_url="https://adfs.example.com/metadata/2007-06/federationmetadata.xml"
+```
+
+</CodeBlockConfig>
+
+
+
+## Next steps
+
+- [Link your Active Directory groups to Vault](/vault/docs/auth/saml/link-vault-group-to-ad)
+- [Troubleshoot your SAML + AD FS configuration](/vault/docs/auth/saml/troubleshoot-adfs)

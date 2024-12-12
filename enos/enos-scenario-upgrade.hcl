@@ -29,7 +29,6 @@ scenario "upgrade" {
     consul_version  = global.consul_versions
     distro          = global.distros
     edition         = global.editions
-    initial_version = global.upgrade_initial_versions_ce
     ip_version      = global.ip_versions
     seal            = global.seals
 
@@ -37,19 +36,6 @@ scenario "upgrade" {
     exclude {
       artifact_source = ["local"]
       artifact_type   = ["package"]
-    }
-
-    // Don't upgrade from super-ancient versions in CI because there are known reliability issues
-    // in those versions that have already been fixed.
-    exclude {
-      initial_version = [for e in matrix.initial_version : e if semverconstraint(e, "<1.11.0-0")]
-    }
-
-    // FIPS 140-2 editions were not supported until 1.11.x, even though there are 1.10.x binaries
-    // published.
-    exclude {
-      edition         = ["ent.fips1402", "ent.hsm.fips1402"]
-      initial_version = [for e in matrix.initial_version : e if semverconstraint(e, "<1.11.0-0")]
     }
 
     // There are no published versions of these artifacts yet. We'll update this to exclude older
@@ -314,7 +300,7 @@ scenario "upgrade" {
       packages             = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       release = {
         edition = matrix.edition
-        version = matrix.initial_version
+        version = var.vault_upgrade_initial_version
       }
       seal_attributes = step.create_seal_key.attributes
       seal_type       = matrix.seal
@@ -660,6 +646,37 @@ scenario "upgrade" {
       hosts             = step.get_updated_vault_cluster_ips.follower_hosts
       vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+    }
+  }
+
+  step "verify_log_secrets" {
+    // Only verify log secrets if the audit devices are turned on and we've enabled the check (as
+    // it requires a radar license). Some older versions have known issues so we'll skip this step
+    // in the event that we're upgrading from them, see VAULT-30557 for more information.
+    skip_step = !var.vault_enable_audit_devices || !var.verify_log_secrets || semverconstraint(var.vault_upgrade_initial_version, "=1.17.3 || =1.17.4 || =1.16.7 || =1.16.8")
+
+    description = global.description.verify_log_secrets
+    module      = module.verify_log_secrets
+    depends_on = [
+      step.verify_secrets_engines_read,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_audit_log_secrets,
+      quality.vault_journal_secrets,
+      quality.vault_radar_index_create,
+      quality.vault_radar_scan_file,
+    ]
+
+    variables {
+      audit_log_file_path = step.create_vault_cluster.audit_device_file_path
+      leader_host         = step.get_updated_vault_cluster_ips.leader_host
+      vault_addr          = step.create_vault_cluster.api_addr_localhost
+      vault_root_token    = step.create_vault_cluster.root_token
     }
   }
 

@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/okta: update to okta sdk v5 from v2. Transitively updates go-jose dependency to >=3.0.3 to resolve GO-2024-2631. See https://github.com/okta/okta-sdk-golang/blob/master/MIGRATING.md for details on changes.
+```
