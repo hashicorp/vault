@@ -4,10 +4,8 @@
 ~}}
 
 <form {{on "submit" (perform this.submitForm)}} aria-label="configure azure credentials" data-test-configure-form>
-
   <NamespaceReminder @mode="save" @noun="configuration" />
   <MessageError @errorMessage={{this.errorMessage}} />
-
   <div class="box is-fullwidth is-sideless">
     {{! accessType can be "azure" or "wif" - since WIF is an enterprise only feature we default to "azure" for community users and only display those related form fields. }}
     {{#if this.version.isEnterprise}}
@@ -33,7 +31,6 @@
             @disabled={{this.disableAccessType}}
           />
           <label for="access-type-azure">Azure account credentials</label>
-
           <RadioButton
             id="access-type-wif"
             name="wif"
@@ -64,7 +61,6 @@
       />
     {{/if}}
   </div>
-
   <Hds::ButtonSet>
     <Hds::Button
       @text="Save"
@@ -85,7 +81,6 @@
   {{#if this.invalidFormAlert}}
     <AlertInline data-test-invalid-form-alert class="has-top-padding-s" @type="danger" @message={{this.invalidFormAlert}} />
   {{/if}}
-
 </form>
 
 {{#if this.saveIssuerWarning}}

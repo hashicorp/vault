@@ -21,7 +21,7 @@ import type FlashMessageService from 'vault/services/flash-messages';
 /**
  * @module SecretEngineConfigureAzure component is used to configure the Azure secret engine
  * For enterprise users, they will see an additional option to config WIF attributes in place of Azure account attributes.
- * If the user is configuring WIF attributes they will also have the option to update the global issuer config, which is a separate —global— endpoint named identity/oidc/config.
+ * If the user is configuring WIF attributes they will also have the option to update the global issuer config, which is a separate endpoint named identity/oidc/config.
  * @example
  * <SecretEngine::ConfigureAzure
     @model={{this.model.azure-config}}
@@ -55,7 +55,6 @@ export default class ConfigureAzureComponent extends Component<Args> {
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
-
     if (this.version.isEnterprise && !this.args.model.isNew) return;
     const { isWifPluginConfigured, isAzureAccountConfigured } = this.args.model;
     this.accessType = isWifPluginConfigured ? 'wif' : 'azure';

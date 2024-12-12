@@ -58,19 +58,17 @@ export default class SecretsBackendConfigurationEdit extends Route {
       // ex: adapterPath = ssh/ca-config, convert to: ssh-ca-config so that you can pass to component @model={{this.model.ssh-ca-config}}
       const standardizedKey = adapterPath.replace(/\//g, '-');
       try {
-        const response = await this.store.queryRecord(adapterPath, {
+        const configModel = await this.store.queryRecord(adapterPath, {
           backend,
           type,
         });
-        if (type === 'azure' && !this.isAzureConfigSet(response)) {
-          // Azure will return a 200 if the config has not been set (grr)
-          // Use isAzureConfigSet to check every possible field for a value and if none are set, create a new record.
+        if (configModel.isConfigured) {
           model[standardizedKey] = await this.store.createRecord(adapterPath, {
             backend,
             type,
           });
         } else {
-          model[standardizedKey] = response;
+          model[standardizedKey] = configModel;
         }
       } catch (e: AdapterError) {
         // For most models if the adapter returns a 404, we want to create a new record.
@@ -101,16 +99,6 @@ export default class SecretsBackendConfigurationEdit extends Route {
       }
     }
     return model;
-  }
-
-  isAzureConfigSet(response: Record<string, unknown>) {
-    let isConfigSet = false;
-    for (const property of POSSIBLE_AZURE_CONFIG_PROPS) {
-      if (response[property]) {
-        isConfigSet = true;
-      }
-    }
-    return isConfigSet;
   }
 
   @action
