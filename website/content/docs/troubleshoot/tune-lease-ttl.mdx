@@ -1,0 +1,198 @@
+---
+layout: docs
+page_title: Tune the lease TTL
+description: >-
+  Understand the behavior of time-to-live set on leases.
+---
+
+# Tune the lease time-to-live (TTL)
+
+The benefit of using Vault's dynamic secrets engines and auth methods is the
+ability to control how long the Vault-managed credentials (leases) remain valid.
+Often times, you generate short-lived credentials or tokens to reduce the risk
+of unauthorized attacks caused by leaked credentials or tokens. If you do not
+explicitly specify the time-to-live (TTL), Vault generates leases with TTL of 32
+days by default.
+
+For example, you enabled AppRole auth method at `approle`, and create a role
+named `read-only` with max lease TTL of **120 days**.
+
+```shell-session
+$ vault write auth/approle/role/read-only token_policies="read-only" \
+    token_ttl=90d token_max_ttl=120d
+```
+
+The command returns a warning about the TTL exceeding the mount's max TTL value.
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
+WARNING! The following warnings were returned from Vault:
+
+  * token_max_ttl is greater than the backend mount's maximum TTL value;
+  issued tokens' max TTL value will be truncated
+```
+
+</CodeBlockConfig>
+
+
+Therefore, it will return a client token with TTL of 768 hours (32 days) instead
+of 120 days.
+
+<CodeBlockConfig highlight="12" hideClipboard>
+
+```shell-session
+$ vault write auth/approle/login role_id=<ROLE_ID> secret_id=<SECRET_ID>
+
+WARNING! The following warnings were returned from Vault:
+
+  * TTL of "2880h" exceeded the effective max_ttl of "768h"; TTL value is
+  capped accordingly
+
+Key                     Value
+---                     -----
+token                   hvs.CAESIJeVezY3UObHXTvzpI722q0MmaARB1692fT-MmdzcryvGh4KHGh2cy43czViYXVZS3FnSzltWmdVZ3Q0MmFTdkc
+token_accessor          wXTOvz5xxBi2vvUpTBhemUXr
+token_duration          768h
+token_renewable         true
+token_policies          ["default" "read-only"]
+identity_policies       []
+policies                ["default" "read-only"]
+token_meta_role_name    read-only
+```
+
+</CodeBlockConfig>
+
+## Max lease TTL on an auth mount
+
+You cannot set the TTL for a role to go beyond the max lease TTL set on the
+AppRole auth mount (`approle` in this example). The default lease TTL and max
+lease TTL are 32 days (768 hours).
+
+```shell-session
+$ vault read sys/auth/approle/tune
+```
+
+**Output:**
+
+<CodeBlockConfig highlight="3,6" hideClipboard>
+
+```plaintext
+Key                  Value
+---                  -----
+default_lease_ttl    768h
+description          n/a
+force_no_cache       false
+max_lease_ttl        768h
+token_type           default-service
+```
+
+</CodeBlockConfig>
+
+If the desired max lease TTL is 120 days (2880 hours), update the max lease TTL
+on the mount.
+
+```shell-session
+$ vault auth tune -max-lease-ttl=120d approle
+```
+
+The following command lists all available parameters that you can tune.
+
+```shell-session
+$ vault auth tune -h
+```
+
+Now, the AppRole will generate a lease with token duration of 120 days (2880 hours).
+
+<CodeBlockConfig highlight="7" hideClipboard>
+
+```shell-session
+$ vault write auth/approle/login role_id=<ROLE_ID> secret_id=<SECRET_ID>
+
+Key                     Value
+---                     -----
+token                   hvs.CAESIOzTpLX4naKw-epzhcb3DneZ9ZuRTx4tKh5mTT1CajLQGh4KHGh2cy5TUFFhY3QzVzdmSTFwQUduOWlrMVRWaUE
+token_accessor          blc2MGA4EmmqEROzqlotFbqr
+token_duration          2880h
+token_renewable         true
+token_policies          ["default" "jenkins"]
+identity_policies       []
+policies                ["default" "jenkins"]
+token_meta_role_name    jenkins
+```
+
+</CodeBlockConfig>
+
+
+## Max lease TTL on a secrets mount
+
+Similar to the AppRole auth method example, you can tune the max lease TTL on
+dynamic secrets.
+
+For example, you enabled database secrets engine at `mongodb` and create a role
+named `tester` with max lease TTL of 120 days (2880 hours). When you request a
+database credential for the `tester` role, it returns a warning, and its lease
+duration is 32 days (768 hours) instead of 120 days.
+
+<CodeBlockConfig hideClipboard highlight="11">
+
+```shell-session
+$ vault read mongodb/creds/tester
+
+WARNING! The following warnings were returned from Vault:
+
+  * TTL of "2880h" exceeded the effective max_ttl of "768h"; TTL value is
+  capped accordingly
+
+Key                Value
+---                -----
+lease_id           mongodb/creds/tester/fVPt15506k3UW9n4pq0kIpBH
+lease_duration     768h
+lease_renewable    true
+password           Eskkx6yRhAN4--H9WL7B
+username           v-token-tester-6BtY903qOZBpzYa4yQs8-1724715513
+```
+
+</CodeBlockConfig>
+
+To set the desired TTL on the role, tune the max lease TTL on the `mongodb`
+mount.
+
+```shell-session
+$ vault secrets tune -max-lease-ttl=120d mongodb
+```
+
+Verify the configured max lease TTL available on the mount.
+
+<CodeBlockConfig hideClipboard highlight="8">
+
+```shell-session
+$ vault read sys/mounts/mongodb/tune
+
+Key                  Value
+---                  -----
+default_lease_ttl    768h
+description          n/a
+force_no_cache       false
+max_lease_ttl        2880h
+```
+
+</CodeBlockConfig>
+
+The following command lists all available parameters that you can tune.
+
+```shell-session
+$ vault secrets tune -h
+```
+
+When you introduce Vault into your existing system, the existing applications
+may not be able to handle short-lived leases. You can tune the default TTLs
+on each mount.
+
+On the similar note, if the system default of 32 days is too long, you can tune
+the default TTL to be shorter to comply with your organization's policy.
+
+## API
+
+- [Tune auth method](/vault/api-docs/system/auth#tune-auth-method)
+- [Tune mount configuration](/vault/api-docs/system/mounts#tune-mount-configuration)
