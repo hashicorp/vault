@@ -24,19 +24,19 @@ const validations = {
 export default class Config extends Model {
   @attr('string', {
     editType: 'radio',
-    label: 'Storage scope',
+    label: 'Storage persistence',
     subText:
       "Defines the behavior of the storage used for cubbyhole's secrets. Per default, cubbyhole data is destroyed after the token's expiration. If set persistent, secrets are persisted and are linked to user's entity",
     possibleValues: lifetimeValues,
     defaultValue: 'per-token',
   })
-  scope;
+  lfietime;
   get attrs() {
-    const keys = ['scope'];
+    const keys = ['lifetime'];
     return expandAttributeMeta(this, keys);
   }
   get formFields() {
-    const keys = ['scope'];
+    const keys = ['lifetime'];
     return expandAttributeMeta(this, keys);
   }
 }

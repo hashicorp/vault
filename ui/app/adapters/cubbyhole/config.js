@@ -10,7 +10,7 @@ export default class CubbyholeConfig extends ApplicationAdapter {
   namespace = 'v1';
 
   queryRecord() {
-    return this.ajax(`${this.buildURL()}/cubbyhole/config/scope`, 'GET').then((resp) => {
+    return this.ajax(`${this.buildURL()}/cubbyhole/config/lifetime`, 'GET').then((resp) => {
       return {
         ...resp,
         id: 'cubbyhole',
@@ -21,7 +21,7 @@ export default class CubbyholeConfig extends ApplicationAdapter {
   updateRecord(store, type, snapshot) {
     const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot);
-    return this.ajax(`${this.buildURL()}/cubbyhole/config/scope`, 'POST', { data }).then((resp) => {
+    return this.ajax(`${this.buildURL()}/cubbyhole/config/lifetime`, 'POST', { data }).then((resp) => {
       // ember data requires an id on the response
       return {
         ...resp,
