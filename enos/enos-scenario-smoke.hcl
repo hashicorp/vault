@@ -572,7 +572,7 @@ scenario "smoke" {
     }
   }
   step "start_vault_new_node" {
-    skip_step = semverconstraint(var.vault_upgrade_initial_version, "<1.19.0-0") || matrix.backend != "raft"
+    skip_step = semverconstraint(var.vault_upgrade_initial_version, "<1.19.0") || matrix.backend != "raft"
     module = module.vault_cluster
     depends_on = [
       step.build_vault,
@@ -609,7 +609,7 @@ scenario "smoke" {
   }
  
   step "remove_raft_node" {
-    skip_step = semverconstraint(var.vault_upgrade_initial_version, "<1.19.0-0") || matrix.backend != "raft"
+    skip_step = semverconstraint(var.vault_upgrade_initial_version, "<1.19.0") || matrix.backend != "raft"
     module = module.vault_raft_remove_peer
     depends_on = [step.start_vault_new_node]
     
@@ -634,10 +634,11 @@ scenario "smoke" {
   }
   
   step "verify_removed" {
-    skip_step = semverconstraint(var.vault_upgrade_initial_version, "<1.19.0-0") || matrix.backend != "raft"
+    skip_step = semverconstraint(var.vault_upgrade_initial_version, "<1.19.0") || matrix.backend != "raft"
     description = <<-EOF
       Verify that the removed nodes are marked as such
     EOF
+    vault_install_dir       = var.vault_install_dir
     module      = module.vault_verify_raft_removed
     depends_on = [
       step.create_vault_cluster_targets,
