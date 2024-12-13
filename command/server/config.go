@@ -1155,6 +1155,12 @@ func parseServiceRegistration(result *Config, list *ast.ObjectList, name string)
 		return multierror.Prefix(err, fmt.Sprintf("%s.%s:", name, key))
 	}
 
+	if key == "consul" {
+		if addr, ok := m["address"]; ok {
+			m["address"] = configutil.NormalizeAddr(addr)
+		}
+	}
+
 	result.ServiceRegistration = &ServiceRegistration{
 		Type:   strings.ToLower(key),
 		Config: m,

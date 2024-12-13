@@ -144,7 +144,8 @@ func testLoadConfigFile_topLevel(t *testing.T, entropy *configutil.Entropy) {
 		ServiceRegistration: &ServiceRegistration{
 			Type: "consul",
 			Config: map[string]string{
-				"foo": "bar",
+				"foo":     "bar",
+				"address": "https://[2001:db8::1]:8500",
 			},
 		},
 
