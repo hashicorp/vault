@@ -14,6 +14,7 @@ fail() {
 [[ -z "$VAULT_INSTALL_DIR" ]] && fail "VAULT_INSTALL_DIR env variable has not been set"
 [[ -z "$VAULT_TOKEN" ]] && fail "VAULT_TOKEN env variable has not been set"
 [[ -z "$COMMON_NAME" ]] && fail "COMMON_NAME env variable has not been set"
+[[ -z "$ISSUER_NAME" ]] && fail "ISSUER_NAME env variable has not been set"
 [[ -z "$TTL" ]] && fail "TTL env variable has not been set"
 [[ -z "$TMP_TEST_RESULTS" ]] && fail "TMP_TEST_RESULTS env variable has not been set"
 
@@ -33,7 +34,7 @@ mkdir "${TMP_TEST_RESULTS}"
 "$binpath" write "${MOUNT}/config/urls" issuing_certificates="${VAULT_ADDR}/v1/pki/ca" crl_distribution_points="${VAULT_ADDR}/v1/pki/crl"
 
 # Generating CA Certificate
-"$binpath" write "${MOUNT}/root/generate/internal" common_name="${COMMON_NAME}.com" ttl="${TTL}" -format=json | jq -r '.data.certificate' > "${TMP_TEST_RESULTS}/${CA_NAME}"
+"$binpath" write -format=json "${MOUNT}/root/generate/internal" common_name="${COMMON_NAME}.com" issuer_name="${ISSUER_NAME}" ttl="${TTL}" | jq -r '.data.issuing_ca' > "${TMP_TEST_RESULTS}/${CA_NAME}"
 # Creating a role
 "$binpath" write "${MOUNT}/roles/${ROLE_NAME}" allowed_domains="${COMMON_NAME}.com" allow_subdomains=true max_ttl="${TMP_TTL}"
 # Issuing Signed Certificate
@@ -41,11 +42,12 @@ mkdir "${TMP_TEST_RESULTS}"
 
 # ------ Generate and sign intermediate ------
 INTERMEDIATE_COMMON_NAME="intermediate-${COMMON_NAME}"
+INTERMEDIATE_ISSUER_NAME="intermediate-${ISSUER_NAME}"
 INTERMEDIATE_CA_NAME="${MOUNT}-${INTERMEDIATE_COMMON_NAME}.pem"
 INTERMEDIATE_SIGNED_NAME="${MOUNT}-${INTERMEDIATE_COMMON_NAME}-signed.pem"
 
-# Generate Intermediate CA
-"$binpath" write "${MOUNT}/intermediate/generate/internal" common_name="${INTERMEDIATE_COMMON_NAME}.com" ttl="${TTL}" | jq -r '.data.csr' > "${TMP_TEST_RESULTS}/${INTERMEDIATE_CA_NAME}"
+# Generate Intermediate CSR
+"$binpath" write "${MOUNT}/intermediate/generate/internal" common_name="${INTERMEDIATE_COMMON_NAME}.com" issuer_name="${INTERMEDIATE_ISSUER_NAME}" ttl="${TTL}" | jq -r '.data.csr' > "${TMP_TEST_RESULTS}/${INTERMEDIATE_CA_NAME}"
 # Sign Intermediate Certificate
 "$binpath" write "${MOUNT}/root/sign-intermediate" csr="@${TMP_TEST_RESULTS}/${INTERMEDIATE_CA_NAME}" format=pem_bundle ttl="${TMP_TTL}" | jq -r '.data.certificate' > "${TMP_TEST_RESULTS}/${INTERMEDIATE_SIGNED_NAME}"
 # Import Signed Intermediate Certificate into Vault
