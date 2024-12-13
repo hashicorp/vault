@@ -3,7 +3,7 @@
 
 locals {
   // Variables
-  pki_mount                 = "pki_secret" # secret
+  pki_mount                 = "pki" # secret
   pki_issuer_name           = "issuer"
   pki_common_name           = "common"
   pki_default_ttl           = "72h"
@@ -29,7 +29,7 @@ output "pki" {
 # Enable pki secrets engine
 resource "enos_remote_exec" "secrets_enable_pki_secret" {
   environment = {
-    ENGINE            = "pki"
+    ENGINE            = local.pki_mount
     MOUNT             = local.pki_mount
     VAULT_ADDR        = var.vault_addr
     VAULT_TOKEN       = var.vault_root_token
@@ -56,6 +56,7 @@ resource "enos_remote_exec" "pki_issue_certificates" {
     VAULT_INSTALL_DIR = var.vault_install_dir
     VAULT_TOKEN       = var.vault_root_token
     COMMON_NAME       = local.pki_common_name
+    ISSUER_NAME       = local.pki_issuer_name
     TTL               = local.pki_default_ttl
     TMP_TEST_RESULTS  = local.tmp_test_results
   }

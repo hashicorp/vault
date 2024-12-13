@@ -14,6 +14,7 @@ fail() {
 [[ -z "$VAULT_INSTALL_DIR" ]] && fail "VAULT_INSTALL_DIR env variable has not been set"
 [[ -z "$VAULT_TOKEN" ]] && fail "VAULT_TOKEN env variable has not been set"
 [[ -z "$COMMON_NAME" ]] && fail "COMMON_NAME env variable has not been set"
+[[ -z "$ISSUER_NAME" ]] && fail "ISSUER_NAME env variable has not been set"
 [[ -z "$TTL" ]] && fail "TTL env variable has not been set"
 [[ -z "$TMP_TEST_RESULTS" ]] && fail "TMP_TEST_RESULTS env variable has not been set"
 
@@ -21,10 +22,20 @@ binpath=${VAULT_INSTALL_DIR}/vault
 test -x "$binpath" || fail "unable to locate vault binary at $binpath" || fail "The certificate appears to be improperly configured or contains errors"
 export VAULT_FORMAT=json
 
-# Getting Certificates
-VAULT_CERTS=$("$binpath" list -format=json "${MOUNT}/certs" | jq -r '.[]')
+# Verifying List Roles
+ROLE=$("$binpath" list -format=json "${MOUNT}/roles" | jq -r '.[]')
+[[ -z "$ROLE" ]] && fail "No roles created!"
+
+# Verifying List Issuer
+ISSUER=$("$binpath" list -format=json "${MOUNT}/issuers" | jq -r '.[]')
+[[ -z "$ISSUER" ]] && fail "No issuers created!"
+
+# Verifying Root CA Certificate
+ROOT_CA_CERT=$("$binpath" read -format=json pki/cert/ca | jq -r '.data.certificate')
+[[ -z "$ROOT_CA_CERT" ]] && fail "No root ca certificate generated"
 
 # Verify List Certificate
+VAULT_CERTS=$("$binpath" list -format=json "${MOUNT}/certs" | jq -r '.[]')
 [[ -z "$VAULT_CERTS" ]] && fail "VAULT_CERTS should include vault certificates"
 
 # Verifying Certificates
