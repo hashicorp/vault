@@ -17,23 +17,23 @@ test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
 getSysHealth() {
   curl -XGET --header "X-Vault-Token: $VAULT_TOKEN" \
-  "$VAULT_ADDR/v1/sys/health" | jq '.removed_from_cluster'
+    "$VAULT_ADDR/v1/sys/health" | jq '.removed_from_cluster'
 }
 
 getStatus() {
-  $binpath --format=json status | jq '.data.removed_from_cluster'
+  $binpath status --format=json | jq '.removed_from_cluster'
 }
 
 expectRemoved() {
   local status
-  status=getStatus
+  status=$(getStatus)
   if [[ "$status" != "true" ]]; then
     echo "unexpected status $status"
     return 1
   fi
   
   local health
-  health=getSysHealth
+  health=$(getSysHealth)
   if [[ "$health" != "true" ]]; then
     echo "unexpected health $health"
   fi 
