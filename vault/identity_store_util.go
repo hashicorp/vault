@@ -39,6 +39,12 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 		return nil
 	}
 
+	// Resolve all conflicts by logging a warning and returning
+	// errDuplicateIdentityName. The error will flip the identityStore into
+	// case-sensitive mode by switching the underlying schema to one with a
+	// relaxed lowerCase constraint and reload all artifacts into MemDB.
+	c.identityStore.conflictResolver = &identity.ErrorResolver{c.identityStore.logger}
+
 	loadFunc := func(context.Context) error {
 		if err := c.identityStore.loadEntities(ctx); err != nil {
 			return err
@@ -62,7 +68,7 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 	case err == nil:
 		// If it succeeds, all is well
 		return nil
-	case !errwrap.Contains(err, errDuplicateIdentityName.Error()):
+	case !errwrap.Contains(err, identity.ErrDuplicateName.Error()):
 		return err
 	}
 
@@ -137,15 +143,12 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 			nsCtx := namespace.ContextWithNamespace(ctx, ns)
 
 			// Ensure that there are no groups with duplicate names
-			groupByName, err := i.MemDBGroupByName(nsCtx, group.Name, false)
+			groupByName, err := i.MemDBGroupByName(nsCtx, group.Name, true)
 			if err != nil {
 				return err
 			}
-			if groupByName != nil {
-				i.logger.Warn(errDuplicateIdentityName.Error(), "group_name", group.Name, "conflicting_group_name", groupByName.Name, "action", "merge the contents of duplicated groups into one and delete the other")
-				if !i.disableLowerCasedNames {
-					return errDuplicateIdentityName
-				}
+			if err := i.conflictResolver.ResolveGroups(ctx, groupByName, group); err != nil && !i.disableLowerCasedNames {
+				return err
 			}
 
 			if i.logger.IsDebug() {
@@ -468,11 +471,8 @@ LOOP:
 				if err != nil {
 					return nil
 				}
-				if entityByName != nil {
-					i.logger.Warn(errDuplicateIdentityName.Error(), "entity_name", entity.Name, "conflicting_entity_name", entityByName.Name, "action", "merge the duplicate entities into one")
-					if !i.disableLowerCasedNames {
-						return errDuplicateIdentityName
-					}
+				if err := i.conflictResolver.ResolveEntities(ctx, entityByName, entity); err != nil && !i.disableLowerCasedNames {
+					return err
 				}
 
 				mountAccessors := getAccessorsOnDuplicateAliases(entity.Aliases)
@@ -622,7 +622,15 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 			fallthrough
 
 		default:
-			i.logger.Warn("alias is already tied to a different entity; these entities are being merged", "alias_id", alias.ID, "other_entity_id", aliasByFactors.CanonicalID, "entity_aliases", entity.Aliases, "alias_by_factors", aliasByFactors)
+			// Though this is technically a conflict that should be resolved by the
+			// ConflictResolver implementation, the behavior here is a bit nuanced.
+			// Rather than introduce a behavior change, handle this case directly as
+			// before by merging.
+			i.logger.Warn("alias is already tied to a different entity; these entities are being merged",
+				"alias_id", alias.ID,
+				"other_entity_id", aliasByFactors.CanonicalID,
+				"entity_aliases", entity.Aliases,
+				"alias_by_factors", aliasByFactors)
 
 			respErr, intErr := i.mergeEntityAsPartOfUpsert(ctx, txn, entity, aliasByFactors.CanonicalID, persist)
 			switch {
@@ -638,9 +646,8 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 		}
 
 		if strutil.StrListContains(aliasFactors, i.sanitizeName(alias.Name)+alias.MountAccessor) {
-			i.logger.Warn(errDuplicateIdentityName.Error(), "alias_name", alias.Name, "mount_accessor", alias.MountAccessor, "local", alias.Local, "entity_name", entity.Name, "action", "delete one of the duplicate aliases")
-			if !i.disableLowerCasedNames {
-				return errDuplicateIdentityName
+			if err := i.conflictResolver.ResolveAliases(ctx, entity, aliasByFactors, alias); err != nil && !i.disableLowerCasedNames {
+				return err
 			}
 		}
 
