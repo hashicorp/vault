@@ -9,8 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/hashicorp/vault/internalshared/configutil"
 )
 
 func TestLoadConfigFile(t *testing.T) {
@@ -63,6 +64,10 @@ func TestParseSeals(t *testing.T) {
 
 func TestParseStorage(t *testing.T) {
 	testParseStorageTemplate(t)
+}
+
+func TestParseStorageURLConformance(t *testing.T) {
+	testParseStorageURLConformance(t)
 }
 
 // TestConfigWithAdministrativeNamespace tests that .hcl and .json configurations are correctly parsed when the administrative_namespace_path is present.

@@ -11,9 +11,12 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/mitchellh/mapstructure"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
@@ -25,7 +28,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/testcluster"
-	"github.com/mitchellh/mapstructure"
 )
 
 const (
@@ -934,33 +936,39 @@ func ParseStorage(result *Config, list *ast.ObjectList, name string) error {
 	}
 
 	m := make(map[string]string)
-	for key, val := range config {
+	for k, val := range config {
 		valStr, ok := val.(string)
 		if ok {
-			m[key] = valStr
+			var err error
+			m[k], err = normalizeStorageConfigAddresses(key, k, valStr)
+			if err != nil {
+				return err
+			}
 			continue
 		}
+		// TODO(ryancragun): We don't currently normalize nested configuration here
+		// that we might have otherwise, e.g.: raft's leader_api_addr.
 		valBytes, err := json.Marshal(val)
 		if err != nil {
 			return err
 		}
-		m[key] = string(valBytes)
+		m[k] = string(valBytes)
 	}
 
 	// Pull out the redirect address since it's common to all backends
 	var redirectAddr string
 	if v, ok := m["redirect_addr"]; ok {
-		redirectAddr = v
+		redirectAddr = configutil.NormalizeAddr(v)
 		delete(m, "redirect_addr")
 	} else if v, ok := m["advertise_addr"]; ok {
-		redirectAddr = v
+		redirectAddr = configutil.NormalizeAddr(v)
 		delete(m, "advertise_addr")
 	}
 
 	// Pull out the cluster address since it's common to all backends
 	var clusterAddr string
 	if v, ok := m["cluster_addr"]; ok {
-		clusterAddr = v
+		clusterAddr = configutil.NormalizeAddr(v)
 		delete(m, "cluster_addr")
 	}
 
@@ -997,6 +1005,51 @@ func ParseStorage(result *Config, list *ast.ObjectList, name string) error {
 	return nil
 }
 
+// storageAddressKeys is a map to physical storage configuration keys that might
+// contain URLs, IP addresses, or IP:port style addresses. All physical storage
+// types must have an entry in this map, otherwise our normalization check will
+// fail when parsing the storage entry config.
+var storageAddressKeys = map[string][]string{
+	"aerospike":    {"hostname"},
+	"alicloudoss":  {"endpoint"},
+	"azure":        {"arm_endpoint"},
+	"cassandra":    {"hosts"},
+	"cockroachdb":  {"connection_url"},
+	"consul":       {"address"},
+	"couchdb":      {"endpoint"},
+	"dynamodb":     {"endpoint"},
+	"etcd":         {"address", "discovery_srv"},
+	"filesystem":   {},
+	"foundationdb": {},
+	"gcs":          {},
+	"inmem":        {},
+	"manta":        {"url"},
+	"mssql":        {"server"},
+	"mysql":        {"address"},
+	"oci":          {},
+	"postgresql":   {"connection_url"},
+	"raft":         {},
+	"s3":           {"endpoint"},
+	"spanner":      {},
+	"swift":        {"auth_url", "storage_url"},
+	"zookeeper":    {"address"},
+}
+
+// normalizeStorageConfigAddresses takes a storage name, config key, and config
+// value and will normalize any URLs, IP addresses, or IP:port style addresses.
+func normalizeStorageConfigAddresses(storage string, key string, value string) (string, error) {
+	keys, ok := storageAddressKeys[storage]
+	if !ok {
+		return "", fmt.Errorf("unknown storage type %s", storage)
+	}
+
+	if slices.Contains(keys, key) {
+		return configutil.NormalizeAddr(value), nil
+	}
+
+	return value, nil
+}
+
 func parseHAStorage(result *Config, list *ast.ObjectList, name string) error {
 	if len(list.Items) > 1 {
 		return fmt.Errorf("only one %q block is permitted", name)
@@ -1016,33 +1069,39 @@ func parseHAStorage(result *Config, list *ast.ObjectList, name string) error {
 	}
 
 	m := make(map[string]string)
-	for key, val := range config {
+	for k, val := range config {
 		valStr, ok := val.(string)
 		if ok {
-			m[key] = valStr
+			var err error
+			m[k], err = normalizeStorageConfigAddresses(key, k, valStr)
+			if err != nil {
+				return err
+			}
 			continue
 		}
+		// TODO(ryancragun): We don't currently normalize nested configuration here
+		// that we might have otherwise, e.g.: raft's leader_api_addr.
 		valBytes, err := json.Marshal(val)
 		if err != nil {
 			return err
 		}
-		m[key] = string(valBytes)
+		m[k] = string(valBytes)
 	}
 
 	// Pull out the redirect address since it's common to all backends
 	var redirectAddr string
 	if v, ok := m["redirect_addr"]; ok {
-		redirectAddr = v
+		redirectAddr = configutil.NormalizeAddr(v)
 		delete(m, "redirect_addr")
 	} else if v, ok := m["advertise_addr"]; ok {
-		redirectAddr = v
+		redirectAddr = configutil.NormalizeAddr(v)
 		delete(m, "advertise_addr")
 	}
 
 	// Pull out the cluster address since it's common to all backends
 	var clusterAddr string
 	if v, ok := m["cluster_addr"]; ok {
-		clusterAddr = v
+		clusterAddr = configutil.NormalizeAddr(v)
 		delete(m, "cluster_addr")
 	}
 

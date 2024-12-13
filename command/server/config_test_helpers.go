@@ -12,11 +12,12 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
+	"github.com/stretchr/testify/require"
+
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/hcl/hcl/token"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/stretchr/testify/require"
 )
 
 var DefaultCustomHeaders = map[string]map[string]string{
@@ -1121,6 +1122,310 @@ ha_storage "consul" {
 	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
+	}
+}
+
+func testParseStorageURLConformance(t *testing.T) {
+	t.Parallel()
+
+	for name, tc := range map[string]struct {
+		config     string
+		expected   *Storage
+		shouldFail bool
+	}{
+		"aerospike": {
+			config: `
+storage "aerospike" {
+	hostname  = "2001:db8:0:0:0:0:2:1"
+  port      = "3000"
+  namespace = "test"
+  set       = "vault"
+  username  = "admin"
+  password  = "admin"
+}`,
+			expected: &Storage{
+				Type: "aerospike",
+				Config: map[string]string{
+					"hostname":  "2001:db8::2:1",
+					"port":      "3000",
+					"namespace": "test",
+					"set":       "vault",
+					"username":  "admin",
+					"password":  "admin",
+				},
+			},
+		},
+		"alicloudoss": {
+			config: `
+storage "alicloudoss" {
+  access_key = "abcd1234"
+  secret_key = "defg5678"
+	endpoint   = "2001:db8:0:0:0:0:2:1"
+  bucket     = "my-bucket"
+}`,
+			expected: &Storage{
+				Type: "alicloudoss",
+				Config: map[string]string{
+					"access_key": "abcd1234",
+					"secret_key": "defg5678",
+					"endpoint":   "2001:db8::2:1",
+					"bucket":     "my-bucket",
+				},
+			},
+		},
+		"azure": {
+			config: `
+storage "azure" {
+  accountName  = "my-storage-account"
+  accountKey   = "abcd1234"
+	arm_endpoint = "2001:db8:0:0:0:0:2:1"
+  container    = "container-efgh5678"
+  environment  = "AzurePublicCloud"
+}`,
+			expected: &Storage{
+				Type: "azure",
+				Config: map[string]string{
+					"accountName":  "my-storage-account",
+					"accountKey":   "abcd1234",
+					"arm_endpoint": "2001:db8::2:1",
+					"container":    "container-efgh5678",
+					"environment":  "AzurePublicCloud",
+				},
+			},
+		},
+		"cassandra": {
+			config: `
+storage "cassandra" {
+	hosts            = "2001:db8:0:0:0:0:2:1"
+  consistency      = "LOCAL_QUORUM"
+  protocol_version = 3
+}`,
+			expected: &Storage{
+				Type: "cassandra",
+				Config: map[string]string{
+					"hosts":            "2001:db8::2:1",
+					"consistency":      "LOCAL_QUORUM",
+					"protocol_version": "3",
+				},
+			},
+		},
+		"cockroachdb": {
+			config: `
+storage "cockroachdb" {
+  connection_url = "postgres://user123:secret123!@2001:db8:0:0:0:0:2:1:5432/vault"
+  table          = "vault_kv_store"
+}`,
+			expected: &Storage{
+				Type: "cockroachdb",
+				Config: map[string]string{
+					"connection_url": "postgres://user123:secret123%21@[2001:db8::2:1]:5432/vault",
+					"table":          "vault_kv_store",
+				},
+			},
+		},
+		"consul": {
+			config: `
+storage "consul" {
+  address = "2001:db8:0:0:0:0:2:1:8500"
+  path    = "vault/"
+}`,
+			expected: &Storage{
+				Type: "consul",
+				Config: map[string]string{
+					"address": "2001:db8::2:1:8500",
+					"path":    "vault/",
+				},
+			},
+		},
+		"couchdb": {
+			config: `
+storage "couchdb" {
+  endpoint = "https://[2001:db8:0:0:0:0:2:1]:5984/my-database"
+  username = "admin"
+  password = "admin"
+}`,
+			expected: &Storage{
+				Type: "couchdb",
+				Config: map[string]string{
+					"endpoint": "https://[2001:db8::2:1]:5984/my-database",
+					"username": "admin",
+					"password": "admin",
+				},
+			},
+		},
+		"dynamodb": {
+			config: `
+storage "dynamodb" {
+  endpoint   = "https://[2001:db8:0:0:0:0:2:1]:5984/my-aws-endpoint"
+  ha_enabled = "true"
+  region     = "us-west-2"
+  table      = "vault-data"
+}`,
+			expected: &Storage{
+				Type: "dynamodb",
+				Config: map[string]string{
+					"endpoint":   "https://[2001:db8::2:1]:5984/my-aws-endpoint",
+					"ha_enabled": "true",
+					"region":     "us-west-2",
+					"table":      "vault-data",
+				},
+			},
+		},
+		"etcd": {
+			config: `
+storage "etcd" {
+  address       = "https://[2001:db8:0:0:0:0:2:1]:2379"
+  discovery_srv = "https://[2001:db8:0:0:1:0:0:1]"
+  etcd_api      = "v3"
+}`,
+			expected: &Storage{
+				Type: "etcd",
+				Config: map[string]string{
+					"address":       "https://[2001:db8::2:1]:2379",
+					"discovery_srv": "https://[2001:db8::1:0:0:1]",
+					"etcd_api":      "v3",
+				},
+			},
+		},
+		"manta": {
+			config: `
+storage "manta" {
+  directory = "manta-directory"
+  user      = "myuser"
+  key_id    = "40:9d:d3:f9:0b:86:62:48:f4:2e:a5:8e:43:00:2a:9b"
+  url       = "https://[2001:db8:0:0:0:0:2:1]"
+}`,
+			expected: &Storage{
+				Type: "manta",
+				Config: map[string]string{
+					"directory": "manta-directory",
+					"user":      "myuser",
+					"key_id":    "40:9d:d3:f9:0b:86:62:48:f4:2e:a5:8e:43:00:2a:9b",
+					"url":       "https://[2001:db8::2:1]",
+				},
+			},
+		},
+		"mssql": {
+			config: `
+storage "mssql" {
+  server            = "2001:db8:0:0:0:0:2:1"
+  port              = 1433
+  username          = "user1234"
+  password          = "secret123!"
+  database          = "vault"
+  table             = "vault"
+  appname           = "vault"
+  schema            = "dbo"
+  connectionTimeout = 30
+  logLevel = 0
+}`,
+			expected: &Storage{
+				Type: "mssql",
+				Config: map[string]string{
+					"server":            "2001:db8::2:1",
+					"port":              "1433",
+					"username":          "user1234",
+					"password":          "secret123!",
+					"database":          "vault",
+					"table":             "vault",
+					"appname":           "vault",
+					"schema":            "dbo",
+					"connectionTimeout": "30",
+					"logLevel":          "0",
+				},
+			},
+		},
+		"mysql": {
+			config: `
+storage "mysql" {
+	address  = "2001:db8:0:0:0:0:2:1:3306"
+  username = "user1234"
+  password = "secret123!"
+  database = "vault"
+}`,
+			expected: &Storage{
+				Type: "mysql",
+				Config: map[string]string{
+					"address":  "2001:db8::2:1:3306",
+					"username": "user1234",
+					"password": "secret123!",
+					"database": "vault",
+				},
+			},
+		},
+		"postgresql": {
+			config: `
+storage "postgresql" {
+  connection_url = "postgres://user123:secret123!@2001:db8:0:0:0:0:2:1:5432/vault"
+  table          = "vault_kv_store"
+}`,
+			expected: &Storage{
+				Type: "postgresql",
+				Config: map[string]string{
+					"connection_url": "postgres://user123:secret123%21@[2001:db8::2:1]:5432/vault",
+					"table":          "vault_kv_store",
+				},
+			},
+		},
+		"s3": {
+			config: `
+storage "s3" {
+  endpoint   = "https://[2001:db8:0:0:0:0:2:1]:5984/my-aws-endpoint"
+  access_key = "abcd1234"
+  secret_key = "defg5678"
+	bucket     = "my-bucket"
+}`,
+			expected: &Storage{
+				Type: "s3",
+				Config: map[string]string{
+					"endpoint":   "https://[2001:db8::2:1]:5984/my-aws-endpoint",
+					"access_key": "abcd1234",
+					"secret_key": "defg5678",
+					"bucket":     "my-bucket",
+				},
+			},
+		},
+		"swift": {
+			config: `
+storage "swift" {
+	auth_url    = "https://[2001:db8:0:0:0:0:2:1]/auth"
+	storage_url = "https://[2001:db8:0:0:0:0:2:1]/storage"
+  username    = "admin"
+  password    = "secret123!"
+  container   = "my-storage-container"
+}`,
+			expected: &Storage{
+				Type: "swift",
+				Config: map[string]string{
+					"auth_url":    "https://[2001:db8::2:1]/auth",
+					"storage_url": "https://[2001:db8::2:1]/storage",
+					"username":    "admin",
+					"password":    "secret123!",
+					"container":   "my-storage-container",
+				},
+			},
+		},
+		"zookeeper": {
+			config: `
+storage "zookeeper" {
+	address = "2001:db8:0:0:0:0:2:1:2181"
+  path    = "vault/"
+}`,
+			expected: &Storage{
+				Type: "zookeeper",
+				Config: map[string]string{
+					"address": "2001:db8::2:1:2181",
+					"path":    "vault/",
+				},
+			},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			config, err := ParseConfig(tc.config, "")
+			require.NoError(t, err)
+			require.EqualValues(t, tc.expected, config.Storage)
+		})
 	}
 }
 

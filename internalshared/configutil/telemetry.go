@@ -267,7 +267,7 @@ func normalizeTelemetryAddresses(in *Telemetry) {
 		}
 
 		if url := *addr; url != "" {
-			n := normalizeIfURL(url)
+			n := NormalizeAddr(url)
 			*addr = n
 		}
 	}
