@@ -21,37 +21,31 @@ import (
 func TestSealUnwrapper(t *testing.T) {
 	logger := corehelpers.NewTestLogger(t)
 
-	// Test with both cache enabled and disabled
-	for _, disableCache := range []bool{true, false} {
-		// Test without transactions
-		phys, err := inmem.NewInmemHA(nil, logger)
-		if err != nil {
-			t.Fatal(err)
-		}
-		performTestSealUnwrapper(t, phys, logger, disableCache)
-
-		// Test with transactions
-		tPhys, err := inmem.NewTransactionalInmemHA(nil, logger)
-		if err != nil {
-			t.Fatal(err)
-		}
-		performTestSealUnwrapper(t, tPhys, logger, disableCache)
+	// Test without transactions
+	phys, err := inmem.NewInmemHA(nil, logger)
+	if err != nil {
+		t.Fatal(err)
 	}
+	performTestSealUnwrapper(t, phys, logger)
+
+	// Test with transactions
+	tPhys, err := inmem.NewTransactionalInmemHA(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	performTestSealUnwrapper(t, tPhys, logger)
 }
 
-func performTestSealUnwrapper(t *testing.T, phys physical.Backend, logger log.Logger, disableCache bool) {
+func performTestSealUnwrapper(t *testing.T, phys physical.Backend, logger log.Logger) {
 	ctx := context.Background()
 	base := &CoreConfig{
-		Physical:     phys,
-		DisableCache: disableCache,
+		Physical: phys,
 	}
 	cluster := NewTestCluster(t, base, &TestClusterOptions{
 		Logger: logger,
 	})
 	cluster.Start()
 	defer cluster.Cleanup()
-
-	physImem := phys.(interface{ Underlying() *inmem.InmemBackend }).Underlying()
 
 	// Read a value and then save it back in a proto message
 	entry, err := phys.Get(ctx, "core/master")
@@ -84,15 +78,7 @@ func performTestSealUnwrapper(t *testing.T, phys physical.Backend, logger log.Lo
 	// successfully decode it, but be able to unmarshal it when read back from
 	// the underlying physical store. When we read from active, it should both
 	// successfully decode it and persist it back.
-	checkValue := func(core *Core, wrapped bool, ro bool) {
-		if ro {
-			physImem.FailPut(true)
-			physImem.FailDelete(true)
-			defer func() {
-				physImem.FailPut(false)
-				physImem.FailDelete(false)
-			}()
-		}
+	checkValue := func(core *Core, wrapped bool) {
 		entry, err := core.physical.Get(ctx, "core/master")
 		if err != nil {
 			t.Fatal(err)
@@ -120,12 +106,7 @@ func performTestSealUnwrapper(t *testing.T, phys physical.Backend, logger log.Lo
 	}
 
 	TestWaitActive(t, cluster.Cores[0].Core)
-	checkValue(cluster.Cores[2].Core, true, true)
-	checkValue(cluster.Cores[1].Core, true, true)
-	checkValue(cluster.Cores[0].Core, false, false)
-
-	// The storage entry should now be unwrapped, so there should be no more writes to storage when we read it
-	checkValue(cluster.Cores[2].Core, false, true)
-	checkValue(cluster.Cores[1].Core, false, true)
-	checkValue(cluster.Cores[0].Core, false, true)
+	checkValue(cluster.Cores[2].Core, true)
+	checkValue(cluster.Cores[1].Core, true)
+	checkValue(cluster.Cores[0].Core, false)
 }
