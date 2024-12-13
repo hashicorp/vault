@@ -232,8 +232,73 @@ $ vault write -non-interactive sys/mfa/validate -format=json @payload.json
 
 To get started with Login MFA, refer to the [Login MFA](/vault/tutorials/auth-methods/multi-factor-authentication) tutorial.
 
+### Time-based One-time Password (TOTP)
 
-### TOTP passcode validation rate limit
+Enable a Login MFA method to enforce TOTP on the LDAP auth method.
+
+<Note>
+
+ Authenticator applications are not consistent in their support of encryption algorithms. You should research the algorithms supported by your preferred authenticator app. The [Configure TOTP MFA Method documentation](/vault/api-docs/secret/identity/mfa/totp#algorithm) lists algorithms supported by the Login MFA TOTP method. Google Authenticator supports SHA256.
+
+</Note>
+
+Configure the Login MFA TOTP method and note down the resulting `method_id`.
+
+```shell-session
+$ vault write identity/mfa/method/totp \
+   generate=true \
+   issuer=Vault \
+   period=30 \
+   key_size=30 \
+   algorithm=SHA256 \
+   digits=6
+```
+
+Using the TOTP `method_id` and an `entity_id` from after a sucessful MFA login.  Use these to generate a QR code.
+
+```shell-session
+$ vault write -field=barcode \
+   /identity/mfa/method/totp/admin-generate \
+   method_id=$TOTP_METHOD_ID entity_id=$ENTITY_ID \
+   | base64 -d > qr-code.png
+```
+
+#### Create login MFA enforcement
+
+Capture the LDAP auth method accessor for use in creating a Login MFA enforcement.
+
+```shell-session
+$ vault auth list -format=json --detailed
+```
+
+Using the accessor from the previous step and a `method_id` apply the enforcement.
+
+```shell-session
+$ VAULT_TOKEN=root vault write /identity/mfa/login-enforcement/adtotp \
+    mfa_method_ids=$TOTP_METHOD_ID \
+    auth_method_accessors=$ACCESSOR
+```
+
+**Successful output example:**
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
+Success! Data written to: identity/mfa/login-enforcement/adtotp
+```
+
+</CodeBlockConfig>
+
+#### Login with LDAP auth method
+
+Logging in with MFA enforcement will resemble the following:
+
+```shell-session
+$ vault login -method=ldap username=alice password='password!'
+Enter the passphrase for methodID "01194a79-e2d9-c038-029d-79b0091cafd0" of type "totp":
+```
+
+#### TOTP passcode validation rate limit
 
 Rate limiting of Login MFA paths are enforced by default in Vault 1.10.1 and above.
 By default, Vault allows for 5 consecutive failed TOTP passcode validation.
