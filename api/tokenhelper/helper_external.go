@@ -129,7 +129,7 @@ func execScript(script string) (*exec.Cmd, error) {
 	}
 	if other := os.Getenv("SHELL"); other != "" {
 		// fix git-bash of windows, issue: failed to get token from token helper: "/C: /C: Is a directory\n": exit status 1
-		if strings.HasSuffix(other, "sh") {
+		if strings.HasSuffix(other, "sh") || strings.HasSuffix(other, "sh.exe") {
 			flag = "-c"
 		}
 		shell = other
