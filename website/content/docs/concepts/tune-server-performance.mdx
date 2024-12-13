@@ -1,0 +1,948 @@
+---
+layout: docs
+page_title: Tune server performance
+description: >-
+  Understand the configuration and settings you can tune to gain increased server performance.
+---
+
+# Tune server performance
+
+Vault is a high-performance secrets management and data protection solution capable of handling enterprise-scale workloads. As you scale your usage and adopt broader use cases, you can tune Vault, its underlying operating system, and storage for optimal performance.
+
+These guidelines and best practices can help you tune the Vault environment to achieve optimal performance, but they are not for documenting requirements. These are best practice recommendations you should apply based on your specific environment and requirements. The guidance also includes important Vault resource limitations to consider with regards to performance.
+
+<Tip>
+
+This guidance focuses on tuning your Vault environment for optimal performance.
+Refer to [Vault limits and maximums](/vault/docs/internals/limits) for known 
+upper limits on the size of certain fields and objects, and configurable limits 
+on others.
+
+</Tip>
+
+You can focus on a limited range of tunable parameters grouped as follows:
+
+- **Operating system tuning** covers critical OS configuration items for ideal operations.
+- **Vault tuning** details the configuration tuning for Vault itself.
+- **Storage tuning** has items of note which are specific to storage.
+
+If your aim is to use what you learn here to tune production systems, then you should first become familiar with guidance from the [Reference Architecture](/vault/tutorials/raft/raft-reference-architecture) and [Deployment Guide](/vault/tutorials/day-one-raft/raft-deployment-guide). Ensure that your Vault cluster deployment aligns with guidance in those resources before proceeding with this guidance. [Production hardening](/vault/docs/concepts/production-hardening) is also a useful resource to learn about hardening your clusters for production.
+
+## Performance investigation
+
+Part of performance tuning involves investigation by observation and measuring current system characteristics. You can use a range of techniques and tools to investigate performance. One such method for analyzing the performance of a system is the [Utilization Saturation and Errors](http://www.brendangregg.com/usemethod.html) (USE) method.
+
+This method proposes a technique to use in performance investigation that involves checking the following characteristics for each relevant resource under investigation:
+
+- **Utilization** - did you get an alert about low storage capacity or notice out of memory errors, for example?
+
+- **Saturation** - are there signs that the storage IOPS are at their allowed maximum, for example?
+
+- **Errors** - are there errors in the application logs or Vault logs, for example? Are they persistent while performance degrades?
+
+You can apply the USE method to Vault cluster system resources and gain deeper understanding of existing bottlenecks or issues as part of your performance investigation.
+
+This guidance uses elements of the USE method throughout. For example, when investigating the performance of failover in a highly available cluster, errors (the 'E' in USE) can inform you about which resources need tuning.
+
+Likewise, you can use features like [telemetry](/vault/docs/configuration/telemetry) to gather [metrics](/vault/docs/internals/telemetry) and measure the utilization and saturation of resources in your Vault cluster.
+
+Review [Monitor telemetry & audit device log data](/vault/tutorials/monitoring/monitor-telemetry-audit-splunk) to learn more about using Vault telemetry and audit device metrics with an aggregation stack based on Fluentd, Telegraf, and Splunk.
+
+<Tip>
+
+ When you are able to gather, investigate, and measure data from Vault cluster environments you can also more accurately inform your performance tuning decisions.
+
+</Tip>
+
+### Performance investigation tools
+
+The USE Method provides a comprehensive [checklist for Linux](http://www.brendangregg.com/USEmethod/use-linux.html) systems that is great for investigating system level performance. The USE method also details tools you can use for investigating utilization and saturation aspects of each resource.
+
+The most common tools you can use to help with performance investigation at the physical system or virtual machine level are also listed here for your reference.
+
+| Component   | Tools                                | Notes                                                                                                     |
+| ----------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| **CPU**     | dstat, htop, lscpu, sar, top, vmstat | dstat does not have a Python 3 implementation; Red Hat users can emulate dstat with Performance Co-Pilot. |
+| **Memory**  | free, sar, vmstat                    |                                                                                                           |
+| **Storage** | df, iostat, sar, swapon              |                                                                                                           |
+| **Network** | ifconfig, netstat                    |                                                                                                           |
+
+For users in containerized environments like Docker and Kubernetes, there exists a range of higher level tools to better serve the specific troubleshooting challenges of those environments.
+
+Some solutions in common use include:
+
+- [Datadog Real-Time Container Monitoring](https://www.datadoghq.com/dg/monitor/containers/)
+
+- [Dynatrace](https://www.dynatrace.com/)
+
+- [Sysdig Inspect](https://github.com/draios/sysdig-inspect) is a powerful open source interface for container troubleshooting.
+
+## Linux operating system tuning
+
+Your deployments can benefit from smooth Vault operations by properly configuring and tuning the underlying operating system. In this section, you learn about Linux OS tunable configuration for ideal Vault operations.
+
+### User limits
+
+The Linux kernel can impose **user limits** (known also as `ulimit` values) on a per-user, per-process, or system-wide basis. These limits were historically designed to help prevent any one user or process from consuming available resources on multi-user and multi-process systems. 
+
+On a contemporary Linux system, these limits are typically controlled by [systemd process properties](https://www.freedesktop.org/software/systemd/man/systemd.exec.html#Process%20Properties).
+
+For Vault servers, which host a minimum number of running processes and no multi-user interactive sessions, the default limits can be too low and cause issues.
+
+You can read the active limits for a running vault process from the kernel process table under the relevant process ID (PID). This example shows use of the `pidof` command to dynamically get the vault PID and insert it into the path to retrieve the correct values.
+
+```shell-session
+$ cat /proc/$(pidof vault)/limits
+```
+
+**Example output:**
+
+<CodeBlockConfig hideClipboard>
+
+
+```plaintext
+Limit                     Soft Limit           Hard Limit           Units
+Max cpu time              unlimited            unlimited            seconds
+Max file size             unlimited            unlimited            bytes
+Max data size             unlimited            unlimited            bytes
+Max stack size            8388608              unlimited            bytes
+Max core file size        0                    unlimited            bytes
+Max resident set          unlimited            unlimited            bytes
+Max processes             7724                 7724                 processes
+Max open files            1024                 4096                 files
+Max locked memory         16777216             16777216             bytes
+Max address space         unlimited            unlimited            bytes
+Max file locks            unlimited            unlimited            locks
+Max pending signals       7724                 7724                 signals
+Max msgqueue size         819200               819200               bytes
+Max nice priority         0                    0
+Max realtime priority     0                    0
+Max realtime timeout      unlimited            unlimited            us
+```
+
+</CodeBlockConfig>
+
+The output shows the limit name and three values:
+
+- **Soft Limit** is a user configurable value the kernel will enforce that cannot exceed the hard limit.
+- **Hard Limit** is a root user configurable value the kernel will enforce that cannot exceed the system-wide limit
+- **Units** represent the measurement type for the limit
+
+While there are 16 distinct limits shown in the output, this guidance focuses on 2 of them in detail: **Max open files** and **Max processes**.
+
+<Note>
+
+ Be cautious when using approaches such as `ulimit -a` to get user limit values. The limits output from that command are for the _current user_, and do not necessarily match those of the user ID under which your Vault process executed.
+
+</Note>
+
+#### Max open files
+
+An operating Vault consumes file descriptors for both use in accessing files on a filesystem and for representing socket connections established to other network hosts.
+
+The value of maximum open files allowed to the Vault process is a critical user limit that you should appropriately tune for ideal performance.
+
+**How to measure usage?**
+
+To inspect the current maximum open files values for the vault process, read them from the kernel process table.
+
+```shell-session
+$ cat /proc/$(pidof vault)/limits | awk 'NR==1; /Max open files/'
+```
+
+**Example output:**
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
+Limit                     Soft Limit           Hard Limit           Units
+Max open files            1024                 4096                 files
+```
+
+</CodeBlockConfig>
+
+You can also use `lsof` to get detailed output on open files, like this:
+
+```shell-session
+$ sudo lsof -p $(pidof vault)
+```
+
+**Example output:**
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
+COMMAND PID    USER   FD      TYPE             DEVICE  SIZE/OFF   NODE NAME
+vault   14810 vault   cwd      DIR              253,0      4096      2 /
+vault   14810 vault   rtd      DIR              253,0      4096      2 /
+vault   14810 vault   txt      REG              253,0 138377265 131086 /usr/local/bin/vault
+vault   14810 vault    0r      CHR                1,3       0t0      6 /dev/null
+vault   14810 vault    1u     unix 0xffff89e6347f9c00       0t0  41148 type=STREAM
+vault   14810 vault    2u     unix 0xffff89e6347f9c00       0t0  41148 type=STREAM
+vault   14810 vault    3u     unix 0xffff89e6347f8800       0t0  41208 type=DGRAM
+vault   14810 vault    4u     a_inode            0,13         0   9583 [eventpoll]
+vault   14810 vault    6u     IPv4              40467       0t0    TCP *:8200 (LISTEN)
+vault   14810 vault    7u     IPv4              41227       0t0    TCP localhost:53766->localhost:8500 (ESTABLISHED)
+```
+
+</CodeBlockConfig>
+
+This is a minimal example taken from a newly unsealed Vault. You can expect much more output in a production Vault with several use cases. The output is helpful for spotting the specific source of open connections, such as socket connections to a database secrets engine, for example.
+
+Here, you can observe that the last 2 lines relate to 2 open sockets.
+
+First is file descriptor number 6, open with read and write permission (u), is of type IPv4, is a TCP node bound to port 8200 on all network interfaces.
+
+Second, file descriptor 7 represents the same kind of socket, except as an outbound ephemeral port connection. The outbound connection originates from Vault on TCP/53766 to the Consul client agent on localhost that is listening on port 8500.
+
+**What are common errors?**
+
+When the value for maximum open files is too low, Vault emits errors to its operational logging in the format of this example:
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
+http: Accept error: accept tcp4 0.0.0.0:8200: accept4: too many open files; retrying in 1s
+```
+
+</CodeBlockConfig>
+
+Key parts to this log line:
+
+- The error source is Vault's HTTP subsystem (`http:`).
+
+- Since the error originates from `http`, the error also relates to exhausting file descriptors in the context of network sockets, not regular files (note `accept4()` instead of `open()`).
+
+- The most critical piece of the error, and one that explains the immediate cause of this issue is **too many open files**. If maximum open files are not tuned on this Vault server, then tuning the value would be a reasonable starting point towards resolving the error.
+
+<Tip>
+
+This error is a both red alert that there are insufficient file descriptors, and that something within or outside Vault might be excessively consuming them.
+
+</Tip>
+
+You should remedy the issue by increasing the maximum open files limit and restarting the Vault service for each affected cluster peer. There are implications and limitations around raising the value that you should be aware of before doing so.
+
+First, there is a system-wide maximum open files limit that the kernel enforces and that user programs like Vault can't exceed. Note that this value is dynamically set at boot time and varies depending on the physical computer system characteristics, such as available physical memory.
+
+To check the current system-wide maximum open files value for a given system, read it from the kernel process table.
+
+```shell-session
+$ cat /proc/sys/fs/file-max
+```
+
+**Example output:**
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
+197073
+```
+
+</CodeBlockConfig>
+
+On this example system, it will not be possible to specify a maximum open file limit that exceeds 197073.
+
+**Increase limits**
+
+In the earlier example output, you observed that the maximum open files for the Vault process had a soft limit of 1024 and a hard limit of 4096. These are often the default values for some Linux distributions, and you should always increase the value beyond such defaults for using Vault in production.
+
+Once you learn the system-wide limit, you can appropriately increase the limit for Vault processes. With a contemporary systemd based Linux, you can do so by editing the Vault systemd service unit file, and specifying a value for the **LimitNOFILE** [process property](https://www.freedesktop.org/software/systemd/man/systemd.exec.html#Process%20Properties).
+
+The systemd unit file name can vary, but often it's name is `vault.service`, and you can find the file located at `/lib/systemd/system/vault.service` or `/etc/systemd/system/vault.service`.
+
+Edit the file as the system super user:
+
+```shell-session
+$ sudo $EDITOR /etc/systemd/system/vault.service
+```
+
+Either add the `LimitNOFILE` process property under **[Service]** or edit its value if it already exists to increase the soft and hard limits to a reasonable baseline value of **65536**.
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
+LimitNOFILE=65536
+```
+
+</CodeBlockConfig>
+
+Save the file, exit your editor.
+
+Any change to the unit requires a daemon reload; go ahead and do that now.
+
+```shell-session
+$ sudo systemctl daemon-reload
+```
+
+This command produces no output when the reload occurs without issue.
+
+The next time you restart the vault service, the new maximum open files limits will be in effect.
+
+You can restart the service, then examine the process table again to confirm your changes are in place.
+
+<Note>
+
+ You should be careful about this step in production systems as it can trigger a cluster leadership change. Depending on your Vault seal type, restarting the service can mean that you also need to unseal Vault if not using an auto seal type. Prepare to unseal Vault after reloading the configuration if not using an auto seal.
+
+</Note>
+
+Restart the vault service.
+
+```shell-session
+$ sudo systemctl restart vault
+```
+
+After Vault restarts, check the process table for the new vault process:
+
+```shell-session
+$ cat /proc/$(pidof vault)/limits | awk 'NR==1; /Max open files/'
+```
+
+**Example output:**
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
+Limit                     Soft Limit           Hard Limit           Units
+Max open files            65536                65536                files
+```
+
+</CodeBlockConfig>
+
+<Tip>
+
+ For an example Vault systemd unit file that also includes this process property, refer to [enable and start the service](/vault/tutorials/day-one-raft/raft-deployment-guide#enable-and-start-the-vault-service) in the [Vault Deployment Guide](/vault/tutorials/day-one-raft/raft-deployment-guide).
+
+</Tip>
+
+### A note about CPU scaling
+
+You might expect that Vault will scale linearly up to 100% CPU usage when tuning specific workloads, such as the Transit or Transform Secrets engine encryption. That is typically an unrealistic expectation.
+
+HashiCorp builds Vault with the Go programming language, and part of this relates to its performance characteristics. Go has the notion of [goroutines](https://golang.org/doc/effective_go.html?h=goroutine#goroutines), which are functions or methods that run concurrently with other functions or methods. 
+ 
+ The more goroutines that are simultaneously scheduled, the more context switching the system performs, the more interrupts by the network interface, etc.
+
+This behavior may not represent a large toll on the CPU in terms of real CPU utilization, but it can impair I/O. Each time a goroutine blocks for I/O (or gets preempted due to an interrupt) it can take longer each time before that goroutine is back in service.
+
+You should keep this in mind whenever tuning CPU heavy workloads in Vault.
+
+## Vault tuning
+
+The following sections relate to tuning of the Vault software itself through the use of available configuration parameters, features, or functionality.
+
+These sections share guidance and examples wherever possible.
+
+### Cache size
+
+Vault uses a [Least Recently Used (LRU)](https://en.wikipedia.org/wiki/Cache_replacement_policies#Least_recently_used_.28LRU.29) read cache for the physical storage subsystem with a tunable value, [cache_size](/vault/docs/configuration#cache_size). The value is the number of entries and the default value is **131072**.
+
+The total cache size depends on the size of stored entries.
+
+<Note>
+
+ LIST operations are not cached.
+
+</Note>
+
+### Maximum request duration
+
+Vault provides two parameters you can tune that will limit the maximum allowed duration of a request. You can use this for deployments with strict service level agreements around the duration of requests, or for enforcing a request duration of specific length.
+
+At the server-wide level, there is [default_max_request_duration](/vault/docs/configuration#default_max_request_duration) with a default value of 90 seconds (90s). Again, tuning of this value is for specific use cases and affects _every request made against the entire node_, so do keep this in mind.
+
+Here is an example minimal Vault configuration that shows the use of an explicit `default_max_request_duration` setting.
+
+```hcl
+api_addr = "https://127.0.0.8200"
+
+default_max_request_duration = "30s"
+
+listener "tcp" {
+  address       = "127.0.0.1:8200"
+  tls_cert_file = "/etc/pki/vault-server.crt"
+  tls_key_file  = "/etc/pki/vault-server.key"
+}
+
+storage "consul" {
+  address = "127.0.0.1:8500"
+  path    = "vault"
+}
+```
+
+The second option is to set a similar maximum at the listener level. You can configure Vault to use more than one listener by adding more listener stanzas. To gain some granularity on the request restriction, you can set [max_request_duration](/vault/docs/configuration/listener/tcp#max_request_duration) within the scope of the `listener` stanza. The default value is also 90 seconds (90s).
+
+Here is an example minimal Vault configuration that shows the use of an explicit `max_request_duration` setting in the TCP listener.
+
+```hcl
+api_addr = "https://127.0.0.8200"
+
+listener "tcp" {
+  address              = "127.0.0.1:8200"
+  tls_cert_file        = "/etc/pki/vault-server.crt"
+  tls_key_file         = "/etc/pki/vault-server.key"
+  max_request_duration = "15s"
+}
+
+storage "consul" {
+  address = "127.0.0.1:8500"
+  path    = "vault"
+}
+```
+
+<Note>
+
+ When you set **max_request_duration** in the TCP listener stanza, the value overrides that of **default_max_request_duration**.
+
+</Note>
+
+### Maximum request size
+
+Vault enables control of the global hard maximum allowed request size in bytes on a listener through the [max_request_size](/vault/docs/configuration/listener/tcp#max_request_size) parameter.
+
+The default value is **33554432** bytes (32 MB).
+
+Specifying a number less than or equal to 0 turns off request size limiting altogether.
+
+### HTTP timeouts
+
+Each Vault TCP listener can define four HTTP timeouts, which directly map to underlying Go http server parameters as defined in [Package http](https://golang.org/pkg/net/http/).
+
+#### http_idle_timeout
+
+Use the [http_idle_timeout](/vault/docs/configuration/listener/tcp#http_idle_timeout) parameter to configure the maximum amount of time to wait for the next request when using keep-alives. If the value of this parameter is 0, Vault uses the value of **http_read_timeout**. If both have a 0 value, there is no timeout.
+
+Default value: **5m** (5 minutes)
+
+#### http_read_header_timeout
+
+You can use the [http_read_header_timeout](/vault/docs/configuration/listener/tcp#http_read_header_timeout) parameter to configure the amount of time allowed to read request headers. If the value of **http_read_header_timeout** is 0, Vault uses the value of **http_read_timeout**. If both values are 0, there is no timeout.
+
+Default value: **10s** (10 seconds)
+
+#### http_read_timeout
+
+You can use the [http_read_timeout](/vault/docs/configuration/listener/tcp#http_read_timeout) parameter to configure the maximum duration for reading the entire HTTP request, including the body.
+
+Default value: **30s** (30 seconds)
+
+#### http_write_timeout
+
+You can use the [http_write_timeout](/vault/docs/configuration/listener/tcp#http_write_timeout) parameter to configure the maximum duration before timing out writes of the response.
+
+Default value: **0** (zero)
+
+### Lease expiration and TTL values
+
+Vault maintains [leases](/vault/docs/concepts/lease) for all dynamic secrets and service type authentication [tokens](/vault/docs/concepts/tokens).
+
+These leases represent a commitment to do future work in the form of revocation, which involves connecting to external hosts to revoke the credential there as well. In addition, Vault has internal maintenance to perform in the form of deleting (potentially recursively) expired tokens and leases.
+
+It is important to keep the growth of leases in a production Vault cluster in check. Unbounded lease growth can eventually cause serious issues with the underlying storage, and eventually to Vault itself.
+
+By default, Vault will use a time-to-live (TTL) value of 32 days on all leases. You need to be aware of this when defining use cases and try to select the shortest possible TTL value that your use can tolerate.
+
+<Note>
+
+ If you deploy Vault without specifying explicit TTL and maximum TTL values, you run the risk of generating excessive leases as the default TTL allows them to readily accumulate. Doing bulk or load generation and testing amplifies this effect. This is a common pitfall with new Vault users. Review [Token Time-To-Live, Periodic Tokens, and Explicit Max TTLs](/vault/docs/concepts/tokens#token-time-to-live-periodic-tokens-and-explicit-max-ttls) to learn more.
+
+</Note>
+
+#### Short TTLs are good
+
+**Good for security**
+
+- A leaked token with a short lease expires sooner.
+- A failed or destroyed service instance whose token is not revoked soon after use is not a big deal if it has a short TTL anyway.
+
+**Good for performance**
+
+Short TTLs have a load smoothing effect. It is better to have a lot of small writes spaced out over time, than having a big backlog of expired leases all at once.
+
+#### What to look for?
+
+With respect to usage and saturation, you can identify issues by monitoring the [vault.expire.num_leases metric](/vault/docs/internals/telemetry#policy-and-token-metrics), which represents the number of all leases which are eligible for eventual expiry.
+
+You can also monitor storage capacity for signs of lease saturation. Specifically you can examine the paths in storage which hold leases. Review the [Inspecting Data in Consul Storage](/vault/tutorials/monitoring/inspecting-data-consul) or [Inspect Data in Integrated Storage](/vault/tutorials/monitoring/inspect-data-integrated-storage) tutorials to learn more about the paths where you can expect to find lease data.
+
+### Namespaces
+
+<Note>
+
+ [Namespaces](/vault/docs/enterprise/namespaces) are a Vault Enterprise Platform feature.
+
+</Note>
+
+The hierarchy of namespaces is purely logical and Vault handles internal routing at just one level. As a result, there aren't any performance considerations or general limitations for the use of namespaces themselves whether implemented as flat hierarchies or in a deeply nested configuration.
+
+### Performance Standbys
+
+<Note>
+
+ [Performance Standbys](/vault/docs/enterprise/performance-standby) are a feature of Vault Enterprise with the Multi-Datacenter & Scale Module.
+
+</Note>
+
+Vault Enterprise features High Availability functionality that enables servers to service requests which do not change Vault's storage (read-only requests) on the local standby node versus forwarding them to the active node. This is the Performance Standby feature, and Vault Enterprise enables the feature by default. Read the [Performance Standby Nodes](/vault/tutorials/enterprise/performance-standbys) tutorial to learn more.
+
+While there are no tunable parameters available for performance standby functionality, some use cases can require that they be entirely deactivate. If necessary, you can use the [disable_performance_standby](/vault/docs/configuration#disable_performance_standby) configuration parameter to deactivate performance standbys with the.
+
+### Enterprise Replication
+
+[Vault enterprise replication](/vault/docs/enterprise) uses a component called the _log shipper_ to track recent updates written to Vault storage and stream them to replication secondaries.
+
+Vault version 1.7 introduced new performance related configuration for [Enterprise Replication](/vault/docs/enterprise/replication) functionality.
+
+If you are a Vault Enterprise user with version 1.7 or higher, use the information in this section to understand and adjust the replication performance configuration for your use case and workload.
+
+Tuning the replication configuration is most useful when replicating large numbers (thousands to tens of thousands) of items such as namespaces. This is most helpful when your use cases create and delete namespaces often.
+
+You can tune both the length and size of the log shipper buffer to make the most use of available system resources, while also preventing unbounded buffer growth.
+
+The configuration goes in a [`replication`](/vault/docs/configuration/replication) stanza that should be in the global configuration scope. Here is an example configuration snippet containing all available options for the `replication` stanza.
+
+```hcl
+replication {
+  resolver_discover_servers = true
+  logshipper_buffer_length  = 1000
+  logshipper_buffer_size    = "5gb"
+}
+```
+
+Detailed information about each configuration option follows.
+
+- `resolver_discover_servers` controls whether the log shipper's resolver should discover other Vault servers; the option accepts a boolean value, and the default value is true;
+
+- `logshipper_buffer_length` sets the maximum number of entries that the log shipper buffer holds as an integer value; the default value is zero (0). In the example configuration, the value is 1000 entries.
+
+- `logshipper_buffer_size` sets the maximum size that the log shipper buffer can grow to, expressed as an integer indicating the number of bytes or as a capacity string. Valid capacity strings are `kb, kib, mb, mib, gb, gib, tb, tib`; there is no default value. In the example configuration, the value is 5 gigabytes.
+
+If you do not explicitly define values for `logshipper_buffer_length` or `logshipper_buffer_size`, then Vault calculates default values based on available memory.
+
+On startup, Vault attempts to access the amount of host memory, if it is successful, it allocates 10% of the available memory to the log shipper. For example, if your Vault server has 16GB of memory, the log shipper will have access to 1.6GB.
+
+If Vault fails to read the host memory, it uses the default value of 1GB for `logshipper_buffer_size`.
+
+<Tip>
+
+ Refer to [Vault limits and maximums](/vault/docs/internals/limits) to learn more about specific limits and maximum sizes for Vault resources.
+
+</Tip>
+
+#### What to look for?
+
+Observe memory utilization for the Vault processes; if you replicate several enterprise namespaces, and memory is not released upon namespace deletion, you should investigate.
+
+You can then decide whether to implement changes to the replication configuration that match your available server memory resources and namespace usage based on your investigation of current memory usage behavior.
+
+#### How to improve performance?
+
+You must first ensure that your Vault servers meet the requirements outlined in the [Reference Architecture](/vault/tutorials/raft/raft-reference-architecture). Tuning these configuration values requires that the underlying memory resources are present on each server in the Vault cluster.
+
+If you intend to increase memory resources in your Vault servers, you can then increase the `logshipper_buffer_size` value.
+
+You can adjust the `logshipper_buffer_length` value to handle anticipated increases in namespace usage. For example, if your deployment uses several hundred namespaces, but your plans are to soon expand to 3000 namespaces, then you should increase `logshipper_buffer_length` to meet this increase.
+
+<Note title="Heads up">
+
+ Keep in mind that the practical limit for enterprise namespaces in a single cluster is dependent on the storage in use. The [Namespace limits](/vault/docs/internals/limits#namespace-limits) section of the Vault Limits and Maximums documentation explains the current limits.
+
+</Note>
+
+### PKI certificates & certificate revocation lists
+
+Users of the [PKI Secrets Engine](/vault/docs/secrets/pki), should be aware of the performance considerations and best practices specific to this secrets engine.
+
+One thing to consider If you are aiming for maximum performance with this secrets engine: performance bounds depend on available entropy on the Vault server and the high CPU requirements for computing key pairs. If your use case has Vault issuing the certificates and keys instead of signing Certificate Signing Requests (CSR).
+
+This can cause linear scaling. The most general-purpose way to avoid this is to have clients generate CSRs and submit them to Vault for signing instead of having Vault return a certificate/key pair.
+
+The two most common performance pitfalls users find with the PKI secrets engine relate to one another, and can result in severe performance issues. In extreme cases, these problems can cause a complete Vault outage.
+
+The first problem is in choosing unrealistically long certificate lifetimes.
+
+Vault champions a philosophy of keeping all secret lifetimes as short as practically possible. While this is fantastic for security posture, it can add a bit of challenge to selecting the ideal certificate expiration values.
+
+It is still critical that you reason about each use case thoroughly and work out the ideal shortest lifetimes for your Vault secrets, including PKI certificates generated by Vault. Review the PKI secrets engine documentation, focusing on the section [Keep certificate lifetimes short, for CRL's sake](/vault/docs/secrets/pki#keep-certificate-lifetimes-short-for-crl-s-sake) to learn more.
+
+<Tip>
+
+ If your certificate lifetimes are somewhat longer than required, it is critical that you ensure that applications are reusing the certificates they get from Vault until they near expiry before requesting new ones, and are not often requesting new ones on a regular basis. Long lived certificates often generated cause rapid CRL growth.
+
+</Tip>
+
+The second issue is a symptom of the first, in that creation of several certificates with long lifetimes causes rapid growth of the Certificate Revocation List (CRL). This list is internally represented as one key in the key/value store. If your Vault servers use Consul storage, it ships with a default maximum value size of **512KB**. The CRL can saturate this value in time with enough improper usage and frequent requesting of long lived certificates.
+
+**What are common errors?**
+
+When the PKI secrets engine CRL has grown to be larger than allowed by the default Consul key value maximum size, you can expect to meet with errors about lease revocation in the Vault operational log that resemble this example:
+
+<CodeBlockConfig hideClipboard>
+
+
+```plaintext
+[ERROR] expiration: failed to revoke lease: lease_id=pki/issue/prod/7XXYS4FkmFq8PO05En6rvm6m error="failed to revoke entry: resp: (*logical.Response)(nil) err: error encountered during CRL building: error storing CRL: Failed request: Request body too large, max size: 524288 bytes"
+```
+
+</CodeBlockConfig>
+
+
+If you are trying to gain increased performance with the PKI secrets engine and do not require a CRL, you should define your roles to use the [no_store](/vault/api-docs/secret/pki#no_store) parameter.
+
+<Note>
+
+ Vault cannot list or revoke certificates generated from roles that define the `no_store` parameter.
+
+</Note>
+
+### ACLs in policies
+
+If your goal is to optimize Vault performance as much as possible, you should analyze your ACL policies and policy paths to minimize the complexity of paths which use templating and special operators.
+
+#### How to improve performance?
+
+- Try to minimize use of [templating in policy paths](/vault/tutorials/policies/policy-templating) when possible
+- Try to minimize use of the `+` and `*` path segment designators in your policy path syntax.
+
+### Audit devices
+
+Ensure that your audit devices can write without obstruction, but also be sure to tune the target of the device. For example, you should tune the storage used by a file audit device so that it can perform at its maximum potential.
+
+As of Vault Enterprise 1.18.0, you can also enable exclusion of specific fields from audit device output. Depending on the fields required by your use case, excluding fields can represent significant audit device performance gains.
+
+Review the [audit exclusion](/vault/docs/enterprise/audit/exclusion) documentation to learn more about how audit device exclusion works.
+
+### Policy evaluation
+
+Vault Enterprise users can have [Access Control List (ACL) policies](/vault/docs/concepts/policies), [Endpoint Governing Policies (EGP)](/vault/docs/enterprise/sentinel#endpoint-governing-policies-egps), and [Role Governing Policies (RGP)](/vault/docs/enterprise/sentinel#role-governing-policies-rgps) in use.
+
+For your reference, here is a diagram and description of the Vault policy evaluation process for ACL, EGP, and RGP.
+
+![A diagram that explains Vault policy request evaluation](/img/vault-policy-evaluation.png)
+
+If the request was an unauthenticated request (for example "vault login"), there is no token; therefore, Vault evaluates EGPs associated with the request endpoint.
+
+If the request has a token, the ACL policies attached to the token get evaluated. If the token has an appropriate capability to operate on the path, Vault evaluates RGPs next.
+
+Vault then evaluates EGPs set on the request endpoint.
+
+If at any point, the policy evaluation fails, then Vault denies the request.
+
+### Sentinel policies
+
+Enterprise users of Vault Sentinel policies should be aware that these policies are generally more computationally intensive by nature.
+
+What are the performance implications of Sentinel policies?
+
+- Generally, the more complex a policy and the more that it pertains to a specific request, the more expensive it will be.
+- [Templated policy paths](/vault/tutorials/policies/policy-templating) also add extra cost to the policy as well.
+- A larger number of Sentinel policies that apply to specific requests will have more performance negative performance effects than a similar number of policies which are not as specific about the request.
+
+The new [HTTP import](https://docs.hashicorp.com/sentinel/imports/http) introduced in Vault version 1.5 provides a flexible means of policy workflow to use external HTTP endpoints. If you use this module, you should be aware that in addition to the internal latency involved in processing the logic for the Sentinel policy, there is now an external latency and you must combine these two latencies to properly reason about overall performance.
+
+### Tokens
+
+Vault requires valid [tokens](/vault/docs/concepts/tokens) for all authenticated requests, which include the majority of API endpoints.
+
+They typically have a finite lifetime in the form of a [lease](/vault/docs/concepts/lease) or time-to-live (TTL) value.
+
+The common interactions for tokens involve login requests and revocation. Those interactions with Vault result in the following operations.
+
+| Interaction                        | Vault operations                                                               |
+| ---------------------------------- | ------------------------------------------------------------------------------ |
+| Login request                      | Write new token to the Token Store <br/> Write new lease to the Lease Store    |
+| Revoke token (or token expiration) | Delete token <br/> Delete token lease <br/> Delete all child tokens and leases |
+
+[Batch tokens](/vault/docs/concepts/tokens#batch-tokens) are encrypted blobs that carry enough information for Vault to use them for actions, but require no storage on disk like service tokens.
+
+There are some trade-offs to be aware of when using batch tokens and you should use them with care.
+
+#### Less secure than service tokens
+
+- Vault cannot revoke or renew batch tokens.
+
+- You must set the TTL value in advance, and often the value is higher than ideal as a result.
+
+#### Better performing
+
+- Batch tokens are amazingly inexpensive to use since they do not touch the disk.
+- They are often an acceptable trade-off when the alternative is unmanageable login request rates.
+
+### Seal Wrap
+
+<Note>
+
+ [Seal Wrap](/vault/docs/enterprise/sealwrap) is a feature of Vault Enterprise with Governance & Policy Module.
+
+</Note>
+
+When integrating Vault Enterprise with HSM, seal wrapping is always enabled with a supported seal. This includes the recovery key, any stored key shares, the root key, the keyring, and more- essentially, any critical security parameter (CSP) within the Vault core.
+
+Anything that is seal-wrapped will be considerably slower to read and write since the requests will use the HSM for encryption and decryption. In general, communicating to the HSM adds latency that you will need to factor into overall performance.
+
+This applies even to cached items since Vault caches the encrypted data. Even if the read from storage is free, the request still needs to talk to the seal to use the data.
+
+## Storage tuning
+
+Vault request latency is primarily limited by the configured storage type, and storage writes are much more expensive than reads.
+
+The majority of Vault write operations relate to these events:
+
+- Logins and token creation
+- Dynamic secret creation
+- Renewals
+- Revocations
+
+There are a number of similar tunable parameters for the supported [storage](/vault/docs/configuration/storage). This tutorial covers the parameters for Integrated Storage (Raft) and Consul storage.
+
+There are some operational characteristics and trade-offs around how the different storage engines handle memory, persistence, and networking that you should familiarize yourself with.
+
+Consul storage characteristics:
+
+| Storage | Notes                                                                                                                                                                                                                                                                     |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Consul          | Consul storage has better disk write performance than Integrated Storage.                                                                                                                                                               |
+| Pros            | Working set contained in memory, so it is highly performant.                                                                                                                                                                                                           |
+| Cons            | Operationally complex <br/> Harder to debug and troubleshoot <br/>Network hop involved, theoretically higher network latency <br/> More frequent snapshots results in negative performance impact <br/> Memory bound with higher probability of out-of-memory conditions |
+
+Integrated Storage (Raft) characteristics:
+
+| Storage | Notes                                                                                                                                                                                            |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Raft            | Integrated Storage (Raft) has better network performance than Consul storage.                                                                                  |
+| Pros            | Operationally simpler <br/> Less frequent snapshots since data persists to disk <br/> No network hop (trade off is an extra `fsync()` writing to BoltDB in the finite state manager) |
+| Cons            | Data persisted to disk, so theoretically somewhat less performant <br/> Write performance slightly lower than with Consul                                                              |
+
+With this information in mind, review details on specific tunable parameters for the storage that you are most interested in.
+
+### Consul
+
+When using Consul for storage, most of the disk I/O work falls on Consul servers, and Vault itself has much lower disk I/O usage in comparison. Consul keeps its working set in memory. As a general rule of thumb, the Consul server should have physical memory equal to about 3x the working data set size of the key/value store containing Vault data. Sustaining good Input/Output Operations Per Second (IOPS) performance for the Consul storage is of utmost importance. Review the [Consul reference architecture](/consul/tutorials/production-deploy/reference-architecture) and [Consul deployment guide](/consul/tutorials/production-deploy/deployment-guide) for more details.
+
+#### What are common errors?
+
+If you observe extreme performance degradation in Vault while using Consul for storage, a first look at Consul server memory usage and errors is helpful. For example, check the Consul server operating system kernel ring buffer or syslog for signs of out of memory (OOM) conditions.
+
+```shell-session
+$ grep 'Out of memory' /var/log/messages
+```
+
+If there are results, they will resemble this example.
+
+<CodeBlockConfig hideClipboard>
+
+
+```plaintext
+kernel: [16909.873984] Out of memory: Kill process 10742 (consul) score 422 or sacrifice child
+kernel: [16909.874486] Killed process 10742 (consul) total-vm:242812kB, anon-rss:142081kB, file-rss:68768kB
+```
+
+</CodeBlockConfig>
+
+
+Reduced IOPS on the Consul servers is another common cause of issues. This condition can manifest itself in Vault as errors related to canceled context, such as in the following examples.
+
+<CodeBlockConfig hideClipboard>
+
+
+```plaintext
+[ERROR] core: failed to create token: error="failed to persist entry: context canceled"
+
+[ERROR] core: failed to register token lease: request_path=auth/approle/login error="failed to persist lease entry: context canceled"
+
+[ERROR] core: failed to create token: error="failed to persist accessor index entry: context canceled"
+```
+
+</CodeBlockConfig>
+
+
+The key clue here is the "context canceled" message. This issue will cause intermittent Vault availability to all users, and you should try to remedy the issue by increasing the available IOPS for the Consul servers.
+
+---
+
+The following are some important performance related configuration settings that you should become aware of when using Consul for Vault storage.
+
+#### kv_max_value_size
+
+One common performance constraint that you can find when using Consul for Vault storage is the size of data Vault can write as a value to one key in the Consul key/value store.
+
+As of Consul [version 1.7.2](https://github.com/hashicorp/consul/blob/master/CHANGELOG.md#172-march-16-2020) you can explicitly specify this value in bytes with the configuration parameter [kv_max_value_size](/consul/docs/agent/config/config-files#kv_max_value_size).
+
+Default value: **512KB**
+
+Here is an example Consul server configuration snippet that increases this value to **1024KB**.
+
+<CodeBlockConfig hideClipboard>
+
+
+```plaintext
+ "limits": {
+     "kv_max_value_size": 1024000
+ }
+```
+
+</CodeBlockConfig>
+
+
+**What are common errors?**
+
+Vault returns the following error to a client that attempts to exceed the maximum value size.
+
+<CodeBlockConfig hideClipboard>
+
+
+```plaintext
+Error writing data to kv/data/foo: Error making API request.
+
+URL: PUT http://127.0.0.1:8200/v1/kv/data/foo
+Code: 413. Errors:
+
+* failed to parse JSON input: http: request body too large
+```
+
+</CodeBlockConfig>
+
+
+<Note>
+ 
+ Tuning this improperly can cause Consul to fail in unexpected ways, it may potentially affect leadership stability and prevent regular heartbeat signals by increasing RPC IO duration.
+
+</Note>
+
+#### txn_max_req_len
+
+This parameter configures the maximum number of bytes for a transaction request body to the Consul `/v1/txn` endpoint. In situations where you set both `txn_max_req_len` and `kv_max_value_size`, the higher value takes precedence for both settings.
+
+<Note>
+
+Tuning this improperly can cause Consul to fail in unexpected ways, it may potentially affect leadership stability and prevent regular heartbeat signals by increasing RPC IO duration.
+
+</Note>
+
+#### max_parallel
+
+Another parameter that can sometimes benefit from tuning depending on the specific environment and configuration is the [max_parallel](/vault/docs/configuration/storage/consul#max_parallel) parameter, which specifies the maximum number of parallel requests Vault can make to Consul.
+
+The default value is **128**.
+
+This value is not typically increased to increase performance, rather it is most often called upon to reduce the load on an overwhelmed Consul cluster by dialing down the default value.
+
+#### consistency_mode
+
+Vault supports using 2 of the 3 Consul [Consistency Modes](/consul/api-docs/features/consistency). By default it uses the [default mode](/consul/api-docs/features/consistency#default), which the Consul documentation describes as follows:
+
+> If not specified, the default is strongly consistent in most cases. However, there is a small window when Vault may elect a new leader during which the old leader may service stale values. The trade-off is fast reads but potentially stale values. The condition resulting in stale reads is hard to trigger, and most clients should not need to worry about this case. Also, note that this race condition applies to reads, but not to writes.
+
+This mode is suitable for the majority of use cases and you should be aware that changing the mode to **strong** in Vault maps to the [consistent](/consul/api-docs/features/consistency#consistent) mode in Consul. This mode comes with more performance implications, and most use cases should not need this mode unless they cannot tolerate a stale read. The Consul documentation states the following about **consistent** mode:
+
+> This mode is strongly consistent without caveats. It requires that a leader verify with a quorum of peers that it is still the leader. This introduces an extra round-trip to all servers. Increased latency is the tradeoff due to an extra round trip. Most clients should not use this unless they cannot tolerate a stale read.
+
+### Integrated Storage (Raft)
+
+Vault version 1.4.0 introduced a new Integrated Storage capability that uses [Raft Storage](/vault/docs/configuration/storage/raft). Integrated Storage is quite similar to Consul key/value storage in its behavior and feature-set. It replicates Vault data to all servers using the [Raft consensus algorithm](https://raft.github.io/).
+
+If you have not already, review the [Migration checklist](/vault/docs/concepts/integrated-storage/migration-checklist) for more information about Integrated Storage.
+
+The following are tunable configuration items for Integrated Storage.
+
+#### mlock()
+
+<Note>
+
+Deactivate `mlock()` if your Vault deployment uses Integrated Storage. Integrated storage does not interact well with memory mapped files such as those created by BoltDB, which Raft uses to track state.
+
+</Note>
+
+When using `mlock()`, memory-mapped files get loaded into resident memory, which results in the complete Vault dataset loading into memory, and this can result in out-of-memory conditions if Vault data becomes larger than the available physical memory.
+
+#### Recommendation
+
+Although Vault data within BoltDB remains encrypted at rest, you're encouraged to use the instructions for your OS to deactivate swap on your Vault servers which use Integrated Storage to prevent the OS from writing sensitive in-memory Vault data to disk.
+
+#### What are common errors?
+
+If you're operating a Vault cluster with Integrated Storage, and you haven't deactivated `mlock()` for the vault binary (and potentially any external plugins), then you can observe errors like this example when the Vault data exceeds the available memory.
+
+<CodeBlockConfig hideClipboard>
+
+
+```plaintext
+kernel: [12209.426991] Out of memory: Kill process 23847 (vault) score 444 or sacrifice child
+kernel: [12209.427473] Killed process 23847 (vault) total-vm:1897491kB, anon-rss:948745kB, file-rss:474372kB
+```
+
+</CodeBlockConfig>
+
+
+#### performance_multiplier
+
+If you have experience configuring and tuning Consul, you might already be familiar with its **performance_multiplier** configuration parameter. Vault uses it in the same way in the context of the Integrated Storage to scale key Raft algorithm timing parameters.
+
+The default value is **0**.
+
+Tuning this affects the time it takes Vault to detect leader failures and to perform leader elections, at the expense of requiring more network and CPU resources for better performance.
+
+By default, Vault will use a lower-performance timing that is suitable for Vault servers with modest resources. The default setting is equal to setting this to a value of 5. Setting this to a value of 1 configures Raft to its highest-performance mode recommended for production Vault servers. The maximum allowed value is 10.
+
+<Note>
+
+This default may change in future versions of Vault if the target minimum server profile changes.
+
+</Note>
+
+#### snapshot_threshold
+
+<Tip>
+
+ This is a low-level parameter that should rarely need tuning.
+
+</Tip>
+
+Again, the [snapshot_threshold](/vault/docs/configuration/storage/raft#snapshot_threshold) parameter is similar to one you may have experience with in Consul deployments. If you're unfamiliar with Consul, it automatically takes snapshots of raft commit data. The `snapshot_threshold` parameter controls the minimum number of raft commit entries between snapshots saved to disk.
+
+The documentation further states the following about adjusting this value:
+
+> Busy clusters experiencing excessive disk IO may increase this value to reduce disk IO and minimize the chances of all servers taking snapshots at the same time. Increasing this trades off disk IO for disk space since the log will grow much larger and Vault can't reclaim the space in the `raft.db` until the next snapshot. Servers may take longer to recover from crashes or failover if you increase this value, as Vault must replay more logs.
+
+## Resource limits & maximums
+
+This section serves as a reference to the most common resource limitations and maximum values that you should be aware of when tuning Vault for performance.
+
+### Maximum number of secrets engines
+
+There is no specific limit for the number of enabled secrets engines.
+
+Depending on the storage type in use, with several thousands (potentially tens of thousands) of enabled secrets engines, Vault can push to a maximum value size limit (for example).
+
+### Maximum value size with Consul storage
+
+The default maximum value size for a key in Consul key/value storage is the Raft suggested maximum size of **512KB**. As of Consul [version 1.7.2](https://github.com/hashicorp/consul/blob/master/CHANGELOG.md#172-march-16-2020), you can change this limit with [kv_max_value_size](/consul/docs/agent/config/config-files#kv_max_value_size).
+
+### Maximum value size with Integrated Storage
+
+Unlike Consul storage, Integrated Storage does not impose a maximum key value size. This means you should be cautious when deploying use cases on Integrated Storage that have the potential to create unbounded growth in a value.
+
+Integrated Storage isn't as reliant on memory and subject to memory pressure due to how Vault persists data to disk. That said, using overly large values for keys can have adverse effects on network coordination, voting, and leadership election. Keep in mind that Vault Integrated Storage is not designed to perform as a general purpose key/value database. If you use keys with unreasonably large values (several times larger than the default), you might meet with problems, depending on your use case and environment.
+
+## Help and reference
+
+- [Reference Architecture](/vault/tutorials/raft/raft-reference-architecture)
+- [Deployment Guide](/vault/tutorials/day-one-raft/raft-deployment-guide)
+- [Production hardening documentation](/vault/docs/concepts/production-hardening)
+- [Utilization Saturation and Errors](http://www.brendangregg.com/usemethod.html)
+- [telemetry](/vault/docs/configuration/telemetry)
+- [systemd process properties](https://www.freedesktop.org/software/systemd/man/systemd.exec.html#Process%20Properties)
+- [Vault Enterprise Namespaces](/vault/docs/enterprise/namespaces)
+- [Least Recently Used (LRU) cache](https://en.wikipedia.org/wiki/Cache_replacement_policies#Least_recently_used_.28LRU.29)
+- [dstat documentation](http://dag.wieers.com/home-made/dstat/#)
+- [Implementing Dstat with Performance Co-Pilot](https://www.redhat.com/en/blog/implementing-dstat-performance-co-pilot)
+- [perf: Linux profiling with performance counters](https://perf.wiki.kernel.org/)
+- [The Go Memory Model](https://golang.org/ref/mem)
+- [Package runtime](https://golang.org/pkg/runtime/)
+- [Goroutines](https://golang.org/doc/effective_go.html?h=goroutine#goroutines)
+- [vault.expire.num_leases metric](/vault/docs/internals/telemetry#policy-and-token-metrics)
+- [snapshot_threshold](/vault/docs/configuration/storage/raft#snapshot_threshold)
+- [mlock(2)](https://linux.die.net/man/2/mlock)
+- [Keep certificate lifetimes short, for CRL's sake](/vault/docs/secrets/pki#keep-certificate-lifetimes-short-for-crl-s-sake)
+- [Policies](/vault/docs/concepts/policies)
