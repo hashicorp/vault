@@ -34,11 +34,15 @@ variable "listener_port" {
   type        = number 
   description = "The port of the vault address" 
 }
-variable "vault_leader_addr" {
-  type        = string
-  description = "The cluster leader API address"
+variable "vault_leader_host" {
+  type        =object({
+    ipv6 = string
+    private_ip = string
+    public_ip = string
+  }) 
+  description = "The leader's host information"
 }
-variable "vault_leader_local_addr" {
+variable "vault_local_addr" {
   type = string
 }
 variable "cluster_port" {
@@ -81,7 +85,7 @@ resource "enos_remote_exec" "verify_raft_peer_removed" {
   environment = {
     RETRY_INTERVAL  = var.retry_interval
     TIMEOUT_SECONDS = var.timeout
-    VAULT_ADDR      = var.vault_leader_local_addr
+    VAULT_ADDR      = var.vault_local_addr
     VAULT_TOKEN     = var.vault_root_token
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
@@ -103,7 +107,7 @@ resource "enos_remote_exec" "verify_unseal_fails" {
 
   environment = {
     VAULT_INSTALL_DIR = var.vault_install_dir
-    VAULT_ADDR      = var.vault_leader_local_addr
+    VAULT_ADDR      = var.vault_local_addr
     VAULT_TOKEN     = var.vault_root_token
     UNSEAL_KEYS       = join(",", var.vault_unseal_keys)
   }
@@ -122,14 +126,14 @@ resource "enos_remote_exec" "verify_rejoin_fails" {
 
   environment = {
     VAULT_INSTALL_DIR = var.vault_install_dir
-    VAULT_ADDR      = var.vault_leader_local_addr
+    VAULT_ADDR      = var.vault_local_addr
     VAULT_TOKEN     = var.vault_root_token
     RETRY_INTERVAL  = var.retry_interval
     TIMEOUT_SECONDS = var.timeout
-    VAULT_LEADER_ADDR = var.vault_leader_addr
+    VAULT_LEADER_ADDR = "${var.ip_version == 4 ? "${var.vault_leader_host.private_ip}" : "[${var.vault_leader_host.ipv6}]"}:${var.listener_port}"
   }
 
-  scripts = [abspath("${path.module}/scripts/try_rejoin.sh")]
+  scripts = [abspath("${path.module}/scripts/verify_manual_rejoin_fails.sh")]
 
   transport = {
     ssh = {
@@ -158,7 +162,7 @@ resource "enos_remote_exec" "verify_removed_after_restart" {
     RETRY_INTERVAL  = var.retry_interval
     TIMEOUT_SECONDS = var.timeout
     VAULT_INSTALL_DIR = var.vault_install_dir
-    VAULT_ADDR      = var.vault_leader_local_addr
+    VAULT_ADDR      = var.vault_local_addr
     VAULT_TOKEN     = var.vault_root_token
   }
 
@@ -218,6 +222,6 @@ module "verify_rejoin_succeeds" {
   ip_version = var.ip_version
   vault_root_token = var.vault_root_token
   vault_install_dir = var.vault_install_dir
-  vault_addr = var.vault_leader_local_addr
+  vault_addr = var.vault_local_addr
   vault_cluster_addr_port = var.cluster_port
 }

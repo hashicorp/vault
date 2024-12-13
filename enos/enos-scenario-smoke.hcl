@@ -568,14 +568,14 @@ scenario "smoke" {
 
     variables {
       hosts              = step.get_vault_cluster_ips.single_follower_hosts
-      vault_leader_addr  = step.get_vault_cluster_ips.leader_public_ip
+      vault_leader_host  = step.get_vault_cluster_ips.leader_host
       vault_root_token   = step.create_vault_cluster.root_token
       vault_seal_type    = matrix.seal
       vault_unseal_keys  = matrix.seal == "shamir" ? step.create_vault_cluster.unseal_keys_hex : null
       add_back_nodes     = true
       listener_port      = step.create_vault_cluster.listener_port
       ip_version        = matrix.ip_version
-      vault_leader_local_addr        = step.create_vault_cluster.api_addr_localhost
+      vault_local_addr        = step.create_vault_cluster.api_addr_localhost
       cluster_port = step.create_vault_cluster.cluster_port
 
     }
