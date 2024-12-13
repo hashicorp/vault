@@ -62,6 +62,15 @@ export default class ConfigureAzureComponent extends Component<Args> {
     this.disableAccessType = isWifPluginConfigured || isAzureAccountConfigured;
   }
 
+  get modelAttrChanged() {
+    // "backend" dirties model state so explicity ignore it here
+    return Object.keys(this.args.model?.changedAttributes()).some((item) => item !== 'backend');
+  }
+
+  get issuerAttrChanged() {
+    return this.args.issuerConfig?.hasDirtyAttributes;
+  }
+
   @action continueSubmitForm() {
     this.saveIssuerWarning = '';
     this.save.perform();
@@ -90,26 +99,22 @@ export default class ConfigureAzureComponent extends Component<Args> {
 
   save = task(
     waitFor(async () => {
-      const { model, issuerConfig } = this.args;
-      // check if any of the model attributes have changed
+      const modelAttrChanged = this.modelAttrChanged;
+      const issuerAttrChanged = this.issuerAttrChanged;
+      // check if any of the model or issue attributes have changed
       // if no changes, transition and notify user
-      // if changes, save the model and notify user
-      // note: "backend" dirties model state so explicity ignore it here
-      const attrChanged = Object.keys(model?.changedAttributes()).some((item) => item !== 'backend');
-      const issuerAttrChanged = issuerConfig?.hasDirtyAttributes;
-      if (!attrChanged && !issuerAttrChanged) {
+      if (!modelAttrChanged && !issuerAttrChanged) {
         this.flashMessages.info('No changes detected.');
         this.transition();
         return;
       }
 
-      const modelSaved = attrChanged ? await this.saveModel() : false;
+      const modelSaved = modelAttrChanged ? await this.saveModel() : false;
       const issuerSaved = issuerAttrChanged ? await this.updateIssuer() : false;
 
-      if (modelSaved || issuerSaved) {
-        // transition if either model or issuer are saved
-        // there's a chance they wanted to update the issuer and not the model
-        // if both are saved, the user will see two success messages
+      if (modelSaved || (!modelAttrChanged && issuerSaved)) {
+        // transition if the model was saved successfully
+        // or transition if no attributes on the model have changed and the issuer was saved successfully
         this.transition();
       } else {
         // otherwise there was a failure and we should not transition and exit the function

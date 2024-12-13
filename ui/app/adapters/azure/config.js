@@ -24,24 +24,17 @@ export default class AzureConfig extends ApplicationAdapter {
     });
   }
 
-  createOrUpdate(store, type, snapshot) {
+  // there is no createRecord for this adapter because the backend returns a 200 when the config has not been updated.
+  // using updateRecord for both a new && update to match the backends concept that the record exists the moment you mount the engine
+  updateRecord(store, type, snapshot) {
     const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot);
     const backend = snapshot.record.backend;
     return this.ajax(this._url(backend), 'POST', { data }).then((resp) => {
-      // ember data requires an id on the response
       return {
         ...resp,
         id: backend,
       };
     });
-  }
-
-  createRecord() {
-    return this.createOrUpdate(...arguments);
-  }
-
-  updateRecord() {
-    return this.createOrUpdate(...arguments);
   }
 }

@@ -25,16 +25,6 @@ const CONFIG_ADAPTERS_PATHS: Record<string, string[]> = {
   ssh: ['ssh/ca-config'],
 };
 
-const POSSIBLE_AZURE_CONFIG_PROPS = [
-  'subscriptionId',
-  'tenantId',
-  'clientId',
-  'identityTokenAudience',
-  'identityTokenTtl',
-  'environment',
-  'rootPasswordTtl',
-];
-
 export default class SecretsBackendConfigurationEdit extends Route {
   @service declare readonly store: Store;
   @service declare readonly version: VersionService;
@@ -62,8 +52,11 @@ export default class SecretsBackendConfigurationEdit extends Route {
           backend,
           type,
         });
-        if (configModel.isConfigured) {
-          model[standardizedKey] = await this.store.createRecord(adapterPath, {
+        // some of the models return a 200 if they are not configured (ex: azure)
+        // so instead of checking a catch or httpStatus, we check if the model is configured based on the getter `isConfigured` on the engine's model
+        // if the engine is not configured we update the record to get the default values
+        if (!configModel.isConfigured) {
+          model[standardizedKey] = await this.store.updateRecord(adapterPath, {
             backend,
             type,
           });
