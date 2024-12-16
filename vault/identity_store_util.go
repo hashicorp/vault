@@ -28,9 +28,8 @@ import (
 )
 
 var (
-	errDuplicateIdentityName = errors.New("duplicate identity name")
-	errCycleDetectedPrefix   = "cyclic relationship detected for member group ID"
-	tmpSuffix                = ".tmp"
+	errCycleDetectedPrefix = "cyclic relationship detected for member group ID"
+	tmpSuffix              = ".tmp"
 )
 
 func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
