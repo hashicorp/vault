@@ -4095,11 +4095,10 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 func (c *Core) activityLogMigrationTask(ctx context.Context) {
 	manager := c.activityLog
 	if !c.IsPerfSecondary() {
-		// If the oldest version is less than 1.19 and no migrations tasks have been run, kick off the migration task
-		if !manager.OldestVersionHasDeduplicatedClients(ctx) && !manager.hasDedupClientsUpgrade(ctx) {
+		// If no migrations tasks have been run, kick off the migration task
+		if !manager.hasDedupClientsUpgrade(ctx) {
 			go c.primaryDuplicateClientMigrationWorker(ctx)
 		} else {
-			// Store that upgrade processes have already been completed
 			manager.writeDedupClientsUpgrade(ctx)
 		}
 	} else {
@@ -4108,6 +4107,8 @@ func (c *Core) activityLogMigrationTask(ctx context.Context) {
 		// already upgraded primary
 		if !manager.hasDedupClientsUpgrade(ctx) {
 			go c.secondaryDuplicateClientMigrationWorker(ctx)
+		} else {
+			manager.writeDedupClientsUpgrade(ctx)
 		}
 	}
 }
@@ -4118,7 +4119,12 @@ func (c *Core) activityLogMigrationTask(ctx context.Context) {
 // current cluster. This method wil only exit once all connected secondary clusters have
 // upgraded to 1.19, and this cluster receives global data from all of them.
 func (c *Core) primaryDuplicateClientMigrationWorker(ctx context.Context) error {
+	c.activityLogLock.Lock()
 	a := c.activityLog
+	c.activityLogLock.Unlock()
+	if a == nil {
+		return fmt.Errorf("activity log not configured")
+	}
 	a.logger.Trace("started primary activity log migration worker")
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
