@@ -80,6 +80,11 @@ export default Model.extend({
     subText: 'The password to use when connecting with the above username.',
     editType: 'password',
   }),
+  disable_escaping: attr('boolean', {
+    defaultValue: false,
+    subText: 'Turns off the escaping of special characters inside of the username and password fields.',
+    docLink: 'https://developer.hashicorp.com/vault/docs/secrets/databases#disable-character-escaping',
+  }),
 
   // optional
   ca_cert: attr('string', {
@@ -128,10 +133,54 @@ export default Model.extend({
     label: 'Disable SSL verification',
     defaultValue: false,
   }),
+  password_authentication: attr('string', {
+    defaultValue: 'password',
+    editType: 'radio',
+    subText: 'The default is "password."',
+    possibleValues: [
+      {
+        value: 'password',
+        helpText:
+          'Passwords will be sent to PostgreSQL in plaintext format and may appear in PostgreSQL logs as-is.',
+      },
+      {
+        value: 'scram-sha-256',
+        helpText:
+          'When set to "scram-sha-256", passwords will be hashed by Vault and stored as-is by PostgreSQL. Using "scram-sha-256" requires a minimum version of PostgreSQL 10.',
+      },
+    ],
+    docLink:
+      'https://developer.hashicorp.com/vault/api-docs/secret/databases/postgresql#password_authentication',
+  }),
+  auth_type: attr('string', {
+    subText: 'If set to "gcp_iam", will enable IAM authentication to a Google CloudSQL instance.',
+    docLink: 'https://developer.hashicorp.com/vault/api-docs/secret/databases/postgresql#auth_type',
+  }),
+  service_account_json: attr('string', {
+    label: 'Service account JSON',
+    subText:
+      'JSON encoded credentials for a GCP Service Account to use for IAM authentication. Requires "auth_type" to be "gcp_iam".',
+    editType: 'file',
+  }),
+  use_private_ip: attr('boolean', {
+    label: 'Use private IP',
+    subText:
+      'Enables the option to connect to CloudSQL Instances with Private IP. Requires auth_type to be "gcp_iam".',
+    defaultValue: false,
+  }),
+  private_key: attr('string', {
+    helpText: 'The secret key used for the x509 client certificate. Must be PEM encoded.',
+    editType: 'file',
+  }),
   tls: attr('string', {
     label: 'TLS Certificate Key',
     helpText:
       'x509 certificate for connecting to the database. This must be a PEM encoded version of the private key and the certificate combined.',
+    editType: 'file',
+  }),
+  tls_certificate: attr('string', {
+    label: 'TLS Certificate Key',
+    helpText: 'The x509 certificate for connecting to the database. Must be PEM encoded.',
     editType: 'file',
   }),
   tls_ca: attr('string', {
@@ -149,6 +198,7 @@ export default Model.extend({
     editType: 'stringArray',
     defaultShown: 'Default',
   }),
+
   // ENTERPRISE ONLY
   self_managed: attr('boolean', {
     subText:
