@@ -258,7 +258,6 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 				"continue in the background but it is also safe to retry manually: %w", err)
 		}
 
-		// return any err from the setStaticAccount call
 		return nil, nil
 	}
 }

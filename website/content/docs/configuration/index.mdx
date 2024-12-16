@@ -260,6 +260,17 @@ can have a negative effect on performance due to the tracking of each lock attem
   When `imprecise_lease_role_tracking` is set to true and a new role-based quota is enabled, subsequent lease counts start from 0.
   `imprecise_lease_role_tracking` affects role-based lease count quotas, but reduces latencies when not using role based quotas.
 
+- `enable_post_unseal_trace` `(bool: false)` - Enables the server to generate a Go trace during the execution of the
+  `core.postUnseal` function for debug purposes. The resulting trace can be viewed with the `go tool trace` command. The output
+  directory can be specified with the `post_unseal_trace_directory` parameter. This should only be enabled temporarily for
+  debugging purposes as it can have a significant performance impact. This can be updated on a running Vault process with a 
+  SIGHUP signal.
+
+- `post_unseal_trace_directory` `(string: "")` - Specifies the directory where the trace file will be written, which must exist
+  and be writable by the Vault process. If not specified it will create a subdirectory `vault-traces` under the result from
+  [os.TempDir()](https://pkg.go.dev/os#TempDir) (usually `/tmp` on Unix systems). This can be updated on a running Vault process
+  with a SIGHUP signal.
+
 ### High availability parameters
 
 The following parameters are used on backends that support [high availability][high-availability].

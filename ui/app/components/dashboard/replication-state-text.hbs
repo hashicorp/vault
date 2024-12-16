@@ -23,8 +23,9 @@
     >
       {{or @state "not set up"}}
 
-      <FlightIcon
+      <Hds::Icon
         @name={{or @clusterStates.glyph "x-circle"}}
+        @isInline={{true}}
         class={{if @clusterStates.isOk "has-text-success" "has-text-danger"}}
       />
     </T.Trigger>
