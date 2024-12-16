@@ -55,7 +55,8 @@ export default class ConfigureAzureComponent extends Component<Args> {
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
-    if (this.version.isEnterprise && !this.args.model.isNew) return;
+    // the following checks are only relevant to existing enterprise configurations
+    if (this.version.isCommunity && this.args.model.isNew) return;
     const { isWifPluginConfigured, isAzureAccountConfigured } = this.args.model;
     this.accessType = isWifPluginConfigured ? 'wif' : 'azure';
     // if there are either WIF or azure attributes, disable user's ability to change accessType
@@ -130,6 +131,8 @@ export default class ConfigureAzureComponent extends Component<Args> {
       return true;
     } catch (e) {
       this.flashMessages.danger(`Issuer was not saved: ${errorMessage(e, 'Check Vault logs for details.')}`);
+      // remove issuer from the config model if it was not saved
+      this.args.issuerConfig.rollbackAttributes();
       return false;
     }
   }

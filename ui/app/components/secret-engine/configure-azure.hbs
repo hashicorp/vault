@@ -47,7 +47,7 @@
     {{/if}}
     {{#if (eq this.accessType "wif")}}
       {{! WIF Fields }}
-      {{#each @issuerConfig.attrs as |attr|}}
+      {{#each @issuerConfig.displayAttrs as |attr|}}
         <FormField @attr={{attr}} @model={{@issuerConfig}} />
       {{/each}}
       <FormFieldGroups @model={{@model}} @mode={{if @model.isNew "create" "edit"}} @groupName="fieldGroupsWif" />

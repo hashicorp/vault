@@ -207,9 +207,6 @@ export const expectedConfigKeys = (type) => {
         'Subscription ID',
         'Tenant ID',
         'Client ID',
-        'Root password TTL',
-        'Environment',
-        'identityTokenAudience',
         'Environment',
         'Identity token audience',
         'Identity token TTL',
@@ -312,7 +309,7 @@ export const fillInAzureConfig = async (situation = 'azure') => {
   await fillIn(GENERAL.inputByAttr('subscriptionId'), 'subscription-id');
   await fillIn(GENERAL.inputByAttr('tenantId'), 'tenant-id');
   await fillIn(GENERAL.inputByAttr('clientId'), 'client-id');
-  await fillIn(GENERAL.inputByAttr('environment'), 'environment-123');
+  await fillIn(GENERAL.inputByAttr('environment'), 'AZUREPUBLICCLOUD');
 
   if (situation === 'azure') {
     await fillIn(GENERAL.inputByAttr('clientSecret'), 'client-secret');

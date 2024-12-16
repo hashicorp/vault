@@ -369,7 +369,7 @@ module('Integration | Component | SecretEngine/ConfigureAzure', function (hooks)
           );
       });
 
-      test('it allows you to change access type if record does not have wif or azure values already set', async function (assert) {
+      test('it allows you to change accessType if record does not have wif or azure values already set', async function (assert) {
         // the model does not have to be new for a user to see the option to change the access type.
         // the access type is only disabled if the model has values already set for access type fields.
         this.config = createConfig(this.store, this.id, 'azure-generic');

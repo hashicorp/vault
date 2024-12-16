@@ -55,8 +55,8 @@ export default class SecretsBackendConfigurationEdit extends Route {
         // some of the models return a 200 if they are not configured (ex: azure)
         // so instead of checking a catch or httpStatus, we check if the model is configured based on the getter `isConfigured` on the engine's model
         // if the engine is not configured we update the record to get the default values
-        if (!configModel.isConfigured) {
-          model[standardizedKey] = await this.store.updateRecord(adapterPath, {
+        if (!configModel.isConfigured && type === 'azure') {
+          model[standardizedKey] = await this.store.createRecord(adapterPath, {
             backend,
             type,
           });

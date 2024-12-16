@@ -10,6 +10,7 @@ export default class AzureConfigSerializer extends ApplicationSerializer {
     if (!payload.data) {
       return super.normalizeResponse(...arguments);
     }
+
     const normalizedPayload = {
       id: payload.id,
       backend: payload.backend,

@@ -156,8 +156,5 @@ export default class SecretsBackendConfigurationRoute extends Route {
     )?.displayName;
     controller.isConfigurable = CONFIGURABLE_SECRET_ENGINES.includes(resolvedModel.secretEngineModel.type);
     controller.modelId = resolvedModel.secretEngineModel.id;
-    // Azure configuration TTLs are in seconds, so we want to format them to a readable timestamp, ex: 15768000 -> 6 months 1 day 13 hours
-    // Other engines have TTLs returned in strings that do not need formatting, ex: maxLease on aws "12h15m10s"
-    controller.formatTtl = resolvedModel.secretEngineModel.type === 'azure';
   }
 }
