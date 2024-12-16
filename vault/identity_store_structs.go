@@ -110,6 +110,8 @@ type IdentityStore struct {
 	// aliasLocks is used to protect modifications to alias entries based on the uniqueness factor
 	// which is name + accessor
 	aliasLocks []*locksutil.LockEntry
+
+	conflictResolver ConflictResolver
 }
 
 type groupDiff struct {
