@@ -20,6 +20,8 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
+var errNoUpdateAfterRotation = "updating password not allowed after rotation"
+
 func pathListRoles(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
 		{
@@ -643,6 +645,11 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		return nil, err
 	}
 
+	connDetails, err := b.ConnectionDetails(ctx, dbConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	lastVaultRotation := role.StaticAccount.LastVaultRotation
 	if passwordRaw, ok := data.GetOk("password"); ok {
 		// We will allow users to update the password until the point where
@@ -651,12 +658,12 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		updateAllowed := lastVaultRotation.IsZero()
 		if updateAllowed {
 			role.StaticAccount.Password = passwordRaw.(string)
-			if selfManaged, ok := dbConfig.ConnectionDetails["self_managed"].(bool); ok && selfManaged {
+			if connDetails != nil && connDetails.SelfManaged {
 				// Password and SelfManagedPassword should map to the same value
 				role.StaticAccount.SelfManagedPassword = passwordRaw.(string)
 			}
 		} else {
-			return logical.ErrorResponse("updating password not allowed after rotation: role=%s, lastVaultRotation=%s", name, lastVaultRotation), nil
+			return logical.ErrorResponse("%s: role=%s, lastVaultRotation=%s", errNoUpdateAfterRotation, name, lastVaultRotation), nil
 		}
 	}
 
