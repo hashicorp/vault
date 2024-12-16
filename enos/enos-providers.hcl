@@ -1,11 +1,11 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
 
 provider "aws" "default" {
   region = var.aws_region
 }
 
-# This default SSH user is used in RHEL, Amazon Linux, SUSE, and Leap distros
+// This default SSH user is used in RHEL, Amazon Linux, SUSE, and Leap distros
 provider "enos" "ec2_user" {
   transport = {
     ssh = {
@@ -15,7 +15,7 @@ provider "enos" "ec2_user" {
   }
 }
 
-# This default SSH user is used in the Ubuntu distro
+// This default SSH user is used in the Ubuntu distro
 provider "enos" "ubuntu" {
   transport = {
     ssh = {

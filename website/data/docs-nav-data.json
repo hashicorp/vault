@@ -34,8 +34,25 @@
   },
 
   {
-    "title": "Installing Vault",
-    "path": "install"
+    "title": "Install Vault",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "install"
+      },
+      {
+        "title": "Install manually",
+        "path": "install/install-binary"
+      },
+      {
+        "title": "Build from code",
+        "path": "install/build-from-code"
+      }
+    ]
+  },
+  {
+    "title": "Run Vault as a service",
+    "path": "run-as-service"
   },
   {
     "title": "Internals",
@@ -181,14 +198,6 @@
         "path": "concepts/lease"
       },
       {
-        "title": "Lease Explosions",
-        "path": "concepts/lease-explosions"
-      },
-      {
-        "title": "Lease count quota exceeded",
-        "path": "concepts/lease-count-quota-exceeded"
-      },
-      {
         "title": "Authentication",
         "path": "concepts/auth"
       },
@@ -256,6 +265,10 @@
       {
         "title": "Resource Quotas",
         "path": "concepts/resource-quotas"
+      },
+      {
+        "title": "Billing Start Date",
+        "path": "concepts/billing-start-date"
       },
       {
         "title": "Client count",
@@ -368,6 +381,14 @@
         "path": "configuration/programmatic-management"
       },
       {
+        "title": "Prevent lease explosions",
+        "path": "configuration/prevent-lease-explosions"
+      },
+      {
+        "title": "Create a lease count quota",
+        "path": "configuration/create-lease-count-quota"
+      },
+      {
         "title": "<code>listener</code>",
         "routes": [
           {
@@ -401,6 +422,15 @@
           "color": "neutral"
         },
         "path": "configuration/replication"
+      },
+      {
+        "title": "<code>reporting</code>",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
+        "path": "configuration/reporting"
       },
       {
         "title": "<code>seal</code>",
@@ -455,6 +485,11 @@
       },
       {
         "title": "<code>sentinel</code>",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "path": "configuration/sentinel"
       },
       {
@@ -1613,10 +1648,11 @@
           },
           {
             "title": "Enrollment over Secure Transport (EST)",
+            "path": "secrets/pki/est",
             "badge": {
-              "text": "BETA",
+              "text": "ENTERPRISE",
               "type": "outlined",
-              "color": "highlight"
+              "color": "neutral"
             },
             "path": "secrets/pki/est"
           }
@@ -1995,8 +2031,25 @@
     "path": "interoperability-matrix"
   },
   {
-    "title": "Troubleshoot",
-    "href": "https://learn.hashicorp.com/tutorials/vault/troubleshooting-vault"
+    "title": "Troubleshoot Vault",
+    "routes": [
+      {
+        "title": "Generate a root token",
+        "path": "troubleshoot/generate-root-token"
+      },
+      {
+        "title": "Troubleshoot lease errors",
+        "path": "troubleshoot/lease-issues"
+      },
+      {
+        "title": "Tune the lease TTL",
+        "path": "troubleshoot/tune-lease-ttl"
+      },
+      {
+        "title": "Troubleshooting tutorials",
+        "href": "https://learn.hashicorp.com/tutorials/vault/troubleshooting-vault"
+      }
+    ]
   },
   {
     "divider": true
@@ -2045,7 +2098,10 @@
             "title": "Agent Injector vs. Vault CSI Provider",
             "path": "platform/k8s/injector-csi"
           },
-
+          {
+            "title": "Migrate Consul to Raft storage",
+            "path": "platform/k8s/consul-to-raft"
+          },
           {
             "title": "Helm Chart",
             "routes": [
@@ -2736,6 +2792,10 @@
             "path": "enterprise/license/manual-reporting"
           },
           {
+            "title": "Product usage reporting",
+            "path": "enterprise/license/product-usage-reporting"
+          },
+          {
             "title": "FAQ",
             "path": "enterprise/license/faq"
           }
@@ -2851,6 +2911,15 @@
           {
             "title": "Run Vault with many namespaces",
             "path": "enterprise/namespaces/namespace-limits",
+            "badge": {
+              "text": "ENTERPRISE",
+              "type": "outlined",
+              "color": "neutral"
+            }
+          },
+          {
+            "title": "Configure cross namespace access",
+            "path": "enterprise/namespaces/configure-cross-namespace-access",
             "badge": {
               "text": "ENTERPRISE",
               "type": "outlined",

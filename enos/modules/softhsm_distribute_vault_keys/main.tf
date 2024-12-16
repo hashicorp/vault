@@ -12,6 +12,7 @@ terraform {
 
 variable "hosts" {
   type = map(object({
+    ipv6       = string
     private_ip = string
     public_ip  = string
   }))
@@ -26,6 +27,7 @@ variable "token_base64" {
 locals {
   // The user/group name for softhsm
   softhsm_groups = {
+    "amzn"   = "ods"
     "rhel"   = "ods"
     "ubuntu" = "softhsm"
   }

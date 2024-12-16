@@ -90,22 +90,6 @@ $ curl \
 This endpoint returns client activity information for a given billing
 period, which is represented by the `start_time` and `end_time` parameters.
 
-There are a few things to keep in mind while using this API.
-
-- For Vault versions before 1.11, the activity information only accounts for
-the activity of the latest contiguous months in the billing period.
-For example, if the billing period is from Jan 2022 to June 2022, and the
-activity subsystem in Vault was not capturing data for the months Jan to March,
-the response will only include information for May and June. Note that if no
-`start_time` and `end_time` parameters are specified, the billing period defaults
-to 12 months, so the endpoint will return activity information from the end of the
-previous month to the start of 12 months prior to that date.
-
-- As of 1.11, this behavior has been modified to return all available data within
-the specified billing period.
-
-- As of 1.12, the `end_time` can be the current month.
-
 - The response contains the total activity for the billing period and the
 attributions of the total activity against specific components in Vault. This
 helps in understanding the total activity better by knowing which components in
@@ -247,21 +231,21 @@ returned by the API for backward compatibility and it may be removed in the futu
 `non_entity_clients` field instead. The `non_entity_tokens` field is currently
 returned by the API for backward compatibility, and it may be removed in the future.
 
-- If the `end_date` supplied to the API is for the current month, the activity
-information returned by this API will only be till the previous month. The
-activity system is designed to process the accumulated activity only at the end
-of the month. Since the system does not fully process the current month's
-information, it will not be added to the API response.
+- The response includes month data for the entire queried period, but may
+not exactly match the `start_time` and `end_time` returned in the response.
+The `start_time` in the response is the earliest time there is activity data
+in the queried period. The `end_time` is the end of the final month of the queried
+period.
 
-- The response includes the actual time period covered, which may not exactly
-match the query parameters due to the month granularity of data or missing
-months in the requested time range.
+- If the `end_date` supplied to the API is the current month, exact activity
+information will be returned for all months in the queried period, except for the
+current month. The last element in the `months` response stanza will signify the current month. Furthermore, the
+`new_clients` counts returned for the current month will be an estimate.
 
-- Note that if the `end_date` specified is the current month,
-the last element in the `months` response stanza, signifying the current month, will
-not have namespace attribution for the `new_clients` stanza. Furthermore, the
-`new_clients` counts returned for the current month will be an approximation.
-That is to say, the response will appear as follows.
+The following is an example of the `months` breakdown with just the current month information.
+
+
+  @include 'auto-roll-billing-start-example.mdx'
 
 ```json
 {
@@ -316,7 +300,35 @@ That is to say, the response will appear as follows.
                "acme_clients":"approx int value",
                "clients":"approx int value"
             },
-            "namespaces":[]
+            "namespaces":[
+               {
+                  "namespace_id":"root",
+                  "namespace_path":"",
+                  "counts":{},
+                  "mounts":[
+                     {
+                        "path":"auth/up2/",
+                        "counts":{
+                          "entity_clients":"approx int value",
+                          "non_entity_clients":"approx int value",
+                          "secret_syncs":"approx int value",
+                          "acme_clients":"approx int value",
+                          "clients":"approx int value"
+                         },
+                     },
+                     {
+                        "path":"auth/up1/",
+                        "counts":{
+                          "entity_clients":"approx int value",
+                          "non_entity_clients":"approx int value",
+                          "secret_syncs":"approx int value",
+                          "acme_clients":"approx int value",
+                          "clients":"approx int value"
+                        }
+                     }
+                  ]
+               }
+            ]
          }
       }
    ],
@@ -335,7 +347,6 @@ be listed as "deleted namespace :ID:." Deleted namespaces are reported only for
 queries in the root namespace because the information about the namespace path
 is unknown.
 
-This endpoint was added in Vault 1.6.
 
 @include 'alerts/restricted-root.mdx'
 
@@ -346,8 +357,8 @@ This endpoint was added in Vault 1.6.
 ### Parameters
 
 - `start_time` `(string, optional)` - An RFC3339 timestamp or Unix epoch time. Specifies the start of the
-  period for which client counts will be reported. If no start time is specified, the `default_report_months`
-  prior to the `end_time` will be used.
+  period for which client counts will be reported. If no start time is specified, the billing start date will be used.
+  The [billing start date](/vault/docs/concepts/billing-start-date) automatically rolls over to the latest billing year at the end of the last cycle.
 - `end_time` `(string, optional)` - An RFC3339 timestamp or Unix epoch time. Specifies the end of the period
   for which client counts will be reported. If no end time is specified, the end of the previous calendar
   month will be used.
@@ -935,8 +946,6 @@ Note: the client count may be inaccurate in the moments following a Vault
 reboot, or leadership change. The estimate will stabilize when background
 loading of client data has completed.
 
-This endpoint was added in Vault 1.7.
-
 @include 'alerts/restricted-root.mdx'
 
 | Method | Path                                      |
@@ -1166,6 +1175,18 @@ $ curl \
 }
 ```
 
+<Note title="Important change to supported versions">
+   As of 1.16.7, 1.17.3 and later,
+   the <a href="/vault/docs/concepts/billing-start-date">billing start date</a> automatically
+   rolls over to the latest billing year at the end of the last cycle.
+
+   For more information, refer to the upgrade guide for your Vault version:
+
+   [Vault v1.16.x](/vault/docs/upgrading/upgrade-to-1.16.x#auto-rolled-billing-start-date),
+   [Vault v1.17.x](/vault/docs/upgrading/upgrade-to-1.17.x#auto-rolled-billing-start-date)
+
+</Note>
+
 ## Activity export
 
 This endpoint returns an export of the clients that had activity within the
@@ -1185,7 +1206,6 @@ months in the requested time range.
 information returned by this API will include activity for this month, however
 it may be up to 20 minutes delayed.
 
-This endpoint was added in Vault 1.11.
 
 @include 'alerts/restricted-root.mdx'
 

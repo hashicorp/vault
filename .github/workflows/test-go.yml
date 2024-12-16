@@ -49,6 +49,11 @@ on:
         required: false
         default: 20
         type: number
+      go-test-timeout:
+        description: The timeout parameter for Go tests
+        required: false
+        default: 50m
+        type: string
       timeout-minutes:
         description: The maximum number of minutes that this workflow should run
         required: false
@@ -98,12 +103,6 @@ jobs:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           ref: ${{ inputs.checkout-ref }}
-      - uses: ./.github/actions/set-up-go
-        with:
-          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
-      - id: metadata
-        name: Set up metadata
-        run: echo "go-test-dir=test-results/go-test" | tee -a "$GITHUB_OUTPUT"
       - name: Authenticate to Vault
         id: vault-auth
         if: github.repository == 'hashicorp/vault-enterprise'
@@ -131,6 +130,12 @@ jobs:
         if: github.repository != 'hashicorp/vault-enterprise'
         run: |
           git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
+      - uses: ./.github/actions/set-up-go
+        with:
+          github-token: ${{ github.repository == 'hashicorp/vault-enterprise' && steps.secrets.outputs.github-token || secrets.ELEVATED_GITHUB_TOKEN }}
+      - id: metadata
+        name: Set up metadata
+        run: echo "go-test-dir=test-results/go-test" | tee -a "$GITHUB_OUTPUT"
       - uses: ./.github/actions/set-up-gotestsum
       - run: mkdir -p ${{ steps.metadata.outputs.go-test-dir }}
       - uses: actions/cache/restore@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
@@ -243,24 +248,26 @@ jobs:
           # Example comments assume:
           #   - needs.test-matrix.outputs.go-test-dir == test-results/go-test
           #   - inputs.name == testonly
+          #   - inputs.checkout-ref == main
           #   - matrix.id == 1
-          name='${{ inputs.name }}-${{ matrix.id }}'                                    # testonly-1
+          ref="$(tr / - <<< "${{ inputs.checkout-ref }}")"                              # main, but removes special characters from refs with /
+          name="${{ inputs.name }}-${ref}-${{ matrix.id }}"                             # testonly-main-1
           go_test_dir='${{ needs.test-matrix.outputs.go-test-dir }}'                    # test-results/go-test
           test_results_dir="$(dirname "$go_test_dir")"                                  # test-results
           go_test_dir_absolute="$(pwd)/${go_test_dir}"                                  # /home/runner/work/vault/vault/test-results/go-test
           go_test_log_dir="${go_test_dir}/logs"                                         # test-results/go-test/logs
           go_test_log_dir_absolute="${go_test_dir_absolute}/logs"                       # /home/runner/work/vault/vault/test-results/go-test/logs
-          go_test_log_archive_name="test-logs-${name}.tar"                              # test-logs-testonly-1.tar
-          go_test_results_upload_key="${test_results_dir}-${name}"                      # test-results/go-test-testonly-1
-          go_test_results_download_pattern="${test_results_dir}-${{ inputs.name }}-*"   # test-results/go-test-testonly-*
+          go_test_log_archive_name="test-logs-${name}.tar"                              # test-logs-testonly-main-1.tar
+          go_test_results_upload_key="${test_results_dir}-${name}"                      # test-results/go-test-testonly-main-1
+          go_test_results_download_pattern="${test_results_dir}-${{ inputs.name }}-*"   # test-results/go-test-testonly-main-*
           gotestsum_results_prefix="results"                                            # results
-          gotestsum_junitfile=${go_test_dir}/${gotestsum_results_prefix}-${name}.xml    # test-results/go-test/results-testonly-1.xml
-          gotestsum_jsonfile=${go_test_dir}/${gotestsum_results_prefix}-${name}.json    # test-results/go-test/results-testonly-1.json
-          gotestsum_timing_events=failure-summary-${name}.json                          # failure-summary-testonly-1.json
-          failure_summary_file_name="failure-summary-${name}.md"                        # failure-summary-testonly-1.md
+          gotestsum_junitfile=${go_test_dir}/${gotestsum_results_prefix}-${name}.xml    # test-results/go-test/results-testonly-main-1.xml
+          gotestsum_jsonfile=${go_test_dir}/${gotestsum_results_prefix}-${name}.json    # test-results/go-test/results-testonly-main-1.json
+          gotestsum_timing_events=failure-summary-${name}.json                          # failure-summary-testonly-main-1.json
+          failure_summary_file_name="failure-summary-${name}.md"                        # failure-summary-testonly-main-1.md
           data_race_log_file="data-race.log"                                            # data-race.log
-          data_race_log_download_pattern="data-race-${{ inputs.name }}*.log"            # data-race-testonly-*.log
-          data_race_log_upload_key="data-race-${name}.log"                              # data-race-testonly-1.log
+          data_race_log_download_pattern="data-race-${{ inputs.name }}*.log"            # data-race-testonly-main-*.log
+          data_race_log_upload_key="data-race-${name}.log"                              # data-race-testonly-main-1.log
           {
             echo "name=${name}"
             echo "failure-summary-file-name=${failure_summary_file_name}"
@@ -441,7 +448,7 @@ jobs:
               -- \
               $package_parallelism \
               -tags "${{ inputs.go-tags }}" \
-              -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
+              -timeout=${{ inputs.go-test-timeout }} \
               -parallel=${{ inputs.go-test-parallelism }} \
               ${{ inputs.extra-flags }} \
       - name: Prepare datadog-ci
@@ -478,7 +485,7 @@ jobs:
         run: |
           tar -cvf '${{ steps.metadata.outputs.go-test-log-archive-name }}' -C "${{ steps.metadata.outputs.go-test-log-dir }}" .
       - name: Upload test logs archives
-        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
         with:
           name: ${{ steps.metadata.outputs.go-test-log-archive-name }}
           path: ${{ steps.metadata.outputs.go-test-log-archive-name }}
@@ -486,7 +493,7 @@ jobs:
         if: success() || failure()
       - name: Upload test results
         if: success() || failure()
-        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
         with:
           name: ${{ steps.metadata.outputs.go-test-results-upload-key }}
           path: |
@@ -526,7 +533,7 @@ jobs:
         if: |
           (success() || failure()) &&
           steps.data-race-check.outputs.data-race-result == 'failure'
-        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
         with:
           name: ${{ steps.metadata.outputs.data-race-log-upload-key }}
           path: ${{ steps.metadata.outputs.go-test-dir }}/${{ steps.metadata.outputs.data-race-log-file }}
@@ -599,7 +606,7 @@ jobs:
           '${{ steps.metadata.outputs.gotestsum-timing-events }}' \
           >> '${{ steps.metadata.outputs.failure-summary-file-name }}'
       - name: Upload failure summary
-        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
         if: success() || failure()
         with:
           name: ${{ steps.metadata.outputs.failure-summary-file-name }}
@@ -617,7 +624,7 @@ jobs:
       data-race-output: ${{ steps.status.outputs.data-race-output }}
       data-race-result: ${{ steps.status.outputs.data-race-result }}
     steps:
-      - uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # v4.1.7
+      - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
           pattern: ${{ needs.test-go.outputs.data-race-log-download-pattern }}
           path: data-race-logs
@@ -666,7 +673,7 @@ jobs:
           restore-keys: |
             ${{ inputs.test-timing-cache-key }}-
       - if: ${{ ! cancelled() && needs.test-go.result == 'success' && inputs.test-timing-cache-enabled }}
-        uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # v4.1.7
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
           path: ${{ needs.test-matrix.outputs.go-test-dir }}
           pattern: ${{ needs.test-go.outputs.go-test-results-download-pattern }}

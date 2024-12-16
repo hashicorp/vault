@@ -1,5 +1,5 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
 
 scenario "seal_ha" {
   description = <<-EOF
@@ -31,17 +31,18 @@ scenario "seal_ha" {
     consul_version  = global.consul_versions
     distro          = global.distros
     edition         = global.enterprise_editions
+    ip_version      = global.ip_versions
     // Seal HA is only supported with auto-unseal devices.
     primary_seal   = ["awskms", "pkcs11"]
     secondary_seal = ["awskms", "pkcs11"]
 
-    # Our local builder always creates bundles
+    // Our local builder always creates bundles
     exclude {
       artifact_source = ["local"]
       artifact_type   = ["package"]
     }
 
-    # PKCS#11 can only be used on ent.hsm and ent.hsm.fips1402.
+    // PKCS#11 can only be used on ent.hsm and ent.hsm.fips1402.
     exclude {
       primary_seal = ["pkcs11"]
       edition      = [for e in matrix.edition : e if !strcontains(e, "hsm")]
@@ -52,22 +53,21 @@ scenario "seal_ha" {
       edition        = [for e in matrix.edition : e if !strcontains(e, "hsm")]
     }
 
-    # arm64 AMIs are not offered for Leap
-    exclude {
-      distro = ["leap"]
-      arch   = ["arm64"]
-    }
-
-    # softhsm packages not available for leap/sles. Enos support for softhsm on amzn2 is
-    # not implemented yet.
+    // softhsm packages not available for leap/sles.
     exclude {
       primary_seal = ["pkcs11"]
-      distro       = ["amzn2", "leap", "sles"]
+      distro       = ["leap", "sles"]
     }
 
     exclude {
       secondary_seal = ["pkcs11"]
-      distro         = ["amzn2", "leap", "sles"]
+      distro         = ["leap", "sles"]
+    }
+
+    // Testing in IPV6 mode is currently implemented for integrated Raft storage only
+    exclude {
+      ip_version = ["6"]
+      backend    = ["consul"]
     }
   }
 
@@ -82,7 +82,7 @@ scenario "seal_ha" {
   locals {
     artifact_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_artifact_path) : null
     enos_provider = {
-      amzn2  = provider.enos.ec2_user
+      amzn   = provider.enos.ec2_user
       leap   = provider.enos.ec2_user
       rhel   = provider.enos.ec2_user
       sles   = provider.enos.ec2_user
@@ -130,6 +130,7 @@ scenario "seal_ha" {
 
     variables {
       common_tags = global.tags
+      ip_version  = matrix.ip_version
     }
   }
 
@@ -216,7 +217,7 @@ scenario "seal_ha" {
     }
 
     variables {
-      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
+      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"][global.distro_version["ubuntu"]]
       cluster_tag_key = global.backend_tag_key
       common_tags     = global.tags
       seal_key_names  = step.create_secondary_seal_key.resource_names
@@ -255,12 +256,12 @@ scenario "seal_ha" {
     variables {
       cluster_name    = step.create_vault_cluster_backend_targets.cluster_name
       cluster_tag_key = global.backend_tag_key
+      hosts           = step.create_vault_cluster_backend_targets.hosts
       license         = (matrix.backend == "consul" && matrix.consul_edition == "ent") ? step.read_backend_license.license : null
       release = {
         edition = matrix.consul_edition
         version = matrix.consul_version
       }
-      target_hosts = step.create_vault_cluster_backend_targets.hosts
     }
   }
 
@@ -286,12 +287,14 @@ scenario "seal_ha" {
       quality.vault_audit_socket,
       quality.vault_audit_syslog,
       quality.vault_autojoin_aws,
-      quality.vault_service_start,
       quality.vault_config_env_variables,
       quality.vault_config_file,
       quality.vault_config_log_level,
       quality.vault_init,
       quality.vault_license_required_ent,
+      quality.vault_listener_ipv4,
+      quality.vault_listener_ipv6,
+      quality.vault_service_start,
       quality.vault_storage_backend_consul,
       quality.vault_storage_backend_raft,
       // verified in enos_vault_start resource
@@ -321,16 +324,17 @@ scenario "seal_ha" {
         version = matrix.consul_version
       } : null
       enable_audit_devices = var.vault_enable_audit_devices
+      hosts                = step.create_vault_cluster_targets.hosts
       install_dir          = global.vault_install_dir[matrix.artifact_type]
+      ip_version           = matrix.ip_version
       license              = matrix.edition != "ce" ? step.read_vault_license.license : null
       local_artifact_path  = local.artifact_path
       manage_service       = local.manage_service
-      packages             = concat(global.packages, global.distro_packages[matrix.distro])
+      packages             = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       // Only configure our primary seal during our initial cluster setup
       seal_attributes = step.create_primary_seal_key.attributes
       seal_type       = matrix.primary_seal
       storage_backend = matrix.backend
-      target_hosts    = step.create_vault_cluster_targets.hosts
     }
   }
 
@@ -350,8 +354,10 @@ scenario "seal_ha" {
     ]
 
     variables {
-      timeout           = 120 # seconds
-      vault_hosts       = step.create_vault_cluster_targets.hosts
+      hosts             = step.create_vault_cluster_targets.hosts
+      ip_version        = matrix.ip_version
+      timeout           = 120 // seconds
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
     }
@@ -373,7 +379,9 @@ scenario "seal_ha" {
     ]
 
     variables {
-      vault_hosts       = step.create_vault_cluster_targets.hosts
+      hosts             = step.create_vault_cluster_targets.hosts
+      ip_version        = matrix.ip_version
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
     }
@@ -381,7 +389,7 @@ scenario "seal_ha" {
 
   step "verify_vault_unsealed" {
     description = global.description.verify_vault_unsealed
-    module      = module.vault_verify_unsealed
+    module      = module.vault_wait_for_cluster_unsealed
     depends_on  = [step.wait_for_leader]
 
     providers = {
@@ -395,15 +403,16 @@ scenario "seal_ha" {
     ]
 
     variables {
+      hosts             = step.create_vault_cluster_targets.hosts
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_instances   = step.create_vault_cluster_targets.hosts
     }
   }
 
   // Write some test data before we create the new seal
-  step "verify_write_test_data" {
-    description = global.description.verify_write_test_data
-    module      = module.vault_verify_write_data
+  step "verify_secrets_engines_create" {
+    description = global.description.verify_secrets_engines_create
+    module      = module.vault_verify_secrets_engines_create
     depends_on = [
       step.create_vault_cluster,
       step.get_vault_cluster_ips,
@@ -415,16 +424,28 @@ scenario "seal_ha" {
     }
 
     verifies = [
+      quality.vault_api_auth_userpass_login_write,
+      quality.vault_api_auth_userpass_user_write,
+      quality.vault_api_identity_entity_write,
+      quality.vault_api_identity_entity_alias_write,
+      quality.vault_api_identity_group_write,
+      quality.vault_api_identity_oidc_config_write,
+      quality.vault_api_identity_oidc_introspect_write,
+      quality.vault_api_identity_oidc_key_write,
+      quality.vault_api_identity_oidc_key_rotate_write,
+      quality.vault_api_identity_oidc_role_write,
+      quality.vault_api_identity_oidc_token_read,
+      quality.vault_api_sys_auth_userpass_user_write,
+      quality.vault_api_sys_policy_write,
       quality.vault_mount_auth,
       quality.vault_mount_kv,
-      quality.vault_secrets_auth_user_policy_write,
       quality.vault_secrets_kv_write,
     ]
 
     variables {
-      leader_public_ip  = step.get_vault_cluster_ips.leader_public_ip
-      leader_private_ip = step.get_vault_cluster_ips.leader_private_ip
-      vault_instances   = step.create_vault_cluster_targets.hosts
+      hosts             = step.create_vault_cluster_targets.hosts
+      leader_host       = step.get_vault_cluster_ips.leader_host
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
     }
@@ -435,7 +456,7 @@ scenario "seal_ha" {
     description = global.description.wait_for_seal_rewrap
     module      = module.vault_wait_for_seal_rewrap
     depends_on = [
-      step.verify_write_test_data,
+      step.verify_secrets_engines_create,
     ]
 
     providers = {
@@ -450,7 +471,8 @@ scenario "seal_ha" {
     ]
 
     variables {
-      vault_hosts       = step.create_vault_cluster_targets.hosts
+      hosts             = step.create_vault_cluster_targets.hosts
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
     }
@@ -461,7 +483,7 @@ scenario "seal_ha" {
     module      = module.stop_vault
     depends_on = [
       step.create_vault_cluster,
-      step.verify_write_test_data,
+      step.verify_secrets_engines_create,
       step.wait_for_initial_seal_rewrap,
     ]
 
@@ -470,7 +492,7 @@ scenario "seal_ha" {
     }
 
     variables {
-      target_hosts = step.create_vault_cluster_targets.hosts
+      hosts = step.create_vault_cluster_targets.hosts
     }
   }
 
@@ -488,7 +510,9 @@ scenario "seal_ha" {
 
     variables {
       cluster_name              = step.create_vault_cluster_targets.cluster_name
+      hosts                     = step.create_vault_cluster_targets.hosts
       install_dir               = global.vault_install_dir[matrix.artifact_type]
+      ip_version                = matrix.ip_version
       license                   = matrix.edition != "ce" ? step.read_vault_license.license : null
       manage_service            = local.manage_service
       seal_attributes           = step.create_primary_seal_key.attributes
@@ -496,7 +520,6 @@ scenario "seal_ha" {
       seal_type                 = matrix.primary_seal
       seal_type_secondary       = matrix.secondary_seal
       storage_backend           = matrix.backend
-      target_hosts              = step.create_vault_cluster_targets.hosts
     }
   }
 
@@ -516,8 +539,10 @@ scenario "seal_ha" {
     ]
 
     variables {
-      timeout           = 120 # seconds
-      vault_hosts       = step.create_vault_cluster_targets.hosts
+      hosts             = step.create_vault_cluster_targets.hosts
+      ip_version        = matrix.ip_version
+      timeout           = 120 // seconds
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
     }
@@ -539,7 +564,9 @@ scenario "seal_ha" {
     ]
 
     variables {
-      vault_hosts       = step.create_vault_cluster_targets.hosts
+      hosts             = step.create_vault_cluster_targets.hosts
+      ip_version        = matrix.ip_version
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
     }
@@ -561,8 +588,9 @@ scenario "seal_ha" {
     ]
 
     variables {
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       leader_host       = step.get_leader_ip_for_step_down.leader_host
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
     }
   }
@@ -583,8 +611,10 @@ scenario "seal_ha" {
     ]
 
     variables {
-      timeout           = 120 # seconds
-      vault_hosts       = step.create_vault_cluster_targets.hosts
+      timeout           = 120 // seconds
+      ip_version        = matrix.ip_version
+      hosts             = step.create_vault_cluster_targets.hosts
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
     }
@@ -606,7 +636,9 @@ scenario "seal_ha" {
     ]
 
     variables {
-      vault_hosts       = step.create_vault_cluster_targets.hosts
+      hosts             = step.create_vault_cluster_targets.hosts
+      ip_version        = matrix.ip_version
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
     }
@@ -614,7 +646,7 @@ scenario "seal_ha" {
 
   step "verify_vault_unsealed_with_new_seal" {
     description = global.description.verify_vault_unsealed
-    module      = module.vault_verify_unsealed
+    module      = module.vault_wait_for_cluster_unsealed
     depends_on  = [step.wait_for_new_leader]
 
     providers = {
@@ -628,8 +660,9 @@ scenario "seal_ha" {
     ]
 
     variables {
+      hosts             = step.create_vault_cluster_targets.hosts
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_instances   = step.create_vault_cluster_targets.hosts
     }
   }
 
@@ -654,7 +687,8 @@ scenario "seal_ha" {
     ]
 
     variables {
-      vault_hosts       = step.create_vault_cluster_targets.hosts
+      hosts             = step.create_vault_cluster_targets.hosts
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
     }
@@ -671,13 +705,16 @@ scenario "seal_ha" {
     }
 
     verifies = [
+      quality.vault_api_sys_version_history_keys,
+      quality.vault_api_sys_version_history_key_info,
       quality.vault_version_build_date,
       quality.vault_version_edition,
       quality.vault_version_release,
     ]
 
     variables {
-      vault_instances       = step.create_vault_cluster_targets.hosts
+      hosts                 = step.create_vault_cluster_targets.hosts
+      vault_addr            = step.create_vault_cluster.api_addr_localhost
       vault_edition         = matrix.edition
       vault_install_dir     = global.vault_install_dir[matrix.artifact_type]
       vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
@@ -700,8 +737,10 @@ scenario "seal_ha" {
     verifies = quality.vault_raft_voters
 
     variables {
+      hosts             = step.create_vault_cluster_targets.hosts
+      ip_version        = matrix.ip_version
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_instances   = step.create_vault_cluster_targets.hosts
       vault_root_token  = step.create_vault_cluster.root_token
     }
   }
@@ -722,26 +761,35 @@ scenario "seal_ha" {
     ]
 
     variables {
-      vault_edition     = matrix.edition
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_instances   = step.create_vault_cluster_targets.hosts
+      hosts         = step.create_vault_cluster_targets.hosts
+      vault_addr    = step.create_vault_cluster.api_addr_localhost
+      vault_edition = matrix.edition
     }
   }
 
   // Make sure our data is still available
-  step "verify_read_test_data" {
-    description = global.description.verify_read_test_data
-    module      = module.vault_verify_read_data
+  step "verify_secrets_engines_read" {
+    description = global.description.verify_secrets_engines_read
+    module      = module.vault_verify_secrets_engines_read
     depends_on  = [step.wait_for_seal_rewrap]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
 
-    verifies = quality.vault_secrets_kv_read
+    verifies = [
+      quality.vault_api_auth_userpass_login_write,
+      quality.vault_api_identity_entity_read,
+      quality.vault_api_identity_oidc_config_read,
+      quality.vault_api_identity_oidc_key_read,
+      quality.vault_api_identity_oidc_role_read,
+      quality.vault_secrets_kv_read
+    ]
 
     variables {
-      node_public_ips   = step.get_updated_cluster_ips.follower_public_ips
+      create_state      = step.verify_secrets_engines_create.state
+      hosts             = step.get_updated_cluster_ips.follower_hosts
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
     }
   }
@@ -758,7 +806,8 @@ scenario "seal_ha" {
     verifies = quality.vault_ui_assets
 
     variables {
-      vault_instances = step.create_vault_cluster_targets.hosts
+      hosts      = step.create_vault_cluster_targets.hosts
+      vault_addr = step.create_vault_cluster.api_addr_localhost
     }
   }
 
@@ -776,9 +825,10 @@ scenario "seal_ha" {
     verifies = quality.vault_status_seal_type
 
     variables {
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_hosts       = step.create_vault_cluster_targets.hosts
+      hosts             = step.create_vault_cluster_targets.hosts
       seal_type         = "multiseal"
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
     }
   }
 
@@ -790,7 +840,7 @@ scenario "seal_ha" {
     module      = module.stop_vault
     depends_on = [
       step.wait_for_seal_rewrap,
-      step.verify_read_test_data,
+      step.verify_secrets_engines_read,
     ]
 
     providers = {
@@ -798,7 +848,7 @@ scenario "seal_ha" {
     }
 
     variables {
-      target_hosts = step.create_vault_cluster_targets.hosts
+      hosts = step.create_vault_cluster_targets.hosts
     }
   }
 
@@ -820,14 +870,15 @@ scenario "seal_ha" {
 
     variables {
       cluster_name    = step.create_vault_cluster_targets.cluster_name
+      hosts           = step.create_vault_cluster_targets.hosts
       install_dir     = global.vault_install_dir[matrix.artifact_type]
+      ip_version      = matrix.ip_version
       license         = matrix.edition != "ce" ? step.read_vault_license.license : null
       manage_service  = local.manage_service
       seal_alias      = "secondary"
       seal_attributes = step.create_secondary_seal_key.attributes
       seal_type       = matrix.secondary_seal
       storage_backend = matrix.backend
-      target_hosts    = step.create_vault_cluster_targets.hosts
     }
   }
 
@@ -847,8 +898,10 @@ scenario "seal_ha" {
     ]
 
     variables {
-      timeout           = 120 # seconds
-      vault_hosts       = step.create_vault_cluster_targets.hosts
+      timeout           = 120 // seconds
+      ip_version        = matrix.ip_version
+      hosts             = step.create_vault_cluster_targets.hosts
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
     }
@@ -871,7 +924,9 @@ scenario "seal_ha" {
     ]
 
     variables {
-      vault_hosts       = step.create_vault_cluster_targets.hosts
+      hosts             = step.create_vault_cluster_targets.hosts
+      ip_version        = matrix.ip_version
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
     }
@@ -879,7 +934,7 @@ scenario "seal_ha" {
 
   // Make sure we unsealed
   step "verify_vault_unsealed_after_migration" {
-    module     = module.vault_verify_unsealed
+    module     = module.vault_wait_for_cluster_unsealed
     depends_on = [step.wait_for_leader_after_migration]
 
     providers = {
@@ -887,8 +942,9 @@ scenario "seal_ha" {
     }
 
     variables {
+      hosts             = step.create_vault_cluster_targets.hosts
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_instances   = step.create_vault_cluster_targets.hosts
     }
   }
 
@@ -905,23 +961,35 @@ scenario "seal_ha" {
     }
 
     variables {
-      vault_hosts       = step.create_vault_cluster_targets.hosts
+      hosts             = step.create_vault_cluster_targets.hosts
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
     }
   }
 
   // Make sure our data is still available after migration
-  step "verify_read_test_data_after_migration" {
-    module     = module.vault_verify_read_data
+  step "verify_secrets_engines_read_after_migration" {
+    module     = module.vault_verify_secrets_engines_read
     depends_on = [step.wait_for_seal_rewrap_after_migration]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
 
+    verifies = [
+      quality.vault_api_auth_userpass_login_write,
+      quality.vault_api_identity_entity_read,
+      quality.vault_api_identity_oidc_config_read,
+      quality.vault_api_identity_oidc_key_read,
+      quality.vault_api_identity_oidc_role_read,
+      quality.vault_secrets_kv_read
+    ]
+
     variables {
-      node_public_ips   = step.get_cluster_ips_after_migration.follower_public_ips
+      create_state      = step.verify_secrets_engines_create.state
+      hosts             = step.get_cluster_ips_after_migration.follower_hosts
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
     }
   }
@@ -938,9 +1006,10 @@ scenario "seal_ha" {
     }
 
     variables {
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_hosts       = step.create_vault_cluster_targets.hosts
+      hosts             = step.create_vault_cluster_targets.hosts
       seal_type         = matrix.secondary_seal
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
     }
   }
 
@@ -956,7 +1025,7 @@ scenario "seal_ha" {
 
   output "hosts" {
     description = "The Vault cluster target hosts"
-    value       = step.create_vault_cluster.target_hosts
+    value       = step.create_vault_cluster.hosts
   }
 
   output "initial_seal_rewrap" {
@@ -1007,6 +1076,11 @@ scenario "seal_ha" {
   output "secondary_seal_attributes" {
     description = "The Vault cluster secondary seal attributes"
     value       = step.create_secondary_seal_key.attributes
+  }
+
+  output "secrets_engines_state" {
+    description = "The state of configured secrets engines"
+    value       = step.verify_secrets_engines_create.state
   }
 
   output "unseal_keys_b64" {

@@ -1,5 +1,5 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
 
 module "autopilot_upgrade_storageconfig" {
   source = "./modules/autopilot_upgrade_storageconfig"
@@ -54,6 +54,24 @@ module "ec2_info" {
 
 module "get_local_metadata" {
   source = "./modules/get_local_metadata"
+}
+
+module "generate_dr_operation_token" {
+  source = "./modules/generate_dr_operation_token"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "generate_failover_secondary_token" {
+  source = "./modules/generate_failover_secondary_token"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "generate_secondary_public_key" {
+  source = "./modules/generate_secondary_public_key"
+
+  vault_install_dir = var.vault_install_dir
 }
 
 module "generate_secondary_token" {
@@ -114,7 +132,7 @@ module "stop_vault" {
   source = "./modules/stop_vault"
 }
 
-# create target instances using ec2:CreateFleet
+// create target instances using ec2:CreateFleet
 module "target_ec2_fleet" {
   source = "./modules/target_ec2_fleet"
 
@@ -123,25 +141,27 @@ module "target_ec2_fleet" {
   ssh_keypair  = var.aws_ssh_keypair_name
 }
 
-# create target instances using ec2:RunInstances
+// create target instances using ec2:RunInstances
 module "target_ec2_instances" {
   source = "./modules/target_ec2_instances"
 
-  common_tags  = var.tags
-  project_name = var.project_name
-  ssh_keypair  = var.aws_ssh_keypair_name
+  common_tags   = var.tags
+  ports_ingress = values(global.ports)
+  project_name  = var.project_name
+  ssh_keypair   = var.aws_ssh_keypair_name
 }
 
-# don't create instances but satisfy the module interface
+// don't create instances but satisfy the module interface
 module "target_ec2_shim" {
   source = "./modules/target_ec2_shim"
 
-  common_tags  = var.tags
-  project_name = var.project_name
-  ssh_keypair  = var.aws_ssh_keypair_name
+  common_tags   = var.tags
+  ports_ingress = values(global.ports)
+  project_name  = var.project_name
+  ssh_keypair   = var.aws_ssh_keypair_name
 }
 
-# create target instances using ec2:RequestSpotFleet
+// create target instances using ec2:RequestSpotFleet
 module "target_ec2_spot_fleet" {
   source = "./modules/target_ec2_spot_fleet"
 
@@ -153,36 +173,52 @@ module "target_ec2_spot_fleet" {
 module "vault_agent" {
   source = "./modules/vault_agent"
 
-  vault_install_dir    = var.vault_install_dir
-  vault_instance_count = var.vault_instance_count
+  vault_install_dir = var.vault_install_dir
+  vault_agent_port  = global.ports["vault_agent"]["port"]
 }
 
 module "vault_proxy" {
   source = "./modules/vault_proxy"
 
-  vault_install_dir    = var.vault_install_dir
-  vault_instance_count = var.vault_instance_count
+  vault_install_dir = var.vault_install_dir
+  vault_proxy_port  = global.ports["vault_proxy"]["port"]
 }
 
 module "vault_verify_agent_output" {
   source = "./modules/vault_verify_agent_output"
-
-  vault_instance_count = var.vault_instance_count
 }
 
 module "vault_cluster" {
   source = "./modules/vault_cluster"
 
-  install_dir    = var.vault_install_dir
-  consul_license = var.backend_license_path == null ? null : file(abspath(var.backend_license_path))
-  log_level      = var.vault_log_level
+  install_dir     = var.vault_install_dir
+  consul_license  = var.backend_license_path == null ? null : file(abspath(var.backend_license_path))
+  cluster_tag_key = global.vault_tag_key
+  log_level       = var.vault_log_level
 }
 
 module "vault_get_cluster_ips" {
   source = "./modules/vault_get_cluster_ips"
 
-  vault_install_dir    = var.vault_install_dir
-  vault_instance_count = var.vault_instance_count
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_failover_demote_dr_primary" {
+  source = "./modules/vault_failover_demote_dr_primary"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_failover_promote_dr_secondary" {
+  source = "./modules/vault_failover_promote_dr_secondary"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_failover_update_dr_primary" {
+  source = "./modules/vault_failover_update_dr_primary"
+
+  vault_install_dir = var.vault_install_dir
 }
 
 module "vault_raft_remove_peer" {
@@ -190,8 +226,20 @@ module "vault_raft_remove_peer" {
   vault_install_dir = var.vault_install_dir
 }
 
-module "vault_setup_perf_secondary" {
-  source = "./modules/vault_setup_perf_secondary"
+module "vault_setup_dr_primary" {
+  source = "./modules/vault_setup_dr_primary"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_setup_perf_primary" {
+  source = "./modules/vault_setup_perf_primary"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_setup_replication_secondary" {
+  source = "./modules/vault_setup_replication_secondary"
 
   vault_install_dir = var.vault_install_dir
 }
@@ -208,18 +256,16 @@ module "vault_test_ui" {
   ui_run_tests = var.ui_run_tests
 }
 
-module "vault_unseal_nodes" {
-  source = "./modules/vault_unseal_nodes"
+module "vault_unseal_replication_followers" {
+  source = "./modules/vault_unseal_replication_followers"
 
-  vault_install_dir    = var.vault_install_dir
-  vault_instance_count = var.vault_instance_count
+  vault_install_dir = var.vault_install_dir
 }
 
 module "vault_upgrade" {
   source = "./modules/vault_upgrade"
 
-  vault_install_dir    = var.vault_install_dir
-  vault_instance_count = var.vault_instance_count
+  vault_install_dir = var.vault_install_dir
 }
 
 module "vault_verify_autopilot" {
@@ -227,61 +273,30 @@ module "vault_verify_autopilot" {
 
   vault_autopilot_upgrade_status = "await-server-removal"
   vault_install_dir              = var.vault_install_dir
-  vault_instance_count           = var.vault_instance_count
 }
 
-module "vault_verify_raft_auto_join_voter" {
-  source = "./modules/vault_verify_raft_auto_join_voter"
+module "vault_verify_dr_replication" {
+  source = "./modules/vault_verify_dr_replication"
 
-  vault_install_dir    = var.vault_install_dir
-  vault_instance_count = var.vault_instance_count
+  vault_install_dir = var.vault_install_dir
 }
 
-module "vault_verify_undo_logs" {
-  source = "./modules/vault_verify_undo_logs"
+module "vault_verify_secrets_engines_create" {
+  source = "./modules/verify_secrets_engines/modules/create"
 
-  vault_install_dir    = var.vault_install_dir
-  vault_instance_count = var.vault_instance_count
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_verify_secrets_engines_read" {
+  source = "./modules/verify_secrets_engines/modules/read"
+
+  vault_install_dir = var.vault_install_dir
 }
 
 module "vault_verify_default_lcq" {
   source = "./modules/vault_verify_default_lcq"
 
   vault_autopilot_default_max_leases = "300000"
-  vault_instance_count               = var.vault_instance_count
-}
-
-module "vault_verify_replication" {
-  source = "./modules/vault_verify_replication"
-
-  vault_install_dir    = var.vault_install_dir
-  vault_instance_count = var.vault_instance_count
-}
-
-module "vault_verify_ui" {
-  source = "./modules/vault_verify_ui"
-
-  vault_instance_count = var.vault_instance_count
-}
-
-module "vault_verify_unsealed" {
-  source = "./modules/vault_verify_unsealed"
-
-  vault_install_dir    = var.vault_install_dir
-  vault_instance_count = var.vault_instance_count
-}
-
-module "vault_setup_perf_primary" {
-  source = "./modules/vault_setup_perf_primary"
-
-  vault_install_dir = var.vault_install_dir
-}
-
-module "vault_verify_read_data" {
-  source = "./modules/vault_verify_read_data"
-
-  vault_install_dir    = var.vault_install_dir
-  vault_instance_count = var.vault_instance_count
 }
 
 module "vault_verify_performance_replication" {
@@ -290,18 +305,37 @@ module "vault_verify_performance_replication" {
   vault_install_dir = var.vault_install_dir
 }
 
+module "vault_verify_raft_auto_join_voter" {
+  source = "./modules/vault_verify_raft_auto_join_voter"
+
+  vault_install_dir       = var.vault_install_dir
+  vault_cluster_addr_port = global.ports["vault_cluster"]["port"]
+}
+
+module "vault_verify_replication" {
+  source = "./modules/vault_verify_replication"
+}
+
+module "vault_verify_ui" {
+  source = "./modules/vault_verify_ui"
+}
+
+module "vault_verify_undo_logs" {
+  source = "./modules/vault_verify_undo_logs"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_wait_for_cluster_unsealed" {
+  source = "./modules/vault_wait_for_cluster_unsealed"
+
+  vault_install_dir = var.vault_install_dir
+}
+
 module "vault_verify_version" {
   source = "./modules/vault_verify_version"
 
-  vault_install_dir    = var.vault_install_dir
-  vault_instance_count = var.vault_instance_count
-}
-
-module "vault_verify_write_data" {
-  source = "./modules/vault_verify_write_data"
-
-  vault_install_dir    = var.vault_install_dir
-  vault_instance_count = var.vault_instance_count
+  vault_install_dir = var.vault_install_dir
 }
 
 module "vault_wait_for_leader" {
@@ -321,3 +355,12 @@ module "verify_seal_type" {
 
   vault_install_dir = var.vault_install_dir
 }
+
+module "vault_verify_billing_start_date" {
+  source = "./modules/vault_verify_billing_start_date"
+
+  vault_install_dir       = var.vault_install_dir
+  vault_instance_count    = var.vault_instance_count
+  vault_cluster_addr_port = global.ports["vault_cluster"]["port"]
+}
+

@@ -34,6 +34,13 @@ const ssh = {
       fieldGroup: 'default',
       type: 'boolean',
     },
+    allowEmptyPrincipals: {
+      editType: 'boolean',
+      fieldGroup: 'default',
+      helpText:
+        'Whether to allow issuing certificates with no valid principals (meaning any valid principal). Exists for backwards compatibility only, the default of false is highly recommended.',
+      type: 'boolean',
+    },
     allowHostCertificates: {
       editType: 'boolean',
       helpText:
@@ -1391,6 +1398,16 @@ const pki = {
       editType: 'ttl',
       helpText:
         'Interval at which to run an auto-tidy operation. This is the time between tidy invocations (after one finishes to the start of the next). Running a manual tidy will reset this duration.',
+      fieldGroup: 'default',
+    },
+    minStartupBackoffDuration: {
+      editType: 'ttl',
+      helpText: 'The minimum amount of time in seconds auto-tidy will be delayed after startup.',
+      fieldGroup: 'default',
+    },
+    maxStartupBackoffDuration: {
+      editType: 'ttl',
+      helpText: 'The maximum amount of time in seconds auto-tidy will be delayed after startup.',
       fieldGroup: 'default',
     },
     issuerSafetyBuffer: {

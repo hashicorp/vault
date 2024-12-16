@@ -38,6 +38,11 @@ jobs:
       ENOS_VAR_tfc_api_token: ${{ secrets.TF_API_TOKEN }}
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
+        with:
+          cache: false # save cache space for vault builds: https://github.com/hashicorp/vault/pull/21764
+          go-version-file: .go-version
+      - uses: ./.github/actions/install-external-tools
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_wrapper: false

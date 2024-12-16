@@ -13,6 +13,7 @@ import { clearRecords, deleteLatestCmd, writeVersionedSecret } from 'vault/tests
 import { setupControlGroup } from 'vault/tests/helpers/control-groups';
 import { click, currentURL, visit } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
+import sinon from 'sinon';
 
 const ALL_DELETE_ACTIONS = ['delete', 'destroy', 'undelete'];
 const assertDeleteActions = (assert, expected = ['delete', 'destroy']) => {
@@ -65,7 +66,8 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       return;
     });
     test('can delete and undelete the latest secret version (a)', async function (assert) {
-      assert.expect(17);
+      assert.expect(18);
+      const flashSuccess = sinon.spy(this.owner.lookup('service:flash-messages'), 'success');
       // go to secret details
       await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details`);
       // correct toolbar options & details show
@@ -78,6 +80,10 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assert.dom(PAGE.detail.deleteOptionLatest).isNotDisabled('delete latest option is selectable');
       await click(PAGE.detail.deleteOptionLatest);
       await click(PAGE.detail.deleteConfirm);
+      const expected = `Successfully deleted Version 4 of ${this.secretPath}.`;
+      const [actual] = flashSuccess.lastCall.args;
+      assert.strictEqual(actual, expected, 'renders correct flash message');
+
       // details update accordingly
       assert
         .dom(PAGE.emptyStateTitle)
@@ -123,7 +129,8 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assertDeleteActions(assert, ['delete', 'destroy']);
     });
     test('can destroy a secret version (a)', async function (assert) {
-      assert.expect(9);
+      assert.expect(10);
+      const flashSuccess = sinon.spy(this.owner.lookup('service:flash-messages'), 'success');
       // go to secret details
       await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=3`);
       // correct toolbar options show
@@ -132,6 +139,9 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await click(PAGE.detail.destroy);
       assert.dom(PAGE.detail.deleteModalTitle).includesText('Destroy version?', 'modal has correct title');
       await click(PAGE.detail.deleteConfirm);
+      const expected = `Successfully destroyed Version 3 of ${this.secretPath}.`;
+      const [actual] = flashSuccess.lastCall.args;
+      assert.strictEqual(actual, expected, 'renders correct flash message');
       // details update accordingly
       assert
         .dom(PAGE.emptyStateTitle)

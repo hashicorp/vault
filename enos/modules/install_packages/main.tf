@@ -15,8 +15,6 @@ locals {
     "arm64" = "aarch64"
   }
   package_manager = {
-    # Note: though we generally use "amzn2" as our distro name for Amazon Linux 2,
-    # enos_host_info.hosts[each.key].distro returns "amzn", so that is what we reference here.
     "amzn"          = "yum"
     "opensuse-leap" = "zypper"
     "rhel"          = "dnf"
@@ -25,11 +23,11 @@ locals {
   }
   distro_repos = {
     "sles" = {
-      "15.5" = "https://download.opensuse.org/repositories/network:utilities/SLE_15_SP5/network:utilities.repo"
+      "15.6" = "https://download.opensuse.org/repositories/network:utilities/SLE_15_SP6/network:utilities.repo"
     }
     "rhel" = {
-      "8.9" = "https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm"
-      "9.3" = "https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm"
+      "8.10" = "https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm"
+      "9.4"  = "https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm"
     }
   }
 }
@@ -41,6 +39,7 @@ variable "packages" {
 
 variable "hosts" {
   type = map(object({
+    ipv6       = string
     private_ip = string
     public_ip  = string
   }))

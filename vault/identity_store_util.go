@@ -148,7 +148,7 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 			}
 
 			if i.logger.IsDebug() {
-				i.logger.Debug("loading group", "name", group.Name, "id", group.ID)
+				i.logger.Debug("loading group", "namespace", ns.ID, "name", group.Name, "id", group.ID)
 			}
 
 			txn := i.db.Txn(true)
@@ -459,6 +459,10 @@ LOOP:
 
 				mountAccessors := getAccessorsOnDuplicateAliases(entity.Aliases)
 
+				if len(mountAccessors) > 0 {
+					i.logger.Warn("Entity has multiple aliases on the same mount(s)", "entity_id", entity.ID, "mount_accessors", mountAccessors)
+				}
+
 				for _, accessor := range mountAccessors {
 					if _, ok := duplicatedAccessors[accessor]; !ok {
 						duplicatedAccessors[accessor] = struct{}{}
@@ -496,10 +500,6 @@ LOOP:
 	for accessor := range duplicatedAccessors {
 		duplicatedAccessorsList[accessorCounter] = accessor
 		accessorCounter++
-	}
-
-	if len(duplicatedAccessorsList) > 0 {
-		i.logger.Warn("One or more entities have multiple aliases on the same mount(s), remove duplicates to avoid ACL templating issues", "mount_accessors", duplicatedAccessorsList)
 	}
 
 	if i.logger.IsInfo() {

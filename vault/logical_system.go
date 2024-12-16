@@ -2421,6 +2421,17 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			pluginType = consts.PluginTypeCredential
 		}
 
+		// Update MountEntry.Type of external plugins registered in Vault pre-v1.0.0 to the plugin binary name
+		// stored in MountEntry.Config.PluginName
+		// Previously, when upgrading Vault from pre-v1.0.0 to post-v1.0.0, MountEntry.Type of external plugins
+		// remained "plugin" where it should follow the new scheme and be updated to the plugin binary name.
+		// https://hashicorp.atlassian.net/browse/VAULT-21999
+		if mountEntry.Config.PluginName != "" {
+			if mountEntry.Config.PluginName != mountEntry.Type && mountEntry.Type == "plugin" {
+				mountEntry.Type = mountEntry.Config.PluginName
+			}
+		}
+
 		pinnedVersion, err := b.Core.pluginCatalog.GetPinnedVersion(ctx, pluginType, mountEntry.Type)
 		if err != nil && !errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
 			return nil, err
@@ -5063,6 +5074,14 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 		routerPrefix = credentialRoutePrefix
 	}
 
+	// the mount's namespace is (at least partially) in the request path and not
+	// in the request's context, so we need to add the namespace from the
+	// request path to the router prefix
+	if me.NamespaceID != ns.ID {
+		namespaceRouterPrefix := strings.TrimPrefix(me.Namespace().Path, ns.Path)
+		routerPrefix = namespaceRouterPrefix + routerPrefix
+	}
+
 	filtered, err := b.Core.checkReplicatedFiltering(ctx, me, routerPrefix)
 	if err != nil {
 		return nil, err
@@ -5622,7 +5641,16 @@ func (c *Core) GetSealBackendStatus(ctx context.Context) (*SealBackendStatusResp
 	if err != nil {
 		return nil, fmt.Errorf("could not list partially seal wrapped values: %w", err)
 	}
-	genInfo := c.seal.GetAccess().GetSealGenerationInfo()
+	// When multi-seal is enabled, use the stored seal generation information. Note that the in-memory
+	// value may not be up-to-date on non-active nodes.
+	genInfo, err := PhysicalSealGenInfo(ctx, c.physical)
+	if err != nil {
+		return nil, fmt.Errorf("could not read seal generation information: %w", err)
+	}
+	if genInfo == nil {
+		// Multi-seal is not enabled, use the in-memory value.
+		genInfo = c.seal.GetAccess().GetSealGenerationInfo()
+	}
 	r.FullyWrapped = genInfo.IsRewrapped() && len(pps) == 0
 	return &r, nil
 }

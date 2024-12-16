@@ -2458,15 +2458,12 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 
-		if !c.perfStandby {
-			if err := c.setupCensusManager(); err != nil {
-				logger.Error("failed to instantiate the license reporting agent", "error", err)
-			}
-
-			c.StartCensusReports(ctx)
-
-			c.StartManualCensusSnapshots()
+		if err := c.setupCensusManager(); err != nil {
+			logger.Error("failed to instantiate the license reporting agent", "error", err)
 		}
+
+		c.StartCensusReports(ctx)
+		c.StartManualCensusSnapshots()
 
 	} else {
 		brokerLogger := logger.Named("audit")
@@ -2861,7 +2858,6 @@ func (c *Core) preSeal() error {
 	if err := c.teardownCensusManager(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down reporting agent: %w", err))
 	}
-
 	if err := c.teardownCredentials(context.Background()); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down credentials: %w", err))
 	}

@@ -31,19 +31,34 @@ export default Route.extend(ClusterRoute, {
 
   afterModel(model) {
     return hash({
-      canEnablePrimary: this.store
-        .findRecord('capabilities', 'sys/replication/primary/enable')
+      canEnablePrimaryPerformance: this.store
+        .findRecord('capabilities', 'sys/replication/performance/primary/enable')
         .then((c) => c.canUpdate),
-      canEnableSecondary: this.store
-        .findRecord('capabilities', 'sys/replication/secondary/enable')
+      canEnableSecondaryPerformance: this.store
+        .findRecord('capabilities', 'sys/replication/performance/secondary/enable')
         .then((c) => c.canUpdate),
-    }).then(({ canEnablePrimary, canEnableSecondary }) => {
-      setProperties(model, {
-        canEnablePrimary,
-        canEnableSecondary,
-      });
-      return model;
-    });
+      canEnablePrimaryDr: this.store
+        .findRecord('capabilities', 'sys/replication/dr/primary/enable')
+        .then((c) => c.canUpdate),
+      canEnableSecondaryDr: this.store
+        .findRecord('capabilities', 'sys/replication/dr/secondary/enable')
+        .then((c) => c.canUpdate),
+    }).then(
+      ({
+        canEnablePrimaryPerformance,
+        canEnableSecondaryPerformance,
+        canEnablePrimaryDr,
+        canEnableSecondaryDr,
+      }) => {
+        setProperties(model, {
+          canEnablePrimaryPerformance,
+          canEnableSecondaryPerformance,
+          canEnablePrimaryDr,
+          canEnableSecondaryDr,
+        });
+        return model;
+      }
+    );
   },
   actions: {
     refresh() {

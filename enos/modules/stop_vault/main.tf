@@ -18,16 +18,17 @@ variable "service_name" {
   default     = "vault"
 }
 
-variable "target_hosts" {
+variable "hosts" {
   description = "The target machines host addresses to use for the Vault cluster"
   type = map(object({
+    ipv6       = string
     private_ip = string
     public_ip  = string
   }))
 }
 
 resource "enos_remote_exec" "shutdown_multiple_nodes" {
-  for_each = var.target_hosts
+  for_each = var.hosts
   inline   = ["sudo systemctl stop ${var.service_name}.service; sleep 5"]
 
   transport = {

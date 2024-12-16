@@ -20,9 +20,9 @@ var (
 	ErrExternalOptions = errors.New("invalid configuration")
 )
 
-// ConvertToExternalError handles converting an error that was generated in Vault
-// and should appear as-is in the server logs, to an error that can be returned to
-// calling clients (via the API/CLI).
+// ConvertToExternalError handles converting an audit related error that was generated
+// in Vault and should appear as-is in the server logs, to an error that can be
+// returned to calling clients (via the API/CLI).
 func ConvertToExternalError(err error) error {
 	// If the error is an internal error, the contents will have been logged, and
 	// we should probably shield the caller from the details.

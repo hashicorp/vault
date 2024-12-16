@@ -2653,6 +2653,31 @@ func (b *LoginMFABackend) MemDBMFALoginEnforcementConfigByNameAndNamespace(name,
 	return eConfig.Clone()
 }
 
+func (b *LoginMFABackend) MemDBMFALoginEnforcementConfigByID(id string) (*mfa.MFAEnforcementConfig, error) {
+	if id == "" {
+		return nil, fmt.Errorf("missing config id")
+	}
+
+	txn := b.db.Txn(false)
+	defer txn.Abort()
+
+	eConfigRaw, err := txn.First(memDBMFALoginEnforcementsTable, "id", id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch MFA login enforcement config from memdb using id: %w", err)
+	}
+
+	if eConfigRaw == nil {
+		return nil, nil
+	}
+
+	eConfig, ok := eConfigRaw.(*mfa.MFAEnforcementConfig)
+	if !ok {
+		return nil, fmt.Errorf("invalid type for MFA login enforcement config in memdb")
+	}
+
+	return eConfig.Clone()
+}
+
 func (b *LoginMFABackend) MemDBMFALoginEnforcementConfigIterator() (memdb.ResultIterator, error) {
 	txn := b.db.Txn(false)
 	defer txn.Abort()
@@ -2704,6 +2729,32 @@ func (b *LoginMFABackend) deleteMFALoginEnforcementConfigByNameAndNamespace(ctx 
 	err = txn.Delete(memDBMFALoginEnforcementsTable, eConfig)
 	if err != nil {
 		return fmt.Errorf("failed to delete MFA login enforcement config from memdb: %w", err)
+	}
+
+	txn.Commit()
+	return nil
+}
+
+func (b *LoginMFABackend) MemDBDeleteMFALoginEnforcementConfigByID(id string) error {
+	if id == "" {
+		return nil
+	}
+
+	txn := b.db.Txn(true)
+	defer txn.Abort()
+
+	eConfig, err := b.MemDBMFALoginEnforcementConfigByID(id)
+	if err != nil {
+		return err
+	}
+
+	if eConfig == nil {
+		return nil
+	}
+
+	err = txn.Delete(memDBMFALoginEnforcementsTable, eConfig)
+	if err != nil {
+		return err
 	}
 
 	txn.Commit()

@@ -1,5 +1,5 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
 
 quality "consul_api_agent_host_read" {
   description = "The /v1/agent/host Consul API returns host info for each node in the cluster"
@@ -72,8 +72,79 @@ quality "vault_agent_log_template" {
   description = global.description.verify_agent_output
 }
 
+quality "vault_api_auth_userpass_login_write" {
+  description = "The v1/auth/userpass/login/<user> Vault API creates a token for a user"
+}
+
+quality "vault_api_auth_userpass_user_write" {
+  description = "The v1/auth/userpass/users/<user> Vault API associates a policy with a user"
+}
+
+quality "vault_api_identity_entity_read" {
+  description = <<-EOF
+    The v1/identity/entity Vault API returns an identity entity, has the correct metadata, and is
+    associated with the expected entity-alias, groups, and policies
+  EOF
+}
+
+quality "vault_api_identity_entity_write" {
+  description = "The v1/identity/entity Vault API creates an identity entity"
+}
+
+quality "vault_api_identity_entity_alias_write" {
+  description = "The v1/identity/entity-alias Vault API creates an identity entity alias"
+}
+
+quality "vault_api_identity_group_write" {
+  description = "The v1/identity/group/<group> Vault API creates an identity group"
+}
+
+quality "vault_api_identity_oidc_config_read" {
+  description = <<-EOF
+    The v1/identity/oidc/config Vault API returns the built-in identity secrets engine configuration
+  EOF
+}
+
+quality "vault_api_identity_oidc_config_write" {
+  description = "The v1/identity/oidc/config Vault API configures the built-in identity secrets engine"
+}
+
+quality "vault_api_identity_oidc_introspect_write" {
+  description = "The v1/identity/oidc/introspect Vault API creates introspect verifies the active state of a signed OIDC token"
+}
+
+quality "vault_api_identity_oidc_key_read" {
+  description = <<-EOF
+    The v1/identity/oidc/key Vault API returns the OIDC signing key and verifies the key's algorithm,
+    rotation_period, and verification_ttl are correct
+  EOF
+}
+
+quality "vault_api_identity_oidc_key_write" {
+  description = "The v1/identity/oidc/key Vault API creates an OIDC signing key"
+}
+
+quality "vault_api_identity_oidc_key_rotate_write" {
+  description = "The v1/identity/oidc/key/<name>/rotate Vault API rotates an OIDC signing key and applies a new verification TTL"
+}
+
+quality "vault_api_identity_oidc_role_read" {
+  description = <<-EOF
+    The v1/identity/oidc/role Vault API returns the OIDC role and verifies that the roles key and
+    ttl are corect.
+  EOF
+}
+
+quality "vault_api_identity_oidc_role_write" {
+  description = "The v1/identity/oidc/role Vault API creates an OIDC role associated with a key and clients"
+}
+
+quality "vault_api_identity_oidc_token_read" {
+  description = "The v1/identity/oidc/token Vault API creates an OIDC token associated with a role"
+}
+
 quality "vault_api_sys_auth_userpass_user_write" {
-  description = "The v1/sys/auth/userpass/users/<user> Vault API associates a policy with a user"
+  description = "The v1/sys/auth/userpass/users/<user> Vault API associates a superuser policy with a user"
 }
 
 quality "vault_api_sys_config_read" {
@@ -110,13 +181,66 @@ quality "vault_api_sys_metrics_vault_core_replication_write_undo_logs_enabled" {
 }
 
 quality "vault_api_sys_policy_write" {
-  description = "The v1/sys/policy Vault API writes a superuser policy"
+  description = "The v1/sys/policy Vault API writes a policy"
 }
 
 quality "vault_api_sys_quotas_lease_count_read_max_leases_default" {
   description = <<-EOF
     The v1/sys/quotas/lease-count/default Vault API returns the lease 'count' and 'max_leases' is
     set to 300,000
+  EOF
+}
+
+quality "vault_api_sys_replication_dr_primary_enable_write" {
+  description = <<-EOF
+    The v1/sys/replication/dr/primary/enable Vault API enables DR replication
+  EOF
+}
+
+quality "vault_api_sys_replication_dr_primary_secondary_token_write" {
+  description = <<-EOF
+    The v1/sys/replication/dr/primary/secondary-token Vault API configures the DR replication
+    secondary token
+  EOF
+}
+
+quality "vault_api_sys_replication_dr_secondary_enable_write" {
+  description = <<-EOF
+    The v1/sys/replication/dr/secondary/enable Vault API enables DR replication
+  EOF
+}
+
+quality "vault_api_sys_replication_dr_read_connection_status_connected" {
+  description = <<-EOF
+    The v1/sys/replication/dr/status Vault API returns status info and the
+    'connection_status' is correct for the given node
+  EOF
+}
+
+quality "vault_api_sys_replication_dr_status_known_primary_cluster_addrs" {
+  description = <<-EOF
+    The v1/sys/replication/dr/status Vault API returns the DR replication status and
+    'known_primary_cluster_address' is the expected primary cluster leader
+  EOF
+}
+
+quality "vault_api_sys_replication_dr_status_read" {
+  description = <<-EOF
+    The v1/sys/replication/dr/status Vault API returns the DR replication status
+  EOF
+}
+
+quality "vault_api_sys_replication_dr_status_read_cluster_address" {
+  description = <<-EOF
+    The v1/sys/replication/dr/status Vault API returns the DR replication status
+    and the '{primaries,secondaries}[*].cluster_address' is correct for the given node
+  EOF
+}
+
+quality "vault_api_sys_replication_dr_status_read_state_not_idle" {
+  description = <<-EOF
+    The v1/sys/replication/dr/status Vault API returns the DR replication status
+    and the state is not idle
   EOF
 }
 
@@ -250,6 +374,21 @@ quality "vault_api_sys_storage_raft_remove_peer_write_removes_peer" {
   EOF
 }
 
+quality "vault_api_sys_version_history_keys" {
+  description = <<-EOF
+    The v1/sys/version-history Vault API returns the cluster version history and the 'keys' data
+    includes our target version
+  EOF
+}
+
+quality "vault_api_sys_version_history_key_info" {
+  description = <<-EOF
+    The v1/sys/version-history Vault API returns the cluster version history and the
+    'key_info["$expected_version]' data is present for the expected version and the 'build_date'
+    matches the expected build_date.
+  EOF
+}
+
 quality "vault_artifact_bundle" {
   description = "The candidate binary packaged as a zip bundle is used for testing"
 }
@@ -355,8 +494,20 @@ quality "vault_license_required_ent" {
   description = "Vault Enterprise requires a license in order to start"
 }
 
+quality "vault_listener_ipv4" {
+  description = "Vault operates on ipv4 TCP listeners"
+}
+
+quality "vault_listener_ipv6" {
+  description = "Vault operates on ipv6 TCP listeners"
+}
+
 quality "vault_mount_auth" {
   description = "Vault mounts the auth engine"
+}
+
+quality "vault_mount_identity" {
+  description = "Vault mounts the identity engine"
 }
 
 quality "vault_mount_kv" {
@@ -409,10 +560,6 @@ quality "vault_seal_shamir" {
 
 quality "vault_seal_pkcs11" {
   description = "Vault auto-unseals with the pkcs11 seal"
-}
-
-quality "vault_secrets_auth_user_policy_write" {
-  description = "Vault creates auth user policies with the root token"
 }
 
 quality "vault_secrets_kv_read" {
@@ -475,4 +622,8 @@ quality "vault_version_edition" {
 
 quality "vault_version_release" {
   description = "Vault's reported release version matches our expectations"
+}
+
+quality "vault_billing_start_date" {
+  description = "Vault's billing start date has adjusted to the latest billing year"
 }

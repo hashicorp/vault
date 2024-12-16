@@ -59,7 +59,10 @@ jobs:
         run: |
           build_date=$(make ci-get-date)
           sample_seed=$(date +%s)
-          sample=$(enos scenario sample observe "${{ inputs.sample-name }}" --chdir ./enos --min 1 --max "${{ inputs.sample-max }}" --seed "${sample_seed}" --format json | jq -c ".observation.elements")
+          if ! sample=$(enos scenario sample observe "${{ inputs.sample-name }}" --chdir ./enos --min 1 --max "${{ inputs.sample-max }}" --seed "${sample_seed}" --format json | jq -c ".observation.elements"); then
+            echo "failed to do sample observation: $sample" 2>&1
+            exit 1
+          fi
           if [[ "${{ inputs.vault-edition }}" == "ce" ]]; then
             vault_version="${{ inputs.vault-version }}"
           else
@@ -98,7 +101,7 @@ jobs:
       ENOS_VAR_vault_revision: ${{ inputs.vault-revision }}
       ENOS_VAR_consul_license_path: ./support/consul.hclic
       ENOS_VAR_vault_license_path: ./support/vault.hclic
-      ENOS_VAR_distro_version_amzn2: ${{ matrix.attributes.distro_version_amzn2 }}
+      ENOS_VAR_distro_version_amzz: ${{ matrix.attributes.distro_version_amzn }}
       ENOS_VAR_distro_version_leap: ${{ matrix.attributes.distro_version_leap }}
       ENOS_VAR_distro_version_rhel: ${{ matrix.attributes.distro_version_rhel }}
       ENOS_VAR_distro_version_sles: ${{ matrix.attributes.distro_version_sles }}
@@ -132,7 +135,7 @@ jobs:
           chmod 600 "./enos/support/private_key.pem"
           echo "debug_data_artifact_name=enos-debug-data_$(echo "${{ matrix.scenario }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')" >> "$GITHUB_OUTPUT"
       - if: contains(inputs.sample-name, 'build')
-        uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # v4.1.7
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
           name: ${{ inputs.build-artifact-name }}
           path: ./enos/support/downloads
@@ -155,7 +158,7 @@ jobs:
         run: enos scenario launch --timeout 60m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
       - name: Upload Debug Data
         if: failure()
-        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
         with:
           # The name of the artifact is the same as the matrix scenario name with the spaces replaced with underscores and colons replaced by equals.
           name: ${{ steps.prepare_scenario.outputs.debug_data_artifact_name }}

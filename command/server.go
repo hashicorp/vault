@@ -1703,7 +1703,7 @@ func (c *ServerCommand) Run(args []string) int {
 				sr.NotifyConfigurationReload(srConfig)
 			}
 
-			if err := core.ReloadCensus(); err != nil {
+			if err := core.ReloadCensusManager(false); err != nil {
 				c.UI.Error(err.Error())
 			}
 

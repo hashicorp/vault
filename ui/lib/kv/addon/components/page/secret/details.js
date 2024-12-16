@@ -108,7 +108,8 @@ export default class KvSecretDetails extends Component {
     const { secret } = this.args;
     try {
       await secret.destroyRecord({ adapterOptions: { deleteType: type, deleteVersions: this.version } });
-      this.flashMessages.success(`Successfully ${secret.state} Version ${this.version} of ${secret.path}.`);
+      const verb = type.includes('delete') ? 'deleted' : 'destroyed';
+      this.flashMessages.success(`Successfully ${verb} Version ${this.version} of ${secret.path}.`);
       this.refreshRoute();
     } catch (err) {
       const verb = type.includes('delete') ? 'deleting' : 'destroying';

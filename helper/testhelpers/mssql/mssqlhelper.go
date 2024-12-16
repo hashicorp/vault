@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/docker"
 )
 
@@ -32,32 +33,36 @@ func PrepareMSSQLTestContainer(t *testing.T) (cleanup func(), retURL string) {
 		return func() {}, os.Getenv("MSSQL_URL")
 	}
 
+	logger := corehelpers.NewTestLogger(t)
+
 	var err error
 	for i := 0; i < numRetries; i++ {
 		var svc *docker.Service
-		runner, err := docker.NewServiceRunner(docker.RunOptions{
+		var runner *docker.Runner
+		runner, err = docker.NewServiceRunner(docker.RunOptions{
 			ContainerName: "sqlserver",
 			ImageRepo:     "mcr.microsoft.com/mssql/server",
-			ImageTag:      "2017-latest-ubuntu",
+			ImageTag:      "2022-latest",
 			Env:           []string{"ACCEPT_EULA=Y", "SA_PASSWORD=" + mssqlPassword},
 			Ports:         []string{"1433/tcp"},
 			LogConsumer: func(s string) {
-				if t.Failed() {
-					t.Logf("container logs: %s", s)
-				}
+				logger.Info(s)
 			},
 		})
 		if err != nil {
-			t.Fatalf("Could not start docker MSSQL: %s", err)
+			logger.Error("failed creating new service runner", "error", err.Error())
+			continue
 		}
 
 		svc, err = runner.StartService(context.Background(), connectMSSQL)
 		if err == nil {
 			return svc.Cleanup, svc.Config.URL().String()
 		}
+
+		logger.Error("failed starting service", "error", err.Error())
 	}
 
-	t.Fatalf("Could not start docker MSSQL: %s", err)
+	t.Fatalf("Could not start docker MSSQL last error: %v", err)
 	return nil, ""
 }
 

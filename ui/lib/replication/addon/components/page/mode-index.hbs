@@ -6,7 +6,7 @@
 {{#if @replicationDisabled}}
   <PageHeader as |p|>
     <p.levelLeft>
-      <h1 class="title is-3" data-test-replication-title>
+      <h1 class="title is-3" data-test-replication-title={{@replicationMode}}>
         {{#if (eq @replicationMode "dr")}}
           Enable Disaster Recovery Replication
         {{else if (eq @replicationMode "performance")}}
@@ -45,8 +45,10 @@
   </div>
   <EnableReplicationForm
     @replicationMode={{@replicationMode}}
-    @canEnablePrimary={{@cluster.canEnablePrimary}}
-    @canEnableSecondary={{@cluster.canEnableSecondary}}
+    @canEnablePrimaryDr={{@cluster.canEnablePrimaryDr}}
+    @canEnablePrimaryPerformance={{@cluster.canEnablePrimaryPerformance}}
+    @canEnableSecondaryDr={{@cluster.canEnableSecondaryDr}}
+    @canEnableSecondaryPerformance={{@cluster.canEnableSecondaryPerformance}}
     @performanceReplicationDisabled={{@cluster.performance.replicationDisabled}}
     @performanceMode={{if @cluster.performance.replicationDisabled "disabled" @cluster.performance.modeForUrl}}
     @onSuccess={{@onEnableSuccess}}
