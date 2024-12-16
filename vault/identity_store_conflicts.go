@@ -46,7 +46,7 @@ func (r *errorResolver) ResolveEntities(ctx context.Context, existing, duplicate
 	return errDuplicateIdentityName
 }
 
-// ResolveGroups logs a warning message when a pre-existing identity.Group is found and
+// ResolveGroups logs a warning message when a pre-existing Group is found and
 // returns a duplicate name error, which should be handled by the caller by
 // putting the system in case-sensitive mode.
 func (r *errorResolver) ResolveGroups(ctx context.Context, existing, duplicate *identity.Group) error {
