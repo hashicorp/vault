@@ -92,6 +92,12 @@ management tool.
       entity_id="https://my.vault/v1/auth/saml" \
       acs_urls="https://my.vault/v1/auth/saml/callback"
    ```
+<Note>
+  The config has boolean options to validate SAML response signature as `validate_response_and_assertion_signatures`
+  , `validate_response_signature` and `validate_assertion_signature`. By default, its validated that at least one out of
+  response or assertion is signed. If your IDP allows signing both then recommended secure approach is to enable
+  `validate_response_and_assertion_signatures` option.
+</Note>
 
 1. Create a named role:
 
