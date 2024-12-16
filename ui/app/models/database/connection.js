@@ -9,6 +9,7 @@ import { alias, or } from '@ember/object/computed';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { AVAILABLE_PLUGIN_TYPES } from '../../utils/model-helpers/database-helpers';
+import { service } from '@ember/service';
 
 /**
  * fieldsToGroups helper fn
@@ -31,6 +32,8 @@ const fieldsToGroups = function (arr, key = 'subgroup') {
 };
 
 export default Model.extend({
+  version: service(),
+
   backend: attr('string', {
     readOnly: true,
   }),
@@ -146,15 +149,19 @@ export default Model.extend({
     editType: 'stringArray',
     defaultShown: 'Default',
   }),
+  // ENTERPRISE ONLY
+  self_managed: attr('boolean', {
+    subText:
+      'If set, allows onboarding static roles with a rootless connection configuration. Mutually exclusive with username and password. If set, will force verify_connection to be false.',
+    defaultValue: false,
+  }),
 
   isAvailablePlugin: computed('plugin_name', function () {
     return !!AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name);
   }),
 
   showAttrs: computed('plugin_name', function () {
-    const fields = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name)
-      .fields.filter((f) => f.show !== false)
-      .map((f) => f.attr);
+    const fields = this._filterFields((f) => f.show !== false).map((f) => f.attr);
     fields.push('allowed_roles');
     return expandAttributeMeta(this, fields);
   }),
@@ -163,9 +170,7 @@ export default Model.extend({
     // for both create and edit fields
     let fields = ['plugin_name', 'name', 'connection_url', 'verify_connection', 'password_policy'];
     if (this.plugin_name) {
-      fields = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name)
-        .fields.filter((f) => !f.group)
-        .map((field) => field.attr);
+      fields = this._filterFields((f) => !f.group).map((field) => field.attr);
     }
     return expandAttributeMeta(this, fields);
   }),
@@ -174,9 +179,7 @@ export default Model.extend({
     if (!this.plugin_name) {
       return null;
     }
-    const pluginFields = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name).fields.filter(
-      (f) => f.group === 'pluginConfig'
-    );
+    const pluginFields = this._filterFields((f) => f.group === 'pluginConfig');
     const groups = fieldsToGroups(pluginFields, 'subgroup');
     return fieldToAttrs(this, groups);
   }),
@@ -185,11 +188,20 @@ export default Model.extend({
     if (!this.plugin_name) {
       return expandAttributeMeta(this, ['root_rotation_statements']);
     }
-    const fields = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name)
-      .fields.filter((f) => f.group === 'statements')
-      .map((field) => field.attr);
+    const fields = this._filterFields((f) => f.group === 'statements').map((f) => f.attr);
     return expandAttributeMeta(this, fields);
   }),
+
+  // after checking for enterprise, filter callback fires and returns
+  _filterFields(filterCallback) {
+    const plugin = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name);
+    return plugin.fields.filter((attrOptions) => {
+      // return if attribute is enterprise only and we're on community
+      if (attrOptions?.isEnterprise && !this.version.isEnterprise) return;
+      // filter by group, or if there isn't a group
+      return filterCallback(attrOptions);
+    });
+  },
 
   /* CAPABILITIES */
   editConnectionPath: lazyCapabilities(apiPath`${'backend'}/config/${'id'}`, 'backend', 'id'),

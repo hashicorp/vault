@@ -174,6 +174,7 @@ export const AVAILABLE_PLUGIN_TYPES = [
       { attr: 'max_connection_lifetime', group: 'pluginConfig' },
       { attr: 'username_template', group: 'pluginConfig' },
       { attr: 'root_rotation_statements', group: 'statements' },
+      { attr: 'self_managed', group: 'pluginConfig', isEnterprise: true },
     ],
   },
 ];
