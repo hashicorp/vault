@@ -2,5 +2,5 @@
 ui: Fixes login to web UI when MFA is enabled for OIDC (i.e. azure, auth0) and Okta auth methods
 ```
 ```release-note:bug
-ui (enterprise): Fixes login to web UI when MFA is enabled fr SAML methods
+ui (enterprise): Fixes login to web UI when MFA is enabled for SAML auth methods
 ```
