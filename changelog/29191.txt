@@ -1,0 +1,3 @@
+```release-note:enhancement
+storage/s3: allow for S3 backend to run highly available.  
+```
