@@ -26,6 +26,7 @@ export VAULT_FORMAT=json
 CA_NAME="${MOUNT}.pem"
 SIGNED_CERT_NAME="${MOUNT}-signed.pem"
 ROLE_NAME="${COMMON_NAME}-role"
+SUBJECT="test.${COMMON_NAME}"
 TMP_TTL="1h"
 rm -rf "${TMP_TEST_RESULTS}"
 mkdir "${TMP_TEST_RESULTS}"
@@ -38,7 +39,7 @@ mkdir "${TMP_TEST_RESULTS}"
 # Creating a role
 "$binpath" write "${MOUNT}/roles/${ROLE_NAME}" allowed_domains="${COMMON_NAME}.com" allow_subdomains=true max_ttl="${TMP_TTL}"
 # Issuing Signed Certificate
-"$binpath" write "${MOUNT}/issue/${ROLE_NAME}" common_name="test.${COMMON_NAME}.com" ttl="${TMP_TTL}" | jq -r '.data.certificate' > "${TMP_TEST_RESULTS}/${SIGNED_CERT_NAME}"
+"$binpath" write "${MOUNT}/issue/${ROLE_NAME}" common_name="${SUBJECT}.com" ttl="${TMP_TTL}" | jq -r '.data.certificate' > "${TMP_TEST_RESULTS}/${SIGNED_CERT_NAME}"
 
 # ------ Generate and sign intermediate ------
 INTERMEDIATE_COMMON_NAME="intermediate-${COMMON_NAME}"

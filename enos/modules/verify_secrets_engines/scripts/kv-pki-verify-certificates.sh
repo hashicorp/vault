@@ -39,21 +39,36 @@ VAULT_CERTS=$("$binpath" list -format=json "${MOUNT}/certs" | jq -r '.[]')
 [[ -z "$VAULT_CERTS" ]] && fail "VAULT_CERTS should include vault certificates"
 
 # Verifying Certificates
+TMP_FILE="tmp-vault-cert.pem"
+REVOKED_CERTS=()
 for CERT in $VAULT_CERTS; do
-  echo "Getting Certificate from Vault PKI: ${CERT}"
-  "$binpath" read "${MOUNT}/cert/${CERT}" | jq -r '.data.certificate' > "${TMP_TEST_RESULTS}/tmp_vault_cert.pem"
-  echo "Verifying Certificate..."
-  openssl x509 -in "${TMP_TEST_RESULTS}/tmp_vault_cert.pem" -text -noout || fail "The certificate appears to be improperly configured or contains errors"
-  echo "Successfully Verified Certificate"
+  echo "Getting certificate from Vault PKI: ${CERT}"
+  "$binpath" read "${MOUNT}/cert/${CERT}" | jq -r '.data.certificate' > "${TMP_TEST_RESULTS}/${TMP_FILE}"
+  echo "Verifying certificate..."
+  openssl x509 -in "${TMP_TEST_RESULTS}/${TMP_FILE}" -text -noout || fail "The certificate appears to be improperly configured or contains errors"
+  CURR_CERT_SERIAL=$(echo "${CERT}" | tr -d ':' | tr '[:lower:]' '[:upper:]')
+  TMP_CERT_SUBJECT=$(openssl x509 -in "${TMP_TEST_RESULTS}/${TMP_FILE}" -noout -subject)
+  TMP_CERT_ISSUER=$(openssl x509 -in "${TMP_TEST_RESULTS}/${TMP_FILE}" -noout -issuer)
+  TMP_CERT_SERIAL=$(openssl x509 -in "${TMP_TEST_RESULTS}/${TMP_FILE}" -noout -serial)
+  [[ "${TMP_CERT_SUBJECT}" == *"${COMMON_NAME}.com"* ]] || fail "Subject is incorrect. Actual Subject: ${TMP_CERT_SUBJECT}"
+  [[ "${TMP_CERT_ISSUER}" == *"${COMMON_NAME}.com"* ]] || fail "Issuer is incorrect. Actual Issuer: ${TMP_CERT_ISSUER}"
+  [[ "${TMP_CERT_SERIAL}" == *"${CURR_CERT_SERIAL}"* ]] || fail "Certificate Serial is incorrect. Actual certificate Serial: ${CURR_CERT_SERIAL},${TMP_CERT_SERIAL}"
+  echo "Certificate successfully verified"
 
-  IS_CA=$(openssl x509 -in "${TMP_TEST_RESULTS}/tmp_vault_cert.pem" -text -noout | grep -q "CA:TRUE" && echo "TRUE" || echo "FALSE")
+  IS_CA=$(openssl x509 -in "${TMP_TEST_RESULTS}/${TMP_FILE}" -text -noout | grep -q "CA:TRUE" && echo "TRUE" || echo "FALSE")
   if [[ "${IS_CA}" == "FALSE" ]]; then
-    echo "Revoking Certificate: ${CERT}"
+    echo "Revoking certificate: ${CERT}"
     "$binpath" write "${MOUNT}/revoke" serial_number="${CERT}" || fail "Could not revoke certificate ${CERT}"
+    REVOKED_CERTS+=("$CERT")
   else
     echo "Skipping revoking step for this certificate to being a root CA Cert: ${CERT}"
   fi
 done
 
-# Verify List Revoked Certificate
-"$binpath" list -format=json "${MOUNT}/certs/revoked" | jq -r '.[]' || fail "There are no revoked certificate listed"
+echo "Verifying Revoked Certificates"
+REVOKED_CERT_FROM_LIST=$("$binpath" list -format=json "${MOUNT}/certs/revoked" | jq -r '.[]')
+[[ -z "$REVOKED_CERT_FROM_LIST" ]] && fail "No revoked certificates are listed."
+for CERT in "${REVOKED_CERTS[@]}"; do
+  [[ "${REVOKED_CERT_FROM_LIST}" == *"${CERT}"* ]] || fail "Unable to locate certificate in the Vault Revoked Certificate List: ${CERT}"
+done
+echo "Revoked certificate successfully verified"
