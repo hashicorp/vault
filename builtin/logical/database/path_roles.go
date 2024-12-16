@@ -648,11 +648,6 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		return nil, err
 	}
 
-	connDetails, err := b.ConnectionDetails(ctx, dbConfig)
-	if err != nil {
-		return nil, err
-	}
-
 	lastVaultRotation := role.StaticAccount.LastVaultRotation
 	if passwordRaw, ok := data.GetOk("password"); ok {
 		// We will allow users to update the password until the point where
@@ -661,6 +656,12 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		updateAllowed := lastVaultRotation.IsZero()
 		if updateAllowed {
 			role.StaticAccount.Password = passwordRaw.(string)
+
+			connDetails, err := b.ConnectionDetails(ctx, dbConfig)
+			if err != nil {
+				return nil, err
+			}
+
 			if connDetails != nil && connDetails.SelfManaged {
 				// Password and SelfManagedPassword should map to the same value
 				role.StaticAccount.SelfManagedPassword = passwordRaw.(string)
@@ -686,6 +687,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 			role.SkipImportRotation = skipImportRotationRaw.(bool)
 		}
 	} else if createRole {
+		// default to the config-level setting
 		role.SkipImportRotation = dbConfig.SkipStaticRoleImportRotation
 	}
 
