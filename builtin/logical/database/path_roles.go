@@ -20,7 +20,10 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
-var errNoUpdateAfterRotation = "updating password not allowed after rotation"
+var (
+	errNoUpdateAfterRotation            = "updating password not allowed after rotation"
+	errNoPasswordAndSelfManagedPassword = "cannot set both `password` and `self_managed_password`"
+)
 
 func pathListRoles(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
@@ -668,6 +671,9 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	}
 
 	if smPasswordRaw, ok := data.GetOk("self_managed_password"); ok && createRole {
+		if _, ok := data.GetOk("password"); ok {
+			return logical.ErrorResponse(errNoPasswordAndSelfManagedPassword), nil
+		}
 		// Password and SelfManagedPassword should map to the same value
 		role.StaticAccount.SelfManagedPassword = smPasswordRaw.(string)
 		role.StaticAccount.Password = smPasswordRaw.(string)
