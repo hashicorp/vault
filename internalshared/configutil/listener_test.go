@@ -66,9 +66,8 @@ func TestListener_ParseSingleIPTemplate(t *testing.T) {
 			errorMessage:    "unable to parse address template",
 		},
 		"test partial template": {
-			arg: "{{FooBar",
-			// Partial templates get treated as literal hostname and get URL encoded
-			want:            "%7B%7BFooBar",
+			arg:             "{{FooBar",
+			want:            "{{FooBar",
 			isErrorExpected: false,
 		},
 	}

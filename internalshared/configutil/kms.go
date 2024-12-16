@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/hashicorp/errwrap"
@@ -157,7 +158,10 @@ func parseKMS(result *[]*KMS, list *ast.ObjectList, blockName string, maxKMS int
 			if err != nil {
 				return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
 			}
-			strMap[k] = s
+			strMap[k], err = normalizeKMSSealAddresses(name, k, s)
+			if err != nil {
+				return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
+			}
 		}
 
 		seal := &KMS{
@@ -212,6 +216,34 @@ func ParseKMSes(d string) ([]*KMS, error) {
 	}
 
 	return result.Seals, nil
+}
+
+// kmsSealAddressKeys is a map to seal keys that might contain URLs, IP addresses, or IP:port style addresses. All physical storage
+// types must have an entry in this map, otherwise our normalization check will
+// fail when parsing the storage entry config.
+var kmsSealAddressKeys = map[string][]string{
+	"alicloudkms":   {"domain"},
+	"awskms":        {"endpoint"},
+	"azurekeyvault": {"resource"},
+	"gcpckms":       {},
+	"ocikms":        {"key_id", "crypto_endpoint", "management_endpoint"},
+	"pkcs11":        {},
+	"transit":       {"address"},
+}
+
+// normalizeKMSSealAddresses takes a storage name, config key, and config
+// value and will normalize any URLs, IP addresses, or IP:port style addresses.
+func normalizeKMSSealAddresses(seal string, key string, value string) (string, error) {
+	keys, ok := kmsSealAddressKeys[seal]
+	if !ok {
+		return "", fmt.Errorf("unknown seal type %s", seal)
+	}
+
+	if slices.Contains(keys, key) {
+		return NormalizeAddr(value), nil
+	}
+
+	return value, nil
 }
 
 func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]string, logger hclog.Logger, opts ...wrapping.Option) (wrapping.Wrapper, error) {
