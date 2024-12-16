@@ -108,10 +108,7 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 		config.WithHTTPClient(&http.Client{Transport: pooledTransport}),
 	)
 	if accessKey != "" && secretKey != "" {
-		logger.Debug("using provided creds")
 		cfg.Credentials = credentials.NewStaticCredentialsProvider(accessKey, secretKey, sessionToken)
-	} else {
-		logger.Debug("using other creds")
 	}
 
 	if err != nil {

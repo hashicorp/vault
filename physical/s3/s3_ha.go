@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -46,11 +45,9 @@ type S3Lock struct {
 	value    string
 	held     bool
 	identity string
-	lock     sync.Mutex
 
-	stopCh   chan struct{}
-	stopped  bool
-	stopLock sync.Mutex
+	stopCh  chan struct{}
+	stopped bool
 
 	renewInterval      time.Duration
 	retryInterval      time.Duration
@@ -61,20 +58,6 @@ type S3Lock struct {
 
 func (l *S3Lock) Unlock() error {
 	defer metrics.MeasureSince(metricLockUnlock, time.Now())
-
-	l.lock.Lock()
-	defer l.lock.Unlock()
-	if !l.held {
-		return nil
-	}
-
-	// Stop any existing locking or renewal attempts
-	l.stopLock.Lock()
-	if !l.stopped {
-		l.stopped = true
-		close(l.stopCh)
-	}
-	l.stopLock.Unlock()
 
 	// First verify the lock exists and we own it
 	exists, _, err := l.Value()
@@ -124,7 +107,6 @@ func (s *S3Backend) LockWith(key, value string) (physical.Lock, error) {
 		key:      key,
 		value:    value,
 		identity: identity,
-		stopped:  true,
 
 		renewInterval:      LockRenewInterval,
 		retryInterval:      LockRetryInterval,
@@ -136,12 +118,6 @@ func (s *S3Backend) LockWith(key, value string) (physical.Lock, error) {
 
 func (l *S3Lock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	defer metrics.MeasureSince(metricLockLock, time.Now())
-
-	l.lock.Lock()
-	defer l.lock.Unlock()
-	if l.held {
-		return nil, errors.New("lock already held")
-	}
 
 	// Attempt to lock - this function blocks until a lock is acquired or an error
 	// occurs.
@@ -158,10 +134,7 @@ func (l *S3Lock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	l.held = true
 
 	// Build the locks
-	l.stopLock.Lock()
 	l.stopCh = make(chan struct{})
-	l.stopped = false
-	l.stopLock.Unlock()
 
 	// Periodically renew and watch the lock
 	go l.watchLock()
@@ -288,12 +261,6 @@ func (l *S3Lock) watchLock() {
 			if err != nil {
 				var nsk *types.NoSuchKey
 				if errors.As(err, &nsk) {
-					l.stopLock.Lock()
-					if !l.stopped {
-						close(l.stopCh)
-						l.stopped = true
-					}
-					l.stopLock.Unlock()
 					return
 				}
 				continue
@@ -306,12 +273,6 @@ func (l *S3Lock) watchLock() {
 			result.Body.Close()
 
 			if lockInfo.Identity != l.identity {
-				l.stopLock.Lock()
-				if !l.stopped {
-					close(l.stopCh)
-					l.stopped = true
-				}
-				l.stopLock.Unlock()
 				return
 			}
 		case <-l.stopCh:
