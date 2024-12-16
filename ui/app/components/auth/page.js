@@ -52,11 +52,11 @@ export default class AuthPage extends Component {
   onAuthResponse(authResponse, backend, data) {
     const { mfa_requirement } = authResponse;
     /*
-    Checking for an mfa_requirement happens in two different places depending on which <form> is submitted:
-    If doSubmit in <AuthForm> is called directly (by the <form> component) mfa is handled here.
+    Checking for an mfa_requirement happens in two places.
+    If doSubmit in <AuthForm> is called directly (by the <form> component) mfa is just handled here.
   
-    Login methods submitted using a child form component of <AuthForm> are checked for mfa 
-    in the Auth::LoginForm "authenticate" task
+    Login methods submitted using a child form component of <AuthForm> are first checked for mfa 
+    in the Auth::LoginForm "authenticate" task, and then that data eventually bubbles up here.
     */
     if (mfa_requirement) {
       // if an mfa requirement exists further action is required

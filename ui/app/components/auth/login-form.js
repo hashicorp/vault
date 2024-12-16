@@ -62,17 +62,19 @@ export default class AuthLoginFormComponent extends Component {
       }
 
       /*
-      Checking for an mfa_requirement happens in two different places depending which <form> is submitted:
+      Checking for an mfa_requirement happens in two places.
       Login methods submitted using a child of <AuthForm> have custom auth logic where mfa_requirements are collected, if any. 
-      This mfa data is passed to their respective onSubmit callback functions and is eventually handled here.
-      
-      If doSubmit in <AuthForm> is called directly (by the "default" <form> component) mfa is handled the parent <Auth::Page> component.
+      This mfa data is passed to their respective onSubmit callback functions, then intercepted here and passed up to 
+      the parent <Auth::Page> component (which renders the Mfa::MfaForm).
+
+      If doSubmit in <AuthForm> is called directly (by the "default" <form> component) 
+      mfa is handled directly by the parent <Auth::Page> component.
       */
       if (data?.mfa_requirement) {
-        const mfa_requirement = this.auth._parseMfaResponse(data.mfa_requirement);
-        // calls onAuthResponse in auth/page.js
-        this.args.onSuccess(mfa_requirement, backendType, data);
-        // return here because mfa-form.js will finish login flow after mfa validation
+        const parsedMfaAuthResponse = this.auth._parseMfaResponse(data.mfa_requirement);
+        // calls onAuthResponse in parent auth/page.js component
+        this.args.onSuccess(parsedMfaAuthResponse, backendType, data);
+        // return here because mfa-form.js will finish login/authentication flow after mfa validation
         return;
       }
 
