@@ -68,7 +68,7 @@ func pathAcmeMgmtAccountRead(b *backend) *framework.Path {
 		},
 
 		HelpSynopsis:    "Fetch the details or update the status of an ACME account by key identifier.",
-		HelpDescription: `Allows an operator to get details of an ACME account by key identifier for read operations or update the account status for update operations.`,
+		HelpDescription: `Allows an operator to retrieve details of an ACME account and to update the account status.`,
 	}
 }
 

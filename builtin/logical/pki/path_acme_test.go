@@ -1840,7 +1840,7 @@ func TestVaultOperatorACMEDisableWorkflow(t *testing.T) {
 	require.NotEmpty(t, order["cert_expiry"], "expected cert_expiry field in response")
 	require.NotEmpty(t, order["cert_serial_number"], "expected cert_serial_number field in response")
 
-	// Make sure we get an error response when trying to write to a non-existent key, unlike read the write call returns an error.
+	// Make sure we can update the status of the account to revoked and the revoked_time field is set
 	resp, err = vaultClient.Logical().WriteWithContext(testCtx, "pki/acme/mgmt/account/keyid/"+kid, map[string]interface{}{"status": "revoked"})
 	require.NoError(t, err, "failed updating writing ACME with account key")
 	require.NotNil(t, resp, "expected non-nil response on write to ACME keyid")
