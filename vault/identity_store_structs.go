@@ -111,7 +111,7 @@ type IdentityStore struct {
 	// which is name + accessor
 	aliasLocks []*locksutil.LockEntry
 
-	conflictResolver identity.ConflictResolver
+	conflictResolver ConflictResolver
 }
 
 type groupDiff struct {

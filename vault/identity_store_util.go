@@ -42,7 +42,7 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 	// errDuplicateIdentityName. The error will flip the identityStore into
 	// case-sensitive mode by switching the underlying schema to one with a
 	// relaxed lowerCase constraint and reload all artifacts into MemDB.
-	c.identityStore.conflictResolver = &identity.ErrorResolver{c.identityStore.logger}
+	c.identityStore.conflictResolver = &errorResolver{c.identityStore.logger}
 
 	loadFunc := func(context.Context) error {
 		if err := c.identityStore.loadEntities(ctx); err != nil {
@@ -67,7 +67,7 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 	case err == nil:
 		// If it succeeds, all is well
 		return nil
-	case !errwrap.Contains(err, identity.ErrDuplicateName.Error()):
+	case !errwrap.Contains(err, errDuplicateIdentityName.Error()):
 		return err
 	}
 
@@ -142,7 +142,7 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 			nsCtx := namespace.ContextWithNamespace(ctx, ns)
 
 			// Ensure that there are no groups with duplicate names
-			groupByName, err := i.MemDBGroupByName(nsCtx, group.Name, true)
+			groupByName, err := i.MemDBGroupByName(nsCtx, group.Name, false)
 			if err != nil {
 				return err
 			}
