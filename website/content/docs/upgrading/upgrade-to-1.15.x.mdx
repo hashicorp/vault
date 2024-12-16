@@ -89,7 +89,7 @@ kubectl exec -ti <NAME> -- wget https://github.com/moparisthebest/static-curl/re
 
 ### Disable client counting activity
 
-As of Vault Enterprise 1.15.6 and later, client counting cannot be disabled using `/sys/internal/counters/config` endpoint as manual license utilization reporting is always enabled.
+License utilization cannot be reported if client counting is disabled. As of Vault Enterprise 1.15.6 and later, client counting cannot be disabled using `/sys/internal/counters/config` endpoint as manual license utilization reporting is always enabled.
 
 ## Known issues and workarounds
 
