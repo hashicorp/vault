@@ -27,6 +27,7 @@ module('Integration | Component | SecretEngine/ConfigureAzure', function (hooks)
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
+    this.version = this.owner.lookup('service:version');
     this.flashMessages = this.owner.lookup('service:flash-messages');
     this.flashMessages.registerTypes(['success', 'danger']);
     this.flashSuccessSpy = sinon.spy(this.flashMessages, 'success');
@@ -35,13 +36,9 @@ module('Integration | Component | SecretEngine/ConfigureAzure', function (hooks)
 
     this.uid = uuidv4();
     this.id = `azure-${this.uid}`;
-    // using createRecord to simulate a fresh mount
     this.config = this.store.createRecord('azure/config');
-    // issuer config is never a createdRecord but the response from the API.
     this.issuerConfig = createConfig(this.store, this.id, 'issuer');
-    // Add backend to the configs because it's not on the testing snapshot (would come from url)
-    this.config.backend = this.id;
-    this.version = this.owner.lookup('service:version');
+    this.config.backend = this.id; // Add backend to the configs because it's not on the testing snapshot (would come from url)
     // stub capabilities so that by default user can read and update issuer
     this.server.post('/sys/capabilities-self', () => capabilitiesStub('identity/oidc/config', ['sudo']));
 
@@ -57,7 +54,7 @@ module('Integration | Component | SecretEngine/ConfigureAzure', function (hooks)
         this.version.type = 'enterprise';
       });
 
-      test('it renders default fields', async function (assert) {
+      test('it renders default fields, showing access type options for enterprise users', async function (assert) {
         await this.renderComponent();
         assert.dom(SES.configureForm).exists('it lands on the Azure configuration form.');
         assert.dom(SES.wif.accessType('azure')).isChecked('defaults to showing Azure access type checked');
@@ -69,7 +66,7 @@ module('Integration | Component | SecretEngine/ConfigureAzure', function (hooks)
         assert.dom(GENERAL.inputByAttr('issuer')).doesNotExist();
       });
 
-      test('it renders wif fields when selected', async function (assert) {
+      test('it renders wif fields when user selects wif access type', async function (assert) {
         await this.renderComponent();
         await click(SES.wif.accessType('wif'));
         // check for the wif fields only
@@ -83,7 +80,7 @@ module('Integration | Component | SecretEngine/ConfigureAzure', function (hooks)
         assert.dom(GENERAL.inputByAttr('issuer')).exists('issuer shows for wif section.');
       });
 
-      test('it clears wif/iam inputs after toggling accessType', async function (assert) {
+      test('it clears wif/azure-account inputs after toggling accessType', async function (assert) {
         await this.renderComponent();
         await fillInAzureConfig('azure');
         await click(SES.wif.accessType('wif'));
@@ -137,14 +134,14 @@ module('Integration | Component | SecretEngine/ConfigureAzure', function (hooks)
         assert.expect(3);
         await this.renderComponent();
         this.server.post(configUrl('azure', this.id), () => {
-          assert.true(
-            false,
+          assert.notOk(
+            true,
             'post request was made to config when user canceled out of flow. test should fail.'
           );
         });
         this.server.post('/identity/oidc/config', () => {
-          assert.true(
-            false,
+          assert.notOk(
+            true,
             'post request was made to save issuer when user canceled out of flow. test should fail.'
           );
         });
@@ -175,14 +172,14 @@ module('Integration | Component | SecretEngine/ConfigureAzure', function (hooks)
             );
         });
 
-        test('is shows placeholder issuer, shows modal when saving changes, and does not call APIs on cancel', async function (assert) {
+        test('is shows placeholder issuer, and does not call APIs on canceling out of issuer modal', async function (assert) {
           this.server.post('/identity/oidc/config', () => {
             assert.notOk(true, 'request should not be made to issuer config endpoint');
           });
           this.server.post(configUrl('azure', this.id), () => {
             assert.notOk(
               true,
-              'post request was made to config/root when user canceled out of flow. test should fail.'
+              'post request was made to config/ when user canceled out of flow. test should fail.'
             );
           });
           await this.renderComponent();
@@ -221,7 +218,7 @@ module('Integration | Component | SecretEngine/ConfigureAzure', function (hooks)
             };
           });
           this.server.post(configUrl('azure', this.id), () => {
-            assert.notOk(true, 'skips request to config/root due to no changes');
+            assert.notOk(true, 'skips request to config because the model was not changed');
           });
           await this.renderComponent();
           await click(SES.wif.accessType('wif'));
@@ -286,6 +283,7 @@ module('Integration | Component | SecretEngine/ConfigureAzure', function (hooks)
       hooks.beforeEach(function () {
         this.version.type = 'community';
       });
+
       test('it renders fields', async function (assert) {
         assert.expect(8);
         await this.renderComponent();
@@ -299,6 +297,7 @@ module('Integration | Component | SecretEngine/ConfigureAzure', function (hooks)
         }
         assert.dom(GENERAL.inputByAttr('issuer')).doesNotExist();
       });
+
       test('it does not send issuer on save', async function (assert) {
         assert.expect(4);
         await this.renderComponent();
@@ -322,6 +321,7 @@ module('Integration | Component | SecretEngine/ConfigureAzure', function (hooks)
       });
     });
   });
+
   module('Edit view', function () {
     module('isEnterprise', function (hooks) {
       hooks.beforeEach(function () {
