@@ -11,9 +11,8 @@ import (
 	"crypto/rand"
 	"testing"
 
-	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
-
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 )
 
 func TestGetKeyTypeAndBitsFromPublicKeyForRole(t *testing.T) {
