@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/axiomhq/hyperloglog"
-	semver "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
@@ -638,28 +637,6 @@ func (a *ActivityLog) getAllEntitySegmentsForMonth(ctx context.Context, path str
 		}
 	}
 	return segments, nil
-}
-
-// OldestVersionHasDeduplicatedClients returns whether this cluster is 1.19+, and
-// hence supports deduplicated clients
-func (a *ActivityLog) OldestVersionHasDeduplicatedClients(ctx context.Context) bool {
-	oldestVersionIsDedupClients := a.core.IsNewInstall(ctx)
-	if !oldestVersionIsDedupClients {
-		if v, _, err := a.core.FindOldestVersionTimestamp(); err == nil {
-			oldestVersion, err := semver.NewSemver(v)
-			if err != nil {
-				a.core.logger.Debug("could not extract version instance", "version", v)
-				return false
-			}
-			dedupChangeVersion, err := semver.NewSemver(DeduplicatedClientMinimumVersion)
-			if err != nil {
-				a.core.logger.Debug("could not extract version instance", "version", DeduplicatedClientMinimumVersion)
-				return false
-			}
-			oldestVersionIsDedupClients = oldestVersionIsDedupClients || oldestVersion.GreaterThanOrEqual(dedupChangeVersion)
-		}
-	}
-	return oldestVersionIsDedupClients
 }
 
 func (a *ActivityLog) loadClientDataIntoSegment(ctx context.Context, pathPrefix string, startTime time.Time, seqNum uint64, currentSegment *segmentInfo) ([]*activity.EntityRecord, error) {
