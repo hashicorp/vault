@@ -54,8 +54,8 @@ variable "vault_root_token" {
 }
 
 variable "is_voter" {
-  type = bool
-  default = false
+  type        = bool
+  default     = false
   description = "Whether the nodes that are going to be removed are voters"
 }
 

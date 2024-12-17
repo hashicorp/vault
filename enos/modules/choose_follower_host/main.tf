@@ -12,6 +12,6 @@ variable "followers" {
 
 output "chosen_follower" {
   value = {
-    0: try(var.followers[0], null)
+    0 : try(var.followers[0], null)
   }
 }

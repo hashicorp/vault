@@ -187,7 +187,7 @@ module "stop" {
 
 resource "enos_remote_exec" "delete_data" {
   depends_on = [module.stop]
-  for_each   = {
+  for_each = {
     for idx, host in var.hosts : idx => host
     if var.add_back_nodes
   }
@@ -203,7 +203,7 @@ resource "enos_remote_exec" "delete_data" {
 }
 resource "enos_remote_exec" "start" {
   depends_on = [enos_remote_exec.delete_data]
-  for_each   = {
+  for_each = {
     for idx, host in var.hosts : idx => host
     if var.add_back_nodes
   }
