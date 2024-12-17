@@ -51,6 +51,12 @@ type DatabaseConfig struct {
 	SkipStaticRoleImportRotation bool `json:"skip_static_role_import_rotation" structs:"skip_static_role_import_rotation" mapstructure:"skip_static_role_import_rotation"`
 }
 
+// ConnectionDetails represents the DatabaseConfig.ConnectionDetails map as a
+// struct
+type ConnectionDetails struct {
+	SelfManaged bool `json:"self_managed" structs:"self_managed" mapstructure:"self_managed"`
+}
+
 func (c *DatabaseConfig) SupportsCredentialType(credentialType v5.CredentialType) bool {
 	credTypes, ok := c.ConnectionDetails[v5.SupportedCredentialTypesKey].([]interface{})
 	if !ok {
