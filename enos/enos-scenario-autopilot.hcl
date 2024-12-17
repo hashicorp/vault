@@ -206,16 +206,24 @@ scenario "autopilot" {
       vpc_id          = step.create_vpc.id
     }
   }
+
+  step "get_local_metadata" {
+    description = global.description.get_local_metadata
+    skip_step   = matrix.artifact_source != "local"
+    module      = module.get_local_metadata
+  }
+
   step "create_autopilot_initial_storage_config" {
     description = <<-EOF
       An arithmetic module used to dynamically create autopilot storage configuration depending on
       whether or not we're testing a local build or a candidate build.
     EOF
+    depends_on = [step.get_local_metadata]
     module      = module.autopilot_upgrade_storageconfig
 
     variables {
-      vault_product_version = var.vault_upgrade_initial_version
-      addition = ".initial"
+      vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version_base : var.vault_upgrade_initial_version
+      addition = ".0"
     }
   }
 
@@ -285,12 +293,6 @@ scenario "autopilot" {
       storage_backend = "raft"
       storage_backend_addl_config = step.create_autopilot_initial_storage_config.storage_addl_config
     }
-  }
-
-  step "get_local_metadata" {
-    description = global.description.get_local_metadata
-    skip_step   = matrix.artifact_source != "local"
-    module      = module.get_local_metadata
   }
 
   // Wait for our cluster to elect a leader
@@ -393,8 +395,8 @@ scenario "autopilot" {
     module      = module.autopilot_upgrade_storageconfig
 
     variables {
-      vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
-      addition = ".new"
+      vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version_base : var.vault_product_version
+      addition = ".1"
     }
   }
 
@@ -507,7 +509,7 @@ scenario "autopilot" {
     variables {
       hosts                           = step.create_vault_cluster.hosts
       vault_addr                      = step.create_vault_cluster.api_addr_localhost
-      vault_autopilot_upgrade_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_autopilot_upgrade_version = step.create_autopilot_upgrade_storageconfig.version 
       vault_autopilot_upgrade_status  = "await-server-removal"
       vault_install_dir               = local.vault_install_dir
       vault_root_token                = step.upgrade_vault_cluster_with_autopilot.root_token
@@ -706,7 +708,8 @@ scenario "autopilot" {
     module      = module.shutdown_multiple_nodes
     depends_on = [
       step.create_vault_cluster,
-      step.raft_remove_peers
+      step.raft_remove_peers,
+      step.verify_removed,
     ]
 
     providers = {
@@ -725,7 +728,8 @@ scenario "autopilot" {
       step.create_vault_cluster_upgrade_targets,
       step.upgrade_vault_cluster_with_autopilot,
       step.verify_raft_auto_join_voter,
-      step.remove_old_nodes
+      step.remove_old_nodes,
+      step.create_autopilot_upgrade_storageconfig,
     ]
 
     providers = {
@@ -740,7 +744,7 @@ scenario "autopilot" {
     variables {
       hosts                           = step.upgrade_vault_cluster_with_autopilot.hosts
       vault_addr                      = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
-      vault_autopilot_upgrade_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_autopilot_upgrade_version = step.create_autopilot_upgrade_storageconfig.version
       vault_autopilot_upgrade_status  = "idle"
       vault_install_dir               = local.vault_install_dir
       vault_root_token                = step.create_vault_cluster.root_token
