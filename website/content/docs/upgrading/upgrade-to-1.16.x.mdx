@@ -96,6 +96,10 @@ decides to trigger the flag. More information can be found in the
 
 ### Activity Log Changes
 
+#### Disable client counting activity
+
+License utilization cannot be reported if client counting is disabled. As of Vault Enterprise 1.16.0 and later, client counting cannot be disabled using `/sys/internal/counters/config` endpoint as manual license utilization reporting is always enabled.
+
 #### Default Activity Log Querying Period
 
 As of 1.16.13 and later, the field `default_report_months` can no longer be configured or read. Any previously set values
