@@ -1,0 +1,190 @@
+---
+layout: docs
+page_title: Operations quick start
+description: Learn how to store and retrieve your first secret.
+---
+
+# Operations quick start
+
+This quick start will explore how to set up Vault to authenticate
+entities, store and retrieve your first secret value.
+
+For in-depth Vault learning experience, see the [Vault foundations tutorials](/vault/tutorials/get-started).
+
+## Prerequisites
+
+- A local installation of the [Vault binary](/vault/install).
+
+## Start Vault
+
+<Warning>
+
+This in-memory “dev” server is useful for practicing with Vault locally for the
+first time, but is insecure and should never be used in production. For
+developers who need to manage their own production Vault installations, this
+[page](/vault/tutorials/operations/production-hardening) provides some guidance
+on how to make your setup more production-ready.
+
+</Warning>
+
+1. Start the Vault server in development mode.
+
+   ```shell-session
+   $ vault server -dev -dev-root-token-id="dev-only-token"
+   ```
+
+   The `-dev-root-token-id` flag for dev servers defines the initial root token.
+   The root token allows full access to any entity that presents the token (in this
+   case "dev-only-token").
+
+   <Warning>
+
+   The [root token](/vault/docs/concepts/tokens#root-tokens) is useful for
+   testing as the associate `root` policy allows full access to all data and functionality of Vault. The
+   root token must be carefully guarded in production. Ideally, even an administrator of
+   Vault would use their own token with limited privileges instead of the root token.
+
+   </Warning>
+
+   Vault is now listening over HTTP on port `8200`.
+
+1. Open a new terminal and export environment variables to interact with the
+   Vault server.
+
+   ```shell-session
+   $ export VAULT_ADDR='http://127.0.0.1:8200'
+   ```
+
+1. Log into the Vault server using the root token.
+
+   ```shell-session
+   $ vault login dev-only-token
+   ```
+
+   You are now authenticated to Vault with the root token.
+
+## Enable auth methods
+
+Vault supports multiple [authentication methods](/vault/docs/auth). These
+plugins authenticate both human and machine based workloads to Vault. In this
+quick start, you will use the `userpass` auth method.
+
+1. Enable the `userpass` auth method. This method allows users to authenticate to
+   Vault.
+
+   ```shell-session
+   $ vault auth enable userpass
+   ```
+
+   The `userpass` auth method is enabled.
+
+1. To authenticate users with Vault, you must create a user and password.
+
+   ```shell-session
+   $ vault write auth/userpass/users/opsuser \
+       password=p@ssw0rd
+   ```
+
+   The user `opsuser` is created. The password is `p@ssw0rd`.
+
+1. (Optional) Enable the `approle` auth method. This is a general purpose plugin that
+   allows machines or apps to authenticate to Vault.
+
+   ```shell-session
+   $ vault auth enable approle
+   ```
+
+   The `approle` auth method is enabled.
+
+1. (Optional) To authenticate workloads with Vault, you must create a role.
+
+   ```shell-session
+   $ vault write auth/approle/role/my-app-role \
+       secret_id_ttl=10m \
+       token_ttl=20m \
+       token_max_ttl=30m
+   ```
+
+   The role `my-app-role` is created. The role has a secret ID TTL of 10 minutes, a
+   token TTL of 20 minutes, and a token max TTL of 30 minutes.
+
+## Enable secrets engines
+
+Vault supports multiple [secrets engines](/vault/docs/secrets). These
+plugins support various use cases like storing static secrets, dynamic secrets,
+and managing PKI certificates.
+
+Enable the `kv` secrets engine. This engine stores arbitrary secrets.
+
+```shell-session
+$ vault secrets enable -version=2 kv
+```
+
+The `kv` secrets engine is enabled.
+
+## Store a secret
+
+Vault securely stores secrets static for a configured `kv` secrets engine.
+
+Write a secret to the `kv` secrets engine.
+
+```shell-session
+$ vault kv put kv/creds username=opsuser password=p@ssw0rd
+```
+
+The `kv put` command writes the secret to the `kv` secrets engine. In this example, two
+secrets are written: The `username` key with a value of `opsuser` and the key
+`password` with a value of `p@ssw0rd`.
+
+## Protect secrets
+
+In the previous step, you wrote a password to the `kv` secrets engine using the
+root token. Using the root token, and root policy, is not recommended for production environments.
+
+Vault policies allow you to control access to secrets, and which operations are allowed.
+
+1. Write a policy that permits access to the `kv` secrets engine.
+
+   ```shell-session
+   $ vault policy write kv-access-policy - << EOF
+   path "kv/creds" {
+      capabilities = ["read", "create", "update", "delete"]
+   }
+   EOF
+   ```
+
+   This policy supports the `read`, `create`, `update`, and `delete` operations on
+   the path `kv/creds`.
+
+1. Attach the policy to the `opsuser` user.
+
+   ```shell-session
+   $ vault write auth/userpass/users/opsuser \
+       policies=kv-access-policy
+   ```
+
+   The `opsuser` user is updated with the `kv-access-policy` policy.
+
+## Authenticate to Vault
+
+Authenticate to Vault using the `opsuser` user. When prompted, enter the
+password `p@ssw0rd`.
+
+```shell-session
+$ vault login -method=userpass username=opsuser
+```
+
+You are now authenticated to Vault.
+
+## Retrieve a secret
+
+You authenticated to Vault as the `opsuser` user. Retrieve the secrets from the
+path `kv/creds`. The `opsuser` user has access to the `kv/creds` path from the
+`kv-access-policy`.
+
+```shell-session
+$ vault kv get kv/creds
+```
+
+You have successfully stored and retrieved your first secret value with a user
+from the `userpass` auth method.
