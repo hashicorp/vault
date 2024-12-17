@@ -933,6 +933,12 @@ func (c *Core) InitiateRetryJoin(ctx context.Context) error {
 	c.logger.Info("raft retry join initiated")
 
 	if _, err = c.JoinRaftCluster(ctx, leaderInfos, raftBackend.NonVoter()); err != nil {
+		// If the node has been removed, we should continue to startup but in
+		// the removed state
+		if errors.Is(err, errRemovedHANode) {
+			c.logger.Error("failed to join raft cluster", "error", err)
+			return nil
+		}
 		return err
 	}
 
@@ -1048,9 +1054,9 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 	isRaftHAOnly := c.isRaftHAOnly()
 	if raftBackend.IsRemoved() {
 		if isRaftHAOnly {
-			return false, errors.New("node has been removed from the HA cluster. Raft data for this node must be cleaned up before it can be added back")
+			return false, fmt.Errorf("%w. Raft data for this node must be cleaned up before it can be added back", errRemovedHANode)
 		} else {
-			return false, errors.New("node has been removed from the HA cluster. All vault data for this node must be cleaned up before it can be added back")
+			return false, fmt.Errorf("%w. All vault data for this node must be cleaned up before it can be added back", errRemovedHANode)
 		}
 	}
 	// Prevent join from happening if we're using raft for storage and
