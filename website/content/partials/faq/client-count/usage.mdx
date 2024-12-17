@@ -62,6 +62,19 @@ and disable the tracking parameter. If you disable client counting in the middle
 of a month, Vault will discard any data currently recorded for the month. Data
 for previous months is preserved.
 
+<Note>
+
+  <EnterpriseAlert product="vault" inline /> 
+
+  License utilization cannot be reported if client counting is disabled. 
+  
+  As of 1.16.0, 1.15.6 and 1.14.10, client counting cannot be disabled as manual license utilization reporting is always enabled.
+
+  As of 1.14.0, 1.13.4, 1.12.8 and 1.11.12, client counting cannot be disabled when automated license utilization reporting is enabled. 
+
+</Note>
+
+
 ### Can I configure Vault to log the client count data? ((#log-client-count))
 
 **Yes**.
