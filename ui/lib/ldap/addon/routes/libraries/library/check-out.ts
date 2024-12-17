@@ -51,7 +51,7 @@ export default class LdapLibraryCheckOutRoute extends Route {
       { label: library.backend, route: 'overview' },
       { label: 'Libraries', route: 'libraries' },
       { label: library.name, route: 'libraries.library' },
-      { label: 'Check-out' },
+      { label: 'Check-Out' },
     ];
   }
 

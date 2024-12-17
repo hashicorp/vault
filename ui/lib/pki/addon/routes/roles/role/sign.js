@@ -27,7 +27,7 @@ export default class PkiRoleSignRoute extends Route {
       { label: this.secretMountPath.currentPath, route: 'overview', model: this.secretMountPath.currentPath },
       { label: 'Roles', route: 'roles.index', model: this.secretMountPath.currentPath },
       { label: role, route: 'roles.role.details', models: [this.secretMountPath.currentPath, role] },
-      { label: 'Sign certificate' },
+      { label: 'Sign Certificate' },
     ];
     // This is updated on successful generate in the controller
     controller.hasSubmitted = false;
