@@ -1037,6 +1037,16 @@ The `/sys/internal/counters/config` endpoint is used to configure logging of act
 - `enabled` `(string: enable, disable, default)` - Enable or disable counting of client activity. When set to `default`, the client
   counts are enabled on Enterprise builds and disabled on community builds. Disabling the feature during the middle of a month will
   discard any data recorded for that month, but does not delete previous months.
+  <Note>
+
+  <EnterpriseAlert product="vault" inline /> 
+  
+  License utilization cannot be reported if client counting is disabled. 
+  
+  As of 1.16.0, 1.15.6 and 1.14.10, client counting cannot be disabled as manual license utilization reporting is always enabled.
+  
+  As of 1.14.0, 1.13.4, 1.12.8 and 1.11.12, client counting cannot be disabled when automated license utilization reporting is enabled. 
+  </Note>
 - `retention_months` `(integer: 48)` - The number of months of history to retain. The minimum is 48 months and the maximum is 60 months.
 
 Any missing parameters are left at their existing value.

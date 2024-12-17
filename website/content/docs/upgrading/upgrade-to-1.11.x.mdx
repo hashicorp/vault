@@ -19,6 +19,12 @@ an Elasticsearch version prior to 6, they will need to switch back to the old
 API path by setting the [bool config option](/vault/api-docs/secret/databases/elasticdb#use_old_xpack)
 `use_old_xpack=true`.
 
+## Activity Log Changes
+
+### Disable client counting activity
+
+License utilization cannot be reported if client counting is disabled. As of Vault Enterprise 1.11.12 and later, client counting cannot be disabled using `/sys/internal/counters/config` endpoint when automated license utilization reporting is enabled.
+
 ## Changes
 
 @include 'pgx-params.mdx'
