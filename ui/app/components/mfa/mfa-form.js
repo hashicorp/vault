@@ -83,6 +83,7 @@ export default class MfaForm extends Component {
         clusterId: this.args.clusterId,
         ...this.args.authData,
       });
+      // calls onMfaSuccess in auth/page.js
       this.args.onSuccess(response);
     } catch (error) {
       const errors = error.errors || [];
