@@ -28,6 +28,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
+	"github.com/mitchellh/mapstructure"
 )
 
 const (
@@ -203,6 +204,19 @@ func (b *databaseBackend) DatabaseConfig(ctx context.Context, s logical.Storage,
 	}
 
 	return &config, nil
+}
+
+// ConnectionDetails decodes the DatabaseConfig.ConnectionDetails map into a
+// struct
+func (b *databaseBackend) ConnectionDetails(ctx context.Context, config *DatabaseConfig) (*ConnectionDetails, error) {
+	cd := &ConnectionDetails{}
+
+	err := mapstructure.WeakDecode(config.ConnectionDetails, &cd)
+	if err != nil {
+		return nil, err
+	}
+
+	return cd, nil
 }
 
 type upgradeStatements struct {
