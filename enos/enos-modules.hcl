@@ -48,6 +48,10 @@ module "create_vpc" {
   common_tags = var.tags
 }
 
+module "choose_follower_host" {
+  source = "./modules/choose_follower_host"
+}
+
 module "ec2_info" {
   source = "./modules/ec2_info"
 }

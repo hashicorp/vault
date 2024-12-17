@@ -16,6 +16,6 @@ test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
 result=$($binpath operator raft join "$VAULT_LEADER_ADDR")
 output=$?
-if [ $output -ne 1 ]; then
-  fail "Joining did not return code 1, instead $output: $result"  
+if [ $output -ne 2 ]; then
+  fail "Joining did not return code 2, instead $output: $result"  
 fi

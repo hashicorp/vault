@@ -516,12 +516,29 @@ scenario "smoke" {
       vault_root_token  = step.create_vault_cluster.root_token
     }
   }
- 
-  step "remove_raft_node" {
-    // skip_step = semverconstraint(var.vault_product_version, "<1.19.0") || matrix.backend != "raft"
-    module = module.vault_raft_remove_peer
-    depends_on = [step.verify_raft_auto_join_voter]
 
+  step "choose_follower_to_remove" {
+    skip_step  = semverconstraint(var.vault_product_version, "<1.19.0-0") || matrix.backend != "raft"
+    module = module.choose_follower_host
+    depends_on = [
+      step.get_vault_cluster_ips,
+    ]
+    
+    variables {
+      followers = step.get_vault_cluster_ips.follower_hosts
+    }
+  }
+  
+  step "remove_raft_node" {
+    skip_step  = semverconstraint(var.vault_product_version, "<1.19.0-0") || matrix.backend != "raft"
+    module     = module.vault_raft_remove_peer
+    depends_on = [
+      step.verify_raft_auto_join_voter,
+      step.get_vault_cluster_ips,
+      step.create_vault_cluster,
+      step.choose_follower_to_remove,
+    ]
+    
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
@@ -532,27 +549,28 @@ scenario "smoke" {
     ]
 
     variables {
-      hosts                   = step.get_vault_cluster_ips.single_follower_hosts 
+      hosts                   = step.choose_follower_to_remove.chosen_follower
       ip_version              = matrix.ip_version
       operator_instance       = step.get_vault_cluster_ips.leader_public_ip
       vault_addr              = step.create_vault_cluster.api_addr_localhost
       vault_cluster_addr_port = step.create_vault_cluster.cluster_port
       vault_install_dir       = global.vault_install_dir[matrix.artifact_type]
       vault_root_token        = step.create_vault_cluster.root_token
-      is_voter = true
+      is_voter                = true
     }
   }
-  
+
   step "verify_removed" {
-    //skip_step = semverconstraint(var.vault_product_version, "<1.19.0") || matrix.backend != "raft"
+    skip_step   = semverconstraint(var.vault_product_version, "<1.19.0-0") || matrix.backend != "raft"
     description = <<-EOF
-      Verify that the removed nodes are marked as such
+      Verify that the removed nodes are marked as such and can be added back if their data has been deleted
     EOF
     module      = module.vault_verify_raft_removed
     depends_on  = [
       step.create_vault_cluster_targets,
       step.get_vault_cluster_ips,
       step.remove_raft_node,
+      step.choose_follower_to_remove,
     ]
 
     providers = {
@@ -567,19 +585,20 @@ scenario "smoke" {
     ]
 
     variables {
-      hosts              = step.get_vault_cluster_ips.single_follower_hosts
-      vault_leader_host  = step.get_vault_cluster_ips.leader_host
-      vault_root_token   = step.create_vault_cluster.root_token
-      vault_seal_type    = matrix.seal
-      vault_unseal_keys  = matrix.seal == "shamir" ? step.create_vault_cluster.unseal_keys_hex : null
-      add_back_nodes     = true
-      listener_port      = step.create_vault_cluster.listener_port
+      hosts             = step.choose_follower_to_remove.chosen_follower
+      vault_leader_host = step.get_vault_cluster_ips.leader_host
+      vault_root_token  = step.create_vault_cluster.root_token
+      vault_seal_type   = matrix.seal
+      vault_unseal_keys = matrix.seal == "shamir" ? step.create_vault_cluster.unseal_keys_hex : null
+      add_back_nodes    = true
+      listener_port     = step.create_vault_cluster.listener_port
       ip_version        = matrix.ip_version
-      vault_local_addr        = step.create_vault_cluster.api_addr_localhost
-      cluster_port = step.create_vault_cluster.cluster_port
+      vault_local_addr  = step.create_vault_cluster.api_addr_localhost
+      cluster_port      = step.create_vault_cluster.cluster_port
 
     }
   }
+  
   step "verify_secrets_engines_create" {
     description = global.description.verify_secrets_engines_create
     module      = module.vault_verify_secrets_engines_create

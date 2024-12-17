@@ -206,6 +206,18 @@ scenario "autopilot" {
       vpc_id          = step.create_vpc.id
     }
   }
+  step "create_autopilot_initial_storage_config" {
+    description = <<-EOF
+      An arithmetic module used to dynamically create autopilot storage configuration depending on
+      whether or not we're testing a local build or a candidate build.
+    EOF
+    module      = module.autopilot_upgrade_storageconfig
+
+    variables {
+      vault_product_version = var.vault_upgrade_initial_version
+      addition = ".initial"
+    }
+  }
 
   step "create_vault_cluster" {
     description = <<-EOF
@@ -216,7 +228,8 @@ scenario "autopilot" {
     module = module.vault_cluster
     depends_on = [
       step.build_vault,
-      step.create_vault_cluster_targets
+      step.create_vault_cluster_targets,
+      step.create_autopilot_initial_storage_config,
     ]
 
     providers = {
@@ -266,16 +279,11 @@ scenario "autopilot" {
       ip_version           = matrix.ip_version
       license              = matrix.edition != "ce" ? step.read_license.license : null
       packages             = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
-      release = {
-        edition = matrix.edition
-        version = var.vault_upgrade_initial_version
-      }
+      local_artifact_path         = local.artifact_path
       seal_attributes = step.create_seal_key.attributes
       seal_type       = matrix.seal
       storage_backend = "raft"
-      storage_backend_addl_config = {
-        autopilot_upgrade_version = var.vault_upgrade_initial_version
-      }
+      storage_backend_addl_config = step.create_autopilot_initial_storage_config.storage_addl_config
     }
   }
 
@@ -386,6 +394,7 @@ scenario "autopilot" {
 
     variables {
       vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
+      addition = ".new"
     }
   }
 
@@ -655,14 +664,14 @@ scenario "autopilot" {
       vault_root_token        = step.create_vault_cluster.root_token
     }
   }
-  
+
   step "verify_removed" {
-    skip_step = semverconstraint(var.vault_upgrade_initial_version, "<1.19.0-0")
+    skip_step   = semverconstraint(var.vault_upgrade_initial_version, "<1.19.0-0")
     description = <<-EOF
       Verify that the removed nodes are marked as such
     EOF
     module      = module.vault_verify_raft_removed
-    depends_on = [
+    depends_on  = [
       step.create_vault_cluster,
       step.get_updated_vault_cluster_ips,
       step.raft_remove_peers,
@@ -679,13 +688,16 @@ scenario "autopilot" {
     ]
 
     variables {
-      hosts              = step.create_vault_cluster.hosts
-      vault_leader_addr  = step.get_updated_vault_cluster_ips.leader_host
-      vault_root_token   = step.create_vault_cluster.root_token
-      vault_seal_type    = matrix.seal
-      vault_unseal_keys  = matrix.seal == "shamir" ? step.create_vault_cluster.unseal_keys_hex : null
-      add_back_nodes     = false
-      listener_port      = step.create_vault_cluster.listener_port
+      hosts             = step.create_vault_cluster.hosts
+      vault_leader_host = step.get_updated_vault_cluster_ips.leader_host
+      vault_root_token  = step.create_vault_cluster.root_token
+      vault_seal_type   = matrix.seal
+      vault_unseal_keys = matrix.seal == "shamir" ? step.create_vault_cluster.unseal_keys_hex : null
+      add_back_nodes    = false
+      listener_port     = step.create_vault_cluster.listener_port
+      ip_version        = matrix.ip_version
+      vault_local_addr  = step.create_vault_cluster.api_addr_localhost
+      cluster_port      = step.create_vault_cluster.cluster_port
     }
   }
 
