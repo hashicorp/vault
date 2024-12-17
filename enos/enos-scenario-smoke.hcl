@@ -518,27 +518,27 @@ scenario "smoke" {
   }
 
   step "choose_follower_to_remove" {
-    skip_step  = semverconstraint(var.vault_product_version, "<1.19.0-0") || matrix.backend != "raft"
-    module = module.choose_follower_host
+    skip_step = semverconstraint(var.vault_product_version, "<1.19.0-0") || matrix.backend != "raft"
+    module    = module.choose_follower_host
     depends_on = [
       step.get_vault_cluster_ips,
     ]
-    
+
     variables {
       followers = step.get_vault_cluster_ips.follower_hosts
     }
   }
-  
+
   step "remove_raft_node" {
-    skip_step  = semverconstraint(var.vault_product_version, "<1.19.0-0") || matrix.backend != "raft"
-    module     = module.vault_raft_remove_peer
+    skip_step = semverconstraint(var.vault_product_version, "<1.19.0-0") || matrix.backend != "raft"
+    module    = module.vault_raft_remove_peer
     depends_on = [
       step.verify_raft_auto_join_voter,
       step.get_vault_cluster_ips,
       step.create_vault_cluster,
       step.choose_follower_to_remove,
     ]
-    
+
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
@@ -566,7 +566,7 @@ scenario "smoke" {
       Verify that the removed nodes are marked as such and can be added back if their data has been deleted
     EOF
     module      = module.vault_verify_raft_removed
-    depends_on  = [
+    depends_on = [
       step.create_vault_cluster_targets,
       step.get_vault_cluster_ips,
       step.remove_raft_node,
@@ -598,7 +598,7 @@ scenario "smoke" {
 
     }
   }
-  
+
   step "verify_secrets_engines_create" {
     description = global.description.verify_secrets_engines_create
     module      = module.vault_verify_secrets_engines_create

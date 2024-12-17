@@ -662,7 +662,7 @@ scenario "autopilot" {
       Verify that the removed nodes are marked as such
     EOF
     module      = module.vault_verify_raft_removed
-    depends_on  = [
+    depends_on = [
       step.create_vault_cluster,
       step.get_updated_vault_cluster_ips,
       step.raft_remove_peers,
@@ -691,7 +691,7 @@ scenario "autopilot" {
       cluster_port      = step.create_vault_cluster.cluster_port
     }
   }
-  
+
   step "remove_old_nodes" {
     description = global.description.shutdown_nodes
     module      = module.shutdown_multiple_nodes

@@ -318,7 +318,8 @@ module "vault_verify_raft_auto_join_voter" {
 
 module "vault_verify_raft_removed" {
   source = "./modules/vault_verify_raft_removed"
-  vault_install_dir       = var.vault_install_dir
+
+  vault_install_dir = var.vault_install_dir
 }
 
 module "vault_verify_replication" {
