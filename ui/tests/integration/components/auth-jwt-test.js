@@ -225,7 +225,13 @@ module('Integration | Component | auth jwt', function (hooks) {
     });
     this.window.trigger('message', buildMessage());
     await settled();
-    assert.ok(this.handler.withArgs(null, null, 'token').calledOnce, 'calls the onSubmit handler with token');
+    const [callbackData, , token] = this.handler.lastCall.args;
+    assert.propEqual(
+      callbackData,
+      { mfa_requirement: undefined },
+      'mfa_requirement is undefined if not returned by response'
+    );
+    assert.strictEqual(token, 'token', 'calls the onSubmit handler with token');
   });
 
   test('oidc: fails silently when event origin does not match window origin', async function (assert) {
