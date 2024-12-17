@@ -59,9 +59,6 @@ locals {
   follower_hosts = {
     for idx in range(local.host_count - 1) : idx => try(local.follower_hosts_list[idx], null)
   }
-#  single_follower_hosts = {
-#    0: try(local.follower_hosts_list[0], null)
-#  }
   follower_ipv6s       = jsondecode(enos_remote_exec.follower_ipv6s.stdout)
   follower_private_ips = jsondecode(enos_remote_exec.follower_private_ipv4s.stdout)
   follower_public_ips  = [for host in local.follower_hosts : host.public_ip]
@@ -186,7 +183,3 @@ output "leader_private_ip" {
 output "leader_public_ip" {
   value = local.leader_public_ip
 }
-
-#output "single_follower_hosts" {
-#  value = local.single_follower_hosts
-#}

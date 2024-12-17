@@ -56,6 +56,7 @@ variable "vault_root_token" {
 variable "is_voter" {
   type = bool
   default = false
+  description = "Whether the nodes that are going to be removed are voters"
 }
 
 resource "enos_remote_exec" "vault_raft_remove_peer" {
