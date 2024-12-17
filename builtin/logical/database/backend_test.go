@@ -97,6 +97,7 @@ func TestBackend_RoleUpgrade(t *testing.T) {
 	backend := &databaseBackend{}
 
 	roleExpected := &roleEntry{
+		Name: "test",
 		Statements: v4.Statements{
 			CreationStatements: "test",
 			Creation:           []string{"test"},
@@ -211,6 +212,7 @@ func TestBackend_config_connection(t *testing.T) {
 			"password_policy":                    "",
 			"plugin_version":                     "",
 			"verify_connection":                  false,
+			"skip_static_role_import_rotation":   false,
 		}
 		configReq.Operation = logical.ReadOperation
 		resp, err = b.HandleRequest(namespace.RootContext(nil), configReq)
@@ -266,6 +268,7 @@ func TestBackend_config_connection(t *testing.T) {
 			"password_policy":                    "",
 			"plugin_version":                     "",
 			"verify_connection":                  false,
+			"skip_static_role_import_rotation":   false,
 		}
 		configReq.Operation = logical.ReadOperation
 		resp, err = b.HandleRequest(namespace.RootContext(nil), configReq)
@@ -310,6 +313,7 @@ func TestBackend_config_connection(t *testing.T) {
 			"password_policy":                    "",
 			"plugin_version":                     "",
 			"verify_connection":                  false,
+			"skip_static_role_import_rotation":   false,
 		}
 		configReq.Operation = logical.ReadOperation
 		resp, err = b.HandleRequest(namespace.RootContext(nil), configReq)
@@ -417,7 +421,7 @@ func TestBackend_basic(t *testing.T) {
 	defer b.Cleanup(context.Background())
 
 	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
-	defer cleanup()
+	t.Cleanup(cleanup)
 
 	// Configure a connection
 	data := map[string]interface{}{
@@ -768,6 +772,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 		"password_policy":                    "",
 		"plugin_version":                     "",
 		"verify_connection":                  false,
+		"skip_static_role_import_rotation":   false,
 	}
 	resp, err = client.Read("database/config/plugin-test")
 	if err != nil {
