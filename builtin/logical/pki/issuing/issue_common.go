@@ -92,6 +92,7 @@ type CreationBundleInput interface {
 	IsUserIdInSchema() (interface{}, bool)
 	GetUserIds() []string
 	IgnoreCSRSignature() bool
+	GetPathNameConstraints() (*pkix.Extension, error)
 }
 
 // GenerateCreationBundle is a shared function that reads parameters supplied
@@ -408,6 +409,11 @@ func GenerateCreationBundle(b logical.SystemView, role *RoleEntry, entityInfo En
 		}
 	}
 
+	pathNameConstraints, err := cb.GetPathNameConstraints()
+	if err != nil {
+		return nil, nil, errutil.UserError{Err: fmt.Sprintf("requested name_constraints cannot be populated: %s", err)}
+	}
+
 	creation := &certutil.CreationBundle{
 		Params: &certutil.CreationParameters{
 			Subject:                       subject,
@@ -430,6 +436,7 @@ func GenerateCreationBundle(b logical.SystemView, role *RoleEntry, entityInfo En
 			ForceAppendCaChain:            caSign != nil,
 			SKID:                          skid,
 			IgnoreCSRSignature:            cb.IgnoreCSRSignature(),
+			NameConstraints:               pathNameConstraints,
 		},
 		SigningBundle: caSign,
 		CSR:           csr,

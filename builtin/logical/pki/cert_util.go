@@ -551,6 +551,14 @@ func (cb CreationBundleInputFromFieldData) GetUserIds() []string {
 	return cb.data.Get("user_ids").([]string)
 }
 
+func (cb CreationBundleInputFromFieldData) GetPathNameConstraints() (*pkix.Extension, error) {
+	jsonString, exists := cb.data.GetOk("name_constraints")
+	if !exists {
+		return nil, nil
+	}
+	return entParseNameConstraintsJson(jsonString.(string))
+}
+
 // generateCreationBundle is a shared function that reads parameters supplied
 // from the various endpoints and generates a CreationParameters with the
 // parameters that can be used to issue or sign
