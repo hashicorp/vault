@@ -140,7 +140,8 @@ secrets are written: The `username` key with a value of `opsuser` and the key
 In the previous step, you wrote a password to the `kv` secrets engine using the
 root token. The use of the root token, and root policy, is not recommended for production environments.
 
-Vault policies allow you to control access to secrets, and which operations are allowed.
+You can use Vault policies to control and limit access to plugin data and
+the operations allowed on plugin data.
 
 1. Write a policy that permits access to the `kv` secrets engine.
 
