@@ -50,29 +50,14 @@ export default class AzureConfig extends Model {
     'environment',
   ];
 
-  // for configuration details view
-  // do not include clientSecret because it is never returned by the API
-  get displayAttrs() {
-    return this.formFields.filter((attr) => attr.name !== 'clientSecret');
-  }
-
+  /* GETTERS used by configure-azure component 
+  these getters help:
+  1. determine if the model is new or existing
+  2. if wif or azure attributes have been configured
+  */
   get isConfigured() {
     // if every value is falsy, this engine has not been configured yet
     return !this.configurableParams.every((param) => !this[param]);
-  }
-
-  // formFields are iterated through to generate the edit/create view
-  get formFields() {
-    return expandAttributeMeta(this, this.configurableParams);
-  }
-
-  // "filedGroupsWif" and "fieldGroupsAzure" are passed to the FormFieldGroups component to determine which group to show in the form (ex: @groupName="fieldGroupsWif")
-  get fieldGroupsWif() {
-    return fieldToAttrs(this, this.formFieldGroups('wif'));
-  }
-
-  get fieldGroupsAzure() {
-    return fieldToAttrs(this, this.formFieldGroups('azure'));
   }
 
   get isWifPluginConfigured() {
@@ -83,6 +68,24 @@ export default class AzureConfig extends Model {
     // clientSecret is not checked here because it's never return by the API
     // however it is an Azure account field
     return !!this.rootPasswordTtl;
+  }
+
+  /* GETTERS used to generate array of fields to be displayed in: 
+  1. details view
+  2. edit/create view
+*/
+  get displayAttrs() {
+    const formFields = expandAttributeMeta(this, this.configurableParams);
+    return formFields.filter((attr) => attr.name !== 'clientSecret');
+  }
+
+  // "filedGroupsWif" and "fieldGroupsAzure" are passed to the FormFieldGroups component to determine which group to show in the form (ex: @groupName="fieldGroupsWif")
+  get fieldGroupsWif() {
+    return fieldToAttrs(this, this.formFieldGroups('wif'));
+  }
+
+  get fieldGroupsAzure() {
+    return fieldToAttrs(this, this.formFieldGroups('azure'));
   }
 
   formFieldGroups(accessType = 'azure') {
