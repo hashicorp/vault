@@ -72,7 +72,7 @@ require (
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/hashicorp/cap v0.7.0
-	github.com/hashicorp/cap/ldap v0.0.0-20241218111300-43d3999eefa1
+	github.com/hashicorp/cap/ldap v0.0.0-20241217213233-43d3999eefa1
 	github.com/hashicorp/cli v1.1.6
 	github.com/hashicorp/consul-template v0.39.1
 	github.com/hashicorp/consul/api v1.29.1
