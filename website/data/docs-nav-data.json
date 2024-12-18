@@ -11,12 +11,12 @@
     "title": "Get Started",
     "routes": [
       {
-        "title": "Operations quick start",
-        "path": "get-started/operations-qs"
-      },
-      {
         "title": "Developer quick start",
         "path": "get-started/developer-qs"
+      },
+      {
+        "title": "Operations quick start",
+        "path": "get-started/operations-qs"
       },
       {
         "title": "Vault foundations tutorials",

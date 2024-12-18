@@ -2,14 +2,13 @@
 layout: docs
 page_title: Operations quick start
 description: >-
-  Bring Vault up in developer mode with a basic configuration file
-  then store and retrieve a key/value secret.
+  Bring Vault up in developer mode then store and retrieve a key/value secret.
 ---
 
 # Operations quick start
 
-Start Vault in developer mode to authenticate entities, store and retrieve
-your first key/value secret.
+Start Vault in developer mode and authenticate entities, store and retrieve
+your first key/value secret, and test access control with policies.
 
 <Warning>
 
@@ -25,12 +24,11 @@ For a complete Vault learning experience, refer to the [Vault foundations tutori
 
 ## Before you start
 
-- **You must have [Vault installed](/vault/install) locally**.
+- You must have [Vault installed](/vault/install) locally.
 
-## Start Vault
+## Start Vault in `dev` mode
 
-
-1. Start the Vault server in development mode.
+Use the `-dev` and `-dev-root-token` flags to start the Vault server in development mode:
 
    ```shell-session
    $ vault server -dev -dev-root-token-id="dev-only-token"
@@ -49,7 +47,7 @@ For a complete Vault learning experience, refer to the [Vault foundations tutori
 
    </Warning>
 
-   Vault is now listening over HTTP on port `8200`.
+## Authenticate to Vault
 
 1. Open a new terminal and export environment variables to interact with the
    Vault server.
@@ -66,10 +64,10 @@ For a complete Vault learning experience, refer to the [Vault foundations tutori
 
    You are now authenticated to Vault with the root token.
 
-## Enable auth methods
+## Enable authentication plugins
 
 Vault supports multiple [authentication methods](/vault/docs/auth). Authentication
-plugins control access to Vault for humans and machine based workloads. 
+plugins control access to Vault for humans and machine based workloads.
 The `userpass` plugin uses basic authentication with usernames and passwords.
 
 1. Use `vault auth enable` to enable the `userpass` authentication method for human clients:
@@ -78,7 +76,7 @@ The `userpass` plugin uses basic authentication with usernames and passwords.
    $ vault auth enable userpass
    ```
 
-   The `userpass` auth method is enabled.
+   The `userpass` auth method plugin is enabled.
 
 1. Use the `userpass` plugin to create a demo user called `opsuser` with the
     password `p@ssw0rd`:
@@ -88,7 +86,6 @@ The `userpass` plugin uses basic authentication with usernames and passwords.
        password=p@ssw0rd
    ```
 
-
 1. Use `vault auth enable` to enable the `approle` authentication method
     for machines and application clients:
 
@@ -96,8 +93,7 @@ The `userpass` plugin uses basic authentication with usernames and passwords.
    $ vault auth enable approle
    ```
 
-
-1.  Use the `approle` plugin to create a demo role called `my-app-role` :
+1. Use the `approle` plugin to create a demo role called `my-app-role` :
 
    ```shell-session
    $ vault write auth/approle/role/my-app-role \
@@ -109,7 +105,7 @@ The `userpass` plugin uses basic authentication with usernames and passwords.
    The `my-app-role` role has a secret ID TTL of 10 minutes, a token TTL
    of 20 minutes, and a token max TTL of 30 minutes.
 
-## Enable secrets engines
+## Enable the key/value secret plugin
 
 Vault supports multiple [secrets engine plugins](/vault/docs/secrets).
 You can use secret engine plugins to manage critical information like
@@ -121,10 +117,7 @@ The key/value plugin (`kv`) stores and versions arbitrary secrets. Use `vault se
 $ vault secrets enable -path shared -version 2 kv
 ```
 
-
 ## Store a secret
-
-
 
 <Tip>
 
@@ -132,27 +125,28 @@ The `kv` plugin is a core Vault plugin and has dedicated commands in the Vault C
 
 </Tip>
 
-Use the `kv put` command to store the demo user credentials in the `kv` plugin as the secrets `username` and `password`:
+1. Use the `kv put` command to store the demo user credentials in the `kv` plugin as the secrets `username` and `password`:
 
-```shell-session
-$ vault kv put   \
-  -mount shared  \
-  kv/creds       \
-  username=opsuser password=p@ssw0rd
-```
+   ```shell-session
+   $ vault kv put \
+     -mount shared \
+     kv/creds \
+     username=opsuser password=p@ssw0rd
+   ```
 
-`kv put` writes the keys `username` and `password` and their values to
-the `/creds` path for the key/value plugin called `kv`. 
+   `kv put` writes the keys `username` and `password` and their values to
+   the `/creds` path for the key/value plugin called `kv`.
 
-Now write a third key to a separate path called `api-keys`:
-```shell-session
-$ vault kv put   \
-  -mount shared  \
-  kv/api-keys       \
-  square=1234
-```
+1. Write a third key to a separate path called `api-keys`:
 
-## Protect secrets
+   ```shell-session
+   $ vault kv put \
+     -mount shared \
+     kv/api-keys \
+     square=1234
+   ```
+
+## Create a policy to protect secrets
 
 In the previous step, you wrote a password to the `kv` secrets engine using the
 root token. The use of the root token, and root policy, is not recommended for production environments.
@@ -171,7 +165,6 @@ the operations allowed on plugin data.
    EOF
    ```
 
-
 1. Use `vault write` to attach the policy to your `userpass` authentication
    plugin policy for the `opsuser` user:
 
@@ -180,34 +173,33 @@ the operations allowed on plugin data.
        policies=kv-access-policy
    ```
 
+## Test the policy
 
-## Authenticate to Vault
+1. Use `vault login` to authenticate to Vault using the `opsuser` user. When prompted, enter the
+   password `p@ssw0rd`:
 
-Use `vault login` to authenticate to Vault using the `opsuser` user. When prompted, enter the
-password `p@ssw0rd`:
+   ```shell-session
+   $ vault login -method=userpass username=opsuser
+   ```
 
-```shell-session
-$ vault login -method=userpass username=opsuser
-```
+   You are now authenticated to Vault with the `opsuser` and the `kv-access-policy` access policy instead of the root token.
 
-You are now authenticated to Vault with the `opsuser` and the `kv-access-policy` access policy instead of the root token.
+1. Try retrieving the secrets stored on the `kv/creds` path:
 
+   ```shell-session
+   $ vault kv get kv/creds
+   ```
 
+   The command retrieves the secrets stored on the `kv/creds` path.
 
-Try retrieving the secrets stored on the `kv/creds` path:
+1. Try retrieving the secrets stored on the `kv/api-keys` path:
 
-```shell-session
-$ vault kv get kv/creds
-```
+   ```shell-session
+   $ vault kv get kv/api-keys
+   ```
 
-Now try retrieving the secrets stored on the `kv/api-keys` path:
-
-```shell-session
-$ vault kv get kv/api-keys
-```
-
-The second command fails because the policy for `opsuser` does
-not grant access to the `/api-keys` path.
+   The second command fails because the policy for `opsuser` does
+   not grant access to the `/api-keys` path.
 
 You have successfully stored and retrieved your first secret value with a user
 from the `userpass` auth method.
