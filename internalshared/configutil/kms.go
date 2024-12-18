@@ -218,10 +218,11 @@ func ParseKMSes(d string) ([]*KMS, error) {
 	return result.Seals, nil
 }
 
-// kmsSealAddressKeys is a map to seal keys that might contain URLs, IP
-// addresses, or IP:port style addresses. All physical storage types must have
-// an entry in this map, otherwise our normalization check will fail when
-// parsing the storage entry config.
+// kmsSealAddressKeys maps seal key types to corresponding config keys whose
+// values might contain URLs, IP addresses, or host:port addresses. All seal
+// types must contain an entry here, otherwise our normalization check will fail
+// when parsing the seal config. Seal types which do not contain such
+// configurations ought to have an empty array as the value in the map.
 var kmsSealAddressKeys = map[string][]string{
 	wrapping.WrapperTypeAliCloudKms.String():   {"domain"},
 	wrapping.WrapperTypeAwsKms.String():        {"endpoint"},
@@ -233,8 +234,10 @@ var kmsSealAddressKeys = map[string][]string{
 	"pkcs11-disabled":                          {}, // only used in tests
 }
 
-// normalizeKMSSealConfigAddrs takes a kms seal type, a config key, and config
-// value and will normalize any URLs, IP addresses, or IP:port style addresses.
+// normalizeKMSSealConfigAddrs takes a kms seal type, a config key, and its
+// associated value and will normalize any URLs, IP addresses, or host:port
+// addresses contained in the value if the config key is known in the
+// kmsSealAddressKeys.
 func normalizeKMSSealConfigAddrs(seal string, key string, value string) (string, error) {
 	keys, ok := kmsSealAddressKeys[seal]
 	if !ok {
@@ -248,6 +251,8 @@ func normalizeKMSSealConfigAddrs(seal string, key string, value string) (string,
 	return value, nil
 }
 
+// mergeKMSEnvConfig takes a KMS and merges any normalized values set via
+// environment variables.
 func mergeKMSEnvConfig(configKMS *KMS) error {
 	envConfig := GetEnvConfigFunc(configKMS)
 	if len(envConfig) > 0 && configKMS.Config == nil {
@@ -276,6 +281,7 @@ func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]strin
 	var kmsInfo map[string]string
 	var err error
 
+	// Get the any seal config set as env variables and merge it into the KMS.
 	if err = mergeKMSEnvConfig(configKMS); err != nil {
 		return nil, err
 	}

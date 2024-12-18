@@ -56,9 +56,10 @@ func TestParsePrefixFilters(t *testing.T) {
 	})
 }
 
-// Test_normalizeTelemetryAddresses verifies that addr and URL configuration is
-// normalized to conform to RFC-5952.
-func Test_normalizeTelemetryAddresses(t *testing.T) {
+// TestNormalizeTelemetryAddresses ensures that any telemetry configuration that
+// can be a URL, IP Address, or host:port address is conformant with RFC-5942 §4
+// See: https://rfc-editor.org/rfc/rfc5952.html
+func TestNormalizeTelemetryAddresses(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {

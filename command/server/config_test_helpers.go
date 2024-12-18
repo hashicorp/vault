@@ -31,8 +31,7 @@ func boolPointer(x bool) *bool {
 	return &x
 }
 
-// testConfigRaftRetryJoin ensures that we properly decode and normalize
-// config which contains IPv6 addresses.
+// testConfigRaftRetryJoin decodes and normalizes retry_join stanzas.
 func testConfigRaftRetryJoin(t *testing.T) {
 	t.Helper()
 	config, err := LoadConfigFile("./test-fixtures/raft_retry_join.hcl")
@@ -1140,6 +1139,9 @@ ha_storage "consul" {
 	}
 }
 
+// testParseStorageURLConformance verifies that any storage configuration that
+// takes a URL, IP Address, or host:port address conforms to RFC-5942 §4 when
+// configured with an IPv6 address. See: https://rfc-editor.org/rfc/rfc5952.html
 func testParseStorageURLConformance(t *testing.T) {
 	t.Parallel()
 

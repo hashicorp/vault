@@ -936,33 +936,33 @@ func ParseStorage(result *Config, list *ast.ObjectList, name string) error {
 	}
 
 	m := make(map[string]string)
-	for k, val := range config {
-		valStr, ok := val.(string)
+	for k, v := range config {
+		vStr, ok := v.(string)
 		if ok {
 			var err error
-			m[k], err = normalizeStorageConfigAddresses(key, k, valStr)
+			m[k], err = normalizeStorageConfigAddresses(key, k, vStr)
 			if err != nil {
 				return err
 			}
 			continue
 		}
 
-		var valBytes []byte
 		var err error
+		var vBytes []byte
 		// Raft's retry_join requires special normalization due to its complexity
 		if key == "raft" && k == "retry_join" {
-			valBytes, err = normalizeRaftRetryJoin(val)
+			vBytes, err = normalizeRaftRetryJoin(v)
 			if err != nil {
 				return err
 			}
 		} else {
-			valBytes, err = json.Marshal(val)
+			vBytes, err = json.Marshal(v)
 			if err != nil {
 				return err
 			}
 		}
 
-		m[k] = string(valBytes)
+		m[k] = string(vBytes)
 	}
 
 	// Pull out the redirect address since it's common to all backends
@@ -1015,10 +1015,12 @@ func ParseStorage(result *Config, list *ast.ObjectList, name string) error {
 	return nil
 }
 
-// storageAddressKeys is a map to physical storage configuration keys that might
-// contain URLs, IP addresses, or IP:port style addresses. All physical storage
-// types must have an entry in this map, otherwise our normalization check will
-// fail when parsing the storage entry config.
+// storageAddressKeys is a maps a storage backend type to its associated
+// that may configuration whose values are URLs, IP addresses, or host:port
+// style addresses. All physical storage types must have an entry in this map,
+// otherwise our normalization check will fail when parsing the storage entry
+// config. Physical storage types which don't contain such keys should include
+// an empty array.
 var storageAddressKeys = map[string][]string{
 	"aerospike":    {"hostname"},
 	"alicloudoss":  {"endpoint"},
@@ -1038,15 +1040,16 @@ var storageAddressKeys = map[string][]string{
 	"mysql":        {"address"},
 	"oci":          {},
 	"postgresql":   {"connection_url"},
-	"raft":         {}, // handled separately in normalizeRaftRetryJoin()
+	"raft":         {}, // retry_join is handled separately in normalizeRaftRetryJoin()
 	"s3":           {"endpoint"},
 	"spanner":      {},
 	"swift":        {"auth_url", "storage_url"},
 	"zookeeper":    {"address"},
 }
 
-// normalizeStorageConfigAddresses takes a storage name, config key, and config
-// value and will normalize any URLs, IP addresses, or IP:port style addresses.
+// normalizeStorageConfigAddresses takes a storage name, a configuration key
+// and it's associated value and will normalize any URLs, IP addresses, or
+// host:port style addresses.
 func normalizeStorageConfigAddresses(storage string, key string, value string) (string, error) {
 	keys, ok := storageAddressKeys[storage]
 	if !ok {
@@ -1060,9 +1063,9 @@ func normalizeStorageConfigAddresses(storage string, key string, value string) (
 	return value, nil
 }
 
-// normalizeRaftRetryJoin takes the hcl value representation of a retry_join
-// stanza and normalizes any URLs, IP addresses, or IP:port style addresses,
-// and returns the value encoded as JSON.
+// normalizeRaftRetryJoin takes the hcl decoded value representation of a
+// retry_join stanza and normalizes any URLs, IP addresses, or host:port style
+// addresses, and returns the value encoded as JSON.
 func normalizeRaftRetryJoin(val any) ([]byte, error) {
 	res := []map[string]any{}
 
@@ -1072,7 +1075,7 @@ func normalizeRaftRetryJoin(val any) ([]byte, error) {
 	}
 
 	for _, rj := range retryJoin {
-		rjMap := rj.(map[string]any)
+		rjMap, ok := rj.(map[string]any)
 		if !ok {
 			return nil, fmt.Errorf("malformed retry_join stanza: %v+", rj)
 		}
@@ -1127,11 +1130,11 @@ func parseHAStorage(result *Config, list *ast.ObjectList, name string) error {
 	}
 
 	m := make(map[string]string)
-	for k, val := range config {
-		valStr, ok := val.(string)
+	for k, v := range config {
+		vStr, ok := v.(string)
 		if ok {
 			var err error
-			m[k], err = normalizeStorageConfigAddresses(key, k, valStr)
+			m[k], err = normalizeStorageConfigAddresses(key, k, vStr)
 			if err != nil {
 				return err
 			}
@@ -1139,21 +1142,21 @@ func parseHAStorage(result *Config, list *ast.ObjectList, name string) error {
 		}
 
 		var err error
-		var valBytes []byte
+		var vBytes []byte
 		// Raft's retry_join requires special normalization due to its complexity
 		if key == "raft" && k == "retry_join" {
-			valBytes, err = normalizeRaftRetryJoin(val)
+			vBytes, err = normalizeRaftRetryJoin(v)
 			if err != nil {
 				return err
 			}
 		} else {
-			valBytes, err = json.Marshal(val)
+			vBytes, err = json.Marshal(v)
 			if err != nil {
 				return err
 			}
 		}
 
-		m[k] = string(valBytes)
+		m[k] = string(vBytes)
 	}
 
 	// Pull out the redirect address since it's common to all backends
