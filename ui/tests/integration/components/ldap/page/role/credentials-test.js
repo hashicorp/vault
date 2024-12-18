@@ -21,9 +21,9 @@ module('Integration | Component | ldap | Page::Role::Credentials', function (hoo
   hooks.beforeEach(function () {
     this.breadcrumbs = [
       { label: 'ldap-test', route: 'overview' },
-      { label: 'roles', route: 'roles' },
+      { label: 'Roles', route: 'roles' },
       { label: 'test-role', route: 'roles.role' },
-      { label: 'credentials' },
+      { label: 'Credentials' },
     ];
     this.transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
   });
@@ -45,7 +45,7 @@ module('Integration | Component | ldap | Page::Role::Credentials', function (hoo
       .containsText('test-role', 'Role breadcrumb renders');
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(4)')
-      .containsText('credentials', 'Credentials breadcrumb renders');
+      .containsText('Credentials', 'Credentials breadcrumb renders');
   });
 
   test('it should render error', async function (assert) {

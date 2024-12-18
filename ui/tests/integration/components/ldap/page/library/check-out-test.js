@@ -26,9 +26,9 @@ module('Integration | Component | ldap | Page::Library::CheckOut', function (hoo
     };
     this.breadcrumbs = [
       { label: 'ldap-test', route: 'overview' },
-      { label: 'libraries', route: 'libraries' },
+      { label: 'Libraries', route: 'libraries' },
       { label: 'test-library', route: 'libraries.library' },
-      { label: 'check-out' },
+      { label: 'Check-Out' },
     ];
 
     this.renderComponent = () => {

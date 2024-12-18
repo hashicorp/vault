@@ -34,7 +34,7 @@ module('Integration | Component | ldap | Page::Library::Details', function (hook
 
     this.breadcrumbs = [
       { label: 'ldap-test', route: 'overview' },
-      { label: 'libraries', route: 'libraries' },
+      { label: 'Libraries', route: 'libraries' },
       { label: 'test-library' },
     ];
   });
