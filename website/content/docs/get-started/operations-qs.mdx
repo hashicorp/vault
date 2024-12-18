@@ -135,7 +135,10 @@ The `kv` plugin is a core Vault plugin and has dedicated commands in the Vault C
 Use the `kv put` command to store the demo user credentials in the `kv` plugin as the secrets `username` and `password`:
 
 ```shell-session
-$ vault kv put kv/creds username=opsuser password=p@ssw0rd
+$ vault kv put   \
+  -mount shared  \
+  kv/creds       \
+  username=opsuser password=p@ssw0rd
 ```
 
 The `kv put` command writes the secret to the `kv` secrets engine. In this example, two
