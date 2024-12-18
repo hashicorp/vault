@@ -80,7 +80,8 @@ The `userpass` plugin uses basic authentication with usernames and passwords.
 
    The `userpass` auth method is enabled.
 
-1. To authenticate users with Vault, you must create a user and password.
+1. Use the `userpass` plugin to create a demo user called `opsuser` with the
+    password `p@ssw0rd`:
 
    ```shell-session
    $ vault write auth/userpass/users/opsuser \
