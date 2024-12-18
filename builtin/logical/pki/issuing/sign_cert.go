@@ -114,6 +114,8 @@ func (b BasicSignCertInput) GetPermittedDomains() []string {
 	return []string{}
 }
 
+// GetPathNameConstraints always returns nil for BasicSignCertInput.
+// ignore-nil-nil-function-check
 func (b BasicSignCertInput) GetPathNameConstraints() (*pkix.Extension, error) {
 	return nil, nil
 }

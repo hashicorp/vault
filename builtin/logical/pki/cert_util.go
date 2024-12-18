@@ -551,6 +551,8 @@ func (cb CreationBundleInputFromFieldData) GetUserIds() []string {
 	return cb.data.Get("user_ids").([]string)
 }
 
+// GetPathNameConstraints parses and returns the name constraints extension if present (enterprise).
+// ignore-nil-nil-function-check
 func (cb CreationBundleInputFromFieldData) GetPathNameConstraints() (*pkix.Extension, error) {
 	jsonString, exists := cb.data.GetOk("name_constraints")
 	if !exists {
