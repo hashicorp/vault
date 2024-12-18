@@ -86,7 +86,7 @@ module('Integration | Component | kubernetes | Page::Role::Details', function (h
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(1)')
       .containsText(this.model.backend, 'Overview breadcrumb renders');
-    assert.dom('[data-test-breadcrumbs] li:nth-child(2) a').containsText('roles', 'Roles breadcrumb renders');
+    assert.dom('[data-test-breadcrumbs] li:nth-child(2) a').containsText('Roles', 'Roles breadcrumb renders');
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(3)')
       .containsText(this.model.name, 'Role breadcrumb renders');

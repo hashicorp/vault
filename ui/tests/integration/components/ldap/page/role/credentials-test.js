@@ -39,7 +39,7 @@ module('Integration | Component | ldap | Page::Role::Credentials', function (hoo
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(1)')
       .containsText('ldap-test', 'Overview breadcrumb renders');
-    assert.dom('[data-test-breadcrumbs] li:nth-child(2) a').containsText('roles', 'Roles breadcrumb renders');
+    assert.dom('[data-test-breadcrumbs] li:nth-child(2) a').containsText('Roles', 'Roles breadcrumb renders');
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(3)')
       .containsText('test-role', 'Role breadcrumb renders');
