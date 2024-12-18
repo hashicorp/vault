@@ -287,7 +287,7 @@ func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]strin
 
 	switch wrapping.WrapperType(configKMS.Type) {
 	case wrapping.WrapperTypeShamir:
-		return nil, nil
+		return wrapper, nil
 
 	case wrapping.WrapperTypeAead:
 		wrapper, kmsInfo, err = GetAEADKMSFunc(configKMS, opts...)

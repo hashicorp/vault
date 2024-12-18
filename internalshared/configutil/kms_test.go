@@ -96,6 +96,10 @@ func Test_getEnvConfig(t *testing.T) {
 	}
 }
 
+// TestParseKMSesURLConformance tests that all config attrs whose values can be
+// URLs, IP addresses, or host:port addresses, when configured with an IPv6
+// address, the normalized to be conformant with RFC-5942 §4
+// See: https://rfc-editor.org/rfc/rfc5952.html
 func TestParseKMSesURLConformance(t *testing.T) {
 	t.Parallel()
 
@@ -291,6 +295,10 @@ seal "transit" {
 	}
 }
 
+// TestMergeKMSEnvConfigAddrConformance tests that all env config whose values
+// can be URLs, IP addresses, or host:port addresses, when configured with an
+// an IPv6 address, the normalized to be conformant with RFC-5942 §4
+// See: https://rfc-editor.org/rfc/rfc5952.html
 func TestMergeKMSEnvConfigAddrConformance(t *testing.T) {
 	for name, tc := range map[string]struct {
 		sealType  string // default to name if none given
