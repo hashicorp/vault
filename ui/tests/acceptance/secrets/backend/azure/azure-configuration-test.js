@@ -208,7 +208,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
           assert.strictEqual(
             payload.client_secret,
             'client-secret-updated',
-            'client_secret is was sent on payload because user updated its value'
+            'client_secret is sent on payload because user updated its value'
           );
           assert.strictEqual(
             payload.subscription_id,
