@@ -188,13 +188,21 @@ $ vault login -method=userpass username=opsuser
 You are now authenticated to Vault.
 
 
-You authenticated to Vault as the `opsuser` user. Retrieve the secrets from the
-path `kv/creds`. The `opsuser` user has access to the `kv/creds` path from the
-`kv-access-policy`.
+
+Try retrieving the secrets stored on the `kv/creds` path:
 
 ```shell-session
 $ vault kv get kv/creds
 ```
+
+Now try retrieving the secrets stored on the `kv/api-keys` path:
+
+```shell-session
+$ vault kv get kv/api-keys
+```
+
+The second command fails because the policy for `opsuser` does
+not grant access to the `/api-keys` path.
 
 You have successfully stored and retrieved your first secret value with a user
 from the `userpass` auth method.
