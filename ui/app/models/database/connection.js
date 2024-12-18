@@ -220,7 +220,7 @@ export default Model.extend({
     // for both create and edit fields
     let fields = ['plugin_name', 'name', 'connection_url', 'verify_connection', 'password_policy'];
     if (this.plugin_name) {
-      fields = this._filterFields((f) => !f.group).map((field) => field.attr);
+      fields = this._filterFields((f) => !f.group).map((f) => f.attr);
     }
     return expandAttributeMeta(this, fields);
   }),
@@ -245,11 +245,11 @@ export default Model.extend({
   // after checking for enterprise, filter callback fires and returns
   _filterFields(filterCallback) {
     const plugin = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name);
-    return plugin.fields.filter((attrOptions) => {
+    return plugin.fields.filter((field) => {
       // return if attribute is enterprise only and we're on community
-      if (attrOptions?.isEnterprise && !this.version.isEnterprise) return;
+      if (field?.isEnterprise && !this.version.isEnterprise) return false;
       // filter by group, or if there isn't a group
-      return filterCallback(attrOptions);
+      return filterCallback(field);
     });
   },
 
