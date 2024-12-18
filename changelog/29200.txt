@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Adds params to postgresql database to improve editing a connection in the web browser.
+```
