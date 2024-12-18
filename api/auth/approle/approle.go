@@ -62,7 +62,7 @@ func NewAppRoleAuth(roleID string, secretID *SecretID, opts ...LoginOption) (*Ap
 	}
 
 	if secretID == nil {
-		return nil, fmt.Errorf("no secret ID provided for login")
+		return nil, fmt.Errorf("no secret ID provided for login!")
 	}
 
 	err := secretID.validate()
