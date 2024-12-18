@@ -972,8 +972,15 @@ func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPl
 	var enterprise bool
 
 	if plugin.OCIImage == "" {
-		if len(plugin.Sha256) == 0 {
-			// Enterprise only: unpack the plugin artifact
+		command = filepath.Join(c.directory, plugin.Command)
+		sym, err := filepath.EvalSymlinks(command)
+		if err != nil {
+			if len(plugin.Sha256) != 0 {
+				return nil, fmt.Errorf("error while validating the command path: %w", err)
+			}
+
+			// When binary is missing and sha256 is unset, attempt to unpack the plugin artifact
+			// Enterprise only
 			var unpackErr error
 			enterprise, plugin.Command, plugin.Sha256, unpackErr = c.entUnpackArtifact(plugin)
 			if unpackErr != nil {
@@ -984,11 +991,6 @@ func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPl
 		} else {
 			// Best effort check to make sure the command isn't breaking out of the
 			// configured plugin directory.
-			command = filepath.Join(c.directory, plugin.Command)
-			sym, err := filepath.EvalSymlinks(command)
-			if err != nil {
-				return nil, fmt.Errorf("error while validating the command path: %w", err)
-			}
 			symAbs, err := filepath.Abs(filepath.Dir(sym))
 			if err != nil {
 				return nil, fmt.Errorf("error while validating the command path: %w", err)
