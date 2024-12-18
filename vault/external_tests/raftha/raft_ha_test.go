@@ -4,7 +4,10 @@
 package raftha
 
 import (
+	"errors"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
@@ -326,4 +329,50 @@ func TestRaft_HA_ExistingCluster(t *testing.T) {
 	}
 
 	updateCluster(t)
+}
+
+// TestRaftHACluster_Removed_ReAdd creates a raft HA cluster with a file
+// backend. The test adds two standbys to the cluster and then removes one of
+// them. The removed follower tries to re-join, and the test verifies that it
+// errors and cannot join.
+func TestRaftHACluster_Removed_ReAdd(t *testing.T) {
+	t.Parallel()
+	var conf vault.CoreConfig
+	opts := vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
+	teststorage.RaftHASetup(&conf, &opts, teststorage.MakeFileBackend)
+	cluster := vault.NewTestCluster(t, &conf, &opts)
+	defer cluster.Cleanup()
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+
+	leader := cluster.Cores[0]
+	follower := cluster.Cores[2]
+	joinReq := &api.RaftJoinRequest{LeaderCACert: string(cluster.CACertPEM)}
+	_, err := follower.Client.Sys().RaftJoin(joinReq)
+	require.NoError(t, err)
+	_, err = cluster.Cores[1].Client.Sys().RaftJoin(joinReq)
+	require.NoError(t, err)
+
+	testhelpers.RetryUntil(t, 3*time.Second, func() error {
+		resp, err := leader.Client.Sys().RaftAutopilotState()
+		if err != nil {
+			return err
+		}
+		if len(resp.Servers) != 3 {
+			return errors.New("need 3 servers")
+		}
+		for serverID, server := range resp.Servers {
+			if !server.Healthy {
+				return fmt.Errorf("server %s is unhealthy", serverID)
+			}
+		}
+		return nil
+	})
+	_, err = leader.Client.Logical().Write("/sys/storage/raft/remove-peer", map[string]interface{}{
+		"server_id": follower.NodeID,
+	})
+	require.NoError(t, err)
+	require.Eventually(t, follower.Sealed, 3*time.Second, 250*time.Millisecond)
+
+	_, err = follower.Client.Sys().RaftJoin(joinReq)
+	require.Error(t, err)
 }

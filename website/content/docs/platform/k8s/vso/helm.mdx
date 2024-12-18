@@ -1,17 +1,17 @@
 ---
 layout: docs
-page_title: Vault Secrets Operator Helm Chart Configuration
+page_title: Vault Secrets Operator Helm chart configuration
 description: >-
   Configuration for the Vault Secrets Operator Helm chart.
 ---
 <!-- DO NOT EDIT.
 Generated from chart/values.yaml in the vault-secrets-operator repo.
-commit SHA=08a6e5071ffa4faa486bd4b2c53b27585da4680c
+commit SHA=0bf284afea63a64e706717e2324a304be4d7f24b
 
 To update run 'make gen-helm-docs' from the vault-secrets-operator repo.
 -->
 
-# Vault Secrets Operator helm chart
+# Vault Secrets Operator Helm chart configuration
 
 The chart is customizable using
 [Helm configuration values](https://helm.sh/docs/intro/using_helm/#customizing-the-chart-before-installing).
@@ -179,7 +179,7 @@ Use these links to navigate to a particular top-level stanza.
 
       - `repository` ((#v-controller-manager-image-repository)) (`string: hashicorp/vault-secrets-operator`)
 
-      - `tag` ((#v-controller-manager-image-tag)) (`string: 0.9.0`)
+      - `tag` ((#v-controller-manager-image-tag)) (`string: 0.9.1`)
 
     - `logging` ((#v-controller-manager-logging)) - logging
 
@@ -264,6 +264,16 @@ Use these links to navigate to a particular top-level stanza.
         of the client cache which can result in additional Vault client counts.
 
         default: 10000
+
+      - `numLocks` ((#v-controller-manager-clientcache-numlocks)) (`integer: ""`) - Defines the number of locks to use for the Vault client cache controller.
+        May also be set via the `VSO_CLIENT_CACHE_NUM_LOCKS` environment variable.
+
+        Setting this value less than 1 will cause the manager to set the number of locks equal
+        to the number of logical CPUs of the run host.
+
+        See the VSO help output for more information.
+
+        default: 100
 
       - `storageEncryption` ((#v-controller-manager-clientcache-storageencryption)) - StorageEncryption provides the necessary configuration to encrypt the client storage
         cache within Kubernetes objects using (required) Vault Transit Engine.
