@@ -972,26 +972,23 @@ func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPl
 	var enterprise bool
 
 	if plugin.OCIImage == "" {
-		command = filepath.Join(c.directory, plugin.Command)
-		sym, err := filepath.EvalSymlinks(command)
-		if err != nil {
+		if len(plugin.Sha256) == 0 {
 			// Enterprise only: unpack the plugin artifact
 			var unpackErr error
 			enterprise, plugin.Command, plugin.Sha256, unpackErr = c.entUnpackArtifact(plugin)
-			switch {
-			case unpackErr == nil:
-				command = filepath.Join(c.directory, plugin.Command)
-			case errors.Is(unpackErr, ErrEnterpriseFeatureOnly):
-				// Return the error that Vault CE users normally should see
-				// when evaluating symlinks of the command fails
-				return nil, fmt.Errorf("error while validating the command path: %w", err)
-			default:
+			if unpackErr != nil {
 				return nil, fmt.Errorf("failed to unpack plugin artifact plugin %q version %q: %w",
 					plugin.Name, plugin.Version, unpackErr)
 			}
+			command = filepath.Join(c.directory, plugin.Command)
 		} else {
 			// Best effort check to make sure the command isn't breaking out of the
 			// configured plugin directory.
+			command = filepath.Join(c.directory, plugin.Command)
+			sym, err := filepath.EvalSymlinks(command)
+			if err != nil {
+				return nil, fmt.Errorf("error while validating the command path: %w", err)
+			}
 			symAbs, err := filepath.Abs(filepath.Dir(sym))
 			if err != nil {
 				return nil, fmt.Errorf("error while validating the command path: %w", err)
