@@ -118,7 +118,7 @@ static secrets, dynamic secrets, and PKI certificates.
 The key/value plugin (`kv`) stores and versions arbitrary secrets. Use `vault secrets enable` to enable the key/value plugin:
 
 ```shell-session
-$ vault secrets enable -version=2 kv
+$ vault secrets enable -path shared -version 2 kv
 ```
 
 
