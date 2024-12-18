@@ -234,7 +234,8 @@ type unlockInformation struct {
 }
 
 type raftInformation struct {
-	challenge           *wrapping.BlobInfo
+	// challenge is in ciphertext
+	challenge           []byte
 	leaderClient        *api.Client
 	leaderBarrierConfig *SealConfig
 	nonVoter            bool
@@ -4635,6 +4636,8 @@ func (c *Core) IsRemovedFromCluster() (removed, ok bool) {
 
 func (c *Core) shutdownRemovedNode() {
 	go func() {
-		c.ShutdownCoreError(errors.New("node has been removed from cluster"))
+		c.ShutdownCoreError(errRemovedHANode)
 	}()
 }
+
+var errRemovedHANode = errors.New("node has been removed from the HA cluster")

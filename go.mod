@@ -150,7 +150,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.9.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.20.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.13.0
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.14.3
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.14.4
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.10.0
 	github.com/hashicorp/vault-testing-stepwise v0.3.2
 	github.com/hashicorp/vault/api v1.15.0
@@ -209,14 +209,14 @@ require (
 	go.opentelemetry.io/otel/trace v1.30.0
 	go.uber.org/atomic v1.11.0
 	go.uber.org/goleak v1.3.0
-	golang.org/x/crypto v0.29.0
+	golang.org/x/crypto v0.31.0
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842
 	golang.org/x/net v0.31.0
 	golang.org/x/oauth2 v0.24.0
-	golang.org/x/sync v0.9.0
-	golang.org/x/sys v0.27.0
-	golang.org/x/term v0.26.0
-	golang.org/x/text v0.20.0
+	golang.org/x/sync v0.10.0
+	golang.org/x/sys v0.28.0
+	golang.org/x/term v0.27.0
+	golang.org/x/text v0.21.0
 	golang.org/x/tools v0.27.0
 	google.golang.org/api v0.207.0
 	google.golang.org/grpc v1.68.0
@@ -237,6 +237,8 @@ require (
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.1.0 // indirect
+	github.com/hashicorp/go-hmac-drbg v0.0.0-20210916214228-a6e5a68489f6 // indirect
+	github.com/hashicorp/go-secure-stdlib/cryptoutil v0.1.0 // indirect
 	github.com/hashicorp/go-secure-stdlib/httputil v0.1.0 // indirect
 	github.com/lestrrat-go/backoff/v2 v2.0.8 // indirect
 	github.com/lestrrat-go/blackmagic v1.0.2 // indirect

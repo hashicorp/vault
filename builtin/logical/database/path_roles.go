@@ -20,6 +20,11 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
+var (
+	errNoUpdateAfterRotation            = "updating password not allowed after rotation"
+	errNoPasswordAndSelfManagedPassword = "cannot set both `password` and `self_managed_password`"
+)
+
 func pathListRoles(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
 		{
@@ -217,12 +222,15 @@ func staticFields() map[string]*framework.FieldSchema {
 	this functionality. See the plugin's API page for more information on
 	support and formatting for this parameter.`,
 		},
+		// Deprecated: use 'password' instead
 		"self_managed_password": {
 			Type: framework.TypeString,
 			Description: `Used to connect to a self-managed static account. Must
 	be provided by the user when root credentials are not provided.`,
+			Deprecated: true,
 		},
 	}
+	AddStaticFieldsEnt(fields)
 	return fields
 }
 
@@ -303,9 +311,10 @@ func (b *databaseBackend) pathStaticRoleRead(ctx context.Context, req *logical.R
 	}
 
 	data := map[string]interface{}{
-		"db_name":             role.DBName,
-		"rotation_statements": role.Statements.Rotation,
-		"credential_type":     role.CredentialType.String(),
+		"db_name":              role.DBName,
+		"rotation_statements":  role.Statements.Rotation,
+		"credential_type":      role.CredentialType.String(),
+		"skip_import_rotation": role.SkipImportRotation,
 	}
 
 	// guard against nil StaticAccount; shouldn't happen but we'll be safe
@@ -530,7 +539,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		return logical.ErrorResponse("Role and Static Role names must be unique"), nil
 	}
 
-	role, err := b.StaticRole(ctx, req.Storage, data.Get("name").(string))
+	role, err := b.StaticRole(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -541,6 +550,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	createRole := (req.Operation == logical.CreateOperation)
 	if role == nil {
 		role = &roleEntry{
+			Name:          name,
 			StaticAccount: &staticAccount{},
 		}
 		createRole = true
@@ -633,8 +643,52 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		}
 	}
 
+	dbConfig, err := b.DatabaseConfig(ctx, req.Storage, role.DBName)
+	if err != nil {
+		return nil, err
+	}
+
+	lastVaultRotation := role.StaticAccount.LastVaultRotation
+	if passwordRaw, ok := data.GetOk("password"); ok {
+		// We will allow users to update the password until the point where
+		// Vault assumes management of the account so that we don't break the
+		// promise of Vault being the source of truth.
+		updateAllowed := lastVaultRotation.IsZero()
+		if updateAllowed {
+			role.StaticAccount.Password = passwordRaw.(string)
+
+			connDetails, err := b.ConnectionDetails(ctx, dbConfig)
+			if err != nil {
+				return nil, err
+			}
+
+			if connDetails != nil && connDetails.SelfManaged {
+				// Password and SelfManagedPassword should map to the same value
+				role.StaticAccount.SelfManagedPassword = passwordRaw.(string)
+			}
+		} else {
+			return logical.ErrorResponse("%s: role=%s, lastVaultRotation=%s", errNoUpdateAfterRotation, name, lastVaultRotation), nil
+		}
+	}
+
 	if smPasswordRaw, ok := data.GetOk("self_managed_password"); ok && createRole {
+		if _, ok := data.GetOk("password"); ok {
+			return logical.ErrorResponse(errNoPasswordAndSelfManagedPassword), nil
+		}
+		// Password and SelfManagedPassword should map to the same value
 		role.StaticAccount.SelfManagedPassword = smPasswordRaw.(string)
+		role.StaticAccount.Password = smPasswordRaw.(string)
+	}
+
+	if skipImportRotationRaw, ok := data.GetOk("skip_import_rotation"); ok {
+		if !createRole {
+			response.AddWarning("skip_import_rotation has no effect on updates")
+		} else {
+			role.SkipImportRotation = skipImportRotationRaw.(bool)
+		}
+	} else if createRole {
+		// default to the config-level setting
+		role.SkipImportRotation = dbConfig.SkipStaticRoleImportRotation
 	}
 
 	var credentialConfig map[string]string
@@ -647,62 +701,74 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		return logical.ErrorResponse("credential_config validation failed: %s", err), nil
 	}
 
-	// lvr represents the roles' LastVaultRotation
-	lvr := role.StaticAccount.LastVaultRotation
-
-	// Only call setStaticAccount if we're creating the role for the
-	// first time
+	// Only call setStaticAccount if we're creating the role for the first time
 	var item *queue.Item
 	switch req.Operation {
 	case logical.CreateOperation:
-		// setStaticAccount calls Storage.Put and saves the role to storage
-		resp, err := b.setStaticAccount(ctx, req.Storage, &setStaticAccountInput{
-			RoleName: name,
-			Role:     role,
-		})
-		if err != nil {
-			if resp != nil && resp.WALID != "" {
-				b.Logger().Debug("deleting WAL for failed role creation", "WAL ID", resp.WALID, "role", name)
-				walDeleteErr := framework.DeleteWAL(ctx, req.Storage, resp.WALID)
-				if walDeleteErr != nil {
-					b.Logger().Debug("failed to delete WAL for failed role creation", "WAL ID", resp.WALID, "error", walDeleteErr)
-					var merr *multierror.Error
-					merr = multierror.Append(merr, err)
-					merr = multierror.Append(merr, fmt.Errorf("failed to clean up WAL from failed role creation: %w", walDeleteErr))
-					err = merr.ErrorOrNil()
-				}
+		if role.SkipImportRotation {
+			b.Logger().Trace("skipping static role import rotation", "role", name)
+			// synthetically set lastVaultRotation to now, so that it gets
+			// queued correctly
+			lastVaultRotation = time.Now()
+			// we intentionally do not set role.StaticAccount.LastVaultRotation
+			// because the zero value indicates Vault has not rotated the
+			// password yet
+			role.StaticAccount.SetNextVaultRotation(lastVaultRotation)
+			// we were told to not rotate, just add the entry
+			err := b.StoreStaticRole(ctx, req.Storage, role)
+			if err != nil {
+				return nil, err
 			}
+		} else {
+			// setStaticAccount calls Storage.Put and saves the role to storage
+			resp, err := b.setStaticAccount(ctx, req.Storage, &setStaticAccountInput{
+				RoleName: name,
+				Role:     role,
+			})
+			if err != nil {
+				if resp != nil && resp.WALID != "" {
+					b.Logger().Debug("deleting WAL for failed role creation", "WAL ID", resp.WALID, "role", name)
+					walDeleteErr := framework.DeleteWAL(ctx, req.Storage, resp.WALID)
+					if walDeleteErr != nil {
+						b.Logger().Debug("failed to delete WAL for failed role creation", "WAL ID", resp.WALID, "error", walDeleteErr)
+						var merr *multierror.Error
+						merr = multierror.Append(merr, err)
+						merr = multierror.Append(merr, fmt.Errorf("failed to clean up WAL from failed role creation: %w", walDeleteErr))
+						err = merr.ErrorOrNil()
+					}
+				}
 
-			return nil, err
+				return nil, err
+			}
+			// guard against RotationTime not being set or zero-value
+			lastVaultRotation = resp.RotationTime
 		}
-		// guard against RotationTime not being set or zero-value
-		lvr = resp.RotationTime
+
 		item = &queue.Item{
 			Key: name,
 		}
 	case logical.UpdateOperation:
 		// store updated Role
-		entry, err := logical.StorageEntryJSON(databaseStaticRolePath+name, role)
+		err := b.StoreStaticRole(ctx, req.Storage, role)
 		if err != nil {
 			return nil, err
 		}
-		if err := req.Storage.Put(ctx, entry); err != nil {
-			return nil, err
-		}
+
 		item, err = b.popFromRotationQueueByKey(name)
 		if err != nil {
 			return nil, err
 		}
 	}
 
+	var next time.Time
 	if rotationPeriodOk {
-		b.logger.Debug("init priority for RotationPeriod", "lvr", lvr, "next", lvr.Add(role.StaticAccount.RotationPeriod))
-		item.Priority = lvr.Add(role.StaticAccount.RotationPeriod).Unix()
+		next = lastVaultRotation.Add(role.StaticAccount.RotationPeriod)
+		item.Priority = next.Unix()
 	} else if rotationScheduleOk {
-		next := role.StaticAccount.Schedule.Next(lvr)
-		b.logger.Debug("init priority for Schedule", "lvr", lvr, "next", next)
+		next = role.StaticAccount.Schedule.Next(lastVaultRotation)
 		item.Priority = next.Unix()
 	}
+	b.logger.Trace("initialized priority", "role", name, "lastVaultRotation", lastVaultRotation, "next", next)
 
 	// Add their rotation to the queue
 	if err := b.pushItem(item); err != nil {
@@ -713,6 +779,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 }
 
 type roleEntry struct {
+	Name             string                 `json:"name"`
 	DBName           string                 `json:"db_name"`
 	Statements       v4.Statements          `json:"statements"`
 	DefaultTTL       time.Duration          `json:"default_ttl"`
@@ -720,6 +787,12 @@ type roleEntry struct {
 	CredentialType   v5.CredentialType      `json:"credential_type"`
 	CredentialConfig map[string]interface{} `json:"credential_config"`
 	StaticAccount    *staticAccount         `json:"static_account" mapstructure:"static_account"`
+
+	// SkipImportRotation is a flag to toggle wether or not the static
+	// account's password should be rotated on creation of the static role.
+	// This overrides the config-level field skip_static_role_import_rotation.
+	// The default is false. Enterprise only.
+	SkipImportRotation bool `json:"skip_import_rotation"`
 }
 
 // setCredentialType sets the credential type for the role given its string form.
@@ -812,7 +885,8 @@ type staticAccount struct {
 	// CredentialTypeRSAPrivateKey.
 	PrivateKey []byte `json:"private_key"`
 
-	// LastVaultRotation represents the last time Vault rotated the password
+	// LastVaultRotation represents the last time Vault rotated the password.
+	// A zero value indicates that Vault has not rotated this password yet.
 	LastVaultRotation time.Time `json:"last_vault_rotation"`
 
 	// NextVaultRotation represents the next time Vault is expected to rotate
