@@ -153,6 +153,10 @@ export function configurationOnly() {
 // These engines do not exist in their own Ember engine.
 export const CONFIGURABLE_SECRET_ENGINES = ['aws', 'azure', 'ssh'];
 
+export function configurableSecretEngines() {
+  return CONFIGURABLE_SECRET_ENGINES.slice();
+}
+
 export function mountableEngines() {
   return MOUNTABLE_SECRET_ENGINES.slice();
 }
