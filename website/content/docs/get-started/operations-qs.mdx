@@ -42,10 +42,10 @@ For a complete Vault learning experience, refer to the [Vault foundations tutori
 
    <Warning>
 
-   The [root token](/vault/docs/concepts/tokens#root-tokens) is useful for
-   testing as the associate `root` policy allows full access to all data and functionality of Vault. The
-   root token must be carefully guarded in production. Ideally, even an administrator of
-   Vault would use their own token with limited privileges instead of the root token.
+   [Root tokens](/vault/docs/concepts/tokens#root-tokens) grant full
+   access to all data and functionality in your Vault server. Do not share
+   your root token. For production deployments, we recommend creating
+   individual administrator tokens  with explicit privileges.
 
    </Warning>
 
