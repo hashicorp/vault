@@ -141,9 +141,16 @@ $ vault kv put   \
   username=opsuser password=p@ssw0rd
 ```
 
-The `kv put` command writes the secret to the `kv` secrets engine. In this example, two
-secrets are written: The `username` key with a value of `opsuser` and the key
-`password` with a value of `p@ssw0rd`.
+`kv put` writes the keys `username` and `password` and their values to
+the `/creds` path for the key/value plugin called `kv`. 
+
+Now write a third key to a separate path called `api-keys`:
+```shell-session
+$ vault kv put   \
+  -mount shared  \
+  kv/api-keys       \
+  square=1234
+```
 
 ## Protect secrets
 
