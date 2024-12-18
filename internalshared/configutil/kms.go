@@ -158,7 +158,7 @@ func parseKMS(result *[]*KMS, list *ast.ObjectList, blockName string, maxKMS int
 			if err != nil {
 				return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
 			}
-			strMap[k], err = normalizeKMSSealConfigAddrs(name, k, s)
+			strMap[k], err = normalizeKMSSealConfigAddrs(key, k, s)
 			if err != nil {
 				return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
 			}
@@ -231,7 +231,6 @@ var kmsSealAddressKeys = map[string][]string{
 	wrapping.WrapperTypeOciKms.String():        {"key_id", "crypto_endpoint", "management_endpoint"},
 	wrapping.WrapperTypePkcs11.String():        {},
 	wrapping.WrapperTypeTransit.String():       {"address"},
-	"pkcs11-disabled":                          {}, // only used in tests
 }
 
 // normalizeKMSSealConfigAddrs takes a kms seal type, a config key, and its
