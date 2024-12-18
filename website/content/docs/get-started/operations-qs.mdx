@@ -89,8 +89,8 @@ The `userpass` plugin uses basic authentication with usernames and passwords.
    ```
 
 
-1. (Optional) Enable the `approle` auth method. This is a general purpose plugin that
-   allows machines or apps to authenticate to Vault.
+1. Use `vault auth enable` to enable the `approle` authentication method
+    for machines and application clients:
 
    ```shell-session
    $ vault auth enable approle
