@@ -202,7 +202,7 @@ export default Model.extend({
   // ENTERPRISE ONLY
   self_managed: attr('boolean', {
     subText:
-      'If set, allows onboarding static roles with a rootless connection configuration. Mutually exclusive with username and password. If set, will force verify_connection to be false.',
+      'Allows onboarding static roles with a rootless connection configuration. Mutually exclusive with username and password. If true, will force verify_connection to be false.',
     defaultValue: false,
   }),
 
@@ -216,8 +216,8 @@ export default Model.extend({
     return expandAttributeMeta(this, fields);
   }),
 
+  // for both create and edit fields
   fieldAttrs: computed('plugin_name', function () {
-    // for both create and edit fields
     let fields = ['plugin_name', 'name', 'connection_url', 'verify_connection', 'password_policy'];
     if (this.plugin_name) {
       fields = this._filterFields((f) => !f.group).map((f) => f.attr);
