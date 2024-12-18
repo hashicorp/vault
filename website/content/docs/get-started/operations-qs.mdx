@@ -160,7 +160,8 @@ root token. The use of the root token, and root policy, is not recommended for p
 You can use Vault policies to control and limit access to plugin data and
 the operations allowed on plugin data.
 
-1. Write a policy that permits access to the `kv` secrets engine.
+1. Create a policy file that permits `read`, `create`, `update`, and `delete`
+   operations on the `/creds` path for your `kv` plugin:
 
    ```shell-session
    $ vault policy write kv-access-policy - << EOF
