@@ -17,7 +17,14 @@ export default class AzureConfig extends Model {
   environment: string | undefined;
   rootPasswordTtl: string | undefined;
 
-  get attrs(): any;
+  get displayAttrs(): any;
+  get isWifPluginConfigured(): boolean;
+  get isAzureAccountConfigured(): boolean;
+  get fieldGroupsWif(): any;
+  get fieldGroupsAzure(): any;
+  formFieldGroups(accessType?: string): {
+    [key: string]: string[];
+  }[];
   changedAttributes(): {
     [key: string]: unknown[];
   };

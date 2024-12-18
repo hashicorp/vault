@@ -21,6 +21,7 @@ import type VersionService from 'vault/services/version';
 
 const CONFIG_ADAPTERS_PATHS: Record<string, string[]> = {
   aws: ['aws/lease-config', 'aws/root-config'],
+  azure: ['azure/config'],
   ssh: ['ssh/ca-config'],
 };
 
@@ -47,10 +48,21 @@ export default class SecretsBackendConfigurationEdit extends Route {
       // ex: adapterPath = ssh/ca-config, convert to: ssh-ca-config so that you can pass to component @model={{this.model.ssh-ca-config}}
       const standardizedKey = adapterPath.replace(/\//g, '-');
       try {
-        model[standardizedKey] = await this.store.queryRecord(adapterPath, {
+        const configModel = await this.store.queryRecord(adapterPath, {
           backend,
           type,
         });
+        // some of the models return a 200 if they are not configured (ex: azure)
+        // so instead of checking a catch or httpStatus, we check if the model is configured based on the getter `isConfigured` on the engine's model
+        // if the engine is not configured we update the record to get the default values
+        if (!configModel.isConfigured && type === 'azure') {
+          model[standardizedKey] = await this.store.createRecord(adapterPath, {
+            backend,
+            type,
+          });
+        } else {
+          model[standardizedKey] = configModel;
+        }
       } catch (e: AdapterError) {
         // For most models if the adapter returns a 404, we want to create a new record.
         // The ssh secret engine however returns a 400 if the CA is not configured.

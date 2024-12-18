@@ -23,4 +23,24 @@ export default class AzureConfig extends ApplicationAdapter {
       };
     });
   }
+
+  createOrUpdate(store, type, snapshot) {
+    const serializer = store.serializerFor(type.modelName);
+    const data = serializer.serialize(snapshot);
+    const backend = snapshot.record.backend;
+    return this.ajax(this._url(backend), 'POST', { data }).then((resp) => {
+      return {
+        ...resp,
+        id: backend,
+      };
+    });
+  }
+
+  createRecord() {
+    return this.createOrUpdate(...arguments);
+  }
+
+  updateRecord() {
+    return this.createOrUpdate(...arguments);
+  }
 }

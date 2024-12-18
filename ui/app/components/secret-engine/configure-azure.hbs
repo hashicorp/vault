@@ -1,0 +1,103 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<form {{on "submit" (perform this.submitForm)}} aria-label="configure azure credentials" data-test-configure-form>
+  <NamespaceReminder @mode="save" @noun="configuration" />
+  <MessageError @errorMessage={{this.errorMessage}} />
+  <div class="box is-fullwidth is-sideless">
+    {{! accessType can be "azure" or "wif" - since WIF is an enterprise only feature we default to "azure" for community users and only display those related form fields. }}
+    {{#if this.version.isEnterprise}}
+      <fieldset class="field form-fieldset" id="protection" data-test-access-type-section>
+        <legend class="is-label">Access Type</legend>
+        <p class="sub-text" data-test-access-type-subtext>
+          {{#if this.disableAccessType}}
+            You cannot edit Access Type if you have already saved access credentials.
+          {{else}}
+            Choose the way to configure access to Azure. Access can be configured either using an Azure account or with the
+            Plugin Workload Identity Federation (WIF).
+          {{/if}}
+        </p>
+        <div>
+          <RadioButton
+            id="access-type-azure"
+            name="azure"
+            class="radio"
+            data-test-access-type="azure"
+            @value="azure"
+            @groupValue={{this.accessType}}
+            @onChange={{fn this.onChangeAccessType "azure"}}
+            @disabled={{this.disableAccessType}}
+          />
+          <label for="access-type-azure">Azure account credentials</label>
+          <RadioButton
+            id="access-type-wif"
+            name="wif"
+            class="radio has-left-margin-m"
+            data-test-access-type="wif"
+            @value="wif"
+            @groupValue={{this.accessType}}
+            @onChange={{fn this.onChangeAccessType "wif"}}
+            @disabled={{this.disableAccessType}}
+          />
+          <label for="access-type-wif">Workload Identity Federation</label>
+        </div>
+      </fieldset>
+    {{/if}}
+    {{#if (eq this.accessType "wif")}}
+      {{! WIF Fields }}
+      {{#each @issuerConfig.displayAttrs as |attr|}}
+        <FormField @attr={{attr}} @model={{@issuerConfig}} />
+      {{/each}}
+      <FormFieldGroups @model={{@model}} @mode={{if @model.isNew "create" "edit"}} @groupName="fieldGroupsWif" />
+    {{else}}
+      {{! Azure Account Fields }}
+      <FormFieldGroups
+        @model={{@model}}
+        @mode={{if @model.isNew "create" "edit"}}
+        @useEnableInput={{true}}
+        @groupName="fieldGroupsAzure"
+      />
+    {{/if}}
+  </div>
+  <Hds::ButtonSet>
+    <Hds::Button
+      @text="Save"
+      @icon={{if this.save.isRunning "loading"}}
+      type="submit"
+      disabled={{this.save.isRunning}}
+      data-test-save
+    />
+    <Hds::Button
+      @text="Cancel"
+      @color="secondary"
+      class="has-left-margin-s"
+      disabled={{this.save.isRunning}}
+      {{on "click" this.onCancel}}
+      data-test-cancel
+    />
+  </Hds::ButtonSet>
+  {{#if this.invalidFormAlert}}
+    <AlertInline data-test-invalid-form-alert class="has-top-padding-s" @type="danger" @message={{this.invalidFormAlert}} />
+  {{/if}}
+</form>
+
+{{#if this.saveIssuerWarning}}
+  <Hds::Modal @color="warning" @onClose={{action (mut this.saveIssuerWarning) ""}} data-test-issuer-warning as |M|>
+    <M.Header @icon="alert-circle">
+      Are you sure?
+    </M.Header>
+    <M.Body>
+      <p class="has-bottom-margin-s" data-test-issuer-warning-message>
+        {{this.saveIssuerWarning}}
+      </p>
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::ButtonSet>
+        <Hds::Button @text="Continue" {{on "click" this.continueSubmitForm}} data-test-issuer-save />
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} data-test-issuer-cancel />
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}
