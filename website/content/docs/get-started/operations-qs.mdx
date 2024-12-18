@@ -72,8 +72,7 @@ Vault supports multiple [authentication methods](/vault/docs/auth). Authenticati
 plugins control access to Vault for humans and machine based workloads. 
 The `userpass` plugin uses basic authentication with usernames and passwords.
 
-1. Enable the `userpass` auth method. This method allows users to authenticate to
-   Vault.
+1. Use `vault auth enable` to enable the `userpass` authentication method for human clients:
 
    ```shell-session
    $ vault auth enable userpass
