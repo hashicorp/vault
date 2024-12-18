@@ -125,7 +125,14 @@ $ vault secrets enable -version=2 kv
 ## Store a secret
 
 
-Write a secret to the `kv` secrets engine.
+
+<Tip>
+
+The `kv` plugin is a core Vault plugin and has dedicated commands in the Vault CLI. Most plugins use the `vault read` and `vault write` commands.
+
+</Tip>
+
+Use the `kv put` command to store the demo user credentials in the `kv` plugin as the secrets `username` and `password`:
 
 ```shell-session
 $ vault kv put kv/creds username=opsuser password=p@ssw0rd
