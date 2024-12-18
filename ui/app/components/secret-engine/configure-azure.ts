@@ -83,13 +83,12 @@ export default class ConfigureAzureComponent extends Component<Args> {
     waitFor(async (event: Event) => {
       event?.preventDefault();
       this.resetErrors();
-      const { issuerConfig } = this.args;
 
-      if (issuerConfig?.hasDirtyAttributes) {
+      if (this.issuerAttrChanged) {
         // if the issuer has changed show modal with warning that the config will change
         // if the modal is shown, the user has to click confirm to continue saving
         this.saveIssuerWarning = `You are updating the global issuer config. This will overwrite Vault's current issuer ${
-          issuerConfig.queryIssuerError ? 'if it exists ' : ''
+          this.args.issuerConfig.queryIssuerError ? 'if it exists ' : ''
         }and may affect other configurations using this value. Continue?`;
         // exit task until user confirms
         return;
@@ -115,7 +114,7 @@ export default class ConfigureAzureComponent extends Component<Args> {
 
       if (modelSaved || (!modelAttrChanged && issuerSaved)) {
         // transition if the model was saved successfully
-        // or transition if no attributes on the model have changed and the issuer was saved successfully
+        // we only prevent a transition if the model is edited and fails saving
         this.transition();
       } else {
         // otherwise there was a failure and we should not transition and exit the function
