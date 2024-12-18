@@ -11,16 +11,20 @@
     "title": "Get Started",
     "routes": [
       {
-        "title": "CLI Quick Start",
-        "href": "https://learn.hashicorp.com/collections/vault/getting-started"
-      },
-      {
-        "title": "HCP Quick Start",
-        "href": "https://learn.hashicorp.com/collections/vault/cloud"
-      },
-      {
-        "title": "Developer Quick Start",
+        "title": "Developer quick start",
         "path": "get-started/developer-qs"
+      },
+      {
+        "title": "Operations quick start",
+        "path": "get-started/operations-qs"
+      },
+      {
+        "title": "Vault foundations tutorials",
+        "href": "/vault/tutorials/get-started"
+      },
+      {
+        "title": "HCP Vault Dedicated tutorials",
+        "href": "/vault/tutorials/get-started-hcp-vault-dedicated"
       }
     ]
   },
