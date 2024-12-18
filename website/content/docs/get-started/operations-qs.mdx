@@ -97,7 +97,7 @@ The `userpass` plugin uses basic authentication with usernames and passwords.
    ```
 
 
-1. (Optional) To authenticate workloads with Vault, you must create a role.
+1.  Use the `approle` plugin to create a demo role called `my-app-role` :
 
    ```shell-session
    $ vault write auth/approle/role/my-app-role \
