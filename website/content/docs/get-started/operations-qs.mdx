@@ -164,7 +164,7 @@ the operations allowed on plugin data.
 
    ```shell-session
    $ vault policy write kv-access-policy - << EOF
-   path "kv/creds" {
+   path "shared/data/kv/creds/*" {
       capabilities = ["read", "create", "update", "delete"]
    }
    EOF
