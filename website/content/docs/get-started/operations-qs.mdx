@@ -172,7 +172,8 @@ the operations allowed on plugin data.
    ```
 
 
-1. Attach the policy to the `opsuser` user.
+1. Use `vault write` to attach the policy to your `userpass` authentication
+   plugin policy for the `opsuser` user:
 
    ```shell-session
    $ vault write auth/userpass/users/opsuser \
