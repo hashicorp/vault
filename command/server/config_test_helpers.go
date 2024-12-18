@@ -4,6 +4,7 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"sort"
@@ -30,12 +31,27 @@ func boolPointer(x bool) *bool {
 	return &x
 }
 
+// testConfigRaftRetryJoin ensures that we properly decode and normalize
+// config which contains IPv6 addresses.
 func testConfigRaftRetryJoin(t *testing.T) {
+	t.Helper()
 	config, err := LoadConfigFile("./test-fixtures/raft_retry_join.hcl")
 	if err != nil {
 		t.Fatal(err)
 	}
-	retryJoinConfig := `[{"leader_api_addr":"http://127.0.0.1:8200"},{"leader_api_addr":"http://127.0.0.2:8200"},{"leader_api_addr":"http://127.0.0.3:8200"}]`
+
+	retryJoinExpected := []map[string]string{
+		{"leader_api_addr": "http://127.0.0.1:8200"},
+		{"leader_api_addr": "http://[2001:db8::2:1]:8200"},
+		{"auto_join": "provider=mdns service=consul domain=2001:db8::2:1"},
+		{"auto_join": "provider=os tag_key=consul tag_value=server username=foo password=bar auth_url=https://[2001:db8::2:1]/auth"},
+		{"auto_join": "provider=triton account=testaccount url=https://[2001:db8::2:1] key_id=1234 tag_key=consul-role tag_value=server"},
+		{"auto_join": "provider=packet auth_token=token project=uuid url=https://[2001:db8::2:1] address_type=public_v6"},
+		{"auto_join": "provider=vsphere category_name=consul-role tag_name=consul-server host=https://[2001:db8::2:1] user=foo password=bar insecure_ssl=false"},
+	}
+	retryJoinJSON, err := json.Marshal(retryJoinExpected)
+	require.NoError(t, err)
+
 	expected := &Config{
 		SharedConfig: &configutil.SharedConfig{
 			Listeners: []*configutil.Listener{
@@ -53,14 +69,12 @@ func testConfigRaftRetryJoin(t *testing.T) {
 			Config: map[string]string{
 				"path":       "/storage/path/raft",
 				"node_id":    "raft1",
-				"retry_join": retryJoinConfig,
+				"retry_join": string(retryJoinJSON),
 			},
 		},
 	}
 	config.Prune()
-	if diff := deep.Equal(config, expected); diff != nil {
-		t.Fatal(diff)
-	}
+	require.EqualValues(t, expected, config)
 }
 
 func testLoadConfigFile_topLevel(t *testing.T, entropy *configutil.Entropy) {

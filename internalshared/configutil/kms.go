@@ -230,6 +230,7 @@ var kmsSealAddressKeys = map[string][]string{
 	wrapping.WrapperTypeOciKms.String():        {"key_id", "crypto_endpoint", "management_endpoint"},
 	wrapping.WrapperTypePkcs11.String():        {},
 	wrapping.WrapperTypeTransit.String():       {"address"},
+	"pkcs11-disabled":                          {}, // only used in tests
 }
 
 // normalizeKMSSealConfigAddrs takes a kms seal type, a config key, and config

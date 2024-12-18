@@ -946,12 +946,22 @@ func ParseStorage(result *Config, list *ast.ObjectList, name string) error {
 			}
 			continue
 		}
-		// TODO(ryancragun): We don't currently normalize nested configuration here
-		// that we might have otherwise, e.g.: raft's leader_api_addr.
-		valBytes, err := json.Marshal(val)
-		if err != nil {
-			return err
+
+		var valBytes []byte
+		var err error
+		// Raft's retry_join requires special normalization due to its complexity
+		if key == "raft" && k == "retry_join" {
+			valBytes, err = normalizeRaftRetryJoin(val)
+			if err != nil {
+				return err
+			}
+		} else {
+			valBytes, err = json.Marshal(val)
+			if err != nil {
+				return err
+			}
 		}
+
 		m[k] = string(valBytes)
 	}
 
@@ -1015,7 +1025,7 @@ var storageAddressKeys = map[string][]string{
 	"azure":        {"arm_endpoint"},
 	"cassandra":    {"hosts"},
 	"cockroachdb":  {"connection_url"},
-	"consul":       {"address"},
+	"consul":       {"address", "service_address"},
 	"couchdb":      {"endpoint"},
 	"dynamodb":     {"endpoint"},
 	"etcd":         {"address", "discovery_srv"},
@@ -1028,7 +1038,7 @@ var storageAddressKeys = map[string][]string{
 	"mysql":        {"address"},
 	"oci":          {},
 	"postgresql":   {"connection_url"},
-	"raft":         {},
+	"raft":         {}, // handled separately in normalizeRaftRetryJoin()
 	"s3":           {"endpoint"},
 	"spanner":      {},
 	"swift":        {"auth_url", "storage_url"},
@@ -1048,6 +1058,54 @@ func normalizeStorageConfigAddresses(storage string, key string, value string) (
 	}
 
 	return value, nil
+}
+
+// normalizeRaftRetryJoin takes the hcl value representation of a retry_join
+// stanza and normalizes any URLs, IP addresses, or IP:port style addresses,
+// and returns the value encoded as JSON.
+func normalizeRaftRetryJoin(val any) ([]byte, error) {
+	res := []map[string]any{}
+
+	retryJoin, ok := val.([]any)
+	if !ok {
+		return nil, fmt.Errorf("malformed retry_join stanza: %v+", val)
+	}
+
+	for _, rj := range retryJoin {
+		rjMap := rj.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("malformed retry_join stanza: %v+", rj)
+		}
+
+		rjRes := map[string]any{}
+		for k, v := range rjMap {
+			switch k {
+			case "auto_join":
+				pairs := strings.Split(v.(string), " ")
+				for i, pair := range pairs {
+					pairParts := strings.Split(pair, "=")
+					if len(pairParts) != 2 {
+						return nil, fmt.Errorf("malformed auto_join pair %s, expected key=value", pair)
+					}
+					// These are auto_join keys that a valid for the provider in go-discover
+					if slices.Contains([]string{"domain", "auth_url", "url", "host"}, pairParts[0]) {
+						pairParts[1] = configutil.NormalizeAddr(pairParts[1])
+						pair = strings.Join(pairParts, "=")
+						pairs[i] = pair
+					}
+				}
+				rjRes[k] = strings.Join(pairs, " ")
+			case "leader_api_addr":
+				rjRes[k] = configutil.NormalizeAddr(v.(string))
+			default:
+				rjRes[k] = v
+			}
+		}
+
+		res = append(res, rjRes)
+	}
+
+	return json.Marshal(res)
 }
 
 func parseHAStorage(result *Config, list *ast.ObjectList, name string) error {
@@ -1079,12 +1137,22 @@ func parseHAStorage(result *Config, list *ast.ObjectList, name string) error {
 			}
 			continue
 		}
-		// TODO(ryancragun): We don't currently normalize nested configuration here
-		// that we might have otherwise, e.g.: raft's leader_api_addr.
-		valBytes, err := json.Marshal(val)
-		if err != nil {
-			return err
+
+		var err error
+		var valBytes []byte
+		// Raft's retry_join requires special normalization due to its complexity
+		if key == "raft" && k == "retry_join" {
+			valBytes, err = normalizeRaftRetryJoin(val)
+			if err != nil {
+				return err
+			}
+		} else {
+			valBytes, err = json.Marshal(val)
+			if err != nil {
+				return err
+			}
 		}
+
 		m[k] = string(valBytes)
 	}
 
