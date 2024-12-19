@@ -299,6 +299,12 @@ The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
 		},
 	}
 
+	fields["name_constraints"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Default:     "",
+		Description: `Names Constraints extension, see https://www.rfc-editor.org/rfc/rfc5280#section-4.2.1.10 ; formatted as a JSON tree of permitted and excluded subtrees.`,
+	}
+
 	return fields
 }
 

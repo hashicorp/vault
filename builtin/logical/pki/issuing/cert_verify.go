@@ -65,9 +65,9 @@ func VerifyCertificate(ctx context.Context, storage logical.Storage, issuerId Is
 		DisableTimeChecks:              true,
 		DisableEKUChecks:               true,
 		DisableCriticalExtensionChecks: false,
-		DisableNameChecks:              false,
+		DisableNameChecks:              false, // issuer name check
 		DisablePathLenChecks:           false,
-		DisableNameConstraintChecks:    false,
+		DisableNameConstraintChecks:    false, // path name constraints extension
 	}
 
 	if err := entSetCertVerifyOptions(ctx, storage, issuerId, &options); err != nil {

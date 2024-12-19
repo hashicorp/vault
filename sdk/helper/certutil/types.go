@@ -810,6 +810,9 @@ type CreationParameters struct {
 	UseCSRValues        bool
 	PermittedDNSDomains []string
 
+	// The path NameConstraints extension for issued certificates.
+	NameConstraints *pkix.Extension
+
 	// URLs to encode into the certificate
 	URLs *URLEntries
 

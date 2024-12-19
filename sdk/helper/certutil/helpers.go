@@ -1069,8 +1069,9 @@ func selectSignatureAlgorithmForECDSA(pub crypto.PublicKey, signatureBits int) x
 }
 
 var (
-	ExtensionBasicConstraintsOID = []int{2, 5, 29, 19}
-	ExtensionSubjectAltNameOID   = []int{2, 5, 29, 17}
+	ExtensionBasicConstraintsOID   = []int{2, 5, 29, 19}
+	ExtensionSubjectAltNameOID     = []int{2, 5, 29, 17}
+	ExtensionPathNameConstraintOID = []int{2, 5, 29, 30}
 )
 
 // CreateCSR creates a CSR with the default rand.Reader to
@@ -1296,6 +1297,8 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		}
 	}
 
+	hasPathNameExtension := ""
+
 	if data.Params.UseCSRValues {
 		certTemplate.Subject = data.CSR.Subject
 		certTemplate.Subject.ExtraNames = certTemplate.Subject.Names
@@ -1308,6 +1311,10 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		for _, name := range data.CSR.Extensions {
 			if !name.Id.Equal(ExtensionBasicConstraintsOID) && !(len(data.Params.OtherSANs) > 0 && name.Id.Equal(ExtensionSubjectAltNameOID)) {
 				certTemplate.ExtraExtensions = append(certTemplate.ExtraExtensions, name)
+			}
+			if name.Id.Equal(ExtensionPathNameConstraintOID) {
+				certTemplate.ExtraExtensions = append(certTemplate.ExtraExtensions, name)
+				hasPathNameExtension = "has path name extension on CSR and UseCSRValues is true"
 			}
 		}
 
@@ -1352,9 +1359,19 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		certTemplate.IsCA = false
 	}
 
+	if data.Params.NameConstraints != nil {
+		if hasPathNameExtension == "" {
+			certTemplate.ExtraExtensions = append(certTemplate.ExtraExtensions, *data.Params.NameConstraints)
+			hasPathNameExtension = "path name constraints parameter passed in"
+		}
+	}
 	if len(data.Params.PermittedDNSDomains) > 0 {
-		certTemplate.PermittedDNSDomains = data.Params.PermittedDNSDomains
-		certTemplate.PermittedDNSDomainsCritical = true
+		if hasPathNameExtension == "" {
+			certTemplate.PermittedDNSDomains = data.Params.PermittedDNSDomains
+			certTemplate.PermittedDNSDomainsCritical = true
+		} else {
+			return nil, errutil.UserError{Err: fmt.Sprintf("permitted domains were set, but would be overrridden by path name constraints: %v", hasPathNameExtension)}
+		}
 	}
 
 	certBytes, err = x509.CreateCertificate(randReader, certTemplate, caCert, data.CSR.PublicKey, data.SigningBundle.PrivateKey)

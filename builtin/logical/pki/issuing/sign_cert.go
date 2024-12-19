@@ -8,6 +8,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"fmt"
 
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -111,6 +112,12 @@ func (b BasicSignCertInput) UseCSRValues() bool {
 
 func (b BasicSignCertInput) GetPermittedDomains() []string {
 	return []string{}
+}
+
+// GetPathNameConstraints always returns nil for BasicSignCertInput.
+// ignore-nil-nil-function-check
+func (b BasicSignCertInput) GetPathNameConstraints() (*pkix.Extension, error) {
+	return nil, nil
 }
 
 func SignCert(b logical.SystemView, role *RoleEntry, entityInfo EntityInfo, caSign *certutil.CAInfoBundle, signInput SignCertInput) (*certutil.ParsedCertBundle, []string, error) {
