@@ -8,7 +8,7 @@ locals {
   pki_common_name           = "common"
   pki_default_ttl           = "72h"
   pki_test_data_path_prefix = "smoke"
-  pki_test_dir      = "tmp-test-results"
+  pki_test_dir              = "tmp-test-results"
 
   // Output
   pki_output = {
@@ -35,7 +35,7 @@ resource "enos_remote_exec" "pki_verify_certificates" {
     COMMON_NAME       = local.pki_common_name
     ISSUER_NAME       = local.pki_issuer_name
     TTL               = local.pki_default_ttl
-    TEST_DIR  = local.pki_test_dir
+    TEST_DIR          = local.pki_test_dir
   }
 
   scripts = [abspath("${path.module}/../../scripts/pki-verify-certificates.sh")]
