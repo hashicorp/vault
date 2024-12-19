@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
+
 	"github.com/stretchr/testify/require"
 )
 

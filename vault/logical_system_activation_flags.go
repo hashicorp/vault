@@ -36,7 +36,6 @@ This path responds to the following HTTP methods.
 		Activates the specified feature. Cannot be undone.`
 )
 
-// Register CRUD functions dynamically.
 // These variables should only be mutated during initialization or server construction.
 // It is unsafe to modify them once the Vault core is running.
 var (
