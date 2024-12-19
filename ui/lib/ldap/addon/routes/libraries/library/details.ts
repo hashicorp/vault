@@ -25,7 +25,7 @@ export default class LdapLibraryDetailsRoute extends Route {
 
     controller.breadcrumbs = [
       { label: resolvedModel.backend, route: 'overview' },
-      { label: 'libraries', route: 'libraries' },
+      { label: 'Libraries', route: 'libraries' },
       { label: resolvedModel.name },
     ];
   }

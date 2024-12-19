@@ -21,10 +21,10 @@ export default class PkiTidyAutoConfigureRoute extends Route {
     controller.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview', model: backend },
-      { label: 'configuration', route: 'configuration.index', model: backend },
-      { label: 'tidy', route: 'tidy', model: backend },
-      { label: 'auto', route: 'tidy.auto', model: backend },
-      { label: 'configure' },
+      { label: 'Configuration', route: 'configuration.index', model: backend },
+      { label: 'Tidy', route: 'tidy', model: backend },
+      { label: 'Auto', route: 'tidy.auto', model: backend },
+      { label: 'Configure' },
     ];
   }
 }

@@ -69,7 +69,7 @@ module('Acceptance | ldap | libraries', function (hooks) {
         isURL(`libraries/test-library/${uri}`, this.backend),
         `Transitions to ${action} route on list item action menu click`
       );
-      await click('[data-test-breadcrumb="libraries"] a');
+      await click('[data-test-breadcrumb="Libraries"] a');
     }
   });
 
