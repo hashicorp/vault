@@ -11,8 +11,7 @@ description: |-
 The S3 storage backend is used to persist Vault's data in an [Amazon S3][s3]
 bucket.
 
-- **No High Availability** – the S3 storage backend does not support high
-  availability.
+- **High Availability** – the S3 storage backend support high availability.
 
 - **Community Supported** – the S3 storage backend is supported by the
   community. While it has undergone review by HashiCorp employees, they may not
@@ -73,6 +72,18 @@ cause Vault to attempt to retrieve credentials from the AWS metadata service.
 
 - `path` `(string: "")` - Specifies the path in the S3 Bucket where Vault
   data will be stored.
+
+
+### High availability parameters
+
+- `ha_enabled` `(string: "false")` - Specifies if high availability mode is
+  enabled. This is a boolean value, but it is specified as a string like "true"
+  or "false". Alternatively, this parameter can be omitted and the 
+  `S3_STORAGE_HA_ENABLED` environment variable can be used to 
+  enable or disable high availability. If both the environment variable and 
+  the parameter in the stanza are set, the value of the environment variable will 
+  take precedence.
+  
 
 ## `s3` examples
 
