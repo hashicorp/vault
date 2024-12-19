@@ -57,13 +57,13 @@ for CERT in $VAULT_CERTS; do
   # Setting up variables for types of certificates
   IS_CA=$(openssl x509 -in "${TEST_DIR}/${TMP_FILE}" -text -noout | grep -q "CA:TRUE" && echo "TRUE" || echo "FALSE")
   if [[ "${IS_CA}" == "TRUE" ]]; then
-      if [[ "${COMMON_NAME}.com" == "${TMP_CERT_SUBJECT}" ]]; then
-          CA_CERT=${CERT}
-      elif [[ "intermediate-${COMMON_NAME}.com" == "${TMP_CERT_SUBJECT}" ]]; then
-          INTERMEDIATE_CA_CERT=${CERT}
-      fi
+    if [[ "${COMMON_NAME}.com" == "${TMP_CERT_SUBJECT}" ]]; then
+      CA_CERT=${CERT}
+    elif [[ "intermediate-${COMMON_NAME}.com" == "${TMP_CERT_SUBJECT}" ]]; then
+      INTERMEDIATE_CA_CERT=${CERT}
+    fi
   elif [[ "${IS_CA}" == "FALSE" ]]; then
-      INTERMEDIATE_ISSUED_CERT=${CERT}
+    INTERMEDIATE_ISSUED_CERT=${CERT}
   fi
 
 done
