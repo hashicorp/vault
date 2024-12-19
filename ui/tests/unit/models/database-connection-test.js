@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import { EXPECTED_FIELDS } from 'vault/tests/helpers/secret-engine/database-helpers';
 
-import { AVAILABLE_PLUGIN_TYPES } from 'vault/utils/model-helpers/database-helpers';
+import { AVAILABLE_PLUGIN_TYPES } from 'vault/utils/database-helpers';
 
 module('Unit | Model | database/connection', function (hooks) {
   setupTest(hooks);
