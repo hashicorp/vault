@@ -1,3 +1,3 @@
 ```release-note:improvement
-ui: Update vault tutorial link.
+ui: Update tutorial link for creating a policy.
 ```
