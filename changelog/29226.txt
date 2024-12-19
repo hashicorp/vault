@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Update tutorial link for creating a policy.
+```
