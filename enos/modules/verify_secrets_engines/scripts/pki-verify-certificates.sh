@@ -87,5 +87,3 @@ echo "Verifying Revoked Certificate"
 REVOKED_CERT_FROM_LIST=$("$binpath" list "${MOUNT}/certs/revoked" | jq -r '.[0]')
 [[ "${INTERMEDIATE_ISSUED_CERT}" == "${REVOKED_CERT_FROM_LIST}" ]] || fail "Expected: ${INTERMEDIATE_ISSUED_CERT}, actual: ${REVOKED_CERT_FROM_LIST}"
 echo "Successfully verified revoked certificate"
-
-
