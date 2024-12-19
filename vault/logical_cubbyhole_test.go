@@ -258,6 +258,84 @@ func TestCubbyholeIsolation(t *testing.T) {
 	}
 }
 
+func TestCubbyholePersistentMode(t *testing.T) {
+	b := testCubbyholeBackend()
+
+	clientID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var storage logical.Storage
+
+	// Populate and test persistent entry
+	req := logical.TestRequest(t, logical.UpdateOperation, "foo")
+	req.ClientID = clientID
+	storage = req.Storage
+	req.Data["raw"] = "test"
+
+	configData := map[string]interface{}{
+		"lifetime": "persistent",
+	}
+
+	confReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/lifetime",
+		Storage:   storage,
+		Data:      configData,
+	}
+
+	resp, err := b.HandleRequest(context.Background(), confReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("failed to write configuration: resp:%#v err:%s", resp, err)
+	}
+
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %v", resp)
+	}
+
+	// Test another session using the same Client ID
+	req = logical.TestRequest(t, logical.ReadOperation, "foo")
+	req.Storage = storage
+	req.ClientID = clientID
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	expected := &logical.Response{
+		Data: map[string]interface{}{
+			"raw": "test",
+		},
+	}
+
+	if !reflect.DeepEqual(resp, expected) {
+		t.Fatalf("bad response.\n\nexpected: %#v\n\nGot: %#v", expected, resp)
+	}
+
+	//Test persistence wotj
+	req = logical.TestRequest(t, logical.ReadOperation, "foo")
+	req.Storage = storage
+	req.ClientID = clientID
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	expected = &logical.Response{
+		Data: map[string]interface{}{
+			"raw": "test",
+		},
+	}
+
+	if !reflect.DeepEqual(resp, expected) {
+		t.Fatalf("bad response.\n\nexpected: %#v\n\nGot: %#v", expected, resp)
+	}
+}
+
 func testCubbyholeBackend() logical.Backend {
 	b, _ := CubbyholeBackendFactory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
