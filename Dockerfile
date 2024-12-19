@@ -34,7 +34,7 @@ ENV VERSION=$VERSION
 # Create a non-root user to run the software.
 RUN addgroup ${NAME} && adduser -S -G ${NAME} ${NAME}
 
-RUN apk add --no-cache libcap su-exec dumb-init tzdata curl && \
+RUN apk add --no-cache ca-certificates libcap su-exec dumb-init tzdata curl && \
     mkdir -p /usr/share/doc/vault && \
     curl -o /usr/share/doc/vault/EULA.txt https://eula.hashicorp.com/EULA.txt && \
     curl -o /usr/share/doc/vault/TermsOfEvaluation.txt https://eula.hashicorp.com/TermsOfEvaluation.txt && \
