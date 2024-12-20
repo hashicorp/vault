@@ -28,6 +28,7 @@ seal unwrapper was performing the read twice, and would also issue an unnecessar
 * secret/db: Update static role rotation to generate a new password after 2 failed attempts. [[GH-28989](https://github.com/hashicorp/vault/pull/28989)]
 * ui: Allow users to search the full json object within the json code-editor edit/create view. [[GH-28808](https://github.com/hashicorp/vault/pull/28808)]
 * ui: Decode `connection_url` to fix database connection updates (i.e. editing connection config, deleting roles) failing when urls include template variables. [[GH-29114](https://github.com/hashicorp/vault/pull/29114)]
+* ui: Fix Swagger explorer bug where requests with path params were not working. [[GH-28670](https://github.com/hashicorp/vault/issues/28670)]
 * vault/diagnose: Fix time to expiration reporting within the TLS verification to not be a month off. [[GH-29128](https://github.com/hashicorp/vault/pull/29128)]
 
 ## 1.18.2
@@ -339,6 +340,7 @@ BUG FIXES:
 * secret/db: Update static role rotation to generate a new password after 2 failed attempts. [[GH-28989](https://github.com/hashicorp/vault/pull/28989)]
 * ui: Allow users to search the full json object within the json code-editor edit/create view. [[GH-28808](https://github.com/hashicorp/vault/pull/28808)]
 * ui: Decode `connection_url` to fix database connection updates (i.e. editing connection config, deleting roles) failing when urls include template variables. [[GH-29114](https://github.com/hashicorp/vault/pull/29114)]
+* ui: Fix Swagger explorer bug where requests with path params were not working. [[GH-28670](https://github.com/hashicorp/vault/issues/28670)]
 * vault/diagnose: Fix time to expiration reporting within the TLS verification to not be a month off. [[GH-29128](https://github.com/hashicorp/vault/pull/29128)]
 
 ## 1.17.9 Enterprise
