@@ -225,8 +225,18 @@ module "vault_failover_update_dr_primary" {
   vault_install_dir = var.vault_install_dir
 }
 
+module "vault_raft_remove_and_verify" {
+  source            = "./modules/vault_raft_remove_and_verify"
+  vault_install_dir = var.vault_install_dir
+}
+
 module "vault_raft_remove_peer" {
   source            = "./modules/vault_raft_remove_peer"
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_removed_do_nothing" {
+  source            = "./modules/vault_removed_do_nothing"
   vault_install_dir = var.vault_install_dir
 }
 

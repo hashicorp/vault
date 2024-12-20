@@ -105,6 +105,7 @@ scenario "autopilot" {
     manage_service                     = matrix.artifact_type == "bundle"
     vault_install_dir                  = global.vault_install_dir[matrix.artifact_type]
     vault_autopilot_default_max_leases = semverconstraint(var.vault_upgrade_initial_version, ">=1.16.0-0") ? "300000" : ""
+    verify_removed_step_module         = semverconstraint(var.vault_product_version, ">=1.19.0-0") && matrix.backend == "raft" ? "vault_verify_raft_removed" : "vault_removed_do_nothing"
   }
 
   step "build_vault" {
@@ -657,11 +658,10 @@ scenario "autopilot" {
   }
 
   step "verify_removed" {
-    skip_step   = semverconstraint(var.vault_upgrade_initial_version, "<1.19.0-0")
     description = <<-EOF
       Verify that the removed nodes are marked as such
     EOF
-    module      = module.vault_verify_raft_removed
+    module      = local.verify_removed_step_module
     depends_on = [
       step.create_vault_cluster,
       step.get_updated_vault_cluster_ips,
