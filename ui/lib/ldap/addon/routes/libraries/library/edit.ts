@@ -25,9 +25,9 @@ export default class LdapLibraryEditRoute extends Route {
 
     controller.breadcrumbs = [
       { label: resolvedModel.backend, route: 'overview' },
-      { label: 'libraries', route: 'libraries' },
+      { label: 'Libraries', route: 'libraries' },
       { label: resolvedModel.name, route: 'libraries.library.details' },
-      { label: 'edit' },
+      { label: 'Edit' },
     ];
   }
 }
