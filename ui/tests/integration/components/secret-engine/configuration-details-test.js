@@ -36,7 +36,7 @@ module('Integration | Component | SecretEngine/ConfigurationDetails', function (
   });
 
   test('it shows config details if configModel(s) are passed in', async function (assert) {
-    assert.expect(36);
+    assert.expect(42);
     const allEnginesArray = allEngines(); // saving as const so we don't invoke the method multiple times via the for loop
     for (const type of CONFIGURABLE_SECRET_ENGINES) {
       const backend = `test-${type}`;
