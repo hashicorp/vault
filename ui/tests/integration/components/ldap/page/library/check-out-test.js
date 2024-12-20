@@ -26,9 +26,9 @@ module('Integration | Component | ldap | Page::Library::CheckOut', function (hoo
     };
     this.breadcrumbs = [
       { label: 'ldap-test', route: 'overview' },
-      { label: 'libraries', route: 'libraries' },
+      { label: 'Libraries', route: 'libraries' },
       { label: 'test-library', route: 'libraries.library' },
-      { label: 'check-out' },
+      { label: 'Check-Out' },
     ];
 
     this.renderComponent = () => {
@@ -48,13 +48,13 @@ module('Integration | Component | ldap | Page::Library::CheckOut', function (hoo
       .containsText('ldap-test', 'Overview breadcrumb renders');
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(2) a')
-      .containsText('libraries', 'Libraries breadcrumb renders');
+      .containsText('Libraries', 'Libraries breadcrumb renders');
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(3)')
       .containsText('test-library', 'Library breadcrumb renders');
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(4)')
-      .containsText('check-out', 'Check-out breadcrumb renders');
+      .containsText('Check-Out', 'Check-out breadcrumb renders');
   });
 
   test('it should render check out information and credentials', async function (assert) {

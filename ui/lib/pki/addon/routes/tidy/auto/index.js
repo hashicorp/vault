@@ -19,8 +19,8 @@ export default class TidyAutoIndexRoute extends Route {
     controller.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview', model: backend },
-      { label: 'tidy', route: 'tidy.index', model: backend },
-      { label: 'auto' },
+      { label: 'Tidy', route: 'tidy.index', model: backend },
+      { label: 'Auto' },
     ];
     controller.title = this.secretMountPath.currentPath;
   }
