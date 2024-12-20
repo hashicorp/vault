@@ -3006,23 +3006,23 @@
         ]
       },
       {
-        "title": "Automated Integrated Storage Snapshots",
+        "title": "Automatic snapshots with integrated storage",
         "path": "enterprise/automated-integrated-storage-snapshots"
       },
       {
-        "title": "Automated Upgrades",
+        "title": "Automatically upgrade Vault clusters",
         "path": "enterprise/automated-upgrades"
       },
       {
-        "title": "Redundancy Zones",
+        "title": "Use redundancy zones",
         "path": "enterprise/redundancy-zones"
       },
       {
-        "title": "Lease Count Quotas",
+        "title": "Enforce lease count quotas",
         "path": "enterprise/lease-count-quotas"
       },
       {
-        "title": "Entropy Augmentation",
+        "title": "Augment entropy with external samples",
         "path": "enterprise/entropy-augmentation"
       },
       {
@@ -3043,7 +3043,7 @@
         ]
       },
       {
-        "title": "Seal Wrap",
+        "title": "Wrap seals with encryption",
         "path": "enterprise/sealwrap"
       },
       {
@@ -3082,7 +3082,7 @@
         ]
       },
       {
-        "title": "Performance Standbys",
+        "title": "Use performance standby nodes",
         "path": "enterprise/performance-standby"
       },
       {
@@ -3103,11 +3103,11 @@
         ]
       },
       {
-        "title": "Control Groups",
+        "title": "Use control group authZ ",
         "path": "enterprise/control-groups"
       },
       {
-        "title": "Managed Keys",
+        "title": "3rd party key management",
         "path": "enterprise/managed-keys"
       },
       {
