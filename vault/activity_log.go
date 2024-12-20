@@ -336,9 +336,6 @@ type ActivityLogExportRecord struct {
 	// MountPath is the path of the auth mount associated with the token used
 	MountPath string `json:"mount_path" mapstructure:"mount_path"`
 
-	// LocalMount indicates if the mount only belongs to the current cluster
-	LocalMount bool `json:"local_mount" mapstructure:"local_mount"`
-
 	// Timestamp denotes the time at which the activity occurred formatted using RFC3339
 	Timestamp string `json:"timestamp" mapstructure:"timestamp"`
 
@@ -919,7 +916,7 @@ func (a *ActivityLog) getLastSegmentNumberByEntityPath(ctx context.Context, enti
 }
 
 // WalkEntitySegments loads each of the entity segments for a particular start time
-func (a *ActivityLog) WalkEntitySegments(ctx context.Context, startTime time.Time, hll *hyperloglog.Sketch, walkFn func(*activity.EntityActivityLog, time.Time, bool) error) error {
+func (a *ActivityLog) WalkEntitySegments(ctx context.Context, startTime time.Time, hll *hyperloglog.Sketch, walkFn func(*activity.EntityActivityLog, time.Time, *hyperloglog.Sketch) error) error {
 	baseGlobalPath := activityGlobalPathPrefix + activityEntityBasePath + fmt.Sprint(startTime.Unix()) + "/"
 	baseLocalPath := activityLocalPathPrefix + activityEntityBasePath + fmt.Sprint(startTime.Unix()) + "/"
 
@@ -943,7 +940,7 @@ func (a *ActivityLog) WalkEntitySegments(ctx context.Context, startTime time.Tim
 			if err != nil {
 				return fmt.Errorf("unable to parse segment %v%v: %w", basePath, path, err)
 			}
-			err = walkFn(out, startTime, basePath == baseLocalPath)
+			err = walkFn(out, startTime, hll)
 			if err != nil {
 				return fmt.Errorf("unable to walk entities: %w", err)
 			}
@@ -3837,7 +3834,7 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 		return err
 	}
 
-	walkEntities := func(l *activity.EntityActivityLog, startTime time.Time, isLocal bool) error {
+	walkEntities := func(l *activity.EntityActivityLog, startTime time.Time, hll *hyperloglog.Sketch) error {
 		for _, e := range l.Clients {
 			if _, ok := dedupIDs[e.ClientID]; ok {
 				continue
@@ -3869,7 +3866,6 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 				NamespacePath: nsDisplayPath,
 				Timestamp:     ts.UTC().Format(time.RFC3339),
 				MountAccessor: e.MountAccessor,
-				LocalMount:    isLocal,
 
 				// Default following to empty versus nil, will be overwritten if necessary
 				Policies:                  []string{},
@@ -4265,7 +4261,6 @@ func baseActivityExportCSVHeader() []string {
 		"client_id",
 		"client_type",
 		"local_entity_alias",
-		"local_mount",
 		"namespace_id",
 		"namespace_path",
 		"mount_accessor",
