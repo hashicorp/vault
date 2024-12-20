@@ -812,6 +812,7 @@ scenario "seal_ha" {
       hosts             = step.get_updated_cluster_ips.follower_hosts
       vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      vault_root_token  = step.create_vault_cluster.root_token
     }
   }
 
@@ -1040,6 +1041,7 @@ scenario "seal_ha" {
       hosts             = step.get_cluster_ips_after_migration.follower_hosts
       vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      vault_root_token  = step.create_vault_cluster.root_token
     }
   }
 
