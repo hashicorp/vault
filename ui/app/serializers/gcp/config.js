@@ -10,10 +10,6 @@ export default class GcpConfigSerializer extends ApplicationSerializer {
     if (!payload.data) {
       return super.normalizeResponse(...arguments);
     }
-    // remove identityTokenTtl if the API's default value of 0. We don't want to display this value on configuration details if they haven't changed the default value
-    if (payload.data.identity_token_ttl === 0) {
-      delete payload.data.identity_token_ttl;
-    }
 
     const normalizedPayload = {
       id: payload.id,
