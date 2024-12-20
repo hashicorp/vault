@@ -157,6 +157,10 @@ export function configurableSecretEngines() {
   return CONFIGURABLE_SECRET_ENGINES.slice();
 }
 
+export function configurableSecretEngines() {
+  return CONFIGURABLE_SECRET_ENGINES.slice();
+}
+
 export function mountableEngines() {
   return MOUNTABLE_SECRET_ENGINES.slice();
 }
