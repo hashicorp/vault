@@ -20,4 +20,3 @@ code=$?
 if [ $code -eq 0 ]; then
   fail "expected unseal to fail but got exit code $code: $result"
 fi
- 

@@ -31,14 +31,14 @@ expectRemoved() {
     echo "unexpected status $status"
     return 1
   fi
-  
+
   local health
   health=$(getSysHealth)
   if [[ "$health" != "true" ]]; then
     echo "unexpected health $health"
-  fi 
-  
-  return 0 
+  fi
+
+  return 0
 }
 
 begin_time=$(date +%s)

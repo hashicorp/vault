@@ -107,7 +107,7 @@ module "remove_raft_node" {
 }
 
 module "verify_removed" {
-  source     = "../vault_verify_raft_removed"
+  source = "../vault_verify_raft_removed"
   depends_on = [
     module.remove_raft_node
   ]
