@@ -243,6 +243,14 @@ export const expectedConfigKeys = (type) => {
         'Identity token TTL',
       ];
     case 'azure-wif-camelCase':
+      return [
+        'subscriptionId',
+        'tenantId',
+        'clientId',
+        'environment',
+        'identityTokenAudience',
+        'Identity token TTL',
+      ];
     case 'gcp':
       return ['Config TTL', 'Max TTL'];
     case 'gcp-wif':
