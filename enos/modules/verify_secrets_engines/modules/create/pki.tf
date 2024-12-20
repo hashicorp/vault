@@ -7,14 +7,15 @@ locals {
   pki_issuer_name           = "issuer"
   pki_common_name           = "common"
   pki_default_ttl           = "72h"
-  pki_test_data_path_prefix = "smoke"
   pki_test_dir              = "tmp-test-results"
 
   // Output
   pki_output = {
-    mount        = local.pki_mount
     common_name  = local.pki_common_name
-    test_results = local.pki_test_dir
+    issuer_name  = local.pki_issuer_name
+    mount        = local.pki_mount
+    ttl          = local.pki_default_ttl
+    test_dir     = local.pki_test_dir
   }
 
 }
