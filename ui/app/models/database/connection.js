@@ -186,7 +186,7 @@ export default Model.extend({
   tls_ca: attr('string', {
     label: 'TLS CA',
     helpText:
-      'x509 CA file for validating the certificate presented by the MongoDB server. Must be PEM encoded.',
+      'x509 CA file for validating the certificate presented by the database server. Must be PEM encoded.',
     editType: 'file',
   }),
   tls_server_name: attr('string', {
