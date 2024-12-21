@@ -72,7 +72,8 @@ scenario "smoke" {
       sles   = provider.enos.ec2_user
       ubuntu = provider.enos.ubuntu
     }
-    manage_service = matrix.artifact_type == "bundle"
+    manage_service      = matrix.artifact_type == "bundle"
+    removed_step_module = semverconstraint(var.vault_product_version, ">=1.19.0-0") && matrix.backend == "raft" ? "vault_raft_remove_and_verify" : "vault_removed_do_nothing"
   }
 
   step "build_vault" {
@@ -474,10 +475,71 @@ scenario "smoke" {
     }
   }
 
+
+  step "verify_raft_auto_join_voter" {
+    description = global.description.verify_raft_cluster_all_nodes_are_voters
+    skip_step   = matrix.backend != "raft"
+    module      = module.vault_verify_raft_auto_join_voter
+    depends_on  = [step.verify_vault_unsealed]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = quality.vault_raft_voters
+
+    variables {
+      hosts             = step.create_vault_cluster_targets.hosts
+      ip_version        = matrix.ip_version
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
+  step "vault_remove_node_and_verify" {
+    description = <<-EOF
+      Remove a follower and ensure that it's marked as removed and can be added back once its data has been deleted
+    EOF
+    module      = local.removed_step_module
+    depends_on = [
+      step.create_vault_cluster_targets,
+      step.get_vault_cluster_ips,
+      step.verify_vault_unsealed,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_api_sys_storage_raft_remove_peer_write_removes_peer,
+      quality.vault_cli_operator_raft_remove_peer,
+      quality.vault_raft_removed_after_restart,
+      quality.vault_raft_removed_statuses,
+      quality.vault_raft_removed_cant_rejoin,
+      quality.vault_raft_removed_rejoin_after_deletion,
+    ]
+
+    variables {
+      hosts             = step.get_vault_cluster_ips.follower_hosts
+      vault_leader_host = step.get_vault_cluster_ips.leader_host
+      vault_root_token  = step.create_vault_cluster.root_token
+      vault_seal_type   = matrix.seal
+      vault_unseal_keys = matrix.seal == "shamir" ? step.create_vault_cluster.unseal_keys_hex : null
+      add_back_nodes    = true
+      listener_port     = step.create_vault_cluster.listener_port
+      ip_version        = matrix.ip_version
+      vault_local_addr  = step.create_vault_cluster.api_addr_localhost
+      cluster_port      = step.create_vault_cluster.cluster_port
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+    }
+  }
+
   step "verify_secrets_engines_create" {
     description = global.description.verify_secrets_engines_create
     module      = module.vault_verify_secrets_engines_create
-    depends_on  = [step.verify_vault_unsealed]
+    depends_on  = [step.vault_remove_node_and_verify]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -511,31 +573,10 @@ scenario "smoke" {
     }
   }
 
-  step "verify_raft_auto_join_voter" {
-    description = global.description.verify_raft_cluster_all_nodes_are_voters
-    skip_step   = matrix.backend != "raft"
-    module      = module.vault_verify_raft_auto_join_voter
-    depends_on  = [step.verify_vault_unsealed]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    verifies = quality.vault_raft_voters
-
-    variables {
-      hosts             = step.create_vault_cluster_targets.hosts
-      ip_version        = matrix.ip_version
-      vault_addr        = step.create_vault_cluster.api_addr_localhost
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_root_token  = step.create_vault_cluster.root_token
-    }
-  }
-
   step "verify_replication" {
     description = global.description.verify_replication_status
     module      = module.vault_verify_replication
-    depends_on  = [step.verify_vault_unsealed]
+    depends_on  = [step.vault_remove_node_and_verify]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -614,7 +655,7 @@ scenario "smoke" {
   step "verify_ui" {
     description = global.description.verify_ui
     module      = module.vault_verify_ui
-    depends_on  = [step.verify_vault_unsealed]
+    depends_on  = [step.vault_remove_node_and_verify]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
