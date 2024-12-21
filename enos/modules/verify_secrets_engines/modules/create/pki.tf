@@ -3,19 +3,19 @@
 
 locals {
   // Variables
-  pki_mount                 = "pki" # secret
-  pki_issuer_name           = "issuer"
-  pki_common_name           = "common"
-  pki_default_ttl           = "72h"
-  pki_test_dir              = "tmp-test-results"
+  pki_mount       = "pki" # secret
+  pki_issuer_name = "issuer"
+  pki_common_name = "common"
+  pki_default_ttl = "72h"
+  pki_test_dir    = "tmp-test-results"
 
   // Output
   pki_output = {
-    common_name  = local.pki_common_name
-    issuer_name  = local.pki_issuer_name
-    mount        = local.pki_mount
-    ttl          = local.pki_default_ttl
-    test_dir     = local.pki_test_dir
+    common_name = local.pki_common_name
+    issuer_name = local.pki_issuer_name
+    mount       = local.pki_mount
+    ttl         = local.pki_default_ttl
+    test_dir    = local.pki_test_dir
   }
 
 }
