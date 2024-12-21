@@ -37,6 +37,7 @@ func TestPopulate_Basic(t *testing.T) {
 		groupName           string
 		groupMetadata       map[string]string
 		groupMemberships    []string
+		token               *logical.TokenEntry
 		now                 time.Time
 	}{
 		// time.* tests. Keep tests with time.Now() at the front to avoid false
@@ -380,6 +381,34 @@ func TestPopulate_Basic(t *testing.T) {
 			aliasCustomMetadata: map[string]string{"foo": "abc", "bar": "123"},
 			output:              `{}`,
 		},
+		// token metadata cases
+		{
+			mode:   JSONTemplating,
+			name:   "token metadata field usage",
+			input:  "{{token.metadata.foo}}",
+			token:  &logical.TokenEntry{Meta: map[string]string{"foo": "abc"}},
+			output: `"abc"`,
+		},
+		{
+			mode:   JSONTemplating,
+			name:   "token metadata missing field usage",
+			input:  "{{token.metadata.foo}}",
+			token:  &logical.TokenEntry{Meta: map[string]string{"bar": "abc"}},
+			output: `""`,
+		},
+		{
+			mode:   JSONTemplating,
+			name:   "token metadata usage",
+			input:  "{{token.metadata}}",
+			token:  &logical.TokenEntry{Meta: map[string]string{"foo": "abc"}},
+			output: `{"foo":"abc"}`,
+		},
+		{
+			mode:  JSONTemplating,
+			name:  "token metadata usage with no token",
+			input: "{{token.metadata}}",
+			err:   ErrTemplateValueNotFound,
+		},
 	}
 
 	for _, test := range tests {
@@ -427,6 +456,7 @@ func TestPopulate_Basic(t *testing.T) {
 			String:            test.input,
 			Entity:            entity,
 			Groups:            groups,
+			Token:             test.token,
 			NamespaceID:       "root",
 			Now:               test.now,
 		})
