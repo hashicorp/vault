@@ -110,10 +110,13 @@ export default class TotpModel extends Model {
   // Used when generate is false
   @attr('string', {
     editDisabled: true,
+    label: 'otpauth url',
+    helpText: 'If a URL is provided the other fields can be left empty. E.g. otpauth://totp/Vault:test@test.com?secret=Y64VEVMBTSXCYIWRSHRNDZW62MPGVU2G&issuer=Vault',
   })
   url;
   @attr('string', {
     editDisabled: true,
+    label: 'Shared master key',
   })
   key;
 
