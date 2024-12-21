@@ -237,6 +237,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathAcmeConfig(&b),
 			pathAcmeEabList(&b),
 			pathAcmeEabDelete(&b),
+			pathAcmeMgmtAccountList(&b),
+			pathAcmeMgmtAccountRead(&b),
 		},
 
 		Secrets: []*framework.Secret{
