@@ -807,8 +807,15 @@ type CreationParameters struct {
 	ForceAppendCaChain            bool
 
 	// Only used when signing a CA cert
-	UseCSRValues        bool
-	PermittedDNSDomains []string
+	UseCSRValues            bool
+	PermittedDNSDomains     []string
+	ExcludedDNSDomains      []string
+	PermittedIPRanges       []*net.IPNet
+	ExcludedIPRanges        []*net.IPNet
+	PermittedEmailAddresses []string
+	ExcludedEmailAddresses  []string
+	PermittedURIDomains     []string
+	ExcludedURIDomains      []string
 
 	// URLs to encode into the certificate
 	URLs *URLEntries
