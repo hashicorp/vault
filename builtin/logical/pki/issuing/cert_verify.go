@@ -4,6 +4,7 @@
 package issuing
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -42,26 +43,30 @@ func VerifyCertificate(ctx context.Context, storage logical.Storage, issuerId Is
 		return nil
 	}
 
-	certChainPool := ctx509.NewCertPool()
+	rootCertPool := ctx509.NewCertPool()
+	intermediateCertPool := ctx509.NewCertPool()
+
 	for _, certificate := range parsedBundle.CAChain {
 		cert, err := convertCertificate(certificate.Bytes)
 		if err != nil {
 			return err
 		}
-		certChainPool.AddCert(cert)
+		if bytes.Equal(cert.RawIssuer, cert.RawSubject) {
+			rootCertPool.AddCert(cert)
+		} else {
+			intermediateCertPool.AddCert(cert)
+		}
 	}
-
-	// Validation Code, assuming we need to validate the entire chain of constraints
 
 	// Note that we use github.com/google/certificate-transparency-go/x509 to perform certificate verification,
 	// since that library provides options to disable checks that the standard library does not.
 
 	options := ctx509.VerifyOptions{
-		Intermediates:                  nil, // We aren't verifying the chain here, this would do more work
-		Roots:                          certChainPool,
+		Roots:                          rootCertPool,
+		Intermediates:                  intermediateCertPool,
 		CurrentTime:                    time.Time{},
 		KeyUsages:                      nil,
-		MaxConstraintComparisions:      0, // This means infinite
+		MaxConstraintComparisions:      0, // Use the library's 'sensible default'
 		DisableTimeChecks:              true,
 		DisableEKUChecks:               true,
 		DisableCriticalExtensionChecks: false,
