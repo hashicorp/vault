@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"net"
 	"net/url"
 	"os"
@@ -1163,5 +1164,117 @@ func testParseCsrToFields(t *testing.T, issueTime time.Time, tt *parseCertificat
 
 	if diff := deep.Equal(tt.wantFields, fields); diff != nil {
 		t.Errorf("testParseCertificateToFields() diff: %s", strings.ReplaceAll(strings.Join(diff, "\n"), "map", "\nmap"))
+	}
+}
+
+// TestVerify_chained_name_constraints verifies that we perform name constraints certificate validation using the
+// entire CA chain.
+//
+// This test constructs a root CA that
+// - allows: .example.com
+// - excludes: bad.example.com
+//
+// and an intermediate that
+// - forbids alsobad.example.com
+//
+// It verifies that the intermediate
+// - can issue certs like good.example.com
+// - rejects names like notanexample.com since they are not in the namespace of names permitted by the root CA
+// - rejects bad.example.com, since the root CA excludes it
+// - rejects alsobad.example.com, since the intermediate CA excludes it.
+func TestVerify_chained_name_constraints(t *testing.T) {
+	t.Parallel()
+	bRoot, sRoot := CreateBackendWithStorage(t)
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Setup
+
+	var bInt *backend
+	var sInt logical.Storage
+	{
+		resp, err := CBWrite(bRoot, sRoot, "root/generate/internal", map[string]interface{}{
+			"ttl":                   "40h",
+			"common_name":           "myvault.com",
+			"permitted_dns_domains": ".example.com",
+			"excluded_dns_domains":  "bad.example.com",
+		})
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+
+		// Create the CSR
+		bInt, sInt = CreateBackendWithStorage(t)
+		resp, err = CBWrite(bInt, sInt, "intermediate/generate/internal", map[string]interface{}{
+			"common_name": "myint.com",
+		})
+		require.NoError(t, err)
+		schema.ValidateResponse(t, schema.GetResponseSchema(t, bRoot.Route("intermediate/generate/internal"), logical.UpdateOperation), resp, true)
+		csr := resp.Data["csr"]
+
+		// Sign the CSR
+		resp, err = CBWrite(bRoot, sRoot, "root/sign-intermediate", map[string]interface{}{
+			"common_name":          "myint.com",
+			"csr":                  csr,
+			"ttl":                  "60h",
+			"excluded_dns_domains": "alsobad.example.com",
+		})
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+
+		// Import the New Signed Certificate into the Intermediate Mount.
+		// Note that we append the root CA certificate to the signed intermediate, so that
+		// the entire chain is stored by set-signed.
+		resp, err = CBWrite(bInt, sInt, "intermediate/set-signed", map[string]interface{}{
+			"certificate": strings.Join(resp.Data["ca_chain"].([]string), "\n"),
+		})
+		require.NoError(t, err)
+
+		// Create a Role in the Intermediate Mount
+		resp, err = CBWrite(bInt, sInt, "roles/test", map[string]interface{}{
+			"allow_bare_domains": true,
+			"allow_subdomains":   true,
+			"allow_any_name":     true,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+	}
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Tests
+
+	testCases := []struct {
+		commonName string
+		wantError  string
+	}{
+		{
+			commonName: "good.example.com",
+		},
+		{
+			commonName: "notanexample.com",
+			wantError:  "should not be permitted by root CA",
+		},
+		{
+			commonName: "bad.example.com",
+			wantError:  "should be rejected by the root CA",
+		},
+		{
+			commonName: "alsobad.example.com",
+			wantError:  "should be rejected by the intermediate CA",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.commonName, func(t *testing.T) {
+			resp, err := CBWrite(bInt, sInt, "issue/test", map[string]any{
+				"common_name": tc.commonName,
+			})
+			if tc.wantError != "" {
+				require.Error(t, err, tc.wantError)
+				require.ErrorContains(t, err, "certificate is not authorized to sign for this name")
+				require.Nil(t, resp)
+			} else {
+				require.NoError(t, err)
+				require.NoError(t, resp.Error())
+			}
+		})
 	}
 }
