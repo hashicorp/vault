@@ -101,7 +101,8 @@ export default class FormFieldComponent extends Component {
   }
   get subtext() {
     const { subText, helpText } = this.args.attr.options;
-    return subText || this.args.useHelpTextAsSubtext ? helpText : '';
+    if (subText) return subText;
+    return this.args.useHelpTextAsSubtext && helpText ? helpText : '';
   }
   // used in the label element next to the form element
   get labelString() {
