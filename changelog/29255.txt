@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: Fix a bug that prevented the full CA chain to be used when enforcing name constraints.
+```
