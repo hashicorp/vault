@@ -135,23 +135,36 @@ const MOUNTABLE_SECRET_ENGINES = [
 ];
 
 // A list of Workload Identity Federation engines.
-// Will eventually include Azure and GCP.
-export const WIF_ENGINES = ['aws'];
+export const WIF_ENGINES = ['aws', 'azure'];
 
 export function wifEngines() {
   return WIF_ENGINES.slice();
 }
 
+// The UI only supports configuration views for these secrets engines. The CLI must be used to manage other engine resources (i.e. roles, credentials).
+// Will eventually include gcp.
+export const CONFIGURATION_ONLY = ['azure'];
+
+export function configurationOnly() {
+  return CONFIGURATION_ONLY.slice();
+}
+
 // Secret engines that have their own configuration page and actions
 // These engines do not exist in their own Ember engine.
-export const CONFIGURABLE_SECRET_ENGINES = ['aws', 'ssh'];
+export const CONFIGURABLE_SECRET_ENGINES = ['aws', 'azure', 'ssh'];
 
 export function configurableSecretEngines() {
-  return MOUNTABLE_SECRET_ENGINES.slice();
+  return CONFIGURABLE_SECRET_ENGINES.slice();
 }
 
 export function mountableEngines() {
   return MOUNTABLE_SECRET_ENGINES.slice();
+}
+// secret engines that have not other views than the mount view and mount details view
+export const UNSUPPORTED_ENGINES = ['alicloud', 'consul', 'gcp', 'gcpkms', 'nomad', 'rabbitmq', 'totp'];
+
+export function unsupportedEngines() {
+  return UNSUPPORTED_ENGINES.slice();
 }
 
 export function allEngines() {
