@@ -21,7 +21,6 @@ const validations = {
   'notBeforeDuration',
   'enforceLeafNotAfterBehavior',
   'format',
-  'permittedDnsDomains',
   'maxPathLength',
 ])
 export default class PkiSignIntermediateModel extends PkiCertificateBaseModel {

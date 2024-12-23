@@ -10,7 +10,7 @@
       for={{@attr.name}}
       @label={{this.labelString}}
       @helpText={{(if this.showHelpText @attr.options.helpText)}}
-      @subText={{@attr.options.subText}}
+      @subText={{this.subtext}}
       @docLink={{@attr.options.docLink}}
     />
   {{/unless}}
@@ -116,7 +116,7 @@
         @wildcardLabel={{@attr.options.wildcardLabel}}
         @label={{this.labelString}}
         @labelClass={{if @attr.options.isSectionHeader "title is-4" "is-label"}}
-        @subText={{@attr.options.subText}}
+        @subText={{this.subtext}}
         @helpText={{@attr.options.helpText}}
         @fallbackComponent={{@attr.options.fallbackComponent}}
         @selectLimit={{@attr.options.selectLimit}}
@@ -141,7 +141,7 @@
       @label={{this.labelString}}
       @labelClass={{if @attr.options.isSectionHeader "title is-4" "is-label"}}
       @helpText={{@attr.options.helpText}}
-      @subText={{@attr.options.subText}}
+      @subText={{this.subtext}}
       @onKeyUp={{this.handleKeyUp}}
       @keyPlaceholder={{@attr.options.keyPlaceholder}}
       @valuePlaceholder={{@attr.options.valuePlaceholder}}
@@ -154,7 +154,7 @@
     <div class="has-bottom-margin-m" data-test-input={{@attr.name}}>
       <TextFile
         @label={{this.labelString}}
-        @subText={{@attr.options.subText}}
+        @subText={{this.subtext}}
         @helpText={{@attr.options.helpText}}
         @docLink={{@attr.options.docLink}}
         @onChange={{this.setFile}}
@@ -199,7 +199,7 @@
       <div class="description has-text-grey">
         {{#if this.showInput}}
           <span>
-            {{@attr.options.subText}}
+            {{this.subtext}}
             {{#if @attr.options.docLink}}
               <DocLink @path={{@attr.options.docLink}}>
                 See our documentation
@@ -241,7 +241,7 @@
       @inputValue={{get @model this.valuePath}}
       @onChange={{this.setAndBroadcast}}
       @attrName={{@attr.name}}
-      @subText="{{@attr.options.subText}} Add one item per row."
+      @subText="{{this.subtext}} Add one item per row."
     />
   {{else if (eq @attr.options.sensitive true)}}
     <MaskedInput
@@ -302,9 +302,9 @@
             {{/if}}
           </JsonEditor>
         {{/let}}
-        {{#if @attr.options.subText}}
+        {{#if this.subtext}}
           <p class="sub-text">
-            {{@attr.options.subText}}
+            {{this.subtext}}
             {{#if @attr.options.docLink}}
               <DocLink @path={{@attr.options.docLink}}>
                 See our documentation
@@ -349,9 +349,9 @@
           <InfoTooltip>{{@attr.options.helpText}}</InfoTooltip>
         {{/if}}
       </label>
-      {{#if @attr.options.subText}}
+      {{#if this.subtext}}
         <p class="sub-text">
-          {{@attr.options.subText}}
+          {{this.subtext}}
           {{#if @attr.options.docLink}}
             <DocLink @path={{@attr.options.docLink}}>
               Learn more here.
