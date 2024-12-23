@@ -57,6 +57,11 @@ func VerifyCertificate(ctx context.Context, storage logical.Storage, issuerId Is
 			intermediateCertPool.AddCert(cert)
 		}
 	}
+	if len(rootCertPool.Subjects()) < 1 {
+		// Alright, this is weird, since we don't have the root CA, we'll treat the intermediate as
+		// the root, otherwise we'll get a "x509: certificate signed by unknown authority" error.
+		rootCertPool, intermediateCertPool = intermediateCertPool, rootCertPool
+	}
 
 	// Note that we use github.com/google/certificate-transparency-go/x509 to perform certificate verification,
 	// since that library provides options to disable checks that the standard library does not.
