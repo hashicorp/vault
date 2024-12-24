@@ -50,7 +50,7 @@ module('Integration | Component | policy-example', function (hooks) {
     assert
       .dom(SELECTORS.policyDescription('rgp'))
       .hasText(
-        'Role Governing Policies (RGPs) are tied to client tokens or identities which is similar to ACL policies . They use Sentinel as a language framework to enable fine-grained policy decisions.'
+        'Role Governing Policies (RGPs) are tied to client tokens or identities which is similar to ACL policies. They use Sentinel as a language framework to enable fine-grained policy decisions.'
       );
   });
 
