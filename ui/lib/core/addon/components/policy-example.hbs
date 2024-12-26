@@ -8,7 +8,7 @@
     <p data-test-example-modal-text="acl">
       <Hds::Link::Inline @href={{doc-link "/vault/tutorials/get-started/introduction-policies"}}>ACL Policies</Hds::Link::Inline>
       are written in Hashicorp Configuration Language (
-      <Hds::Link::Inline @href="https://github.com/hashicorp/hcl">HCL</Hds::Link::Inline>
+      <Hds::Link::Inline @isHrefExternal={{true}} @href="https://github.com/hashicorp/hcl">HCL</Hds::Link::Inline>
       ) or JSON and describe which paths in Vault a user or machine is allowed to access. Here is an example policy:
     </p>
   {{else if (eq @policyType "rgp")}}
@@ -32,7 +32,10 @@
       Endpoint Governing Policies (EGPs) are tied to particular paths (e.g.
       <code class="tag is-marginless is-paddingless">aws/creds/</code>
       ) instead of tokens. They use
-      <Hds::Link::Inline @href="https://docs.hashicorp.com/sentinel/language">Sentinel</Hds::Link::Inline>
+      <Hds::Link::Inline
+        @isHrefExternal={{true}}
+        @href="https://docs.hashicorp.com/sentinel/language"
+      >Sentinel</Hds::Link::Inline>
       as a language to access
       <Hds::Link::Inline @href={{doc-link "/vault/docs/enterprise/sentinel/properties"}}>properties</Hds::Link::Inline>
       of the incoming requests.
