@@ -49,9 +49,9 @@ export default class LdapLibraryCheckOutRoute extends Route {
     const library = this.modelFor('libraries.library') as LdapLibraryModel;
     controller.breadcrumbs = [
       { label: library.backend, route: 'overview' },
-      { label: 'libraries', route: 'libraries' },
+      { label: 'Libraries', route: 'libraries' },
       { label: library.name, route: 'libraries.library' },
-      { label: 'check-out' },
+      { label: 'Check-Out' },
     ];
   }
 

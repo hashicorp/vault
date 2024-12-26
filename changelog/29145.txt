@@ -1,4 +1,0 @@
-```release-note:improvement
-activity: Add a "local_mount" field to the Export API response. This field is true if the client is a token or created on a
-local mount.
-```
