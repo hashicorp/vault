@@ -534,28 +534,23 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 		return logical.ErrorResponse("version %q is not allowed because 'builtin' is a reserved metadata identifier", pluginVersion), nil
 	}
 
-	licenseState, err := b.Core.EntGetLicenseState()
-	if err != nil {
-		return logical.ErrorResponse("failed to get license state: %w", err), nil
-	}
-
 	sha256 := d.Get("sha256").(string)
 	if sha256 == "" {
 		sha256 = d.Get("sha_256").(string)
-		if sha256 == "" && licenseState == nil {
-			return logical.ErrorResponse("missing SHA-256 value, register plugin with artifact and implicit SHA-256 is enterprise only feature"), nil
+		if resp := validateSHA256(sha256); resp.IsError() {
+			return resp, nil
 		}
 	}
 
 	command := d.Get("command").(string)
 	ociImage := d.Get("oci_image").(string)
-	if ociImage == "" {
-		if command == "" {
-			return logical.ErrorResponse("must provide at least one of command or oci_image"), nil
-		}
+	if command == "" && ociImage == "" {
+		return logical.ErrorResponse("must provide at least one of command or oci_image"), nil
+	}
 
-		if licenseState != nil && pluginVersion == "" && sha256 == "" {
-			return logical.ErrorResponse("enterprise only: must provide version to register plugin with artifact"), nil
+	if ociImage == "" {
+		if resp := validateVersionSHA256(pluginVersion, sha256); resp.IsError() {
+			return resp, nil
 		}
 
 		if err = b.Core.CheckPluginPerms(command); err != nil {
