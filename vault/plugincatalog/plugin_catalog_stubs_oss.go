@@ -133,6 +133,6 @@ func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPl
 	return entry, nil
 }
 
-func (c *PluginCatalog) entSanitize(context.Context) error {
+func (c *PluginCatalog) entValidate(context.Context) error {
 	return nil
 }
