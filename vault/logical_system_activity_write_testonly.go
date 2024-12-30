@@ -85,13 +85,14 @@ func (b *SystemBackend) handleActivityWriteData(ctx context.Context, request *lo
 	for _, opt := range input.Write {
 		opts[opt] = struct{}{}
 	}
-	localPaths, globalPaths, err := generated.write(ctx, opts, b.Core.activityLog, now)
+	paths, localPaths, globalPaths, err := generated.write(ctx, opts, b.Core.activityLog, now)
 	if err != nil {
 		b.logger.Debug("failed to write activity log data", "error", err.Error())
 		return logical.ErrorResponse("failed to write data"), err
 	}
 	return &logical.Response{
 		Data: map[string]interface{}{
+			"paths":        paths,
 			"local_paths":  localPaths,
 			"global_paths": globalPaths,
 		},
@@ -100,10 +101,15 @@ func (b *SystemBackend) handleActivityWriteData(ctx context.Context, request *lo
 
 // singleMonthActivityClients holds a single month's client IDs, in the order they were seen
 type singleMonthActivityClients struct {
+	// clients are indexed by ID
+	clients []*activity.EntityRecord
 	// globalClients are indexed by ID
 	globalClients []*activity.EntityRecord
 	// localClients are indexed by ID
 	localClients []*activity.EntityRecord
+	// predefinedSegments map from the segment number to the client's index in
+	// the clients slice
+	predefinedSegments map[int][]int
 	// predefinedGlobalSegments map from the segment number to the client's index in
 	// the clients slice
 	predefinedGlobalSegments map[int][]int
@@ -120,13 +126,17 @@ type multipleMonthsActivityClients struct {
 	months []*singleMonthActivityClients
 }
 
-func (s *singleMonthActivityClients) addEntityRecord(core *Core, record *activity.EntityRecord, segmentIndex *int, local bool) {
+func (s *singleMonthActivityClients) addEntityRecord(core *Core, record *activity.EntityRecord, segmentIndex *int) {
+	s.clients = append(s.clients, record)
+	local, _ := core.activityLog.isClientLocal(record)
 	if !local {
 		s.globalClients = append(s.globalClients, record)
 	} else {
 		s.localClients = append(s.localClients, record)
 	}
 	if segmentIndex != nil {
+		index := len(s.clients) - 1
+		s.predefinedSegments[*segmentIndex] = append(s.predefinedSegments[*segmentIndex], index)
 		if !local {
 			globalIndex := len(s.globalClients) - 1
 			s.predefinedGlobalSegments[*segmentIndex] = append(s.predefinedGlobalSegments[*segmentIndex], globalIndex)
@@ -220,15 +230,9 @@ func (s *singleMonthActivityClients) addNewClients(c *generation.Client, mountAc
 	if c.Count > 1 {
 		count = int(c.Count)
 	}
+	isNonEntity := c.ClientType != entityActivityType
 	ts := timeutil.MonthsPreviousTo(int(monthsAgo), now)
 
-	// identify is client is local or global
-	isLocal, err := isClientLocal(core, c.ClientType, mountAccessor)
-	if err != nil {
-		return err
-	}
-
-	isNonEntity := c.ClientType != entityActivityType
 	for i := 0; i < count; i++ {
 		record := &activity.EntityRecord{
 			ClientID:      c.Id,
@@ -246,7 +250,7 @@ func (s *singleMonthActivityClients) addNewClients(c *generation.Client, mountAc
 			}
 		}
 
-		s.addEntityRecord(core, record, segmentIndex, isLocal)
+		s.addEntityRecord(core, record, segmentIndex)
 	}
 	return nil
 }
@@ -355,25 +359,13 @@ func (m *multipleMonthsActivityClients) addRepeatedClients(monthsAgo int32, c *g
 		repeatedFromMonth = c.RepeatedFromMonth
 	}
 	repeatedFrom := m.months[repeatedFromMonth]
-
-	// identify is client is local or global
-	isLocal, err := isClientLocal(core, c.ClientType, mountAccessor)
-	if err != nil {
-		return err
-	}
-
 	numClients := 1
 	if c.Count > 0 {
 		numClients = int(c.Count)
 	}
-
-	repeatedClients := repeatedFrom.globalClients
-	if isLocal {
-		repeatedClients = repeatedFrom.localClients
-	}
-	for _, client := range repeatedClients {
+	for _, client := range repeatedFrom.clients {
 		if c.ClientType == client.ClientType && mountAccessor == client.MountAccessor && c.Namespace == client.NamespaceID {
-			addingTo.addEntityRecord(core, client, segmentIndex, isLocal)
+			addingTo.addEntityRecord(core, client, segmentIndex)
 			numClients--
 			if numClients == 0 {
 				break
@@ -384,23 +376,6 @@ func (m *multipleMonthsActivityClients) addRepeatedClients(monthsAgo int32, c *g
 		return fmt.Errorf("missing repeated %d clients matching given parameters", numClients)
 	}
 	return nil
-}
-
-// isClientLocal checks whether the given client is on a local mount.
-// In all other cases, we will assume it is a global client.
-func isClientLocal(core *Core, clientType string, mountAccessor string) (bool, error) {
-	// Tokens are not replicated to performance secondary clusters
-	if clientType == nonEntityTokenActivityType {
-		return true, nil
-	}
-	mountEntry := core.router.MatchingMountByAccessor(mountAccessor)
-	// If the mount entry is nil, this means the mount has been deleted. We will assume it was replicated because we do not want to
-	// over count clients
-	if mountEntry != nil && mountEntry.Local {
-		return true, nil
-	}
-
-	return false, nil
 }
 
 func (m *multipleMonthsActivityClients) addMissingCurrentMonth() {
@@ -420,7 +395,8 @@ func (m *multipleMonthsActivityClients) timestampForMonth(i int, now time.Time) 
 	return now
 }
 
-func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[generation.WriteOptions]struct{}, activityLog *ActivityLog, now time.Time) ([]string, []string, error) {
+func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[generation.WriteOptions]struct{}, activityLog *ActivityLog, now time.Time) ([]string, []string, []string, error) {
+	paths := []string{}
 	globalPaths := []string{}
 	localPaths := []string{}
 
@@ -435,10 +411,30 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 			continue
 		}
 		timestamp := m.timestampForMonth(i, now)
+		segments, err := month.populateSegments(month.predefinedSegments, month.clients)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		for segmentIndex, segment := range segments {
+			if segment == nil {
+				// skip the index
+				continue
+			}
+			entityPath, err := activityLog.saveSegmentEntitiesInternal(ctx, segmentInfo{
+				startTimestamp:       timestamp.Unix(),
+				currentClients:       &activity.EntityActivityLog{Clients: segment},
+				clientSequenceNumber: uint64(segmentIndex),
+				tokenCount:           &activity.TokenCount{},
+			}, true, "")
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			paths = append(paths, entityPath)
+		}
 		if len(month.globalClients) > 0 {
 			globalSegments, err := month.populateSegments(month.predefinedGlobalSegments, month.globalClients)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 			for segmentIndex, segment := range globalSegments {
 				if segment == nil {
@@ -452,7 +448,7 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 					tokenCount:           &activity.TokenCount{},
 				}, true, activityGlobalPathPrefix)
 				if err != nil {
-					return nil, nil, err
+					return nil, nil, nil, err
 				}
 				globalPaths = append(globalPaths, entityPath)
 			}
@@ -460,7 +456,7 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 		if len(month.localClients) > 0 {
 			localSegments, err := month.populateSegments(month.predefinedLocalSegments, month.localClients)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 			for segmentIndex, segment := range localSegments {
 				if segment == nil {
@@ -474,7 +470,7 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 					tokenCount:           &activity.TokenCount{},
 				}, true, activityLocalPathPrefix)
 				if err != nil {
-					return nil, nil, err
+					return nil, nil, nil, err
 				}
 				localPaths = append(localPaths, entityPath)
 			}
@@ -499,16 +495,16 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 	if writeIntentLog {
 		err := activityLog.writeIntentLog(ctx, m.latestTimestamp(now, false).Unix(), m.latestTimestamp(now, true).UTC())
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 	wg := sync.WaitGroup{}
 	err := activityLog.refreshFromStoredLog(ctx, &wg, now)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	wg.Wait()
-	return localPaths, globalPaths, nil
+	return paths, localPaths, globalPaths, nil
 }
 
 func (m *multipleMonthsActivityClients) latestTimestamp(now time.Time, includeCurrentMonth bool) time.Time {
@@ -536,6 +532,7 @@ func newMultipleMonthsActivityClients(numberOfMonths int) *multipleMonthsActivit
 	}
 	for i := 0; i < numberOfMonths; i++ {
 		m.months[i] = &singleMonthActivityClients{
+			predefinedSegments:       make(map[int][]int),
 			predefinedGlobalSegments: make(map[int][]int),
 			predefinedLocalSegments:  make(map[int][]int),
 		}
@@ -585,4 +582,13 @@ func (p *sliceSegmentReader) ReadLocalEntity(ctx context.Context) (*activity.Ent
 
 func (p *sliceSegmentReader) ReadToken(ctx context.Context) (*activity.TokenCount, error) {
 	return nil, io.EOF
+}
+
+func (p *sliceSegmentReader) ReadEntity(ctx context.Context) (*activity.EntityActivityLog, error) {
+	if p.i == len(p.records) {
+		return nil, io.EOF
+	}
+	record := p.records[p.i]
+	p.i++
+	return &activity.EntityActivityLog{Clients: record}, nil
 }
