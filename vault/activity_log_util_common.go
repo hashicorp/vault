@@ -10,12 +10,10 @@ import (
 	"io"
 	"slices"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/axiomhq/hyperloglog"
-	semver "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
@@ -553,133 +551,4 @@ func (a *ActivityLog) namespaceRecordToCountsResponse(record *activity.Namespace
 		SecretSyncs:      int(record.SecretSyncs),
 		ACMEClients:      int(record.ACMEClients),
 	}
-}
-
-func (a *ActivityLog) extractLocalGlobalClientsDeprecatedStoragePath(ctx context.Context) (map[int64][]*activity.EntityRecord, map[int64][]*activity.EntityRecord, error) {
-	clusterGlobalClients := make(map[int64][]*activity.EntityRecord)
-	clusterLocalClients := make(map[int64][]*activity.EntityRecord)
-
-	// Extract global clients on the current cluster per month store them in a map
-	times, err := a.availableTimesAtPath(ctx, time.Now(), activityEntityBasePath)
-	if err != nil {
-		a.logger.Error("could not list available logs until now")
-		return clusterLocalClients, clusterGlobalClients, fmt.Errorf("could not list available logs on the cluster")
-	}
-	for _, time := range times {
-		segments, err := a.getAllEntitySegmentsForMonth(ctx, activityEntityBasePath, time.Unix())
-		if err != nil {
-			return nil, nil, err
-		}
-		for _, segment := range segments {
-			for _, entity := range segment.GetClients() {
-				// If the client is not local, then add it to a map
-				// Normalize month value to the beginning of the month to avoid multiple storage entries for the same month
-				startOfMonth := timeutil.StartOfMonth(time.UTC())
-				if local, _ := a.isClientLocal(entity); !local {
-					if _, ok := clusterGlobalClients[startOfMonth.Unix()]; !ok {
-						clusterGlobalClients[startOfMonth.Unix()] = make([]*activity.EntityRecord, 0)
-					}
-					clusterGlobalClients[startOfMonth.Unix()] = append(clusterGlobalClients[startOfMonth.Unix()], entity)
-				} else {
-					if _, ok := clusterLocalClients[startOfMonth.Unix()]; !ok {
-						clusterLocalClients[startOfMonth.Unix()] = make([]*activity.EntityRecord, 0)
-					}
-					clusterLocalClients[startOfMonth.Unix()] = append(clusterLocalClients[startOfMonth.Unix()], entity)
-				}
-			}
-		}
-	}
-
-	return clusterLocalClients, clusterGlobalClients, nil
-}
-
-func (a *ActivityLog) extractTokensDeprecatedStoragePath(ctx context.Context) (map[int64][]map[string]uint64, error) {
-	tokensByMonth := make(map[int64][]map[string]uint64)
-	times, err := a.availableTimesAtPath(ctx, time.Now(), activityTokenBasePath)
-	if err != nil {
-		return nil, err
-	}
-	for _, monthTime := range times {
-		tokenPath := activityTokenBasePath + fmt.Sprint(monthTime.Unix()) + "/"
-		segmentPaths, err := a.view.List(ctx, tokenPath)
-		if err != nil {
-			return nil, err
-		}
-		tokensByMonth[monthTime.Unix()] = make([]map[string]uint64, 0)
-		for _, seqNum := range segmentPaths {
-			tokenCount, err := a.readTokenSegmentAtPath(ctx, tokenPath+seqNum)
-			if tokenCount == nil {
-				a.logger.Error("data at path has been unexpectedly deleted", "path", tokenPath+seqNum)
-				continue
-			}
-			if err != nil {
-				return nil, err
-			}
-			tokensByMonth[monthTime.Unix()] = append(tokensByMonth[monthTime.Unix()], tokenCount.CountByNamespaceID)
-		}
-	}
-	return tokensByMonth, nil
-}
-
-func (a *ActivityLog) getAllEntitySegmentsForMonth(ctx context.Context, path string, time int64) ([]*activity.EntityActivityLog, error) {
-	entityPathWithTime := fmt.Sprintf("%s%d/", path, time)
-	segments := make([]*activity.EntityActivityLog, 0)
-	segmentPaths, err := a.view.List(ctx, entityPathWithTime)
-	if err != nil {
-		return segments, err
-	}
-	for _, seqNum := range segmentPaths {
-		segment, err := a.readEntitySegmentAtPath(ctx, entityPathWithTime+seqNum)
-		if err != nil {
-			return segments, err
-		}
-		if segment != nil {
-			segments = append(segments, segment)
-		}
-	}
-	return segments, nil
-}
-
-// OldestVersionHasDeduplicatedClients returns whether this cluster is 1.19+, and
-// hence supports deduplicated clients
-func (a *ActivityLog) OldestVersionHasDeduplicatedClients(ctx context.Context) bool {
-	oldestVersionIsDedupClients := a.core.IsNewInstall(ctx)
-	if !oldestVersionIsDedupClients {
-		if v, _, err := a.core.FindOldestVersionTimestamp(); err == nil {
-			oldestVersion, err := semver.NewSemver(v)
-			if err != nil {
-				a.core.logger.Debug("could not extract version instance", "version", v)
-				return false
-			}
-			dedupChangeVersion, err := semver.NewSemver(DeduplicatedClientMinimumVersion)
-			if err != nil {
-				a.core.logger.Debug("could not extract version instance", "version", DeduplicatedClientMinimumVersion)
-				return false
-			}
-			oldestVersionIsDedupClients = oldestVersionIsDedupClients || oldestVersion.GreaterThanOrEqual(dedupChangeVersion)
-		}
-	}
-	return oldestVersionIsDedupClients
-}
-
-func (a *ActivityLog) loadClientDataIntoSegment(ctx context.Context, pathPrefix string, startTime time.Time, seqNum uint64, currentSegment *segmentInfo) ([]*activity.EntityRecord, error) {
-	path := pathPrefix + activityEntityBasePath + fmt.Sprint(startTime.Unix()) + "/" + strconv.FormatUint(seqNum, 10)
-	out, err := a.readEntitySegmentAtPath(ctx, path)
-	if err != nil && !errors.Is(err, ErrEmptyResponse) {
-		return nil, err
-	}
-	if out != nil {
-		if !a.core.perfStandby {
-			a.logger.Debug(fmt.Sprintf("loading client data from %s into segment", path))
-			currentSegment.startTimestamp = startTime.Unix()
-			currentSegment.currentClients = &activity.EntityActivityLog{Clients: out.Clients}
-			currentSegment.clientSequenceNumber = seqNum
-
-		} else {
-			// populate this for edge case checking (if end of month passes while background loading on standby)
-			currentSegment.startTimestamp = startTime.Unix()
-		}
-		return out.GetClients(), nil
-	}
-	return []*activity.EntityRecord{}, nil
 }
