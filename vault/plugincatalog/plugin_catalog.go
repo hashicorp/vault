@@ -43,7 +43,6 @@ var (
 	ErrPinnedVersion            = errors.New("cannot delete a pinned version")
 	ErrPluginVersionMismatch    = errors.New("plugin version mismatch")
 	ErrPluginUnableToRun        = errors.New("unable to run plugin")
-	ErrEnterpriseFeatureOnly    = errors.New("enterprise only feature")
 )
 
 // PluginCatalog keeps a record of plugins known to vault. External plugins need
