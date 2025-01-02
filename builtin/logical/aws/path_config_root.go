@@ -9,13 +9,17 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginidentityutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // A single default template that supports both the different credential types (IAM/STS) that are capped at differing length limits (64 chars/32 chars respectively)
-const defaultUserNameTemplate = `{{ if (eq .Type "STS") }}{{ printf "vault-%s-%s"  (unix_time) (random 20) | truncate 32 }}{{ else }}{{ printf "vault-%s-%s-%s" (printf "%s-%s" (.DisplayName) (.PolicyName) | truncate 42) (unix_time) (random 20) | truncate 64 }}{{ end }}`
+const (
+	defaultUserNameTemplate = `{{ if (eq .Type "STS") }}{{ printf "vault-%s-%s"  (unix_time) (random 20) | truncate 32 }}{{ else }}{{ printf "vault-%s-%s-%s" (printf "%s-%s" (.DisplayName) (.PolicyName) | truncate 42) (unix_time) (random 20) | truncate 64 }}{{ end }}`
+	rootRotationJobName     = "aws-root-creds"
+)
 
 func pathConfigRoot(b *backend) *framework.Path {
 	p := &framework.Path{
@@ -95,6 +99,7 @@ func pathConfigRoot(b *backend) *framework.Path {
 		HelpDescription: pathConfigRootHelpDesc,
 	}
 	pluginidentityutil.AddPluginIdentityTokenFields(p.Fields)
+	automatedrotationutil.AddAutomatedRotationFields(p.Fields)
 
 	return p
 }
@@ -131,6 +136,8 @@ func (b *backend) pathConfigRootRead(ctx context.Context, req *logical.Request, 
 	}
 
 	config.PopulatePluginIdentityTokenData(configData)
+	config.PopulateAutomatedRotationData(configData)
+
 	return &logical.Response{
 		Data: configData,
 	}, nil
@@ -174,6 +181,9 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 	if err := rc.ParsePluginIdentityTokenFields(data); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
+	if err := rc.ParseAutomatedRotationFields(data); err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
 
 	if rc.IdentityTokenAudience != "" && rc.AccessKey != "" {
 		return logical.ErrorResponse("only one of 'access_key' or 'identity_token_audience' can be set"), nil
@@ -204,6 +214,41 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 		return nil, err
 	}
 
+	// Now that the root config is set up, register the rotation job if it required
+	if rc.RotationSchedule != "" || rc.RotationTTL != 0 {
+		cfgReq := &logical.RotationJobConfigureRequest{
+			Name:             rootRotationJobName,
+			MountPoint:       req.MountPoint,
+			ReqPath:          req.Path,
+			RotationSchedule: rc.RotationSchedule,
+			RotationWindow:   rc.RotationWindow,
+			RotationTTL:      rc.RotationTTL,
+		}
+
+		rotationJob, err := logical.ConfigureRotationJob(cfgReq)
+		if err != nil {
+			return logical.ErrorResponse("error configuring rotation job: %s", err), nil
+		}
+
+		b.Logger().Debug("Registering rotation job", "mount", req.MountPoint+req.Path)
+		rotationID, err := b.System().RegisterRotationJob(ctx, rotationJob)
+		if err != nil {
+			return logical.ErrorResponse("error registering rotation job: %s", err), nil
+		}
+
+		rc.RotationID = rotationID
+
+		// update config entry with rotation ID
+		entry, err = logical.StorageEntryJSON("config/root", rc)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := req.Storage.Put(ctx, entry); err != nil {
+			return nil, err
+		}
+	}
+
 	// clear possible cached IAM / STS clients after successfully updating
 	// config/root
 	b.iamClient = nil
@@ -214,6 +259,7 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 
 type rootConfig struct {
 	pluginidentityutil.PluginIdentityTokenParams
+	automatedrotationutil.AutomatedRotationParams
 
 	AccessKey            string   `json:"access_key"`
 	SecretKey            string   `json:"secret_key"`
