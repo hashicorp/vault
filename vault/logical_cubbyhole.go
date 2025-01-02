@@ -7,13 +7,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
-
 	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"strings"
+)
+
+const (
+	lifetimeSession    = "session"
+	lifetimePersistent = "persistent"
 )
 
 // CubbyholeBackendFactory constructs a new cubbyhole backend
@@ -47,6 +51,38 @@ type CubbyholeBackend struct {
 
 func (b *CubbyholeBackend) paths() []*framework.Path {
 	return []*framework.Path{
+
+		{
+			Pattern: "config/lifetime",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "cubbyhole",
+			},
+
+			Fields: map[string]*framework.FieldSchema{
+				"lifetime": {
+					Type:        framework.TypeString,
+					Description: `Defines the behavior of the storage used for cubbyhole\'s secrets. Per default, cubbyhole data is destroyed after the token\'s expiration. If set persistent, secrets are persisted and are linked to user\'s entity`,
+					Default:     "session",
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.pathLifetimeWrite,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "write",
+						OperationSuffix: "lifetime",
+					},
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathLifetimeRead,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "lifetime",
+					},
+				},
+			},
+		},
 		{
 			Pattern: framework.MatchAllRegex("path"),
 
@@ -131,8 +167,10 @@ func (b *CubbyholeBackend) handleExistenceCheck(ctx context.Context, req *logica
 }
 
 func (b *CubbyholeBackend) handleRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	if req.ClientToken == "" {
-		return nil, fmt.Errorf("client token empty")
+	pathPrefix, err := b.GetPathPrefixFromRequest(ctx, req)
+
+	if err != nil {
+		return nil, err
 	}
 
 	path := data.Get("path").(string)
@@ -142,7 +180,7 @@ func (b *CubbyholeBackend) handleRead(ctx context.Context, req *logical.Request,
 	}
 
 	// Read the path
-	out, err := req.Storage.Get(ctx, req.ClientToken+"/"+path)
+	out, err := req.Storage.Get(ctx, pathPrefix+"/"+path)
 	if err != nil {
 		return nil, fmt.Errorf("read failed: %w", err)
 	}
@@ -167,9 +205,12 @@ func (b *CubbyholeBackend) handleRead(ctx context.Context, req *logical.Request,
 }
 
 func (b *CubbyholeBackend) handleWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	if req.ClientToken == "" {
-		return nil, fmt.Errorf("client token empty")
+	pathPrefix, err := b.GetPathPrefixFromRequest(ctx, req)
+
+	if err != nil {
+		return nil, err
 	}
+
 	// Check that some fields are given
 	if len(req.Data) == 0 {
 		return nil, fmt.Errorf("missing data fields")
@@ -189,7 +230,7 @@ func (b *CubbyholeBackend) handleWrite(ctx context.Context, req *logical.Request
 
 	// Write out a new key
 	entry := &logical.StorageEntry{
-		Key:   req.ClientToken + "/" + path,
+		Key:   pathPrefix + "/" + path,
 		Value: buf,
 	}
 	if req.WrapInfo != nil && req.WrapInfo.SealWrap {
@@ -203,14 +244,16 @@ func (b *CubbyholeBackend) handleWrite(ctx context.Context, req *logical.Request
 }
 
 func (b *CubbyholeBackend) handleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	if req.ClientToken == "" {
-		return nil, fmt.Errorf("client token empty")
+	pathPrefix, err := b.GetPathPrefixFromRequest(ctx, req)
+
+	if err != nil {
+		return nil, err
 	}
 
 	path := data.Get("path").(string)
 
 	// Delete the key at the request path
-	if err := req.Storage.Delete(ctx, req.ClientToken+"/"+path); err != nil {
+	if err := req.Storage.Delete(ctx, pathPrefix+"/"+path); err != nil {
 		return nil, err
 	}
 
@@ -218,8 +261,10 @@ func (b *CubbyholeBackend) handleDelete(ctx context.Context, req *logical.Reques
 }
 
 func (b *CubbyholeBackend) handleList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	if req.ClientToken == "" {
-		return nil, fmt.Errorf("client token empty")
+	pathPrefix, err := b.GetPathPrefixFromRequest(ctx, req)
+
+	if err != nil {
+		return nil, err
 	}
 
 	// Right now we only handle directories, so ensure it ends with / We also
@@ -231,7 +276,7 @@ func (b *CubbyholeBackend) handleList(ctx context.Context, req *logical.Request,
 	}
 
 	// List the keys at the prefix given by the request
-	keys, err := req.Storage.List(ctx, req.ClientToken+"/"+path)
+	keys, err := req.Storage.List(ctx, pathPrefix+"/"+path)
 	if err != nil {
 		return nil, err
 	}
@@ -244,6 +289,79 @@ func (b *CubbyholeBackend) handleList(ctx context.Context, req *logical.Request,
 
 	// Generate the response
 	return logical.ListResponse(strippedKeys), nil
+}
+
+// Returns the root path used for cubbyhole storage.
+func (b *CubbyholeBackend) GetPathPrefixFromRequest(ctx context.Context, req *logical.Request) (string, error) {
+	var pathPrefix string
+	lifetime, err := b.Lifetime(ctx, req.Storage)
+	if err != nil {
+		return "", err
+	}
+
+	if lifetime == lifetimePersistent {
+		//Cubbyhole Lifetime linked to the user
+		if req.EntityID == "" {
+			return "", fmt.Errorf("entity ID empty")
+		}
+		pathPrefix = req.EntityID
+	} else {
+		//Cubbyhole Lifetime linked to the current session
+		if req.ClientToken == "" {
+			return "", fmt.Errorf("client token empty")
+		}
+		pathPrefix = req.ClientToken
+	}
+
+	return pathPrefix, nil
+}
+
+// Lifetime returns the storage persistence
+func (b *CubbyholeBackend) Lifetime(ctx context.Context, s logical.Storage) (string, error) {
+	entry, err := s.Get(ctx, "config/lifetime")
+	if err != nil {
+		return lifetimeSession, err
+	}
+
+	//Return default configuration
+	if entry == nil {
+		return lifetimeSession, nil
+	}
+
+	var result string
+	if err := entry.DecodeJSON(&result); err != nil {
+		return lifetimeSession, err
+	}
+
+	return result, nil
+}
+
+func (b *CubbyholeBackend) pathLifetimeWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	lifetimeRaw := d.Get("lifetime").(string)
+
+	// Store it
+	entry, err := logical.StorageEntryJSON("config/lifetime", lifetimeRaw)
+	if err != nil {
+		return nil, err
+	}
+	if err := req.Storage.Put(ctx, entry); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (b *CubbyholeBackend) pathLifetimeRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	lifetime, err := b.Lifetime(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"lifetime": lifetime,
+		},
+	}, nil
 }
 
 const cubbyholeHelp = `

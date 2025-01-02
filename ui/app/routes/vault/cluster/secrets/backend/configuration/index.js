@@ -70,6 +70,8 @@ export default class SecretsBackendConfigurationRoute extends Route {
         return this.fetchSshCaConfig(id);
       case 'azure':
         return this.fetchAzureConfig(id);
+      case 'cubbyhole':
+        return this.fetchCubbyholeConfig();
       default:
         return reject({ httpStatus: 404, message: 'not found', path: id });
     }
@@ -95,6 +97,18 @@ export default class SecretsBackendConfigurationRoute extends Route {
   async fetchAwsConfig(id, modelPath) {
     try {
       return await this.store.queryRecord(modelPath, { backend: id });
+    } catch (e) {
+      if (e.httpStatus === 404) {
+        // a 404 error is thrown when the lease config hasn't been set yet.
+        return;
+      }
+      throw e;
+    }
+  }
+
+  async fetchCubbyholeConfig() {
+    try {
+      return await this.store.queryRecord('cubbyhole/config');
     } catch (e) {
       if (e.httpStatus === 404) {
         // a 404 error is thrown when the lease config hasn't been set yet.
