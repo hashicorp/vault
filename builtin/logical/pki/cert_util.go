@@ -348,6 +348,19 @@ func generateCert(sc *storageContext,
 	if isCA {
 		data.Params.IsCA = isCA
 		data.Params.PermittedDNSDomains = input.apiData.Get("permitted_dns_domains").([]string)
+		data.Params.ExcludedDNSDomains = input.apiData.Get("excluded_dns_domains").([]string)
+		data.Params.PermittedIPRanges, err = convertIpRanges(input.apiData.Get("permitted_ip_ranges").([]string))
+		if err != nil {
+			return nil, nil, errutil.UserError{Err: fmt.Sprintf("invalid permitted_ip_ranges value: %s", err)}
+		}
+		data.Params.ExcludedIPRanges, err = convertIpRanges(input.apiData.Get("excluded_ip_ranges").([]string))
+		if err != nil {
+			return nil, nil, errutil.UserError{Err: fmt.Sprintf("invalid excluded_ip_ranges value: %s", err)}
+		}
+		data.Params.PermittedEmailAddresses = input.apiData.Get("permitted_email_addresses").([]string)
+		data.Params.ExcludedEmailAddresses = input.apiData.Get("excluded_email_addresses").([]string)
+		data.Params.PermittedURIDomains = input.apiData.Get("permitted_uri_domains").([]string)
+		data.Params.ExcludedURIDomains = input.apiData.Get("excluded_uri_domains").([]string)
 
 		if data.SigningBundle == nil {
 			// Generating a self-signed root certificate. Since we have no
@@ -397,6 +410,21 @@ func generateCert(sc *storageContext,
 	}
 
 	return parsedBundle, warnings, nil
+}
+
+// convertIpRanges parses each string in the input slice as an IP network. Input
+// strings are expected to be in the CIDR notation of IP address and prefix length
+// like "192.0.2.0/24" or "2001:db8::/32", as defined in RFC 4632 and RFC 4291.
+func convertIpRanges(ipRanges []string) ([]*net.IPNet, error) {
+	var ret []*net.IPNet
+	for _, ipRange := range ipRanges {
+		_, ipnet, err := net.ParseCIDR(ipRange)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing IP range %q: %w", ipRange, err)
+		}
+		ret = append(ret, ipnet)
+	}
+	return ret, nil
 }
 
 // N.B.: This is only meant to be used for generating intermediate CAs.
@@ -470,6 +498,34 @@ func (i SignCertInputFromDataFields) UseCSRValues() bool {
 
 func (i SignCertInputFromDataFields) GetPermittedDomains() []string {
 	return i.data.Get("permitted_dns_domains").([]string)
+}
+
+func (i SignCertInputFromDataFields) GetExcludedDomains() []string {
+	return i.data.Get("excluded_dns_domains").([]string)
+}
+
+func (i SignCertInputFromDataFields) GetPermittedIpRanges() ([]*net.IPNet, error) {
+	return convertIpRanges(i.data.Get("permitted_ip_ranges").([]string))
+}
+
+func (i SignCertInputFromDataFields) GetExcludedIpRanges() ([]*net.IPNet, error) {
+	return convertIpRanges(i.data.Get("excluded_ip_ranges").([]string))
+}
+
+func (i SignCertInputFromDataFields) GetPermittedEmailAddresses() []string {
+	return i.data.Get("permitted_email_addresses").([]string)
+}
+
+func (i SignCertInputFromDataFields) GetExcludedEmailAddresses() []string {
+	return i.data.Get("excluded_email_addresses").([]string)
+}
+
+func (i SignCertInputFromDataFields) GetPermittedUriDomains() []string {
+	return i.data.Get("permitted_uri_domains").([]string)
+}
+
+func (i SignCertInputFromDataFields) GetExcludedUriDomains() []string {
+	return i.data.Get("excluded_uri_domains").([]string)
 }
 
 func (i SignCertInputFromDataFields) IgnoreCSRSignature() bool {

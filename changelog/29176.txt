@@ -1,0 +1,3 @@
+```release-note:bug
+core: Prevent integer overflows of the barrier key counter on key rotation requests
+```
