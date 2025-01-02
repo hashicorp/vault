@@ -62,7 +62,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
       await runCmd(`delete sys/mounts/${path}`);
     });
 
-    test('it should show configuration with WIF options configured', async function (assert) {
+    test('it should show configuration details with WIF options configured', async function (assert) {
       const path = `GCP-${this.uid}`;
       const wifAttrs = {
         service_account_email: 'service-email',
@@ -89,7 +89,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
       await runCmd(`delete sys/mounts/${path}`);
     });
 
-    test('it should show configuration with GCP account options configured', async function (assert) {
+    test('it should show configuration details with GCP account options configured', async function (assert) {
       const path = `GCP-${this.uid}`;
       const GCPAccountAttrs = {
         credentials: '{"some-key":"some-value"}',
