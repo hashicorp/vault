@@ -14,9 +14,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 const selectors = {
   form: '[data-test-sign-intermediate-form]',
   csrInput: '[data-test-input="csr"]',
-  toggleSigningOptions: '[data-test-toggle-group="Signing options"]',
-  toggleSANOptions: '[data-test-toggle-group="Subject Alternative Name (SAN) Options"]',
-  toggleAdditionalFields: '[data-test-toggle-group="Additional subject fields"]',
+  toggleGroup: (group) => `[data-test-toggle-group="${group}"]`,
   fieldByName: (name) => `[data-test-field="${name}"]`,
   saveButton: '[data-test-pki-sign-intermediate-save]',
   cancelButton: '[data-test-pki-sign-intermediate-cancel]',
@@ -40,19 +38,24 @@ module('Integration | Component | pki-sign-intermediate-form', function (hooks) 
   });
 
   test('renders correctly on load', async function (assert) {
-    assert.expect(9);
+    assert.expect(10);
     await render(hbs`<PkiSignIntermediateForm @onCancel={{this.onCancel}} @model={{this.model}} />`, {
       owner: this.engine,
     });
 
     assert.dom(selectors.form).exists('Form is rendered');
     assert.dom(selectors.resultsContainer).doesNotExist('Results display not rendered');
-    assert.dom('[data-test-field]').exists({ count: 10 }, '10 default fields shown');
-    assert.dom(selectors.toggleSigningOptions).exists();
-    assert.dom(selectors.toggleSANOptions).exists();
-    assert.dom(selectors.toggleAdditionalFields).exists();
+    assert.dom('[data-test-field]').exists({ count: 9 }, '9 default fields shown');
+    [
+      'Name constraints',
+      'Signing options',
+      'Subject Alternative Name (SAN) Options',
+      'Additional subject fields',
+    ].forEach((group) => {
+      assert.dom(selectors.toggleGroup(group)).exists(`${group} renders`);
+    });
 
-    await click(selectors.toggleSigningOptions);
+    await click(selectors.toggleGroup('Signing options'));
     ['usePss', 'skid', 'signatureBits'].forEach((name) => {
       assert.dom(selectors.fieldByName(name)).exists();
     });
