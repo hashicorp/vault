@@ -21,7 +21,7 @@ export default class GcpConfig extends Model {
     label: 'Max TTL',
     editType: 'ttl',
     helperTextDisabled:
-      'Specifies the maximum Config time-to-live (TTL) for long-lived credentials (i.e. service account keys).',
+      'Specifies the maximum config TTL (time-to-live) for long-lived credentials (i.e. service account keys).',
   })
   maxTtl;
 
