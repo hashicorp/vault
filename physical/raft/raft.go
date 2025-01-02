@@ -258,7 +258,7 @@ type RaftBackend struct {
 
 	removed            *atomic.Bool
 	removedCallback    func()
-	perfStandbyCleanup func(context.Context, string) (bool, error)
+	removedNodeCleanup func(context.Context, string) (bool, error)
 }
 
 func (b *RaftBackend) IsNodeRemoved(ctx context.Context, nodeID string) (bool, error) {
@@ -285,18 +285,18 @@ func (b *RaftBackend) RemoveSelf() error {
 	return b.stableStore.SetUint64(removedKey, 1)
 }
 
-func (b *RaftBackend) SetPerfStandbyCleanupFunc(f func(context.Context, string) (bool, error)) {
+func (b *RaftBackend) SetRemovedNodeCleanup(f func(context.Context, string) (bool, error)) {
 	b.l.Lock()
-	b.perfStandbyCleanup = f
+	b.removedNodeCleanup = f
 	b.l.Unlock()
 }
 
-func (b *RaftBackend) PerfStandbyCleanup(ctx context.Context, nodeID string) (bool, error) {
+func (b *RaftBackend) RemovedNodeCleanup(ctx context.Context, nodeID string) (bool, error) {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
-	if b.perfStandbyCleanup != nil {
-		return b.perfStandbyCleanup(ctx, nodeID)
+	if b.removedNodeCleanup != nil {
+		return b.removedNodeCleanup(ctx, nodeID)
 	}
 
 	return false, nil

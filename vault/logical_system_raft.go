@@ -268,7 +268,7 @@ func (b *SystemBackend) handleRaftRemovePeerUpdate() framework.OperationFunc {
 		}
 
 		b.Core.raftFollowerStates.Delete(serverID)
-		_, err := raftBackend.PerfStandbyCleanup(ctx, serverID)
+		_, err := raftBackend.RemovedNodeCleanup(ctx, serverID)
 		if err != nil {
 			// log the error but don't return it - we might get an error if we can't find the node in the cache, which
 			// is not an error condition in this instance.
