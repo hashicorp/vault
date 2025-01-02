@@ -9,11 +9,11 @@ import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 export default class GcpConfig extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord
 
-  /* GCP creds, mutually exclusive with WIF fields */
+  /* GCP config fields */
   @attr({
     label: 'Config TTL',
     editType: 'ttl',
-    helperTextDisabled: 'The TTL of generated tokens. Defaults to 1 hour.',
+    helperTextDisabled: 'The time-to-live (TTL) of generated tokens.',
   })
   ttl;
 
@@ -21,7 +21,7 @@ export default class GcpConfig extends Model {
     label: 'Max TTL',
     editType: 'ttl',
     helperTextDisabled:
-      'Specifies the maximum Config TTL for long-lived credentials (i.e. service account keys).',
+      'Specifies the maximum Config time-to-live (TTL) for long-lived credentials (i.e. service account keys).',
   })
   maxTtl;
 
@@ -34,7 +34,7 @@ export default class GcpConfig extends Model {
   })
   credentials; // obfuscated, never returned by API.
 
-  /* WIF fields, mutually exclusive with GCP cred fields */
+  /* WIF config fields */
   @attr('string', {
     subText:
       'The audience claim value for plugin identity tokens. Must match an allowed audience configured for the target IAM OIDC identity provider.',
