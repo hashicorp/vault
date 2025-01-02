@@ -13,6 +13,11 @@ import (
 	"github.com/hashicorp/go-uuid"
 )
 
+func (b *RaftBackend) DataDir(t testing.TB) string {
+	t.Helper()
+	return b.dataDir
+}
+
 func GetRaft(t testing.TB, bootstrap bool, noStoreState bool) (*RaftBackend, string) {
 	return getRaftInternal(t, bootstrap, defaultRaftConfig(t, bootstrap, noStoreState), nil, nil, nil)
 }
