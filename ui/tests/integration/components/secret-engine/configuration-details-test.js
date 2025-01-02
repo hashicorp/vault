@@ -38,7 +38,7 @@ module('Integration | Component | SecretEngine/ConfigurationDetails', function (
   });
 
   for (const type of CONFIGURABLE_SECRET_ENGINES) {
-    test('it shows config details if configModel(s) are passed in', async function (assert) {
+    test(`it shows config details if configModel(s) are passed in for type: ${type}`, async function (assert) {
       const backend = `test-${type}`;
       this.configModels = createConfig(this.store, backend, type);
       this.typeDisplay = allEnginesArray.find((engine) => engine.type === type).displayName;
