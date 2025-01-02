@@ -16,6 +16,8 @@ import {
   expectedValueOfConfigKeys,
 } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 
+const allEnginesArray = allEngines(); // saving as const so we don't invoke the method multiple times via the for loop
+
 module('Integration | Component | SecretEngine/ConfigurationDetails', function (hooks) {
   setupRenderingTest(hooks);
 
@@ -35,10 +37,8 @@ module('Integration | Component | SecretEngine/ConfigurationDetails', function (
       .hasText(`Get started by configuring your Display Name secrets engine.`);
   });
 
-  test('it shows config details if configModel(s) are passed in', async function (assert) {
-    assert.expect(36);
-    const allEnginesArray = allEngines(); // saving as const so we don't invoke the method multiple times via the for loop
-    for (const type of CONFIGURABLE_SECRET_ENGINES) {
+  for (const type of CONFIGURABLE_SECRET_ENGINES) {
+    test(`it shows config details if configModel(s) are passed in for type: ${type}`, async function (assert) {
       const backend = `test-${type}`;
       this.configModels = createConfig(this.store, backend, type);
       this.typeDisplay = allEnginesArray.find((engine) => engine.type === type).displayName;
@@ -60,6 +60,6 @@ module('Integration | Component | SecretEngine/ConfigurationDetails', function (
           assert.dom(GENERAL.infoRowValue(key)).doesNotHaveClass('masked-input', `${key} is not masked`);
         }
       }
-    }
-  });
+    });
+  }
 });
