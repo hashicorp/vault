@@ -1491,7 +1491,7 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 		}
 		return verifyWithECDSA(p.Type, key, input, sigBytes, marshaling)
 	case KeyType_ED25519:
-		return p.verifyEd25519WithOptions(ver, input, context, "", options, sigBytes)
+		return p.verifyEd25519WithOptions(ver, input, context, options, sigBytes)
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		keyEntry, err := p.safeGetKeyEntry(ver)
 		if err != nil {
@@ -1578,32 +1578,22 @@ func verifyWithECDSA(keyType KeyType, keyParams KeyEntry, input, sigBytes []byte
 	return ecdsa.Verify(key, input, ecdsaSig.R, ecdsaSig.S), nil
 }
 
-func (p *Policy) verifyEd25519WithOptions(ver int, input []byte, context []byte, publicKey string, options *SigningOptions, sigBytes []byte) (bool, error) {
+func (p *Policy) verifyEd25519WithOptions(ver int, input []byte, context []byte, options *SigningOptions, sigBytes []byte) (bool, error) {
 	var pub ed25519.PublicKey
-
-	if publicKey == "" {
-		if p.Derived {
-			// Derive the key that should be used
-			key, err := p.GetKey(context, ver, 32)
-			if err != nil {
-				return false, errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
-			}
-			pub = ed25519.PrivateKey(key).Public().(ed25519.PublicKey)
-		} else {
-			keyEntry, err := p.safeGetKeyEntry(ver)
-			if err != nil {
-				return false, err
-			}
-
-			raw, err := base64.StdEncoding.DecodeString(keyEntry.FormattedPublicKey)
-			if err != nil {
-				return false, err
-			}
-
-			pub = ed25519.PublicKey(raw)
+	if p.Derived {
+		// Derive the key that should be used
+		key, err := p.GetKey(context, ver, 32)
+		if err != nil {
+			return false, errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
 		}
+		pub = ed25519.PrivateKey(key).Public().(ed25519.PublicKey)
 	} else {
-		raw, err := base64.StdEncoding.DecodeString(publicKey)
+		keyEntry, err := p.safeGetKeyEntry(ver)
+		if err != nil {
+			return false, err
+		}
+
+		raw, err := base64.StdEncoding.DecodeString(keyEntry.FormattedPublicKey)
 		if err != nil {
 			return false, err
 		}
@@ -1611,6 +1601,10 @@ func (p *Policy) verifyEd25519WithOptions(ver int, input []byte, context []byte,
 		pub = ed25519.PublicKey(raw)
 	}
 
+	return p.verifyEd25519WithPublicKey(input, sigBytes, pub, options)
+}
+
+func (p *Policy) verifyEd25519WithPublicKey(input []byte, sigBytes []byte, pub ed25519.PublicKey, options *SigningOptions) (bool, error) {
 	opts, err := genEd25519Options(options.HashAlgorithm, options.SigContext)
 	if err != nil {
 		return false, errutil.UserError{Err: fmt.Sprintf("error generating Ed25519 options: %v", err)}
