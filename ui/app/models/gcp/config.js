@@ -13,7 +13,7 @@ export default class GcpConfig extends Model {
   @attr({
     label: 'Config TTL',
     editType: 'ttl',
-    helperTextDisabled: 'The time-to-live (TTL) of generated tokens.',
+    helperTextDisabled: 'The TTL (time-to-live) of generated tokens.',
   })
   ttl;
 
