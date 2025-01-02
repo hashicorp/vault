@@ -1530,7 +1530,7 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 		return err == nil, nil
 
 	default:
-		return entVerifySignatureWithOptions(p, context, input, sigBytes, ver, hashAlgorithm, options)
+		return entVerifySignatureWithOptions(p, input, context, sigBytes, ver, options)
 	}
 }
 
