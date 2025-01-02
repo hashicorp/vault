@@ -133,7 +133,7 @@ export default class SecretsBackendConfigurationRoute extends Route {
     try {
       const gcpModel = await this.store.queryRecord('gcp/config', { backend: id });
       let issuer = null;
-      if (this.version.isEnterprise && gcpModel) {
+      if (this.version.isEnterprise) {
         const WIF_FIELDS = ['identityTokenAudience', 'identityTokenTtl', 'serviceAccountEmail'];
         WIF_FIELDS.some((field) => gcpModel[field]) ? (issuer = await this.fetchIssuer()) : null;
       }
