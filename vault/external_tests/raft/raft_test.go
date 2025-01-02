@@ -1526,8 +1526,7 @@ func TestSysHealth_Raft(t *testing.T) {
 		var erroredResponse *api.Response
 
 		// now that the node can connect again, it will start getting the removed
-		// error when trying to connect. The code should be removed, and the ha
-		// connection will be nil because there is no ha connection
+		// error when trying to connect. The code should be removed
 		testhelpers.RetryUntil(t, 10*time.Second, func() error {
 			resp, err := followerClient.Logical().ReadRawWithData("sys/health", map[string][]string{
 				"perfstandbyok": {"true"},
@@ -1548,7 +1547,12 @@ func TestSysHealth_Raft(t *testing.T) {
 		})
 		r := parseHealthBody(t, erroredResponse)
 		require.True(t, true, *r.RemovedFromCluster)
-		require.Nil(t, r.HAConnectionHealthy)
+		// The HA connection health should either be nil or false. It's possible
+		// for it to be false if we got the response in between the node marking
+		// itself removed and sealing
+		if r.HAConnectionHealthy != nil {
+			require.False(t, *r.HAConnectionHealthy)
+		}
 	})
 }
 
