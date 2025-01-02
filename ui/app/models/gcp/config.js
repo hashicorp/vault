@@ -44,7 +44,7 @@ export default class GcpConfig extends Model {
   @attr({
     label: 'Identity token TTL',
     helperTextDisabled:
-      'The TTL of generated tokens. Defaults to 1 hour, turn on the toggle to specify a different value.',
+      'The TTL of generated tokens. Defaults to 1 hour, toggle on to specify a different value.',
     helperTextEnabled: 'The TTL of generated tokens.',
     editType: 'ttl',
   })
