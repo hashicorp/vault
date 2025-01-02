@@ -93,28 +93,6 @@ func (c *Core) GetActiveClientsList() []*activity.EntityRecord {
 	return out
 }
 
-func (c *Core) GetActiveGlobalClientsList() []*activity.EntityRecord {
-	out := []*activity.EntityRecord{}
-	c.activityLog.globalFragmentLock.RLock()
-	// add active global clients
-	for _, v := range c.activityLog.globalPartialMonthClientTracker {
-		out = append(out, v)
-	}
-	c.activityLog.globalFragmentLock.RUnlock()
-	return out
-}
-
-func (c *Core) GetActiveLocalClientsList() []*activity.EntityRecord {
-	out := []*activity.EntityRecord{}
-	c.activityLog.localFragmentLock.RLock()
-	// add active global clients
-	for _, v := range c.activityLog.partialMonthLocalClientTracker {
-		out = append(out, v)
-	}
-	c.activityLog.localFragmentLock.RUnlock()
-	return out
-}
-
 // GetCurrentEntities returns the current entity activity log
 func (a *ActivityLog) GetCurrentEntities() *activity.EntityActivityLog {
 	a.l.RLock()
@@ -126,14 +104,9 @@ func (a *ActivityLog) GetCurrentEntities() *activity.EntityActivityLog {
 func (a *ActivityLog) GetCurrentGlobalEntities() *activity.EntityActivityLog {
 	a.l.RLock()
 	defer a.l.RUnlock()
+	a.globalFragmentLock.RLock()
+	defer a.globalFragmentLock.RUnlock()
 	return a.currentGlobalSegment.currentClients
-}
-
-// GetCurrentLocalEntities returns the current local entity activity log
-func (a *ActivityLog) GetCurrentLocalEntities() *activity.EntityActivityLog {
-	a.l.RLock()
-	defer a.l.RUnlock()
-	return a.currentLocalSegment.currentClients
 }
 
 // WriteToStorage is used to put entity data in storage
@@ -217,9 +190,6 @@ func (a *ActivityLog) ExpectCurrentSegmentRefreshed(t *testing.T, expectedStart 
 	if a.partialMonthLocalClientTracker == nil {
 		t.Errorf("expected non-nil partialMonthLocalClientTracker")
 	}
-	if a.globalPartialMonthClientTracker == nil {
-		t.Errorf("expected non-nil globalPartialMonthClientTracker")
-	}
 	if len(a.currentSegment.currentClients.Clients) > 0 {
 		t.Errorf("expected no current entity segment to be loaded. got: %v", a.currentSegment.currentClients)
 	}
@@ -232,26 +202,13 @@ func (a *ActivityLog) ExpectCurrentSegmentRefreshed(t *testing.T, expectedStart 
 	if len(a.partialMonthLocalClientTracker) > 0 {
 		t.Errorf("expected no active entity segment to be loaded. got: %v", a.partialMonthLocalClientTracker)
 	}
-	if len(a.globalPartialMonthClientTracker) > 0 {
-		t.Errorf("expected no active entity segment to be loaded. got: %v", a.globalPartialMonthClientTracker)
-	}
 
 	if verifyTimeNotZero {
 		if a.currentSegment.startTimestamp == 0 {
 			t.Error("bad start timestamp. expected no reset but timestamp was reset")
 		}
-		if a.currentGlobalSegment.startTimestamp == 0 {
-			t.Error("bad start timestamp. expected no reset but timestamp was reset")
-		}
-		if a.currentLocalSegment.startTimestamp == 0 {
-			t.Error("bad start timestamp. expected no reset but timestamp was reset")
-		}
 	} else if a.currentSegment.startTimestamp != expectedStart {
 		t.Errorf("bad start timestamp. expected: %v got: %v", expectedStart, a.currentSegment.startTimestamp)
-	} else if a.currentGlobalSegment.startTimestamp != expectedStart {
-		t.Errorf("bad start timestamp. expected: %v got: %v", expectedStart, a.currentGlobalSegment.startTimestamp)
-	} else if a.currentLocalSegment.startTimestamp != expectedStart {
-		t.Errorf("bad start timestamp. expected: %v got: %v", expectedStart, a.currentLocalSegment.startTimestamp)
 	}
 }
 
@@ -284,14 +241,13 @@ func (a *ActivityLog) SetStartTimestamp(timestamp int64) {
 	defer a.l.Unlock()
 	a.currentSegment.startTimestamp = timestamp
 	a.currentGlobalSegment.startTimestamp = timestamp
-	a.currentLocalSegment.startTimestamp = timestamp
 }
 
 // GetStoredTokenCountByNamespaceID returns the count of tokens by namespace ID
 func (a *ActivityLog) GetStoredTokenCountByNamespaceID() map[string]uint64 {
 	a.l.RLock()
 	defer a.l.RUnlock()
-	return a.currentLocalSegment.tokenCount.CountByNamespaceID
+	return a.currentSegment.tokenCount.CountByNamespaceID
 }
 
 // GetEntitySequenceNumber returns the current entity sequence number
@@ -299,20 +255,6 @@ func (a *ActivityLog) GetEntitySequenceNumber() uint64 {
 	a.l.RLock()
 	defer a.l.RUnlock()
 	return a.currentSegment.clientSequenceNumber
-}
-
-// GetGlobalEntitySequenceNumber returns the current entity sequence number
-func (a *ActivityLog) GetGlobalEntitySequenceNumber() uint64 {
-	a.l.RLock()
-	defer a.l.RUnlock()
-	return a.currentGlobalSegment.clientSequenceNumber
-}
-
-// GetLocalEntitySequenceNumber returns the current entity sequence number
-func (a *ActivityLog) GetLocalEntitySequenceNumber() uint64 {
-	a.l.RLock()
-	defer a.l.RUnlock()
-	return a.currentLocalSegment.clientSequenceNumber
 }
 
 // SetEnable sets the enabled flag on the activity log
