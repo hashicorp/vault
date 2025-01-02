@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Add support for the name constraints extension to be fully specified when creating root and intermediate CA certificates.
+```
