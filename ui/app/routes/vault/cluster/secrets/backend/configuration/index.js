@@ -63,13 +63,16 @@ export default class SecretsBackendConfigurationRoute extends Route {
   }
 
   fetchConfig(type, id) {
+    // id is the path where the backend is mounted since there's only one config per engine (often this path is referred to just as backend)
     switch (type) {
       case 'aws':
         return this.fetchAwsConfigs(id);
-      case 'ssh':
-        return this.fetchSshCaConfig(id);
       case 'azure':
         return this.fetchAzureConfig(id);
+      case 'gcp':
+        return this.fetchGcpConfig(id);
+      case 'ssh':
+        return this.fetchSshCaConfig(id);
       default:
         return reject({ httpStatus: 404, message: 'not found', path: id });
     }
@@ -104,28 +107,6 @@ export default class SecretsBackendConfigurationRoute extends Route {
     }
   }
 
-  async fetchIssuer() {
-    try {
-      return await this.store.queryRecord('identity/oidc/config', {});
-    } catch (e) {
-      // silently fail if the endpoint is not available or the user doesn't have permission to access it.
-      return;
-    }
-  }
-
-  async fetchSshCaConfig(id) {
-    try {
-      return await this.store.queryRecord('ssh/ca-config', { backend: id });
-    } catch (e) {
-      if (e.httpStatus === 400 && e.errors[0] === `keys haven't been configured yet`) {
-        // When first mounting a SSH engine it throws a 400 error with this specific message.
-        // We want to catch this situation and return nothing so that the component can handle it correctly.
-        return;
-      }
-      throw e;
-    }
-  }
-
   async fetchAzureConfig(id) {
     try {
       const azureModel = await this.store.queryRecord('azure/config', { backend: id });
@@ -143,6 +124,49 @@ export default class SecretsBackendConfigurationRoute extends Route {
     } catch (e) {
       if (e.httpStatus === 404) {
         // a 404 error is thrown when Azure's config hasn't been set yet.
+        return;
+      }
+      throw e;
+    }
+  }
+
+  async fetchGcpConfig(id) {
+    try {
+      const gcpModel = await this.store.queryRecord('gcp/config', { backend: id });
+      let issuer = null;
+      if (this.version.isEnterprise) {
+        const WIF_FIELDS = ['identityTokenAudience', 'identityTokenTtl', 'serviceAccountEmail'];
+        WIF_FIELDS.some((field) => gcpModel[field]) ? (issuer = await this.fetchIssuer()) : null;
+      }
+      const configArray = [];
+      if (gcpModel) configArray.push(gcpModel);
+      if (issuer) configArray.push(issuer);
+      return configArray;
+    } catch (e) {
+      if (e.httpStatus === 404) {
+        // a 404 error is thrown when GCP's config hasn't been set yet.
+        return;
+      }
+      throw e;
+    }
+  }
+
+  async fetchIssuer() {
+    try {
+      return await this.store.queryRecord('identity/oidc/config', {});
+    } catch (e) {
+      // silently fail if the endpoint is not available or the user doesn't have permission to access it.
+      return;
+    }
+  }
+
+  async fetchSshCaConfig(id) {
+    try {
+      return await this.store.queryRecord('ssh/ca-config', { backend: id });
+    } catch (e) {
+      if (e.httpStatus === 400 && e.errors[0] === `keys haven't been configured yet`) {
+        // When first mounting a SSH engine it throws a 400 error with this specific message.
+        // We want to catch this situation and return nothing so that the component can handle it correctly.
         return;
       }
       throw e;
