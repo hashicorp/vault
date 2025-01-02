@@ -63,6 +63,7 @@ export default class SecretsBackendConfigurationRoute extends Route {
   }
 
   fetchConfig(type, id) {
+    // id is the path where the backend is mounted since there's only one config per engine (often this path is referred to just as backend)
     switch (type) {
       case 'aws':
         return this.fetchAwsConfigs(id);
