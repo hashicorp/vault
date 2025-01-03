@@ -323,19 +323,19 @@ type KeyEntry struct {
 	// Time of creation
 	CreationTime time.Time `json:"time"`
 
-	EC_X *big.Int `json:"ec_x"`
-	EC_Y *big.Int `json:"ec_y"`
-	EC_D *big.Int `json:"ec_d"`
+	EC_X *big.Int `json:"ec_x,omitempty"`
+	EC_Y *big.Int `json:"ec_y,omitempty"`
+	EC_D *big.Int `json:"ec_d,omitempty"`
 
-	RSAKey       *rsa.PrivateKey `json:"rsa_key"`
-	RSAPublicKey *rsa.PublicKey  `json:"rsa_public_key"`
+	RSAKey       *rsa.PrivateKey `json:"rsa_key,omitempty"`
+	RSAPublicKey *rsa.PublicKey  `json:"rsa_public_key,omitempty"`
 
 	// The public key in an appropriate format for the type of key
-	FormattedPublicKey string `json:"public_key"`
+	FormattedPublicKey string `json:"public_key,omitempty"`
 
 	// If convergent is enabled, the version (falling back to what's in the
 	// policy)
-	ConvergentVersion int `json:"convergent_version"`
+	ConvergentVersion int `json:"convergent_version,omitempty"`
 
 	// This is deprecated (but still filled) in favor of the value above which
 	// is more precise
@@ -345,7 +345,7 @@ type KeyEntry struct {
 
 	// Key entry certificate chain. If set, leaf certificate key matches the
 	// KeyEntry key
-	CertificateChain [][]byte `json:"certificate_chain"`
+	CertificateChain [][]byte `json:"certificate_chain,omitempty"`
 }
 
 func (ke *KeyEntry) IsPrivateKeyMissing() bool {
@@ -977,7 +977,6 @@ func (p *Policy) DeriveKey(context, salt []byte, ver int, numBytes int) ([]byte,
 				return nil, errutil.InternalError{Err: fmt.Sprintf("error generating derived key: %v", err)}
 			}
 			return pri, nil
-
 		default:
 			return nil, errutil.InternalError{Err: "unsupported key type for derivation"}
 		}
@@ -1274,30 +1273,10 @@ func (p *Policy) SignWithOptions(ver int, context, input []byte, options *Signin
 	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
 		sig, err = signWithECDSA(p.Type, keyParams, input, marshaling)
 	case KeyType_ED25519:
-		var key ed25519.PrivateKey
-
-		if p.Derived {
-			// Derive the key that should be used
-			var err error
-			key, err = p.GetKey(context, ver, 32)
-			if err != nil {
-				return nil, errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
-			}
-			pubKey = key.Public().(ed25519.PublicKey)
-		} else {
-			key = ed25519.PrivateKey(keyParams.Key)
-		}
-
-		opts, err := genEd25519Options(hashAlgorithm, options.SigContext)
-		if err != nil {
-			return nil, errutil.UserError{Err: fmt.Sprintf("error generating Ed25519 options: %v", err)}
-		}
-
-		sig, err = key.Sign(rand.Reader, input, opts)
+		sig, pubKey, err = p.signWithEd25519(ver, input, context, options, keyParams)
 		if err != nil {
 			return nil, err
 		}
-
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		key := keyParams.RSAKey
 
@@ -1328,7 +1307,7 @@ func (p *Policy) SignWithOptions(ver int, context, input []byte, options *Signin
 			return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported rsa signature algorithm %s", sigAlgorithm)}
 		}
 	default:
-		sig, err = entSignWithOptions(p, input, ver, options)
+		sig, err = entSignWithOptions(p, input, context, ver, hashAlgorithm, options)
 	}
 
 	// Convert to base64
@@ -1345,6 +1324,33 @@ func (p *Policy) SignWithOptions(ver int, context, input []byte, options *Signin
 	}
 
 	return res, nil
+}
+
+func (p *Policy) signWithEd25519(ver int, input []byte, context []byte, options *SigningOptions, keyParams KeyEntry) ([]byte, []byte, error) {
+	var key ed25519.PrivateKey
+	var pubKey []byte
+	if p.Derived {
+		// Derive the key that should be used
+		var err error
+		key, err = p.GetKey(context, ver, 32)
+		if err != nil {
+			return nil, nil, errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
+		}
+		pubKey = key.Public().(ed25519.PublicKey)
+	} else {
+		key = ed25519.PrivateKey(keyParams.Key)
+	}
+
+	opts, err := genEd25519Options(options.HashAlgorithm, options.SigContext)
+	if err != nil {
+		return nil, nil, errutil.UserError{Err: fmt.Sprintf("error generating Ed25519 options: %v", err)}
+	}
+
+	sig, err := key.Sign(rand.Reader, input, opts)
+	if err != nil {
+		return nil, nil, err
+	}
+	return sig, pubKey, nil
 }
 
 func signWithECDSA(keyType KeyType, keyParams KeyEntry, input []byte, marshaling MarshalingType) ([]byte, error) {
@@ -1484,42 +1490,8 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 			return false, err
 		}
 		return verifyWithECDSA(p.Type, key, input, sigBytes, marshaling)
-
 	case KeyType_ED25519:
-		var pub ed25519.PublicKey
-
-		if p.Derived {
-			// Derive the key that should be used
-			key, err := p.GetKey(context, ver, 32)
-			if err != nil {
-				return false, errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
-			}
-			pub = ed25519.PrivateKey(key).Public().(ed25519.PublicKey)
-		} else {
-			keyEntry, err := p.safeGetKeyEntry(ver)
-			if err != nil {
-				return false, err
-			}
-
-			raw, err := base64.StdEncoding.DecodeString(keyEntry.FormattedPublicKey)
-			if err != nil {
-				return false, err
-			}
-
-			pub = ed25519.PublicKey(raw)
-		}
-
-		opts, err := genEd25519Options(hashAlgorithm, options.SigContext)
-		if err != nil {
-			return false, errutil.UserError{Err: fmt.Sprintf("error generating Ed25519 options: %v", err)}
-		}
-		if err := stdlibEd25519.VerifyWithOptions(pub, input, sigBytes, opts); err != nil {
-			// We drop the error, just report back that we failed signature verification
-			return false, nil
-		}
-
-		return true, nil
-
+		return p.verifyEd25519WithOptions(ver, input, context, options, sigBytes)
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		keyEntry, err := p.safeGetKeyEntry(ver)
 		if err != nil {
@@ -1558,7 +1530,7 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 		return err == nil, nil
 
 	default:
-		return entVerifySignatureWithOptions(p, input, sigBytes, ver, options)
+		return entVerifySignatureWithOptions(p, input, context, sigBytes, ver, options)
 	}
 }
 
@@ -1604,6 +1576,48 @@ func verifyWithECDSA(keyType KeyType, keyParams KeyEntry, input, sigBytes []byte
 	}
 
 	return ecdsa.Verify(key, input, ecdsaSig.R, ecdsaSig.S), nil
+}
+
+func (p *Policy) verifyEd25519WithOptions(ver int, input []byte, context []byte, options *SigningOptions, sigBytes []byte) (bool, error) {
+	var pub ed25519.PublicKey
+	if p.Derived {
+		// Derive the key that should be used
+		key, err := p.GetKey(context, ver, 32)
+		if err != nil {
+			return false, errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
+		}
+		pub = ed25519.PrivateKey(key).Public().(ed25519.PublicKey)
+	} else {
+		keyEntry, err := p.safeGetKeyEntry(ver)
+		if err != nil {
+			return false, err
+		}
+
+		raw, err := base64.StdEncoding.DecodeString(keyEntry.FormattedPublicKey)
+		if err != nil {
+			return false, err
+		}
+
+		pub = ed25519.PublicKey(raw)
+	}
+
+	return p.verifyEd25519WithPublicKey(input, sigBytes, pub, options)
+}
+
+func (p *Policy) verifyEd25519WithPublicKey(input []byte, sigBytes []byte, pub ed25519.PublicKey, options *SigningOptions) (bool, error) {
+	opts, err := genEd25519Options(options.HashAlgorithm, options.SigContext)
+	if err != nil {
+		return false, errutil.UserError{Err: fmt.Sprintf("error generating Ed25519 options: %v", err)}
+	}
+	if pub == nil {
+		return false, errutil.InternalError{Err: "no Ed25519 public key on policy"}
+	}
+	if err := stdlibEd25519.VerifyWithOptions(pub, input, sigBytes, opts); err != nil {
+		// We drop the error, just report back that we failed signature verification
+		return false, nil
+	}
+
+	return true, nil
 }
 
 func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte, randReader io.Reader) error {
@@ -1797,19 +1811,10 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 		}
 
 	case KeyType_ED25519:
-		// Go uses a 64-byte private key for Ed25519 keys (private+public, each
-		// 32-bytes long). When we do Key derivation, we still generate a 32-byte
-		// random value (and compute the corresponding Ed25519 public key), but
-		// use this entire 64-byte key as if it was an HKDF key. The corresponding
-		// underlying public key is never returned (which is probably good, because
-		// doing so would leak half of our HKDF key...), but means we cannot import
-		// derived-enabled Ed25519 public key components.
-		pub, pri, err := ed25519.GenerateKey(randReader)
+		err := generateEd25519Key(randReader, &entry.Key, &entry.FormattedPublicKey)
 		if err != nil {
 			return err
 		}
-		entry.Key = pri
-		entry.FormattedPublicKey = base64.StdEncoding.EncodeToString(pub)
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		bitSize := 2048
 		if p.Type == KeyType_RSA3072 {
@@ -1855,6 +1860,23 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 		p.MinDecryptionVersion = 1
 	}
 
+	return nil
+}
+
+func generateEd25519Key(randReader io.Reader, private *[]byte, public *string) error {
+	// Go uses a 64-byte private key for Ed25519 keys (private+public, each
+	// 32-bytes long). When we do Key derivation, we still generate a 32-byte
+	// random value (and compute the corresponding Ed25519 public key), but
+	// use this entire 64-byte key as if it was an HKDF key. The corresponding
+	// underlying public key is never returned (which is probably good, because
+	// doing so would leak half of our HKDF key...), but means we cannot import
+	// derived-enabled Ed25519 public key components.
+	pub, pri, err := ed25519.GenerateKey(randReader)
+	if err != nil {
+		return err
+	}
+	*private = pri
+	*public = base64.StdEncoding.EncodeToString(pub)
 	return nil
 }
 
