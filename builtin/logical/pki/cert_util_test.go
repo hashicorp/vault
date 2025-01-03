@@ -1057,3 +1057,169 @@ func testParseCsrToFields(t *testing.T, issueTime time.Time, tt *parseCertificat
 		}
 	}
 }
+
+// TestVerify_chained_name_constraints verifies that we perform name constraints certificate validation using the
+// entire CA chain.
+//
+// This test constructs a root CA that
+// - allows: .example.com
+// - excludes: bad.example.com
+//
+// and an intermediate that
+// - forbids alsobad.example.com
+//
+// It verifies that the intermediate
+// - can issue certs like good.example.com
+// - rejects names like notanexample.com since they are not in the namespace of names permitted by the root CA
+// - rejects bad.example.com, since the root CA excludes it
+// - rejects alsobad.example.com, since the intermediate CA excludes it.
+func TestVerify_chained_name_constraints(t *testing.T) {
+	t.Parallel()
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Setup
+	// In 1.19 and above, this setup is done using the new "excluded_dns_domains" field, not in this version
+	// Instead, the certificates have been pre-generated on 1.19 with a 1,000,000 hour (>100 years) ttl
+	// If they ever expire for some reason, they can be regenerated as follows:
+	//     vault secrets enable pki
+	//     vault secrets tune -default-lease-ttl=1000000h -max-lease-ttl=1000000h pki
+	//     vault write pki/root/generate/internal ttl="999999h" common_name="myvault.com" permitted_dns_domains=".example.com" excluded_dns_domains="bad.example.com"
+	//     vault write pki/intermediate/generate/exported common_name="myint.com"
+	//     CSR=<csr>
+	//     vault write pki/root/sign-intermediate common_name="myint.com" csr="$CSR" ttl="999998h" excluded_dns_domains="alsobad.example.com"
+
+	var b *backend
+	var s logical.Storage
+	{
+		// Intermediate Private Key; Intermediate Certificate and Root Certificate
+		pemBundle := []byte(`
+-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEA4xVskyF6ykn2yYMsK5VRemMpm2nlzsT3stiSyER7rzLzId5Q
+9OjH3QOXR94hLTab/tJteukRtzZT8Rg5YmLIvSvNGyzjGUV4eErj1cRKUsOW1JtN
+UXrKLIcjpGpoB8vDxxMHZhJL8JGOL+fx6qLuboWFuKmPJ1nE4tgS6yHR7x4oBp1V
+oU0bUEPXTo2CYVIFuvIjK2mDpuUCprJtg0si9WbZi/59SCHJzAIti6xjJnGV8QnQ
+/NHjiB2krL/0oeDkLRwS72wvmbYQ3PU7i23zVcEpcoOWUXXIeU645bupJY4dLC5Y
+Viuj4UDuCiVrTb+Ea+pAJlrd5UIselSN+7KktQIDAQABAoIBAQCAQ0SdYiayBc8A
+CTg0sdVgtIv2vXzRKo3iFdPqjEv0LGoJ8kF149mn63RSYpQIrrSz3PV7nBOmkWge
+YJlhCfzqZMgoFlV7m7Ks91fzETkNwG38TnAAmsOBHR+zqWpzJNPDKOtf6uu7yOsw
+Aemxpy/Xe1GJeTRjfJ/ppTQiXWrvjN+WPGKyOwwkyzZE08Xv5dnqkyCOX0TCGQfO
+4CE7FoeMOm+A1Qxnl5OPQxjnS6IXOMWZNTuKWVs0s806ojG9WheA00WEbyIDIYSp
+4XampDFjt3wQYwrv9hHV82f0Otqlys/4skq7Wp5Bl+/7QOOTlqzkRqk2CnQJXOA4
+1e9mYfFtAoGBAPSNrTTCcFvVh3FBqt8kQjqyYDC86JyYmb+ZF3mpu9eDxrASYAT6
+QoMAUUbvFSVdzcHufN+bymLDMPGPAkexFdlY+BxYF7d6CGXivgZBl+yQtZ6e7WkS
+T+WB5wHySp5igIbV5SuVY+22pGGBVL0kqbPKFG/+MOlRqMBX15pPrSTjAoGBAO22
+a0xYdqtF0jXgAHlKN4Z7UNdfsrkAWnMVaBt2Mi8FlomDGoXax9E6q5hmGthhFafV
+FKqCZ8e148Wc3ry0Z/KYs4SRASUx/NOuQlpHre3DVLLSNawYXU3HqD06wEiQPWzR
+fq+UoKsCiJC+qz8f/UD8UuiZZAa9EthOSpNxstuHAoGBAIIFgX13k31//c79dvfE
+s2G5zOKczZ/UkooHvy90Sua+rTiXzG1ZEVvNI2lvW/LN+MOPJN1OW0A/PxpvSmsL
+f+5bGy8WtyVZwHVLJHT3Eus31RhMrzUaA1imxEeIppunC2ak+n89oi+U17jvpjoZ
+8BAi9NLGdwLV476/9WWZzxi5AoGATq0wyD0DUd6zG4e/QGWzCPypng8bfSXDyhFM
+usIdC/kigPL2hVULC5IKl088FV/Upg7dXy34IV5vO8mW4wgm22F1ESxZH7Fyx7EG
+XxEYXPhogSMYBpSt1P9/DHz0hU/QNMMF1iEwKEmXX6jrzuHMlYSuADQ8qgpMQXFw
+N2rLUuMCgYABtwULLZJz8eMKRRFp6fJNcqqXFmCCaB4M3tGPGNnSpnTaqmBggYg6
+NRAVwplparFZ0vg5ZSegCZzAAwCNLDHOBtlsakStDaXB2EdAhS5vKERh5HpWUeeR
+iKyfuPEjfsS51MzFKunVWLotGBy33SWWhSevI03d/ECnC7E319+BcQ==
+-----END RSA PRIVATE KEY-----
+-----BEGIN CERTIFICATE-----
+MIIDXDCCAkSgAwIBAgIUTOa1pFOYnf22Cu1g+SLtEdeXif4wDQYJKoZIhvcNAQEL
+BQAwFjEUMBIGA1UEAxMLbXl2YXVsdC5jb20wIBcNMjUwMTAzMjIxNzU0WhgPMjEz
+OTAyMDIxMjE4MjRaMBQxEjAQBgNVBAMTCW15aW50LmNvbTCCASIwDQYJKoZIhvcN
+AQEBBQADggEPADCCAQoCggEBAOMVbJMhespJ9smDLCuVUXpjKZtp5c7E97LYkshE
+e68y8yHeUPTox90Dl0feIS02m/7SbXrpEbc2U/EYOWJiyL0rzRss4xlFeHhK49XE
+SlLDltSbTVF6yiyHI6RqaAfLw8cTB2YSS/CRji/n8eqi7m6FhbipjydZxOLYEush
+0e8eKAadVaFNG1BD106NgmFSBbryIytpg6blAqaybYNLIvVm2Yv+fUghycwCLYus
+YyZxlfEJ0PzR44gdpKy/9KHg5C0cEu9sL5m2ENz1O4tt81XBKXKDllF1yHlOuOW7
+qSWOHSwuWFYro+FA7gola02/hGvqQCZa3eVCLHpUjfuypLUCAwEAAaOBoTCBnjAO
+BgNVHQ8BAf8EBAMCAQYwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQUIvhScHgB
+Q3s9uuhM4wCr9n0JOrkwHwYDVR0jBBgwFoAUaRs3bAPVLwyZKS0PIKmoER4vreIw
+FAYDVR0RBA0wC4IJbXlpbnQuY29tMCUGA1UdHgEB/wQbMBmhFzAVghNhbHNvYmFk
+LmV4YW1wbGUuY29tMA0GCSqGSIb3DQEBCwUAA4IBAQC/Yw+gctU5vEr5oS1gHCmm
+9z6aB8fr8UTFAjHfVzggfXf3DKU6NJ9rqKQ5PNvHpVYNacgO3bCyDa0BFPQ9AsE/
+vBDKspfF0ARgK7LFhuQi9hoUM6BfEt5CHOUVMYvx7MnYxLsdiNOCjbvnFjSz70Nr
++q63d0dISHAEjRW1+DbCMUihi/npOH0xKezDu23010Rfsos08ZVBJw9aqkAAe7zT
+J7/RZ6ITnqQwJc2iMshIXbP8HrrLcEJ+9lyQK0h7gZ3kgcrObtg6Xr80HSDRus0U
+z9J2vNwKYlEOXHVPU9X/zdNJhDuv+/OB469ehVcetyd4+q9dF5LNBwi5ZG6CLJXz
+-----END CERTIFICATE-----
+-----BEGIN CERTIFICATE-----
+MIIDbjCCAlagAwIBAgIUH5XPxepR27cGAFwQsmNxQOEQhdEwDQYJKoZIhvcNAQEL
+BQAwFjEUMBIGA1UEAxMLbXl2YXVsdC5jb20wIBcNMjUwMTAzMjIxNjM1WhgPMjEz
+OTAyMDIxMzE3MDVaMBYxFDASBgNVBAMTC215dmF1bHQuY29tMIIBIjANBgkqhkiG
+9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwway6sN9F5iQ7JBg5+5HOpfhHpUhfZyjwcIP
+OWfRVU/+tD9WGdI42apMqMZu4lXhJGMnNKAZbTszyCcI4/a8INy+cTu/OJLT++r/
+JCfLYcSnBBnCw8t/T0MvE3SWH/H0ToMIwSZPuMhBjVA6XlCopVzhZy8x+nM7oqNC
+gqqW1e/oK2V6zZDlxD+hTDDdQnEhnFu9qyr0wOacAfqrtTwnR9G770CECF95mRzJ
+ULmS5SJHkSxZzetRc+cTao4bar9JU2WUhih7qGs5OjHw6YmVosNWLAV38vX9DPy9
+J2wCh7r4ttTir0GQdl1YaVDBtG5EQcuCEFpq79i+AgOK/LuMTQIDAQABo4GxMIGu
+MA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBRpGzds
+A9UvDJkpLQ8gqagRHi+t4jAfBgNVHSMEGDAWgBRpGzdsA9UvDJkpLQ8gqagRHi+t
+4jAWBgNVHREEDzANggtteXZhdWx0LmNvbTAzBgNVHR4BAf8EKTAnoBAwDoIMLmV4
+YW1wbGUuY29toRMwEYIPYmFkLmV4YW1wbGUuY29tMA0GCSqGSIb3DQEBCwUAA4IB
+AQBv65+kEvaAPYgLnfZjaXkFSysuVR5TI2sw9qMj23mCOfIm7mBzPkGKnB8g4XSg
+tsOf+6UKcgQVkTvGSKqjavrHrtRtojgKvnXfra3yPY41//G2IWZ6juiQzqqj55Fm
+rM952Wrr7iIjR5pLP6sZ74OCjxTr35Ky3Y2+k4blHlGA/JBQeGNhiyO6mYSqzY1i
+tRI8ij2/5wSXYaPDl3DBSJSEDqYpSUINSUK2W1R5Rq10yD5HDREh96oeOYLKC3a0
+C73G+J0nGaYffdR4MWeTEq6gfENZXrmlA5Fe4fyBgxlHfzxx5c0KWpZVJttoVGir
+j8bwlXImoBeiKZL7lEGT2vDk
+-----END CERTIFICATE-----
+`)
+
+		// Create the Certificates by Importing It into the Mount
+		b, s = CreateBackendWithStorage(t)
+
+		// Note that we append the root CA certificate to the signed intermediate, so that
+		// the entire chain is stored by set-signed.
+		resp, err := CBWrite(b, s, "issuers/import/bundle", map[string]interface{}{
+			"pem_bundle": pemBundle,
+		})
+		require.NoError(t, err)
+
+		// Create a Role in the Mount
+		resp, err = CBWrite(b, s, "roles/test", map[string]interface{}{
+			"allow_bare_domains": true,
+			"allow_subdomains":   true,
+			"allow_any_name":     true,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+	}
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Tests
+
+	testCases := []struct {
+		commonName string
+		wantError  string
+	}{
+		{
+			commonName: "good.example.com",
+		},
+		{
+			commonName: "notanexample.com",
+			wantError:  "should not be permitted by root CA",
+		},
+		{
+			commonName: "bad.example.com",
+			wantError:  "should be rejected by the root CA",
+		},
+		{
+			commonName: "alsobad.example.com",
+			wantError:  "should be rejected by the intermediate CA",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.commonName, func(t *testing.T) {
+			resp, err := CBWrite(b, s, "issue/test", map[string]any{
+				"common_name": tc.commonName,
+			})
+			if tc.wantError != "" {
+				require.Error(t, err, tc.wantError)
+				require.ErrorContains(t, err, "certificate is not authorized to sign for this name")
+				require.Nil(t, resp)
+			} else {
+				require.NoError(t, err)
+				require.NoError(t, resp.Error())
+			}
+		})
+	}
+}
