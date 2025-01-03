@@ -16,6 +16,8 @@ import (
 	"github.com/armon/go-metrics/prometheus"
 	stackdriver "github.com/google/go-metrics-stackdriver"
 	stackdrivervault "github.com/google/go-metrics-stackdriver/vault"
+	"google.golang.org/api/option"
+
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
@@ -23,7 +25,6 @@ import (
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/metricregistry"
-	"google.golang.org/api/option"
 )
 
 const (
@@ -34,7 +35,7 @@ const (
 	NumLeaseMetricsTimeBucketsDefault = 168
 )
 
-// Telemetry is the telemetry configuration for the server
+// Telemetry is the telemetry configuration for the server.
 type Telemetry struct {
 	FoundKeys    []string     `hcl:",decodedFields"`
 	UnusedKeys   UnusedKeyMap `hcl:",unusedKeyPositions"`
@@ -192,6 +193,11 @@ func parseTelemetry(result *SharedConfig, list *ast.ObjectList) error {
 		return multierror.Prefix(err, "telemetry:")
 	}
 
+	// Make sure addresses conform to RFC-5942 §4. If you've added new fields that
+	// are an address or URL be sure to update normalizeTelemetryAddresses().
+	// See: https://rfc-editor.org/rfc/rfc5952.html
+	normalizeTelemetryAddresses(result.Telemetry)
+
 	if result.Telemetry.PrometheusRetentionTimeRaw != nil {
 		var err error
 		if result.Telemetry.PrometheusRetentionTime, err = parseutil.ParseDurationSecond(result.Telemetry.PrometheusRetentionTimeRaw); err != nil {
@@ -239,6 +245,33 @@ func parseTelemetry(result *SharedConfig, list *ast.ObjectList) error {
 	}
 
 	return nil
+}
+
+// normalizeTelemetryAddresses ensures that any telemetry configuration that can
+// be a URL, IP Address, or host:port address is conformant with RFC-5942 §4
+// See: https://rfc-editor.org/rfc/rfc5952.html
+func normalizeTelemetryAddresses(in *Telemetry) {
+	if in == nil {
+		return
+	}
+
+	// Make sure addresses conform to RFC-5952
+	for _, addr := range []*string{
+		&in.CirconusAPIURL,
+		&in.CirconusCheckSubmissionURL,
+		&in.DogStatsDAddr,
+		&in.StatsdAddr,
+		&in.StatsiteAddr,
+	} {
+		if addr == nil {
+			continue
+		}
+
+		if url := *addr; url != "" {
+			n := NormalizeAddr(url)
+			*addr = n
+		}
+	}
 }
 
 type SetupTelemetryOpts struct {
