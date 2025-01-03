@@ -48,6 +48,10 @@ module "create_vpc" {
   common_tags = var.tags
 }
 
+module "choose_follower_host" {
+  source = "./modules/choose_follower_host"
+}
+
 module "ec2_info" {
   source = "./modules/ec2_info"
 }
@@ -221,8 +225,18 @@ module "vault_failover_update_dr_primary" {
   vault_install_dir = var.vault_install_dir
 }
 
+module "vault_raft_remove_and_verify" {
+  source            = "./modules/vault_raft_remove_and_verify"
+  vault_install_dir = var.vault_install_dir
+}
+
 module "vault_raft_remove_peer" {
   source            = "./modules/vault_raft_remove_peer"
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_removed_do_nothing" {
+  source            = "./modules/vault_removed_do_nothing"
   vault_install_dir = var.vault_install_dir
 }
 
@@ -310,6 +324,12 @@ module "vault_verify_raft_auto_join_voter" {
 
   vault_install_dir       = var.vault_install_dir
   vault_cluster_addr_port = global.ports["vault_cluster"]["port"]
+}
+
+module "vault_verify_raft_removed" {
+  source = "./modules/vault_verify_raft_removed"
+
+  vault_install_dir = var.vault_install_dir
 }
 
 module "vault_verify_replication" {
