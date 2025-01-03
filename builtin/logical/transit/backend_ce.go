@@ -24,3 +24,5 @@ func (b *backend) periodicFuncEnt(_ context.Context, _ *logical.Request) error {
 func (b *backend) cleanupEnt(_ context.Context) {}
 
 func (b *backend) setupEnt() {}
+
+func entAugmentAsymKey(p *keysutil.Policy, k string, v keysutil.KeyEntry, key *asymKey) {}

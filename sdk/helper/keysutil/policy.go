@@ -493,8 +493,8 @@ type Policy struct {
 	deleted uint32
 
 	Name    string      `json:"name"`
-	Key     []byte      `json:"key,omitempty"`      // DEPRECATED
-	KeySize int         `json:"key_size,omitempty"` // For algorithms with variable key sizes
+	Key     []byte      `json:"key"`      // DEPRECATED
+	KeySize int         `json:"key_size"` // For algorithms with variable key sizes
 	Keys    keyEntryMap `json:"keys"`
 
 	// Derived keys MUST provide a context and the master underlying key is
