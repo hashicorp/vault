@@ -8,6 +8,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginidentityutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -245,10 +247,46 @@ func TestBackend_PathConfigRoot_PluginIdentityToken(t *testing.T) {
 	assert.ErrorContains(t, resp.Error(), pluginidentityutil.ErrPluginWorkloadIdentityUnsupported.Error())
 }
 
+func TestBackend_PathConfigRoot_RegisterRootRotation(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = &testSystemView{}
+
+	nsCtx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
+
+	b := Backend(config)
+	if err := b.Setup(nsCtx, config); err != nil {
+		t.Fatal(err)
+	}
+
+	configData := map[string]interface{}{
+		"access_key":        "access-key",
+		"secret_key":        "secret-key",
+		"rotation_schedule": "*/30 * * * * *",
+		"rotation_window":   60,
+	}
+
+	configReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   config.StorageView,
+		Path:      "config/root",
+		Data:      configData,
+	}
+
+	resp, err := b.HandleRequest(context.Background(), configReq)
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.ErrorContains(t, resp.Error(), automatedrotationutil.ErrRotationManagerUnsupported.Error())
+}
+
 type testSystemView struct {
 	logical.StaticSystemView
 }
 
 func (d testSystemView) GenerateIdentityToken(_ context.Context, _ *pluginutil.IdentityTokenRequest) (*pluginutil.IdentityTokenResponse, error) {
 	return nil, pluginidentityutil.ErrPluginWorkloadIdentityUnsupported
+}
+
+func (d testSystemView) RegisterRotationJob(_ context.Context, _ *logical.RotationJob) (string, error) {
+	return "", automatedrotationutil.ErrRotationManagerUnsupported
 }
