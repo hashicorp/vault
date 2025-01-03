@@ -57,27 +57,17 @@ func (c *Core) InjectActivityLogDataThisMonth(t *testing.T) map[string]*activity
 	return c.activityLog.partialMonthClientTracker
 }
 
-// GetActiveClients returns the in-memory globalPartialMonthClientTracker and  partialMonthLocalClientTracker from an
+// GetActiveClients returns the in-memory partialMonthClientTracker from an
 // activity log.
 func (c *Core) GetActiveClients() map[string]*activity.EntityRecord {
 	out := make(map[string]*activity.EntityRecord)
 
 	c.stateLock.RLock()
 	c.activityLog.globalFragmentLock.RLock()
-	c.activityLog.localFragmentLock.RLock()
-
-	// add active global clients
 	for k, v := range c.activityLog.globalPartialMonthClientTracker {
 		out[k] = v
 	}
-
-	// add active local clients
-	for k, v := range c.activityLog.partialMonthLocalClientTracker {
-		out[k] = v
-	}
-
 	c.activityLog.globalFragmentLock.RUnlock()
-	c.activityLog.localFragmentLock.RUnlock()
 	c.stateLock.RUnlock()
 
 	return out
@@ -178,9 +168,6 @@ func (a *ActivityLog) ExpectCurrentSegmentRefreshed(t *testing.T, expectedStart 
 	if a.partialMonthClientTracker == nil {
 		t.Errorf("expected non-nil partialMonthClientTracker")
 	}
-	if a.partialMonthLocalClientTracker == nil {
-		t.Errorf("expected non-nil partialMonthLocalClientTracker")
-	}
 	if len(a.currentSegment.currentClients.Clients) > 0 {
 		t.Errorf("expected no current entity segment to be loaded. got: %v", a.currentSegment.currentClients)
 	}
@@ -189,9 +176,6 @@ func (a *ActivityLog) ExpectCurrentSegmentRefreshed(t *testing.T, expectedStart 
 	}
 	if len(a.partialMonthClientTracker) > 0 {
 		t.Errorf("expected no active entity segment to be loaded. got: %v", a.partialMonthClientTracker)
-	}
-	if len(a.partialMonthLocalClientTracker) > 0 {
-		t.Errorf("expected no active entity segment to be loaded. got: %v", a.partialMonthLocalClientTracker)
 	}
 
 	if verifyTimeNotZero {
@@ -270,12 +254,4 @@ func (c *Core) GetActiveGlobalFragment() *activity.LogFragment {
 
 func (c *Core) GetSecondaryGlobalFragments() []*activity.LogFragment {
 	return c.activityLog.secondaryGlobalClientFragments
-}
-
-func (c *Core) GetActiveLocalFragment() *activity.LogFragment {
-	return c.activityLog.localFragment
-}
-
-func (c *Core) GetActiveFragment() *activity.LogFragment {
-	return c.activityLog.fragment
 }
