@@ -174,7 +174,7 @@ for write requests as a GA feature (enabled by default) for Integrated Storage.
 * **Audit Entry Exclusion (enterprise)**: Audit devices support excluding fields from entries being written to them, with expression-based rules (powered by go-bexpr) to determine when the specific fields are excluded.
 * **Workload Identity Federation UI for AWS (enterprise)**: Add WIF fields to AWS secrets engine. [[GH-28148](https://github.com/hashicorp/vault/pull/28148)]
 * **KV v2 Patch/Subkey (enterprise)**: Adds GUI support to read the subkeys of a KV v2 secret and patch (partially update) secret data. [[GH-28212](https://github.com/hashicorp/vault/pull/28212)]
-* **Self-Managed Static Roles**: Self-Managed Static Roles are now supported for select SQL database engines (Postgres, Oracle). Requires Vault Enterprise. [[GH-28199](https://github.com/hashicorp/vault/pull/28199)]
+* **Self-Managed Static Roles**: Self-Managed Static Roles are now supported for the Postgres SQL database engine. Requires Vault Enterprise. [[GH-28199](https://github.com/hashicorp/vault/pull/28199)]
 * **Vault Minimal Version**: Add the ability to build a minimal version of Vault
 with only core features using the BUILD_MINIMAL environment variable. [[GH-27394](https://github.com/hashicorp/vault/pull/27394)]
 * **Vault PKI 3GPP CMPv2 Server (Enterprise)**: Support for the PKI 3GPP CMPv2 certificate management protocol has been added to the Vault PKI Plugin. This allows standard CMPv2 clients to request certificates from a Vault server with no knowledge of Vault APIs.
