@@ -18,11 +18,11 @@ func (e entKeyEntry) IsEntPrivateKeyMissing() bool {
 	return true
 }
 
-func entSignWithOptions(p *Policy, input []byte, ver int, options *SigningOptions) ([]byte, error) {
+func entSignWithOptions(p *Policy, input, context []byte, ver int, hashAlgorithm HashType, options *SigningOptions) ([]byte, error) {
 	return nil, fmt.Errorf("unsupported key type %v", p.Type)
 }
 
-func entVerifySignatureWithOptions(p *Policy, input []byte, sigBytes []byte, ver int, options *SigningOptions) (bool, error) {
+func entVerifySignatureWithOptions(p *Policy, input, context []byte, sigBytes []byte, ver int, options *SigningOptions) (bool, error) {
 	return false, errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
 }
 
