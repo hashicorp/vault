@@ -265,25 +265,17 @@ func (c *Core) GetActivityLog() *ActivityLog {
 }
 
 func (c *Core) GetActiveGlobalFragment() *activity.LogFragment {
-	c.activityLog.globalFragmentLock.RLock()
-	defer c.activityLog.globalFragmentLock.RUnlock()
 	return c.activityLog.currentGlobalFragment
 }
 
 func (c *Core) GetSecondaryGlobalFragments() []*activity.LogFragment {
-	c.activityLog.globalFragmentLock.RLock()
-	defer c.activityLog.globalFragmentLock.RUnlock()
 	return c.activityLog.secondaryGlobalClientFragments
 }
 
 func (c *Core) GetActiveLocalFragment() *activity.LogFragment {
-	c.activityLog.localFragmentLock.RLock()
-	defer c.activityLog.localFragmentLock.RUnlock()
 	return c.activityLog.localFragment
 }
 
 func (c *Core) GetActiveFragment() *activity.LogFragment {
-	c.activityLog.fragmentLock.RLock()
-	defer c.activityLog.fragmentLock.RUnlock()
 	return c.activityLog.fragment
 }
