@@ -173,7 +173,7 @@ a warning that it did not exist.`,
 }
 
 type eabType struct {
-	KeyID         string    `json:"-"`
+	KeyID         string    `json:"key-id"`
 	KeyType       string    `json:"key-type"`
 	PrivateBytes  []byte    `json:"private-bytes"`
 	AcmeDirectory string    `json:"acme-directory"`
