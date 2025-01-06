@@ -439,7 +439,7 @@ func (a *ActivityLog) NewSegmentFileReader(ctx context.Context, startTime time.T
 	if err != nil {
 		return nil, err
 	}
-	tokens, err := a.newSingleTypeSegmentReader(ctx, startTime, activityTokenLocalBasePath)
+	tokens, err := a.newSingleTypeSegmentReader(ctx, startTime, activityTokenBasePath)
 	if err != nil {
 		return nil, err
 	}
