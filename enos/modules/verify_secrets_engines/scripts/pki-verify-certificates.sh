@@ -39,6 +39,10 @@ VAULT_CERTS=$("$binpath" list "${MOUNT}/certs" | jq -r '.[]')
 [[ -z "$VAULT_CERTS" ]] && fail "VAULT_CERTS should include vault certificates"
 
 # Verifying Certificates
+if [ ! -d "${TEST_DIR}" ]; then
+    echo "Directory does not exist. Creating it now."
+    mkdir -p "${TEST_DIR}" # Need to create this directory for Enterprise test
+fi
 TMP_FILE="tmp-vault-cert.pem"
 for CERT in $VAULT_CERTS; do
   echo "Getting certificate from Vault PKI: ${CERT}"
