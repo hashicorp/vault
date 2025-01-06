@@ -4,7 +4,7 @@
  */
 
 import Model, { attr } from '@ember-data/model';
-import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
+import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 export default class GcpConfig extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord
@@ -67,5 +67,37 @@ export default class GcpConfig extends Model {
   get displayAttrs() {
     const formFields = expandAttributeMeta(this, this.configurableParams);
     return formFields.filter((attr) => attr.name !== 'credentials');
+  }
+
+  // "filedGroupsWif" and "fieldGroupsGcp" are passed to the FormFieldGroups component to determine which group to show in the form (ex: @groupName="fieldGroupsWif")
+  get fieldGroupsWif() {
+    return fieldToAttrs(this, this.formFieldGroups('wif'));
+  }
+
+  get fieldGroupsGcp() {
+    return fieldToAttrs(this, this.formFieldGroups('gcp'));
+  }
+
+  formFieldGroups(accessType = 'gcp') {
+    const formFieldGroups = [];
+    if (accessType === 'wif') {
+      formFieldGroups.push({
+        default: ['identityTokenAudience', 'serviceAccountEmail', 'identityTokenTtl'],
+      });
+    }
+    if (accessType === 'gcp') {
+      formFieldGroups.push({
+        default: ['credentials'],
+      });
+    }
+    formFieldGroups.push({
+      'More options': ['ttl', 'maxTtl'],
+    });
+    return formFieldGroups;
+  }
+
+  // GETTERS used by configure-gcp component
+  get isWifPluginConfigured() {
+    return !!this.identityTokenAudience || !!this.identityTokenTtl || !!this.serviceAccountEmail;
   }
 }
