@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Adds navigation for LDAP hierarchical libraries
+```
