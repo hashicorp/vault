@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginidentityutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/rotation"
 )
 
 // A single default template that supports both the different credential types (IAM/STS) that are capped at differing length limits (64 chars/32 chars respectively)
@@ -216,7 +217,7 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 
 	// Now that the root config is set up, register the rotation job if it required
 	if rc.RotationSchedule != "" || rc.RotationTTL != 0 {
-		cfgReq := &logical.RotationJobConfigureRequest{
+		cfgReq := &rotation.RotationJobConfigureRequest{
 			Name:             rootRotationJobName,
 			MountPoint:       req.MountPoint,
 			ReqPath:          req.Path,
@@ -225,7 +226,7 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 			RotationTTL:      rc.RotationTTL,
 		}
 
-		rotationJob, err := logical.ConfigureRotationJob(cfgReq)
+		rotationJob, err := rotation.ConfigureRotationJob(cfgReq)
 		if err != nil {
 			return logical.ErrorResponse("error configuring rotation job: %s", err), nil
 		}

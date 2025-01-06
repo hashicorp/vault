@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/rotation"
 	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/hashicorp/vault/version"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -488,7 +489,7 @@ func (d dynamicSystemView) GenerateIdentityToken(ctx context.Context, req *plugi
 	}, nil
 }
 
-func (d dynamicSystemView) RegisterRotationJob(ctx context.Context, job *logical.RotationJob) (rotationID string, err error) {
+func (d dynamicSystemView) RegisterRotationJob(ctx context.Context, job *rotation.RotationJob) (string, error) {
 	mountEntry := d.mountEntry
 	if mountEntry == nil {
 		return "", fmt.Errorf("no mount entry")

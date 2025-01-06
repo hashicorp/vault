@@ -1,7 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package logical
+package rotation
 
 import (
 	"fmt"
@@ -10,11 +10,11 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
-// RotationOptions is an embeddable struct to capture common lease
+// RotationOptions is an embeddable struct to capture common rotation
 // settings between a Secret and Auth
 type RotationOptions struct {
 	// Schedule holds the info for the framework.Schedule
-	Schedule *RootSchedule
+	Schedule *RotationSchedule
 }
 
 // RotationJob represents the secret part of a response.
@@ -43,7 +43,7 @@ func (s *RotationJob) Validate() error {
 	return nil
 }
 
-func getRotationJob(rotationSchedule, path, rotationJobName string, rotationWindow, ttl int) (*RotationJob, error) {
+func newRotationJob(rotationSchedule, path, rotationJobName string, rotationWindow, ttl int) (*RotationJob, error) {
 	var cronSc *cron.SpecSchedule
 	if rotationSchedule != "" {
 		var err error
@@ -53,7 +53,7 @@ func getRotationJob(rotationSchedule, path, rotationJobName string, rotationWind
 		}
 	}
 
-	rs := &RootSchedule{
+	rs := &RotationSchedule{
 		Schedule:         cronSc,
 		RotationSchedule: rotationSchedule,
 		RotationWindow:   time.Duration(rotationWindow) * time.Second,
@@ -82,7 +82,7 @@ func ConfigureRotationJob(configRequest *RotationJobConfigureRequest) (*Rotation
 	var rotationJob *RotationJob
 	if configRequest.RotationSchedule != "" && configRequest.RotationWindow != 0 {
 		var err error
-		rotationJob, err = getRotationJob(configRequest.RotationSchedule, mount, configRequest.Name, configRequest.RotationWindow, 0)
+		rotationJob, err = newRotationJob(configRequest.RotationSchedule, mount, configRequest.Name, configRequest.RotationWindow, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -90,7 +90,7 @@ func ConfigureRotationJob(configRequest *RotationJobConfigureRequest) (*Rotation
 
 	if configRequest.RotationTTL != 0 {
 		var err error
-		rotationJob, err = getRotationJob("", mount, configRequest.Name, 0, configRequest.RotationTTL)
+		rotationJob, err = newRotationJob("", mount, configRequest.Name, 0, configRequest.RotationTTL)
 		if err != nil {
 			return nil, err
 		}

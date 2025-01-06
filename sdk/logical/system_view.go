@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
+	"github.com/hashicorp/vault/sdk/rotation"
 )
 
 // SystemView exposes system configuration information in a safe way
@@ -103,7 +104,7 @@ type SystemView interface {
 
 	// RegisterRotationJob returns a rotation ID after registering a
 	// rotation job for the requesting plugin.
-	RegisterRotationJob(ctx context.Context, job *RotationJob) (rotationID string, err error)
+	RegisterRotationJob(ctx context.Context, job *rotation.RotationJob) (rotationID string, err error)
 }
 
 type PasswordPolicy interface {
@@ -290,6 +291,6 @@ func (d StaticSystemView) APILockShouldBlockRequest() (bool, error) {
 	return d.APILockShouldBlockRequestVal, nil
 }
 
-func (d StaticSystemView) RegisterRotationJob(_ context.Context, _ *RotationJob) (rotationID string, err error) {
+func (d StaticSystemView) RegisterRotationJob(_ context.Context, _ *rotation.RotationJob) (rotationID string, err error) {
 	return "", errors.New("RegisterRotationJob is not implemented in StaticSystemView")
 }

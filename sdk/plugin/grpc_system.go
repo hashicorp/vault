@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
+	"github.com/hashicorp/vault/sdk/rotation"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -227,7 +228,7 @@ func (s *gRPCSystemViewClient) GenerateIdentityToken(ctx context.Context, req *p
 	}, nil
 }
 
-func (s *gRPCSystemViewClient) RegisterRotationJob(ctx context.Context, job *logical.RotationJob) (id string, retErr error) {
+func (s *gRPCSystemViewClient) RegisterRotationJob(ctx context.Context, job *rotation.RotationJob) (id string, retErr error) {
 	scheduleData := map[string]interface{}{
 		"schedule":            job.Schedule.Schedule,
 		"rotation_window":     job.Schedule.RotationWindow,

@@ -20,7 +20,8 @@ var (
 type AutomatedRotationParams struct {
 	// RotationSchedule is the CRON-style rotation schedule.
 	RotationSchedule string `json:"rotation_schedule"`
-	// RotationWindow is the amount of time the rotation is allowed within from the CRON schedule.
+	// RotationWindow specifies the amount of time in which the rotation is allowed to
+	// occur starting from a given rotation_schedule.
 	RotationWindow int `json:"rotation_window"`
 	// RotationTTL is an alternate choice for simple time-to-live based rotation timing.
 	RotationTTL int `json:"rotation_ttl"`

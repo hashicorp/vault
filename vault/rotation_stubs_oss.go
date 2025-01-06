@@ -11,7 +11,7 @@ import (
 	"context"
 
 	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
-	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/rotation"
 )
 
 type RotationManager struct{}
@@ -24,6 +24,6 @@ func (c *Core) stopRotation() error {
 	return nil
 }
 
-func (c *Core) RegisterRotationJob(_ context.Context, _ string, _ *logical.RotationJob) (string, error) {
+func (c *Core) RegisterRotationJob(_ context.Context, _ string, _ *rotation.RotationJob) (string, error) {
 	return "", automatedrotationutil.ErrRotationManagerUnsupported
 }

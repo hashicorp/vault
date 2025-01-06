@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginidentityutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/rotation"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -247,6 +248,8 @@ func TestBackend_PathConfigRoot_PluginIdentityToken(t *testing.T) {
 	assert.ErrorContains(t, resp.Error(), pluginidentityutil.ErrPluginWorkloadIdentityUnsupported.Error())
 }
 
+// TestBackend_PathConfigRoot_RegisterRootRotation tests that configuration
+// and registering a root credential returns an immediate error.
 func TestBackend_PathConfigRoot_RegisterRootRotation(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -287,6 +290,6 @@ func (d testSystemView) GenerateIdentityToken(_ context.Context, _ *pluginutil.I
 	return nil, pluginidentityutil.ErrPluginWorkloadIdentityUnsupported
 }
 
-func (d testSystemView) RegisterRotationJob(_ context.Context, _ *logical.RotationJob) (string, error) {
+func (d testSystemView) RegisterRotationJob(_ context.Context, _ *rotation.RotationJob) (string, error) {
 	return "", automatedrotationutil.ErrRotationManagerUnsupported
 }
