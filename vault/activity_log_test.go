@@ -297,7 +297,7 @@ func TestActivityLog_SaveTokensToStorage(t *testing.T) {
 	a.SetStartTimestamp(time.Now().Unix()) // set a nonzero segment
 
 	nsIDs := [...]string{"ns1_id", "ns2_id", "ns3_id"}
-	path := fmt.Sprintf("%sdirecttokens/%d/0", ActivityLogLocalPrefix, a.GetStartTimestamp())
+	path := fmt.Sprintf("%sdirecttokens/%d/0", ActivityLogPrefix, a.GetStartTimestamp())
 
 	for i := 0; i < 3; i++ {
 		a.AddTokenToFragment(nsIDs[0])
@@ -380,7 +380,7 @@ func TestActivityLog_SaveTokensToStorageDoesNotUpdateTokenCount(t *testing.T) {
 	a.SetStandbyEnable(ctx, true)
 	a.SetStartTimestamp(time.Now().Unix()) // set a nonzero segment
 
-	tokenPath := fmt.Sprintf("%sdirecttokens/%d/0", ActivityLogLocalPrefix, a.GetStartTimestamp())
+	tokenPath := fmt.Sprintf("%sdirecttokens/%d/0", ActivityLogPrefix, a.GetStartTimestamp())
 	clientPath := fmt.Sprintf("sys/counters/activity/log/entity/%d/0", a.GetStartTimestamp())
 	// Create some entries without entityIDs
 	tokenEntryOne := logical.TokenEntry{NamespaceID: namespace.RootNamespaceID, Policies: []string{"hi"}}
@@ -637,16 +637,11 @@ func TestActivityLog_availableLogs(t *testing.T) {
 	// set up a few files in storage
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
-	paths := [...]string{"entity/1111/1", "entity/992/3"}
-	tokenPaths := [...]string{"directtokens/1111/1", "directtokens/1000000/1", "directtokens/992/1"}
+	paths := [...]string{"entity/1111/1", "directtokens/1111/1", "directtokens/1000000/1", "entity/992/3", "directtokens/992/1"}
 	expectedTimes := [...]time.Time{time.Unix(1000000, 0), time.Unix(1111, 0), time.Unix(992, 0)}
 
 	for _, path := range paths {
 		WriteToStorage(t, core, ActivityLogPrefix+path, []byte("test"))
-	}
-
-	for _, path := range tokenPaths {
-		WriteToStorage(t, core, ActivityLogLocalPrefix+path, []byte("test"))
 	}
 
 	// verify above files are there, and dates in correct order
@@ -783,7 +778,7 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 	path0 := fmt.Sprintf("sys/counters/activity/log/entity/%d/0", startTimestamp)
 	path1 := fmt.Sprintf("sys/counters/activity/log/entity/%d/1", startTimestamp)
 	path2 := fmt.Sprintf("sys/counters/activity/log/entity/%d/2", startTimestamp)
-	tokenPath := fmt.Sprintf("sys/counters/activity/local/log/directtokens/%d/0", startTimestamp)
+	tokenPath := fmt.Sprintf("sys/counters/activity/log/directtokens/%d/0", startTimestamp)
 
 	genID := func(i int) string {
 		return fmt.Sprintf("11111111-1111-1111-1111-%012d", i)
@@ -1145,7 +1140,7 @@ func TestActivityLog_tokenCountExists(t *testing.T) {
 	a := core.activityLog
 	paths := [...]string{"directtokens/992/0", "directtokens/1001/foo", "directtokens/1111/0", "directtokens/2222/1"}
 	for _, path := range paths {
-		WriteToStorage(t, core, ActivityLogLocalPrefix+path, []byte("test"))
+		WriteToStorage(t, core, ActivityLogPrefix+path, []byte("test"))
 	}
 
 	testCases := []struct {
@@ -1512,7 +1507,7 @@ func TestActivityLog_loadTokenCount(t *testing.T) {
 
 	ctx := context.Background()
 	for _, tc := range testCases {
-		WriteToStorage(t, core, ActivityLogLocalPrefix+tc.path, data)
+		WriteToStorage(t, core, ActivityLogPrefix+tc.path, data)
 	}
 
 	for _, tc := range testCases {
@@ -1656,7 +1651,7 @@ func setupActivityRecordsInStorage(t *testing.T, base time.Time, includeEntities
 			t.Fatalf(err.Error())
 		}
 
-		WriteToStorage(t, core, ActivityLogLocalPrefix+"directtokens/"+fmt.Sprint(base.Unix())+"/0", tokenData)
+		WriteToStorage(t, core, ActivityLogPrefix+"directtokens/"+fmt.Sprint(base.Unix())+"/0", tokenData)
 	}
 
 	return a, entityRecords, tokenRecords
@@ -1983,17 +1978,11 @@ func TestActivityLog_DeleteWorker(t *testing.T) {
 		"entity/1111/2",
 		"entity/1111/3",
 		"entity/1112/1",
-	}
-	for _, path := range paths {
-		WriteToStorage(t, core, ActivityLogPrefix+path, []byte("test"))
-	}
-
-	tokenPaths := []string{
 		"directtokens/1111/1",
 		"directtokens/1112/1",
 	}
-	for _, path := range tokenPaths {
-		WriteToStorage(t, core, ActivityLogLocalPrefix+path, []byte("test"))
+	for _, path := range paths {
+		WriteToStorage(t, core, ActivityLogPrefix+path, []byte("test"))
 	}
 
 	doneCh := make(chan struct{})
@@ -2009,13 +1998,13 @@ func TestActivityLog_DeleteWorker(t *testing.T) {
 
 	// Check segments still present
 	readSegmentFromStorage(t, core, ActivityLogPrefix+"entity/1112/1")
-	readSegmentFromStorage(t, core, ActivityLogLocalPrefix+"directtokens/1112/1")
+	readSegmentFromStorage(t, core, ActivityLogPrefix+"directtokens/1112/1")
 
 	// Check other segments not present
 	expectMissingSegment(t, core, ActivityLogPrefix+"entity/1111/1")
 	expectMissingSegment(t, core, ActivityLogPrefix+"entity/1111/2")
 	expectMissingSegment(t, core, ActivityLogPrefix+"entity/1111/3")
-	expectMissingSegment(t, core, ActivityLogLocalPrefix+"directtokens/1111/1")
+	expectMissingSegment(t, core, ActivityLogPrefix+"directtokens/1111/1")
 }
 
 // checkAPIWarnings ensures there is a warning if switching from enabled -> disabled,
@@ -2134,7 +2123,7 @@ func TestActivityLog_EnableDisable(t *testing.T) {
 		path = fmt.Sprintf("%ventity/%v/0", ActivityLogPrefix, seg2)
 		readSegmentFromStorage(t, core, path)
 
-		path = fmt.Sprintf("%vdirecttokens/%v/0", ActivityLogLocalPrefix, seg2)
+		path = fmt.Sprintf("%vdirecttokens/%v/0", ActivityLogPrefix, seg2)
 	}
 	readSegmentFromStorage(t, core, path)
 }
@@ -2382,7 +2371,7 @@ func TestActivityLog_CalculatePrecomputedQueriesWithMixedTWEs(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		tokenPath := fmt.Sprintf("%vdirecttokens/%v/%v", ActivityLogLocalPrefix, segment.StartTime, segment.Segment)
+		tokenPath := fmt.Sprintf("%vdirecttokens/%v/%v", ActivityLogPrefix, segment.StartTime, segment.Segment)
 		WriteToStorage(t, core, tokenPath, data)
 	}
 
@@ -3705,7 +3694,7 @@ func TestActivityLog_Deletion(t *testing.T) {
 			paths[i] = append(paths[i], entityPath)
 			WriteToStorage(t, core, entityPath, []byte("test"))
 		}
-		tokenPath := fmt.Sprintf("%vdirecttokens/%v/0", ActivityLogLocalPrefix, start.Unix())
+		tokenPath := fmt.Sprintf("%vdirecttokens/%v/0", ActivityLogPrefix, start.Unix())
 		paths[i] = append(paths[i], tokenPath)
 		WriteToStorage(t, core, tokenPath, []byte("test"))
 

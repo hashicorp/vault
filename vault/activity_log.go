@@ -36,22 +36,20 @@ import (
 const (
 	// activitySubPath is the directory under the system view where
 	// the log will be stored.
-	activitySubPath            = "counters/activity/"
-	activityEntityBasePath     = "log/entity/"
-	activityTokenBasePath      = "log/directtokens/"
-	activityTokenLocalBasePath = "local/" + activityTokenBasePath
-	activityQueryBasePath      = "queries/"
-	activityConfigKey          = "config"
-	activityIntentLogKey       = "endofmonth"
+	activitySubPath        = "counters/activity/"
+	activityEntityBasePath = "log/entity/"
+	activityTokenBasePath  = "log/directtokens/"
+	activityQueryBasePath  = "queries/"
+	activityConfigKey      = "config"
+	activityIntentLogKey   = "endofmonth"
 
 	activityACMERegenerationKey = "acme-regeneration"
 	// sketch for each month that stores hash of client ids
 	distinctClientsBasePath = "log/distinctclients/"
 
 	// for testing purposes (public as needed)
-	ActivityLogPrefix      = "sys/counters/activity/log/"
-	ActivityLogLocalPrefix = "sys/counters/activity/local/log/"
-	ActivityPrefix         = "sys/counters/activity/"
+	ActivityLogPrefix = "sys/counters/activity/log/"
+	ActivityPrefix    = "sys/counters/activity/"
 
 	// Time to wait on perf standby before sending fragment
 	activityFragmentStandbyTime = 10 * time.Minute
@@ -506,7 +504,7 @@ func (a *ActivityLog) saveSegmentTokensInternal(ctx context.Context, currentSegm
 		return "", nil
 	}
 	// RFC (VLT-120) defines this as 1-indexed, but it should be 0-indexed
-	tokenPath := fmt.Sprintf("%s%d/0", activityTokenLocalBasePath, currentSegment.startTimestamp)
+	tokenPath := fmt.Sprintf("%s%d/0", activityTokenBasePath, currentSegment.startTimestamp)
 	// We must still allow for the tokenCount of the current segment to
 	// be written to storage, since if we remove this code we will incur
 	// data loss for one segment's worth of TWEs.
@@ -588,7 +586,7 @@ func parseSegmentNumberFromPath(path string) (int, bool) {
 // sorted last to first
 func (a *ActivityLog) availableLogs(ctx context.Context, upTo time.Time) ([]time.Time, error) {
 	paths := make([]string, 0)
-	for _, basePath := range []string{activityEntityBasePath, activityTokenLocalBasePath} {
+	for _, basePath := range []string{activityEntityBasePath, activityTokenBasePath} {
 		p, err := a.view.List(ctx, basePath)
 		if err != nil {
 			return nil, err
@@ -696,7 +694,7 @@ func (a *ActivityLog) WalkTokenSegments(ctx context.Context,
 	startTime time.Time,
 	walkFn func(*activity.TokenCount),
 ) error {
-	basePath := activityTokenLocalBasePath + fmt.Sprint(startTime.Unix()) + "/"
+	basePath := activityTokenBasePath + fmt.Sprint(startTime.Unix()) + "/"
 	pathList, err := a.view.List(ctx, basePath)
 	if err != nil {
 		return err
@@ -797,7 +795,7 @@ func (a *ActivityLog) loadCurrentClientSegment(ctx context.Context, startTime ti
 // tokenCountExists checks if there's a token log for :startTime:
 // this function should be called with the lock held
 func (a *ActivityLog) tokenCountExists(ctx context.Context, startTime time.Time) (bool, error) {
-	p, err := a.view.List(ctx, activityTokenLocalBasePath+fmt.Sprint(startTime.Unix())+"/")
+	p, err := a.view.List(ctx, activityTokenBasePath+fmt.Sprint(startTime.Unix())+"/")
 	if err != nil {
 		return false, err
 	}
@@ -822,7 +820,7 @@ func (a *ActivityLog) loadTokenCount(ctx context.Context, startTime time.Time) e
 		return nil
 	}
 
-	path := activityTokenLocalBasePath + fmt.Sprint(startTime.Unix()) + "/0"
+	path := activityTokenBasePath + fmt.Sprint(startTime.Unix()) + "/0"
 	data, err := a.view.Get(ctx, path)
 	if err != nil {
 		return err
@@ -918,7 +916,7 @@ func (a *ActivityLog) resetCurrentLog() {
 
 func (a *ActivityLog) deleteLogWorker(ctx context.Context, startTimestamp int64, whenDone chan struct{}) {
 	entityPath := fmt.Sprintf("%v%v/", activityEntityBasePath, startTimestamp)
-	tokenPath := fmt.Sprintf("%v%v/", activityTokenLocalBasePath, startTimestamp)
+	tokenPath := fmt.Sprintf("%v%v/", activityTokenBasePath, startTimestamp)
 
 	entitySegments, err := a.view.List(ctx, entityPath)
 	if err != nil {
