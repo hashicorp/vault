@@ -5,6 +5,10 @@
 import type { Breadcrumb } from 'vault/vault/app-types';
 
 export const roleRoutes = { details: 'roles.role.details', subdirectory: 'roles.subdirectory' };
+export const libraryRoutes = {
+  details: 'libraries.library.details',
+  subdirectory: 'libraries.subdirectory',
+};
 
 export const ldapBreadcrumbs = (
   fullPath: string | undefined, // i.e. path/to/item

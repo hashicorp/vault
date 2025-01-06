@@ -13,6 +13,7 @@ import type {
 export default interface LdapLibraryModel extends WithFormFieldsAndValidationsModel {
   backend: string;
   name: string;
+  path_to_library: string;
   service_account_names: string;
   default_ttl: number;
   max_ttl: number;

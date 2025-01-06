@@ -28,6 +28,16 @@ export default class LdapLibrariesPageComponent extends Component<Args> {
   @tracked filterValue = '';
   @tracked libraryToDelete: LdapLibraryModel | null = null;
 
+  isHierarchical = (name: string) => name.endsWith('/');
+
+  linkParams = (library: LdapLibraryModel) => {
+    const route = this.isHierarchical(library.name) ? 'libraries.subdirectory' : 'libraries.library.details';
+    // if there is a path_to_library we're in a subdirectory
+    // and must concat the ancestors with the leaf name to get the full library path
+    const libraryName = library.path_to_library ? library.path_to_library + library.name : library.name;
+    return [route, libraryName];
+  };
+
   get mountPoint(): string {
     const owner = getOwner(this) as EngineOwner;
     return owner.mountPoint;

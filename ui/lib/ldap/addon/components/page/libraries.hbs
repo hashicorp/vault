@@ -43,7 +43,7 @@
 {{else}}
   <div class="has-bottom-margin-s">
     {{#each this.filteredLibraries as |library|}}
-      <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{array "libraries.library.details" library.name}} as |Item|>
+      <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{this.linkParams library}} as |Item|>
         <Item.content>
           <Icon @name="folder" />
           <span data-test-library={{library.name}}>{{library.name}}</span>
@@ -57,22 +57,34 @@
                 @hasChevron={{false}}
                 data-test-popup-menu-trigger
               />
-              {{#if library.canEdit}}
-                <dd.Interactive data-test-edit @route="libraries.library.edit" @model={{library}}>Edit</dd.Interactive>
-              {{/if}}
-              {{#if library.canRead}}
+              {{#if (this.isHierarchical library.name)}}
                 <dd.Interactive
-                  data-test-details
-                  @route="libraries.library.details"
-                  @model={{library}}
-                >Details</dd.Interactive>
-              {{/if}}
-              {{#if library.canDelete}}
-                <dd.Interactive
-                  data-test-delete
-                  @color="critical"
-                  {{on "click" (fn (mut this.libraryToDelete) library)}}
-                >Delete</dd.Interactive>
+                  data-test-subdirectory
+                  @route="libraries.subdirectory"
+                  @model={{concat library.path_to_library library.name}}
+                >Content</dd.Interactive>
+              {{else}}
+                {{#if library.canEdit}}
+                  <dd.Interactive
+                    data-test-edit
+                    @route="libraries.library.edit"
+                    @model={{concat library.path_to_library library.name}}
+                  >Edit</dd.Interactive>
+                {{/if}}
+                {{#if library.canRead}}
+                  <dd.Interactive
+                    data-test-details
+                    @route="libraries.library.details"
+                    @model={{concat library.path_to_library library.name}}
+                  >Details</dd.Interactive>
+                {{/if}}
+                {{#if library.canDelete}}
+                  <dd.Interactive
+                    data-test-delete
+                    @color="critical"
+                    {{on "click" (fn (mut this.libraryToDelete) library)}}
+                  >Delete</dd.Interactive>
+                {{/if}}
               {{/if}}
             </Hds::Dropdown>
           {{/if}}
