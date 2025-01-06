@@ -47,7 +47,7 @@ export default class LdapLibrariesSubdirectoryRoute extends Route {
     super.setupController(controller, resolvedModel, transition);
 
     const routeParams = (childResource: string) => {
-      return [resolvedModel.backendModel.id, , childResource];
+      return [resolvedModel.backendModel.id, childResource];
     };
 
     controller.breadcrumbs = [
