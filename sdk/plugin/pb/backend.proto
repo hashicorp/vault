@@ -624,6 +624,10 @@ message RotationJobInput {
   string name = 4;
 }
 
+message DeregisterRotationJobRequest {
+  string rotation_id = 1;
+}
+
 // SystemView exposes system configuration information in a safe way for plugins
 // to consume. Plugins should implement the client for this service.
 service SystemView {
@@ -685,6 +689,9 @@ service SystemView {
 
   // RegisterRotationJob returns a rotation ID for the requested plugin credential.
   rpc RegisterRotationJob(RegisterRotationJobRequest) returns (RegisterRotationJobResponse);
+
+  // DeregisterRotationJob returns any errors in de-registering a credential from the Rotation Manager.
+  rpc DeregisterRotationJob(DeregisterRotationJobRequest) returns (Empty);
 }
 
 message Connection {

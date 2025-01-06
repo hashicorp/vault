@@ -689,6 +689,7 @@ const (
 	SystemView_ClusterInfo_FullMethodName                = "/pb.SystemView/ClusterInfo"
 	SystemView_GenerateIdentityToken_FullMethodName      = "/pb.SystemView/GenerateIdentityToken"
 	SystemView_RegisterRotationJob_FullMethodName        = "/pb.SystemView/RegisterRotationJob"
+	SystemView_DeregisterRotationJob_FullMethodName      = "/pb.SystemView/DeregisterRotationJob"
 )
 
 // SystemViewClient is the client API for SystemView service.
@@ -742,6 +743,8 @@ type SystemViewClient interface {
 	GenerateIdentityToken(ctx context.Context, in *GenerateIdentityTokenRequest, opts ...grpc.CallOption) (*GenerateIdentityTokenResponse, error)
 	// RegisterRotationJob returns a rotation ID for the requested plugin credential.
 	RegisterRotationJob(ctx context.Context, in *RegisterRotationJobRequest, opts ...grpc.CallOption) (*RegisterRotationJobResponse, error)
+	// DeregisterRotationJob returns any errors in de-registering a credential from the Rotation Manager.
+	DeregisterRotationJob(ctx context.Context, in *DeregisterRotationJobRequest, opts ...grpc.CallOption) (*Empty, error)
 }
 
 type systemViewClient struct {
@@ -902,6 +905,16 @@ func (c *systemViewClient) RegisterRotationJob(ctx context.Context, in *Register
 	return out, nil
 }
 
+func (c *systemViewClient) DeregisterRotationJob(ctx context.Context, in *DeregisterRotationJobRequest, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, SystemView_DeregisterRotationJob_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SystemViewServer is the server API for SystemView service.
 // All implementations must embed UnimplementedSystemViewServer
 // for forward compatibility.
@@ -953,6 +966,8 @@ type SystemViewServer interface {
 	GenerateIdentityToken(context.Context, *GenerateIdentityTokenRequest) (*GenerateIdentityTokenResponse, error)
 	// RegisterRotationJob returns a rotation ID for the requested plugin credential.
 	RegisterRotationJob(context.Context, *RegisterRotationJobRequest) (*RegisterRotationJobResponse, error)
+	// DeregisterRotationJob returns any errors in de-registering a credential from the Rotation Manager.
+	DeregisterRotationJob(context.Context, *DeregisterRotationJobRequest) (*Empty, error)
 	mustEmbedUnimplementedSystemViewServer()
 }
 
@@ -1007,6 +1022,9 @@ func (UnimplementedSystemViewServer) GenerateIdentityToken(context.Context, *Gen
 }
 func (UnimplementedSystemViewServer) RegisterRotationJob(context.Context, *RegisterRotationJobRequest) (*RegisterRotationJobResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegisterRotationJob not implemented")
+}
+func (UnimplementedSystemViewServer) DeregisterRotationJob(context.Context, *DeregisterRotationJobRequest) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeregisterRotationJob not implemented")
 }
 func (UnimplementedSystemViewServer) mustEmbedUnimplementedSystemViewServer() {}
 func (UnimplementedSystemViewServer) testEmbeddedByValue()                    {}
@@ -1299,6 +1317,24 @@ func _SystemView_RegisterRotationJob_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SystemView_DeregisterRotationJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeregisterRotationJobRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemViewServer).DeregisterRotationJob(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemView_DeregisterRotationJob_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemViewServer).DeregisterRotationJob(ctx, req.(*DeregisterRotationJobRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SystemView_ServiceDesc is the grpc.ServiceDesc for SystemView service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1365,6 +1401,10 @@ var SystemView_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RegisterRotationJob",
 			Handler:    _SystemView_RegisterRotationJob_Handler,
+		},
+		{
+			MethodName: "DeregisterRotationJob",
+			Handler:    _SystemView_DeregisterRotationJob_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

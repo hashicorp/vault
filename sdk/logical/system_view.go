@@ -105,6 +105,10 @@ type SystemView interface {
 	// RegisterRotationJob returns a rotation ID after registering a
 	// rotation job for the requesting plugin.
 	RegisterRotationJob(ctx context.Context, job *rotation.RotationJob) (rotationID string, err error)
+
+	// DeregisterRotationJob returns any errors in de-registering a
+	// credential from the Rotation Manager.
+	DeregisterRotationJob(ctx context.Context, rotationID string) error
 }
 
 type PasswordPolicy interface {
@@ -293,4 +297,8 @@ func (d StaticSystemView) APILockShouldBlockRequest() (bool, error) {
 
 func (d StaticSystemView) RegisterRotationJob(_ context.Context, _ *rotation.RotationJob) (rotationID string, err error) {
 	return "", errors.New("RegisterRotationJob is not implemented in StaticSystemView")
+}
+
+func (d StaticSystemView) DeregisterRotationJob(_ context.Context, _ string) (err error) {
+	return errors.New("DeregisterRotationJob is not implemented in StaticSystemView")
 }

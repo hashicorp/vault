@@ -109,18 +109,12 @@ func (b *backend) pathConfigRootRead(ctx context.Context, req *logical.Request, 
 	b.clientMutex.RLock()
 	defer b.clientMutex.RUnlock()
 
-	entry, err := req.Storage.Get(ctx, "config/root")
+	config, exists, err := getConfigFromStorage(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	if entry == nil {
+	if !exists {
 		return nil, nil
-	}
-
-	var config rootConfig
-
-	if err := entry.DecodeJSON(&config); err != nil {
-		return nil, err
 	}
 
 	configData := map[string]interface{}{
@@ -166,6 +160,12 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 	b.clientMutex.Lock()
 	defer b.clientMutex.Unlock()
 
+	// check for existing config
+	previousCfg, previousCfgExists, err := getConfigFromStorage(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
 	rc := rootConfig{
 		AccessKey:            data.Get("access_key").(string),
 		SecretKey:            data.Get("secret_key").(string),
@@ -206,13 +206,11 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 		}
 	}
 
-	entry, err := logical.StorageEntryJSON("config/root", rc)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := req.Storage.Put(ctx, entry); err != nil {
-		return nil, err
+	// Save the initial config only if it does not already exist
+	if !previousCfgExists {
+		if err := putConfigToStorage(ctx, req, &rc); err != nil {
+			return nil, err
+		}
 	}
 
 	// Now that the root config is set up, register the rotation job if it required
@@ -238,16 +236,25 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 		}
 
 		rc.RotationID = rotationID
+	}
 
-		// update config entry with rotation ID
-		entry, err = logical.StorageEntryJSON("config/root", rc)
-		if err != nil {
-			return nil, err
-		}
+	// Disable Automated Rotation and Deregister credentials if required
+	if rc.DisableAutomatedRotation {
+		// Ensure de-registering only occurs on updates and if
+		// a credential has actually been registered
+		if previousCfgExists && previousCfg.RotationID != "" {
+			err := b.System().DeregisterRotationJob(ctx, previousCfg.RotationID)
+			if err != nil {
+				return logical.ErrorResponse("error de-registering rotation job: %s", err), nil
+			}
 
-		if err := req.Storage.Put(ctx, entry); err != nil {
-			return nil, err
+			rc.RotationID = ""
 		}
+	}
+
+	// update config entry with rotation ID
+	if err := putConfigToStorage(ctx, req, &rc); err != nil {
+		return nil, err
 	}
 
 	// clear possible cached IAM / STS clients after successfully updating
@@ -256,6 +263,37 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 	b.stsClient = nil
 
 	return nil, nil
+}
+
+func getConfigFromStorage(ctx context.Context, req *logical.Request) (*rootConfig, bool, error) {
+	entry, err := req.Storage.Get(ctx, "config/root")
+	if err != nil {
+		return nil, false, err
+	}
+	if entry == nil {
+		return nil, false, nil
+	}
+
+	var config rootConfig
+
+	if err := entry.DecodeJSON(&config); err != nil {
+		return nil, false, err
+	}
+
+	return &config, true, nil
+}
+
+func putConfigToStorage(ctx context.Context, req *logical.Request, rc *rootConfig) error {
+	entry, err := logical.StorageEntryJSON("config/root", rc)
+	if err != nil {
+		return err
+	}
+
+	if err := req.Storage.Put(ctx, entry); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type rootConfig struct {

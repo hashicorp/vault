@@ -27,3 +27,7 @@ func (c *Core) stopRotation() error {
 func (c *Core) RegisterRotationJob(_ context.Context, _ string, _ *rotation.RotationJob) (string, error) {
 	return "", automatedrotationutil.ErrRotationManagerUnsupported
 }
+
+func (c *Core) DeregisterRotationJob(_ string) error {
+	return automatedrotationutil.ErrRotationManagerUnsupported
+}

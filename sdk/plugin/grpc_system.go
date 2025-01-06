@@ -254,6 +254,17 @@ func (s *gRPCSystemViewClient) RegisterRotationJob(ctx context.Context, job *rot
 	return resp.RotationID, nil
 }
 
+func (s *gRPCSystemViewClient) DeregisterRotationJob(ctx context.Context, rotationID string) error {
+	_, err := s.client.DeregisterRotationJob(ctx, &pb.DeregisterRotationJobRequest{
+		RotationID: rotationID,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 type gRPCSystemViewServer struct {
 	pb.UnimplementedSystemViewServer
 

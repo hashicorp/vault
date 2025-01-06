@@ -29,6 +29,9 @@ type AutomatedRotationParams struct {
 	// RotationID is the unique ID of the registered rotation job.
 	// Used by the plugin to track the rotation.
 	RotationID string `json:"rotation_id"`
+
+	// If set, will deregister all registered rotation jobs from the RotationManager for plugin.
+	DisableAutomatedRotation bool `json:"disable_automated_rotation"`
 }
 
 // ParseAutomatedRotationFields provides common field parsing to embedding structs.
@@ -59,6 +62,8 @@ func (p *AutomatedRotationParams) ParseAutomatedRotationFields(d *framework.Fiel
 		return fmt.Errorf("must include both schedule and window")
 	}
 
+	p.DisableAutomatedRotation = d.Get("disable_automated_rotation").(bool)
+
 	return nil
 }
 
@@ -68,6 +73,7 @@ func (p *AutomatedRotationParams) PopulateAutomatedRotationData(m map[string]int
 	m["rotation_window"] = p.RotationWindow
 	m["rotation_ttl"] = p.RotationTTL
 	m["rotation_id"] = p.RotationID
+	m["disable_automated_rotation"] = p.DisableAutomatedRotation
 }
 
 // AddAutomatedRotationFields adds plugin identity token fields to the given
@@ -89,6 +95,10 @@ func AddAutomatedRotationFields(m map[string]*framework.FieldSchema) {
 		"rotation_id": {
 			Type:        framework.TypeInt,
 			Description: "Unique ID of the registered rotation job",
+		},
+		"disable_automated_rotation": {
+			Type:        framework.TypeBool,
+			Description: "If set to true, will deregister all registered rotation jobs from the RotationManager for the plugin.",
 		},
 	}
 

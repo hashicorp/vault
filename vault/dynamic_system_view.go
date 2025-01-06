@@ -508,3 +508,7 @@ func (d dynamicSystemView) RegisterRotationJob(ctx context.Context, job *rotatio
 	job.RotationID = id
 	return id, nil
 }
+
+func (d dynamicSystemView) DeregisterRotationJob(_ context.Context, rotationID string) (err error) {
+	return d.core.DeregisterRotationJob(rotationID)
+}
