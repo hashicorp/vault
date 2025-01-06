@@ -90,7 +90,6 @@ func TestTransit_Export_KeyVersion_ExportsCorrectVersion(t *testing.T) {
 	verifyExportsCorrectVersion(t, "public-key", "ecdsa-p384", "", "")
 	verifyExportsCorrectVersion(t, "public-key", "ecdsa-p521", "", "")
 	verifyExportsCorrectVersion(t, "public-key", "ed25519", "", "")
-	entTestExportsCorrectVersion(t)
 }
 
 func verifyExportsCorrectVersion(t *testing.T, exportType, keyType, parameterSet, ecKeyType string) {
