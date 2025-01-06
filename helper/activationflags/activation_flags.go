@@ -22,6 +22,12 @@ type FeatureActivationFlags struct {
 	activationFlags     map[string]bool
 }
 
+func NewFeatureActivationFlags() *FeatureActivationFlags {
+	return &FeatureActivationFlags{
+		activationFlags: map[string]bool{},
+	}
+}
+
 func (f *FeatureActivationFlags) Initialize(ctx context.Context, storage logical.Storage) error {
 	f.activationFlagsLock.Lock()
 	defer f.activationFlagsLock.Unlock()

@@ -1456,14 +1456,10 @@ func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, log
 		c.AddLogger(sysBackendLogger)
 		b := NewSystemBackend(c, sysBackendLogger, config)
 
-		err := c.FeatureActivationFlags.Initialize(ctx, b.Core.systemBarrierView)
-		if err != nil {
-			return nil, fmt.Errorf("failed to initialize activation flags: %w", err)
-		}
-
 		if err := b.Setup(ctx, config); err != nil {
 			return nil, err
 		}
+
 		return b, nil
 	}
 

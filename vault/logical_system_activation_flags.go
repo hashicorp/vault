@@ -14,8 +14,6 @@ import (
 )
 
 const (
-	EnvHVDTierSecretsSync = "VAULT_HVD_ADMIN_SECRETS_SYNC"
-
 	paramFeatureName = "feature_name"
 	descFeatureName  = "The name of the feature to be activated."
 	summaryList      = "Returns the available and activated activation-flagged features."
@@ -39,6 +37,8 @@ This path responds to the following HTTP methods.
 )
 
 // Register CRUD functions dynamically.
+// These variables should only be mutated during initialization or server construction.
+// It is unsafe to modify them once the Vault core is running.
 var (
 	readActivationFlag = func(ctx context.Context, b *SystemBackend, req *logical.Request, fd *framework.FieldData) (*logical.Response, error) {
 		return b.readActivationFlag(ctx, req, fd)
@@ -61,6 +61,23 @@ func (b *SystemBackend) activationFlagsPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleActivationFlagRead,
 					Summary:  summaryList,
+				},
+			},
+			HelpSynopsis:    helpSynopsis,
+			HelpDescription: helpDescription,
+		},
+		{
+			Pattern: fmt.Sprintf("%s/%s/%s", prefixActivationFlags, "activation-test", verbActivationFlagsActivate),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: prefixActivationFlags,
+				OperationVerb:   verbActivationFlagsActivate,
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:                    b.handleActivationFlagsActivate,
+					ForwardPerformanceSecondary: true,
+					ForwardPerformanceStandby:   true,
+					Summary:                     summaryUpdate,
 				},
 			},
 			HelpSynopsis:    helpSynopsis,
