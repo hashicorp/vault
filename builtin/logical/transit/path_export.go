@@ -225,6 +225,14 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 				return "", err
 			}
 			return rsaKey, nil
+		default:
+			key, err := entEncodePrivateKey(exportType, policy, key)
+			if err != nil {
+				return "", err
+			}
+			if key != "" {
+				return key, nil
+			}
 		}
 	case exportTypePublicKey:
 		switch policy.Type {
@@ -253,6 +261,14 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 				return "", err
 			}
 			return rsaKey, nil
+		default:
+			key, err := entEncodePublicKey(exportType, policy, key)
+			if err != nil {
+				return "", err
+			}
+			if key != "" {
+				return key, nil
+			}
 		}
 	case exportTypeCertificateChain:
 		if key.CertificateChain == nil {

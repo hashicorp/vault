@@ -25,9 +25,9 @@ export default class PkiRoleGenerateRoute extends Route {
     controller.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview', model: this.secretMountPath.currentPath },
-      { label: 'roles', route: 'roles.index', model: this.secretMountPath.currentPath },
+      { label: 'Roles', route: 'roles.index', model: this.secretMountPath.currentPath },
       { label: role, route: 'roles.role.details', models: [this.secretMountPath.currentPath, role] },
-      { label: 'generate certificate' },
+      { label: 'Generate Certificate' },
     ];
     // This is updated on successful generate in the controller
     controller.hasSubmitted = false;
