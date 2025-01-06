@@ -61,21 +61,21 @@
                 <dd.Interactive
                   data-test-subdirectory
                   @route="libraries.subdirectory"
-                  @model={{concat library.path_to_library library.name}}
+                  @model={{library.completeLibraryName}}
                 >Content</dd.Interactive>
               {{else}}
                 {{#if library.canEdit}}
                   <dd.Interactive
                     data-test-edit
                     @route="libraries.library.edit"
-                    @model={{concat library.path_to_library library.name}}
+                    @model={{library.completeLibraryName}}
                   >Edit</dd.Interactive>
                 {{/if}}
                 {{#if library.canRead}}
                   <dd.Interactive
                     data-test-details
                     @route="libraries.library.details"
-                    @model={{concat library.path_to_library library.name}}
+                    @model={{library.completeLibraryName}}
                   >Details</dd.Interactive>
                 {{/if}}
                 {{#if library.canDelete}}

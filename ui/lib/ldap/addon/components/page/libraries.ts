@@ -32,10 +32,7 @@ export default class LdapLibrariesPageComponent extends Component<Args> {
 
   linkParams = (library: LdapLibraryModel) => {
     const route = this.isHierarchical(library.name) ? 'libraries.subdirectory' : 'libraries.library.details';
-    // if there is a path_to_library we're in a subdirectory
-    // and must concat the ancestors with the leaf name to get the full library path
-    const libraryName = library.path_to_library ? library.path_to_library + library.name : library.name;
-    return [route, libraryName];
+    return [route, library.completeLibraryName];
   };
 
   get mountPoint(): string {
@@ -53,7 +50,7 @@ export default class LdapLibrariesPageComponent extends Component<Args> {
   @action
   async onDelete(model: LdapLibraryModel) {
     try {
-      const message = `Successfully deleted library ${model.name}.`;
+      const message = `Successfully deleted library ${model.completeLibraryName}.`;
       await model.destroyRecord();
       this.flashMessages.success(message);
     } catch (error) {

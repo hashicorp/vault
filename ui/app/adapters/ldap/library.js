@@ -14,10 +14,12 @@ export default class LdapLibraryAdapter extends NamedPathAdapter {
   }
 
   urlForUpdateRecord(name, modelName, snapshot) {
+    // when editing the name IS the full path so we can use "name" instead of "completeLibraryName" here
     return this._getURL(snapshot.attr('backend'), name);
   }
   urlForDeleteRecord(name, modelName, snapshot) {
-    return this._getURL(snapshot.attr('backend'), name);
+    const { backend, completeLibraryName } = snapshot.record;
+    return this._getURL(backend, completeLibraryName);
   }
 
   query(store, type, query) {

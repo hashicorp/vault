@@ -18,6 +18,7 @@ export default interface LdapLibraryModel extends WithFormFieldsAndValidationsMo
   default_ttl: number;
   max_ttl: number;
   disable_check_in_enforcement: string;
+  get completeLibraryName(): string;
   get displayFields(): Array<FormField>;
   libraryPath: CapabilitiesModel;
   statusPath: CapabilitiesModel;

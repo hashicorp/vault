@@ -65,6 +65,12 @@ export default class LdapLibraryModel extends Model {
   })
   disable_check_in_enforcement;
 
+  get completeLibraryName() {
+    // if there is a path_to_library then the name is hierarchical
+    // and we must concat the ancestors with the leaf name to get the full library path
+    return this.path_to_library ? `${this.path_to_library}${this.name}` : this.name;
+  }
+
   get displayFields() {
     return this.formFields.filter((field) => field.name !== 'service_account_names');
   }
