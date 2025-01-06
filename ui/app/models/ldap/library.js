@@ -68,7 +68,7 @@ export default class LdapLibraryModel extends Model {
   get completeLibraryName() {
     // if there is a path_to_library then the name is hierarchical
     // and we must concat the ancestors with the leaf name to get the full library path
-    return this.path_to_library ? `${this.path_to_library}${this.name}` : this.name;
+    return this.path_to_library ? this.path_to_library + this.name : this.name;
   }
 
   get displayFields() {

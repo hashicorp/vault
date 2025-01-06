@@ -37,10 +37,7 @@ export default class LdapRolesPageComponent extends Component<Args> {
 
   linkParams = (role: LdapRoleModel) => {
     const route = this.isHierarchical(role.name) ? 'roles.subdirectory' : 'roles.role.details';
-    // if there is a path_to_role we're in a subdirectory
-    // and must concat the ancestors with the leaf name to get the full role path
-    const roleName = role.path_to_role ? role.path_to_role + role.name : role.name;
-    return [route, role.type, roleName];
+    return [route, role.type, role.completeRoleName];
   };
 
   get mountPoint(): string {
