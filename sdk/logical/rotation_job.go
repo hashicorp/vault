@@ -10,7 +10,7 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
-// RotationOptions is an embeddable struct to capture common lease
+// RotationOptions is an embeddable struct to capture common rotation
 // settings between a Secret and Auth
 type RotationOptions struct {
 	// Schedule holds the info for the framework.Schedule
