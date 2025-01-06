@@ -48,7 +48,7 @@
 {{else if (eq @type "details")}}
   {{#each-in @secret.secretData as |key value|}}
     <InfoTableRow @label={{key}} @value={{value}} @alwaysRender={{true}}>
-      <MaskedInput @name={{key}} @value={{value}} @displayOnly={{true}} @allowCopy={{true}} @allowDownload={{true}} />
+      <MaskedInput @name={{key}} @value={{value}} @displayOnly={{true}} @allowCopy={{true}} />
     </InfoTableRow>
   {{else}}
     <InfoTableRow @label="" @value="" @alwaysRender={{true}} />
