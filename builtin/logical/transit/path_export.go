@@ -227,7 +227,10 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 			return rsaKey, nil
 		default:
 			key, err := entEncodePrivateKey(exportType, policy, key)
-			if key != "" && err == nil {
+			if err != nil {
+				return "", err
+			}
+			if key != "" {
 				return key, nil
 			}
 		}
@@ -260,7 +263,10 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 			return rsaKey, nil
 		default:
 			key, err := entEncodePublicKey(exportType, policy, key)
-			if key != "" && err == nil {
+			if err != nil {
+				return "", err
+			}
+			if key != "" {
 				return key, nil
 			}
 		}
