@@ -14,6 +14,7 @@ import type LdapLibraryModel from 'vault/models/ldap/library';
 import type SecretEngineModel from 'vault/models/secret-engine';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type { Breadcrumb, EngineOwner } from 'vault/vault/app-types';
+import type RouterService from '@ember/routing/router-service';
 
 interface Args {
   libraries: Array<LdapLibraryModel>;
@@ -24,6 +25,7 @@ interface Args {
 
 export default class LdapLibrariesPageComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
+  @service('app-router') declare readonly router: RouterService;
 
   @tracked filterValue = '';
   @tracked libraryToDelete: LdapLibraryModel | null = null;
@@ -52,6 +54,7 @@ export default class LdapLibrariesPageComponent extends Component<Args> {
     try {
       const message = `Successfully deleted library ${model.completeLibraryName}.`;
       await model.destroyRecord();
+      this.router.transitionTo('vault.cluster.secrets.backend.ldap.libraries');
       this.flashMessages.success(message);
     } catch (error) {
       this.flashMessages.danger(`Error deleting library \n ${errorMessage(error)}`);
