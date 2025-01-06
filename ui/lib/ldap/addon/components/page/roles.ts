@@ -61,7 +61,7 @@ export default class LdapRolesPageComponent extends Component<Args> {
   @action
   async onRotate(model: LdapRoleModel) {
     try {
-      const message = `Successfully rotated credentials for ${model.name}.`;
+      const message = `Successfully rotated credentials for ${model.completeRoleName}.`;
       await model.rotateStaticPassword();
       this.flashMessages.success(message);
     } catch (error) {
@@ -74,7 +74,7 @@ export default class LdapRolesPageComponent extends Component<Args> {
   @action
   async onDelete(model: LdapRoleModel) {
     try {
-      const message = `Successfully deleted role ${model.name}.`;
+      const message = `Successfully deleted role ${model.completeRoleName}.`;
       await model.destroyRecord();
       this.pagination.clearDataset('ldap/role');
       this.router.transitionTo('vault.cluster.secrets.backend.ldap.roles');

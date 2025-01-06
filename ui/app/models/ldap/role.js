@@ -201,6 +201,9 @@ export default class LdapRoleModel extends Model {
   @lazyCapabilities(apiPath`${'backend'}/${'credsUri'}/${'name'}`, 'backend', 'credsUri', 'name') credsPath;
   @lazyCapabilities(apiPath`${'backend'}/rotate-role/${'name'}`, 'backend', 'name') staticRotateCredsPath;
 
+  get completeRoleName() {
+    return this.path_to_role ? `${this.path_to_role}${this.name}` : this.name;
+  }
   get canCreate() {
     return this.rolePath.get('canCreate') !== false;
   }
@@ -224,9 +227,11 @@ export default class LdapRoleModel extends Model {
   }
 
   fetchCredentials() {
-    return this.store.adapterFor('ldap/role').fetchCredentials(this.backend, this.type, this.name);
+    return this.store
+      .adapterFor('ldap/role')
+      .fetchCredentials(this.backend, this.type, this.completeRoleName);
   }
   rotateStaticPassword() {
-    return this.store.adapterFor('ldap/role').rotateStaticPassword(this.backend, this.name);
+    return this.store.adapterFor('ldap/role').rotateStaticPassword(this.backend, this.completeRoleName);
   }
 }

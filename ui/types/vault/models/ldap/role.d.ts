@@ -26,6 +26,7 @@ export default interface LdapRoleModel extends WithFormFieldsAndValidationsModel
   get displayFields(): Array<FormField>;
   get roleUri(): string;
   get credsUri(): string;
+  get completeRoleName(): string;
   rolePath: CapabilitiesModel;
   credsPath: CapabilitiesModel;
   staticRotateCredsPath: CapabilitiesModel;

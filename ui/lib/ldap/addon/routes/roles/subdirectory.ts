@@ -64,7 +64,6 @@ export default class LdapRolesSubdirectoryRoute extends LdapRolesRoute {
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: backendModel.id, route: 'overview' },
       { label: 'Roles', route: 'roles' },
-
       ...ldapBreadcrumbs(roleAncestry.path_to_role, routeParams, roleRoutes, true),
     ];
 
