@@ -12,7 +12,7 @@ export const libraryRoutes = {
 
 export const ldapBreadcrumbs = (
   fullPath: string | undefined, // i.e. path/to/item
-  routeParams: Function,
+  routeParams: (childResource: string) => string[], // array of route param strings
   routes: { details: string; subdirectory: string },
   lastItemCurrent = false // this array of objects can be spread anywhere within the crumbs array
 ): Breadcrumb[] => {
