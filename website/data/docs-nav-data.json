@@ -2544,6 +2544,10 @@
         "path": "upgrading/raft-wal"
       },
       {
+        "title": "Identity duplicate resolution guide",
+        "path": "upgrading/identity-deduplication"
+      },
+      {
         "title": "Upgrade to 1.19.x",
         "path": "upgrading/upgrade-to-1.19.x"
       },

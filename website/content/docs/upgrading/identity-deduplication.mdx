@@ -1,0 +1,406 @@
+---
+layout: docs
+page_title: Vault identity duplicate resolution guide
+description: >-
+   Discover whether your Vault cluster contains any identity duplicates and if
+   so, how to safely resolve them.
+---
+
+# Vault identity duplicate resolution guide
+
+Some users may have duplicate identity resources (entities, aliases, groups) in
+their cluster's storage due to historical bugs. These can cause unexpected
+behavior as they are outside of Vault's typical expectations and test scenarios.
+
+Vault 1.19.0 includes additional reporting in server logs to identify if any
+duplicates exist in a cluster. If any do exist, this document provides the
+information necessary to safely resolve them and return the cluster to normal,
+supported behavior.
+
+## Diagnosis
+
+To identify whether your cluster has duplicates you need to follow these steps:
+
+ 1. Ensure you have upgraded to Vault 1.19.0 or higher on all cluster nodes.
+ 2. Check the Vault logs on the active node and locate it's last unseal operation between the following log lines:
+    ```
+    [INFO]  core: post-unseal setup starting
+    ...<check here> ...
+    [INFO]  core: post-unseal setup complete
+    ```
+ 3. If you see the following line, duplicates were found and you should continue
+    to read this guide.
+
+    ```
+    [WARN]  identity: DUPLICATES DETECTED, see following logs for details [...]
+    ```
+
+    **If you don't see this line, you have no further action to take on this
+    cluster**. Ensure you repeat this process on any Performance Replication
+    (PR) secondary clusters though as it's possible for PR secondaries to have
+    local duplicates. Disaster Recovery (DR) secondaries do not need to be
+    checked separately.
+
+## Resolution
+
+If duplicates have been reported in your Vault logs, there are a few steps to
+work through which will depend on the types of duplicates found. Details of each
+are given below. The high-level process for resolution is:
+
+#### With Vault Enterprise Performance or Disaster Recovery replication
+
+ 1. Ensure all clusters (primary and secondaries) are upgraded to 1.19.0 or
+    higher.
+ 1. On the primary, address each duplicate reported using the type-specific
+    guidance below.
+ 2. On any Performance Replication secondaries, address each _local alias_ duplicate reported using the guidance below.
+ 3. Activate the `force-identity-deduplication` activation flag.
+
+#### Without Vault replication
+
+ 1. Ensure the cluster is upgraded to 1.19.0 or higher.
+ 1. Address each duplicate reported using the type specific guidance below.
+ 2. Activate the `force-identity-deduplication` activation flag.
+
+### Resolving different-case entity alias duplicates
+
+```
+[WARN]  identity: 2 different-case entity alias duplicates found (potential security risk)
+[WARN]  identity: entity-alias "alias-case" with mount accessor "auth_userpass_34aca7ec" duplicates 1 others: id=df3568a4-3b65-4104-9481-1129ecbed72f canonical_id=5f013d99-a6c7-9a00-6ad5-4ad724b14f60 force_deduplication="would merge into entity 7da76b0d-fe9b-a125-3362-2a8ff055dcf8"
+[WARN]  identity: entity-alias "alias-cAsE" with mount accessor "auth_userpass_34aca7ec" duplicates 1 others: id=2992253b-1e99-4e47-b6f9-afb0c7cedf7a canonical_id=7da76b0d-fe9b-a125-3362-2a8ff055dcf8 force_deduplication="would merge others into this entity"
+[WARN]  identity: entity-alias "alias-case" with mount accessor "auth_userpass_a555989a" duplicates 1 others: id=0e4bd46e-a868-4dd4-a34a-cb73f097e3a5 canonical_id=1ce06951-e2fd-0923-8ae0-a0e2c6c2378b force_deduplication="would merge into entity 37f41fcf-5e15-f13f-248d-9fa8405b1ecd"
+[WARN]  identity: entity-alias "alias-cAsE" with mount accessor "auth_userpass_a555989a" duplicates 1 others: id=6cafe546-665c-4bd0-a4fd-5e699ba413c1 canonical_id=37f41fcf-5e15-f13f-248d-9fa8405b1ecd force_deduplication="would merge others into this entity"
+[WARN]  identity: end of different-case entity-alias duplicates
+```
+
+These duplicates are caused by auth mounts that have somehow (due to historical
+bugs) been allowed to create aliases that differ only in their case. One known
+way this can happen is if you use an external auth method such as LDAP and for
+some reason have an LDAP system that will sometimes return usernames normalized
+to uppercase and sometimes to lower or mixed case.
+
+By default Vault would match these in a case-insensitive way and so both would
+be considered the same alias. Past bugs have left some users with these
+different-case duplicates in storage though. To avoid the potential security
+impact of merging them, Vault since version 0.11.8 attempts to honor the past
+behavior by switching the identity engine to a case-sensitive matching mode to
+avoid accidentally merging two entities that might not be the same user.
+
+<Note> These are the most critical duplicates to resolve because there may be
+  security impact when enabling the `force-identity-deduplication` flag. </Note>
+
+Note that the two sets of duplicates in the example above all have the same
+name, but are distinct because they come from different auth mounts. You will
+need to consider each set of duplicate names from each auth mount separately.
+
+There are two important cases to consider for each mount:
+ 1. The case difference is _unintentional_ and all case variants should be
+    considered the same logical entity. This is Vault's default behavior.
+ 2. The source identity provider actually _intended_ to distinguish between
+    different entity names using case so `Alice` and `alice` are different user
+    accounts corresponding to different humans with distinct permission sets.
+
+#### Case 1: unintentional different-case duplicates
+
+If the different-case variations of an alias name are accidental then no
+additional resolution steps are required before activating the flag. When the
+`force-identity-deduplication` flag is activated, the entities that each
+duplicate alias resolves to will be merged.
+
+You can see the `force_deduplication` label in the log line to see exactly which
+entity will remain. Any policies attached to either entity will be merged so the
+final entity will have the union of all policies granted to any of the
+duplicates and so not loose access to anything.
+
+Logins using either case will continue to work but will now map to a single
+entity and so be impacted by the same policies. This is restoring the intended
+Vault behavior and is the only behavior possible without the bugs that allowed
+the duplicates to be created.
+
+#### Case 2: intentional different-case duplicates
+
+If the different-case variations of an alias name actually represent different
+logical users or entities in an external system then activating the flag will
+merge them and potentially grant users access to resources they shouldn't have.
+It is critical to ensure these are resolved before activating the flag. Use the
+steps below to choose an resolution for each duplicate name on each mount.
+
+<Note> Using case-sensitive names is unsupported and carries significant
+  security risks. There is a risk that different-case alias duplicates could
+  merge at any time due to unrelated changes in storage such as other entities
+  or groups being deleted. You should aim to resolve these duplicates as soon as
+  possible to restore Vault's intended security model. </Note>
+
+ 1. If you can confirm that the duplicate aliases or their entire auth mounts
+    are unused or unimportant, they can be deleted by their ID as shown in the
+    log line, for example `id=df3568a4-3b65-4104-9481-1129ecbed72f`. Use the
+    [entity alias delete
+    endpoint](https://developer.hashicorp.com/vault/api-docs/secret/identity/entity-alias#delete-entity-alias-by-id).
+    Deleting all but one of each duplicate name on each mount is sufficient to
+    avoid unintentional merging when the flag is activated.
+ 2. If you are unsure whether these aliases are used, you will need to discover
+    this and form a strategy for resolving.
+
+    You may need to reconfigure the auth mount or external service to ensure
+       that it will no longer create aliases with names that differ only-by
+       case. For example by including a unique ID in the alias name as well as
+       the username. There might be some disruption to users as you roll out
+       that change but it will depend on the chosen solution.
+
+    We anticipate this being rare and are not aware of any specific example
+    integrations where this would apply. Vault Enterprise customers should work
+    with HashiCorp support staff to determine the best strategy if you find this
+    is the case.
+
+    Once you are able to manually resolve the duplicates via deletion or
+    reconfiguration and no longer see them reported during unseal you are safe
+    to activate the flag.
+
+
+### Resolving _local_ different-case entity alias duplicates
+
+Local different-case entity alias duplicates have all the same considerations as
+[non-local entity alias
+duplicates](#resolving-different-case-entity-alias-duplicates).
+
+The only difference is that these aliases only exist on the local cluster. If
+the cluster that reports them is a Performance Replication secondary, you will
+need to perform any resolution steps necessary against that cluster and not the
+Primary.
+
+### Resolving entity and group duplicates
+
+```
+[WARN]  identity: 2 entity duplicates found
+[WARN]  identity: entity "entity-cAsE" with namespace ID "root" duplicates 2 others: id=2562b42d-f603-ac6b-2591-8a20dd050897 force_deduplication="would rename to entity-cAsE-2562b42d-f603-ac6b-2591-8a20dd050897"
+[WARN]  identity: entity "entity-case" with namespace ID "root" duplicates 2 others: id=290a643d-6043-da5e-943f-3a3d09e4ecbd force_deduplication="would rename to entity-case-290a643d-6043-da5e-943f-3a3d09e4ecbd"
+[WARN]  identity: entity "entity-case" with namespace ID "root" duplicates 2 others: id=b0141be5-3f03-a1c7-a57b-02f045d04426 force_deduplication="would not rename"
+[WARN]  identity: entity "entity-cAsE" with namespace ID "sYMXY" duplicates 2 others: id=95f0743b-a1d5-26da-b4ef-a50490da0787 force_deduplication="would rename to entity-cAsE-95f0743b-a1d5-26da-b4ef-a50490da0787"
+[WARN]  identity: entity "entity-case" with namespace ID "sYMXY" duplicates 2 others: id=9d3be96f-490a-9625-3118-896bd2b3a5f3 force_deduplication="would rename to entity-case-9d3be96f-490a-9625-3118-896bd2b3a5f3"
+[WARN]  identity: entity "entity-case" with namespace ID "sYMXY" duplicates 2 others: id=d82231d2-3716-6b9c-e80d-7d09c0409739 force_deduplication="would not rename"
+[WARN]  identity: end of entity duplicates
+[WARN]  identity: 2 group duplicates found
+[WARN]  identity: 2 group duplicates found
+[WARN]  identity: group "group-case" with namespace ID "root" duplicates 2 others: id=8ad26e0c-8cf6-5b67-7c77-6571fa374f34 force_deduplication="would rename to group-case-8ad26e0c-8cf6-5b67-7c77-6571fa374f34"
+[WARN]  identity: group "group-cAsE" with namespace ID "root" duplicates 2 others: id=9fe86ea0-f80c-1131-5be1-1d6e3b70237f force_deduplication="would rename to group-cAsE-9fe86ea0-f80c-1131-5be1-1d6e3b70237f"
+[WARN]  identity: group "group-case" with namespace ID "root" duplicates 2 others: id=32dd070c-c1f8-c796-9a71-15887014b813 force_deduplication="would not rename"
+[WARN]  identity: group "group-case" with namespace ID "sYMXY" duplicates 2 others: id=8aaeff7e-7343-c883-1e0c-c5c9968f75a5 force_deduplication="would rename to group-case-8aaeff7e-7343-c883-1e0c-c5c9968f75a5"
+[WARN]  identity: group "group-case" with namespace ID "sYMXY" duplicates 2 others: id=f11277b3-d985-4d72-d2e9-9c8c6c0db02c force_deduplication="would rename to group-case-f11277b3-d985-4d72-d2e9-9c8c6c0db02c"
+[WARN]  identity: group "group-cAsE" with namespace ID "sYMXY" duplicates 2 others: id=7c753d07-b0d9-e13b-6184-48247b8f7504 force_deduplication="would not rename"
+[WARN]  identity: end of group duplicates
+```
+
+Entity and group duplicates are reported as in the examples above. The
+resolution steps are the same for both.
+
+Entities or groups may exist with duplicate names. These might be exact matches,
+or may differ in case such as `Admin` and `admin`. In either case, the
+resolution is the same.
+
+Note that names are only duplicates if they are in the same namespace.
+
+Possible unexpected behavior caused by these types of duplicates includes:
+ * Only one of them will be returned when looking up or listing by name
+ * Before Vault 1.19.0, which one is returned might vary depending on which
+   server is hit or even after a seal and unseal on the same server
+ * Lookup by ID _will_ work for all duplicates
+ * Listing by IS will return _all_ duplicates
+ * Deletion by name may or may not delete all duplicates
+
+These types of duplicates **will be resolved automatically by renaming** when
+the `force-identity-deduplication` flag is activated. Automatic renaming has the
+following properties:
+ * **Security safe**. Renaming one or more of the duplicates will not allow
+   existing tokens to access anything new.
+ * **Preserves all data**. Renaming will not delete any data in Vault and so can
+   be identified and reversed manually later if necessary.
+ * **Preserves access**. In the vast majority of cases, logins and permissions
+   will be unaffected and continue to work the same way. The exceptions are
+   noted below.
+
+There are two know edge cases that you should be aware of before activating the
+flag and triggering the renaming:
+ * **Templated Policies**. If access to some resource in Vault is granted via a
+   [templated policy](/vault/docs/concepts/policies#templated-policies) that
+   uses the entity or group name as part of a resource path, _and_ that policy
+   might be applied to the duplicated entity or group, then access to those
+   resources could be _lost_ when the name is changed. [Resolution details are
+   provided below.](#resolving-templated-acl-policies)
+ * **External references**. For example if entities or groups are defined in
+   Terraform configuration by name then one of those references will break when
+   the resource is renamed. The same could apply to other external references to
+   a named entity or group that use the name-based API methods to read or
+   manage. [Resolution details are
+   provided below.]()
+
+In general, for each duplicate within a namespace, the possible resolutions are:
+ 1. If the risk of either of the above edge cases is low to zero, **no action is
+    needed before activating the flag**.
+ 2. If you know that the duplicates are unused or unimportant (for example
+    because of naming conventions such as `test-*`, or from consulting with
+    teams that created them) you might simply delete them by their ID using the
+    relevant API endpoint to clean them up.
+ 3. If you are unsure about the risk from policy templating or external
+    references. Refer to the additional resolution details below.
+
+
+
+#### Resolving templated ACL policies
+
+When duplicate entities or groups are renamed by activating the
+`force-identity-deduplication` flag, certain templated ACL policies might cause
+access to some resources to be lost.
+
+[Policy templating](/vault/docs/concepts/policies#templated-policies) in Vault
+allows users to specify policies that dynamically resolve based on properties of
+the authenticated entity. If those properties happen to include either entity or
+group name then a rename has the potential to change the meaning of the policy.
+
+In practice this is overwhelmingly unlikely to result in unintended access being
+granted to an existing resource since the new name contains a UUID which should
+never collide with another resource path. The rename _could_ potentially cause
+the entity to _loose_ access to a resource they previously had access to
+however.
+
+For example, if a user entity named `Janine` had this policy:
+
+```hcl
+path "kv/users/{{identity.entity.name}}/*" {
+    capabilities = ["read", "create", "update"]
+}
+```
+
+Then before the rename they would be able to read and write key-value pairs
+(KVs) with the prefix `kv/users/Janine/`. After the rename, the user would
+ instead be granted access to KVs with prefix `kv/users/Janine-<UUID>/`, however
+the KV mount doesn't know anything special about either path and so any existing
+KVs the user had stored would remain at the old paths and `Janine-<UUID>` would
+no longer be able to access them.
+
+You can resolve this in two ways:
+ 1. **Change or add policy**. You could define a new policy or a new rule in a
+user-specific policy that explicitly granted access back to the old resource
+path. For example you could add the following to a policy specific to the
+renamed `Janine-UUID` entity:
+  ```hcl
+  path "kv/users/Janine/*" {
+    capabilities = ["read", "create", "update"]
+  }
+  ```
+ 2. **Move the resources.** In some cases operators could move the resources to
+be at the new path via the API. For example KV secrets could be renamed to match
+the new path. This might be arduous if there are many to rename, and for some
+other resource types it might not be possible to move them for other reasons
+e.g. external resources expecting access at that path. You should decide whether
+you perform any migration before or after activating the flag. If you choose to
+do it afterwards, the resources will be unavailable until the migration is
+complete. If you choose to do it first then the resources might be unavailable
+until the flag is activated if moved, or you might need to take care to keep
+updates to both old an new paths in sync until the flag is switched.
+
+#### Resolving external references (e.g. Terraform)
+
+It it is possible that renaming resources could break external references if
+they refer directly to the entity or group by name.
+
+For example, if you have a Terraform configuration like this:
+
+```hcl
+terraform {
+  required_providers {
+    vault = {
+      source = "hashicorp/vault"
+    }
+  }
+}
+
+provider "vault" {}
+
+resource "vault_identity_entity" "BOB" {
+  name              = "BOB"
+  policies          = ["TEST"]
+}
+
+
+resource "vault_identity_entity" "bob" {
+    name              = "bob"
+    policies          = ["test"]
+}
+```
+
+By default this Terraform config would not work correctly since Vault would
+match the names in a case-insensitive way and reject creating the second
+resource. But if you have had duplicates reported in your Vault cluster, that
+means that due to some historical issue Vault is running in a mode that would
+allow both of these case variations to exist a separate entities.
+
+After activating the `force-identity-deduplication` flag, one of these entities
+will no longer have the specified name and so Terraform will attempt to rename
+it and be unable to because that violates the case-insensitive name constraint
+that has be re-introduced. An apply would result in an error such as:
+
+```
+➜  tf_dupe_testing terraform apply
+vault_identity_entity.bob: Refreshing state... [id=e8c5e633-fe37-5a49-4a29-32e2643d03bd]
+vault_identity_entity.BOB: Refreshing state... [id=2577bc3f-67ab-dab7-93dc-e86f78194ff0]
+
+Terraform used the selected providers to generate the following execution plan. Resource
+actions are indicated with the following symbols:
+  ~ update in-place
+
+Terraform will perform the following actions:
+
+  # vault_identity_entity.bob will be updated in-place
+  ~ resource "vault_identity_entity" "bob" {
+      + external_policies = false
+        id                = "e8c5e633-fe37-5a49-4a29-32e2643d03bd"
+      ~ name              = "bob-e8c5e633-fe37-5a49-4a29-32e2643d03bd" -> "bob"
+        # (3 unchanged attributes hidden)
+    }
+
+Plan: 0 to add, 1 to change, 0 to destroy.
+
+Do you want to perform these actions?
+  Terraform will perform the actions described above.
+  Only 'yes' will be accepted to approve.
+
+  Enter a value: yes
+
+vault_identity_entity.bob: Modifying... [id=e8c5e633-fe37-5a49-4a29-32e2643d03bd]
+╷
+│ Error: error updating IdentityEntity "e8c5e633-fe37-5a49-4a29-32e2643d03bd": Error making API request.
+│
+│ URL: PUT https://127.0.0.1:8200/v1/identity/entity/id/e8c5e633-fe37-5a49-4a29-32e2643d03bd
+│ Code: 400. Errors:
+│
+│ * entity name is already in use
+│
+│   with vault_identity_entity.bob,
+│   on main.tf line 17, in resource "vault_identity_entity" "bob":
+│   17: resource "vault_identity_entity" "bob" {
+│
+╵
+```
+
+To resolve this, you will need to update any Terraform configuration with the
+new name which you can get from the previous duplicate report:
+
+```
+WARN: [...] force_deduplication="would rename to bob-5789a392-e4fa-4df3-b2a9-ec11839f7ed1"
+```
+
+Or from future unseal logs:
+
+```
+WARN: duplicate entity `bob` was renamed to `bob-5789a392-e4fa-4df3-b2a9-ec11839f7ed1`
+```
+
+The same idea would apply to any other external systems that reference an entity
+or group by name. Simply changing the reference to use the new name is the
+simplest resolution.
+
+### Activating the `force-identity-deduplication` flag
+
+TODO, describe the process and any details like how each Vault node will need to
+reload part of it's in-memory state which could cause a short period where
+requests wait or timeout depending on size of the data.
