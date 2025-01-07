@@ -285,13 +285,13 @@ func (b *RaftBackend) RemoveSelf() error {
 	return b.stableStore.SetUint64(removedKey, 1)
 }
 
-func (b *RaftBackend) SetPerfStandbyCleanupFunc(f func(context.Context, string) (bool, error)) {
+func (b *RaftBackend) SetRemovedServerCleanupFunc(f func(context.Context, string) (bool, error)) {
 	b.l.Lock()
 	b.removedServerCleanup = f
 	b.l.Unlock()
 }
 
-func (b *RaftBackend) PerfStandbyCleanup(ctx context.Context, nodeID string) (bool, error) {
+func (b *RaftBackend) RemovedServerCleanup(ctx context.Context, nodeID string) (bool, error) {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
