@@ -3,6 +3,34 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
+## 1.18.3
+### December 18, 2024
+
+CHANGES:
+
+* secrets/openldap: Update plugin to v0.14.4 [[GH-29131](https://github.com/hashicorp/vault/pull/29131)]
+* secrets/pki: Enforce the issuer constraint extensions (extended key usage, name constraints, issuer name) when issuing or signing leaf certificates. For more information see [PKI considerations](https://developer.hashicorp.com/vault/docs/secrets/pki/considerations#issuer-constraints-enforcement) [[GH-29045](https://github.com/hashicorp/vault/pull/29045)]
+
+IMPROVEMENTS:
+
+* auth/okta: update to okta sdk v5 from v2. Transitively updates go-jose dependency to >=3.0.3 to resolve GO-2024-2631. See https://github.com/okta/okta-sdk-golang/blob/master/MIGRATING.md for details on changes. [[GH-28121](https://github.com/hashicorp/vault/pull/28121)]
+* core: Added new `enable_post_unseal_trace` and `post_unseal_trace_directory` config options to generate Go traces during the post-unseal step for debug purposes. [[GH-28895](https://github.com/hashicorp/vault/pull/28895)]
+* sdk: Add Vault build date to system view plugin environment response [[GH-29082](https://github.com/hashicorp/vault/pull/29082)]
+* ui: Replace KVv2 json secret details view with Hds::CodeBlock component allowing users to search the full secret height. [[GH-28808](https://github.com/hashicorp/vault/pull/28808)]
+
+BUG FIXES:
+
+* autosnapshots (enterprise): Fix an issue where snapshot size metrics were not reported for cloud-based storage.
+* core/metrics: Fix unlocked mounts read for usage reporting. [[GH-29091](https://github.com/hashicorp/vault/pull/29091)]
+* core/seal (enterprise): Fix problem with nodes unable to join Raft clusters with Seal High Availability enabled. [[GH-29117](https://github.com/hashicorp/vault/pull/29117)]
+* core: fix bug in seal unwrapper that caused high storage latency in Vault CE. For every storage read request, the
+seal unwrapper was performing the read twice, and would also issue an unnecessary storage write. [[GH-29050](https://github.com/hashicorp/vault/pull/29050)]
+* secret/db: Update static role rotation to generate a new password after 2 failed attempts. [[GH-28989](https://github.com/hashicorp/vault/pull/28989)]
+* ui: Allow users to search the full json object within the json code-editor edit/create view. [[GH-28808](https://github.com/hashicorp/vault/pull/28808)]
+* ui: Decode `connection_url` to fix database connection updates (i.e. editing connection config, deleting roles) failing when urls include template variables. [[GH-29114](https://github.com/hashicorp/vault/pull/29114)]
+* ui: Fix Swagger explorer bug where requests with path params were not working. [[GH-28670](https://github.com/hashicorp/vault/issues/28670)]
+* vault/diagnose: Fix time to expiration reporting within the TLS verification to not be a month off. [[GH-29128](https://github.com/hashicorp/vault/pull/29128)]
+
 ## 1.18.2
 ### November 21, 2024
 
@@ -146,7 +174,7 @@ for write requests as a GA feature (enabled by default) for Integrated Storage.
 * **Audit Entry Exclusion (enterprise)**: Audit devices support excluding fields from entries being written to them, with expression-based rules (powered by go-bexpr) to determine when the specific fields are excluded.
 * **Workload Identity Federation UI for AWS (enterprise)**: Add WIF fields to AWS secrets engine. [[GH-28148](https://github.com/hashicorp/vault/pull/28148)]
 * **KV v2 Patch/Subkey (enterprise)**: Adds GUI support to read the subkeys of a KV v2 secret and patch (partially update) secret data. [[GH-28212](https://github.com/hashicorp/vault/pull/28212)]
-* **Self-Managed Static Roles**: Self-Managed Static Roles are now supported for select SQL database engines (Postgres, Oracle). Requires Vault Enterprise. [[GH-28199](https://github.com/hashicorp/vault/pull/28199)]
+* **Self-Managed Static Roles**: Self-Managed Static Roles are now supported for the Postgres SQL database engine. Requires Vault Enterprise. [[GH-28199](https://github.com/hashicorp/vault/pull/28199)]
 * **Vault Minimal Version**: Add the ability to build a minimal version of Vault
 with only core features using the BUILD_MINIMAL environment variable. [[GH-27394](https://github.com/hashicorp/vault/pull/27394)]
 * **Vault PKI 3GPP CMPv2 Server (Enterprise)**: Support for the PKI 3GPP CMPv2 certificate management protocol has been added to the Vault PKI Plugin. This allows standard CMPv2 clients to request certificates from a Vault server with no knowledge of Vault APIs.
@@ -288,6 +316,32 @@ use versioned plugins. [[GH-27881](https://github.com/hashicorp/vault/pull/27881
 * ui: fix namespace picker not working when in small screen where the sidebar is collapsed by default. [[GH-27728](https://github.com/hashicorp/vault/pull/27728)]
 * ui: fixes renew-self being called right after login for non-renewable tokens [[GH-28204](https://github.com/hashicorp/vault/pull/28204)]
 * ui: fixes toast (flash) alert message saying "created" when deleting a kv v2 secret [[GH-28093](https://github.com/hashicorp/vault/pull/28093)]
+
+## 1.17.10 Enterprise
+### December 18, 2024
+
+CHANGES:
+
+* secrets/pki: Enforce the issuer constraint extensions (extended key usage, name constraints, issuer name) when issuing or signing leaf certificates. For more information see [PKI considerations](https://developer.hashicorp.com/vault/docs/secrets/pki/considerations#issuer-constraints-enforcement) [[GH-29045](https://github.com/hashicorp/vault/pull/29045)]
+
+IMPROVEMENTS:
+
+* auth/okta: update to okta sdk v5 from v2. Transitively updates go-jose dependency to >=3.0.3 to resolve GO-2024-2631. See https://github.com/okta/okta-sdk-golang/blob/master/MIGRATING.md for details on changes. [[GH-28121](https://github.com/hashicorp/vault/pull/28121)]
+* core: Added new `enable_post_unseal_trace` and `post_unseal_trace_directory` config options to generate Go traces during the post-unseal step for debug purposes. [[GH-28895](https://github.com/hashicorp/vault/pull/28895)]
+* sdk: Add Vault build date to system view plugin environment response [[GH-29082](https://github.com/hashicorp/vault/pull/29082)]
+* ui: Replace KVv2 json secret details view with Hds::CodeBlock component allowing users to search the full secret height. [[GH-28808](https://github.com/hashicorp/vault/pull/28808)]
+
+BUG FIXES:
+
+* auth/ldap: Fixed an issue where debug level logging was not emitted. [[GH-28881](https://github.com/hashicorp/vault/pull/28881)]
+* autosnapshots (enterprise): Fix an issue where snapshot size metrics were not reported for cloud-based storage.
+* core/metrics: Fix unlocked mounts read for usage reporting. [[GH-29091](https://github.com/hashicorp/vault/pull/29091)]
+* core/seal (enterprise): Fix decryption of the raft bootstrap challenge when using seal high availability. [[GH-29117](https://github.com/hashicorp/vault/pull/29117)]
+* secret/db: Update static role rotation to generate a new password after 2 failed attempts. [[GH-28989](https://github.com/hashicorp/vault/pull/28989)]
+* ui: Allow users to search the full json object within the json code-editor edit/create view. [[GH-28808](https://github.com/hashicorp/vault/pull/28808)]
+* ui: Decode `connection_url` to fix database connection updates (i.e. editing connection config, deleting roles) failing when urls include template variables. [[GH-29114](https://github.com/hashicorp/vault/pull/29114)]
+* ui: Fix Swagger explorer bug where requests with path params were not working. [[GH-28670](https://github.com/hashicorp/vault/issues/28670)]
+* vault/diagnose: Fix time to expiration reporting within the TLS verification to not be a month off. [[GH-29128](https://github.com/hashicorp/vault/pull/29128)]
 
 ## 1.17.9 Enterprise
 ### November 21, 2024
@@ -731,6 +785,32 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 * ui: fix issue where a month without new clients breaks the client count dashboard [[GH-27352](https://github.com/hashicorp/vault/pull/27352)]
 * ui: fixed a bug where the replication pages did not update display when navigating between DR and performance [[GH-26325](https://github.com/hashicorp/vault/pull/26325)]
 * ui: fixes undefined start time in filename for downloaded client count attribution csv [[GH-26485](https://github.com/hashicorp/vault/pull/26485)]
+
+## 1.16.14 Enterprise
+### December 18, 2024
+
+**Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
+CHANGES:
+
+* secrets/pki: Enforce the issuer constraint extensions (extended key usage, name constraints, issuer name) when issuing or signing leaf certificates. For more information see [PKI considerations](https://developer.hashicorp.com/vault/docs/secrets/pki/considerations#issuer-constraints-enforcement) [[GH-29045](https://github.com/hashicorp/vault/pull/29045)]
+
+IMPROVEMENTS:
+
+* auth/okta: update to okta sdk v5 from v2. Transitively updates go-jose dependency to >=3.0.3 to resolve GO-2024-2631. See https://github.com/okta/okta-sdk-golang/blob/master/MIGRATING.md for details on changes. [[GH-28121](https://github.com/hashicorp/vault/pull/28121)]
+* core: Added new `enable_post_unseal_trace` and `post_unseal_trace_directory` config options to generate Go traces during the post-unseal step for debug purposes. [[GH-28895](https://github.com/hashicorp/vault/pull/28895)]
+* sdk: Add Vault build date to system view plugin environment response [[GH-29082](https://github.com/hashicorp/vault/pull/29082)]
+* ui: Replace KVv2 json secret details view with Hds::CodeBlock component allowing users to search the full secret height. [[GH-28808](https://github.com/hashicorp/vault/pull/28808)]
+
+BUG FIXES:
+
+* autosnapshots (enterprise): Fix an issue where snapshot size metrics were not reported for cloud-based storage.
+* core/metrics: Fix unlocked mounts read for usage reporting. [[GH-29091](https://github.com/hashicorp/vault/pull/29091)]
+* core/seal (enterprise): Fix decryption of the raft bootstrap challenge when using seal high availability. [[GH-29117](https://github.com/hashicorp/vault/pull/29117)]
+* secret/db: Update static role rotation to generate a new password after 2 failed attempts. [[GH-28989](https://github.com/hashicorp/vault/pull/28989)]
+* ui: Allow users to search the full json object within the json code-editor edit/create view. [[GH-28808](https://github.com/hashicorp/vault/pull/28808)]
+* ui: Decode `connection_url` to fix database connection updates (i.e. editing connection config, deleting roles) failing when urls include template variables. [[GH-29114](https://github.com/hashicorp/vault/pull/29114)]
+* vault/diagnose: Fix time to expiration reporting within the TLS verification to not be a month off. [[GH-29128](https://github.com/hashicorp/vault/pull/29128)]
 
 ## 1.16.13 Enterprise
 ### November 21, 2024

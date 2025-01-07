@@ -1003,3 +1003,15 @@ func WaitForNodesExcludingSelectedStandbys(t testing.TB, cluster *vault.TestClus
 func IsLocalOrRegressionTests() bool {
 	return os.Getenv("CI") == "" || os.Getenv("VAULT_REGRESSION_TESTS") == "true"
 }
+
+func RaftDataDir(t testing.TB, core *vault.TestClusterCore) string {
+	t.Helper()
+	r, ok := core.UnderlyingStorage.(*raft.RaftBackend)
+	if !ok {
+		r, ok = core.UnderlyingHAStorage.(*raft.RaftBackend)
+		if !ok {
+			t.Fatal("no raft backend")
+		}
+	}
+	return r.DataDir(t)
+}

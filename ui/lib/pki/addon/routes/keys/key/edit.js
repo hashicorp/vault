@@ -20,7 +20,7 @@ export default class PkiKeyEditRoute extends Route {
     controller.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview', model: this.secretMountPath.currentPath },
-      { label: 'keys', route: 'keys.index', model: this.secretMountPath.currentPath },
+      { label: 'Keys', route: 'keys.index', model: this.secretMountPath.currentPath },
       { label: resolvedModel.id },
     ];
   }

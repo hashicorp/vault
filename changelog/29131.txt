@@ -1,0 +1,4 @@
+```release-note:bug
+secrets/openldap: Update static role rotation to generate a new password after 2 failed attempts.
+Unblocks customers that were stuck in a failing loop when attempting to rotate static role passwords.
+```
