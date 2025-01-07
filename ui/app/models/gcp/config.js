@@ -64,6 +64,14 @@ export default class GcpConfig extends Model {
     'identityTokenTtl',
   ];
 
+  get isWifPluginConfigured() {
+    return !!this.identityTokenAudience || !!this.identityTokenTtl || !!this.serviceAccountEmail;
+  }
+
+  get isAccountPluginConfigured() {
+    return !!this.credentials;
+  }
+
   get displayAttrs() {
     const formFields = expandAttributeMeta(this, this.configurableParams);
     return formFields.filter((attr) => attr.name !== 'credentials');
@@ -74,18 +82,18 @@ export default class GcpConfig extends Model {
     return fieldToAttrs(this, this.formFieldGroups('wif'));
   }
 
-  get fieldGroupsGcp() {
-    return fieldToAttrs(this, this.formFieldGroups('gcp'));
+  get fieldGroupsAccount() {
+    return fieldToAttrs(this, this.formFieldGroups('account'));
   }
 
-  formFieldGroups(accessType = 'gcp') {
+  formFieldGroups(accessType = 'account') {
     const formFieldGroups = [];
     if (accessType === 'wif') {
       formFieldGroups.push({
         default: ['identityTokenAudience', 'serviceAccountEmail', 'identityTokenTtl'],
       });
     }
-    if (accessType === 'gcp') {
+    if (accessType === 'account') {
       formFieldGroups.push({
         default: ['credentials'],
       });
@@ -94,10 +102,5 @@ export default class GcpConfig extends Model {
       'More options': ['ttl', 'maxTtl'],
     });
     return formFieldGroups;
-  }
-
-  // GETTERS used by configure-gcp component
-  get isWifPluginConfigured() {
-    return !!this.identityTokenAudience || !!this.identityTokenTtl || !!this.serviceAccountEmail;
   }
 }
