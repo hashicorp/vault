@@ -267,6 +267,10 @@
           {
             "title": "Migration checklist",
             "path": "concepts/integrated-storage/migration-checklist"
+          },
+          {
+            "title": "Migrate Consul storage",
+            "path": "concepts/integrated-storage/migrate-consul-storage"
           }
         ]
       },
