@@ -214,14 +214,14 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 	}
 
 	// Now that the root config is set up, register the rotation job if it required
-	if rc.RotationSchedule != "" || rc.RotationTTL != 0 {
+	if rc.ShouldRegisterRotationJob() {
 		cfgReq := &rotation.RotationJobConfigureRequest{
 			Name:             rootRotationJobName,
 			MountPoint:       req.MountPoint,
 			ReqPath:          req.Path,
 			RotationSchedule: rc.RotationSchedule,
 			RotationWindow:   rc.RotationWindow,
-			RotationTTL:      rc.RotationTTL,
+			RotationPeriod:   rc.RotationPeriod,
 		}
 
 		rotationJob, err := rotation.ConfigureRotationJob(cfgReq)

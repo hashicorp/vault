@@ -35,7 +35,7 @@ type RotationJobConfigureRequest struct {
 	ReqPath          string
 	RotationSchedule string
 	RotationWindow   int
-	RotationTTL      int
+	RotationPeriod   int
 }
 
 func (s *RotationJob) Validate() error {
@@ -57,7 +57,7 @@ func newRotationJob(rotationSchedule, path, rotationJobName string, rotationWind
 		Schedule:         cronSc,
 		RotationSchedule: rotationSchedule,
 		RotationWindow:   time.Duration(rotationWindow) * time.Second,
-		RotationTTL:      time.Duration(ttl) * time.Second,
+		RotationPeriod:   time.Duration(ttl) * time.Second,
 		// TODO
 		// decide if next rotation should be set here
 		// or when we actually push item into queue
@@ -88,9 +88,9 @@ func ConfigureRotationJob(configRequest *RotationJobConfigureRequest) (*Rotation
 		}
 	}
 
-	if configRequest.RotationTTL != 0 {
+	if configRequest.RotationPeriod != 0 {
 		var err error
-		rotationJob, err = newRotationJob("", mount, configRequest.Name, 0, configRequest.RotationTTL)
+		rotationJob, err = newRotationJob("", mount, configRequest.Name, 0, configRequest.RotationPeriod)
 		if err != nil {
 			return nil, err
 		}

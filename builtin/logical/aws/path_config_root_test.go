@@ -69,8 +69,8 @@ func TestBackend_PathConfigRoot(t *testing.T) {
 	}
 
 	delete(configData, "secret_key")
-	// remove rotation_ttl from response for comparison with original config
-	delete(resp.Data, "rotation_ttl")
+	// remove rotation_period from response for comparison with original config
+	delete(resp.Data, "rotation_period")
 	require.Equal(t, configData, resp.Data)
 	if !reflect.DeepEqual(resp.Data, configData) {
 		t.Errorf("bad: expected to read config root as %#v, got %#v instead", configData, resp.Data)
@@ -130,8 +130,8 @@ func TestBackend_PathConfigRoot_STSFallback(t *testing.T) {
 	}
 
 	delete(configData, "secret_key")
-	// remove rotation_ttl from response for comparison with original config
-	delete(resp.Data, "rotation_ttl")
+	// remove rotation_period from response for comparison with original config
+	delete(resp.Data, "rotation_period")
 	require.Equal(t, configData, resp.Data)
 	if !reflect.DeepEqual(resp.Data, configData) {
 		t.Errorf("bad: expected to read config root as %#v, got %#v instead", configData, resp.Data)
@@ -180,8 +180,8 @@ func TestBackend_PathConfigRoot_STSFallback(t *testing.T) {
 	}
 
 	delete(configData, "secret_key")
-	// remove rotation_ttl from response for comparison with original config
-	delete(resp.Data, "rotation_ttl")
+	// remove rotation_period from response for comparison with original config
+	delete(resp.Data, "rotation_period")
 	configData["sts_fallback_endpoints"] = []string{"1.1.1.1", "8.8.8.8"}
 	configData["sts_fallback_regions"] = []string{"zone-1", "zone-2"}
 	require.Equal(t, configData, resp.Data)

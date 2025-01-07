@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	ErrRotationMutuallyExclusiveFields = errors.New("mutually exclusive fields rotation_schedule and rotation_ttl were both specified; only one of them can be provided")
+	ErrRotationMutuallyExclusiveFields = errors.New("mutually exclusive fields rotation_schedule and rotation_period were both specified; only one of them can be provided")
 	ErrRotationManagerUnsupported      = errors.New("rotation manager capabilities not supported in Vault community edition")
 )
 
@@ -23,8 +23,8 @@ type AutomatedRotationParams struct {
 	// RotationWindow specifies the amount of time in which the rotation is allowed to
 	// occur starting from a given rotation_schedule.
 	RotationWindow int `json:"rotation_window"`
-	// RotationTTL is an alternate choice for simple time-to-live based rotation timing.
-	RotationTTL int `json:"rotation_ttl"`
+	// RotationPeriod is an alternate choice for simple time-to-live based rotation timing.
+	RotationPeriod int `json:"rotation_period"`
 
 	// RotationID is the unique ID of the registered rotation job.
 	// Used by the plugin to track the rotation.
@@ -38,24 +38,24 @@ type AutomatedRotationParams struct {
 func (p *AutomatedRotationParams) ParseAutomatedRotationFields(d *framework.FieldData) error {
 	rotationScheduleRaw, scheduleOk := d.GetOk("rotation_schedule")
 	rotationWindowRaw, windowOk := d.GetOk("rotation_window")
-	rotationTTLRaw, ttlOk := d.GetOk("rotation_ttl")
+	rotationPeriodRaw, periodOk := d.GetOk("rotation_period")
 
 	if scheduleOk {
-		if ttlOk {
+		if periodOk {
 			return ErrRotationMutuallyExclusiveFields
 		}
 		p.RotationSchedule = rotationScheduleRaw.(string)
 	}
 
 	if windowOk {
-		if ttlOk {
-			return fmt.Errorf("rotation_window does not apply to ttl")
+		if periodOk {
+			return fmt.Errorf("rotation_window does not apply to period")
 		}
 		p.RotationWindow = rotationWindowRaw.(int)
 	}
 
-	if ttlOk {
-		p.RotationTTL = rotationTTLRaw.(int)
+	if periodOk {
+		p.RotationPeriod = rotationPeriodRaw.(int)
 	}
 
 	if (scheduleOk && !windowOk) || (windowOk && !scheduleOk) {
@@ -71,9 +71,13 @@ func (p *AutomatedRotationParams) ParseAutomatedRotationFields(d *framework.Fiel
 func (p *AutomatedRotationParams) PopulateAutomatedRotationData(m map[string]interface{}) {
 	m["rotation_schedule"] = p.RotationSchedule
 	m["rotation_window"] = p.RotationWindow
-	m["rotation_ttl"] = p.RotationTTL
+	m["rotation_period"] = p.RotationPeriod
 	m["rotation_id"] = p.RotationID
 	m["disable_automated_rotation"] = p.DisableAutomatedRotation
+}
+
+func (p *AutomatedRotationParams) ShouldRegisterRotationJob() bool {
+	return p.RotationSchedule != "" || p.RotationPeriod != 0
 }
 
 // AddAutomatedRotationFields adds plugin identity token fields to the given
@@ -82,13 +86,13 @@ func AddAutomatedRotationFields(m map[string]*framework.FieldSchema) {
 	fields := map[string]*framework.FieldSchema{
 		"rotation_schedule": {
 			Type:        framework.TypeString,
-			Description: "CRON-style string that will define the schedule on which rotations should occur. Mutually exclusive with TTL",
+			Description: "CRON-style string that will define the schedule on which rotations should occur. Mutually exclusive with rotation_period",
 		},
 		"rotation_window": {
 			Type:        framework.TypeInt,
 			Description: "Specifies the amount of time in which the rotation is allowed to occur starting from a given rotation_schedule",
 		},
-		"rotation_ttl": {
+		"rotation_period": {
 			Type:        framework.TypeInt,
 			Description: "TTL for automatic credential rotation of the given username. Mutually exclusive with rotation_schedule",
 		},

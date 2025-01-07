@@ -21,7 +21,7 @@ type RotationSchedule struct {
 	Schedule          *cron.SpecSchedule `json:"schedule"`
 	RotationWindow    time.Duration      `json:"rotation_window"` // seconds of window
 	RotationSchedule  string             `json:"rotation_schedule"`
-	RotationTTL       time.Duration      `json:"rotation_ttl"`
+	RotationPeriod    time.Duration      `json:"rotation_period"`
 	NextVaultRotation time.Time          `json:"next_vault_rotation"`
 	LastVaultRotation time.Time          `json:"last_vault_rotation"`
 }
@@ -63,17 +63,17 @@ func (d *DefaultSchedule) ValidateRotationWindow(s int) error {
 }
 
 func (d *DefaultSchedule) UsesRotationSchedule(rs *RotationSchedule) bool {
-	return rs.RotationSchedule != "" && rs.RotationTTL == 0
+	return rs.RotationSchedule != "" && rs.RotationPeriod == 0
 }
 
 func (d *DefaultSchedule) UsesTTL(rs *RotationSchedule) bool {
-	return rs.RotationTTL != 0 && rs.RotationSchedule == ""
+	return rs.RotationPeriod != 0 && rs.RotationSchedule == ""
 }
 
 // NextRotationTime calculates the next scheduled rotation
 func (d *DefaultSchedule) NextRotationTime(rs *RotationSchedule) time.Time {
 	if d.UsesTTL(rs) {
-		return rs.LastVaultRotation.Add(rs.RotationTTL)
+		return rs.LastVaultRotation.Add(rs.RotationPeriod)
 	}
 	return rs.Schedule.Next(time.Now())
 }
@@ -81,7 +81,7 @@ func (d *DefaultSchedule) NextRotationTime(rs *RotationSchedule) time.Time {
 // NextRotationTimeFromInput calculates and returns the next rotation time based on the provided  schedule and input time
 func (d *DefaultSchedule) NextRotationTimeFromInput(rs *RotationSchedule, input time.Time) time.Time {
 	if d.UsesTTL(rs) {
-		return input.Add(rs.RotationTTL)
+		return input.Add(rs.RotationPeriod)
 	}
 	return rs.Schedule.Next(input)
 }
@@ -105,7 +105,7 @@ func (d *DefaultSchedule) ShouldRotate(rs *RotationSchedule, priority int64, t t
 // SetNextVaultRotation calculates the next rotation time of a given schedule based on the time.
 func (d *DefaultSchedule) SetNextVaultRotation(rs *RotationSchedule, t time.Time) {
 	if d.UsesTTL(rs) {
-		rs.NextVaultRotation = t.Add(rs.RotationTTL)
+		rs.NextVaultRotation = t.Add(rs.RotationPeriod)
 	} else {
 		rs.NextVaultRotation = rs.Schedule.Next(t)
 	}
