@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+// extendedSystemView (Vault Community edition) is a logical.SystemView
+// that is extended with logical.ExtendedSystemView and SudoPrivilege
 type extendedSystemView interface {
 	logical.SystemView
 	logical.ExtendedSystemView

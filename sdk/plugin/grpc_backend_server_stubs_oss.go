@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc"
 )
 
+// newGRPCSystemViewFromSetupArgs (Vault Community edition) constructs a gRPC SystemView client.
 func newGRPCSystemViewFromSetupArgs(conn *grpc.ClientConn, _ *pb.SetupArgs) logical.SystemView {
 	return newGRPCSystemView(conn)
 }

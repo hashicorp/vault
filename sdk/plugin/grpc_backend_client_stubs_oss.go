@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-// registerSystewViewServer (on Vault Community edition) registers the SystemView server
+// registerSystewViewServer (Vault Community edition) registers the SystemView server
 // to the gRPC service registrar
 func registerSystewViewServer(s *grpc.Server, sysView logical.SystemView, _ *logical.BackendConfig) {
 	pb.RegisterSystemViewServer(s, &gRPCSystemViewServer{
