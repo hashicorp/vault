@@ -1,0 +1,3 @@
+```release-note:change
+cap/ldap: Upgrade cap/ldap to https://github.com/hashicorp/cap/commit/9047b8b3240fd6503b08a05e5a5455793c64100f.
+```
