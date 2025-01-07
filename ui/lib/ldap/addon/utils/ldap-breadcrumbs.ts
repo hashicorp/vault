@@ -4,10 +4,16 @@
  */
 import type { Breadcrumb } from 'vault/vault/app-types';
 
+export const roleRoutes = { details: 'roles.role.details', subdirectory: 'roles.subdirectory' };
+export const libraryRoutes = {
+  details: 'libraries.library.details',
+  subdirectory: 'libraries.subdirectory',
+};
+
 export const ldapBreadcrumbs = (
   fullPath: string | undefined, // i.e. path/to/item
-  roleType: string,
-  mountPath: string,
+  routeParams: (childResource: string) => string[], // array of route param strings
+  routes: { details: string; subdirectory: string },
   lastItemCurrent = false // this array of objects can be spread anywhere within the crumbs array
 ): Breadcrumb[] => {
   if (!fullPath) return [];
@@ -26,11 +32,10 @@ export const ldapBreadcrumbs = (
     const segment = ancestry.slice(0, idx + 1).join('/');
 
     const itemPath = isLast && !isDirectory ? segment : `${segment}/`;
-    const routeParams = [mountPath, roleType, itemPath];
     return {
       label: name,
-      route: isLast && !isDirectory ? 'roles.role.details' : 'roles.subdirectory',
-      models: routeParams,
+      route: isLast && !isDirectory ? routes.details : routes.subdirectory,
+      models: routeParams(itemPath),
     };
   });
 };

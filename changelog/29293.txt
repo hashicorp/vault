@@ -1,0 +1,6 @@
+```release-note:improvement
+ui: Adds navigation for LDAP hierarchical libraries
+```
+```release-note:bug
+ui: Fixes navigation for quick actions in LDAP roles' popup menu
+```
