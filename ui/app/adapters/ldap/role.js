@@ -56,8 +56,8 @@ export default class LdapRoleAdapter extends ApplicationAdapter {
   }
 
   urlForDeleteRecord(id, modelName, snapshot) {
-    const { backend, type, name } = snapshot.record;
-    return this._getURL(backend, this._pathForRoleType(type), name);
+    const { backend, type, completeRoleName } = snapshot.record;
+    return this._getURL(backend, this._pathForRoleType(type), completeRoleName);
   }
 
   /* 
