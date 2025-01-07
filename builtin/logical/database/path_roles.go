@@ -20,6 +20,11 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
+var (
+	errNoUpdateAfterRotation            = "updating password not allowed after rotation"
+	errNoPasswordAndSelfManagedPassword = "cannot set both `password` and `self_managed_password`"
+)
+
 func pathListRoles(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
 		{
@@ -644,26 +649,42 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	}
 
 	lastVaultRotation := role.StaticAccount.LastVaultRotation
+	updateAllowed := lastVaultRotation.IsZero()
+
 	if passwordRaw, ok := data.GetOk("password"); ok {
 		// We will allow users to update the password until the point where
 		// Vault assumes management of the account so that we don't break the
 		// promise of Vault being the source of truth.
-		updateAllowed := lastVaultRotation.IsZero()
 		if updateAllowed {
 			role.StaticAccount.Password = passwordRaw.(string)
-			if selfManaged, ok := dbConfig.ConnectionDetails["self_managed"].(bool); ok && selfManaged {
-				// Password and SelfManagedPassword should map to the same value
+
+			connDetails, err := b.ConnectionDetails(ctx, dbConfig)
+			if err != nil {
+				return nil, err
+			}
+
+			if connDetails != nil && connDetails.SelfManaged {
+				// SelfManagedPassword was deprecated in favor of Password, so they
+				// should map to the same value
 				role.StaticAccount.SelfManagedPassword = passwordRaw.(string)
 			}
 		} else {
-			return logical.ErrorResponse("updating password not allowed after rotation: role=%s, lastVaultRotation=%s", name, lastVaultRotation), nil
+			return logical.ErrorResponse("%s: role=%s, lastVaultRotation=%s", errNoUpdateAfterRotation, name, lastVaultRotation), nil
 		}
 	}
 
-	if smPasswordRaw, ok := data.GetOk("self_managed_password"); ok && createRole {
-		// Password and SelfManagedPassword should map to the same value
-		role.StaticAccount.SelfManagedPassword = smPasswordRaw.(string)
-		role.StaticAccount.Password = smPasswordRaw.(string)
+	if smPasswordRaw, ok := data.GetOk("self_managed_password"); ok {
+		if _, ok := data.GetOk("password"); ok {
+			return logical.ErrorResponse(errNoPasswordAndSelfManagedPassword), nil
+		}
+		if updateAllowed {
+			// SelfManagedPassword was deprecated in favor of Password, so they
+			// should map to the same value
+			role.StaticAccount.SelfManagedPassword = smPasswordRaw.(string)
+			role.StaticAccount.Password = smPasswordRaw.(string)
+		} else {
+			return logical.ErrorResponse("%s: role=%s, lastVaultRotation=%s", errNoUpdateAfterRotation, name, lastVaultRotation), nil
+		}
 	}
 
 	if skipImportRotationRaw, ok := data.GetOk("skip_import_rotation"); ok {
@@ -673,6 +694,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 			role.SkipImportRotation = skipImportRotationRaw.(bool)
 		}
 	} else if createRole {
+		// default to the config-level setting
 		role.SkipImportRotation = dbConfig.SkipStaticRoleImportRotation
 	}
 

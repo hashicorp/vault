@@ -53,7 +53,7 @@ func TestOperatorUsageCommandRun(t *testing.T) {
 
 	now := time.Now().UTC()
 
-	_, _, err = clientcountutil.NewActivityLogData(client).
+	_, err = clientcountutil.NewActivityLogData(client).
 		NewPreviousMonthData(1).
 		NewClientsSeen(6, clientcountutil.WithClientType("entity")).
 		NewClientsSeen(4, clientcountutil.WithClientType("non-entity-token")).
