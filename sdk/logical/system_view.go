@@ -104,10 +104,12 @@ type SystemView interface {
 
 	// RegisterRotationJob returns a rotation ID after registering a
 	// rotation job for the requesting plugin.
+	// NOTE: This method is intended for use only by HashiCorp Vault Enterprise plugins.
 	RegisterRotationJob(ctx context.Context, job *rotation.RotationJob) (rotationID string, err error)
 
 	// DeregisterRotationJob returns any errors in de-registering a
 	// credential from the Rotation Manager.
+	// NOTE: This method is intended for use only by HashiCorp Vault Enterprise plugins.
 	DeregisterRotationJob(ctx context.Context, rotationID string) error
 }
 
