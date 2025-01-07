@@ -11,6 +11,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
 import authPage from 'vault/tests/pages/auth';
 import { fakeWindow } from 'vault/tests/helpers/oidc-window-stub';
+import { setupTotpMfaResponse } from 'vault/tests/helpers/auth/mfa-helpers';
 
 module('Acceptance | enterprise saml auth method', function (hooks) {
   setupApplicationTest(hooks);
@@ -157,5 +158,16 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
     assert
       .dom('[data-test-select="auth-method"]')
       .hasValue('saml', 'Previous auth method selected on logout');
+  });
+
+  test('it prompts mfa if configured', async function (assert) {
+    assert.expect(1);
+    this.server.put('/auth/saml/token', () => setupTotpMfaResponse('saml'));
+
+    await waitUntil(() => find('[data-test-select="auth-method"]'));
+    await fillIn('[data-test-select="auth-method"]', 'saml');
+    await click('[data-test-auth-submit]');
+    await waitUntil(() => find('[data-test-mfa-form]'));
+    assert.dom('[data-test-mfa-form]').exists('it renders TOTP MFA form');
   });
 });

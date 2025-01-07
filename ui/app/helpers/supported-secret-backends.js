@@ -7,8 +7,10 @@ import { helper as buildHelper } from '@ember/component/helper';
 
 const SUPPORTED_SECRET_BACKENDS = [
   'aws',
+  'azure',
   'cubbyhole',
   'database',
+  'gcp',
   'generic',
   'keymgmt',
   'kmip',
