@@ -1192,14 +1192,14 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			namedKeySamples := make([]*logical.StorageEntry, len(testSet.testCases))
 			publicKeysSamples := make([][]string, len(testSet.testCases))
 			for i := range testSet.testCases {
-				c.identityStore.oidcPeriodicFunc(ctx)
+				c.identityStore.oidcPeriodicFunc(ctx, storage)
 				namedKeyEntry, _ := storage.Get(ctx, namedKeyConfigPath+testSet.namedKey.name)
 				publicKeysEntry, _ := storage.List(ctx, publicKeysConfigPath)
 				namedKeySamples[i] = namedKeyEntry
 				publicKeysSamples[i] = publicKeysEntry
 
 				// sleep until we are in the next cycle - where a next run will happen
-				v, _, _ := c.identityStore.oidcCache.Get(noNamespace, "nextRun")
+				v, _, _ := c.identityStore.oidcCache.Get(namespace.RootNamespace, "nextRun")
 				nextRun := v.(time.Time)
 				now := time.Now()
 				diff := nextRun.Sub(now)
@@ -1602,61 +1602,37 @@ func TestOIDC_isTargetNamespacedKey(t *testing.T) {
 func TestOIDC_Flush(t *testing.T) {
 	c := newOIDCCache(gocache.NoExpiration, gocache.NoExpiration)
 	ns := []*namespace.Namespace{
-		noNamespace, // ns[0] is nilNamespace
+		{ID: "ns0"},
 		{ID: "ns1"},
-		{ID: "ns2"},
 	}
 
-	// populateNs populates cache by ns with some data
-	populateNs := func() {
-		for i := range ns {
-			for _, val := range []string{"keyA", "keyB", "keyC"} {
-				if err := c.SetDefault(ns[i], val, struct{}{}); err != nil {
-					t.Fatal(err)
-				}
-			}
-		}
-	}
-
-	// validate verifies that cache items exist or do not exist based on their namespaced key
-	verify := func(items map[string]gocache.Item, expect, doNotExpect []*namespace.Namespace) {
-		for _, expectNs := range expect {
-			found := false
-			for i := range items {
-				if isTargetNamespacedKey(i, []string{expectNs.ID}) {
-					found = true
-					break
-				}
-			}
-			if !found {
-				t.Fatalf("Expected cache to contain an entry with a namespaced key for namespace: %q but did not find one", expectNs.ID)
-			}
-		}
-
-		for _, doNotExpectNs := range doNotExpect {
-			for i := range items {
-				if isTargetNamespacedKey(i, []string{doNotExpectNs.ID}) {
-					t.Fatalf("Did not expect cache to contain an entry with a namespaced key for namespace: %q but found the key: %q", doNotExpectNs.ID, i)
-				}
-			}
-		}
-	}
-
-	// flushing ns1 should flush ns1 and nilNamespace but not ns2
-	populateNs()
-	if err := c.Flush(ns[1]); err != nil {
+	// Add a key to the cache under each namespace
+	if err := c.SetDefault(ns[0], "keyA", struct{}{}); err != nil {
 		t.Fatal(err)
 	}
-	items := c.c.Items()
-	verify(items, []*namespace.Namespace{ns[2]}, []*namespace.Namespace{ns[0], ns[1]})
+	if err := c.SetDefault(ns[1], "keyB", struct{}{}); err != nil {
+		t.Fatal(err)
+	}
 
-	// flushing nilNamespace should flush nilNamespace but not ns1 or ns2
-	populateNs()
+	// Flush ns0
 	if err := c.Flush(ns[0]); err != nil {
 		t.Fatal(err)
 	}
-	items = c.c.Items()
-	verify(items, []*namespace.Namespace{ns[1], ns[2]}, []*namespace.Namespace{ns[0]})
+
+	// Verify that ns0 was flushed but ns1 was not
+	items := c.c.Items()
+	ns1KeyFound := false
+	for i := range items {
+		if isTargetNamespacedKey(i, []string{ns[0].ID}) {
+			t.Fatalf("Expected cache to not contain an entry with a namespaced key for namespace: %q but found one", ns[0].ID)
+		}
+		if isTargetNamespacedKey(i, []string{ns[1].ID}) {
+			ns1KeyFound = true
+		}
+	}
+	if !ns1KeyFound {
+		t.Fatalf("Expected cache to contain an entry with a namespaced key for namespace: %q but did not find one", ns[1].ID)
+	}
 }
 
 func TestOIDC_CacheNamespaceNilCheck(t *testing.T) {
@@ -1679,7 +1655,7 @@ func TestOIDC_GetKeysCacheControlHeader(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 
 	// get default value
-	header, err := c.identityStore.getKeysCacheControlHeader()
+	header, err := c.identityStore.getKeysCacheControlHeader(namespace.RootNamespace)
 	if err != nil {
 		t.Fatalf("expected success, got error:\n%v", err)
 	}
@@ -1691,11 +1667,11 @@ func TestOIDC_GetKeysCacheControlHeader(t *testing.T) {
 
 	// set nextRun
 	nextRun := time.Now().Add(24 * time.Hour)
-	if err = c.identityStore.oidcCache.SetDefault(noNamespace, "nextRun", nextRun); err != nil {
+	if err = c.identityStore.oidcCache.SetDefault(namespace.RootNamespace, "nextRun", nextRun); err != nil {
 		t.Fatal(err)
 	}
 
-	header, err = c.identityStore.getKeysCacheControlHeader()
+	header, err = c.identityStore.getKeysCacheControlHeader(namespace.RootNamespace)
 	if err != nil {
 		t.Fatalf("expected success, got error:\n%v", err)
 	}
@@ -1708,11 +1684,11 @@ func TestOIDC_GetKeysCacheControlHeader(t *testing.T) {
 	// set jwksCacheControlMaxAge
 	durationSeconds := 60
 	jwksCacheControlMaxAge := time.Duration(durationSeconds) * time.Second
-	if err = c.identityStore.oidcCache.SetDefault(noNamespace, "jwksCacheControlMaxAge", jwksCacheControlMaxAge); err != nil {
+	if err = c.identityStore.oidcCache.SetDefault(namespace.RootNamespace, "jwksCacheControlMaxAge", jwksCacheControlMaxAge); err != nil {
 		t.Fatal(err)
 	}
 
-	header, err = c.identityStore.getKeysCacheControlHeader()
+	header, err = c.identityStore.getKeysCacheControlHeader(namespace.RootNamespace)
 	if err != nil {
 		t.Fatalf("expected success, got error:\n%v", err)
 	}
