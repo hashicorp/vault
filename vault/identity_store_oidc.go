@@ -2125,7 +2125,8 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context, s logical.Storage)
 	now := time.Now()
 
 	ns, err := namespace.FromContext(ctx)
-	if err != nil && !errors.Is(err, namespace.ErrNoNamespace) {
+	if err != nil {
+		i.Logger().Error("error getting namespace from context", "err", err)
 		return
 	}
 
