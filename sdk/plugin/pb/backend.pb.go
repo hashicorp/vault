@@ -3213,11 +3213,10 @@ func (x *GenerateIdentityTokenResponse) GetTTL() int64 {
 }
 
 type RegisterRotationJobRequest struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Job           *RotationJobInput      `protobuf:"bytes,1,opt,name=job,proto3" json:"job,omitempty"`
 	unknownFields protoimpl.UnknownFields
-
-	Job *RotationJobInput `protobuf:"bytes,1,opt,name=job,proto3" json:"job,omitempty"`
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *RegisterRotationJobRequest) Reset() {
@@ -3258,12 +3257,11 @@ func (x *RegisterRotationJobRequest) GetJob() *RotationJobInput {
 }
 
 type RegisterRotationJobResponse struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RotationID    string                 `protobuf:"bytes,1,opt,name=rotation_id,json=rotationId,proto3" json:"rotation_id,omitempty"`
+	Err           string                 `protobuf:"bytes,2,opt,name=err,proto3" json:"err,omitempty"`
 	unknownFields protoimpl.UnknownFields
-
-	RotationID string `protobuf:"bytes,1,opt,name=rotation_id,json=rotationId,proto3" json:"rotation_id,omitempty"`
-	Err        string `protobuf:"bytes,2,opt,name=err,proto3" json:"err,omitempty"`
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *RegisterRotationJobResponse) Reset() {
@@ -3311,14 +3309,13 @@ func (x *RegisterRotationJobResponse) GetErr() string {
 }
 
 type RotationJobInput struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Schedule      *structpb.Struct       `protobuf:"bytes,1,opt,name=schedule,proto3" json:"schedule,omitempty"`
+	RotationID    string                 `protobuf:"bytes,2,opt,name=rotation_id,json=rotationId,proto3" json:"rotation_id,omitempty"`
+	Path          string                 `protobuf:"bytes,3,opt,name=path,proto3" json:"path,omitempty"`
+	Name          string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
 	unknownFields protoimpl.UnknownFields
-
-	Schedule   *structpb.Struct `protobuf:"bytes,1,opt,name=schedule,proto3" json:"schedule,omitempty"`
-	RotationID string           `protobuf:"bytes,2,opt,name=rotation_id,json=rotationId,proto3" json:"rotation_id,omitempty"`
-	Path       string           `protobuf:"bytes,3,opt,name=path,proto3" json:"path,omitempty"`
-	Name       string           `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *RotationJobInput) Reset() {
@@ -3380,11 +3377,10 @@ func (x *RotationJobInput) GetName() string {
 }
 
 type DeregisterRotationJobRequest struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RotationID    string                 `protobuf:"bytes,1,opt,name=rotation_id,json=rotationId,proto3" json:"rotation_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
-
-	RotationID string `protobuf:"bytes,1,opt,name=rotation_id,json=rotationId,proto3" json:"rotation_id,omitempty"`
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DeregisterRotationJobRequest) Reset() {
