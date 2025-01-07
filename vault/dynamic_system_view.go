@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/rotation"
 	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/hashicorp/vault/version"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -486,4 +487,28 @@ func (d dynamicSystemView) GenerateIdentityToken(ctx context.Context, req *plugi
 		Token: pluginutil.IdentityToken(token),
 		TTL:   ttl,
 	}, nil
+}
+
+func (d dynamicSystemView) RegisterRotationJob(ctx context.Context, job *rotation.RotationJob) (string, error) {
+	mountEntry := d.mountEntry
+	if mountEntry == nil {
+		return "", fmt.Errorf("no mount entry")
+	}
+	ns := mountEntry.Namespace()
+	path := job.Path
+	if ns != namespace.RootNamespace {
+		path = ns.Path + "/" + path
+	}
+	nsCtx := namespace.ContextWithNamespace(ctx, mountEntry.Namespace())
+	id, err := d.core.RegisterRotationJob(nsCtx, path, job)
+	if err != nil {
+		return "", fmt.Errorf("error registering rotation job: %s", err)
+	}
+
+	job.RotationID = id
+	return id, nil
+}
+
+func (d dynamicSystemView) DeregisterRotationJob(_ context.Context, rotationID string) (err error) {
+	return d.core.DeregisterRotationJob(rotationID)
 }
