@@ -35,8 +35,8 @@ export default class AwsLeaseConfig extends Model {
   configurableParams = ['lease', 'leaseMax'];
 
   get displayAttrs() {
-    // while identical to formFields, opting to keep the same pattern as other configurable secret engines for consistency
-    //and to easily filter out displayAttributes in the future if needed
+    // while identical to formFields, keeping the same pattern as other configurable secret engines for consistency
+    // and to easily filter out displayAttributes in the future if needed
     return this.formFields;
   }
 
