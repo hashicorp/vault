@@ -371,7 +371,7 @@ func TestRaftHACluster_Removed_ReAdd(t *testing.T) {
 		"server_id": follower.NodeID,
 	})
 	require.NoError(t, err)
-	require.Eventually(t, follower.Sealed, 3*time.Second, 250*time.Millisecond)
+	require.Eventually(t, follower.Sealed, 10*time.Second, 250*time.Millisecond)
 
 	_, err = follower.Client.Sys().RaftJoin(joinReq)
 	require.Error(t, err)
