@@ -1029,7 +1029,7 @@ func TestBackend_StaticRole_Rotation_MongoDBAtlas(t *testing.T) {
 // does not break on invalid values.
 func TestQueueTickIntervalKeyConfig(t *testing.T) {
 	t.Parallel()
-	cluster, sys := getClusterPostgresDB(t)
+	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
 	values := []string{"1", "0", "-1"}
