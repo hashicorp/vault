@@ -126,9 +126,6 @@ type oidcCache struct {
 var (
 	errNilNamespace = errors.New("nil namespace in oidc cache request")
 
-	// pseudo-namespace for cache items that don't belong to any real namespace.
-	noNamespace = &namespace.Namespace{ID: "__NO_NAMESPACE"}
-
 	reservedClaims = []string{
 		"iat", "aud", "exp", "iss",
 		"sub", "namespace", "nonce",
