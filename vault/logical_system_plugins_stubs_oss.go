@@ -15,7 +15,3 @@ func validateSHA256(sha256 string) *logical.Response {
 	}
 	return nil
 }
-
-func validateVersionSHA256(version, sha256 string) *logical.Response {
-	return nil
-}

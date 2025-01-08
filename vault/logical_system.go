@@ -549,10 +549,6 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 	}
 
 	if ociImage == "" {
-		if resp := validateVersionSHA256(pluginVersion, sha256); resp.IsError() {
-			return resp, nil
-		}
-
 		if err = b.Core.CheckPluginPerms(command); err != nil {
 			return nil, err
 		}
