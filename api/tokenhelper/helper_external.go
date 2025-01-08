@@ -40,7 +40,7 @@ func ExternalTokenHelperPath(path string) (string, error) {
 	return path, nil
 }
 
-var _ TokenHelper = (*ExternalTokenHelper)(nil)
+var _ TokenHelper = new(ExternalTokenHelper)
 
 // ExternalTokenHelper should only be used in a dev mode. For all other cases,
 // InternalTokenHelper should be used.
