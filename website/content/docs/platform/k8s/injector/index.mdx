@@ -197,6 +197,7 @@ Set [`injector.metrics.enabled`](/vault/docs/platform/k8s/helm/configuration#met
 to `true` in the Helm chart to start collecting injector metrics.
 
 </Tip>
+
 Vault Agent injector collects the following Prometheus metrics in addition to
 the default set of `golang` metrics:
 
@@ -207,14 +208,13 @@ the default set of `golang` metrics:
 
 - `vault_agent_injector_injections_by_namespace_total` - The total count of
   Agent container injections, grouped by Kubernetes `namespace` and `injection_type`.
-  Vault Agent counts the following injection types:
+  Vault Agent injector counts the following injection types:
     - `init_only`
     - `sidecar_only`
-    - `init_and_sidecar`.
+    - `init_and_sidecar`
 
 - `vault_agent_injector_failed_injections_by_namespace_total` - The total count
-  of failed Agent Sidecar injections, grouped by Kubernetes `namespace`.
-
+  of failed Agent sidecar injections, grouped by Kubernetes `namespace`.
 
 ## Tutorial
 
