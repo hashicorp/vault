@@ -4,8 +4,8 @@
 syntax = "proto3";
 package pb;
 
-import "google/protobuf/timestamp.proto";
 import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
 import "sdk/logical/event.proto";
 import "sdk/logical/identity.proto";
 import "sdk/logical/plugin.proto";
