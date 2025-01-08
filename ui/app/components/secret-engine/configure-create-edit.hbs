@@ -21,69 +21,61 @@
       Access to AWS
     </h2>
   {{/if}}
-  {{! Form Fields for all engines }}
+  {{! Form Fields for all WIF engines }}
   <div class="box is-fullwidth is-sideless">
-    {{#if this.isWifEngine}}
-      {{#if this.version.isEnterprise}}
-        {{! Only enterprise users who are configuring wif engines can select a specific access type (account vs wif). }}
-        <fieldset class="field form-fieldset" id="protection" data-test-access-type-section>
-          <legend class="is-label">Access Type</legend>
-          <p class="sub-text" data-test-access-type-subtext>
-            {{#if this.disableAccessType}}
-              You cannot edit Access Type if you have already saved access credentials.
-            {{else}}
-              Choose the way to configure access to
-              {{@displayName}}. Access can be configured either using an
-              {{@displayName}}
-              account or with the Plugin Workload Identity Federation (WIF).
-            {{/if}}
-          </p>
-          <div>
-            <RadioButton
-              id={{concat "access-type-" @model.type}}
-              name="account"
-              class="radio"
-              data-test-access-type={{@model.type}}
-              @value="account"
-              @groupValue={{this.accessType}}
-              @onChange={{fn this.onChangeAccessType "account"}}
-              @disabled={{this.disableAccessType}}
-            />
-            <label for={{concat "access-type-" @model.type}}>{{@displayName}} account credentials</label>
-            <RadioButton
-              id="access-type-wif"
-              name="wif"
-              class="radio has-left-margin-m"
-              data-test-access-type="wif"
-              @value="wif"
-              @groupValue={{this.accessType}}
-              @onChange={{fn this.onChangeAccessType "wif"}}
-              @disabled={{this.disableAccessType}}
-            />
-            <label for="access-type-wif">Workload Identity Federation</label>
-          </div>
-        </fieldset>
-      {{/if}}
-
-      {{#if (eq this.accessType "wif")}}
-        {{! If access type is "wif" display issuer and wif fields }}
-        {{#each @issuerConfig.displayAttrs as |attr|}}
-          <FormField @attr={{attr}} @model={{@issuerConfig}} />
-        {{/each}}
-        <FormFieldGroups @model={{@model}} @mode={{if @model.isNew "create" "edit"}} @groupName="fieldGroupsWif" />
-      {{else}}
-        <FormFieldGroups
-          @model={{@model}}
-          @mode={{if @model.isNew "create" "edit"}}
-          @useEnableInput={{true}}
-          @groupName="fieldGroupsAccount"
-        />
-      {{/if}}
-      {{! If it is not a wif engine iterate over FormFields instead of groups (currently only relevant to ssh) }}
-    {{else}}
-      {{#each @model.formFields as |attr|}}
-        <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
+    {{#if this.version.isEnterprise}}
+      {{! Only enterprise users who are configuring wif engines can select a specific access type (account vs wif). }}
+      <fieldset class="field form-fieldset" id="protection" data-test-access-type-section>
+        <legend class="is-label">Access Type</legend>
+        <p class="sub-text" data-test-access-type-subtext>
+          {{#if this.disableAccessType}}
+            You cannot edit Access Type if you have already saved access credentials.
+          {{else}}
+            Choose the way to configure access to
+            {{@displayName}}. Access can be configured either using an
+            {{@displayName}}
+            account or with the Plugin Workload Identity Federation (WIF).
+          {{/if}}
+        </p>
+        <div>
+          <RadioButton
+            id={{concat "access-type-" @type}}
+            name="account"
+            class="radio"
+            data-test-access-type={{@type}}
+            @value="account"
+            @groupValue={{this.accessType}}
+            @onChange={{fn this.onChangeAccessType "account"}}
+            @disabled={{this.disableAccessType}}
+          />
+          <label for={{concat "access-type-" @type}}>{{@displayName}} account credentials</label>
+          <RadioButton
+            id="access-type-wif"
+            name="wif"
+            class="radio has-left-margin-m"
+            data-test-access-type="wif"
+            @value="wif"
+            @groupValue={{this.accessType}}
+            @onChange={{fn this.onChangeAccessType "wif"}}
+            @disabled={{this.disableAccessType}}
+          />
+          <label for="access-type-wif">Workload Identity Federation</label>
+        </div>
+      </fieldset>
+    {{/if}}
+    {{#if (eq this.accessType "wif")}}
+      {{! If access type is "wif" display issuer and wif fields }}
+      {{#each @issuerConfig.displayAttrs as |attr|}}
+        <FormField @attr={{attr}} @model={{@issuerConfig}} />
       {{/each}}
+      <FormFieldGroups @model={{@model}} @mode={{if @model.isNew "create" "edit"}} @groupName="fieldGroupsWif" />
+    {{else}}
+      <FormFieldGroups
+        @model={{@model}}
+        @mode={{if @model.isNew "create" "edit"}}
+        @useEnableInput={{true}}
+        @groupName="fieldGroupsAccount"
+      />
     {{/if}}
     {{! secondModel fields should show regardless of vault version or whether or not this is a wif engine (currently only relevant to AWS)}}
     {{#if @secondModel}}

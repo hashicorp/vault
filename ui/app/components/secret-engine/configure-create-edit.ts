@@ -19,15 +19,16 @@ import type Router from '@ember/routing/router';
 import type StoreService from 'vault/services/store';
 import type VersionService from 'vault/services/version';
 import type FlashMessageService from 'vault/services/flash-messages';
-import { WIF_ENGINES } from 'vault/helpers/mountable-secret-engines';
 
 /**
- * @module SecretEngineConfigureCreateEdit component is used to configure CONFIGURABLE_SECRET_ENGINES (aws, azure, gcp, ssh)
+ * @module SecretEngineConfigureCreateEdit component is used to configure WIF_ENGINES (aws, azure)
  * For enterprise users configuring a WIF_ENGINES, they will see an additional option to config WIF attributes in place of account attributes.
  * If the user is configuring WIF attributes they will also have the option to update the global issuer config, which is a separate endpoint named identity/oidc/config.
  * @example
  * <SecretEngine::ConfigureCreateEdit
     @backendPath={{this.model.id}}
+    @displayName="AWS"
+    @type="aws"
     @model={{this.model.root-config}}
     @secondModel={{this.model.lease-config}}
     @issuerConfig={{this.model.identity-oidc-config}}
@@ -60,7 +61,7 @@ export default class ConfigureAzureComponent extends Component<Args> {
   @tracked errorMessage = '';
   @tracked invalidFormAlert = '';
   @tracked saveIssuerWarning = '';
-  @tracked modelValidations = '';
+  @tracked modelValidations: ValidationMap | null = null;
 
   disableAccessType = false;
 
@@ -85,16 +86,13 @@ export default class ConfigureAzureComponent extends Component<Args> {
   }
 
   get issuerAttrChanged() {
-    // relevant only to WIF secret engines
-    return WIF_ENGINES.includes(this.args.type) && this.args.issuerConfig?.hasDirtyAttributes;
+    return this.args.issuerConfig?.hasDirtyAttributes;
   }
 
   get secondModelAttrChanged() {
-    return Object.keys(this.args.secondModel?.changedAttributes()).some((item) => item !== 'backend');
-  }
-
-  get isWifEngine() {
-    return WIF_ENGINES.includes(this.args.type);
+    return this.args.secondModel
+      ? Object.keys(this.args.secondModel.changedAttributes()).some((item) => item !== 'backend')
+      : false;
   }
 
   @action continueSubmitForm() {
@@ -108,7 +106,10 @@ export default class ConfigureAzureComponent extends Component<Args> {
     waitFor(async (event: Event) => {
       event?.preventDefault();
       this.resetErrors();
-
+      // AWS lease model has model validations we need to check before saving
+      if (this.args.secondModel && !this.validate(this.args.secondModel)) {
+        return;
+      }
       if (this.issuerAttrChanged) {
         // if the issuer has changed show modal with warning that the config will change
         // if the modal is shown, the user has to click confirm to continue saving
@@ -178,15 +179,16 @@ export default class ConfigureAzureComponent extends Component<Args> {
 
   async saveSecondModel(): Promise<boolean> {
     const { backendPath, secondModel } = this.args;
-    // see if you can access modelName
-    debugger;
     try {
       await secondModel.save();
       this.flashMessages.success(`Successfully saved ${backendPath}'s lease configuration.`);
       return true;
     } catch (error) {
       this.errorMessage = errorMessage(error);
-      this.invalidFormAlert = 'There was an error submitting this form.';
+      // show a flash message and no invalidForm alert. Only if the first modal fails will we prevent transition so display error via flash message as it's likely they'll transition.
+      this.flashMessages.danger(`Lease configuration was not saved: ${this.errorMessage}`, {
+        sticky: true,
+      });
       return false;
     }
   }
@@ -201,10 +203,18 @@ export default class ConfigureAzureComponent extends Component<Args> {
     this.router.transitionTo('vault.cluster.secrets.backend.configuration', this.args.backendPath);
   }
 
+  validate(model: ConfigModel) {
+    const { isValid, state, invalidFormMessage } = model.validate();
+    this.modelValidations = isValid ? null : state;
+    this.invalidFormAlert = isValid ? '' : invalidFormMessage;
+    return isValid;
+  }
+
   @action
   onChangeAccessType(accessType: string) {
     this.accessType = accessType;
     const { model } = this.args;
+    // ARG TODO come back here for AWS
     if (accessType === 'azure') {
       // reset all WIF attributes
       model.identityTokenAudience = model.identityTokenTtl = undefined;

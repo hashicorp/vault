@@ -52,5 +52,7 @@ export default class SecretEngineConfig extends Model {
   isNew: boolean;
   save(): void;
   unloadRecord(): void;
+  destroyRecord(): void;
+  rollbackAttributes(): void;
   validate(): ModelValidations;
 }
