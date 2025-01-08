@@ -1,0 +1,3 @@
+```release-note:feature
+**Activation Flag (core)**: A simple, one-time flag that lets users turn on specific Vault functionalities when they need them.
+```
