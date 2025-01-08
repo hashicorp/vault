@@ -61,7 +61,7 @@
               <dd.Interactive
                 data-test-subdirectory
                 @route="roles.subdirectory"
-                @models={{array role.type (concat role.path_to_role role.name)}}
+                @models={{array role.type role.completeRoleName}}
               >Content</dd.Interactive>
             {{else}}
               {{#if role.canEdit}}
@@ -72,7 +72,11 @@
                 >Edit</dd.Interactive>
               {{/if}}
               {{#if role.canReadCreds}}
-                <dd.Interactive data-test-get-creds @route="roles.role.credentials" @models={{array role.type role.name}}>
+                <dd.Interactive
+                  data-test-get-creds
+                  @route="roles.role.credentials"
+                  @models={{array role.type role.completeRoleName}}
+                >
                   Get credentials
                 </dd.Interactive>
               {{/if}}
@@ -87,7 +91,7 @@
                 data-test-details
                 @route="roles.role.details"
                 {{! this will force the roles.role model hook to fire since we may only have a partial model loaded in the list view }}
-                @models={{array role.type role.name}}
+                @models={{array role.type role.completeRoleName}}
               >Details</dd.Interactive>
               {{#if role.canDelete}}
                 <dd.Interactive
