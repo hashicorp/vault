@@ -42,6 +42,17 @@ based on the table below.
 | CE            | true      | any value other than sha2-512 | An error is returned                       | Pure Ed25519                      |
 | CE            | true      | sha2-512                      | An error is returned (not supported on CE) | Pure Ed25519                      |
 
+### LDAP user DN search with `upndomain`
+
+The github.com/hashicorp/cap/ldap dependency has been upgraded to include a security improvement
+which may be a breaking change for users. The enhancement ensures that user DN searches with
+`upndomain` configured will now check that exactly one user is returned and error otherwise.
+For more details, see https://github.com/hashicorp/cap/pull/151.
+
+In previous versions of Vault, multiple users could be returned when searching for the user DN
+with `upndomain` configured, and the last user would be selected. As of 1.19.x, such searches will
+error if multiple users are returned.
+
 ## Known issues and workarounds
 
 @include 'known-issues/duplicate-hsm-key.mdx'
