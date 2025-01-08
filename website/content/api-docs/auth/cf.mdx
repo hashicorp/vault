@@ -46,6 +46,8 @@ documentation](/vault/docs/auth/cf).
 - `login_max_seconds_not_after` `(int: 60)`: In case of clock drift, the maximum number of
   seconds in the future when a signature could have been created. The lower the value,
   the lower the risk of replay attacks.
+- `cf_timeout` `(duration: 0s)`: The timeout for the CF API. If not set, the default
+  timeout is 0, which means no timeout.
 
 ### Sample payload
 
