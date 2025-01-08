@@ -159,16 +159,16 @@ scenario "dev_single_cluster" {
         artifactory_host:
           The artifactory host to search. It's very unlikely that you'll want to change this. The
           default value is the HashiCorp Artifactory instance.
-        artifactory_repo
+        artifactory_repo:
           The artifactory host to search. It's very unlikely that you'll want to change this. The
           default value is where CRT will publish packages.
-        artifactory_username
+        artifactory_username:
           The artifactory username associated with your token. You'll need this if you wish to use
           deb or rpm artifacts! You can request access via Okta.
-        artifactory_token
+        artifactory_token:
           The artifactory token associated with your username. You'll need this if you wish to use
           deb or rpm artifacts! You can create a token by logging into Artifactory via Okta.
-        dev_build_local_ui
+        dev_build_local_ui:
           If you are not testing any changes in the UI, set to false. This will save time by not
           building the entire UI. If you need to test the UI, set to true.
         vault_product_version:

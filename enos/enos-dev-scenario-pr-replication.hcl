@@ -171,7 +171,7 @@ scenario "dev_pr_replication" {
         artifactory_token:
           The artifactory token associated with your username. You'll need this if you wish to use
           deb or rpm artifacts! You can create a token by logging into Artifactory via Okta.
-        dev_build_local_ui
+        dev_build_local_ui:
           If you are not testing any changes in the UI, set to false. This will save time by not
           building the entire UI. If you need to test the UI, set to true.
         vault_product_version:
