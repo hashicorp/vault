@@ -58,6 +58,7 @@ var _ TokenHelper = new(ExternalTokenHelper)
 // exit code then the stderr will be made part of the error value.
 type ExternalTokenHelper struct {
 	BinaryPath string
+	Args       []string
 	Env        []string
 }
 
