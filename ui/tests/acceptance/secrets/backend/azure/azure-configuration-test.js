@@ -93,7 +93,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
           return { data: { id: path, type: this.type, ...azureAccountAttrs } };
         });
         await enablePage.enable(this.type, path);
-        for (const key of expectedConfigKeys('azure')) {
+        for (const key of expectedConfigKeys('azure-details')) {
           assert.dom(GENERAL.infoRowLabel(key)).exists(`${key} on the ${this.type} config details exists.`);
           const responseKeyAndValue = expectedValueOfConfigKeys(this.type, key);
           assert
