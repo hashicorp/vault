@@ -31,9 +31,7 @@ var (
 		return nil
 	}
 
-	sysInitialize = func(b *SystemBackend) func(context.Context, *logical.InitializationRequest) error {
-		return ceSysInitialize(b)
-	}
+	sysInitialize = ceSysInitialize
 
 	sysClean = func(b *SystemBackend) func(context.Context) {
 		return nil
