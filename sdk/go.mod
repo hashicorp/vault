@@ -15,7 +15,7 @@ require (
 	github.com/go-test/deep v1.1.1
 	github.com/golang/protobuf v1.5.4
 	github.com/golang/snappy v0.0.4
-	github.com/hashicorp/cap/ldap v0.0.0-20240403125925-c0418810d10e
+	github.com/hashicorp/cap/ldap v0.0.0-20250106213447-9047b8b3240f
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-hclog v1.6.3
@@ -38,7 +38,6 @@ require (
 	github.com/hashicorp/go-version v1.7.0
 	github.com/hashicorp/golang-lru v1.0.2
 	github.com/hashicorp/hcl v1.0.1-vault-5
-	github.com/hashicorp/vault v1.18.3
 	github.com/hashicorp/vault/api v1.15.0
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/mitchellh/mapstructure v1.5.0
@@ -59,10 +58,14 @@ require (
 	cloud.google.com/go/auth v0.10.2 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.5 // indirect
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24 // indirect
+	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
+	github.com/Masterminds/semver/v3 v3.2.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/go-jose/go-jose/v4 v4.0.4 // indirect
+	github.com/go-sql-driver/mysql v1.8.1 // indirect
+	github.com/gofrs/uuid v4.3.0+incompatible // indirect
 	github.com/hashicorp/go-hmac-drbg v0.0.0-20210916214228-a6e5a68489f6 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/sys/userns v0.1.0 // indirect
@@ -71,8 +74,11 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.55.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
+	github.com/rogpeppe/go-internal v1.12.0 // indirect
+	github.com/shopspring/decimal v1.4.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.19.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
+	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842 // indirect
 )
 
 require (
