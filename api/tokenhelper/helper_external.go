@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 )
 
@@ -110,28 +109,13 @@ func (h *ExternalTokenHelper) Path() string {
 }
 
 func (h *ExternalTokenHelper) cmd(op string) (*exec.Cmd, error) {
-	script := strings.ReplaceAll(h.BinaryPath, "\\", "\\\\") + " " + op
-	cmd, err := execScript(script)
-	if err != nil {
-		return nil, err
-	}
-	cmd.Env = h.Env
-	return cmd, nil
-}
+	binPath := strings.ReplaceAll(h.BinaryPath, "\\", "\\\\")
 
-// execScript returns a command to execute a script
-func execScript(script string) (*exec.Cmd, error) {
-	var shell, flag string
-	if runtime.GOOS == "windows" {
-		shell = "cmd"
-		flag = "/C"
-	} else {
-		shell = "/bin/sh"
-		flag = "-c"
-	}
-	if other := os.Getenv("SHELL"); other != "" {
-		shell = other
-	}
-	cmd := exec.Command(shell, flag, script)
+	args := make([]string, len(h.Args))
+	copy(args, h.Args)
+	args = append(args, op)
+
+	cmd := exec.Command(binPath, args...)
+	cmd.Env = h.Env
 	return cmd, nil
 }
