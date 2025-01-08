@@ -19,6 +19,8 @@ export default buildRoutes(function () {
   });
   this.route('libraries', function () {
     this.route('create');
+    // wildcard route so we can traverse hierarchical libraries i.e. prod/admin/my-library
+    this.route('subdirectory', { path: '/subdirectory/*path_to_library' });
     this.route('library', { path: '/:name' }, function () {
       this.route('details', function () {
         this.route('accounts');
