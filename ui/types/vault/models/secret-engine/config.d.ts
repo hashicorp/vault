@@ -38,7 +38,7 @@ export default class SecretEngineConfig extends Model {
 
   get displayAttrs(): any;
   get isWifPluginConfigured(): boolean;
-  get isAzureAccountConfigured(): boolean;
+  get isAccountPluginConfigured(): boolean;
   get fieldGroupsWif(): any;
   get fieldGroupsAzure(): any;
   get fieldGroupsGcp(): any;

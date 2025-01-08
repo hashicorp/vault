@@ -22,7 +22,7 @@ import type FlashMessageService from 'vault/services/flash-messages';
 
 /**
  * @module SecretEngineConfigureCreateEdit component is used to configure WIF_ENGINES (aws, azure)
- * For enterprise users configuring a WIF_ENGINES, they will see an additional option to config WIF attributes in place of account attributes.
+ * For enterprise users, they will see an additional option to config WIF attributes in place of account attributes.
  * If the user is configuring WIF attributes they will also have the option to update the global issuer config, which is a separate endpoint named identity/oidc/config.
  * @example
  * <SecretEngine::ConfigureCreateEdit
@@ -51,7 +51,7 @@ interface Args {
   issuerConfig: IdentityOidcConfigModel;
 }
 
-export default class ConfigureAzureComponent extends Component<Args> {
+export default class ConfigureCreateEdit extends Component<Args> {
   @service declare readonly router: Router;
   @service declare readonly store: StoreService;
   @service declare readonly version: VersionService;
@@ -73,11 +73,10 @@ export default class ConfigureAzureComponent extends Component<Args> {
       // display title is used create a section header indicating fields associated with the second model
       assert('secondModel must have a displayTitle', this.args.secondModel.displayTitle);
     }
-    // Azure has an extra check for configuration because the API returns a 200 on an Azure engine that has not been configured.
-    const { isWifPluginConfigured, isAzureAccountConfigured } = this.args.model;
+    const { isWifPluginConfigured, isAccountPluginConfigured } = this.args.model;
     this.accessType = isWifPluginConfigured ? 'wif' : 'account';
-    // if there are either WIF or azure attributes, disable user's ability to change accessType
-    this.disableAccessType = isWifPluginConfigured || isAzureAccountConfigured;
+    // if there are either WIF or mutually exclusive account attributes, disable user's ability to change accessType
+    this.disableAccessType = isWifPluginConfigured || isAccountPluginConfigured;
   }
 
   get modelAttrChanged() {
