@@ -668,7 +668,7 @@ func (d *Delegate) RemoveFailedServer(server *autopilot.Server) {
 		d.followerStates.Delete(string(server.ID))
 		_, err := d.RemovedServerCleanup(context.Background(), string(server.ID))
 		if err != nil {
-			d.logger.Error("failed to cleanup perf standbys", "error", err)
+			d.logger.Error("failed to run cleanup", "error", err)
 		}
 	}()
 }
