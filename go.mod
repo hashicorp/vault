@@ -72,7 +72,7 @@ require (
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/hashicorp/cap v0.7.0
-	github.com/hashicorp/cap/ldap v0.0.0-20240403125925-c0418810d10e
+	github.com/hashicorp/cap/ldap v0.0.0-20250106213447-9047b8b3240f
 	github.com/hashicorp/cli v1.1.6
 	github.com/hashicorp/consul-template v0.39.1
 	github.com/hashicorp/consul/api v1.29.1
@@ -388,7 +388,6 @@ require (
 	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/godbus/dbus v0.0.0-20190726142602-4481cbc300e2 // indirect
-	github.com/gofrs/uuid v4.3.0+incompatible // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
 	github.com/golang-sql/civil v0.0.0-20220223132316-b832511892a9 // indirect
