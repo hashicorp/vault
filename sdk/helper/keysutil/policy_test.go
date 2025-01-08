@@ -55,7 +55,7 @@ func TestPolicy_KeyTypes(t *testing.T) {
 	}
 }
 
-func TestPolicy_HmacCmacSuported(t *testing.T) {
+func TestPolicy_HmacCmacSupported(t *testing.T) {
 	// Test HMAC supported feature
 	for _, keyType := range allTestKeyTypes {
 		switch keyType {

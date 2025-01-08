@@ -6831,6 +6831,7 @@ func TestProperAuthing(t *testing.T) {
 	}
 	serial := resp.Data["serial_number"].(string)
 	eabKid := "13b80844-e60d-42d2-b7e9-152a8e834b90"
+	acmeKeyId := "hrKmDYTvicHoHGVN2-3uzZV_BPGdE0W_dNaqYTtYqeo="
 	paths := map[string]pathAuthChecker{
 		"ca_chain":                               shouldBeUnauthedReadList,
 		"cert/ca_chain":                          shouldBeUnauthedReadList,
@@ -6950,6 +6951,8 @@ func TestProperAuthing(t *testing.T) {
 		"unified-ocsp/dGVzdAo=":                  shouldBeUnauthedReadList,
 		"eab/":                                   shouldBeAuthed,
 		"eab/" + eabKid:                          shouldBeAuthed,
+		"acme/mgmt/account/keyid/":               shouldBeAuthed,
+		"acme/mgmt/account/keyid/" + acmeKeyId:   shouldBeAuthed,
 	}
 
 	entPaths := getEntProperAuthingPaths(serial)
@@ -7020,7 +7023,10 @@ func TestProperAuthing(t *testing.T) {
 			raw_path = strings.ReplaceAll(raw_path, "{serial}", serial)
 		}
 		if strings.Contains(raw_path, "acme/account/") && strings.Contains(raw_path, "{kid}") {
-			raw_path = strings.ReplaceAll(raw_path, "{kid}", "hrKmDYTvicHoHGVN2-3uzZV_BPGdE0W_dNaqYTtYqeo=")
+			raw_path = strings.ReplaceAll(raw_path, "{kid}", acmeKeyId)
+		}
+		if strings.Contains(raw_path, "acme/mgmt/account/") && strings.Contains(raw_path, "{keyid}") {
+			raw_path = strings.ReplaceAll(raw_path, "{keyid}", acmeKeyId)
 		}
 		if strings.Contains(raw_path, "acme/") && strings.Contains(raw_path, "{auth_id}") {
 			raw_path = strings.ReplaceAll(raw_path, "{auth_id}", "29da8c38-7a09-465e-b9a6-3d76802b1afd")
