@@ -42,6 +42,23 @@ based on the table below.
 | CE            | true      | any value other than sha2-512 | An error is returned                       | Pure Ed25519                      |
 | CE            | true      | sha2-512                      | An error is returned (not supported on CE) | Pure Ed25519                      |
 
+### Identity System Duplicate Cleanup
+
+**Users should review their server logs after upgrading to see if identity
+duplicates are reported.**
+
+Vault 1.19.0 enables users impacted by historical identity duplicate bugs to
+manually trigger a one-time de-duplication process. This process restores the
+cluster to supported default behavior by resolving the duplicates.
+
+Vault 1.19.0 also includes improved reporting in server logs to help diagnose
+whether this de-duplication is required. No behavior will change until the
+operator activates the relevant flag via the API.
+
+To understand if you need to take action, consult the [resolution guide]() which
+demonstrates which log lines to watch for. If duplicates are found, the guide
+explains the process to ensure any duplicates found are safely resolved.
+
 ## Known issues and workarounds
 
 @include 'known-issues/duplicate-hsm-key.mdx'
