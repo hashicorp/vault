@@ -10,7 +10,6 @@ import (
 	"sync/atomic"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
@@ -242,7 +241,7 @@ func (b *backendGRPCPluginClient) Setup(ctx context.Context, config *logical.Bac
 		opts = append(opts, grpc.MaxSendMsgSize(math.MaxInt32))
 
 		s := grpc.NewServer(opts...)
-		registerSystewViewServer(s, sysViewImpl, config)
+		registerSystemViewServer(s, sysViewImpl, config)
 		pb.RegisterStorageServer(s, storage)
 		pb.RegisterEventsServer(s, events)
 		b.server.Store(s)
