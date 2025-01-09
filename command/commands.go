@@ -551,9 +551,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 			}, nil
 		},
 		"plugin register": func() (cli.Command, error) {
-			return &PluginRegisterCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
+			return NewPluginRegisterCommand(getBaseCommand()), nil
 		},
 		"plugin reload": func() (cli.Command, error) {
 			return &PluginReloadCommand{
