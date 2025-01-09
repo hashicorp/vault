@@ -25,7 +25,7 @@ import { WIF_ENGINES, allEngines } from 'vault/helpers/mountable-secret-engines'
 
 const allEnginesArray = allEngines(); // saving as const so we don't invoke the method multiple times via the for loop
 
-module('Integration | Component | SecretEngine/ConfigureCreateEdit', function (hooks) {
+module('Integration | Component | SecretEngine/ConfigureCreateEdit meep', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
@@ -113,18 +113,17 @@ module('Integration | Component | SecretEngine/ConfigureCreateEdit', function (h
           assert.dom(GENERAL.inputByAttr('issuer')).exists(`issuer shows for ${type} wif section.`);
         });
       }
-
       /* For tests relevant to all engines, they are run once within one of the engine specific modules below */
       module('Azure specific', function () {
-        test('Azure: it clears access type inputs after toggling accessType', async function (assert) {
+        test('it clears access type inputs after toggling accessType', async function (assert) {
           this.id = `azure-${this.uid}`;
           this.displayName = 'Azure';
           this.issuerConfig = createConfig(this.store, this.id, 'issuer');
-          this.config == this.store.createRecord(`azure/config`);
-          this.config.backend = this.id; // Add backend to the configs because it's not on the testing snapshot (would come from url)
+          this.config = this.store.createRecord('azure/config');
+          this.config.backend = this.id;
 
           await render(hbs`
-                <SecretEngine::ConfigureCreateEdit @backendPath={{this.id}} @displayName={{this.displayName}} @type='azure' @model={{this.config}} @issuerConfig={{this.issuerConfig}} @secondModel={{this.secondConfig}}/>
+                <SecretEngine::ConfigureCreateEdit @backendPath={{this.id}} @displayName={{this.displayName}} @type='azure' @model={{this.config}} @issuerConfig={{this.issuerConfig}}/>
               `);
           await fillInAzureConfig('azure');
           await click(SES.wif.accessType('wif'));
@@ -156,9 +155,17 @@ module('Integration | Component | SecretEngine/ConfigureCreateEdit', function (h
             .isNotChecked('identityTokenTtl is cleared after toggling accessType');
         });
 
-        test('Azure: it transitions without sending a config or issuer payload on cancel', async function (assert) {
+        test('it transitions without sending a config or issuer payload on cancel', async function (assert) {
           assert.expect(3);
-          await this.renderComponent();
+          this.id = `azure-${this.uid}`;
+          this.displayName = 'Azure';
+          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
+          this.config = this.store.createRecord('azure/config');
+          this.config.backend = this.id;
+
+          await render(hbs`
+                <SecretEngine::ConfigureCreateEdit @backendPath={{this.id}} @displayName={{this.displayName}} @type='azure' @model={{this.config}} @issuerConfig={{this.issuerConfig}}/>
+              `);
           this.server.post(configUrl('azure', this.id), () => {
             assert.notOk(
               true,
@@ -357,10 +364,19 @@ module('Integration | Component | SecretEngine/ConfigureCreateEdit', function (h
         });
       });
 
-      module('issuer field tests', function () {
+      module('Issuer field tests', function () {
+        // only need to test one engine because code is the same for all engines.
         test('if issuer API error and user changes issuer value, shows specific warning message', async function (assert) {
+          this.id = `azure-${this.uid}`;
+          this.displayName = 'Azure';
+          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
           this.issuerConfig.queryIssuerError = true;
-          await this.renderComponent();
+          this.config = this.store.createRecord('azure/config');
+          this.config.backend = this.id;
+
+          await render(hbs`
+                <SecretEngine::ConfigureCreateEdit @backendPath={{this.id}} @displayName={{this.displayName}} @type='azure' @model={{this.config}} @issuerConfig={{this.issuerConfig}}/>
+              `);
           await click(SES.wif.accessType('wif'));
           await fillIn(GENERAL.inputByAttr('issuer'), 'http://change.me.no.read');
           await click(GENERAL.saveButton);
@@ -382,7 +398,15 @@ module('Integration | Component | SecretEngine/ConfigureCreateEdit', function (h
               'post request was made to config/ when user canceled out of flow. test should fail.'
             );
           });
-          await this.renderComponent();
+          this.id = `azure-${this.uid}`;
+          this.displayName = 'Azure';
+          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
+          this.config = this.store.createRecord('azure/config');
+          this.config.backend = this.id;
+
+          await render(hbs`
+                <SecretEngine::ConfigureCreateEdit @backendPath={{this.id}} @displayName={{this.displayName}} @type='azure' @model={{this.config}} @issuerConfig={{this.issuerConfig}}/>
+              `);
           await click(SES.wif.accessType('wif'));
           assert
             .dom(GENERAL.inputByAttr('issuer'))
@@ -420,7 +444,15 @@ module('Integration | Component | SecretEngine/ConfigureCreateEdit', function (h
           this.server.post(configUrl('azure', this.id), () => {
             assert.notOk(true, 'skips request to config because the model was not changed');
           });
-          await this.renderComponent();
+          this.id = `azure-${this.uid}`;
+          this.displayName = 'Azure';
+          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
+          this.config = this.store.createRecord('azure/config');
+          this.config.backend = this.id;
+
+          await render(hbs`
+                <SecretEngine::ConfigureCreateEdit @backendPath={{this.id}} @displayName={{this.displayName}} @type='azure' @model={{this.config}} @issuerConfig={{this.issuerConfig}}/>
+              `);
           await click(SES.wif.accessType('wif'));
           assert.dom(GENERAL.inputByAttr('issuer')).hasValue('', 'issuer defaults to empty string');
           await fillIn(GENERAL.inputByAttr('issuer'), newIssuer);
@@ -442,7 +474,12 @@ module('Integration | Component | SecretEngine/ConfigureCreateEdit', function (h
 
         test('shows modal when modifying the issuer, has correct payload, and shows flash message on fail', async function (assert) {
           assert.expect(7);
-          this.issuer = 'http://foo.bar';
+          this.id = `azure-${this.uid}`;
+          this.displayName = 'Azure';
+          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
+          this.config = this.store.createRecord('azure/config');
+          this.config.backend = this.id;
+
           this.server.post(configUrl('azure', this.id), () => {
             assert.true(
               true,
@@ -451,14 +488,17 @@ module('Integration | Component | SecretEngine/ConfigureCreateEdit', function (h
           });
           this.server.post('/identity/oidc/config', (_, req) => {
             const payload = JSON.parse(req.requestBody);
-            assert.deepEqual(payload, { issuer: this.issuer }, 'correctly sets the issuer');
+            assert.deepEqual(payload, { issuer: 'http://foo.bar' }, 'correctly sets the issuer');
             return overrideResponse(403);
           });
 
-          await this.renderComponent();
+          await render(hbs`
+                <SecretEngine::ConfigureCreateEdit @backendPath={{this.id}} @displayName={{this.displayName}} @type='azure' @model={{this.config}} @issuerConfig={{this.issuerConfig}}/>
+              `);
           await click(SES.wif.accessType('wif'));
           assert.dom(GENERAL.inputByAttr('issuer')).hasValue('');
-          await fillIn(GENERAL.inputByAttr('issuer'), this.issuer);
+
+          await fillIn(GENERAL.inputByAttr('issuer'), 'http://foo.bar');
           await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'some-value');
           await click(GENERAL.saveButton);
           assert.dom(SES.wif.issuerWarningMessage).exists('issuer warning modal exists');
@@ -503,6 +543,7 @@ module('Integration | Component | SecretEngine/ConfigureCreateEdit', function (h
         });
       });
     });
+
     module('isCommunity', function (hooks) {
       hooks.beforeEach(function () {
         this.version.type = 'community';
@@ -549,40 +590,60 @@ module('Integration | Component | SecretEngine/ConfigureCreateEdit', function (h
       hooks.beforeEach(function () {
         this.version.type = 'enterprise';
       });
+      for (const type of WIF_ENGINES) {
+        test(`${type}: it defaults to WIF accessType if WIF fields are already set`, async function (assert) {
+          this.id = `${type}-${this.uid}`;
+          this.displayName = allEnginesArray.find((engine) => engine.type === type)?.displayName;
+          this.config = createConfig(this.store, this.id, `${type}-wif`);
+          this.type = type;
+          await render(hbs`
+                <SecretEngine::ConfigureCreateEdit @backendPath={{this.id}} @displayName={{this.displayName}} @type={{this.type}} @model={{this.config}} @issuerConfig={{this.issuerConfig}} />
+              `);
+          assert.dom(SES.wif.accessType('wif')).isChecked('WIF accessType is checked');
+          assert.dom(SES.wif.accessType('wif')).isDisabled('WIF accessType is disabled');
+          assert.dom(SES.wif.accessType(type)).isNotChecked(`${type} accessType is not checked`);
+          assert.dom(SES.wif.accessType(type)).isDisabled(`${type} accessType is disabled`);
+          assert
+            .dom(GENERAL.inputByAttr('identityTokenAudience'))
+            .hasValue(this.config.identityTokenAudience);
+          assert
+            .dom(SES.wif.accessTypeSubtext)
+            .hasText('You cannot edit Access Type if you have already saved access credentials.');
+          assert.dom(GENERAL.ttl.input('Identity token TTL')).hasValue('2'); // 7200 on payload is 2hrs in ttl picker
+        });
+      }
 
-      test('it defaults to WIF accessType if WIF fields are already set', async function (assert) {
-        this.config = createConfig(this.store, this.id, 'azure-wif');
-        await this.renderComponent();
-        assert.dom(SES.wif.accessType('wif')).isChecked('WIF accessType is checked');
-        assert.dom(SES.wif.accessType('wif')).isDisabled('WIF accessType is disabled');
-        assert.dom(SES.wif.accessType('azure')).isNotChecked('azure accessType is not checked');
-        assert.dom(SES.wif.accessType('azure')).isDisabled('azure accessType is disabled');
-        assert.dom(GENERAL.inputByAttr('identityTokenAudience')).hasValue(this.config.identityTokenAudience);
-        assert
-          .dom(SES.wif.accessTypeSubtext)
-          .hasText('You cannot edit Access Type if you have already saved access credentials.');
-        assert.dom(GENERAL.ttl.input('Identity token TTL')).hasValue('2'); // 7200 on payload is 2hrs in ttl picker
-      });
+      for (const type of WIF_ENGINES) {
+        test(`${type}: it renders issuer if global issuer is already set`, async function (assert) {
+          this.id = `${type}-${this.uid}`;
+          this.displayName = allEnginesArray.find((engine) => engine.type === type)?.displayName;
+          this.config = createConfig(this.store, this.id, `${type}-wif`);
+          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
+          this.issuerConfig.issuer = 'https://foo-bar-blah.com';
+          this.type = type;
+          await render(hbs`
+                <SecretEngine::ConfigureCreateEdit @backendPath={{this.id}} @displayName={{this.displayName}} @type={{this.type}} @model={{this.config}} @issuerConfig={{this.issuerConfig}}/>
+              `);
 
-      test('it renders issuer if global issuer is already set', async function (assert) {
-        this.config = createConfig(this.store, this.id, 'azure-wif');
-        this.issuerConfig = createConfig(this.store, this.id, 'issuer');
-        this.issuerConfig.issuer = 'https://foo-bar-blah.com';
-        await this.renderComponent();
-        assert.dom(SES.wif.accessType('wif')).isChecked('WIF accessType is checked');
-        assert.dom(SES.wif.accessType('wif')).isDisabled('WIF accessType is disabled');
-        assert
-          .dom(GENERAL.inputByAttr('issuer'))
-          .hasValue(
-            this.issuerConfig.issuer,
-            `it has the global issuer value of ${this.issuerConfig.issuer}`
-          );
-      });
+          assert.dom(SES.wif.accessType('wif')).isChecked('WIF accessType is checked');
+          assert.dom(SES.wif.accessType('wif')).isDisabled('WIF accessType is disabled');
+          assert
+            .dom(GENERAL.inputByAttr('issuer'))
+            .hasValue(
+              this.issuerConfig.issuer,
+              `it has the global issuer value of ${this.issuerConfig.issuer}`
+            );
+        });
+      }
 
       module('Azure specific', function () {
         test('it defaults to Azure accessType if Azure account fields are already set', async function (assert) {
+          this.id = `azure-${this.uid}`;
           this.config = createConfig(this.store, this.id, 'azure');
-          await this.renderComponent();
+          await render(hbs`
+                <SecretEngine::ConfigureCreateEdit @backendPath={{this.id}} @displayName='Azure' @type='azure' @model={{this.config}} @issuerConfig={{this.issuerConfig}}/>
+              `);
+
           assert.dom(SES.wif.accessType('azure')).isChecked('Azure accessType is checked');
           assert.dom(SES.wif.accessType('azure')).isDisabled('Azure accessType is disabled');
           assert.dom(SES.wif.accessType('wif')).isNotChecked('WIF accessType is not checked');
@@ -592,18 +653,23 @@ module('Integration | Component | SecretEngine/ConfigureCreateEdit', function (h
             .hasText('You cannot edit Access Type if you have already saved access credentials.');
         });
 
-        test('it allows you to change accessType if record does not have wif or azure values already set', async function (assert) {
-          // the model does not have to be new for a user to see the option to change the access type.
-          // the access type is only disabled if the model has values already set for access type fields.
+        test('it allows you to change accessType if record does not have wif or azure values already set meep', async function (assert) {
+          this.id = `azure-${this.uid}`;
           this.config = createConfig(this.store, this.id, 'azure-generic');
-          await this.renderComponent();
+          await render(hbs`
+                <SecretEngine::ConfigureCreateEdit @backendPath={{this.id}} @displayName='Azure' @type='azure' @model={{this.config}} @issuerConfig={{this.issuerConfig}}/>
+              `);
+
           assert.dom(SES.wif.accessType('wif')).isNotDisabled('WIF accessType is NOT disabled');
           assert.dom(SES.wif.accessType('azure')).isNotDisabled('Azure accessType is NOT disabled');
         });
 
         test('it shows previously saved config information', async function (assert) {
+          this.id = `azure-${this.uid}`;
           this.config = createConfig(this.store, this.id, 'azure-generic');
-          await this.renderComponent();
+          await render(hbs`
+                <SecretEngine::ConfigureCreateEdit @backendPath={{this.id}} @displayName='Azure' @type='azure' @model={{this.config}} @issuerConfig={{this.issuerConfig}}/>
+              `);
           assert.dom(GENERAL.inputByAttr('subscriptionId')).hasValue(this.config.subscriptionId);
           assert.dom(GENERAL.inputByAttr('clientId')).hasValue(this.config.clientId);
           assert.dom(GENERAL.inputByAttr('tenantId')).hasValue(this.config.tenantId);
@@ -612,9 +678,12 @@ module('Integration | Component | SecretEngine/ConfigureCreateEdit', function (h
             .hasValue('**********', 'clientSecret is masked on edit the value');
         });
 
-        test('it requires a double click to change the client secret', async function (assert) {
+        test('it requires a double click to change the client secret meep', async function (assert) {
+          this.id = `azure-${this.uid}`;
           this.config = createConfig(this.store, this.id, 'azure');
-          await this.renderComponent();
+          await render(hbs`
+                <SecretEngine::ConfigureCreateEdit @backendPath={{this.id}} @displayName='Azure' @type='azure' @model={{this.config}} @issuerConfig={{this.issuerConfig}}/>
+              `);
 
           this.server.post(configUrl('azure', this.id), (schema, req) => {
             const payload = JSON.parse(req.requestBody);
@@ -634,9 +703,13 @@ module('Integration | Component | SecretEngine/ConfigureCreateEdit', function (h
 
       module('AWS specific', function () {
         test('it defaults to IAM accessType if IAM fields are already set', async function (assert) {
-          await this.renderComponent();
-          assert.dom(SES.wif.accessType('iam')).isChecked('IAM accessType is checked');
-          assert.dom(SES.wif.accessType('iam')).isDisabled('IAM accessType is disabled');
+          this.id = `aws-${this.uid}`;
+          this.config = createConfig(this.store, this.id, 'aws');
+          await render(hbs`
+                <SecretEngine::ConfigureCreateEdit @backendPath={{this.id}} @displayName='AWS' @type='aws' @model={{this.config}} @issuerConfig={{this.issuerConfig}}/>
+              `);
+          assert.dom(SES.wif.accessType('aws')).isChecked('IAM accessType is checked');
+          assert.dom(SES.wif.accessType('aws')).isDisabled('IAM accessType is disabled');
           assert.dom(SES.wif.accessType('wif')).isNotChecked('WIF accessType is not checked');
           assert.dom(SES.wif.accessType('wif')).isDisabled('WIF accessType is disabled');
           assert
@@ -645,25 +718,32 @@ module('Integration | Component | SecretEngine/ConfigureCreateEdit', function (h
         });
 
         test('it allows you to change access type if record does not have wif or iam values already set', async function (assert) {
-          // the model does not have to be new for a user to see the option to change the access type.
-          // the access type is only disabled if the model has values already set for access type fields.
-          this.rootConfig = createConfig(this.store, this.id, 'aws-no-access');
-          await this.renderComponent();
+          this.id = `aws-${this.uid}`;
+          this.config = createConfig(this.store, this.id, 'aws-no-access');
+          await render(hbs`
+                <SecretEngine::ConfigureCreateEdit @backendPath={{this.id}} @displayName='AWS' @type='aws' @model={{this.config}} @issuerConfig={{this.issuerConfig}}/>
+              `);
           assert.dom(SES.wif.accessType('wif')).isNotDisabled('WIF accessType is NOT disabled');
-          assert.dom(SES.wif.accessType('iam')).isNotDisabled('IAM accessType is NOT disabled');
+          assert.dom(SES.wif.accessType('aws')).isNotDisabled('IAM accessType is NOT disabled');
         });
 
         test('it shows previously saved root and lease information', async function (assert) {
-          await this.renderComponent();
-          assert.dom(GENERAL.inputByAttr('accessKey')).hasValue(this.rootConfig.accessKey);
+          this.id = `aws-${this.uid}`;
+          this.config = createConfig(this.store, this.id, 'aws');
+          this.secondConfig = createConfig(this.store, this.id, 'aws-lease');
+          await render(hbs`
+                <SecretEngine::ConfigureCreateEdit @backendPath={{this.id}} @displayName='AWS' @type='aws' @model={{this.config}} @issuerConfig={{this.issuerConfig}} @secondModel={{this.secondConfig}}/>
+              `);
+
+          assert.dom(GENERAL.inputByAttr('accessKey')).hasValue(this.config.accessKey);
           assert
             .dom(GENERAL.inputByAttr('secretKey'))
             .hasValue('**********', 'secretKey is masked on edit the value');
 
           await click(GENERAL.toggleGroup('Root config options'));
-          assert.dom(GENERAL.inputByAttr('region')).hasValue(this.rootConfig.region);
-          assert.dom(GENERAL.inputByAttr('iamEndpoint')).hasValue(this.rootConfig.iamEndpoint);
-          assert.dom(GENERAL.inputByAttr('stsEndpoint')).hasValue(this.rootConfig.stsEndpoint);
+          assert.dom(GENERAL.inputByAttr('region')).hasValue(this.config.region);
+          assert.dom(GENERAL.inputByAttr('iamEndpoint')).hasValue(this.config.iamEndpoint);
+          assert.dom(GENERAL.inputByAttr('stsEndpoint')).hasValue(this.config.stsEndpoint);
           assert.dom(GENERAL.inputByAttr('maxRetries')).hasValue('1');
           // Check lease config values
           assert.dom(GENERAL.ttl.input('Default Lease TTL')).hasValue('50');
@@ -671,7 +751,11 @@ module('Integration | Component | SecretEngine/ConfigureCreateEdit', function (h
         });
 
         test('it requires a double click to change the secret key', async function (assert) {
-          await this.renderComponent();
+          this.id = `aws-${this.uid}`;
+          this.config = createConfig(this.store, this.id, 'aws');
+          await render(hbs`
+                <SecretEngine::ConfigureCreateEdit @backendPath={{this.id}} @displayName='AWS' @type='aws' @model={{this.config}} @issuerConfig={{this.issuerConfig}} />
+              `);
 
           this.server.post(configUrl('aws', this.id), (schema, req) => {
             const payload = JSON.parse(req.requestBody);
@@ -694,14 +778,28 @@ module('Integration | Component | SecretEngine/ConfigureCreateEdit', function (h
       hooks.beforeEach(function () {
         this.version.type = 'community';
       });
-      test('it does not show access types but defaults to type account fields', async function (assert) {
-        this.config = createConfig(this.store, this.id, 'azure-generic');
-        await this.renderComponent();
-        assert.dom(SES.wif.accessTypeSection).doesNotExist('Access type section does not render');
-        assert.dom(GENERAL.inputByAttr('clientId')).hasValue(this.config.clientId);
-        assert.dom(GENERAL.inputByAttr('subscriptionId')).hasValue(this.config.subscriptionId);
-        assert.dom(GENERAL.inputByAttr('tenantId')).hasValue(this.config.tenantId);
-      });
+      for (const type of WIF_ENGINES) {
+        test(`${type}:it does not show access types but defaults to type account fields`, async function (assert) {
+          this.id = `${type}-${this.uid}`;
+          this.config = createConfig(this.store, this.id, `${type}-generic`);
+          this.displayName = allEnginesArray.find((engine) => engine.type === type)?.displayName;
+          this.type = type;
+          await render(hbs`
+                <SecretEngine::ConfigureCreateEdit @backendPath={{this.id}} @displayName={{this.displayName}} @type={{this.type}} @model={{this.config}} @issuerConfig={{this.issuerConfig}} @secondModel={{this.secondConfig}}/>
+              `);
+          assert.dom(SES.wif.accessTypeSection).doesNotExist('Access type section does not render');
+          // toggle grouped fields if it exists
+          const toggleGroup = document.querySelector('[data-test-toggle-group]');
+          toggleGroup ? await click(toggleGroup) : null;
+
+          for (const key of expectedConfigKeys(type, true)) {
+            if (key === 'secretKey' || key === 'clientSecret') return; // these keys are not returned by the API
+            assert
+              .dom(GENERAL.inputByAttr(key))
+              .hasValue(this.config[key], `${key} for ${type}: has the expected value set on the config`);
+          }
+        });
+      }
     });
   });
 });

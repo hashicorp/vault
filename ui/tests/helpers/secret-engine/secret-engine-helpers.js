@@ -196,6 +196,7 @@ const createGcpConfig = (store, backend, accessType = 'gcp') => {
 export const createConfig = (store, backend, type) => {
   switch (type) {
     case 'aws':
+    case 'aws-generic':
       return createAwsRootConfig(store, backend);
     case 'aws-wif':
       return createAwsRootConfig(store, backend, 'wif');
@@ -277,7 +278,7 @@ const awsKeys = ['Access key', 'Secret Key', 'Region', 'IAM Endpoint', 'STS Endp
 const awsWifKeys = ['Issuer', 'Role ARN', ...genericWifKeys];
 // Azure specific keys
 const genericAzureKeys = ['Subscription ID', 'Tenant ID', 'Client ID', 'Environment'];
-const azureKeys = [...genericAzureKeys, 'Root password TTL'];
+const azureKeys = [...genericAzureKeys, 'Client Secret', 'Root password TTL'];
 const azureWifKeys = [...genericAzureKeys, ...genericWifKeys];
 // SSH specific keys
 const sshKeys = ['Private Key', 'Public Key', 'Generate Signing Key'];

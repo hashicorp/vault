@@ -9,7 +9,6 @@ import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { assert } from '@ember/debug';
 import { ValidationMap } from 'vault/vault/app-types';
 import errorMessage from 'vault/utils/error-message';
 
@@ -40,6 +39,7 @@ import type FlashMessageService from 'vault/services/flash-messages';
  * @param {object} model - The config model for the engine.
  * @param {object} [secondModel] - For engines with two config models. Currently, only used by aws (lease and root config).
  * @param {object} [issuerConfigModel] - the identity/oidc/config model. relevant only to wif engines.
+ * @param {string} [displayTitle="Additional Configuration"] - Specific title to display above the second modal. 
  */
 
 interface Args {
@@ -69,10 +69,6 @@ export default class ConfigureCreateEdit extends Component<Args> {
     super(owner, args);
     // the following checks are only relevant to existing enterprise configurations
     if (this.version.isCommunity && this.args.model.isNew) return;
-    if (this.args.secondModel) {
-      // display title is used create a section header indicating fields associated with the second model
-      assert('secondModel must have a displayTitle', this.args.secondModel.displayTitle);
-    }
     const { isWifPluginConfigured, isAccountPluginConfigured } = this.args.model;
     this.accessType = isWifPluginConfigured ? 'wif' : 'account';
     // if there are either WIF or mutually exclusive account attributes, disable user's ability to change accessType
@@ -213,8 +209,7 @@ export default class ConfigureCreateEdit extends Component<Args> {
   onChangeAccessType(accessType: string) {
     this.accessType = accessType;
     const { model } = this.args;
-    // ARG TODO come back here for AWS
-    if (accessType === 'azure') {
+    if (accessType === 'account') {
       // reset all WIF attributes
       model.identityTokenAudience = model.identityTokenTtl = undefined;
       // return the issuer to the globally set value (if there is one) on toggle
