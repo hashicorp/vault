@@ -39,7 +39,7 @@ import type FlashMessageService from 'vault/services/flash-messages';
  * @param {object} model - The config model for the engine.
  * @param {object} [secondModel] - For engines with two config models. Currently, only used by aws (lease and root config).
  * @param {object} [issuerConfig] - The identity/oidc/config model. Will be passed in if user has an enterprise license.
- * @param {string} [displayTitle="Additional Configuration"] - Specific title to display above the second modal. 
+ * @param {string} [displayTitle="Additional Configuration"] - Specific title to display above the second model's fields. 
  */
 
 interface Args {

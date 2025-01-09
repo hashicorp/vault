@@ -76,7 +76,7 @@
         @groupName="fieldGroupsAccount"
       />
     {{/if}}
-    {{! secondModel fields should show regardless of vault version or whether or not this is a wif engine (currently only relevant to AWS)}}
+    {{! secondModel fields should show regardless of vault version or what access type is selected }}
     {{#if @secondModel}}
       <h2 class="title is-5 has-bottom-padding-s has-top-margin-l" data-test-second-model-title>
         {{or @secondModel.displayTitle "Additional Configuration"}}
