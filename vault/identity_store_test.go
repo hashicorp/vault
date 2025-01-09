@@ -1464,7 +1464,7 @@ func TestEntityStoreLoadingIsDeterministic(t *testing.T) {
 		name := fmt.Sprintf("entity-%d", i)
 		alias := fmt.Sprintf("alias-%d", i)
 		localAlias := fmt.Sprintf("localalias-%d", i)
-		e := makeEntityForPacker(t, namespace.RootNamespaceID, name, c.identityStore.entityPacker)
+		e := makeEntityForPacker(t, name, c.identityStore.entityPacker)
 		attachAlias(t, e, alias, upme)
 		attachAlias(t, e, localAlias, localMe)
 		err = TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e.ID, e)
@@ -1478,7 +1478,7 @@ func TestEntityStoreLoadingIsDeterministic(t *testing.T) {
 		rnd := rand.Float64()
 		dupeNum := 1
 		for rnd < pDup && dupeNum < 10 {
-			e := makeEntityForPacker(t, namespace.RootNamespaceID, fmt.Sprintf("entity-%d-dup-%d", i, dupeNum), c.identityStore.entityPacker)
+			e := makeEntityForPacker(t, fmt.Sprintf("entity-%d-dup-%d", i, dupeNum), c.identityStore.entityPacker)
 			attachAlias(t, e, alias, upme)
 			err = TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e.ID, e)
 			require.NoError(t, err)
@@ -1490,7 +1490,7 @@ func TestEntityStoreLoadingIsDeterministic(t *testing.T) {
 		dupeNum = 1
 		rnd = rand.Float64()
 		for rnd < pDup && dupeNum < 10 {
-			e := makeEntityForPacker(t, namespace.RootNamespaceID, fmt.Sprintf("entity-%d-localdup-%d", i, dupeNum), c.identityStore.entityPacker)
+			e := makeEntityForPacker(t, fmt.Sprintf("entity-%d-localdup-%d", i, dupeNum), c.identityStore.entityPacker)
 			attachAlias(t, e, localAlias, localMe)
 			err = TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e.ID, e)
 			require.NoError(t, err)
@@ -1500,7 +1500,7 @@ func TestEntityStoreLoadingIsDeterministic(t *testing.T) {
 		// See if we should add entity _name_ duplicates too (with no aliases)
 		rnd = rand.Float64()
 		for rnd < pDup {
-			e := makeEntityForPacker(t, namespace.RootNamespaceID, name, c.identityStore.entityPacker)
+			e := makeEntityForPacker(t, name, c.identityStore.entityPacker)
 			err = TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e.ID, e)
 			require.NoError(t, err)
 			rnd = rand.Float64()

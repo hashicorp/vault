@@ -2671,7 +2671,12 @@ func (i *IdentityStore) countEntitiesByMountAccessor(ctx context.Context) (map[s
 	return byMountAccessor, nil
 }
 
-func makeEntityForPacker(t *testing.T, namespaceID, name string, p *storagepacker.StoragePacker) *identity.Entity {
+func makeEntityForPacker(t *testing.T, name string, p *storagepacker.StoragePacker) *identity.Entity {
+	t.Helper()
+	return makeEntityForPackerWithNamespace(t, namespace.RootNamespaceID, name, p)
+}
+
+func makeEntityForPackerWithNamespace(t *testing.T, namespaceID, name string, p *storagepacker.StoragePacker) *identity.Entity {
 	t.Helper()
 	id, err := uuid.GenerateUUID()
 	require.NoError(t, err)
@@ -2714,12 +2719,12 @@ func identityCreateCaseDuplicates(t *testing.T, ctx context.Context, c *Core, up
 	// suffixes.
 	for i, suffix := range []string{"-case", "-case", "-cAsE"} {
 		// Entity duplicated by name
-		e := makeEntityForPacker(t, upme.NamespaceID, "entity"+suffix, c.identityStore.entityPacker)
+		e := makeEntityForPackerWithNamespace(t, upme.NamespaceID, "entity"+suffix, c.identityStore.entityPacker)
 		err := TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e.ID, e)
 		require.NoError(t, err)
 
 		// Entity that isn't a dupe itself but has duplicated aliases
-		e2 := makeEntityForPacker(t, upme.NamespaceID, fmt.Sprintf("entity-%d", i), c.identityStore.entityPacker)
+		e2 := makeEntityForPackerWithNamespace(t, upme.NamespaceID, fmt.Sprintf("entity-%d", i), c.identityStore.entityPacker)
 		// Add local and non-local aliases for this entity (which will also be
 		// duplicated)
 		attachAlias(t, e2, "alias"+suffix, upme)
