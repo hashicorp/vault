@@ -34,9 +34,11 @@ This path responds to the following HTTP methods.
 
 	PUT|POST /<feature-name>/activate
 		Activates the specified feature. Cannot be undone.`
+
+	activationFlagIdentityCleanup = "force-identity-deduplication"
+	activationFlagTest            = "activation-test"
 )
 
-// Register CRUD functions dynamically.
 // These variables should only be mutated during initialization or server construction.
 // It is unsafe to modify them once the Vault core is running.
 var (
@@ -67,7 +69,24 @@ func (b *SystemBackend) activationFlagsPaths() []*framework.Path {
 			HelpDescription: helpDescription,
 		},
 		{
-			Pattern: fmt.Sprintf("%s/%s/%s", prefixActivationFlags, "activation-test", verbActivationFlagsActivate),
+			Pattern: fmt.Sprintf("%s/%s/%s", prefixActivationFlags, activationFlagTest, verbActivationFlagsActivate),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: prefixActivationFlags,
+				OperationVerb:   verbActivationFlagsActivate,
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:                    b.handleActivationFlagsActivate,
+					ForwardPerformanceSecondary: true,
+					ForwardPerformanceStandby:   true,
+					Summary:                     summaryUpdate,
+				},
+			},
+			HelpSynopsis:    helpSynopsis,
+			HelpDescription: helpDescription,
+		},
+		{
+			Pattern: fmt.Sprintf("%s/%s/%s", prefixActivationFlags, activationFlagIdentityCleanup, verbActivationFlagsActivate),
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: prefixActivationFlags,
 				OperationVerb:   verbActivationFlagsActivate,
