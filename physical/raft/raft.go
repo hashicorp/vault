@@ -256,8 +256,9 @@ type RaftBackend struct {
 	// limits.
 	specialPathLimits map[string]uint64
 
-	removed         *atomic.Bool
-	removedCallback func()
+	removed              *atomic.Bool
+	removedCallback      func()
+	removedServerCleanup func(context.Context, string) (bool, error)
 }
 
 func (b *RaftBackend) IsNodeRemoved(ctx context.Context, nodeID string) (bool, error) {
@@ -282,6 +283,23 @@ var removedKey = []byte("removed")
 func (b *RaftBackend) RemoveSelf() error {
 	b.removed.Store(true)
 	return b.stableStore.SetUint64(removedKey, 1)
+}
+
+func (b *RaftBackend) SetRemovedServerCleanupFunc(f func(context.Context, string) (bool, error)) {
+	b.l.Lock()
+	b.removedServerCleanup = f
+	b.l.Unlock()
+}
+
+func (b *RaftBackend) RemovedServerCleanup(ctx context.Context, nodeID string) (bool, error) {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	if b.removedServerCleanup != nil {
+		return b.removedServerCleanup(ctx, nodeID)
+	}
+
+	return false, nil
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
