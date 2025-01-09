@@ -13,6 +13,7 @@ import (
 	"time"
 
 	metrics "github.com/armon/go-metrics"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/errwrap"
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
@@ -373,10 +374,10 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 	// create a slice of result channels, one for each bucket. We need each result
 	// and err chan to be 1 buffered so we can leave a result there even if the
 	// processing loop is blocking on an earlier bucket still.
-	results := make([]chan *storagepacker.Bucket, len(existing))
+	results := make([]chan []*identity.Entity, len(existing))
 	errs := make([]chan error, len(existing))
 	for j := range existing {
-		results[j] = make(chan *storagepacker.Bucket, 1)
+		results[j] = make(chan []*identity.Entity, 1)
 		errs[j] = make(chan error, 1)
 	}
 
@@ -404,8 +405,18 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 						continue
 					}
 
+					items := make([]*identity.Entity, len(bucket.Items))
+					for j, item := range bucket.Items {
+						entity, err := i.parseEntityFromBucketItem(ctx, item)
+						if err != nil {
+							errs[idx] <- err
+							continue
+						}
+						items[j] = entity
+					}
+
 					// Write results out to the result channel
-					results[idx] <- bucket
+					results[idx] <- items
 
 				// quit early
 				case <-quit:
@@ -433,6 +444,8 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 		close(broker)
 	}()
 
+	localAliasBuckets := make(map[string]*storagepacker.Bucket)
+
 	// Restore each key by pulling from the result chan
 LOOP:
 	for j := range existing {
@@ -442,17 +455,15 @@ LOOP:
 			close(quit)
 			break LOOP
 
-		case bucket := <-results[j]:
+		case entities := <-results[j]:
 			// If there is no entry, nothing to restore
-			if bucket == nil {
+			if entities == nil {
 				continue
 			}
 
-			for _, item := range bucket.Items {
-				entity, err := i.parseEntityFromBucketItem(ctx, item)
-				if err != nil {
-					return err
-				}
+			tx := i.db.Txn(true)
+			upsertedItems := 0
+			for _, entity := range entities {
 				if entity == nil {
 					continue
 				}
@@ -497,22 +508,28 @@ LOOP:
 					}
 				}
 
-				localAliases, err := i.parseLocalAliases(entity.ID)
+				err = i.loadLocalAliasesForEntity(ctx, entity, localAliasBuckets)
 				if err != nil {
 					return fmt.Errorf("failed to load local aliases from storage: %v", err)
 				}
-				if localAliases != nil {
-					for _, alias := range localAliases.Aliases {
-						entity.UpsertAlias(alias)
-					}
-				}
 
+				toBeUpserted := 1 + len(entity.Aliases)
+				if upsertedItems+toBeUpserted > 1024 {
+					tx.Commit()
+					upsertedItems = 0
+					tx = i.db.Txn(true)
+				}
 				// Only update MemDB and don't hit the storage again
-				err = i.upsertEntity(nsCtx, entity, nil, false)
+				err = i.upsertEntityInTxn(nsCtx, tx, entity, nil, false)
 				if err != nil {
 					return fmt.Errorf("failed to update entity in MemDB: %w", err)
 				}
+				upsertedItems += toBeUpserted
 			}
+			if upsertedItems > 0 {
+				tx.Commit()
+			}
+			tx.Abort()
 		}
 	}
 
@@ -534,6 +551,40 @@ LOOP:
 		i.logger.Info("entities restored")
 	}
 
+	return nil
+}
+
+// loadLocalAliasesForEntity upserts local aliases into the entity by retrieving
+// the local aliases from the cache (if present) or storage
+func (i *IdentityStore) loadLocalAliasesForEntity(ctx context.Context, entity *identity.Entity, localAliasCache map[string]*storagepacker.Bucket) error {
+	bucketKey := i.localAliasPacker.BucketKey(entity.ID)
+	if len(bucketKey) == 0 {
+		return fmt.Errorf("no bucket key for ID %s", entity.ID)
+	}
+	bucket, ok := localAliasCache[bucketKey]
+	if !ok {
+		var err error
+		bucket, err = i.localAliasPacker.GetBucket(ctx, bucketKey)
+		if err != nil {
+			return fmt.Errorf("failed to load local alias bucket from storage: %v", err)
+		}
+		localAliasCache[bucketKey] = bucket
+	}
+	if bucket == nil {
+		return nil
+	}
+	for _, item := range bucket.Items {
+		if item.ID == entity.ID {
+			var localAliases identity.LocalAliases
+			err := ptypes.UnmarshalAny(item.Message, &localAliases)
+			if err != nil {
+				return fmt.Errorf("failed to unmarshal local alias: %v", err)
+			}
+			for _, alias := range localAliases.Aliases {
+				entity.UpsertAlias(alias)
+			}
+		}
+	}
 	return nil
 }
 
