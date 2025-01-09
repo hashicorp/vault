@@ -70,18 +70,37 @@ func TestActivationFlags_BadFeatureName(t *testing.T) {
 
 // TestActivationFlags_Write tests the write operations for the activation flags
 func TestActivationFlags_Write(t *testing.T) {
-	t.Run("given an initial state then read flags and expect all to be unactivated", func(t *testing.T) {
+	t.Run("given an initial state then write an activation test flag and expect no errors", func(t *testing.T) {
 		core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{})
 
 		_, err := core.systemBackend.HandleRequest(
 			context.Background(),
 			&logical.Request{
 				Operation: logical.UpdateOperation,
-				Path:      fmt.Sprintf("%s/%s/%s", prefixActivationFlags, "activation-test", verbActivationFlagsActivate),
+				Path:      fmt.Sprintf("%s/%s/%s", prefixActivationFlags, activationFlagTest, verbActivationFlagsActivate),
 				Storage:   core.systemBarrierView,
 			},
 		)
 
 		require.NoError(t, err)
+	})
+
+	t.Run("activate identity cleanup flag", func(t *testing.T) {
+		core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{})
+
+		resp, err := core.systemBackend.HandleRequest(
+			context.Background(),
+			&logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      fmt.Sprintf("%s/%s/%s", prefixActivationFlags, activationFlagIdentityCleanup, verbActivationFlagsActivate),
+				Storage:   core.systemBarrierView,
+			},
+		)
+
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotEmpty(t, resp.Data)
+		require.NotNil(t, resp.Data["activated"])
+		require.Contains(t, resp.Data["activated"], activationFlagIdentityCleanup)
 	})
 }
