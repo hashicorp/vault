@@ -32,6 +32,7 @@ import (
 var (
 	errCycleDetectedPrefix = "cyclic relationship detected for member group ID"
 	tmpSuffix              = ".tmp"
+	entityLoadingTxMaxSize = 1024
 )
 
 func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
@@ -514,7 +515,7 @@ LOOP:
 				}
 
 				toBeUpserted := 1 + len(entity.Aliases)
-				if upsertedItems+toBeUpserted > 1024 {
+				if upsertedItems+toBeUpserted > entityLoadingTxMaxSize {
 					tx.Commit()
 					upsertedItems = 0
 					tx = i.db.Txn(true)
