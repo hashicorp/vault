@@ -35,7 +35,7 @@ This path responds to the following HTTP methods.
 	PUT|POST /<feature-name>/activate
 		Activates the specified feature. Cannot be undone.`
 
-	activationFlagIdentityCleanup = "identity-cleanup"
+	activationFlagIdentityCleanup = "force-identity-deduplication"
 	activationFlagTest            = "activation-test"
 )
 
