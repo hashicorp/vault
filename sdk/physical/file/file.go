@@ -17,6 +17,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -40,7 +41,7 @@ type FileBackend struct {
 	sync.RWMutex
 	path       string
 	logger     log.Logger
-	permitPool *physical.PermitPool
+	permitPool *permitpool.Pool
 }
 
 type TransactionalFileBackend struct {
@@ -61,7 +62,7 @@ func NewFileBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	return &FileBackend{
 		path:       path,
 		logger:     logger,
-		permitPool: physical.NewPermitPool(physical.DefaultParallelOperations),
+		permitPool: permitpool.New(physical.DefaultParallelOperations),
 	}, nil
 }
 
@@ -76,7 +77,7 @@ func NewTransactionalFileBackend(conf map[string]string, logger log.Logger) (phy
 		FileBackend: FileBackend{
 			path:       path,
 			logger:     logger,
-			permitPool: physical.NewPermitPool(1),
+			permitPool: permitpool.New(1),
 		},
 	}, nil
 }

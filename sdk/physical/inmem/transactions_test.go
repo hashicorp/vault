@@ -12,6 +12,7 @@ import (
 
 	radix "github.com/armon/go-radix"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
 )
@@ -72,7 +73,7 @@ func newFaultyPseudo(logger log.Logger, faultyPaths []string) *faultyPseudo {
 	out := &faultyPseudo{
 		underlying: InmemBackend{
 			root:       radix.New(),
-			permitPool: physical.NewPermitPool(1),
+			permitPool: permitpool.New(1),
 			logger:     logger.Named("storage.inmembackend"),
 			failGet:    new(uint32),
 			failPut:    new(uint32),
