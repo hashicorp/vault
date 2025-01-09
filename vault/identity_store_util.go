@@ -34,6 +34,7 @@ import (
 var (
 	errCycleDetectedPrefix = "cyclic relationship detected for member group ID"
 	tmpSuffix              = ".tmp"
+	entityLoadingTxMaxSize = 1024
 )
 
 // loadIdentityStoreArtifacts is responsible for loading entities, groups, and aliases from storage into MemDB.
@@ -534,7 +535,7 @@ LOOP:
 				}
 
 				toBeUpserted := 1 + len(entity.Aliases)
-				if upsertedItems+toBeUpserted > 1024 {
+				if upsertedItems+toBeUpserted > entityLoadingTxMaxSize {
 					tx.Commit()
 					upsertedItems = 0
 					tx = i.db.Txn(true)
