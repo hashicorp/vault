@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -83,9 +84,19 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 		return err
 	}
 
+	// Also reset the conflict resolver so that we report potential duplicates to
+	// be resolved before it's safe to return to case-insensitive mode.
+	reporterResolver := newDuplicateReportingErrorResolver(c.identityStore.logger)
+	c.identityStore.conflictResolver = reporterResolver
+
 	// Attempt to load identity artifacts once more after memdb is reset to
 	// accept case sensitive names
-	return loadFunc(ctx)
+	err = loadFunc(ctx)
+
+	// Log reported duplicates if any found whether or not we end up erroring.
+	reporterResolver.LogReport(c.identityStore.logger)
+
+	return err
 }
 
 func (i *IdentityStore) sanitizeName(name string) string {
@@ -623,8 +634,8 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 		default:
 			// Though this is technically a conflict that should be resolved by the
 			// ConflictResolver implementation, the behavior here is a bit nuanced.
-			// Rather than introduce a behavior change, handle this case directly as
-			// before by merging.
+			// Rather than introduce a behavior change, we handle this case directly
+			// as before by merging.
 			i.logger.Warn("alias is already tied to a different entity; these entities are being merged",
 				"alias_id", alias.ID,
 				"other_entity_id", aliasByFactors.CanonicalID,
@@ -644,10 +655,34 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 			return nil
 		}
 
-		if strutil.StrListContains(aliasFactors, i.sanitizeName(alias.Name)+alias.MountAccessor) {
-			if err := i.conflictResolver.ResolveAliases(ctx, entity, aliasByFactors, alias); err != nil && !i.disableLowerCasedNames {
-				return err
-			}
+		// This is subtle. We want to call `ResolveAliases` so that the resolver can
+		// get full insight into all the aliases loaded and generate useful reports
+		// about duplicates. However, we don't want to actually change the error
+		// handling behavior from before which would only return an error in a very
+		// specific case (when the alias being added is a duplicate of one for the
+		// same entity and we are not in case-sensitive mode). So we call the method
+		// here unconditionally, but then only handle the resultant error in the
+		// specific case we care about. Note that we choose not to call it `err` to
+		// avoid it being left non-nil in some cases and tripping up later error
+		// handling code, and to signal something different is happening here. Note
+		// that we explicitly _want_ this to be here an not before we merge
+		// duplicates above, because duplicates that have always merged are not a
+		// problem to the user and are already logged. We care about different-case
+		// duplicates that are not being considered duplicates right now because we
+		// are in case-sensitive mode so we can report these to the operator ahead
+		// of them disabling case-sensitive mode.
+		conflictErr := i.conflictResolver.ResolveAliases(ctx, entity, aliasByFactors, alias)
+
+		// This appears to be accounting for any duplicate aliases for the same
+		// Entity. In that case we would have skipped over the merge above in the
+		// `aliasByFactors.CanonicalID == entity.ID` case and made it here. Now we
+		// are here, duplicates are reported and may cause an insert error but only
+		// if we are in default case-insensitive mode. Once we are in case-sensitive
+		// mode we'll happily ignore duplicates of any case! This doesn't seem
+		// especially desirable to me, but we'd rather not change behavior for now.
+		if strutil.StrListContains(aliasFactors, i.sanitizeName(alias.Name)+alias.MountAccessor) &&
+			conflictErr != nil && !i.disableLowerCasedNames {
+			return conflictErr
 		}
 
 		// Insert or update alias in MemDB using the transaction created above
@@ -2636,24 +2671,113 @@ func (i *IdentityStore) countEntitiesByMountAccessor(ctx context.Context) (map[s
 	return byMountAccessor, nil
 }
 
-func makeEntityForPacker(_t *testing.T, id string, p *storagepacker.StoragePacker) *identity.Entity {
+func makeEntityForPacker(t *testing.T, name string, p *storagepacker.StoragePacker) *identity.Entity {
+	t.Helper()
+	return makeEntityForPackerWithNamespace(t, namespace.RootNamespaceID, name, p)
+}
+
+func makeEntityForPackerWithNamespace(t *testing.T, namespaceID, name string, p *storagepacker.StoragePacker) *identity.Entity {
+	t.Helper()
+	id, err := uuid.GenerateUUID()
+	require.NoError(t, err)
 	return &identity.Entity{
 		ID:          id,
-		Name:        id,
-		NamespaceID: namespace.RootNamespaceID,
+		Name:        name,
+		NamespaceID: namespaceID,
 		BucketKey:   p.BucketKey(id),
 	}
 }
 
 func attachAlias(t *testing.T, e *identity.Entity, name string, me *MountEntry) *identity.Alias {
 	t.Helper()
+	id, err := uuid.GenerateUUID()
+	require.NoError(t, err)
+	if e.NamespaceID != me.NamespaceID {
+		panic("mount and entity in different namespaces")
+	}
 	a := &identity.Alias{
-		ID:            name,
+		ID:            id,
 		Name:          name,
+		NamespaceID:   me.NamespaceID,
 		CanonicalID:   e.ID,
 		MountType:     me.Type,
 		MountAccessor: me.Accessor,
+		Local:         me.Local,
 	}
 	e.UpsertAlias(a)
 	return a
+}
+
+func identityCreateCaseDuplicates(t *testing.T, ctx context.Context, c *Core, upme, localme *MountEntry) {
+	t.Helper()
+
+	if upme.NamespaceID != localme.NamespaceID {
+		panic("both replicated and local auth mounts must be in the same namespace")
+	}
+
+	// Create entities with both case-sensitive and case-insensitive duplicate
+	// suffixes.
+	for i, suffix := range []string{"-case", "-case", "-cAsE"} {
+		// Entity duplicated by name
+		e := makeEntityForPackerWithNamespace(t, upme.NamespaceID, "entity"+suffix, c.identityStore.entityPacker)
+		err := TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e.ID, e)
+		require.NoError(t, err)
+
+		// Entity that isn't a dupe itself but has duplicated aliases
+		e2 := makeEntityForPackerWithNamespace(t, upme.NamespaceID, fmt.Sprintf("entity-%d", i), c.identityStore.entityPacker)
+		// Add local and non-local aliases for this entity (which will also be
+		// duplicated)
+		attachAlias(t, e2, "alias"+suffix, upme)
+		attachAlias(t, e2, "local-alias"+suffix, localme)
+		err = TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e2.ID, e2)
+		require.NoError(t, err)
+
+		// Group duplicated by name
+		g := makeGroupWithNameAndAlias(t, "group"+suffix, "", c.identityStore.groupPacker, upme)
+		err = TestHelperWriteToStoragePacker(ctx, c.identityStore.groupPacker, g.ID, g)
+		require.NoError(t, err)
+	}
+}
+
+func makeGroupWithNameAndAlias(t *testing.T, name, alias string, p *storagepacker.StoragePacker, me *MountEntry) *identity.Group {
+	t.Helper()
+	id, err := uuid.GenerateUUID()
+	require.NoError(t, err)
+	id2, err := uuid.GenerateUUID()
+	require.NoError(t, err)
+	g := &identity.Group{
+		ID:          id,
+		Name:        name,
+		NamespaceID: me.NamespaceID,
+		BucketKey:   p.BucketKey(id),
+	}
+	if alias != "" {
+		g.Alias = &identity.Alias{
+			ID:            id2,
+			Name:          alias,
+			CanonicalID:   id,
+			MountType:     me.Type,
+			MountAccessor: me.Accessor,
+			NamespaceID:   me.NamespaceID,
+		}
+	}
+	return g
+}
+
+func makeLocalAliasWithName(t *testing.T, name, entityID string, bucketKey string, me *MountEntry) *identity.LocalAliases {
+	t.Helper()
+	id, err := uuid.GenerateUUID()
+	require.NoError(t, err)
+	return &identity.LocalAliases{
+		Aliases: []*identity.Alias{
+			{
+				ID:            id,
+				Name:          name,
+				CanonicalID:   entityID,
+				MountType:     me.Type,
+				MountAccessor: me.Accessor,
+				NamespaceID:   me.NamespaceID,
+			},
+		},
+	}
 }
