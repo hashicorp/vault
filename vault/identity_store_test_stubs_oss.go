@@ -12,11 +12,11 @@ import (
 
 //go:generate go run github.com/hashicorp/vault/tools/stubmaker
 
-func entIdentityStoreDeterminismTestSetup(t *testing.T, ctx context.Context, c *Core, localme *MountEntry) {
+func entIdentityStoreDeterminismTestSetup(t *testing.T, ctx context.Context, c *Core, me, localme *MountEntry) {
 	// no op
 }
 
-func entIdentityStoreDeterminismAssert(t *testing.T, i int, loaded []string) {
+func entIdentityStoreDeterminismAssert(t *testing.T, i int, loadedIDs, lastIDs []string) {
 	// no op
 }
 

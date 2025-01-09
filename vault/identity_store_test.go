@@ -1548,7 +1548,7 @@ func TestEntityStoreLoadingIsDeterministic(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	entIdentityStoreDeterminismTestSetup(t, ctx, c, localMe)
+	entIdentityStoreDeterminismTestSetup(t, ctx, c, upme, localMe)
 
 	// Storage is now primed for the test.
 
@@ -1612,7 +1612,10 @@ func TestEntityStoreLoadingIsDeterministic(t *testing.T) {
 		groupsLoaded := len(loadedNames) - numLoaded
 		require.Greater(t, groupsLoaded, 140, "not enough groups and aliases loaded on attempt %d", i)
 
-		entIdentityStoreDeterminismAssert(t, i, loadedNames)
+		// note `lastIDs` argument is not needed any more but we can't change the
+		// signature without breaking enterprise. It's simpler to keep it unused for
+		// now until both parts of this merge.
+		entIdentityStoreDeterminismAssert(t, i, loadedNames, nil)
 
 		if i > 0 {
 			// Should be in the same order if we are deterministic since MemDB has strong ordering.
