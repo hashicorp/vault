@@ -273,7 +273,7 @@ export const fillInAzureConfig = async (situation = 'azure') => {
 // WIF specific keys
 const genericWifKeys = ['Identity token audience', 'Identity token TTL'];
 // AWS specific keys
-// const leaseAwsKeys = ['Default Lease TTL', 'Max Lease TTL'];
+const awsLeaseKeys = ['Default Lease TTL', 'Max Lease TTL'];
 const awsKeys = ['Access key', 'Secret Key', 'Region', 'IAM Endpoint', 'STS Endpoint', 'Max Retries'];
 const awsWifKeys = ['Issuer', 'Role ARN', ...genericWifKeys];
 // Azure specific keys
@@ -289,6 +289,8 @@ export const expectedConfigKeys = (type, camelCase = false) => {
       return camelCase ? stringToCamelCase(awsKeys) : awsKeys;
     case 'aws-wif':
       return camelCase ? stringToCamelCase(awsWifKeys) : awsWifKeys;
+    case 'aws-lease':
+      return camelCase ? stringToCamelCase(awsLeaseKeys) : awsLeaseKeys;
     case 'azure':
       return camelCase ? stringToCamelCase(azureKeys) : azureKeys;
     case 'azure-wif':

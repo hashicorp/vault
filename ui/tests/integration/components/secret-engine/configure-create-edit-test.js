@@ -25,7 +25,7 @@ import { WIF_ENGINES, allEngines } from 'vault/helpers/mountable-secret-engines'
 
 const allEnginesArray = allEngines(); // saving as const so we don't invoke the method multiple times via the for loop
 
-module('Integration | Component | SecretEngine/ConfigureCreateEdit meep', function (hooks) {
+module('Integration | Component | SecretEngine/ConfigureCreateEdit', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 

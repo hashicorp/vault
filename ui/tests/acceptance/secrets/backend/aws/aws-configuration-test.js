@@ -62,7 +62,10 @@ module('Acceptance | aws | configuration', function (hooks) {
       await click(SES.configure);
       assert.strictEqual(currentURL(), `/vault/secrets/${path}/configuration/edit`);
       assert.dom(SES.configureTitle('aws')).hasText('Configure AWS');
-      assert.dom(SES.aws.rootForm).exists('it lands on the root configuration form.');
+      assert.dom(SES.configureForm).exists('it lands on the root configuration form');
+      assert
+        .dom(SES.secondModelTitle)
+        .hasText('Lease Configuration', 'it shows the lease configuration section with correct title.');
       // cleanup
       await runCmd(`delete sys/mounts/${path}`);
     });
@@ -98,8 +101,8 @@ module('Acceptance | aws | configuration', function (hooks) {
       // three flash messages, the first is about mounting the engine, only care about the last two
       assert.strictEqual(
         this.flashSuccessSpy.args[1][0],
-        `Successfully saved ${path}'s root configuration.`,
-        'first flash message about the root config.'
+        `Successfully saved ${path}'s configuration.`,
+        'first flash message about the aws root config.'
       );
       assert.strictEqual(
         this.flashSuccessSpy.args[2][0],
@@ -156,7 +159,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       await fillInAwsConfig('withAccess');
       await click(GENERAL.saveButton);
       assert.true(
-        this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s root configuration.`),
+        this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s configuration.`),
         'Success flash message is rendered showing the root configuration was saved.'
       );
       assert.dom(GENERAL.infoRowValue('Access key')).hasText('foo', 'Access Key has been set.');
@@ -219,7 +222,6 @@ module('Acceptance | aws | configuration', function (hooks) {
     });
 
     test('it shows AWS mount configuration details', async function (assert) {
-      assert.expect(12);
       const path = `aws-${this.uid}`;
       const type = 'aws';
       this.server.get(`${path}/config/root`, (schema, req) => {
@@ -231,6 +233,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       createConfig(this.store, path, type); // create the aws root config in the store
       await click(SES.configTab);
       for (const key of expectedConfigKeys(type)) {
+        if (key === 'Secret Key' || key === 'Client Secret') return; // these keys are not returned by the API so they will not show up on the details page
         assert.dom(GENERAL.infoRowLabel(key)).exists(`${key} on the ${type} config details exists.`);
         const responseKeyAndValue = expectedValueOfConfigKeys(type, key);
         assert
@@ -368,7 +371,7 @@ module('Acceptance | aws | configuration', function (hooks) {
         .doesNotExist('Access type section does not render for a community user');
       // check all the form fields are present
       await click(GENERAL.toggleGroup('Root config options'));
-      for (const key of expectedConfigKeys('aws-root-create')) {
+      for (const key of expectedConfigKeys('aws', true)) {
         assert.dom(GENERAL.inputByAttr(key)).exists(`${key} shows for root section.`);
       }
       for (const key of expectedConfigKeys('aws-lease')) {
