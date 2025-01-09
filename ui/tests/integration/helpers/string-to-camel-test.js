@@ -29,7 +29,7 @@ module('Integration | Helper | string-to-camel', function (hooks) {
     assert.deepEqual(result, expected, 'camelCase array of strings returned for all sorts of strings');
   });
 
-  test('it returns camelCased string if string contains numbers', function (assert) {
+  test('it returns string if string is numbers', function (assert) {
     const string = '123';
     const expected = '123';
     const result = stringToCamelCase(string);
