@@ -52,7 +52,6 @@ export default class AzureConfig extends Model {
 
   get isConfigured() {
     // if every value is falsy, this engine has not been configured yet
-    // doing this here because the API does not return the clientSecret
     return !this.configurableParams.every((param) => !this[param]);
   }
 

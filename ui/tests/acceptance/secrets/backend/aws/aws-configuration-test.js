@@ -102,7 +102,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       assert.strictEqual(
         this.flashSuccessSpy.args[1][0],
         `Successfully saved ${path}'s configuration.`,
-        'first flash message about the aws root config.'
+        'first flash message about the root config.'
       );
       assert.strictEqual(
         this.flashSuccessSpy.args[2][0],
@@ -159,7 +159,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       await fillInAwsConfig('withAccess');
       await click(GENERAL.saveButton);
       assert.true(
-        this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s configuration.`),
+        this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s root configuration.`),
         'Success flash message is rendered showing the root configuration was saved.'
       );
       assert.dom(GENERAL.infoRowValue('Access key')).hasText('foo', 'Access Key has been set.');

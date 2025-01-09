@@ -30,8 +30,6 @@ export default class SecretsBackendConfigurationEdit extends Route {
   @service declare readonly version: VersionService;
 
   standardizedModelName(type: string, adapterPath: string) {
-    // we return first-model if there is only one model or the adapterPath is the first model listed
-    // otherwise we return second-model
     if (
       CONFIG_ADAPTERS_PATHS[type] &&
       CONFIG_ADAPTERS_PATHS[type].length > 1 &&
@@ -48,6 +46,7 @@ export default class SecretsBackendConfigurationEdit extends Route {
     const secretEngineRecord = this.modelFor('vault.cluster.secrets.backend') as SecretEngineModel;
     const type = secretEngineRecord.type;
     const displayName = allEngines().find((engine) => engine.type === type)?.displayName;
+    const isWifEngine = WIF_ENGINES.includes(type);
 
     // if the engine type is not configurable, return a 404.
     if (!secretEngineRecord || !CONFIGURABLE_SECRET_ENGINES.includes(type)) {
@@ -97,7 +96,7 @@ export default class SecretsBackendConfigurationEdit extends Route {
     }
     // if the type is a WIF engine and it's enterprise, we also fetch the issuer
     // from a global endpoint which has no associated model/adapter
-    if (WIF_ENGINES.includes(type) && this.version.isEnterprise) {
+    if (isWifEngine && this.version.isEnterprise) {
       try {
         const response = await this.store.queryRecord('identity/oidc/config', {});
         model['identity-oidc-config'] = response;
@@ -106,8 +105,8 @@ export default class SecretsBackendConfigurationEdit extends Route {
         model['identity-oidc-config'] = { queryIssuerError: true };
       }
     }
-    // add displayName to the model
     model['displayName'] = displayName;
+    model['isWifEngine'] = isWifEngine;
     return model;
   }
 

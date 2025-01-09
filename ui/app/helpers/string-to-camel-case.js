@@ -7,7 +7,7 @@ import { helper as buildHelper } from '@ember/component/helper';
 
 // This helper turns strings with spaces into camelCase strings, example: 'hello world' -> 'helloWorld'
 // If an array of strings is passed, this helper returns an array of camelCase strings.
-// Taken from slackOverflow, doesn't handle accented characters. https://stackoverflow.com/questions/2970525/converting-a-string-with-spaces-into-camel-case?page=1&tab=scoredesc#tab-top
+// Does not handle accented characters
 export function stringToCamelCase(str) {
   if (Array.isArray(str)) {
     return str.map((s) => {

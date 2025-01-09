@@ -38,7 +38,7 @@ import type FlashMessageService from 'vault/services/flash-messages';
  * @param {string} type - The type of the engine, ex: 'azure'
  * @param {object} model - The config model for the engine.
  * @param {object} [secondModel] - For engines with two config models. Currently, only used by aws (lease and root config).
- * @param {object} [issuerConfigModel] - the identity/oidc/config model. relevant only to wif engines.
+ * @param {object} [issuerConfig] - The identity/oidc/config model. Will be passed in if user has an enterprise license.
  * @param {string} [displayTitle="Additional Configuration"] - Specific title to display above the second modal. 
  */
 
@@ -133,11 +133,15 @@ export default class ConfigureCreateEdit extends Component<Args> {
 
       const modelSaved = modelAttrChanged ? await this.saveModel() : false;
       const issuerSaved = issuerAttrChanged ? await this.updateIssuer() : false;
-      const leaseSaved = secondModelAttrChanged ? await this.saveSecondModel() : false;
+      const secondModel = secondModelAttrChanged ? await this.saveSecondModel() : false;
 
-      if (modelSaved || (!modelAttrChanged && issuerSaved) || leaseSaved) {
-        // transition if either of the models were saved successfully
-        // we only prevent a transition if the model(s) are edited and fail when saving
+      if (modelSaved || (!modelAttrChanged && issuerSaved)) {
+        // if there is a secondModel, attempt to save it. If it fails, we should still transition and the failure will surface as a sticky flash message.
+        if (secondModelAttrChanged) {
+          await this.saveSecondModel();
+        }
+        // transition if first model or issuer are saved successfully
+        // we only prevent a transition if the first model or issuer are edited and fail when saving
         this.transition();
       } else {
         // otherwise there was a failure and we should not transition and exit the function
@@ -180,7 +184,7 @@ export default class ConfigureCreateEdit extends Component<Args> {
       return true;
     } catch (error) {
       this.errorMessage = errorMessage(error);
-      // show a flash message and no invalidForm alert. Only if the first modal fails will we prevent transition so display error via flash message as it's likely they'll transition.
+      // We will transition even if the second model fails. Surface a sticky flash message to the user that they can see on the next view.
       this.flashMessages.danger(`Lease configuration was not saved: ${this.errorMessage}`, {
         sticky: true,
       });
