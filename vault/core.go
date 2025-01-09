@@ -45,6 +45,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/helper/activationflags"
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/locking"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -739,6 +740,9 @@ type Core struct {
 	clusterAddrBridge *raft.ClusterAddrBridge
 
 	censusManager *CensusManager
+
+	// Activation flags for enterprise features that require a one-time activation
+	FeatureActivationFlags *activationflags.FeatureActivationFlags
 }
 
 func (c *Core) ActiveNodeClockSkewMillis() int64 {
@@ -1448,11 +1452,14 @@ func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, log
 	// System
 	logicalBackends[mountTypeSystem] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
 		sysBackendLogger := logger.Named("system")
+
 		c.AddLogger(sysBackendLogger)
 		b := NewSystemBackend(c, sysBackendLogger, config)
+
 		if err := b.Setup(ctx, config); err != nil {
 			return nil, err
 		}
+
 		return b, nil
 	}
 
