@@ -8,6 +8,8 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"math"
+	"strings"
 	"testing"
 	"time"
 
@@ -694,6 +696,45 @@ func TestBarrier_LegacyRotate(t *testing.T) {
 	reason, err := b1.CheckBarrierAutoRotate(context.Background())
 	if err != nil || reason != legacyRotateReason {
 		t.Fail()
+	}
+}
+
+// TestBarrier_RotateFailsOnOverflow validates that if we ever actually hit the
+// barrier key rotation limit, we fail the rotation with an error.
+func TestBarrier_RotateFailsOnOverflow(t *testing.T) {
+	inm, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	b, err := NewAESGCMBarrier(inm, false)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	key, err := b.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Initialize the barrier
+	ctx := context.Background()
+	err = b.Initialize(ctx, key, nil, rand.Reader)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	err = b.Unseal(ctx, key)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Hack to avoid generating a lot of keys...
+	b.keyring.activeTerm = math.MaxUint32
+
+	_, err = b.Rotate(ctx, rand.Reader)
+	if err == nil {
+		t.Fatalf("Rotate should fail on overflow but did not")
+	}
+	if !strings.Contains(err.Error(), "integer overflow") {
+		t.Fatalf("Rotate failed but not for the expected reason of integer overflow: %v", err)
 	}
 }
 

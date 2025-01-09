@@ -121,14 +121,12 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		if b.Logger().IsDebug() {
 			b.Logger().Debug(errString)
 		}
-		ldapResponse.AddWarning(errString)
 	}
 
 	for _, warning := range c.Warnings {
 		if b.Logger().IsDebug() {
 			b.Logger().Debug(string(warning))
 		}
-		ldapResponse.AddWarning(string(warning))
 	}
 
 	var allGroups []string

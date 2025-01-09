@@ -9,6 +9,7 @@ import { alias, or } from '@ember/object/computed';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { AVAILABLE_PLUGIN_TYPES } from '../../utils/model-helpers/database-helpers';
+import { service } from '@ember/service';
 
 /**
  * fieldsToGroups helper fn
@@ -31,6 +32,8 @@ const fieldsToGroups = function (arr, key = 'subgroup') {
 };
 
 export default Model.extend({
+  version: service(),
+
   backend: attr('string', {
     readOnly: true,
   }),
@@ -76,6 +79,11 @@ export default Model.extend({
   password: attr('string', {
     subText: 'The password to use when connecting with the above username.',
     editType: 'password',
+  }),
+  disable_escaping: attr('boolean', {
+    defaultValue: false,
+    subText: 'Turns off the escaping of special characters inside of the username and password fields.',
+    docLink: 'https://developer.hashicorp.com/vault/docs/secrets/databases#disable-character-escaping',
   }),
 
   // optional
@@ -125,16 +133,60 @@ export default Model.extend({
     label: 'Disable SSL verification',
     defaultValue: false,
   }),
+  password_authentication: attr('string', {
+    defaultValue: 'password',
+    editType: 'radio',
+    subText: 'The default is "password."',
+    possibleValues: [
+      {
+        value: 'password',
+        helpText:
+          'Passwords will be sent to PostgreSQL in plaintext format and may appear in PostgreSQL logs as-is.',
+      },
+      {
+        value: 'scram-sha-256',
+        helpText:
+          'When set to "scram-sha-256", passwords will be hashed by Vault and stored as-is by PostgreSQL. Using "scram-sha-256" requires a minimum version of PostgreSQL 10.',
+      },
+    ],
+    docLink:
+      'https://developer.hashicorp.com/vault/api-docs/secret/databases/postgresql#password_authentication',
+  }),
+  auth_type: attr('string', {
+    subText: 'If set to "gcp_iam", will enable IAM authentication to a Google CloudSQL instance.',
+    docLink: 'https://developer.hashicorp.com/vault/api-docs/secret/databases/postgresql#auth_type',
+  }),
+  service_account_json: attr('string', {
+    label: 'Service account JSON',
+    subText:
+      'JSON encoded credentials for a GCP Service Account to use for IAM authentication. Requires "auth_type" to be "gcp_iam".',
+    editType: 'file',
+  }),
+  use_private_ip: attr('boolean', {
+    label: 'Use private IP',
+    subText:
+      'Enables the option to connect to CloudSQL Instances with Private IP. Requires auth_type to be "gcp_iam".',
+    defaultValue: false,
+  }),
+  private_key: attr('string', {
+    helpText: 'The secret key used for the x509 client certificate. Must be PEM encoded.',
+    editType: 'file',
+  }),
   tls: attr('string', {
     label: 'TLS Certificate Key',
     helpText:
       'x509 certificate for connecting to the database. This must be a PEM encoded version of the private key and the certificate combined.',
     editType: 'file',
   }),
+  tls_certificate: attr('string', {
+    label: 'TLS Certificate Key',
+    helpText: 'The x509 certificate for connecting to the database. Must be PEM encoded.',
+    editType: 'file',
+  }),
   tls_ca: attr('string', {
     label: 'TLS CA',
     helpText:
-      'x509 CA file for validating the certificate presented by the MongoDB server. Must be PEM encoded.',
+      'x509 CA file for validating the certificate presented by the database server. Must be PEM encoded.',
     editType: 'file',
   }),
   tls_server_name: attr('string', {
@@ -147,25 +199,28 @@ export default Model.extend({
     defaultShown: 'Default',
   }),
 
+  // ENTERPRISE ONLY
+  self_managed: attr('boolean', {
+    subText:
+      'Allows onboarding static roles with a rootless connection configuration. Mutually exclusive with username and password. If true, will force verify_connection to be false.',
+    defaultValue: false,
+  }),
+
   isAvailablePlugin: computed('plugin_name', function () {
     return !!AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name);
   }),
 
   showAttrs: computed('plugin_name', function () {
-    const fields = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name)
-      .fields.filter((f) => f.show !== false)
-      .map((f) => f.attr);
+    const fields = this._filterFields((f) => f.show !== false).map((f) => f.attr);
     fields.push('allowed_roles');
     return expandAttributeMeta(this, fields);
   }),
 
+  // for both create and edit fields
   fieldAttrs: computed('plugin_name', function () {
-    // for both create and edit fields
     let fields = ['plugin_name', 'name', 'connection_url', 'verify_connection', 'password_policy'];
     if (this.plugin_name) {
-      fields = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name)
-        .fields.filter((f) => !f.group)
-        .map((field) => field.attr);
+      fields = this._filterFields((f) => !f.group).map((f) => f.attr);
     }
     return expandAttributeMeta(this, fields);
   }),
@@ -174,9 +229,7 @@ export default Model.extend({
     if (!this.plugin_name) {
       return null;
     }
-    const pluginFields = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name).fields.filter(
-      (f) => f.group === 'pluginConfig'
-    );
+    const pluginFields = this._filterFields((f) => f.group === 'pluginConfig');
     const groups = fieldsToGroups(pluginFields, 'subgroup');
     return fieldToAttrs(this, groups);
   }),
@@ -185,11 +238,20 @@ export default Model.extend({
     if (!this.plugin_name) {
       return expandAttributeMeta(this, ['root_rotation_statements']);
     }
-    const fields = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name)
-      .fields.filter((f) => f.group === 'statements')
-      .map((field) => field.attr);
+    const fields = this._filterFields((f) => f.group === 'statements').map((f) => f.attr);
     return expandAttributeMeta(this, fields);
   }),
+
+  // after checking for enterprise, filter callback fires and returns
+  _filterFields(filterCallback) {
+    const plugin = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name);
+    return plugin.fields.filter((field) => {
+      // return if attribute is enterprise only and we're on community
+      if (field?.isEnterprise && !this.version.isEnterprise) return false;
+      // filter by group, or if there isn't a group
+      return filterCallback(field);
+    });
+  },
 
   /* CAPABILITIES */
   editConnectionPath: lazyCapabilities(apiPath`${'backend'}/config/${'id'}`, 'backend', 'id'),

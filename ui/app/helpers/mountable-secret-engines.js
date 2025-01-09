@@ -142,8 +142,7 @@ export function wifEngines() {
 }
 
 // The UI only supports configuration views for these secrets engines. The CLI must be used to manage other engine resources (i.e. roles, credentials).
-// Will eventually include gcp.
-export const CONFIGURATION_ONLY = ['azure'];
+export const CONFIGURATION_ONLY = ['azure', 'gcp'];
 
 export function configurationOnly() {
   return CONFIGURATION_ONLY.slice();
@@ -151,13 +150,17 @@ export function configurationOnly() {
 
 // Secret engines that have their own configuration page and actions
 // These engines do not exist in their own Ember engine.
-export const CONFIGURABLE_SECRET_ENGINES = ['aws', 'azure', 'ssh'];
+export const CONFIGURABLE_SECRET_ENGINES = ['aws', 'azure', 'gcp', 'ssh'];
+
+export function configurableSecretEngines() {
+  return CONFIGURABLE_SECRET_ENGINES.slice();
+}
 
 export function mountableEngines() {
   return MOUNTABLE_SECRET_ENGINES.slice();
 }
 // secret engines that have not other views than the mount view and mount details view
-export const UNSUPPORTED_ENGINES = ['alicloud', 'consul', 'gcp', 'gcpkms', 'nomad', 'rabbitmq', 'totp'];
+export const UNSUPPORTED_ENGINES = ['alicloud', 'consul', 'gcpkms', 'nomad', 'rabbitmq', 'totp'];
 
 export function unsupportedEngines() {
   return UNSUPPORTED_ENGINES.slice();
