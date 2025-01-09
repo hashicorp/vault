@@ -24,6 +24,7 @@ import (
 	mysql "github.com/go-sql-driver/mysql"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 )
@@ -47,7 +48,7 @@ type MySQLBackend struct {
 	client       *sql.DB
 	statements   map[string]*sql.Stmt
 	logger       log.Logger
-	permitPool   *physical.PermitPool
+	permitPool   *permitpool.Pool
 	conf         map[string]string
 	redirectHost string
 	redirectPort int64
@@ -173,7 +174,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		client:      db,
 		statements:  make(map[string]*sql.Stmt),
 		logger:      logger,
-		permitPool:  physical.NewPermitPool(maxParInt),
+		permitPool:  permitpool.New(maxParInt),
 		conf:        conf,
 		haEnabled:   haEnabled,
 	}

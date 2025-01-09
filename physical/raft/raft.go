@@ -25,6 +25,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-raftchunking"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/raft"
 	autopilot "github.com/hashicorp/raft-autopilot"
@@ -175,7 +176,7 @@ type RaftBackend struct {
 	serverAddressProvider raft.ServerAddressProvider
 
 	// permitPool is used to limit the number of concurrent storage calls.
-	permitPool *physical.PermitPool
+	permitPool *permitpool.Pool
 
 	// maxEntrySize imposes a size limit (in bytes) on a raft entry (put or transaction).
 	// It is suggested to use a value of 2x the Raft chunking size for optimal
@@ -614,7 +615,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		closers:                       closers,
 		dataDir:                       backendConfig.Path,
 		localID:                       backendConfig.NodeId,
-		permitPool:                    physical.NewPermitPool(physical.DefaultParallelOperations),
+		permitPool:                    permitpool.New(physical.DefaultParallelOperations),
 		maxEntrySize:                  backendConfig.MaxEntrySize,
 		maxMountAndNamespaceEntrySize: backendConfig.MaxMountAndNamespaceTableEntrySize,
 		maxBatchEntries:               backendConfig.MaxBatchEntries,

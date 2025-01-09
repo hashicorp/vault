@@ -19,6 +19,7 @@ import (
 	metrics "github.com/armon/go-metrics"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
@@ -26,7 +27,7 @@ import (
 type CouchDBBackend struct {
 	logger     log.Logger
 	client     *couchDBClient
-	permitPool *physical.PermitPool
+	permitPool *permitpool.Pool
 }
 
 // Verify CouchDBBackend satisfies the correct interfaces
@@ -196,7 +197,7 @@ func buildCouchDBBackend(conf map[string]string, logger log.Logger) (*CouchDBBac
 			Client:   cleanhttp.DefaultPooledClient(),
 		},
 		logger:     logger,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: permitpool.New(maxParInt),
 	}, nil
 }
 
@@ -276,7 +277,7 @@ func NewTransactionalCouchDBBackend(conf map[string]string, logger log.Logger) (
 	if err != nil {
 		return nil, err
 	}
-	backend.permitPool = physical.NewPermitPool(1)
+	backend.permitPool = permitpool.New(1)
 
 	return &TransactionalCouchDBBackend{
 		CouchDBBackend: *backend,

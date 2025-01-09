@@ -17,6 +17,7 @@ import (
 
 	metrics "github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/vault/sdk/physical"
 	triton "github.com/joyent/triton-go"
 	"github.com/joyent/triton-go/authentication"
@@ -28,7 +29,7 @@ const mantaDefaultRootStore = "/stor"
 
 type MantaBackend struct {
 	logger     log.Logger
-	permitPool *physical.PermitPool
+	permitPool *permitpool.Pool
 	client     *storage.StorageClient
 	directory  string
 }
@@ -95,7 +96,7 @@ func NewMantaBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		client:     client,
 		directory:  conf["directory"],
 		logger:     logger,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: permitpool.New(maxParInt),
 	}, nil
 }
 

@@ -19,6 +19,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -60,7 +61,7 @@ type ConsulBackend struct {
 	path            string
 	kv              *api.KV
 	txn             *api.Txn
-	permitPool      *physical.PermitPool
+	permitPool      *permitpool.Pool
 	consistencyMode string
 	sessionTTL      string
 	lockWaitTime    time.Duration
@@ -161,7 +162,7 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 		client:          client,
 		kv:              client.KV(),
 		txn:             client.Txn(),
-		permitPool:      physical.NewPermitPool(maxParInt),
+		permitPool:      permitpool.New(maxParInt),
 		consistencyMode: consistencyMode,
 		sessionTTL:      sessionTTL,
 		lockWaitTime:    lockWaitTime,

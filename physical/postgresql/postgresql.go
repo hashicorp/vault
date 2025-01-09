@@ -15,6 +15,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -64,7 +65,7 @@ type PostgreSQLBackend struct {
 
 	haEnabled  bool
 	logger     log.Logger
-	permitPool *physical.PermitPool
+	permitPool *permitpool.Pool
 }
 
 // PostgreSQLLock implements a lock using an PostgreSQL client.
@@ -192,7 +193,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 		// $1=ha_identity $2=ha_key
 		" DELETE FROM " + quoted_ha_table + " WHERE ha_identity=$1 AND ha_key=$2 ",
 		logger:     logger,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: permitpool.New(maxParInt),
 		haEnabled:  conf["ha_enabled"] == "true",
 	}
 

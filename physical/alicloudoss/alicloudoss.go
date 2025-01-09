@@ -18,6 +18,7 @@ import (
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
@@ -39,7 +40,7 @@ type AliCloudOSSBackend struct {
 	bucket     string
 	client     *oss.Client
 	logger     log.Logger
-	permitPool *physical.PermitPool
+	permitPool *permitpool.Pool
 }
 
 // NewAliCloudOSSBackend constructs an OSS backend using a pre-existing
@@ -113,7 +114,7 @@ func NewAliCloudOSSBackend(conf map[string]string, logger log.Logger) (physical.
 		client:     client,
 		bucket:     bucket,
 		logger:     logger,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: permitpool.New(maxParInt),
 	}
 	return a, nil
 }

@@ -25,6 +25,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/physical"
 )
@@ -40,7 +41,7 @@ type S3Backend struct {
 	kmsKeyId   string
 	client     *s3.S3
 	logger     log.Logger
-	permitPool *physical.PermitPool
+	permitPool *permitpool.Pool
 }
 
 // NewS3Backend constructs a S3 backend using a pre-existing
@@ -157,7 +158,7 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 		path:       path,
 		kmsKeyId:   kmsKeyId,
 		logger:     logger,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: permitpool.New(maxParInt),
 	}
 	return s, nil
 }
