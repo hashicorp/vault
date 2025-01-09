@@ -64,7 +64,7 @@ func TestBackend_StaticRole_Rotation_basic(t *testing.T) {
 	b.schedule = &TestSchedule{}
 
 	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
-	defer cleanup()
+	t.Cleanup(cleanup)
 
 	// create the database user
 	createTestPGUser(t, connURL, dbUser, dbUserDefaultPassword, testRoleStaticCreate)
@@ -1029,7 +1029,7 @@ func TestBackend_StaticRole_Rotation_MongoDBAtlas(t *testing.T) {
 // does not break on invalid values.
 func TestQueueTickIntervalKeyConfig(t *testing.T) {
 	t.Parallel()
-	cluster, sys := getClusterPostgresDB(t)
+	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
