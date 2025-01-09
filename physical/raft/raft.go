@@ -1461,6 +1461,9 @@ func (b *RaftBackend) StartRemovedChecker(ctx context.Context) {
 		for {
 			select {
 			case <-ticker.C:
+				if !b.Initialized() {
+					return
+				}
 				removed, err := b.IsNodeRemoved(ctx, b.localID)
 				if err != nil {
 					logger.Error("failed to check if node is removed", "node ID", b.localID, "error", err)
