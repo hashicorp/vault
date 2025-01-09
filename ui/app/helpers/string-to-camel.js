@@ -14,7 +14,7 @@ export function stringToCamelCase(str) {
   if (Array.isArray(str)) {
     return str.map((s) => {
       assert(`must pass in a string or array of strings`, typeof s === 'string');
-      // lower case the entire string to handle situations like IAM Endpoint  -> iamEndpoint instead of
+      // lower case the entire string to handle situations like IAM Endpoint  -> iamEndpoint instead of iAMEndpoint
       s = s.toLowerCase();
       return s
         .replace(/(?:^\w|[A-Z]|\b\w)/g, function (word, index) {
@@ -23,7 +23,7 @@ export function stringToCamelCase(str) {
         .replace(/\s+/g, '');
     });
   } else {
-    // lower case the entire string to handle situations like IAM Endpoint  -> iamEndpoint instead of
+    // lower case the entire string to handle situations like IAM Endpoint  -> iamEndpoint instead of iAMEndpoint
     assert(`must pass in a string or array of strings`, typeof str === 'string');
     str = str.toLowerCase();
     return str
