@@ -274,14 +274,18 @@ export const fillInAzureConfig = async (situation = 'azure') => {
 const genericWifKeys = ['Identity token audience', 'Identity token TTL'];
 // AWS specific keys
 const awsLeaseKeys = ['Default Lease TTL', 'Max Lease TTL'];
-const awsKeys = ['Access key', 'Secret Key', 'Region', 'IAM Endpoint', 'STS Endpoint', 'Max Retries'];
+const awsKeys = ['Access key', 'Secret key', 'Region', 'IAM endpoint', 'STS endpoint', 'Max retries'];
 const awsWifKeys = ['Issuer', 'Role ARN', ...genericWifKeys];
 // Azure specific keys
 const genericAzureKeys = ['Subscription ID', 'Tenant ID', 'Client ID', 'Environment'];
-const azureKeys = [...genericAzureKeys, 'Client Secret', 'Root password TTL'];
+const azureKeys = [...genericAzureKeys, 'Client secret', 'Root password TTL'];
 const azureWifKeys = [...genericAzureKeys, ...genericWifKeys];
+// GCP specific keys
+const genericGcpKeys = ['Config TTL', 'Max TTL'];
+const gcpKeys = [...genericGcpKeys, 'Credentials'];
+const gcpWifKeys = [...genericGcpKeys, ...genericWifKeys, 'Service account email'];
 // SSH specific keys
-const sshKeys = ['Private Key', 'Public Key', 'Generate Signing Key'];
+const sshKeys = ['Private key', 'Public key', 'Generate signing key'];
 
 export const expectedConfigKeys = (type, camelCase = false) => {
   switch (type) {
@@ -295,6 +299,10 @@ export const expectedConfigKeys = (type, camelCase = false) => {
       return camelCase ? stringToCamelCase(azureKeys) : azureKeys;
     case 'azure-wif':
       return camelCase ? stringToCamelCase(azureWifKeys) : azureWifKeys;
+    case 'gcp':
+      return camelCase ? stringToCamelCase(gcpKeys) : gcpKeys;
+    case 'gcp-wif':
+      return camelCase ? stringToCamelCase(gcpWifKeys) : gcpWifKeys;
     case 'ssh':
       return camelCase ? stringToCamelCase(sshKeys) : sshKeys;
   }
@@ -310,7 +318,7 @@ const valueOfAwsKeys = (string) => {
       return 'iam-endpoint';
     case 'STS endpoint':
       return 'sts-endpoint';
-    case 'Maximum retries':
+    case 'Max retries':
       return '1';
   }
 };

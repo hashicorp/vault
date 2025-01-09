@@ -45,7 +45,6 @@ export default class AwsRootConfig extends Model {
   iamEndpoint;
   @attr('string', { label: 'STS endpoint' }) stsEndpoint;
   @attr('number', {
-    label: 'Maximum retries',
     subText: 'Number of max retries the client should use for recoverable errors. Default is -1.',
   })
   maxRetries;

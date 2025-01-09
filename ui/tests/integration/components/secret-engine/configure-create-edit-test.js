@@ -678,7 +678,7 @@ module('Integration | Component | SecretEngine/ConfigureCreateEdit', function (h
             .hasValue('**********', 'clientSecret is masked on edit the value');
         });
 
-        test('it requires a double click to change the client secret meep', async function (assert) {
+        test('it requires a double click to change the client secret', async function (assert) {
           this.id = `azure-${this.uid}`;
           this.config = createConfig(this.store, this.id, 'azure');
           await render(hbs`
