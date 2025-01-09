@@ -829,3 +829,15 @@ func fetchRevocationInfo(sc pki_backend.StorageContext, serial string) (*revocat
 
 	return revInfo, nil
 }
+
+// filterDirEntries filters out directory entries from a list of entries normally from a List operation.
+func filterDirEntries(entries []string) []string {
+	ids := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if strings.HasSuffix(entry, "/") {
+			continue
+		}
+		ids = append(ids, entry)
+	}
+	return ids
+}

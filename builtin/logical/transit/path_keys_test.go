@@ -254,6 +254,42 @@ func TestTransit_CreateKey(t *testing.T) {
 			creationParams: map[string]interface{}{"type": "ml-dsa", "parameter_set": "87"},
 			entOnly:        true,
 		},
+		"Hybrid ML-DSA-44-ECDSA-P256": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": "44", "hybrid_key_type_ec": "ecdsa-p256", "hybrid_key_type_pqc": "ml-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid ML-DSA-44-ECDSA-P384": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": "44", "hybrid_key_type_ec": "ecdsa-p384", "hybrid_key_type_pqc": "ml-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid ML-DSA-44-ECDSA-P521": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": "44", "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "ml-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid ML-DSA-65-ECDSA-P256": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": "65", "hybrid_key_type_ec": "ecdsa-p256", "hybrid_key_type_pqc": "ml-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid ML-DSA-65-ECDSA-P384": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": "65", "hybrid_key_type_ec": "ecdsa-p384", "hybrid_key_type_pqc": "ml-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid ML-DSA-65-ECDSA-P521": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": "65", "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "ml-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid ML-DSA-87-ECDSA-P256": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": "87", "hybrid_key_type_ec": "ecdsa-p256", "hybrid_key_type_pqc": "ml-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid ML-DSA-87-ECDSA-P384": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": "87", "hybrid_key_type_ec": "ecdsa-p384", "hybrid_key_type_pqc": "ml-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid ML-DSA-87-ECDSA-P521": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": "87", "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "ml-dsa"},
+			entOnly:        true,
+		},
 		"bad key type": {
 			creationParams: map[string]interface{}{"type": "fake-key-type"},
 			shouldError:    true,

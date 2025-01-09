@@ -390,6 +390,60 @@ func addCAIssueFields(fields map[string]*framework.FieldSchema) map[string]*fram
 			Name: "Permitted DNS Domains",
 		},
 	}
+	fields["excluded_dns_domains"] = &framework.FieldSchema{
+		Type:        framework.TypeCommaStringSlice,
+		Description: `Domains for which this certificate is not allowed to sign or issue child certificates (see https://tools.ietf.org/html/rfc5280#section-4.2.1.10).`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Name: "Excluded DNS Domains",
+		},
+	}
+
+	fields["permitted_ip_ranges"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `IP ranges for which this certificate is allowed to sign or issue child certificates (see https://tools.ietf.org/html/rfc5280#section-4.2.1.10).
+Ranges must be specified in the notation of IP address and prefix length, like "192.0.2.0/24" or "2001:db8::/32", as defined in RFC 4632 and RFC 4291.`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Name: "Permitted IP ranges",
+		},
+	}
+	fields["excluded_ip_ranges"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `IP ranges for which this certificate is not allowed to sign or issue child certificates (see https://tools.ietf.org/html/rfc5280#section-4.2.1.10).
+Ranges must be specified in the notation of IP address and prefix length, like "192.0.2.0/24" or "2001:db8::/32", as defined in RFC 4632 and RFC 4291.`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Name: "Excluded IP ranges",
+		},
+	}
+
+	fields["permitted_email_addresses"] = &framework.FieldSchema{
+		Type:        framework.TypeCommaStringSlice,
+		Description: `Email addresses for which this certificate is allowed to sign or issue child certificates (see https://tools.ietf.org/html/rfc5280#section-4.2.1.10).`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Name: "Permitted email addresses",
+		},
+	}
+	fields["excluded_email_addresses"] = &framework.FieldSchema{
+		Type:        framework.TypeCommaStringSlice,
+		Description: `Email addresses for which this certificate is not allowed to sign or issue child certificates (see https://tools.ietf.org/html/rfc5280#section-4.2.1.10).`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Name: "Excluded email addresses",
+		},
+	}
+
+	fields["permitted_uri_domains"] = &framework.FieldSchema{
+		Type:        framework.TypeCommaStringSlice,
+		Description: `URI domains for which this certificate is allowed to sign or issue child certificates (see https://tools.ietf.org/html/rfc5280#section-4.2.1.10).`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Name: "Permitted URI domains",
+		},
+	}
+	fields["excluded_uri_domains"] = &framework.FieldSchema{
+		Type:        framework.TypeCommaStringSlice,
+		Description: `URI domains for which this certificate is not allowed to sign or issue child certificates (see https://tools.ietf.org/html/rfc5280#section-4.2.1.10).`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Name: "Excluded URI domains",
+		},
+	}
 
 	fields = addIssuerNameField(fields)
 

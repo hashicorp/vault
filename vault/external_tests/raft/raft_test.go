@@ -1378,14 +1378,26 @@ func TestRaftCluster_Removed(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	_, err = cluster.Cores[0].Client.Logical().Write("/sys/storage/raft/remove-peer", map[string]interface{}{
+	leaderClient := cluster.Cores[0].Client
+	_, err = leaderClient.Logical().Write("/sys/storage/raft/remove-peer", map[string]interface{}{
 		"server_id": follower.NodeID,
 	})
+	require.NoError(t, err)
 	followerClient.SetCheckRedirect(func(request *http.Request, requests []*http.Request) error {
 		require.Fail(t, "request caused a redirect", request.URL.Path)
 		return fmt.Errorf("no redirects allowed")
 	})
-	require.NoError(t, err)
+	configChanged := func() bool {
+		config, err := leaderClient.Logical().Read("sys/storage/raft/configuration")
+		require.NoError(t, err)
+		cfg := config.Data["config"].(map[string]interface{})
+		servers := cfg["servers"].([]interface{})
+		return len(servers) == 2
+	}
+	// raft config changes happen async, so block until the config change is
+	// applied
+	require.Eventually(t, configChanged, 3*time.Second, 50*time.Millisecond)
+
 	_, err = followerClient.Logical().Write("secret/foo", map[string]interface{}{
 		"test": "other_data",
 	})
@@ -1514,8 +1526,7 @@ func TestSysHealth_Raft(t *testing.T) {
 		var erroredResponse *api.Response
 
 		// now that the node can connect again, it will start getting the removed
-		// error when trying to connect. The code should be removed, and the ha
-		// connection will be nil because there is no ha connection
+		// error when trying to connect. The code should be removed
 		testhelpers.RetryUntil(t, 10*time.Second, func() error {
 			resp, err := followerClient.Logical().ReadRawWithData("sys/health", map[string][]string{
 				"perfstandbyok": {"true"},
@@ -1536,6 +1547,33 @@ func TestSysHealth_Raft(t *testing.T) {
 		})
 		r := parseHealthBody(t, erroredResponse)
 		require.True(t, true, *r.RemovedFromCluster)
-		require.Nil(t, r.HAConnectionHealthy)
+		// The HA connection health should either be nil or false. It's possible
+		// for it to be false if we got the response in between the node marking
+		// itself removed and sealing
+		if r.HAConnectionHealthy != nil {
+			require.False(t, *r.HAConnectionHealthy)
+		}
 	})
+}
+
+// TestRaftCluster_Removed_ReAdd creates a three node raft cluster and then
+// removes one of the nodes. The removed follower tries to re-join, and the test
+// verifies that it errors and cannot join.
+func TestRaftCluster_Removed_ReAdd(t *testing.T) {
+	t.Parallel()
+	cluster, _ := raftCluster(t, nil)
+	defer cluster.Cleanup()
+
+	leader := cluster.Cores[0]
+	follower := cluster.Cores[2]
+
+	_, err := leader.Client.Logical().Write("/sys/storage/raft/remove-peer", map[string]interface{}{
+		"server_id": follower.NodeID,
+	})
+	require.NoError(t, err)
+	require.Eventually(t, follower.Sealed, 10*time.Second, 250*time.Millisecond)
+
+	joinReq := &api.RaftJoinRequest{LeaderAPIAddr: leader.Address.String()}
+	_, err = follower.Client.Sys().RaftJoin(joinReq)
+	require.Error(t, err)
 }

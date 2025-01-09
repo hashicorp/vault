@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 )
 
 // Tests converting back and forth between a CertBundle and a ParsedCertBundle.
@@ -465,7 +466,7 @@ vitin0L6nprauWkKO38XgM4T75qKZpqtiOcT
 }
 
 func TestGetPublicKeySize(t *testing.T) {
-	rsa, err := rsa.GenerateKey(rand.Reader, 3072)
+	rsa, err := cryptoutil.GenerateRSAKey(rand.Reader, 3072)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -735,7 +736,7 @@ func setCerts() {
 
 	// RSA generation
 	{
-		key, err := rsa.GenerateKey(rand.Reader, 2048)
+		key, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 		if err != nil {
 			panic(err)
 		}
@@ -864,7 +865,7 @@ func setCerts() {
 
 func TestComparePublicKeysAndType(t *testing.T) {
 	rsa1 := genRsaKey(t).Public()
-	rsa2 := genRsaKey(t).Public()
+	rsa := genRsaKey(t).Public()
 	eddsa1 := genEdDSA(t).Public()
 	eddsa2 := genEdDSA(t).Public()
 	ed25519_1, _ := genEd25519Key(t)
@@ -881,7 +882,7 @@ func TestComparePublicKeysAndType(t *testing.T) {
 		wantErr bool
 	}{
 		{name: "RSA_Equal", args: args{key1Iface: rsa1, key2Iface: rsa1}, want: true, wantErr: false},
-		{name: "RSA_NotEqual", args: args{key1Iface: rsa1, key2Iface: rsa2}, want: false, wantErr: false},
+		{name: "RSA_NotEqual", args: args{key1Iface: rsa1, key2Iface: rsa}, want: false, wantErr: false},
 		{name: "EDDSA_Equal", args: args{key1Iface: eddsa1, key2Iface: eddsa1}, want: true, wantErr: false},
 		{name: "EDDSA_NotEqual", args: args{key1Iface: eddsa1, key2Iface: eddsa2}, want: false, wantErr: false},
 		{name: "ED25519_Equal", args: args{key1Iface: ed25519_1, key2Iface: ed25519_1}, want: true, wantErr: false},
@@ -1106,7 +1107,7 @@ func TestIgnoreCSRSigning(t *testing.T) {
 }
 
 func genRsaKey(t *testing.T) *rsa.PrivateKey {
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	key, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatal(err)
 	}
