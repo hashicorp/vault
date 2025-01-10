@@ -2544,8 +2544,29 @@
         "path": "upgrading/raft-wal"
       },
       {
-        "title": "Identity duplicate resolution guide",
-        "path": "upgrading/identity-deduplication"
+        "title": "Resolve duplicate identities",
+        "routes": [
+          {
+            "title": "Process overview",
+            "path": "upgrading/deduplication"
+          },
+          {
+            "title": "Fix different-case entity alias duplicates",
+            "path": "upgrading/deduplication/different-case"
+          },
+          {
+            "title": "Fix entity and group duplicates",
+            "path": "upgrading/deduplication/entity-group"
+          },
+          {
+            "title": "Fix ACL policy template duplicates",
+            "path": "upgrading/deduplication/acl-policy-templates"
+          },
+          {
+            "title": "Fix external reference duplicates",
+            "path": "upgrading/deduplication/external-refs"
+          }
+        ]
       },
       {
         "title": "Upgrade to 1.19.x",

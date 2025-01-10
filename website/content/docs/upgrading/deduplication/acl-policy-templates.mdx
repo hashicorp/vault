@@ -1,0 +1,62 @@
+---
+layout: docs
+page_title: Fix ACL policy template duplicates
+description: >-
+  Fix duplicate identities for ACL policy templates
+---
+
+# Fix ACL policy template duplicates
+
+#### Resolving templated ACL policies
+
+When duplicate entities or groups are renamed by activating the
+`force-identity-deduplication` flag, certain templated ACL policies might cause
+access to some resources to be lost.
+
+[Policy templating](/vault/docs/concepts/policies#templated-policies) in Vault
+allows users to specify policies that dynamically resolve based on properties of
+the authenticated entity. If those properties happen to include either entity or
+group name then a rename has the potential to change the meaning of the policy.
+
+In practice this is overwhelmingly unlikely to result in unintended access being
+granted to an existing resource since the new name contains a UUID which should
+never collide with another resource path. The rename _could_ potentially cause
+the entity to _loose_ access to a resource they previously had access to
+however.
+
+For example, if a user entity named `Janine` had this policy:
+
+```hcl
+path "kv/users/{{identity.entity.name}}/*" {
+    capabilities = ["read", "create", "update"]
+}
+```
+
+Then before the rename they would be able to read and write key-value pairs
+(KVs) with the prefix `kv/users/Janine/`. After the rename, the user would
+ instead be granted access to KVs with prefix `kv/users/Janine-<UUID>/`, however
+the KV mount doesn't know anything special about either path and so any existing
+KVs the user had stored would remain at the old paths and `Janine-<UUID>` would
+no longer be able to access them.
+
+You can resolve this in two ways:
+ 1. **Change or add policy**. You could define a new policy or a new rule in a
+user-specific policy that explicitly granted access back to the old resource
+path. For example you could add the following to a policy specific to the
+renamed `Janine-UUID` entity:
+  ```hcl
+  path "kv/users/Janine/*" {
+    capabilities = ["read", "create", "update"]
+  }
+  ```
+ 2. **Move the resources.** In some cases operators could move the resources to
+be at the new path via the API. For example KV secrets could be renamed to match
+the new path. This might be arduous if there are many to rename, and for some
+other resource types it might not be possible to move them for other reasons
+e.g. external resources expecting access at that path. You should decide whether
+you perform any migration before or after activating the flag. If you choose to
+do it afterwards, the resources will be unavailable until the migration is
+complete. If you choose to do it first then the resources might be unavailable
+until the flag is activated if moved, or you might need to take care to keep
+updates to both old an new paths in sync until the flag is switched.
+

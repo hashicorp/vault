@@ -1,0 +1,83 @@
+---
+layout: docs
+page_title: Fix entity and group duplicates
+description: >-
+  Fix duplicate identities for Vault entities and groups
+---
+
+# Fix entity and group duplicates
+
+### Resolving entity and group duplicates
+
+```
+[WARN]  identity: 2 entity duplicates found
+[WARN]  identity: entity "entity-cAsE" with namespace ID "root" duplicates 2 others: id=2562b42d-f603-ac6b-2591-8a20dd050897 force_deduplication="would rename to entity-cAsE-2562b42d-f603-ac6b-2591-8a20dd050897"
+[WARN]  identity: entity "entity-case" with namespace ID "root" duplicates 2 others: id=290a643d-6043-da5e-943f-3a3d09e4ecbd force_deduplication="would rename to entity-case-290a643d-6043-da5e-943f-3a3d09e4ecbd"
+[WARN]  identity: entity "entity-case" with namespace ID "root" duplicates 2 others: id=b0141be5-3f03-a1c7-a57b-02f045d04426 force_deduplication="would not rename"
+[WARN]  identity: entity "entity-cAsE" with namespace ID "sYMXY" duplicates 2 others: id=95f0743b-a1d5-26da-b4ef-a50490da0787 force_deduplication="would rename to entity-cAsE-95f0743b-a1d5-26da-b4ef-a50490da0787"
+[WARN]  identity: entity "entity-case" with namespace ID "sYMXY" duplicates 2 others: id=9d3be96f-490a-9625-3118-896bd2b3a5f3 force_deduplication="would rename to entity-case-9d3be96f-490a-9625-3118-896bd2b3a5f3"
+[WARN]  identity: entity "entity-case" with namespace ID "sYMXY" duplicates 2 others: id=d82231d2-3716-6b9c-e80d-7d09c0409739 force_deduplication="would not rename"
+[WARN]  identity: end of entity duplicates
+[WARN]  identity: 2 group duplicates found
+[WARN]  identity: 2 group duplicates found
+[WARN]  identity: group "group-case" with namespace ID "root" duplicates 2 others: id=8ad26e0c-8cf6-5b67-7c77-6571fa374f34 force_deduplication="would rename to group-case-8ad26e0c-8cf6-5b67-7c77-6571fa374f34"
+[WARN]  identity: group "group-cAsE" with namespace ID "root" duplicates 2 others: id=9fe86ea0-f80c-1131-5be1-1d6e3b70237f force_deduplication="would rename to group-cAsE-9fe86ea0-f80c-1131-5be1-1d6e3b70237f"
+[WARN]  identity: group "group-case" with namespace ID "root" duplicates 2 others: id=32dd070c-c1f8-c796-9a71-15887014b813 force_deduplication="would not rename"
+[WARN]  identity: group "group-case" with namespace ID "sYMXY" duplicates 2 others: id=8aaeff7e-7343-c883-1e0c-c5c9968f75a5 force_deduplication="would rename to group-case-8aaeff7e-7343-c883-1e0c-c5c9968f75a5"
+[WARN]  identity: group "group-case" with namespace ID "sYMXY" duplicates 2 others: id=f11277b3-d985-4d72-d2e9-9c8c6c0db02c force_deduplication="would rename to group-case-f11277b3-d985-4d72-d2e9-9c8c6c0db02c"
+[WARN]  identity: group "group-cAsE" with namespace ID "sYMXY" duplicates 2 others: id=7c753d07-b0d9-e13b-6184-48247b8f7504 force_deduplication="would not rename"
+[WARN]  identity: end of group duplicates
+```
+
+Entity and group duplicates are reported as in the examples above. The
+resolution steps are the same for both.
+
+Entities or groups may exist with duplicate names. These might be exact matches,
+or may differ in case such as `Admin` and `admin`. In either case, the
+resolution is the same.
+
+Note that names are only duplicates if they are in the same namespace.
+
+Possible unexpected behavior caused by these types of duplicates includes:
+ * Only one of them will be returned when looking up or listing by name
+ * Before Vault 1.19.0, which one is returned might vary depending on which
+   server is hit or even after a seal and unseal on the same server
+ * Lookup by ID _will_ work for all duplicates
+ * Listing by IS will return _all_ duplicates
+ * Deletion by name may or may not delete all duplicates
+
+These types of duplicates **will be resolved automatically by renaming** when
+the `force-identity-deduplication` flag is activated. Automatic renaming has the
+following properties:
+ * **Security safe**. Renaming one or more of the duplicates will not allow
+   existing tokens to access anything new.
+ * **Preserves all data**. Renaming will not delete any data in Vault and so can
+   be identified and reversed manually later if necessary.
+ * **Preserves access**. In the vast majority of cases, logins and permissions
+   will be unaffected and continue to work the same way. The exceptions are
+   noted below.
+
+There are two know edge cases that you should be aware of before activating the
+flag and triggering the renaming:
+ * **Templated Policies**. If access to some resource in Vault is granted via a
+   [templated policy](/vault/docs/concepts/policies#templated-policies) that
+   uses the entity or group name as part of a resource path, _and_ that policy
+   might be applied to the duplicated entity or group, then access to those
+   resources could be _lost_ when the name is changed. [Resolution details are
+   provided below.](#resolving-templated-acl-policies)
+ * **External references**. For example if entities or groups are defined in
+   Terraform configuration by name then one of those references will break when
+   the resource is renamed. The same could apply to other external references to
+   a named entity or group that use the name-based API methods to read or
+   manage. [Resolution details are
+   provided below.]()
+
+In general, for each duplicate within a namespace, the possible resolutions are:
+ 1. If the risk of either of the above edge cases is low to zero, **no action is
+    needed before activating the flag**.
+ 2. If you know that the duplicates are unused or unimportant (for example
+    because of naming conventions such as `test-*`, or from consulting with
+    teams that created them) you might simply delete them by their ID using the
+    relevant API endpoint to clean them up.
+ 3. If you are unsure about the risk from policy templating or external
+    references. Refer to the additional resolution details below.
