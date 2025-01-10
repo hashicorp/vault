@@ -45,23 +45,33 @@ export default class AwsRootConfig extends Model {
   iamEndpoint;
   @attr('string', { label: 'STS endpoint' }) stsEndpoint;
   @attr('number', {
-    label: 'Maximum retries',
     subText: 'Number of max retries the client should use for recoverable errors. Default is -1.',
   })
   maxRetries;
 
+  configurableParams = [
+    'roleArn',
+    'identityTokenAudience',
+    'identityTokenTtl',
+    'accessKey',
+    'secretKey',
+    'region',
+    'iamEndpoint',
+    'stsEndpoint',
+    'maxRetries',
+  ];
+
+  get isWifPluginConfigured() {
+    return !!this.identityTokenAudience || !!this.identityTokenTtl || !!this.roleArn;
+  }
+
+  get isAccountPluginConfigured() {
+    return !!this.accessKey;
+  }
+
   get displayAttrs() {
-    const keys = [
-      'roleArn',
-      'identityTokenAudience',
-      'identityTokenTtl',
-      'accessKey',
-      'region',
-      'iamEndpoint',
-      'stsEndpoint',
-      'maxRetries',
-    ];
-    return expandAttributeMeta(this, keys);
+    const formFields = expandAttributeMeta(this, this.configurableParams);
+    return formFields.filter((attr) => attr.name !== 'secretKey');
   }
 
   // "filedGroupsWif" and "fieldGroupsIam" are passed to the FormFieldGroups component to determine which group to show in the form (ex: @groupName="fieldGroupsWif")

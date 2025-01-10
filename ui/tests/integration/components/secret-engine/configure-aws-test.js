@@ -68,7 +68,7 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
         assert.dom(SES.wif.accessType('wif')).isNotChecked('wif access type is not checked');
         // check all the form fields are present
         await click(GENERAL.toggleGroup('Root config options'));
-        for (const key of expectedConfigKeys('aws-root-create')) {
+        for (const key of expectedConfigKeys('aws', true)) {
           assert.dom(GENERAL.inputByAttr(key)).exists(`${key} shows for root section.`);
         }
         for (const key of expectedConfigKeys('aws-lease')) {
@@ -81,7 +81,7 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
         await this.renderComponent();
         await click(SES.wif.accessType('wif'));
         // check for the wif fields only
-        for (const key of expectedConfigKeys('aws-root-create-wif')) {
+        for (const key of expectedConfigKeys('aws-wif', true)) {
           if (key === 'Identity token TTL') {
             assert.dom(GENERAL.ttl.toggle(key)).exists(`${key} shows for wif section.`);
           } else {
@@ -89,7 +89,7 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
           }
         }
         // check iam fields do not show
-        for (const key of expectedConfigKeys('aws-root-create-iam')) {
+        for (const key of expectedConfigKeys('aws', true)) {
           assert.dom(GENERAL.inputByAttr(key)).doesNotExist(`${key} does not show when wif is selected.`);
         }
       });
@@ -426,7 +426,7 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
           .doesNotExist('Access type section does not render for a community user');
         // check all the form fields are present
         await click(GENERAL.toggleGroup('Root config options'));
-        for (const key of expectedConfigKeys('aws-root-create')) {
+        for (const key of expectedConfigKeys('aws', true)) {
           assert.dom(GENERAL.inputByAttr(key)).exists(`${key} shows for root section.`);
         }
         for (const key of expectedConfigKeys('aws-lease')) {
