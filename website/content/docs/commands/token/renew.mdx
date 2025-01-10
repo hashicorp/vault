@@ -53,3 +53,6 @@ flags](/vault/docs/commands) included on all commands.
   Vault will not honor this request for periodic tokens. If not supplied, Vault will use
   the default TTL. This is specified as a numeric string with suffix like "30s"
   or "5m". This is aliased as "-i".
+
+- `-accessor` `(bool: false)` - Treat the argument as an accessor instead of a
+token. When this option is selected, the output will NOT include the token.
