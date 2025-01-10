@@ -45,8 +45,8 @@ var _ TokenHelper = new(ExternalTokenHelper)
 // InternalTokenHelper should be used.
 // ExternalTokenHelper is the struct that has all the logic for storing and retrieving
 // tokens from the token helper. The API for the helpers is simple: the
-// BinaryPath is executed within a shell with environment Env. The last argument
-// appended will be the operation, which is:
+// BinaryPath is executed directly with arguments Args and environment Env.
+// The last argument appended to Args will be the operation, which is:
 //
 //   - "get" - Read the value of the token and write it to stdout.
 //   - "store" - Store the value of the token which is on stdin. Output
