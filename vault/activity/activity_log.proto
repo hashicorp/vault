@@ -38,10 +38,6 @@ message LogFragment {
   // token counts not yet in a log segment,
   // indexed by namespace ID
   map<string, uint64> non_entity_tokens = 3;
-
-  // the cluster id that this fragment originated from
-  // this is used when a fragment is sent from a secondary
-  string originating_cluster = 4;
 }
 
 // This activity log stores records for both clients with entities

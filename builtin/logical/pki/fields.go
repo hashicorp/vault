@@ -419,7 +419,7 @@ Ranges must be specified in the notation of IP address and prefix length, like "
 		Type:        framework.TypeCommaStringSlice,
 		Description: `Email addresses for which this certificate is allowed to sign or issue child certificates (see https://tools.ietf.org/html/rfc5280#section-4.2.1.10).`,
 		DisplayAttrs: &framework.DisplayAttributes{
-			Name: "Permitted email adresses",
+			Name: "Permitted email addresses",
 		},
 	}
 	fields["excluded_email_addresses"] = &framework.FieldSchema{
