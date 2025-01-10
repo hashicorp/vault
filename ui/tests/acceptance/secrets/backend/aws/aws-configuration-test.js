@@ -185,7 +185,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       assert
         .dom(GENERAL.infoRowValue('Identity token TTL'))
         .doesNotExist('Identity token TTL does not show.');
-      assert.dom(GENERAL.infoRowValue('Maximum retries')).doesNotExist('Maximum retries does not show.');
+      assert.dom(GENERAL.infoRowValue('Max retries')).doesNotExist('Max retries does not show.');
       // cleanup
       await runCmd(`delete sys/mounts/${path}`);
     });

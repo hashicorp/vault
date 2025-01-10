@@ -21,6 +21,34 @@ export const createSecretsEngine = (store, type, path) => {
   return store.peekRecord('secret-engine', path);
 };
 
+/* Create configurations methods
+ * for each configuration we create the record and then push it to the store.
+ */
+
+export function configUrl(type, backend) {
+  switch (type) {
+    case 'aws':
+      return `/${backend}/config/root`;
+    case 'aws-lease':
+      return `/${backend}/config/lease`;
+    case 'ssh':
+      return `/${backend}/config/ca`;
+    default:
+      return `/${backend}/config`;
+  }
+}
+
+const createIssuerConfig = (store) => {
+  store.pushPayload('identity/oidc/config', {
+    id: 'identity-oidc-config',
+    modelName: 'identity/oidc/config',
+    data: {
+      issuer: ``,
+    },
+  });
+  return store.peekRecord('identity/oidc/config', 'identity-oidc-config');
+};
+
 const createAwsRootConfig = (store, backend, accessType = 'iam') => {
   // clear any records first
   store.unloadAll('aws/root-config');
@@ -60,17 +88,6 @@ const createAwsRootConfig = (store, backend, accessType = 'iam') => {
     });
   }
   return store.peekRecord('aws/root-config', backend);
-};
-
-const createIssuerConfig = (store) => {
-  store.pushPayload('identity/oidc/config', {
-    id: 'identity-oidc-config',
-    modelName: 'identity/oidc/config',
-    data: {
-      issuer: ``,
-    },
-  });
-  return store.peekRecord('identity/oidc/config', 'identity-oidc-config');
 };
 
 const createAwsLeaseConfig = (store, backend) => {
@@ -177,18 +194,6 @@ const createGcpConfig = (store, backend, accessType = 'gcp') => {
   return store.peekRecord('gcp/config', backend);
 };
 
-export function configUrl(type, backend) {
-  switch (type) {
-    case 'aws':
-      return `/${backend}/config/root`;
-    case 'aws-lease':
-      return `/${backend}/config/lease`;
-    case 'ssh':
-      return `/${backend}/config/ca`;
-    default:
-      return `/${backend}/config`;
-  }
-}
 // send the type of config you want and the name of the backend path to push the config to the store.
 export const createConfig = (store, backend, type) => {
   switch (type) {
@@ -214,51 +219,6 @@ export const createConfig = (store, backend, type) => {
       return createGcpConfig(store, backend);
   }
 };
-// Used in tests to assert the expected keys in the config details of configurable secret engines
-export const expectedConfigKeys = (type) => {
-  switch (type) {
-    case 'aws':
-      return ['Access key', 'Region', 'IAM endpoint', 'STS endpoint', 'Maximum retries'];
-    case 'aws-lease':
-      return ['Default Lease TTL', 'Max Lease TTL'];
-    case 'aws-root-create':
-      return ['accessKey', 'secretKey', 'region', 'iamEndpoint', 'stsEndpoint', 'maxRetries'];
-    case 'aws-root-create-wif':
-      return ['issuer', 'roleArn', 'identityTokenAudience', 'Identity token TTL'];
-    case 'aws-root-create-iam':
-      return ['accessKey', 'secretKey'];
-    case 'ssh':
-      return ['Public key', 'Generate signing key'];
-    case 'azure':
-      return ['Subscription ID', 'Tenant ID', 'Client ID', 'Root password TTL', 'Environment'];
-    case 'azure-camelCase':
-      return ['subscriptionId', 'tenantId', 'clientId', 'rootPasswordTtl', 'environment'];
-    case 'azure-wif':
-      return [
-        'Subscription ID',
-        'Tenant ID',
-        'Client ID',
-        'Environment',
-        'Identity token audience',
-        'Identity token TTL',
-      ];
-    case 'azure-wif-camelCase':
-      return [
-        'subscriptionId',
-        'tenantId',
-        'clientId',
-        'environment',
-        'identityTokenAudience',
-        'Identity token TTL',
-      ];
-    case 'gcp':
-      return ['Config TTL', 'Max TTL'];
-    case 'gcp-wif':
-      return ['Service account email', 'Identity token audience', 'Identity token TTL'];
-    case 'gcp-wif-camelCase':
-      return ['serviceAccountEmail', 'identityTokenAudience', 'Identity token TTL'];
-  }
-};
 
 const valueOfAwsKeys = (string) => {
   switch (string) {
@@ -270,7 +230,7 @@ const valueOfAwsKeys = (string) => {
       return 'iam-endpoint';
     case 'STS endpoint':
       return 'sts-endpoint';
-    case 'Maximum retries':
+    case 'Max retries':
       return '1';
   }
 };
@@ -319,6 +279,52 @@ const valueOfSshKeys = (string) => {
       return 'Yes';
   }
 };
+
+// Used in tests to assert the expected keys in the config details of configurable secret engines
+export const expectedConfigKeys = (type) => {
+  switch (type) {
+    case 'aws':
+      return ['Access key', 'Region', 'IAM endpoint', 'STS endpoint', 'Max retries'];
+    case 'aws-lease':
+      return ['Default Lease TTL', 'Max Lease TTL'];
+    case 'aws-root-create':
+      return ['accessKey', 'secretKey', 'region', 'iamEndpoint', 'stsEndpoint', 'maxRetries'];
+    case 'aws-root-create-wif':
+      return ['issuer', 'roleArn', 'identityTokenAudience', 'Identity token TTL'];
+    case 'aws-root-create-iam':
+      return ['accessKey', 'secretKey'];
+    case 'ssh':
+      return ['Public key', 'Generate signing key'];
+    case 'azure':
+      return ['Subscription ID', 'Tenant ID', 'Client ID', 'Root password TTL', 'Environment'];
+    case 'azure-camelCase':
+      return ['subscriptionId', 'tenantId', 'clientId', 'rootPasswordTtl', 'environment'];
+    case 'azure-wif':
+      return [
+        'Subscription ID',
+        'Tenant ID',
+        'Client ID',
+        'Environment',
+        'Identity token audience',
+        'Identity token TTL',
+      ];
+    case 'azure-wif-camelCase':
+      return [
+        'subscriptionId',
+        'tenantId',
+        'clientId',
+        'environment',
+        'identityTokenAudience',
+        'Identity token TTL',
+      ];
+    case 'gcp':
+      return ['Config TTL', 'Max TTL'];
+    case 'gcp-wif':
+      return ['Service account email', 'Identity token audience', 'Identity token TTL'];
+    case 'gcp-wif-camelCase':
+      return ['serviceAccountEmail', 'identityTokenAudience', 'Identity token TTL'];
+  }
+};
 // Used in tests to assert the expected values in the config details of configurable secret engines
 export const expectedValueOfConfigKeys = (type, string) => {
   switch (type) {
@@ -333,6 +339,7 @@ export const expectedValueOfConfigKeys = (type, string) => {
   }
 };
 
+/* Manually create the configuration by filling in the configuration form */
 export const fillInAwsConfig = async (situation = 'withAccess') => {
   if (situation === 'withAccess') {
     await fillIn(GENERAL.inputByAttr('accessKey'), 'foo');
