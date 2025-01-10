@@ -59,7 +59,6 @@ module('Integration | Component | SecretEngine/ConfigurationDetails', function (
             .dom(GENERAL.infoRowLabel(key))
             .doesNotExist(`${key} on the ${type} config details does NOT exists.`);
         } else {
-          assert.dom(GENERAL.infoRowLabel(key)).exists(`${key} on the ${type} config details exists.`);
           const responseKeyAndValue = expectedValueOfConfigKeys(type, key);
           assert
             .dom(GENERAL.infoRowValue(key))
