@@ -104,7 +104,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
       });
       await enablePage.enable(this.type, path);
       for (const key of expectedConfigKeys(this.type)) {
-        if (key === 'Credentials') return; // not returned by the API
+        if (key === 'Credentials') continue; // not returned by the API
         const responseKeyAndValue = expectedValueOfConfigKeys(this.type, key);
         assert
           .dom(GENERAL.infoRowValue(key))

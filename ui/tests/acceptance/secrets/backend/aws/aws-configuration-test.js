@@ -230,7 +230,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       createConfig(this.store, path, type); // create the aws root config in the store
       await click(SES.configTab);
       for (const key of expectedConfigKeys(type)) {
-        if (key === 'Secret key') return; // secret-key is not returned by the API
+        if (key === 'Secret key') continue; // secret-key is not returned by the API
         assert.dom(GENERAL.infoRowLabel(key)).exists(`${key} on the ${type} config details exists.`);
         const responseKeyAndValue = expectedValueOfConfigKeys(type, key);
         assert
