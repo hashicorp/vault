@@ -1,0 +1,3 @@
+```release-note:improvement
+core/identity: Improve performance of loading entities when unsealing by batching updates, caching local alias storage reads, and doing more work in parallel. 
+```
