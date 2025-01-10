@@ -21,6 +21,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 )
@@ -37,7 +38,7 @@ const (
 type AzureBackend struct {
 	container  *azblob.ContainerURL
 	logger     log.Logger
-	permitPool *physical.PermitPool
+	permitPool *permitpool.Pool
 }
 
 // Verify AzureBackend satisfies the correct interfaces
@@ -191,7 +192,7 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	a := &AzureBackend{
 		container:  &containerURL,
 		logger:     logger,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: permitpool.New(maxParInt),
 	}
 	return a, nil
 }

@@ -15,6 +15,7 @@ import (
 	metrics "github.com/armon/go-metrics"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/ncw/swift"
@@ -29,7 +30,7 @@ type SwiftBackend struct {
 	container  string
 	client     *swift.Connection
 	logger     log.Logger
-	permitPool *physical.PermitPool
+	permitPool *permitpool.Pool
 }
 
 // NewSwiftBackend constructs a Swift backend using a pre-existing
@@ -148,7 +149,7 @@ func NewSwiftBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		client:     &c,
 		container:  container,
 		logger:     logger,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: permitpool.New(maxParInt),
 	}
 	return s, nil
 }

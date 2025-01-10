@@ -28,6 +28,7 @@ import (
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -122,7 +123,7 @@ type DynamoDBLockRecord struct {
 }
 
 type PermitPoolWithMetrics struct {
-	physical.PermitPool
+	permitpool.Pool
 	pendingPermits int32
 	poolSize       int
 }
@@ -928,7 +929,7 @@ func isConditionCheckFailed(err error) bool {
 // number of permits which emits metrics
 func NewPermitPoolWithMetrics(permits int) *PermitPoolWithMetrics {
 	return &PermitPoolWithMetrics{
-		PermitPool:     *physical.NewPermitPool(permits),
+		Pool:           *permitpool.New(permits),
 		pendingPermits: 0,
 		poolSize:       permits,
 	}
@@ -938,24 +939,24 @@ func NewPermitPoolWithMetrics(permits int) *PermitPoolWithMetrics {
 func (c *PermitPoolWithMetrics) Acquire() {
 	atomic.AddInt32(&c.pendingPermits, 1)
 	c.emitPermitMetrics()
-	c.PermitPool.Acquire()
+	c.Pool.Acquire()
 	atomic.AddInt32(&c.pendingPermits, -1)
 	c.emitPermitMetrics()
 }
 
 // Release returns a permit to the pool
 func (c *PermitPoolWithMetrics) Release() {
-	c.PermitPool.Release()
+	c.Pool.Release()
 	c.emitPermitMetrics()
 }
 
 // Get the number of requests in the permit pool
 func (c *PermitPoolWithMetrics) CurrentPermits() int {
-	return c.PermitPool.CurrentPermits()
+	return c.Pool.CurrentPermits()
 }
 
 func (c *PermitPoolWithMetrics) emitPermitMetrics() {
 	metrics.SetGauge([]string{"dynamodb", "permit_pool", "pending_permits"}, float32(c.pendingPermits))
-	metrics.SetGauge([]string{"dynamodb", "permit_pool", "active_permits"}, float32(c.PermitPool.CurrentPermits()))
+	metrics.SetGauge([]string{"dynamodb", "permit_pool", "active_permits"}, float32(c.Pool.CurrentPermits()))
 	metrics.SetGauge([]string{"dynamodb", "permit_pool", "pool_size"}, float32(c.poolSize))
 }

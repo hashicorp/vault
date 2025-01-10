@@ -14,6 +14,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -64,7 +65,7 @@ type Backend struct {
 	client         *objectstorage.ObjectStorageClient
 	bucketName     string
 	logger         log.Logger
-	permitPool     *physical.PermitPool
+	permitPool     *permitpool.Pool
 	namespaceName  string
 	haEnabled      bool
 	lockBucketName string
@@ -141,7 +142,7 @@ func NewBackend(conf map[string]string, logger log.Logger) (physical.Backend, er
 		client:         &objectStorageClient,
 		bucketName:     bucketName,
 		logger:         logger,
-		permitPool:     physical.NewPermitPool(MaxNumberOfPermits),
+		permitPool:     permitpool.New(MaxNumberOfPermits),
 		namespaceName:  namespaceName,
 		haEnabled:      haEnabled,
 		lockBucketName: lockBucketName,

@@ -15,6 +15,7 @@ import (
 	"cloud.google.com/go/spanner"
 	metrics "github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -85,7 +86,7 @@ type Backend struct {
 	// client is the API client and permitPool is the allowed concurrent uses of
 	// the client.
 	client     *spanner.Client
-	permitPool *physical.PermitPool
+	permitPool *permitpool.Pool
 
 	// haTable is the name of the table to use for HA in the database.
 	haTable string
@@ -190,7 +191,7 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 		database:   database,
 		table:      table,
 		client:     client,
-		permitPool: physical.NewPermitPool(maxParallel),
+		permitPool: permitpool.New(maxParallel),
 
 		haEnabled: haEnabled,
 		haTable:   haTable,

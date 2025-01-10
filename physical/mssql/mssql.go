@@ -16,6 +16,7 @@ import (
 	metrics "github.com/armon/go-metrics"
 	_ "github.com/denisenkom/go-mssqldb"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 )
@@ -31,7 +32,7 @@ type MSSQLBackend struct {
 	client     *sql.DB
 	statements map[string]*sql.Stmt
 	logger     log.Logger
-	permitPool *physical.PermitPool
+	permitPool *permitpool.Pool
 }
 
 func isInvalidIdentifier(name string) bool {
@@ -171,7 +172,7 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		client:     db,
 		statements: make(map[string]*sql.Stmt),
 		logger:     logger,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: permitpool.New(maxParInt),
 	}
 
 	statements := map[string]string{

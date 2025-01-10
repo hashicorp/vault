@@ -17,6 +17,7 @@ import (
 	"github.com/cockroachdb/cockroach-go/v2/crdb"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	_ "github.com/jackc/pgx/v4/stdlib"
@@ -44,7 +45,7 @@ type CockroachDBBackend struct {
 	rawHAStatements map[string]string
 	haStatements    map[string]*sql.Stmt
 	logger          log.Logger
-	permitPool      *physical.PermitPool
+	permitPool      *permitpool.Pool
 	haEnabled       bool
 }
 
@@ -142,7 +143,7 @@ func NewCockroachDBBackend(conf map[string]string, logger log.Logger) (physical.
 		},
 		haStatements: make(map[string]*sql.Stmt),
 		logger:       logger,
-		permitPool:   physical.NewPermitPool(maxParInt),
+		permitPool:   permitpool.New(maxParInt),
 		haEnabled:    haEnabled,
 	}
 

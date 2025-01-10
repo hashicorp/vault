@@ -185,37 +185,6 @@ type Lock interface {
 // Factory is the factory function to create a physical backend.
 type Factory func(config map[string]string, logger log.Logger) (Backend, error)
 
-// PermitPool is used to limit maximum outstanding requests
-type PermitPool struct {
-	sem chan int
-}
-
-// NewPermitPool returns a new permit pool with the provided
-// number of permits
-func NewPermitPool(permits int) *PermitPool {
-	if permits < 1 {
-		permits = DefaultParallelOperations
-	}
-	return &PermitPool{
-		sem: make(chan int, permits),
-	}
-}
-
-// Acquire returns when a permit has been acquired
-func (c *PermitPool) Acquire() {
-	c.sem <- 1
-}
-
-// Release returns a permit to the pool
-func (c *PermitPool) Release() {
-	<-c.sem
-}
-
-// Get number of requests in the permit pool
-func (c *PermitPool) CurrentPermits() int {
-	return len(c.sem)
-}
-
 // Prefixes is a shared helper function returns all parent 'folders' for a
 // given vault key.
 // e.g. for 'foo/bar/baz', it returns ['foo', 'foo/bar']

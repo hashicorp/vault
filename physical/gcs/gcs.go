@@ -19,6 +19,7 @@ import (
 	metrics "github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/sdk/physical"
 	"google.golang.org/api/iterator"
@@ -75,7 +76,7 @@ type Backend struct {
 	// client is the API client and permitPool is the allowed concurrent uses of
 	// the client.
 	client     *storage.Client
-	permitPool *physical.PermitPool
+	permitPool *permitpool.Pool
 
 	// haEnabled indicates if HA is enabled.
 	haEnabled bool
@@ -171,7 +172,7 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 		bucket:     bucket,
 		chunkSize:  chunkSize,
 		client:     client,
-		permitPool: physical.NewPermitPool(maxParallel),
+		permitPool: permitpool.New(maxParallel),
 
 		haEnabled: haEnabled,
 		haClient:  haClient,
