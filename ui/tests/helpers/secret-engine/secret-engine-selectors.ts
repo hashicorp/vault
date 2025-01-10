@@ -24,6 +24,7 @@ export const SECRET_ENGINE_SELECTORS = {
   viewBackend: '[data-test-backend-view-link]',
   warning: '[data-test-warning]',
   configureForm: '[data-test-configure-form]',
+  secondModelTitle: '[data-test-second-model-title]',
   wif: {
     accessTypeSection: '[data-test-access-type-section]',
     accessTitle: '[data-test-access-title]',
@@ -35,8 +36,6 @@ export const SECRET_ENGINE_SELECTORS = {
     issuerWarningSave: '[data-test-issuer-save]',
   },
   aws: {
-    rootForm: '[data-test-root-form]',
-    leaseTitle: '[data-test-lease-title]',
     deleteRole: (role: string) => `[data-test-aws-role-delete="${role}"]`,
   },
   ssh: {

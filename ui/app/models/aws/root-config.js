@@ -45,40 +45,50 @@ export default class AwsRootConfig extends Model {
   iamEndpoint;
   @attr('string', { label: 'STS endpoint' }) stsEndpoint;
   @attr('number', {
-    label: 'Maximum retries',
     subText: 'Number of max retries the client should use for recoverable errors. Default is -1.',
   })
   maxRetries;
 
-  get displayAttrs() {
-    const keys = [
-      'roleArn',
-      'identityTokenAudience',
-      'identityTokenTtl',
-      'accessKey',
-      'region',
-      'iamEndpoint',
-      'stsEndpoint',
-      'maxRetries',
-    ];
-    return expandAttributeMeta(this, keys);
+  configurableParams = [
+    'roleArn',
+    'identityTokenAudience',
+    'identityTokenTtl',
+    'accessKey',
+    'secretKey',
+    'region',
+    'iamEndpoint',
+    'stsEndpoint',
+    'maxRetries',
+  ];
+
+  get isWifPluginConfigured() {
+    return !!this.identityTokenAudience || !!this.identityTokenTtl || !!this.roleArn;
   }
 
-  // "filedGroupsWif" and "fieldGroupsIam" are passed to the FormFieldGroups component to determine which group to show in the form (ex: @groupName="fieldGroupsWif")
+  get isAccountPluginConfigured() {
+    return !!this.accessKey;
+  }
+
+  get displayAttrs() {
+    const formFields = expandAttributeMeta(this, this.configurableParams);
+    return formFields.filter((attr) => attr.name !== 'secretKey');
+  }
+
+  // "filedGroupsWif" and "fieldGroupsAccount" are passed to the FormFieldGroups component to determine which group to show in the form (ex: @groupName="fieldGroupsWif")
   get fieldGroupsWif() {
     return fieldToAttrs(this, this.formFieldGroups('wif'));
   }
 
-  get fieldGroupsIam() {
-    return fieldToAttrs(this, this.formFieldGroups('iam'));
+  get fieldGroupsAccount() {
+    return fieldToAttrs(this, this.formFieldGroups('account'));
   }
 
-  formFieldGroups(accessType = 'iam') {
+  formFieldGroups(accessType = 'account') {
     const formFieldGroups = [];
     if (accessType === 'wif') {
       formFieldGroups.push({ default: ['roleArn', 'identityTokenAudience', 'identityTokenTtl'] });
     }
-    if (accessType === 'iam') {
+    if (accessType === 'account') {
       formFieldGroups.push({ default: ['accessKey', 'secretKey'] });
     }
     formFieldGroups.push({

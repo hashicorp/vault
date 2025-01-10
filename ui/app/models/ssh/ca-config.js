@@ -38,16 +38,15 @@ export default class SshCaConfig extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord
   @attr('string', { sensitive: true }) privateKey; // obfuscated, never returned by API
   @attr('string') publicKey;
-  @attr('boolean', { defaultValue: true })
-  generateSigningKey;
+  @attr('boolean', { defaultValue: true }) generateSigningKey;
 
-  // do not return private key for configuration.index view
+  configurableParams = ['privateKey', 'publicKey', 'generateSigningKey'];
+
   get displayAttrs() {
     return this.formFields.filter((attr) => attr.name !== 'privateKey');
   }
-  // return private key for edit/create view
+
   get formFields() {
-    const keys = ['privateKey', 'publicKey', 'generateSigningKey'];
-    return expandAttributeMeta(this, keys);
+    return expandAttributeMeta(this, this.configurableParams);
   }
 }

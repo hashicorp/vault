@@ -7,7 +7,7 @@ import AdapterError from '@ember-data/adapter/error';
 import { set } from '@ember/object';
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { CONFIGURABLE_SECRET_ENGINES, WIF_ENGINES } from 'vault/helpers/mountable-secret-engines';
+import { CONFIGURABLE_SECRET_ENGINES, WIF_ENGINES, allEngines } from 'vault/helpers/mountable-secret-engines';
 import errorMessage from 'vault/utils/error-message';
 import { action } from '@ember/object';
 
@@ -20,7 +20,7 @@ import type VersionService from 'vault/services/version';
 // Saving and updating of those models are done within the engine specific components.
 
 const CONFIG_ADAPTERS_PATHS: Record<string, string[]> = {
-  aws: ['aws/lease-config', 'aws/root-config'],
+  aws: ['aws/root-config', 'aws/lease-config'],
   azure: ['azure/config'],
   ssh: ['ssh/ca-config'],
 };
@@ -29,10 +29,24 @@ export default class SecretsBackendConfigurationEdit extends Route {
   @service declare readonly store: Store;
   @service declare readonly version: VersionService;
 
+  standardizedModelName(type: string, adapterPath: string) {
+    if (
+      CONFIG_ADAPTERS_PATHS[type] &&
+      CONFIG_ADAPTERS_PATHS[type].length > 1 &&
+      adapterPath === CONFIG_ADAPTERS_PATHS[type][1]
+    ) {
+      return 'second-model';
+    } else {
+      return 'first-model';
+    }
+  }
+
   async model() {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     const secretEngineRecord = this.modelFor('vault.cluster.secrets.backend') as SecretEngineModel;
     const type = secretEngineRecord.type;
+    const displayName = allEngines().find((engine) => engine.type === type)?.displayName;
+    const isWifEngine = WIF_ENGINES.includes(type);
 
     // if the engine type is not configurable, return a 404.
     if (!secretEngineRecord || !CONFIGURABLE_SECRET_ENGINES.includes(type)) {
@@ -44,9 +58,9 @@ export default class SecretsBackendConfigurationEdit extends Route {
     // and pre-set model with type and backend e.g. {type: ssh, id: ssh-123}
     const model: Record<string, unknown> = { type, id: backend };
     for (const adapterPath of CONFIG_ADAPTERS_PATHS[type] as string[]) {
-      // convert the adapterPath with a name that can be passed to the components
-      // ex: adapterPath = ssh/ca-config, convert to: ssh-ca-config so that you can pass to component @model={{this.model.ssh-ca-config}}
-      const standardizedKey = adapterPath.replace(/\//g, '-');
+      // create a key that corresponds with the configs model order
+      // ex: adapterPath = ssh/ca-config, convert to: first-model so that you can pass to component @model={{this.model.first-model}}
+      const standardizedKey = this.standardizedModelName(type, adapterPath);
       try {
         const configModel = await this.store.queryRecord(adapterPath, {
           backend,
@@ -82,7 +96,7 @@ export default class SecretsBackendConfigurationEdit extends Route {
     }
     // if the type is a WIF engine and it's enterprise, we also fetch the issuer
     // from a global endpoint which has no associated model/adapter
-    if (WIF_ENGINES.includes(type) && this.version.isEnterprise) {
+    if (isWifEngine && this.version.isEnterprise) {
       try {
         const response = await this.store.queryRecord('identity/oidc/config', {});
         model['identity-oidc-config'] = response;
@@ -91,6 +105,8 @@ export default class SecretsBackendConfigurationEdit extends Route {
         model['identity-oidc-config'] = { queryIssuerError: true };
       }
     }
+    model['displayName'] = displayName;
+    model['isWifEngine'] = isWifEngine;
     return model;
   }
 

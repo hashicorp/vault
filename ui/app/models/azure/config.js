@@ -50,11 +50,6 @@ export default class AzureConfig extends Model {
     'environment',
   ];
 
-  /* GETTERS used by configure-azure component 
-  these getters help:
-  1. determine if the model is new or existing
-  2. if wif or azure attributes have been configured
-  */
   get isConfigured() {
     // if every value is falsy, this engine has not been configured yet
     return !this.configurableParams.every((param) => !this[param]);
@@ -64,7 +59,7 @@ export default class AzureConfig extends Model {
     return !!this.identityTokenAudience || !!this.identityTokenTtl;
   }
 
-  get isAzureAccountConfigured() {
+  get isAccountPluginConfigured() {
     // clientSecret is not checked here because it's never return by the API
     // however it is an Azure account field
     return !!this.rootPasswordTtl;
@@ -79,16 +74,16 @@ export default class AzureConfig extends Model {
     return formFields.filter((attr) => attr.name !== 'clientSecret');
   }
 
-  // "filedGroupsWif" and "fieldGroupsAzure" are passed to the FormFieldGroups component to determine which group to show in the form (ex: @groupName="fieldGroupsWif")
+  // "filedGroupsWif" and "fieldGroupsAccount" are passed to the FormFieldGroups component to determine which group to show in the form (ex: @groupName="fieldGroupsWif")
   get fieldGroupsWif() {
     return fieldToAttrs(this, this.formFieldGroups('wif'));
   }
 
-  get fieldGroupsAzure() {
-    return fieldToAttrs(this, this.formFieldGroups('azure'));
+  get fieldGroupsAccount() {
+    return fieldToAttrs(this, this.formFieldGroups('account'));
   }
 
-  formFieldGroups(accessType = 'azure') {
+  formFieldGroups(accessType = 'account') {
     const formFieldGroups = [];
     formFieldGroups.push({
       default: ['subscriptionId', 'tenantId', 'clientId', 'environment'],
@@ -98,7 +93,7 @@ export default class AzureConfig extends Model {
         default: ['identityTokenAudience', 'identityTokenTtl'],
       });
     }
-    if (accessType === 'azure') {
+    if (accessType === 'account') {
       formFieldGroups.push({
         default: ['clientSecret', 'rootPasswordTtl'],
       });
