@@ -6,11 +6,11 @@
 import { helper as buildHelper } from '@ember/component/helper';
 import { assert } from '@ember/debug';
 
-// This helper is simlar to the Ember string camelize helper but it does some additional handling:
+// This helper is similar to the Ember string camelize helper but it does some additional handling:
 // it allows you to pass in an array of strings
 // it lowercases the entire string before converting to camelCase preventing situations like IAM Endpoint  -> iamEndpoint instead of iAMEndpoint
-// Does not handle accented characters
-export function stringToCamelCase(str) {
+// it does not handle accented characters so try not use for user inputted strings.
+export function stringArrayToCamelCase(str) {
   if (!str) return;
   if (Array.isArray(str)) {
     return str.map((s) => {
@@ -35,4 +35,4 @@ export function stringToCamelCase(str) {
   }
 }
 
-export default buildHelper(stringToCamelCase);
+export default buildHelper(stringArrayToCamelCase);

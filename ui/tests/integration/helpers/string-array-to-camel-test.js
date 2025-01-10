@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { stringToCamelCase } from 'vault/helpers/string-to-camel';
+import { stringToCamelCase } from 'vault/helpers/string-array-to-camel';
 
 module('Integration | Helper | string-to-camel', function (hooks) {
   setupRenderingTest(hooks);
