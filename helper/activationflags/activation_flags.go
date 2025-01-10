@@ -61,14 +61,32 @@ func (f *FeatureActivationFlags) Initialize(ctx context.Context, storage logical
 // actual values from storage, then updates the in-memory cache of the activation-flags. It
 // returns a slice of the feature names which have already been activated.
 func (f *FeatureActivationFlags) Get(ctx context.Context) ([]string, error) {
-	f.activationFlagsLock.Lock()
-	defer f.activationFlagsLock.Unlock()
-
 	// Don't use nil slice declaration, we want the JSON to show "[]" instead of null
 	activated := []string{}
 
+	_, err := f.ReloadFlagsFromStorage(ctx)
+	if err != nil {
+		return activated, err
+	}
+
+	f.activationFlagsLock.Lock()
+	defer f.activationFlagsLock.Unlock()
+
+	for flag, set := range f.activationFlags {
+		if set {
+			activated = append(activated, flag)
+		}
+	}
+
+	return activated, nil
+}
+
+func (f *FeatureActivationFlags) ReloadFlagsFromStorage(ctx context.Context) (map[string]bool, error) {
+	f.activationFlagsLock.Lock()
+	defer f.activationFlagsLock.Unlock()
+
 	if f.storage == nil {
-		return activated, nil
+		return map[string]bool{}, nil
 	}
 
 	entry, err := f.storage.Get(ctx, storagePathActivationFlags)
@@ -76,24 +94,51 @@ func (f *FeatureActivationFlags) Get(ctx context.Context) ([]string, error) {
 		return nil, fmt.Errorf("failed to get activation flags from storage: %w", err)
 	}
 	if entry == nil {
-		return activated, nil
+		return map[string]bool{}, nil
 	}
 
-	var activationFlags map[string]bool
-	if err := entry.DecodeJSON(&activationFlags); err != nil {
+	var storageActivationFlags map[string]bool
+	if err := entry.DecodeJSON(&storageActivationFlags); err != nil {
 		return nil, fmt.Errorf("failed to decode activation flags from storage: %w", err)
 	}
 
-	// Update the in-memory flags after loading the latest values from storage
-	f.activationFlags = activationFlags
+	// State Change Logic for Flags
+	//
+	// This logic determines changes to flags, but it does NOT account for flags that have been deleted.
+	// As of this writing, flag removal is not supported for activation flags.
+	//
+	// Valid State Transitions:
+	// 1. Unset (new flag) -> Active
+	// 2. Active -> Inactive
+	// 3. Inactive -> Active
+	//
+	// Behavior notes:
+	// - If a flag does not exist in-memory (`!ok`), it is treated as a new flag.
+	//   Nodes should only react to the new flag if its state is being set to "Active".
+	// - If a flag exists in-memory, any change in its value (e.g., Active -> Inactive) is considered valid
+	//   and is marked as a state change.
+	//
+	// The resulting `changedFlags` map will store the flags with their new values if they meet the above criteria.
+	changedFlags := map[string]bool{}
+	for flg, v := range storageActivationFlags {
+		oldValue, ok := f.activationFlags[flg]
 
-	for flag, set := range activationFlags {
-		if set {
-			activated = append(activated, flag)
+		switch {
+		// New flag: handle only if transitioning to "Active (true)"
+		case !ok && v:
+			changedFlags[flg] = v
+		default:
+			// Existing flag: detect state change
+			if oldValue != v {
+				changedFlags[flg] = v
+			}
 		}
 	}
 
-	return activated, nil
+	// Update the in-memory flags after loading the latest values from storage
+	f.activationFlags = storageActivationFlags
+
+	return changedFlags, nil
 }
 
 // Write is the helper function called by the activation-flags API write endpoint. This stores
