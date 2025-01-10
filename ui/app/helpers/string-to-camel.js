@@ -6,8 +6,9 @@
 import { helper as buildHelper } from '@ember/component/helper';
 import { assert } from '@ember/debug';
 
-// This helper turns strings with spaces into camelCase strings, example: 'hello world' -> 'helloWorld'
-// If an array of strings is passed, this helper returns an array of camelCase strings.
+// This helper is simlar to the Ember string camelize helper but it does some additional handling:
+// it allows you to pass in an array of strings
+// it lowercases the entire string before converting to camelCase preventing situations like IAM Endpoint  -> iamEndpoint instead of iAMEndpoint
 // Does not handle accented characters
 export function stringToCamelCase(str) {
   if (!str) return;
