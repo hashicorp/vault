@@ -280,7 +280,7 @@ func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]strin
 	var kmsInfo map[string]string
 	var err error
 
-	// Get the any seal config set as env variables and merge it into the KMS.
+	// Get any seal config set as env variables and merge it into the KMS.
 	if err = mergeKMSEnvConfig(configKMS); err != nil {
 		return nil, err
 	}

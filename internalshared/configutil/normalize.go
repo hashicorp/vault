@@ -14,8 +14,8 @@ import (
 // If the addr is a URL, IP Address, or host:port address that includes an IPv6
 // address, the normalized copy will be conformant with RFC-5942 §4
 // See: https://rfc-editor.org/rfc/rfc5952.html
-func NormalizeAddr(u string) string {
-	if u == "" {
+func NormalizeAddr(address string) string {
+	if address == "" {
 		return ""
 	}
 
@@ -24,22 +24,22 @@ func NormalizeAddr(u string) string {
 	bracketedIPv6 := false
 
 	// Try parsing it as a URL
-	pu, err := url.Parse(u)
+	pu, err := url.Parse(address)
 	if err == nil {
 		// We've been given something that appears to be a URL. See if the hostname
 		// is an IP address
 		ip = net.ParseIP(pu.Hostname())
 	} else {
 		// We haven't been given a URL. Try and parse it as an IP address
-		ip = net.ParseIP(u)
+		ip = net.ParseIP(address)
 		if ip == nil {
 			// We haven't been given a URL or IP address, try parsing an IP:Port
 			// combination.
-			idx := strings.LastIndex(u, ":")
+			idx := strings.LastIndex(address, ":")
 			if idx > 0 {
 				// We've perhaps received an IP:Port address
-				addr := u[:idx]
-				port = u[idx+1:]
+				addr := address[:idx]
+				port = address[idx+1:]
 				if strings.HasPrefix(addr, "[") && strings.HasSuffix(addr, "]") {
 					addr = strings.TrimPrefix(strings.TrimSuffix(addr, "]"), "[")
 					bracketedIPv6 = true
@@ -51,22 +51,11 @@ func NormalizeAddr(u string) string {
 
 	// If our IP is nil whatever was passed in does not contain an IP address.
 	if ip == nil {
-		return u
+		return address
 	}
 
 	if v4 := ip.To4(); v4 != nil {
-		// We don't need to normalize IPv4 addresses.
-		if pu != nil && port == "" {
-			return pu.String()
-		}
-
-		if port != "" {
-			// Return the address:port
-			return fmt.Sprintf("%s:%s", v4.String(), port)
-		}
-
-		// Return the ip addres
-		return v4.String()
+		return address
 	}
 
 	if v6 := ip.To16(); v6 != nil {
@@ -98,5 +87,5 @@ func NormalizeAddr(u string) string {
 
 	// It shouldn't be possible to get to this point. If we somehow we manage
 	// to, return the string unchanged.
-	return u
+	return address
 }

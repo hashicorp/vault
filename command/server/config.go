@@ -16,6 +16,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mitchellh/mapstructure"
+
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
@@ -26,7 +28,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/testcluster"
-	"github.com/mitchellh/mapstructure"
 )
 
 const (
@@ -1014,9 +1015,9 @@ func ParseStorage(result *Config, list *ast.ObjectList, name string) error {
 	return nil
 }
 
-// storageAddressKeys is a maps a storage backend type to its associated
-// that may configuration whose values are URLs, IP addresses, or host:port
-// style addresses. All physical storage types must have an entry in this map,
+// storageAddressKeys maps a storage backend type to its associated
+// configuration whose values are URLs, IP addresses, or host:port style
+// addresses. All physical storage types must have an entry in this map,
 // otherwise our normalization check will fail when parsing the storage entry
 // config. Physical storage types which don't contain such keys should include
 // an empty array.

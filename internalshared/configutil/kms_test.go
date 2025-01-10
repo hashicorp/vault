@@ -7,8 +7,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2"
 	"github.com/stretchr/testify/require"
+
+	"github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2"
 )
 
 func Test_getEnvConfig(t *testing.T) {
