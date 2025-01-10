@@ -59,12 +59,14 @@ module('Integration | Component | SecretEngine/ConfigurationDetails', function (
             .dom(GENERAL.infoRowLabel(key))
             .doesNotExist(`${key} on the ${type} config details does NOT exists.`);
         } else {
+          // check the label appears
+          assert.dom(GENERAL.infoRowLabel(key)).exists(`${key} on the ${type} config details exists.`);
           const responseKeyAndValue = expectedValueOfConfigKeys(type, key);
+          // check the value appears
           assert
             .dom(GENERAL.infoRowValue(key))
             .hasText(responseKeyAndValue, `${key} value for the ${type} config details exists.`);
-          // make sure the ones that should be masked are masked, and others are not.
-
+          // make sure the values that should be masked are masked, and others are not.
           if (key === 'Public Key') {
             assert.dom(GENERAL.infoRowValue(key)).hasClass('masked-input', `${key} is masked`);
           } else {
