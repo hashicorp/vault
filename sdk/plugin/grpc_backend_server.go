@@ -94,13 +94,12 @@ func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs)
 	}
 
 	storage := newGRPCStorageClient(brokeredClient)
-	sysView := newGRPCSystemView(brokeredClient)
 	events := newGRPCEventsClient(brokeredClient)
 
 	config := &logical.BackendConfig{
 		StorageView:  storage,
 		Logger:       b.logger,
-		System:       sysView,
+		System:       newGRPCSystemViewFromSetupArgs(brokeredClient, args),
 		Config:       args.Config,
 		BackendUUID:  args.BackendUUID,
 		EventsSender: events,
