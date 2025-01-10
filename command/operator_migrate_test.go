@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/vault/command/server"

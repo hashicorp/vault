@@ -26,12 +26,6 @@ import (
 
 	systemd "github.com/coreos/go-systemd/daemon"
 	"github.com/google/go-cmp/cmp"
-	"github.com/posener/complete"
-	"github.com/sasha-s/go-deadlock"
-	"go.uber.org/atomic"
-	"golang.org/x/net/http/httpproxy"
-	"google.golang.org/grpc/grpclog"
-
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
@@ -68,6 +62,11 @@ import (
 	"github.com/hashicorp/vault/vault/plugincatalog"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
+	"github.com/posener/complete"
+	"github.com/sasha-s/go-deadlock"
+	"go.uber.org/atomic"
+	"golang.org/x/net/http/httpproxy"
+	"google.golang.org/grpc/grpclog"
 )
 
 var (
