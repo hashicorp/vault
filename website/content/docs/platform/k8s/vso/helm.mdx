@@ -4,14 +4,18 @@ page_title: Vault Secrets Operator Helm Chart Configuration
 description: >-
   Configuration for the Vault Secrets Operator Helm chart.
 ---
+<!-- DO NOT EDIT.
+Generated from chart/values.yaml in the vault-secrets-operator repo.
+commit SHA=0bf284afea63a64e706717e2324a304be4d7f24b
+
+To update run 'make gen-helm-docs' from the vault-secrets-operator repo.
+-->
 
 # Vault Secrets Operator helm chart
 
 The chart is customizable using
 [Helm configuration values](https://helm.sh/docs/intro/using_helm/#customizing-the-chart-before-installing).
 
-<!-- DO NOT EDIT. The docs below are generated automatically. To change, edit
-                  the vault-secrets-operator repo's values.yaml: file commit=bf1746f1937f25b4cb28f15d4b818303f3a78dd9 -->
 <!-- codegen: start -->
 
 ## Top-Level Stanzas
@@ -23,6 +27,7 @@ Use these links to navigate to a particular top-level stanza.
 - [`defaultVaultConnection`](#h-defaultvaultconnection)
 - [`defaultAuthMethod`](#h-defaultauthmethod)
 - [`telemetry`](#h-telemetry)
+- [`hooks`](#h-hooks)
 - [`tests`](#h-tests)
 
 ## All Values
@@ -116,6 +121,15 @@ Use these links to navigate to a particular top-level stanza.
         - "VaultAuth"
         - "HCPAuth"
 
+      - `userFacingRoles` ((#v-controller-rbac-clusterroleaggregation-userfacingroles)) (`object: ""`) - userFacingRoles is a map of roles that will be aggregated into the viewer and editor ClusterRoles.
+        See https://kubernetes.io/docs/reference/access-authn-authz/rbac/#user-facing-roles for more information.
+
+        - `view` ((#v-controller-rbac-clusterroleaggregation-userfacingroles-view)) (`boolean: false`) - view controls whether the aggregated viewer ClusterRole will be made available to the user-facing
+          'view' ClusterRole. Requires the viewerRoles to be set.
+
+        - `edit` ((#v-controller-rbac-clusterroleaggregation-userfacingroles-edit)) (`boolean: false`) - view controls whether the aggregated editor ClusterRole will be made available to the user-facing
+          'edit' ClusterRole. Requires the editorRoles to be set.
+
   - `kubeRbacProxy` ((#v-controller-kuberbacproxy)) - Settings related to the kubeRbacProxy container. This container is an HTTP proxy for the
     controller manager which performs RBAC authorization against the Kubernetes API using SubjectAccessReviews.
 
@@ -123,9 +137,9 @@ Use these links to navigate to a particular top-level stanza.
 
       - `pullPolicy` ((#v-controller-kuberbacproxy-image-pullpolicy)) (`string: IfNotPresent`)
 
-      - `repository` ((#v-controller-kuberbacproxy-image-repository)) (`string: gcr.io/kubebuilder/kube-rbac-proxy`)
+      - `repository` ((#v-controller-kuberbacproxy-image-repository)) (`string: quay.io/brancz/kube-rbac-proxy`)
 
-      - `tag` ((#v-controller-kuberbacproxy-image-tag)) (`string: v0.15.0`)
+      - `tag` ((#v-controller-kuberbacproxy-image-tag)) (`string: v0.18.1`)
 
     - `resources` ((#v-controller-kuberbacproxy-resources)) (`map`) - Configures the default resources for the kube rbac proxy container.
       For more information on configuring resources, see the K8s documentation:
@@ -165,7 +179,7 @@ Use these links to navigate to a particular top-level stanza.
 
       - `repository` ((#v-controller-manager-image-repository)) (`string: hashicorp/vault-secrets-operator`)
 
-      - `tag` ((#v-controller-manager-image-tag)) (`string: 0.7.1`)
+      - `tag` ((#v-controller-manager-image-tag)) (`string: 0.9.1`)
 
     - `logging` ((#v-controller-manager-logging)) - logging
 
@@ -189,18 +203,43 @@ Use these links to navigate to a particular top-level stanza.
       - `excludeRaw` ((#v-controller-manager-globaltransformationoptions-excluderaw)) (`boolean: false`) - excludeRaw directs the operator to prevent _raw secret data being stored
         in the destination K8s Secret.
 
-    - `backoffOnSecretSourceError` ((#v-controller-manager-backoffonsecretsourceerror)) - Backoff settings for the controller manager. These settings control the backoff behavior
+    - `globalVaultAuthOptions` ((#v-controller-manager-globalvaultauthoptions)) - Global Vault auth options. In addition to the boolean options
+      below, these options may be set via the
+      `VSO_GLOBAL_VAULT_OPTION_OPTIONS` environment variable as a
+      comma-separated list. Valid values are: `allow-default-globals`
+
+      - `allowDefaultGlobals` ((#v-controller-manager-globalvaultauthoptions-allowdefaultglobals)) (`boolean: true`) - allowDefaultGlobals directs the operator search for a "default"
+        VaultAuthGlobal if none is specified on the referring VaultAuth CR.
+        Default: true
+
+    - `backoffOnSecretSourceError` ((#v-controller-manager-backoffonsecretsourceerror)) (`object: ""`) - Backoff settings for the controller manager. These settings control the backoff behavior
       when the controller encounters an error while fetching secrets from the SecretSource.
+      For example given the following settings:
+        initialInterval: 5s
+        maxInterval: 60s
+        randomizationFactor: 0.5
+        multiplier: 1.5
+
+      The backoff retry sequence might be something like:
+       5.5s, 7.5s, 11.25s, 16.87s, 25.3125s, 37.96s, 56.95, 60.95s...
 
       - `initialInterval` ((#v-controller-manager-backoffonsecretsourceerror-initialinterval)) (`duration: 5s`) - Initial interval between retries.
 
       - `maxInterval` ((#v-controller-manager-backoffonsecretsourceerror-maxinterval)) (`duration: 60s`) - Maximum interval between retries.
 
-      - `maxElapsedTime` ((#v-controller-manager-backoffonsecretsourceerror-maxelapsedtime)) (`duration: 0s`) - Maximum elapsed time before giving up.
+      - `maxElapsedTime` ((#v-controller-manager-backoffonsecretsourceerror-maxelapsedtime)) (`duration: 0s`) - Maximum elapsed time without a successful sync from the secret's source.
+        It's important to note that setting this option to anything other than
+        its default will result in the secret sync no longer being retried after
+        reaching the max elapsed time.
 
-      - `randomizationFactor` ((#v-controller-manager-backoffonsecretsourceerror-randomizationfactor)) (`float: 0.5`) - Randomization factor to add jitter to the interval between retries.
+      - `randomizationFactor` ((#v-controller-manager-backoffonsecretsourceerror-randomizationfactor)) (`float: 0.5`) - Randomization factor randomizes the backoff interval between retries.
+        This helps to spread out the retries to avoid a thundering herd.
+        If the value is 0, then the backoff interval will not be randomized.
+        It is recommended to set this to a value that is greater than 0.
 
-      - `multiplier` ((#v-controller-manager-backoffonsecretsourceerror-multiplier)) (`float: 1.5`) - Sets the multiplier for increasing the interval between retries.
+      - `multiplier` ((#v-controller-manager-backoffonsecretsourceerror-multiplier)) (`float: 1.5`) - Sets the multiplier that is used to increase the backoff interval between retries.
+        This value should always be set to a value greater than 0.
+        The value must be greater than zero.
 
     - `clientCache` ((#v-controller-manager-clientcache)) - Configures the client cache which is used by the controller to cache (and potentially persist) vault tokens that
       are the result of using the VaultAuthMethod. This enables re-use of Vault Tokens
@@ -225,6 +264,16 @@ Use these links to navigate to a particular top-level stanza.
         of the client cache which can result in additional Vault client counts.
 
         default: 10000
+
+      - `numLocks` ((#v-controller-manager-clientcache-numlocks)) (`integer: ""`) - Defines the number of locks to use for the Vault client cache controller.
+        May also be set via the `VSO_CLIENT_CACHE_NUM_LOCKS` environment variable.
+
+        Setting this value less than 1 will cause the manager to set the number of locks equal
+        to the number of logical CPUs of the run host.
+
+        See the VSO help output for more information.
+
+        default: 100
 
       - `storageEncryption` ((#v-controller-manager-clientcache-storageencryption)) - StorageEncryption provides the necessary configuration to encrypt the client storage
         cache within Kubernetes objects using (required) Vault Transit Engine.
@@ -581,6 +630,27 @@ Use these links to navigate to a particular top-level stanza.
     headers:
       X-vault-something1: "foo"
 
+  - `vaultAuthGlobalRef` ((#v-defaultauthmethod-vaultauthglobalref)) - VaultAuthGlobalRef
+
+    - `enabled` ((#v-defaultauthmethod-vaultauthglobalref-enabled)) (`boolean: false`) -  toggles the inclusion of the VaultAuthGlobal configuration in the
+      default VaultAuth CR.
+
+    - `name` ((#v-defaultauthmethod-vaultauthglobalref-name)) (`string: ""`) - Name of the VaultAuthGlobal CR to reference.
+
+    - `namespace` ((#v-defaultauthmethod-vaultauthglobalref-namespace)) (`string: ""`) - Namespace of the VaultAuthGlobal CR to reference.
+
+    - `allowDefault` ((#v-defaultauthmethod-vaultauthglobalref-allowdefault)) (`boolean: ""`) - allow default globals
+
+    - `mergeStrategy` ((#v-defaultauthmethod-vaultauthglobalref-mergestrategy))
+
+      - `headers` ((#v-defaultauthmethod-vaultauthglobalref-mergestrategy-headers)) (`string: none`) - merge strategy for headers
+        Valid values are: "replace", "merge", "none"
+        Default: "replace"
+
+      - `params` ((#v-defaultauthmethod-vaultauthglobalref-mergestrategy-params)) (`string: none`) - merge strategy for params
+        Valid values are: "replace", "merge", "none"
+        Default: "replace"
+
 ### telemetry ((#h-telemetry))
 
 - `telemetry` ((#v-telemetry)) - Configures a Prometheus ServiceMonitor
@@ -614,6 +684,35 @@ Use these links to navigate to a particular top-level stanza.
     - `interval` ((#v-telemetry-servicemonitor-interval)) (`string: 30s`) - Interval at which Prometheus scrapes metrics
 
     - `scrapeTimeout` ((#v-telemetry-servicemonitor-scrapetimeout)) (`string: 10s`) - Timeout for Prometheus scrapes
+
+### hooks ((#h-hooks))
+
+- `hooks` ((#v-hooks)) - Configure the behaviour of Helm hooks.
+
+  - `resources` ((#v-hooks-resources)) - Resources common to all hooks.
+
+    - `limits` ((#v-hooks-resources-limits))
+
+      - `cpu` ((#v-hooks-resources-limits-cpu)) (`string: 500m`)
+
+      - `memory` ((#v-hooks-resources-limits-memory)) (`string: 128Mi`)
+
+    - `requests` ((#v-hooks-resources-requests))
+
+      - `cpu` ((#v-hooks-resources-requests-cpu)) (`string: 10m`)
+
+      - `memory` ((#v-hooks-resources-requests-memory)) (`string: 64Mi`)
+
+  - `upgradeCRDs` ((#v-hooks-upgradecrds)) - Configure the Helm pre-upgrade hook that handles custom resource definition (CRD) upgrades.
+
+    - `enabled` ((#v-hooks-upgradecrds-enabled)) (`boolean: true`) - Set to true to automatically upgrade the CRDs.
+      Disabling this will require manual intervention to upgrade the CRDs, so it is recommended to
+      always leave it enabled.
+
+    - `backoffLimit` ((#v-hooks-upgradecrds-backofflimit)) (`integer: 5`) - Limit the number of retries for the CRD upgrade.
+
+    - `executionTimeout` ((#v-hooks-upgradecrds-executiontimeout)) (`string: 30s`) - Set the timeout for the CRD upgrade. The operation should typically take less than 5s
+      to complete.
 
 ### tests ((#h-tests))
 
