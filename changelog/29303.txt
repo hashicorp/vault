@@ -1,0 +1,3 @@
+```release-note:change
+core (enterprise): Add tracking of performance standbys by their HA node ID so that RPC connections can be more easily cleaned up when nodes are removed.
+```

@@ -364,6 +364,9 @@ func TestRaftHACluster_Removed_ReAdd(t *testing.T) {
 			if !server.Healthy {
 				return fmt.Errorf("server %s is unhealthy", serverID)
 			}
+			if server.NodeType != "voter" {
+				return fmt.Errorf("server %s has type %s", serverID, server.NodeType)
+			}
 		}
 		return nil
 	})
