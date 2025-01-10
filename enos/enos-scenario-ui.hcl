@@ -3,14 +3,23 @@
 
 scenario "ui" {
   description = <<-EOF
-    The UI scenario is designed to create a new cluster and run the existing Ember test suite
-    against a live Vault cluster instead of a binary in dev mode.
+    The UI scenario creates a new cluster and runs the existing Ember test suite
+    against a live Vault cluster instead of a binary in dev mode. It builds Vault
+    from the local branch.
 
-    The UI scenario verifies the Vault ember test suite against a Vault cluster. The build can be a
-    local branch, any CRT built Vault artifact saved to the local machine, or any CRT built Vault
-    artifact in the stable channel in Artifactory.
+    # How to run this scenario
 
-    The scenario deploys a Vault cluster with the candidate build and executes the ember test suite.
+    For general instructions on running a scenario, refer to the Enos docs: https://eng-handbook.hashicorp.services/internal-tools/enos/running-a-scenario/
+    For troubleshooting tips and common errors, see https://eng-handbook.hashicorp.services/internal-tools/enos/troubleshooting/.
+
+    Variables required for all scenario variants:
+      - aws_ssh_private_key_path (more info about AWS SSH keypairs: https://eng-handbook.hashicorp.services/internal-tools/enos/getting-started/#set-your-aws-key-pair-name-and-private-key)
+      - aws_ssh_keypair_name
+      - vault_product_version
+
+    Variables required for some scenario variants:
+      - consul_license_path (if using an ENT edition of Consul)
+      - vault_license_path (if using an ENT edition of Vault)
   EOF
   matrix {
     backend        = global.backends

@@ -6,8 +6,8 @@ scenario "dev_pr_replication" {
     This scenario spins up a two Vault clusters with either an external Consul cluster or
     integrated Raft for storage. The secondary cluster is configured with performance replication
     from the primary cluster. None of our test verification is included in this scenario in order
-    to improve end-to-end speed. If you wish to perform such verification you'll need to a non-dev
-    scenario.
+    to improve end-to-end speed. If you wish to perform such verification you'll need to use a
+    non-dev scenario.
 
     The scenario supports finding and installing any released 'linux/amd64' or 'linux/arm64' Vault
     artifact as long as its version is >= 1.8. You can also use the 'artifact:local' variant to
@@ -15,12 +15,12 @@ scenario "dev_pr_replication" {
 
     In order to execute this scenario you'll need to install the enos CLI:
       - $ brew tap hashicorp/tap && brew update && brew install hashicorp/tap/enos
-
+    
     You'll also need access to an AWS account via Doormat, follow the guide here:
-      https://eng-handbook.hashicorp.services/internal-tools/enos/common-setup-steps/#authenticate-with-doormat
+      https://eng-handbook.hashicorp.services/internal-tools/enos/getting-started/#authenticate-to-aws-with-doormat
 
     Follow this guide to get an SSH keypair set up in the AWS account:
-      https://eng-handbook.hashicorp.services/internal-tools/enos/common-setup-steps/#set-your-aws-key-pair-name-and-private-key
+      https://eng-handbook.hashicorp.services/internal-tools/enos/getting-started/#set-your-aws-key-pair-name-and-private-key
 
     Please note that this scenario requires several inputs variables to be set in order to function
     properly. While not all variants will require all variables, it's suggested that you look over
@@ -162,15 +162,18 @@ scenario "dev_pr_replication" {
         artifactory_host:
           The artifactory host to search. It's very unlikely that you'll want to change this. The
           default value is the HashiCorp Artifactory instance.
-        artifactory_repo
+        artifactory_repo:
           The artifactory host to search. It's very unlikely that you'll want to change this. The
           default value is where CRT will publish packages.
-        artifactory_username
+        artifactory_username:
           The artifactory username associated with your token. You'll need this if you wish to use
           deb or rpm artifacts! You can request access via Okta.
-        artifactory_token
+        artifactory_token:
           The artifactory token associated with your username. You'll need this if you wish to use
           deb or rpm artifacts! You can create a token by logging into Artifactory via Okta.
+        dev_build_local_ui:
+          If you are not testing any changes in the UI, set to false. This will save time by not
+          building the entire UI. If you need to test the UI, set to true.
         vault_product_version:
           When using the artifact:rpm or artifact:deb variants we'll use this variable to determine
           which version of the Vault pacakge we should fetch from Artifactory.
@@ -207,7 +210,7 @@ scenario "dev_pr_replication" {
   }
 
   step "ec2_info" {
-    description = "This discovers usefull metadata in Ec2 like AWS AMI ID's that we use in later modules."
+    description = "This discovers usefull metadata in Ec2 like AWS AMI IDs that we use in later modules."
     module      = module.ec2_info
   }
 
