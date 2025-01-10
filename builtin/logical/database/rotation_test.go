@@ -1029,28 +1029,23 @@ func TestBackend_StaticRole_Rotation_MongoDBAtlas(t *testing.T) {
 // does not break on invalid values.
 func TestQueueTickIntervalKeyConfig(t *testing.T) {
 	t.Parallel()
-	cluster, sys := getClusterPostgresDB(t)
+	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	config.System = sys
-	config.Config[queueTickIntervalKey] = "1"
+	values := []string{"1", "0", "-1"}
+	for _, v := range values {
+		t.Run("test"+v, func(t *testing.T) {
+			config := logical.TestBackendConfig()
+			config.StorageView = &logical.InmemStorage{}
+			config.System = sys
+			config.Config[queueTickIntervalKey] = v
 
-	// Rotation ticker starts running in Factory call
-	b, err := Factory(context.Background(), config)
-	require.Nil(t, err)
-	b.Cleanup(context.Background())
-
-	config.Config[queueTickIntervalKey] = "0"
-	b, err = Factory(context.Background(), config)
-	require.Nil(t, err)
-	b.Cleanup(context.Background())
-
-	config.Config[queueTickIntervalKey] = "-1"
-	b, err = Factory(context.Background(), config)
-	require.Nil(t, err)
-	b.Cleanup(context.Background())
+			// Rotation ticker starts running in Factory call
+			b, err := Factory(context.Background(), config)
+			require.Nil(t, err)
+			b.Cleanup(context.Background())
+		})
+	}
 }
 
 func testBackend_StaticRole_Rotations(t *testing.T, createUser userCreator, opts map[string]interface{}) {
