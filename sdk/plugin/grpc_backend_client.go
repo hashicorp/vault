@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
