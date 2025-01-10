@@ -190,23 +190,23 @@ func TestMigration(t *testing.T) {
 		cmd := new(OperatorMigrateCommand)
 		cfgName := filepath.Join(t.TempDir(), "migrator")
 		os.WriteFile(cfgName, []byte(`
-storage_source "src_type" {
+storage_source "consul" {
   path = "src_path"
 }
 
-storage_destination "dest_type" {
+storage_destination "raft" {
   path = "dest_path"
 }`), 0o644)
 
 		expCfg := &migratorConfig{
 			StorageSource: &server.Storage{
-				Type: "src_type",
+				Type: "consul",
 				Config: map[string]string{
 					"path": "src_path",
 				},
 			},
 			StorageDestination: &server.Storage{
-				Type: "dest_type",
+				Type: "raft",
 				Config: map[string]string{
 					"path": "dest_path",
 				},
@@ -230,41 +230,41 @@ storage_destination "dest_type" {
 
 		// missing source
 		verifyBad(`
-storage_destination "dest_type" {
+storage_destination "raft" {
   path = "dest_path"
 }`)
 
 		// missing destination
 		verifyBad(`
-storage_source "src_type" {
+storage_source "consul" {
   path = "src_path"
 }`)
 
 		// duplicate source
 		verifyBad(`
-storage_source "src_type" {
+storage_source "consul" {
   path = "src_path"
 }
 
-storage_source "src_type2" {
+storage_source "raft" {
   path = "src_path"
 }
 
-storage_destination "dest_type" {
+storage_destination "raft" {
   path = "dest_path"
 }`)
 
 		// duplicate destination
 		verifyBad(`
-storage_source "src_type" {
+storage_source "consul" {
   path = "src_path"
 }
 
-storage_destination "dest_type" {
+storage_destination "raft" {
   path = "dest_path"
 }
 
-storage_destination "dest_type2" {
+storage_destination "consul" {
   path = "dest_path"
 }`)
 	})
