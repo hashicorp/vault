@@ -32,11 +32,7 @@ func boolPointer(x bool) *bool {
 
 // testConfigRaftRetryJoin decodes and normalizes retry_join stanzas.
 func testConfigRaftRetryJoin(t *testing.T) {
-	t.Helper()
-	config, err := LoadConfigFile("./test-fixtures/raft_retry_join.hcl")
-	if err != nil {
-		t.Fatal(err)
-	}
+	t.Parallel()
 
 	retryJoinExpected := []map[string]string{
 		{"leader_api_addr": "http://127.0.0.1:8200"},
@@ -47,32 +43,44 @@ func testConfigRaftRetryJoin(t *testing.T) {
 		{"auto_join": "provider=packet auth_token=token project=uuid url=https://[2001:db8::2:1] address_type=public_v6"},
 		{"auto_join": "provider=vsphere category_name=consul-role tag_name=consul-server host=https://[2001:db8::2:1] user=foo password=bar insecure_ssl=false"},
 	}
-	retryJoinJSON, err := json.Marshal(retryJoinExpected)
-	require.NoError(t, err)
+	for _, cfg := range []string{
+		"attr",
+		"block",
+		"mixed",
+	} {
+		t.Run(cfg, func(t *testing.T) {
+			t.Parallel()
 
-	expected := &Config{
-		SharedConfig: &configutil.SharedConfig{
-			Listeners: []*configutil.Listener{
-				{
-					Type:                  "tcp",
-					Address:               "127.0.0.1:8200",
-					CustomResponseHeaders: DefaultCustomHeaders,
+			config, err := LoadConfigFile(fmt.Sprintf("./test-fixtures/raft_retry_join_%s.hcl", cfg))
+			require.NoError(t, err)
+			retryJoinJSON, err := json.Marshal(retryJoinExpected)
+			require.NoError(t, err)
+
+			expected := &Config{
+				SharedConfig: &configutil.SharedConfig{
+					Listeners: []*configutil.Listener{
+						{
+							Type:                  "tcp",
+							Address:               "127.0.0.1:8200",
+							CustomResponseHeaders: DefaultCustomHeaders,
+						},
+					},
+					DisableMlock: true,
 				},
-			},
-			DisableMlock: true,
-		},
 
-		Storage: &Storage{
-			Type: "raft",
-			Config: map[string]string{
-				"path":       "/storage/path/raft",
-				"node_id":    "raft1",
-				"retry_join": string(retryJoinJSON),
-			},
-		},
+				Storage: &Storage{
+					Type: "raft",
+					Config: map[string]string{
+						"path":       "/storage/path/raft",
+						"node_id":    "raft1",
+						"retry_join": string(retryJoinJSON),
+					},
+				},
+			}
+			config.Prune()
+			require.EqualValues(t, expected, config)
+		})
 	}
-	config.Prune()
-	require.EqualValues(t, expected, config)
 }
 
 func testLoadConfigFile_topLevel(t *testing.T, entropy *configutil.Entropy) {

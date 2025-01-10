@@ -6,8 +6,6 @@ storage "raft" {
   node_id = "raft1"
   retry_join = [
     { "leader_api_addr" = "http://127.0.0.1:8200" },
-  ]
-  retry_join = [
     { "leader_api_addr" = "http://[2001:db8:0:0:0:0:2:1]:8200" }
   ]
   retry_join = [

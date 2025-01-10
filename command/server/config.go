@@ -1072,19 +1072,33 @@ func normalizeStorageConfigAddresses(storage string, key string, value string) (
 func normalizeRaftRetryJoin(val any) ([]byte, error) {
 	res := []map[string]any{}
 
-	retryJoin, ok := val.([]any)
-	if !ok {
-		return nil, fmt.Errorf("malformed retry_join stanza: %v+", val)
-	}
-
-	for _, rj := range retryJoin {
-		rjMap, ok := rj.(map[string]any)
+	// Depending on whether the retry_join stanzas were configured as an attribute,
+	// a block, or a mixture of both, we'll get different values from which we
+	// need to extract our individual retry joins stanzas.
+	stanzas := []map[string]any{}
+	if retryJoin, ok := val.([]map[string]any); ok {
+		// retry_join stanzas are defined as blocks
+		stanzas = retryJoin
+	} else {
+		// retry_join stanzas are defined as attributes or attributes and blocks
+		retryJoin, ok := val.([]any)
 		if !ok {
-			return nil, fmt.Errorf("malformed retry_join stanza: %v+", rj)
+			// retry_join stanzas have not been configured correctly
+			return nil, fmt.Errorf("malformed retry_join stanza: %v", val)
 		}
 
-		rjRes := map[string]any{}
-		for k, v := range rjMap {
+		for _, stanza := range retryJoin {
+			stanzaVal, ok := stanza.(map[string]any)
+			if !ok {
+				return nil, fmt.Errorf("malformed retry_join stanza: %v", stanza)
+			}
+			stanzas = append(stanzas, stanzaVal)
+		}
+	}
+
+	for _, stanza := range stanzas {
+		normalizedStanza := map[string]any{}
+		for k, v := range stanza {
 			switch k {
 			case "auto_join":
 				pairs := strings.Split(v.(string), " ")
@@ -1100,15 +1114,15 @@ func normalizeRaftRetryJoin(val any) ([]byte, error) {
 						pairs[i] = pair
 					}
 				}
-				rjRes[k] = strings.Join(pairs, " ")
+				normalizedStanza[k] = strings.Join(pairs, " ")
 			case "leader_api_addr":
-				rjRes[k] = configutil.NormalizeAddr(v.(string))
+				normalizedStanza[k] = configutil.NormalizeAddr(v.(string))
 			default:
-				rjRes[k] = v
+				normalizedStanza[k] = v
 			}
 		}
 
-		res = append(res, rjRes)
+		res = append(res, normalizedStanza)
 	}
 
 	return json.Marshal(res)
