@@ -94,6 +94,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
         });
         await enablePage.enable(this.type, path);
         for (const key of expectedConfigKeys('azure')) {
+          if (key === 'Client secret') continue; // client-secret is not returned by the API
           assert.dom(GENERAL.infoRowLabel(key)).exists(`${key} on the ${this.type} config details exists.`);
           const responseKeyAndValue = expectedValueOfConfigKeys(this.type, key);
           assert
