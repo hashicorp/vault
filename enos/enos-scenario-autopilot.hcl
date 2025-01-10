@@ -105,6 +105,7 @@ scenario "autopilot" {
     manage_service                     = matrix.artifact_type == "bundle"
     vault_install_dir                  = global.vault_install_dir[matrix.artifact_type]
     vault_autopilot_default_max_leases = semverconstraint(var.vault_upgrade_initial_version, ">=1.16.0-0") ? "300000" : ""
+    verify_removed_step_module         = semverconstraint(var.vault_upgrade_initial_version, ">=1.19.0-0") ? "vault_verify_raft_removed" : "vault_removed_do_nothing"
   }
 
   step "build_vault" {
@@ -655,12 +656,49 @@ scenario "autopilot" {
     }
   }
 
+  step "verify_removed" {
+    description = <<-EOF
+      Verify that the removed nodes are marked as such
+    EOF
+    module      = local.verify_removed_step_module
+    depends_on = [
+      step.create_vault_cluster,
+      step.get_updated_vault_cluster_ips,
+      step.raft_remove_peers,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_raft_removed_after_restart,
+      quality.vault_raft_removed_statuses,
+      quality.vault_raft_removed_cant_rejoin,
+    ]
+
+    variables {
+      hosts             = step.create_vault_cluster.hosts
+      vault_leader_host = step.get_updated_vault_cluster_ips.leader_host
+      vault_root_token  = step.create_vault_cluster.root_token
+      vault_seal_type   = matrix.seal
+      vault_unseal_keys = matrix.seal == "shamir" ? step.create_vault_cluster.unseal_keys_hex : null
+      add_back_nodes    = false
+      listener_port     = step.create_vault_cluster.listener_port
+      ip_version        = matrix.ip_version
+      vault_local_addr  = step.create_vault_cluster.api_addr_localhost
+      cluster_port      = step.create_vault_cluster.cluster_port
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+    }
+  }
+
   step "remove_old_nodes" {
     description = global.description.shutdown_nodes
     module      = module.shutdown_multiple_nodes
     depends_on = [
       step.create_vault_cluster,
-      step.raft_remove_peers
+      step.raft_remove_peers,
+      step.verify_removed,
     ]
 
     providers = {
