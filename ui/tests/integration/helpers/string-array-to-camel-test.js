@@ -5,15 +5,15 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { stringToCamelCase } from 'vault/helpers/string-array-to-camel';
+import { stringArrayToCamelCase } from 'vault/helpers/string-array-to-camel';
 
-module('Integration | Helper | string-to-camel', function (hooks) {
+module('Integration | Helper | string-array-to-camel', function (hooks) {
   setupRenderingTest(hooks);
 
   test('it returns camelCase string with all caps and two words separated by space', async function (assert) {
     const string = 'FOO Bar';
     const expected = 'fooBar';
-    const result = stringToCamelCase(string);
+    const result = stringArrayToCamelCase(string);
 
     assert.strictEqual(
       result,
@@ -25,14 +25,14 @@ module('Integration | Helper | string-to-camel', function (hooks) {
   test('it returns an array of camelCased strings if an array of strings passed in', function (assert) {
     const string = ['FOO Bar', 'Baz Qux', 'wibble wobble', 'wobble WIBBLes'];
     const expected = ['fooBar', 'bazQux', 'wibbleWobble', 'wobbleWibbles'];
-    const result = stringToCamelCase(string);
+    const result = stringArrayToCamelCase(string);
     assert.deepEqual(result, expected, 'camelCase array of strings returned for all sorts of strings');
   });
 
   test('it returns string if string is numbers', function (assert) {
     const string = '123';
     const expected = '123';
-    const result = stringToCamelCase(string);
+    const result = stringArrayToCamelCase(string);
     assert.strictEqual(result, expected, 'camelCase kind of handles strings with numbers');
   });
 
@@ -40,7 +40,7 @@ module('Integration | Helper | string-to-camel', function (hooks) {
     const string = { name: 'foo.bar*baz' };
     let result;
     try {
-      result = stringToCamelCase(string);
+      result = stringArrayToCamelCase(string);
     } catch (e) {
       result = e.message;
     }
@@ -51,7 +51,7 @@ module('Integration | Helper | string-to-camel', function (hooks) {
     const string = [{ name: 'foo.bar*baz' }];
     let result;
     try {
-      result = stringToCamelCase(string);
+      result = stringArrayToCamelCase(string);
     } catch (e) {
       result = e.message;
     }
