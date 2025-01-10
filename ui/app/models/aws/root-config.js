@@ -74,21 +74,21 @@ export default class AwsRootConfig extends Model {
     return formFields.filter((attr) => attr.name !== 'secretKey');
   }
 
-  // "filedGroupsWif" and "fieldGroupsAccount" are passed to the FormFieldGroups component to determine which group to show in the form (ex: @groupName="fieldGroupsWif")
+  // "filedGroupsWif" and "fieldGroupsIam" are passed to the FormFieldGroups component to determine which group to show in the form (ex: @groupName="fieldGroupsWif")
   get fieldGroupsWif() {
     return fieldToAttrs(this, this.formFieldGroups('wif'));
   }
 
-  get fieldGroupsAccount() {
-    return fieldToAttrs(this, this.formFieldGroups('account'));
+  get fieldGroupsIam() {
+    return fieldToAttrs(this, this.formFieldGroups('iam'));
   }
 
-  formFieldGroups(accessType = 'account') {
+  formFieldGroups(accessType = 'iam') {
     const formFieldGroups = [];
     if (accessType === 'wif') {
       formFieldGroups.push({ default: ['roleArn', 'identityTokenAudience', 'identityTokenTtl'] });
     }
-    if (accessType === 'account') {
+    if (accessType === 'iam') {
       formFieldGroups.push({ default: ['accessKey', 'secretKey'] });
     }
     formFieldGroups.push({

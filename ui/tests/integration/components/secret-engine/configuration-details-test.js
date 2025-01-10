@@ -48,16 +48,29 @@ module('Integration | Component | SecretEngine/ConfigurationDetails', function (
       );
 
       for (const key of expectedConfigKeys(type)) {
-        assert.dom(GENERAL.infoRowLabel(key)).exists(`${key} on the ${type} config details exists.`);
-        const responseKeyAndValue = expectedValueOfConfigKeys(type, key);
-        assert
-          .dom(GENERAL.infoRowValue(key))
-          .hasText(responseKeyAndValue, `${key} value for the ${type} config details exists.`);
-        // make sure the ones that should be masked are masked, and others are not.
-        if (key === 'private_key' || key === 'public_key') {
-          assert.dom(GENERAL.infoRowValue(key)).hasClass('masked-input', `${key} is masked`);
+        if (
+          key === 'Secret key' ||
+          key === 'Client secret' ||
+          key === 'Private key' ||
+          key === 'Credentials'
+        ) {
+          // these keys are not returned by the API and should not show on the details page
+          assert
+            .dom(GENERAL.infoRowLabel(key))
+            .doesNotExist(`${key} on the ${type} config details does NOT exists.`);
         } else {
-          assert.dom(GENERAL.infoRowValue(key)).doesNotHaveClass('masked-input', `${key} is not masked`);
+          assert.dom(GENERAL.infoRowLabel(key)).exists(`${key} on the ${type} config details exists.`);
+          const responseKeyAndValue = expectedValueOfConfigKeys(type, key);
+          assert
+            .dom(GENERAL.infoRowValue(key))
+            .hasText(responseKeyAndValue, `${key} value for the ${type} config details exists.`);
+          // make sure the ones that should be masked are masked, and others are not.
+
+          if (key === 'Public Key') {
+            assert.dom(GENERAL.infoRowValue(key)).hasClass('masked-input', `${key} is masked`);
+          } else {
+            assert.dom(GENERAL.infoRowValue(key)).doesNotHaveClass('masked-input', `${key} is not masked`);
+          }
         }
       }
     });

@@ -60,7 +60,7 @@ module('Integration | Component | SecretEngine/ConfigureAzure', function (hooks)
         assert.dom(SES.wif.accessType('azure')).isChecked('defaults to showing Azure access type checked');
         assert.dom(SES.wif.accessType('wif')).isNotChecked('wif access type is not checked');
         // check all the form fields are present
-        for (const key of expectedConfigKeys('azure-camelCase')) {
+        for (const key of expectedConfigKeys('azure', true)) {
           assert.dom(GENERAL.inputByAttr(key)).exists(`${key} shows for root section`);
         }
         assert.dom(GENERAL.inputByAttr('issuer')).doesNotExist();
@@ -70,7 +70,7 @@ module('Integration | Component | SecretEngine/ConfigureAzure', function (hooks)
         await this.renderComponent();
         await click(SES.wif.accessType('wif'));
         // check for the wif fields only
-        for (const key of expectedConfigKeys('azure-wif-camelCase')) {
+        for (const key of expectedConfigKeys('azure-wif', true)) {
           if (key === 'Identity token TTL') {
             assert.dom(GENERAL.ttl.toggle(key)).exists(`${key} shows for wif section.`);
           } else {
@@ -285,14 +285,14 @@ module('Integration | Component | SecretEngine/ConfigureAzure', function (hooks)
       });
 
       test('it renders fields', async function (assert) {
-        assert.expect(8);
+        assert.expect(9);
         await this.renderComponent();
         assert.dom(SES.configureForm).exists('t lands on the Azure configuration form');
         assert
           .dom(SES.wif.accessTypeSection)
           .doesNotExist('Access type section does not render for a community user');
         // check all the form fields are present
-        for (const key of expectedConfigKeys('azure-camelCase')) {
+        for (const key of expectedConfigKeys('azure', true)) {
           assert.dom(GENERAL.inputByAttr(key)).exists(`${key} shows for azure account creds section.`);
         }
         assert.dom(GENERAL.inputByAttr('issuer')).doesNotExist();
