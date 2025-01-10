@@ -1479,6 +1479,19 @@ func (b *RaftBackend) StartRemovedChecker(ctx context.Context) {
 		for {
 			select {
 			case <-ticker.C:
+				// If the raft cluster has been torn down (which will happen on
+				// seal) the raft backend will be uninitialized. We want to exit
+				// the loop in that case. If the cluster unseals, we'll get a
+				// new backend setup and that will have its own removed checker.
+
+				// There is a ctx.Done() check below that will also exit, but
+				// in most (if not all) places we pass in context.Background()
+				// to this function. Checking initialization will prevent this
+				// loop from continuing to run after the raft backend is stopped
+				// regardless of the context.
+				if !b.Initialized() {
+					return
+				}
 				removed, err := b.IsNodeRemoved(ctx, b.localID)
 				if err != nil {
 					logger.Error("failed to check if node is removed", "node ID", b.localID, "error", err)
