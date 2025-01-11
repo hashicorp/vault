@@ -124,6 +124,7 @@ export default Route.extend({
       kv: 'secret',
       keymgmt: `keymgmt/${tab || 'key'}`,
       generic: 'secret',
+      totp: 'totp',
     };
     return types[type];
   },
