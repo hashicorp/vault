@@ -36,6 +36,12 @@ Renew a token requesting a specific increment value:
 $ vault token renew -increment=30m 96ddf4bc-d217-f3ba-f9bd-017055595017
 ```
 
+Fail if the requested TTL increment cannot be fully fulfilled:
+
+```shell-session
+$ vault token renew -increment=30m 96ddf4bc-d217-f3ba-f9bd-017055595017 --fail-if-not-fulfilled || vault login
+```
+
 ## Usage
 
 The following flags are available in addition to the [standard set of
@@ -53,3 +59,7 @@ flags](/vault/docs/commands) included on all commands.
   Vault will not honor this request for periodic tokens. If not supplied, Vault will use
   the default TTL. This is specified as a numeric string with suffix like "30s"
   or "5m". This is aliased as "-i".
+
+- `--fail-if-not-fulfilled` - Fail if the requested TTL increment cannot be fully fulfilled.
+Vault will allow token renewal request completion with capped duration even if renew request fails.
+And Vault will also allow command chaining after renew command.
