@@ -92,7 +92,7 @@ runs:
       shell: bash
       run: git config --global url."https://${{ inputs.github-token }}:@github.com".insteadOf "https://github.com"
     - name: Restore UI from cache
-      uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+      uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
       with:
         # Restore the UI asset from the UI build workflow. Never use a partial restore key.
         enableCrossOsArchive: true
@@ -146,7 +146,7 @@ runs:
         BUNDLE_PATH: out/${{ steps.metadata.outputs.artifact-basename }}.zip
       shell: bash
       run: make ci-bundle
-    - uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
+    - uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       with:
         name: ${{ steps.metadata.outputs.artifact-basename }}.zip
         path: out/${{ steps.metadata.outputs.artifact-basename }}.zip
@@ -178,13 +178,13 @@ runs:
           echo "deb-files=$(basename out/*.deb)"
         } | tee -a "$GITHUB_OUTPUT"
     - if: inputs.create-packages == 'true'
-      uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       with:
         name: ${{ steps.package-files.outputs.rpm-files }}
         path: out/${{ steps.package-files.outputs.rpm-files }}
         if-no-files-found: error
     - if: inputs.create-packages == 'true'
-      uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       with:
         name: ${{ steps.package-files.outputs.deb-files }}
         path: out/${{ steps.package-files.outputs.deb-files }}

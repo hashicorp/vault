@@ -51,7 +51,7 @@ jobs:
       ENOS_DEBUG_DATA_ROOT_DIR: /tmp/enos-debug-data
       VAULT_METADATA: ent
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Set product version and revision
         # If the Vault version and revision are not provided as workflow inputs, incase of
         # testing local artifact, the environment variables ENOS_VAR_vault_product_version
@@ -66,7 +66,7 @@ jobs:
       - name: Configure Git
         run: git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN }}:@github.com".insteadOf "https://github.com"
       - name: Set up node
-        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
         with:
           node-version: 14
           cache-dependency-path: ui/yarn.lock
@@ -106,13 +106,13 @@ jobs:
         run: |
           bash -x ./scripts/gha_enos_logs.sh "${{ steps.scenario-deps.outputs.logsdir }}" "${{ inputs.scenario }}" "${{ inputs.distro }}" "${{ inputs.artifact-type }}" 2>/dev/null
           find "${{ steps.scenario-deps.outputs.logsdir }}" -maxdepth 0 -empty -exec rmdir {} \;
-      - uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+      - uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         if: ${{ always() }}
         with:
           name: enos-scenario-logs
           path: ${{ steps.scenario-deps.outputs.logsdir }}
           retention-days: 1
-      - uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+      - uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         if: ${{ always() }}
         with:
           name: enos-debug-data-logs
