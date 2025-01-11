@@ -22,7 +22,7 @@ an [Alicloud OSS][alicloudoss] bucket.
 storage "alicloudoss" {
   access_key = "abcd1234"
   secret_key = "defg5678"
-  endpoint   = "oss-us-west-1.aliyuncs.com"
+  endpoint   = "https://oss-us-west-1.aliyuncs.com" 
   bucket     = "my-bucket"
 }
 ```
@@ -33,7 +33,9 @@ storage "alicloudoss" {
   can also be provided via the environment variable `ALICLOUD_OSS_BUCKET`.
 
 - `endpoint` `(string: "")` – Specifies the OSS endpoint. This can also be
-  provided via the environment variable `ALICLOUD_OSS_ENDPOINT`.
+  provided via the environment variable `ALICLOUD_OSS_ENDPOINT`. <br>
+  **Important Note:** By default the Aliyun SDK uses HTTP for the endpoint schema, which means you should set the according protocol prefix of `"https://"` in order to ensure encrypted communication.
+
 
 The following settings are used for authenticating to Alicloud.
 
@@ -56,7 +58,7 @@ This example shows using Alicloud OSS as a storage backend.
 storage "alicloudoss" {
   access_key = "abcd1234"
   secret_key = "defg5678"
-  endpoint   = "oss-us-west-1.aliyuncs.com"
+  endpoint   = "https://oss-us-west-1.aliyuncs.com"
   bucket     = "my-bucket"
 }
 ```
