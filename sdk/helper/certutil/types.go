@@ -370,7 +370,9 @@ func (p *ParsedCertBundle) ToCertBundle() (*CertBundle, error) {
 
 // Verify checks if the parsed bundle is valid.  It validates the public
 // key of the certificate to the private key and checks the certificate trust
-// chain for path issues.
+// chain for path issues.  Inside the PKI secrets engine, the more configurable
+// builtin/logical/pki/issuing/cert_verify VerifyCertificate should be used
+// instead.
 func (p *ParsedCertBundle) Verify() error {
 	// If private key exists, check if it matches the public key of cert
 	if p.PrivateKey != nil && p.Certificate != nil {
@@ -383,19 +385,40 @@ func (p *ParsedCertBundle) Verify() error {
 		}
 	}
 
-	certPath := p.GetCertificatePath()
-	if len(certPath) > 1 {
-		for i, caCert := range certPath[1:] {
-			if !caCert.Certificate.IsCA {
-				return fmt.Errorf("certificate %d of certificate chain is not a certificate authority", i+1)
-			}
-			if !bytes.Equal(certPath[i].Certificate.AuthorityKeyId, caCert.Certificate.SubjectKeyId) {
-				return fmt.Errorf("certificate %d of certificate chain ca trust path is incorrect (%q/%q) (%X/%X)",
-					i+1,
-					certPath[i].Certificate.Subject.CommonName, caCert.Certificate.Subject.CommonName,
-					certPath[i].Certificate.AuthorityKeyId, caCert.Certificate.SubjectKeyId)
-			}
+	rootCertPool := x509.NewCertPool()
+	intermediateCertPool := x509.NewCertPool()
+
+	for index, certBytes := range p.CAChain {
+		parsedCert, err := x509.ParseCertificate(certBytes.Bytes)
+		if err != nil {
+			return fmt.Errorf("could not parse certificate number %v in chain: %w", index, err)
 		}
+		if bytes.Equal(parsedCert.RawIssuer, parsedCert.RawSubject) {
+			rootCertPool.AddCert(parsedCert)
+		} else {
+			intermediateCertPool.AddCert(parsedCert)
+		}
+		if index > 0 && !parsedCert.IsCA {
+			return fmt.Errorf("certificate %v is not a CA certificate", index)
+		}
+	}
+	emptyCertPool := x509.NewCertPool()
+
+	if rootCertPool.Equal(emptyCertPool) {
+		// Alright, this is weird, since we don't have the root CA, we'll treat the intermediate as
+		// the root, otherwise we'll get a "x509: certificate signed by unknown authority" error.
+		rootCertPool, intermediateCertPool = intermediateCertPool, rootCertPool
+	}
+
+	options := x509.VerifyOptions{
+		Roots:         rootCertPool,
+		Intermediates: intermediateCertPool,
+		CurrentTime:   time.Now(),
+	}
+
+	_, err := p.Certificate.Verify(options)
+	if err != nil {
+		return err
 	}
 
 	return nil
