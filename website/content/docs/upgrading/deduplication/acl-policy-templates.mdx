@@ -1,30 +1,45 @@
 ---
 layout: docs
-page_title: Fix ACL policy template duplicates
+page_title: Fix ACL policy templates
 description: >-
-  Fix duplicate identities for ACL policy templates
+  Fix templated ACL behavior for deduplicated user entities and groups.
 ---
 
-# Fix ACL policy template duplicates
+# Fix ACL policy templates
 
-#### Resolving templated ACL policies
+Fix templated ACL behavior for deduplicated user entities and groups.
 
-When duplicate entities or groups are renamed by activating the
-`force-identity-deduplication` flag, certain templated ACL policies might cause
-access to some resources to be lost.
+**You must address templated ACL policies before enabling forced identity
+deduplication otherwise you may lose access to resources gated by the affected
+policy templates**.
 
-[Policy templating](/vault/docs/concepts/policies#templated-policies) in Vault
-allows users to specify policies that dynamically resolve based on properties of
-the authenticated entity. If those properties happen to include either entity or
-group name then a rename has the potential to change the meaning of the policy.
+<Tip title="Assumptions">
 
-In practice this is overwhelmingly unlikely to result in unintended access being
-granted to an existing resource since the new name contains a UUID which should
-never collide with another resource path. The rename _could_ potentially cause
-the entity to _loose_ access to a resource they previously had access to
-however.
+- You have [identified the duplicate entity aliases](/vault/docs/upgrading/identity-deduplication). 
+- You have admin permission on the relevant Vault server or cluster.
 
-For example, if a user entity named `Janine` had this policy:
+</Tip>
+
+
+## How deduplication affects ACL policies
+
+Operators use 
+[policy templating](/vault/docs/concepts/policies#templated-policies) to specify
+permissions that dynamically resolve based on specific properties of an
+authenticated entity. During deduplication, Vault merges duplicate user and
+group aliases then appends the new, singular identity with a universally unique
+identifier (UUID) to avoid future duplication.
+
+If a templated ACL policy relies on an entity or group name, merging duplicate
+identities could inadvertently change the meaning of the policy. In practice,
+identity deduplication is unlikely to grant unintended access to an existing
+resource since the new, merged identity contains a UUID that should
+not collide with other resource paths. But the rename **might** remove access to
+an existing resource the merged identity had permission to use before
+deduplication.
+
+For example, assume you have the following templated ACL policy for a `kv`
+plugin:
 
 ```hcl
 path "kv/users/{{identity.entity.name}}/*" {
@@ -32,28 +47,221 @@ path "kv/users/{{identity.entity.name}}/*" {
 }
 ```
 
-Then before the rename they would be able to read and write key-value pairs
-(KVs) with the prefix `kv/users/Janine/`. After the rename, the user would
- instead be granted access to KVs with prefix `kv/users/Janine-<UUID>/`, however
-the KV mount doesn't know anything special about either path and so any existing
-KVs the user had stored would remain at the old paths and `Janine-<UUID>` would
-no longer be able to access them.
+The policy grants a user entity named `janine` permission to read and write
+key-value pairs to the `kv` plugin on the path `kv/users/janine/`. If `janine`
+has duplicate identities, after deduplication, the new, merged user entity name
+is `janine-<UUID>`. And the ACL policy give the new entity permission to read
+and write key-value pairs to the `kv` plugin on the path `kv/users/janine-<uuid>/`.
 
-You can resolve this in two ways:
- 1. **Change or add policy**. You could define a new policy or a new rule in a
-user-specific policy that explicitly granted access back to the old resource
-path. For example you could add the following to a policy specific to the
-renamed `Janine-UUID` entity:
-  ```hcl
-  path "kv/users/Janine/*" {
-    capabilities = ["read", "create", "update"]
-  }
-  ```
- 2. **Move the resources.** In some cases operators could move the resources to
-be at the new path via the API. For example KV secrets could be renamed to match
-the new path. This might be arduous if there are many to rename, and for some
-other resource types it might not be possible to move them for other reasons
-e.g. external resources expecting access at that path. You should decide whether
+While the deduplicated entity can still access the `kv` plugin, the change in
+entity names means that the user can no longed access the data stored under the
+previous path (`kv/users/janine/`). As a result there are two ways to fix user
+access:
+
+1. Modify your ACL policies
+1. Move the affected resource
+
+
+## Fix 1: Modify your ACL policies
+
+The easiest way to deal with the alias changes that come from deduplication is
+to define new policies or add rules to existing policies for each of the affected
+entities that explicitly grants access to the existing resource.
+
+If you have a large number of duplicate identities, it may be easier to
+pre-populate a custom metadata field (e.g., `prev_name`) for the duplicated
+entities. Once Vault deduplicates the entities, add them to a policy that uses
+the custom metadata field instead of the entity name.
+
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+Assume you have a file called `duplicate-names.txt` with a list of entity names
+currently attached to a templated ACL policy, which will no longer work after
+deduplication.
+
+1. Use `vault write` and the 
+   [`{namespace}/identity/entity/name/{name}`](/vault/api-docs/secret/identity/entity#create-update-entity-by-name)
+   endpoint to update your target entries with a custom metadata field called
+   `old_name` set to the **current** entity name:
+   
+    ```shell-session
+    while read entity_name; do
+
+      if [[ "" = "${entity_name}" ]] ; then continue ; fi
+
+      # Create a payload file with the new metadata field
+      echo -n '{"metadata": { "old_name": "'${entity_name}'"}}' > ./metadata.json
+          
+      # Save the metadata to the entity
+      vault write /identity/entity/name/${entity_name} @metadata.json
+
+    done < duplicate-names.txt
+    ```
+
+1. Create a new templatized ACL policy file that replaces the entity name
+   reference with a reference to the metadata field. For example:
+
+    ```hcl
+    path "kv/users/{{identity.entity.metadata.old_name}}/*" {
+      capabilities = ["read", "create", "update"]
+    }
+    ```
+
+1. Use `vault policy write` to create a new ACL policy with the policy
+   definition file:
+
+    ```shell-session
+    $ vault policy write <name> <path_to_policy_file>
+    ```
+
+   For example:
+
+    <CodeBlockConfig hideClipboard="true">
+
+    ```shell-session
+    $ vault policy write "kv-access-preservation" ./dedupe-policy.hcl
+    ```
+
+    </CodeBlockConfig>
+
+1. Use the
+   [`{namespace}/identity/entity/name/{name}`](/vault/api-docs/secret/identity/entity#create-update-entity-by-name)
+   to read in the existing policy assignments and add the new policy to the
+   target entities. For example:
+
+    ```shell-session
+    policy_name="kv-access-preservation"
+    while read entity_name; do
+
+      if [[ "" = "${entity_name}" ]] ; then continue ; fi
+      
+      # Create a payload file with new policy added to any existing policy assignments
+      vault read                              \
+        -field policies                       \
+        -format json                          \
+        /identity/entity/name/${entity_name}  \
+        | jq  ". + [\"${policy_name}\"] | {policies: .}" > policy_update.json
+
+      # Update the policy assignment for the entity
+      vault write /identity/entity/name/${entity_name} @policy_update.json
+
+    done < duplicate-names.txt
+    ```
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+Assume you have a file called `duplicate-names.txt` with a list of entity names
+currently attached to a templated ACL policy, which will no longer work after
+deduplication.
+
+1. Use the 
+   [`{namespace}/identity/entity/name/{name}`](/vault/api-docs/secret/identity/entity#create-update-entity-by-name)
+   endpoint to update your target entries with a custom metadata field called
+   `old_name` set to the **current** entity name:
+
+    ```shell-session
+    while read entity_name; do
+
+      if [[ "" = "${entity_name}" ]] ; then continu ; fi
+      
+      # Create a payload file with the new metadata
+      echo -n '{"metadata": { "old_name": "'${entity_name}'"}}' > ./metadata.json
+      
+      # Save the metadata to the entity
+      curl                                        \
+        --request POST                            \
+        --header "X-Vault-Token: ${VAULT_TOKEN}"  \
+        --data @./metadata.json                   \
+        ${VAULT_ADDR}/v1/${VAULT_NAMESPACE}/identity/entity/name/${entity_name}
+      
+    done < duplicate-names.txt
+    ```
+
+1. Create a new templatized ACL policy file that replaces the entity name
+   reference with a reference to the metadata field. For example:
+
+    ```hcl
+    path "kv/users/{{identity.entity.metadata.old_name}}/*" {
+      capabilities = ["read", "create", "update"]
+    }
+    ```
+
+1. Escape your policy file and make a `POST` call to
+   [`{namespace}/sys/policy/{policy_name}`](/vault/api-docs/system/policy#create-update-policy)
+   with your policy details:
+
+    ```shell-session
+    $ jq -Rs '{ "policy": . | gsub("[\\r\\n\\t]"; "") }' <path_to_policy_file> |
+      curl                                        \
+        --request POST                            \
+        --header "X-Vault-Token: ${VAULT_TOKEN}"  \
+        "$(</dev/stdin)"                          \
+        ${VAULT_ADDR}/v1/${VAULT_NAMESPACE}/sys/policy/<policy_name>
+    ```
+
+    For example:
+
+    <CodeBlockConfig hideClipboard="true">
+
+    ```shell-session
+    $ jq -Rs '{ "policy": . | gsub("[\\r\\n\\t]"; "") }' ./dedupe-policy.hcl |
+      curl                                        \
+        --request POST                            \
+        --header "X-Vault-Token: ${VAULT_TOKEN}"  \
+        --data "$(</dev/stdin)"                   \
+        ${VAULT_ADDR}/v1/${VAULT_NAMESPACE}/sys/policy/kv-access-preservation
+    ```
+    </CodeBlockConfig>
+
+    `/sys/mounts/{plugin_mount_path}` does not return data on success.
+
+
+1. Use the
+   [`{namespace}/identity/entity/name/{name}`](/vault/api-docs/secret/identity/entity#create-update-entity-by-name)
+   to read in the existing policy assignments and add the new policy to the
+   target entities. For example:
+
+    ```shell-session
+    policy_name="kv-access-preservation"
+    while read entity_name; do
+
+      if [[ "" = "${entity_name}" ]] ; then continue ; fi
+
+      # Create a payload file with new policy added to any existing policy assignments
+      curl \
+        --request GET                            \
+        --header "X-Vault-Token: ${VAULT_TOKEN}"  \
+        ${VAULT_ADDR}/v1/${VAULT_NAMESPACE}/identity/entity/name/${entity_name} \
+        | jq  ".data.policies + [\"${policy_name}\"] | {policies: .}" > policy_update.json
+
+      # Update the policy assignment for the entity
+      curl                                        \
+        --request POST                            \
+        --header "X-Vault-Token: ${VAULT_TOKEN}"  \
+        --data @policy_update.json                \
+        ${VAULT_ADDR}/v1/${VAULT_NAMESPACE}/identity/entity/name/${entity_name}
+        
+    done < duplicate-names.txt
+    ```
+
+</Tab>
+
+</Tabs>
+
+
+## Option 2: Move the affected resource
+
+In some cases, it may be preferable move the target resource to the new
+templated path after deduplication instead of creating new policies.
+
+However, moving resources is rarely easy, and it may not be possible to move
+all the affected resources. 
+
+You should decide whether
 you perform any migration before or after activating the flag. If you choose to
 do it afterwards, the resources will be unavailable until the migration is
 complete. If you choose to do it first then the resources might be unavailable

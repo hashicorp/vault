@@ -63,7 +63,7 @@ difference is a **true duplicate** or **false positive**:
   correspond to different humans with distinct permission sets.
 
 
-## Case 1: True duplicates
+## Case 1: Fixing true duplicates
 
 You can ignore true duplicates since Vault will force-merge them once you enable
 forced identity deduplication. To confirm the merge behavior **before** enabling
@@ -76,7 +76,7 @@ those logins now map to a single entity gated by the same policies per the
 expected, default Vault behavior.
 
 
-## Case 2: False positives
+## Case 2: Fixing false positives
 
 <Warning>
 
@@ -172,8 +172,9 @@ $ curl                                      \
 </Tabs>
 
 
-Once you resolve all duplicates by deleting or reconfiguring the relevant
-services and confirm the duplicates no longer appear in the log during unseal,
-you can [enable forced identity deduplication](/vault/docs/upgrading/deduplication#dedupe-flag).
+After you resolve the duplicates by deleting them or reconfiguring the relevant
+services, recheck the system logs to confirm the duplicates no longer appear in
+the log during unseal.
 
-
+Once you confirm any remaining duplicates can be force-merged safely, you can
+[enable forced identity deduplication](/vault/docs/upgrading/deduplication#dedupe-flag).
