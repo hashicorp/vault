@@ -23,11 +23,11 @@ be stored in the same filesystem that the Vault servers see) or a cloud object
 storage service such as AWS S3.
 
 Local is not usually a good production option. Only the active node will be
-taking snapshots, but you can't predict which node is going to be active at
-any point in time, so unless you're using a distributed filesystem you'll
-be stuck checking each node's filesystem to find the snapshot you want. Moreover
+taking snapshots, but you cannot predict which node is going to be active at
+any point in time, so unless you are using a distributed filesystem, you will
+be stuck checking each node's filesystem to find the snapshot you want. Moreover,
 backups ought to be stored somewhere with redundancy, and ideally not on the
-same system they're meant to protect.
+same system they are meant to protect.
 
 Cloud storage types can usually be managed in two ways. The mode supported by
 all is providing explicit credentials during configuration. In addition, AWS
@@ -49,12 +49,12 @@ parameters in the context of AWS EKS & S3 configuration.
 
 Nomad and Consul Enterprise offer the same functionality in a slightly different way.
 They provide a `snapshot agent`, which is a standalone program that runs
-"outside" the cluster but otherwise behaves much the same as Vault's built-in
+_outside_ the cluster but otherwise behaves much the same as Vault's built-in
 automated snapshot mechanism.
 
-There are various trade-offs to this approach. The main reason Vault doesn't
+There are various trade-offs to this approach. The main reason Vault does not
 do things this way is that the snapshot agents need something to manage HA.
-One doesn't want a single point of failure for something as important
+One would not want a single point of failure for something as important
 as backups, which means running multiple snapshot agents, but that requires some
 way to coordinate among them to ensure that only one is actually taking snapshots
 at any given time. Consul already has an API for distributed locks, which is
