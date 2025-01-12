@@ -1,0 +1,3 @@
+```release-note:improvement
+build: bump github.com/go-git/go-git/v5 to address known vulnerabilities (GHSA-r9px-m959-cxf4, GHSA-v725-9546-7q7m).
+```
