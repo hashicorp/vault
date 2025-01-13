@@ -1,0 +1,3 @@
+```release-note:bug
+identity/oidc: Run OIDC key rotations for each namespace individually.
+```
