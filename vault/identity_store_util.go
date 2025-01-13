@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-	"testing"
 	"time"
 
 	metrics "github.com/armon/go-metrics"
@@ -23,7 +22,6 @@ import (
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -2669,115 +2667,4 @@ func (i *IdentityStore) countEntitiesByMountAccessor(ctx context.Context) (map[s
 	}
 
 	return byMountAccessor, nil
-}
-
-func makeEntityForPacker(t *testing.T, name string, p *storagepacker.StoragePacker) *identity.Entity {
-	t.Helper()
-	return makeEntityForPackerWithNamespace(t, namespace.RootNamespaceID, name, p)
-}
-
-func makeEntityForPackerWithNamespace(t *testing.T, namespaceID, name string, p *storagepacker.StoragePacker) *identity.Entity {
-	t.Helper()
-	id, err := uuid.GenerateUUID()
-	require.NoError(t, err)
-	return &identity.Entity{
-		ID:          id,
-		Name:        name,
-		NamespaceID: namespaceID,
-		BucketKey:   p.BucketKey(id),
-	}
-}
-
-func attachAlias(t *testing.T, e *identity.Entity, name string, me *MountEntry) *identity.Alias {
-	t.Helper()
-	id, err := uuid.GenerateUUID()
-	require.NoError(t, err)
-	if e.NamespaceID != me.NamespaceID {
-		panic("mount and entity in different namespaces")
-	}
-	a := &identity.Alias{
-		ID:            id,
-		Name:          name,
-		NamespaceID:   me.NamespaceID,
-		CanonicalID:   e.ID,
-		MountType:     me.Type,
-		MountAccessor: me.Accessor,
-		Local:         me.Local,
-	}
-	e.UpsertAlias(a)
-	return a
-}
-
-func identityCreateCaseDuplicates(t *testing.T, ctx context.Context, c *Core, upme, localme *MountEntry) {
-	t.Helper()
-
-	if upme.NamespaceID != localme.NamespaceID {
-		panic("both replicated and local auth mounts must be in the same namespace")
-	}
-
-	// Create entities with both case-sensitive and case-insensitive duplicate
-	// suffixes.
-	for i, suffix := range []string{"-case", "-case", "-cAsE"} {
-		// Entity duplicated by name
-		e := makeEntityForPackerWithNamespace(t, upme.NamespaceID, "entity"+suffix, c.identityStore.entityPacker)
-		err := TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e.ID, e)
-		require.NoError(t, err)
-
-		// Entity that isn't a dupe itself but has duplicated aliases
-		e2 := makeEntityForPackerWithNamespace(t, upme.NamespaceID, fmt.Sprintf("entity-%d", i), c.identityStore.entityPacker)
-		// Add local and non-local aliases for this entity (which will also be
-		// duplicated)
-		attachAlias(t, e2, "alias"+suffix, upme)
-		attachAlias(t, e2, "local-alias"+suffix, localme)
-		err = TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e2.ID, e2)
-		require.NoError(t, err)
-
-		// Group duplicated by name
-		g := makeGroupWithNameAndAlias(t, "group"+suffix, "", c.identityStore.groupPacker, upme)
-		err = TestHelperWriteToStoragePacker(ctx, c.identityStore.groupPacker, g.ID, g)
-		require.NoError(t, err)
-	}
-}
-
-func makeGroupWithNameAndAlias(t *testing.T, name, alias string, p *storagepacker.StoragePacker, me *MountEntry) *identity.Group {
-	t.Helper()
-	id, err := uuid.GenerateUUID()
-	require.NoError(t, err)
-	id2, err := uuid.GenerateUUID()
-	require.NoError(t, err)
-	g := &identity.Group{
-		ID:          id,
-		Name:        name,
-		NamespaceID: me.NamespaceID,
-		BucketKey:   p.BucketKey(id),
-	}
-	if alias != "" {
-		g.Alias = &identity.Alias{
-			ID:            id2,
-			Name:          alias,
-			CanonicalID:   id,
-			MountType:     me.Type,
-			MountAccessor: me.Accessor,
-			NamespaceID:   me.NamespaceID,
-		}
-	}
-	return g
-}
-
-func makeLocalAliasWithName(t *testing.T, name, entityID string, bucketKey string, me *MountEntry) *identity.LocalAliases {
-	t.Helper()
-	id, err := uuid.GenerateUUID()
-	require.NoError(t, err)
-	return &identity.LocalAliases{
-		Aliases: []*identity.Alias{
-			{
-				ID:            id,
-				Name:          name,
-				CanonicalID:   entityID,
-				MountType:     me.Type,
-				MountAccessor: me.Accessor,
-				NamespaceID:   me.NamespaceID,
-			},
-		},
-	}
 }
