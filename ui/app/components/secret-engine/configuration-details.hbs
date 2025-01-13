@@ -30,15 +30,12 @@
     @title="{{@typeDisplay}} not configured"
     @message="Get started by configuring your {{@typeDisplay}} secrets engine."
   >
-    {{! TODO: short-term conditional to be removed once configuration for gcp is merged. }}
-    {{#unless (eq @typeDisplay "Google Cloud")}}
-      <Hds::Link::Standalone
-        @icon="chevron-right"
-        @iconPosition="trailing"
-        @text="Configure {{@typeDisplay}}"
-        @route="vault.cluster.secrets.backend.configuration.edit"
-        @model={{@id}}
-      />
-    {{/unless}}
+    <Hds::Link::Standalone
+      @icon="chevron-right"
+      @iconPosition="trailing"
+      @text="Configure {{@typeDisplay}}"
+      @route="vault.cluster.secrets.backend.configuration.edit"
+      @model={{@id}}
+    />
   </EmptyState>
 {{/each}}
