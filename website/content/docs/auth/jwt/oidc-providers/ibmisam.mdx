@@ -1,14 +1,16 @@
 ---
 layout: docs
-page_title: OIDC Provider Setup - Auth Methods - IBM Security Access Manager (ISAM)
-description: OIDC provider configuration for IBM Security Access Manager (recently renamed to IBM Security Verify Access)
+page_title: Use IBM Verify for OIDC authentication
+description: >-
+  Configure Vault to use IBM Verify as an OIDC provider.
 ---
 
-# IBM ISAM
+# Use IBM Verify for OIDC authentication
 
-The [IBM ISAM](https://www.ibm.com/de-de/products/verify-access) identity provider
-returns group membership claims as a space-separated list of strings (e.g.
-`groups: "group-1 group-2"`) instead of a list of strings.
+The [IBM Verify](https://www.ibm.com/de-de/products/verify-access) identity
+provider (previously IBM Security Access Manager) returns group membership
+claims as a space-separated list of strings (e.g. `groups: "group-1 group-2"`)
+instead of a list of strings.
 
 To properly obtain group membership when using IBMISAM as the identity provider for
 Vault's OIDC Auth Method, the `ibmisam` provider must be explicitly configured as
