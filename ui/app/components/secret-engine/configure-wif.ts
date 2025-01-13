@@ -9,9 +9,11 @@ import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
+import { ValidationMap } from 'vault/vault/app-types';
+import { assert } from '@ember/debug';
 import errorMessage from 'vault/utils/error-message';
 
-import type ConfigModel from 'vault/models/azure/config';
+import type ConfigModel from 'vault/models/secret-engine/config';
 import type IdentityOidcConfigModel from 'vault/models/identity/oidc/config';
 import type Router from '@ember/routing/router';
 import type StoreService from 'vault/services/store';
@@ -19,37 +21,50 @@ import type VersionService from 'vault/services/version';
 import type FlashMessageService from 'vault/services/flash-messages';
 
 /**
- * @module SecretEngineConfigureAzure component is used to configure the Azure secret engine
- * For enterprise users, they will see an additional option to config WIF attributes in place of Azure account attributes.
+ * @module SecretEngineConfigureWif component is used to configure secret engines that allow the WIF configuration.
+ * The ability to configure WIF fields is an enterprise only feature.
  * If the user is configuring WIF attributes they will also have the option to update the global issuer config, which is a separate endpoint named identity/oidc/config.
+ * If a user is on OSS, the account configuration fields will display with no ability to select or see wif fields.
+ * 
  * @example
- * <SecretEngine::ConfigureAzure
-    @model={{this.model.azure-config}}
+ * <SecretEngine::ConfigureWif
     @backendPath={{this.model.id}}
+    @displayName="AWS"
+    @type="aws"
+    @model={{this.model.root-config}}
+    @secondModel={{this.model.lease-config}}
     @issuerConfig={{this.model.identity-oidc-config}}
     />
- * 
- * @param {object} model - Azure config model
- * @param {string} backendPath - name of the Azure secret engine, ex: 'azure-123'
- * @param {object} issuerConfigModel - the identity/oidc/config model
+ *
+ * @param {string} backendPath - name of the secret engine, ex: 'azure-123'.
+ * @param {string} displayName - Azure vs azure or AWS vs aws. Used for display purposes.
+ * @param {string} type - The type of the engine, ex: 'azure'.
+ * @param {object} model - The config model for the engine.
+ * @param {object} [secondModel] - For engines with two config models. Currently, only used by aws
+ * @param {object} [issuerConfig] - The identity/oidc/config model. Will be passed in if user has an enterprise license.
+ * @param {string} [modelNameDisplay] - Specific h2 title to display above the second model's fields. Also used in flash message error if saving the second modal fails
  */
 
 interface Args {
-  model: ConfigModel;
-  issuerConfig: IdentityOidcConfigModel;
   backendPath: string;
+  displayName: string;
+  type: string;
+  model: ConfigModel;
+  secondModel: ConfigModel;
+  issuerConfig: IdentityOidcConfigModel;
 }
 
-export default class ConfigureAzureComponent extends Component<Args> {
+export default class ConfigureWif extends Component<Args> {
   @service declare readonly router: Router;
   @service declare readonly store: StoreService;
   @service declare readonly version: VersionService;
   @service declare readonly flashMessages: FlashMessageService;
 
-  @tracked accessType = 'azure';
+  @tracked accessType = 'account'; // for community users they will not be able to change this. for enterprise users, they will have the option to select "wif".
   @tracked errorMessage = '';
   @tracked invalidFormAlert = '';
   @tracked saveIssuerWarning = '';
+  @tracked modelValidations: ValidationMap | null = null;
 
   disableAccessType = false;
 
@@ -57,10 +72,14 @@ export default class ConfigureAzureComponent extends Component<Args> {
     super(owner, args);
     // the following checks are only relevant to existing enterprise configurations
     if (this.version.isCommunity && this.args.model.isNew) return;
-    const { isWifPluginConfigured, isAzureAccountConfigured } = this.args.model;
-    this.accessType = isWifPluginConfigured ? 'wif' : 'azure';
-    // if there are either WIF or azure attributes, disable user's ability to change accessType
-    this.disableAccessType = isWifPluginConfigured || isAzureAccountConfigured;
+    const { isWifPluginConfigured, isAccountPluginConfigured } = this.args.model;
+    assert(
+      `'isWifPluginConfigured' is required to be defined on the config model. Must return a boolean.`,
+      isWifPluginConfigured !== undefined
+    );
+    this.accessType = isWifPluginConfigured ? 'wif' : 'account';
+    // if wif or account only attributes are defined, disable the user's ability to change the access type
+    this.disableAccessType = isWifPluginConfigured || isAccountPluginConfigured;
   }
 
   get modelAttrChanged() {
@@ -70,6 +89,13 @@ export default class ConfigureAzureComponent extends Component<Args> {
 
   get issuerAttrChanged() {
     return this.args.issuerConfig?.hasDirtyAttributes;
+  }
+
+  get secondModelAttrChanged() {
+    const { secondModel } = this.args;
+    // required to check for model first otherwise Object.keys will have nothing to iterate over and fails
+    if (!secondModel) return;
+    return Object.keys(secondModel.changedAttributes()).some((item) => item !== 'backend');
   }
 
   @action continueSubmitForm() {
@@ -83,7 +109,10 @@ export default class ConfigureAzureComponent extends Component<Args> {
     waitFor(async (event: Event) => {
       event?.preventDefault();
       this.resetErrors();
-
+      // AWS lease model has model validations we need to check before saving
+      if (this.args.secondModel && !this.validate(this.args.secondModel)) {
+        return;
+      }
       if (this.issuerAttrChanged) {
         // if the issuer has changed show modal with warning that the config will change
         // if the modal is shown, the user has to click confirm to continue saving
@@ -101,9 +130,10 @@ export default class ConfigureAzureComponent extends Component<Args> {
     waitFor(async () => {
       const modelAttrChanged = this.modelAttrChanged;
       const issuerAttrChanged = this.issuerAttrChanged;
-      // check if any of the model or issue attributes have changed
+      const secondModelAttrChanged = this.secondModelAttrChanged;
+      // check if any of the mode(s) or issuer attributes have changed
       // if no changes, transition and notify user
-      if (!modelAttrChanged && !issuerAttrChanged) {
+      if (!modelAttrChanged && !issuerAttrChanged && !secondModelAttrChanged) {
         this.flashMessages.info('No changes detected.');
         this.transition();
         return;
@@ -113,11 +143,13 @@ export default class ConfigureAzureComponent extends Component<Args> {
       const issuerSaved = issuerAttrChanged ? await this.updateIssuer() : false;
 
       if (modelSaved || (!modelAttrChanged && issuerSaved)) {
-        // transition if the model was saved successfully
-        // we only prevent a transition if the model is edited and fails saving
+        // if there is a secondModel, attempt to save it. if saving fails, we transition and the failure will surface as a sticky flash message on the configuration details page.
+        if (secondModelAttrChanged) {
+          await this.saveSecondModel();
+        }
+        // we only prevent a transition if the first model or issuer are edited and fail when saving
         this.transition();
       } else {
-        // otherwise there was a failure and we should not transition and exit the function
         return;
       }
     })
@@ -149,6 +181,27 @@ export default class ConfigureAzureComponent extends Component<Args> {
     }
   }
 
+  async saveSecondModel(): Promise<boolean> {
+    const { backendPath, secondModel } = this.args;
+    try {
+      await secondModel.save();
+      this.flashMessages.success(
+        `Successfully saved ${backendPath}'s ${secondModel.modelNameDisplay?.toLowerCase()} configuration.`
+      );
+      return true;
+    } catch (error) {
+      this.errorMessage = errorMessage(error);
+      // we transition even if the second model fails. surface a sticky flash message so the user can see it on the next view.
+      this.flashMessages.danger(
+        `${secondModel.modelNameDisplay} configuration was not saved: ${this.errorMessage}`,
+        {
+          sticky: true,
+        }
+      );
+      return false;
+    }
+  }
+
   resetErrors() {
     this.flashMessages.clearMessages();
     this.errorMessage = '';
@@ -159,19 +212,32 @@ export default class ConfigureAzureComponent extends Component<Args> {
     this.router.transitionTo('vault.cluster.secrets.backend.configuration', this.args.backendPath);
   }
 
+  validate(model: ConfigModel) {
+    const { isValid, state, invalidFormMessage } = model.validate();
+    this.modelValidations = isValid ? null : state;
+    this.invalidFormAlert = isValid ? '' : invalidFormMessage;
+    return isValid;
+  }
+
   @action
   onChangeAccessType(accessType: string) {
     this.accessType = accessType;
-    const { model } = this.args;
-    if (accessType === 'azure') {
-      // reset all WIF attributes
+    const { model, type } = this.args;
+    if (accessType === 'account') {
+      // reset all "wif" attributes that are mutually exclusive with "account" attributes
+      // these attributes are the same for each engine
       model.identityTokenAudience = model.identityTokenTtl = undefined;
       // return the issuer to the globally set value (if there is one) on toggle
       this.args.issuerConfig.rollbackAttributes();
     }
     if (accessType === 'wif') {
-      // reset all Azure attributes
-      model.clientSecret = model.rootPasswordTtl = undefined;
+      // reset all "account" attributes that are mutually exclusive with "wif" attributes
+      // these attributes are different for each engine
+      type === 'azure'
+        ? (model.clientSecret = model.rootPasswordTtl = undefined)
+        : type === 'aws'
+        ? (model.accessKey = undefined)
+        : null;
     }
   }
 

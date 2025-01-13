@@ -43,4 +43,6 @@ export default class AwsLeaseConfig extends Model {
   get formFields() {
     return expandAttributeMeta(this, this.configurableParams);
   }
+
+  modelNameDisplay = 'Lease'; // shows as Lease Configuration
 }

@@ -62,7 +62,10 @@ module('Acceptance | aws | configuration', function (hooks) {
       await click(SES.configure);
       assert.strictEqual(currentURL(), `/vault/secrets/${path}/configuration/edit`);
       assert.dom(SES.configureTitle('aws')).hasText('Configure AWS');
-      assert.dom(SES.aws.rootForm).exists('it lands on the root configuration form.');
+      assert.dom(SES.configureForm).exists('it lands on the configuration form.');
+      assert
+        .dom(SES.secondModelTitle)
+        .hasText('Lease Configuration', 'it shows the lease configuration section with correct title.');
       // cleanup
       await runCmd(`delete sys/mounts/${path}`);
     });
@@ -93,13 +96,13 @@ module('Acceptance | aws | configuration', function (hooks) {
       await click(SES.configure);
       await fillInAwsConfig('withWif');
       await click(GENERAL.saveButton);
-      assert.dom(SES.wif.issuerWarningModal).exists('issue warning modal exists');
+      assert.dom(SES.wif.issuerWarningModal).exists('issuer warning modal exists');
       await click(SES.wif.issuerWarningSave);
       // three flash messages, the first is about mounting the engine, only care about the last two
       assert.strictEqual(
         this.flashSuccessSpy.args[1][0],
-        `Successfully saved ${path}'s root configuration.`,
-        'first flash message about the root config.'
+        `Successfully saved ${path}'s configuration.`,
+        'first flash message about the first model config.'
       );
       assert.strictEqual(
         this.flashSuccessSpy.args[2][0],
@@ -156,8 +159,8 @@ module('Acceptance | aws | configuration', function (hooks) {
       await fillInAwsConfig('withAccess');
       await click(GENERAL.saveButton);
       assert.true(
-        this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s root configuration.`),
-        'Success flash message is rendered showing the root configuration was saved.'
+        this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s configuration.`),
+        'Success flash message is rendered showing the configuration was saved.'
       );
       assert.dom(GENERAL.infoRowValue('Access key')).hasText('foo', 'Access Key has been set.');
       assert
@@ -190,30 +193,27 @@ module('Acceptance | aws | configuration', function (hooks) {
       await runCmd(`delete sys/mounts/${path}`);
     });
 
-    test('it should save lease AWS configuration', async function (assert) {
-      assert.expect(3);
+    test('it does not save lease AWS configuration if root configuration errored on save', async function (assert) {
+      assert.expect(1);
       const path = `aws-${this.uid}`;
       await enablePage.enable('aws', path);
 
       this.server.post(configUrl('aws', path), () => {
-        assert.false(
-          true,
-          'post request was made to config/root when no data was changed. test should fail.'
+        assert.ok('post request was made to config/root when no data was changed. test should fail.');
+        return overrideResponse(400, { errors: ['bad request!'] });
+      });
+      this.server.post(configUrl('aws-lease', path), () => {
+        assert.true(
+          false,
+          'post request was made to config/lease when the first config was not saved. test should fail.'
         );
+        return overrideResponse(400, { errors: ['bad request!'] });
       });
       await click(SES.configTab);
       await click(SES.configure);
+      await fillInAwsConfig('withAccess');
       await fillInAwsConfig('withLease');
       await click(GENERAL.saveButton);
-      assert.true(
-        this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s lease configuration.`),
-        'Success flash message is rendered showing the lease configuration was saved.'
-      );
-
-      assert
-        .dom(GENERAL.infoRowValue('Default Lease TTL'))
-        .hasText('33 seconds', `Default TTL has been set.`);
-      assert.dom(GENERAL.infoRowValue('Max Lease TTL')).hasText('44 seconds', `Max lease TTL has been set.`);
       // cleanup
       await runCmd(`delete sys/mounts/${path}`);
     });

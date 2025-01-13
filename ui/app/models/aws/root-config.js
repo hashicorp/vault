@@ -79,16 +79,16 @@ export default class AwsRootConfig extends Model {
     return fieldToAttrs(this, this.formFieldGroups('wif'));
   }
 
-  get fieldGroupsIam() {
-    return fieldToAttrs(this, this.formFieldGroups('iam'));
+  get fieldGroupsAccount() {
+    return fieldToAttrs(this, this.formFieldGroups('account'));
   }
 
-  formFieldGroups(accessType = 'iam') {
+  formFieldGroups(accessType = 'account') {
     const formFieldGroups = [];
     if (accessType === 'wif') {
       formFieldGroups.push({ default: ['roleArn', 'identityTokenAudience', 'identityTokenTtl'] });
     }
-    if (accessType === 'iam') {
+    if (accessType === 'account') {
       formFieldGroups.push({ default: ['accessKey', 'secretKey'] });
     }
     formFieldGroups.push({

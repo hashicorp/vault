@@ -64,7 +64,7 @@ export default class AzureConfig extends Model {
     return !!this.identityTokenAudience || !!this.identityTokenTtl;
   }
 
-  get isAzureAccountConfigured() {
+  get isAccountPluginConfigured() {
     // clientSecret is not checked here because it's never return by the API
     // however it is an Azure account field
     return !!this.rootPasswordTtl;
@@ -84,11 +84,11 @@ export default class AzureConfig extends Model {
     return fieldToAttrs(this, this.formFieldGroups('wif'));
   }
 
-  get fieldGroupsAzure() {
-    return fieldToAttrs(this, this.formFieldGroups('azure'));
+  get fieldGroupsAccount() {
+    return fieldToAttrs(this, this.formFieldGroups('account'));
   }
 
-  formFieldGroups(accessType = 'azure') {
+  formFieldGroups(accessType = 'account') {
     const formFieldGroups = [];
     formFieldGroups.push({
       default: ['subscriptionId', 'tenantId', 'clientId', 'environment'],
@@ -98,7 +98,7 @@ export default class AzureConfig extends Model {
         default: ['identityTokenAudience', 'identityTokenTtl'],
       });
     }
-    if (accessType === 'azure') {
+    if (accessType === 'account') {
       formFieldGroups.push({
         default: ['clientSecret', 'rootPasswordTtl'],
       });
