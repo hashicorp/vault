@@ -537,8 +537,8 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 	sha256 := d.Get("sha256").(string)
 	if sha256 == "" {
 		sha256 = d.Get("sha_256").(string)
-		if sha256 == "" {
-			return logical.ErrorResponse("missing SHA-256 value"), nil
+		if resp := validateSHA256(sha256); resp.IsError() {
+			return resp, nil
 		}
 	}
 

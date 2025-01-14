@@ -551,6 +551,19 @@ func TestGRPCServer_Close(t *testing.T) {
 				}
 			},
 		},
+		"error path for multiplexed plugin": {
+			db: fakeDatabase{
+				closeErr: errors.New("close error"),
+			},
+			expectErr:     true,
+			expectCode:    codes.Internal,
+			grpcSetupFunc: testGrpcServer,
+			assertFunc: func(t *testing.T, g gRPCServer) {
+				if len(g.instances) != 1 {
+					t.Fatalf("err expected instances map to contain exactly 1 element")
+				}
+			},
+		},
 		"happy path for non-multiplexed plugin": {
 			db:            fakeDatabase{},
 			expectErr:     false,

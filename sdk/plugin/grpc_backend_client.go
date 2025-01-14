@@ -231,9 +231,6 @@ func (b *backendGRPCPluginClient) Setup(ctx context.Context, config *logical.Bac
 	if b.metadataMode {
 		sysViewImpl = &logical.StaticSystemView{}
 	}
-	sysView := &gRPCSystemViewServer{
-		impl: sysViewImpl,
-	}
 
 	events := &GRPCEventsServer{
 		impl: config.EventsSender,
@@ -245,7 +242,7 @@ func (b *backendGRPCPluginClient) Setup(ctx context.Context, config *logical.Bac
 		opts = append(opts, grpc.MaxSendMsgSize(math.MaxInt32))
 
 		s := grpc.NewServer(opts...)
-		pb.RegisterSystemViewServer(s, sysView)
+		registerSystemViewServer(s, sysViewImpl, config)
 		pb.RegisterStorageServer(s, storage)
 		pb.RegisterEventsServer(s, events)
 		b.server.Store(s)
