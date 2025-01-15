@@ -17,15 +17,17 @@ import (
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	uuid "github.com/hashicorp/go-uuid"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/hashicorp/vault/helper/activationflags"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/types/known/anypb"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var (
@@ -33,54 +35,73 @@ var (
 	tmpSuffix              = ".tmp"
 )
 
+// loadIdentityStoreArtifacts is responsible for loading entities, groups, and aliases from storage into MemDB.
 func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 	if c.identityStore == nil {
 		c.logger.Warn("identity store is not setup, skipping loading")
 		return nil
 	}
 
-	// Resolve all conflicts by logging a warning and returning
-	// errDuplicateIdentityName. The error will flip the identityStore into
-	// case-sensitive mode by switching the underlying schema to one with a
-	// relaxed lowerCase constraint and reload all artifacts into MemDB.
-	c.identityStore.conflictResolver = &errorResolver{c.identityStore.logger}
-
 	loadFunc := func(context.Context) error {
 		if err := c.identityStore.loadEntities(ctx); err != nil {
-			return err
+			return fmt.Errorf("failed to load entities: %w", err)
 		}
 		if err := c.identityStore.loadGroups(ctx); err != nil {
-			return err
+			return fmt.Errorf("failed to load groups: %w", err)
 		}
 		if err := c.identityStore.loadOIDCClients(ctx); err != nil {
-			return err
+			return fmt.Errorf("failed to load OIDC clients: %w", err)
 		}
 		if err := c.identityStore.loadCachedEntitiesOfLocalAliases(ctx); err != nil {
-			return err
+			return fmt.Errorf("failed to load cached local alias entities: %w", err)
 		}
 
 		return nil
 	}
 
-	// Load everything when memdb is set to operate on lower cased names
+	// Resolve all conflicts by logging a warning and returning
+	// errDuplicateIdentityName by default. The error will flip the
+	// identityStore into case-sensitive mode by switching the underlying
+	// schema to one with a relaxed lowerCase constraint and reload all
+	// artifacts into MemDB.
+	c.identityStore.conflictResolver = &errorResolver{c.identityStore.logger}
+
+	// If the identity deduplication cleanup flag is activated, instead
+	// deal with duplicate entities and groups by renaming with a -UUID
+	// suffix. N.B. *entity alias* duplicates will still be merged as before.
+	if c.FeatureActivationFlags.IsActivationFlagEnabled(activationflags.IdentityDeduplication) {
+		c.identityStore.conflictResolver = &renameResolver{c.identityStore.logger}
+	}
+
+	// Load everything when MemDB is set to operate on lower cased names.
+	// errDuplicateIdentityName below should only happen if we're using the
+	// errorResolver (i.e. identity deduplication is not activated) and we
+	// encounter non-alias duplicates.
 	err := loadFunc(ctx)
 	switch {
 	case err == nil:
-		// If it succeeds, all is well
+		// No error implies we've loaded the artifacts successfully
+		// with no duplicates detected. This means there were no
+		// unmerged duplicates detected while loading with the
+		// errorResolver, or the renameResolver was activated and
+		// resolved all duplicates. In either case, we can return
+		// early, since there's nothing left to do.
 		return nil
 	case !errwrap.Contains(err, errDuplicateIdentityName.Error()):
+		// All other errors are unexpected and should be returned.
 		return err
 	}
 
+	// If we're here, it means we've encountered duplicates while loading
+	// with the errorResolver.
 	c.identityStore.logger.Warn("enabling case sensitive identity names")
 
 	// Set identity store to operate on case sensitive identity names
 	c.identityStore.disableLowerCasedNames = true
 
-	// Swap the memdb instance by the one which operates on case sensitive
-	// names, hence obviating the need to unload anything that's already
-	// loaded.
-	if err := c.identityStore.resetDB(ctx); err != nil {
+	// Swap out the MemDB instance and reload artifacts with the
+	// new schema.
+	if err := c.identityStore.resetDB(); err != nil {
 		return err
 	}
 
@@ -339,7 +360,6 @@ func (i *IdentityStore) loadCachedEntitiesOfLocalAliases(ctx context.Context) er
 					return err
 				}
 				nsCtx := namespace.ContextWithNamespace(ctx, ns)
-
 				err = i.upsertEntity(nsCtx, entity, nil, false)
 				if err != nil {
 					return fmt.Errorf("failed to update entity in MemDB: %w", err)
@@ -1857,7 +1877,7 @@ func (i *IdentityStore) UpsertGroup(ctx context.Context, group *identity.Group, 
 	txn := i.db.Txn(true)
 	defer txn.Abort()
 
-	err := i.UpsertGroupInTxn(ctx, txn, group, true)
+	err := i.UpsertGroupInTxn(ctx, txn, group, persist)
 	if err != nil {
 		return err
 	}
@@ -2695,6 +2715,7 @@ func attachAlias(t *testing.T, e *identity.Entity, name string, me *MountEntry) 
 	if e.NamespaceID != me.NamespaceID {
 		panic("mount and entity in different namespaces")
 	}
+	require.NoError(t, err)
 	a := &identity.Alias{
 		ID:            id,
 		Name:          name,
