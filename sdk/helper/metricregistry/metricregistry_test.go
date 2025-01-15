@@ -6,7 +6,7 @@ package metricregistry
 import (
 	"testing"
 
-	promsink "github.com/armon/go-metrics/prometheus"
+	promsink "github.com/hashicorp/go-metrics/compat/prometheus"
 	"github.com/stretchr/testify/require"
 )
 
