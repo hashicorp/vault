@@ -45,7 +45,7 @@ func (c *Core) IdentityStore() *IdentityStore {
 	return c.identityStore
 }
 
-func (i *IdentityStore) resetDB(ctx context.Context) error {
+func (i *IdentityStore) resetDB() error {
 	var err error
 
 	i.db, err = memdb.NewMemDB(identityStoreSchema(!i.disableLowerCasedNames))
@@ -76,7 +76,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 
 	// Create a memdb instance, which by default, operates on lower cased
 	// identity names
-	err := iStore.resetDB(ctx)
+	err := iStore.resetDB()
 	if err != nil {
 		return nil, err
 	}
