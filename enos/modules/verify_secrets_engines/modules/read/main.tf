@@ -38,6 +38,12 @@ variable "vault_root_token" {
   default     = null
 }
 
+variable "verify_pki_certs" {
+  type        = bool
+  description = "Flag to verify pki certificates"
+  default     = true
+}
+
 locals {
   vault_bin_path = "${var.vault_install_dir}/vault"
 }

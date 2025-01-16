@@ -67,4 +67,3 @@ resource "enos_remote_exec" "pki_issue_certificates" {
     }
   }
 }
-
