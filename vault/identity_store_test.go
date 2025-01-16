@@ -21,6 +21,7 @@ import (
 	credGithub "github.com/hashicorp/vault/builtin/credential/github"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/helper/activationflags"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
@@ -1411,14 +1412,27 @@ func TestIdentityStoreInvalidate_TemporaryEntity(t *testing.T) {
 	assert.Nil(t, item)
 }
 
-// TestEntityStoreLoadingIsDeterministic is a property-based test that ensures
-// the loading logic of the entity store is deterministic. This is important
-// because we perform certain merges and corrections of duplicates on load and
-// non-deterministic order can cause divergence between different nodes or even
-// after seal/unseal cycles on one node. Loading _should_ be deterministic
-// anyway if all data in storage was correct see comments inline for examples of
-// ways storage can be corrupt with respect to the expected schema invariants.
-func TestEntityStoreLoadingIsDeterministic(t *testing.T) {
+// TestIdentityStoreLoadingIsDeterministic tests the default error resolver and
+// the identity cleanup rename resolver to ensure that loading is deterministic
+// for both.
+func TestIdentityStoreLoadingIsDeterministic(t *testing.T) {
+	t.Run(t.Name()+"error-resolver", func(t *testing.T) {
+		identityStoreLoadingIsDeterministic(t, false)
+	})
+	t.Run(t.Name()+"identity-cleanup", func(t *testing.T) {
+		identityStoreLoadingIsDeterministic(t, true)
+	})
+}
+
+// identityStoreLoadingIsDeterministic is a property-based test helper that
+// ensures the loading logic of the entity store is deterministic. This is
+// important because we perform certain merges and corrections of duplicates on
+// load and non-deterministic order can cause divergence between different nodes
+// or even after seal/unseal cycles on one node. Loading _should_ be
+// deterministic anyway if all data in storage was correct see comments inline
+// for examples of ways storage can be corrupt with respect to the expected
+// schema invariants.
+func identityStoreLoadingIsDeterministic(t *testing.T, identityDeduplication bool) {
 	// Create some state in store that could trigger non-deterministic behavior.
 	// The nature of the identity store schema is such that the order of loading
 	// entities etc shouldn't matter even if it was non-deterministic, however due
@@ -1455,6 +1469,11 @@ func TestEntityStoreLoadingIsDeterministic(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := context.Background()
+
+	if identityDeduplication {
+		err = c.FeatureActivationFlags.Write(ctx, activationflags.IdentityDeduplication, true)
+		require.NoError(t, err)
+	}
 
 	// We create 100 entities each with 1 non-local alias and 1 local alias. We
 	// then randomly create duplicate alias or local alias entries with a
@@ -1626,9 +1645,9 @@ func TestEntityStoreLoadingIsDeterministic(t *testing.T) {
 	}
 }
 
-// TestEntityStoreLoadingDuplicateReporting tests the reporting of different
+// TestIdentityStoreLoadingDuplicateReporting tests the reporting of different
 // types of duplicates during unseal when in case-sensitive mode.
-func TestEntityStoreLoadingDuplicateReporting(t *testing.T) {
+func TestIdentityStoreLoadingDuplicateReporting(t *testing.T) {
 	logger := corehelpers.NewTestLogger(t)
 	ims, err := inmem.NewTransactionalInmemHA(nil, logger)
 	require.NoError(t, err)
