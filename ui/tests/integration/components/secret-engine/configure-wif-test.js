@@ -24,7 +24,7 @@ import { capabilitiesStub } from 'vault/tests/helpers/stubs';
 import { WIF_ENGINES, allEngines } from 'vault/helpers/mountable-secret-engines';
 import waitForError from 'vault/tests/helpers/wait-for-error';
 
-const allEnginesArray = allEngines(); // saving as const so we don't invoke the method multiple times via the for loop
+const allEnginesArray = allEngines(); // saving as const so we don't invoke the method multiple times in the for loop
 
 module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
   setupRenderingTest(hooks);
@@ -48,6 +48,7 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
       hooks.beforeEach(function () {
         this.version.type = 'enterprise';
       });
+
       for (const type of WIF_ENGINES) {
         test(`${type}: it renders default fields`, async function (assert) {
           this.id = `${type}-${this.uid}`;
@@ -60,7 +61,7 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
           this.secondConfig = type === 'aws' ? this.store.createRecord('aws/lease-config') : null;
           this.config.backend = this.id;
           this.secondConfig ? (this.secondConfig.backend = this.id) : null; // Add backend to the configs because it's not on the testing snapshot (would come from url)
-          this.type = type; // required to set on this to pass into the component
+          this.type = type;
 
           await render(hbs`
                 <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type={{this.type}} @model={{this.config}} @issuerConfig={{this.issuerConfig}} @secondModel={{this.secondConfig}}/>
@@ -84,6 +85,7 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
             .doesNotExist(`for ${type}, the issuer does not show when wif is not the access type`);
         });
       }
+
       for (const type of WIF_ENGINES) {
         test(`${type}: it renders wif fields when user selects wif access type`, async function (assert) {
           this.id = `${type}-${this.uid}`;
@@ -95,8 +97,8 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
               : this.store.createRecord(`${type}/config`);
           this.secondConfig = type === 'aws' ? this.store.createRecord('aws/lease-config') : null;
           this.config.backend = this.id;
-          this.secondConfig ? (this.secondConfig.backend = this.id) : null; // Add backend to the configs because it's not on the testing snapshot (would come from url)
-          this.type = type; // required to set on this to pass into the component
+          this.secondConfig ? (this.secondConfig.backend = this.id) : null;
+          this.type = type;
 
           await render(hbs`
                 <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type={{this.type}} @model={{this.config}} @issuerConfig={{this.issuerConfig}} @secondModel={{this.secondConfig}}/>
@@ -113,49 +115,9 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
           assert.dom(GENERAL.inputByAttr('issuer')).exists(`issuer shows for ${type} wif section.`);
         });
       }
-      /* For tests relevant to all engines, they are run once within one of the engine specific modules below */
-      module('Azure specific', function () {
-        test('it clears access type inputs after toggling accessType', async function (assert) {
-          this.id = `azure-${this.uid}`;
-          this.displayName = 'Azure';
-          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
-          this.config = this.store.createRecord('azure/config');
-          this.config.backend = this.id;
 
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='azure' @model={{this.config}} @issuerConfig={{this.issuerConfig}}/>
-              `);
-          await fillInAzureConfig('azure');
-          await click(SES.wif.accessType('wif'));
-          await fillInAzureConfig('withWif');
-          await click(SES.wif.accessType('azure'));
-
-          assert
-            .dom(GENERAL.toggleInput('Root password TTL'))
-            .isNotChecked('rootPasswordTtl is cleared after toggling accessType');
-          assert
-            .dom(GENERAL.inputByAttr('clientSecret'))
-            .hasValue('', 'clientSecret is cleared after toggling accessType');
-
-          await click(SES.wif.accessType('wif'));
-          assert
-            .dom(GENERAL.inputByAttr('issuer'))
-            .hasValue('', 'issuer shows no value after toggling accessType');
-          assert
-            .dom(GENERAL.inputByAttr('issuer'))
-            .hasAttribute(
-              'placeholder',
-              'https://vault-test.com',
-              'issuer shows no value after toggling accessType'
-            );
-          assert
-            .dom(GENERAL.inputByAttr('identityTokenAudience'))
-            .hasValue('', 'idTokenAudience is cleared after toggling accessType');
-          assert
-            .dom(GENERAL.toggleInput('Identity token TTL'))
-            .isNotChecked('identityTokenTtl is cleared after toggling accessType');
-        });
-
+      module('Engine agnostic', function () {
+        /* This module covers code that is the same for all engines. We run them once against one of the engines.*/
         test('it transitions without sending a config or issuer payload on cancel', async function (assert) {
           assert.expect(3);
           this.id = `azure-${this.uid}`;
@@ -208,6 +170,130 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
             'asserts without isWifPluginConfigured'
           );
         });
+
+        test('it allows user to submit the config even if API error occurs on issuer config', async function (assert) {
+          this.id = `aws-${this.uid}`;
+          this.displayName = 'AWS';
+          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
+          this.config = this.store.createRecord('aws/root-config');
+          this.secondConfig = this.store.createRecord('aws/lease-config');
+          this.config.backend = this.secondConfig.backend = this.id;
+
+          await render(hbs`
+                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='aws' @model={{this.config}} @issuerConfig={{this.issuerConfig}} @secondModel={{this.secondConfig}}/>
+              `);
+          this.server.post(configUrl('aws', this.id), () => {
+            assert.true(true, 'post request was made to config/root when issuer failed. test should pass.');
+          });
+          this.server.post('/identity/oidc/config', () => {
+            return overrideResponse(400, { errors: ['bad request'] });
+          });
+          await fillInAwsConfig('withWif');
+          await click(GENERAL.saveButton);
+          await click(SES.wif.issuerWarningSave);
+
+          assert.true(
+            this.flashDangerSpy.calledWith('Issuer was not saved: bad request'),
+            'Flash message shows that issuer was not saved'
+          );
+          assert.true(
+            this.flashSuccessSpy.calledWith(`Successfully saved ${this.id}'s configuration.`),
+            'Flash message shows that root was saved even if issuer was not'
+          );
+          assert.ok(
+            this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', this.id),
+            'Transitioned to the configuration index route.'
+          );
+        });
+
+        test('it surfaces the API error if config save fails, and prevents the user from transitioning', async function (assert) {
+          this.id = `aws-${this.uid}`;
+          this.displayName = 'AWS';
+          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
+          this.config = this.store.createRecord('aws/root-config');
+          this.secondConfig = this.store.createRecord('aws/lease-config');
+          this.config.backend = this.secondConfig.backend = this.id;
+
+          await render(hbs`
+                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='aws' @model={{this.config}} @issuerConfig={{this.issuerConfig}} @secondModel={{this.secondConfig}}/>
+              `);
+          this.server.post(configUrl('aws', this.id), () => {
+            return overrideResponse(400, { errors: ['bad request'] });
+          });
+          this.server.post(configUrl('aws-lease', this.id), () => {
+            assert.true(
+              true,
+              'post request was made to config/lease when config/root failed. test should pass.'
+            );
+          });
+          // fill in both lease and root endpoints to ensure that both payloads are attempted to be sent
+          await fillInAwsConfig('withAccess');
+          await fillInAwsConfig('withLease');
+          await click(GENERAL.saveButton);
+          assert.dom(GENERAL.messageError).exists('API error surfaced to user');
+          assert.dom(GENERAL.inlineError).exists('User shown inline error message');
+        });
+      });
+
+      module('Azure specific', function () {
+        test('it clears access type inputs after toggling accessType', async function (assert) {
+          this.id = `azure-${this.uid}`;
+          this.displayName = 'Azure';
+          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
+          this.config = this.store.createRecord('azure/config');
+          this.config.backend = this.id;
+
+          await render(hbs`
+                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='azure' @model={{this.config}} @issuerConfig={{this.issuerConfig}}/>
+              `);
+          await fillInAzureConfig('azure');
+          await click(SES.wif.accessType('wif'));
+          await fillInAzureConfig('withWif');
+          await click(SES.wif.accessType('azure'));
+
+          assert
+            .dom(GENERAL.toggleInput('Root password TTL'))
+            .isNotChecked('rootPasswordTtl is cleared after toggling accessType');
+          assert
+            .dom(GENERAL.inputByAttr('clientSecret'))
+            .hasValue('', 'clientSecret is cleared after toggling accessType');
+
+          await click(SES.wif.accessType('wif'));
+          assert
+            .dom(GENERAL.inputByAttr('issuer'))
+            .hasValue('', 'issuer shows no value after toggling accessType');
+          assert
+            .dom(GENERAL.inputByAttr('issuer'))
+            .hasAttribute(
+              'placeholder',
+              'https://vault-test.com',
+              'issuer shows no value after toggling accessType'
+            );
+          assert
+            .dom(GENERAL.inputByAttr('identityTokenAudience'))
+            .hasValue('', 'idTokenAudience is cleared after toggling accessType');
+          assert
+            .dom(GENERAL.toggleInput('Identity token TTL'))
+            .isNotChecked('identityTokenTtl is cleared after toggling accessType');
+        });
+
+        test('it shows the correct access type subtext', async function (assert) {
+          this.id = `azure-${this.uid}`;
+          this.displayName = 'Azure';
+          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
+          this.config = this.store.createRecord('azure/config');
+          this.config.backend = this.id;
+
+          await render(hbs`
+                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='azure' @model={{this.config}} @issuerConfig={{this.issuerConfig}}/>
+              `);
+
+          assert
+            .dom(SES.wif.accessTypeSubtext)
+            .hasText(
+              'Choose the way to configure access to Azure. Access can be configured either using an Azure account credentials, or with the Plugin Workload Identity Federation (WIF).'
+            );
+        });
       });
 
       module('AWS specific', function () {
@@ -249,13 +335,31 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
             .isNotChecked('identityTokenTtl is cleared after toggling accessType');
         });
 
+        test('it shows the correct access type subtext', async function (assert) {
+          this.id = `aws-${this.uid}`;
+          this.displayName = 'AWS';
+          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
+          this.config = this.store.createRecord('aws/root-config');
+          this.config.backend = this.id;
+
+          await render(hbs`
+                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='aws' @model={{this.config}} @issuerConfig={{this.issuerConfig}}/>
+              `);
+
+          assert
+            .dom(SES.wif.accessTypeSubtext)
+            .hasText(
+              'Choose the way to configure access to AWS. Access can be configured either using an IAM access keys, or with the Plugin Workload Identity Federation (WIF).'
+            );
+        });
+
         test('it shows validation error if default lease is entered but max lease is not', async function (assert) {
           this.id = `aws-${this.uid}`;
           this.displayName = 'AWS';
           this.issuerConfig = createConfig(this.store, this.id, 'issuer');
           this.config = this.store.createRecord('aws/root-config');
           this.secondConfig = this.store.createRecord('aws/lease-config');
-          this.config.backend = this.secondConfig.backend = this.id; // Add backend to the configs because it's not on the testing snapshot (would come from url)
+          this.config.backend = this.secondConfig.backend = this.id;
 
           await render(hbs`
                 <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='aws' @model={{this.config}} @issuerConfig={{this.issuerConfig}} @secondModel={{this.secondConfig}}/>
@@ -281,41 +385,13 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
           assert.dom(SES.configureForm).exists('remains on the configuration form');
         });
 
-        test('it surfaces the API error if one occurs on root/config, preventing user from transitioning', async function (assert) {
-          this.id = `aws-${this.uid}`;
-          this.displayName = 'AWS';
-          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
-          this.config = this.store.createRecord('aws/root-config');
-          this.secondConfig = this.store.createRecord('aws/lease-config');
-          this.config.backend = this.secondConfig.backend = this.id; // Add backend to the configs because it's not on the testing snapshot (would come from url)
-
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='aws' @model={{this.config}} @issuerConfig={{this.issuerConfig}} @secondModel={{this.secondConfig}}/>
-              `);
-          this.server.post(configUrl('aws', this.id), () => {
-            return overrideResponse(400, { errors: ['bad request'] });
-          });
-          this.server.post(configUrl('aws-lease', this.id), () => {
-            assert.true(
-              true,
-              'post request was made to config/lease when config/root failed. test should pass.'
-            );
-          });
-          // fill in both lease and root endpoints to ensure that both payloads are attempted to be sent
-          await fillInAwsConfig('withAccess');
-          await fillInAwsConfig('withLease');
-          await click(GENERAL.saveButton);
-          assert.dom(GENERAL.messageError).exists('API error surfaced to user');
-          assert.dom(GENERAL.inlineError).exists('User shown inline error message');
-        });
-
         test('it allows user to submit root config even if API error occurs on config/lease config', async function (assert) {
           this.id = `aws-${this.uid}`;
           this.displayName = 'AWS';
           this.issuerConfig = createConfig(this.store, this.id, 'issuer');
           this.config = this.store.createRecord('aws/root-config');
           this.secondConfig = this.store.createRecord('aws/lease-config');
-          this.config.backend = this.secondConfig.backend = this.id; // Add backend to the configs because it's not on the testing snapshot (would come from url)
+          this.config.backend = this.secondConfig.backend = this.id;
 
           await render(hbs`
                 <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='aws' @model={{this.config}} @issuerConfig={{this.issuerConfig}} @secondModel={{this.secondConfig}}/>
@@ -343,48 +419,13 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
           );
         });
 
-        test('it allows user to submit root config even if API error occurs on issuer config', async function (assert) {
-          this.id = `aws-${this.uid}`;
-          this.displayName = 'AWS';
-          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
-          this.config = this.store.createRecord('aws/root-config');
-          this.secondConfig = this.store.createRecord('aws/lease-config');
-          this.config.backend = this.secondConfig.backend = this.id; // Add backend to the configs because it's not on the testing snapshot (would come from url)
-
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='aws' @model={{this.config}} @issuerConfig={{this.issuerConfig}} @secondModel={{this.secondConfig}}/>
-              `);
-          this.server.post(configUrl('aws', this.id), () => {
-            assert.true(true, 'post request was made to config/root when issuer failed. test should pass.');
-          });
-          this.server.post('/identity/oidc/config', () => {
-            return overrideResponse(400, { errors: ['bad request'] });
-          });
-          await fillInAwsConfig('withWif');
-          await click(GENERAL.saveButton);
-          await click(SES.wif.issuerWarningSave);
-
-          assert.true(
-            this.flashDangerSpy.calledWith('Issuer was not saved: bad request'),
-            'Flash message shows that issuer was not saved'
-          );
-          assert.true(
-            this.flashSuccessSpy.calledWith(`Successfully saved ${this.id}'s configuration.`),
-            'Flash message shows that root was saved even if issuer was not'
-          );
-          assert.ok(
-            this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', this.id),
-            'Transitioned to the configuration index route.'
-          );
-        });
-
         test('it transitions without sending a lease, root, or issuer payload on cancel', async function (assert) {
           this.id = `aws-${this.uid}`;
           this.displayName = 'AWS';
           this.issuerConfig = createConfig(this.store, this.id, 'issuer');
           this.config = this.store.createRecord('aws/root-config');
           this.secondConfig = this.store.createRecord('aws/lease-config');
-          this.config.backend = this.secondConfig.backend = this.id; // Add backend to the configs because it's not on the testing snapshot (would come from url)
+          this.config.backend = this.secondConfig.backend = this.id;
 
           await render(hbs`
                 <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='aws' @model={{this.config}} @issuerConfig={{this.issuerConfig}} @secondModel={{this.secondConfig}}/>
@@ -422,7 +463,6 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
       });
 
       module('Issuer field tests', function () {
-        // only need to test one engine because code is the same for all engines.
         test('if issuer API error and user changes issuer value, shows specific warning message', async function (assert) {
           this.id = `azure-${this.uid}`;
           this.displayName = 'Azure';
@@ -579,7 +619,7 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
           this.displayName = 'Azure';
           this.issuerConfig = createConfig(this.store, this.id, 'issuer');
           this.config = this.store.createRecord(`azure/config`);
-          this.config.backend = this.id; // Add backend to the configs because it's not on the testing snapshot (would come from url)
+          this.config.backend = this.id;
           await render(hbs`
                 <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='azure' @model={{this.config}} @issuerConfig={{this.issuerConfig}}/>
               `);
@@ -619,7 +659,7 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
           this.secondConfig = type === 'aws' ? this.store.createRecord('aws/lease-config') : null;
           this.config.backend = this.id;
           this.secondConfig ? (this.secondConfig.backend = this.id) : null;
-          this.type = type; // required to set on this to pass into the component
+          this.type = type;
 
           await render(hbs`
                 <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type={{this.type}} @model={{this.config}} @issuerConfig={{this.issuerConfig}} @secondModel={{this.secondConfig}}/>
@@ -835,7 +875,7 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
         this.version.type = 'community';
       });
       for (const type of WIF_ENGINES) {
-        test(`${type}:it does not show access types but defaults to type account fields`, async function (assert) {
+        test(`${type}:it does not show access type but defaults to type "account" fields`, async function (assert) {
           this.id = `${type}-${this.uid}`;
           this.config = createConfig(this.store, this.id, `${type}-generic`);
           this.displayName = allEnginesArray.find((engine) => engine.type === type)?.displayName;

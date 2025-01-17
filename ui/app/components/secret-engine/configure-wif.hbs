@@ -34,8 +34,8 @@
           {{else}}
             Choose the way to configure access to
             {{@displayName}}. Access can be configured either using an
-            {{@displayName}}
-            account credentials or with the Plugin Workload Identity Federation (WIF).
+            {{if (eq @type "aws") "IAM access keys" (concat @displayName " account credentials")}}, or with the Plugin
+            Workload Identity Federation (WIF).
           {{/if}}
         </p>
         <div>
@@ -79,7 +79,7 @@
         @groupName="fieldGroupsAccount"
       />
     {{/if}}
-    {{! secondModel fields should show regardless of the vault version or what access type is selected }}
+    {{! secondModel fields show regardless of the vault version or what access type is selected }}
     {{#if @secondModel}}
       <h2 class="title is-5 has-bottom-padding-s has-top-margin-l" data-test-second-model-title>
         {{or @secondModel.modelNameDisplay "Additional"}}

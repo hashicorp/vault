@@ -37,11 +37,11 @@ import type FlashMessageService from 'vault/services/flash-messages';
     />
  *
  * @param {string} backendPath - name of the secret engine, ex: 'azure-123'.
- * @param {string} displayName - Azure vs azure or AWS vs aws. Used for display purposes.
- * @param {string} type - The type of the engine, ex: 'azure'.
- * @param {object} model - The config model for the engine.
- * @param {object} [secondModel] - For engines with two config models. Currently, only used by aws
- * @param {object} [issuerConfig] - The identity/oidc/config model. Will be passed in if user has an enterprise license.
+ * @param {string} displayName - used for flash messages, subText and labels. ex: 'Azure'.
+ * @param {string} type - the type of the engine, ex: 'azure'.
+ * @param {object} model - the config model for the engine.
+ * @param {object} [secondModel] - tor engines with two config models. Currently, only used by aws
+ * @param {object} [issuerConfig] - the identity/oidc/config model. Will be passed in if user has an enterprise license.
  * @param {string} [modelNameDisplay] - Specific h2 title to display above the second model's fields. Also used in flash message error if saving the second modal fails
  */
 

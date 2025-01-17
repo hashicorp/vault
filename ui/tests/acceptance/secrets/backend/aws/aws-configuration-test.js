@@ -65,7 +65,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       assert.dom(SES.configureForm).exists('it lands on the configuration form.');
       assert
         .dom(SES.secondModelTitle)
-        .hasText('Lease Configuration', 'it shows the lease configuration section with correct title.');
+        .hasText('Lease Configuration', 'it shows the lease configuration section with the lease title.');
       // cleanup
       await runCmd(`delete sys/mounts/${path}`);
     });
@@ -102,7 +102,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       assert.strictEqual(
         this.flashSuccessSpy.args[1][0],
         `Successfully saved ${path}'s configuration.`,
-        'first flash message about the first model config.'
+        'first success message is about the first model config.'
       );
       assert.strictEqual(
         this.flashSuccessSpy.args[2][0],
