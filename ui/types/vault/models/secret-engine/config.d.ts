@@ -31,7 +31,6 @@ export default class SecretEngineConfig extends Model {
   ttl: any;
   maxTtl: any;
   secretAccountEmail: string | undefined;
-  modelNameDisplay: string | undefined;
   // wif
   identityTokenAudience: string | undefined;
   identityTokenTtl: any;

@@ -42,7 +42,6 @@ import type FlashMessageService from 'vault/services/flash-messages';
  * @param {object} model - the config model for the engine.
  * @param {object} [secondModel] - tor engines with two config models. Currently, only used by aws
  * @param {object} [issuerConfig] - the identity/oidc/config model. Will be passed in if user has an enterprise license.
- * @param {string} [modelNameDisplay] - Specific h2 title to display above the second model's fields. Also used in flash message error if saving the second modal fails
  */
 
 interface Args {
@@ -182,22 +181,18 @@ export default class ConfigureWif extends Component<Args> {
   }
 
   async saveSecondModel(): Promise<boolean> {
-    const { backendPath, secondModel } = this.args;
+    const { backendPath, secondModel, type } = this.args;
+    const secondModelName = type === 'aws' ? 'Lease configuration' : 'additional configuration';
     try {
       await secondModel.save();
-      this.flashMessages.success(
-        `Successfully saved ${backendPath}'s ${secondModel.modelNameDisplay?.toLowerCase()} configuration.`
-      );
+      this.flashMessages.success(`Successfully saved ${backendPath}'s ${secondModelName}.`);
       return true;
     } catch (error) {
       this.errorMessage = errorMessage(error);
       // we transition even if the second model fails. surface a sticky flash message so the user can see it on the next view.
-      this.flashMessages.danger(
-        `${secondModel.modelNameDisplay} configuration was not saved: ${this.errorMessage}`,
-        {
-          sticky: true,
-        }
-      );
+      this.flashMessages.danger(`${secondModelName} was not saved: ${this.errorMessage}`, {
+        sticky: true,
+      });
       return false;
     }
   }

@@ -82,7 +82,7 @@
     {{! secondModel fields show regardless of the vault version or what access type is selected }}
     {{#if @secondModel}}
       <h2 class="title is-5 has-bottom-padding-s has-top-margin-l" data-test-second-model-title>
-        {{or @secondModel.modelNameDisplay "Additional"}}
+        {{if (eq @type "aws") "Lease" "Additional"}}
         Configuration
       </h2>
       <div class="box is-fullwidth is-sideless is-bottomless">
