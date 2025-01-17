@@ -131,7 +131,7 @@ export default class ConfigureWif extends Component<Args> {
       const modelAttrChanged = this.modelAttrChanged;
       const issuerAttrChanged = this.issuerAttrChanged;
       const secondModelAttrChanged = this.secondModelAttrChanged;
-      // check if any of the mode(s) or issuer attributes have changed
+      // check if any of the model(s) or issuer attributes have changed
       // if no changes, transition and notify user
       if (!modelAttrChanged && !issuerAttrChanged && !secondModelAttrChanged) {
         this.flashMessages.info('No changes detected.');
