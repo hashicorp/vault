@@ -74,7 +74,7 @@ export default class AwsRootConfig extends Model {
     return formFields.filter((attr) => attr.name !== 'secretKey');
   }
 
-  // "filedGroupsWif" and "fieldGroupsIam" are passed to the FormFieldGroups component to determine which group to show in the form (ex: @groupName="fieldGroupsWif")
+  // "filedGroupsWif" and "fieldGroupsAccount" are passed to the FormFieldGroups component to determine which group to show in the form (ex: @groupName="fieldGroupsWif")
   get fieldGroupsWif() {
     return fieldToAttrs(this, this.formFieldGroups('wif'));
   }

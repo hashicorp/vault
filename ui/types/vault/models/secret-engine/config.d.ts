@@ -37,12 +37,12 @@ export default class SecretEngineConfig extends Model {
   identityTokenTtl: any;
 
   get displayAttrs(): any;
+  get isConfigured(): boolean;
   get isWifPluginConfigured(): boolean;
   get isAccountPluginConfigured(): boolean;
   get fieldGroupsWif(): any;
-  get fieldGroupsAzure(): any;
-  get fieldGroupsGcp(): any;
-  get fieldGroupsIam(): any;
+  get fieldGroupsAccount(): any;
+
   formFieldGroups(accessType?: string): {
     [key: string]: string[];
   }[];
