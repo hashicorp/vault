@@ -278,6 +278,15 @@ include the Common Name (cn); use use_csr_common_name
 for that. Defaults to true.`,
 		},
 
+		"serial_number_source": {
+			Type:     framework.TypeString,
+			Required: true,
+			Description: `Source for the certificate subject serial number.
+If "json-csr" (default), the value from the JSON serial_number field is used,
+falling back to the value in the CSR if empty. If "json", the value from the
+serial_number JSON field is used, ignoring the value in the CSR.`,
+		},
+
 		"ou": {
 			Type: framework.TypeCommaStringSlice,
 			Description: `If set, OU (OrganizationalUnit) will be set to
@@ -676,6 +685,19 @@ for that. Defaults to true.`,
 				},
 			},
 
+			"serial_number_source": {
+				Type:    framework.TypeString,
+				Default: "json-csr",
+				Description: `Source for the certificate subject serial number.
+If "json-csr" (default), the value from the JSON serial_number field is used,
+falling back to the value in the CSR if empty. If "json", the value from the
+serial_number JSON field is used, ignoring the value in the CSR.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "Serial number source",
+					Value: "json-csr",
+				},
+			},
+
 			"ou": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `If set, OU (OrganizationalUnit) will be set to
@@ -964,6 +986,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		UsePSS:                        data.Get("use_pss").(bool),
 		UseCSRCommonName:              data.Get("use_csr_common_name").(bool),
 		UseCSRSANs:                    data.Get("use_csr_sans").(bool),
+		SerialNumberSource:            data.Get("serial_number_source").(string),
 		KeyUsage:                      data.Get("key_usage").([]string),
 		ExtKeyUsage:                   data.Get("ext_key_usage").([]string),
 		ExtKeyUsageOIDs:               data.Get("ext_key_usage_oids").([]string),
@@ -1059,6 +1082,12 @@ func validateRole(b *backend, entry *issuing.RoleEntry, ctx context.Context, s l
 
 	if entry.KeyBits, entry.SignatureBits, err = certutil.ValidateDefaultOrValueKeyTypeSignatureLength(entry.KeyType, entry.KeyBits, entry.SignatureBits); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	if entry.SerialNumberSource != "" &&
+		entry.SerialNumberSource != "json-csr" &&
+		entry.SerialNumberSource != "json" {
+		return logical.ErrorResponse("unknown serial_number_source %s", entry.SerialNumberSource), nil
 	}
 
 	if len(entry.ExtKeyUsageOIDs) > 0 {
@@ -1165,6 +1194,7 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 		UsePSS:                        getWithExplicitDefault(data, "use_pss", oldEntry.UsePSS).(bool),
 		UseCSRCommonName:              getWithExplicitDefault(data, "use_csr_common_name", oldEntry.UseCSRCommonName).(bool),
 		UseCSRSANs:                    getWithExplicitDefault(data, "use_csr_sans", oldEntry.UseCSRSANs).(bool),
+		SerialNumberSource:            getWithExplicitDefault(data, "serial_number_source", oldEntry.SerialNumberSource).(string),
 		KeyUsage:                      getWithExplicitDefault(data, "key_usage", oldEntry.KeyUsage).([]string),
 		ExtKeyUsage:                   getWithExplicitDefault(data, "ext_key_usage", oldEntry.ExtKeyUsage).([]string),
 		ExtKeyUsageOIDs:               getWithExplicitDefault(data, "ext_key_usage_oids", oldEntry.ExtKeyUsageOIDs).([]string),
