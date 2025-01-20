@@ -1,8 +1,8 @@
 ### vault.identity.entity.active.partial_month ((#vault-identity-entity-active-partial_month))
 
-Metric type | Value    | Description
------------ | -------- | -----------
-gauge       | entities | The number of distinct entities (per namespace) that created a token during the current month
+| Metric type | Value    | Description                                                                                            |
+|-------------|----------|--------------------------------------------------------------------------------------------------------|
+| gauge       | entities | The number of distinct entities (across all namespaces) that created a token during the current month. |
 
 Vault reports `vault.identity.entity.active.partial_month` periodically during
 the month when client counting is enabled.
