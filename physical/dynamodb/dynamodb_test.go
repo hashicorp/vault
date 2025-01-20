@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDynamoDBBackend(t *testing.T) {
@@ -176,14 +177,14 @@ func TestDynamoDBHABackend(t *testing.T) {
 	testDynamoDBLockRenewal(t, b.(physical.HABackend))
 }
 
+// TestDynamoDBBackendPayPerRequest tests the DynamoDB backend
+// with the PAY_PER_REQUEST billing mode
 func TestDynamoDBBackendPayPerRequest(t *testing.T) {
 	cleanup, svccfg := prepareDynamoDBTestContainer(t)
 	defer cleanup()
 
 	creds, err := svccfg.Credentials.Get()
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
+	require.NoError(t, err)
 
 	region := os.Getenv("AWS_DEFAULT_REGION")
 	if region == "" {
@@ -195,9 +196,7 @@ func TestDynamoDBBackendPayPerRequest(t *testing.T) {
 		Endpoint:    aws.String(svccfg.URL().String()),
 		Region:      aws.String(region),
 	})
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
+	require.NoError(t, err)
 
 	conn := dynamodb.New(awsSession)
 
@@ -221,33 +220,27 @@ func TestDynamoDBBackendPayPerRequest(t *testing.T) {
 		"endpoint":      svccfg.URL().String(),
 		"billing_mode":  "PAY_PER_REQUEST",
 	}, logger)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	require.NoError(t, err)
 
 	dynamoTable, err := conn.DescribeTable(&dynamodb.DescribeTableInput{
 		TableName: aws.String(table),
 	})
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	require.NoError(t, err)
 	billingMode := *(dynamoTable.Table.BillingModeSummary.BillingMode)
-	if billingMode != "PAY_PER_REQUEST" {
-		t.Fatalf("billing mode should be PAY_PER_REQUEST, not %s", billingMode)
-	}
+	require.Equal(t, "PAY_PER_REQUEST", billingMode)
 
 	physical.ExerciseBackend(t, b)
 	physical.ExerciseBackend_ListPrefix(t, b)
 }
 
+// TestDynamoDBBackendUpdateBillingMode tests the DynamoDB backend
+// and updating the billing mode
 func TestDynamoDBBackendUpdateBillingMode(t *testing.T) {
 	cleanup, svccfg := prepareDynamoDBTestContainer(t)
 	defer cleanup()
 
 	creds, err := svccfg.Credentials.Get()
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
+	require.NoError(t, err)
 
 	region := os.Getenv("AWS_DEFAULT_REGION")
 	if region == "" {
@@ -259,9 +252,7 @@ func TestDynamoDBBackendUpdateBillingMode(t *testing.T) {
 		Endpoint:    aws.String(svccfg.URL().String()),
 		Region:      aws.String(region),
 	})
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
+	require.NoError(t, err)
 
 	conn := dynamodb.New(awsSession)
 
@@ -284,20 +275,14 @@ func TestDynamoDBBackendUpdateBillingMode(t *testing.T) {
 		"region":        region,
 		"endpoint":      svccfg.URL().String(),
 	}, logger)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	require.NoError(t, err)
 
 	dynamoTable, err := conn.DescribeTable(&dynamodb.DescribeTableInput{
 		TableName: aws.String(table),
 	})
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	require.NoError(t, err)
 	billingMode := dynamoTable.Table.BillingModeSummary
-	if billingMode != nil {
-		t.Fatalf("billing mode should be nil for PROVISIONED, not %s", *(billingMode.BillingMode))
-	}
+	require.Nil(t, billingMode)
 
 	// now run again, with the same table name but a different billing mode
 	// and setting allow_update
@@ -311,33 +296,27 @@ func TestDynamoDBBackendUpdateBillingMode(t *testing.T) {
 		"billing_mode":           "PAY_PER_REQUEST",
 		"dynamodb_allow_updates": "true",
 	}, logger)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	require.NoError(t, err)
 
 	dynamoTable, err = conn.DescribeTable(&dynamodb.DescribeTableInput{
 		TableName: aws.String(table),
 	})
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	require.NoError(t, err)
 	newBillingMode := *(dynamoTable.Table.BillingModeSummary.BillingMode)
-	if newBillingMode != "PAY_PER_REQUEST" {
-		t.Fatalf("billing mode should be PAY_PER_REQUEST, not %s", newBillingMode)
-	}
+	require.Equal(t, "PAY_PER_REQUEST", newBillingMode)
 
 	physical.ExerciseBackend(t, b)
 	physical.ExerciseBackend_ListPrefix(t, b)
 }
 
+// TestDynamoDBBackendUpdateReadWriteCapacity tests the DynamoDB backend
+// and updating the provisioned read and write capacity
 func TestDynamoDBBackendUpdateReadWriteCapacity(t *testing.T) {
 	cleanup, svccfg := prepareDynamoDBTestContainer(t)
 	defer cleanup()
 
 	creds, err := svccfg.Credentials.Get()
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
+	require.NoError(t, err)
 
 	region := os.Getenv("AWS_DEFAULT_REGION")
 	if region == "" {
@@ -349,9 +328,7 @@ func TestDynamoDBBackendUpdateReadWriteCapacity(t *testing.T) {
 		Endpoint:    aws.String(svccfg.URL().String()),
 		Region:      aws.String(region),
 	})
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
+	require.NoError(t, err)
 
 	conn := dynamodb.New(awsSession)
 
@@ -374,23 +351,17 @@ func TestDynamoDBBackendUpdateReadWriteCapacity(t *testing.T) {
 		"region":        region,
 		"endpoint":      svccfg.URL().String(),
 	}, logger)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	require.NoError(t, err)
 
 	dynamoTable, err := conn.DescribeTable(&dynamodb.DescribeTableInput{
 		TableName: aws.String(table),
 	})
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	require.NoError(t, err)
+
 	provisionedThroughput := dynamoTable.Table.ProvisionedThroughput
-	if provisionedThroughput == nil {
-		t.Fatalf("provisioned throughput should not be nil")
-	}
-	if *(provisionedThroughput.ReadCapacityUnits) != int64(5) && *(provisionedThroughput.WriteCapacityUnits) != int64(5) {
-		t.Fatalf("provisioned throughput should be 5, not %s", provisionedThroughput.String())
-	}
+	require.NotNil(t, provisionedThroughput)
+	require.Equal(t, int64(5), *(provisionedThroughput.ReadCapacityUnits))
+	require.Equal(t, int64(5), *(provisionedThroughput.WriteCapacityUnits))
 
 	// now run again, with the same table name but a capacity of 20
 	// and setting allow_update
@@ -405,23 +376,17 @@ func TestDynamoDBBackendUpdateReadWriteCapacity(t *testing.T) {
 		"write_capacity":         "20",
 		"dynamodb_allow_updates": "true",
 	}, logger)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	require.NoError(t, err)
 
 	dynamoTable, err = conn.DescribeTable(&dynamodb.DescribeTableInput{
 		TableName: aws.String(table),
 	})
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	require.NoError(t, err)
+
 	provisionedThroughput = dynamoTable.Table.ProvisionedThroughput
-	if provisionedThroughput == nil {
-		t.Fatalf("provisioned throughput should not be nil")
-	}
-	if *(provisionedThroughput.ReadCapacityUnits) != int64(20) && *(provisionedThroughput.WriteCapacityUnits) != int64(20) {
-		t.Fatalf("provisioned throughput should be 20, not %s", provisionedThroughput.String())
-	}
+	require.NotNil(t, provisionedThroughput)
+	require.Equal(t, int64(20), *(provisionedThroughput.ReadCapacityUnits))
+	require.Equal(t, int64(20), *(provisionedThroughput.WriteCapacityUnits))
 
 	physical.ExerciseBackend(t, b)
 	physical.ExerciseBackend_ListPrefix(t, b)
