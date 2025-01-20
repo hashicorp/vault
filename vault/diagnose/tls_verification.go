@@ -270,15 +270,17 @@ func TLSFileWarningChecks(leafCerts, interCerts, rootCerts []*x509.Certificate) 
 	return warnings, nil
 }
 
-// NearExpiration returns a true if a certficate will expire in a month and false otherwise
+// NearExpiration returns a true if a certificate will expire in a month
+// and false otherwise, along with the duration until the certificate expires
+// which can be a negative duration if the certificate has already expired.
 func NearExpiration(c *x509.Certificate) (bool, time.Duration) {
-	oneMonthFromNow := time.Now().Add(30 * 24 * time.Hour)
-	var timeToExpiry time.Duration
-	if oneMonthFromNow.After(c.NotAfter) {
-		timeToExpiry := oneMonthFromNow.Sub(c.NotAfter)
-		return true, timeToExpiry
-	}
-	return false, timeToExpiry
+	now := time.Now()
+	timeToExpiry := c.NotAfter.Sub(now)
+
+	oneMonthFromNow := now.Add(30 * 24 * time.Hour)
+	isNearExpiration := oneMonthFromNow.After(c.NotAfter)
+
+	return isNearExpiration, timeToExpiry
 }
 
 // TLSMutualExclusionCertCheck returns error if both TLSDisableClientCerts and TLSRequireAndVerifyClientCert are set

@@ -81,7 +81,7 @@ mod_download() {
     pushd "$(dirname "$mod")" > /dev/null || (echo "failed to push into module dir" && exit 1)
       GOOS=linux GOARCH=amd64 GOPRIVATE=github.com/hashicorp go mod download -x
     popd > /dev/null || (echo "failed to pop out of module dir" && exit 1)
-  done < <(find . -type f -name go.mod -print0)
+  done < <(find . -type f -name go.mod -not -path "./tools/pipeline/*" -print0 )
 }
 
 # Tidy all the go.mod's defined in the project.

@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/mitchellh/mapstructure"
@@ -368,7 +369,7 @@ func generatePrivateKey(keyType string, keyBits int, container ParsedPrivateKeyC
 			return errutil.InternalError{Err: fmt.Sprintf("insecure bit length for RSA private key: %d", keyBits)}
 		}
 		privateKeyType = RSAPrivateKey
-		privateKey, err = rsa.GenerateKey(randReader, keyBits)
+		privateKey, err = cryptoutil.GenerateRSAKey(randReader, keyBits)
 		if err != nil {
 			return errutil.InternalError{Err: fmt.Sprintf("error generating RSA private key: %v", err)}
 		}
@@ -938,10 +939,18 @@ func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGen
 	}
 
 	// This will only be filled in from the generation paths
-	if len(data.Params.PermittedDNSDomains) > 0 {
-		certTemplate.PermittedDNSDomains = data.Params.PermittedDNSDomains
-		certTemplate.PermittedDNSDomainsCritical = true
-	}
+	certTemplate.PermittedDNSDomains = append(certTemplate.PermittedDNSDomains, data.Params.PermittedDNSDomains...)
+	certTemplate.ExcludedDNSDomains = append(certTemplate.ExcludedDNSDomains, data.Params.ExcludedDNSDomains...)
+	certTemplate.PermittedIPRanges = append(certTemplate.PermittedIPRanges, data.Params.PermittedIPRanges...)
+	certTemplate.ExcludedIPRanges = append(certTemplate.ExcludedIPRanges, data.Params.ExcludedIPRanges...)
+	certTemplate.PermittedEmailAddresses = append(certTemplate.PermittedEmailAddresses, data.Params.PermittedEmailAddresses...)
+	certTemplate.ExcludedEmailAddresses = append(certTemplate.ExcludedEmailAddresses, data.Params.ExcludedEmailAddresses...)
+	certTemplate.PermittedURIDomains = append(certTemplate.PermittedURIDomains, data.Params.PermittedURIDomains...)
+	certTemplate.ExcludedURIDomains = append(certTemplate.ExcludedURIDomains, data.Params.ExcludedURIDomains...)
+	// Note that it is harmless to set PermittedDNSDomainsCritical even if all other
+	// permitted or excluded fields are empty, as the name constraints extension won't be created in
+	// that case
+	certTemplate.PermittedDNSDomainsCritical = true
 
 	AddPolicyIdentifiers(data, certTemplate)
 
@@ -1351,10 +1360,15 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		certTemplate.IsCA = false
 	}
 
-	if len(data.Params.PermittedDNSDomains) > 0 {
-		certTemplate.PermittedDNSDomains = data.Params.PermittedDNSDomains
-		certTemplate.PermittedDNSDomainsCritical = true
-	}
+	certTemplate.ExcludedDNSDomains = append(certTemplate.ExcludedDNSDomains, data.Params.ExcludedDNSDomains...)
+	certTemplate.PermittedIPRanges = append(certTemplate.PermittedIPRanges, data.Params.PermittedIPRanges...)
+	certTemplate.ExcludedIPRanges = append(certTemplate.ExcludedIPRanges, data.Params.ExcludedIPRanges...)
+	certTemplate.PermittedEmailAddresses = append(certTemplate.PermittedEmailAddresses, data.Params.PermittedEmailAddresses...)
+	certTemplate.ExcludedEmailAddresses = append(certTemplate.ExcludedEmailAddresses, data.Params.ExcludedEmailAddresses...)
+	certTemplate.PermittedURIDomains = append(certTemplate.PermittedURIDomains, data.Params.PermittedURIDomains...)
+	certTemplate.ExcludedURIDomains = append(certTemplate.ExcludedURIDomains, data.Params.ExcludedURIDomains...)
+	// Note that it is harmless to set PermittedDNSDomainsCritical even if all other permitted/excluded fields are empty
+	certTemplate.PermittedDNSDomainsCritical = true
 
 	certBytes, err = x509.CreateCertificate(randReader, certTemplate, caCert, data.CSR.PublicKey, data.SigningBundle.PrivateKey)
 	if err != nil {
@@ -1791,7 +1805,15 @@ func ParseCertificateToCreationParameters(certificate x509.Certificate) (creatio
 		// The following two values are on creation parameters, but are impossible to parse from the certificate
 		// ForceAppendCaChain
 		// UseCSRValues
-		PermittedDNSDomains: certificate.PermittedDNSDomains,
+		PermittedDNSDomains:     certificate.PermittedDNSDomains,
+		ExcludedDNSDomains:      certificate.ExcludedDNSDomains,
+		PermittedIPRanges:       certificate.PermittedIPRanges,
+		ExcludedIPRanges:        certificate.ExcludedIPRanges,
+		PermittedEmailAddresses: certificate.PermittedEmailAddresses,
+		ExcludedEmailAddresses:  certificate.ExcludedEmailAddresses,
+		PermittedURIDomains:     certificate.PermittedURIDomains,
+		ExcludedURIDomains:      certificate.ExcludedURIDomains,
+
 		// URLs: punting on this for now
 		MaxPathLength:     certificate.MaxPathLen,
 		NotBeforeDuration: time.Now().Sub(certificate.NotBefore), // Assumes Certificate was created this moment
@@ -1933,31 +1955,46 @@ func ParseCertificateToFields(certificate x509.Certificate) (map[string]interfac
 	}
 
 	templateData := map[string]interface{}{
-		"common_name":           certificate.Subject.CommonName,
-		"alt_names":             MakeAltNamesCommaSeparatedString(certificate.DNSNames, certificate.EmailAddresses),
-		"ip_sans":               MakeIpAddressCommaSeparatedString(certificate.IPAddresses),
-		"uri_sans":              MakeUriCommaSeparatedString(certificate.URIs),
-		"other_sans":            otherSans,
-		"signature_bits":        FindSignatureBits(certificate.SignatureAlgorithm),
-		"exclude_cn_from_sans":  DetermineExcludeCnFromCertSans(certificate),
-		"ou":                    makeCommaSeparatedString(certificate.Subject.OrganizationalUnit),
-		"organization":          makeCommaSeparatedString(certificate.Subject.Organization),
-		"country":               makeCommaSeparatedString(certificate.Subject.Country),
-		"locality":              makeCommaSeparatedString(certificate.Subject.Locality),
-		"province":              makeCommaSeparatedString(certificate.Subject.Province),
-		"street_address":        makeCommaSeparatedString(certificate.Subject.StreetAddress),
-		"postal_code":           makeCommaSeparatedString(certificate.Subject.PostalCode),
-		"serial_number":         certificate.Subject.SerialNumber,
-		"ttl":                   (certificate.NotAfter.Sub(certificate.NotBefore)).String(),
-		"max_path_length":       certificate.MaxPathLen,
-		"permitted_dns_domains": strings.Join(certificate.PermittedDNSDomains, ","),
-		"use_pss":               IsPSS(certificate.SignatureAlgorithm),
-		"skid":                  hex.EncodeToString(certificate.SubjectKeyId),
-		"key_type":              GetKeyType(certificate.PublicKeyAlgorithm.String()),
-		"key_bits":              FindBitLength(certificate.PublicKey),
+		"common_name":               certificate.Subject.CommonName,
+		"alt_names":                 MakeAltNamesCommaSeparatedString(certificate.DNSNames, certificate.EmailAddresses),
+		"ip_sans":                   MakeIpAddressCommaSeparatedString(certificate.IPAddresses),
+		"uri_sans":                  MakeUriCommaSeparatedString(certificate.URIs),
+		"other_sans":                otherSans,
+		"signature_bits":            FindSignatureBits(certificate.SignatureAlgorithm),
+		"exclude_cn_from_sans":      DetermineExcludeCnFromCertSans(certificate),
+		"ou":                        makeCommaSeparatedString(certificate.Subject.OrganizationalUnit),
+		"organization":              makeCommaSeparatedString(certificate.Subject.Organization),
+		"country":                   makeCommaSeparatedString(certificate.Subject.Country),
+		"locality":                  makeCommaSeparatedString(certificate.Subject.Locality),
+		"province":                  makeCommaSeparatedString(certificate.Subject.Province),
+		"street_address":            makeCommaSeparatedString(certificate.Subject.StreetAddress),
+		"postal_code":               makeCommaSeparatedString(certificate.Subject.PostalCode),
+		"serial_number":             certificate.Subject.SerialNumber,
+		"ttl":                       (certificate.NotAfter.Sub(certificate.NotBefore)).String(),
+		"max_path_length":           certificate.MaxPathLen,
+		"permitted_dns_domains":     strings.Join(certificate.PermittedDNSDomains, ","),
+		"excluded_dns_domains":      strings.Join(certificate.ExcludedDNSDomains, ","),
+		"permitted_ip_ranges":       strings.Join(ipRangesToStrings(certificate.PermittedIPRanges), ","),
+		"excluded_ip_ranges":        strings.Join(ipRangesToStrings(certificate.ExcludedIPRanges), ","),
+		"permitted_email_addresses": strings.Join(certificate.PermittedEmailAddresses, ","),
+		"excluded_email_addresses":  strings.Join(certificate.ExcludedEmailAddresses, ","),
+		"permitted_uri_domains":     strings.Join(certificate.PermittedURIDomains, ","),
+		"excluded_uri_domains":      strings.Join(certificate.ExcludedURIDomains, ","),
+		"use_pss":                   IsPSS(certificate.SignatureAlgorithm),
+		"skid":                      hex.EncodeToString(certificate.SubjectKeyId),
+		"key_type":                  GetKeyType(certificate.PublicKeyAlgorithm.String()),
+		"key_bits":                  FindBitLength(certificate.PublicKey),
 	}
 
 	return templateData, nil
+}
+
+func ipRangesToStrings(ipRanges []*net.IPNet) []string {
+	var ret []string
+	for _, ipRange := range ipRanges {
+		ret = append(ret, ipRange.String())
+	}
+	return ret
 }
 
 func getBasicConstraintsFromExtension(exts []pkix.Extension) (found bool, isCA bool, maxPathLength int, err error) {
