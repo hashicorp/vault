@@ -41,7 +41,7 @@ import type FlashMessageService from 'vault/services/flash-messages';
  * @param {string} displayName - used for flash messages, subText and labels. ex: 'Azure'.
  * @param {string} type - the type of the engine, ex: 'azure'.
  * @param {object} model - the config model for the engine.
- * @param {object} [secondModel] - tor engines with two config models. Currently, only used by aws
+ * @param {object} [secondModel] - for engines with two config models. Currently, only used by aws
  * @param {object} [issuerConfig] - the identity/oidc/config model. Will be passed in if user has an enterprise license.
  */
 
@@ -110,7 +110,6 @@ export default class ConfigureWif extends Component<Args> {
       event?.preventDefault();
       this.resetErrors();
       // currently we only check validations on the second model (for AWS lease config).
-      // however, if future first models are added and they have validations, we will need to check them here.
       if (this.args.secondModel && !this.validate(this.args.secondModel)) {
         return;
       }
