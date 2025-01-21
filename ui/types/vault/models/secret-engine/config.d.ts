@@ -4,14 +4,12 @@
  */
 
 import type Model from '@ember-data/model';
-import type { ModelValidations } from 'vault/app-types';
+import type { ModelValidations, FormFieldGroups } from 'vault/app-types';
 
 export default class SecretEngineConfig extends Model {
   backend: string;
   type: string;
   // aws
-  leaseMax: any;
-  lease: any;
   accessKey: any;
   secretKey: any;
   roleArn: any;
@@ -36,15 +34,14 @@ export default class SecretEngineConfig extends Model {
   identityTokenTtl: any;
 
   get displayAttrs(): any;
-  get isConfigured(): boolean;
+  get isConfigured(): boolean; // used only for secret engines that return a 200 when configuration has not be set.
   get isWifPluginConfigured(): boolean;
   get isAccountPluginConfigured(): boolean;
   get fieldGroupsWif(): any;
   get fieldGroupsAccount(): any;
 
-  formFieldGroups(accessType?: string): {
-    [key: string]: string[];
-  }[];
+  formFieldGroups: FormFieldGroups[];
+
   changedAttributes(): {
     [key: string]: unknown[];
   };
@@ -53,5 +50,4 @@ export default class SecretEngineConfig extends Model {
   unloadRecord(): void;
   destroyRecord(): void;
   rollbackAttributes(): void;
-  validate(): ModelValidations;
 }

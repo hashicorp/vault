@@ -14,6 +14,7 @@ import { assert } from '@ember/debug';
 import errorMessage from 'vault/utils/error-message';
 
 import type ConfigModel from 'vault/models/secret-engine/config';
+import type SecondConfigModel from 'vault/models/secret-engine/second-config';
 import type IdentityOidcConfigModel from 'vault/models/identity/oidc/config';
 import type Router from '@ember/routing/router';
 import type StoreService from 'vault/services/store';
@@ -49,7 +50,7 @@ interface Args {
   displayName: string;
   type: string;
   model: ConfigModel;
-  secondModel: ConfigModel;
+  secondModel: SecondConfigModel;
   issuerConfig: IdentityOidcConfigModel;
 }
 
@@ -108,7 +109,8 @@ export default class ConfigureWif extends Component<Args> {
     waitFor(async (event: Event) => {
       event?.preventDefault();
       this.resetErrors();
-      // AWS lease model has model validations we need to check before saving
+      // currently we only check validations on the second model (for AWS lease config).
+      // however, if future first models are added and they have validations, we will need to check them here.
       if (this.args.secondModel && !this.validate(this.args.secondModel)) {
         return;
       }
@@ -142,7 +144,7 @@ export default class ConfigureWif extends Component<Args> {
       const issuerSaved = issuerAttrChanged ? await this.updateIssuer() : false;
 
       if (modelSaved || (!modelAttrChanged && issuerSaved)) {
-        // if there is a secondModel, attempt to save it. if saving fails, we transition and the failure will surface as a sticky flash message on the configuration details page.
+        // if there is a second model, attempt to save it. if saving fails, we transition and the failure will surface as a sticky flash message on the configuration details page.
         if (secondModelAttrChanged) {
           await this.saveSecondModel();
         }
@@ -207,7 +209,7 @@ export default class ConfigureWif extends Component<Args> {
     this.router.transitionTo('vault.cluster.secrets.backend.configuration', this.args.backendPath);
   }
 
-  validate(model: ConfigModel) {
+  validate(model: SecondConfigModel) {
     const { isValid, state, invalidFormMessage } = model.validate();
     this.modelValidations = isValid ? null : state;
     this.invalidFormAlert = isValid ? '' : invalidFormMessage;

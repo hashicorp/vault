@@ -24,7 +24,7 @@
   {{/if}}
 
   <div class="box is-fullwidth is-sideless">
-    {{! Only enterprise users can select a specific access type: "account" or "wif" }}
+    {{! Only enterprise users can change access type from "account" to "wif" }}
     {{#if this.version.isEnterprise}}
       <fieldset class="field form-fieldset" id="protection" data-test-access-type-section>
         <legend class="is-label">Access Type</legend>

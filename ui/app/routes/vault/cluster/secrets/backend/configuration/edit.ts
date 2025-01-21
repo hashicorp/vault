@@ -46,7 +46,6 @@ export default class SecretsBackendConfigurationEdit extends Route {
     const secretEngineRecord = this.modelFor('vault.cluster.secrets.backend') as SecretEngineModel;
     const type = secretEngineRecord.type;
     const displayName = allEngines().find((engine) => engine.type === type)?.displayName;
-    const isWifEngine = WIF_ENGINES.includes(type);
 
     // if the engine type is not configurable, return a 404.
     if (!secretEngineRecord || !CONFIGURABLE_SECRET_ENGINES.includes(type)) {
@@ -96,7 +95,7 @@ export default class SecretsBackendConfigurationEdit extends Route {
     }
     // if the type is a WIF engine and it's enterprise, we also fetch the issuer
     // from a global endpoint which has no associated model/adapter
-    if (isWifEngine && this.version.isEnterprise) {
+    if (WIF_ENGINES.includes(type) && this.version.isEnterprise) {
       try {
         const response = await this.store.queryRecord('identity/oidc/config', {});
         model['identity-oidc-config'] = response;
@@ -106,7 +105,6 @@ export default class SecretsBackendConfigurationEdit extends Route {
       }
     }
     model['displayName'] = displayName;
-    model['isWifEngine'] = isWifEngine;
     return model;
   }
 
