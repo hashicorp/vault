@@ -33,8 +33,9 @@ storage "alicloudoss" {
   can also be provided via the environment variable `ALICLOUD_OSS_BUCKET`.
 
 - `endpoint` `(string: "")` – Specifies the OSS endpoint. This can also be
-  provided via the environment variable `ALICLOUD_OSS_ENDPOINT`. <br>
-  **Important Note:** By default the Aliyun SDK uses HTTP for the endpoint schema, which means you should set the according protocol prefix of `"https://"` in order to ensure encrypted communication.
+  provided via the environment variable `ALICLOUD_OSS_ENDPOINT`. By default, the
+  Aliyun SDK uses HTTP for endpoint schemas. **You use the `https://` prefix to
+  ensure encrypted communication**.
 
 
 The following settings are used for authenticating to Alicloud.
