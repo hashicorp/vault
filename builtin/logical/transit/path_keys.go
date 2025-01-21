@@ -143,7 +143,7 @@ Supported types are: ML-DSA.`,
 			"hybrid_key_type_ec": {
 				Type: framework.TypeString,
 				Description: `The key type of the elliptic curve key to use for hybrid signature schemes.
-Supported types are: ecdsa-p256, ecdsa-p384, ecdsa-p521.`,
+Supported types are: ecdsa-p256, ecdsa-p384, ecdsa-p521, and ed25519.`,
 			},
 		},
 
@@ -247,6 +247,7 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		polReq.KeyType = keysutil.KeyType_AES256_CMAC
 	case "ml-dsa":
 		polReq.KeyType = keysutil.KeyType_ML_DSA
+
 		if parameterSet != keysutil.ParameterSet_ML_DSA_44 &&
 			parameterSet != keysutil.ParameterSet_ML_DSA_65 &&
 			parameterSet != keysutil.ParameterSet_ML_DSA_87 {
@@ -322,6 +323,7 @@ type asymKey struct {
 	PublicKey        string    `json:"public_key" structs:"public_key" mapstructure:"public_key"`
 	CertificateChain string    `json:"certificate_chain" structs:"certificate_chain" mapstructure:"certificate_chain"`
 	CreationTime     time.Time `json:"creation_time" structs:"creation_time" mapstructure:"creation_time"`
+	HybridPublicKey  string    `json:"hybrid_public_key" structs:"hybrid_public_key" mapstructure:"hybrid_public_key"`
 }
 
 func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -538,6 +540,8 @@ func getHybridKeyConfig(pqcKeyType, parameterSet, ecKeyType string) (keysutil.Hy
 		config.ECKeyType = keysutil.KeyType_ECDSA_P384
 	case "ecdsa-p521":
 		config.ECKeyType = keysutil.KeyType_ECDSA_P521
+	case "ed25519":
+		config.ECKeyType = keysutil.KeyType_ED25519
 	default:
 		return keysutil.HybridKeyConfig{}, fmt.Errorf("invalid key type for hybrid key: %s", ecKeyType)
 	}

@@ -49,6 +49,16 @@ export default class PkiSignIntermediateFormComponent extends Component<Args> {
 
   get groups() {
     return {
+      'Name constraints': [
+        'permittedDnsDomains',
+        'permittedEmailAddresses',
+        'permittedIpRanges',
+        'permittedUriDomains',
+        'excludedDnsDomains',
+        'excludedEmailAddresses',
+        'excludedIpRanges',
+        'excludedUriDomains',
+      ],
       'Signing options': ['usePss', 'skid', 'signatureBits'],
       'Subject Alternative Name (SAN) Options': ['altNames', 'ipSans', 'uriSans', 'otherSans'],
       'Additional subject fields': [

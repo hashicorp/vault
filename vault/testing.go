@@ -2225,6 +2225,10 @@ var (
 )
 
 func TestUserpassMount(c *Core, local bool) (*MountEntry, error) {
+	return TestUserpassMountContext(namespace.RootContext(nil), c, local)
+}
+
+func TestUserpassMountContext(ctx context.Context, c *Core, local bool) (*MountEntry, error) {
 	name := "userpass"
 	if local {
 		name += "-local"
@@ -2234,10 +2238,12 @@ func TestUserpassMount(c *Core, local bool) (*MountEntry, error) {
 		Path:        name + "/",
 		Type:        "userpass",
 		Description: name,
-		Accessor:    name,
-		Local:       local,
+		// Don't specify an accessor so we use a random one otherwise we will cause
+		// horrible issues when we try to create a new mount on a different
+		// namespace but they have the same accessor!
+		Local: local,
 	}
-	if err := c.enableCredential(namespace.RootContext(nil), userpassMe); err != nil {
+	if err := c.enableCredential(ctx, userpassMe); err != nil {
 		return nil, err
 	}
 	return userpassMe, nil

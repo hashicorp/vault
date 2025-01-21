@@ -29,7 +29,7 @@ func Test_ActivityLog_Disable(t *testing.T) {
 		"enabled": "enable",
 	})
 	require.NoError(t, err)
-	_, _, err = clientcountutil.NewActivityLogData(client).
+	_, err = clientcountutil.NewActivityLogData(client).
 		NewPreviousMonthData(1).
 		NewClientsSeen(5).
 		NewCurrentMonthData().

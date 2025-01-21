@@ -12,6 +12,7 @@ import hbs from 'htmlbars-inline-precompile';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap/ldap-helpers';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { LDAP_SELECTORS } from 'vault/tests/helpers/ldap/ldap-selectors';
 
 module('Integration | Component | ldap | Page::Libraries', function (hooks) {
   setupRenderingTest(hooks);
@@ -25,7 +26,7 @@ module('Integration | Component | ldap | Page::Libraries', function (hooks) {
     this.backend = createSecretsEngine(this.store);
     this.breadcrumbs = generateBreadcrumbs(this.backend.id);
 
-    for (const name of ['foo', 'bar']) {
+    for (const name of ['foo', 'bar', 'foo/']) {
       this.store.pushPayload('ldap/library', {
         modelName: 'ldap/library',
         backend: 'ldap-test',
@@ -93,12 +94,19 @@ module('Integration | Component | ldap | Page::Libraries', function (hooks) {
     await this.renderComponent();
 
     assert.dom('[data-test-list-item-content] svg').hasClass('hds-icon-folder', 'List item icon renders');
-    assert.dom('[data-test-library]').hasText(this.libraries[0].name, 'List item name renders');
+    assert.dom('[data-test-library="foo"]').hasText('foo', 'List item name renders');
 
-    await click('[data-test-popup-menu-trigger]');
+    await click(LDAP_SELECTORS.libraryMenu('foo'));
+    assert.dom('[data-test-subdirectory]').doesNotExist();
     assert.dom('[data-test-edit]').hasText('Edit', 'Edit link renders in menu');
     assert.dom('[data-test-details]').hasText('Details', 'Details link renders in menu');
     assert.dom('[data-test-delete]').hasText('Delete', 'Details link renders in menu');
+
+    await click(LDAP_SELECTORS.libraryMenu('foo/'));
+    assert.dom('[data-test-subdirectory]').hasText('Content', 'Content link renders in menu');
+    assert.dom('[data-test-edit]').doesNotExist();
+    assert.dom('[data-test-details]').doesNotExist();
+    assert.dom('[data-test-delete]').doesNotExist();
   });
 
   test('it should filter libraries', async function (assert) {
@@ -110,11 +118,11 @@ module('Integration | Component | ldap | Page::Libraries', function (hooks) {
       .hasText('There are no libraries matching "baz"', 'Filter message renders');
 
     await fillIn('[data-test-filter-input]', 'foo');
-    assert.dom('[data-test-list-item-content]').exists({ count: 1 }, 'List is filtered with correct results');
+    assert.dom('[data-test-list-item-content]').exists({ count: 2 }, 'List is filtered with correct results');
 
     await fillIn('[data-test-filter-input]', '');
     assert
       .dom('[data-test-list-item-content]')
-      .exists({ count: 2 }, 'All libraries are displayed when filter is cleared');
+      .exists({ count: 3 }, 'All libraries are displayed when filter is cleared');
   });
 });
