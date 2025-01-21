@@ -357,30 +357,6 @@ jobs:
           }
           EOF
           sudo systemctl reload docker
-      - name: Install rootless Docker
-        # Enterprise repo runners do not allow sudo, so can't system packages there yet.
-        if: github.repository != 'hashicorp/vault-enterprise'
-        run: |
-          sudo apt-get install -y uidmap dbus-user-session
-          export FORCE_ROOTLESS_INSTALL=1
-          curl -fsSL https://get.docker.com/rootless | sh
-          mkdir -p ~/.config/docker/
-          tee ~/.config/docker/daemon.json  <<EOF
-          {
-            "runtimes": {
-              "runsc": {
-                "path": "/usr/local/bin/runsc",
-                "runtimeArgs": [
-                  "--host-uds=create",
-                  "--ignore-cgroups"
-                ]
-              }
-            }
-          }
-          EOF
-          systemctl --user restart docker
-          # Ensure the original rootful Docker install is still the default.
-          docker context use default
       - id: run-go-tests
         name: Run Go tests
         timeout-minutes: ${{ fromJSON(env.TIMEOUT_IN_MINUTES) }}
