@@ -1,8 +1,8 @@
 ### vault.identity.entity.active.monthly ((#vault-identity-entity-active-monthly))
 
-Metric type | Value    | Description
------------ | -------- | -----------
-gauge       | entities | The number of distinct entities (per namespace) that created a token during the past month
+| Metric type | Value    | Description                                                                                         |
+|-------------|----------|-----------------------------------------------------------------------------------------------------|
+| gauge       | entities | The number of distinct entities (across all namespaces) that created a token during the past month. |
 
 Vault reports `vault.identity.entity.active.monthly` at the start of each month
 when client counting is enabled.
