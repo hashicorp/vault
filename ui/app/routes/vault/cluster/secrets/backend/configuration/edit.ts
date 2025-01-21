@@ -17,11 +17,12 @@ import type VersionService from 'vault/services/version';
 
 // This route file is reused for all configurable secret engines.
 // It generates config models based on the engine type.
-// Saving and updating of those models are done within the engine specific components.
+// Saving and updating those models are done within the engine specific components.
 
 const CONFIG_ADAPTERS_PATHS: Record<string, string[]> = {
   aws: ['aws/lease-config', 'aws/root-config'],
   azure: ['azure/config'],
+  gcp: ['gcp/config'],
   ssh: ['ssh/ca-config'],
 };
 
@@ -40,7 +41,7 @@ export default class SecretsBackendConfigurationEdit extends Route {
       set(error, 'httpStatus', 404);
       throw error;
     }
-    // generate the model based on the engine type.
+    // generate the model based on the engine type
     // and pre-set model with type and backend e.g. {type: ssh, id: ssh-123}
     const model: Record<string, unknown> = { type, id: backend };
     for (const adapterPath of CONFIG_ADAPTERS_PATHS[type] as string[]) {
