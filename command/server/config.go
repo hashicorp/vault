@@ -1107,7 +1107,7 @@ func normalizeRaftRetryJoin(val any) ([]byte, error) {
 					if len(pairParts) != 2 {
 						return nil, fmt.Errorf("malformed auto_join pair %s, expected key=value", pair)
 					}
-					// These are auto_join keys that a valid for the provider in go-discover
+					// These are auto_join keys that are valid for the provider in go-discover
 					if slices.Contains([]string{"domain", "auth_url", "url", "host"}, pairParts[0]) {
 						pairParts[1] = configutil.NormalizeAddr(pairParts[1])
 						pair = strings.Join(pairParts, "=")
