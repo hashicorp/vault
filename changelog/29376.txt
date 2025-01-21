@@ -1,0 +1,3 @@
+```release-note:bug
+activity : Include activity records on deleted mounts in Export API response.
+```
