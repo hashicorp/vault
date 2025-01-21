@@ -888,3 +888,97 @@ func TestHandleQuery_MultipleMounts(t *testing.T) {
 		})
 	}
 }
+
+// Test_ActivityLog_Export_DisabledMounts tests that the export API
+// produces the correct results even after a mount that a client was seen
+// on is disabled.
+func Test_ActivityLog_Export_DisabledMounts(t *testing.T) {
+	timeutil.SkipAtEndOfMonth(t)
+	t.Parallel()
+
+	var err error
+	var exportedClients map[string]vault.ActivityLogExportRecord
+
+	now := time.Now().UTC()
+
+	cluster := minimal.NewTestSoloCluster(t, nil)
+
+	client := cluster.Cores[0].Client
+	_, err = client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
+		"enabled": "enable",
+	})
+	require.NoError(t, err)
+
+	_, err = client.Logical().Write("sys/namespaces/ns1", map[string]interface{}{})
+	require.NoError(t, err)
+
+	// Enable userpass
+	err = client.Sys().EnableAuthWithOptions("userpass1", &api.EnableAuthOptions{
+		Type: "userpass",
+	})
+	require.NoError(t, err)
+
+	// Create two userpass users
+	_, err = client.Logical().Write("auth/userpass1/users/user1", map[string]interface{}{
+		"password": "foo",
+		"policies": "default",
+	})
+	require.NoError(t, err)
+
+	_, err = client.Logical().Write("auth/userpass1/users/user2", map[string]interface{}{
+		"password": "foo",
+	})
+	require.NoError(t, err)
+
+	// Login to using both user names
+	resp1, err := client.Logical().Write("auth/userpass1/login/user1", map[string]interface{}{
+		"password": "foo",
+	})
+	require.NoError(t, err)
+
+	resp2, err := client.Logical().Write("auth/userpass1/login/user2", map[string]interface{}{
+		"password": "foo",
+	})
+	require.NoError(t, err)
+
+	// Do some activity with the tokens
+	client.SetToken(resp1.Auth.ClientToken)
+	_, err = client.Logical().Read("auth/token/lookup-self")
+	require.NoError(t, err)
+	_, err = client.Logical().Read("auth/token/lookup-self")
+	require.NoError(t, err)
+	client.SetToken(resp2.Auth.ClientToken)
+	_, err = client.Logical().Read("auth/token/lookup-self")
+	require.NoError(t, err)
+	_, err = client.Logical().Read("auth/token/lookup-self")
+	require.NoError(t, err)
+	client.SetToken(cluster.RootToken)
+
+	err = cluster.Cores[0].Core.SaveCurrentFragmentEarly()
+	require.NoError(t, err)
+	require.Equal(t, 2, len(
+		cluster.Cores[0].Core.GetActivityLog().GetCurrentEntities().Clients))
+
+	exportedClients, err = getJSONExport(t, client, 0, now)
+	require.NoError(t, err)
+	require.Equal(t, 2, len(exportedClients))
+
+	// Disable the userpass mount. This should not affect the Export API
+	err = client.Sys().DisableAuth("userpass1")
+	require.NoError(t, err)
+
+	// Get the JSON data. This should be the same as before, with no errors.
+	exportedClients, err = getJSONExport(t, client, 0, now)
+	require.NoError(t, err)
+	require.Equal(t, 2, len(exportedClients))
+
+	// Get the CSV data. This count should be the same as the JSON count.
+	exportedClients, err = getCSVExport(t, client, 0, now)
+	require.NoError(t, err)
+	require.Equal(t, 2, len(exportedClients))
+
+	for _, record := range exportedClients {
+		require.Equal(t, record.MountPath, fmt.Sprintf(vault.DeletedMountFmt, record.MountAccessor))
+		require.Equal(t, record.MountType, "")
+	}
+}
