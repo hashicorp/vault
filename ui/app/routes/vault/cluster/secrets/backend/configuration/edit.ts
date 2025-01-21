@@ -7,7 +7,7 @@ import AdapterError from '@ember-data/adapter/error';
 import { set } from '@ember/object';
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { CONFIGURABLE_SECRET_ENGINES, WIF_ENGINES, allEngines } from 'vault/helpers/mountable-secret-engines';
+import { CONFIGURABLE_SECRET_ENGINES, WIF_ENGINES } from 'vault/helpers/mountable-secret-engines';
 import errorMessage from 'vault/utils/error-message';
 import { action } from '@ember/object';
 
@@ -45,7 +45,6 @@ export default class SecretsBackendConfigurationEdit extends Route {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     const secretEngineRecord = this.modelFor('vault.cluster.secrets.backend') as SecretEngineModel;
     const type = secretEngineRecord.type;
-    const displayName = allEngines().find((engine) => engine.type === type)?.displayName;
 
     // if the engine type is not configurable, return a 404.
     if (!secretEngineRecord || !CONFIGURABLE_SECRET_ENGINES.includes(type)) {
@@ -104,7 +103,6 @@ export default class SecretsBackendConfigurationEdit extends Route {
         model['identity-oidc-config'] = { queryIssuerError: true };
       }
     }
-    model['displayName'] = displayName;
     return model;
   }
 
