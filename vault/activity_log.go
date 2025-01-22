@@ -3172,16 +3172,6 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 								return fmt.Errorf("failed to process local entity alias")
 							}
 
-							record.MountType, ok = alias["mount_type"].(string)
-							if !ok {
-								return fmt.Errorf("failed to process mount type")
-							}
-
-							record.MountPath, ok = alias["mount_path"].(string)
-							if !ok {
-								return fmt.Errorf("failed to process mount path")
-							}
-
 							entityAliasMetadata, ok := alias["metadata"].(map[string]string)
 							if !ok {
 								return fmt.Errorf("failed to process entity alias metadata")
@@ -3199,6 +3189,23 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 							if entityAliasCustomMetadata != nil {
 								record.EntityAliasCustomMetadata = entityAliasCustomMetadata
 							}
+
+							valResp := a.core.router.ValidateMountByAccessor(e.MountAccessor)
+							if valResp == nil {
+								record.MountType = ""
+								record.MountPath = fmt.Sprintf(DeletedMountFmt, e.MountAccessor)
+							} else {
+								record.MountType, ok = alias["mount_type"].(string)
+								if !ok {
+									return fmt.Errorf("failed to process mount type")
+								}
+								record.MountPath, ok = alias["mount_path"].(string)
+								if !ok {
+									return fmt.Errorf("failed to process mount path")
+								}
+
+							}
+
 						}
 					} else {
 						// fetch mount directly to ensure mount type and path are populated
