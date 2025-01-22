@@ -9,8 +9,10 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import ldapMirageScenario from 'vault/mirage/scenarios/ldap';
 import ldapHandlers from 'vault/mirage/handlers/ldap';
 import authPage from 'vault/tests/pages/auth';
-import { click } from '@ember/test-helpers';
+import { click, currentURL } from '@ember/test-helpers';
 import { isURL, visitURL } from 'vault/tests/helpers/ldap/ldap-helpers';
+import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
+import { LDAP_SELECTORS } from 'vault/tests/helpers/ldap/ldap-selectors';
 
 module('Acceptance | ldap | libraries', function (hooks) {
   setupApplicationTest(hooks);
@@ -20,7 +22,21 @@ module('Acceptance | ldap | libraries', function (hooks) {
     ldapHandlers(this.server);
     ldapMirageScenario(this.server);
     await authPage.login();
-    return visitURL('libraries');
+    // mount & configure
+    await runCmd([
+      mountEngineCmd('ldap', this.backend),
+      `write ${this.backend}/config binddn=foo bindpass=bar url=http://localhost:8208`,
+    ]);
+    return visitURL('libraries', this.backend);
+  });
+
+  hooks.afterEach(async function () {
+    await runCmd(deleteEngineCmd(this.backend));
+  });
+
+  test('it should show libraries on overview page', async function (assert) {
+    await visitURL('overview', this.backend);
+    assert.dom('[data-test-libraries-count]').hasText('2');
   });
 
   test('it should transition to create library route on toolbar link click', async function (assert) {
@@ -29,11 +45,30 @@ module('Acceptance | ldap | libraries', function (hooks) {
   });
 
   test('it should transition to library details route on list item click', async function (assert) {
-    await click('[data-test-list-item-link] a');
-    assert.true(
-      isURL('libraries/test-library/details/accounts'),
+    await click(LDAP_SELECTORS.libraryItem('test-library'));
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${this.backend}/ldap/libraries/test-library/details/accounts`,
       'Transitions to library details accounts route on list item click'
     );
+  });
+
+  test('it should transition to library details for hierarchical list items', async function (assert) {
+    await click(LDAP_SELECTORS.libraryItem('admin/'));
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${this.backend}/ldap/libraries/subdirectory/admin/`,
+      'Transitions to subdirectory list view'
+    );
+
+    await click(LDAP_SELECTORS.libraryItem('admin/test-library'));
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${this.backend}/ldap/libraries/admin%2Ftest-library/details/accounts`,
+      'Transitions to child library details accounts'
+    );
+    assert.dom('[data-test-account-name]').exists({ count: 2 }, 'lists the accounts');
+    assert.dom('[data-test-checked-out-account]').exists({ count: 1 }, 'lists the checked out accounts');
   });
 
   test('it should transition to routes from list item action menu', async function (assert) {
