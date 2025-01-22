@@ -392,7 +392,7 @@ func (a *ActivityLog) sortActivityLogMonthsResponse(months []*ResponseMonth) {
 
 const (
 	noMountAccessor     = "no mount accessor (pre-1.10 upgrade?)"
-	DeletedMountFmt     = "deleted mount; accessor %q"
+	deletedMountFmt     = "deleted mount; accessor %q"
 	DeletedNamespaceFmt = "deleted namespace %q"
 )
 
@@ -405,7 +405,7 @@ func (a *ActivityLog) mountAccessorToMountPath(mountAccessor string) string {
 	} else {
 		valResp := a.core.router.ValidateMountByAccessor(mountAccessor)
 		if valResp == nil {
-			displayPath = fmt.Sprintf(DeletedMountFmt, mountAccessor)
+			displayPath = fmt.Sprintf(deletedMountFmt, mountAccessor)
 		} else {
 			displayPath = valResp.MountPath
 			if !strings.HasSuffix(displayPath, "/") {
