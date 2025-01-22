@@ -1,8 +1,8 @@
 ### vault.identity.entity.active.reporting_period ((#vault-identity-entity-active-reporting_period))
 
-Metric type | Value    | Description
------------ | -------- | -----------
-gauge       | entities | The number of distinct entities (per namespace) that created a token during the configured reporting period
+| Metric type | Value    | Description                                                                                                          |
+|-------------|----------|----------------------------------------------------------------------------------------------------------------------|
+| gauge       | entities | The number of distinct entities (across all namespaces) that created a token during the configured reporting period. |
 
 Vault reports `vault.identity.entity.active.reporting_period` at the start of
 each month when client counting is enabled.
