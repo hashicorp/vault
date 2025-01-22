@@ -16,6 +16,7 @@ import (
 
 	"github.com/armon/go-radix"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/vault/sdk/physical"
 	uberAtomic "go.uber.org/atomic"
 )
@@ -46,7 +47,7 @@ var (
 type InmemBackend struct {
 	sync.RWMutex
 	root         *radix.Tree
-	permitPool   *physical.PermitPool
+	permitPool   *permitpool.Pool
 	logger       log.Logger
 	failGet      *uint32
 	failPut      *uint32
@@ -90,7 +91,7 @@ func NewInmem(conf map[string]string, logger log.Logger) (physical.Backend, erro
 
 	return &InmemBackend{
 		root:         radix.New(),
-		permitPool:   physical.NewPermitPool(physical.DefaultParallelOperations),
+		permitPool:   permitpool.New(physical.DefaultParallelOperations),
 		logger:       logger,
 		failGet:      new(uint32),
 		failPut:      new(uint32),
@@ -118,7 +119,7 @@ func NewTransactionalInmem(conf map[string]string, logger log.Logger) (physical.
 	return &TransactionalInmemBackend{
 		InmemBackend: InmemBackend{
 			root:         radix.New(),
-			permitPool:   physical.NewPermitPool(1),
+			permitPool:   permitpool.New(1),
 			logger:       logger,
 			failGet:      new(uint32),
 			failPut:      new(uint32),
