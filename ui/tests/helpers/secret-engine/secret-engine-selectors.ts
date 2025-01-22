@@ -24,7 +24,7 @@ export const SECRET_ENGINE_SELECTORS = {
   viewBackend: '[data-test-backend-view-link]',
   warning: '[data-test-warning]',
   configureForm: '[data-test-configure-form]',
-  secondModelTitle: '[data-test-second-model-title]',
+  additionalConfigModelTitle: '[data-test-additional-config-model-title]',
   wif: {
     accessTypeSection: '[data-test-access-type-section]',
     accessTitle: '[data-test-access-title]',

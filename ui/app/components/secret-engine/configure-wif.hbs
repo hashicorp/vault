@@ -3,21 +3,15 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<form
-  {{on "submit" (perform this.submitForm)}}
-  aria-label={{concat "configure" @type " credentials"}}
-  data-test-configure-form
->
+<form {{on "submit" (perform this.submitForm)}} aria-label="configure {{@type}} credentials" data-test-configure-form>
   <NamespaceReminder @mode="save" @noun="configuration" />
   <MessageError @errorMessage={{this.errorMessage}} />
   {{! AWS specific note and section header }}
   {{#if (eq @type "aws")}}
-    <div class="box is-fullwidth is-shadowless is-marginless">
-      <p class="has-text-grey-dark">
-        Note: the client uses the official AWS SDK and will use the specified credentials, environment credentials, shared
-        file credentials, or IAM role/ECS task credentials in that order.
-      </p>
-    </div>
+    <p class="has-text-grey-dark has-top-bottom-margin">
+      Note: the client uses the official AWS SDK and will use the specified credentials, environment credentials, shared file
+      credentials, or IAM role/ECS task credentials in that order.
+    </p>
     <h2 class="title is-5 has-bottom-padding-s has-top-margin-l" data-test-access-title>
       Access to AWS
     </h2>
@@ -33,23 +27,23 @@
             You cannot edit Access Type if you have already saved access credentials.
           {{else}}
             Choose the way to configure access to
-            {{@displayName}}. Access can be configured either using an
-            {{if (eq @type "aws") "IAM access keys" (concat @displayName " account credentials")}}, or with the Plugin
-            Workload Identity Federation (WIF).
+            {{@displayName}}. Access can be configured either using
+            {{if (eq @type "aws") "IAM access keys" (concat @displayName " account credentials")}}
+            or with the Plugin Workload Identity Federation (WIF).
           {{/if}}
         </p>
         <div>
           <RadioButton
-            id={{concat "access-type-" @type}}
+            id="access-type-{{@type}}"
             name="account"
             class="radio"
             data-test-access-type={{@type}}
             @value="account"
             @groupValue={{this.accessType}}
-            @onChange={{fn this.onChangeAccessType "account"}}
+            @onChange={{this.onChangeAccessType}}
             @disabled={{this.disableAccessType}}
           />
-          <label for={{concat "access-type-" @type}}>{{@displayName}} account credentials</label>
+          <label for="access-type-{{@type}}">{{@displayName}} account credentials</label>
           <RadioButton
             id="access-type-wif"
             name="wif"
@@ -57,7 +51,7 @@
             data-test-access-type="wif"
             @value="wif"
             @groupValue={{this.accessType}}
-            @onChange={{fn this.onChangeAccessType "wif"}}
+            @onChange={{this.onChangeAccessType}}
             @disabled={{this.disableAccessType}}
           />
           <label for="access-type-wif">Workload Identity Federation</label>
@@ -69,25 +63,29 @@
       {{#each @issuerConfig.displayAttrs as |attr|}}
         <FormField @attr={{attr}} @model={{@issuerConfig}} />
       {{/each}}
-      <FormFieldGroups @model={{@model}} @mode={{if @model.isNew "create" "edit"}} @groupName="fieldGroupsWif" />
+      <FormFieldGroups
+        @model={{@mountConfigModel}}
+        @mode={{if @mountConfigModel.isNew "create" "edit"}}
+        @groupName="fieldGroupsWif"
+      />
     {{else}}
       {{! otherwise display account credential fields }}
       <FormFieldGroups
-        @model={{@model}}
-        @mode={{if @model.isNew "create" "edit"}}
+        @model={{@mountConfigModel}}
+        @mode={{if @mountConfigModel.isNew "create" "edit"}}
         @useEnableInput={{true}}
         @groupName="fieldGroupsAccount"
       />
     {{/if}}
-    {{! secondModel fields show regardless of the vault version or what access type is selected }}
-    {{#if @secondModel}}
-      <h2 class="title is-5 has-bottom-padding-s has-top-margin-l" data-test-second-model-title>
+    {{! additionalConfigModel fields show regardless of the vault version or what access type is selected }}
+    {{#if @additionalConfigModel}}
+      <h2 class="title is-5 has-bottom-padding-s has-top-margin-l" data-test-additional-config-model-title>
         {{if (eq @type "aws") "Lease" "Additional"}}
         Configuration
       </h2>
       <div class="box is-fullwidth is-sideless is-bottomless">
-        {{#each @secondModel.formFields as |attr|}}
-          <FormField @attr={{attr}} @model={{@secondModel}} @modelValidations={{this.modelValidations}} />
+        {{#each @additionalConfigModel.formFields as |attr|}}
+          <FormField @attr={{attr}} @model={{@additionalConfigModel}} @modelValidations={{this.modelValidations}} />
         {{/each}}
       </div>
     {{/if}}

@@ -11,10 +11,11 @@ import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { ValidationMap } from 'vault/vault/app-types';
 import { assert } from '@ember/debug';
+import { capitalize } from '@ember/string';
 import errorMessage from 'vault/utils/error-message';
 
-import type ConfigModel from 'vault/models/secret-engine/config';
-import type SecondConfigModel from 'vault/models/secret-engine/second-config';
+import type MountConfigModel from 'vault/vault/models/secret-engine/mount-config';
+import type additionalConfigModel from 'vault/vault/models/secret-engine/additional-config';
 import type IdentityOidcConfigModel from 'vault/models/identity/oidc/config';
 import type Router from '@ember/routing/router';
 import type StoreService from 'vault/services/store';
@@ -22,26 +23,26 @@ import type VersionService from 'vault/services/version';
 import type FlashMessageService from 'vault/services/flash-messages';
 
 /**
- * @module SecretEngineConfigureWif component is used to configure secret engines that allow the WIF configuration.
+ * @module SecretEngineConfigureWif component is used to configure secret engines that allow the WIF (Workload Identity Federation) configuration.
  * The ability to configure WIF fields is an enterprise only feature.
  * If the user is configuring WIF attributes they will also have the option to update the global issuer config, which is a separate endpoint named identity/oidc/config.
- * If a user is on OSS, the account configuration fields will display with no ability to select or see wif fields.
+ * If a user is on CE, the account configuration fields will display with no ability to select or see wif fields.
  * 
  * @example
  * <SecretEngine::ConfigureWif
     @backendPath={{this.model.id}}
     @displayName="AWS"
     @type="aws"
-    @model={{this.model.root-config}}
-    @secondModel={{this.model.lease-config}}
+    @mountConfigModel={{this.model.root-config}}
+    @additionalConfigModel={{this.model.lease-config}}
     @issuerConfig={{this.model.identity-oidc-config}}
     />
  *
  * @param {string} backendPath - name of the secret engine, ex: 'azure-123'.
  * @param {string} displayName - used for flash messages, subText and labels. ex: 'Azure'.
  * @param {string} type - the type of the engine, ex: 'azure'.
- * @param {object} model - the config model for the engine.
- * @param {object} [secondModel] - for engines with two config models. Currently, only used by aws
+ * @param {object} mountConfigModel - the config model for the engine.
+ * @param {object} [additionalConfigModel] - for engines with two config models. Currently, only used by aws
  * @param {object} [issuerConfig] - the identity/oidc/config model. Will be passed in if user has an enterprise license.
  */
 
@@ -49,8 +50,8 @@ interface Args {
   backendPath: string;
   displayName: string;
   type: string;
-  model: ConfigModel;
-  secondModel: SecondConfigModel;
+  mountConfigModel: MountConfigModel;
+  additionalConfigModel: additionalConfigModel;
   issuerConfig: IdentityOidcConfigModel;
 }
 
@@ -71,8 +72,8 @@ export default class ConfigureWif extends Component<Args> {
   constructor(owner: unknown, args: Args) {
     super(owner, args);
     // the following checks are only relevant to existing enterprise configurations
-    if (this.version.isCommunity && this.args.model.isNew) return;
-    const { isWifPluginConfigured, isAccountPluginConfigured } = this.args.model;
+    if (this.version.isCommunity && this.args.mountConfigModel.isNew) return;
+    const { isWifPluginConfigured, isAccountPluginConfigured } = this.args.mountConfigModel;
     assert(
       `'isWifPluginConfigured' is required to be defined on the config model. Must return a boolean.`,
       isWifPluginConfigured !== undefined
@@ -84,18 +85,19 @@ export default class ConfigureWif extends Component<Args> {
 
   get modelAttrChanged() {
     // "backend" dirties model state so explicity ignore it here
-    return Object.keys(this.args.model?.changedAttributes()).some((item) => item !== 'backend');
+    return Object.keys(this.args.mountConfigModel?.changedAttributes()).some((item) => item !== 'backend');
   }
 
   get issuerAttrChanged() {
     return this.args.issuerConfig?.hasDirtyAttributes;
   }
 
-  get secondModelAttrChanged() {
-    const { secondModel } = this.args;
-    // required to check for model first otherwise Object.keys will have nothing to iterate over and fails
-    if (!secondModel) return;
-    return Object.keys(secondModel.changedAttributes()).some((item) => item !== 'backend');
+  get additionalConfigModelAttrChanged() {
+    const { additionalConfigModel } = this.args;
+    // required to check for model otherwise Object.keys will have nothing to iterate over and fails
+    return additionalConfigModel
+      ? Object.keys(additionalConfigModel.changedAttributes()).some((item) => item !== 'backend')
+      : false;
   }
 
   @action continueSubmitForm() {
@@ -109,8 +111,8 @@ export default class ConfigureWif extends Component<Args> {
     waitFor(async (event: Event) => {
       event?.preventDefault();
       this.resetErrors();
-      // currently we only check validations on the second model (for AWS lease config).
-      if (this.args.secondModel && !this.validate(this.args.secondModel)) {
+      // currently we only check validations on the additional model (for AWS lease config).
+      if (this.args.additionalConfigModel && !this.isValid(this.args.additionalConfigModel)) {
         return;
       }
       if (this.issuerAttrChanged) {
@@ -130,24 +132,24 @@ export default class ConfigureWif extends Component<Args> {
     waitFor(async () => {
       const modelAttrChanged = this.modelAttrChanged;
       const issuerAttrChanged = this.issuerAttrChanged;
-      const secondModelAttrChanged = this.secondModelAttrChanged;
+      const additionalConfigModelAttrChanged = this.additionalConfigModelAttrChanged;
       // check if any of the model(s) or issuer attributes have changed
       // if no changes, transition and notify user
-      if (!modelAttrChanged && !issuerAttrChanged && !secondModelAttrChanged) {
+      if (!modelAttrChanged && !issuerAttrChanged && !additionalConfigModelAttrChanged) {
         this.flashMessages.info('No changes detected.');
         this.transition();
         return;
       }
 
-      const modelSaved = modelAttrChanged ? await this.saveModel() : false;
+      const modelSaved = modelAttrChanged ? await this.saveMountConfigModel() : false;
       const issuerSaved = issuerAttrChanged ? await this.updateIssuer() : false;
 
       if (modelSaved || (!modelAttrChanged && issuerSaved)) {
-        // if there is a second model, attempt to save it. if saving fails, we transition and the failure will surface as a sticky flash message on the configuration details page.
-        if (secondModelAttrChanged) {
-          await this.saveSecondModel();
+        // if there is an additional model, attempt to save it. if saving fails, we transition and the failure will surface as a sticky flash message on the configuration details page.
+        if (additionalConfigModelAttrChanged) {
+          await this.saveAdditionalConfigModel();
         }
-        // we only prevent a transition if the first model or issuer are edited and fail when saving
+        // we only prevent a transition if the mount config model or issuer fail when saving
         this.transition();
       } else {
         return;
@@ -168,10 +170,10 @@ export default class ConfigureWif extends Component<Args> {
     }
   }
 
-  async saveModel(): Promise<boolean> {
-    const { backendPath, model } = this.args;
+  async saveMountConfigModel(): Promise<boolean> {
+    const { backendPath, mountConfigModel } = this.args;
     try {
-      await model.save();
+      await mountConfigModel.save();
       this.flashMessages.success(`Successfully saved ${backendPath}'s configuration.`);
       return true;
     } catch (error) {
@@ -181,34 +183,35 @@ export default class ConfigureWif extends Component<Args> {
     }
   }
 
-  async saveSecondModel(): Promise<boolean> {
-    const { backendPath, secondModel, type } = this.args;
-    const secondModelName = type === 'aws' ? 'Lease configuration' : 'additional configuration';
+  async saveAdditionalConfigModel() {
+    const { backendPath, additionalConfigModel, type } = this.args;
+    const additionalConfigModelName = type === 'aws' ? 'lease configuration' : 'additional configuration';
     try {
-      await secondModel.save();
-      this.flashMessages.success(`Successfully saved ${backendPath}'s ${secondModelName}.`);
-      return true;
+      await additionalConfigModel.save();
+      this.flashMessages.success(`Successfully saved ${backendPath}'s ${additionalConfigModelName}.`);
     } catch (error) {
-      this.errorMessage = errorMessage(error);
-      // we transition even if the second model fails. surface a sticky flash message so the user can see it on the next view.
-      this.flashMessages.danger(`${secondModelName} was not saved: ${this.errorMessage}`, {
-        sticky: true,
-      });
-      return false;
+      // we transition even if the additional config model fails.
+      // the only error the user sees is a sticky flash message on the next view.
+      this.flashMessages.danger(
+        `${capitalize(additionalConfigModelName)} was not saved: ${errorMessage(error)}`,
+        {
+          sticky: true,
+        }
+      );
     }
   }
 
   resetErrors() {
     this.flashMessages.clearMessages();
-    this.errorMessage = '';
-    this.invalidFormAlert = '';
+    this.errorMessage = this.invalidFormAlert = '';
+    this.modelValidations = null;
   }
 
   transition() {
     this.router.transitionTo('vault.cluster.secrets.backend.configuration', this.args.backendPath);
   }
 
-  validate(model: SecondConfigModel) {
+  isValid(model: additionalConfigModel) {
     const { isValid, state, invalidFormMessage } = model.validate();
     this.modelValidations = isValid ? null : state;
     this.invalidFormAlert = isValid ? '' : invalidFormMessage;
@@ -218,11 +221,11 @@ export default class ConfigureWif extends Component<Args> {
   @action
   onChangeAccessType(accessType: string) {
     this.accessType = accessType;
-    const { model, type } = this.args;
+    const { mountConfigModel, type } = this.args;
     if (accessType === 'account') {
       // reset all "wif" attributes that are mutually exclusive with "account" attributes
       // these attributes are the same for each engine
-      model.identityTokenAudience = model.identityTokenTtl = undefined;
+      mountConfigModel.identityTokenAudience = mountConfigModel.identityTokenTtl = undefined;
       // return the issuer to the globally set value (if there is one) on toggle
       this.args.issuerConfig.rollbackAttributes();
     }
@@ -230,9 +233,9 @@ export default class ConfigureWif extends Component<Args> {
       // reset all "account" attributes that are mutually exclusive with "wif" attributes
       // these attributes are different for each engine
       type === 'azure'
-        ? (model.clientSecret = model.rootPasswordTtl = undefined)
+        ? (mountConfigModel.clientSecret = mountConfigModel.rootPasswordTtl = undefined)
         : type === 'aws'
-        ? (model.accessKey = undefined)
+        ? (mountConfigModel.accessKey = undefined)
         : null;
     }
   }
@@ -240,7 +243,7 @@ export default class ConfigureWif extends Component<Args> {
   @action
   onCancel() {
     this.resetErrors();
-    this.args.model.unloadRecord();
+    this.args.mountConfigModel.unloadRecord();
     this.transition();
   }
 }

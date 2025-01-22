@@ -64,7 +64,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       assert.dom(SES.configureTitle('aws')).hasText('Configure AWS');
       assert.dom(SES.configureForm).exists('it lands on the configuration form.');
       assert
-        .dom(SES.secondModelTitle)
+        .dom(SES.additionalConfigModelTitle)
         .hasText(
           'Lease Configuration',
           'it shows the lease configuration section with the "Lease Configuration" title.'
@@ -89,9 +89,8 @@ module('Acceptance | aws | configuration', function (hooks) {
       await enablePage.enable('aws', path);
 
       this.server.post(configUrl('aws-lease', path), () => {
-        assert.false(
-          true,
-          'post request was made to config/lease when no data was changed. test should fail.'
+        throw new Error(
+          'A POST request was made to config/lease when it should not because no data was changed.'
         );
       });
 
@@ -130,11 +129,11 @@ module('Acceptance | aws | configuration', function (hooks) {
       const type = 'aws';
       this.server.get(`${path}/config/root`, (schema, req) => {
         const payload = JSON.parse(req.requestBody);
-        assert.ok(true, 'request made to config/root when navigating to the configuration page.');
+        assert.true(true, 'request made to config/root when navigating to the configuration page.');
         return { data: { id: path, type, attributes: payload } };
       });
       this.server.get(`identity/oidc/config`, () => {
-        assert.false(true, 'request made to return issuer. test should fail.');
+        throw new Error(`Request was made to return the issuer when it should not have been.`);
       });
       await enablePage.enable(type, path);
       createConfig(this.store, path, type); // create the aws root config in the store
@@ -151,10 +150,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       await enablePage.enable('aws', path);
 
       this.server.post(configUrl('aws-lease', path), () => {
-        assert.false(
-          true,
-          'post request was made to config/lease when no data was changed. test should fail.'
-        );
+        throw new Error(`post request was made to config/lease when it should not have been.`);
       });
 
       await click(SES.configTab);
@@ -202,15 +198,13 @@ module('Acceptance | aws | configuration', function (hooks) {
       await enablePage.enable('aws', path);
 
       this.server.post(configUrl('aws', path), () => {
-        assert.ok('post request was made to config/root when no data was changed. test should fail.');
+        assert.true(true, 'post request was made to save aws root config.');
         return overrideResponse(400, { errors: ['bad request!'] });
       });
       this.server.post(configUrl('aws-lease', path), () => {
-        assert.true(
-          false,
-          'post request was made to config/lease when the first config was not saved. test should fail.'
+        throw new Error(
+          `post request was made to config/lease when the first config was not saved. A request to this endpoint should NOT be be made`
         );
-        return overrideResponse(400, { errors: ['bad request!'] });
       });
       await click(SES.configTab);
       await click(SES.configure);
@@ -226,7 +220,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       const type = 'aws';
       this.server.get(`${path}/config/root`, (schema, req) => {
         const payload = JSON.parse(req.requestBody);
-        assert.ok(true, 'request made to config/root when navigating to the configuration page.');
+        assert.true(true, 'request made to config/root when navigating to the configuration page.');
         return { data: { id: path, type, attributes: payload } };
       });
       await enablePage.enable(type, path);
@@ -303,16 +297,10 @@ module('Acceptance | aws | configuration', function (hooks) {
       await enablePage.enable(type, path);
 
       this.server.post(configUrl(type, path), () => {
-        assert.false(
-          true,
-          'post request was made to config/root when no data was changed. test should fail.'
-        );
+        throw new Error(`post request was made to config/root when it should not have been.`);
       });
       this.server.post(configUrl('aws-lease', path), () => {
-        assert.false(
-          true,
-          'post request was made to config/lease when no data was changed. test should fail.'
-        );
+        throw new Error(`post request was made to config/lease when it should not have been.`);
       });
 
       await click(SES.configTab);

@@ -6,7 +6,7 @@
 import type Model from '@ember-data/model';
 import type { ModelValidations, FormField } from 'vault/app-types';
 
-export default class SecretEngineSecondConfig extends Model {
+export default class SecretEngineAdditionalConfigModel extends Model {
   backend: string;
   type: string;
   // aws lease

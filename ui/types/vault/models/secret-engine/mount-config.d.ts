@@ -6,7 +6,7 @@
 import type Model from '@ember-data/model';
 import type { ModelValidations, FormFieldGroups } from 'vault/app-types';
 
-export default class SecretEngineConfig extends Model {
+export default class SecretEngineMountConfigModel extends Model {
   backend: string;
   type: string;
   // aws
