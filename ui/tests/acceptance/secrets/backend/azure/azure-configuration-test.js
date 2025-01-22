@@ -109,17 +109,6 @@ module('Acceptance | Azure | configuration', function (hooks) {
         // cleanup
         await runCmd(`delete sys/mounts/${path}`);
       });
-
-      test('it should show API error when configuration read fails', async function (assert) {
-        assert.expect(1);
-        const path = `azure-${this.uid}`;
-        // interrupt get and return API error
-        this.server.get(configUrl(this.type, path), () => {
-          return overrideResponse(400, { errors: ['bad request'] });
-        });
-        await enablePage.enable(this.type, path);
-        assert.dom(SES.error.title).hasText('Error', 'shows the secrets backend error route');
-      });
     });
 
     module('create', function () {
@@ -223,6 +212,42 @@ module('Acceptance | Azure | configuration', function (hooks) {
         await click(GENERAL.saveButton);
         // cleanup
         await runCmd(`delete sys/mounts/${path}`);
+      });
+    });
+
+    module('Error handling', function () {
+      test('it prevents transition and shows api error if config errored on save', async function (assert) {
+        const path = `azure-${this.uid}`;
+        await enablePage.enable('azure', path);
+
+        this.server.post(configUrl('azure', path), () => {
+          return overrideResponse(400, { errors: ['welp, that did not work!'] });
+        });
+
+        await click(SES.configTab);
+        await click(SES.configure);
+        await fillInAzureConfig('azure');
+        await click(GENERAL.saveButton);
+
+        assert.dom(GENERAL.messageError).hasText('Error welp, that did not work!', 'API error shows on form');
+        assert.strictEqual(
+          currentURL(),
+          `/vault/secrets/${path}/configuration/edit`,
+          'the form did not transition because the save failed.'
+        );
+        // cleanup
+        await runCmd(`delete sys/mounts/${path}`);
+      });
+
+      test('it should show API error when configuration read fails', async function (assert) {
+        assert.expect(1);
+        const path = `azure-${this.uid}`;
+        // interrupt get and return API error
+        this.server.get(configUrl(this.type, path), () => {
+          return overrideResponse(400, { errors: ['bad request'] });
+        });
+        await enablePage.enable(this.type, path);
+        assert.dom(SES.error.title).hasText('Error', 'shows the secrets backend error route');
       });
     });
   });

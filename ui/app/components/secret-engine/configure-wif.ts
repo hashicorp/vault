@@ -41,7 +41,7 @@ import type FlashMessageService from 'vault/services/flash-messages';
  * @param {string} backendPath - name of the secret engine, ex: 'azure-123'.
  * @param {string} displayName - used for flash messages, subText and labels. ex: 'Azure'.
  * @param {string} type - the type of the engine, ex: 'azure'.
- * @param {object} mountConfigModel - the config model for the engine. The attr `isWifPluginConfigured` must be added to this config model otherwise this form will assert an error. `isWifPluginConfigured` returns true if any required wif fields have been set.
+ * @param {object} mountConfigModel - the config model for the engine. The attr `isWifPluginConfigured` must be added to this config model otherwise this component will assert an error. `isWifPluginConfigured` should return true if any required wif fields have been set.
  * @param {object} [additionalConfigModel] - for engines with two config models. Currently, only used by aws
  * @param {object} [issuerConfig] - the identity/oidc/config model. Will be passed in if user has an enterprise license.
  */
@@ -94,7 +94,7 @@ export default class ConfigureWif extends Component<Args> {
 
   get additionalConfigModelAttrChanged() {
     const { additionalConfigModel } = this.args;
-    // required to check for model otherwise Object.keys will have nothing to iterate over and fails
+    // required to check for additional model otherwise Object.keys will have nothing to iterate over and fails
     return additionalConfigModel
       ? Object.keys(additionalConfigModel.changedAttributes()).some((item) => item !== 'backend')
       : false;

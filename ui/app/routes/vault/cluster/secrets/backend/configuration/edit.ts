@@ -57,8 +57,8 @@ export default class SecretsBackendConfigurationEdit extends Route {
     // and pre-set model with type and backend e.g. {type: ssh, id: ssh-123}
     const model: Record<string, unknown> = { type, id: backend };
     for (const modelName of MOUNT_CONFIG_MODEL_NAMES[type] as string[]) {
-      // create a key that corresponds with the configs model order
-      // ex: modelName = ssh/ca-config, convert to: mount-config-model so that you can pass to component @model={{this.model.mount-config-model}}
+      // create a key that corresponds with the model order
+      // ex: modelName = aws/lease-config, convert to: additional-config-model so that you can pass to component @additionalConfigModel={{this.model.additional-config-model}}
       const standardizedKey = this.standardizedModelName(type, modelName);
       try {
         const configModel = await this.store.queryRecord(modelName, {
