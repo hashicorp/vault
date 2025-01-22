@@ -15,7 +15,7 @@ import { capitalize } from '@ember/string';
 import errorMessage from 'vault/utils/error-message';
 
 import type MountConfigModel from 'vault/vault/models/secret-engine/mount-config';
-import type additionalConfigModel from 'vault/vault/models/secret-engine/additional-config';
+import type AdditionalConfigModel from 'vault/vault/models/secret-engine/additional-config';
 import type IdentityOidcConfigModel from 'vault/models/identity/oidc/config';
 import type Router from '@ember/routing/router';
 import type StoreService from 'vault/services/store';
@@ -33,15 +33,15 @@ import type FlashMessageService from 'vault/services/flash-messages';
     @backendPath={{this.model.id}}
     @displayName="AWS"
     @type="aws"
-    @mountConfigModel={{this.model.root-config}}
-    @additionalConfigModel={{this.model.lease-config}}
+    @mountConfigModel={{this.model.mount-config-model}}
+    @additionalConfigModel={{this.model.additional-config-model}}
     @issuerConfig={{this.model.identity-oidc-config}}
     />
  *
  * @param {string} backendPath - name of the secret engine, ex: 'azure-123'.
  * @param {string} displayName - used for flash messages, subText and labels. ex: 'Azure'.
  * @param {string} type - the type of the engine, ex: 'azure'.
- * @param {object} mountConfigModel - the config model for the engine.
+ * @param {object} mountConfigModel - the config model for the engine. The attr `isWifPluginConfigured` must be added to this config model otherwise this form will assert an error. `isWifPluginConfigured` returns true if any required wif fields have been set.
  * @param {object} [additionalConfigModel] - for engines with two config models. Currently, only used by aws
  * @param {object} [issuerConfig] - the identity/oidc/config model. Will be passed in if user has an enterprise license.
  */
@@ -51,7 +51,7 @@ interface Args {
   displayName: string;
   type: string;
   mountConfigModel: MountConfigModel;
-  additionalConfigModel: additionalConfigModel;
+  additionalConfigModel: AdditionalConfigModel;
   issuerConfig: IdentityOidcConfigModel;
 }
 
@@ -83,7 +83,7 @@ export default class ConfigureWif extends Component<Args> {
     this.disableAccessType = isWifPluginConfigured || isAccountPluginConfigured;
   }
 
-  get modelAttrChanged() {
+  get mountConfigModelAttrChanged() {
     // "backend" dirties model state so explicity ignore it here
     return Object.keys(this.args.mountConfigModel?.changedAttributes()).some((item) => item !== 'backend');
   }
@@ -111,7 +111,7 @@ export default class ConfigureWif extends Component<Args> {
     waitFor(async (event: Event) => {
       event?.preventDefault();
       this.resetErrors();
-      // currently we only check validations on the additional model (for AWS lease config).
+      // currently we only check validations on the additional model
       if (this.args.additionalConfigModel && !this.isValid(this.args.additionalConfigModel)) {
         return;
       }
@@ -130,23 +130,27 @@ export default class ConfigureWif extends Component<Args> {
 
   save = task(
     waitFor(async () => {
-      const modelAttrChanged = this.modelAttrChanged;
+      const mountConfigModelChanged = this.mountConfigModelAttrChanged;
+      const additionalModelAttrChanged = this.additionalConfigModelAttrChanged;
       const issuerAttrChanged = this.issuerAttrChanged;
-      const additionalConfigModelAttrChanged = this.additionalConfigModelAttrChanged;
       // check if any of the model(s) or issuer attributes have changed
       // if no changes, transition and notify user
-      if (!modelAttrChanged && !issuerAttrChanged && !additionalConfigModelAttrChanged) {
+      if (!mountConfigModelChanged && !additionalModelAttrChanged && !issuerAttrChanged) {
         this.flashMessages.info('No changes detected.');
         this.transition();
         return;
       }
 
-      const modelSaved = modelAttrChanged ? await this.saveMountConfigModel() : false;
+      const mountConfigModelSaved = mountConfigModelChanged ? await this.saveMountConfigModel() : false;
       const issuerSaved = issuerAttrChanged ? await this.updateIssuer() : false;
 
-      if (modelSaved || (!modelAttrChanged && issuerSaved)) {
-        // if there is an additional model, attempt to save it. if saving fails, we transition and the failure will surface as a sticky flash message on the configuration details page.
-        if (additionalConfigModelAttrChanged) {
+      if (
+        mountConfigModelSaved ||
+        (!mountConfigModelChanged && issuerSaved) ||
+        (!mountConfigModelChanged && additionalModelAttrChanged)
+      ) {
+        // if there are changes made to the an additional model, attempt to save it. if saving fails, we transition and the failure will surface as a sticky flash message on the configuration details page.
+        if (additionalModelAttrChanged) {
           await this.saveAdditionalConfigModel();
         }
         // we only prevent a transition if the mount config model or issuer fail when saving
@@ -190,7 +194,6 @@ export default class ConfigureWif extends Component<Args> {
       await additionalConfigModel.save();
       this.flashMessages.success(`Successfully saved ${backendPath}'s ${additionalConfigModelName}.`);
     } catch (error) {
-      // we transition even if the additional config model fails.
       // the only error the user sees is a sticky flash message on the next view.
       this.flashMessages.danger(
         `${capitalize(additionalConfigModelName)} was not saved: ${errorMessage(error)}`,
@@ -211,7 +214,7 @@ export default class ConfigureWif extends Component<Args> {
     this.router.transitionTo('vault.cluster.secrets.backend.configuration', this.args.backendPath);
   }
 
-  isValid(model: additionalConfigModel) {
+  isValid(model: AdditionalConfigModel) {
     const { isValid, state, invalidFormMessage } = model.validate();
     this.modelValidations = isValid ? null : state;
     this.invalidFormAlert = isValid ? '' : invalidFormMessage;
