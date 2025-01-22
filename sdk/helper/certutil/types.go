@@ -31,6 +31,7 @@ import (
 	"strings"
 	"time"
 
+	ctx509 "github.com/google/certificate-transparency-go/x509"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 )
@@ -370,58 +371,10 @@ func (p *ParsedCertBundle) ToCertBundle() (*CertBundle, error) {
 
 // Verify checks if the parsed bundle is valid.  It validates the public
 // key of the certificate to the private key and checks the certificate trust
-// chain for path issues.  Inside the PKI secrets engine, the more configurable
-// builtin/logical/pki/issuing/cert_verify VerifyCertificate should be used
-// instead.
+// chain for path issues.
 func (p *ParsedCertBundle) Verify() error {
-	// If private key exists, check if it matches the public key of cert
-	if p.PrivateKey != nil && p.Certificate != nil {
-		equal, err := ComparePublicKeys(p.Certificate.PublicKey, p.PrivateKey.Public())
-		if err != nil {
-			return errwrap.Wrapf("could not compare public and private keys: {{err}}", err)
-		}
-		if !equal {
-			return fmt.Errorf("public key of certificate does not match private key")
-		}
-	}
-
-	rootCertPool := x509.NewCertPool()
-	intermediateCertPool := x509.NewCertPool()
-
-	for index, certBytes := range p.CAChain {
-		parsedCert, err := x509.ParseCertificate(certBytes.Bytes)
-		if err != nil {
-			return fmt.Errorf("could not parse certificate number %v in chain: %w", index, err)
-		}
-		if bytes.Equal(parsedCert.RawIssuer, parsedCert.RawSubject) {
-			rootCertPool.AddCert(parsedCert)
-		} else {
-			intermediateCertPool.AddCert(parsedCert)
-		}
-		if index > 0 && !parsedCert.IsCA {
-			return fmt.Errorf("certificate %v is not a CA certificate", index)
-		}
-	}
-	emptyCertPool := x509.NewCertPool()
-
-	if rootCertPool.Equal(emptyCertPool) {
-		// Alright, this is weird, since we don't have the root CA, we'll treat the intermediate as
-		// the root, otherwise we'll get a "x509: certificate signed by unknown authority" error.
-		rootCertPool, intermediateCertPool = intermediateCertPool, rootCertPool
-	}
-
-	options := x509.VerifyOptions{
-		Roots:         rootCertPool,
-		Intermediates: intermediateCertPool,
-		CurrentTime:   time.Now(),
-	}
-
-	_, err := p.Certificate.Verify(options)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	options := ctx509.VerifyOptions{}
+	return VerifyCertificate(p, options)
 }
 
 // GetCertificatePath returns a slice of certificates making up a path, pulled
