@@ -149,4 +149,3 @@ while [ "$(date +%s)" -lt "$end_time" ]; do
 done
 
 fail "Timed out waiting for distro repos to be set up"
-
