@@ -1599,7 +1599,7 @@ func identityStoreLoadingIsDeterministic(t *testing.T, identityDeduplication boo
 		err := c.identityStore.resetDB()
 		require.NoError(t, err)
 
-		err = c.identityStore.loadArtifacts(ctx)
+		err = c.identityStore.loadArtifacts(ctx, true)
 		if i > 0 {
 			require.Equal(t, prevErr, err)
 		}
@@ -1711,7 +1711,7 @@ func TestIdentityStoreLoadingDuplicateReporting(t *testing.T) {
 	}
 
 	logger.RegisterSink(unsealLogger)
-	err = c.identityStore.loadArtifacts(ctx)
+	err = c.identityStore.loadArtifacts(ctx, true)
 	require.NoError(t, err)
 	logger.DeregisterSink(unsealLogger)
 

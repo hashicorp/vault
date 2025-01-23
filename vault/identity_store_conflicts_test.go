@@ -119,7 +119,7 @@ end of identity duplicate report, refer to https://developer.hashicorp.com/vault
 		// Call ResolveEntities, assume existing is nil for now. In real life we
 		// should be passed the existing entity for the exact match dupes but we
 		// don't depend on that so it's fine to omit.
-		_ = r.ResolveEntities(context.Background(), nil, entity)
+		_, _ = r.ResolveEntities(context.Background(), nil, entity)
 		// Don't care about the actual error here since it would be ignored in
 		// case-sensitive mode anyway.
 
@@ -129,7 +129,7 @@ end of identity duplicate report, refer to https://developer.hashicorp.com/vault
 			Name:        pair[1],
 			NamespaceID: pair[0],
 		}
-		_ = r.ResolveGroups(context.Background(), nil, group)
+		_, _ = r.ResolveGroups(context.Background(), nil, group)
 	}
 
 	// Load aliases second because that is realistic and yet we want to report on
@@ -148,7 +148,7 @@ end of identity duplicate report, refer to https://developer.hashicorp.com/vault
 			// Parse our hacky DSL to define some alias mounts as local
 			Local: strings.HasPrefix(pair[0], "local-"),
 		}
-		_ = r.ResolveAliases(context.Background(), entity, nil, alias)
+		_, _ = r.ResolveAliases(context.Background(), entity, nil, alias)
 	}
 
 	// "log" the report and check it matches expected report below.
@@ -220,7 +220,7 @@ func TestDuplicateRenameResolver(t *testing.T) {
 
 			// Simulate a MemDB lookup
 			existingEntity := seenEntities[name]
-			err := r.ResolveEntities(context.Background(), existingEntity, entity)
+			_, err := r.ResolveEntities(context.Background(), existingEntity, entity)
 			require.NoError(t, err)
 
 			if existingEntity != nil {
@@ -239,7 +239,7 @@ func TestDuplicateRenameResolver(t *testing.T) {
 
 			// More MemDB mocking
 			existingGroup := seenGroups[name]
-			err = r.ResolveGroups(context.Background(), existingGroup, group)
+			_, err = r.ResolveGroups(context.Background(), existingGroup, group)
 			require.NoError(t, err)
 
 			if existingGroup != nil {
