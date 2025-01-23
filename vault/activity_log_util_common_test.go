@@ -978,7 +978,7 @@ func Test_ActivityLog_ComputeCurrentMonth_NamespaceMounts(t *testing.T) {
 			correctMountPaths := func(namespaces []*activity.MonthlyNamespaceRecord) {
 				for _, ns := range namespaces {
 					for _, mount := range ns.Mounts {
-						mount.MountPath = fmt.Sprintf(deletedMountFmt, mount.MountPath)
+						mount.MountPath = fmt.Sprintf(DeletedMountFmt, mount.MountPath)
 					}
 				}
 			}
