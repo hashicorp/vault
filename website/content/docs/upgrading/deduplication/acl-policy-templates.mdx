@@ -9,13 +9,10 @@ description: >-
 
 Fix templated ACL behavior for deduplicated entities and groups.
 
-**You must address templated ACL policies before enabling forced identity
-deduplication otherwise you may lose access to resources gated by the affected
-policy templates**.
 
 <Tip title="Assumptions">
 
-- You have [identified the duplicate entity aliases](/vault/docs/upgrading/identity-deduplication). 
+- You have [identified the duplicate entity and group names](/vault/docs/upgrading/identity-deduplication). 
 - You have admin permission on the relevant Vault server or cluster.
 
 </Tip>
@@ -125,7 +122,7 @@ for policy in ${policy_list} ; do
       ${VAULT_ADDR}/v1/${VAULT_NAMESPACE}/sys/policy/${policy} \
     | jq '.data.rules' | sed 's/\\"/"/g'  | sed 's/\\n/ /g'
   )
-  
+
   # Check for a name based template key
   if echo "${policy_details}" | grep -q "\.name" ; then
     echo ""
@@ -139,7 +136,13 @@ done
 
 </Tabs>
 
+Compare the list of template keys against the list of deduplication targets
+found in your system logs to determine if the policy will break after
+duplication.
 
+If you identify policies that may break during deduplication, consult with
+the relevant teams to determine if the policies are still used and if you should
+address the renaming problem before or after deduplication.
 
 ## Solution 1: Update relevant templated ACL policies
 
