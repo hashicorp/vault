@@ -76,14 +76,69 @@ Name                                                          | Description
 `identity.groups.names.<group name>.id`	                      | Group ID for the given group name
 `identity.groups.names.<group name>.metadata.<metadata key>`  | Metadata for the given group name and key
 
+You can use the following `bash` script to check for templated policies using
+entity or group names:
 
-curl --request GET --header "X-Vault-Token: ${VAULT_TOKEN}" ${VAULT_ADDR}/v1/${VAULT_NAMESPACE}/sys/policy | jq .data.policies
+<Tabs>
 
+<Tab heading="CLI" group="cli">
 
-curl \
-  --request GET                            \
-  --header "X-Vault-Token: ${VAULT_TOKEN}"  \
-  ${VAULT_ADDR}/v1/${VAULT_NAMESPACE}/sys/policy
+```shell-session
+policy_list=$(vault policy list)
+
+for policy in ${policy_list} ; do
+  
+  # Get the policy details
+  policy_details=$(vault policy read ${policy})
+
+  # Check for a name based template key
+  if echo "${policy_details}" | grep -q "\.name" ; then
+    echo ""
+    echo "Policy name: ${policy}"
+  fi
+  echo "${policy_details}" | tr -s ' '  '\n' | grep "\.name" --label="  template key" -H
+done
+```
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+```shell-session
+policy_list=$(
+  curl                                              \
+    --silent                                        \
+    --request GET                                   \
+    --header "X-Vault-Token: ${VAULT_TOKEN}"        \
+    ${VAULT_ADDR}/v1/${VAULT_NAMESPACE}/sys/policy  \
+  | jq .data.policies | jq -c '.[]' | tr -d '"'
+)
+
+for policy in ${policy_list} ; do
+  
+  # Get the policy details
+  policy_details=$(
+    curl                                              \
+      --silent                                        \
+      --request GET                                   \
+      --header "X-Vault-Token: ${VAULT_TOKEN}"        \
+      ${VAULT_ADDR}/v1/${VAULT_NAMESPACE}/sys/policy/${policy} \
+    | jq '.data.rules' | sed 's/\\"/"/g'  | sed 's/\\n/ /g'
+  )
+  
+  # Check for a name based template key
+  if echo "${policy_details}" | grep -q "\.name" ; then
+    echo ""
+    echo "Policy name: ${policy}"
+  fi
+  echo "${policy_details}" | tr -s ' '  '\n' | grep "\.name" --label="  template key" -H
+done
+```
+
+</Tab>
+
+</Tabs>
+
 
 
 ## Solution 1: Update relevant templated ACL policies
