@@ -360,13 +360,8 @@ func (d dynamicSystemView) RegisterRotationJob(ctx context.Context, job *rotatio
 	if mountEntry == nil {
 		return "", fmt.Errorf("no mount entry")
 	}
-	ns := mountEntry.Namespace()
-	path := job.Path
-	if ns != namespace.RootNamespace {
-		path = ns.Path + "/" + path
-	}
 	nsCtx := namespace.ContextWithNamespace(ctx, mountEntry.Namespace())
-	id, err := d.core.RegisterRotationJob(nsCtx, path, job)
+	id, err := d.core.RegisterRotationJob(nsCtx, job)
 	if err != nil {
 		return "", fmt.Errorf("error registering rotation job: %s", err)
 	}
@@ -375,6 +370,12 @@ func (d dynamicSystemView) RegisterRotationJob(ctx context.Context, job *rotatio
 	return id, nil
 }
 
-func (d dynamicSystemView) DeregisterRotationJob(_ context.Context, rotationID string) (err error) {
-	return d.core.DeregisterRotationJob(rotationID)
+func (d dynamicSystemView) DeregisterRotationJob(ctx context.Context, req *rotation.RotationJobDeregisterRequest) (err error) {
+	mountEntry := d.mountEntry
+	if mountEntry == nil {
+		return fmt.Errorf("no mount entry")
+	}
+	nsCtx := namespace.ContextWithNamespace(ctx, mountEntry.Namespace())
+
+	return d.core.DeregisterRotationJob(nsCtx, req)
 }

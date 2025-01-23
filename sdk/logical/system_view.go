@@ -110,7 +110,7 @@ type SystemView interface {
 	// DeregisterRotationJob returns any errors in de-registering a
 	// credential from the Rotation Manager.
 	// NOTE: This method is intended for use only by HashiCorp Vault Enterprise plugins.
-	DeregisterRotationJob(ctx context.Context, rotationID string) error
+	DeregisterRotationJob(ctx context.Context, req *rotation.RotationJobDeregisterRequest) error
 }
 
 type PasswordPolicy interface {
@@ -301,6 +301,6 @@ func (d StaticSystemView) RegisterRotationJob(_ context.Context, _ *rotation.Rot
 	return "", errors.New("RegisterRotationJob is not implemented in StaticSystemView")
 }
 
-func (d StaticSystemView) DeregisterRotationJob(_ context.Context, _ string) (err error) {
+func (d StaticSystemView) DeregisterRotationJob(_ context.Context, _ *rotation.RotationJobDeregisterRequest) (err error) {
 	return errors.New("DeregisterRotationJob is not implemented in StaticSystemView")
 }

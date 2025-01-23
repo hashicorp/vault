@@ -254,9 +254,12 @@ func (s *gRPCSystemViewClient) RegisterRotationJob(ctx context.Context, job *rot
 	return resp.RotationID, nil
 }
 
-func (s *gRPCSystemViewClient) DeregisterRotationJob(ctx context.Context, rotationID string) error {
+func (s *gRPCSystemViewClient) DeregisterRotationJob(ctx context.Context, req *rotation.RotationJobDeregisterRequest) error {
 	_, err := s.client.DeregisterRotationJob(ctx, &pb.DeregisterRotationJobRequest{
-		RotationID: rotationID,
+		Req: &pb.DeregisterRotationRequestInput{
+			MountPoint: req.MountPoint,
+			ReqPath:    req.ReqPath,
+		},
 	})
 	if err != nil {
 		return err
