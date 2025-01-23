@@ -43,7 +43,8 @@ To identify duplicates in server logs:
     ```
 
 If you do not see entires for `DUPLICATES DETECTED`, the current cluster is
-clean and you can move to the next cluster.
+clean and you can move to the next cluster. If you confirm none of the logs
+have duplicates, you can jump to [Step #3](#dedupe-flag).
 
 <Note>
 
@@ -58,25 +59,22 @@ need to check DR secondary clusters separately.
 
 ## Step 2: Resolve any duplicates
 
+If you **did not** find duplicates in the log, you can jump to
+[Step #3](#dedupe-flag).
+
+If you **did** find duplicates in the logs:
+
 1. Identify the duplication type for each entry in your server logs:
     - **In PR/DR deployments**: identify duplication types on your primary
       clusters.
     - **In PR deployments**: identify duplication types for **local aliases** on
-      your performance secondaries.
+      your performance secondaries. Local duplicates exist independently on the
+      secondary cluster and require explicit resolution but follow the same
+      process as resolving non-local different-case entity alias duplicates.
+
 1. Follow the appropriate de-duplication steps based on the duplication type:
     - [Fix different-case entity alias duplicates](/vault/docs/upgrading/deduplication/different-case)
     - [Fix entity and group duplicates](/vault/docs/upgrading/deduplication/entity-group)
-    - [Fix ACL policy template duplicates](/vault/docs/upgrading/deduplication/acl-policy-templates)
-    - [Fix external reference duplicates](/vault/docs/upgrading/deduplication/external-refs)
-
-<Tip title="Local different-case entity alias duplicates">
-
-Performance secondaries may have **local** different-case entity alias
-duplicates. Local duplicates exist independently on the secondary cluster and
-require explicit resolution but follow the same process as resolving non-local
-[different-case entity alias duplicates](/vault/docs/upgrading/deduplication/different-case).
-
-</Tip>
 
 
 ## Step 3: Enforce identity de-duplication ((#dedupe-flag))

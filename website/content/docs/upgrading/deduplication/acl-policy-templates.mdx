@@ -2,12 +2,12 @@
 layout: docs
 page_title: Fix ACL policy templates
 description: >-
-  Fix templated ACL behavior for deduplicated user entities and groups.
+  Fix templated ACL behavior for deduplicated entities and groups.
 ---
 
 # Fix ACL policy templates
 
-Fix templated ACL behavior for deduplicated user entities and groups.
+Fix templated ACL behavior for deduplicated entities and groups.
 
 **You must address templated ACL policies before enabling forced identity
 deduplication otherwise you may lose access to resources gated by the affected
@@ -26,20 +26,20 @@ policy templates**.
 Operators use 
 [policy templating](/vault/docs/concepts/policies#templated-policies) to specify
 permissions that dynamically resolve based on specific properties of an
-authenticated entity. During deduplication, Vault merges duplicate user and
-group aliases then appends the new, singular identity with a universally unique
-identifier (UUID) to avoid future duplication.
+authenticated entity. During deduplication, Vault renames entities or groups
+with duplicate identities by appending a universally unique identifier (UUID) to
+all but one of the entities to avoid future duplication.
 
-If a templated ACL policy relies on an entity or group name, merging duplicate
+If a templated ACL policy relies on an entity or group name, renaming duplicate
 identities could inadvertently change the meaning of the policy. In practice,
 identity deduplication is unlikely to grant unintended access to an existing
-resource since the new, merged identity contains a UUID that should
-not collide with other resource paths. But the rename **might** remove access to
-an existing resource the merged identity had permission to use before
-deduplication.
+resource since the renamed identity contains a UUID that should
+not collide with other resource paths. But the rename might **remove** access to
+existing resources after deduplication if the associated resource policy
+references the old entity or group name.
 
-For example, assume you have the following templated ACL policy for a `kv`
-plugin:
+For example, assume you have the following templated ACL policy that grants
+users access to a `kv` plugin:
 
 ```hcl
 path "kv/users/{{identity.entity.name}}/*" {
@@ -48,30 +48,54 @@ path "kv/users/{{identity.entity.name}}/*" {
 ```
 
 The policy grants a user entity named `janine` permission to read and write
-key-value pairs to the `kv` plugin on the path `kv/users/janine/`. If `janine`
-has duplicate identities, after deduplication, the new, merged user entity name
-is `janine-<UUID>`. And the ACL policy give the new entity permission to read
-and write key-value pairs to the `kv` plugin on the path `kv/users/janine-<uuid>/`.
+key-value pairs to the `kv` plugin on the path `kv/users/janine/`. If there are 
+duplicate entities named `janine`, Vault renames all but one of entities
+to `janine-<UUID>` during deduplication.
 
-While the deduplicated entity can still access the `kv` plugin, the change in
-entity names means that the user can no longed access the data stored under the
-previous path (`kv/users/janine/`). As a result there are two ways to fix user
-access:
+The ACL policy now gives the renamed entity permission to read and write
+While the renamed entity can still access the `kv` plugin, the change in
+no longer grants access to path `kv/users/janine/`. As a result, the user can no
+longer access their data stored under `kv/users/janine/`.
 
-1. Modify your ACL policies
-1. Move the affected resource
+There are two ways to fix user access:
+
+1. Update relevant templated ACL policies.
+1. Move the affected resource.
 
 
-## Fix 1: Modify your ACL policies
+## Find affected ACL policies
 
-The easiest way to deal with the alias changes that come from deduplication is
-to define new policies or add rules to existing policies for each of the affected
-entities that explicitly grants access to the existing resource.
+Deduplication has the potential to break templated ACL policies that rely on
+entity or group names:
+
+Name                                                          | Description
+------------------------------------------------------------- | ----------------
+`identity.entity.name`	                                      | Entity name
+`identity.entity.aliases.<mount accessor>.name`	              | Entity alias name for the given mount
+`identity.groups.ids.<group id>.name`	                        | Group name for the given group ID
+`identity.groups.names.<group name>.id`	                      | Group ID for the given group name
+`identity.groups.names.<group name>.metadata.<metadata key>`  | Metadata for the given group name and key
+
+
+curl --request GET --header "X-Vault-Token: ${VAULT_TOKEN}" ${VAULT_ADDR}/v1/${VAULT_NAMESPACE}/sys/policy | jq .data.policies
+
+
+curl \
+  --request GET                            \
+  --header "X-Vault-Token: ${VAULT_TOKEN}"  \
+  ${VAULT_ADDR}/v1/${VAULT_NAMESPACE}/sys/policy
+
+
+## Solution 1: Update relevant templated ACL policies
+
+The easiest way to deal with broken ACL policy templates due to deduplication is
+to define new policies or add rules to existing policies that explicitly grants
+access to previous resources for the affected entities.
 
 If you have a large number of duplicate identities, it may be easier to
-pre-populate a custom metadata field (e.g., `prev_name`) for the duplicated
-entities. Once Vault deduplicates the entities, add them to a policy that uses
-the custom metadata field instead of the entity name.
+pre-populate a custom metadata field (e.g., `prev_name`) for the renamed
+entities. Then create a single policy that uses the custom metadata field
+instead of the entity name and attach that policy to the renamed entities.
 
 <Tabs>
 
@@ -126,9 +150,9 @@ deduplication.
 
     </CodeBlockConfig>
 
-1. Use the
+1. Use `vault read` with the
    [`{namespace}/identity/entity/name/{name}`](/vault/api-docs/secret/identity/entity#create-update-entity-by-name)
-   to read in the existing policy assignments and add the new policy to the
+   path to read in the existing policy assignments and add the new policy to the
    target entities. For example:
 
     ```shell-session
@@ -190,7 +214,7 @@ deduplication.
     }
     ```
 
-1. Escape your policy file and make a `POST` call to
+1. Escape your policy file and make a `POST` call to the
    [`{namespace}/sys/policy/{policy_name}`](/vault/api-docs/system/policy#create-update-policy)
    with your policy details:
 
@@ -220,9 +244,9 @@ deduplication.
     `/sys/mounts/{plugin_mount_path}` does not return data on success.
 
 
-1. Use the
+1. Make a `GET` call to the
    [`{namespace}/identity/entity/name/{name}`](/vault/api-docs/secret/identity/entity#create-update-entity-by-name)
-   to read in the existing policy assignments and add the new policy to the
+   endpoint to read in the existing policy assignments and add the new policy to the
    target entities. For example:
 
     ```shell-session
@@ -253,18 +277,22 @@ deduplication.
 </Tabs>
 
 
-## Option 2: Move the affected resource
+## Solution 2: Move the affected resource
 
-In some cases, it may be preferable move the target resource to the new
-templated path after deduplication instead of creating new policies.
+Some resources are immovable and others are difficult to move. If you decide you
+can, and want, to move resources affected by the renaming:
 
-However, moving resources is rarely easy, and it may not be possible to move
-all the affected resources. 
-
-You should decide whether
-you perform any migration before or after activating the flag. If you choose to
-do it afterwards, the resources will be unavailable until the migration is
-complete. If you choose to do it first then the resources might be unavailable
-until the flag is activated if moved, or you might need to take care to keep
-updates to both old an new paths in sync until the flag is switched.
-
+1. Inventory the relevant resources and the associated mount paths.
+1. Determine which resources you will migrate before activating the
+   deduplication flag.
+    - Resources migrating **before** deduplication will be unavailable on the
+      old and new paths until **deduplication** completes.
+    - Resources migrating **after** deduplication will be unavailable until
+      **migration** completes.
+1. Move any resources flagged for migration before deduplication and alert the
+   relevant users that the paths will remain unavailable until deduplication
+   completes.
+1. [Enable the deduplication option for Vault](/vault/docs/upgrading/deduplication#dedupe-flag)
+1. Move any resources flagged for migration after deduplication and alert the
+   relevant users that the paths will remain unavailable until migration
+   completes and the changes fully propagate.
