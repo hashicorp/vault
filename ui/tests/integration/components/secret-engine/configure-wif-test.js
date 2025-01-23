@@ -480,7 +480,9 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
 
         test('it shows placeholder issuer, and does not call APIs on canceling out of issuer modal', async function (assert) {
           this.server.post('/identity/oidc/config', () => {
-            assert.notOk(true, 'request should not be made to issuer config endpoint');
+            throw new Error(
+              'Request was made to post the identity/oidc/config when it should not have been because user canceled out of the modal.'
+            );
           });
           this.server.post(configUrl('azure', this.id), () => {
             throw new Error(
@@ -531,7 +533,9 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
             };
           });
           this.server.post(configUrl('azure', this.id), () => {
-            assert.notOk(true, 'skips request to config because the model was not changed');
+            throw new Error(
+              `Request was made to post the config when it should not have been because no data was changed.`
+            );
           });
           this.id = `azure-${this.uid}`;
           this.displayName = 'Azure';
