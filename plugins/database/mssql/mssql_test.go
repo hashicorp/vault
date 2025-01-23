@@ -501,6 +501,7 @@ func TestMSSQL_RotateRootCredentialsContainedDB(t *testing.T) {
 			t.Cleanup(cleanup)
 
 			dbUser := "vaultuser"
+			initPassword := "initialpassword"
 			connectionDetails := map[string]interface{}{
 				"connection_url": connURL,
 				"contained_db":   true,
@@ -519,6 +520,12 @@ func TestMSSQL_RotateRootCredentialsContainedDB(t *testing.T) {
 			dbtesting.AssertInitializeCircleCiTest(t, db, initReq)
 			defer dbtesting.AssertClose(t, db)
 
+			err := createTestMSSQLUser(connURL, dbUser, initPassword, testMSSQLLogin)
+			if err != nil {
+				t.Fatalf("Failed to create user: %s", err)
+			}
+
+			assertCredsExist(t, connURL, dbUser, initPassword)
 			updateReq := dbplugin.UpdateUserRequest{
 				Username: dbUser,
 				Password: &dbplugin.ChangePassword{
@@ -529,7 +536,7 @@ func TestMSSQL_RotateRootCredentialsContainedDB(t *testing.T) {
 				},
 			}
 
-			_, err := db.UpdateUser(ctx, updateReq)
+			_, err = db.UpdateUser(ctx, updateReq)
 			if err != nil {
 				t.Fatalf("err: %v", err)
 			}
