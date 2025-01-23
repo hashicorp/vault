@@ -385,7 +385,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       });
 
       test('it shows a flash message error and transitions if lease configuration errored on save', async function (assert) {
-        assert.expect(1);
+        assert.expect(2);
         const path = `aws-${this.uid}`;
         await enablePage.enable('aws', path);
 
@@ -408,7 +408,7 @@ module('Acceptance | aws | configuration', function (hooks) {
         );
         assert.strictEqual(
           currentURL(),
-          `/vault/secrets/${path}/configuration/index`,
+          `/vault/secrets/${path}/configuration`,
           'lease configuration failed to save but the component transitioned as expected'
         );
         // cleanup
