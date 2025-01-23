@@ -93,7 +93,7 @@ module('Integration | Component | ldap | Page::Libraries', function (hooks) {
   test('it should render libraries list', async function (assert) {
     await this.renderComponent();
 
-    assert.dom('[data-test-list-item-content] svg').hasClass('hds-icon-folder', 'List item icon renders');
+    assert.dom('[data-test-list-item-content] svg').hasClass('flight-icon-folder', 'List item icon renders');
     assert.dom('[data-test-library="foo"]').hasText('foo', 'List item name renders');
 
     await click(LDAP_SELECTORS.libraryMenu('foo'));
