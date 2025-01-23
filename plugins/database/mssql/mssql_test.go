@@ -520,7 +520,7 @@ func TestMSSQL_RotateRootCredentialsContainedDB(t *testing.T) {
 			dbtesting.AssertInitializeCircleCiTest(t, db, initReq)
 			defer dbtesting.AssertClose(t, db)
 
-			err := createTestMSSQLUser(connURL, dbUser, initPassword, testMSSQLLogin)
+			err := createTestMSSQLUser(connURL, dbUser, initPassword, testMSSQLContainedLoginAdmin)
 			if err != nil {
 				t.Fatalf("Failed to create user: %s", err)
 			}
@@ -647,4 +647,13 @@ CREATE LOGIN [{{name}}] WITH PASSWORD = '{{password}}';
 const testMSSQLContainedLogin = `
 CREATE LOGIN [{{name}}] WITH PASSWORD = '{{password}}';
 CREATE USER [{{name}}] FOR LOGIN [{{name}}];
+`
+
+const testMSSQLContainedLoginAdmin = `
+CREATE LOGIN [{{name}}] WITH PASSWORD = '{{password}}';
+CREATE USER [{{name}}] FOR LOGIN [{{name}}];
+
+ALTER ROLE db_datareader ADD MEMBER [{{name}}];
+ALTER ROLE db_datawriter ADD MEMBER [{{name}}];
+ALTER ROLE db_owner ADD MEMBER [{{name}}];
 `
