@@ -47,6 +47,7 @@ lint:
       - sdk/logical/plugin.proto
       - sdk/logical/version.proto
       - sdk/plugin/pb/backend.proto
+      - sdk/plugin/pb/system_view_service_ent.proto
       - vault/activity/activity_log.proto
       - sdk/helper/clientcountutil/generation/generate_data.proto
       - vault/hcp_link/proto/link_control/link_control.proto
@@ -79,6 +80,7 @@ lint:
       - sdk/logical/plugin.proto
       - sdk/logical/version.proto
       - sdk/plugin/pb/backend.proto
+      - sdk/plugin/pb/system_view_service_ent.proto
       - vault/activity/activity_log.proto
       - sdk/helper/clientcountutil/generation/generate_data.proto
       - vault/hcp_link/proto/link_control/link_control.proto
@@ -93,6 +95,7 @@ lint:
       - sdk/database/dbplugin/database.proto
       - sdk/database/dbplugin/v5/proto/database.proto
       - sdk/plugin/pb/backend.proto
+      - sdk/plugin/pb/system_view_service_ent.proto
       - vault/replication_services_ent.proto
       - vault/request_forwarding_service.proto
     RPC_REQUEST_STANDARD_NAME:
@@ -100,6 +103,7 @@ lint:
       - sdk/database/dbplugin/v5/proto/database.proto
       - sdk/logical/version.proto
       - sdk/plugin/pb/backend.proto
+      - sdk/plugin/pb/system_view_service_ent.proto
       - vault/replication/replication_resolver_ent.proto
       - vault/replication_services_ent.proto
       - vault/request_forwarding_service.proto
@@ -118,6 +122,7 @@ lint:
       - sdk/helper/pluginutil/multiplexing.proto
       - sdk/logical/version.proto
       - sdk/plugin/pb/backend.proto
+      - sdk/plugin/pb/system_view_service_ent.proto
       - vault/hcp_link/proto/link_control/link_control.proto
       - vault/hcp_link/proto/meta/meta.proto
       - vault/replication/replication_resolver_ent.proto
