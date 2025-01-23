@@ -650,8 +650,7 @@ CREATE USER [{{name}}] FOR LOGIN [{{name}}];
 `
 
 const testMSSQLContainedLoginAdmin = `
-CREATE LOGIN [{{name}}] WITH PASSWORD = '{{password}}';
-CREATE USER [{{name}}] FOR LOGIN [{{name}}];
+CREATE USER [{{name}}] WITH PASSWORD = '{{password}}';
 
 ALTER ROLE db_datareader ADD MEMBER [{{name}}];
 ALTER ROLE db_datawriter ADD MEMBER [{{name}}];
