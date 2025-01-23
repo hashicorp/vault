@@ -501,7 +501,7 @@ func TestMSSQL_RotateRootCredentialsContainedDB(t *testing.T) {
 			t.Cleanup(cleanup)
 
 			dbUser := "vaultuser"
-			initPassword := "initialpassword"
+			initPassword := "g00d-initial-password!"
 			connectionDetails := map[string]interface{}{
 				"connection_url": connURL,
 				"contained_db":   true,
@@ -529,7 +529,7 @@ func TestMSSQL_RotateRootCredentialsContainedDB(t *testing.T) {
 			updateReq := dbplugin.UpdateUserRequest{
 				Username: dbUser,
 				Password: &dbplugin.ChangePassword{
-					NewPassword: "different_sercret",
+					NewPassword: "b3tt3r-new-password!",
 					Statements: dbplugin.Statements{
 						Commands: test.statements,
 					},
