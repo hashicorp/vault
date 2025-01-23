@@ -218,6 +218,7 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 		cfgReq := &rotation.RotationJobConfigureRequest{
 			Name:             rootRotationJobName,
 			MountPoint:       req.MountPoint,
+			MountType:        req.MountType,
 			ReqPath:          req.Path,
 			RotationSchedule: rc.RotationSchedule,
 			RotationWindow:   rc.RotationWindow,
@@ -230,25 +231,25 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 		}
 
 		b.Logger().Debug("Registering rotation job", "mount", req.MountPoint+req.Path)
-		rotationID, err := b.System().RegisterRotationJob(ctx, rotationJob)
+		_, err = b.System().RegisterRotationJob(ctx, rotationJob)
 		if err != nil {
 			return logical.ErrorResponse("error registering rotation job: %s", err), nil
 		}
-
-		rc.RotationID = rotationID
 	}
 
 	// Disable Automated Rotation and Deregister credentials if required
 	if rc.DisableAutomatedRotation {
 		// Ensure de-registering only occurs on updates and if
-		// a credential has actually been registered
-		if previousCfgExists && previousCfg.RotationID != "" {
-			err := b.System().DeregisterRotationJob(ctx, previousCfg.RotationID)
+		// a credential has actually been registered (rotation_period or rotation_schedule is set)
+		deregisterReq := &rotation.RotationJobDeregisterRequest{
+			MountPoint: req.MountPoint,
+			ReqPath:    req.Path,
+		}
+		if previousCfgExists && previousCfg.ShouldRegisterRotationJob() {
+			err := b.System().DeregisterRotationJob(ctx, deregisterReq)
 			if err != nil {
 				return logical.ErrorResponse("error de-registering rotation job: %s", err), nil
 			}
-
-			rc.RotationID = ""
 		}
 	}
 
