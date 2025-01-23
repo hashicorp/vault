@@ -20,11 +20,14 @@ var errDuplicateIdentityName = errors.New("duplicate identity name")
 // ConflictResolver defines the interface for resolving conflicts between
 // entities, groups, and aliases. All methods should implement a check for
 // existing=nil. This is an intentional design choice to allow the caller to
-// search for extra information if necessary.
+// search for extra information if necessary. Resolvers may not modify existing.
+// If they choose to modify duplicate the modified version will be inserted into
+// MemDB but they must return true in this case to all the calling code to take
+// appropriate actions like persisting the change.
 type ConflictResolver interface {
-	ResolveEntities(ctx context.Context, existing, duplicate *identity.Entity) error
-	ResolveGroups(ctx context.Context, existing, duplicate *identity.Group) error
-	ResolveAliases(ctx context.Context, parent *identity.Entity, existing, duplicate *identity.Alias) error
+	ResolveEntities(ctx context.Context, existing, duplicate *identity.Entity) (bool, error)
+	ResolveGroups(ctx context.Context, existing, duplicate *identity.Group) (bool, error)
+	ResolveAliases(ctx context.Context, parent *identity.Entity, existing, duplicate *identity.Alias) (bool, error)
 }
 
 // errorResolver is a ConflictResolver that logs a warning message when a
@@ -36,9 +39,9 @@ type errorResolver struct {
 // ResolveEntities logs a warning message when a pre-existing Entity is found
 // and returns a duplicate name error, which should be handled by the caller by
 // putting the system in case-sensitive mode.
-func (r *errorResolver) ResolveEntities(ctx context.Context, existing, duplicate *identity.Entity) error {
+func (r *errorResolver) ResolveEntities(ctx context.Context, existing, duplicate *identity.Entity) (bool, error) {
 	if existing == nil {
-		return nil
+		return false, nil
 	}
 
 	r.logger.Warn(errDuplicateIdentityName.Error(),
@@ -47,15 +50,15 @@ func (r *errorResolver) ResolveEntities(ctx context.Context, existing, duplicate
 		"duplicate_of_id", existing.ID,
 		"action", "merge the duplicate entities into one")
 
-	return errDuplicateIdentityName
+	return false, errDuplicateIdentityName
 }
 
 // ResolveGroups logs a warning message when a pre-existing Group is found and
 // returns a duplicate name error, which should be handled by the caller by
 // putting the system in case-sensitive mode.
-func (r *errorResolver) ResolveGroups(ctx context.Context, existing, duplicate *identity.Group) error {
+func (r *errorResolver) ResolveGroups(ctx context.Context, existing, duplicate *identity.Group) (bool, error) {
 	if existing == nil {
-		return nil
+		return false, nil
 	}
 
 	r.logger.Warn(errDuplicateIdentityName.Error(),
@@ -64,15 +67,15 @@ func (r *errorResolver) ResolveGroups(ctx context.Context, existing, duplicate *
 		"duplicate_of_id", existing.ID,
 		"action", "merge the contents of duplicated groups into one and delete the other")
 
-	return errDuplicateIdentityName
+	return false, errDuplicateIdentityName
 }
 
 // ResolveAliases logs a warning message when a pre-existing Alias is found and
 // returns a duplicate name error, which should be handled by the caller by
 // putting the system in case-sensitive mode.
-func (r *errorResolver) ResolveAliases(ctx context.Context, parent *identity.Entity, existing, duplicate *identity.Alias) error {
+func (r *errorResolver) ResolveAliases(ctx context.Context, parent *identity.Entity, existing, duplicate *identity.Alias) (bool, error) {
 	if existing == nil {
-		return nil
+		return false, nil
 	}
 
 	r.logger.Warn(errDuplicateIdentityName.Error(),
@@ -85,7 +88,7 @@ func (r *errorResolver) ResolveAliases(ctx context.Context, parent *identity.Ent
 		"duplicate_of_canonical_id", existing.CanonicalID,
 		"action", "merge the canonical entity IDs into one")
 
-	return errDuplicateIdentityName
+	return false, errDuplicateIdentityName
 }
 
 // duplicateReportingErrorResolver collects duplicate information and optionally
@@ -119,26 +122,26 @@ func newDuplicateReportingErrorResolver(logger hclog.Logger) *duplicateReporting
 	}
 }
 
-func (r *duplicateReportingErrorResolver) ResolveEntities(ctx context.Context, existing, duplicate *identity.Entity) error {
+func (r *duplicateReportingErrorResolver) ResolveEntities(ctx context.Context, existing, duplicate *identity.Entity) (bool, error) {
 	entityKey := fmt.Sprintf("%s/%s", duplicate.NamespaceID, strings.ToLower(duplicate.Name))
 	r.seenEntities[entityKey] = append(r.seenEntities[entityKey], duplicate)
-	return errDuplicateIdentityName
+	return false, errDuplicateIdentityName
 }
 
-func (r *duplicateReportingErrorResolver) ResolveGroups(ctx context.Context, existing, duplicate *identity.Group) error {
+func (r *duplicateReportingErrorResolver) ResolveGroups(ctx context.Context, existing, duplicate *identity.Group) (bool, error) {
 	groupKey := fmt.Sprintf("%s/%s", duplicate.NamespaceID, strings.ToLower(duplicate.Name))
 	r.seenGroups[groupKey] = append(r.seenGroups[groupKey], duplicate)
-	return errDuplicateIdentityName
+	return false, errDuplicateIdentityName
 }
 
-func (r *duplicateReportingErrorResolver) ResolveAliases(ctx context.Context, parent *identity.Entity, existing, duplicate *identity.Alias) error {
+func (r *duplicateReportingErrorResolver) ResolveAliases(ctx context.Context, parent *identity.Entity, existing, duplicate *identity.Alias) (bool, error) {
 	aliasKey := fmt.Sprintf("%s/%s", duplicate.MountAccessor, strings.ToLower(duplicate.Name))
 	if duplicate.Local {
 		r.seenLocalAliases[aliasKey] = append(r.seenLocalAliases[aliasKey], duplicate)
 	} else {
 		r.seenAliases[aliasKey] = append(r.seenAliases[aliasKey], duplicate)
 	}
-	return errDuplicateIdentityName
+	return false, errDuplicateIdentityName
 }
 
 type identityDuplicateReportEntry struct {
@@ -375,9 +378,9 @@ type renameResolver struct {
 // pre-existing entity such that only the last occurrence retains its unmodified
 // name. Note that this is potentially destructive but is the best option
 // available to resolve duplicates in storage caused by bugs in our validation.
-func (r *renameResolver) ResolveEntities(ctx context.Context, existing, duplicate *identity.Entity) error {
+func (r *renameResolver) ResolveEntities(ctx context.Context, existing, duplicate *identity.Entity) (bool, error) {
 	if existing == nil {
-		return nil
+		return false, nil
 	}
 
 	duplicate.Name = duplicate.Name + "-" + duplicate.ID
@@ -394,7 +397,7 @@ func (r *renameResolver) ResolveEntities(ctx context.Context, existing, duplicat
 		"renamed_to", duplicate.Name,
 	)
 
-	return nil
+	return true, nil
 }
 
 // ResolveGroups deals with group name duplicates by renaming those that
@@ -403,9 +406,9 @@ func (r *renameResolver) ResolveEntities(ctx context.Context, existing, duplicat
 // nodes. We use the ID to ensure the new name is unique bit also
 // deterministic. For now, don't persist this. The user can choose to
 // resolve it permanently by renaming or deleting explicitly.
-func (r *renameResolver) ResolveGroups(ctx context.Context, existing, duplicate *identity.Group) error {
+func (r *renameResolver) ResolveGroups(ctx context.Context, existing, duplicate *identity.Group) (bool, error) {
 	if existing == nil {
-		return nil
+		return false, nil
 	}
 
 	duplicate.Name = duplicate.Name + "-" + duplicate.ID
@@ -420,10 +423,10 @@ func (r *renameResolver) ResolveGroups(ctx context.Context, existing, duplicate 
 		"renamed_from", existing.Name,
 		"renamed_to", duplicate.Name,
 	)
-	return nil
+	return true, nil
 }
 
 // ResolveAliases is a no-op for the renameResolver implementation.
-func (r *renameResolver) ResolveAliases(ctx context.Context, parent *identity.Entity, existing, duplicate *identity.Alias) error {
-	return nil
+func (r *renameResolver) ResolveAliases(ctx context.Context, parent *identity.Entity, existing, duplicate *identity.Alias) (bool, error) {
+	return false, nil
 }

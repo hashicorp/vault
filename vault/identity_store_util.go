@@ -18,6 +18,10 @@ import (
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	uuid "github.com/hashicorp/go-uuid"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	"github.com/hashicorp/vault/helper/activationflags"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/identity/mfa"
@@ -25,9 +29,6 @@ import (
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/types/known/anypb"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var (
@@ -38,7 +39,7 @@ var (
 
 // loadArtifacts is responsible for loading entities, groups, and aliases from
 // storage into MemDB.
-func (i *IdentityStore) loadArtifacts(ctx context.Context) error {
+func (i *IdentityStore) loadArtifacts(ctx context.Context, isActive bool) error {
 	if i == nil {
 		return nil
 	}
@@ -48,10 +49,10 @@ func (i *IdentityStore) loadArtifacts(ctx context.Context) error {
 			"case_sensitive", !i.disableLowerCasedNames,
 			"conflict_resolver", i.conflictResolver)
 
-		if err := i.loadEntities(ctx); err != nil {
+		if err := i.loadEntities(ctx, isActive); err != nil {
 			return fmt.Errorf("failed to load entities: %w", err)
 		}
-		if err := i.loadGroups(ctx); err != nil {
+		if err := i.loadGroups(ctx, isActive); err != nil {
 			return fmt.Errorf("failed to load groups: %w", err)
 		}
 		if err := i.loadOIDCClients(ctx); err != nil {
@@ -144,7 +145,7 @@ func (i *IdentityStore) activateDeduplication(ctx context.Context, req *logical.
 		return fmt.Errorf("failed to reset existing identity state: %w", err)
 	}
 
-	if err := i.loadArtifacts(ctx); err != nil {
+	if err := i.loadArtifacts(ctx, i.localNode.HAState() == consts.Active); err != nil {
 		return fmt.Errorf("failed to activate identity deduplication: %w", err)
 	}
 
@@ -159,7 +160,7 @@ func (i *IdentityStore) sanitizeName(name string) string {
 	return strings.ToLower(name)
 }
 
-func (i *IdentityStore) loadGroups(ctx context.Context) error {
+func (i *IdentityStore) loadGroups(ctx context.Context, isActive bool) error {
 	i.logger.Debug("identity loading groups")
 	existing, err := i.groupPacker.View().List(ctx, groupBucketsPrefix)
 	if err != nil {
@@ -210,8 +211,30 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-			if err := i.conflictResolver.ResolveGroups(ctx, groupByName, group); err != nil && !i.disableLowerCasedNames {
+			modified, err := i.conflictResolver.ResolveGroups(ctx, groupByName, group)
+			if err != nil && !i.disableLowerCasedNames {
 				return err
+			}
+			persist := false
+			if modified {
+				// If we modified the group we need to persist the changes to avoid bugs
+				// where memDB and storage are out of sync in the future (e.g. after
+				// invalidations of other items in the same bucket later). We do this
+				// _even_ if `persist=false` because it is in general during unseal but
+				// this is exactly when we need to fix these. We must be _really_
+				// careful to only do this on primary active node though which is the
+				// only source of truth that should have write access to groups across a
+				// cluster since they are always non-local. Note that we check !Standby
+				// and !secondary because we still need to write back even if this is a
+				// single cluster with no replication setup and I'm not _sure_ that we
+				// report such a cluster as a primary.
+				if !i.localNode.ReplicationState().HasState(
+					consts.ReplicationDRSecondary|
+						consts.ReplicationPerformanceSecondary|
+						consts.ReplicationPerformanceStandby,
+				) && isActive {
+					persist = true
+				}
 			}
 
 			if i.logger.IsDebug() {
@@ -224,7 +247,6 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 			// updated when respective entities were deleted. This is here to
 			// check that the entity IDs in the group are indeed valid, and if
 			// not remove them.
-			persist := false
 			for _, memberEntityID := range group.MemberEntityIDs {
 				entity, err := i.MemDBEntityByID(memberEntityID, false)
 				if err != nil {
@@ -403,7 +425,7 @@ func (i *IdentityStore) loadCachedEntitiesOfLocalAliases(ctx context.Context) er
 	return nil
 }
 
-func (i *IdentityStore) loadEntities(ctx context.Context) error {
+func (i *IdentityStore) loadEntities(ctx context.Context, isActive bool) error {
 	// Accumulate existing entities
 	i.logger.Debug("loading entities")
 	existing, err := i.entityPacker.View().List(ctx, storagepacker.StoragePackerBucketsPrefix)
@@ -544,8 +566,30 @@ LOOP:
 					if err != nil {
 						return nil
 					}
-					if err := i.conflictResolver.ResolveEntities(ctx, entityByName, entity); err != nil && !i.disableLowerCasedNames {
+					modified, err := i.conflictResolver.ResolveEntities(ctx, entityByName, entity)
+					if err != nil && !i.disableLowerCasedNames {
 						return err
+					}
+					persist := false
+					if modified {
+						// If we modified the group we need to persist the changes to avoid bugs
+						// where memDB and storage are out of sync in the future (e.g. after
+						// invalidations of other items in the same bucket later). We do this
+						// _even_ if `persist=false` because it is in general during unseal but
+						// this is exactly when we need to fix these. We must be _really_
+						// careful to only do this on primary active node though which is the
+						// only source of truth that should have write access to groups across a
+						// cluster since they are always non-local. Note that we check !Stadby
+						// and !secondary because we still need to write back even if this is a
+						// single cluster with no replication setup and I'm not _sure_ that we
+						// report such a cluster as a primary.
+						if !i.localNode.ReplicationState().HasState(
+							consts.ReplicationDRSecondary|
+								consts.ReplicationPerformanceSecondary|
+								consts.ReplicationPerformanceStandby,
+						) && isActive {
+							persist = true
+						}
 					}
 
 					mountAccessors := getAccessorsOnDuplicateAliases(entity.Aliases)
@@ -573,7 +617,7 @@ LOOP:
 						defer tx.Abort()
 					}
 					// Only update MemDB and don't hit the storage again
-					err = i.upsertEntityInTxn(nsCtx, tx, entity, nil, false)
+					err = i.upsertEntityInTxn(nsCtx, tx, entity, nil, persist)
 					if err != nil {
 						return fmt.Errorf("failed to update entity in MemDB: %w", err)
 					}
@@ -780,8 +824,9 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 		// problem to the user and are already logged. We care about different-case
 		// duplicates that are not being considered duplicates right now because we
 		// are in case-sensitive mode so we can report these to the operator ahead
-		// of them disabling case-sensitive mode.
-		conflictErr := i.conflictResolver.ResolveAliases(ctx, entity, aliasByFactors, alias)
+		// of them disabling case-sensitive mode. Note that alias resolvers don't
+		// ever modify right now so ignore the bool.
+		_, conflictErr := i.conflictResolver.ResolveAliases(ctx, entity, aliasByFactors, alias)
 
 		// This appears to be accounting for any duplicate aliases for the same
 		// Entity. In that case we would have skipped over the merge above in the
