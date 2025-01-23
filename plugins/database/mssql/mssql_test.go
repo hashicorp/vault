@@ -20,7 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestInitialize(t *testing.T) {
+func TestMSSQLInitialize(t *testing.T) {
 	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
 	defer cleanup()
 
@@ -79,7 +79,7 @@ func TestInitialize(t *testing.T) {
 	}
 }
 
-func TestNewUser(t *testing.T) {
+func TestMSSQLNewUser(t *testing.T) {
 	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
 	defer cleanup()
 
@@ -185,7 +185,7 @@ func TestNewUser(t *testing.T) {
 	}
 }
 
-func TestUpdateUser_password(t *testing.T) {
+func TestMSSQLUpdateUser_password(t *testing.T) {
 	type testCase struct {
 		req              dbplugin.UpdateUserRequest
 		expectErr        bool
@@ -312,7 +312,7 @@ func TestUpdateUser_password(t *testing.T) {
 	}
 }
 
-func TestDeleteUser(t *testing.T) {
+func TestMSSQLDeleteUser(t *testing.T) {
 	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
 	defer cleanup()
 
@@ -358,7 +358,7 @@ func TestDeleteUser(t *testing.T) {
 	assertCredsDoNotExist(t, connURL, dbUser, initPassword)
 }
 
-func TestDeleteUserContainedDB(t *testing.T) {
+func TestMSSQLDeleteUserContainedDB(t *testing.T) {
 	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
 	defer cleanup()
 
@@ -405,7 +405,7 @@ func TestDeleteUserContainedDB(t *testing.T) {
 	assertContainedDBCredsDoNotExist(t, connURL, dbUser)
 }
 
-func TestContainedDBSQLSanitization(t *testing.T) {
+func TestMSSQLContainedDBSQLSanitization(t *testing.T) {
 	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
 	defer cleanup()
 
@@ -443,7 +443,7 @@ func TestContainedDBSQLSanitization(t *testing.T) {
 	assert.EqualError(t, err, "mssql: Cannot alter the login 'vaultuser]', because it does not exist or you do not have permission.")
 }
 
-func TestSQLSanitization(t *testing.T) {
+func TestMSSQLSanitization(t *testing.T) {
 	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
 	defer cleanup()
 
@@ -479,6 +479,71 @@ func TestSQLSanitization(t *testing.T) {
 	_, err = db.DeleteUser(ctx, deleteReq)
 
 	assert.EqualError(t, err, "mssql: Cannot alter the login 'vaultuser]', because it does not exist or you do not have permission.")
+}
+
+func TestMSSQL_RotateRootCredentialsContainedDB(t *testing.T) {
+	type testCase struct {
+		statements []string
+	}
+
+	tests := map[string]testCase{
+		"empty statements": {
+			statements: nil,
+		},
+		"custom statement": {
+			statements: []string{alterUserContainedSQL},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
+			t.Cleanup(cleanup)
+
+			dbUser := "vaultuser"
+			connectionDetails := map[string]interface{}{
+				"connection_url": connURL,
+				"contained_db":   true,
+			}
+
+			// Give a timeout just in case the test decides to be problematic
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+
+			initReq := dbplugin.InitializeRequest{
+				Config:           connectionDetails,
+				VerifyConnection: true,
+			}
+
+			db := new()
+			dbtesting.AssertInitializeCircleCiTest(t, db, initReq)
+			defer dbtesting.AssertClose(t, db)
+
+			updateReq := dbplugin.UpdateUserRequest{
+				Username: dbUser,
+				Password: &dbplugin.ChangePassword{
+					NewPassword: "different_sercret",
+					Statements: dbplugin.Statements{
+						Commands: test.statements,
+					},
+				},
+			}
+
+			_, err := db.UpdateUser(ctx, updateReq)
+			if err != nil {
+				t.Fatalf("err: %v", err)
+			}
+			assertCredsExist(t, connURL, updateReq.Username, updateReq.Password.NewPassword)
+
+			// verify old password doesn't work
+			assertContainedDBCredsDoNotExist(t, connURL, dbUser)
+
+			err = db.Close()
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
+		})
+	}
 }
 
 func assertCredsExist(t testing.TB, connURL, username, password string) {
