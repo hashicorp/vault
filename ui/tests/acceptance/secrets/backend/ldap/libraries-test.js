@@ -78,6 +78,24 @@ module('Acceptance | ldap | libraries', function (hooks) {
     assert.dom('[data-test-checked-out-account]').exists({ count: 1 }, 'lists the checked out accounts');
   });
 
+  test('it should transition to library details for hierarchical list items', async function (assert) {
+    await click(LDAP_SELECTORS.libraryItem('admin/'));
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${this.backend}/ldap/libraries/subdirectory/admin/`,
+      'Transitions to subdirectory list view'
+    );
+
+    await click(LDAP_SELECTORS.libraryItem('admin/test-library'));
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${this.backend}/ldap/libraries/admin%2Ftest-library/details/accounts`,
+      'Transitions to child library details accounts'
+    );
+    assert.dom('[data-test-account-name]').exists({ count: 2 }, 'lists the accounts');
+    assert.dom('[data-test-checked-out-account]').exists({ count: 1 }, 'lists the checked out accounts');
+  });
+
   test('it should transition to routes from list item action menu', async function (assert) {
     assert.expect(2);
 
