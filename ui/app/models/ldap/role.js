@@ -163,6 +163,12 @@ export default class LdapRoleModel extends Model {
   })
   rollback_ldif;
 
+  get completeRoleName() {
+    // if there is a path_to_role then the name is hierarchical
+    // and we must concat the ancestors with the leaf name to get the full role path
+    return this.path_to_role ? this.path_to_role + this.name : this.name;
+  }
+
   get isStatic() {
     return this.type === 'static';
   }
@@ -224,9 +230,11 @@ export default class LdapRoleModel extends Model {
   }
 
   fetchCredentials() {
-    return this.store.adapterFor('ldap/role').fetchCredentials(this.backend, this.type, this.name);
+    return this.store
+      .adapterFor('ldap/role')
+      .fetchCredentials(this.backend, this.type, this.completeRoleName);
   }
   rotateStaticPassword() {
-    return this.store.adapterFor('ldap/role').rotateStaticPassword(this.backend, this.name);
+    return this.store.adapterFor('ldap/role').rotateStaticPassword(this.backend, this.completeRoleName);
   }
 }

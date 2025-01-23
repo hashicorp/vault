@@ -62,7 +62,7 @@
                 @text="Content"
                 data-test-subdirectory
                 @route="roles.subdirectory"
-                @models={{array role.type (concat role.path_to_role role.name)}}
+                @models={{array role.type role.completeRoleName}}
               />
             {{else}}
               {{#if role.canEdit}}
@@ -73,7 +73,7 @@
                   @text="Get credentials"
                   data-test-get-creds
                   @route="roles.role.credentials"
-                  @models={{array role.type role.name}}
+                  @models={{array role.type role.completeRoleName}}
                 />
               {{/if}}
               {{#if role.canRotateStaticCreds}}
@@ -89,7 +89,7 @@
                 data-test-details
                 @route="roles.role.details"
                 {{! this will force the roles.role model hook to fire since we may only have a partial model loaded in the list view }}
-                @models={{array role.type role.name}}
+                @models={{array role.type role.completeRoleName}}
               />
               {{#if role.canDelete}}
                 <dd.Interactive
