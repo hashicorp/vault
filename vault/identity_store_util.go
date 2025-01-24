@@ -481,82 +481,84 @@ LOOP:
 			if entities == nil {
 				continue
 			}
+			load := func(entities []*identity.Entity) error {
+				tx := i.db.Txn(true)
+				defer tx.Abort()
+				upsertedItems := 0
+				for _, entity := range entities {
+					if entity == nil {
+						continue
+					}
 
-			tx := i.db.Txn(true)
-			upsertedItems := 0
-			for _, entity := range entities {
-				if entity == nil {
-					continue
-				}
+					ns, err := i.namespacer.NamespaceByID(ctx, entity.NamespaceID)
+					if err != nil {
+						return err
+					}
+					if ns == nil {
+						// Remove dangling entities
+						if !(i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.localNode.HAState() == consts.PerfStandby) {
+							// Entity's namespace doesn't exist anymore but the
+							// entity from the namespace still exists.
+							i.logger.Warn("deleting entity and its any existing aliases", "name", entity.Name, "namespace_id", entity.NamespaceID)
+							err = i.entityPacker.DeleteItem(ctx, entity.ID)
+							if err != nil {
+								return err
+							}
+						}
+						continue
+					}
+					nsCtx := namespace.ContextWithNamespace(ctx, ns)
 
-				ns, err := i.namespacer.NamespaceByID(ctx, entity.NamespaceID)
-				if err != nil {
-					tx.Abort()
-					return err
-				}
-				if ns == nil {
-					// Remove dangling entities
-					if !(i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.localNode.HAState() == consts.PerfStandby) {
-						// Entity's namespace doesn't exist anymore but the
-						// entity from the namespace still exists.
-						i.logger.Warn("deleting entity and its any existing aliases", "name", entity.Name, "namespace_id", entity.NamespaceID)
-						err = i.entityPacker.DeleteItem(ctx, entity.ID)
-						if err != nil {
-							tx.Abort()
-							return err
+					// Ensure that there are no entities with duplicate names
+					entityByName, err := i.MemDBEntityByName(nsCtx, entity.Name, false)
+					if err != nil {
+						return nil
+					}
+					if err := i.conflictResolver.ResolveEntities(ctx, entityByName, entity); err != nil && !i.disableLowerCasedNames {
+						return err
+					}
+
+					mountAccessors := getAccessorsOnDuplicateAliases(entity.Aliases)
+
+					if len(mountAccessors) > 0 {
+						i.logger.Warn("Entity has multiple aliases on the same mount(s)", "entity_id", entity.ID, "mount_accessors", mountAccessors)
+					}
+
+					for _, accessor := range mountAccessors {
+						if _, ok := duplicatedAccessors[accessor]; !ok {
+							duplicatedAccessors[accessor] = struct{}{}
 						}
 					}
-					continue
-				}
-				nsCtx := namespace.ContextWithNamespace(ctx, ns)
 
-				// Ensure that there are no entities with duplicate names
-				entityByName, err := i.MemDBEntityByName(nsCtx, entity.Name, false)
-				if err != nil {
-					tx.Abort()
-					return nil
-				}
-				if err := i.conflictResolver.ResolveEntities(ctx, entityByName, entity); err != nil && !i.disableLowerCasedNames {
-					tx.Abort()
-					return err
-				}
-
-				mountAccessors := getAccessorsOnDuplicateAliases(entity.Aliases)
-
-				if len(mountAccessors) > 0 {
-					i.logger.Warn("Entity has multiple aliases on the same mount(s)", "entity_id", entity.ID, "mount_accessors", mountAccessors)
-				}
-
-				for _, accessor := range mountAccessors {
-					if _, ok := duplicatedAccessors[accessor]; !ok {
-						duplicatedAccessors[accessor] = struct{}{}
+					err = i.loadLocalAliasesForEntity(ctx, entity, localAliasBuckets)
+					if err != nil {
+						return fmt.Errorf("failed to load local aliases from storage: %v", err)
 					}
-				}
 
-				err = i.loadLocalAliasesForEntity(ctx, entity, localAliasBuckets)
-				if err != nil {
-					tx.Abort()
-					return fmt.Errorf("failed to load local aliases from storage: %v", err)
+					toBeUpserted := 1 + len(entity.Aliases)
+					if upsertedItems+toBeUpserted > entityLoadingTxMaxSize {
+						tx.Commit()
+						upsertedItems = 0
+						tx = i.db.Txn(true)
+						defer tx.Abort()
+					}
+					// Only update MemDB and don't hit the storage again
+					err = i.upsertEntityInTxn(nsCtx, tx, entity, nil, false)
+					if err != nil {
+						return fmt.Errorf("failed to update entity in MemDB: %w", err)
+					}
+					upsertedItems += toBeUpserted
 				}
-
-				toBeUpserted := 1 + len(entity.Aliases)
-				if upsertedItems+toBeUpserted > entityLoadingTxMaxSize {
+				if upsertedItems > 0 {
 					tx.Commit()
-					upsertedItems = 0
-					tx = i.db.Txn(true)
 				}
-				// Only update MemDB and don't hit the storage again
-				err = i.upsertEntityInTxn(nsCtx, tx, entity, nil, false)
-				if err != nil {
-					tx.Abort()
-					return fmt.Errorf("failed to update entity in MemDB: %w", err)
-				}
-				upsertedItems += toBeUpserted
+				return nil
 			}
-			if upsertedItems > 0 {
-				tx.Commit()
+			err := load(entities)
+			if err != nil {
+				return err
 			}
-			tx.Abort()
+
 		}
 	}
 
