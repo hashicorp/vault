@@ -1,0 +1,47 @@
+---
+layout: docs
+page_title: Azure secret import source
+description: The Azure KeyVault source imports secrets from Azure to Vault.
+---
+
+# Azure secret import source
+
+Use the Azure source to import secret data from Azure KeyVault into your Vault instance.
+
+## Argument reference
+
+Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-1) for arguments common to all source types.
+
+## Additional arguments
+
+Required:
+
+- `key_vault_uri` `(string)` - The URI of the Azure KeyVault to import from
+
+All the following are optional, in which case the default provider mechanisms are used, e.g.
+a preliminary `az login` can suffice.
+
+- `cloud_name` `(string: "AzureCloud")` - Azure cloud to connect to
+- `tenant_id` `(string: "")` - Tenant ID to use
+- `client_id` `(string: "")` - Client ID to use
+- `credentials_file` `(string: "")` - Path to a file with the client secret
+
+## Example
+
+Define and configure the `my-azure-source-1` Azure source:
+
+```hcl
+source_aws {
+  name = "my-azure-source-1"
+}
+```
+
+## Permissions
+
+To use Azure import, you must grant the associated Azure identity permission to read secrets
+from the specified KeyVault:
+
+```shell-session
+"Get",
+"List",
+```
