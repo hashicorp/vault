@@ -150,7 +150,9 @@ func (i *InmemBackend) SetWriteLatency(latency time.Duration) {
 
 // Put is used to insert or update an entry
 func (i *InmemBackend) Put(ctx context.Context, entry *physical.Entry) error {
-	i.permitPool.Acquire()
+	if err := i.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer i.permitPool.Release()
 
 	i.Lock()
@@ -194,7 +196,9 @@ func (i *InmemBackend) FailPut(fail bool) {
 
 // Get is used to fetch an entry
 func (i *InmemBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
-	i.permitPool.Acquire()
+	if err := i.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer i.permitPool.Release()
 
 	i.RLock()
@@ -244,7 +248,9 @@ func (i *InmemBackend) FailGetInTxn(fail bool) {
 
 // Delete is used to permanently delete an entry
 func (i *InmemBackend) Delete(ctx context.Context, key string) error {
-	i.permitPool.Acquire()
+	if err := i.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer i.permitPool.Release()
 
 	i.Lock()
@@ -284,7 +290,9 @@ func (i *InmemBackend) FailDelete(fail bool) {
 // List is used to list all the keys under a given
 // prefix, up to the next prefix.
 func (i *InmemBackend) List(ctx context.Context, prefix string) ([]string, error) {
-	i.permitPool.Acquire()
+	if err := i.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer i.permitPool.Release()
 
 	i.RLock()
@@ -356,7 +364,9 @@ func (i *InmemBackend) GetMountTablePaths() []string {
 
 // Transaction implements the transaction interface
 func (t *TransactionalInmemBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry) error {
-	t.permitPool.Acquire()
+	if err := t.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer t.permitPool.Release()
 
 	t.Lock()

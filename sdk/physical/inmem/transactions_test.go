@@ -60,7 +60,9 @@ func (f *faultyPseudo) List(ctx context.Context, prefix string) ([]string, error
 }
 
 func (f *faultyPseudo) Transaction(ctx context.Context, txns []*physical.TxnEntry) error {
-	f.underlying.permitPool.Acquire()
+	if err := f.underlying.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer f.underlying.permitPool.Release()
 
 	f.underlying.Lock()

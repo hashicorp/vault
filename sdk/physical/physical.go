@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/permitpool"
 )
 
+const DefaultParallelOperations = 128
+
 // The operation type
 type Operation string
 
