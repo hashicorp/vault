@@ -144,7 +144,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           assert.true(this.flashDangerSpy.notCalled, 'No danger flash messages called.');
           assert.true(this.flashSuccessSpy.notCalled, 'No success flash messages called.');
 
-          assert.ok(
+          assert.true(
             this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', this.id),
             'Transitioned to the configuration index route.'
           );
@@ -160,7 +160,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
                 <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='azure' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
               `);
           const err = await promise;
-          assert.ok(
+          assert.true(
             err.message.includes(
               `'isWifPluginConfigured' is required to be defined on the config model. Must return a boolean.`
             ),
@@ -197,7 +197,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
             this.flashSuccessSpy.calledWith(`Successfully saved ${this.id}'s configuration.`),
             'Flash message shows that root was saved even if issuer was not'
           );
-          assert.ok(
+          assert.true(
             this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', this.id),
             'Transitioned to the configuration index route.'
           );
@@ -396,7 +396,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
             this.flashDangerSpy.calledWith('Lease configuration was not saved: bad request!!'),
             'Flash message shows that lease was not saved.'
           );
-          assert.ok(
+          assert.true(
             this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', this.id),
             'Transitioned to the configuration index route.'
           );
@@ -428,7 +428,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
 
           assert.true(this.flashDangerSpy.notCalled, 'No danger flash messages called.');
           assert.true(this.flashSuccessSpy.notCalled, 'No success flash messages called.');
-          assert.ok(
+          assert.true(
             this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', this.id),
             'Transitioned to the configuration index route.'
           );
@@ -577,7 +577,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
             this.flashSuccessSpy.calledWith(`Successfully saved ${this.id}'s configuration.`),
             "calls the config flash message not the issuer's"
           );
-          assert.ok(
+          assert.true(
             this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', this.id),
             'Transitioned to the configuration index route.'
           );
