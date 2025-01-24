@@ -47,7 +47,11 @@ jobs:
 
       - name: Update Enterprise-only plugin
         if: github.repository == 'hashicorp/vault-enterprise'
+        env:
+          # Use elevated token to read private repos.
+          GITHUB_TOKEN: ${{secrets.ELEVATED_GITHUB_TOKEN}}
         run: |
+          git config --global url."https://${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
           (cd vault_ent && go get "github.com/hashicorp/${{ inputs.plugin }}@v${{ inputs.version }}" && go mod tidy)
           go mod tidy
 
