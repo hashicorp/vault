@@ -8,7 +8,7 @@
   <MessageError @errorMessage={{this.errorMessage}} />
   {{! AWS specific note and section header }}
   {{#if (eq @type "aws")}}
-    <p class="has-text-grey-dark has-top-bottom-margin">
+    <p class="has-text-grey-dark has-top-bottom-margin" data-test-configure-note={{@type}}>
       Note: the client uses the official AWS SDK and will use the specified credentials, environment credentials, shared file
       credentials, or IAM role/ECS task credentials in that order.
     </p>

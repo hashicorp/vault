@@ -6,6 +6,7 @@
 export const SECRET_ENGINE_SELECTORS = {
   configTab: '[data-test-configuration-tab]',
   configure: '[data-test-secret-backend-configure]',
+  configureNote: (name: string) => `[data-test-configure-note="${name}"]`,
   configureTitle: (type: string) => `[data-test-backend-configure-title="${type}"]`,
   configurationToggle: '[data-test-mount-config-toggle]',
   createSecret: '[data-test-secret-create]',

@@ -309,7 +309,7 @@ module('Acceptance | aws | configuration', function (hooks) {
     });
 
     test('it saves lease configuration if root configuration was not changed', async function (assert) {
-      assert.expect(1);
+      assert.expect(2);
       const path = `aws-${this.uid}`;
       await enablePage.enable('aws', path);
 
@@ -328,7 +328,11 @@ module('Acceptance | aws | configuration', function (hooks) {
         this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s lease configuration.`),
         'Success flash message is rendered showing the lease configuration was saved.'
       );
-      assert.strictEqual(currentURL(), `/vault/secrets/${path}/configuration/edit`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${path}/configuration`,
+        'the form transitioned as expected to the details page'
+      );
       // cleanup
       await runCmd(`delete sys/mounts/${path}`);
     });

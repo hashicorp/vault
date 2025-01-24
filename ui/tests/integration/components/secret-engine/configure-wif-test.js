@@ -26,7 +26,7 @@ import waitForError from 'vault/tests/helpers/wait-for-error';
 
 const allEnginesArray = allEngines(); // saving as const so we don't invoke the method multiple times in the for loop
 
-module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
+module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
@@ -115,9 +115,8 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
           assert.dom(GENERAL.inputByAttr('issuer')).exists(`issuer shows for ${type} wif section.`);
         });
       }
-
+      /* This module covers code that is the same for all engines. We run them once against one of the engines.*/
       module('Engine agnostic', function () {
-        /* This module covers code that is the same for all engines. We run them once against one of the engines.*/
         test('it transitions without sending a config or issuer payload on cancel', async function (assert) {
           assert.expect(3);
           this.id = `azure-${this.uid}`;
@@ -233,14 +232,15 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
         });
       });
 
-      module('Azure specific', function () {
-        test('it clears access type inputs after toggling accessType', async function (assert) {
+      module('Azure specific', function (hooks) {
+        hooks.beforeEach(function () {
           this.id = `azure-${this.uid}`;
           this.displayName = 'Azure';
           this.issuerConfig = createConfig(this.store, this.id, 'issuer');
           this.mountConfigModel = this.store.createRecord('azure/config');
           this.mountConfigModel.backend = this.id;
-
+        });
+        test('it clears access type inputs after toggling accessType', async function (assert) {
           await render(hbs`
                 <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='azure' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
               `);
@@ -276,12 +276,6 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
         });
 
         test('it shows the correct access type subtext', async function (assert) {
-          this.id = `azure-${this.uid}`;
-          this.displayName = 'Azure';
-          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
-          this.mountConfigModel = this.store.createRecord('azure/config');
-          this.mountConfigModel.backend = this.id;
-
           await render(hbs`
                 <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='azure' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
               `);
@@ -292,16 +286,29 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
               'Choose the way to configure access to Azure. Access can be configured either using Azure account credentials or with the Plugin Workload Identity Federation (WIF).'
             );
         });
+
+        test('it does not show aws specific note', async function (assert) {
+          await render(hbs`
+                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='azure' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
+              `);
+
+          assert
+            .dom(SES.configureNote('azure'))
+            .doesNotExist('Note specific to AWS does not show for Azure secret engine when configuring.');
+        });
       });
 
-      module('AWS specific', function () {
-        test('it clears access type inputs after toggling accessType', async function (assert) {
+      module('AWS specific', function (hooks) {
+        hooks.beforeEach(function () {
           this.id = `aws-${this.uid}`;
           this.displayName = 'AWS';
           this.issuerConfig = createConfig(this.store, this.id, 'issuer');
           this.mountConfigModel = this.store.createRecord('aws/root-config');
-          this.mountConfigModel.backend = this.id;
+          this.additionalConfigModel = this.store.createRecord('aws/lease-config');
+          this.mountConfigModel.backend = this.additionalConfigModel.backend = this.id;
+        });
 
+        test('it clears access type inputs after toggling accessType', async function (assert) {
           await render(hbs`
                 <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='aws' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
               `);
@@ -334,12 +341,6 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
         });
 
         test('it shows the correct access type subtext', async function (assert) {
-          this.id = `aws-${this.uid}`;
-          this.displayName = 'AWS';
-          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
-          this.mountConfigModel = this.store.createRecord('aws/root-config');
-          this.mountConfigModel.backend = this.id;
-
           await render(hbs`
                 <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='aws' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
               `);
@@ -352,13 +353,6 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
         });
 
         test('it shows validation error if default lease is entered but max lease is not', async function (assert) {
-          this.id = `aws-${this.uid}`;
-          this.displayName = 'AWS';
-          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
-          this.mountConfigModel = this.store.createRecord('aws/root-config');
-          this.additionalConfigModel = this.store.createRecord('aws/lease-config');
-          this.mountConfigModel.backend = this.additionalConfigModel.backend = this.id;
-
           await render(hbs`
                 <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='aws' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}} @additionalConfigModel={{this.additionalConfigModel}}/>
               `);
@@ -382,13 +376,6 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
         });
 
         test('it allows user to submit root config even if API error occurs on config/lease config', async function (assert) {
-          this.id = `aws-${this.uid}`;
-          this.displayName = 'AWS';
-          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
-          this.mountConfigModel = this.store.createRecord('aws/root-config');
-          this.additionalConfigModel = this.store.createRecord('aws/lease-config');
-          this.mountConfigModel.backend = this.additionalConfigModel.backend = this.id;
-
           await render(hbs`
                 <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='aws' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}} @additionalConfigModel={{this.additionalConfigModel}}/>
               `);
@@ -416,13 +403,6 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
         });
 
         test('it transitions without sending a lease, root, or issuer payload on cancel', async function (assert) {
-          this.id = `aws-${this.uid}`;
-          this.displayName = 'AWS';
-          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
-          this.mountConfigModel = this.store.createRecord('aws/root-config');
-          this.additionalConfigModel = this.store.createRecord('aws/lease-config');
-          this.mountConfigModel.backend = this.additionalConfigModel.backend = this.id;
-
           await render(hbs`
                 <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='aws' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}} @additionalConfigModel={{this.additionalConfigModel}}/>
               `);
@@ -453,17 +433,26 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
             'Transitioned to the configuration index route.'
           );
         });
+
+        test('it does show aws specific note', async function (assert) {
+          await render(hbs`
+                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='aws' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}} @additionalConfigModel={{this.additionalConfigModel}}/>
+              `);
+
+          assert.dom(SES.configureNote('aws')).exists('Note specific to AWS does show when configuring.');
+        });
       });
 
-      module('Issuer field tests', function () {
-        test('if issuer API error and user changes issuer value, shows specific warning message', async function (assert) {
+      module('Issuer field tests', function (hooks) {
+        hooks.beforeEach(function () {
           this.id = `azure-${this.uid}`;
           this.displayName = 'Azure';
           this.issuerConfig = createConfig(this.store, this.id, 'issuer');
           this.issuerConfig.queryIssuerError = true;
           this.mountConfigModel = this.store.createRecord('azure/config');
           this.mountConfigModel.backend = this.id;
-
+        });
+        test('if issuer API error and user changes issuer value, shows specific warning message', async function (assert) {
           await render(hbs`
                 <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='azure' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
               `);
@@ -489,12 +478,7 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
               `Request was made to post the config when it should not have been because the user canceled out of the flow.`
             );
           });
-          this.id = `azure-${this.uid}`;
-          this.displayName = 'Azure';
-          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
-          this.mountConfigModel = this.store.createRecord('azure/config');
-          this.mountConfigModel.backend = this.id;
-
+          this.issuerConfig.queryIssuerError = false;
           await render(hbs`
                 <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='azure' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
               `);
@@ -537,11 +521,6 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
               `Request was made to post the config when it should not have been because no data was changed.`
             );
           });
-          this.id = `azure-${this.uid}`;
-          this.displayName = 'Azure';
-          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
-          this.mountConfigModel = this.store.createRecord('azure/config');
-          this.mountConfigModel.backend = this.id;
 
           await render(hbs`
                 <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='azure' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
@@ -566,12 +545,6 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
 
         test('shows modal when modifying the issuer, has correct payload, and shows flash message on fail', async function (assert) {
           assert.expect(7);
-          this.id = `azure-${this.uid}`;
-          this.displayName = 'Azure';
-          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
-          this.mountConfigModel = this.store.createRecord('azure/config');
-          this.mountConfigModel.backend = this.id;
-
           this.server.post(configUrl('azure', this.id), () => {
             assert.true(
               true,
@@ -611,11 +584,6 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
         });
 
         test('it does not clear global issuer when toggling accessType', async function (assert) {
-          this.id = `azure-${this.uid}`;
-          this.displayName = 'Azure';
-          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
-          this.mountConfigModel = this.store.createRecord(`azure/config`);
-          this.mountConfigModel.backend = this.id;
           await render(hbs`
                 <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='azure' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
               `);
@@ -728,10 +696,13 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
         });
       }
 
-      module('Azure specific', function () {
-        test('it defaults to Azure accessType if Azure account fields are already set', async function (assert) {
+      module('Azure specific', function (hooks) {
+        hooks.beforeEach(function () {
           this.id = `azure-${this.uid}`;
           this.mountConfigModel = createConfig(this.store, this.id, 'azure');
+        });
+
+        test('it defaults to Azure accessType if Azure account fields are already set', async function (assert) {
           await render(hbs`
                 <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName='Azure' @type='azure' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
               `);
@@ -746,7 +717,6 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
         });
 
         test('it allows you to change accessType if record does not have wif or azure values already set', async function (assert) {
-          this.id = `azure-${this.uid}`;
           this.mountConfigModel = createConfig(this.store, this.id, 'azure-generic');
           await render(hbs`
                 <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName='Azure' @type='azure' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
@@ -772,7 +742,6 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
 
         test('it requires a double click to change the client secret', async function (assert) {
           this.id = `azure-${this.uid}`;
-          this.mountConfigModel = createConfig(this.store, this.id, 'azure');
           await render(hbs`
                 <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName='Azure' @type='azure' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
               `);
@@ -793,10 +762,12 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
         });
       });
 
-      module('AWS specific', function () {
-        test('it defaults to IAM accessType if IAM fields are already set', async function (assert) {
+      module('AWS specific', function (hooks) {
+        hooks.beforeEach(function () {
           this.id = `aws-${this.uid}`;
           this.mountConfigModel = createConfig(this.store, this.id, 'aws');
+        });
+        test('it defaults to IAM accessType if IAM fields are already set', async function (assert) {
           await render(hbs`
                 <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName='AWS' @type='aws' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
               `);
@@ -810,7 +781,6 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
         });
 
         test('it allows you to change access type if record does not have wif or iam values already set', async function (assert) {
-          this.id = `aws-${this.uid}`;
           this.mountConfigModel = createConfig(this.store, this.id, 'aws-no-access');
           await render(hbs`
                 <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName='AWS' @type='aws' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
@@ -820,8 +790,6 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
         });
 
         test('it shows previously saved root and lease information', async function (assert) {
-          this.id = `aws-${this.uid}`;
-          this.mountConfigModel = createConfig(this.store, this.id, 'aws');
           this.additionalConfigModel = createConfig(this.store, this.id, 'aws-lease');
           await render(hbs`
                 <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName='AWS' @type='aws' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}} @additionalConfigModel={{this.additionalConfigModel}}/>
@@ -843,8 +811,6 @@ module('Integration | Component | SecretEngine/ConfigureWif', function (hooks) {
         });
 
         test('it requires a double click to change the secret key', async function (assert) {
-          this.id = `aws-${this.uid}`;
-          this.mountConfigModel = createConfig(this.store, this.id, 'aws');
           await render(hbs`
                 <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName='AWS' @type='aws' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}} />
               `);
