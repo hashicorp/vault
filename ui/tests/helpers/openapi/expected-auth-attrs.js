@@ -849,6 +849,13 @@ const ldap = {
       label: 'Discover DN',
       type: 'boolean',
     },
+    enableSamaccountnameLogin: {
+      editType: 'boolean',
+      fieldGroup: 'default',
+      helpText:
+        'If true, matching sAMAccountName attribute values will be allowed to login when upndomain is defined.',
+      type: 'boolean',
+    },
     groupattr: {
       editType: 'string',
       helpText:
