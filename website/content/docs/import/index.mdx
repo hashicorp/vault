@@ -84,15 +84,15 @@ information required by the target system or the secrets engine to leverage. For
 
 ```hcl
 source_gcp {
-  name        = "my-gcp-source-1"
-  credentials = "/path/to/service-account-key.json"
+  name             = "my-gcp-source-1"
+  credentials_file = "/path/to/service-account-key.json"
 }
 ```
 
 - `name` `(string: <required>)` - A unique name for the source block that can be
   referenced in subsequent mapping blocks.
 
-- `credentials` `(string: <required>)` - Path to a credential file with
+- `credentials_file` `(string: <required>)` - Path to a credential file with
   read permissions for the target system.
 
 Depending on the source system, additional information may be required. Refer to
@@ -140,7 +140,7 @@ mapping {
 #### Filters
 
 A filter describes conditions that a source secret must meet in order to be imported.
-These conditions are applied to secret fields, which currently consist of:
+These conditions are applied to the secret fields, which are:
 
 - `Secret.Name` - The name of the source secret
 - `Secret.Tags` - A map of key-value user-defined metadata associated with the source secret
@@ -157,10 +157,10 @@ These can be combined using `and`, `or`, and `not`:
 
 #### Transformers
 
-Transform stanzas come in two forms: exact and regexp.
+Transform stanzas come in two forms: `exact` and `regexp`.
 
 An exact transform allows renaming a secret during import, so that the `from` secret name
-is imported into Vault a secret named `to`.  In the example below, a source secret named
+is imported into Vault as a secret named `to`.  In the example below, a source secret named
 `foo` will be imported as `foosball`.
 
 ```hcl
@@ -171,7 +171,7 @@ is imported into Vault a secret named `to`.  In the example below, a source secr
 ```
 
 A regexp transform allows renaming a secret during import using [Go regular expression syntax](https://github.com/google/re2/wiki/Syntax).
-Parentheses designate capture groups that are used to define the name secrets matching the regular
+Parentheses designate capture groups that are used to define the name that secrets matching the regular
 expression will be imported as.  In the example below, any secret in the source whose name
 starts with "foo" will have the leading "foo" prefix replaced with "bar".  Named capture groups
 using the syntax `(?P<name>re)` are also supported, in which case the replacement would be addressed
@@ -181,5 +181,9 @@ as `$name` instead of a numeric reference like `$1`.
   transform "regexp" {
     from = "foo(.*)"
     to = "bar$1"
+  }
+  transform "regexp" {
+    from = "foo(?P<suffix>.*)"
+    to = "bar$suffix"
   }
 ```
