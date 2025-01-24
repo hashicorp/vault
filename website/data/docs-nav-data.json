@@ -2559,11 +2559,11 @@
             "path": "upgrading/deduplication/entity-group"
           },
           {
-            "title": "Fix ACL policy template duplicates",
+            "title": "Resolve impact on ACL policy templates",
             "path": "upgrading/deduplication/acl-policy-templates"
           },
           {
-            "title": "Fix external reference duplicates",
+            "title": "Resolve impact on external references",
             "path": "upgrading/deduplication/external-refs"
           }
         ]

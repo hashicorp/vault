@@ -46,7 +46,7 @@ Possible unexpected behavior caused by these types of duplicates includes:
  * Before Vault 1.19.0, which one is returned might vary depending on which
    server is hit or even after a seal and unseal on the same server
  * Lookup by ID _will_ work for all duplicates
- * Listing by IS will return _all_ duplicates
+ * Listing by ID will return _all_ duplicates
  * Deletion by name may or may not delete all duplicates
 
 These types of duplicates **will be resolved automatically by renaming** when

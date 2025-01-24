@@ -1,14 +1,14 @@
 ---
 layout: docs
-page_title: Fix ACL policy templates
+page_title: Resolve deduplication impact on ACL policy templates
 description: >-
-  Fix templated ACL behavior for deduplicated entities and groups.
+  Resolve templated ACL behavior for deduplicated entities and groups.
 ---
 
-# Fix ACL policy templates
+# Resolve deduplication impact on ACL policy templates
 
-Fix templated ACL behavior for deduplicated entities and groups.
-
+Fix templated ACL policy behavior for entities and groups renamed during
+identity deduplication.
 
 <Tip title="Assumptions">
 
@@ -18,7 +18,7 @@ Fix templated ACL behavior for deduplicated entities and groups.
 </Tip>
 
 
-## How deduplication affects ACL policies
+## How renaming affect ACL policies
 
 Operators use 
 [policy templating](/vault/docs/concepts/policies#templated-policies) to specify
@@ -54,18 +54,13 @@ While the renamed entity can still access the `kv` plugin, the change in
 no longer grants access to path `kv/users/janine/`. As a result, the user can no
 longer access their data stored under `kv/users/janine/`.
 
-There are two ways to fix user access:
-
-1. Update relevant templated ACL policies.
-1. Move the affected resource.
-
 
 ## Find affected ACL policies
 
 Deduplication has the potential to break templated ACL policies that rely on
-entity or group names:
+entity or group name keys:
 
-Name                                                          | Description
+Template key                                                  | Description
 ------------------------------------------------------------- | ----------------
 `identity.entity.name`	                                      | Entity name
 `identity.entity.aliases.<mount accessor>.name`	              | Entity alias name for the given mount
@@ -80,7 +75,7 @@ entity or group names:
 
 <Tab heading="CLI" group="cli">
 
-```shell-session
+```bash
 policy_list=$(vault policy list)
 
 for policy in ${policy_list} ; do
@@ -93,7 +88,9 @@ for policy in ${policy_list} ; do
     echo ""
     echo "Policy name: ${policy}"
   fi
-  echo "${policy_details}" | tr -s ' '  '\n' | grep "\.name" --label="  template key" -H
+  echo "${policy_details}"  |
+    tr -s ' ' '\n'          |
+    grep "\.name" --label="  template key" -H
 done
 ```
 
@@ -101,7 +98,7 @@ done
 
 <Tab heading="API" group="api">
 
-```shell-session
+```bash
 policy_list=$(
   curl                                              \
     --silent                                        \
@@ -128,7 +125,9 @@ for policy in ${policy_list} ; do
     echo ""
     echo "Policy name: ${policy}"
   fi
-  echo "${policy_details}" | tr -s ' '  '\n' | grep "\.name" --label="  template key" -H
+  echo "${policy_details}"  |
+    tr -s ' ' '\n'          |
+    grep "\.name" --label="  template key" -H
 done
 ```
 
@@ -136,13 +135,20 @@ done
 
 </Tabs>
 
-Compare the list of template keys against the list of deduplication targets
-found in your system logs to determine if the policy will break after
-duplication.
+Compare the returned list of policies and template keys against the list of
+deduplication targets identified in your system logs to determine if the policy
+will break after duplication.
 
 If you identify policies that may break during deduplication, consult with
 the relevant teams to determine if the policies are still used and if you should
 address the renaming problem before or after deduplication.
+
+If you find policies that need remediation, there are two ways to fix user
+access:
+
+1. Update relevant templated ACL policies.
+1. Move the affected resource.
+
 
 ## Solution 1: Update relevant templated ACL policies
 
@@ -168,7 +174,7 @@ deduplication.
    endpoint to update your target entries with a custom metadata field called
    `old_name` set to the **current** entity name:
    
-    ```shell-session
+    ```bash
     while read entity_name; do
 
       if [[ "" = "${entity_name}" ]] ; then continue ; fi
@@ -195,7 +201,7 @@ deduplication.
    definition file:
 
     ```shell-session
-    $ vault policy write <name> <path_to_policy_file>
+    $ vault policy write <policy_name> <path_to_policy_file>
     ```
 
    For example:
@@ -213,13 +219,14 @@ deduplication.
    path to read in the existing policy assignments and add the new policy to the
    target entities. For example:
 
-    ```shell-session
-    policy_name="kv-access-preservation"
+    ```bash
+    policy_name="<policy_name>"
     while read entity_name; do
 
       if [[ "" = "${entity_name}" ]] ; then continue ; fi
       
-      # Create a payload file with new policy added to any existing policy assignments
+      # Create a payload file with new policy added to any existing policy
+      # assignments
       vault read                              \
         -field policies                       \
         -format json                          \
@@ -245,7 +252,7 @@ deduplication.
    endpoint to update your target entries with a custom metadata field called
    `old_name` set to the **current** entity name:
 
-    ```shell-session
+    ```bash
     while read entity_name; do
 
       if [[ "" = "${entity_name}" ]] ; then continu ; fi
@@ -307,8 +314,8 @@ deduplication.
    endpoint to read in the existing policy assignments and add the new policy to the
    target entities. For example:
 
-    ```shell-session
-    policy_name="kv-access-preservation"
+    ```bash
+    policy_name="<policy_name>"
     while read entity_name; do
 
       if [[ "" = "${entity_name}" ]] ; then continue ; fi

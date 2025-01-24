@@ -1,13 +1,18 @@
 ---
 layout: docs
-page_title: Fix external reference duplicates
+page_title: Resolve deduplication effects on external references
 description: >-
-  Fix duplicate identities for external references
+  Fix external reference behavior for deduplicated entities and groups.
 ---
 
-# Fix external reference duplicates
+# Resolve deduplication impact on external references
 
-#### Resolving external references (e.g. Terraform)
+Fix external reference behavior for entities and groups renamed during identity
+deduplication.
+
+
+
+## How renaming affect external references
 
 It it is possible that renaming resources could break external references if
 they refer directly to the entity or group by name.
@@ -90,6 +95,15 @@ vault_identity_entity.bob: Modifying... [id=e8c5e633-fe37-5a49-4a29-32e2643d03bd
 │
 ╵
 ```
+
+
+## Find affected references
+
+TBD
+
+
+## Solution
+
 
 To resolve this, you will need to update any Terraform configuration with the
 new name which you can get from the previous duplicate report:

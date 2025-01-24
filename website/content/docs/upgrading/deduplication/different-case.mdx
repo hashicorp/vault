@@ -9,7 +9,7 @@ description: >-
 
 Fix duplicate identities for entity aliases due to case differences.
 
-**You must fix different-case entity alias duplicates before enabling forced
+**You must review different-case entity alias duplicates before enabling forced
 identity deduplication due to the potential security risk of incorrectly merging
 distinct aliases**.
 
@@ -28,11 +28,14 @@ Historical bugs in Vault allowed authN mounts to create duplicate entries of the
 same entity alias if the aliases used difference cases. For example, if an
 external LDAP system returns unnormalized usernames or changes the normalization
 scheme over time. By default, Vault uses case-insensitive matching for the
-usernames so entires like `username` and `uSeRnAmE` have the same alias. But,
+usernames and considers `username` and `uSeRnAmE` to be the same alias. But,
 past bugs have left some users with different-case duplicates in storage. To
 avoid the security impact of incorrectly merging identities that do not
 represent the same user, Vault tries to honor past behavior by switching the
 identity engine to use case-sensitive matching mode.
+But case-sensitive matching 
+This mode is not well supported however  
+as it deviates from Vault's typical assumptions. Remaining in this mode can lead to unexpected behavior. 
 
 
 ## Example server log
@@ -51,32 +54,33 @@ because they come from different authN mounts. When resolving duplicates,
 consider the set of duplicate names from each authN mount separately.
 
 Before resolving different-case duplicates, you must determine if the case
-difference is a **true duplicate** or **false positive**:
+difference is a **mergeable duplicate** or **unmergeable duplicate**:
 
-- With true duplicates, the case difference is **unintentional** and the
+- For mergeable duplicates, the case difference is **unintentional** and the
   duplicate entries represent the same logical entity. You should deduplicate
   true duplicates to reflect the expected default Vault behavior.
 
-- With false positive, the case difference is **deliberate** and the source
-  identity provider **intended** to distinguish between different entities
-  using case. For example, `Alice` and `alice` are different entities that
-  correspond to different humans with distinct permission sets.
+- For unmergeable duplicates, the case difference is **deliberate** and the
+  source identity provider **intended** to distinguish between different
+  entities using case. For example, `Alice` and `alice` are different entities
+  that correspond to different humans with distinct permission sets.
 
 
-## Case 1: Fixing true duplicates
+## Case 1: Fixing mergeable duplicates
 
-You can ignore true duplicates since Vault will force-merge them once you enable
-forced identity deduplication. To confirm the merge behavior **before** enabling
-the flag, review the `force_deduplication` label in the log line. During
-deduplication, Vault merges any policies attached to the duplicates so the final
-entry has the union of all permissions granted to the duplicates.
+You can ignore mergeable duplicates since Vault will force-merge them once you
+enable forced identity deduplication with the `force-identity-deduplication`
+flag. To confirm the merge behavior **before** enabling the flag, review the
+`force_deduplication` label in the log line. During deduplication, Vault merges
+any policies attached to the duplicates so the final entry has the union of all
+permissions granted to the duplicates.
 
 Users can continue to log in using any case combination of their username, but
 those logins now map to a single entity gated by the same policies per the
 expected, default Vault behavior.
 
 
-## Case 2: Fixing false positives
+## Case 2: Fixing unmergeable duplicates
 
 <Warning>
 
