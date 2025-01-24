@@ -8,9 +8,8 @@ import (
 	"strings"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 )
-
-const DefaultParallelOperations = 128
 
 // The operation type
 type Operation string
@@ -184,6 +183,27 @@ type Lock interface {
 
 // Factory is the factory function to create a physical backend.
 type Factory func(config map[string]string, logger log.Logger) (Backend, error)
+
+// PermitPool is used to limit maximum outstanding requests
+// Deprecated: use permitpool.Pool from go-secure-stdlib.
+type PermitPool struct {
+	*permitpool.Pool
+}
+
+// NewPermitPool returns a new permit pool with the provided
+// number of permits.
+// Deprecated: use permitpool.New from go-secure-stdlib.
+func NewPermitPool(permits int) *PermitPool {
+	return &PermitPool{
+		Pool: permitpool.New(permits),
+	}
+}
+
+// Acquire returns when a permit has been acquired
+// Deprecated: use permitpool.Acquire from go-secure-stdlib.
+func (c *PermitPool) Acquire() {
+	_ = c.Pool.Acquire(context.Background())
+}
 
 // Prefixes is a shared helper function returns all parent 'folders' for a
 // given vault key.
