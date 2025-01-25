@@ -31,7 +31,19 @@
 /vault/plugin_catalog.go      @hashicorp/vault-ecosystem
 
 # Content on developer.hashicorp.com
-/website/ @hashicorp/vault-education-approvers
+
+# Engineering and web presence get notified of, and can approve changes to web tooling, but not content.
+
+/website/               @hashicorp/web-presence @hashicorp/vault
+/website/data/
+/website/public/
+/website/content/
+
+# Education and engineering get notified of, and can approve changes to web content.
+
+/website/data/          @hashicorp/vault-education-approvers @hashicorp/vault
+/website/public/        @hashicorp/vault-education-approvers @hashicorp/vault
+/website/content/       @hashicorp/vault-education-approvers @hashicorp/vault
 
 # Plugin docs
 /website/content/docs/plugins/              @hashicorp/vault-ecosystem @hashicorp/vault-education-approvers
