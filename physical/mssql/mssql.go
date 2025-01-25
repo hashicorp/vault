@@ -16,6 +16,7 @@ import (
 	metrics "github.com/armon/go-metrics"
 	_ "github.com/denisenkom/go-mssqldb"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 )
@@ -31,7 +32,7 @@ type MSSQLBackend struct {
 	client     *sql.DB
 	statements map[string]*sql.Stmt
 	logger     log.Logger
-	permitPool *physical.PermitPool
+	permitPool *permitpool.Pool
 }
 
 func isInvalidIdentifier(name string) bool {
@@ -171,7 +172,7 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		client:     db,
 		statements: make(map[string]*sql.Stmt),
 		logger:     logger,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: permitpool.New(maxParInt),
 	}
 
 	statements := map[string]string{
@@ -205,7 +206,9 @@ func (m *MSSQLBackend) prepare(name, query string) error {
 func (m *MSSQLBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"mssql", "put"}, time.Now())
 
-	m.permitPool.Acquire()
+	if err := m.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer m.permitPool.Release()
 
 	_, err := m.statements["put"].Exec(entry.Key, entry.Value, entry.Key, entry.Key, entry.Value)
@@ -219,7 +222,9 @@ func (m *MSSQLBackend) Put(ctx context.Context, entry *physical.Entry) error {
 func (m *MSSQLBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"mssql", "get"}, time.Now())
 
-	m.permitPool.Acquire()
+	if err := m.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer m.permitPool.Release()
 
 	var result []byte
@@ -243,7 +248,9 @@ func (m *MSSQLBackend) Get(ctx context.Context, key string) (*physical.Entry, er
 func (m *MSSQLBackend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"mssql", "delete"}, time.Now())
 
-	m.permitPool.Acquire()
+	if err := m.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer m.permitPool.Release()
 
 	_, err := m.statements["delete"].Exec(key)
@@ -257,7 +264,9 @@ func (m *MSSQLBackend) Delete(ctx context.Context, key string) error {
 func (m *MSSQLBackend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"mssql", "list"}, time.Now())
 
-	m.permitPool.Acquire()
+	if err := m.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer m.permitPool.Release()
 
 	likePrefix := prefix + "%"

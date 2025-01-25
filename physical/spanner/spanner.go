@@ -15,6 +15,7 @@ import (
 	"cloud.google.com/go/spanner"
 	metrics "github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -85,7 +86,7 @@ type Backend struct {
 	// client is the API client and permitPool is the allowed concurrent uses of
 	// the client.
 	client     *spanner.Client
-	permitPool *physical.PermitPool
+	permitPool *permitpool.Pool
 
 	// haTable is the name of the table to use for HA in the database.
 	haTable string
@@ -190,7 +191,7 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 		database:   database,
 		table:      table,
 		client:     client,
-		permitPool: physical.NewPermitPool(maxParallel),
+		permitPool: permitpool.New(maxParallel),
 
 		haEnabled: haEnabled,
 		haTable:   haTable,
@@ -205,7 +206,9 @@ func (b *Backend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince(metricPut, time.Now())
 
 	// Pooling
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer b.permitPool.Release()
 
 	// Insert
@@ -224,7 +227,9 @@ func (b *Backend) Get(ctx context.Context, key string) (*physical.Entry, error) 
 	defer metrics.MeasureSince(metricGet, time.Now())
 
 	// Pooling
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer b.permitPool.Release()
 
 	// Read
@@ -252,7 +257,9 @@ func (b *Backend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince(metricDelete, time.Now())
 
 	// Pooling
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer b.permitPool.Release()
 
 	// Delete
@@ -269,7 +276,9 @@ func (b *Backend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince(metricList, time.Now())
 
 	// Pooling
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer b.permitPool.Release()
 
 	// Sanitize
@@ -347,7 +356,9 @@ func (b *Backend) Transaction(ctx context.Context, txns []*physical.TxnEntry) er
 	}
 
 	// Pooling
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer b.permitPool.Release()
 
 	// Transactivate!

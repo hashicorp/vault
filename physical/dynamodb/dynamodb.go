@@ -28,6 +28,7 @@ import (
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -126,7 +127,7 @@ type DynamoDBLockRecord struct {
 }
 
 type PermitPoolWithMetrics struct {
-	physical.PermitPool
+	permitpool.Pool
 	pendingPermits int32
 	poolSize       int
 }
@@ -322,7 +323,9 @@ func (d *DynamoDBBackend) Put(ctx context.Context, entry *physical.Entry) error 
 func (d *DynamoDBBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"dynamodb", "get"}, time.Now())
 
-	d.permitPool.Acquire()
+	if err := d.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer d.permitPool.Release()
 
 	resp, err := d.client.GetItemWithContext(ctx, &dynamodb.GetItemInput{
@@ -438,7 +441,9 @@ func (d *DynamoDBBackend) List(ctx context.Context, prefix string) ([]string, er
 		},
 	}
 
-	d.permitPool.Acquire()
+	if err := d.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer d.permitPool.Release()
 
 	err := d.client.QueryPagesWithContext(ctx, queryInput, func(out *dynamodb.QueryOutput, lastPage bool) bool {
@@ -491,7 +496,9 @@ func (d *DynamoDBBackend) hasChildren(ctx context.Context, prefix string, exclud
 		Limit: aws.Int64(int64(len(exclude) + 1)),
 	}
 
-	d.permitPool.Acquire()
+	if err := d.permitPool.Acquire(ctx); err != nil {
+		return false, err
+	}
 	defer d.permitPool.Release()
 
 	out, err := d.client.QueryWithContext(ctx, queryInput)
@@ -547,8 +554,9 @@ func (d *DynamoDBBackend) batchWriteRequests(ctx context.Context, requests []*dy
 		requests = requests[batchSize:]
 
 		var err error
-
-		d.permitPool.Acquire()
+		if err := d.permitPool.Acquire(ctx); err != nil {
+			return err
+		}
 
 		boff := backoff.NewExponentialBackOff()
 		boff.MaxElapsedTime = 600 * time.Second
@@ -996,34 +1004,38 @@ func isConditionCheckFailed(err error) bool {
 // number of permits which emits metrics
 func NewPermitPoolWithMetrics(permits int) *PermitPoolWithMetrics {
 	return &PermitPoolWithMetrics{
-		PermitPool:     *physical.NewPermitPool(permits),
+		Pool:           *permitpool.New(permits),
 		pendingPermits: 0,
 		poolSize:       permits,
 	}
 }
 
 // Acquire returns when a permit has been acquired
-func (c *PermitPoolWithMetrics) Acquire() {
+func (c *PermitPoolWithMetrics) Acquire(ctx context.Context) error {
 	atomic.AddInt32(&c.pendingPermits, 1)
 	c.emitPermitMetrics()
-	c.PermitPool.Acquire()
+	err := c.Pool.Acquire(ctx)
 	atomic.AddInt32(&c.pendingPermits, -1)
 	c.emitPermitMetrics()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Release returns a permit to the pool
 func (c *PermitPoolWithMetrics) Release() {
-	c.PermitPool.Release()
+	c.Pool.Release()
 	c.emitPermitMetrics()
 }
 
 // Get the number of requests in the permit pool
 func (c *PermitPoolWithMetrics) CurrentPermits() int {
-	return c.PermitPool.CurrentPermits()
+	return c.Pool.CurrentPermits()
 }
 
 func (c *PermitPoolWithMetrics) emitPermitMetrics() {
 	metrics.SetGauge([]string{"dynamodb", "permit_pool", "pending_permits"}, float32(c.pendingPermits))
-	metrics.SetGauge([]string{"dynamodb", "permit_pool", "active_permits"}, float32(c.PermitPool.CurrentPermits()))
+	metrics.SetGauge([]string{"dynamodb", "permit_pool", "active_permits"}, float32(c.Pool.CurrentPermits()))
 	metrics.SetGauge([]string{"dynamodb", "permit_pool", "pool_size"}, float32(c.poolSize))
 }

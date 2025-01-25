@@ -14,6 +14,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -64,7 +65,7 @@ type Backend struct {
 	client         *objectstorage.ObjectStorageClient
 	bucketName     string
 	logger         log.Logger
-	permitPool     *physical.PermitPool
+	permitPool     *permitpool.Pool
 	namespaceName  string
 	haEnabled      bool
 	lockBucketName string
@@ -141,7 +142,7 @@ func NewBackend(conf map[string]string, logger log.Logger) (physical.Backend, er
 		client:         &objectStorageClient,
 		bucketName:     bucketName,
 		logger:         logger,
-		permitPool:     physical.NewPermitPool(MaxNumberOfPermits),
+		permitPool:     permitpool.New(MaxNumberOfPermits),
 		namespaceName:  namespaceName,
 		haEnabled:      haEnabled,
 		lockBucketName: lockBucketName,
@@ -153,7 +154,9 @@ func (o *Backend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince(metricPutFull, time.Now())
 	startAcquirePool := time.Now()
 	metrics.SetGauge(metricPermitsUsed, float32(o.permitPool.CurrentPermits()))
-	o.permitPool.Acquire()
+	if err := o.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer o.permitPool.Release()
 	metrics.MeasureSince(metricPutAcquirePool, startAcquirePool)
 
@@ -198,7 +201,9 @@ func (o *Backend) Get(ctx context.Context, key string) (*physical.Entry, error) 
 	defer metrics.MeasureSince(metricGetFull, time.Now())
 	metrics.SetGauge(metricPermitsUsed, float32(o.permitPool.CurrentPermits()))
 	startAcquirePool := time.Now()
-	o.permitPool.Acquire()
+	if err := o.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer o.permitPool.Release()
 	metrics.MeasureSince(metricGetAcquirePool, startAcquirePool)
 
@@ -249,7 +254,9 @@ func (o *Backend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince(metricDeleteFull, time.Now())
 	metrics.SetGauge(metricPermitsUsed, float32(o.permitPool.CurrentPermits()))
 	startAcquirePool := time.Now()
-	o.permitPool.Acquire()
+	if err := o.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer o.permitPool.Release()
 	metrics.MeasureSince(metricDeleteAcquirePool, startAcquirePool)
 
@@ -291,7 +298,9 @@ func (o *Backend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince(metricListFull, time.Now())
 	metrics.SetGauge(metricPermitsUsed, float32(o.permitPool.CurrentPermits()))
 	startAcquirePool := time.Now()
-	o.permitPool.Acquire()
+	if err := o.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer o.permitPool.Release()
 
 	metrics.MeasureSince(metricListAcquirePool, startAcquirePool)
