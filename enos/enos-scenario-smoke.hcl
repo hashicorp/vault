@@ -93,8 +93,7 @@ scenario "smoke" {
       sles   = provider.enos.ec2_user
       ubuntu = provider.enos.ubuntu
     }
-    manage_service      = matrix.artifact_type == "bundle"
-    removed_step_module = semverconstraint(var.vault_product_version, ">=1.19.0-0") && matrix.backend == "raft" ? "vault_raft_remove_and_verify" : "vault_removed_do_nothing"
+    manage_service = matrix.artifact_type == "bundle"
   }
 
   step "build_vault" {
@@ -522,8 +521,9 @@ scenario "smoke" {
     description = <<-EOF
       Remove a follower and ensure that it's marked as removed and can be added back once its data has been deleted
     EOF
-    module      = local.removed_step_module
+    module      = semverconstraint(var.vault_product_version, ">=1.19.0-0") && matrix.backend == "raft" ? "vault_raft_remove_node_and_verify" : "vault_verify_removed_node_shim"
     depends_on = [
+      step.create_vault_cluster,
       step.create_vault_cluster_targets,
       step.get_vault_cluster_ips,
       step.verify_vault_unsealed,
@@ -543,17 +543,18 @@ scenario "smoke" {
     ]
 
     variables {
+      add_back_nodes    = true
+      cluster_name      = step.create_vault_cluster.cluster_name
+      cluster_port      = step.create_vault_cluster.cluster_port
       hosts             = step.get_vault_cluster_ips.follower_hosts
+      ip_version        = matrix.ip_version
+      listener_port     = step.create_vault_cluster.listener_port
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_leader_host = step.get_vault_cluster_ips.leader_host
       vault_root_token  = step.create_vault_cluster.root_token
       vault_seal_type   = matrix.seal
       vault_unseal_keys = matrix.seal == "shamir" ? step.create_vault_cluster.unseal_keys_hex : null
-      add_back_nodes    = true
-      listener_port     = step.create_vault_cluster.listener_port
-      ip_version        = matrix.ip_version
-      vault_local_addr  = step.create_vault_cluster.api_addr_localhost
-      cluster_port      = step.create_vault_cluster.cluster_port
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
     }
   }
 
