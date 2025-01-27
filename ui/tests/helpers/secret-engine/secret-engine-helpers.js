@@ -266,6 +266,26 @@ export const fillInAzureConfig = async (situation = 'azure') => {
   }
 };
 
+export const fillInGcpConfig = async (situation = 'gcp') => {
+  await click(GENERAL.toggleGroup('More options'));
+  await click(GENERAL.ttl.toggle('Config TTL'));
+  await fillIn(GENERAL.ttl.input('Config TTL'), '7200');
+  await click(GENERAL.ttl.toggle('Max TTL'));
+  await fillIn(GENERAL.ttl.input('Max TTL'), '8200');
+
+  if (situation === 'gcp') {
+    await click(GENERAL.textToggle);
+    await fillIn(GENERAL.textToggleTextarea, '{"some-key":"some-value"}');
+  }
+  if (situation === 'withWif') {
+    await click(SES.wif.accessType('wif')); // toggle to wif
+    await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'azure-audience');
+    await click(GENERAL.ttl.toggle('Identity token TTL'));
+    await fillIn(GENERAL.ttl.input('Identity token TTL'), '7200');
+    await fillIn(GENERAL.inputByAttr('serviceAccountEmail'), 'some@email.com');
+  }
+};
+
 /* Generate arrays of keys to iterate over.
  * used to check details of the secret engine configuration
  * and used to check the form to configure the secret engine
