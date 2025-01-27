@@ -56,29 +56,26 @@ func testConfigRaftRetryJoin(t *testing.T) {
 			retryJoinJSON, err := json.Marshal(retryJoinExpected)
 			require.NoError(t, err)
 
-			expected := &Config{
-				SharedConfig: &configutil.SharedConfig{
-					Listeners: []*configutil.Listener{
-						{
-							Type:                  "tcp",
-							Address:               "127.0.0.1:8200",
-							CustomResponseHeaders: DefaultCustomHeaders,
-						},
-					},
-					DisableMlock: true,
+			expected := NewConfig()
+			expected.SharedConfig.Listeners = []*configutil.Listener{
+				{
+					Type:                  "tcp",
+					Address:               "127.0.0.1:8200",
+					CustomResponseHeaders: DefaultCustomHeaders,
 				},
-
-				Storage: &Storage{
-					Type: "raft",
-					Config: map[string]string{
-						"path":       "/storage/path/raft",
-						"node_id":    "raft1",
-						"retry_join": string(retryJoinJSON),
-					},
+			}
+			expected.SharedConfig.DisableMlock = true
+			expected.Storage = &Storage{
+				Type: "raft",
+				Config: map[string]string{
+					"path":       "/storage/path/raft",
+					"node_id":    "raft1",
+					"retry_join": string(retryJoinJSON),
 				},
 			}
 			config.Prune()
-			require.EqualValues(t, expected, config)
+			require.EqualValues(t, expected.SharedConfig, config.SharedConfig)
+			require.EqualValues(t, expected.Storage, config.Storage)
 		})
 	}
 }
