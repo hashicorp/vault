@@ -76,8 +76,7 @@ export default class GcpConfig extends Model {
   get isAccountPluginConfigured() {
     // credentials is not checked here because it's never return by the API
     // additionally credentials can be set via GOOGLE_APPLICATION_CREDENTIALS env var so we cannot call it a required field in the ui.
-    // thus we can never say for sure if the account accessType has been configured
-    // we also can't prevent the user from saving seeing the error message "only one of 'credentials' or 'identity_token_audience' can be set".
+    // thus we can never say for sure if the account accessType has been configured so we always return false
     return false;
   }
 

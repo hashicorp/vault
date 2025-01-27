@@ -75,14 +75,14 @@ module('Acceptance | GCP | configuration', function (hooks) {
 
     module('details', function () {
       test('it should show configuration details with GCP account options configured', async function (assert) {
-        const GCPAccountAttrs = {
+        const gcpAccountAttrs = {
           credentials: '{"some-key":"some-value"}',
           ttl: '1 minute 40 seconds',
           max_ttl: '1 minute 41 seconds',
         };
         this.server.get(`${this.path}/config`, () => {
           assert.true(true, 'request made to config when navigating to the configuration page.');
-          return { data: { id: this.path, type: this.type, ...GCPAccountAttrs } };
+          return { data: { id: this.path, type: this.type, ...gcpAccountAttrs } };
         });
         await enablePage.enable(this.type, this.path);
         for (const key of expectedConfigKeys(this.type)) {
@@ -105,13 +105,6 @@ module('Acceptance | GCP | configuration', function (hooks) {
     module('create', function () {
       test('it should save gcp account accessType options', async function (assert) {
         await enablePage.enable(this.type, this.path);
-
-        this.server.post('/identity/oidc/config', () => {
-          throw new Error(
-            `Request was made to return the issuer when it should not have been because user is on CE.`
-          );
-        });
-
         await click(SES.configTab);
         await click(SES.configure);
         await fillInGcpConfig(this.type);
@@ -138,7 +131,6 @@ module('Acceptance | GCP | configuration', function (hooks) {
     module('edit', function (hooks) {
       hooks.beforeEach(async function () {
         const genericAttrs = {
-          // attributes that can be used for either wif or gcp account access type
           configTtl: '2h',
           maxTtl: '4h',
         };
