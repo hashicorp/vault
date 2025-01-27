@@ -101,6 +101,12 @@ div > .ember-power-select-options {
   justify-content: space-between;
   border-bottom: $light-border;
 
+  .list-item-text {
+    max-width: 200px;
+    overflow-x: hidden;
+    margin-right: 5px;
+  }
+
   .control .button {
     color: $grey-light;
     min-width: auto;
