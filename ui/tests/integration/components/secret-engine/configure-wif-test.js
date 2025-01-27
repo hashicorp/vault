@@ -75,7 +75,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
 
           for (const key of expectedConfigKeys(type, true)) {
             if (key === 'configTtl' || key === 'maxTtl') {
-              // because toggle.hbs passes in the name rather than the camelized attr, we have a difference of camelCased vs title cased being passed into the data-test selectors. Long-term solution we should match formField inputs to toggle.hbs toggle (imo always camelCased)
+              // because toggle.hbs passes in the name rather than the camelized attr, we have a difference of data-test=attrName vs data-test="Item name" being passed into the data-test selectors. Long-term solution we should match formField inputs to toggle.hbs toggle (imo always camelCased)
               assert
                 .dom(GENERAL.ttl.toggle(key === 'configTtl' ? 'Config TTL' : 'Max TTL'))
                 .exists(
@@ -647,7 +647,6 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           // check all the form fields are present
           for (const key of expectedConfigKeys(type, true)) {
             if (key === 'configTtl' || key === 'maxTtl') {
-              // because toggle.hbs uses the name rather than the camelized attr, we have a difference of camelCased vs title cased being passed into data-test-xx. Long-term solution we should match formField inputs to toggle.hbs toggle (imo always camelCased)
               assert
                 .dom(GENERAL.ttl.toggle(key === 'configTtl' ? 'Config TTL' : 'Max TTL'))
                 .exists(`${key} shows for ${type} account access section.`);
@@ -848,15 +847,15 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
       });
 
       module('GCP specific', function (hooks) {
+        // GCP is unique in that "credentials" is the only mutually exclusive GCP account attr and it's never returned from the API. Thus, we can only check for the presence of configured wif fields to determine if the accessType should be preselected to wif and disabled.
+        // This leads to a unique situation where if the user has configured the credentials field, the ui will not know until the user tries to save WIF fields. This is a limitation of the API and surfaced to the user in a descriptive API error.
+        // We cover some of this workflow here and error testing in the gcp-configuration acceptance test.
         hooks.beforeEach(function () {
           this.id = `gcp-${this.uid}`;
           this.mountConfigModel = createConfig(this.store, this.id, 'gcp');
           this.type = 'gcp';
           this.displayName = 'Google Cloud';
         });
-        // GCP is unique in that credentials is the only mutually exclusive GCP account field and it's never returned from the API. Thus, we can only check for the presence of configured wif fields to determine if the accessType should be preselected to wif and disabled.
-        // This leads to a unique situation where if the user has configured the credentials field, the ui will not know until the user tries to save WIF fields. This is a limitation of the API and surfaced to the user in a descriptive API error.
-        // We cover some of this workflow here and error testing in the gcp-configuration acceptance test.
         test('it allows you to change access type if no wif fields are set', async function (assert) {
           await render(hbs`
                 <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type={{this.type}} @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>

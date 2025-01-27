@@ -181,7 +181,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
 
         this.server.post(configUrl('gcp', this.path), (schema, req) => {
           const payload = JSON.parse(req.requestBody);
-          assert.strictEqual(payload.credentials, undefined, 'credentials are sent in post request');
+          assert.strictEqual(payload.credentials, undefined, 'credentials are not sent in post request');
 
           assert.strictEqual(
             payload.ttl,
