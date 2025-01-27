@@ -200,8 +200,6 @@ github.com/hashicorp/go-secure-stdlib/parseutil v0.1.8 h1:iBt4Ew4XEGLfh6/bPk4rSY
 github.com/hashicorp/go-secure-stdlib/parseutil v0.1.8/go.mod h1:aiJI+PIApBRQG7FZTEBx5GiiX+HbOHilUdNxUZi4eV0=
 github.com/hashicorp/go-secure-stdlib/password v0.1.1 h1:6JzmBqXprakgFEHwBgdchsjaA9x3GyjdI568bXKxa60=
 github.com/hashicorp/go-secure-stdlib/password v0.1.1/go.mod h1:9hH302QllNwu1o2TGYtSk8I8kTAN0ca1EHpwhm5Mmzo=
-github.com/hashicorp/go-secure-stdlib/permitpool v0.0.0-20250109173936-1ecdd6ad783f h1:FC0HhfmXKlQh/21KJFhGsvrOyNY1JEKRobE93wP5cKQ=
-github.com/hashicorp/go-secure-stdlib/permitpool v0.0.0-20250109173936-1ecdd6ad783f/go.mod h1:ecDb3o+8D4xtP0nTCufJaAVawHavy5M2eZ64Nq/8/LM=
 github.com/hashicorp/go-secure-stdlib/permitpool v1.0.0 h1:U6y5MXGiDVOOtkWJ6o/tu1TxABnI0yKTQWJr7z6BpNk=
 github.com/hashicorp/go-secure-stdlib/permitpool v1.0.0/go.mod h1:ecDb3o+8D4xtP0nTCufJaAVawHavy5M2eZ64Nq/8/LM=
 github.com/hashicorp/go-secure-stdlib/plugincontainer v0.4.1 h1:JY+zGg8gOmslwif1fiCqT5Hu1SikLZQcHkmQhCoA9gY=
@@ -657,8 +655,6 @@ google.golang.org/protobuf v1.22.0/go.mod h1:EGpADcykh3NcUnDUJcl1+ZksZNG86OlYog2
 google.golang.org/protobuf v1.23.0/go.mod h1:EGpADcykh3NcUnDUJcl1+ZksZNG86OlYog2l/sGQquU=
 google.golang.org/protobuf v1.23.1-0.20200526195155-81db48ad09cc/go.mod h1:EGpADcykh3NcUnDUJcl1+ZksZNG86OlYog2l/sGQquU=
 google.golang.org/protobuf v1.25.0/go.mod h1:9JNX74DMeImyA3h4bdi1ymwjUzf21/xIlbajtzgsN7c=
-google.golang.org/protobuf v1.35.2 h1:8Ar7bF+apOIoThw1EdZl0p1oWvMqTHmpA2fRTyZO8io=
-google.golang.org/protobuf v1.35.2/go.mod h1:9fA7Ob0pmnwhb644+1+CVWFRbNajQ6iRojtC/QF5bRE=
 google.golang.org/protobuf v1.36.3 h1:82DV7MYdb8anAVi3qge1wSnMDrnKK7ebr+I0hHRN1BU=
 google.golang.org/protobuf v1.36.3/go.mod h1:9fA7Ob0pmnwhb644+1+CVWFRbNajQ6iRojtC/QF5bRE=
 gopkg.in/alecthomas/kingpin.v2 v2.2.6/go.mod h1:FMv+mEhP44yOT+4EoQTLFTRgOQ1FBLkstjWtayDeSgw=
