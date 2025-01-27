@@ -1329,7 +1329,7 @@ func TestActivityLog_loadCurrentClientSegment(t *testing.T) {
 	for _, tc := range testCases {
 		data, err := proto.Marshal(tc.entities)
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		WriteToStorage(t, core, ActivityLogPrefix+tc.path, data)
 	}
@@ -1442,7 +1442,7 @@ func TestActivityLog_loadPriorEntitySegment(t *testing.T) {
 	for _, tc := range testCases {
 		data, err := proto.Marshal(tc.entities)
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		WriteToStorage(t, core, ActivityLogPrefix+tc.path, data)
 	}
@@ -1488,7 +1488,7 @@ func TestActivityLog_loadTokenCount(t *testing.T) {
 
 	data, err := proto.Marshal(tokenCount)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	testCases := []struct {
@@ -1622,7 +1622,7 @@ func setupActivityRecordsInStorage(t *testing.T, base time.Time, includeEntities
 				Clients: []*activity.EntityRecord{entityRecord},
 			})
 			if err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 			if i == 0 {
 				WriteToStorage(t, core, ActivityLogPrefix+"entity/"+fmt.Sprint(monthsAgo.Unix())+"/0", entityData)
@@ -1648,7 +1648,7 @@ func setupActivityRecordsInStorage(t *testing.T, base time.Time, includeEntities
 
 		tokenData, err := proto.Marshal(tokenCount)
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 
 		WriteToStorage(t, core, ActivityLogPrefix+"directtokens/"+fmt.Sprint(base.Unix())+"/0", tokenData)
@@ -4064,7 +4064,7 @@ func TestActivityLog_partialMonthClientCountWithMultipleMountPaths(t *testing.T)
 			Clients: []*activity.EntityRecord{entityRecord},
 		})
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		storagePath := fmt.Sprintf("%sentity/%d/%d", ActivityLogPrefix, timeutil.StartOfMonth(now).Unix(), i)
 		WriteToStorage(t, core, storagePath, entityData)
