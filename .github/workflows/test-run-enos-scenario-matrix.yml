@@ -185,6 +185,8 @@ jobs:
             echo "ENOS_DEBUG_DATA_ROOT_DIR=/tmp/enos-debug-data"
             echo "ENOS_VAR_artifactory_username=${{ steps.secrets.outputs.artifactory-user }}"
             echo "ENOS_VAR_artifactory_token=${{ steps.secrets.outputs.artifactory-token }}"
+            echo "ENOS_VAR_aws_access_key_id=${{ steps.secrets.outputs.aws-access-key-id }}"
+            echo "ENOS_VAR_aws_access_secret_key=${{ steps.secrets.outputs.aws-secret-access-key }}"
             echo "ENOS_VAR_aws_region=${{ matrix.attributes.aws_region }}"
             echo "ENOS_VAR_aws_ssh_keypair_name=${{ inputs.ssh-key-name }}"
             echo "ENOS_VAR_aws_ssh_private_key_path=./support/private_key.pem"

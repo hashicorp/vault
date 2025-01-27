@@ -9,6 +9,24 @@ terraform {
   }
 }
 
+variable "aws_test_region" {
+  type        = string
+  description = "AWS region for aws secrets engine"
+  default     = "us-east-1"
+}
+
+variable "aws_test_access_key_id" {
+  type        = string
+  description = "AWS access key for aws secrets engine"
+  default     = null
+}
+
+variable "aws_test_access_secret_key" {
+  type        = string
+  description = "AWS secret access key for aws secrets engine"
+  default     = null
+}
+
 variable "hosts" {
   type = map(object({
     ipv6       = string
@@ -49,5 +67,6 @@ output "state" {
     auth     = local.auth_output
     identity = local.identity_output
     kv       = local.kv_output
+    aws      = local.aws_output
   }
 }

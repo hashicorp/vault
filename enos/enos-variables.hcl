@@ -27,6 +27,18 @@ variable "artifactory_repo" {
   default     = "hashicorp-crt-stable-local*"
 }
 
+variable "aws_access_key_id" {
+  description = "The AWS access key id that will be used for testing"
+  type        = string
+  default     = null
+}
+
+variable "aws_access_secret_key" {
+  description = "The AWS secret access key that will be used for testing"
+  type        = string
+  default     = null
+}
+
 variable "aws_region" {
   description = "The AWS region where we'll create infrastructure"
   type        = string
