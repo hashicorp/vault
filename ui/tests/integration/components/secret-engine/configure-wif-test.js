@@ -74,11 +74,20 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           toggleGroup ? await click(toggleGroup) : null;
 
           for (const key of expectedConfigKeys(type, true)) {
-            assert
-              .dom(GENERAL.inputByAttr(key))
-              .exists(
-                `${key} shows for ${type} configuration create section when wif is not the access type`
-              );
+            if (key === 'configTtl' || key === 'maxTtl') {
+              // because toggle.hbs passes in the name rather than the camelized attr, we have a difference of camelCased vs title cased being passed into the data-test selectors. Long-term solution we should match formField inputs to toggle.hbs toggle (imo always camelCased)
+              assert
+                .dom(GENERAL.ttl.toggle(key === 'configTtl' ? 'Config TTL' : 'Max TTL'))
+                .exists(
+                  `${key} shows for ${type} configuration create section when wif is not the access type.`
+                );
+            } else {
+              assert
+                .dom(GENERAL.inputByAttr(key))
+                .exists(
+                  `${key} shows for ${type} configuration create section when wif is not the access type`
+                );
+            }
           }
           assert
             .dom(GENERAL.inputByAttr('issuer'))
@@ -637,7 +646,14 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           toggleGroup ? await click(toggleGroup) : null;
           // check all the form fields are present
           for (const key of expectedConfigKeys(type, true)) {
-            assert.dom(GENERAL.inputByAttr(key)).exists(`${key} shows for ${type} account access section.`);
+            if (key === 'configTtl' || key === 'maxTtl') {
+              // because toggle.hbs uses the name rather than the camelized attr, we have a difference of camelCased vs title cased being passed into data-test-xx. Long-term solution we should match formField inputs to toggle.hbs toggle (imo always camelCased)
+              assert
+                .dom(GENERAL.ttl.toggle(key === 'configTtl' ? 'Config TTL' : 'Max TTL'))
+                .exists(`${key} shows for ${type} account access section.`);
+            } else {
+              assert.dom(GENERAL.inputByAttr(key)).exists(`${key} shows for ${type} account access section.`);
+            }
           }
           assert.dom(GENERAL.inputByAttr('issuer')).doesNotExist();
         });
@@ -851,13 +867,27 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           toggleGroup ? await click(toggleGroup) : null;
 
           for (const key of expectedConfigKeys(type, true)) {
-            if (key === 'secretKey' || key === 'clientSecret') return; // these keys are not returned by the API
-            assert
-              .dom(GENERAL.inputByAttr(key))
-              .hasValue(
-                this.mountConfigModel[key],
-                `${key} for ${type}: has the expected value set on the config`
-              );
+            if (key === 'secretKey' || key === 'clientSecret' || key === 'credentials') return; // these keys are not returned by the API
+            if (type === 'gcp') {
+              // same issues noted in wif enterprise tests with how toggle.hbs passes in name vs how formField input passes in attr to data test selector
+              if (key === 'configTtl') {
+                assert
+                  .dom(GENERAL.ttl.input('Config TTL'))
+                  .hasValue('100', `${key} for ${type}: has the expected value set on the config`);
+              }
+              if (key === 'maxTtl') {
+                assert
+                  .dom(GENERAL.ttl.input('Max TTL'))
+                  .hasValue('101', `${key} for ${type}: has the expected value set on the config`);
+              }
+            } else {
+              assert
+                .dom(GENERAL.inputByAttr(key))
+                .hasValue(
+                  this.mountConfigModel[key],
+                  `${key} for ${type}: has the expected value set on the config`
+                );
+            }
           }
         });
       }

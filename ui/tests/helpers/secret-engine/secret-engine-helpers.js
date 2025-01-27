@@ -185,8 +185,8 @@ const createGcpConfig = (store, backend, accessType = 'gcp') => {
       data: {
         backend,
         credentials: '{"some-key":"some-value"}',
-        ttl: '1 hour',
-        max_ttl: '4 hours',
+        ttl: '100s',
+        max_ttl: '101s',
       },
     });
   }
@@ -215,7 +215,10 @@ export const createConfig = (store, backend, type) => {
     case 'azure-generic':
       return createAzureConfig(store, backend, 'generic');
     case 'gcp':
+    case 'gcp-generic':
       return createGcpConfig(store, backend);
+    case 'gcp-wif':
+      return createGcpConfig(store, backend, 'wif');
   }
 };
 /* Manually create the configuration by filling in the configuration form */
@@ -303,7 +306,7 @@ const azureWifKeys = [...genericAzureKeys, ...genericWifKeys];
 // GCP specific keys
 const genericGcpKeys = ['Config TTL', 'Max TTL'];
 const gcpKeys = [...genericGcpKeys, 'Credentials'];
-const gcpWifKeys = [...genericGcpKeys, ...genericWifKeys, 'Service account email'];
+const gcpWifKeys = [...genericWifKeys, 'Service account email'];
 // SSH specific keys
 const sshKeys = ['Private key', 'Public key', 'Generate signing key'];
 
