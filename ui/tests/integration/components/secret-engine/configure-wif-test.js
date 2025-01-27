@@ -75,7 +75,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
 
           for (const key of expectedConfigKeys(type, true)) {
             if (key === 'configTtl' || key === 'maxTtl') {
-              // because toggle.hbs passes in the name rather than the camelized attr, we have a difference of data-test=attrName vs data-test="Item name" being passed into the data-test selectors. Long-term solution we should match formField inputs to toggle.hbs toggle
+              // because toggle.hbs passes in the name rather than the camelized attr, we have a difference of data-test=attrName vs data-test="Item name" being passed into the data-test selectors. Long-term solution we should match toggle.hbs selectors to formField.hbs selectors syntax
               assert
                 .dom(GENERAL.ttl.toggle(key === 'configTtl' ? 'Config TTL' : 'Max TTL'))
                 .exists(
