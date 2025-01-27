@@ -1922,7 +1922,8 @@ func (f *fakeResponseWriter) WriteHeader(statusCode int) {
 // their parents.
 func TestActivityLog_IncludeNamespace(t *testing.T) {
 	root := namespace.RootNamespace
-	a := &ActivityLog{}
+	core, _, _ := TestCoreUnsealed(t)
+	a := core.activityLog
 
 	nsA := &namespace.Namespace{
 		ID:   "aaaaa",
