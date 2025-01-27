@@ -16,8 +16,7 @@ binpath=${VAULT_INSTALL_DIR}/vault
 test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
 getSysHealth() {
-  curl -XGET --header "X-Vault-Token: $VAULT_TOKEN" \
-    "$VAULT_ADDR/v1/sys/health" | jq '.removed_from_cluster'
+  $binpath read -format=json sys/health sealedcode=299 haunhealthycode=299 removedcode=299 | jq '.removed_from_cluster'
 }
 
 getStatus() {
@@ -26,7 +25,10 @@ getStatus() {
 
 expectRemoved() {
   local status
-  status=$(getStatus)
+  if ! status=$(getStatus); then
+    echo "failed to get vault status: $status"
+    return 1
+  fi
   if [[ "$status" != "true" ]]; then
     echo "unexpected status $status"
     return 1
@@ -34,6 +36,10 @@ expectRemoved() {
 
   local health
   health=$(getSysHealth)
+  if ! health=$(getSysHealth); then
+    echo "failed to get health: $health"
+    return 1
+  fi
   if [[ "$health" != "true" ]]; then
     echo "unexpected health $health"
   fi

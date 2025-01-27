@@ -96,6 +96,11 @@ module "replication_data" {
   source = "./modules/replication_data"
 }
 
+module "restart_vault" {
+  source            = "./modules/restart_vault"
+  vault_install_dir = var.vault_install_dir
+}
+
 module "seal_awskms" {
   source = "./modules/seal_awskms"
 
@@ -225,18 +230,13 @@ module "vault_failover_update_dr_primary" {
   vault_install_dir = var.vault_install_dir
 }
 
-module "vault_raft_remove_and_verify" {
+module "vault_raft_remove_node_and_verify" {
   source            = "./modules/vault_raft_remove_and_verify"
   vault_install_dir = var.vault_install_dir
 }
 
 module "vault_raft_remove_peer" {
   source            = "./modules/vault_raft_remove_peer"
-  vault_install_dir = var.vault_install_dir
-}
-
-module "vault_removed_do_nothing" {
-  source            = "./modules/vault_removed_do_nothing"
   vault_install_dir = var.vault_install_dir
 }
 
@@ -295,6 +295,18 @@ module "vault_verify_dr_replication" {
   vault_install_dir = var.vault_install_dir
 }
 
+module "vault_verify_removed_node" {
+  source = "./modules/vault_verify_raft_removed"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_verify_removed_node_shim" {
+  source            = "./modules/vault_removed_do_nothing"
+  vault_install_dir = var.vault_install_dir
+}
+
+
 module "vault_verify_secrets_engines_create" {
   source = "./modules/verify_secrets_engines/modules/create"
 
@@ -324,12 +336,6 @@ module "vault_verify_raft_auto_join_voter" {
 
   vault_install_dir       = var.vault_install_dir
   vault_cluster_addr_port = global.ports["vault_cluster"]["port"]
-}
-
-module "vault_verify_raft_removed" {
-  source = "./modules/vault_verify_raft_removed"
-
-  vault_install_dir = var.vault_install_dir
 }
 
 module "vault_verify_replication" {

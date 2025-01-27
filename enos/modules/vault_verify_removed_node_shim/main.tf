@@ -38,6 +38,7 @@ variable "listener_port" {
   type        = number
   description = "The listener port for vault"
 }
+
 variable "vault_leader_host" {
   type = object({
     ipv6       = string
@@ -46,13 +47,20 @@ variable "vault_leader_host" {
   })
   description = "The leader's host information"
 }
-variable "vault_local_addr" {
+
+variable "vault_addr" {
   type        = string
   description = "The local address to use to query vault"
 }
+
 variable "cluster_port" {
   type        = number
   description = "The cluster port for vault"
+}
+
+variable "cluster_name" {
+  type        = string
+  description = "The name of the vault cluster"
 }
 
 variable "ip_version" {
