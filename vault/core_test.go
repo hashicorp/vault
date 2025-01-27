@@ -3696,3 +3696,16 @@ func TestBarrier_DeadlockDetection(t *testing.T) {
 		t.Fatal("barrierLock doesn't have deadlock detection enabled, it should")
 	}
 }
+
+// Test_administrativeNamespacePath verifies if administrativeNamespacePath function returns the configured administrative namespace path
+func Test_administrativeNamespacePath(t *testing.T) {
+	adminNamespacePath := "admin"
+	coreConfig := &CoreConfig{
+		RawConfig: &server.Config{
+			SharedConfig: &configutil.SharedConfig{AdministrativeNamespacePath: adminNamespacePath},
+		},
+		AdministrativeNamespacePath: adminNamespacePath,
+	}
+	core, _, _ := TestCoreUnsealedWithConfig(t, coreConfig)
+	require.Equal(t, core.administrativeNamespacePath(), adminNamespacePath)
+}
