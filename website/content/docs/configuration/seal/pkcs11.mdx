@@ -170,6 +170,8 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 
 - `disabled` `(string: "")`: Set this to `true` if Vault is migrating from an auto seal configuration. Otherwise, set to `false`.
 
+`pin` can be an [indirect value reference](/vault/docs/configuration/seal#indirect-value-references).
+
 Refer to the [Seal Migration](/vault/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
   
 ### Mechanism specific flags
