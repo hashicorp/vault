@@ -77,8 +77,8 @@ module('Acceptance | GCP | configuration', function (hooks) {
       test('it should show configuration details with GCP account options configured', async function (assert) {
         const GCPAccountAttrs = {
           credentials: '{"some-key":"some-value"}',
-          ttl: '1 hour',
-          max_ttl: '4 hours',
+          ttl: '1 minute 40 seconds',
+          max_ttl: '1 minute 41 seconds',
         };
         this.server.get(`${this.path}/config`, () => {
           assert.true(true, 'request made to config when navigating to the configuration page.');
@@ -270,6 +270,29 @@ module('Acceptance | GCP | configuration', function (hooks) {
         .hasText(`${this.path}/`, 'mount path is displayed in the configuration details');
       // cleanup
       await runCmd(`delete sys/mounts/${this.path}`);
+    });
+
+    module('Error handling', function () {
+      test('it shows API error if user previously set credentials but tries to edit the configuration with wif fields', async function (assert) {
+        await enablePage.enable(this.type, this.path);
+        await click(SES.configTab);
+        await click(SES.configure);
+        await fillInGcpConfig(this.type);
+        await click(GENERAL.saveButton); // save GCP credentials
+
+        await click(SES.configure); // navigate so you can edit that configuration
+        await fillInGcpConfig('withWif');
+        await click(GENERAL.saveButton); // try and save wif fields
+        assert
+          .dom(GENERAL.messageError)
+          .hasText(
+            `Error only one of 'credentials' or 'identity_token_audience' can be set`,
+            'api error about conflicting fields is shown'
+          );
+        assert.dom(GENERAL.inlineError).hasText('There was an error submitting this form.');
+        // cleanup
+        await runCmd(`delete sys/mounts/${this.path}`);
+      });
     });
   });
 });

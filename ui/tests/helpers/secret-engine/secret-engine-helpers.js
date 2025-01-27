@@ -270,13 +270,12 @@ export const fillInAzureConfig = async (situation = 'azure') => {
 };
 
 export const fillInGcpConfig = async (situation = 'gcp') => {
-  await click(GENERAL.toggleGroup('More options'));
-  await click(GENERAL.ttl.toggle('Config TTL'));
-  await fillIn(GENERAL.ttl.input('Config TTL'), '7200');
-  await click(GENERAL.ttl.toggle('Max TTL'));
-  await fillIn(GENERAL.ttl.input('Max TTL'), '8200');
-
   if (situation === 'gcp') {
+    await click(GENERAL.toggleGroup('More options'));
+    await click(GENERAL.ttl.toggle('Config TTL'));
+    await fillIn(GENERAL.ttl.input('Config TTL'), '7200');
+    await click(GENERAL.ttl.toggle('Max TTL'));
+    await fillIn(GENERAL.ttl.input('Max TTL'), '8200');
     await click(GENERAL.textToggle);
     await fillIn(GENERAL.textToggleTextarea, '{"some-key":"some-value"}');
   }
@@ -372,9 +371,9 @@ const valueOfGcpKeys = (string) => {
     case 'Service account email':
       return 'service-email';
     case 'Config TTL':
-      return '1 hour';
+      return '1 minute 40 seconds';
     case 'Max TTL':
-      return '4 hours';
+      return '1 minute 41 seconds';
     case 'Identity token audience':
       return 'audience';
     case 'Identity token TTL':

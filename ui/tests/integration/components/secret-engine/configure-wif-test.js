@@ -846,6 +846,47 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           await click(GENERAL.saveButton);
         });
       });
+
+      module('GCP specific', function (hooks) {
+        hooks.beforeEach(function () {
+          this.id = `gcp-${this.uid}`;
+          this.mountConfigModel = createConfig(this.store, this.id, 'gcp');
+          this.type = 'gcp';
+          this.displayName = 'Google Cloud';
+        });
+        // GCP is unique in that credentials is the only mutually exclusive GCP account field and it's never returned from the API. Thus, we can only check for the presence of configured wif fields to determine if the accessType should be preselected to wif and disabled.
+        // This leads to a unique situation where if the user has configured the credentials field, the ui will not know until the user tries to save WIF fields. This is a limitation of the API and surfaced to the user in a descriptive API error.
+        // We cover some of this workflow here and error testing in the gcp-configuration acceptance test.
+        test('it allows you to change access type if no wif fields are set', async function (assert) {
+          await render(hbs`
+                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type={{this.type}} @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
+              `);
+
+          assert.dom(SES.wif.accessType('gcp')).isChecked('GCP accessType is checked');
+          assert
+            .dom(SES.wif.accessType('gcp'))
+            .isNotDisabled(
+              'GCP accessType is not disabled because we cannot determine if credentials was set as it is not returned by the api.'
+            );
+          assert.dom(SES.wif.accessType('wif')).isNotChecked('WIF accessType is not checked');
+          assert.dom(SES.wif.accessType('wif')).isNotDisabled('WIF accessType is not disabled');
+          assert
+            .dom(SES.wif.accessTypeSubtext)
+            .hasText(
+              'Choose the way to configure access to Google Cloud. Access can be configured either using Google Cloud account credentials or with the Plugin Workload Identity Federation (WIF).'
+            );
+        });
+
+        test('it shows previously saved config information', async function (assert) {
+          this.mountConfigModel = createConfig(this.store, this.id, 'gcp-generic');
+          await render(hbs`
+                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type={{this.type}} @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
+              `);
+          await click(GENERAL.toggleGroup('More options'));
+          assert.dom(GENERAL.ttl.input('Config TTL')).hasValue('100');
+          assert.dom(GENERAL.ttl.input('Max TTL')).hasValue('101');
+        });
+      });
     });
 
     module('isCommunity', function (hooks) {
