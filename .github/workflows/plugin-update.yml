@@ -28,13 +28,13 @@ jobs:
       VAULT_BRANCH: ${{ inputs.branch }}
       REVIEWER: ${{ inputs.reviewer || github.actor }}
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           # We don't use the default token so that checks are executed on the resulting PR
           # https://docs.github.com/en/actions/using-workflows/triggering-a-workflow#triggering-a-workflow-from-a-workflow
           token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
 
-      - uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
+      - uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
         with:
           cache: false # save cache space for vault builds: https://github.com/hashicorp/vault/pull/21764
           go-version-file: .go-version
@@ -47,7 +47,11 @@ jobs:
 
       - name: Update Enterprise-only plugin
         if: github.repository == 'hashicorp/vault-enterprise'
+        env:
+          # Use elevated token to read private repos.
+          GITHUB_TOKEN: ${{secrets.ELEVATED_GITHUB_TOKEN}}
         run: |
+          git config --global url."https://${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
           (cd vault_ent && go get "github.com/hashicorp/${{ inputs.plugin }}@v${{ inputs.version }}" && go mod tidy)
           go mod tidy
 

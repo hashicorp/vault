@@ -10,6 +10,7 @@ const SUPPORTED_SECRET_BACKENDS = [
   'azure',
   'cubbyhole',
   'database',
+  'gcp',
   'generic',
   'keymgmt',
   'kmip',

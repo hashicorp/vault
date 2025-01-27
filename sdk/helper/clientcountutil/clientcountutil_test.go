@@ -116,7 +116,7 @@ func TestNewCurrentMonthData_AddClients(t *testing.T) {
 // sent to the server is correct.
 func TestWrite(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, err := io.WriteString(w, `{"data":{"global_paths":["path2","path3"], "local_paths":["path3","path4"]}}`)
+		_, err := io.WriteString(w, `{"data":{"paths":["path1","path2"]}}`)
 		require.NoError(t, err)
 		body, err := io.ReadAll(r.Body)
 		require.NoError(t, err)
@@ -131,7 +131,7 @@ func TestWrite(t *testing.T) {
 		Address: ts.URL,
 	})
 	require.NoError(t, err)
-	localPaths, globalPaths, err := NewActivityLogData(client).
+	paths, err := NewActivityLogData(client).
 		NewPreviousMonthData(3).
 		NewClientSeen().
 		NewPreviousMonthData(2).
@@ -140,8 +140,7 @@ func TestWrite(t *testing.T) {
 		NewCurrentMonthData().Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES)
 
 	require.NoError(t, err)
-	require.Equal(t, []string{"path2", "path3"}, globalPaths)
-	require.Equal(t, []string{"path3", "path4"}, localPaths)
+	require.Equal(t, []string{"path1", "path2"}, paths)
 }
 
 func testAddClients(t *testing.T, makeGenerator func() *ActivityLogDataGenerator, getClient func(data *ActivityLogDataGenerator) *generation.Client) {

@@ -621,6 +621,11 @@ func (b *AESGCMBarrier) Rotate(ctx context.Context, randomSource io.Reader) (uin
 	term := b.keyring.ActiveTerm()
 	newTerm := term + 1
 
+	if newTerm < term {
+		// We've rolled over the uint32, don't allow this
+		return 0, errors.New("failed to generate a new term value due to integer overflow")
+	}
+
 	// Add a new encryption key
 	newKeyring, err := b.keyring.AddKey(&Key{
 		Term:    newTerm,

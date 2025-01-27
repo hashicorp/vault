@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/helper/clientcountutil/generation"
@@ -27,12 +26,11 @@ import (
 // correctly validated
 func TestSystemBackend_handleActivityWriteData(t *testing.T) {
 	testCases := []struct {
-		name            string
-		operation       logical.Operation
-		input           map[string]interface{}
-		hasLocalClients bool
-		wantError       error
-		wantPaths       int
+		name      string
+		operation logical.Operation
+		input     map[string]interface{}
+		wantError error
+		wantPaths int
 	}{
 		{
 			name:      "read fails",
@@ -86,13 +84,6 @@ func TestSystemBackend_handleActivityWriteData(t *testing.T) {
 			input:     map[string]interface{}{"input": `{"write":["WRITE_ENTITIES"],"data":[{"current_month":true,"num_segments":3,"all":{"clients":[{"count":5}]}}]}`},
 			wantPaths: 3,
 		},
-		{
-			name:            "entities with multiple segments",
-			operation:       logical.UpdateOperation,
-			input:           map[string]interface{}{"input": `{"write":["WRITE_ENTITIES"],"data":[{"current_month":true,"num_segments":3,"all":{"clients":[{"count":5, "mount":"cubbyhole/"}]}}]}`},
-			hasLocalClients: true,
-			wantPaths:       3,
-		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -104,16 +95,8 @@ func TestSystemBackend_handleActivityWriteData(t *testing.T) {
 				require.Equal(t, tc.wantError, err, resp.Error())
 			} else {
 				require.NoError(t, err)
-				globalPaths := resp.Data["global_paths"].([]string)
-				localPaths := resp.Data["local_paths"].([]string)
-				if tc.hasLocalClients {
-					require.Len(t, globalPaths, 0)
-					require.Len(t, localPaths, tc.wantPaths)
-				} else {
-					require.Len(t, globalPaths, tc.wantPaths)
-					require.Len(t, localPaths, 0)
-				}
-
+				paths := resp.Data["paths"].([]string)
+				require.Len(t, paths, tc.wantPaths)
 			}
 		})
 	}
@@ -133,7 +116,6 @@ func Test_singleMonthActivityClients_addNewClients(t *testing.T) {
 		wantNamespace string
 		wantMount     string
 		wantID        string
-		isLocal       bool
 		segmentIndex  *int
 	}{
 		{
@@ -172,13 +154,6 @@ func Test_singleMonthActivityClients_addNewClients(t *testing.T) {
 			},
 		},
 		{
-			name: "non entity token client",
-			clients: &generation.Client{
-				ClientType: nonEntityTokenActivityType,
-			},
-			isLocal: true,
-		},
-		{
 			name: "acme client",
 			clients: &generation.Client{
 				ClientType: "acme",
@@ -192,27 +167,17 @@ func Test_singleMonthActivityClients_addNewClients(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			core, _, _ := TestCoreUnsealed(t)
 			m := &singleMonthActivityClients{
-				predefinedGlobalSegments: make(map[int][]int),
-				predefinedLocalSegments:  make(map[int][]int),
+				predefinedSegments: make(map[int][]int),
 			}
-			err := m.addNewClients(tt.clients, tt.mount, tt.segmentIndex, 0, time.Now().UTC(), core)
+			err := m.addNewClients(tt.clients, tt.mount, tt.segmentIndex, 0, time.Now().UTC())
 			require.NoError(t, err)
 			numNew := tt.clients.Count
 			if numNew == 0 {
 				numNew = 1
 			}
-
-			var clients []*activity.EntityRecord
-			if tt.isLocal {
-				require.Len(t, m.localClients, int(numNew))
-				clients = m.localClients
-			} else {
-				require.Len(t, m.globalClients, int(numNew))
-				clients = m.globalClients
-			}
-			for i, rec := range clients {
+			require.Len(t, m.clients, int(numNew))
+			for i, rec := range m.clients {
 				require.NotNil(t, rec)
 				require.Equal(t, tt.wantNamespace, rec.NamespaceID)
 				require.Equal(t, tt.wantMount, rec.MountAccessor)
@@ -222,11 +187,8 @@ func Test_singleMonthActivityClients_addNewClients(t *testing.T) {
 				} else {
 					require.NotEqual(t, "", rec.ClientID)
 				}
-				if tt.segmentIndex != nil && tt.isLocal {
-					require.Contains(t, m.predefinedLocalSegments[*tt.segmentIndex], i)
-				}
-				if tt.segmentIndex != nil && !tt.isLocal {
-					require.Contains(t, m.predefinedGlobalSegments[*tt.segmentIndex], i)
+				if tt.segmentIndex != nil {
+					require.Contains(t, m.predefinedSegments[*tt.segmentIndex], i)
 				}
 			}
 		})
@@ -242,7 +204,6 @@ func Test_multipleMonthsActivityClients_processMonth(t *testing.T) {
 		name      string
 		clients   *generation.Data
 		wantError bool
-		isLocal   bool
 		numMonths int
 	}{
 		{
@@ -254,16 +215,6 @@ func Test_multipleMonthsActivityClients_processMonth(t *testing.T) {
 				}}}},
 			},
 			numMonths: 1,
-		},
-		{
-			name: "specified namespace and local mount exist",
-			clients: &generation.Data{
-				Clients: &generation.Data_All{All: &generation.Clients{Clients: []*generation.Client{{
-					Mount: "cubbyhole/",
-				}}}},
-			},
-			numMonths: 1,
-			isLocal:   true,
 		},
 		{
 			name: "mount missing slash",
@@ -329,24 +280,13 @@ func Test_multipleMonthsActivityClients_processMonth(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				if tt.isLocal {
-					require.Len(t, m.months[tt.clients.GetMonthsAgo()].localClients, len(tt.clients.GetAll().Clients))
-					for _, month := range m.months {
-						for _, c := range month.localClients {
-							require.NotEmpty(t, c.NamespaceID)
-							require.NotEmpty(t, c.MountAccessor)
-						}
-					}
-				} else {
-					require.Len(t, m.months[tt.clients.GetMonthsAgo()].globalClients, len(tt.clients.GetAll().Clients))
-					for _, month := range m.months {
-						for _, c := range month.globalClients {
-							require.NotEmpty(t, c.NamespaceID)
-							require.NotEmpty(t, c.MountAccessor)
-						}
+				require.Len(t, m.months[tt.clients.GetMonthsAgo()].clients, len(tt.clients.GetAll().Clients))
+				for _, month := range m.months {
+					for _, c := range month.clients {
+						require.NotEmpty(t, c.NamespaceID)
+						require.NotEmpty(t, c.MountAccessor)
 					}
 				}
-
 			}
 		})
 	}
@@ -381,97 +321,59 @@ func Test_multipleMonthsActivityClients_processMonth_segmented(t *testing.T) {
 	m := newMultipleMonthsActivityClients(1)
 	core, _, _ := TestCoreUnsealed(t)
 	require.NoError(t, m.processMonth(context.Background(), core, data, time.Now().UTC()))
-	require.Len(t, m.months[0].predefinedGlobalSegments, 3)
-	require.Len(t, m.months[0].globalClients, 3)
+	require.Len(t, m.months[0].predefinedSegments, 3)
+	require.Len(t, m.months[0].clients, 3)
 
 	// segment indexes are correct
-	require.Contains(t, m.months[0].predefinedGlobalSegments, 0)
-	require.Contains(t, m.months[0].predefinedGlobalSegments, 1)
-	require.Contains(t, m.months[0].predefinedGlobalSegments, 7)
+	require.Contains(t, m.months[0].predefinedSegments, 0)
+	require.Contains(t, m.months[0].predefinedSegments, 1)
+	require.Contains(t, m.months[0].predefinedSegments, 7)
 
 	// the data in each segment is correct
-	require.Contains(t, m.months[0].predefinedGlobalSegments[0], 0)
-	require.Contains(t, m.months[0].predefinedGlobalSegments[1], 1)
-	require.Contains(t, m.months[0].predefinedGlobalSegments[7], 2)
+	require.Contains(t, m.months[0].predefinedSegments[0], 0)
+	require.Contains(t, m.months[0].predefinedSegments[1], 1)
+	require.Contains(t, m.months[0].predefinedSegments[7], 2)
 }
 
 // Test_multipleMonthsActivityClients_addRepeatedClients adds repeated clients
 // from 1 month ago and 2 months ago, and verifies that the correct clients are
 // added based on namespace, mount, and non-entity attributes
 func Test_multipleMonthsActivityClients_addRepeatedClients(t *testing.T) {
-	storage := &logical.InmemStorage{}
-	coreConfig := &CoreConfig{
-		CredentialBackends: map[string]logical.Factory{
-			"userpass": userpass.Factory,
-		},
-		Physical: storage.Underlying(),
-	}
-
-	cluster := NewTestCluster(t, coreConfig, nil)
-	core := cluster.Cores[0].Core
 	now := time.Now().UTC()
 
 	m := newMultipleMonthsActivityClients(3)
 	defaultMount := "default"
 
-	// add global clients
-	require.NoError(t, m.addClientToMonth(2, &generation.Client{Count: 2}, "identity", nil, now, core))
-	require.NoError(t, m.addClientToMonth(2, &generation.Client{Count: 2, Namespace: "other_ns"}, defaultMount, nil, now, core))
-	require.NoError(t, m.addClientToMonth(1, &generation.Client{Count: 2}, defaultMount, nil, now, core))
-	require.NoError(t, m.addClientToMonth(1, &generation.Client{Count: 2, ClientType: "non-entity"}, defaultMount, nil, now, core))
+	require.NoError(t, m.addClientToMonth(2, &generation.Client{Count: 2}, "identity", nil, now))
+	require.NoError(t, m.addClientToMonth(2, &generation.Client{Count: 2, Namespace: "other_ns"}, defaultMount, nil, now))
+	require.NoError(t, m.addClientToMonth(1, &generation.Client{Count: 2}, defaultMount, nil, now))
+	require.NoError(t, m.addClientToMonth(1, &generation.Client{Count: 2, ClientType: "non-entity"}, defaultMount, nil, now))
 
-	// create a local mount
-	localMount := "localMountAccessor"
-	localMe := &MountEntry{
-		Table:    credentialTableType,
-		Path:     "userpass-local/",
-		Type:     "userpass",
-		Local:    true,
-		Accessor: localMount,
-	}
-	err := core.enableCredential(namespace.RootContext(nil), localMe)
-	require.NoError(t, err)
-
-	// add a local client
-	require.NoError(t, m.addClientToMonth(2, &generation.Client{Count: 2}, localMount, nil, now, core))
-	require.NoError(t, m.addClientToMonth(1, &generation.Client{Count: 2}, localMount, nil, now, core))
-
-	month2GlobalClients := m.months[2].globalClients
-	month1GlobalClients := m.months[1].globalClients
-
-	month2LocalClients := m.months[2].localClients
-	month1LocalClients := m.months[1].localClients
+	month2Clients := m.months[2].clients
+	month1Clients := m.months[1].clients
 
 	thisMonth := m.months[0]
 	// this will match the first client in month 1
-	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, Repeated: true}, defaultMount, nil, core))
-	require.Contains(t, month1GlobalClients, thisMonth.globalClients[0])
-
-	// this will match the first local client in month 1
-	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, Repeated: true}, localMount, nil, core))
-	require.Contains(t, month1LocalClients, thisMonth.localClients[0])
+	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, Repeated: true}, defaultMount, nil))
+	require.Contains(t, month1Clients, thisMonth.clients[0])
 
 	// this will match the 3rd client in month 1
-	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, Repeated: true, ClientType: "non-entity"}, defaultMount, nil, core))
-	require.Equal(t, month1GlobalClients[2], thisMonth.globalClients[1])
+	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, Repeated: true, ClientType: "non-entity"}, defaultMount, nil))
+	require.Equal(t, month1Clients[2], thisMonth.clients[1])
 
 	// this will match the first two clients in month 1
-	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 2, Repeated: true}, defaultMount, nil, core))
-	require.Equal(t, month1GlobalClients[0:2], thisMonth.globalClients[2:4])
+	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 2, Repeated: true}, defaultMount, nil))
+	require.Equal(t, month1Clients[0:2], thisMonth.clients[2:4])
 
 	// this will match the first client in month 2
-	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, RepeatedFromMonth: 2}, "identity", nil, core))
-	require.Equal(t, month2GlobalClients[0], thisMonth.globalClients[4])
-
-	// this will match the first local client in month 2
-	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, RepeatedFromMonth: 2}, localMount, nil, core))
-	require.Equal(t, month2LocalClients[0], thisMonth.localClients[1])
+	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, RepeatedFromMonth: 2}, "identity", nil))
+	require.Equal(t, month2Clients[0], thisMonth.clients[4])
 
 	// this will match the 3rd client in month 2
-	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, RepeatedFromMonth: 2, Namespace: "other_ns"}, defaultMount, nil, core))
-	require.Equal(t, month2GlobalClients[2], thisMonth.globalClients[5])
+	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, RepeatedFromMonth: 2, Namespace: "other_ns"}, defaultMount, nil))
+	require.Equal(t, month2Clients[2], thisMonth.clients[5])
 
-	require.Error(t, m.addRepeatedClients(0, &generation.Client{Count: 1, RepeatedFromMonth: 2, Namespace: "other_ns"}, "other_mount", nil, core))
+	require.Error(t, m.addRepeatedClients(0, &generation.Client{Count: 1, RepeatedFromMonth: 2, Namespace: "other_ns"}, "other_mount", nil))
 }
 
 // Test_singleMonthActivityClients_populateSegments calls populateSegments for a
@@ -553,8 +455,8 @@ func Test_singleMonthActivityClients_populateSegments(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			s := singleMonthActivityClients{predefinedGlobalSegments: tc.segments, globalClients: clients, generationParameters: &generation.Data{EmptySegmentIndexes: tc.emptyIndexes, SkipSegmentIndexes: tc.skipIndexes, NumSegments: int32(tc.numSegments)}}
-			gotSegments, err := s.populateSegments(s.predefinedGlobalSegments, s.globalClients)
+			s := singleMonthActivityClients{predefinedSegments: tc.segments, clients: clients, generationParameters: &generation.Data{EmptySegmentIndexes: tc.emptyIndexes, SkipSegmentIndexes: tc.skipIndexes, NumSegments: int32(tc.numSegments)}}
+			gotSegments, err := s.populateSegments()
 			require.NoError(t, err)
 			require.Equal(t, tc.wantSegments, gotSegments)
 		})
@@ -624,7 +526,7 @@ func Test_handleActivityWriteData(t *testing.T) {
 		req.Data = map[string]interface{}{"input": string(marshaled)}
 		resp, err := core.systemBackend.HandleRequest(namespace.RootContext(nil), req)
 		require.NoError(t, err)
-		paths := resp.Data["global_paths"].([]string)
+		paths := resp.Data["paths"].([]string)
 		require.Len(t, paths, 9)
 
 		times, err := core.activityLog.availableLogs(context.Background(), time.Now())

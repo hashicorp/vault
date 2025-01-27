@@ -37,10 +37,7 @@ export default class LdapRolesPageComponent extends Component<Args> {
 
   linkParams = (role: LdapRoleModel) => {
     const route = this.isHierarchical(role.name) ? 'roles.subdirectory' : 'roles.role.details';
-    // if there is a path_to_role we're in a subdirectory
-    // and must concat the ancestors with the leaf name to get the full role path
-    const roleName = role.path_to_role ? role.path_to_role + role.name : role.name;
-    return [route, role.type, roleName];
+    return [route, role.type, role.completeRoleName];
   };
 
   get mountPoint(): string {
@@ -61,7 +58,7 @@ export default class LdapRolesPageComponent extends Component<Args> {
   @action
   async onRotate(model: LdapRoleModel) {
     try {
-      const message = `Successfully rotated credentials for ${model.name}.`;
+      const message = `Successfully rotated credentials for ${model.completeRoleName}.`;
       await model.rotateStaticPassword();
       this.flashMessages.success(message);
     } catch (error) {
@@ -74,7 +71,7 @@ export default class LdapRolesPageComponent extends Component<Args> {
   @action
   async onDelete(model: LdapRoleModel) {
     try {
-      const message = `Successfully deleted role ${model.name}.`;
+      const message = `Successfully deleted role ${model.completeRoleName}.`;
       await model.destroyRecord();
       this.pagination.clearDataset('ldap/role');
       this.router.transitionTo('vault.cluster.secrets.backend.ldap.roles');

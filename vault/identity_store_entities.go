@@ -1038,12 +1038,16 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 						if err != nil {
 							return nil, fmt.Errorf("aborting entity merge - failed to delete orphaned alias %q during merge into entity %q: %w", toAliasId, toEntity.ID, err), nil
 						}
+						// Remove the alias from the entity's list in memory too!
+						toEntity.DeleteAliasByID(toAliasId)
 					} else if strutil.StrListContains(conflictingAliasIDsToKeep, toAliasId) {
 						i.logger.Info("Deleting from_entity alias during entity merge", "from_entity", fromEntityID, "deleted_alias", fromAlias.ID)
 						err := i.MemDBDeleteAliasByIDInTxn(txn, fromAlias.ID, false)
 						if err != nil {
 							return nil, fmt.Errorf("aborting entity merge - failed to delete orphaned alias %q during merge into entity %q: %w", fromAlias.ID, toEntity.ID, err), nil
 						}
+						// Remove the alias from the entity's list in memory too!
+						toEntity.DeleteAliasByID(toAliasId)
 
 						// Continue to next alias, as there's no alias to merge left in the from_entity
 						continue
@@ -1053,6 +1057,8 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 						if err != nil {
 							return nil, fmt.Errorf("aborting entity merge - failed to delete orphaned alias %q during merge into entity %q: %w", toAliasId, toEntity.ID, err), nil
 						}
+						// Remove the alias from the entity's list in memory too!
+						toEntity.DeleteAliasByID(toAliasId)
 					} else {
 						return fmt.Errorf("conflicting mount accessors in following alias IDs and neither were present in conflicting_alias_ids_to_keep: %s, %s", fromAlias.ID, toAliasId), nil, nil
 					}

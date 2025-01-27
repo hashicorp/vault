@@ -3,15 +3,18 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { ldapBreadcrumbs } from 'ldap/utils/ldap-breadcrumbs';
+import { ldapBreadcrumbs, roleRoutes } from 'ldap/utils/ldap-breadcrumbs';
 import { module, test } from 'qunit';
 
 module('Unit | Utility | ldap breadcrumbs', function (hooks) {
   hooks.beforeEach(async function () {
     this.mountPath = 'my-engine';
     this.roleType = 'static';
+    const routeParams = (childResource) => {
+      return [this.mountPath, this.roleType, childResource];
+    };
     this.testCrumbs = (path, { lastItemCurrent }) => {
-      return ldapBreadcrumbs(path, this.roleType, this.mountPath, lastItemCurrent);
+      return ldapBreadcrumbs(path, routeParams, roleRoutes, lastItemCurrent);
     };
   });
 

@@ -392,7 +392,7 @@ func (a *ActivityLog) sortActivityLogMonthsResponse(months []*ResponseMonth) {
 
 const (
 	noMountAccessor     = "no mount accessor (pre-1.10 upgrade?)"
-	deletedMountFmt     = "deleted mount; accessor %q"
+	DeletedMountFmt     = "deleted mount; accessor %q"
 	DeletedNamespaceFmt = "deleted namespace %q"
 )
 
@@ -405,7 +405,7 @@ func (a *ActivityLog) mountAccessorToMountPath(mountAccessor string) string {
 	} else {
 		valResp := a.core.router.ValidateMountByAccessor(mountAccessor)
 		if valResp == nil {
-			displayPath = fmt.Sprintf(deletedMountFmt, mountAccessor)
+			displayPath = fmt.Sprintf(DeletedMountFmt, mountAccessor)
 		} else {
 			displayPath = valResp.MountPath
 			if !strings.HasSuffix(displayPath, "/") {
@@ -424,32 +424,26 @@ type singleTypeSegmentReader struct {
 	a                *ActivityLog
 }
 type segmentReader struct {
-	tokens         *singleTypeSegmentReader
-	globalEntities *singleTypeSegmentReader
-	localEntities  *singleTypeSegmentReader
+	tokens   *singleTypeSegmentReader
+	entities *singleTypeSegmentReader
 }
 
 // SegmentReader is an interface that provides methods to read tokens and entities in order
 type SegmentReader interface {
 	ReadToken(ctx context.Context) (*activity.TokenCount, error)
-	ReadGlobalEntity(ctx context.Context) (*activity.EntityActivityLog, error)
-	ReadLocalEntity(ctx context.Context) (*activity.EntityActivityLog, error)
+	ReadEntity(ctx context.Context) (*activity.EntityActivityLog, error)
 }
 
 func (a *ActivityLog) NewSegmentFileReader(ctx context.Context, startTime time.Time) (SegmentReader, error) {
-	globalEntities, err := a.newSingleTypeSegmentReader(ctx, startTime, activityGlobalPathPrefix+activityEntityBasePath)
+	entities, err := a.newSingleTypeSegmentReader(ctx, startTime, activityEntityBasePath)
 	if err != nil {
 		return nil, err
 	}
-	localEntities, err := a.newSingleTypeSegmentReader(ctx, startTime, activityLocalPathPrefix+activityEntityBasePath)
+	tokens, err := a.newSingleTypeSegmentReader(ctx, startTime, activityTokenBasePath)
 	if err != nil {
 		return nil, err
 	}
-	tokens, err := a.newSingleTypeSegmentReader(ctx, startTime, activityTokenLocalBasePath)
-	if err != nil {
-		return nil, err
-	}
-	return &segmentReader{globalEntities: globalEntities, localEntities: localEntities, tokens: tokens}, nil
+	return &segmentReader{entities: entities, tokens: tokens}, nil
 }
 
 func (a *ActivityLog) newSingleTypeSegmentReader(ctx context.Context, startTime time.Time, prefix string) (*singleTypeSegmentReader, error) {
@@ -504,22 +498,11 @@ func (e *segmentReader) ReadToken(ctx context.Context) (*activity.TokenCount, er
 	return out, nil
 }
 
-// ReadGlobalEntity reads a global entity from the global segment
+// ReadEntity reads an entity from the segment
 // If there is none available, then the error will be io.EOF
-func (e *segmentReader) ReadGlobalEntity(ctx context.Context) (*activity.EntityActivityLog, error) {
+func (e *segmentReader) ReadEntity(ctx context.Context) (*activity.EntityActivityLog, error) {
 	out := &activity.EntityActivityLog{}
-	err := e.globalEntities.nextValue(ctx, out)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// ReadLocalEntity reads a local entity from the local segment
-// If there is none available, then the error will be io.EOF
-func (e *segmentReader) ReadLocalEntity(ctx context.Context) (*activity.EntityActivityLog, error) {
-	out := &activity.EntityActivityLog{}
-	err := e.localEntities.nextValue(ctx, out)
+	err := e.entities.nextValue(ctx, out)
 	if err != nil {
 		return nil, err
 	}

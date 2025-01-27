@@ -19,6 +19,7 @@ import (
 	metrics "github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/sdk/physical"
 	"google.golang.org/api/iterator"
@@ -75,7 +76,7 @@ type Backend struct {
 	// client is the API client and permitPool is the allowed concurrent uses of
 	// the client.
 	client     *storage.Client
-	permitPool *physical.PermitPool
+	permitPool *permitpool.Pool
 
 	// haEnabled indicates if HA is enabled.
 	haEnabled bool
@@ -171,7 +172,7 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 		bucket:     bucket,
 		chunkSize:  chunkSize,
 		client:     client,
-		permitPool: physical.NewPermitPool(maxParallel),
+		permitPool: permitpool.New(maxParallel),
 
 		haEnabled: haEnabled,
 		haClient:  haClient,
@@ -185,7 +186,9 @@ func (b *Backend) Put(ctx context.Context, entry *physical.Entry) (retErr error)
 	defer metrics.MeasureSince(metricPut, time.Now())
 
 	// Pooling
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer b.permitPool.Release()
 
 	// Insert
@@ -211,7 +214,9 @@ func (b *Backend) Get(ctx context.Context, key string) (retEntry *physical.Entry
 	defer metrics.MeasureSince(metricGet, time.Now())
 
 	// Pooling
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer b.permitPool.Release()
 
 	// Read
@@ -246,7 +251,9 @@ func (b *Backend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince(metricDelete, time.Now())
 
 	// Pooling
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer b.permitPool.Release()
 
 	// Delete
@@ -263,7 +270,9 @@ func (b *Backend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince(metricList, time.Now())
 
 	// Pooling
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer b.permitPool.Release()
 
 	iter := b.client.Bucket(b.bucket).Objects(ctx, &storage.Query{

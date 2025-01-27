@@ -178,6 +178,7 @@ var jsonConfigDefault = []byte(`
   "max_page_size": 0,
   "CaseSensitiveNames": false,
   "ClientTLSCert": "",
-  "ClientTLSKey": ""
+  "ClientTLSKey": "",
+  "enable_samaccountname_login": false
 }
 `)

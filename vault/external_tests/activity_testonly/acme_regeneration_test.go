@@ -54,7 +54,7 @@ func TestACMERegeneration_RegenerateWithCurrentMonth(t *testing.T) {
 	})
 	require.NoError(t, err)
 	now := time.Now().UTC()
-	_, _, err = clientcountutil.NewActivityLogData(client).
+	_, err = clientcountutil.NewActivityLogData(client).
 		NewPreviousMonthData(3).
 		// 3 months ago, 15 non-entity clients and 10 ACME clients
 		NewClientsSeen(15, clientcountutil.WithClientType("non-entity-token")).
@@ -116,7 +116,7 @@ func TestACMERegeneration_RegenerateMuchOlder(t *testing.T) {
 	client := cluster.Cores[0].Client
 
 	now := time.Now().UTC()
-	_, _, err := clientcountutil.NewActivityLogData(client).
+	_, err := clientcountutil.NewActivityLogData(client).
 		NewPreviousMonthData(5).
 		// 5 months ago, 15 non-entity clients and 10 ACME clients
 		NewClientsSeen(15, clientcountutil.WithClientType("non-entity-token")).
@@ -159,7 +159,7 @@ func TestACMERegeneration_RegeneratePreviousMonths(t *testing.T) {
 	client := cluster.Cores[0].Client
 
 	now := time.Now().UTC()
-	_, _, err := clientcountutil.NewActivityLogData(client).
+	_, err := clientcountutil.NewActivityLogData(client).
 		NewPreviousMonthData(3).
 		// 3 months ago, 15 non-entity clients and 10 ACME clients
 		NewClientsSeen(15, clientcountutil.WithClientType("non-entity-token")).

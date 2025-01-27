@@ -1345,7 +1345,7 @@ const pki = {
       fieldGroup: 'default',
       helpText:
         'Email addresses for which this certificate is allowed to sign or issue child certificates (see https://tools.ietf.org/html/rfc5280#section-4.2.1.10).',
-      label: 'Permitted email adresses',
+      label: 'Permitted email addresses',
     },
     permittedIpRanges: {
       editType: 'stringArray',
