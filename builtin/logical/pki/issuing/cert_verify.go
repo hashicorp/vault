@@ -59,11 +59,3 @@ func VerifyCertificate(ctx context.Context, storage logical.Storage, issuerId Is
 
 	return certutil.VerifyCertificate(parsedBundle, options)
 }
-
-func convertCertificate(certBytes []byte) (*ctx509.Certificate, error) {
-	ret, err := ctx509.ParseCertificate(certBytes)
-	if err != nil {
-		return nil, fmt.Errorf("cannot convert certificate for validation: %w", err)
-	}
-	return ret, nil
-}

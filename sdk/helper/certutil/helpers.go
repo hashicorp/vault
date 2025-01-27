@@ -312,7 +312,7 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 		}
 	}
 
-	if certPath != nil && len(certPath) > 1 {
+	if len(certPath) > 1 {
 		// Don't validate the certificate chain if no certificate exists eg. only a key is given
 		// And don't validate a chain if it isn't given (eg. only one certificate)
 		if err := parsedBundle.Verify(); err != nil {
