@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/hashicorp/vault/helper/activationflags"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -35,8 +36,7 @@ This path responds to the following HTTP methods.
 	PUT|POST /<feature-name>/activate
 		Activates the specified feature. Cannot be undone.`
 
-	activationFlagIdentityCleanup = "force-identity-deduplication"
-	activationFlagTest            = "activation-test"
+	activationFlagTest = "activation-test"
 )
 
 // These variables should only be mutated during initialization or server construction.
@@ -86,7 +86,7 @@ func (b *SystemBackend) activationFlagsPaths() []*framework.Path {
 			HelpDescription: helpDescription,
 		},
 		{
-			Pattern: fmt.Sprintf("%s/%s/%s", prefixActivationFlags, activationFlagIdentityCleanup, verbActivationFlagsActivate),
+			Pattern: fmt.Sprintf("%s/%s/%s", prefixActivationFlags, activationflags.IdentityDeduplication, verbActivationFlagsActivate),
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: prefixActivationFlags,
 				OperationVerb:   verbActivationFlagsActivate,

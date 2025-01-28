@@ -514,7 +514,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 	if config.Storage.Type == storageTypeRaft || (config.HAStorage != nil && config.HAStorage.Type == storageTypeRaft) {
 		if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
-			config.ClusterAddr = envCA
+			config.ClusterAddr = configutil.NormalizeAddr(envCA)
 		}
 
 		if len(config.ClusterAddr) == 0 {
@@ -742,9 +742,9 @@ func (c *ServerCommand) runRecoveryMode() int {
 func logProxyEnvironmentVariables(logger hclog.Logger) {
 	proxyCfg := httpproxy.FromEnvironment()
 	cfgMap := map[string]string{
-		"http_proxy":  proxyCfg.HTTPProxy,
-		"https_proxy": proxyCfg.HTTPSProxy,
-		"no_proxy":    proxyCfg.NoProxy,
+		"http_proxy":  configutil.NormalizeAddr(proxyCfg.HTTPProxy),
+		"https_proxy": configutil.NormalizeAddr(proxyCfg.HTTPSProxy),
+		"no_proxy":    configutil.NormalizeAddr(proxyCfg.NoProxy),
 	}
 	for k, v := range cfgMap {
 		u, err := url.Parse(v)
@@ -2243,7 +2243,7 @@ func (c *ServerCommand) detectRedirect(detect physical.RedirectDetect,
 	}
 
 	// Return the URL string
-	return url.String(), nil
+	return configutil.NormalizeAddr(url.String()), nil
 }
 
 func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]reloadutil.ReloadFunc, configPath []string, core *vault.Core) error {
@@ -2749,11 +2749,11 @@ func initHaBackend(c *ServerCommand, config *server.Config, coreConfig *vault.Co
 func determineRedirectAddr(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.Config) error {
 	var retErr error
 	if envRA := os.Getenv("VAULT_API_ADDR"); envRA != "" {
-		coreConfig.RedirectAddr = envRA
+		coreConfig.RedirectAddr = configutil.NormalizeAddr(envRA)
 	} else if envRA := os.Getenv("VAULT_REDIRECT_ADDR"); envRA != "" {
-		coreConfig.RedirectAddr = envRA
+		coreConfig.RedirectAddr = configutil.NormalizeAddr(envRA)
 	} else if envAA := os.Getenv("VAULT_ADVERTISE_ADDR"); envAA != "" {
-		coreConfig.RedirectAddr = envAA
+		coreConfig.RedirectAddr = configutil.NormalizeAddr(envAA)
 	}
 
 	// Attempt to detect the redirect address, if possible
@@ -2785,7 +2785,7 @@ func determineRedirectAddr(c *ServerCommand, coreConfig *vault.CoreConfig, confi
 		if c.flagDevTLS {
 			protocol = "https"
 		}
-		coreConfig.RedirectAddr = fmt.Sprintf("%s://%s", protocol, config.Listeners[0].Address)
+		coreConfig.RedirectAddr = configutil.NormalizeAddr(fmt.Sprintf("%s://%s", protocol, config.Listeners[0].Address))
 	}
 	return retErr
 }
@@ -2794,7 +2794,7 @@ func findClusterAddress(c *ServerCommand, coreConfig *vault.CoreConfig, config *
 	if disableClustering {
 		coreConfig.ClusterAddr = ""
 	} else if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
-		coreConfig.ClusterAddr = envCA
+		coreConfig.ClusterAddr = configutil.NormalizeAddr(envCA)
 	} else {
 		var addrToUse string
 		switch {
@@ -2826,7 +2826,7 @@ func findClusterAddress(c *ServerCommand, coreConfig *vault.CoreConfig, config *
 		u.Host = net.JoinHostPort(host, strconv.Itoa(nPort+1))
 		// Will always be TLS-secured
 		u.Scheme = "https"
-		coreConfig.ClusterAddr = u.String()
+		coreConfig.ClusterAddr = configutil.NormalizeAddr(u.String())
 	}
 
 CLUSTER_SYNTHESIS_COMPLETE:

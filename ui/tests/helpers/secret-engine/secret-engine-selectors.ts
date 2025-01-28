@@ -6,6 +6,7 @@
 export const SECRET_ENGINE_SELECTORS = {
   configTab: '[data-test-configuration-tab]',
   configure: '[data-test-secret-backend-configure]',
+  configureNote: (name: string) => `[data-test-configure-note="${name}"]`,
   configureTitle: (type: string) => `[data-test-backend-configure-title="${type}"]`,
   configurationToggle: '[data-test-mount-config-toggle]',
   createSecret: '[data-test-secret-create]',
@@ -24,6 +25,7 @@ export const SECRET_ENGINE_SELECTORS = {
   viewBackend: '[data-test-backend-view-link]',
   warning: '[data-test-warning]',
   configureForm: '[data-test-configure-form]',
+  additionalConfigModelTitle: '[data-test-additional-config-model-title]',
   wif: {
     accessTypeSection: '[data-test-access-type-section]',
     accessTitle: '[data-test-access-title]',
@@ -35,8 +37,6 @@ export const SECRET_ENGINE_SELECTORS = {
     issuerWarningSave: '[data-test-issuer-save]',
   },
   aws: {
-    rootForm: '[data-test-root-form]',
-    leaseTitle: '[data-test-lease-title]',
     deleteRole: (role: string) => `[data-test-aws-role-delete="${role}"]`,
   },
   ssh: {

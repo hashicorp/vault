@@ -72,7 +72,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
         ttl: 3600,
       };
       this.server.get(`${path}/config`, () => {
-        assert.ok(true, 'request made to config when navigating to the configuration page.');
+        assert.true(true, 'request made to config when navigating to the configuration page.');
         return { data: { id: path, type: this.type, ...wifAttrs } };
       });
       await enablePage.enable(this.type, path);
@@ -99,7 +99,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
         max_ttl: '4 hours',
       };
       this.server.get(`${path}/config`, () => {
-        assert.ok(true, 'request made to config when navigating to the configuration page.');
+        assert.true(true, 'request made to config when navigating to the configuration page.');
         return { data: { id: path, type: this.type, ...GCPAccountAttrs } };
       });
       await enablePage.enable(this.type, path);

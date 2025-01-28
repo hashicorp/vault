@@ -49,5 +49,6 @@ output "state" {
     auth     = local.auth_output
     identity = local.identity_output
     kv       = local.kv_output
+    pki      = local.pki_output
   }
 }

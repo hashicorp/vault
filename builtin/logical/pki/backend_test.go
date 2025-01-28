@@ -298,6 +298,87 @@ func TestBackend_CSRValues(t *testing.T) {
 	logicaltest.Test(t, testCase)
 }
 
+func TestBackend_SerialNumberSource(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	var err error
+
+	_, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "myvault.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = CBWrite(b, s, "roles/json-csr", map[string]interface{}{
+		"allow_any_name":         true,
+		"enforce_hostnames":      false,
+		"allowed_serial_numbers": "foo*",
+		"serial_number_source":   "json-csr",
+		"key_type":               "any",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = CBWrite(b, s, "roles/json", map[string]interface{}{
+		"allow_any_name":         true,
+		"enforce_hostnames":      false,
+		"allowed_serial_numbers": "foo*",
+		"serial_number_source":   "json",
+		"key_type":               "any",
+	})
+
+	// Create a CSR with a serial number not allowed by the role.
+	tmpl := &x509.CertificateRequest{
+		Subject: pkix.Name{SerialNumber: "bar"},
+	}
+	_, _, csrPem := generateCSR(t, tmpl, "ec", 256)
+
+	// Signing a csr with a disallowed subject serial number in the CSR
+	// with serial_number_source=json-csr should fail.
+	_, err = CBWrite(b, s, "sign/json-csr", map[string]interface{}{
+		"common_name": "localhost",
+		"csr":         csrPem,
+	})
+	if err == nil {
+		t.Fatal("expected an error")
+	}
+
+	// The serial number in the request should take precedence.
+	_, err = CBWrite(b, s, "sign/json-csr", map[string]interface{}{
+		"common_name":   "localhost",
+		"csr":           csrPem,
+		"serial_number": "foobar",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Try signing the cert with serial_number_source=json.
+	// The serial in the CSR should be ignored.
+	_, err = CBWrite(b, s, "sign/json", map[string]interface{}{
+		"common_name": "localhost",
+		"csr":         csrPem,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Try signing the cert with serial_number_source=json
+	// and a serial number in the request
+	_, err = CBWrite(b, s, "sign/json", map[string]interface{}{
+		"common_name":   "localhost",
+		"csr":           csrPem,
+		"serial_number": "foobar2",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestBackend_URLsCRUD(t *testing.T) {
 	t.Parallel()
 	initTest.Do(setCerts)
@@ -2277,7 +2358,7 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 		t.Fatal(err)
 	}
 	if resp != nil && resp.IsError() {
-		t.Fatalf(resp.Error().Error())
+		t.Fatal(resp.Error().Error())
 	}
 	if resp.Data == nil || resp.Data["certificate"] == nil {
 		t.Fatal("did not get expected data")
@@ -2317,7 +2398,7 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 		t.Fatal(err)
 	}
 	if resp != nil && resp.IsError() {
-		t.Fatalf(resp.Error().Error())
+		t.Fatal(resp.Error().Error())
 	}
 	if resp.Data == nil || resp.Data["certificate"] == nil {
 		t.Fatal("did not get expected data")
@@ -3722,6 +3803,7 @@ func TestReadWriteDeleteRoles(t *testing.T) {
 	expectedData := map[string]interface{}{
 		"key_type":                           "rsa",
 		"use_csr_sans":                       true,
+		"serial_number_source":               "json-csr",
 		"client_flag":                        true,
 		"allowed_serial_numbers":             []interface{}{},
 		"generate_lease":                     false,
