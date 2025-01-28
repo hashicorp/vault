@@ -1,3 +1,3 @@
 ```release-note:bug
-ui: Fixes text overflow on secrets & auth pages for long names
+ui: Fixes text overflow on Secrets engines and Auth Engines list views for long names & descriptions
 ```

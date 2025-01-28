@@ -25,7 +25,5 @@
 }
 
 .linked-block-title {
-  display: grid;
   grid-template-columns: minmax(0, 28px) minmax(0, 1fr);
-  align-items: center;
 }
