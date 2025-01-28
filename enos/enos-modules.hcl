@@ -231,7 +231,7 @@ module "vault_failover_update_dr_primary" {
 }
 
 module "vault_raft_remove_node_and_verify" {
-  source            = "./modules/vault_raft_remove_and_verify"
+  source            = "./modules/vault_raft_remove_node_and_verify"
   vault_install_dir = var.vault_install_dir
 }
 

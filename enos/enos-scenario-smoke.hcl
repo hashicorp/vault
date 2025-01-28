@@ -524,7 +524,6 @@ scenario "smoke" {
     module      = semverconstraint(var.vault_product_version, ">=1.19.0-0") && matrix.backend == "raft" ? "vault_raft_remove_node_and_verify" : "vault_verify_removed_node_shim"
     depends_on = [
       step.create_vault_cluster,
-      step.create_vault_cluster_targets,
       step.get_vault_cluster_ips,
       step.verify_vault_unsealed,
     ]
@@ -544,7 +543,6 @@ scenario "smoke" {
 
     variables {
       add_back_nodes    = true
-      cluster_name      = step.create_vault_cluster.cluster_name
       cluster_port      = step.create_vault_cluster.cluster_port
       hosts             = step.get_vault_cluster_ips.follower_hosts
       ip_version        = matrix.ip_version

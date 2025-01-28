@@ -54,10 +54,6 @@ variable "cluster_port" {
   type        = number
   description = "The cluster port for vault"
 }
-variable "cluster_name" {
-  type        = string
-  description = "The name of the vault cluster"
-}
 variable "ip_version" {
   type        = number
   description = "The IP version to use for the Vault TCP listeners"
@@ -116,7 +112,6 @@ module "verify_removed" {
   ]
 
   add_back_nodes    = true
-  cluster_name      = var.cluster_name
   cluster_port      = var.cluster_port
   hosts             = module.choose_follower_to_remove.chosen_follower
   ip_version        = var.ip_version

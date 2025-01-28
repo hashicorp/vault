@@ -680,7 +680,6 @@ scenario "autopilot" {
 
     variables {
       add_back_nodes    = false
-      cluster_name      = step.create_vault_cluster_targets.cluster_name
       cluster_port      = step.create_vault_cluster.cluster_port
       hosts             = step.create_vault_cluster.hosts
       ip_version        = matrix.ip_version
