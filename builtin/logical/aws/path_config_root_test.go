@@ -43,7 +43,6 @@ func TestBackend_PathConfigRoot(t *testing.T) {
 		"identity_token_ttl":         int64(0),
 		"rotation_schedule":          "",
 		"rotation_window":            0,
-		"rotation_id":                "",
 		"disable_automated_rotation": false,
 	}
 
@@ -104,7 +103,6 @@ func TestBackend_PathConfigRoot_STSFallback(t *testing.T) {
 		"identity_token_ttl":         int64(0),
 		"rotation_schedule":          "",
 		"rotation_window":            0,
-		"rotation_id":                "",
 		"disable_automated_rotation": false,
 	}
 
@@ -154,7 +152,6 @@ func TestBackend_PathConfigRoot_STSFallback(t *testing.T) {
 		"identity_token_ttl":         int64(0),
 		"rotation_schedule":          "",
 		"rotation_window":            0,
-		"rotation_id":                "",
 		"disable_automated_rotation": false,
 	}
 
@@ -308,6 +305,6 @@ func (d testSystemView) GenerateIdentityToken(_ context.Context, _ *pluginutil.I
 	return nil, pluginidentityutil.ErrPluginWorkloadIdentityUnsupported
 }
 
-func (d testSystemView) RegisterRotationJob(_ context.Context, _ *rotation.RotationJob) (string, error) {
+func (d testSystemView) RegisterRotationJob(_ context.Context, _ *rotation.RotationJobConfigureRequest) (string, error) {
 	return "", automatedrotationutil.ErrRotationManagerUnsupported
 }
