@@ -68,9 +68,11 @@ module('Acceptance | GCP | configuration', function (hooks) {
         service_account_email: 'service-email',
         identity_token_audience: 'audience',
         identity_token_ttl: 720000,
+        max_ttl: 14400,
+        ttl: 3600,
       };
       this.server.get(`${path}/config`, () => {
-        assert.ok(true, 'request made to config when navigating to the configuration page.');
+        assert.true(true, 'request made to config when navigating to the configuration page.');
         return { data: { id: path, type: this.type, ...wifAttrs } };
       });
       await enablePage.enable(this.type, path);
@@ -97,11 +99,12 @@ module('Acceptance | GCP | configuration', function (hooks) {
         max_ttl: '4 hours',
       };
       this.server.get(`${path}/config`, () => {
-        assert.ok(true, 'request made to config when navigating to the configuration page.');
+        assert.true(true, 'request made to config when navigating to the configuration page.');
         return { data: { id: path, type: this.type, ...GCPAccountAttrs } };
       });
       await enablePage.enable(this.type, path);
       for (const key of expectedConfigKeys(this.type)) {
+        if (key === 'Credentials') continue; // not returned by the API
         const responseKeyAndValue = expectedValueOfConfigKeys(this.type, key);
         assert
           .dom(GENERAL.infoRowValue(key))

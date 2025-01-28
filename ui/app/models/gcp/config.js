@@ -25,6 +25,7 @@ export default class GcpConfig extends Model {
   })
   maxTtl;
 
+  /* GCP credential config field */
   @attr('string', {
     label: 'JSON credentials',
     subText:

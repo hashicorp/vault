@@ -4,6 +4,7 @@
 syntax = "proto3";
 package pb;
 
+import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 import "sdk/logical/event.proto";
 import "sdk/logical/identity.proto";
@@ -607,6 +608,26 @@ message GenerateIdentityTokenResponse {
   int64 ttl = 2;
 }
 
+message RegisterRotationJobRequest {
+  RotationJobInput job = 1;
+}
+
+message RegisterRotationJobResponse {
+  string rotation_id = 1;
+  string err = 2;
+}
+
+message RotationJobInput {
+  google.protobuf.Struct schedule = 1;
+  string rotation_id = 2;
+  string path = 3;
+  string name = 4;
+}
+
+message DeregisterRotationJobRequest {
+  string rotation_id = 1;
+}
+
 // SystemView exposes system configuration information in a safe way for plugins
 // to consume. Plugins should implement the client for this service.
 service SystemView {
@@ -665,6 +686,12 @@ service SystemView {
 
   // GenerateIdentityToken returns an identity token for the requesting plugin.
   rpc GenerateIdentityToken(GenerateIdentityTokenRequest) returns (GenerateIdentityTokenResponse);
+
+  // RegisterRotationJob returns a rotation ID for the requested plugin credential.
+  rpc RegisterRotationJob(RegisterRotationJobRequest) returns (RegisterRotationJobResponse);
+
+  // DeregisterRotationJob returns any errors in de-registering a credential from the Rotation Manager.
+  rpc DeregisterRotationJob(DeregisterRotationJobRequest) returns (Empty);
 }
 
 message Connection {

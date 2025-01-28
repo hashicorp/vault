@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coder/websocket"
 	"github.com/hashicorp/go-hclog"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
@@ -26,7 +27,6 @@ import (
 	"github.com/hashicorp/vault/vault"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/atomic"
-	"nhooyr.io/websocket"
 )
 
 // Avoiding a circular dependency in the test.

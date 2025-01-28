@@ -1,0 +1,4 @@
+```release-note:improvement
+identity: Added reporting in Vault logs during unseal to help identify any
+duplicate identify resources in storage.
+```

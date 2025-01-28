@@ -22,6 +22,13 @@ replace github.com/hashicorp/vault/api/auth/userpass => ./api/auth/userpass
 
 replace github.com/hashicorp/vault/sdk => ./sdk
 
+// The keyring library has an outstanding bug that causes zombie dbus-daemon
+// processes on each execution. Vault has an indirect dependency on keyring via
+// gosnowflake. This replace is a stopgap measure until either gosnowflake or
+// keyring addresses the issue.
+// See https://github.com/99designs/keyring/issues/103 and https://github.com/snowflakedb/gosnowflake/issues/1183
+replace github.com/99designs/keyring => github.com/Jeffail/keyring v1.2.3
+
 require (
 	cloud.google.com/go/cloudsqlconn v1.4.3
 	cloud.google.com/go/monitoring v1.21.2
@@ -48,6 +55,7 @@ require (
 	github.com/cenkalti/backoff/v3 v3.2.2
 	github.com/chrismalek/oktasdk-go v0.0.0-20181212195951-3430665dfaa0
 	github.com/cockroachdb/cockroach-go/v2 v2.3.8
+	github.com/coder/websocket v1.8.12
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
 	github.com/denisenkom/go-mssqldb v0.12.3
 	github.com/docker/docker v27.2.1+incompatible
@@ -72,7 +80,7 @@ require (
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/hashicorp/cap v0.7.0
-	github.com/hashicorp/cap/ldap v0.0.0-20240403125925-c0418810d10e
+	github.com/hashicorp/cap/ldap v0.0.0-20250106213447-9047b8b3240f
 	github.com/hashicorp/cli v1.1.6
 	github.com/hashicorp/consul-template v0.39.1
 	github.com/hashicorp/consul/api v1.29.1
@@ -106,6 +114,7 @@ require (
 	github.com/hashicorp/go-secure-stdlib/nonceutil v0.1.0
 	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.8
 	github.com/hashicorp/go-secure-stdlib/password v0.1.1
+	github.com/hashicorp/go-secure-stdlib/permitpool v1.0.0
 	github.com/hashicorp/go-secure-stdlib/reloadutil v0.1.1
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2
 	github.com/hashicorp/go-secure-stdlib/tlsutil v0.1.3
@@ -196,7 +205,7 @@ require (
 	github.com/sasha-s/go-deadlock v0.3.5
 	github.com/sethvargo/go-limiter v0.7.1
 	github.com/shirou/gopsutil/v3 v3.22.6
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	github.com/tink-crypto/tink-go/v2 v2.2.0
 	go.etcd.io/bbolt v1.4.0-beta.0
 	go.etcd.io/etcd/client/pkg/v3 v3.5.17
@@ -209,23 +218,22 @@ require (
 	go.opentelemetry.io/otel/trace v1.30.0
 	go.uber.org/atomic v1.11.0
 	go.uber.org/goleak v1.3.0
-	golang.org/x/crypto v0.31.0
+	golang.org/x/crypto v0.32.0
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842
-	golang.org/x/net v0.33.0
+	golang.org/x/net v0.34.0
 	golang.org/x/oauth2 v0.24.0
 	golang.org/x/sync v0.10.0
-	golang.org/x/sys v0.28.0
-	golang.org/x/term v0.27.0
+	golang.org/x/sys v0.29.0
+	golang.org/x/term v0.28.0
 	golang.org/x/text v0.21.0
 	golang.org/x/tools v0.27.0
 	google.golang.org/api v0.207.0
 	google.golang.org/grpc v1.68.0
-	google.golang.org/protobuf v1.35.2
+	google.golang.org/protobuf v1.36.3
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	k8s.io/apimachinery v0.31.0
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8
 	layeh.com/radius v0.0.0-20231213012653-1006025d24f8
-	nhooyr.io/websocket v1.8.11
 )
 
 require (
@@ -387,8 +395,6 @@ require (
 	github.com/go-openapi/validate v0.24.0 // indirect
 	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
-	github.com/godbus/dbus v0.0.0-20190726142602-4481cbc300e2 // indirect
-	github.com/gofrs/uuid v4.3.0+incompatible // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
 	github.com/golang-sql/civil v0.0.0-20220223132316-b832511892a9 // indirect
@@ -407,14 +413,13 @@ require (
 	github.com/gophercloud/gophercloud v0.1.0 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0 // indirect
-	github.com/gsterjov/go-libsecret v0.0.0-20161001094733-a6f4afe4910c // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/hashicorp/cronexpr v1.1.2 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-msgpack/v2 v2.1.2 // indirect
 	github.com/hashicorp/go-secure-stdlib/fileutil v0.1.0 // indirect
 	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.4.1 // indirect
-	github.com/hashicorp/go-slug v0.15.2 // indirect
+	github.com/hashicorp/go-slug v0.16.3 // indirect
 	github.com/hashicorp/go-tfe v1.64.2 // indirect
 	github.com/hashicorp/jsonapi v1.3.1 // indirect
 	github.com/hashicorp/logutils v1.0.0 // indirect
