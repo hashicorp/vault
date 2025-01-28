@@ -226,17 +226,19 @@ func TestCache_ConcurrentRequests(t *testing.T) {
 				"key": key,
 			})
 			if err != nil {
-				t.Fatal(err)
+				t.Error(err.Error())
+				return
 			}
 			secret, err := testClient.Logical().Read(key)
 			if err != nil {
-				t.Fatal(err)
+				t.Error(err.Error())
+				return
 			}
 			if secret == nil || secret.Data["key"].(string) != key {
-				t.Fatal(fmt.Sprintf("failed to read value for key: %q", key))
+				t.Errorf("failed to read value for key: %q", key)
+				return
 			}
 		}(i)
-
 	}
 	wg.Wait()
 }
