@@ -1360,6 +1360,7 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		certTemplate.IsCA = false
 	}
 
+	certTemplate.PermittedDNSDomains = append(certTemplate.PermittedDNSDomains, data.Params.PermittedDNSDomains...)
 	certTemplate.ExcludedDNSDomains = append(certTemplate.ExcludedDNSDomains, data.Params.ExcludedDNSDomains...)
 	certTemplate.PermittedIPRanges = append(certTemplate.PermittedIPRanges, data.Params.PermittedIPRanges...)
 	certTemplate.ExcludedIPRanges = append(certTemplate.ExcludedIPRanges, data.Params.ExcludedIPRanges...)
