@@ -51,10 +51,6 @@ variable "cluster_port" {
   description = "The cluster port for vault"
 }
 
-variable "cluster_name" {
-  type        = string
-  description = "The name of the vault cluster"
-}
 
 variable "ip_version" {
   type        = number
@@ -202,18 +198,23 @@ resource "enos_remote_exec" "delete_data" {
 
 }
 
-module "start" {
-  depends_on   = [enos_remote_exec.delete_data]
-  source       = "../start_vault"
-  count        = var.add_back_nodes ? 1 : 0
-  hosts        = var.hosts
-  cluster_name = var.cluster_name
-  ip_version   = var.ip_version
+resource "enos_remote_exec" "start" {
+  depends_on = [enos_remote_exec.delete_data]
+  for_each = {
+    for idx, host in var.hosts : idx => host
+    if var.add_back_nodes
+  }
+  inline = ["sudo systemctl start vault; sleep 5"]
+  transport = {
+    ssh = {
+      host = each.value.public_ip
+    }
+  }
 }
 
 resource "enos_vault_unseal" "unseal" {
   depends_on = [
-    module.start
+    enos_remote_exec.start
   ]
   for_each = {
     for idx, host in var.hosts : idx => host
