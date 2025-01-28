@@ -26,14 +26,12 @@ type RotationJob struct {
 	// For requests, this will always be blank.
 	RotationID string `sentinel:""`
 	Path       string
-	MountPoint string
 	MountType  string
 	Name       string
 }
 
 type RotationJobConfigureRequest struct {
 	Name             string
-	MountPoint       string
 	MountType        string
 	ReqPath          string
 	RotationSchedule string
@@ -42,8 +40,8 @@ type RotationJobConfigureRequest struct {
 }
 
 type RotationJobDeregisterRequest struct {
-	MountPoint string
-	ReqPath    string
+	MountType string
+	ReqPath   string
 }
 
 func (s *RotationJob) Validate() error {
@@ -74,10 +72,9 @@ func newRotationJob(configRequest *RotationJobConfigureRequest) (*RotationJob, e
 		RotationOptions: RotationOptions{
 			Schedule: rs,
 		},
-		MountPoint: configRequest.MountPoint,
-		MountType:  configRequest.MountType,
-		Path:       configRequest.ReqPath,
-		Name:       configRequest.Name,
+		MountType: configRequest.MountType,
+		Path:      configRequest.ReqPath,
+		Name:      configRequest.Name,
 	}, nil
 }
 

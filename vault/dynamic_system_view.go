@@ -355,12 +355,18 @@ func (d dynamicSystemView) GenerateIdentityToken(ctx context.Context, req *plugi
 	}, nil
 }
 
-func (d dynamicSystemView) RegisterRotationJob(ctx context.Context, job *rotation.RotationJob) (string, error) {
+func (d dynamicSystemView) RegisterRotationJob(ctx context.Context, req *rotation.RotationJobConfigureRequest) (string, error) {
 	mountEntry := d.mountEntry
 	if mountEntry == nil {
 		return "", fmt.Errorf("no mount entry")
 	}
 	nsCtx := namespace.ContextWithNamespace(ctx, mountEntry.Namespace())
+
+	job, err := rotation.ConfigureRotationJob(req)
+	if err != nil {
+		return "", fmt.Errorf("error configuring rotation job: %s", err)
+	}
+
 	id, err := d.core.RegisterRotationJob(nsCtx, job)
 	if err != nil {
 		return "", fmt.Errorf("error registering rotation job: %s", err)
