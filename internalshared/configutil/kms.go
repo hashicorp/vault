@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/hashicorp/errwrap"
@@ -157,7 +158,10 @@ func parseKMS(result *[]*KMS, list *ast.ObjectList, blockName string, maxKMS int
 			if err != nil {
 				return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
 			}
-			strMap[k] = s
+			strMap[k], err = normalizeKMSSealConfigAddrs(key, k, s)
+			if err != nil {
+				return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
+			}
 		}
 
 		seal := &KMS{
@@ -214,27 +218,76 @@ func ParseKMSes(d string) ([]*KMS, error) {
 	return result.Seals, nil
 }
 
-func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]string, logger hclog.Logger, opts ...wrapping.Option) (wrapping.Wrapper, error) {
-	var wrapper wrapping.Wrapper
-	var kmsInfo map[string]string
-	var err error
+// kmsSealAddressKeys maps seal key types to corresponding config keys whose
+// values might contain URLs, IP addresses, or host:port addresses. All seal
+// types must contain an entry here, otherwise our normalization check will fail
+// when parsing the seal config. Seal types which do not contain such
+// configurations ought to have an empty array as the value in the map.
+var kmsSealAddressKeys = map[string][]string{
+	wrapping.WrapperTypeAliCloudKms.String():   {"domain"},
+	wrapping.WrapperTypeAwsKms.String():        {"endpoint"},
+	wrapping.WrapperTypeAzureKeyVault.String(): {"resource"},
+	wrapping.WrapperTypeGcpCkms.String():       {},
+	wrapping.WrapperTypeOciKms.String():        {"key_id", "crypto_endpoint", "management_endpoint"},
+	wrapping.WrapperTypePkcs11.String():        {},
+	wrapping.WrapperTypeTransit.String():       {"address"},
+}
 
+// normalizeKMSSealConfigAddrs takes a kms seal type, a config key, and its
+// associated value and will normalize any URLs, IP addresses, or host:port
+// addresses contained in the value if the config key is known in the
+// kmsSealAddressKeys.
+func normalizeKMSSealConfigAddrs(seal string, key string, value string) (string, error) {
+	keys, ok := kmsSealAddressKeys[seal]
+	if !ok {
+		return "", fmt.Errorf("unknown seal type %s", seal)
+	}
+
+	if slices.Contains(keys, key) {
+		return NormalizeAddr(value), nil
+	}
+
+	return value, nil
+}
+
+// mergeKMSEnvConfig takes a KMS and merges any normalized values set via
+// environment variables.
+func mergeKMSEnvConfig(configKMS *KMS) error {
 	envConfig := GetEnvConfigFunc(configKMS)
 	if len(envConfig) > 0 && configKMS.Config == nil {
 		configKMS.Config = make(map[string]string)
 	}
 	// transit is a special case, because some config values take precedence over env vars
 	if configKMS.Type == wrapping.WrapperTypeTransit.String() {
-		mergeTransitConfig(configKMS.Config, envConfig)
+		if err := mergeTransitConfig(configKMS.Config, envConfig); err != nil {
+			return err
+		}
 	} else {
 		for name, val := range envConfig {
-			configKMS.Config[name] = val
+			var err error
+			configKMS.Config[name], err = normalizeKMSSealConfigAddrs(configKMS.Type, name, val)
+			if err != nil {
+				return err
+			}
 		}
+	}
+
+	return nil
+}
+
+func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]string, logger hclog.Logger, opts ...wrapping.Option) (wrapping.Wrapper, error) {
+	var wrapper wrapping.Wrapper
+	var kmsInfo map[string]string
+	var err error
+
+	// Get any seal config set as env variables and merge it into the KMS.
+	if err = mergeKMSEnvConfig(configKMS); err != nil {
+		return nil, err
 	}
 
 	switch wrapping.WrapperType(configKMS.Type) {
 	case wrapping.WrapperTypeShamir:
-		return nil, nil
+		return wrapper, nil
 
 	case wrapping.WrapperTypeAead:
 		wrapper, kmsInfo, err = GetAEADKMSFunc(configKMS, opts...)
@@ -456,7 +509,7 @@ func getEnvConfig(kms *KMS) map[string]string {
 	return envValues
 }
 
-func mergeTransitConfig(config map[string]string, envConfig map[string]string) {
+func mergeTransitConfig(config map[string]string, envConfig map[string]string) error {
 	useFileTlsConfig := false
 	for _, varName := range TransitTLSConfigVars {
 		if _, ok := config[varName]; ok {
@@ -471,14 +524,20 @@ func mergeTransitConfig(config map[string]string, envConfig map[string]string) {
 		}
 	}
 
+	var err error
 	for varName, val := range envConfig {
 		// for some values, file config takes precedence
 		if strutil.StrListContains(TransitPrioritizeConfigValues, varName) && config[varName] != "" {
 			continue
 		}
 
-		config[varName] = val
+		config[varName], err = normalizeKMSSealConfigAddrs(wrapping.WrapperTypeTransit.String(), varName, val)
+		if err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
 func (k *KMS) Clone() *KMS {
