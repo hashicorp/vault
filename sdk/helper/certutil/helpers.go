@@ -312,8 +312,12 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 		}
 	}
 
-	if err := parsedBundle.Verify(); err != nil {
-		return nil, errutil.UserError{Err: fmt.Sprintf("verification of parsed bundle failed: %s", err)}
+	if len(certPath) > 1 {
+		// Don't validate the certificate chain if no certificate exists eg. only a key is given
+		// And don't validate a chain if it isn't given (eg. only one certificate)
+		if err := parsedBundle.Verify(); err != nil {
+			return nil, errutil.UserError{Err: fmt.Sprintf("verification of parsed bundle failed: %s", err)}
+		}
 	}
 
 	return parsedBundle, nil

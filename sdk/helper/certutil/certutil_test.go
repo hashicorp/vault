@@ -1091,6 +1091,7 @@ func TestIgnoreCSRSigning(t *testing.T) {
 		params := &CreationParameters{
 			IgnoreCSRSignature: true,
 			URLs:               &URLEntries{},
+			NotAfter:           time.Now().Add(10000 * time.Hour),
 		}
 		data := &CreationBundle{
 			Params:        params,
