@@ -25,7 +25,7 @@ func TestHABackend(t *testing.T) {
 		t.Skip()
 	}
 
-	if !hasAWSCredentials(t) {
+	if !hasAWSCredentials() {
 		t.Skip("Skipping because AWS credentials could not be resolved. See https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials for information on how to set up AWS credentials.")
 	}
 

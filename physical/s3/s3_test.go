@@ -34,7 +34,7 @@ func DoS3BackendTest(t *testing.T, kmsKeyId string) {
 		t.Skip()
 	}
 
-	if !hasAWSCredentials(t) {
+	if !hasAWSCredentials() {
 		t.Skip("Skipping because AWS credentials could not be resolved. See https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials for information on how to set up AWS credentials.")
 	}
 
@@ -119,7 +119,7 @@ func DoS3BackendTest(t *testing.T, kmsKeyId string) {
 	physical.ExerciseBackend_ListPrefix(t, b)
 }
 
-func hasAWSCredentials(t *testing.T) bool {
+func hasAWSCredentials() bool {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
