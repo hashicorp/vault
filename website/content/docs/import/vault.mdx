@@ -1,0 +1,37 @@
+---
+layout: docs
+page_title: Vault secret import source
+description: The Vault source imports secrets from Vault to Vault.
+---
+
+# Vault secret import source
+
+Use the Vault source to import secret data from a Vault cluster into your Vault instance.
+
+## Argument reference
+
+Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-1) for arguments common to all source types.
+
+## Additional arguments
+
+- `address` `(string: required)` - API address of source vault cluster.
+- `namespace` `(string: "")` - Optional namespace to read from.
+- `mount` `(string: required)` - KV-v2 mount to read from.
+- `credentials_file` `(string: "")` - Path to a file containing a vault token.  Note that the environment
+variable VAULT_TOKEN can't normally be used for this, since the CLI will use VAULT_TOKEN to authenticate to
+the destination Vault.  Exception: it's possible to import from/to the same Vault cluster.
+
+## Example
+
+Define and configure the `my-vault-source-1` Vault source:
+
+```hcl
+source_vault {
+  name = "my-vault-source-1"
+  address = "https://source-vault-address:8200"
+  namespace = "ns1"
+  mount = "my-kvv2"
+  credentials_file = "/path/to/vault/token"
+}
+```
+
