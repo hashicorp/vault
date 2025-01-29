@@ -42,9 +42,9 @@ To identify duplicates in server logs:
     [WARN]  identity: DUPLICATES DETECTED, see following logs for details [...]
     ```
 
-If you do not see entires for `DUPLICATES DETECTED`, the current cluster is
+If you do not see entries for `DUPLICATES DETECTED`, the current cluster is
 clean and you can move to the next cluster. If you confirm none of the logs
-have duplicates, you can jump to [Step #3](#dedupe-flag).
+have duplicates, you can jump to [Step #4](#dedupe-flag).
 
 <Note>
 
@@ -57,10 +57,90 @@ need to check DR secondary clusters separately.
 
 </Note>
 
-## Step 2: Resolve any duplicates
+## Step 2: Find deduplication targets
+
+If you find `DUPLICATES DETECTED` in the system logs, create a list of same-case
+aliases and renaming targets from the system log to make working through
+duplicate resolution easier. If you have a large number of deduplication targets,
+you can use the following script to pull out the relevant items and create
+four files:
+
+- **`unseal-process.log`** - section of the system log specific to the unseal
+  process.
+- **`merge-details.txt`** - same-case identities Vault will auto-merge during
+  deduplication.
+- **`rename-targets.txt`** - entities and group names in the form
+  `namespace/name` Vault will rename during deduplication.
+- **`rename-details.txt`** - full rename details for rename targets.
+
+```bash
+
+declare -A identity_key=(
+  ['entity_alias']="identity: entity-alias"
+  ['entity_rename']="identity: entity"
+  ['group_rename']="identity: group"
+)
+
+declare -A match_str=(
+  ['has_rename']="would rename to"
+  ['has_merge']="would merge"
+  ['rename']="s/.*would rename to \(.*\)\".*/\1/"
+  ['group_name']="s/.*identity: group \"\(.*\)\" with.*/\1/"
+  ['entity_name']="s/.*identity: entity \"\(.*\)\" with.*/\1/"
+  ['namespace']="s/.*namespace ID \"\(.*\)\" duplicates.*/\1/"
+)
+
+declare -A rename_targets
+
+# Grab the unseal portion of the log
+log_start="core: post-unseal setup starting"
+log_stop="core: post-unseal setup complete"
+sed "/${log_start}/,/${log_stop}/!d;/${log_stop}/q" ../short.log > unseal-process.log
+
+while read line;
+do
+
+  # The log line relates to a renamed identity
+  if [[ "${line}" == *"${match_str['has_rename']}"* ]] ; then
+
+    if [[ "${line}" == *"${identity_key['entity_rename']}"* ]] ; then
+      type="${identity_key['entity_rename']}"
+      name_match="${match_str['entity_name']}"
+    fi
+    if [[ "${line}" == *"${identity_key['group_rename']}"* ]] ; then
+      type="${identity_key['group_rename']}"
+      name_match="${match_str['group_name']}"
+    fi
+
+    new=$(echo $line | sed -e "${match_str['rename']}")
+    old=$(echo $line | sed -e "${name_match}")
+    space=$(echo $line | sed -e "${match_str['namespace']}")
+    rename_targets["${space}/${old}"]="[${type}] ${space}/${old} --> ${space}/${new}"
+
+  fi
+
+  # The line indicates a same-case merge operation
+  if [[ "${line}" == *"${match_str['has_merge']}"* ]] ; then
+    merge_details=$(echo $line | sed -e "${identity_key['entity_alias']}")
+    echo ${merge_details} >> merge-details.txt
+  fi
+
+done < unseal-process.log
+
+# Save the rename target information to files for further processing
+root_ns="root/"
+for name in "${!rename_targets[@]}"
+do
+  echo ${name//"${root_ns}"/""} >> rename-targets.txt
+  echo ${rename_targets["${name}"]} >> rename-details.txt
+done
+```
+
+
+## Step 3: Resolve any duplicates
 
 If you **did not** find duplicates in the log, you can jump to
-[Step #3](#dedupe-flag).
+[Step #5](#dedupe-flag).
 
 If you **did** find duplicates in the logs:
 
@@ -77,11 +157,64 @@ If you **did** find duplicates in the logs:
     - [Fix entity and group duplicates](/vault/docs/upgrading/deduplication/entity-group)
 
 
-## Step 3: Enforce identity de-duplication ((#dedupe-flag))
+## Step 4: Prepare for (possible) latency impacts
+
+When you activate deduplication for a cluster, the cluster reloads the in-memory
+cache of all entities, aliases and groups. When deduplication replicates to
+performance replication secondaries and performance standby nodes, those nodes
+also pause and reload their identity system caches.
+
+Vault remains unsealed during deduplication, but nodes may pause processing
+other requests until deduplication completes. On **moderately large** clusters,
+deduplication may take long enough to impact request latencies. On **large**
+clusters, deduplication may take longer than 30 seconds, which could cause some
+requests to timeout.
+
+In general, deduplication should take less time than sealing and unsealing Vault
+and be less disruptive than a regular failover. And clusters that had duplicates
+should see their future `unseal` times reduced.
+
+
+## Step 5: Enforce identity de-duplication ((#dedupe-flag))
 
 Once you resolve existing duplicates, you need to enable the
-`force-identity-deduplication` activation flag in your Vault configuration.
+`force-identity-deduplication` activation flag on the primary cluster using the
+[activation flag API path](/vault/api-docs/system/activation-flags):
 
-TODO, describe the process and any details like how each Vault node will need to
-reload part of it's in-memory state which could cause a short period where
-requests wait or timeout depending on size of the data.
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+```shell-session
+vault write -f sys/activation-flags/force-identity-deduplication/activate
+``` 
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+```shell-session
+$ curl                                      \
+  --request PUT                             \
+  --header "X-Vault-Token: ${VAULT_TOKEN}"  \
+  ${VAULT_ADDR}/v1/sys/activation-flags/force-identity-deduplication/activate
+```
+
+</Tab>
+
+</Tabs>
+
+You can track the start and end of deduplication on each node in the system
+by looking for `force-identity-deduplication activated` entries in the logs:
+	
+```
+INFO core: force-identity-deduplication activated, reloading identity store
+...
+INFO core: force-identity-deduplication activated, reloading identity store complete
+```
+
+Going forward, Vault requires unique identities and re-runs the deduplication
+check as a part of the unseal process. You can review the impact on unseal time
+by reviewing system log timestamps. The difference between the log lines
+`core: post-unseal setup starting` and `core: post-unseal setup complete`
+indicates the total unseal time required for the cluster.

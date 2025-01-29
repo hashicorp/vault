@@ -1,6 +1,6 @@
 ---
 layout: docs
-page_title: Resolve deduplication impact on ACL policy templates
+page_title: Resolve ACL policy templates
 description: >-
   Resolve templated ACL behavior for deduplicated entities and groups.
 ---
@@ -12,7 +12,8 @@ identity deduplication.
 
 <Tip title="Assumptions">
 
-- You have [identified the duplicate entity and group names](/vault/docs/upgrading/identity-deduplication). 
+- You are running Vault 1.19 or later.
+- You have [deduplication **renaming** targets in your system logs](/vault/docs/upgrading/identity-deduplication).
 - You have admin permission on the relevant Vault server or cluster.
 
 </Tip>
@@ -150,7 +151,7 @@ access:
 1. Move the affected resource.
 
 
-## Solution 1: Update relevant templated ACL policies
+## Solution 1: Update relevant ACL policies
 
 The easiest way to deal with broken ACL policy templates due to deduplication is
 to define new policies or add rules to existing policies that explicitly grants
@@ -165,7 +166,7 @@ instead of the entity name and attach that policy to the renamed entities.
 
 <Tab heading="CLI" group="cli">
 
-Assume you have a file called `duplicate-names.txt` with a list of entity names
+Assume you have a file called `rename-targets.txt` with a list of entity names
 currently attached to a templated ACL policy, which will no longer work after
 deduplication.
 
@@ -185,7 +186,7 @@ deduplication.
       # Save the metadata to the entity
       vault write /identity/entity/name/${entity_name} @metadata.json
 
-    done < duplicate-names.txt
+    done < rename-targets.txt
     ```
 
 1. Create a new templatized ACL policy file that replaces the entity name
@@ -236,14 +237,14 @@ deduplication.
       # Update the policy assignment for the entity
       vault write /identity/entity/name/${entity_name} @policy_update.json
 
-    done < duplicate-names.txt
+    done < rename-targets.txt
     ```
 
 </Tab>
 
 <Tab heading="API" group="api">
 
-Assume you have a file called `duplicate-names.txt` with a list of entity names
+Assume you have a file called `rename-targets.txt` with a list of entity names
 currently attached to a templated ACL policy, which will no longer work after
 deduplication.
 
@@ -255,7 +256,7 @@ deduplication.
     ```bash
     while read entity_name; do
 
-      if [[ "" = "${entity_name}" ]] ; then continu ; fi
+      if [[ "" = "${entity_name}" ]] ; then continue ; fi
       
       # Create a payload file with the new metadata
       echo -n '{"metadata": { "old_name": "'${entity_name}'"}}' > ./metadata.json
@@ -267,7 +268,7 @@ deduplication.
         --data @./metadata.json                   \
         ${VAULT_ADDR}/v1/${VAULT_NAMESPACE}/identity/entity/name/${entity_name}
       
-    done < duplicate-names.txt
+    done < rename-targets.txt
     ```
 
 1. Create a new templatized ACL policy file that replaces the entity name
@@ -334,7 +335,7 @@ deduplication.
         --data @policy_update.json                \
         ${VAULT_ADDR}/v1/${VAULT_NAMESPACE}/identity/entity/name/${entity_name}
         
-    done < duplicate-names.txt
+    done < rename-targets.txt
     ```
 
 </Tab>

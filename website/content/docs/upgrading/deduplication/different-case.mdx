@@ -16,29 +16,34 @@ distinct aliases**.
 
 <Tip title="Assumptions">
 
-- You have [identified the duplicate entity aliases](/vault/docs/upgrading/identity-deduplication). 
+- You are running Vault 1.19 or later.
+- You have [deduplication **merge** targets in your system logs](/vault/docs/upgrading/identity-deduplication).
 - You have admin permission on the relevant Vault server or cluster.
 
 </Tip>
 
 
-## Why entity alias duplicates happen
+## Why duplicates happen
 
 Historical bugs in Vault allowed authN mounts to create duplicate entries of the
 same entity alias if the aliases used difference cases. For example, if an
 external LDAP system returns unnormalized usernames or changes the normalization
 scheme over time. By default, Vault uses case-insensitive matching for the
 usernames and considers `username` and `uSeRnAmE` to be the same alias. But,
-past bugs have left some users with different-case duplicates in storage. To
-avoid the security impact of incorrectly merging identities that do not
-represent the same user, Vault tries to honor past behavior by switching the
-identity engine to use case-sensitive matching mode.
-But case-sensitive matching 
-This mode is not well supported however  
-as it deviates from Vault's typical assumptions. Remaining in this mode can lead to unexpected behavior. 
+past bugs have left some users with different-case duplicates in storage.
 
+To avoid the security impact of incorrectly merging identities that do not
+represent the same user, Vault **tries** to honor past behavior by switching the
+identity engine to use case-sensitive matching mode. But case-sensitive matching
+is poorly supported, deviates from the foundational security assumptions Vault
+makes, and can lead to unexpected behavior.
 
 ## Example server log
+
+When reviewing system logs, consider the entity alias **and** the associated
+mount path.
+
+<CodeBlockConfig hideClipboard>
 
 ```text
 [WARN]  identity: 2 different-case entity alias duplicates found (potential security risk)
@@ -49,38 +54,54 @@ as it deviates from Vault's typical assumptions. Remaining in this mode can lead
 [WARN]  identity: end of different-case entity-alias duplicates
 ```
 
-The duplicate alias in the example log are distinct, despite have the same name,
-because they come from different authN mounts. When resolving duplicates,
-consider the set of duplicate names from each authN mount separately.
+</CodeBlockConfig>
+
+Despite having identical, case-insensitive names in the example logs, the four
+aliases represent two distinct identities because they come from different authN
+mounts:
+
+- `alias-case` and `alias-cAsE` are duplicates from the mount `auth_userpass_34aca7ec`
+- `alias-case` and `alias-cAsE` are duplicates from the mount `auth_userpass_a555989a
+
+Always consider the authN mount and namespace of potential duplicates when
+grouping potential duplicates for resolution.
 
 Before resolving different-case duplicates, you must determine if the case
 difference is a **mergeable duplicate** or **unmergeable duplicate**:
 
 - For mergeable duplicates, the case difference is **unintentional** and the
-  duplicate entries represent the same logical entity. You should deduplicate
-  true duplicates to reflect the expected default Vault behavior.
+  duplicate entries represent the same logical entity. You can ignore mergeable
+  duplicates and let Vault force-merge them for you to establish and enforce
+  default identity matching behavior.
 
 - For unmergeable duplicates, the case difference is **deliberate** and the
   source identity provider **intended** to distinguish between different
   entities using case. For example, `Alice` and `alice` are different entities
-  that correspond to different humans with distinct permission sets.
+  that correspond to different humans with distinct permission sets. **You must
+  resolve unmergeable duplicates before activating the deduplication flag.**  
 
 
-## Case 1: Fixing mergeable duplicates
 
-You can ignore mergeable duplicates since Vault will force-merge them once you
-enable forced identity deduplication with the `force-identity-deduplication`
-flag. To confirm the merge behavior **before** enabling the flag, review the
-`force_deduplication` label in the log line. During deduplication, Vault merges
-any policies attached to the duplicates so the final entry has the union of all
-permissions granted to the duplicates.
+## Case 1: Resolving mergeable duplicates
 
-Users can continue to log in using any case combination of their username, but
-those logins now map to a single entity gated by the same policies per the
-expected, default Vault behavior.
+Vault will force-merge duplicates once you enable forced identity deduplication
+with the `force-identity-deduplication` flag. Vault also merges any policies
+attached to the duplicates so the final entry has the union of all permissions
+granted to the duplicates.
+
+We recommend confirming the expected merge behavior **before** enabling
+deduplication by reviewing the `force_deduplication` label in the log line to:
+
+1. confirm the identified duplicates are all mergeable.
+1. confirm permissions granted by the unified policy are appropriate for the
+   identity.
+
+After deduplication, users can continue to log in using any case combination of
+their username, but those logins will map to a single entity gated by the same
+policies per the expected, default Vault behavior.
 
 
-## Case 2: Fixing unmergeable duplicates
+## Case 2: Resolving unmergeable duplicates
 
 <Warning>
 
@@ -101,9 +122,12 @@ enabling forced identity deduplication.
 
 **If you confirm you need to keep the duplicated aliases**, you will need to
 reconfigure the authN mount or external service to stop creating case-sensitive
-aliases. For example, you could append a unique ID to the alias name to
-differentiate between similar usernames. Be mindful of how the modified behavior
-may disrupt users as you roll out the change.
+aliases. For example, if the authN plugin allows it, you could update the plugin
+configuration to append unique IDs to alias names to differentiate between
+similar usernames.
+
+Regardless of how you choose to address unmergeable duplicates, be mindful of
+how the modified behavior may disrupt users as you roll out the change.
 
 <Note>
 
@@ -175,10 +199,16 @@ $ curl                                      \
 
 </Tabs>
 
-
 After you resolve the duplicates by deleting them or reconfiguring the relevant
-services, recheck the system logs to confirm the duplicates no longer appear in
-the log during unseal.
+services:
+
+1. If the node is a standby, restart the node manually.
+
+1. Recheck the system logs for the current node to confirm the duplicates no
+   longer appear in the log during unseal.
+
+
+## Next steps 
 
 Once you confirm any remaining duplicates can be force-merged safely, you can
 [enable forced identity deduplication](/vault/docs/upgrading/deduplication#dedupe-flag).

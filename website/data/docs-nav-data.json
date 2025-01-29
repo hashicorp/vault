@@ -2559,12 +2559,12 @@
             "path": "upgrading/deduplication/entity-group"
           },
           {
-            "title": "Resolve impact on ACL policy templates",
+            "title": "Resolve ACL policy templates",
             "path": "upgrading/deduplication/acl-policy-templates"
           },
           {
-            "title": "Resolve impact on external references",
-            "path": "upgrading/deduplication/external-refs"
+            "title": "Resolve Terraform config",
+            "path": "upgrading/deduplication/terraform-refs"
           }
         ]
       },
