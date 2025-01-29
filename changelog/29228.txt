@@ -1,0 +1,3 @@
+```release-note:change
+server/config: Configuration values including IPv6 addresses will be automatically translated and displayed conformant to RFC-5952 §4.
+```

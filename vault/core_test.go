@@ -379,7 +379,7 @@ func TestCore_HasVaultVersion(t *testing.T) {
 	upgradeTime := versionEntry.TimestampInstalled
 
 	if upgradeTime.After(time.Now()) || upgradeTime.Before(time.Now().Add(-1*time.Hour)) {
-		t.Fatalf("upgrade time isn't within reasonable bounds of new core initialization. " +
+		t.Fatal("upgrade time isn't within reasonable bounds of new core initialization. " +
 			fmt.Sprintf("time is: %+v, upgrade time is %+v", time.Now(), upgradeTime))
 	}
 }
@@ -3664,7 +3664,7 @@ func TestBuildUnsealSetupFunctionSlice(t *testing.T) {
 			core: &Core{
 				replicationState: uint32Ptr(uint32(0)),
 			},
-			expectedLength: 25,
+			expectedLength: 26,
 		},
 		{
 			name: "dr secondary core",
@@ -3752,4 +3752,17 @@ func TestCore_IsRemovedFromCluster(t *testing.T) {
 	if !removed || !ok {
 		t.Fatalf("expected removed to be false and ok to be true, got removed: %v, ok: %v", removed, ok)
 	}
+}
+
+// Test_administrativeNamespacePath verifies if administrativeNamespacePath function returns the configured administrative namespace path
+func Test_administrativeNamespacePath(t *testing.T) {
+	adminNamespacePath := "admin"
+	coreConfig := &CoreConfig{
+		RawConfig: &server.Config{
+			SharedConfig: &configutil.SharedConfig{AdministrativeNamespacePath: adminNamespacePath},
+		},
+		AdministrativeNamespacePath: adminNamespacePath,
+	}
+	core, _, _ := TestCoreUnsealedWithConfig(t, coreConfig)
+	require.Equal(t, core.administrativeNamespacePath(), adminNamespacePath)
 }

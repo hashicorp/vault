@@ -43,6 +43,13 @@
             etc.) to be protected by a single certificate.
           {{else if (eq group "Additional subject fields")}}
             These fields provide more information about the client to which the certificate belongs.
+          {{else if (eq group "Name constraints")}}
+            These fields create the name constraints extension when generating CA certificates. Specifying any combination of
+            these parameters will trigger the creation of the name constraints extension as per
+            <Hds::Link::Inline
+              @isHrefExternal={{true}}
+              @href="https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.10"
+            >RFC 5280 section 4.2.1.10</Hds::Link::Inline>.
           {{/if}}
         </p>
         {{#each fields as |fieldName|}}

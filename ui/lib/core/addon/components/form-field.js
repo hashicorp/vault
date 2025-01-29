@@ -43,7 +43,6 @@ import { removeFromArray } from 'vault/helpers/remove-from-array';
  * @param {Model} model - Ember Data model that `attr` is defined on
  * @param {boolean} [disabled=false] - whether the field is disabled
  * @param {boolean} [showHelpText=true] - whether to show the tooltip with help text from OpenAPI
- * @param {string} [subText] - text to be displayed below the label
  * @param {string} [mode] - used when editType is 'kv'
  * @param {object} [modelValidations] - Object of errors.  If attr.name is in object and has error message display in AlertInline.
  * @param {function} [onChange] - called whenever a value on the model changes via the component
@@ -96,12 +95,11 @@ export default class FormFieldComponent extends Component {
   get disabled() {
     return this.args.disabled || false;
   }
+
   get showHelpText() {
     return this.args.showHelpText === false ? false : true;
   }
-  get subText() {
-    return this.args.subText || '';
-  }
+
   // used in the label element next to the form element
   get labelString() {
     const label = this.args.attr.options?.label || '';

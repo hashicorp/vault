@@ -1,0 +1,3 @@
+```release-note:change
+ui: Partially reverts #20431 and removes ability to download unencrypted kv v2 secret data
+```

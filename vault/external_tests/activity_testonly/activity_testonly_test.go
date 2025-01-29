@@ -86,7 +86,7 @@ func Test_ActivityLog_LoseLeadership(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	_, _, err = clientcountutil.NewActivityLogData(client).
+	_, err = clientcountutil.NewActivityLogData(client).
 		NewCurrentMonthData().
 		NewClientsSeen(10).
 		Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES)
@@ -121,7 +121,7 @@ func Test_ActivityLog_ClientsOverlapping(t *testing.T) {
 		"enabled": "enable",
 	})
 	require.NoError(t, err)
-	_, _, err = clientcountutil.NewActivityLogData(client).
+	_, err = clientcountutil.NewActivityLogData(client).
 		NewPreviousMonthData(1).
 		NewClientsSeen(7).
 		NewCurrentMonthData().
@@ -169,7 +169,7 @@ func Test_ActivityLog_ClientsNewCurrentMonth(t *testing.T) {
 		"enabled": "enable",
 	})
 	require.NoError(t, err)
-	_, _, err = clientcountutil.NewActivityLogData(client).
+	_, err = clientcountutil.NewActivityLogData(client).
 		NewPreviousMonthData(1).
 		NewClientsSeen(5).
 		NewCurrentMonthData().
@@ -203,7 +203,7 @@ func Test_ActivityLog_EmptyDataMonths(t *testing.T) {
 		"enabled": "enable",
 	})
 	require.NoError(t, err)
-	_, _, err = clientcountutil.NewActivityLogData(client).
+	_, err = clientcountutil.NewActivityLogData(client).
 		NewCurrentMonthData().
 		NewClientsSeen(10).
 		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
@@ -243,7 +243,7 @@ func Test_ActivityLog_FutureEndDate(t *testing.T) {
 		"enabled": "enable",
 	})
 	require.NoError(t, err)
-	_, _, err = clientcountutil.NewActivityLogData(client).
+	_, err = clientcountutil.NewActivityLogData(client).
 		NewPreviousMonthData(1).
 		NewClientsSeen(10).
 		NewCurrentMonthData().
@@ -316,7 +316,7 @@ func Test_ActivityLog_ClientTypeResponse(t *testing.T) {
 			_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
 				"enabled": "enable",
 			})
-			_, _, err = clientcountutil.NewActivityLogData(client).
+			_, err = clientcountutil.NewActivityLogData(client).
 				NewCurrentMonthData().
 				NewClientsSeen(10, clientcountutil.WithClientType(tc.clientType)).
 				Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES)
@@ -369,7 +369,7 @@ func Test_ActivityLogCurrentMonth_Response(t *testing.T) {
 			_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
 				"enabled": "enable",
 			})
-			_, _, err = clientcountutil.NewActivityLogData(client).
+			_, err = clientcountutil.NewActivityLogData(client).
 				NewCurrentMonthData().
 				NewClientsSeen(10, clientcountutil.WithClientType(tc.clientType)).
 				Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES)
@@ -420,7 +420,7 @@ func Test_ActivityLog_Deduplication(t *testing.T) {
 			_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
 				"enabled": "enable",
 			})
-			_, _, err = clientcountutil.NewActivityLogData(client).
+			_, err = clientcountutil.NewActivityLogData(client).
 				NewPreviousMonthData(3).
 				NewClientsSeen(10, clientcountutil.WithClientType(tc.clientType)).
 				NewPreviousMonthData(2).
@@ -462,7 +462,7 @@ func Test_ActivityLog_MountDeduplication(t *testing.T) {
 	require.NoError(t, err)
 	now := time.Now().UTC()
 
-	localPaths, globalPaths, err := clientcountutil.NewActivityLogData(client).
+	_, err = clientcountutil.NewActivityLogData(client).
 		NewPreviousMonthData(1).
 		NewClientSeen(clientcountutil.WithClientMount("sys")).
 		NewClientSeen(clientcountutil.WithClientMount("secret")).
@@ -473,10 +473,6 @@ func Test_ActivityLog_MountDeduplication(t *testing.T) {
 		NewClientSeen(clientcountutil.WithClientMount("sys")).
 		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
 	require.NoError(t, err)
-	// cubbyhole is local, 2 segments must exist for 2 months seen
-	require.Len(t, localPaths, 2)
-	// 2 global segments must exist for 2 months seen
-	require.Len(t, globalPaths, 2)
 
 	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
 		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
@@ -549,7 +545,6 @@ func getCSVExport(t *testing.T, client *api.Client, monthsPreviousTo int, now ti
 
 	boolFields := map[string]struct{}{
 		"local_entity_alias": {},
-		"local_mount":        {},
 	}
 
 	mapFields := map[string]struct{}{
@@ -674,7 +669,7 @@ func Test_ActivityLog_Export_Sudo(t *testing.T) {
 
 	rootToken := client.Token()
 
-	_, _, err = clientcountutil.NewActivityLogData(client).
+	_, err = clientcountutil.NewActivityLogData(client).
 		NewCurrentMonthData().
 		NewClientsSeen(10).
 		Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES)
@@ -850,7 +845,7 @@ func TestHandleQuery_MultipleMounts(t *testing.T) {
 			}
 
 			// Write all the client count data
-			_, _, err = activityLogGenerator.Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
+			_, err = activityLogGenerator.Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
 			require.NoError(t, err)
 
 			endOfCurrentMonth := timeutil.EndOfMonth(time.Now().UTC())

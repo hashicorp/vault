@@ -32,7 +32,7 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
     this.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.backend, route: 'list' },
-      { label: 'create' },
+      { label: 'Create' },
     ];
     setRunOptions({
       rules: {

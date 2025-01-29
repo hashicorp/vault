@@ -31,9 +31,7 @@ var (
 		return nil
 	}
 
-	sysInitialize = func(b *SystemBackend) func(context.Context, *logical.InitializationRequest) error {
-		return nil
-	}
+	sysInitialize = ceSysInitialize
 
 	sysClean = func(b *SystemBackend) func(context.Context) {
 		return nil
@@ -279,6 +277,16 @@ var (
 	}
 	checkRaw = func(b *SystemBackend, path string) error { return nil }
 )
+
+func ceSysInitialize(b *SystemBackend) func(context.Context, *logical.InitializationRequest) error {
+	return func(ctx context.Context, req *logical.InitializationRequest) error {
+		err := b.Core.FeatureActivationFlags.Initialize(ctx, b.Core.systemBarrierView)
+		if err != nil {
+			return fmt.Errorf("failed to initialize activation flags: %w", err)
+		}
+		return nil
+	}
+}
 
 // Contains the config for a global plugin reload
 type pluginReloadRequest struct {
