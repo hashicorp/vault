@@ -17,18 +17,30 @@ const (
 	IdentityDeduplication      = "force-identity-deduplication"
 )
 
+// FeatureActivationFlags stores activation flags in a local map and storage.
+// All operations on internal state need to hold read/write locks for the
+// duration of access.
 type FeatureActivationFlags struct {
 	activationFlagsLock sync.RWMutex
 	storage             logical.Storage
 	activationFlags     map[string]bool
 }
 
+// ActivationManager is a lightweight interface for managing and inspecting
+// feature activation flags.
+type ActivationManager interface {
+	IsActivationFlagEnabled(featureName string) bool
+	Write(ctx context.Context, featureName string, activate bool) error
+}
+
+// NewFeatureActivationFlags is a constructor for FeatureActivationFlags.
 func NewFeatureActivationFlags() *FeatureActivationFlags {
 	return &FeatureActivationFlags{
 		activationFlags: map[string]bool{},
 	}
 }
 
+// Initialize loads the activation flags from storage into the in-memory cache.
 func (f *FeatureActivationFlags) Initialize(ctx context.Context, storage logical.Storage) error {
 	f.activationFlagsLock.Lock()
 	defer f.activationFlagsLock.Unlock()
@@ -82,6 +94,7 @@ func (f *FeatureActivationFlags) Get(ctx context.Context) ([]string, error) {
 	return activated, nil
 }
 
+// ReloadFlagsFromStorage loads the activation flags from storage and updates the in-memory cache.
 func (f *FeatureActivationFlags) ReloadFlagsFromStorage(ctx context.Context) (map[string]bool, error) {
 	f.activationFlagsLock.Lock()
 	defer f.activationFlagsLock.Unlock()
@@ -185,4 +198,12 @@ func (f *FeatureActivationFlags) IsActivationFlagEnabled(featureName string) boo
 	activated, ok := f.activationFlags[featureName]
 
 	return ok && activated
+}
+
+// Set is used to set the activation flag for a feature in tests
+func (f *FeatureActivationFlags) Set(featureName string, activate bool) {
+	f.activationFlagsLock.Lock()
+	defer f.activationFlagsLock.Unlock()
+
+	f.activationFlags[featureName] = activate
 }
