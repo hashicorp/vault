@@ -137,15 +137,18 @@ func (i *IdentityStore) activateDeduplication(ctx context.Context, req *logical.
 	i.groupLock.Lock()
 	defer i.groupLock.Unlock()
 
+	i.logger.Info("activating identity deduplication, reloading identity store")
+
 	i.disableLowerCasedNames = false
 	if err := i.resetDB(); err != nil {
 		return fmt.Errorf("failed to reset existing identity state: %w", err)
 	}
 
 	if err := i.loadArtifacts(ctx); err != nil {
-		return fmt.Errorf("failed to activate identity deduplication; %w", err)
+		return fmt.Errorf("failed to activate identity deduplication: %w", err)
 	}
 
+	i.logger.Info("identity deduplication activated, identity store reload complete")
 	return nil
 }
 
