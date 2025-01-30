@@ -72,7 +72,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
     await runCmd(`delete sys/mounts/${path}`);
   });
 
-  module('isCommunity', function (hooks) {
+  module('Community', function (hooks) {
     hooks.beforeEach(function () {
       this.version.type = 'community';
     });
@@ -252,7 +252,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
     });
   });
 
-  module('isEnterprise', function (hooks) {
+  module('Enterprise', function (hooks) {
     hooks.beforeEach(function () {
       this.version.type = 'enterprise';
     });

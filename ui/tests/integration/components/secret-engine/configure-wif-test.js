@@ -44,7 +44,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
   });
 
   module('Create view', function () {
-    module('isEnterprise', function (hooks) {
+    module('Enterprise', function (hooks) {
       hooks.beforeEach(function () {
         this.version.type = 'enterprise';
       });
@@ -613,7 +613,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
       });
     });
 
-    module('isCommunity', function (hooks) {
+    module('Community', function (hooks) {
       hooks.beforeEach(function () {
         this.version.type = 'community';
       });
@@ -661,7 +661,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
   });
 
   module('Edit view', function () {
-    module('isEnterprise', function (hooks) {
+    module('Enterprise', function (hooks) {
       hooks.beforeEach(function () {
         this.version.type = 'enterprise';
       });
@@ -904,7 +904,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
       });
     });
 
-    module('isCommunity', function (hooks) {
+    module('Community', function (hooks) {
       hooks.beforeEach(function () {
         this.version.type = 'community';
       });

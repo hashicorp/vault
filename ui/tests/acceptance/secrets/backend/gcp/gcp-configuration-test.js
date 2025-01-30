@@ -68,7 +68,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
     await runCmd(`delete sys/mounts/${this.path}`);
   });
 
-  module('isCommunity', function (hooks) {
+  module('Community', function (hooks) {
     hooks.beforeEach(function () {
       this.version.type = 'community';
     });
@@ -107,7 +107,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
         await enablePage.enable(this.type, this.path);
         await click(SES.configTab);
         await click(SES.configure);
-        await fillInGcpConfig(this.type);
+        await fillInGcpConfig();
         await click(GENERAL.saveButton);
         assert.true(
           this.flashSuccessSpy.calledWith(`Successfully saved ${this.path}'s configuration.`),
@@ -206,7 +206,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
 
         await click(SES.configTab);
         await click(SES.configure);
-        await fillInGcpConfig(this.type);
+        await fillInGcpConfig();
         await click(GENERAL.saveButton);
 
         assert
@@ -231,7 +231,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
     });
   });
 
-  module('isEnterprise', function (hooks) {
+  module('Enterprise', function (hooks) {
     hooks.beforeEach(function () {
       this.version.type = 'enterprise';
       this.wifAttrs = {
@@ -269,11 +269,11 @@ module('Acceptance | GCP | configuration', function (hooks) {
         await enablePage.enable(this.type, this.path);
         await click(SES.configTab);
         await click(SES.configure);
-        await fillInGcpConfig(this.type);
+        await fillInGcpConfig();
         await click(GENERAL.saveButton); // save GCP credentials
 
         await click(SES.configure); // navigate so you can edit that configuration
-        await fillInGcpConfig('withWif');
+        await fillInGcpConfig(true);
         await click(GENERAL.saveButton); // try and save wif fields
         assert
           .dom(GENERAL.messageError)
