@@ -9,6 +9,7 @@
 CHANGES:
 
 * auth/cf: Update plugin to v0.19.1 [[GH-29295](https://github.com/hashicorp/vault/pull/29295)]
+* sdk: Updated golang and dependency versions to be consistent across core, API, SDK [[GH-29422](https://github.com/hashicorp/vault/pull/29422)]
 
 FEATURES:
 
@@ -351,11 +352,10 @@ use versioned plugins. [[GH-27881](https://github.com/hashicorp/vault/pull/27881
 ## 1.17.11
 ### January 30, 2025
 
-**Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
-
 CHANGES:
 
 * auth/cf: Update plugin to v0.19.1 [[GH-29295](https://github.com/hashicorp/vault/pull/29295)]
+* sdk: Updated golang and dependency versions to be consistent across core, API, SDK [[GH-29422](https://github.com/hashicorp/vault/pull/29422)]
 
 FEATURES:
 
@@ -857,6 +857,7 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 CHANGES:
 
 * auth/cf: Update plugin to v0.19.1 [[GH-29295](https://github.com/hashicorp/vault/pull/29295)]
+* sdk: Updated golang and dependency versions to be consistent across core, API, SDK [[GH-29422](https://github.com/hashicorp/vault/pull/29422)]
 
 FEATURES:
 
