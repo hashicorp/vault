@@ -22,10 +22,10 @@ and groups renamed during identity deduplication.
 
 ## How renaming affects external references
 
-Renaming entities and groups can break references in Terraform configuration
-files when those reference refer directly to the entity or group by name. For
-example, assume you have a Terraform configuration file with named identity
-resources like the following:
+Renaming entities and groups can break references in Terraform (and other
+external services) when those reference refer directly to the entity or group by
+name. For example, assume you have a Terraform configuration file with named
+identity resources like the following:
 
 <CodeBlockConfig highlight="11,16" hideClipboard="true">
 
@@ -60,9 +60,9 @@ historical issues, the resources might exist as separate entities.
 
 If Vault identifies `bob` and `BOB` as duplicates during deduplication, it
 renames one of the identities `<name>-<uuid>`. After deduplication, Terraform
-tries to rename the related resource, but the in-place update will fail because
-the existing resource now violates the case-insensitive name constraint on the
-Vault side.
+tries to reapply the previous name for the related resource, but the in-place
+update fails because the existing resource now violates the case-insensitive
+name constraint on the Vault side.
 
 For example:
 
@@ -108,9 +108,9 @@ vault_identity_entity.bob: Modifying... [id=e8c5e633-fe37-5a49-4a29-32e2643d03bd
 
 ## Solution
 
-The easiest way to deal with renamed entities is to manually update the
-associated resource in your Terraform configuration with the updated name before
-forcing deduplication.
+The easiest way to deal with renamed entities and groups is to manually update the
+the associated resource in your Terraform configuration with the updated name
+before forcing deduplication.
 
 <Tip>
 
