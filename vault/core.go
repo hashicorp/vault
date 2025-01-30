@@ -3610,6 +3610,15 @@ func (c *Core) LogFormat() string {
 	return conf.(*server.Config).LogFormat
 }
 
+// administrativeNamespacePath returns the configured administrative namespace path.
+func (c *Core) administrativeNamespacePath() string {
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		return ""
+	}
+	return conf.(*server.Config).AdministrativeNamespacePath
+}
+
 // LogLevel returns the log level provided by level provided by config, CLI flag, or env
 func (c *Core) LogLevel() string {
 	return c.logLevel
