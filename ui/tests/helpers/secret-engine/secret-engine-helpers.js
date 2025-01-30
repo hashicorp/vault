@@ -185,8 +185,8 @@ const createGcpConfig = (store, backend, accessType = 'gcp') => {
       data: {
         backend,
         credentials: '{"some-key":"some-value"}',
-        ttl: '1 hour',
-        max_ttl: '4 hours',
+        ttl: '100s',
+        max_ttl: '101s',
       },
     });
   }
@@ -215,7 +215,10 @@ export const createConfig = (store, backend, type) => {
     case 'azure-generic':
       return createAzureConfig(store, backend, 'generic');
     case 'gcp':
+    case 'gcp-generic':
       return createGcpConfig(store, backend);
+    case 'gcp-wif':
+      return createGcpConfig(store, backend, 'wif');
   }
 };
 /* Manually create the configuration by filling in the configuration form */
@@ -266,6 +269,24 @@ export const fillInAzureConfig = async (situation = 'azure') => {
   }
 };
 
+export const fillInGcpConfig = async (withWif = false) => {
+  if (withWif) {
+    await click(SES.wif.accessType('wif')); // toggle to wif
+    await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'azure-audience');
+    await click(GENERAL.ttl.toggle('Identity token TTL'));
+    await fillIn(GENERAL.ttl.input('Identity token TTL'), '7200');
+    await fillIn(GENERAL.inputByAttr('serviceAccountEmail'), 'some@email.com');
+  } else {
+    await click(GENERAL.toggleGroup('More options'));
+    await click(GENERAL.ttl.toggle('Config TTL'));
+    await fillIn(GENERAL.ttl.input('Config TTL'), '7200');
+    await click(GENERAL.ttl.toggle('Max TTL'));
+    await fillIn(GENERAL.ttl.input('Max TTL'), '8200');
+    await click(GENERAL.textToggle);
+    await fillIn(GENERAL.textToggleTextarea, '{"some-key":"some-value"}');
+  }
+};
+
 /* Generate arrays of keys to iterate over.
  * used to check details of the secret engine configuration
  * and used to check the form to configure the secret engine
@@ -283,7 +304,7 @@ const azureWifKeys = [...genericAzureKeys, ...genericWifKeys];
 // GCP specific keys
 const genericGcpKeys = ['Config TTL', 'Max TTL'];
 const gcpKeys = [...genericGcpKeys, 'Credentials'];
-const gcpWifKeys = [...genericGcpKeys, ...genericWifKeys, 'Service account email'];
+const gcpWifKeys = [...genericWifKeys, 'Service account email'];
 // SSH specific keys
 const sshKeys = ['Private key', 'Public key', 'Generate signing key'];
 
@@ -349,9 +370,9 @@ const valueOfGcpKeys = (string) => {
     case 'Service account email':
       return 'service-email';
     case 'Config TTL':
-      return '1 hour';
+      return '1 minute 40 seconds';
     case 'Max TTL':
-      return '4 hours';
+      return '1 minute 41 seconds';
     case 'Identity token audience':
       return 'audience';
     case 'Identity token TTL':
