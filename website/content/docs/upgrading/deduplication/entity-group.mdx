@@ -38,8 +38,13 @@ with Vault more difficult:
 
 ## Example server log
 
-Entities or groups may exist with duplicate names. These might be exact matches,
-or may differ in case such as `Admin` and `admin`. For example:
+The Vault system log provides warnings about duplicate entities and groups,
+including:
+
+- the entity/group name
+- the associated namespace (`namespace ID`)
+- the entity/group ID (`id`)
+- the expected deduplication action (`force_deduplication`)
 
 <CodeBlockConfig hideClipboard>
 
@@ -64,8 +69,12 @@ or may differ in case such as `Admin` and `admin`. For example:
 
 </CodeBlockConfig>
 
-Despite having identical, case-insensitive names in the example logs, Vault only
-targets 8 for renaming because the names belong to different namespaces:
+Duplicate entities and groups might be exact matches or differ in case (for
+example, `Admin` and `admin`). But when reviewing system logs for duplicate
+resolution, always consider the associated namespace when grouping potential
+duplicates. For example, despite having identical, case-insensitive names in the
+example logs, Vault only targets 8 for renaming because the names belong to
+different namespaces:
 
 Identity type | Old name            | New name
 ------------- | ------------------- | --------

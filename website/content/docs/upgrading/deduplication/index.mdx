@@ -7,10 +7,11 @@ description: >-
 
 # Find and resolve duplicate Vault identities
 
-Bugs in Vault versions before 1.19 might lead to duplicate identities for
-entities, aliases, and groups. Duplicate identities in the persistent storage
-of a Vault cluster can cause unexpected behavior as duplicate identities are
-outside typical expectations and test scenarios for Vault.
+Bugs in Vault versions before 1.19 might lead to duplicate
+[identities](/vault/docs/concepts/identity) for entities, aliases, and groups.
+Duplicate identities in the persistent storage of a Vault cluster can cause
+unexpected behavior as duplicate identities are outside typical expectations and
+test scenarios for Vault.
 
 Vault server logs include information to help you identify when duplicate
 identities exist in a given cluster. We strongly recommend identifying
@@ -178,9 +179,12 @@ should see their future `unseal` times reduced.
 
 ## Step 5: Enforce identity de-duplication ((#dedupe-flag))
 
-Once you resolve existing duplicates, you need to enable the
+Once you resolve existing duplicates, you can enable the
 `force-identity-deduplication` activation flag on the primary cluster using the
-[activation flag API path](/vault/api-docs/system/activation-flags):
+[activation flag API path](/vault/api-docs/system/activation-flags).
+
+Activating feature flags is a one-time, one-way action. Once you activate a
+feature gated with a feature flag, you cannot un-activate the feature.
 
 <Tabs>
 

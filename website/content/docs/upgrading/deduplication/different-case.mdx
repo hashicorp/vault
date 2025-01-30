@@ -40,8 +40,12 @@ makes, and can lead to unexpected behavior.
 
 ## Example server log
 
-When reviewing system logs, consider the entity alias **and** the associated
-mount path.
+The Vault system log provides warnings about duplicate aliases, including:
+
+- the alias string
+- the associated mount path (`mount accessor`)
+- the alias ID (`id`)
+- the ID for the entity linked to the alias (`canonical_id`)
 
 <CodeBlockConfig hideClipboard>
 
@@ -56,18 +60,21 @@ mount path.
 
 </CodeBlockConfig>
 
-Despite having identical, case-insensitive names in the example logs, the four
-aliases represent two distinct identities because they come from different authN
-mounts:
+When reviewing system logs for duplicate resolution, always consider the authN
+mount and namespace when grouping potential duplicates. For example, despite
+having identical, case-insensitive names in the example logs, the four aliases
+represent two distinct identities because they come from different authN mounts:
 
-- `alias-case` and `alias-cAsE` are duplicates from the mount `auth_userpass_34aca7ec`
-- `alias-case` and `alias-cAsE` are duplicates from the mount `auth_userpass_a555989a
+- `alias-case` and `alias-cAsE` are duplicates in the mount `auth_userpass_34aca7ec`
+  and will merge under the alias with canonical ID `7da76b0d-fe9b-a125-3362-2a8ff055dcf8`
+  during deduplication.
+- `alias-case` and `alias-cAsE` are duplicates in the mount `auth_userpass_a555989a`
+  and will merge with the alias with canonical ID `37f41fcf-5e15-f13f-248d-9fa8405b1ecd`
+  during deduplication.
 
-Always consider the authN mount and namespace of potential duplicates when
-grouping potential duplicates for resolution.
 
-Before resolving different-case duplicates, you must determine if the case
-difference is a **mergeable duplicate** or **unmergeable duplicate**:
+To resolve different-case duplicates, you must determine if the case difference
+is a **mergeable duplicate** or **unmergeable duplicate**:
 
 - For mergeable duplicates, the case difference is **unintentional** and the
   duplicate entries represent the same logical entity. You can ignore mergeable
