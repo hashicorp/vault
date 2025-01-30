@@ -10,7 +10,6 @@ import (
 	"io"
 	"slices"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -393,7 +392,7 @@ func (a *ActivityLog) sortActivityLogMonthsResponse(months []*ResponseMonth) {
 
 const (
 	noMountAccessor     = "no mount accessor (pre-1.10 upgrade?)"
-	deletedMountFmt     = "deleted mount; accessor %q"
+	DeletedMountFmt     = "deleted mount; accessor %q"
 	DeletedNamespaceFmt = "deleted namespace %q"
 )
 
@@ -406,7 +405,7 @@ func (a *ActivityLog) mountAccessorToMountPath(mountAccessor string) string {
 	} else {
 		valResp := a.core.router.ValidateMountByAccessor(mountAccessor)
 		if valResp == nil {
-			displayPath = fmt.Sprintf(deletedMountFmt, mountAccessor)
+			displayPath = fmt.Sprintf(DeletedMountFmt, mountAccessor)
 		} else {
 			displayPath = valResp.MountPath
 			if !strings.HasSuffix(displayPath, "/") {
@@ -425,32 +424,26 @@ type singleTypeSegmentReader struct {
 	a                *ActivityLog
 }
 type segmentReader struct {
-	tokens         *singleTypeSegmentReader
-	globalEntities *singleTypeSegmentReader
-	localEntities  *singleTypeSegmentReader
+	tokens   *singleTypeSegmentReader
+	entities *singleTypeSegmentReader
 }
 
 // SegmentReader is an interface that provides methods to read tokens and entities in order
 type SegmentReader interface {
 	ReadToken(ctx context.Context) (*activity.TokenCount, error)
-	ReadGlobalEntity(ctx context.Context) (*activity.EntityActivityLog, error)
-	ReadLocalEntity(ctx context.Context) (*activity.EntityActivityLog, error)
+	ReadEntity(ctx context.Context) (*activity.EntityActivityLog, error)
 }
 
 func (a *ActivityLog) NewSegmentFileReader(ctx context.Context, startTime time.Time) (SegmentReader, error) {
-	globalEntities, err := a.newSingleTypeSegmentReader(ctx, startTime, activityGlobalPathPrefix+activityEntityBasePath)
+	entities, err := a.newSingleTypeSegmentReader(ctx, startTime, activityEntityBasePath)
 	if err != nil {
 		return nil, err
 	}
-	localEntities, err := a.newSingleTypeSegmentReader(ctx, startTime, activityLocalPathPrefix+activityEntityBasePath)
+	tokens, err := a.newSingleTypeSegmentReader(ctx, startTime, activityTokenBasePath)
 	if err != nil {
 		return nil, err
 	}
-	tokens, err := a.newSingleTypeSegmentReader(ctx, startTime, activityTokenLocalBasePath)
-	if err != nil {
-		return nil, err
-	}
-	return &segmentReader{globalEntities: globalEntities, localEntities: localEntities, tokens: tokens}, nil
+	return &segmentReader{entities: entities, tokens: tokens}, nil
 }
 
 func (a *ActivityLog) newSingleTypeSegmentReader(ctx context.Context, startTime time.Time, prefix string) (*singleTypeSegmentReader, error) {
@@ -505,22 +498,11 @@ func (e *segmentReader) ReadToken(ctx context.Context) (*activity.TokenCount, er
 	return out, nil
 }
 
-// ReadGlobalEntity reads a global entity from the global segment
+// ReadEntity reads an entity from the segment
 // If there is none available, then the error will be io.EOF
-func (e *segmentReader) ReadGlobalEntity(ctx context.Context) (*activity.EntityActivityLog, error) {
+func (e *segmentReader) ReadEntity(ctx context.Context) (*activity.EntityActivityLog, error) {
 	out := &activity.EntityActivityLog{}
-	err := e.globalEntities.nextValue(ctx, out)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// ReadLocalEntity reads a local entity from the local segment
-// If there is none available, then the error will be io.EOF
-func (e *segmentReader) ReadLocalEntity(ctx context.Context) (*activity.EntityActivityLog, error) {
-	out := &activity.EntityActivityLog{}
-	err := e.localEntities.nextValue(ctx, out)
+	err := e.entities.nextValue(ctx, out)
 	if err != nil {
 		return nil, err
 	}
@@ -552,111 +534,4 @@ func (a *ActivityLog) namespaceRecordToCountsResponse(record *activity.Namespace
 		SecretSyncs:      int(record.SecretSyncs),
 		ACMEClients:      int(record.ACMEClients),
 	}
-}
-
-func (a *ActivityLog) extractLocalGlobalClientsDeprecatedStoragePath(ctx context.Context) (map[int64][]*activity.EntityRecord, map[int64][]*activity.EntityRecord, error) {
-	clusterGlobalClients := make(map[int64][]*activity.EntityRecord)
-	clusterLocalClients := make(map[int64][]*activity.EntityRecord)
-
-	// Extract global clients on the current cluster per month store them in a map
-	times, err := a.availableTimesAtPath(ctx, time.Now(), activityEntityBasePath)
-	if err != nil {
-		a.logger.Error("could not list available logs until now")
-		return clusterLocalClients, clusterGlobalClients, fmt.Errorf("could not list available logs on the cluster")
-	}
-	for _, time := range times {
-		segments, err := a.getAllEntitySegmentsForMonth(ctx, activityEntityBasePath, time.Unix())
-		if err != nil {
-			return nil, nil, err
-		}
-		for _, segment := range segments {
-			for _, entity := range segment.GetClients() {
-				// If the client is not local, then add it to a map
-				// Normalize month value to the beginning of the month to avoid multiple storage entries for the same month
-				startOfMonth := timeutil.StartOfMonth(time.UTC())
-				if local, _ := a.isClientLocal(entity); !local {
-					if _, ok := clusterGlobalClients[startOfMonth.Unix()]; !ok {
-						clusterGlobalClients[startOfMonth.Unix()] = make([]*activity.EntityRecord, 0)
-					}
-					clusterGlobalClients[startOfMonth.Unix()] = append(clusterGlobalClients[startOfMonth.Unix()], entity)
-				} else {
-					if _, ok := clusterLocalClients[startOfMonth.Unix()]; !ok {
-						clusterLocalClients[startOfMonth.Unix()] = make([]*activity.EntityRecord, 0)
-					}
-					clusterLocalClients[startOfMonth.Unix()] = append(clusterLocalClients[startOfMonth.Unix()], entity)
-				}
-			}
-		}
-	}
-
-	return clusterLocalClients, clusterGlobalClients, nil
-}
-
-func (a *ActivityLog) extractTokensDeprecatedStoragePath(ctx context.Context) (map[int64][]map[string]uint64, error) {
-	tokensByMonth := make(map[int64][]map[string]uint64)
-	times, err := a.availableTimesAtPath(ctx, time.Now(), activityTokenBasePath)
-	if err != nil {
-		return nil, err
-	}
-	for _, monthTime := range times {
-		tokenPath := activityTokenBasePath + fmt.Sprint(monthTime.Unix()) + "/"
-		segmentPaths, err := a.view.List(ctx, tokenPath)
-		if err != nil {
-			return nil, err
-		}
-		tokensByMonth[monthTime.Unix()] = make([]map[string]uint64, 0)
-		for _, seqNum := range segmentPaths {
-			tokenCount, err := a.readTokenSegmentAtPath(ctx, tokenPath+seqNum)
-			if tokenCount == nil {
-				a.logger.Error("data at path has been unexpectedly deleted", "path", tokenPath+seqNum)
-				continue
-			}
-			if err != nil {
-				return nil, err
-			}
-			tokensByMonth[monthTime.Unix()] = append(tokensByMonth[monthTime.Unix()], tokenCount.CountByNamespaceID)
-		}
-	}
-	return tokensByMonth, nil
-}
-
-func (a *ActivityLog) getAllEntitySegmentsForMonth(ctx context.Context, path string, time int64) ([]*activity.EntityActivityLog, error) {
-	entityPathWithTime := fmt.Sprintf("%s%d/", path, time)
-	segments := make([]*activity.EntityActivityLog, 0)
-	segmentPaths, err := a.view.List(ctx, entityPathWithTime)
-	if err != nil {
-		return segments, err
-	}
-	for _, seqNum := range segmentPaths {
-		segment, err := a.readEntitySegmentAtPath(ctx, entityPathWithTime+seqNum)
-		if err != nil {
-			return segments, err
-		}
-		if segment != nil {
-			segments = append(segments, segment)
-		}
-	}
-	return segments, nil
-}
-
-func (a *ActivityLog) loadClientDataIntoSegment(ctx context.Context, pathPrefix string, startTime time.Time, seqNum uint64, currentSegment *segmentInfo) ([]*activity.EntityRecord, error) {
-	path := pathPrefix + activityEntityBasePath + fmt.Sprint(startTime.Unix()) + "/" + strconv.FormatUint(seqNum, 10)
-	out, err := a.readEntitySegmentAtPath(ctx, path)
-	if err != nil && !errors.Is(err, ErrEmptyResponse) {
-		return nil, err
-	}
-	if out != nil {
-		if !a.core.perfStandby {
-			a.logger.Debug(fmt.Sprintf("loading client data from %s into segment", path))
-			currentSegment.startTimestamp = startTime.Unix()
-			currentSegment.currentClients = &activity.EntityActivityLog{Clients: out.Clients}
-			currentSegment.clientSequenceNumber = seqNum
-
-		} else {
-			// populate this for edge case checking (if end of month passes while background loading on standby)
-			currentSegment.startTimestamp = startTime.Unix()
-		}
-		return out.GetClients(), nil
-	}
-	return []*activity.EntityRecord{}, nil
 }

@@ -298,6 +298,87 @@ func TestBackend_CSRValues(t *testing.T) {
 	logicaltest.Test(t, testCase)
 }
 
+func TestBackend_SerialNumberSource(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	var err error
+
+	_, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "myvault.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = CBWrite(b, s, "roles/json-csr", map[string]interface{}{
+		"allow_any_name":         true,
+		"enforce_hostnames":      false,
+		"allowed_serial_numbers": "foo*",
+		"serial_number_source":   "json-csr",
+		"key_type":               "any",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = CBWrite(b, s, "roles/json", map[string]interface{}{
+		"allow_any_name":         true,
+		"enforce_hostnames":      false,
+		"allowed_serial_numbers": "foo*",
+		"serial_number_source":   "json",
+		"key_type":               "any",
+	})
+
+	// Create a CSR with a serial number not allowed by the role.
+	tmpl := &x509.CertificateRequest{
+		Subject: pkix.Name{SerialNumber: "bar"},
+	}
+	_, _, csrPem := generateCSR(t, tmpl, "ec", 256)
+
+	// Signing a csr with a disallowed subject serial number in the CSR
+	// with serial_number_source=json-csr should fail.
+	_, err = CBWrite(b, s, "sign/json-csr", map[string]interface{}{
+		"common_name": "localhost",
+		"csr":         csrPem,
+	})
+	if err == nil {
+		t.Fatal("expected an error")
+	}
+
+	// The serial number in the request should take precedence.
+	_, err = CBWrite(b, s, "sign/json-csr", map[string]interface{}{
+		"common_name":   "localhost",
+		"csr":           csrPem,
+		"serial_number": "foobar",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Try signing the cert with serial_number_source=json.
+	// The serial in the CSR should be ignored.
+	_, err = CBWrite(b, s, "sign/json", map[string]interface{}{
+		"common_name": "localhost",
+		"csr":         csrPem,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Try signing the cert with serial_number_source=json
+	// and a serial number in the request
+	_, err = CBWrite(b, s, "sign/json", map[string]interface{}{
+		"common_name":   "localhost",
+		"csr":           csrPem,
+		"serial_number": "foobar2",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestBackend_URLsCRUD(t *testing.T) {
 	t.Parallel()
 	initTest.Do(setCerts)
@@ -2277,7 +2358,7 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 		t.Fatal(err)
 	}
 	if resp != nil && resp.IsError() {
-		t.Fatalf(resp.Error().Error())
+		t.Fatal(resp.Error().Error())
 	}
 	if resp.Data == nil || resp.Data["certificate"] == nil {
 		t.Fatal("did not get expected data")
@@ -2317,7 +2398,7 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 		t.Fatal(err)
 	}
 	if resp != nil && resp.IsError() {
-		t.Fatalf(resp.Error().Error())
+		t.Fatal(resp.Error().Error())
 	}
 	if resp.Data == nil || resp.Data["certificate"] == nil {
 		t.Fatal("did not get expected data")
@@ -3722,6 +3803,7 @@ func TestReadWriteDeleteRoles(t *testing.T) {
 	expectedData := map[string]interface{}{
 		"key_type":                           "rsa",
 		"use_csr_sans":                       true,
+		"serial_number_source":               "json-csr",
 		"client_flag":                        true,
 		"allowed_serial_numbers":             []interface{}{},
 		"generate_lease":                     false,
@@ -6831,6 +6913,7 @@ func TestProperAuthing(t *testing.T) {
 	}
 	serial := resp.Data["serial_number"].(string)
 	eabKid := "13b80844-e60d-42d2-b7e9-152a8e834b90"
+	acmeKeyId := "hrKmDYTvicHoHGVN2-3uzZV_BPGdE0W_dNaqYTtYqeo="
 	paths := map[string]pathAuthChecker{
 		"ca_chain":                               shouldBeUnauthedReadList,
 		"cert/ca_chain":                          shouldBeUnauthedReadList,
@@ -6950,6 +7033,8 @@ func TestProperAuthing(t *testing.T) {
 		"unified-ocsp/dGVzdAo=":                  shouldBeUnauthedReadList,
 		"eab/":                                   shouldBeAuthed,
 		"eab/" + eabKid:                          shouldBeAuthed,
+		"acme/mgmt/account/keyid/":               shouldBeAuthed,
+		"acme/mgmt/account/keyid/" + acmeKeyId:   shouldBeAuthed,
 	}
 
 	entPaths := getEntProperAuthingPaths(serial)
@@ -7020,7 +7105,10 @@ func TestProperAuthing(t *testing.T) {
 			raw_path = strings.ReplaceAll(raw_path, "{serial}", serial)
 		}
 		if strings.Contains(raw_path, "acme/account/") && strings.Contains(raw_path, "{kid}") {
-			raw_path = strings.ReplaceAll(raw_path, "{kid}", "hrKmDYTvicHoHGVN2-3uzZV_BPGdE0W_dNaqYTtYqeo=")
+			raw_path = strings.ReplaceAll(raw_path, "{kid}", acmeKeyId)
+		}
+		if strings.Contains(raw_path, "acme/mgmt/account/") && strings.Contains(raw_path, "{keyid}") {
+			raw_path = strings.ReplaceAll(raw_path, "{keyid}", acmeKeyId)
 		}
 		if strings.Contains(raw_path, "acme/") && strings.Contains(raw_path, "{auth_id}") {
 			raw_path = strings.ReplaceAll(raw_path, "{auth_id}", "29da8c38-7a09-465e-b9a6-3d76802b1afd")

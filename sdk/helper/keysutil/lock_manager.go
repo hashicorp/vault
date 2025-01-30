@@ -277,12 +277,12 @@ func (lm *LockManager) BackupPolicy(ctx context.Context, storage logical.Storage
 			return "", err
 		}
 		if p == nil {
-			return "", fmt.Errorf(fmt.Sprintf("key %q not found", name))
+			return "", fmt.Errorf("key %q not found", name)
 		}
 	}
 
 	if atomic.LoadUint32(&p.deleted) == 1 {
-		return "", fmt.Errorf(fmt.Sprintf("key %q not found", name))
+		return "", fmt.Errorf("key %q not found", name)
 	}
 
 	backup, err := p.Backup(ctx, storage)

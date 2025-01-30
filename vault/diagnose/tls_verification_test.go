@@ -14,6 +14,7 @@ import (
 
 	pkihelper "github.com/hashicorp/vault/helper/testhelpers/pki"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/stretchr/testify/require"
 )
 
 // TestTLSValidCert is the positive test case to show that specifying a valid cert and key
@@ -35,10 +36,10 @@ func TestTLSValidCert(t *testing.T) {
 	warnings, errs := ListenerChecks(context.Background(), listeners)
 	if errs != nil {
 		// The test failed -- we can just return one of the errors
-		t.Fatalf(errs[0].Error())
+		t.Fatal(errs[0].Error())
 	}
 	if warnings != nil {
-		t.Fatalf("warnings returned from good listener")
+		t.Fatal("warnings returned from good listener")
 	}
 }
 
@@ -124,13 +125,14 @@ func TestTLSExpiredCert(t *testing.T) {
 // TestTLSMismatchedCryptographicInfo verifies that a cert and key of differing cryptographic
 // types, when specified together, is met with a unique error message.
 func TestTLSMismatchedCryptographicInfo(t *testing.T) {
+	testCaFiles := pkihelper.GenerateCertWithRoot(t)
 	listeners := []*configutil.Listener{
 		{
 			Type:                  "tcp",
 			Address:               "127.0.0.1:443",
 			ClusterAddress:        "127.0.0.1:8201",
-			TLSCertFile:           "./../../api/test-fixtures/keys/cert.pem",
-			TLSKeyFile:            "./test-fixtures/ecdsa.key",
+			TLSCertFile:           testCaFiles.Leaf.CertFile,
+			TLSKeyFile:            "./test-fixtures/goodkey.pem", // pkihelper uses EC keys, this file is an RSA key
 			TLSMinVersion:         "tls10",
 			TLSDisableClientCerts: true,
 		},
@@ -148,7 +150,7 @@ func TestTLSMismatchedCryptographicInfo(t *testing.T) {
 			Type:                  "tcp",
 			Address:               "127.0.0.1:443",
 			ClusterAddress:        "127.0.0.1:8201",
-			TLSCertFile:           "./test-fixtures/ecdsa.crt",
+			TLSCertFile:           testCaFiles.Leaf.CertFile,
 			TLSKeyFile:            "./../../api/test-fixtures/keys/key.pem",
 			TLSClientCAFile:       "./../../api/test-fixtures/root/rootcacert.pem",
 			TLSMinVersion:         "tls10",
@@ -189,13 +191,15 @@ func TestTLSMultiKeys(t *testing.T) {
 
 // TestTLSCertAsKey verifies that a unique error message is thrown when a cert is specified twice.
 func TestTLSCertAsKey(t *testing.T) {
+	testCaFiles := pkihelper.GenerateCertWithRoot(t)
+
 	listeners := []*configutil.Listener{
 		{
 			Type:                  "tcp",
 			Address:               "127.0.0.1:443",
 			ClusterAddress:        "127.0.0.1:8201",
-			TLSCertFile:           "./../../api/test-fixtures/keys/cert.pem",
-			TLSKeyFile:            "./../../api/test-fixtures/keys/cert.pem",
+			TLSCertFile:           testCaFiles.Leaf.CertFile,
+			TLSKeyFile:            testCaFiles.Leaf.CertFile,
 			TLSMinVersion:         "tls10",
 			TLSDisableClientCerts: true,
 		},
@@ -213,13 +217,21 @@ func TestTLSCertAsKey(t *testing.T) {
 // the root. The root certificate used in this test is the Baltimore Cyber Trust root
 // certificate, downloaded from: https://www.digicert.com/kb/digicert-root-certificates.htm
 func TestTLSInvalidRoot(t *testing.T) {
+	testCaFiles := pkihelper.GenerateCertWithRoot(t)
+	otherRoot := pkihelper.GenerateRootCa(t)
+
+	tempDir := t.TempDir()
+	mixedRoots := filepath.Join(tempDir, "leaf-with-bad-root.pem")
+	err := os.WriteFile(mixedRoots, append(pem.EncodeToMemory(testCaFiles.Leaf.CertPem), pem.EncodeToMemory(otherRoot.CertPem)...), 0o644)
+	require.NoError(t, err, "Failed to write file %s", mixedRoots)
+
 	listeners := []*configutil.Listener{
 		{
 			Type:                  "tcp",
 			Address:               "127.0.0.1:443",
 			ClusterAddress:        "127.0.0.1:8201",
-			TLSCertFile:           "./test-fixtures/goodcertbadroot.pem",
-			TLSKeyFile:            "./test-fixtures/goodkey.pem",
+			TLSCertFile:           mixedRoots,
+			TLSKeyFile:            testCaFiles.Leaf.KeyFile,
 			TLSMinVersion:         "tls10",
 			TLSDisableClientCerts: true,
 		},
@@ -237,13 +249,15 @@ func TestTLSInvalidRoot(t *testing.T) {
 // is still accepted by diagnose as valid. This is an acceptable, though less secure,
 // server configuration.
 func TestTLSNoRoot(t *testing.T) {
+	testCaFiles := pkihelper.GenerateCertWithRoot(t)
+
 	listeners := []*configutil.Listener{
 		{
 			Type:                  "tcp",
 			Address:               "127.0.0.1:443",
 			ClusterAddress:        "127.0.0.1:8201",
-			TLSCertFile:           "./../../api/test-fixtures/keys/cert.pem",
-			TLSKeyFile:            "./test-fixtures/goodkey.pem",
+			TLSCertFile:           testCaFiles.Leaf.CertFile,
+			TLSKeyFile:            testCaFiles.Leaf.KeyFile,
 			TLSMinVersion:         "tls10",
 			TLSDisableClientCerts: true,
 		},
@@ -258,14 +272,16 @@ func TestTLSNoRoot(t *testing.T) {
 // TestTLSInvalidMinVersion checks that a listener with an invalid minimum configured
 // version errors appropriately.
 func TestTLSInvalidMinVersion(t *testing.T) {
+	testCaFiles := pkihelper.GenerateCertWithRoot(t)
+
 	listeners := []*configutil.Listener{
 		{
 			Type:                  "tcp",
 			Address:               "127.0.0.1:443",
 			ClusterAddress:        "127.0.0.1:8201",
-			TLSCertFile:           "./../../api/test-fixtures/keys/cert.pem",
-			TLSKeyFile:            "./../../api/test-fixtures/keys/key.pem",
-			TLSClientCAFile:       "./../../api/test-fixtures/root/rootcacert.pem",
+			TLSCertFile:           testCaFiles.Leaf.CertFile,
+			TLSKeyFile:            testCaFiles.Leaf.KeyFile,
+			TLSClientCAFile:       testCaFiles.RootCa.CertFile,
 			TLSMinVersion:         "0",
 			TLSDisableClientCerts: true,
 		},
@@ -282,14 +298,16 @@ func TestTLSInvalidMinVersion(t *testing.T) {
 // TestTLSInvalidMaxVersion checks that a listener with an invalid maximum configured
 // version errors appropriately.
 func TestTLSInvalidMaxVersion(t *testing.T) {
+	testCaFiles := pkihelper.GenerateCertWithRoot(t)
+
 	listeners := []*configutil.Listener{
 		{
 			Type:                  "tcp",
 			Address:               "127.0.0.1:443",
 			ClusterAddress:        "127.0.0.1:8201",
-			TLSCertFile:           "./../../api/test-fixtures/keys/cert.pem",
-			TLSKeyFile:            "./../../api/test-fixtures/keys/key.pem",
-			TLSClientCAFile:       "./../../api/test-fixtures/root/rootcacert.pem",
+			TLSCertFile:           testCaFiles.Leaf.CertFile,
+			TLSKeyFile:            testCaFiles.Leaf.KeyFile,
+			TLSClientCAFile:       testCaFiles.RootCa.CertFile,
 			TLSMaxVersion:         "0",
 			TLSDisableClientCerts: true,
 		},
@@ -549,13 +567,15 @@ func TestTLSMultipleRootInClientCACert(t *testing.T) {
 
 // TestTLSSelfSignedCerts tests invalid self-signed cert as TLSClientCAFile
 func TestTLSSelfSignedCert(t *testing.T) {
+	testCaFiles := pkihelper.GenerateCertWithRoot(t)
+
 	listeners := []*configutil.Listener{
 		{
 			Type:                          "tcp",
 			Address:                       "127.0.0.1:443",
 			ClusterAddress:                "127.0.0.1:8201",
-			TLSCertFile:                   "./../../api/test-fixtures/keys/cert.pem",
-			TLSKeyFile:                    "./../../api/test-fixtures/keys/key.pem",
+			TLSCertFile:                   testCaFiles.Leaf.CertFile,
+			TLSKeyFile:                    testCaFiles.Leaf.KeyFile,
 			TLSClientCAFile:               "test-fixtures/selfSignedCert.pem",
 			TLSMinVersion:                 "tls10",
 			TLSRequireAndVerifyClientCert: true,

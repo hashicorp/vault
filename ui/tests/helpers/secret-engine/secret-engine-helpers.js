@@ -6,6 +6,7 @@
 import { click, fillIn } from '@ember/test-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import { stringArrayToCamelCase } from 'vault/helpers/string-array-to-camel';
 import { v4 as uuidv4 } from 'uuid';
 
 export const createSecretsEngine = (store, type, path) => {
@@ -19,6 +20,32 @@ export const createSecretsEngine = (store, type, path) => {
     },
   });
   return store.peekRecord('secret-engine', path);
+};
+/* Create configurations methods
+ * for each configuration we create the record and then push it to the store.
+ */
+export function configUrl(type, backend) {
+  switch (type) {
+    case 'aws':
+      return `/${backend}/config/root`;
+    case 'aws-lease':
+      return `/${backend}/config/lease`;
+    case 'ssh':
+      return `/${backend}/config/ca`;
+    default:
+      return `/${backend}/config`;
+  }
+}
+
+const createIssuerConfig = (store) => {
+  store.pushPayload('identity/oidc/config', {
+    id: 'identity-oidc-config',
+    modelName: 'identity/oidc/config',
+    data: {
+      issuer: ``,
+    },
+  });
+  return store.peekRecord('identity/oidc/config', 'identity-oidc-config');
 };
 
 const createAwsRootConfig = (store, backend, accessType = 'iam') => {
@@ -60,17 +87,6 @@ const createAwsRootConfig = (store, backend, accessType = 'iam') => {
     });
   }
   return store.peekRecord('aws/root-config', backend);
-};
-
-const createIssuerConfig = (store) => {
-  store.pushPayload('identity/oidc/config', {
-    id: 'identity-oidc-config',
-    modelName: 'identity/oidc/config',
-    data: {
-      issuer: ``,
-    },
-  });
-  return store.peekRecord('identity/oidc/config', 'identity-oidc-config');
 };
 
 const createAwsLeaseConfig = (store, backend) => {
@@ -148,22 +164,39 @@ const createAzureConfig = (store, backend, accessType = 'generic') => {
   return store.peekRecord('azure/config', backend);
 };
 
-export function configUrl(type, backend) {
-  switch (type) {
-    case 'aws':
-      return `/${backend}/config/root`;
-    case 'aws-lease':
-      return `/${backend}/config/lease`;
-    case 'ssh':
-      return `/${backend}/config/ca`;
-    default:
-      return `/${backend}/config`;
+const createGcpConfig = (store, backend, accessType = 'gcp') => {
+  // clear any records first
+  store.unloadAll('gcp/config');
+  if (accessType === 'wif') {
+    store.pushPayload('gcp/config', {
+      id: backend,
+      modelName: 'gcp/config',
+      data: {
+        backend,
+        service_account_email: 'service-email',
+        identity_token_audience: 'audience',
+        identity_token_ttl: 7200,
+      },
+    });
+  } else {
+    store.pushPayload('gcp/config', {
+      id: backend,
+      modelName: 'gcp/config',
+      data: {
+        backend,
+        credentials: '{"some-key":"some-value"}',
+        ttl: '1 hour',
+        max_ttl: '4 hours',
+      },
+    });
   }
-}
-// send the type of config you want and the name of the backend path to push the config to the store.
+  return store.peekRecord('gcp/config', backend);
+};
+
 export const createConfig = (store, backend, type) => {
   switch (type) {
     case 'aws':
+    case 'aws-generic':
       return createAwsRootConfig(store, backend);
     case 'aws-wif':
       return createAwsRootConfig(store, backend, 'wif');
@@ -181,102 +214,11 @@ export const createConfig = (store, backend, type) => {
       return createAzureConfig(store, backend, 'wif');
     case 'azure-generic':
       return createAzureConfig(store, backend, 'generic');
+    case 'gcp':
+      return createGcpConfig(store, backend);
   }
 };
-// Used in tests to assert the expected keys in the config details of configurable secret engines
-export const expectedConfigKeys = (type) => {
-  switch (type) {
-    case 'aws':
-      return ['Access key', 'Region', 'IAM endpoint', 'STS endpoint', 'Maximum retries'];
-    case 'aws-lease':
-      return ['Default Lease TTL', 'Max Lease TTL'];
-    case 'aws-root-create':
-      return ['accessKey', 'secretKey', 'region', 'iamEndpoint', 'stsEndpoint', 'maxRetries'];
-    case 'aws-root-create-wif':
-      return ['issuer', 'roleArn', 'identityTokenAudience', 'Identity token TTL'];
-    case 'aws-root-create-iam':
-      return ['accessKey', 'secretKey'];
-    case 'ssh':
-      return ['Public key', 'Generate signing key'];
-    case 'azure':
-      return ['Subscription ID', 'Tenant ID', 'Client ID', 'Root password TTL', 'Environment'];
-    case 'azure-camelCase':
-      return ['subscriptionId', 'tenantId', 'clientId', 'rootPasswordTtl', 'environment'];
-    case 'azure-wif':
-      return [
-        'Subscription ID',
-        'Tenant ID',
-        'Client ID',
-        'Environment',
-        'Identity token audience',
-        'Identity token TTL',
-      ];
-    case 'azure-wif-camelCase':
-      return [
-        'subscriptionId',
-        'tenantId',
-        'clientId',
-        'environment',
-        'identityTokenAudience',
-        'Identity token TTL',
-      ];
-  }
-};
-
-const valueOfAwsKeys = (string) => {
-  switch (string) {
-    case 'Access key':
-      return '123-key';
-    case 'Region':
-      return 'us-west-2';
-    case 'IAM endpoint':
-      return 'iam-endpoint';
-    case 'STS endpoint':
-      return 'sts-endpoint';
-    case 'Maximum retries':
-      return '1';
-  }
-};
-
-const valueOfAzureKeys = (string) => {
-  switch (string) {
-    case 'Subscription ID':
-      return 'subscription-id';
-    case 'Tenant ID':
-      return 'tenant-id';
-    case 'Client ID':
-      return 'client-id';
-    case 'Environment':
-      return 'AZUREPUBLICCLOUD';
-    case 'Root password TTL':
-      return '20 days 20 hours';
-    case 'Identity token audience':
-      return 'audience';
-    case 'Identity token TTL':
-      return '8 days 8 hours';
-  }
-};
-
-const valueOfSshKeys = (string) => {
-  switch (string) {
-    case 'Public key':
-      return '***********';
-    case 'Generate signing key':
-      return 'Yes';
-  }
-};
-// Used in tests to assert the expected values in the config details of configurable secret engines
-export const expectedValueOfConfigKeys = (type, string) => {
-  switch (type) {
-    case 'aws':
-      return valueOfAwsKeys(string);
-    case 'azure':
-      return valueOfAzureKeys(string);
-    case 'ssh':
-      return valueOfSshKeys(string);
-  }
-};
-
+/* Manually create the configuration by filling in the configuration form */
 export const fillInAwsConfig = async (situation = 'withAccess') => {
   if (situation === 'withAccess') {
     await fillIn(GENERAL.inputByAttr('accessKey'), 'foo');
@@ -321,6 +263,121 @@ export const fillInAzureConfig = async (situation = 'azure') => {
     await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'azure-audience');
     await click(GENERAL.ttl.toggle('Identity token TTL'));
     await fillIn(GENERAL.ttl.input('Identity token TTL'), '7200');
+  }
+};
+
+/* Generate arrays of keys to iterate over.
+ * used to check details of the secret engine configuration
+ * and used to check the form to configure the secret engine
+ */
+// WIF specific keys
+const genericWifKeys = ['Identity token audience', 'Identity token TTL'];
+// AWS specific keys
+const awsLeaseKeys = ['Default Lease TTL', 'Max Lease TTL'];
+const awsKeys = ['Access key', 'Secret key', 'Region', 'IAM endpoint', 'STS endpoint', 'Max retries'];
+const awsWifKeys = ['Issuer', 'Role ARN', ...genericWifKeys];
+// Azure specific keys
+const genericAzureKeys = ['Subscription ID', 'Tenant ID', 'Client ID', 'Environment'];
+const azureKeys = [...genericAzureKeys, 'Client secret', 'Root password TTL'];
+const azureWifKeys = [...genericAzureKeys, ...genericWifKeys];
+// GCP specific keys
+const genericGcpKeys = ['Config TTL', 'Max TTL'];
+const gcpKeys = [...genericGcpKeys, 'Credentials'];
+const gcpWifKeys = [...genericGcpKeys, ...genericWifKeys, 'Service account email'];
+// SSH specific keys
+const sshKeys = ['Private key', 'Public key', 'Generate signing key'];
+
+export const expectedConfigKeys = (type, camelCase = false) => {
+  switch (type) {
+    case 'aws':
+      return camelCase ? stringArrayToCamelCase(awsKeys) : awsKeys;
+    case 'aws-wif':
+      return camelCase ? stringArrayToCamelCase(awsWifKeys) : awsWifKeys;
+    case 'aws-lease':
+      return camelCase ? stringArrayToCamelCase(awsLeaseKeys) : awsLeaseKeys;
+    case 'azure':
+      return camelCase ? stringArrayToCamelCase(azureKeys) : azureKeys;
+    case 'azure-wif':
+      return camelCase ? stringArrayToCamelCase(azureWifKeys) : azureWifKeys;
+    case 'gcp':
+      return camelCase ? stringArrayToCamelCase(gcpKeys) : gcpKeys;
+    case 'gcp-wif':
+      return camelCase ? stringArrayToCamelCase(gcpWifKeys) : gcpWifKeys;
+    case 'ssh':
+      return camelCase ? stringArrayToCamelCase(sshKeys) : sshKeys;
+  }
+};
+
+const valueOfAwsKeys = (string) => {
+  switch (string) {
+    case 'Access key':
+      return '123-key';
+    case 'Region':
+      return 'us-west-2';
+    case 'IAM endpoint':
+      return 'iam-endpoint';
+    case 'STS endpoint':
+      return 'sts-endpoint';
+    case 'Max retries':
+      return '1';
+  }
+};
+
+const valueOfAzureKeys = (string) => {
+  switch (string) {
+    case 'Subscription ID':
+      return 'subscription-id';
+    case 'Tenant ID':
+      return 'tenant-id';
+    case 'Client ID':
+      return 'client-id';
+    case 'Environment':
+      return 'AZUREPUBLICCLOUD';
+    case 'Root password TTL':
+      return '20 days 20 hours';
+    case 'Identity token audience':
+      return 'audience';
+    case 'Identity token TTL':
+      return '8 days 8 hours';
+  }
+};
+
+const valueOfGcpKeys = (string) => {
+  switch (string) {
+    case 'Credentials':
+      return '"{"some-key":"some-value"}",';
+    case 'Service account email':
+      return 'service-email';
+    case 'Config TTL':
+      return '1 hour';
+    case 'Max TTL':
+      return '4 hours';
+    case 'Identity token audience':
+      return 'audience';
+    case 'Identity token TTL':
+      return '8 days 8 hours';
+  }
+};
+
+const valueOfSshKeys = (string) => {
+  switch (string) {
+    case 'Public key':
+      return '***********';
+    case 'Generate signing key':
+      return 'Yes';
+  }
+};
+// Used in tests to assert the expected values in the config details of configurable secret engines
+export const expectedValueOfConfigKeys = (type, string) => {
+  switch (type) {
+    case 'aws':
+      return valueOfAwsKeys(string);
+    case 'azure':
+      return valueOfAzureKeys(string);
+    case 'gcp':
+      return valueOfGcpKeys(string);
+    case 'ssh':
+      return valueOfSshKeys(string);
   }
 };
 

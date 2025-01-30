@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
+	"github.com/hashicorp/vault/sdk/rotation"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -226,6 +227,38 @@ func (s *gRPCSystemViewClient) GenerateIdentityToken(ctx context.Context, req *p
 	}, nil
 }
 
+func (s *gRPCSystemViewClient) RegisterRotationJob(ctx context.Context, req *rotation.RotationJobConfigureRequest) (id string, retErr error) {
+	cfgReq := &pb.RegisterRotationJobRequest{
+		Job: &pb.RotationJobInput{
+			Name:             req.Name,
+			MountType:        req.MountType,
+			Path:             req.ReqPath,
+			RotationSchedule: req.RotationSchedule,
+			RotationWindow:   int64(req.RotationWindow),
+			RotationPeriod:   int64(req.RotationPeriod),
+		},
+	}
+	resp, err := s.client.RegisterRotationJob(ctx, cfgReq)
+	if err != nil {
+		return "", err
+	}
+	return resp.RotationID, nil
+}
+
+func (s *gRPCSystemViewClient) DeregisterRotationJob(ctx context.Context, req *rotation.RotationJobDeregisterRequest) error {
+	_, err := s.client.DeregisterRotationJob(ctx, &pb.DeregisterRotationJobRequest{
+		Req: &pb.DeregisterRotationRequestInput{
+			MountType: req.MountType,
+			ReqPath:   req.ReqPath,
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 type gRPCSystemViewServer struct {
 	pb.UnimplementedSystemViewServer
 
@@ -420,12 +453,55 @@ func (s *gRPCSystemViewServer) GenerateIdentityToken(ctx context.Context, req *p
 		TTL:      time.Duration(req.GetTTL()) * time.Second,
 	})
 	if err != nil {
-		return &pb.GenerateIdentityTokenResponse{}, status.Errorf(codes.Internal,
-			err.Error())
+		return &pb.GenerateIdentityTokenResponse{}, status.Error(codes.Internal, err.Error())
 	}
 
 	return &pb.GenerateIdentityTokenResponse{
 		Token: res.Token.Token(),
 		TTL:   int64(res.TTL.Seconds()),
 	}, nil
+}
+
+func (s *gRPCSystemViewServer) RegisterRotationJob(ctx context.Context, req *pb.RegisterRotationJobRequest) (*pb.RegisterRotationJobResponse, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
+
+	cfgReq := &rotation.RotationJobConfigureRequest{
+		Name:             req.Job.Name,
+		MountType:        req.Job.MountType,
+		ReqPath:          req.Job.Path,
+		RotationSchedule: req.Job.RotationSchedule,
+		RotationWindow:   int(req.Job.RotationWindow),
+		RotationPeriod:   int(req.Job.RotationPeriod),
+	}
+
+	rotationID, err := s.impl.RegisterRotationJob(ctx, cfgReq)
+	if err != nil {
+		return &pb.RegisterRotationJobResponse{}, status.Errorf(codes.Internal,
+			err.Error())
+	}
+
+	return &pb.RegisterRotationJobResponse{
+		RotationID: rotationID,
+	}, nil
+}
+
+func (s *gRPCSystemViewServer) DeregisterRotationJob(ctx context.Context, req *pb.DeregisterRotationJobRequest) (*pb.Empty, error) {
+	if s.impl == nil {
+		return &pb.Empty{}, errMissingSystemView
+	}
+
+	cfgReq := &rotation.RotationJobDeregisterRequest{
+		MountType: req.Req.MountType,
+		ReqPath:   req.Req.ReqPath,
+	}
+
+	err := s.impl.DeregisterRotationJob(ctx, cfgReq)
+	if err != nil {
+		return &pb.Empty{}, status.Errorf(codes.Internal,
+			err.Error())
+	}
+
+	return &pb.Empty{}, nil
 }

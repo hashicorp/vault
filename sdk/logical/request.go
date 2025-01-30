@@ -203,6 +203,10 @@ type Request struct {
 	// X-Vault-MFA header
 	MFACreds MFACreds `json:"mfa_creds" structs:"mfa_creds" mapstructure:"mfa_creds" sentinel:""`
 
+	// RotationID is set by the Rotation Manager
+	// when making rotate requests to plugin backends
+	RotationID string
+
 	// Cached token entry. This avoids another lookup in request handling when
 	// we've already looked it up at http handling time. Note that this token
 	// has not been "used", as in it will not properly take into account use
@@ -456,6 +460,7 @@ const (
 	RevokeOperation   Operation = "revoke"
 	RenewOperation              = "renew"
 	RollbackOperation           = "rollback"
+	RotationOperation           = "rotate"
 )
 
 type MFACreds map[string][]string

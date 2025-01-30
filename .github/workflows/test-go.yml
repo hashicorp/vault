@@ -100,7 +100,7 @@ jobs:
       matrix: ${{ steps.build.outputs.matrix }}
       matrix_ids: ${{ steps.build.outputs.matrix_ids }}
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ inputs.checkout-ref }}
       - name: Authenticate to Vault
@@ -138,7 +138,7 @@ jobs:
         run: echo "go-test-dir=test-results/go-test" | tee -a "$GITHUB_OUTPUT"
       - uses: ./.github/actions/set-up-gotestsum
       - run: mkdir -p ${{ steps.metadata.outputs.go-test-dir }}
-      - uses: actions/cache/restore@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+      - uses: actions/cache/restore@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         if: inputs.test-timing-cache-enabled
         with:
           path: ${{ steps.metadata.outputs.go-test-dir }}
@@ -235,7 +235,7 @@ jobs:
       go-test-results-download-pattern: ${{ steps.metadata.outputs.go-test-results-download-pattern }}
       data-race-log-download-pattern: ${{ steps.metadata.outputs.data-race-log-download-pattern }}
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/set-up-go
@@ -357,30 +357,6 @@ jobs:
           }
           EOF
           sudo systemctl reload docker
-      - name: Install rootless Docker
-        # Enterprise repo runners do not allow sudo, so can't system packages there yet.
-        if: github.repository != 'hashicorp/vault-enterprise'
-        run: |
-          sudo apt-get install -y uidmap dbus-user-session
-          export FORCE_ROOTLESS_INSTALL=1
-          curl -fsSL https://get.docker.com/rootless | sh
-          mkdir -p ~/.config/docker/
-          tee ~/.config/docker/daemon.json  <<EOF
-          {
-            "runtimes": {
-              "runsc": {
-                "path": "/usr/local/bin/runsc",
-                "runtimeArgs": [
-                  "--host-uds=create",
-                  "--ignore-cgroups"
-                ]
-              }
-            }
-          }
-          EOF
-          systemctl --user restart docker
-          # Ensure the original rootful Docker install is still the default.
-          docker context use default
       - id: run-go-tests
         name: Run Go tests
         timeout-minutes: ${{ fromJSON(env.TIMEOUT_IN_MINUTES) }}
@@ -485,7 +461,7 @@ jobs:
         run: |
           tar -cvf '${{ steps.metadata.outputs.go-test-log-archive-name }}' -C "${{ steps.metadata.outputs.go-test-log-dir }}" .
       - name: Upload test logs archives
-        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         with:
           name: ${{ steps.metadata.outputs.go-test-log-archive-name }}
           path: ${{ steps.metadata.outputs.go-test-log-archive-name }}
@@ -493,7 +469,7 @@ jobs:
         if: success() || failure()
       - name: Upload test results
         if: success() || failure()
-        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         with:
           name: ${{ steps.metadata.outputs.go-test-results-upload-key }}
           path: |
@@ -533,7 +509,7 @@ jobs:
         if: |
           (success() || failure()) &&
           steps.data-race-check.outputs.data-race-result == 'failure'
-        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         with:
           name: ${{ steps.metadata.outputs.data-race-log-upload-key }}
           path: ${{ steps.metadata.outputs.go-test-dir }}/${{ steps.metadata.outputs.data-race-log-file }}
@@ -606,7 +582,7 @@ jobs:
           '${{ steps.metadata.outputs.gotestsum-timing-events }}' \
           >> '${{ steps.metadata.outputs.failure-summary-file-name }}'
       - name: Upload failure summary
-        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         if: success() || failure()
         with:
           name: ${{ steps.metadata.outputs.failure-summary-file-name }}
@@ -666,7 +642,7 @@ jobs:
           } | tee -a "$GITHUB_OUTPUT"
       # Aggregate, prune, and cache our timing data
       - if: ${{ ! cancelled() && needs.test-go.result == 'success' && inputs.test-timing-cache-enabled }}
-        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         with:
           path: ${{ needs.test-matrix.outputs.go-test-dir }}
           key: ${{ inputs.test-timing-cache-key }}-${{ github.run_number }}

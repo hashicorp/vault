@@ -607,6 +607,33 @@ message GenerateIdentityTokenResponse {
   int64 ttl = 2;
 }
 
+message RegisterRotationJobRequest {
+  RotationJobInput job = 1;
+}
+
+message RegisterRotationJobResponse {
+  string rotation_id = 1;
+  string err = 2;
+}
+
+message RotationJobInput {
+  string name = 1;
+  string mount_type = 2;
+  string path = 3;
+  string rotation_schedule = 4;
+  int64 rotation_window = 5;
+  int64 rotation_period = 6;
+}
+
+message DeregisterRotationRequestInput {
+  string mount_type = 1;
+  string req_path = 2;
+}
+
+message DeregisterRotationJobRequest {
+  DeregisterRotationRequestInput req = 1;
+}
+
 // SystemView exposes system configuration information in a safe way for plugins
 // to consume. Plugins should implement the client for this service.
 service SystemView {
@@ -665,6 +692,12 @@ service SystemView {
 
   // GenerateIdentityToken returns an identity token for the requesting plugin.
   rpc GenerateIdentityToken(GenerateIdentityTokenRequest) returns (GenerateIdentityTokenResponse);
+
+  // RegisterRotationJob returns a rotation ID for the requested plugin credential.
+  rpc RegisterRotationJob(RegisterRotationJobRequest) returns (RegisterRotationJobResponse);
+
+  // DeregisterRotationJob returns any errors in de-registering a credential from the Rotation Manager.
+  rpc DeregisterRotationJob(DeregisterRotationJobRequest) returns (Empty);
 }
 
 message Connection {

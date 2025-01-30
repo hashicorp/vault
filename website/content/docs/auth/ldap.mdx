@@ -144,6 +144,9 @@ For anonymous search, `discoverdn` must be set to `true`, and `deny_null_bind` m
 #### Binding - user principal name (AD)
 
 - `upndomain` (string, optional) - userPrincipalDomain used to construct the UPN string for the authenticating user. The constructed UPN will appear as `[username]@UPNDomain`. Example: `example.com`, which will cause vault to bind as `username@example.com`.
+- `enable_samaccountname_login` `(bool: false)` - (Optional) Lets Active Directory
+  LDAP users log in using `sAMAccountName` or `userPrincipalName` when the
+  `upndomain` parameter is set.
 
 ### Group membership resolution
 

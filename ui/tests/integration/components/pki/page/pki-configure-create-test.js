@@ -23,7 +23,7 @@ module('Integration | Component | page/pki-configure-create', function (hooks) {
     this.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: 'pki', route: 'overview', model: 'pki' },
-      { label: 'configure' },
+      { label: 'Configure' },
     ];
     this.config = this.store.createRecord('pki/action');
     this.urls = this.store.createRecord('pki/config/urls');
