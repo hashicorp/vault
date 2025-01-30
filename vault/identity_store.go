@@ -141,6 +141,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 func (i *IdentityStore) paths() []*framework.Path {
 	return framework.PathAppend(
 		entityPaths(i),
+		entityTestonlyPaths(i),
 		aliasPaths(i),
 		groupAliasPaths(i),
 		groupPaths(i),
