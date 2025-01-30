@@ -5025,3 +5025,57 @@ func TestActivityLog_Export_CSV_Header(t *testing.T) {
 
 	require.Empty(t, deep.Equal(expectedColumnIndex, encoder.columnIndex))
 }
+
+func TestActivityLog_partialMonthClientCountUsingWriteExport(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	now := time.Now().UTC()
+	a, expectedClients, _ := setupActivityRecordsInStorage(t, timeutil.StartOfMonth(now), true, true)
+
+	// clients[0] belongs to previous month
+	// the rest belong to the current month
+	expectedCurrentMonthClients := expectedClients[1:]
+
+	rw := &fakeResponseWriter{
+		buffer:  &bytes.Buffer{},
+		headers: http.Header{},
+	}
+
+	if err := a.writeExport(ctx, rw, "json", now, now); err != nil {
+		t.Fatal(err)
+	}
+
+	type record struct {
+		ClientID      string `json:"client_id"`
+		NamespaceID   string `json:"namespace_id"`
+		Timestamp     string `json:"timestamp"`
+		NonEntity     bool   `json:"non_entity"`
+		MountAccessor string `json:"mount_accessor"`
+		ClientType    string `json:"client_type"`
+	}
+
+	var results []record
+
+	jsonObjects := strings.Split(strings.TrimSpace(rw.buffer.String()), "\n")
+	for _, jsonObject := range jsonObjects {
+		if jsonObject == "" {
+			continue
+		}
+
+		var result record
+		if err := json.Unmarshal([]byte(jsonObject), &result); err != nil {
+			t.Fatalf("Error unmarshaling JSON object: %v\nJSON: %s", err, jsonObject)
+		}
+		results = append(results, result)
+	}
+
+	// Compare expectedClients with actualClients
+	for i := range expectedCurrentMonthClients {
+		resultTimeStamp, err := time.Parse(time.RFC3339, results[i].Timestamp)
+		require.NoError(t, err)
+		if expectedCurrentMonthClients[i].ClientID != results[i].ClientID ||
+			expectedCurrentMonthClients[i].NamespaceID != results[i].NamespaceID ||
+			expectedCurrentMonthClients[i].Timestamp != resultTimeStamp.Unix() {
+			t.Errorf("Mismatch at index %d\nExpected: %+v\nActual: %+v", i, expectedCurrentMonthClients[i], results[i])
+		}
+	}
+}
