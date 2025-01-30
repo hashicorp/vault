@@ -171,12 +171,12 @@ func (g *gRPCServer) NewUser(ctx context.Context, req *proto.NewUserRequest) (*p
 
 func (g *gRPCServer) UpdateUser(ctx context.Context, req *proto.UpdateUserRequest) (*proto.UpdateUserResponse, error) {
 	if req.GetUsername() == "" {
-		return &proto.UpdateUserResponse{}, status.Errorf(codes.InvalidArgument, "no username provided")
+		return &proto.UpdateUserResponse{}, status.Error(codes.InvalidArgument, "no username provided")
 	}
 
 	dbReq, err := getUpdateUserRequest(req)
 	if err != nil {
-		return &proto.UpdateUserResponse{}, status.Errorf(codes.InvalidArgument, err.Error())
+		return &proto.UpdateUserResponse{}, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	impl, err := g.getDatabase(ctx)

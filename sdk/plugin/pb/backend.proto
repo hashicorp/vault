@@ -4,7 +4,6 @@
 syntax = "proto3";
 package pb;
 
-import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 import "sdk/logical/event.proto";
 import "sdk/logical/identity.proto";
@@ -618,14 +617,21 @@ message RegisterRotationJobResponse {
 }
 
 message RotationJobInput {
-  google.protobuf.Struct schedule = 1;
-  string rotation_id = 2;
+  string name = 1;
+  string mount_type = 2;
   string path = 3;
-  string name = 4;
+  string rotation_schedule = 4;
+  int64 rotation_window = 5;
+  int64 rotation_period = 6;
+}
+
+message DeregisterRotationRequestInput {
+  string mount_type = 1;
+  string req_path = 2;
 }
 
 message DeregisterRotationJobRequest {
-  string rotation_id = 1;
+  DeregisterRotationRequestInput req = 1;
 }
 
 // SystemView exposes system configuration information in a safe way for plugins
