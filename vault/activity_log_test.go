@@ -23,9 +23,11 @@ import (
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/timeutil"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
 	"github.com/mitchellh/mapstructure"
@@ -1922,9 +1924,19 @@ func (f *fakeResponseWriter) WriteHeader(statusCode int) {
 // their parents.
 func TestActivityLog_IncludeNamespace(t *testing.T) {
 	root := namespace.RootNamespace
-	core, _, _ := TestCoreUnsealed(t)
+	coreConfig := &CoreConfig{
+		RawConfig: &server.Config{
+			SharedConfig: &configutil.SharedConfig{AdministrativeNamespacePath: "admin/"},
+		},
+		AdministrativeNamespacePath: "admin/",
+	}
+	core, _, _ := TestCoreUnsealedWithConfig(t, coreConfig)
 	a := core.activityLog
 
+	adminNs := &namespace.Namespace{
+		ID:   "adminID",
+		Path: "admin/",
+	}
 	nsA := &namespace.Namespace{
 		ID:   "aaaaa",
 		Path: "a/",
@@ -1937,13 +1949,15 @@ func TestActivityLog_IncludeNamespace(t *testing.T) {
 		ID:   "bbbbb",
 		Path: "a/b/",
 	}
-
 	testCases := []struct {
 		QueryNS  *namespace.Namespace
 		RecordNS *namespace.Namespace
 		Expected bool
 	}{
+		// deleted namespace records must be included in root and admin namespaces
 		{root, nil, true},
+		{adminNs, nil, true},
+
 		{root, root, true},
 		{root, nsA, true},
 		{root, nsAB, true},
@@ -1959,7 +1973,6 @@ func TestActivityLog_IncludeNamespace(t *testing.T) {
 		{nsC, nsA, false},
 		{nsC, nsAB, false},
 	}
-
 	for _, tc := range testCases {
 		if a.includeInResponse(tc.QueryNS, tc.RecordNS) != tc.Expected {
 			t.Errorf("bad response for query %v record %v, expected %v",
