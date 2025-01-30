@@ -18,8 +18,9 @@ Required:
 
 - `key_vault_uri` `(string)` - The URI of the Azure KeyVault you want to import from.
 
-All the following are optional, in which case the default provider mechanisms are used, e.g.
-a preliminary `az login` can suffice.
+The following parameters are optional. If you leave these parameters unset,
+Vault uses the default credential provider mechanisms, e.g. the credentials persisted to disk
+by a preceding `az login`.
 
 - `cloud_name` `(string: "AzureCloud")` - Azure cloud to connect to
 - `tenant_id` `(string: "")` - Tenant ID to use
