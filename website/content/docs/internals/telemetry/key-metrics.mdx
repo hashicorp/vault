@@ -215,7 +215,13 @@ Refer to the [Blocked audit devices](/vault/tutorials/monitoring/blocked-audit-d
 
 #### Background:
 
-A fundamental part of Vault's runtime are [goroutines](https://go.dev/tour/concurrency/1), which are lightweight threads managed by the Go runtime. Many functions within Vault create goroutines as part of the runtime. We recommend monitoring key metrics of the runtime to establish an accurate baseline and thresholds for alerting on the health of your Vault installation. 
+A fundamental part of the Vault runtime are
+[`goroutines`](https://go.dev/tour/concurrency/1). `goroutines` are lightweight
+threads managed by the Go runtime that many functions within Vault create as
+part of the runtime.
+
+We recommend monitoring key metrics of the runtime to establish an accurate
+baseline and alerting thresholds for the health of your Vault installation. 
 
 #### Alerting:
 
