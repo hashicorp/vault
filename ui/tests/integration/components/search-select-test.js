@@ -167,6 +167,10 @@ module('Integration | Component | search select', function (hooks) {
       component.selectedOptionText,
       'first object in list is focused'
     );
+
+    // verify overflow styling on input field exists
+    assert.dom('.list-item-text').exists('selected option field has width set');
+    assert.dom('.text-overflow-ellipsis').exists('selected option text has overflow class');
   });
 
   test('it filters options and adds option to create new item when text is entered', async function (assert) {

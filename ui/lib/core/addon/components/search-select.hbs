@@ -68,7 +68,7 @@
               {{get selected this.idKey}}
             </small>
           {{else}}
-            <div>
+            <div class="list-item-text has-right-margin-xxs text-overflow-ellipsis">
               {{selected.id}}
               {{#if @wildcardLabel}}
                 {{#if (is-wildcard-string selected.id)}}
