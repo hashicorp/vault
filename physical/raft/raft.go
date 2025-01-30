@@ -617,7 +617,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	isRemoved := new(atomic.Bool)
 	removedVal, err := stableStore.GetUint64(removedKey)
 	if err != nil {
-		logger.Error("error checking if this node is removed. continuing under the assumption that it's not", "error", err)
+		logger.Debug("error checking if this node is removed. continuing under the assumption that it's not", "error", err)
 	}
 	if removedVal == 1 {
 		isRemoved.Store(true)
