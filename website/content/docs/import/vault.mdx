@@ -17,9 +17,10 @@ Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-1) for arguments common 
 - `address` `(string: required)` - API address of source vault cluster.
 - `namespace` `(string: "")` - Optional namespace to read from.
 - `mount` `(string: required)` - KV-v2 mount to read from.
-- `credentials_file` `(string: "")` - Path to a file containing a vault token.  Note that the environment
-variable VAULT_TOKEN can't normally be used for this, since the CLI will use VAULT_TOKEN to authenticate to
-the destination Vault.  Exception: it's possible to import from/to the same Vault cluster.
+- `credentials_file` `(string: "")` - Path to a file containing a vault token.  If absent, the CLI uses the
+environment variable VAULT_TOKEN.  However, VAULT_TOKEN will be used for the Vault destination as well, so
+unless you're using the same cluster as both source and destination (e.g. from one mount to another), the source
+`credentials_file` should be populated with the source-specific token.
 
 ## Example
 

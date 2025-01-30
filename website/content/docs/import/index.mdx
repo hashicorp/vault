@@ -159,8 +159,8 @@ These can be combined using `and`, `or`, and `not`:
 Transform stanzas come in two forms: `exact` and `regexp`.
 
 An exact transform allows renaming a secret during import, so that the `from` secret name
-is imported into Vault as a secret named `to`.  In the example below, a source secret named
-`foo` will be imported as `foosball`.
+is imported into Vault as a secret named `to`.  In the following example it, takes a source secret
+named `foo` and transforms it to `foosball` during import.
 
 ```hcl
   transform "exact" {
@@ -172,7 +172,7 @@ is imported into Vault as a secret named `to`.  In the example below, a source s
 `regexp` transforms rename secrets during import using
 [Go regular expression syntax](https://github.com/google/re2/wiki/Syntax). For
 example, the transform below imports any secret in the source whose name starts
-with `foo` and replaces the `foo` prefix with `bar`.  
+with `foo` and replaces the `foo` prefix with `bar`.
 
 ```hcl
   transform "regexp" {
@@ -187,5 +187,5 @@ with `foo` and replaces the `foo` prefix with `bar`.
 
 The `from` value supports parentheses to bookend capture groups and named
 capture groups using the syntax `(?P<name>re)`. When you use named capture
-groups, you can reference the named group in the `to` value. For example, 
+groups, you can reference the named group in the `to` value. For example,
 `$name` instead of `$1`.
