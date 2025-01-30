@@ -1,18 +1,17 @@
 ---
 layout: docs
-page_title: PKCS#11 Provider - Vault Enterprise
-description: |-
-  The Vault PKCS#11 Provider allows Vault KMIP Secrets Engine to be used via PKCS#11 calls.
-  The provider supports a subset of key generation, encryption, decryption and key storage operations.
-  This requires the Enterprise ADP-KM license.
+page_title: PKCS#11 support in Vault
+description: >-
+  Use the PKCS#11 provider to support KMIP secrets with PKCS#11 calls.
 ---
 
-# PKCS#11 provider
+# PKCS#11 support in Vault
 
 @include 'alerts/enterprise-only.mdx'
 
 PKCS11 provider is part of the [KMIP Secret Engine](/vault/docs/secrets/kmip), which requires [Vault Enterprise](https://www.hashicorp.com/products/vault/pricing)
-with the Advanced Data Protection (ADP) module.
+with the Advanced Data Protection (ADP) module. The PKCS11 provider supports a subset of key generation, encryption, decryption and key storage operations.
+You must have an Enterprise ADP-KM license to use the PKCS11 provider.
 
 [PKCS#11](http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/os/pkcs11-base-v2.40-os.html)
 is an open standard C API that provides a means to access cryptographic capabilities on a device.
