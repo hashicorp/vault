@@ -134,18 +134,17 @@ mapping {
 - `destination` `(string: <required>)` - The name of a previously defined
   destination block **to** which the data should be written.
 
-- `filter` `(string: "")` - Optional string containing a https://github.com/hashicorp/go-bexpr
-  expression to limit which secrets from the source will be imported.
+- `filter` `(string: "")` - Optional string containing a (`bexpr` style boolean expression)[https://github.com/hashicorp/go-bexpr]
+ that limits which secrets Vault imports from the source.
 
 #### Filters
 
-A filter describes conditions that a source secret must meet in order to be imported.
-These conditions are applied to the secret fields, which are:
+Filters describes conditions for secret fields that a source secret must meet to be imported. You can filter against the following secret fields:
 
 - `Secret.Name` - The name of the source secret
 - `Secret.Tags` - A map of key-value user-defined metadata associated with the source secret
 
-Simple binary conditions can be applied to input values:
+You can also apply simple binary conditions to input values:
 
 - `Secret.Name != "foo"`
 - `Secret.Tags.Team matches "my-dept.*"`
@@ -170,12 +169,10 @@ is imported into Vault as a secret named `to`.  In the example below, a source s
   }
 ```
 
-A regexp transform allows renaming a secret during import using [Go regular expression syntax](https://github.com/google/re2/wiki/Syntax).
-Parentheses designate capture groups that are used to define the name that secrets matching the regular
-expression will be imported as.  In the example below, any secret in the source whose name
-starts with "foo" will have the leading "foo" prefix replaced with "bar".  Named capture groups
-using the syntax `(?P<name>re)` are also supported, in which case the replacement would be addressed
-as `$name` instead of a numeric reference like `$1`.
+`regexp` transforms rename secrets during import using
+[Go regular expression syntax](https://github.com/google/re2/wiki/Syntax). For
+example, the transform below imports any secret in the source whose name starts
+with `foo` and replaces the `foo` prefix with `bar`.  
 
 ```hcl
   transform "regexp" {
@@ -187,3 +184,8 @@ as `$name` instead of a numeric reference like `$1`.
     to = "bar$suffix"
   }
 ```
+
+The `from` value supports parentheses to bookend capture groups and named
+capture groups using the syntax `(?P<name>re)`. When you use named capture
+groups, you can reference the named group in the `to` value. For example, 
+`$name` instead of `$1`.
