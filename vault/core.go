@@ -1474,7 +1474,10 @@ func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, log
 		}
 
 		// Wire up the idStoreBackend to support the activation flag
-		c.systemBackend.idStoreBackend = idStore.Backend
+		if c.systemBackend != nil {
+			c.systemBackend.idStoreBackend = idStore.Backend
+		}
+
 		return idStore, nil
 	}
 
