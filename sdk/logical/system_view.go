@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
+	"github.com/hashicorp/vault/sdk/rotation"
 )
 
 // SystemView exposes system configuration information in a safe way
@@ -100,6 +101,16 @@ type SystemView interface {
 
 	// GenerateIdentityToken returns an identity token for the requesting plugin.
 	GenerateIdentityToken(ctx context.Context, req *pluginutil.IdentityTokenRequest) (*pluginutil.IdentityTokenResponse, error)
+
+	// RegisterRotationJob returns a rotation ID after registering a
+	// rotation job for the requesting plugin.
+	// NOTE: This method is intended for use only by HashiCorp Vault Enterprise plugins.
+	RegisterRotationJob(ctx context.Context, req *rotation.RotationJobConfigureRequest) (rotationID string, err error)
+
+	// DeregisterRotationJob returns any errors in de-registering a
+	// credential from the Rotation Manager.
+	// NOTE: This method is intended for use only by HashiCorp Vault Enterprise plugins.
+	DeregisterRotationJob(ctx context.Context, req *rotation.RotationJobDeregisterRequest) error
 }
 
 type PasswordPolicy interface {
@@ -284,4 +295,12 @@ func (d StaticSystemView) GenerateIdentityToken(_ context.Context, _ *pluginutil
 
 func (d StaticSystemView) APILockShouldBlockRequest() (bool, error) {
 	return d.APILockShouldBlockRequestVal, nil
+}
+
+func (d StaticSystemView) RegisterRotationJob(_ context.Context, _ *rotation.RotationJobConfigureRequest) (rotationID string, err error) {
+	return "", errors.New("RegisterRotationJob is not implemented in StaticSystemView")
+}
+
+func (d StaticSystemView) DeregisterRotationJob(_ context.Context, _ *rotation.RotationJobDeregisterRequest) (err error) {
+	return errors.New("DeregisterRotationJob is not implemented in StaticSystemView")
 }

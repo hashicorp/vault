@@ -46,14 +46,16 @@ export default function (server) {
   };
 
   const listOrGetRecord = (schema, req, type) => {
-    // if the param name is admin, we want to LIST admin/ roles
+    const dbKey = type ? 'ldapRoles' : 'ldapLibraries';
+    const query = type ? { type, name: `admin/child-${type}-role` } : { name: 'admin/test-library' };
     if (req.queryParams.list) {
-      // passing a query with specific name is not flexible
-      // but we only seeded the mirage db with one hierarchical role for each type
-      return listRecords(schema, 'ldapRoles', { type, name: `admin/child-${type}-role` });
+      // the mirage database has setup all hierarchical names to be prefixed with "admin/"
+      // while passing a query with specific name is not flexible, for simplicity
+      // we only seeded the mirage db with one hierarchical resource for each role and a library
+      return listRecords(schema, dbKey, query);
     }
-    // otherwise we want to view details for a specific role
-    return getRecord(schema, req, 'ldapRoles', type);
+    // otherwise we want to view details for a specific resource
+    return getRecord(schema, req, dbKey);
   };
 
   // config
@@ -77,9 +79,9 @@ export default function (server) {
   }));
   // libraries
   server.post('/:backend/library/:name', (schema, req) => createOrUpdateRecord(schema, req, 'ldapLibraries'));
-  server.get('/:backend/library/:name', (schema, req) => getRecord(schema, req, 'ldapLibraries'));
+  server.get('/:backend/library/*name', (schema, req) => listOrGetRecord(schema, req));
   server.get('/:backend/library', (schema) => listRecords(schema, 'ldapLibraries'));
-  server.get('/:backend/library/:name/status', (schema) => {
+  server.get('/:backend/library/*name/status', (schema) => {
     const data = schema.db['ldapAccountStatuses'].reduce((prev, curr) => {
       prev[curr.account] = {
         available: curr.available,

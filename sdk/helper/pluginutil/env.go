@@ -49,6 +49,14 @@ const (
 	// configuration as a shim to the pgx posgtres library.
 	// Deprecated: VAULT_PLUGIN_USE_POSTGRES_SSLINLINE will be removed in a future version of the Vault SDK.
 	PluginUsePostgresSSLInline = "VAULT_PLUGIN_USE_POSTGRES_SSLINLINE"
+
+	// PluginGRPCTimeoutType is an ENV name used to set the timeout for Vault's
+	// call to the plugin Type() GRPC method
+	PluginGRPCTimeoutType = "VAULT_PLUGIN_GRPC_TIMEOUT_TYPE"
+
+	// PluginGRPCTimeoutClose is an ENV name used to set the timeout for Vault's
+	// call to the plugin Close() GRPC method
+	PluginGRPCTimeoutClose = "VAULT_PLUGIN_GRPC_TIMEOUT_CLOSE"
 )
 
 // OptionallyEnableMlock determines if mlock should be called, and if so enables

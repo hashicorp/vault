@@ -1,0 +1,3 @@
+```release-note:bug
+sdk/database: Fix a bug where slow database connections can cause goroutines to be blocked.
+```

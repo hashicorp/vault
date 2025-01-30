@@ -3,11 +3,21 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<form {{on "submit" (perform this.submitForm)}} aria-label="configure azure credentials" data-test-configure-form>
+<form {{on "submit" (perform this.submitForm)}} aria-label="configure {{@type}} credentials" data-test-configure-form>
   <NamespaceReminder @mode="save" @noun="configuration" />
   <MessageError @errorMessage={{this.errorMessage}} />
+  {{! AWS specific note and section header }}
+  {{#if (eq @type "aws")}}
+    <p class="has-text-grey-dark has-top-bottom-margin" data-test-configure-note={{@type}}>
+      Note: the client uses the official AWS SDK and will use the specified credentials, environment credentials, shared file
+      credentials, or IAM role/ECS task credentials in that order.
+    </p>
+    <h2 class="title is-5 has-bottom-padding-s has-top-margin-l" data-test-access-title>
+      Access to AWS
+    </h2>
+  {{/if}}
   <div class="box is-fullwidth is-sideless">
-    {{! accessType can be "azure" or "wif" - since WIF is an enterprise only feature we default to "azure" for community users and only display those related form fields. }}
+    {{! Only enterprise users can change access type from "account" to "wif" }}
     {{#if this.version.isEnterprise}}
       <fieldset class="field form-fieldset" id="protection" data-test-access-type-section>
         <legend class="is-label">Access Type</legend>
@@ -15,22 +25,24 @@
           {{#if this.disableAccessType}}
             You cannot edit Access Type if you have already saved access credentials.
           {{else}}
-            Choose the way to configure access to Azure. Access can be configured either using an Azure account or with the
-            Plugin Workload Identity Federation (WIF).
+            Choose the way to configure access to
+            {{@displayName}}. Access can be configured either using
+            {{if (eq @type "aws") "IAM access keys" (concat @displayName " account credentials")}}
+            or with the Plugin Workload Identity Federation (WIF).
           {{/if}}
         </p>
         <div>
           <RadioButton
-            id="access-type-azure"
-            name="azure"
+            id="access-type-{{@type}}"
+            name="account"
             class="radio"
-            data-test-access-type="azure"
-            @value="azure"
+            data-test-access-type={{@type}}
+            @value="account"
             @groupValue={{this.accessType}}
-            @onChange={{fn this.onChangeAccessType "azure"}}
+            @onChange={{this.onChangeAccessType}}
             @disabled={{this.disableAccessType}}
           />
-          <label for="access-type-azure">Azure account credentials</label>
+          <label for="access-type-{{@type}}">{{@displayName}} account credentials</label>
           <RadioButton
             id="access-type-wif"
             name="wif"
@@ -38,7 +50,7 @@
             data-test-access-type="wif"
             @value="wif"
             @groupValue={{this.accessType}}
-            @onChange={{fn this.onChangeAccessType "wif"}}
+            @onChange={{this.onChangeAccessType}}
             @disabled={{this.disableAccessType}}
           />
           <label for="access-type-wif">Workload Identity Federation</label>
@@ -46,21 +58,38 @@
       </fieldset>
     {{/if}}
     {{#if (eq this.accessType "wif")}}
-      {{! WIF Fields }}
+      {{! if access type is "wif" display Issuer and WIF fields }}
       {{#each @issuerConfig.displayAttrs as |attr|}}
         <FormField @attr={{attr}} @model={{@issuerConfig}} />
       {{/each}}
-      <FormFieldGroups @model={{@model}} @mode={{if @model.isNew "create" "edit"}} @groupName="fieldGroupsWif" />
-    {{else}}
-      {{! Azure Account Fields }}
       <FormFieldGroups
-        @model={{@model}}
-        @mode={{if @model.isNew "create" "edit"}}
+        @model={{@mountConfigModel}}
+        @mode={{if @mountConfigModel.isNew "create" "edit"}}
+        @groupName="fieldGroupsWif"
+      />
+    {{else}}
+      {{! otherwise display account credential fields }}
+      <FormFieldGroups
+        @model={{@mountConfigModel}}
+        @mode={{if @mountConfigModel.isNew "create" "edit"}}
         @useEnableInput={{true}}
-        @groupName="fieldGroupsAzure"
+        @groupName="fieldGroupsAccount"
       />
     {{/if}}
+    {{! additionalConfigModel fields show regardless of the vault version or what access type is selected }}
+    {{#if @additionalConfigModel}}
+      <h2 class="title is-5 has-bottom-padding-s has-top-margin-l" data-test-additional-config-model-title>
+        {{if (eq @type "aws") "Lease" "Additional"}}
+        Configuration
+      </h2>
+      <div class="box is-fullwidth is-sideless is-bottomless">
+        {{#each @additionalConfigModel.formFields as |attr|}}
+          <FormField @attr={{attr}} @model={{@additionalConfigModel}} @modelValidations={{this.modelValidations}} />
+        {{/each}}
+      </div>
+    {{/if}}
   </div>
+
   <Hds::ButtonSet>
     <Hds::Button
       @text="Save"

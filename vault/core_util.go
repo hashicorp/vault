@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/activationflags"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/sdk/helper/license"
@@ -58,6 +59,8 @@ func coreInit(c *Core, conf *CoreConfig) error {
 	if !conf.DisableKeyEncodingChecks {
 		c.physical = physical.NewStorageEncoding(c.physical)
 	}
+
+	c.FeatureActivationFlags = activationflags.NewFeatureActivationFlags()
 
 	return nil
 }
