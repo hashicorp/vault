@@ -40,7 +40,7 @@ module('Acceptance | aws | configuration', function (hooks) {
     return authPage.login();
   });
 
-  module('isEnterprise', function (hooks) {
+  module('Enterprise', function (hooks) {
     hooks.beforeEach(function () {
       this.version.type = 'enterprise';
     });
@@ -338,7 +338,7 @@ module('Acceptance | aws | configuration', function (hooks) {
     });
   });
 
-  module('isCommunity', function (hooks) {
+  module('Community', function (hooks) {
     hooks.beforeEach(function () {
       this.version.type = 'community';
     });

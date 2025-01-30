@@ -44,7 +44,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
   });
 
   module('Create view', function () {
-    module('isEnterprise', function (hooks) {
+    module('Enterprise', function (hooks) {
       hooks.beforeEach(function () {
         this.version.type = 'enterprise';
       });
@@ -74,11 +74,20 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           toggleGroup ? await click(toggleGroup) : null;
 
           for (const key of expectedConfigKeys(type, true)) {
-            assert
-              .dom(GENERAL.inputByAttr(key))
-              .exists(
-                `${key} shows for ${type} configuration create section when wif is not the access type`
-              );
+            if (key === 'configTtl' || key === 'maxTtl') {
+              // because toggle.hbs passes in the name rather than the camelized attr, we have a difference of data-test=attrName vs data-test="Item name" being passed into the data-test selectors. Long-term solution we should match toggle.hbs selectors to formField.hbs selectors syntax
+              assert
+                .dom(GENERAL.ttl.toggle(key === 'configTtl' ? 'Config TTL' : 'Max TTL'))
+                .exists(
+                  `${key} shows for ${type} configuration create section when wif is not the access type.`
+                );
+            } else {
+              assert
+                .dom(GENERAL.inputByAttr(key))
+                .exists(
+                  `${key} shows for ${type} configuration create section when wif is not the access type`
+                );
+            }
           }
           assert
             .dom(GENERAL.inputByAttr('issuer'))
@@ -604,7 +613,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
       });
     });
 
-    module('isCommunity', function (hooks) {
+    module('Community', function (hooks) {
       hooks.beforeEach(function () {
         this.version.type = 'community';
       });
@@ -637,7 +646,13 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           toggleGroup ? await click(toggleGroup) : null;
           // check all the form fields are present
           for (const key of expectedConfigKeys(type, true)) {
-            assert.dom(GENERAL.inputByAttr(key)).exists(`${key} shows for ${type} account access section.`);
+            if (key === 'configTtl' || key === 'maxTtl') {
+              assert
+                .dom(GENERAL.ttl.toggle(key === 'configTtl' ? 'Config TTL' : 'Max TTL'))
+                .exists(`${key} shows for ${type} account access section.`);
+            } else {
+              assert.dom(GENERAL.inputByAttr(key)).exists(`${key} shows for ${type} account access section.`);
+            }
           }
           assert.dom(GENERAL.inputByAttr('issuer')).doesNotExist();
         });
@@ -646,7 +661,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
   });
 
   module('Edit view', function () {
-    module('isEnterprise', function (hooks) {
+    module('Enterprise', function (hooks) {
       hooks.beforeEach(function () {
         this.version.type = 'enterprise';
       });
@@ -830,9 +845,66 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           await click(GENERAL.saveButton);
         });
       });
+
+      module('GCP specific', function (hooks) {
+        // GCP is unique in that "credentials" is the only mutually exclusive GCP account attr and it's never returned from the API. Thus, we can only check for the presence of configured wif fields to determine if the accessType should be preselected to wif and disabled.
+        // If the user has configured the credentials field, the ui will not know until the user tries to save WIF fields. This is a limitation of the API and surfaced to the user in a descriptive API error.
+        // We cover some of this workflow here and error testing in the gcp-configuration acceptance test.
+        hooks.beforeEach(function () {
+          this.id = `gcp-${this.uid}`;
+          this.mountConfigModel = createConfig(this.store, this.id, 'gcp');
+          this.type = 'gcp';
+          this.displayName = 'Google Cloud';
+        });
+        test('it allows you to change access type if no wif fields are set', async function (assert) {
+          await render(hbs`
+                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type={{this.type}} @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
+              `);
+
+          assert.dom(SES.wif.accessType('gcp')).isChecked('GCP accessType is checked');
+          assert
+            .dom(SES.wif.accessType('gcp'))
+            .isNotDisabled(
+              'GCP accessType is not disabled because we cannot determine if credentials was set as it is not returned by the api.'
+            );
+          assert.dom(SES.wif.accessType('wif')).isNotChecked('WIF accessType is not checked');
+          assert.dom(SES.wif.accessType('wif')).isNotDisabled('WIF accessType is not disabled');
+          assert
+            .dom(SES.wif.accessTypeSubtext)
+            .hasText(
+              'Choose the way to configure access to Google Cloud. Access can be configured either using Google Cloud account credentials or with the Plugin Workload Identity Federation (WIF).'
+            );
+        });
+
+        test('it sets access type to wif if wif fields are set', async function (assert) {
+          this.mountConfigModel = createConfig(this.store, this.id, 'gcp-wif');
+          await render(hbs`
+                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type={{this.type}} @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
+              `);
+
+          assert.dom(SES.wif.accessType('wif')).isChecked('WIF accessType is checked');
+          assert
+            .dom(SES.wif.accessType('gcp'))
+            .isDisabled('GCP accessType IS disabled because wif attributes are set.');
+
+          assert
+            .dom(SES.wif.accessTypeSubtext)
+            .hasText('You cannot edit Access Type if you have already saved access credentials.');
+        });
+
+        test('it shows previously saved config information', async function (assert) {
+          this.mountConfigModel = createConfig(this.store, this.id, 'gcp-generic');
+          await render(hbs`
+                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type={{this.type}} @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
+              `);
+          await click(GENERAL.toggleGroup('More options'));
+          assert.dom(GENERAL.ttl.input('Config TTL')).hasValue('100');
+          assert.dom(GENERAL.ttl.input('Max TTL')).hasValue('101');
+        });
+      });
     });
 
-    module('isCommunity', function (hooks) {
+    module('Community', function (hooks) {
       hooks.beforeEach(function () {
         this.version.type = 'community';
       });
@@ -851,13 +923,27 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           toggleGroup ? await click(toggleGroup) : null;
 
           for (const key of expectedConfigKeys(type, true)) {
-            if (key === 'secretKey' || key === 'clientSecret') return; // these keys are not returned by the API
-            assert
-              .dom(GENERAL.inputByAttr(key))
-              .hasValue(
-                this.mountConfigModel[key],
-                `${key} for ${type}: has the expected value set on the config`
-              );
+            if (key === 'secretKey' || key === 'clientSecret' || key === 'credentials') return; // these keys are not returned by the API
+            if (type === 'gcp') {
+              // same issues noted in wif enterprise tests with how toggle.hbs passes in name vs how formField input passes in attr to data test selector
+              if (key === 'configTtl') {
+                assert
+                  .dom(GENERAL.ttl.input('Config TTL'))
+                  .hasValue('100', `${key} for ${type}: has the expected value set on the config`);
+              }
+              if (key === 'maxTtl') {
+                assert
+                  .dom(GENERAL.ttl.input('Max TTL'))
+                  .hasValue('101', `${key} for ${type}: has the expected value set on the config`);
+              }
+            } else {
+              assert
+                .dom(GENERAL.inputByAttr(key))
+                .hasValue(
+                  this.mountConfigModel[key],
+                  `${key} for ${type}: has the expected value set on the config`
+                );
+            }
           }
         });
       }
