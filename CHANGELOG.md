@@ -9,7 +9,7 @@
 CHANGES:
 
 * auth/cf: Update plugin to v0.19.1 [[GH-29295](https://github.com/hashicorp/vault/pull/29295)]
-* sdk: Updated golang and dependency versions to be consistent across core, API, SDK [[GH-29422](https://github.com/hashicorp/vault/pull/29422)]
+* sdk: Updated golang and dependency versions to be consistent across core, API, SDK to address [[GO-2024-3333](https://pkg.go.dev/vuln/GO-2024-3333)] and ensure version consistency [[GH-29422](https://github.com/hashicorp/vault/pull/29422)]
 
 IMPROVEMENTS:
 
@@ -352,7 +352,7 @@ use versioned plugins. [[GH-27881](https://github.com/hashicorp/vault/pull/27881
 CHANGES:
 
 * auth/cf: Update plugin to v0.19.1 [[GH-29295](https://github.com/hashicorp/vault/pull/29295)]
-* sdk: Updated golang and dependency versions to be consistent across core, API, SDK [[GH-29422](https://github.com/hashicorp/vault/pull/29422)]
+* sdk: Updated golang and dependency versions to be consistent across core, API, SDK to address [[GO-2024-3333](https://pkg.go.dev/vuln/GO-2024-3333)] and ensure version consistency [[GH-29422](https://github.com/hashicorp/vault/pull/29422)]
 
 IMPROVEMENTS:
 
@@ -851,7 +851,7 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 CHANGES:
 
 * auth/cf: Update plugin to v0.19.1 [[GH-29295](https://github.com/hashicorp/vault/pull/29295)]
-* sdk: Updated golang and dependency versions to be consistent across core, API, SDK [[GH-29422](https://github.com/hashicorp/vault/pull/29422)]
+* sdk: Updated golang and dependency versions to be consistent across core, API, SDK to address [[GO-2024-3333](https://pkg.go.dev/vuln/GO-2024-3333)] and ensure version consistency [[GH-29422](https://github.com/hashicorp/vault/pull/29422)]
 
 IMPROVEMENTS:
 
