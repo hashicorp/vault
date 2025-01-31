@@ -2316,9 +2316,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hashicorp/design-system-components@npm:~4.13.0":
-  version: 4.13.1
-  resolution: "@hashicorp/design-system-components@npm:4.13.1"
+"@hashicorp/design-system-components@npm:~4.14.0":
+  version: 4.14.0
+  resolution: "@hashicorp/design-system-components@npm:4.14.0"
   dependencies:
     "@ember/render-modifiers": ^2.0.5
     "@ember/string": ^3.1.1
@@ -2327,6 +2327,7 @@ __metadata:
     "@floating-ui/dom": ^1.6.3
     "@hashicorp/design-system-tokens": ^2.2.1
     "@hashicorp/flight-icons": ^3.7.0
+    clipboard-polyfill: ^4.1.0
     decorator-transforms: ^1.1.0
     ember-a11y-refocus: ^4.1.3
     ember-cli-sass: ^11.0.1
@@ -2344,7 +2345,7 @@ __metadata:
     tippy.js: ^6.3.7
   peerDependencies:
     ember-source: ^3.28.0 || ^4.0.0 || ^5.3.0
-  checksum: d8a07a37f0be0ca8b3cbaf4e96c6f41fcdbbf1dd5b8ac927b5607b537908de7d0dd3e8e31b9132761bd87f0a0ad0d4a41ccc6aae71d2e7916e62d91a51b62ff1
+  checksum: b5414ab96436a8c438f323c521cba9ddf5c3ddd1564d4db48809a202ee5a937561779e8c1eff46747adb4b89bdb00ddc22a30830dd522b0ff4d9523bc918a501
   languageName: node
   linkType: hard
 
@@ -6215,6 +6216,13 @@ __metadata:
   version: 4.1.0
   resolution: "cli-width@npm:4.1.0"
   checksum: 0a79cff2dbf89ef530bcd54c713703ba94461457b11e5634bd024c78796ed21401e32349c004995954e06f442d82609287e7aabf6a5f02c919a1cf3b9b6854ff
+  languageName: node
+  linkType: hard
+
+"clipboard-polyfill@npm:^4.1.0":
+  version: 4.1.1
+  resolution: "clipboard-polyfill@npm:4.1.1"
+  checksum: a3657e3250f6b73c8504afc67f41084c9470cf367c6cc81cef564b3dc8ee8a54fd36385f66dcddfa6a6a45d348ccc7670042ea887943416e839a7ee3dfd6e21e
   languageName: node
   linkType: hard
 
@@ -18364,7 +18372,7 @@ __metadata:
     "@ember/test-waiters": ^3.1.0
     "@glimmer/component": ^1.1.2
     "@glimmer/tracking": ^1.1.2
-    "@hashicorp/design-system-components": ~4.13.0
+    "@hashicorp/design-system-components": ~4.14.0
     "@icholy/duration": ^5.1.0
     "@lineal-viz/lineal": ^0.5.1
     "@tsconfig/ember": ^2.0.0
