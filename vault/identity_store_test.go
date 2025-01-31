@@ -1669,7 +1669,7 @@ func identityStoreLoadingIsDeterministic(t *testing.T, identityDeduplication boo
 		// signature without breaking enterprise. It's simpler to keep it unused
 		// for now until both parts of this merge.
 		if secondary {
-			entIdentityStoreSecondaryDeterminismAssert(t, i, loadedNames, nil)
+			entIdentityStoreDeterminismSecondaryAssert(t, i, loadedNames, nil)
 		}
 
 		if i > 0 {
