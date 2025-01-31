@@ -144,17 +144,17 @@ func formatLogLines(log []byte) []string {
 func intensifyStatus(in string) string {
 	switch in {
 	case "completed", "success":
-		return "\x1b[1;32;49m" + in + "\x1b[0m" + "  "
+		return "\x1b[1;32;49m" + in + "\x1b[0m"
 	case "cancelled":
-		return "\x1b[1;33;49m" + in + "\x1b[0m" + " 󰜺 "
+		return "\x1b[1;33;49m" + in + "\x1b[0m"
 	case "failure":
-		return "\x1b[1;31;49m" + in + "\x1b[0m" + "  "
+		return "\x1b[1;31;49m" + in + "\x1b[0m"
 	case "skipped":
-		return "\x1b[1;37;49m" + in + "\x1b[0m" + "  "
+		return "\x1b[1;37;49m" + in + "\x1b[0m"
 	case "in_progress":
-		return "\x1b[1;37;49m" + in + "\x1b[0m" + " ⏳"
+		return "\x1b[1;37;49m" + in + "\x1b[0m"
 	case "warning":
-		return "\x1b[1;33;49m" + in + "\x1b[0m" + "  "
+		return "\x1b[1;33;49m" + in + "\x1b[0m"
 	default:
 		return in
 	}

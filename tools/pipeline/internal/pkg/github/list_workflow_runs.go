@@ -214,7 +214,7 @@ func (r *ListWorkflowRunsReq) getWorkflowCheckRuns(ctx context.Context, client *
 
 	wg := sync.WaitGroup{}
 	wg.Add(len(wfrs))
-	errC, cancelErrCtx := r.startErrorCollector(ctx)
+	errC, resC, cancel := r.startErrorCollector(ctx)
 
 	for _, wfr := range wfrs {
 		go func() {
@@ -250,7 +250,7 @@ func (r *ListWorkflowRunsReq) getWorkflowCheckRuns(ctx context.Context, client *
 
 	wg.Wait()
 
-	return r.stopErrorCollector(errC, cancelErrCtx)
+	return r.stopErrorCollector(errC, resC, cancel)
 }
 
 // getWorkflowCheckRunAnnotations gets the check suite annotations associated with the check suites
@@ -264,7 +264,7 @@ func (r *ListWorkflowRunsReq) getWorkflowCheckRunAnnotations(ctx context.Context
 
 	wg := sync.WaitGroup{}
 	wg.Add(len(wfrs))
-	errC, cancelErrCtx := r.startErrorCollector(ctx)
+	errC, resC, cancel := r.startErrorCollector(ctx)
 
 	for _, wfr := range wfrs {
 		go func() {
@@ -291,7 +291,7 @@ func (r *ListWorkflowRunsReq) getWorkflowCheckRunAnnotations(ctx context.Context
 
 	wg.Wait()
 
-	return r.stopErrorCollector(errC, cancelErrCtx)
+	return r.stopErrorCollector(errC, resC, cancel)
 }
 
 // getWorkflowJobs gets the jobs associated with the workflow runs.
@@ -307,7 +307,7 @@ func (r *ListWorkflowRunsReq) getWorkflowJobs(ctx context.Context, client *gh.Cl
 
 	wg := sync.WaitGroup{}
 	wg.Add(len(wfrs))
-	errC, cancelErrCtx := r.startErrorCollector(ctx)
+	errC, resC, cancel := r.startErrorCollector(ctx)
 
 	for _, run := range wfrs {
 		go func() {
@@ -343,7 +343,7 @@ func (r *ListWorkflowRunsReq) getWorkflowJobs(ctx context.Context, client *gh.Cl
 
 	wg.Wait()
 
-	return r.stopErrorCollector(errC, cancelErrCtx)
+	return r.stopErrorCollector(errC, resC, cancel)
 }
 
 // getUnsuccessfulWorkflowJobsLogs downloads the job log and parses out the
@@ -355,7 +355,7 @@ func (r *ListWorkflowRunsReq) getUnsuccessfulWorkflowJobsLogs(ctx context.Contex
 
 	wg := sync.WaitGroup{}
 	wg.Add(len(wfrs))
-	errC, cancelErrCtx := r.startErrorCollector(ctx)
+	errC, resC, cancel := r.startErrorCollector(ctx)
 
 	for _, run := range wfrs {
 		go func() {
@@ -409,7 +409,7 @@ func (r *ListWorkflowRunsReq) getUnsuccessfulWorkflowJobsLogs(ctx context.Contex
 
 	wg.Wait()
 
-	return r.stopErrorCollector(errC, cancelErrCtx)
+	return r.stopErrorCollector(errC, resC, cancel)
 }
 
 // startErrorCollector starts a helper go routine that listens and aggregrates
@@ -417,9 +417,11 @@ func (r *ListWorkflowRunsReq) getUnsuccessfulWorkflowJobsLogs(ctx context.Contex
 // all work that may write errors it can call the stopErrorCollector() method
 // with the channel and cancel func to safely shut down the go routine and
 // receive the aggregrate error.
-func (r *ListWorkflowRunsReq) startErrorCollector(ctx context.Context) (chan error, context.CancelFunc) {
+func (r *ListWorkflowRunsReq) startErrorCollector(ctx context.Context) (chan error, chan error, context.CancelFunc) {
 	errC := make(chan error)
+	resC := make(chan error)
 	errCtx, cancelCollector := context.WithCancel(ctx)
+
 	go func() {
 		var err error
 
@@ -456,18 +458,19 @@ func (r *ListWorkflowRunsReq) startErrorCollector(ctx context.Context) (chan err
 			}
 		}
 
-		errC <- err
+		resC <- err
 	}()
 
-	return errC, cancelCollector
+	return errC, resC, cancelCollector
 }
 
 // stopErrorCollector stops the error collector and returns the aggregrated error. The given channel
 // is closed. The caller must be sure that all work has concluded prior to calling.
-func (r *ListWorkflowRunsReq) stopErrorCollector(errC chan error, cancel context.CancelFunc) error {
+func (r *ListWorkflowRunsReq) stopErrorCollector(errC chan error, resC chan error, cancel context.CancelFunc) error {
 	cancel()
-	err := <-errC
+	err := <-resC
 	close(errC)
+	close(resC)
 
 	return err
 }
