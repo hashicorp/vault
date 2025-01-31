@@ -21,6 +21,7 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	credGithub "github.com/hashicorp/vault/builtin/credential/github"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/helper/activationflags"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
@@ -1415,11 +1416,17 @@ func TestIdentityStoreInvalidate_TemporaryEntity(t *testing.T) {
 // the identity cleanup rename resolver to ensure that loading is deterministic
 // for both.
 func TestIdentityStoreLoadingIsDeterministic(t *testing.T) {
-	t.Run(t.Name()+"-error-resolver", func(t *testing.T) {
-		identityStoreLoadingIsDeterministic(t, false)
+	t.Run(t.Name()+"-error-resolver-primary", func(t *testing.T) {
+		identityStoreLoadingIsDeterministic(t, false, false)
 	})
-	t.Run(t.Name()+"-identity-cleanup", func(t *testing.T) {
-		identityStoreLoadingIsDeterministic(t, true)
+	t.Run(t.Name()+"-identity-cleanup-primary", func(t *testing.T) {
+		identityStoreLoadingIsDeterministic(t, true, false)
+	})
+	t.Run(t.Name()+"-error-resolver-secondary", func(t *testing.T) {
+		identityStoreLoadingIsDeterministic(t, false, false)
+	})
+	t.Run(t.Name()+"-identity-cleanup-secondary", func(t *testing.T) {
+		identityStoreLoadingIsDeterministic(t, true, false)
 	})
 }
 
@@ -1431,7 +1438,7 @@ func TestIdentityStoreLoadingIsDeterministic(t *testing.T) {
 // deterministic anyway if all data in storage was correct see comments inline
 // for examples of ways storage can be corrupt with respect to the expected
 // schema invariants.
-func identityStoreLoadingIsDeterministic(t *testing.T, identityDeduplication bool) {
+func identityStoreLoadingIsDeterministic(t *testing.T, identityDeduplication bool, secondary bool) {
 	// Create some state in store that could trigger non-deterministic behavior.
 	// The nature of the identity store schema is such that the order of loading
 	// entities etc shouldn't matter even if it was non-deterministic, however due
@@ -1569,7 +1576,9 @@ func identityStoreLoadingIsDeterministic(t *testing.T, identityDeduplication boo
 		require.NoError(t, err)
 	}
 
-	entIdentityStoreDeterminismTestSetup(t, ctx, c, upme, localMe)
+	if secondary {
+		entIdentityStoreDeterminismSecondaryTestSetup(t, ctx, c, upme, localMe, seed)
+	}
 
 	// Storage is now primed for the test.
 
@@ -1659,7 +1668,9 @@ func identityStoreLoadingIsDeterministic(t *testing.T, identityDeduplication boo
 		// note `lastIDs` argument is not needed anymore but we can't change the
 		// signature without breaking enterprise. It's simpler to keep it unused
 		// for now until both parts of this merge.
-		entIdentityStoreDeterminismAssert(t, i, loadedNames, nil)
+		if secondary {
+			entIdentityStoreSecondaryDeterminismAssert(t, i, loadedNames, nil)
+		}
 
 		if i > 0 {
 			// Should be in the same order if we are deterministic since MemDB has strong ordering.
@@ -1683,7 +1694,7 @@ func TestIdentityStoreLoadingDuplicateReporting(t *testing.T) {
 		Logger:          logger,
 		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		CredentialBackends: map[string]logical.Factory{
-			"userpass": userpass.Factory,
+			"userpass": credUserpass.Factory,
 		},
 	}
 
@@ -1706,7 +1717,7 @@ func TestIdentityStoreLoadingDuplicateReporting(t *testing.T) {
 	defer t.Logf("Test generated with with seed %d", seedval)
 	identityCreateCaseDuplicates(t, ctx, c, upme, localMe, seed)
 
-	entIdentityStoreDuplicateReportTestSetup(t, ctx, c, rootToken)
+	entIdentityStoreDuplicateReportTestSetup(t, ctx, c, rootToken, seed)
 
 	// Storage is now primed for the test.
 
