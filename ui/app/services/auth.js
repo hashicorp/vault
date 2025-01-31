@@ -246,15 +246,14 @@ export default Service.extend({
     // haven't set a value yet
     // all of the typeof checks are necessary because the root namespace is ''
     let userRootNamespace = namespace_path && namespace_path.replace(/\/$/, '');
-    // if we're logging in with token and there's no namespace_path, we can assume
+    // renew-self does not return namespace_path, so we manually setting in renew().
+    // so if we're logging in with token and there's no namespace_path, we can assume
     // that the token belongs to the root namespace
     if (backend === 'token' && !userRootNamespace) {
       userRootNamespace = '';
     }
-    if (typeof userRootNamespace === 'undefined') {
-      if (this.authData) {
-        userRootNamespace = this.authData.userRootNamespace;
-      }
+    if (typeof userRootNamespace === 'undefined' && this.authData) {
+      userRootNamespace = this.authData.userRootNamespace;
     }
     if (typeof userRootNamespace === 'undefined') {
       userRootNamespace = currentNamespace;
@@ -374,7 +373,13 @@ export default Service.extend({
     return this.renewCurrentToken().then(
       (resp) => {
         this.isRenewing = false;
-        return this.persistAuthData(tokenName, resp.data || resp.auth);
+        const namespacePath = this.namespaceService.path;
+        const response = resp.data || resp.auth;
+        // renew-self does not return namespace_path, so manually add it if it exists
+        if (!response?.namespace_path && namespacePath) {
+          response.namespace_path = namespacePath;
+        }
+        return this.persistAuthData(tokenName, response);
       },
       (e) => {
         this.isRenewing = false;

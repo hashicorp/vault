@@ -9,12 +9,18 @@ import { click, currentURL, visit, waitUntil, find, fillIn } from '@ember/test-h
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { allSupportedAuthBackends, supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
+import {
+  createNS,
+  createPolicyCmd,
+  mountAuthCmd,
+  mountEngineCmd,
+  runCmd,
+} from 'vault/tests/helpers/commands';
+import { login, loginMethod, loginNs, logout } from 'vault/tests/helpers/auth/auth-helpers';
+import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
+import { v4 as uuidv4 } from 'uuid';
+import { GENERAL } from '../helpers/general-selectors';
 
-const AUTH_FORM = {
-  method: '[data-test-select=auth-method]',
-  token: '[data-test-token]',
-  login: '[data-test-auth-submit]',
-};
 const ENT_AUTH_METHODS = ['saml'];
 const { rootToken } = VAULT_KEYS;
 
@@ -39,10 +45,10 @@ module('Acceptance | auth', function (hooks) {
 
   test('it clears token when changing selected auth method', async function (assert) {
     await visit('/vault/auth');
-    await fillIn(AUTH_FORM.token, 'token');
+    await fillIn(AUTH_FORM.input('token'), 'token');
     await fillIn(AUTH_FORM.method, 'github');
     await fillIn(AUTH_FORM.method, 'token');
-    assert.dom(AUTH_FORM.token).hasNoValue('it clears the token value when toggling methods');
+    assert.dom(AUTH_FORM.input('token')).hasNoValue('it clears the token value when toggling methods');
   });
 
   module('it sends the right payload when authenticating', function (hooks) {
@@ -202,10 +208,85 @@ module('Acceptance | auth', function (hooks) {
       () => new Error('should not call renew-self directly after logging in')
     );
 
-    await visit('/vault/auth');
-    await fillIn(AUTH_FORM.method, 'token');
-    await fillIn(AUTH_FORM.token, rootToken);
-    await click('[data-test-auth-submit]');
+    await login(rootToken);
     assert.strictEqual(currentURL(), '/vault/dashboard');
+  });
+
+  module('Enterprise', function (hooks) {
+    hooks.beforeEach(async function () {
+      const uid = uuidv4();
+      this.ns = `admin-${uid}`;
+      // log in to root to create namespace
+      await login();
+      await runCmd(createNS(this.ns), false);
+      // login to namespace, mount userpass, create policy and user
+      await loginNs(this.ns);
+      this.db = `database-${uid}`;
+      this.userpass = `userpass-${uid}`;
+      this.user = 'bob';
+      this.policyName = `policy-${this.userpass}`;
+      this.policy = `
+        path "${this.db}/" {
+          capabilities = ["list"]
+        }
+        path "${this.db}/roles" {
+          capabilities = ["read","list"]
+        }
+        `;
+      await runCmd([
+        mountAuthCmd('userpass', this.userpass),
+        mountEngineCmd('database', this.db),
+        createPolicyCmd(this.policyName, this.policy),
+        `write auth/${this.userpass}/users/${this.user} password=${this.user} token_policies=${this.policyName}`,
+      ]);
+      return await logout();
+    });
+
+    hooks.afterEach(async function () {
+      await visit(`/vault/logout?namespace=${this.ns}`);
+      await fillIn(AUTH_FORM.namespaceInput, ''); // clear login form namespace input
+      await login();
+      await runCmd([`delete sys/namespaces/${this.ns}`], false);
+    });
+
+    // this test is specifically to cover a token renewal bug within namespaces
+    // namespace_path isn't returned by the renew-self response and so the auth service was
+    // incorrectly setting userRootNamespace to '' (which denotes 'root')
+    // making subsequent capability checks fail because they would not be queried with the appropriate namespace header
+    // if this test fails because a POST /v1/sys/capabilities-self returns a 403, then we have a problem!
+    test('it sets namespace when renewing token', async function (assert) {
+      await login();
+      await runCmd([
+        mountAuthCmd('userpass', this.userpass),
+        mountEngineCmd('database', this.db),
+        createPolicyCmd(this.policyName, this.policy),
+        `write auth/${this.userpass}/users/${this.user} password=${this.user} token_policies=${this.policyName}`,
+      ]);
+
+      const options = { username: this.user, password: this.user, 'auth-form-mount-path': this.userpass };
+
+      // login as user just to get token (this is the only way to generate a token in the UI right now..)
+      await loginMethod('userpass', options, { toggleOptions: true, ns: this.ns });
+      await click('[data-test-user-menu-trigger=""]');
+      const token = find('[data-test-copy-button]').getAttribute('data-test-copy-button');
+
+      // login with token to reproduce bug
+      await loginNs(this.ns, token);
+      await visit(`/vault/secrets/${this.db}/overview?namespace=${this.ns}`);
+      assert
+        .dom('[data-test-overview-card="Roles"]')
+        .hasText('Roles Create new', 'database overview renders');
+      // renew token
+      await click('[data-test-user-menu-trigger=""]');
+      await click('[data-test-user-menu-item="renew token"]');
+      // navigate out and back to overview tab to re-request capabilities
+      await click(GENERAL.secretTab('Roles'));
+      await click(GENERAL.tab('overview'));
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.db}/overview?namespace=${this.ns}`,
+        'it navigates to database overview'
+      );
+    });
   });
 });
