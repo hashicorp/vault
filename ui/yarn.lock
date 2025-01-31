@@ -1937,13 +1937,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@floating-ui/dom@npm:^1.6.3":
-  version: 1.6.12
-  resolution: "@floating-ui/dom@npm:1.6.12"
+"@floating-ui/dom@npm:^1.6.12":
+  version: 1.6.13
+  resolution: "@floating-ui/dom@npm:1.6.13"
   dependencies:
     "@floating-ui/core": ^1.6.0
-    "@floating-ui/utils": ^0.2.8
-  checksum: 956514ed100c0c853e73ace9e3c877b7e535444d7c31326f687a7690d49cb1e59ef457e9c93b76141aea0d280e83ed5a983bb852718b62eea581f755454660f6
+    "@floating-ui/utils": ^0.2.9
+  checksum: eabab9d860d3b5beab1c2d6936287efc4d9ab352de99062380589ef62870d59e8730397489c34a96657e128498001b5672330c4a9da0159fe8b2401ac59fe314
   languageName: node
   linkType: hard
 
@@ -1951,6 +1951,13 @@ __metadata:
   version: 0.2.8
   resolution: "@floating-ui/utils@npm:0.2.8"
   checksum: deb98bba017c4e073c7ad5740d4dec33a4d3e0942d412e677ac0504f3dade15a68fc6fd164d43c93c0bb0bcc5dc5015c1f4080dfb1a6161140fe660624f7c875
+  languageName: node
+  linkType: hard
+
+"@floating-ui/utils@npm:^0.2.9":
+  version: 0.2.9
+  resolution: "@floating-ui/utils@npm:0.2.9"
+  checksum: d518b80cec5a323e54a069a1dd99a20f8221a4853ed98ac16c75275a0cc22f75de4f8ac5b121b4f8990bd45da7ad1fb015b9a1e4bac27bb1cd62444af84e9784
   languageName: node
   linkType: hard
 
@@ -2316,22 +2323,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hashicorp/design-system-components@npm:~4.14.0":
-  version: 4.14.0
-  resolution: "@hashicorp/design-system-components@npm:4.14.0"
+"@hashicorp/design-system-components@npm:~4.15.0":
+  version: 4.15.0
+  resolution: "@hashicorp/design-system-components@npm:4.15.0"
   dependencies:
     "@ember/render-modifiers": ^2.0.5
     "@ember/string": ^3.1.1
     "@ember/test-waiters": ^3.1.0
     "@embroider/addon-shim": ^1.8.7
-    "@floating-ui/dom": ^1.6.3
-    "@hashicorp/design-system-tokens": ^2.2.1
-    "@hashicorp/flight-icons": ^3.7.0
+    "@floating-ui/dom": ^1.6.12
+    "@hashicorp/design-system-tokens": ^2.2.2
+    "@hashicorp/flight-icons": ^3.8.0
     clipboard-polyfill: ^4.1.0
     decorator-transforms: ^1.1.0
     ember-a11y-refocus: ^4.1.3
     ember-cli-sass: ^11.0.1
     ember-composable-helpers: ^5.0.0
+    ember-concurrency: ^4.0.2
     ember-element-helper: ^0.8.5
     ember-focus-trap: ^1.1.0
     ember-get-config: ^2.1.1
@@ -2340,26 +2348,27 @@ __metadata:
     ember-stargate: ^0.4.3
     ember-style-modifier: ^4.4.0
     ember-truth-helpers: ^4.0.3
+    luxon: ^2.3.2 || ^3.4.2
     prismjs: ^1.29.0
     sass: ^1.69.5
     tippy.js: ^6.3.7
   peerDependencies:
     ember-source: ^3.28.0 || ^4.0.0 || ^5.3.0
-  checksum: b5414ab96436a8c438f323c521cba9ddf5c3ddd1564d4db48809a202ee5a937561779e8c1eff46747adb4b89bdb00ddc22a30830dd522b0ff4d9523bc918a501
+  checksum: 9ecfc15e3b72baea9b62d6f96335a11a07e412c001b2d9641f16910f2b0153ce0f8c6d6b6d58e720145e5116105258e2444fc3a25ffee19a28407268df57ce12
   languageName: node
   linkType: hard
 
-"@hashicorp/design-system-tokens@npm:^2.2.1":
-  version: 2.2.1
-  resolution: "@hashicorp/design-system-tokens@npm:2.2.1"
-  checksum: 0e4348ab27b2da4725068b5dab83474ad496895d2b422708b2c08cfc39289830f3756a1b352aff6e6095f64e3476ac227034ab02c7d2e0cc49d13a81ef69f6f3
+"@hashicorp/design-system-tokens@npm:^2.2.2":
+  version: 2.3.0
+  resolution: "@hashicorp/design-system-tokens@npm:2.3.0"
+  checksum: d05650366d4397d4f0bda23398b0f7354212571bcc02e074407da2104c6e455d7435a9bf7a322a3d8d74152defda705d19b1c8c7ec2bc1a807f0bc9600ed6bcf
   languageName: node
   linkType: hard
 
-"@hashicorp/flight-icons@npm:^3.7.0":
-  version: 3.7.0
-  resolution: "@hashicorp/flight-icons@npm:3.7.0"
-  checksum: 9d043a8df428ce47475a8f2605ad31119a9da766b2310eeba207fd311ae5c0422c19fb91b636b744c590a5c0d19075cb295787961d3e46fdd5e21ef17b2df606
+"@hashicorp/flight-icons@npm:^3.8.0":
+  version: 3.9.0
+  resolution: "@hashicorp/flight-icons@npm:3.9.0"
+  checksum: f32b6e273051b3d6eb1ce232d808e9a8d9dd2249c99bca2728daaf46ede324677774192f830a781a8e5c96fe283ae7fb61a9172c8f82231804b2c9153ce5d905
   languageName: node
   linkType: hard
 
@@ -13043,6 +13052,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"luxon@npm:^2.3.2 || ^3.4.2":
+  version: 3.5.0
+  resolution: "luxon@npm:3.5.0"
+  checksum: f290fe5788c8e51e748744f05092160d4be12150dca70f9fadc0d233e53d60ce86acd82e7d909a114730a136a77e56f0d3ebac6141bbb82fd310969a4704825b
+  languageName: node
+  linkType: hard
+
 "magic-string@npm:^0.25.2, magic-string@npm:^0.25.7":
   version: 0.25.9
   resolution: "magic-string@npm:0.25.9"
@@ -18372,7 +18388,7 @@ __metadata:
     "@ember/test-waiters": ^3.1.0
     "@glimmer/component": ^1.1.2
     "@glimmer/tracking": ^1.1.2
-    "@hashicorp/design-system-components": ~4.14.0
+    "@hashicorp/design-system-components": ~4.15.0
     "@icholy/duration": ^5.1.0
     "@lineal-viz/lineal": ^0.5.1
     "@tsconfig/ember": ^2.0.0
