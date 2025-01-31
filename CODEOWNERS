@@ -32,14 +32,14 @@
 
 # Content on developer.hashicorp.com
 
-# Engineering and web presence get notified of, and can approve changes to web tooling, but not content.
+# Web presence gets notified of, and can approve changes to web tooling, but not content.
 
 /website/               @hashicorp/web-presence
 /website/data/
 /website/public/
 /website/content/
 
-# Education and engineering get notified of, and can approve changes to web content.
+# Education gets notified of, and can approve changes to web content.
 
 /website/data/          @hashicorp/vault-education-approvers
 /website/public/        @hashicorp/vault-education-approvers
