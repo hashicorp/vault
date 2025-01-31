@@ -127,7 +127,6 @@ func init() {
 		"!sys/storage/raft/snapshot-auto/config",
 	})
 	websocketPaths.AddPaths(websocketRawPaths)
-	alwaysRedirectPaths.AddPaths(websocketRawPaths)
 }
 
 type HandlerAnchor struct{}
