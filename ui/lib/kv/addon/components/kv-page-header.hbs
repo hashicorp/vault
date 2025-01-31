@@ -12,7 +12,7 @@
       {{#if @mountName}}
         <Icon @name="key-values" @size="24" class="has-text-grey-light" />
         {{@mountName}}
-        <span class="tag">version 2</span>
+        <Hds::Badge @text="version 2" />
       {{else if @secretPath}}
         {{@secretPath}}
         <Hds::Copy::Button @isIconOnly={{true}} @text="Copy your secret path" @textToCopy={{@secretPath}} />
