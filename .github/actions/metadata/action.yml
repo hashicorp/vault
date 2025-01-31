@@ -114,17 +114,18 @@ runs:
           # Look up the pull request labels for the PR that is associated with
           # the commit. If there are none set it as a JSON encoded empty array.
           repo=$(printf ${{ github.repository }} | cut -d "/" -f2)
-          if ! labels=$(gh api graphql -F repo="$repo" -f query='
-            query prLabels($repo: String!){
+          if ! labels=$(gh api graphql -F repo="$repo" -F sha="${{ steps.vault-metadata.outputs.vault-revision }}" -f query='
+            query($repo: String!, $sha: String!){
               repository(name: $repo, owner: "hashicorp") {
-                commit: object(expression: "${{ steps.vault-metadata.outputs.vault-revision }}") {
+                commit: object(expression: $sha) {
                   ... on Commit {
-                  associatedPullRequests(first:1){
-                    edges{
-                      node{
-                        labels(first: 10) {
-                          nodes {
-                            name
+                    associatedPullRequests(first:1){
+                      edges{
+                        node{
+                          labels(first: 10) {
+                            nodes {
+                              name
+                            }
                           }
                         }
                       }
