@@ -79,6 +79,7 @@
             name={{@attr.name}}
             id={{@attr.name}}
             onchange={{this.onChangeWithEvent}}
+            disabled={{and @attr.options.editDisabled (not @model.isNew)}}
             data-test-input={{@attr.name}}
           >
             {{#if @attr.options.noDefault}}
@@ -335,7 +336,7 @@
   {{else if (or (eq @attr.type "boolean") (eq @attr.options.editType "boolean"))}}
     <div class="b-checkbox">
       <input
-        disabled={{this.disabled}}
+        disabled={{and @attr.options.editDisabled (not @model.isNew)}}
         type="checkbox"
         id={{@attr.name}}
         class="styled"
