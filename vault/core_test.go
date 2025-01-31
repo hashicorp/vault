@@ -3674,7 +3674,7 @@ func TestBuildUnsealSetupFunctionSlice(t *testing.T) {
 			expectedLength: 14,
 		},
 	} {
-		funcs := buildUnsealSetupFunctionSlice(testcase.core)
+		funcs := buildUnsealSetupFunctionSlice(testcase.core, true)
 		assert.Equal(t, testcase.expectedLength, len(funcs), testcase.name)
 	}
 }
