@@ -37,11 +37,11 @@
       {{#if @model.privateKey}}
         <CertificateCard @data={{@model.privateKey}} />
       {{else}}
-        <span class="tag">internal</span>
+        <Hds::Badge @text="internal" />
       {{/if}}
     </InfoTableRow>
     <InfoTableRow @label="Private key type" @value={{@model.privateKeyType}}>
-      <span class="{{unless @model.privateKeyType 'tag'}}">{{or @model.privateKeyType "internal"}}</span>
+      <Hds::Badge @text={{or @model.privateKeyType "internal"}} />
     </InfoTableRow>
     <ParsedCertificateInfoRows @model={{@model.parsedCertificate}} />
   </main>
