@@ -82,6 +82,10 @@ module('Acceptance | auth-methods list view', function (hooks) {
     }));
     await page.visit();
     assert.dom('[data-test-auth-backend-link]').exists({ count: 2 }, 'All auth methods appear in list view');
+
+    // verify overflow style exists on auth method name
+    assert.dom('[data-test-path]').hasClass('overflow-wrap', 'auth method name has overflow class applied');
+
     await authEnable.visit();
     await click('[data-test-sidebar-nav-link="OIDC Provider"]');
     await page.visit();
