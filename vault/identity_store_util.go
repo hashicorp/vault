@@ -36,24 +36,28 @@ var (
 	entityLoadingTxMaxSize = 1024
 )
 
-// loadIdentityStoreArtifacts is responsible for loading entities, groups, and aliases from storage into MemDB.
-func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
-	if c.identityStore == nil {
-		c.logger.Warn("identity store is not setup, skipping loading")
+// loadArtifacts is responsible for loading entities, groups, and aliases from
+// storage into MemDB.
+func (i *IdentityStore) loadArtifacts(ctx context.Context) error {
+	if i == nil {
 		return nil
 	}
 
 	loadFunc := func(context.Context) error {
-		if err := c.identityStore.loadEntities(ctx); err != nil {
+		i.logger.Debug("loading identity store artifacts with",
+			"case_sensitive", !i.disableLowerCasedNames,
+			"conflict_resolver", i.conflictResolver)
+
+		if err := i.loadEntities(ctx); err != nil {
 			return fmt.Errorf("failed to load entities: %w", err)
 		}
-		if err := c.identityStore.loadGroups(ctx); err != nil {
+		if err := i.loadGroups(ctx); err != nil {
 			return fmt.Errorf("failed to load groups: %w", err)
 		}
-		if err := c.identityStore.loadOIDCClients(ctx); err != nil {
+		if err := i.loadOIDCClients(ctx); err != nil {
 			return fmt.Errorf("failed to load OIDC clients: %w", err)
 		}
-		if err := c.identityStore.loadCachedEntitiesOfLocalAliases(ctx); err != nil {
+		if err := i.loadCachedEntitiesOfLocalAliases(ctx); err != nil {
 			return fmt.Errorf("failed to load cached local alias entities: %w", err)
 		}
 
@@ -65,13 +69,13 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 	// identityStore into case-sensitive mode by switching the underlying
 	// schema to one with a relaxed lowerCase constraint and reload all
 	// artifacts into MemDB.
-	c.identityStore.conflictResolver = &errorResolver{c.identityStore.logger}
+	i.conflictResolver = &errorResolver{i.logger}
 
 	// If the identity deduplication cleanup flag is activated, instead
 	// deal with duplicate entities and groups by renaming with a -UUID
 	// suffix. N.B. *entity alias* duplicates will still be merged as before.
-	if c.FeatureActivationFlags.IsActivationFlagEnabled(activationflags.IdentityDeduplication) {
-		c.identityStore.conflictResolver = &renameResolver{c.identityStore.logger}
+	if i.renameDuplicates.IsActivationFlagEnabled(activationflags.IdentityDeduplication) {
+		i.conflictResolver = &renameResolver{i.logger}
 	}
 
 	// Load everything when MemDB is set to operate on lower cased names.
@@ -95,30 +99,57 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 
 	// If we're here, it means we've encountered duplicates while loading
 	// with the errorResolver.
-	c.identityStore.logger.Warn("enabling case sensitive identity names")
+	i.logger.Warn("enabling case sensitive identity names")
 
 	// Set identity store to operate on case sensitive identity names
-	c.identityStore.disableLowerCasedNames = true
+	i.disableLowerCasedNames = true
 
 	// Swap out the MemDB instance and reload artifacts with the
 	// new schema.
-	if err := c.identityStore.resetDB(); err != nil {
+	if err := i.resetDB(); err != nil {
 		return err
 	}
 
 	// Also reset the conflict resolver so that we report potential duplicates to
 	// be resolved before it's safe to return to case-insensitive mode.
-	reporterResolver := newDuplicateReportingErrorResolver(c.identityStore.logger)
-	c.identityStore.conflictResolver = reporterResolver
+	reporterResolver := newDuplicateReportingErrorResolver(i.logger)
+	i.conflictResolver = reporterResolver
 
 	// Attempt to load identity artifacts once more after memdb is reset to
 	// accept case sensitive names
 	err = loadFunc(ctx)
 
 	// Log reported duplicates if any found whether or not we end up erroring.
-	reporterResolver.LogReport(c.identityStore.logger)
+	reporterResolver.LogReport(i.logger)
 
 	return err
+}
+
+// activateDeduplication is called when the identity deduplication feature is
+// enabled via the Activation Flag API. This method holds two high-level locks
+// ([*IdentityStore].lock and [*IdentityStore].groupLock) to prevent concurrent
+// requests from updating MemDB state while we're modifying the underlying
+// schema and reloading from storage.
+func (i *IdentityStore) activateDeduplication(ctx context.Context, req *logical.Request) error {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+
+	i.groupLock.Lock()
+	defer i.groupLock.Unlock()
+
+	i.logger.Info("activating identity deduplication, reloading identity store")
+
+	i.disableLowerCasedNames = false
+	if err := i.resetDB(); err != nil {
+		return fmt.Errorf("failed to reset existing identity state: %w", err)
+	}
+
+	if err := i.loadArtifacts(ctx); err != nil {
+		return fmt.Errorf("failed to activate identity deduplication: %w", err)
+	}
+
+	i.logger.Info("identity deduplication activated, identity store reload complete")
+	return nil
 }
 
 func (i *IdentityStore) sanitizeName(name string) string {

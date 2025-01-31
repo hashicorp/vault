@@ -390,7 +390,7 @@ func (r *renameResolver) ResolveEntities(ctx context.Context, existing, duplicat
 		"namespace_id", duplicate.NamespaceID,
 		"entity_id", duplicate.ID,
 		"duplicate_of_canonical_id", existing.ID,
-		"renamed_from", duplicate.Name,
+		"renamed_from", existing.Name,
 		"renamed_to", duplicate.Name,
 	)
 
@@ -417,7 +417,8 @@ func (r *renameResolver) ResolveGroups(ctx context.Context, existing, duplicate 
 		"namespace_id", duplicate.NamespaceID,
 		"group_id", duplicate.ID,
 		"duplicate_of_canonical_id", existing.ID,
-		"new_name", duplicate.Name,
+		"renamed_from", existing.Name,
+		"renamed_to", duplicate.Name,
 	)
 	return nil
 }

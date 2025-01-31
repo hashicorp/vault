@@ -131,7 +131,7 @@ func (b *SystemBackend) writeActivationFlagWrite(ctx context.Context, req *logic
 	// Removes /verb from the path
 	featureName := trimPrefix[:strings.LastIndex(trimPrefix, "/")]
 
-	err := b.Core.FeatureActivationFlags.Write(ctx, featureName, isActivate)
+	err := b.Core.FeatureActivationFlags.SetActivationFlagEnabled(ctx, featureName, isActivate)
 	if err != nil {
 		return nil, fmt.Errorf("failed to write new activation flags: %w", err)
 	}
@@ -156,4 +156,16 @@ func (b *SystemBackend) activationFlagsToResponse(activationFlags []string) *log
 			fieldActivated: activationFlags,
 		},
 	}
+}
+
+// activateIdentityDeduplication activates the identity deduplication feature.
+func (b *SystemBackend) activateIdentityDeduplication(ctx context.Context, _ *logical.Request) error {
+	if b.idStoreBackend == nil || b.idStoreBackend.ActivationFunc == nil {
+		return nil
+	}
+
+	if err := b.idStoreBackend.ActivationFunc(ctx, nil); err != nil {
+		return fmt.Errorf("failed to activate identity deduplication: %w", err)
+	}
+	return nil
 }

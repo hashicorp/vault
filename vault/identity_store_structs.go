@@ -10,6 +10,7 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-memdb"
+	"github.com/hashicorp/vault/helper/activationflags"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -57,12 +58,20 @@ type IdentityStore struct {
 	// to enable richer queries based on multiple indexes.
 	db *memdb.MemDB
 
-	// locks to make sure things are consistent
-	lock             sync.RWMutex
-	oidcLock         sync.RWMutex
+	// lock is the high-level IdentityStore lock, which protects underlying
+	// state against concurrent modification/access. If needed, callers should
+	// be sure to take this lock **before** (and never after) taking out any of
+	// the lower-level locks to prevent deadlocks.
+	lock sync.RWMutex
+
+	// oidcLock is used to protect against concurrent changes to OIDC identity
+	// objects.
+	oidcLock sync.RWMutex
+
 	generateJWKSLock sync.Mutex
 
-	// groupLock is used to protect modifications to group entries
+	// groupLock is used to protect against concurrent changes to the group
+	// table and storagepacker.
 	groupLock sync.RWMutex
 
 	// oidcCache stores common response data as well as when the periodic func needs
@@ -112,6 +121,10 @@ type IdentityStore struct {
 	aliasLocks []*locksutil.LockEntry
 
 	conflictResolver ConflictResolver
+
+	// renameDuplicates holds the Core reference to feature activation flags, so
+	// we can set and query enablement of the deduplication feature.
+	renameDuplicates activationflags.ActivationManager
 }
 
 type groupDiff struct {
