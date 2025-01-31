@@ -42,7 +42,7 @@ require (
 	github.com/ProtonMail/go-crypto v0.0.0-20230828082145-3c4c8a2d2371
 	github.com/SAP/go-hdb v1.10.1
 	github.com/Sectorbob/mlab-ns2 v0.0.0-20171030222938-d3aa0c295a8a
-	github.com/aerospike/aerospike-client-go/v5 v5.6.0
+	github.com/aerospike/aerospike-client-go/v7 v7.8.0
 	github.com/aliyun/alibaba-cloud-sdk-go v1.63.12
 	github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5
 	github.com/apple/foundationdb/bindings/go v0.0.0-20190411004307-cd5c9d91fad2
@@ -529,7 +529,7 @@ require (
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
-	github.com/yuin/gopher-lua v0.0.0-20210529063254-f4c35e4016d9 // indirect
+	github.com/yuin/gopher-lua v1.1.1 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	github.com/zclconf/go-cty v1.12.1 // indirect
 	github.com/zeebo/xxh3 v1.0.2 // indirect
