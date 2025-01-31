@@ -28,6 +28,7 @@ func newRootCmd() *cobra.Command {
 	rootCmd.PersistentFlags().StringVar(&rootCfg.logLevel, "log", "warn", "Set the log level. One of 'debug', 'info', 'warn', 'error'")
 
 	rootCmd.AddCommand(newGenerateCmd())
+	rootCmd.AddCommand(newGithubCmd())
 	rootCmd.AddCommand(newReleasesCmd())
 
 	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
