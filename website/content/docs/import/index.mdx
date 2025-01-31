@@ -156,7 +156,9 @@ These can be combined using `and`, `or`, and `not`:
 
 #### Transformers
 
-Transform stanzas come in two forms: `exact` and `regexp`.
+Transform stanzas come in two forms: `exact` and `regexp`.  For each secret found in the source,
+the CLI examples each transform in order.  As soon as one applies to the source secret, all subsequent
+transforms are ignored.
 
 An exact transform allows renaming a secret during import, so that the `from` secret name
 is imported into Vault as a secret named `to`.  In the following example it, takes a source secret
@@ -170,8 +172,13 @@ named `foo` and transforms it to `foosball` during import.
 ```
 
 `regexp` transforms rename secrets during import using
-[Go regular expression syntax](https://github.com/google/re2/wiki/Syntax). For
-example, the transform below imports any secret in the source whose name starts
+[Go regular expression syntax](https://github.com/google/re2/wiki/Syntax).
+The `to` attribute of the transform block contains a template describing
+the name to import the secret as, using `$` followed by a capture group number or name
+to reference parenthesized matches in the `from` regular expression.
+To insert a literal `$` in the output, use `$$` in the template.
+
+For example, the transform below imports any secret in the source whose name starts
 with `foo` and replaces the `foo` prefix with `bar`.
 
 ```hcl
@@ -189,3 +196,50 @@ The `from` value supports parentheses to bookend capture groups and named
 capture groups using the syntax `(?P<name>re)`. When you use named capture
 groups, you can reference the named group in the `to` value. For example,
 `$name` instead of `$1`.
+
+Unfortunately `$` has special meaning inside HCL files: it's used to reference
+variables, which aren't used in import configuration, but the HCL parser still
+treats `$` specially if followed by open curly brace (`{`).
+
+Placeholders in a template don't behave as desired if they're followed by a letter or number,
+e.g. `to = "$1abc$2"` will be interpreted as the concatenation of the capture groups
+named `$1abc` and `$2`.  Similarly, with named capture groups, `to = "$namefoo"` won't match
+a capture group named `name`.  The usual fix in such cases is to use curly braces around
+the number or name of the capture group, but that runs afoul of the HCL variable interpolation
+syntax described above.
+
+The solution is to escape the variable interpolation by doubling the `$`, but only in the case
+where braces are used.
+
+Good:
+```hcl
+  transform "regexp" {
+    from = "foo(.*)"
+    to = "$${1}bar"
+  }
+  transform "regexp" {
+    from = "(?P<prefix>.*)foo"
+    to = "$${prefix}bar"
+  }
+```
+
+Bad:
+```hcl
+  transform "regexp" {
+    from = "foo(.*)"
+    to = "$1bar"
+  }
+  transform "regexp" {
+    from = "foo(.*)"
+    to = "${1}bar"
+  }
+  transform "regexp" {
+    from = "foo(.*)"
+    to = "$$1bar"
+  }
+  transform "regexp" {
+    from = "(?P<prefix>.*)foo"
+    to = "${prefix}bar"
+  }
+```
+
