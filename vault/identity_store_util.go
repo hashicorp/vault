@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"strings"
 	"sync"
 	"testing"
@@ -2828,14 +2829,14 @@ func (i *IdentityStore) countEntitiesByMountAccessor(ctx context.Context) (map[s
 	return byMountAccessor, nil
 }
 
-func makeEntityForPacker(t *testing.T, name string, p *storagepacker.StoragePacker) *identity.Entity {
+func makeEntityForPacker(t *testing.T, name string, p *storagepacker.StoragePacker, seed *rand.Rand) *identity.Entity {
 	t.Helper()
-	return makeEntityForPackerWithNamespace(t, namespace.RootNamespaceID, name, p)
+	return makeEntityForPackerWithNamespace(t, namespace.RootNamespaceID, name, p, seed)
 }
 
-func makeEntityForPackerWithNamespace(t *testing.T, namespaceID, name string, p *storagepacker.StoragePacker) *identity.Entity {
+func makeEntityForPackerWithNamespace(t *testing.T, namespaceID, name string, p *storagepacker.StoragePacker, seed *rand.Rand) *identity.Entity {
 	t.Helper()
-	id, err := uuid.GenerateUUID()
+	id, err := uuid.GenerateUUIDWithReader(seed)
 	require.NoError(t, err)
 	return &identity.Entity{
 		ID:          id,
@@ -2845,9 +2846,10 @@ func makeEntityForPackerWithNamespace(t *testing.T, namespaceID, name string, p 
 	}
 }
 
-func attachAlias(t *testing.T, e *identity.Entity, name string, me *MountEntry) *identity.Alias {
+func attachAlias(t *testing.T, e *identity.Entity, name string, me *MountEntry, seed *rand.Rand) *identity.Alias {
 	t.Helper()
-	id, err := uuid.GenerateUUID()
+
+	id, err := uuid.GenerateUUIDWithReader(seed)
 	require.NoError(t, err)
 	if e.NamespaceID != me.NamespaceID {
 		panic("mount and entity in different namespaces")
@@ -2866,7 +2868,7 @@ func attachAlias(t *testing.T, e *identity.Entity, name string, me *MountEntry) 
 	return a
 }
 
-func identityCreateCaseDuplicates(t *testing.T, ctx context.Context, c *Core, upme, localme *MountEntry) {
+func identityCreateCaseDuplicates(t *testing.T, ctx context.Context, c *Core, upme, localme *MountEntry, seed *rand.Rand) {
 	t.Helper()
 
 	if upme.NamespaceID != localme.NamespaceID {
@@ -2877,31 +2879,31 @@ func identityCreateCaseDuplicates(t *testing.T, ctx context.Context, c *Core, up
 	// suffixes.
 	for i, suffix := range []string{"-case", "-case", "-cAsE"} {
 		// Entity duplicated by name
-		e := makeEntityForPackerWithNamespace(t, upme.NamespaceID, "entity"+suffix, c.identityStore.entityPacker)
+		e := makeEntityForPackerWithNamespace(t, upme.NamespaceID, "entity"+suffix, c.identityStore.entityPacker, seed)
 		err := TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e.ID, e)
 		require.NoError(t, err)
 
 		// Entity that isn't a dupe itself but has duplicated aliases
-		e2 := makeEntityForPackerWithNamespace(t, upme.NamespaceID, fmt.Sprintf("entity-%d", i), c.identityStore.entityPacker)
+		e2 := makeEntityForPackerWithNamespace(t, upme.NamespaceID, fmt.Sprintf("entity-%d", i), c.identityStore.entityPacker, seed)
 		// Add local and non-local aliases for this entity (which will also be
 		// duplicated)
-		attachAlias(t, e2, "alias"+suffix, upme)
-		attachAlias(t, e2, "local-alias"+suffix, localme)
+		attachAlias(t, e2, "alias"+suffix, upme, seed)
+		attachAlias(t, e2, "local-alias"+suffix, localme, seed)
 		err = TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e2.ID, e2)
 		require.NoError(t, err)
 
 		// Group duplicated by name
-		g := makeGroupWithNameAndAlias(t, "group"+suffix, "", c.identityStore.groupPacker, upme)
+		g := makeGroupWithNameAndAlias(t, "group"+suffix, "", c.identityStore.groupPacker, upme, seed)
 		err = TestHelperWriteToStoragePacker(ctx, c.identityStore.groupPacker, g.ID, g)
 		require.NoError(t, err)
 	}
 }
 
-func makeGroupWithNameAndAlias(t *testing.T, name, alias string, p *storagepacker.StoragePacker, me *MountEntry) *identity.Group {
+func makeGroupWithNameAndAlias(t *testing.T, name, alias string, p *storagepacker.StoragePacker, me *MountEntry, seed *rand.Rand) *identity.Group {
 	t.Helper()
-	id, err := uuid.GenerateUUID()
+	id, err := uuid.GenerateUUIDWithReader(seed)
 	require.NoError(t, err)
-	id2, err := uuid.GenerateUUID()
+	id2, err := uuid.GenerateUUIDWithReader(seed)
 	require.NoError(t, err)
 	g := &identity.Group{
 		ID:          id,
@@ -2922,9 +2924,9 @@ func makeGroupWithNameAndAlias(t *testing.T, name, alias string, p *storagepacke
 	return g
 }
 
-func makeLocalAliasWithName(t *testing.T, name, entityID string, bucketKey string, me *MountEntry) *identity.LocalAliases {
+func makeLocalAliasWithName(t *testing.T, name, entityID string, bucketKey string, me *MountEntry, seed *rand.Rand) *identity.LocalAliases {
 	t.Helper()
-	id, err := uuid.GenerateUUID()
+	id, err := uuid.GenerateUUIDWithReader(seed)
 	require.NoError(t, err)
 	return &identity.LocalAliases{
 		Aliases: []*identity.Alias{
