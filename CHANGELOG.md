@@ -13,7 +13,7 @@ CHANGES:
 
 IMPROVEMENTS:
 
-* **Skip auto import rotation of static roles (enterprise)**: The Database secrets engine now allows skipping the automatic rotation of static roles during import.
+* plugins (enterprise): The Database secrets engine now allows skipping the automatic rotation of static roles during import.
 * events (enterprise): Use the `path` event metadata field when authorizing a client's `subscribe` capability for consuming an event, instead of requiring `data_path` to be present in the event metadata.
 * ui: Adds navigation for LDAP hierarchical libraries [[GH-29293](https://github.com/hashicorp/vault/pull/29293)]
 * ui: Adds params to postgresql database to improve editing a connection in the web browser. [[GH-29200](https://github.com/hashicorp/vault/pull/29200)]
@@ -356,7 +356,7 @@ CHANGES:
 
 IMPROVEMENTS:
 
-* **Skip auto import rotation of static roles (enterprise)**: The Database secrets engine now allows skipping the automatic rotation of static roles during import.
+* plugins (enterprise): The Database secrets engine now allows skipping the automatic rotation of static roles during import.
 * events (enterprise): Use the `path` event metadata field when authorizing a client's `subscribe` capability for consuming an event, instead of requiring `data_path` to be present in the event metadata.
 * ui: Adds navigation for LDAP hierarchical libraries [[GH-29293](https://github.com/hashicorp/vault/pull/29293)]
 * ui: Adds params to postgresql database to improve editing a connection in the web browser. [[GH-29200](https://github.com/hashicorp/vault/pull/29200)]
@@ -855,7 +855,7 @@ CHANGES:
 
 IMPROVEMENTS:
 
-* **Skip auto import rotation of static roles (enterprise)**: The Database secrets engine now allows skipping the automatic rotation of static roles during import.
+* plugins (enterprise): The Database secrets engine now allows skipping the automatic rotation of static roles during import.
 * events (enterprise): Use the `path` event metadata field when authorizing a client's `subscribe` capability for consuming an event, instead of requiring `data_path` to be present in the event metadata.
 * ui: Adds navigation for LDAP hierarchical libraries [[GH-29293](https://github.com/hashicorp/vault/pull/29293)]
 * ui: Adds params to postgresql database to improve editing a connection in the web browser. [[GH-29200](https://github.com/hashicorp/vault/pull/29200)]
