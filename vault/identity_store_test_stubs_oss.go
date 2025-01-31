@@ -17,7 +17,7 @@ func entIdentityStoreDeterminismSecondaryTestSetup(t *testing.T, ctx context.Con
 	// no op
 }
 
-func entIdentityStoreDeterminismSecondaryAssert(t *testing.T, i int, loadedIDs, lastIDs []string, seed *rand.Rand) {
+func entIdentityStoreDeterminismSecondaryAssert(t *testing.T, i int, loadedIDs, lastIDs []string) {
 	// no op
 }
 
