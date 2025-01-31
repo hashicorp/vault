@@ -64,11 +64,14 @@ type IdentityStore struct {
 	// the lower-level locks to prevent deadlocks.
 	lock sync.RWMutex
 
-	// oidcLock is used to provide atomic updates to OIDC identity objects.
-	oidcLock         sync.RWMutex
+	// oidcLock is used to protect against concurrent changes to OIDC identity
+	// objects.
+	oidcLock sync.RWMutex
+
 	generateJWKSLock sync.Mutex
 
-	// groupLock is used to provide atomic updates to group identity objects.
+	// groupLock is used to protect against concurrent changes to the group
+	// table and storagepacker.
 	groupLock sync.RWMutex
 
 	// oidcCache stores common response data as well as when the periodic func needs
@@ -118,6 +121,9 @@ type IdentityStore struct {
 	aliasLocks []*locksutil.LockEntry
 
 	conflictResolver ConflictResolver
+
+	// renameDuplicates holds the Core reference to feature activation flags, so
+	// we can set and query enablement of the deduplication feature.
 	renameDuplicates activationflags.ActivationManager
 }
 
