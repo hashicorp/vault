@@ -30,7 +30,7 @@ type FeatureActivationFlags struct {
 // feature activation flags.
 type ActivationManager interface {
 	IsActivationFlagEnabled(featureName string) bool
-	Write(ctx context.Context, featureName string, activate bool) error
+	SetActivationFlagEnabled(ctx context.Context, featureName string, activate bool) error
 }
 
 // NewFeatureActivationFlags is a constructor for FeatureActivationFlags.
@@ -155,10 +155,11 @@ func (f *FeatureActivationFlags) ReloadFlagsFromStorage(ctx context.Context) (ma
 	return changedFlags, nil
 }
 
-// Write is the helper function called by the activation-flags API write endpoint. This stores
-// the boolean value for the activation-flag feature name into Vault storage across the cluster
-// and updates the in-memory cache upon success.
-func (f *FeatureActivationFlags) Write(ctx context.Context, featureName string, activate bool) (err error) {
+// SetActivationFlagEnabled is the helper function called by the
+// activation-flags API write endpoint. This stores the boolean value for the
+// activation-flag feature name into Vault storage across the cluster and
+// updates the in-memory cache upon success.
+func (f *FeatureActivationFlags) SetActivationFlagEnabled(ctx context.Context, featureName string, activate bool) (err error) {
 	f.activationFlagsLock.Lock()
 	defer f.activationFlagsLock.Unlock()
 
@@ -200,8 +201,9 @@ func (f *FeatureActivationFlags) IsActivationFlagEnabled(featureName string) boo
 	return ok && activated
 }
 
-// Set is used to set the activation flag for a feature in tests
-func (f *FeatureActivationFlags) Set(featureName string, activate bool) {
+// ActivateInMem is used to set the activation flag in-memory only for a feature
+// in tests
+func (f *FeatureActivationFlags) ActivateInMem(featureName string, activate bool) {
 	f.activationFlagsLock.Lock()
 	defer f.activationFlagsLock.Unlock()
 

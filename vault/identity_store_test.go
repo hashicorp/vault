@@ -1581,7 +1581,7 @@ func identityStoreLoadingIsDeterministic(t *testing.T, identityDeduplication boo
 		require.False(t, c.Sealed())
 
 		// Test out the system backend ActivationFunc wiring
-		c.FeatureActivationFlags.Set(activationflags.IdentityDeduplication, true)
+		c.FeatureActivationFlags.ActivateInMem(activationflags.IdentityDeduplication, true)
 		require.NoError(t, err)
 
 		err := c.systemBackend.activateIdentityDeduplication(ctx, nil)

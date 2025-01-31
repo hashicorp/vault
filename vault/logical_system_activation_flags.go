@@ -131,7 +131,7 @@ func (b *SystemBackend) writeActivationFlagWrite(ctx context.Context, req *logic
 	// Removes /verb from the path
 	featureName := trimPrefix[:strings.LastIndex(trimPrefix, "/")]
 
-	err := b.Core.FeatureActivationFlags.Write(ctx, featureName, isActivate)
+	err := b.Core.FeatureActivationFlags.SetActivationFlagEnabled(ctx, featureName, isActivate)
 	if err != nil {
 		return nil, fmt.Errorf("failed to write new activation flags: %w", err)
 	}
