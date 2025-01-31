@@ -404,10 +404,10 @@
           "color": "neutral"
         },
         "path": "configuration/entropy-augmentation"
-      },  
-      
+      },
+
       { "heading": "Configuration stanzas" },
-    
+
       {
         "title": "<code>adaptive_overload_protection</code>",
         "badge": {
@@ -1883,12 +1883,20 @@
         }
       },
       {
+        "title": "AWS Secret Manager",
+        "path": "import/awssm"
+      },
+      {
+        "title": "Azure KeyVault",
+        "path": "import/azurekv"
+      },
+      {
         "title": "GCP Secret Manager",
         "path": "import/gcpsm"
       },
       {
-        "title": "Mappings",
-        "path": "import/mappings"
+        "title": "HashiCorp Vault",
+        "path": "import/vault"
       }
     ]
   },
@@ -2542,6 +2550,31 @@
       {
         "title": "Upgrade to Raft WAL",
         "path": "upgrading/raft-wal"
+      },
+      {
+        "title": "Resolve duplicate identities",
+        "routes": [
+          {
+            "title": "Process overview",
+            "path": "upgrading/deduplication"
+          },
+          {
+            "title": "Fix different-case entity alias duplicates",
+            "path": "upgrading/deduplication/different-case"
+          },
+          {
+            "title": "Fix entity and group duplicates",
+            "path": "upgrading/deduplication/entity-group"
+          },
+          {
+            "title": "Resolve ACL policy templates",
+            "path": "upgrading/deduplication/acl-policy-templates"
+          },
+          {
+            "title": "Resolve Terraform config",
+            "path": "upgrading/deduplication/terraform-refs"
+          }
+        ]
       },
       {
         "title": "Upgrade to 1.19.x",

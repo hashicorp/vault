@@ -112,6 +112,10 @@ type Backend struct {
 	// to communicate with a plugin on when to rotate a credential
 	RotateCredential func(context.Context, *logical.Request) error
 
+	// ActivationFunc is the callback function used by ActivationFlags to
+	// communicate with a plugin to activate a feature.
+	ActivationFunc func(context.Context, *logical.Request) error
+
 	logger  log.Logger
 	system  logical.SystemView
 	events  logical.EventSender

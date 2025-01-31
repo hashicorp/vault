@@ -58,20 +58,21 @@ func (i *IdentityStore) resetDB() error {
 
 func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendConfig, logger log.Logger) (*IdentityStore, error) {
 	iStore := &IdentityStore{
-		view:          config.StorageView,
-		logger:        logger,
-		router:        core.router,
-		redirectAddr:  core.redirectAddr,
-		localNode:     core,
-		namespacer:    core,
-		metrics:       core.MetricSink(),
-		totpPersister: core,
-		groupUpdater:  core,
-		tokenStorer:   core,
-		entityCreator: core,
-		mountLister:   core,
-		mfaBackend:    core.loginMFABackend,
-		aliasLocks:    locksutil.CreateLocks(),
+		view:             config.StorageView,
+		logger:           logger,
+		router:           core.router,
+		redirectAddr:     core.redirectAddr,
+		localNode:        core,
+		namespacer:       core,
+		metrics:          core.MetricSink(),
+		totpPersister:    core,
+		groupUpdater:     core,
+		tokenStorer:      core,
+		entityCreator:    core,
+		mountLister:      core,
+		mfaBackend:       core.loginMFABackend,
+		aliasLocks:       locksutil.CreateLocks(),
+		renameDuplicates: core.FeatureActivationFlags,
 	}
 
 	// Create a memdb instance, which by default, operates on lower cased
@@ -108,6 +109,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		Paths:          iStore.paths(),
 		Invalidate:     iStore.Invalidate,
 		InitializeFunc: iStore.initialize,
+		ActivationFunc: iStore.activateDeduplication,
 		PathsSpecial: &logical.Paths{
 			Unauthenticated: []string{
 				"oidc/.well-known/*",
@@ -120,7 +122,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 			},
 		},
 		PeriodicFunc: func(ctx context.Context, req *logical.Request) error {
-			iStore.oidcPeriodicFunc(ctx)
+			iStore.oidcPeriodicFunc(ctx, req.Storage)
 
 			return nil
 		},
@@ -883,8 +885,7 @@ func (i *IdentityStore) invalidateOIDCToken(ctx context.Context) {
 		return
 	}
 
-	// Wipe the cache for the requested namespace. This will also clear
-	// the shared namespace as well.
+	// Wipe the cache for the requested namespace
 	if err := i.oidcCache.Flush(ns); err != nil {
 		i.logger.Error("error flushing oidc cache", "error", err)
 		return
