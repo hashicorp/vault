@@ -723,6 +723,13 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		if err != nil {
 			return nil, err
 		}
+
+		// TODO: Should this be in rebuild issuer chain (?)
+		err = b.pathIssueSignEmptyCert(ctx, req, issuer.Name)
+		if err != nil {
+			return nil, err
+		}
+
 	}
 
 	if modified {
