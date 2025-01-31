@@ -34,7 +34,7 @@ module('Integration | Component | ldap | Page::Library::Details', function (hook
 
     this.breadcrumbs = [
       { label: 'ldap-test', route: 'overview' },
-      { label: 'libraries', route: 'libraries' },
+      { label: 'Libraries', route: 'libraries' },
       { label: 'test-library' },
     ];
   });
@@ -57,7 +57,7 @@ module('Integration | Component | ldap | Page::Library::Details', function (hook
       .containsText(this.model.backend, 'Overview breadcrumb renders');
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(2) a')
-      .containsText('libraries', 'Libraries breadcrumb renders');
+      .containsText('Libraries', 'Libraries breadcrumb renders');
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(3)')
       .containsText(this.model.name, 'Library breadcrumb renders');
