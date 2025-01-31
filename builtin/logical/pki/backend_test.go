@@ -2276,7 +2276,7 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 		t.Fatal(err)
 	}
 	if resp != nil && resp.IsError() {
-		t.Fatalf(resp.Error().Error())
+		t.Fatal(resp.Error().Error())
 	}
 	if resp.Data == nil || resp.Data["certificate"] == nil {
 		t.Fatal("did not get expected data")
@@ -2316,7 +2316,7 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 		t.Fatal(err)
 	}
 	if resp != nil && resp.IsError() {
-		t.Fatalf(resp.Error().Error())
+		t.Fatal(resp.Error().Error())
 	}
 	if resp.Data == nil || resp.Data["certificate"] == nil {
 		t.Fatal("did not get expected data")
