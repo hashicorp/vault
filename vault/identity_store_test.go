@@ -1423,10 +1423,10 @@ func TestIdentityStoreLoadingIsDeterministic(t *testing.T) {
 		identityStoreLoadingIsDeterministic(t, true, false)
 	})
 	t.Run(t.Name()+"-error-resolver-secondary", func(t *testing.T) {
-		identityStoreLoadingIsDeterministic(t, false, false)
+		identityStoreLoadingIsDeterministic(t, false, true)
 	})
 	t.Run(t.Name()+"-identity-cleanup-secondary", func(t *testing.T) {
-		identityStoreLoadingIsDeterministic(t, true, false)
+		identityStoreLoadingIsDeterministic(t, true, true)
 	})
 }
 
