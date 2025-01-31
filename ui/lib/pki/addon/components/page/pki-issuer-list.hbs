@@ -65,40 +65,45 @@
               <span class="has-text-weight-semibold is-underline">
                 {{pkiIssuer.issuerRef}}
                 {{#if pkiIssuer.issuerName}}
-                  <Hds::Badge @text={{pkiIssuer.id}} />
+                  <Hds::Badge @text={{pkiIssuer.id}} class="has-text-grey-dark" />
                 {{/if}}
               </span>
               <div class="is-flex-row has-left-margin-l has-top-margin-xs">
                 {{#if pkiIssuer.isDefault}}
-                  <Hds::Badge @text="default issuer" data-test-is-default={{idx}} class="has-right-margin-xs" />
+                  <Hds::Badge
+                    @text="default issuer"
+                    data-test-is-default={{idx}}
+                    class="has-text-grey-dark has-right-margin-xs"
+                  />
                 {{/if}}
                 {{#if (not-eq pkiIssuer.isRoot undefined)}}
                   <Hds::Badge
                     @text={{if pkiIssuer.isRoot "root" "intermediate"}}
                     data-test-is-root-tag={{idx}}
-                    class="has-right-margin-xs"
+                    class="has-text-grey-dark has-right-margin-xs"
                   />
                 {{/if}}
                 {{#if pkiIssuer.serialNumber}}
-                  <InfoTooltip>
-                    Serial number
-                  </InfoTooltip>
-                  <Hds::Badge
-                    @text={{pkiIssuer.serialNumber}}
-                    @type="outlined"
+                  <span
+                    class="is-transparent is-flex-v-centered has-right-margin-xs has-side-padding-xs"
                     data-test-serial-number={{idx}}
-                    class="has-right-margin-xs"
-                  />
+                  >
+                    <InfoTooltip>
+                      Serial number
+                    </InfoTooltip>
+                    {{pkiIssuer.serialNumber}}
+                  </span>
                 {{/if}}
                 {{#if pkiIssuer.parsedCertificate.common_name}}
-                  <InfoTooltip>
-                    Common name
-                  </InfoTooltip>
-                  <Hds::Badge
-                    @text={{pkiIssuer.parsedCertificate.common_name}}
-                    @type="outlined"
+                  <span
+                    class="is-transparent is-flex-v-centered has-right-margin-xs has-side-padding-xs"
                     data-test-common-name={{idx}}
-                  />
+                  >
+                    <InfoTooltip>
+                      Common name
+                    </InfoTooltip>
+                    {{pkiIssuer.parsedCertificate.common_name}}
+                  </span>
                 {{/if}}
               </div>
             </div>

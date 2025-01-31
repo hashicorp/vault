@@ -27,7 +27,7 @@
         <div class="role-item-details">
           <span class="is-underline">{{if (eq @item.id " ") "(self)" (or @item.keyWithoutParent @item.id)}}</span>
           <br />
-          <Hds::Badge @text={{@item.keyType}} />
+          <Hds::Badge @text={{@item.keyType}} class="has-text-grey-dark" />
           {{#if @item.zeroAddress}}
             <span class="has-text-grey is-size-7">Zero-Address</span>
           {{/if}}

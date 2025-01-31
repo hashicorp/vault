@@ -16,9 +16,9 @@
     <h1 class="title is-3" data-test-replication-title={{@title}}>
       {{@title}}
       {{#if @data.anyReplicationEnabled}}
-        <Hds::Badge @text={{if @isSecondary "secondary" "primary"}} data-test-mode />
+        <Hds::Badge @text={{if @isSecondary "secondary" "primary"}} class="has-text-grey-dark" data-test-mode />
         {{#if @secondaryId}}
-          <Hds::Badge @text={{@secondaryId}} data-test-secondaryId />
+          <Hds::Badge @text={{@secondaryId}} class="has-text-grey-dark" data-test-secondaryId />
         {{/if}}
       {{/if}}
     </h1>
