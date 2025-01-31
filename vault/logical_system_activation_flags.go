@@ -160,6 +160,10 @@ func (b *SystemBackend) activationFlagsToResponse(activationFlags []string) *log
 
 // activateIdentityDeduplication activates the identity deduplication feature.
 func (b *SystemBackend) activateIdentityDeduplication(ctx context.Context, _ *logical.Request) error {
+	if b.idStoreBackend == nil || b.idStoreBackend.ActivationFunc == nil {
+		return nil
+	}
+
 	if err := b.idStoreBackend.ActivationFunc(ctx, nil); err != nil {
 		return fmt.Errorf("failed to activate identity deduplication: %w", err)
 	}
