@@ -25,7 +25,9 @@ module('Integration | Helper | transition-to', function (hooks) {
   });
 
   test('it does not call transition on render', async function (assert) {
-    await render(hbs`<button data-test-btn {{on "click" (transition-to "vault.cluster")}}>Click</button>`);
+    await render(
+      hbs`<button data-test-btn type="button" {{on "click" (transition-to "vault.cluster")}}>Click</button>`
+    );
 
     assert.true(this.router.transitionTo.notCalled, 'transitionTo not called on render');
     assert.true(this.router.transitionToExternal.notCalled, 'transitionToExternal not called on render');
@@ -33,7 +35,7 @@ module('Integration | Helper | transition-to', function (hooks) {
 
   test('it calls transitionTo correctly', async function (assert) {
     await render(
-      hbs`<button data-test-btn {{on "click" (transition-to "vault.cluster" "foobar" "baz")}}>Click</button>`
+      hbs`<button data-test-btn type="button" {{on "click" (transition-to "vault.cluster" "foobar" "baz")}}>Click</button>`
     );
     await click('[data-test-btn]');
 
@@ -48,7 +50,7 @@ module('Integration | Helper | transition-to', function (hooks) {
 
   test('it calls transitionToExternal correctly', async function (assert) {
     await render(
-      hbs`<button data-test-btn {{on "click" (transition-to "vault.cluster" "foobar" "baz" external=true)}}>Click</button>`
+      hbs`<button data-test-btn type="button" {{on "click" (transition-to "vault.cluster" "foobar" "baz" external=true)}}>Click</button>`
     );
     await click('[data-test-btn]');
 
@@ -68,7 +70,7 @@ module('Integration | Helper | transition-to', function (hooks) {
   // This test passing, indirectly means the helper works as expected. Failures might be something like "global failure: TypeError: this.router is undefined"
   test('it uses service:app-router when base router undefined', async function (assert) {
     await render(
-      hbs`<button data-test-btn {{on "click" (transition-to "vault.cluster" "foobar" "baz" external=true)}}>Click</button>`,
+      hbs`<button data-test-btn type="button" {{on "click" (transition-to "vault.cluster" "foobar" "baz" external=true)}}>Click</button>`,
       { owner: this.engine }
     );
     await click('[data-test-btn]');

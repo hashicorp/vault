@@ -8,6 +8,7 @@ import Service, { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { TrackedObject } from 'tracked-built-ins';
 export default class CustomMessagesService extends Service {
+  @service config;
   @service store;
   @service namespace;
   @service auth;
@@ -32,9 +33,10 @@ export default class CustomMessagesService extends Service {
 
   async fetchMessages(ns) {
     try {
+      const { host } = this.config;
       const url = this.auth.currentToken
-        ? '/v1/sys/internal/ui/authenticated-messages'
-        : '/v1/sys/internal/ui/unauthenticated-messages';
+        ? `${host}/v1/sys/internal/ui/authenticated-message`
+        : `${host}/v1/sys/internal/ui/unauthenticated-messages`;
       const opts = {
         method: 'GET',
         headers: {},

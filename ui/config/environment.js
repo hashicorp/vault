@@ -50,12 +50,16 @@ module.exports = function (environment) {
     ENV.APP.LOG_TRANSITIONS = true;
     // ENV.APP.LOG_TRANSITIONS_INTERNAL = true;
     // ENV.APP.LOG_VIEW_LOOKUPS = true;
-    if (process.env.MIRAGE_DEV_HANDLER !== undefined) {
-      ENV['ember-cli-mirage'] = {
-        enabled: true,
-        handler: process.env.MIRAGE_DEV_HANDLER,
-      };
-    }
+    // if (process.env.MIRAGE_DEV_HANDLER !== undefined) {
+    //   ENV['ember-cli-mirage'] = {
+    //     enabled: true,
+    //     handler: process.env.MIRAGE_DEV_HANDLER,
+    //   };
+    // }
+
+    ENV['ember-cli-mirage'] = {
+      enabled: false,
+    };
   }
 
   if (environment === 'test') {
@@ -76,6 +80,7 @@ module.exports = function (environment) {
   }
 
   ENV.welcomeMessage = process.env.UI_AUTH_WELCOME;
+  ENV.host = process.env.VAULT_ADDR || 'http://127.0.0.1:8200';
 
   return ENV;
 };

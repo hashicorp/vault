@@ -6,7 +6,8 @@
 module.exports = function (environment) {
   return {
     delivery: ['header', 'meta'],
-    enabled: environment !== 'production',
+    // enabled: environment !== 'production',
+    enabled: false,
     failTests: true,
     policy: {
       'default-src': ["'none'"],

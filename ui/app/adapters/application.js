@@ -15,6 +15,7 @@ const { POLLING_URLS, NAMESPACE_ROOT_URLS } = APP;
 
 export default RESTAdapter.extend({
   auth: service(),
+  config: service(),
   namespaceService: service('namespace'),
   controlGroup: service(),
 
@@ -68,6 +69,8 @@ export default RESTAdapter.extend({
     let url = intendedUrl;
     let type = method;
     let options = passedOptions;
+    let { host } = this.config;
+
     const controlGroup = this.controlGroup;
     const controlGroupToken = controlGroup.tokenForUrl(url);
     // if we have a Control Group token that matches the intendedUrl,
@@ -85,6 +88,15 @@ export default RESTAdapter.extend({
       };
     }
     const opts = this._preRequest(url, options, method);
+
+    console.log('ajax url', url);
+    console.log('host?', this.config.host);
+
+    if (!url.startsWith('http')) {
+      console.log('replacing', host, url)
+      url = `${host}${url}`;
+      console.log(url);
+    }
 
     return this._super(url, type, opts).then((...args) => {
       if (controlGroupToken) {

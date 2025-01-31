@@ -11,6 +11,7 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import type StoreService from 'vault/services/store';
 import type VersionService from 'vault/services/version';
 import type PermissionsService from 'vault/services/permissions';
+import type ConfigService from 'vault/services/config';
 
 const FLAGS = {
   vaultCloudNamespace: 'VAULT_CLOUD_ADMIN_NAMESPACE',
@@ -23,6 +24,7 @@ const FLAGS = {
  */
 
 export default class flagsService extends Service {
+  @service declare readonly config: ConfigService;
   @service declare readonly version: VersionService;
   @service declare readonly store: StoreService;
   @service declare readonly permissions: PermissionsService;
@@ -40,7 +42,8 @@ export default class flagsService extends Service {
 
   getFeatureFlags = keepLatestTask(async () => {
     try {
-      const result = await fetch('/v1/sys/internal/ui/feature-flags', {
+      const { host } = this.config;
+      const result = await fetch(`${host}/v1/sys/internal/ui/feature-flags`, {
         method: 'GET',
       });
 
