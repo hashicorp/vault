@@ -4,10 +4,13 @@
 package automatedrotationutil
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/rotation"
 )
 
 var (
@@ -103,4 +106,53 @@ func AddAutomatedRotationFields(m map[string]*framework.FieldSchema) {
 		}
 		m[name] = schema
 	}
+}
+
+func (p *AutomatedRotationParams) HandleRotationJobOperation(ctx context.Context, b *framework.Backend, req *logical.Request, revertStorageFunc func() error) *logical.Response {
+	// Disable Automated Rotation and Deregister credentials if required
+	if p.DisableAutomatedRotation {
+		deregisterReq := &rotation.RotationJobDeregisterRequest{
+			MountType: req.MountType,
+			ReqPath:   req.Path,
+		}
+
+		b.Logger().Debug("Deregistering rotation job", "mount", req.MountPoint+req.Path)
+		err := b.System().DeregisterRotationJob(ctx, deregisterReq)
+		if err != nil {
+			resp := logical.ErrorResponse("error deregistering rotation job but config was successfully updated: %s", err)
+			resp.AddWarning("config was successfully updated despite failing to disable automated rotation")
+
+			if err := revertStorageFunc(); err != nil {
+				return resp
+			}
+
+			return nil
+		}
+	} else {
+		// Now that the root config is set up, register the rotation job if it's required.
+		if p.ShouldRegisterRotationJob() {
+			cfgReq := &rotation.RotationJobConfigureRequest{
+				MountType:        req.MountType,
+				ReqPath:          req.Path,
+				RotationSchedule: p.RotationSchedule,
+				RotationWindow:   p.RotationWindow,
+				RotationPeriod:   p.RotationPeriod,
+			}
+
+			b.Logger().Debug("Registering rotation job", "mount", req.MountPoint+req.Path)
+			_, err := b.System().RegisterRotationJob(ctx, cfgReq)
+			if err != nil {
+				resp := logical.ErrorResponse("error registering rotation job but config was successfully updated: %s", err)
+				resp.AddWarning("config was successfully updated despite failing to enable automated rotation")
+
+				if err := revertStorageFunc(); err != nil {
+					return resp
+				}
+
+				return nil
+			}
+		}
+	}
+
+	return nil
 }
