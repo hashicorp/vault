@@ -637,3 +637,36 @@ requested common name is allowed by the role policy.
 This path requires a CSR; if you want Vault to generate a private key
 for you, use the issue path instead.
 `
+
+func (b *backend) pathIssueSignEmptyCert(ctx context.Context, req *logical.Request, issuerName string) error {
+	emptyRole := &issuing.RoleEntry{
+		AllowLocalhost:    true,
+		AllowedBaseDomain: "*",
+		AllowAnyName:      true,
+		AllowedDomains:    []string{"*"},
+		AllowBaseDomain:   true,
+		AllowBareDomains:  true,
+		AllowGlobDomains:  true,
+		AllowSubdomains:   true,
+		AllowIPSANs:       true,
+		NoStore:           true,
+		NoStoreMetadata:   true,
+		Issuer:            issuerName,
+	}
+	schema := map[string]*framework.FieldSchema{}
+	schema = addNonCACommonFields(addIssueAndSignCommonFields(schema))
+	emptyData := &framework.FieldData{
+		Raw: map[string]interface{}{
+			"ttl": "30s",
+		},
+		Schema: schema,
+	}
+	resp, err := b.pathIssueSignCert(ctx, req, emptyData, emptyRole, false, false)
+	if err != nil {
+		return err
+	}
+	if resp.IsError() {
+		return resp.Error()
+	}
+	return nil
+}
