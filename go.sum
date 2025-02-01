@@ -1368,8 +1368,8 @@ github.com/grpc-ecosystem/grpc-gateway v1.16.0 h1:gmcG1KaJ57LophUzW0Hy8NmPhnMZb4
 github.com/grpc-ecosystem/grpc-gateway v1.16.0/go.mod h1:BDjrQk3hbvj6Nolgz8mAMFbcEtjT1g+wF4CSlocrBnw=
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.7.0/go.mod h1:hgWBS7lorOAVIJEQMi4ZsPv9hVvWI6+ch50m39Pf2Ks=
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.11.3/go.mod h1:o//XUCC/F+yRGJoPO/VU0GSB0f8Nhgmxx0VIRUvaC0w=
-github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.1 h1:/c3QmbOGMGTOumP2iT/rCwB7b0QDGLKzqOmktBjT+Is=
-github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.1/go.mod h1:5SN9VR2LTsRFsrEC6FHgRbTWrTHu6tqPeKxEQv15giM=
+github.com/grpc-ecosystem/grpc-gateway/v2 v2.22.0 h1:asbCHRVmodnJTuQ3qamDwqVOIjwqUPTYmYuemVOx+Ys=
+github.com/grpc-ecosystem/grpc-gateway/v2 v2.22.0/go.mod h1:ggCgvZ2r7uOoQjOyu2Y1NhHmEPPzzuhWgcza5M1Ji1I=
 github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed h1:5upAirOpQc1Q53c0bnx2ufif5kANL7bfZWcc6VJWJd8=
 github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed/go.mod h1:tMWxXQ9wFIaZeTI9F+hmhFiGpFmhOHzyShyFUhRm0H4=
 github.com/hashicorp/cap v0.7.0 h1:atLIEU5lJslYXo1qsv7RtUL1HrJVVxnfkErIT3uxLp0=
@@ -1568,8 +1568,8 @@ github.com/hashicorp/vault-plugin-auth-kerberos v0.13.0 h1:KN+nY7XJANb7IRILf0Ena
 github.com/hashicorp/vault-plugin-auth-kerberos v0.13.0/go.mod h1:tJ4upLp8+7xxNHBFwpXQaQQQjkwSwI4P/Hic9EKkWvQ=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.20.0 h1:C+3gSOE+M1JT/6K/CNbQXCAUAA2wFQ7IFpD9Y9IPXxU=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.20.0/go.mod h1:5//ywSXEdrni78mPcOAE+BnF8XUnbvSMCIwMvmHSbzI=
-github.com/hashicorp/vault-plugin-auth-oci v0.17.0 h1:t2PNAWSZNNm7sf+l2vK4wod0fQ4DckVZuCb3N9Dgark=
-github.com/hashicorp/vault-plugin-auth-oci v0.17.0/go.mod h1:vCuIzHclwIyL+Vk6OfIoqjOomuvPmwRUbnnxlxHCyqM=
+github.com/hashicorp/vault-plugin-auth-oci v0.17.1-0.20250201002132-213a07645e7c h1:+McHA7xQphEAdmCmxXTUU/74LGhRZupcrq63BYgnmOg=
+github.com/hashicorp/vault-plugin-auth-oci v0.17.1-0.20250201002132-213a07645e7c/go.mod h1:4z+yjVUMrYN8uhKm9tyUbCbEvhAIMpF/3vgKRBBYlG4=
 github.com/hashicorp/vault-plugin-database-couchbase v0.12.0 h1:WBPE3nsbM03HxmBBEa2dca2XR/6wZqm1eKZDo3NFxOg=
 github.com/hashicorp/vault-plugin-database-couchbase v0.12.0/go.mod h1:Pp6qHuSRxSivKMNVGzxRhIjkVsdJ4LSj8B4n8uoD4XU=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.16.0 h1:gArlFh8W0SVQA3OmYZ/IwD6H4RxLphAtKB71jOEKawE=
