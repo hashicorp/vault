@@ -518,26 +518,7 @@ func assertErrEquals(expectedErr error) errorAssertion {
 	}
 }
 
-var _ proto.DatabaseClient = fakeClient{}
-
-type fakeClient struct {
-	initResp *proto.InitializeResponse
-	initErr  error
-
-	newUserResp *proto.NewUserResponse
-	newUserErr  error
-
-	updateUserResp *proto.UpdateUserResponse
-	updateUserErr  error
-
-	deleteUserResp *proto.DeleteUserResponse
-	deleteUserErr  error
-
-	typeResp *proto.TypeResponse
-	typeErr  error
-
-	closeErr error
-}
+// fakeClient methods
 
 func (f fakeClient) Initialize(context.Context, *proto.InitializeRequest, ...grpc.CallOption) (*proto.InitializeResponse, error) {
 	return f.initResp, f.initErr

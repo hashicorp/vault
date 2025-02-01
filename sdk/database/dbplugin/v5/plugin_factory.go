@@ -60,6 +60,8 @@ func PluginFactoryVersion(ctx context.Context, pluginName string, pluginVersion 
 			AutoMTLS:        true,
 			Wrapper:         sys,
 		}
+		config.EntUpdate(pluginRunner)
+
 		// create a DatabasePluginClient instance
 		db, err = NewPluginClient(ctx, sys, config)
 		if err != nil {

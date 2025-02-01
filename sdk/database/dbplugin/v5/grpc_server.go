@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
@@ -20,21 +19,6 @@ import (
 )
 
 var _ proto.DatabaseServer = &gRPCServer{}
-
-type gRPCServer struct {
-	proto.UnimplementedDatabaseServer
-	logical.UnimplementedPluginVersionServer
-
-	// holds the non-multiplexed Database
-	// when this is set the plugin does not support multiplexing
-	singleImpl Database
-
-	// instances holds the multiplexed Databases
-	instances   map[string]Database
-	factoryFunc func() (interface{}, error)
-
-	sync.RWMutex
-}
 
 func (g *gRPCServer) getOrCreateDatabase(ctx context.Context) (Database, error) {
 	g.Lock()
