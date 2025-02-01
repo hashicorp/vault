@@ -1368,8 +1368,8 @@ github.com/grpc-ecosystem/grpc-gateway v1.16.0 h1:gmcG1KaJ57LophUzW0Hy8NmPhnMZb4
 github.com/grpc-ecosystem/grpc-gateway v1.16.0/go.mod h1:BDjrQk3hbvj6Nolgz8mAMFbcEtjT1g+wF4CSlocrBnw=
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.7.0/go.mod h1:hgWBS7lorOAVIJEQMi4ZsPv9hVvWI6+ch50m39Pf2Ks=
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.11.3/go.mod h1:o//XUCC/F+yRGJoPO/VU0GSB0f8Nhgmxx0VIRUvaC0w=
-github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.1 h1:/c3QmbOGMGTOumP2iT/rCwB7b0QDGLKzqOmktBjT+Is=
-github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.1/go.mod h1:5SN9VR2LTsRFsrEC6FHgRbTWrTHu6tqPeKxEQv15giM=
+github.com/grpc-ecosystem/grpc-gateway/v2 v2.22.0 h1:asbCHRVmodnJTuQ3qamDwqVOIjwqUPTYmYuemVOx+Ys=
+github.com/grpc-ecosystem/grpc-gateway/v2 v2.22.0/go.mod h1:ggCgvZ2r7uOoQjOyu2Y1NhHmEPPzzuhWgcza5M1Ji1I=
 github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed h1:5upAirOpQc1Q53c0bnx2ufif5kANL7bfZWcc6VJWJd8=
 github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed/go.mod h1:tMWxXQ9wFIaZeTI9F+hmhFiGpFmhOHzyShyFUhRm0H4=
 github.com/hashicorp/cap v0.7.0 h1:atLIEU5lJslYXo1qsv7RtUL1HrJVVxnfkErIT3uxLp0=
@@ -1598,8 +1598,8 @@ github.com/hashicorp/vault-plugin-secrets-kubernetes v0.9.0 h1:HEgEjYzG/DYBbCOrm
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.9.0/go.mod h1:I/CF2GdsKiZ3ZgPrNVF+bs3XD7pUxp24iSKTVV4pHeE=
 github.com/hashicorp/vault-plugin-secrets-kv v0.20.0 h1:p1RVmd4x1rgGK0tN8DDu21J21bR3O93qBFXLGEdJSEo=
 github.com/hashicorp/vault-plugin-secrets-kv v0.20.0/go.mod h1:bCpMggD3Z0+H+3dOmTCoQjBHC53jA08lPqOLmFrHBi8=
-github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.13.0 h1:BeDS7luTeOW0braIbtuyairFF8SEz7k3nvi9e+mJ2Ok=
-github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.13.0/go.mod h1:sprde+S70PBIbgOLUAKDxR+xNF714ksBBVh77O3hnWc=
+github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.13.1-0.20250201002015-b0b4fa5c1c10 h1:zxoY2gjp1XchNIXiwcZyHUVjRrI5WtuaCa4fWd1eahE=
+github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.13.1-0.20250201002015-b0b4fa5c1c10/go.mod h1:V4M6Hs2O2Q6+6DHpARarwb/dNleFFRElguwNZ9liqPo=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.14.4 h1:BA5gf+itQ4FtEg4gyXvEZW0ioRCSUNnO3+XBrxDNi9A=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.14.4/go.mod h1:mdECWDLyILokYVpdBgwvHWkPJ+cEnSTxR6yDT0TBS98=
 github.com/hashicorp/vault-plugin-secrets-terraform v0.10.0 h1:YzOJrpuDRNrw5SQ4i7IEjedF40I/7ejupQy+gAyQ6Zg=
