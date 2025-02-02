@@ -1,0 +1,6 @@
+```release-note:improvement
+secrets/database: Add PSC support for GCP CloudSQL MySQL and Postgresql
+```
+```release-note:improvement
+secrets/database: Add PrivateIP support for MySQL
+```
