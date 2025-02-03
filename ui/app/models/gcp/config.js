@@ -73,10 +73,10 @@ export default class GcpConfig extends Model {
     return !!this.identityTokenAudience || !!this.identityTokenTtl || !!this.serviceAccountEmail;
   }
 
-  isAccountPluginConfigured = false;
   // the "credentials" param is not checked for "isAccountPluginConfigured" because it's never return by the API
   // additionally credentials can be set via GOOGLE_APPLICATION_CREDENTIALS env var so we cannot call it a required field in the ui.
   // thus we can never say for sure if the account accessType has been configured so we always return false
+  isAccountPluginConfigured = false;
 
   get displayAttrs() {
     const formFields = expandAttributeMeta(this, this.configurableParams);
