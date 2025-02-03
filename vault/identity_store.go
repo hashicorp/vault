@@ -66,7 +66,6 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		namespacer:       core,
 		metrics:          core.MetricSink(),
 		totpPersister:    core,
-		groupUpdater:     core,
 		tokenStorer:      core,
 		entityCreator:    core,
 		mountLister:      core,

@@ -237,7 +237,7 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 				}
 			}
 
-			err = i.UpsertGroupInTxn(ctx, txn, group, persist)
+			err = i.UpsertGroupInTxn(nsCtx, txn, group, persist)
 
 			if errors.Is(err, logical.ErrReadOnly) {
 				// This is an imperfect solution to unblock customers who are running into
@@ -1990,6 +1990,14 @@ func (i *IdentityStore) UpsertGroupInTxn(ctx context.Context, txn *memdb.Txn, gr
 		return fmt.Errorf("group is nil")
 	}
 
+	g, err := i.MemDBGroupByName(ctx, group.Name, true)
+	if err != nil {
+		return err
+	}
+	if g != nil {
+		group.ID = g.ID
+	}
+
 	// Increment the modify index of the group
 	group.ModifyIndex++
 
@@ -2030,14 +2038,8 @@ func (i *IdentityStore) UpsertGroupInTxn(ctx context.Context, txn *memdb.Txn, gr
 			Message: groupAsAny,
 		}
 
-		sent, err := i.groupUpdater.SendGroupUpdate(ctx, group)
-		if err != nil {
+		if err := i.groupPacker.PutItem(ctx, item); err != nil {
 			return err
-		}
-		if !sent {
-			if err := i.groupPacker.PutItem(ctx, item); err != nil {
-				return err
-			}
 		}
 	}
 
