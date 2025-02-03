@@ -4,6 +4,7 @@
  */
 
 export const AUTH_FORM = {
+  method: '[data-test-select=auth-method]',
   form: '[data-test-auth-form]',
   login: '[data-test-auth-submit]',
   tabs: (method: string) => (method ? `[data-test-auth-method="${method}"]` : '[data-test-auth-method]'),
