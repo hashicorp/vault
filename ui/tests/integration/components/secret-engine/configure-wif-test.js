@@ -150,7 +150,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
               `Request was made to save the issuer when it should not have been because the user canceled out of the flow.`
             );
           });
-          await fillInAzureConfig({ withWif: true });
+          await fillInAzureConfig(true);
           await click(GENERAL.cancelButton);
 
           assert.true(this.flashDangerSpy.notCalled, 'No danger flash messages called.');
@@ -258,7 +258,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
               `);
           await fillInAzureConfig();
           await click(SES.wif.accessType('wif'));
-          await fillInAzureConfig({ withWif: true });
+          await fillInAzureConfig(true);
           await click(SES.wif.accessType('azure'));
           await click(GENERAL.toggleGroup('More options'));
 

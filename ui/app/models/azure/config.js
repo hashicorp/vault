@@ -16,7 +16,6 @@ export default class AzureConfig extends Model {
   @attr('string', { sensitive: true }) clientSecret; // obfuscated, never returned by API
 
   @attr('string', {
-    label: 'Environment',
     subText:
       'This value can also be provided with the AZURE_ENVIRONMENT environment variable. If not specified, Vault will use Azure Public Cloud.',
   })

@@ -363,7 +363,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
 
         await click(SES.configTab);
         await click(SES.configure);
-        await fillInAzureConfig({ withWif: true });
+        await fillInAzureConfig(true);
         await click(GENERAL.saveButton);
         assert.dom(SES.wif.issuerWarningModal).doesNotExist('issuer warning modal does not show');
         assert.true(
@@ -393,7 +393,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
 
         await click(SES.configTab);
         await click(SES.configure);
-        await fillInAzureConfig({ withWif: true });
+        await fillInAzureConfig(true);
         assert
           .dom(GENERAL.inputByAttr('issuer'))
           .hasValue(oldIssuer, 'issuer defaults to previously saved value');
@@ -435,7 +435,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
 
         await click(SES.configTab);
         await click(SES.configure);
-        await fillInAzureConfig({ withWif: true });
+        await fillInAzureConfig(true);
         assert
           .dom(GENERAL.inputByAttr('issuer'))
           .hasValue(oldIssuer, 'issuer defaults to previously saved value');
@@ -466,7 +466,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
         await enablePage.enable(this.type, path);
         await click(SES.configTab);
         await click(SES.configure);
-        await fillInAzureConfig({ withWif: true });
+        await fillInAzureConfig(true);
         await click(GENERAL.saveButton); // finished creating attributes, go back and edit them.
         assert
           .dom(GENERAL.infoRowValue('Identity token audience'))
