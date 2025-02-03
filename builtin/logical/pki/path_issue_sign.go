@@ -652,6 +652,9 @@ func (b *backend) pathIssueSignEmptyCert(ctx context.Context, req *logical.Reque
 		NoStore:           true,
 		NoStoreMetadata:   true,
 		Issuer:            issuerName,
+		RequireCN:         false,
+		KeyBits:           256,  // Any stored role will have some value here;
+		KeyType:           "ec", // We need more tests with "ec"
 	}
 	schema := map[string]*framework.FieldSchema{}
 	schema = addNonCACommonFields(addIssueAndSignCommonFields(schema))
