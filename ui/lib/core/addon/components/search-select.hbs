@@ -68,7 +68,7 @@
               {{get selected this.idKey}}
             </small>
           {{else}}
-            <div class="list-item-text has-right-margin-xxs text-overflow-ellipsis">
+            <div class="list-item-text has-right-margin-4 text-overflow-ellipsis">
               {{selected.id}}
               {{#if @wildcardLabel}}
                 {{#if (is-wildcard-string selected.id)}}
@@ -77,7 +77,6 @@
                       @text="includes {{wildcardCount}} {{(if
                         (eq wildcardCount 1) @wildcardLabel (pluralize @wildcardLabel)
                       )}}"
-                      class="has-text-grey-dark"
                       data-test-count={{wildcardCount}}
                     />
                   {{/let}}

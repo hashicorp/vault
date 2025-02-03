@@ -14,7 +14,7 @@
       <LinkTo @route="vault.cluster.access.identity.show" @models={{array "groups" gid "details"}} class="has-text-black">
         <Icon @name="folder" class="has-text-grey-light" />{{gid}}
       </LinkTo>
-      <Hds::Badge @text="inherited" class="has-text-grey" />
+      <Hds::Badge @text="inherited" />
     </LinkedBlock>
   {{/each}}
 {{else}}

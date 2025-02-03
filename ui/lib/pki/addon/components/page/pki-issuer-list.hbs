@@ -65,27 +65,23 @@
               <span class="has-text-weight-semibold is-underline">
                 {{pkiIssuer.issuerRef}}
                 {{#if pkiIssuer.issuerName}}
-                  <Hds::Badge @text={{pkiIssuer.id}} class="has-text-grey-dark" />
+                  <Hds::Badge @text={{pkiIssuer.id}} />
                 {{/if}}
               </span>
               <div class="is-flex-row has-left-margin-l has-top-margin-xs">
                 {{#if pkiIssuer.isDefault}}
-                  <Hds::Badge
-                    @text="default issuer"
-                    data-test-is-default={{idx}}
-                    class="has-text-grey-dark has-right-margin-xs"
-                  />
+                  <Hds::Badge @text="default issuer" data-test-is-default={{idx}} class="has-right-margin-8" />
                 {{/if}}
                 {{#if (not-eq pkiIssuer.isRoot undefined)}}
                   <Hds::Badge
                     @text={{if pkiIssuer.isRoot "root" "intermediate"}}
                     data-test-is-root-tag={{idx}}
-                    class="has-text-grey-dark has-right-margin-xs"
+                    class="has-right-margin-8"
                   />
                 {{/if}}
                 {{#if pkiIssuer.serialNumber}}
                   <span
-                    class="is-transparent is-flex-v-centered has-right-margin-xs has-side-padding-xs"
+                    class="is-transparent is-flex-v-centered has-right-margin-8 has-side-padding-8"
                     data-test-serial-number={{idx}}
                   >
                     <InfoTooltip>
@@ -96,7 +92,7 @@
                 {{/if}}
                 {{#if pkiIssuer.parsedCertificate.common_name}}
                   <span
-                    class="is-transparent is-flex-v-centered has-right-margin-xs has-side-padding-xs"
+                    class="is-transparent is-flex-v-centered has-right-margin-8 has-side-padding-8"
                     data-test-common-name={{idx}}
                   >
                     <InfoTooltip>

@@ -1,3 +1,0 @@
-```release-note:improvement
-ui: Replaces instances of custom css class with Hds::Badge component
-```

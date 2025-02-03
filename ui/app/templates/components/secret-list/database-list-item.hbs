@@ -22,7 +22,7 @@
         <div class="role-item-details">
           <span class="is-underline">{{if (eq @item.id " ") "(self)" (or @item.keyWithoutParent @item.id)}}</span>
           {{#if this.keyTypeValue}}
-            <Hds::Badge @text={{this.keyTypeValue}} class="has-text-grey-dark" />
+            <Hds::Badge @text={{this.keyTypeValue}} />
           {{/if}}
         </div>
       </LinkTo>
