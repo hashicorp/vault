@@ -1062,13 +1062,17 @@ func testParseCsrToFields(t *testing.T, issueTime time.Time, tt *parseCertificat
 // entire CA chain.
 //
 // This test constructs a root CA that
-// - allows: .example.com
+// - allows: .example.com and myint.com
 // - excludes: bad.example.com
 //
 // and an intermediate that
 // - forbids alsobad.example.com
 //
-// It verifies that the intermediate
+// By importing the intermediate chain in the "wrong" order, it validates parsePEM
+// is using the updated verification logic, not the historical strict one which
+// prevented multi-chains.
+//
+// It then checks verification by issuing from the intermediate certificate:
 // - can issue certs like good.example.com
 // - rejects names like notanexample.com since they are not in the namespace of names permitted by the root CA
 // - rejects bad.example.com, since the root CA excludes it
