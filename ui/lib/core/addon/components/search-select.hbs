@@ -74,9 +74,7 @@
                 {{#if (is-wildcard-string selected.id)}}
                   {{#let (filter-wildcard selected this.allOptions) as |wildcardCount|}}
                     <Hds::Badge
-                      @text="includes {{wildcardCount}} {{(if
-                        (eq wildcardCount 1) @wildcardLabel (pluralize @wildcardLabel)
-                      )}}"
+                      @text="includes {{pluralize wildcardCount @wildcardLabel}}"
                       data-test-count={{wildcardCount}}
                     />
                   {{/let}}

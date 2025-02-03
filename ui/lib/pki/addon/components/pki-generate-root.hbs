@@ -41,7 +41,11 @@
       {{/if}}
     </InfoTableRow>
     <InfoTableRow @label="Private key type" @value={{@model.privateKeyType}}>
-      <Hds::Badge @text={{or @model.privateKeyType "internal"}} />
+      {{#if @model.privateKeyType}}
+        {{@model.privateKeyType}}
+      {{else}}
+        <Hds::Badge @text="internal" />
+      {{/if}}
     </InfoTableRow>
     <ParsedCertificateInfoRows @model={{@model.parsedCertificate}} />
   </main>

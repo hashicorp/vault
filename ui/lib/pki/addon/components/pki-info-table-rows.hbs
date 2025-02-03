@@ -19,7 +19,7 @@
             <LinkTo @route={{attr.options.detailLinkTo}} @model={{value}}>{{value}}</LinkTo>
           {{else if (or (eq attr.name "privateKey") (eq attr.name "privateKeyType"))}}
             {{#if value}}
-              <span>{{value}}</span>
+              {{value}}
             {{else}}
               <Hds::Badge @text="internal" />
             {{/if}}

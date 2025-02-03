@@ -80,10 +80,7 @@
                   />
                 {{/if}}
                 {{#if pkiIssuer.serialNumber}}
-                  <span
-                    class="is-transparent is-flex-v-centered has-right-margin-8 has-side-padding-8"
-                    data-test-serial-number={{idx}}
-                  >
+                  <span class="is-flex-v-centered has-side-padding-8" data-test-serial-number={{idx}}>
                     <InfoTooltip>
                       Serial number
                     </InfoTooltip>
@@ -91,10 +88,7 @@
                   </span>
                 {{/if}}
                 {{#if pkiIssuer.parsedCertificate.common_name}}
-                  <span
-                    class="is-transparent is-flex-v-centered has-right-margin-8 has-side-padding-8"
-                    data-test-common-name={{idx}}
-                  >
+                  <span class="is-flex-v-centered has-side-padding-8" data-test-common-name={{idx}}>
                     <InfoTooltip>
                       Common name
                     </InfoTooltip>

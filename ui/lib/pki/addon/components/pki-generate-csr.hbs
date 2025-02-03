@@ -33,7 +33,8 @@
                   {{@model.keyId}}
                 </LinkTo>
               {{else if (value)}}
-                <span>{{"value"}}</span>
+                {{value}}
+                {{! it's unlikely but if a value is returned for privateKey and privateKeyType we want to display it, otherwise we show the "internal" badge below }}
               {{else}}
                 <Hds::Badge @text="internal" />
               {{/if}}
