@@ -72,7 +72,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
     await runCmd(`delete sys/mounts/${path}`);
   });
 
-  module('isCommunity', function (hooks) {
+  module('Community', function (hooks) {
     hooks.beforeEach(function () {
       this.version.type = 'community';
     });
@@ -89,7 +89,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
           environment: 'AZUREPUBLICCLOUD',
         };
         this.server.get(`${path}/config`, () => {
-          assert.ok(true, 'request made to config when navigating to the configuration page.');
+          assert.true(true, 'request made to config when navigating to the configuration page.');
           return { data: { id: path, type: this.type, ...azureAccountAttrs } };
         });
         await enablePage.enable(this.type, path);
@@ -109,17 +109,6 @@ module('Acceptance | Azure | configuration', function (hooks) {
         // cleanup
         await runCmd(`delete sys/mounts/${path}`);
       });
-
-      test('it should show API error when configuration read fails', async function (assert) {
-        assert.expect(1);
-        const path = `azure-${this.uid}`;
-        // interrupt get and return API error
-        this.server.get(configUrl(this.type, path), () => {
-          return overrideResponse(400, { errors: ['bad request'] });
-        });
-        await enablePage.enable(this.type, path);
-        assert.dom(SES.error.title).hasText('Error', 'shows the secrets backend error route');
-      });
     });
 
     module('create', function () {
@@ -129,9 +118,8 @@ module('Acceptance | Azure | configuration', function (hooks) {
         await enablePage.enable(this.type, path);
 
         this.server.post('/identity/oidc/config', () => {
-          assert.notOk(
-            true,
-            'post request was made to issuer endpoint when on community and data not changed. test should fail.'
+          throw new Error(
+            `Request was made to return the issuer when it should not have been because user is on CE.`
           );
         });
 
@@ -226,9 +214,45 @@ module('Acceptance | Azure | configuration', function (hooks) {
         await runCmd(`delete sys/mounts/${path}`);
       });
     });
+
+    module('Error handling', function () {
+      test('it prevents transition and shows api error if config errored on save', async function (assert) {
+        const path = `azure-${this.uid}`;
+        await enablePage.enable('azure', path);
+
+        this.server.post(configUrl('azure', path), () => {
+          return overrideResponse(400, { errors: ['welp, that did not work!'] });
+        });
+
+        await click(SES.configTab);
+        await click(SES.configure);
+        await fillInAzureConfig('azure');
+        await click(GENERAL.saveButton);
+
+        assert.dom(GENERAL.messageError).hasText('Error welp, that did not work!', 'API error shows on form');
+        assert.strictEqual(
+          currentURL(),
+          `/vault/secrets/${path}/configuration/edit`,
+          'the form did not transition because the save failed.'
+        );
+        // cleanup
+        await runCmd(`delete sys/mounts/${path}`);
+      });
+
+      test('it should show API error when configuration read fails', async function (assert) {
+        assert.expect(1);
+        const path = `azure-${this.uid}`;
+        // interrupt get and return API error
+        this.server.get(configUrl(this.type, path), () => {
+          return overrideResponse(400, { errors: ['bad request'] });
+        });
+        await enablePage.enable(this.type, path);
+        assert.dom(SES.error.title).hasText('Error', 'shows the secrets backend error route');
+      });
+    });
   });
 
-  module('isEnterprise', function (hooks) {
+  module('Enterprise', function (hooks) {
     hooks.beforeEach(function () {
       this.version.type = 'enterprise';
     });
@@ -245,7 +269,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
           environment: 'AZUREPUBLICCLOUD',
         };
         this.server.get(`${path}/config`, () => {
-          assert.ok(true, 'request made to config when navigating to the configuration page.');
+          assert.true(true, 'request made to config when navigating to the configuration page.');
           return { data: { id: path, type: this.type, ...wifAttrs } };
         });
         await enablePage.enable(this.type, path);
@@ -268,11 +292,11 @@ module('Acceptance | Azure | configuration', function (hooks) {
         const path = `azure-${this.uid}`;
         this.server.get(`${path}/config`, (schema, req) => {
           const payload = JSON.parse(req.requestBody);
-          assert.ok(true, 'request made to config/root when navigating to the configuration page.');
+          assert.true(true, 'request made to config/root when navigating to the configuration page.');
           return { data: { id: path, type: this.type, attributes: payload } };
         });
         this.server.get(`identity/oidc/config`, () => {
-          assert.notOk(true, 'request made to return issuer. test should fail.');
+          throw new Error(`Request was made to return the issuer when it should not have been.`);
         });
         await createConfig(this.store, path, this.type); // create the azure account config in the store
         await enablePage.enable(this.type, path);

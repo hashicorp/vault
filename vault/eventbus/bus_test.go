@@ -36,14 +36,14 @@ func TestBusBasics(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, false, event)
 	if !errors.Is(err, ErrNotStarted) {
 		t.Errorf("Expected not started error but got: %v", err)
 	}
 
 	bus.Start()
 
-	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, false, event)
 	if err != nil {
 		t.Errorf("Expected no error sending: %v", err)
 	}
@@ -59,7 +59,7 @@ func TestBusBasics(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, false, event)
 	if err != nil {
 		t.Error(err)
 	}
@@ -100,7 +100,7 @@ func TestBusIgnoresSendContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // cancel immediately
 
-	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, false, event)
 	if err != nil {
 		t.Errorf("Expected no error sending: %v", err)
 	}
@@ -144,7 +144,7 @@ func TestSubscribeNonRootNamespace(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = bus.SendEventInternal(ctx, ns, nil, eventType, event)
+	err = bus.SendEventInternal(ctx, ns, nil, eventType, false, event)
 	if err != nil {
 		t.Error(err)
 	}
@@ -190,7 +190,7 @@ func TestNamespaceFiltering(t *testing.T) {
 	err = bus.SendEventInternal(ctx, &namespace.Namespace{
 		ID:   "abc",
 		Path: "/abc",
-	}, nil, eventType, event)
+	}, nil, eventType, false, event)
 	if err != nil {
 		t.Error(err)
 	}
@@ -203,7 +203,7 @@ func TestNamespaceFiltering(t *testing.T) {
 		// okay
 	}
 
-	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, false, event)
 	if err != nil {
 		t.Error(err)
 	}
@@ -253,11 +253,11 @@ func TestBus2Subscriptions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType2, event2)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType2, false, event2)
 	if err != nil {
 		t.Error(err)
 	}
-	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType1, event1)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType1, false, event1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -345,7 +345,7 @@ func TestBusSubscriptionsCancel(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+			err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, false, event)
 			if err != nil {
 				t.Error(err)
 			}
@@ -357,7 +357,7 @@ func TestBusSubscriptionsCancel(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+			err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, false, event)
 			if err != nil {
 				t.Error(err)
 			}
@@ -427,11 +427,11 @@ func TestBusWildcardSubscriptions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, barEventType, event2)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, barEventType, false, event2)
 	if err != nil {
 		t.Error(err)
 	}
-	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, fooEventType, event1)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, fooEventType, false, event1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -504,7 +504,7 @@ func TestDataPathIsPrependedWithMount(t *testing.T) {
 	}
 
 	// no plugin info means nothing should change
-	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, fooEventType, event)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, fooEventType, false, event)
 	if err != nil {
 		t.Error(err)
 	}
@@ -530,7 +530,7 @@ func TestDataPathIsPrependedWithMount(t *testing.T) {
 		PluginVersion: "v1.13.1+builtin",
 		Version:       "2",
 	}
-	err = bus.SendEventInternal(ctx, namespace.RootNamespace, &pluginInfo, fooEventType, event)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, &pluginInfo, fooEventType, false, event)
 	if err != nil {
 		t.Error(err)
 	}
@@ -571,7 +571,7 @@ func TestDataPathIsPrependedWithMount(t *testing.T) {
 	if err := event.Metadata.UnmarshalJSON(metadataBytes); err != nil {
 		t.Fatal(err)
 	}
-	err = bus.SendEventInternal(ctx, namespace.RootNamespace, &pluginInfo, fooEventType, event)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, &pluginInfo, fooEventType, false, event)
 	if err != nil {
 		t.Error(err)
 	}
@@ -584,6 +584,40 @@ func TestDataPathIsPrependedWithMount(t *testing.T) {
 		assert.Equal(t, "xyz", metadata["not_touched"])
 		assert.Contains(t, metadata, "data_path")
 		assert.Equal(t, "auth/kubernetes/my/secret/path", metadata["data_path"])
+	case <-timeout:
+		t.Error("Timeout waiting for event")
+	}
+
+	// Test that a forwarded event does not have anything prepended
+	event, err = logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	metadata = map[string]string{
+		logical.EventMetadataDataPath: "your/secret/path",
+		"not_touched":                 "xyz",
+	}
+	metadataBytes, err = json.Marshal(metadata)
+	if err != nil {
+		t.Fatal(err)
+	}
+	event.Metadata = &structpb.Struct{}
+	if err := event.Metadata.UnmarshalJSON(metadataBytes); err != nil {
+		t.Fatal(err)
+	}
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, &pluginInfo, fooEventType, true, event)
+	if err != nil {
+		t.Error(err)
+	}
+
+	timeout = time.After(1 * time.Second)
+	select {
+	case message := <-ch:
+		metadata := message.Payload.(*logical.EventReceived).Event.Metadata.AsMap()
+		assert.Contains(t, metadata, "not_touched")
+		assert.Equal(t, "xyz", metadata["not_touched"])
+		assert.Contains(t, metadata, "data_path")
+		assert.Equal(t, "your/secret/path", metadata["data_path"])
 	case <-timeout:
 		t.Error("Timeout waiting for event")
 	}
@@ -625,7 +659,7 @@ func TestBexpr(t *testing.T) {
 			PluginVersion: "v1.13.1+builtin",
 			Version:       "2",
 		}
-		return bus.SendEventInternal(ctx, namespace.RootNamespace, &pluginInfo, logical.EventType(eventType), event)
+		return bus.SendEventInternal(ctx, namespace.RootNamespace, &pluginInfo, logical.EventType(eventType), false, event)
 	}
 
 	testCases := []struct {
@@ -725,7 +759,7 @@ func TestSubscribeGlobal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = bus.SendEventInternal(nil, namespace.RootNamespace, nil, "abcd", ev)
+	err = bus.SendEventInternal(nil, namespace.RootNamespace, nil, "abcd", false, ev)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -769,7 +803,7 @@ func TestSubscribeGlobal_WithApply(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = bus.SendEventInternal(nil, namespace.RootNamespace, nil, "abcd", ev)
+	err = bus.SendEventInternal(nil, namespace.RootNamespace, nil, "abcd", false, ev)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -805,7 +839,7 @@ func TestSubscribeCluster(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = bus.SendEventInternal(nil, namespace.RootNamespace, nil, "abcd", ev)
+	err = bus.SendEventInternal(nil, namespace.RootNamespace, nil, "abcd", false, ev)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -847,7 +881,7 @@ func TestSubscribeCluster_WithApply(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = bus.SendEventInternal(nil, namespace.RootNamespace, nil, "abcd", ev)
+	err = bus.SendEventInternal(nil, namespace.RootNamespace, nil, "abcd", false, ev)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -890,7 +924,7 @@ func TestClearGlobalFilter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = bus.SendEventInternal(nil, namespace.RootNamespace, nil, "abcd", ev)
+	err = bus.SendEventInternal(nil, namespace.RootNamespace, nil, "abcd", false, ev)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -931,7 +965,7 @@ func TestClearClusterFilter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = bus.SendEventInternal(nil, namespace.RootNamespace, nil, "abcd", ev)
+	err = bus.SendEventInternal(nil, namespace.RootNamespace, nil, "abcd", false, ev)
 	if err != nil {
 		t.Fatal(err)
 	}

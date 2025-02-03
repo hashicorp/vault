@@ -3,6 +3,35 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
+## 1.18.4
+### January 30, 2025
+
+CHANGES:
+
+* auth/cf: Update plugin to v0.19.1 [[GH-29295](https://github.com/hashicorp/vault/pull/29295)]
+* sdk: Updated golang and dependency versions to be consistent across core, API, SDK to address [[GO-2024-3333](https://pkg.go.dev/vuln/GO-2024-3333)] and ensure version consistency [[GH-29422](https://github.com/hashicorp/vault/pull/29422)]
+
+IMPROVEMENTS:
+
+* plugins (enterprise): The Database secrets engine now allows skipping the automatic rotation of static roles during import.
+* events (enterprise): Use the `path` event metadata field when authorizing a client's `subscribe` capability for consuming an event, instead of requiring `data_path` to be present in the event metadata.
+* ui: Adds navigation for LDAP hierarchical libraries [[GH-29293](https://github.com/hashicorp/vault/pull/29293)]
+* ui: Adds params to postgresql database to improve editing a connection in the web browser. [[GH-29200](https://github.com/hashicorp/vault/pull/29200)]
+
+BUG FIXES:
+
+* activity: Include activity records from clients created by deleted or disabled auth mounts in Export API response. [[GH-29376](https://github.com/hashicorp/vault/pull/29376)]
+* core: Prevent integer overflows of the barrier key counter on key rotation requests [[GH-29176](https://github.com/hashicorp/vault/pull/29176)]
+* database/mssql: Fix a bug where contained databases would silently fail root rotation if a custom root rotation statement was not provided. [[GH-29399](https://github.com/hashicorp/vault/pull/29399)]
+* plugins: Fix a bug that causes zombie dbus-daemon processes on certain systems. [[GH-29334](https://github.com/hashicorp/vault/pull/29334)]
+* sdk/database: Fix a bug where slow database connections can cause goroutines to be blocked. [[GH-29097](https://github.com/hashicorp/vault/pull/29097)]
+* secrets/pki: Fix a bug that prevented the full CA chain to be used when enforcing name constraints. [[GH-29255](https://github.com/hashicorp/vault/pull/29255)]
+* sentinel (enterprise): No longer report inaccurate log messages for when failing an advisory policy.
+* ui (enterprise): Fixes login to web UI when MFA is enabled for SAML auth methods [[GH-28873](https://github.com/hashicorp/vault/pull/28873)]
+* ui: Fixes login to web UI when MFA is enabled for OIDC (i.e. azure, auth0) and Okta auth methods [[GH-28873](https://github.com/hashicorp/vault/pull/28873)]
+* ui: Fixes navigation for quick actions in LDAP roles' popup menu [[GH-29293](https://github.com/hashicorp/vault/pull/29293)]
+
+
 ## 1.18.3
 ### December 18, 2024
 
@@ -316,6 +345,34 @@ use versioned plugins. [[GH-27881](https://github.com/hashicorp/vault/pull/27881
 * ui: fix namespace picker not working when in small screen where the sidebar is collapsed by default. [[GH-27728](https://github.com/hashicorp/vault/pull/27728)]
 * ui: fixes renew-self being called right after login for non-renewable tokens [[GH-28204](https://github.com/hashicorp/vault/pull/28204)]
 * ui: fixes toast (flash) alert message saying "created" when deleting a kv v2 secret [[GH-28093](https://github.com/hashicorp/vault/pull/28093)]
+
+## 1.17.11 Enterprise
+### January 30, 2025
+
+CHANGES:
+
+* auth/cf: Update plugin to v0.19.1 [[GH-29295](https://github.com/hashicorp/vault/pull/29295)]
+* sdk: Updated golang and dependency versions to be consistent across core, API, SDK to address [[GO-2024-3333](https://pkg.go.dev/vuln/GO-2024-3333)] and ensure version consistency [[GH-29422](https://github.com/hashicorp/vault/pull/29422)]
+
+IMPROVEMENTS:
+
+* plugins (enterprise): The Database secrets engine now allows skipping the automatic rotation of static roles during import.
+* events (enterprise): Use the `path` event metadata field when authorizing a client's `subscribe` capability for consuming an event, instead of requiring `data_path` to be present in the event metadata.
+* ui: Adds navigation for LDAP hierarchical libraries [[GH-29293](https://github.com/hashicorp/vault/pull/29293)]
+* ui: Adds params to postgresql database to improve editing a connection in the web browser. [[GH-29200](https://github.com/hashicorp/vault/pull/29200)]
+
+BUG FIXES:
+
+* activity: Include activity records from clients created by deleted or disabled auth mounts in Export API response. [[GH-29376](https://github.com/hashicorp/vault/pull/29376)]
+* core: Prevent integer overflows of the barrier key counter on key rotation requests [[GH-29176](https://github.com/hashicorp/vault/pull/29176)]
+* database/mssql: Fix a bug where contained databases would silently fail root rotation if a custom root rotation statement was not provided. [[GH-29399](https://github.com/hashicorp/vault/pull/29399)]
+* plugins: Fix a bug that causes zombie dbus-daemon processes on certain systems. [[GH-29334](https://github.com/hashicorp/vault/pull/29334)]
+* sdk/database: Fix a bug where slow database connections can cause goroutines to be blocked. [[GH-29097](https://github.com/hashicorp/vault/pull/29097)]
+* secrets/pki: Fix a bug that prevented the full CA chain to be used when enforcing name constraints. [[GH-29255](https://github.com/hashicorp/vault/pull/29255)]
+* sentinel (enterprise): No longer report inaccurate log messages for when failing an advisory policy.
+* ui (enterprise): Fixes login to web UI when MFA is enabled for SAML auth methods [[GH-28873](https://github.com/hashicorp/vault/pull/28873)]
+* ui: Fixes login to web UI when MFA is enabled for OIDC (i.e. azure, auth0) and Okta auth methods [[GH-28873](https://github.com/hashicorp/vault/pull/28873)]
+* ui: Fixes navigation for quick actions in LDAP roles' popup menu [[GH-29293](https://github.com/hashicorp/vault/pull/29293)]
 
 ## 1.17.10 Enterprise
 ### December 18, 2024
@@ -785,6 +842,37 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 * ui: fix issue where a month without new clients breaks the client count dashboard [[GH-27352](https://github.com/hashicorp/vault/pull/27352)]
 * ui: fixed a bug where the replication pages did not update display when navigating between DR and performance [[GH-26325](https://github.com/hashicorp/vault/pull/26325)]
 * ui: fixes undefined start time in filename for downloaded client count attribution csv [[GH-26485](https://github.com/hashicorp/vault/pull/26485)]
+
+## 1.16.15 Enterprise
+### January 30, 2025
+
+**Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
+CHANGES:
+
+* auth/cf: Update plugin to v0.19.1 [[GH-29295](https://github.com/hashicorp/vault/pull/29295)]
+* sdk: Updated golang and dependency versions to be consistent across core, API, SDK to address [[GO-2024-3333](https://pkg.go.dev/vuln/GO-2024-3333)] and ensure version consistency [[GH-29422](https://github.com/hashicorp/vault/pull/29422)]
+
+IMPROVEMENTS:
+
+* plugins (enterprise): The Database secrets engine now allows skipping the automatic rotation of static roles during import.
+* events (enterprise): Use the `path` event metadata field when authorizing a client's `subscribe` capability for consuming an event, instead of requiring `data_path` to be present in the event metadata.
+* ui: Adds navigation for LDAP hierarchical libraries [[GH-29293](https://github.com/hashicorp/vault/pull/29293)]
+* ui: Adds params to postgresql database to improve editing a connection in the web browser. [[GH-29200](https://github.com/hashicorp/vault/pull/29200)]
+
+BUG FIXES:
+
+* activity: Include activity records from clients created by deleted or disabled auth mounts in Export API response. [[GH-29376](https://github.com/hashicorp/vault/pull/29376)]
+* core: Prevent integer overflows of the barrier key counter on key rotation requests [[GH-29176](https://github.com/hashicorp/vault/pull/29176)]
+* database/mssql: Fix a bug where contained databases would silently fail root rotation if a custom root rotation statement was not provided. [[GH-29399](https://github.com/hashicorp/vault/pull/29399)]
+* plugins: Fix a bug that causes zombie dbus-daemon processes on certain systems. [[GH-29334](https://github.com/hashicorp/vault/pull/29334)]
+* sdk/database: Fix a bug where slow database connections can cause goroutines to be blocked. [[GH-29097](https://github.com/hashicorp/vault/pull/29097)]
+* secrets/pki: Fix a bug that prevented the full CA chain to be used when enforcing name constraints. [[GH-29255](https://github.com/hashicorp/vault/pull/29255)]
+* sentinel (enterprise): No longer report inaccurate log messages for when failing an advisory policy.
+* ui (enterprise): Fixes login to web UI when MFA is enabled for SAML auth methods [[GH-28873](https://github.com/hashicorp/vault/pull/28873)]
+* ui: Fixes login to web UI when MFA is enabled for OIDC (i.e. azure, auth0) and Okta auth methods [[GH-28873](https://github.com/hashicorp/vault/pull/28873)]
+* ui: Fixes navigation for quick actions in LDAP roles' popup menu [[GH-29293](https://github.com/hashicorp/vault/pull/29293)]
+
 
 ## 1.16.14 Enterprise
 ### December 18, 2024

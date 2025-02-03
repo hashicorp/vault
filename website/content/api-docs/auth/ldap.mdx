@@ -105,6 +105,9 @@ This endpoint configures the LDAP auth method.
   paged search control.
 - `use_token_groups` `(bool: true)` - (Optional) Use the Active Directory tokenGroups
   constructed attribute of the user to find the group memberships.
+- `enable_samaccountname_login` `(bool: false)` - (Optional) Lets Active Directory
+  LDAP users log in using `sAMAccountName` or `userPrincipalName` when the
+  `upndomain` parameter is set.
 
 @include 'tokenfields.mdx'
 

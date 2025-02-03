@@ -1,0 +1,3 @@
+```release-note:bug
+activity: Include activity records from clients created by deleted or disabled auth mounts in Export API response.
+```

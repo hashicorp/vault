@@ -18,7 +18,7 @@ import {
 
 const allEnginesArray = allEngines(); // saving as const so we don't invoke the method multiple times via the for loop
 
-module('Integration | Component | SecretEngine/ConfigurationDetails', function (hooks) {
+module('Integration | Component | SecretEngine::ConfigurationDetails', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {

@@ -27,7 +27,7 @@ type ConflictResolver interface {
 	ResolveAliases(ctx context.Context, parent *identity.Entity, existing, duplicate *identity.Alias) error
 }
 
-// The errorResolver is a ConflictResolver that logs a warning message when a
+// errorResolver is a ConflictResolver that logs a warning message when a
 // pre-existing Identity artifact is found with the same factors as a new one.
 type errorResolver struct {
 	logger log.Logger
@@ -207,7 +207,7 @@ func (r *duplicateReportingErrorResolver) Report() identityDuplicateReport {
 				index:        idx,
 				numOthers:    len(entities) - 1,
 			}
-			if idx < len(entities)-1 {
+			if idx > 0 {
 				r.resolutionHint = fmt.Sprintf("would rename to %s-%s", entity.Name, entity.ID)
 			} else {
 				r.resolutionHint = "would not rename"
@@ -234,7 +234,7 @@ func (r *duplicateReportingErrorResolver) Report() identityDuplicateReport {
 				index:        idx,
 				numOthers:    len(groups) - 1,
 			}
-			if idx < len(groups)-1 {
+			if idx > 0 {
 				r.resolutionHint = fmt.Sprintf("would rename to %s-%s", group.Name, group.ID)
 			} else {
 				r.resolutionHint = "would not rename"
@@ -278,8 +278,8 @@ func reportAliases(report *identityDuplicateReport, seen map[string][]*identity.
 				index:        idx,
 				numOthers:    len(aliases) - 1,
 			}
-			if idx < len(aliases)-1 {
-				r.resolutionHint = fmt.Sprintf("would merge into entity %s", aliases[len(aliases)-1].CanonicalID)
+			if idx > 0 {
+				r.resolutionHint = fmt.Sprintf("would merge into entity %s", aliases[0].CanonicalID)
 			} else {
 				r.resolutionHint = "would merge others into this entity"
 			}
@@ -360,4 +360,70 @@ func (r *duplicateReportingErrorResolver) LogReport(log Warner) {
 	}
 	log.Warn("end of identity duplicate report, refer to " +
 		identityDuplicateReportUrl + " for resolution.")
+}
+
+// renameResolver is a ConflictResolver that appends the artifact's UUID to its
+// name to resolve potential conflicts. The renamed resource is associated with
+// the duplicated artifact by adding a `duplicate_of_canonical_id` metadata
+// field.
+type renameResolver struct {
+	logger log.Logger
+}
+
+// ResolveEntities renames an entity duplicate in a deterministic way so that
+// all entities end up addressable by a unique name still. We rename the
+// pre-existing entity such that only the last occurrence retains its unmodified
+// name. Note that this is potentially destructive but is the best option
+// available to resolve duplicates in storage caused by bugs in our validation.
+func (r *renameResolver) ResolveEntities(ctx context.Context, existing, duplicate *identity.Entity) error {
+	if existing == nil {
+		return nil
+	}
+
+	duplicate.Name = duplicate.Name + "-" + duplicate.ID
+	if duplicate.Metadata == nil {
+		duplicate.Metadata = make(map[string]string)
+	}
+	duplicate.Metadata["duplicate_of_canonical_id"] = existing.ID
+
+	r.logger.Warn("renaming entity with duplicate name",
+		"namespace_id", duplicate.NamespaceID,
+		"entity_id", duplicate.ID,
+		"duplicate_of_canonical_id", existing.ID,
+		"renamed_from", existing.Name,
+		"renamed_to", duplicate.Name,
+	)
+
+	return nil
+}
+
+// ResolveGroups deals with group name duplicates by renaming those that
+// were "hidden" in memDB so they are queryable. It's important this is
+// deterministic so we don't end up with different group names on different
+// nodes. We use the ID to ensure the new name is unique bit also
+// deterministic. For now, don't persist this. The user can choose to
+// resolve it permanently by renaming or deleting explicitly.
+func (r *renameResolver) ResolveGroups(ctx context.Context, existing, duplicate *identity.Group) error {
+	if existing == nil {
+		return nil
+	}
+
+	duplicate.Name = duplicate.Name + "-" + duplicate.ID
+	if duplicate.Metadata == nil {
+		duplicate.Metadata = make(map[string]string)
+	}
+	duplicate.Metadata["duplicate_of_canonical_id"] = existing.ID
+	r.logger.Warn("renaming group with duplicate name",
+		"namespace_id", duplicate.NamespaceID,
+		"group_id", duplicate.ID,
+		"duplicate_of_canonical_id", existing.ID,
+		"renamed_from", existing.Name,
+		"renamed_to", duplicate.Name,
+	)
+	return nil
+}
+
+// ResolveAliases is a no-op for the renameResolver implementation.
+func (r *renameResolver) ResolveAliases(ctx context.Context, parent *identity.Entity, existing, duplicate *identity.Alias) error {
+	return nil
 }

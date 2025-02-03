@@ -203,9 +203,9 @@ type Request struct {
 	// X-Vault-MFA header
 	MFACreds MFACreds `json:"mfa_creds" structs:"mfa_creds" mapstructure:"mfa_creds" sentinel:""`
 
-	// RotationEntryName is internally used by
-	// the RotationManager to rotate root credentials
-	RotationEntryName string
+	// RotationID is set by the Rotation Manager
+	// when making rotate requests to plugin backends
+	RotationID string
 
 	// Cached token entry. This avoids another lookup in request handling when
 	// we've already looked it up at http handling time. Note that this token

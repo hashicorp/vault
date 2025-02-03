@@ -21,6 +21,7 @@ import (
 	credGithub "github.com/hashicorp/vault/builtin/credential/github"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/helper/activationflags"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
@@ -1411,14 +1412,27 @@ func TestIdentityStoreInvalidate_TemporaryEntity(t *testing.T) {
 	assert.Nil(t, item)
 }
 
-// TestEntityStoreLoadingIsDeterministic is a property-based test that ensures
-// the loading logic of the entity store is deterministic. This is important
-// because we perform certain merges and corrections of duplicates on load and
-// non-deterministic order can cause divergence between different nodes or even
-// after seal/unseal cycles on one node. Loading _should_ be deterministic
-// anyway if all data in storage was correct see comments inline for examples of
-// ways storage can be corrupt with respect to the expected schema invariants.
-func TestEntityStoreLoadingIsDeterministic(t *testing.T) {
+// TestIdentityStoreLoadingIsDeterministic tests the default error resolver and
+// the identity cleanup rename resolver to ensure that loading is deterministic
+// for both.
+func TestIdentityStoreLoadingIsDeterministic(t *testing.T) {
+	t.Run(t.Name()+"-error-resolver", func(t *testing.T) {
+		identityStoreLoadingIsDeterministic(t, false)
+	})
+	t.Run(t.Name()+"-identity-cleanup", func(t *testing.T) {
+		identityStoreLoadingIsDeterministic(t, true)
+	})
+}
+
+// identityStoreLoadingIsDeterministic is a property-based test helper that
+// ensures the loading logic of the entity store is deterministic. This is
+// important because we perform certain merges and corrections of duplicates on
+// load and non-deterministic order can cause divergence between different nodes
+// or even after seal/unseal cycles on one node. Loading _should_ be
+// deterministic anyway if all data in storage was correct see comments inline
+// for examples of ways storage can be corrupt with respect to the expected
+// schema invariants.
+func identityStoreLoadingIsDeterministic(t *testing.T, identityDeduplication bool) {
 	// Create some state in store that could trigger non-deterministic behavior.
 	// The nature of the identity store schema is such that the order of loading
 	// entities etc shouldn't matter even if it was non-deterministic, however due
@@ -1552,22 +1566,44 @@ func TestEntityStoreLoadingIsDeterministic(t *testing.T) {
 
 	// Storage is now primed for the test.
 
-	// To test that this is deterministic we need to load from storage a bunch of
-	// times and make sure we get the same result. For easier debugging we'll
-	// build a list of human readable ids that we can compare.
-	prevLoadedNames := []string{}
-	for i := 0; i < 10; i++ {
-		// Seal and unseal to reload the identity store
+	if identityDeduplication {
+		// Perform an initial Seal/Unseal with duplicates injected to assert
+		// initial state.
 		require.NoError(t, c.Seal(rootToken))
 		require.True(t, c.Sealed())
 		for _, key := range sealKeys {
 			unsealed, err := c.Unseal(key)
-			require.NoError(t, err, "failed unseal on attempt %d", i)
+			require.NoError(t, err, "failed unseal on initial assertions")
 			if unsealed {
 				break
 			}
 		}
 		require.False(t, c.Sealed())
+
+		// Test out the system backend ActivationFunc wiring
+		c.FeatureActivationFlags.ActivateInMem(activationflags.IdentityDeduplication, true)
+		require.NoError(t, err)
+
+		err := c.systemBackend.activateIdentityDeduplication(ctx, nil)
+		require.NoError(t, err)
+		require.IsType(t, &renameResolver{}, c.identityStore.conflictResolver)
+		require.False(t, c.identityStore.disableLowerCasedNames)
+	}
+
+	// To test that this is deterministic we need to load from storage a bunch of
+	// times and make sure we get the same result. For easier debugging we'll
+	// build a list of human readable ids that we can compare.
+	prevLoadedNames := []string{}
+	var prevErr error
+	for i := 0; i < 10; i++ {
+		err := c.identityStore.resetDB()
+		require.NoError(t, err)
+
+		err = c.identityStore.loadArtifacts(ctx)
+		if i > 0 {
+			require.Equal(t, prevErr, err)
+		}
+		prevErr = err
 
 		// Identity store should be loaded now. Check it's contents.
 		loadedNames := []string{}
@@ -1607,14 +1643,15 @@ func TestEntityStoreLoadingIsDeterministic(t *testing.T) {
 				loadedNames = append(loadedNames, g.Alias.Name)
 			}
 		}
+
 		// This is a non-triviality check to make sure we actually loaded stuff and
 		// are not just passing because of a bug in the test.
 		groupsLoaded := len(loadedNames) - numLoaded
 		require.Greater(t, groupsLoaded, 140, "not enough groups and aliases loaded on attempt %d", i)
 
-		// note `lastIDs` argument is not needed any more but we can't change the
-		// signature without breaking enterprise. It's simpler to keep it unused for
-		// now until both parts of this merge.
+		// note `lastIDs` argument is not needed anymore but we can't change the
+		// signature without breaking enterprise. It's simpler to keep it unused
+		// for now until both parts of this merge.
 		entIdentityStoreDeterminismAssert(t, i, loadedNames, nil)
 
 		if i > 0 {
@@ -1626,9 +1663,9 @@ func TestEntityStoreLoadingIsDeterministic(t *testing.T) {
 	}
 }
 
-// TestEntityStoreLoadingDuplicateReporting tests the reporting of different
+// TestIdentityStoreLoadingDuplicateReporting tests the reporting of different
 // types of duplicates during unseal when in case-sensitive mode.
-func TestEntityStoreLoadingDuplicateReporting(t *testing.T) {
+func TestIdentityStoreLoadingDuplicateReporting(t *testing.T) {
 	logger := corehelpers.NewTestLogger(t)
 	ims, err := inmem.NewTransactionalInmemHA(nil, logger)
 	require.NoError(t, err)
@@ -1643,7 +1680,7 @@ func TestEntityStoreLoadingDuplicateReporting(t *testing.T) {
 		},
 	}
 
-	c, sealKeys, rootToken := TestCoreUnsealedWithConfig(t, cfg)
+	c, _, rootToken := TestCoreUnsealedWithConfig(t, cfg)
 
 	// Inject values into storage
 	upme, err := TestUserpassMount(c, false)
@@ -1659,10 +1696,6 @@ func TestEntityStoreLoadingDuplicateReporting(t *testing.T) {
 
 	// Storage is now primed for the test.
 
-	// Seal and unseal to reload the identity store
-	require.NoError(t, c.Seal(rootToken))
-	require.True(t, c.Sealed())
-
 	// Setup a logger we can use to capture unseal logs
 	var unsealLogs []string
 	unsealLogger := &logFn{
@@ -1676,16 +1709,10 @@ func TestEntityStoreLoadingDuplicateReporting(t *testing.T) {
 			unsealLogs = append(unsealLogs, fmt.Sprintf("%s: %s", msg, strings.Join(pairs, " ")))
 		},
 	}
-	logger.RegisterSink(unsealLogger)
 
-	for _, key := range sealKeys {
-		unsealed, err := c.Unseal(key)
-		require.NoError(t, err)
-		if unsealed {
-			break
-		}
-	}
-	require.False(t, c.Sealed())
+	logger.RegisterSink(unsealLogger)
+	err = c.identityStore.loadArtifacts(ctx)
+	require.NoError(t, err)
 	logger.DeregisterSink(unsealLogger)
 
 	// Identity store should be loaded now. Check it's contents.

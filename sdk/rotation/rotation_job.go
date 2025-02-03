@@ -26,16 +26,22 @@ type RotationJob struct {
 	// For requests, this will always be blank.
 	RotationID string `sentinel:""`
 	Path       string
+	MountType  string
 	Name       string
 }
 
 type RotationJobConfigureRequest struct {
 	Name             string
-	MountPoint       string
+	MountType        string
 	ReqPath          string
 	RotationSchedule string
 	RotationWindow   int
 	RotationPeriod   int
+}
+
+type RotationJobDeregisterRequest struct {
+	MountType string
+	ReqPath   string
 }
 
 func (s *RotationJob) Validate() error {
@@ -43,24 +49,21 @@ func (s *RotationJob) Validate() error {
 	return nil
 }
 
-func newRotationJob(rotationSchedule, path, rotationJobName string, rotationWindow, ttl int) (*RotationJob, error) {
+func newRotationJob(configRequest *RotationJobConfigureRequest) (*RotationJob, error) {
 	var cronSc *cron.SpecSchedule
-	if rotationSchedule != "" {
+	if configRequest.RotationSchedule != "" {
 		var err error
-		cronSc, err = DefaultScheduler.Parse(rotationSchedule)
+		cronSc, err = DefaultScheduler.Parse(configRequest.RotationSchedule)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	rs := &RotationSchedule{
-		Schedule:         cronSc,
-		RotationSchedule: rotationSchedule,
-		RotationWindow:   time.Duration(rotationWindow) * time.Second,
-		RotationPeriod:   time.Duration(ttl) * time.Second,
-		// TODO
-		// decide if next rotation should be set here
-		// or when we actually push item into queue
+		Schedule:          cronSc,
+		RotationSchedule:  configRequest.RotationSchedule,
+		RotationWindow:    time.Duration(configRequest.RotationWindow) * time.Second,
+		RotationPeriod:    time.Duration(configRequest.RotationPeriod) * time.Second,
 		NextVaultRotation: time.Time{},
 		LastVaultRotation: time.Time{},
 	}
@@ -69,33 +72,18 @@ func newRotationJob(rotationSchedule, path, rotationJobName string, rotationWind
 		RotationOptions: RotationOptions{
 			Schedule: rs,
 		},
-		// Figure out how to get mount info
-		Path: path,
-		Name: rotationJobName,
+		MountType: configRequest.MountType,
+		Path:      configRequest.ReqPath,
+		Name:      configRequest.Name,
 	}, nil
 }
 
 // ConfigureRotationJob builds and returns a configured RotationJob for the mount and request with the given schedule.
 func ConfigureRotationJob(configRequest *RotationJobConfigureRequest) (*RotationJob, error) {
-	mount := configRequest.MountPoint + configRequest.ReqPath
-
-	var rotationJob *RotationJob
-	if configRequest.RotationSchedule != "" && configRequest.RotationWindow != 0 {
-		var err error
-		rotationJob, err = newRotationJob(configRequest.RotationSchedule, mount, configRequest.Name, configRequest.RotationWindow, 0)
-		if err != nil {
-			return nil, err
-		}
+	rotationJob, err := newRotationJob(configRequest)
+	if err != nil {
+		return nil, err
 	}
-
-	if configRequest.RotationPeriod != 0 {
-		var err error
-		rotationJob, err = newRotationJob("", mount, configRequest.Name, 0, configRequest.RotationPeriod)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	// Expect rotation job to exist here
 	if rotationJob == nil {
 		return nil, fmt.Errorf("rotation credential was nil; expected non-nil value")

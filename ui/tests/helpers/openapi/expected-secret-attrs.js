@@ -1131,6 +1131,15 @@ const pki = {
       label: 'Require Common Name',
       type: 'boolean',
     },
+    serialNumberSource: {
+      defaultValue: 'json-csr',
+      editType: 'string',
+      fieldGroup: 'default',
+      helpText:
+        'Source for the certificate subject serial number. If "json-csr" (default), the value from the JSON serial_number field is used, falling back to the value in the CSR if empty. If "json", the value from the serial_number JSON field is used, ignoring the value in the CSR.',
+      label: 'Serial number source',
+      type: 'string',
+    },
     serverFlag: {
       editType: 'boolean',
       helpText:
