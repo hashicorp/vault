@@ -1,0 +1,19 @@
+### AWS Auth Role configuration requires an external_id
+
+#### Affected Versions
+
+- 1.17.0 - 1.17.3
+
+#### Issue
+
+You must set the `external_id` parameter during role configuration, or the Vault
+AWS authentication plugin returns a validation error.
+
+#### Workaround
+
+To avoid the error during configuration:
+
+1. Set the `external_id` parameter when configuring AWS authentication plugin
+   with a valid ID or any string longer than two characters.
+1. Configure any desired roles. 
+1. If you used an arbitrary string, remove the external ID.
