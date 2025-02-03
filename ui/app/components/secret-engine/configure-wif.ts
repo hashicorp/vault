@@ -236,7 +236,7 @@ export default class ConfigureWif extends Component<Args> {
       // reset all "account" attributes that are mutually exclusive with "wif" attributes
       // these attributes are different for each engine
       type === 'azure'
-        ? (mountConfigModel.clientSecret = mountConfigModel.rootPasswordTtl = undefined)
+        ? (mountConfigModel.clientSecret = undefined)
         : type === 'aws'
         ? (mountConfigModel.accessKey = undefined)
         : null;
