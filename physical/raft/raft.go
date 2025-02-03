@@ -22,6 +22,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
+	"github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-raftchunking"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
@@ -1069,9 +1070,9 @@ func (b *RaftBackend) SetRemovedCallback(cb func()) {
 	b.removedCallback = cb
 }
 
-func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
-	config.Logger = b.logger
-	multiplierRaw, ok := b.conf["performance_multiplier"]
+func ApplyConfigSettings(logger hclog.Logger, parsedConf map[string]string, config *raft.Config) error {
+	config.Logger = logger
+	multiplierRaw, ok := parsedConf["performance_multiplier"]
 	multiplier := 5
 	if ok {
 		var err error
@@ -1084,7 +1085,7 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 	config.HeartbeatTimeout *= time.Duration(multiplier)
 	config.LeaderLeaseTimeout *= time.Duration(multiplier)
 
-	snapThresholdRaw, ok := b.conf["snapshot_threshold"]
+	snapThresholdRaw, ok := parsedConf["snapshot_threshold"]
 	if ok {
 		var err error
 		snapThreshold, err := strconv.Atoi(snapThresholdRaw)
@@ -1094,7 +1095,7 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 		config.SnapshotThreshold = uint64(snapThreshold)
 	}
 
-	trailingLogsRaw, ok := b.conf["trailing_logs"]
+	trailingLogsRaw, ok := parsedConf["trailing_logs"]
 	if ok {
 		var err error
 		trailingLogs, err := strconv.Atoi(trailingLogsRaw)
@@ -1103,7 +1104,7 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 		}
 		config.TrailingLogs = uint64(trailingLogs)
 	}
-	snapshotIntervalRaw, ok := b.conf["snapshot_interval"]
+	snapshotIntervalRaw, ok := parsedConf["snapshot_interval"]
 	if ok {
 		var err error
 		snapshotInterval, err := parseutil.ParseDurationSecond(snapshotIntervalRaw)
@@ -1121,7 +1122,7 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 	// scheduler.
 	config.BatchApplyCh = true
 
-	b.logger.Trace("applying raft config", "inputs", b.conf)
+	logger.Trace("applying raft config", "inputs", parsedConf)
 	return nil
 }
 
@@ -1200,7 +1201,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 
 	// Setup the raft config
 	raftConfig := raft.DefaultConfig()
-	if err := b.applyConfigSettings(raftConfig); err != nil {
+	if err := ApplyConfigSettings(b.logger, b.conf, raftConfig); err != nil {
 		return err
 	}
 
@@ -2321,4 +2322,8 @@ func isRaftLogVerifyCheckpoint(l *raft.Log) bool {
 
 	// Must be the last chunk of a chunked object that has chunking meta
 	return false
+}
+
+func (r *RaftBackend) ReloadConfig(config raft.ReloadableConfig) error {
+	return r.raft.ReloadConfig(config)
 }

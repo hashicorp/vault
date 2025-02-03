@@ -37,6 +37,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/mlock"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
+	raftlib "github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/audit"
 	config2 "github.com/hashicorp/vault/command/config"
 	"github.com/hashicorp/vault/command/server"
@@ -50,6 +51,7 @@ import (
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
+	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -1605,6 +1607,7 @@ func (c *ServerCommand) Run(args []string) int {
 	// Wait for shutdown
 	shutdownTriggered := false
 	retCode := 0
+	raftConfig := raftlib.DefaultConfig()
 
 	for !shutdownTriggered {
 		select {
@@ -1637,6 +1640,21 @@ func (c *ServerCommand) Run(args []string) int {
 			// reporting Errors found in the config
 			for _, cErr := range configErrors {
 				c.logger.Warn(cErr.String())
+			}
+
+			if err := raft.ApplyConfigSettings(c.logger, config.Storage.Config, raftConfig); err != nil {
+				c.logger.Warn("error reloading raft config", "error", err.Error())
+			} else {
+				rlconfig := raftlib.ReloadableConfig{
+					TrailingLogs:      raftConfig.TrailingLogs,
+					SnapshotInterval:  raftConfig.SnapshotInterval,
+					SnapshotThreshold: raftConfig.SnapshotThreshold,
+					HeartbeatTimeout:  raftConfig.HeartbeatTimeout,
+					ElectionTimeout:   raftConfig.ElectionTimeout,
+				}
+				if err := core.ReloadRaftConfig(rlconfig); err != nil {
+					c.logger.Warn("error reloading raft config", "error", err.Error())
+				}
 			}
 
 			// Note that seal reloading can also be triggered via Core.TriggerSealReload.

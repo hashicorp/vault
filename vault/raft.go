@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	goversion "github.com/hashicorp/go-version"
 	lru "github.com/hashicorp/golang-lru/v2"
+	raftlib "github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/api"
 	httpPriority "github.com/hashicorp/vault/http/priority"
 	"github.com/hashicorp/vault/physical/raft"
@@ -1319,6 +1320,14 @@ func NewDelegateForCore(c *Core) *raft.Delegate {
 		c.logger.Error("failed to load autopilot persisted state from storage", "error", err)
 	}
 	return raft.NewDelegate(c.getRaftBackend(), persistedState, c.saveAutopilotPersistedState)
+}
+
+func (c *Core) ReloadRaftConfig(config raftlib.ReloadableConfig) error {
+	rb := c.getRaftBackend()
+	if rb == nil {
+		return nil
+	}
+	return rb.ReloadConfig(config)
 }
 
 // getRaftBackend returns the RaftBackend from the HA or physical backend,
