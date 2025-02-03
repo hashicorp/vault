@@ -497,11 +497,11 @@ func Test_ActivityLog_MountDeduplication(t *testing.T) {
 
 // getJSONExport is used to fetch activity export records using json format.
 // The records will returned as a map keyed by client ID.
-func getJSONExport(t *testing.T, client *api.Client, monthsPreviousTo int, now time.Time) (map[string]vault.ActivityLogExportRecord, error) {
+func getJSONExport(t *testing.T, client *api.Client, now time.Time) (map[string]vault.ActivityLogExportRecord, error) {
 	t.Helper()
 
 	resp, err := client.Logical().ReadRawWithData("sys/internal/counters/activity/export", map[string][]string{
-		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(monthsPreviousTo, now)).Format(time.RFC3339)},
+		"start_time": {now.Format(time.RFC3339)},
 		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
 		"format":     {"json"},
 	})
@@ -677,7 +677,7 @@ func Test_ActivityLog_Export_Sudo(t *testing.T) {
 	require.NoError(t, err)
 
 	// Ensure access via root token
-	clients, err := getJSONExport(t, client, 1, now)
+	clients, err := getJSONExport(t, client, now)
 	require.NoError(t, err)
 	require.Len(t, clients, 10)
 
@@ -696,7 +696,7 @@ path "sys/internal/counters/activity/export" {
 	client.SetToken(nonSudoToken)
 
 	// Ensure no access via token without sudo access
-	clients, err = getJSONExport(t, client, 1, now)
+	clients, err = getJSONExport(t, client, now)
 	require.ErrorContains(t, err, "permission denied")
 
 	client.SetToken(rootToken)
@@ -715,7 +715,7 @@ path "sys/internal/counters/activity/export" {
 	client.SetToken(sudoToken)
 
 	// Ensure access via token with sudo access
-	clients, err = getJSONExport(t, client, 1, now)
+	clients, err = getJSONExport(t, client, now)
 	require.NoError(t, err)
 	require.Len(t, clients, 10)
 }
