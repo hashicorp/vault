@@ -589,7 +589,7 @@ func TestParseCertificate(t *testing.T) {
 				},
 				DNSNames:                      []string{"example.com", "www.example.com"},
 				EmailAddresses:                []string{"admin@example.com", "user@example.com"},
-				IPAddresses:                   []net.IP{[]byte{192, 0, 2, 1}, []byte{192, 0, 2, 2}},
+				IPAddresses:                   []net.IP{[]byte{1, 2, 3, 4}, []byte{1, 2, 3, 5}},
 				URIs:                          []*url.URL{parseURL("https://example.com"), parseURL("https://www.example.com")},
 				OtherSANs:                     map[string][]string{"1.3.6.1.4.1.311.20.2.3": {"caadmin@example.com"}},
 				IsCA:                          false,
