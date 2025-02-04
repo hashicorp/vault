@@ -1062,13 +1062,17 @@ func testParseCsrToFields(t *testing.T, issueTime time.Time, tt *parseCertificat
 // entire CA chain.
 //
 // This test constructs a root CA that
-// - allows: .example.com
+// - allows: .example.com and myint.com
 // - excludes: bad.example.com
 //
 // and an intermediate that
 // - forbids alsobad.example.com
 //
-// It verifies that the intermediate
+// By importing the intermediate chain in the "wrong" order, it validates parsePEM
+// is using the updated verification logic, not the historical strict one which
+// prevented multi-chains.
+//
+// It then checks verification by issuing from the intermediate certificate:
 // - can issue certs like good.example.com
 // - rejects names like notanexample.com since they are not in the namespace of names permitted by the root CA
 // - rejects bad.example.com, since the root CA excludes it
@@ -1083,7 +1087,7 @@ func TestVerify_chained_name_constraints(t *testing.T) {
 	// If they ever expire for some reason, they can be regenerated as follows:
 	//     vault secrets enable pki
 	//     vault secrets tune -default-lease-ttl=1000000h -max-lease-ttl=1000000h pki
-	//     vault write pki/root/generate/internal ttl="999999h" common_name="myvault.com" permitted_dns_domains=".example.com" excluded_dns_domains="bad.example.com"
+	//     vault write pki/root/generate/internal ttl="999999h" common_name="myvault.com" permitted_dns_domains=".example.com,myint.com" excluded_dns_domains="bad.example.com"
 	//     vault write pki/intermediate/generate/exported common_name="myint.com"
 	//     CSR=<csr>
 	//     vault write pki/root/sign-intermediate common_name="myint.com" csr="$CSR" ttl="999998h" excluded_dns_domains="alsobad.example.com"
@@ -1094,72 +1098,72 @@ func TestVerify_chained_name_constraints(t *testing.T) {
 		// Intermediate Private Key; Intermediate Certificate and Root Certificate
 		pemBundle := []byte(`
 -----BEGIN RSA PRIVATE KEY-----
-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
+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
 -----END RSA PRIVATE KEY-----
 -----BEGIN CERTIFICATE-----
-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
+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
-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
+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
 -----END CERTIFICATE-----
 -----BEGIN CERTIFICATE-----
-MIIDbjCCAlagAwIBAgIUH5XPxepR27cGAFwQsmNxQOEQhdEwDQYJKoZIhvcNAQEL
-BQAwFjEUMBIGA1UEAxMLbXl2YXVsdC5jb20wIBcNMjUwMTAzMjIxNjM1WhgPMjEz
-OTAyMDIxMzE3MDVaMBYxFDASBgNVBAMTC215dmF1bHQuY29tMIIBIjANBgkqhkiG
-9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwway6sN9F5iQ7JBg5+5HOpfhHpUhfZyjwcIP
-OWfRVU/+tD9WGdI42apMqMZu4lXhJGMnNKAZbTszyCcI4/a8INy+cTu/OJLT++r/
-JCfLYcSnBBnCw8t/T0MvE3SWH/H0ToMIwSZPuMhBjVA6XlCopVzhZy8x+nM7oqNC
-gqqW1e/oK2V6zZDlxD+hTDDdQnEhnFu9qyr0wOacAfqrtTwnR9G770CECF95mRzJ
-ULmS5SJHkSxZzetRc+cTao4bar9JU2WUhih7qGs5OjHw6YmVosNWLAV38vX9DPy9
-J2wCh7r4ttTir0GQdl1YaVDBtG5EQcuCEFpq79i+AgOK/LuMTQIDAQABo4GxMIGu
-MA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBRpGzds
-A9UvDJkpLQ8gqagRHi+t4jAfBgNVHSMEGDAWgBRpGzdsA9UvDJkpLQ8gqagRHi+t
-4jAWBgNVHREEDzANggtteXZhdWx0LmNvbTAzBgNVHR4BAf8EKTAnoBAwDoIMLmV4
-YW1wbGUuY29toRMwEYIPYmFkLmV4YW1wbGUuY29tMA0GCSqGSIb3DQEBCwUAA4IB
-AQBv65+kEvaAPYgLnfZjaXkFSysuVR5TI2sw9qMj23mCOfIm7mBzPkGKnB8g4XSg
-tsOf+6UKcgQVkTvGSKqjavrHrtRtojgKvnXfra3yPY41//G2IWZ6juiQzqqj55Fm
-rM952Wrr7iIjR5pLP6sZ74OCjxTr35Ky3Y2+k4blHlGA/JBQeGNhiyO6mYSqzY1i
-tRI8ij2/5wSXYaPDl3DBSJSEDqYpSUINSUK2W1R5Rq10yD5HDREh96oeOYLKC3a0
-C73G+J0nGaYffdR4MWeTEq6gfENZXrmlA5Fe4fyBgxlHfzxx5c0KWpZVJttoVGir
-j8bwlXImoBeiKZL7lEGT2vDk
+MIIDezCCAmOgAwIBAgIUFufV7PUhESnMe3jsbaFOaJdGmBcwDQYJKoZIhvcNAQEL
+BQAwFjEUMBIGA1UEAxMLbXl2YXVsdC5jb20wIBcNMjUwMjAzMTQ1NzE4WhgPMjEz
+OTAzMDUwNTU3NDdaMBYxFDASBgNVBAMTC215dmF1bHQuY29tMIIBIjANBgkqhkiG
+9w0BAQEFAAOCAQ8AMIIBCgKCAQEAz7wyAmSIrnb9MPWXmHW1cT03hoDkSWZK76Oi
+MoRVnCFTsY2eKrofhUpO6Cxkl4PhUCST6oFdnkTbm5Oxg5q7i1iRLi2s1l/XYOpk
+GQl+WeG59mxeQ6j98K9EAHmN6zm5K4xjej9uHkZK6Nlm2qzyjEaq94pQl56jMH97
+mXsifvqkZUJV0EvW1BYNl+VqMUfMYkuRsS+OOGFY6qinlEL/K1OmDNP8+2RsCo5h
+HbTAf90y1skAyOA99vYkySNubIxSYbl84CrsmhuWY9+oBRBRxLEeTfSbTP4nb2Gh
+VbyEiQhcp94mg9rR9Jd5vN3QjsbNBCP7mdFK734acpfu4YYIowIDAQABo4G+MIG7
+MA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBTZRv9t
+1juB2Nmb3JPX8LE+Hw3RVTAfBgNVHSMEGDAWgBTZRv9t1juB2Nmb3JPX8LE+Hw3R
+VTAWBgNVHREEDzANggtteXZhdWx0LmNvbTBABgNVHR4BAf8ENjA0oB0wDoIMLmV4
+YW1wbGUuY29tMAuCCW15aW50LmNvbaETMBGCD2JhZC5leGFtcGxlLmNvbTANBgkq
+hkiG9w0BAQsFAAOCAQEAPNVRHHCkBfq6qGOdevMIjCQEsRoIhwAx398+oMUrgjKd
+vslOP6dqXoWmKJnFtPKFWpxIkUm4v83Kx7TNNlMwAzf1Hyhjq17OaH0jDbe8LcmY
+CCRrK6yxeN9iJZInJKwmWHtVVAvdbxY2iwLwtqY6TlajP76aO8Zi5rasvEBurhmX
+97acn2LgbmxrDnNEaU2gT60ft0noaGXUrK9WX1LoT0+0dtFSqr5tR/S0sXVioVnG
+ypyP4Fe/DXvXHrLw/v+Kldu5ibKRgx4iCT1vC6CX93/m/AQ7tWawLY+BymFLbrNh
+zOYF7zwf65ExfN+o1q38bFDTOi4idCcL07e7uk2uDQ==
 -----END CERTIFICATE-----
 `)
 
