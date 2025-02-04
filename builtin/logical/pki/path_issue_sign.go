@@ -666,10 +666,10 @@ func (b *backend) pathIssueSignEmptyCert(ctx context.Context, req *logical.Reque
 	}
 	resp, err := b.pathIssueSignCert(ctx, req, emptyData, emptyRole, false, false)
 	if err != nil {
-		return err
+		return fmt.Errorf("certificate path set on issuer %v is not functional: %v", issuerName, err)
 	}
 	if resp.IsError() {
-		return resp.Error()
+		return fmt.Errorf("certificate path set on issuer %v is not functional: %v", issuerName, resp.Error())
 	}
 	return nil
 }
