@@ -2325,5 +2325,8 @@ func isRaftLogVerifyCheckpoint(l *raft.Log) bool {
 }
 
 func (r *RaftBackend) ReloadConfig(config raft.ReloadableConfig) error {
-	return r.raft.ReloadConfig(config)
+	if r.raft != nil {
+		return r.raft.ReloadConfig(config)
+	}
+	return nil
 }
