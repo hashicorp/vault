@@ -40,8 +40,8 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     this.newModel = store.createRecord('kubernetes/role', { backend: 'kubernetes-test' });
     this.breadcrumbs = [
       { label: this.newModel.backend, route: 'overview' },
-      { label: 'roles', route: 'roles' },
-      { label: 'create' },
+      { label: 'Roles', route: 'roles' },
+      { label: 'Create' },
     ];
     setRunOptions({
       rules: {
