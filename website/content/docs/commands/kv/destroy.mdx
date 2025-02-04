@@ -1,84 +1,77 @@
 ---
 layout: docs
 page_title: kv destroy - Command
-description: |-
-  The "kv destroy" command permanently removes the specified version data for
-  the provided key and version numbers from the key-value store.
+description: >-
+  Permanently delete data from a path in a key/value v2 secrets plugin.
 ---
 
-# kv destroy
+# `kv destroy`
 
-<Note>
+<Note title="Version-specific command">
 
-This is a [KV version 2](/vault/docs/secrets/kv/kv-v2) secrets engine command,
-and not available for Version 1.
+The `kv destroy` command only works with key/value v2 plugins.
 
 </Note>
 
-Permanently removes the specified version data for the provided key and version 
-numbers from the key-value store.
+Permanently delete data from the provided key/value secrets path.
 
 <CodeBlockConfig hideClipboard>
 
 ```shell-session
-$ vault kv destroy [flags] <key>
+$ vault kv destroy [flags] <secret_path>
 
 $ vault kv destroy [-help | -h]
 ```
 
 </CodeBlockConfig>
 
+
+
 ## Description
 
-`kv destroy` permanently removes the specified versions' data from the key/value
-secrets engine. If no key exists at the path, Vault takes no action.
+`kv destroy` permanently deletes the targeted version of data on a given path in
+key/value v2 secrets plugins. `kv destroy` fails gracefully and takes no action
+if the secret path is invalid.
 
 <Tip title="Related API endpoints">
 
-DestroySecretVersions - [`PUT: /:secret-mount-path/destroy/:path`](/vault/api-docs/secret/kv/kv-v2#destroy-secret-versions)
+  DestroySecretVersions - [`PUT: /:secret-mount-path/destroy/:path`](/vault/api-docs/secret/kv/kv-v2#destroy-secret-versions)
 
 </Tip>
 
-### Exit codes
 
-The Vault CLI follows consistent exit code conventions to indicate different 
-types of errors:
-
-- Exit code 1 indicates local errors, such as invalid flags, validation 
-  failures, or incorrect number of arguments.
-
-- Exit code 2 indicates remote errors, such as API failures, TLS issues, or 
-  invalid API parameters.
-
-Some commands may use different exit codes for specific scenarios. When this 
-occurs, the different behavior is clearly documented in the command's 
-documentation.
 
 ## Command arguments
 
 <br />
 
-@include 'cli/kv/args/key.mdx'
+@include 'cli/kv/args/secret_path.mdx'
 
-## Command options
 
-None.
 
 ## Command flags
 
 <br />
 
-@include 'cli/kv/flags/mount.mdx'
+@include 'cli/shared/flags/field.mdx'
 
 <br /><hr /><br />
 
-@include 'cli/kv/flags/destroy-versions.mdx'
+@include 'cli/shared/flags/mount.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/kv/flags/versions.mdx'
+
+
 
 ## Global flags
 
 <br />
 
 @include 'cli/standard-settings/all-standard-flags.mdx'
+
+
 
 ## Examples
 

@@ -1,8 +1,8 @@
-<a id="kv-flag-custom-metadata" />
+<a id="kv-arg-key_value_pair" />
 
-**`-custom-metadata (string : "")`**
+**`key_value_pair (string : <required>)`**
 
-Arbitrary, version-agnostic metadata in one of the following forms:
+A key and data value in one of the following forms:
 
 Format                        | Description
 ----------------------------- | -----------
@@ -11,7 +11,5 @@ Format                        | Description
 `<key_name> -`                | Defines a single key and reads value data from `stdin`
 `@<json_file_path>            | Reads one or more key and value pair from a JSON file
 
-If you choose to specify the key/value pairs in the command, repeat the
-`-custom-metadata` flag as needed with one string per flag.
 
-**Example**: `-custom-metadata "foo=bar"`
+**Example**: `prod=5678`

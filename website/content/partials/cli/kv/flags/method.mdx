@@ -1,10 +1,12 @@
 <a id="kv-flag-method" />
 
-**`-method (string : "patch")`**
+**`-method (enum : patch)`**
 
-Specifies the patch method to use. Valid methods are `patch` and `rw`. The
-`patch` method uses an HTTP `PATCH` request to apply the partial update. The
-`rw` method fetches the secret's data, performs an in-memory update, and
-writes the updated data.
+The preferred patch method.
 
-**Example**: `-method "rw"`
+Value   | Description
+------- | -----------
+`patch` | Use an HTTP `PATCH` request
+`rw`    | Combine an HTTP `GET` request, local update, and HTTP `POST` request
+
+**Example**: `-method rw`

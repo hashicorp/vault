@@ -2,7 +2,8 @@
 
 **`-cas-required (boolean : false)`**
 
-If true, the key will require the `cas` parameter to be set on all write 
-requests. By default, the backend's configuration will be used.
+Override the `cas_required` field in the plugin configuration to require a
+check-and-set operations on all write requests. Setting `cas-required` to `true`
+makes the `-cas` flag required.
 
 **Example**: `-cas_required`

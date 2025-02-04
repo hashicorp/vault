@@ -1,12 +1,10 @@
 <a id="kv-flag-delete-version-after" />
 
-**`-delete-version-after (string : "-1ns")`**
+**`-delete-version-after (string : "0s")`**
 
-Specifies the length of time before a version is deleted. If not set, Vault uses
-the backend's configured `delete-version-after`. 
-
-This value cannot be greater than the backend's `delete-version-after`. The 
-`delete-version-after` is specified as a numeric string with a suffix like 
-"30s" or "3h25m19s".
+Time in `<number>[s|m|h|d]` format to wait before automatically deleting data
+versions going forward. The `-delete-version-after` value cannot be greater than
+the `delete_version_after` value in the plugin configuration. Use `"0s"` to
+disable automatic version pruning.
 
 **Example**: `-delete-version-after "30s"`

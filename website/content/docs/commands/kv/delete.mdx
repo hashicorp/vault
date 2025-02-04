@@ -1,31 +1,31 @@
 ---
 layout: docs
-page_title: kv delete - Command
-description: |-
-  The "kv delete" command deletes the data for the provided path in the 
-  key/value secrets engine.
+page_title: "kv delete - Vault CLI"
+description: >-
+  Soft delete data from a path in the key/value secrets plugin.
 ---
 
-# kv delete
+# `kv delete`
 
-Delete the data for the provided path in the key/value secrets engine.
+Soft delete data from the provided key/value secrets path.
 
 <CodeBlockConfig hideClipboard>
 
 ```shell-session
-$ vault kv delete [flags] <path>
+$ vault kv delete [flags] <secret_path>
 
 $ vault kv delete [-help | -h]
 ```
 
 </CodeBlockConfig>
 
+
+
 ## Description
 
-`kv delete` deletes the data for the provided path in the key/value secrets
-engine. If you are using KV version 2, its versioned data will not be fully
-removed, but marked as deleted and will no longer be returned in normal get
-requests.
+`kv delete` soft deletes the targeted version of data on a given path in
+key/value v2 secrets plugins. **`kv delete` permanently deletes  data for
+key/value version 1 plugins**.
 
 <Tip title="Related API endpoints">
 
@@ -35,30 +35,20 @@ requests.
 
 </Tip>
 
-### Exit codes
-
-The Vault CLI follows consistent exit code conventions to indicate different 
-types of errors:
-
-- Exit code 1 indicates local errors, such as invalid flags, validation 
-  failures, or incorrect number of arguments.
-
-- Exit code 2 indicates remote errors, such as API failures, TLS issues, or 
-  invalid API parameters.
-
-Some commands may use different exit codes for specific scenarios. When this 
-occurs, the different behavior is clearly documented in the command's 
-documentation.
 
 ## Command arguments
 
 <br />
 
-@include 'cli/kv/args/path.mdx'
+@include 'cli/kv/args/secret_path.mdx'
+
+
 
 ## Command options
 
 None.
+
+
 
 ## Command flags
 
@@ -68,11 +58,13 @@ None.
 
 <br /><hr /><br />
 
-@include 'cli/kv/flags/mount.mdx'
+@include 'cli/shared/flags/mount.mdx'
 
 <br /><hr /><br />
 
 @include 'cli/kv/flags/versions.mdx'
+
+
 
 ## Global flags
 
@@ -80,19 +72,35 @@ None.
 
 @include 'cli/standard-settings/all-standard-flags.mdx'
 
+
+
 ## Examples
 
-Delete the latest version of the key `creds`:
+### Key/value v2
+
+Delete the latest version of data for the key `creds`:
 
 ```shell-session
-$ vault kv delete -mount=secret creds
-Success! Data deleted (if it existed) at: secret/creds
+$ vault kv delete -mount=shared creds
+
+Success! Data deleted (if it existed) at: shared/creds
 ```
 
-If you use KV version 2, you can delete specific versions. Delete version 11 of 
-key `creds`:
+Delete version 11 of data for the key `creds`:
 
 ```shell-session
-$ vault kv delete -mount=secret -versions=11 creds
-Success! Data deleted (if it existed) at: secret/data/creds
+$ vault kv delete -mount=shared -versions "11" creds
+
+Success! Data deleted (if it existed) at: shared/data/creds
+```
+
+
+### Key/value v1
+
+Permanently delete data for the key `seeds`:
+
+```shell-session
+$ vault kv delete -mount=shared seeds
+
+Success! Data deleted (if it existed) at: shared/seeds
 ```

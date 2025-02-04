@@ -1,91 +1,84 @@
 ---
 layout: docs
-page_title: kv patch - Command
-description: |-
-  The "kv patch" command writes the data to the given path in the key-value
-  store. The data can be of any type.
+page_title: kv destroy - Command
+description: >-
+  Update data for specific keys on a path in a key/value v2 secrets plugin.
 ---
 
-# kv patch
+# `kv patch`
 
-<Note>
+<Note title="Version-specific command">
 
-This is a [KV version 2](/vault/docs/secrets/kv/kv-v2) secrets engine command,
-and not available for Version 1.
+The `kv patch` command only works with key/value v2 plugins.
 
 </Note>
 
-Writes the data to the given path in the key-value store.
+Update specific values or add new key/value pairs to an existing data path in
+a `kv` v2 plugin.
 
 <CodeBlockConfig hideClipboard>
 
 ```shell-session
-$ vault kv patch [flags] <key> [data]
+$ vault kv patch [flags] <secret_path> <key_value_pair> ...
 
 $ vault kv patch [-help | -h]
 ```
 
 </CodeBlockConfig>
 
-`kv patch` writes the data to the given path in the KV v2 secrets
-engine. The data can be of any type. You can pass the data from the command line,
-or from a file on disk (using the `@` symbol), or from stdin (using the `-` symbol).
 
-Unlike the `kv put` command, the `patch` command combines the change with 
-existing data instead of replacing them. Therefore, this command makes it easy 
-to make a partial updates to an existing data.
+## Description
 
-By default, this operation will attempt an HTTP PATCH operation. If your
-policy does not allow that, it will fall back to a read/local update/write 
-approach. If you wish to specify which method this command should use, you may 
-do so with the `-method` flag. When `-method=patch` is specified, Vault will only 
-attempt an HTTP PATCH operation. If it fails, the entire command will fail.
+`kv patch` updates data for specific keys on a given path in `kv` v2 plugins.
+The data can be of any type. You can pass the data from the command line,
+or from a file on disk (using the `@` symbol), or from stdin (using the `-`
+symbol). The patch process is transactional. If any part of the patch process
+fails, the entire update rolls back and returns an error.
+
+By default, `kv patch` performs an HTTP `PATCH` operation. If your
+policy does not allow `PATCH` operations, Vault attempts a
+`read + local update + write` sequential workflow instead. You can force Vault
+to use the sequential process with the `-method` flag.
+
+The `read + local update + write` sequence is a more streamlined version of
+using the `kv put` command with the existing data you want to preserve **and**
+the data you want to change or add.
 
 <Tip title="Related API endpoints">
 
-PatchSecret (v2) - [`PATCH: /:secret-mount-path/data/:path`](/vault/api-docs/secret/kv/kv-v2#patch-secret)
+  PatchSecret (v2) - [`PATCH: /:secret-mount-path/data/:path`](/vault/api-docs/secret/kv/kv-v2#patch-secret)
 
 </Tip>
 
-### Exit codes
 
-The Vault CLI follows consistent exit code conventions to indicate different 
-types of errors:
-
-- Exit code 1 indicates local errors, such as invalid flags, validation 
-  failures, or incorrect number of arguments.
-
-- Exit code 2 indicates remote errors, such as API failures, TLS issues, or 
-  invalid API parameters.
-
-Some commands may use different exit codes for specific scenarios. When this 
-occurs, the different behavior is clearly documented in the command's 
-documentation.
 
 ## Command arguments
 
 <br />
 
-@include 'cli/kv/args/key.mdx'
+@include 'cli/kv/args/secret_path.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/kv/args/key_value_pair.mdx'
+
+
 
 ## Command options
 
-After the required `key` argument, you can specify data as additional options in 
-`key=value` format. If the value begins with an `@`, Vault will load the value 
-from a file. If the value for a key is `-`, Vault will read the value from 
-stdin rather than the command line.
+None.
 
-Examples: `bar=baz`, `@data.json`, `bar=-`
+
 
 ## Command flags
 
 <br />
 
-@include 'cli/shared/flags/field.mdx'
+@include 'cli/kv/flags/cas.mdx'
 
 <br /><hr /><br />
 
-@include 'cli/kv/flags/cas.mdx'
+@include 'cli/shared/flags/field.mdx'
 
 <br /><hr /><br />
 
@@ -93,11 +86,13 @@ Examples: `bar=baz`, `@data.json`, `bar=-`
 
 <br /><hr /><br />
 
-@include 'cli/kv/flags/mount.mdx'
+@include 'cli/shared/flags/mount.mdx'
 
 <br /><hr /><br />
 
 @include 'cli/kv/flags/remove-data.mdx'
+
+
 
 ## Global flags
 
@@ -105,14 +100,18 @@ Examples: `bar=baz`, `@data.json`, `bar=-`
 
 @include 'cli/standard-settings/all-standard-flags.mdx'
 
+
+
 ## Examples
 
-Add an additional key-value (`ttl=48h`) to the existing data at the key `creds`:
+Add a new key/value pair, `ttl=48h`, to the existing data at the secret path
+`creds`:
 
 ```shell-session
-$ vault kv patch -mount=secret creds ttl=48h
+$ vault kv patch -mount=shared creds ttl=48h
+
 == Secret Path ==
-secret/data/creds
+shared/data/creds
 
 ======= Metadata =======
 Key              Value
@@ -123,16 +122,6 @@ destroyed        false
 version          6
 ```
 
-<Tip title="Differences from kv put">
-
-The `kv put` command requires both the existing data and the data you wish to add 
-in order to accomplish the same result.
-
-```shell-session
-$ vault kv put -mount=secret creds ttl=48h passcode=my-long-passcode
-```
-
-</Tip>
 
 Pass the data from a file on disk by prefixing with the "@" symbol:
 

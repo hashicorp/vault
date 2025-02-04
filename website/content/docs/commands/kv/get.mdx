@@ -1,29 +1,31 @@
 ---
 layout: docs
-page_title: kv get - Command
-description: |-
-  The "kv get" command retrieves the value from Vault's key-value store at the
-  given key name. If no key exists with that name, an error is returned. If a
-  key exists with that name but has no data, nothing is returned.
+page_title: "kv get - Vault CLI"
+description: >-
+  Read data from a key/value plugin.
 ---
 
-# kv get
+# `kv get`
 
-Retrieves the value from Vault's key-value store at the given key name.
+Read data from a key/value plugin.
 
 <CodeBlockConfig hideClipboard>
 
 ```shell-session
-$ vault kv get [flags] <kv>
+$ vault kv get [flags] <secret_path>
 
 $ vault kv get [-help | -h]
 ```
 
 </CodeBlockConfig>
 
-`kv get` retrieves the value from KV secrets engine at the given key name. If no 
-key exists with that name, an error is returned. If a key exists with the name 
-but has no data, nothing is returned.
+
+
+## Description
+
+`kv get` returns values stored at the provided secret path for the targeted `kv`
+plugin. Key/value v2 plugins also return metadata associated with the secret
+path.
 
 <Tip title="Related API endpoints">
 
@@ -32,30 +34,21 @@ but has no data, nothing is returned.
 
 </Tip>
 
-### Exit codes
 
-The Vault CLI follows consistent exit code conventions to indicate different 
-types of errors:
-
-- Exit code 1 indicates local errors, such as invalid flags, validation 
-  failures, or incorrect number of arguments.
-
-- Exit code 2 indicates remote errors, such as API failures, TLS issues, or 
-  invalid API parameters.
-
-Some commands may use different exit codes for specific scenarios. When this 
-occurs, the different behavior is clearly documented in the command's 
-documentation.
 
 ## Command arguments
 
 <br />
 
-@include 'cli/kv/args/key.mdx'
+@include 'cli/kv/args/secret_path.mdx'
+
+
 
 ## Command options
 
 None.
+
+
 
 ## Command flags
 
@@ -65,11 +58,13 @@ None.
 
 <br /><hr /><br />
 
-@include 'cli/kv/flags/mount.mdx'
+@include 'cli/shared/flags/mount.mdx'
 
 <br /><hr /><br />
 
 @include 'cli/kv/flags/version.mdx'
+
+
 
 ## Global flags
 
@@ -77,14 +72,18 @@ None.
 
 @include 'cli/standard-settings/all-standard-flags.mdx'
 
+
+
 ## Examples
 
-Retrieve the data of the key `creds`:
+Read metadata and all the current key/value pairs on the path `creds` from the
+`kv` v2 plugin mounted at `shared/`:
 
 ```shell-session
-$ vault kv get -mount=secret creds
+$ vault kv get -mount shared creds
+
 == Secret Path ==
-secret/data/creds
+shared/data/creds
 
 ======= Metadata =======
 Key                Value
@@ -101,20 +100,22 @@ Key         Value
 passcode    my-long-passcode
 ```
 
-If KV version 1 secrets engine is enabled at `secret`, the output has no
-metadata since there is no versioning information associated with the data:
+Read the current key/value pairs on the path `creds` from the `kv` v2 plugin
+mounted at `shared/`:
 
 ```shell-session
-$ vault kv get -mount=secret creds
+$ vault kv get -mount shared creds
+
 ====== Data ======
 Key         Value
 ---         -----
 passcode    my-long-passcode
 ```
 
-Return only the `creds` `passcode` key:
+Limit `kv get` output from the `creds` path to the `passcode` entry:
 
 ```shell-session
-$ vault kv get -mount=secret -field=passcode creds
+$ vault kv get -mount shared -field "passcode" creds
+
 my-long-passcode
 ```

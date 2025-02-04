@@ -1,69 +1,62 @@
 ---
 layout: docs
-page_title: kv list - Command
-description: |-
-  The "kv list" command lists data from Vault's KV secrets engine at the given
-  path.
+page_title: "kv list - Vault CLI"
+description: >-
+  List keys for the given secret path in a key/value plugin.
 ---
 
-# kv list
+# `kv list`
 
-Lists data from Vault's KV secrets engine at the given path.
+List keys for the given secret path in a key/value plugin.
 
 <CodeBlockConfig hideClipboard>
 
 ```shell-session
-$ vault kv list [flags] <path>
+$ vault kv list [flags] <secret_path>
 
 $ vault kv list [-help | -h]
 ```
 
 </CodeBlockConfig>
 
-`kv list` returns a list of key names at the specified path. Folders are suffixed
-with `/`. The input must be a folder; list on a file will not return a value.
 
-Note that no policy-based filtering is performed on keys. Do not encode sensitive
-information in key names. The values themselves are not accessible via this
-command.
+
+## Description
+
+`kv list` returns all key names available at the provided secret path. Sub-paths
+include a `/` suffice. **Do not encode sensitive information in key names**.
+While `kv list` does not return value data, Vault does not apply policy-based
+filtered to the results. 
 
 <Tip title="Related API endpoints">
 
-- ListSecrets (v1) - [`LIST: /secret/:path`](/vault/api-docs/secret/kv/kv-v1#list-secrets)
-- ListSecrets (v2) - [`LIST: /:secret-mount-path/metadata/:path`](/vault/api-docs/secret/kv/kv-v2#list-secrets)
+  - ListSecrets (v1) - [`LIST: /secret/:path`](/vault/api-docs/secret/kv/kv-v1#list-secrets)
+  - ListSecrets (v2) - [`LIST: /:secret-mount-path/metadata/:path`](/vault/api-docs/secret/kv/kv-v2#list-secrets)
 
 </Tip>
 
-### Exit codes
-
-The Vault CLI follows consistent exit code conventions to indicate different 
-types of errors:
-
-- Exit code 1 indicates local errors, such as invalid flags, validation 
-  failures, or incorrect number of arguments.
-
-- Exit code 2 indicates remote errors, such as API failures, TLS issues, or 
-  invalid API parameters.
-
-Some commands may use different exit codes for specific scenarios. When this 
-occurs, the different behavior is clearly documented in the command's 
-documentation.
 
 ## Command arguments
 
 <br />
 
-@include 'cli/kv/args/path.mdx'
+@include 'cli/kv/args/secret_path.mdx'
+
+
 
 ## Command options
 
 None.
 
+
+
 ## Command flags
 
 <br />
 
-@include 'cli/kv/flags/mount.mdx'
+@include 'cli/shared/flags/mount.mdx'
+
+
 
 ## Global flags
 
@@ -71,12 +64,16 @@ None.
 
 @include 'cli/standard-settings/all-standard-flags.mdx'
 
+
+
 ## Examples
 
-List values under the key `my-app`:
+List keys for the key/value pairs on the path `my-app` from the `kv` v2 plugin
+mounted at `shared/`:
 
 ```shell-session
-$ vault kv list -mount=secret my-app/
+$ vault kv list -mount shared my-app/
+
 Keys
 ----
 admin_creds

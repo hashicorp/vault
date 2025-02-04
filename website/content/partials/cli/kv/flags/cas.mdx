@@ -1,16 +1,14 @@
 <a id="kv-flag-cas" />
 
-**`-cas (int : -1)`**
+**`-cas (int : 0)`**
 
-Specifies the value to use for the Check-And-Set operation. If set to 0 or not
-set, the patch will be allowed. 
+Perform a check-and-set operation against the provided version before applying
+the patch to avoid race conditions and potential data loss for targeted
+key/value data. Vault ignores the `-cas` flag when `-method` is `rw`.
 
-This flag will only be used for the `patch` method. This flag is required if
-`cas_required` is set to `true` on either the secret or the engine's config. If
-the index is non-zero, the patch will only be allowed if the key's current
-version matches the version specified in the `-cas` parameter.
-
-This flag will be ignored for the `rw` method. Instead, its value will be
-derived from fetching the current version of the secret.
+`cas` value | Description
+----------- | -----------
+0           | Always patch the data
+N           | Patch data if the current version is `N`
 
 **Example**: `-cas 1`

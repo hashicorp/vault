@@ -1,7 +1,8 @@
 <a id="kv-flag-version" />
 
-**`-version (int : 0)`**
+**`-versions (int : 0)`**
 
-Specifies the version to return. If not set, Vault returns the latest version.
+The version number for versioned `kv` data. Use `0` to target the most recent
+version. **The `kv` v1 plugin does not support versioned data**.
 
-**Example**: `-version 10`
+**Example**: `-version 5`
