@@ -634,6 +634,40 @@ func (n *DockerClusterNode) createTLSDisabledListenerConfig() map[string]interfa
 	}}
 }
 
+func (n *DockerClusterNode) WriteStorageConfig(opts *DockerClusterOptions) error {
+	// Setup storage. Default is raft.
+	storageType := "raft"
+	storageOpts := map[string]interface{}{
+		// TODO add options from vnc
+		"path":    "/vault/file",
+		"node_id": n.NodeID,
+	}
+
+	if opts.Storage != nil {
+		storageType = opts.Storage.Type()
+		storageOpts = opts.Storage.Opts()
+	}
+
+	if opts.VaultNodeConfig != nil {
+		for k, v := range opts.VaultNodeConfig.StorageOptions {
+			if _, ok := storageOpts[k].(string); !ok {
+				storageOpts[k] = v
+			}
+		}
+	}
+	vaultCfg := map[string]interface{}{
+		"storage": map[string]interface{}{
+			storageType: storageOpts,
+		},
+	}
+
+	storageJSON, err := json.Marshal(vaultCfg)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(n.WorkDir, "storage.json"), storageJSON, 0o644)
+}
+
 func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOptions) error {
 	if n.DataVolumeName == "" {
 		vol, err := n.DockerAPI.VolumeCreate(ctx, volume.CreateOptions{})
@@ -678,30 +712,6 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 	vaultCfg["listener"] = listenerConfig
 	vaultCfg["telemetry"] = map[string]interface{}{
 		"disable_hostname": true,
-	}
-
-	// Setup storage. Default is raft.
-	storageType := "raft"
-	storageOpts := map[string]interface{}{
-		// TODO add options from vnc
-		"path":    "/vault/file",
-		"node_id": n.NodeID,
-	}
-
-	if opts.Storage != nil {
-		storageType = opts.Storage.Type()
-		storageOpts = opts.Storage.Opts()
-	}
-
-	if opts != nil && opts.VaultNodeConfig != nil {
-		for k, v := range opts.VaultNodeConfig.StorageOptions {
-			if _, ok := storageOpts[k].(string); !ok {
-				storageOpts[k] = v
-			}
-		}
-	}
-	vaultCfg["storage"] = map[string]interface{}{
-		storageType: storageOpts,
 	}
 
 	//// disable_mlock is required for working in the Docker environment with
@@ -749,6 +759,10 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 		if err != nil {
 			return err
 		}
+	}
+
+	if err := n.WriteStorageConfig(opts); err != nil {
+		return err
 	}
 
 	if !opts.DisableTLS {
@@ -1064,6 +1078,10 @@ func (n *DockerClusterNode) UnpartitionFromCluster(ctx context.Context) error {
 		return fmt.Errorf("got nonzero exit code from iptables: %d", exitCode)
 	}
 	return nil
+}
+
+func (n *DockerClusterNode) Reload(ctx context.Context) error {
+	return n.runner.RefreshFiles(ctx, n.Container.ID)
 }
 
 type LogConsumerWriter struct {
