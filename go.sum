@@ -1374,8 +1374,8 @@ github.com/grpc-ecosystem/grpc-gateway v1.16.0 h1:gmcG1KaJ57LophUzW0Hy8NmPhnMZb4
 github.com/grpc-ecosystem/grpc-gateway v1.16.0/go.mod h1:BDjrQk3hbvj6Nolgz8mAMFbcEtjT1g+wF4CSlocrBnw=
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.7.0/go.mod h1:hgWBS7lorOAVIJEQMi4ZsPv9hVvWI6+ch50m39Pf2Ks=
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.11.3/go.mod h1:o//XUCC/F+yRGJoPO/VU0GSB0f8Nhgmxx0VIRUvaC0w=
-github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.1 h1:/c3QmbOGMGTOumP2iT/rCwB7b0QDGLKzqOmktBjT+Is=
-github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.1/go.mod h1:5SN9VR2LTsRFsrEC6FHgRbTWrTHu6tqPeKxEQv15giM=
+github.com/grpc-ecosystem/grpc-gateway/v2 v2.22.0 h1:asbCHRVmodnJTuQ3qamDwqVOIjwqUPTYmYuemVOx+Ys=
+github.com/grpc-ecosystem/grpc-gateway/v2 v2.22.0/go.mod h1:ggCgvZ2r7uOoQjOyu2Y1NhHmEPPzzuhWgcza5M1Ji1I=
 github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed h1:5upAirOpQc1Q53c0bnx2ufif5kANL7bfZWcc6VJWJd8=
 github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed/go.mod h1:tMWxXQ9wFIaZeTI9F+hmhFiGpFmhOHzyShyFUhRm0H4=
 github.com/hashicorp/cap v0.7.0 h1:atLIEU5lJslYXo1qsv7RtUL1HrJVVxnfkErIT3uxLp0=
@@ -1602,8 +1602,8 @@ github.com/hashicorp/vault-plugin-secrets-gcpkms v0.19.0 h1:XMVCbZtI5UwJ19KoYZpg
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.19.0/go.mod h1:3OEx2UIpLZ0f4biNj60hRZTULuTzJV43Tn6+jKj9xdY=
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.9.0 h1:HEgEjYzG/DYBbCOrm3Pr43XPNwZWMool1EzcRFw3lgg=
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.9.0/go.mod h1:I/CF2GdsKiZ3ZgPrNVF+bs3XD7pUxp24iSKTVV4pHeE=
-github.com/hashicorp/vault-plugin-secrets-kv v0.20.0 h1:p1RVmd4x1rgGK0tN8DDu21J21bR3O93qBFXLGEdJSEo=
-github.com/hashicorp/vault-plugin-secrets-kv v0.20.0/go.mod h1:bCpMggD3Z0+H+3dOmTCoQjBHC53jA08lPqOLmFrHBi8=
+github.com/hashicorp/vault-plugin-secrets-kv v0.20.1-0.20250201001228-62dcb1da0a89 h1:Tk88GxHkTKJVJSb7IsH39pwUWqRi+JWG2Vp7Ix/Fvac=
+github.com/hashicorp/vault-plugin-secrets-kv v0.20.1-0.20250201001228-62dcb1da0a89/go.mod h1:hW5nSSdeZkc216fbzqzLKMAauaNNAxcNEir4xIyb7xY=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.13.0 h1:BeDS7luTeOW0braIbtuyairFF8SEz7k3nvi9e+mJ2Ok=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.13.0/go.mod h1:sprde+S70PBIbgOLUAKDxR+xNF714ksBBVh77O3hnWc=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.14.4 h1:BA5gf+itQ4FtEg4gyXvEZW0ioRCSUNnO3+XBrxDNi9A=
@@ -3071,8 +3071,8 @@ google.golang.org/protobuf v1.28.0/go.mod h1:HV8QOd/L58Z+nl8r43ehVNZIU/HEI6OcFqw
 google.golang.org/protobuf v1.28.1/go.mod h1:HV8QOd/L58Z+nl8r43ehVNZIU/HEI6OcFqwMG9pJV4I=
 google.golang.org/protobuf v1.29.1/go.mod h1:HV8QOd/L58Z+nl8r43ehVNZIU/HEI6OcFqwMG9pJV4I=
 google.golang.org/protobuf v1.30.0/go.mod h1:HV8QOd/L58Z+nl8r43ehVNZIU/HEI6OcFqwMG9pJV4I=
-google.golang.org/protobuf v1.36.3 h1:82DV7MYdb8anAVi3qge1wSnMDrnKK7ebr+I0hHRN1BU=
-google.golang.org/protobuf v1.36.3/go.mod h1:9fA7Ob0pmnwhb644+1+CVWFRbNajQ6iRojtC/QF5bRE=
+google.golang.org/protobuf v1.36.4 h1:6A3ZDJHn/eNqc1i+IdefRzy/9PokBTPvcqMySR7NNIM=
+google.golang.org/protobuf v1.36.4/go.mod h1:9fA7Ob0pmnwhb644+1+CVWFRbNajQ6iRojtC/QF5bRE=
 gopkg.in/airbrake/gobrake.v2 v2.0.9/go.mod h1:/h5ZAUhDkGaJfjzjKLSjv6zCL6O0LLBxU4K+aSYdM/U=
 gopkg.in/alecthomas/kingpin.v2 v2.2.6/go.mod h1:FMv+mEhP44yOT+4EoQTLFTRgOQ1FBLkstjWtayDeSgw=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
