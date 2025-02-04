@@ -209,6 +209,8 @@ export default ApplicationAdapter.extend({
           username: resp.data.username,
         };
       });
+    } else {
+      data = snapshotData;
     }
 
     return this.ajax(this.urlFor(backend, id, roleType), 'POST', { data }).then(() => data);
