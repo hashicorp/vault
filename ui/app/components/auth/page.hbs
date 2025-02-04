@@ -85,6 +85,7 @@
     </:subHeader>
 
     <:content>
+      <SharedSecureUi::Reporting::Counter />
       {{#if this.mfaAuthData}}
         <Mfa::MfaForm
           @clusterId={{@cluster.id}}

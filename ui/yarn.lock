@@ -6931,7 +6931,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"decorator-transforms@npm:^2.0.0":
+"decorator-transforms@npm:^2.0.0, decorator-transforms@npm:^2.2.2":
   version: 2.3.0
   resolution: "decorator-transforms@npm:2.3.0"
   dependencies:
@@ -16164,6 +16164,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"shared-secure-ui@git+https://github.com/hashicorp/shared-secure-ui#workspace=shared-secure-ui":
+  version: 0.0.0
+  resolution: "shared-secure-ui@https://github.com/hashicorp/shared-secure-ui.git#workspace=shared-secure-ui&commit=cbed5a9e05f36ab8505e2cf8421dc1edd054edbb"
+  dependencies:
+    "@embroider/addon-shim": ^1.8.9
+    decorator-transforms: ^2.2.2
+  peerDependencies:
+    ember-source: ">= 4.12.0"
+  checksum: e5e96d76baf4ce7c08ba1083c45daf13304211122a7dc610c64399b4529ee9694955e537c8a532cbcf3d0fd708fb994628d8c95bcc2fc92345230b47671cb36b
+  languageName: node
+  linkType: hard
+
 "shebang-command@npm:^1.2.0":
   version: 1.2.0
   resolution: "shebang-command@npm:1.2.0"
@@ -18270,6 +18282,7 @@ __metadata:
     qunit: ^2.20.0
     qunit-dom: ^2.0.0
     sass: ^1.66.3
+    shared-secure-ui: "git+https://github.com/hashicorp/shared-secure-ui#workspace=shared-secure-ui"
     shell-quote: ^1.8.1
     sinon: ^17.0.1
     string.prototype.endswith: ^0.2.0
