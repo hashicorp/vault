@@ -1,0 +1,5 @@
+```release-note:feature
+Adds Automated Root Rotation capabilities to the AWS Auth and DB Secrets plugins. Allows plugin
+users to automate their root credential rotations based on configurable schedules/periods via the
+Rotation Manager. Note: Enterprise only.
+```
