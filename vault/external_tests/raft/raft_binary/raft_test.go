@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -439,4 +440,84 @@ func TestRaft_LogStore_Migration_Snapshot(t *testing.T) {
 	stabilize(t, newLeaderClient)
 	// check all data exists
 	readKV(newLeaderClient)
+}
+
+func Test_Raft_Trailing_Logs(t *testing.T) {
+	opts := docker.DefaultOptions(t)
+	if opts.ClusterOptions.VaultNodeConfig.StorageOptions == nil {
+		opts.ClusterOptions.VaultNodeConfig.StorageOptions = make(map[string]string, 0)
+	}
+	opts.ClusterOptions.VaultNodeConfig.StorageOptions["snapshot_threshold"] = "10"
+	opts.ClusterOptions.VaultNodeConfig.StorageOptions["snapshot_interval"] = "1"
+	opts.ClusterOptions.VaultNodeConfig.StorageOptions["trailing_logs"] = "10"
+	cluster := docker.NewTestDockerCluster(t, opts)
+	defer cluster.Cleanup()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	leaderIdx, err := testcluster.WaitForActiveNodeAndStandbys(ctx, cluster)
+	if err != nil {
+		t.Fatal(err)
+	}
+	leader := cluster.Nodes()[leaderIdx]
+	followerIdx := (leaderIdx + 1) % len(cluster.Nodes())
+	follower := cluster.Nodes()[followerIdx]
+	folAPIAddrRaw := follower.(*docker.DockerClusterNode).RealAPIAddr
+	folAPIAddr, err := url.Parse(folAPIAddrRaw)
+	if err != nil {
+		t.Fatalf("bad api addr %q: %v", folAPIAddrRaw, err)
+	}
+
+	leaderNode := leader.(*docker.DockerClusterNode)
+	err = leaderNode.AddNetworkDelay(context.Background(), time.Second, strings.Split(folAPIAddr.Host, ":")[0])
+	if err != nil {
+		t.Fatal(fmt.Sprintf("delaying pri node 0 traffic to node %d: %s", followerIdx, err))
+	}
+
+	leaderNodeID, folNodeID := leaderNode.NodeID, follower.(*docker.DockerClusterNode).NodeID
+	// Now we write enough data that a snapshot will occur on the leader and that
+	// there won't be enough trailing logs afterward for the slow client to be
+	// able to catch up via logs, necessitating a snapshot.
+	leaderClient := leader.APIClient()
+	ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	err = leaderClient.Sys().MountWithContext(ctx, "kv", &api.MountInput{
+		Type: "kv",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 10000; i++ {
+		_, err = leaderClient.Logical().WriteWithContext(ctx, fmt.Sprintf("kv/foo-%d", i), map[string]interface{}{
+			"bar": 1,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if i%100 == 0 {
+			state, err := leaderClient.Sys().RaftAutopilotState()
+			if err != nil {
+				t.Fatal(err)
+			}
+			for k, s := range state.Servers {
+				switch k {
+				case leaderNodeID:
+					t.Logf("leader: %d", s.LastIndex)
+				case folNodeID:
+					t.Logf("follower: %d", s.LastIndex)
+				}
+			}
+		}
+		if i == 5000 {
+			opts.ClusterOptions.VaultNodeConfig.StorageOptions["trailing_logs"] = "1000"
+			if err := leaderNode.WriteStorageConfig(opts); err != nil {
+				t.Fatal(err)
+			}
+			if err := leaderNode.Reload(ctx); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		time.Sleep(1 * time.Millisecond)
+	}
 }
