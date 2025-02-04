@@ -195,10 +195,16 @@ export default ApplicationAdapter.extend({
 
   async updateRecord(store, type, snapshot) {
     const serializer = store.serializerFor(type.modelName);
-    const data = serializer.serialize(snapshot);
+    const snapshotData = serializer.serialize(snapshot);
     const roleType = snapshot.attr('type');
     const backend = snapshot.attr('backend');
     const id = snapshot.attr('name');
+    let data = {};
+    if (roleType === 'static') {
+      data = await this.staticRoles(backend, id).then((resp) => resp.data);
+      // combines incoming rotation_period with existing data, if no change comes in, the data stays the same
+      data = { ...data, ...snapshotData };
+    }
 
     return this.ajax(this.urlFor(backend, id, roleType), 'POST', { data }).then(() => data);
   },
