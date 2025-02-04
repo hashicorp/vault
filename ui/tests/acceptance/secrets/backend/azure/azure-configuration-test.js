@@ -85,8 +85,8 @@ module('Acceptance | Azure | configuration', function (hooks) {
           subscription_id: 'subscription-id',
           tenant_id: 'tenant-id',
           client_id: 'client-id',
-          root_password_ttl: '20 days 20 hours',
           environment: 'AZUREPUBLICCLOUD',
+          root_password_ttl: '1800000s',
         };
         this.server.get(`${path}/config`, () => {
           assert.true(true, 'request made to config when navigating to the configuration page.');
@@ -112,7 +112,8 @@ module('Acceptance | Azure | configuration', function (hooks) {
     });
 
     module('create', function () {
-      test('it should save azure account accessType options', async function (assert) {
+      test('it should save azure account options', async function (assert) {
+        // there are no azure specific options that can be returned from the API so confirm the generic options are saved.
         assert.expect(3);
         const path = `azure-${this.uid}`;
         await enablePage.enable(this.type, path);
@@ -125,7 +126,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
 
         await click(SES.configTab);
         await click(SES.configure);
-        await fillInAzureConfig(this.type);
+        await fillInAzureConfig();
         await click(GENERAL.saveButton);
         assert.true(
           this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s configuration.`),
@@ -133,10 +134,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
         );
         assert
           .dom(GENERAL.infoRowValue('Root password TTL'))
-          .hasText(
-            '1 hour 26 minutes 40 seconds',
-            'Root password TTL, an azure account specific field, has been set.'
-          );
+          .hasText('3 minutes 20 seconds', 'Root password TTL, a generic field, has been set.');
         assert
           .dom(GENERAL.infoRowValue('Subscription ID'))
           .hasText('subscription-id', 'Subscription ID, a generic field, has been set.');
@@ -226,7 +224,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
 
         await click(SES.configTab);
         await click(SES.configure);
-        await fillInAzureConfig('azure');
+        await fillInAzureConfig();
         await click(GENERAL.saveButton);
 
         assert.dom(GENERAL.messageError).hasText('Error welp, that did not work!', 'API error shows on form');
@@ -267,12 +265,15 @@ module('Acceptance | Azure | configuration', function (hooks) {
           identity_token_audience: 'audience',
           identity_token_ttl: 720000,
           environment: 'AZUREPUBLICCLOUD',
+          root_password_ttl: '1800000s',
         };
         this.server.get(`${path}/config`, () => {
           assert.true(true, 'request made to config when navigating to the configuration page.');
           return { data: { id: path, type: this.type, ...wifAttrs } };
         });
         await enablePage.enable(this.type, path);
+        GENERAL.toggleGroup('More options');
+
         for (const key of expectedConfigKeys('azure-wif')) {
           const responseKeyAndValue = expectedValueOfConfigKeys(this.type, key);
           assert
@@ -362,7 +363,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
 
         await click(SES.configTab);
         await click(SES.configure);
-        await fillInAzureConfig('withWif');
+        await fillInAzureConfig(true);
         await click(GENERAL.saveButton);
         assert.dom(SES.wif.issuerWarningModal).doesNotExist('issuer warning modal does not show');
         assert.true(
@@ -392,7 +393,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
 
         await click(SES.configTab);
         await click(SES.configure);
-        await fillInAzureConfig('withWif');
+        await fillInAzureConfig(true);
         assert
           .dom(GENERAL.inputByAttr('issuer'))
           .hasValue(oldIssuer, 'issuer defaults to previously saved value');
@@ -434,7 +435,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
 
         await click(SES.configTab);
         await click(SES.configure);
-        await fillInAzureConfig('withWif');
+        await fillInAzureConfig(true);
         assert
           .dom(GENERAL.inputByAttr('issuer'))
           .hasValue(oldIssuer, 'issuer defaults to previously saved value');
@@ -465,7 +466,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
         await enablePage.enable(this.type, path);
         await click(SES.configTab);
         await click(SES.configure);
-        await fillInAzureConfig('withWif');
+        await fillInAzureConfig(true);
         await click(GENERAL.saveButton); // finished creating attributes, go back and edit them.
         assert
           .dom(GENERAL.infoRowValue('Identity token audience'))

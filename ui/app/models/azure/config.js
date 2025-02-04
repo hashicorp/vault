@@ -14,7 +14,12 @@ export default class AzureConfig extends Model {
   @attr('string', { label: 'Tenant ID' }) tenantId;
   @attr('string', { label: 'Client ID' }) clientId;
   @attr('string', { sensitive: true }) clientSecret; // obfuscated, never returned by API
-  @attr('string') environment;
+
+  @attr('string', {
+    subText:
+      'This value can also be provided with the AZURE_ENVIRONMENT environment variable. If not specified, Vault will use Azure Public Cloud.',
+  })
+  environment;
 
   @attr('string', {
     subText:
@@ -34,8 +39,10 @@ export default class AzureConfig extends Model {
   @attr({
     label: 'Root password TTL',
     editType: 'ttl',
-    helperTextDisabled:
-      'Specifies how long the root password is valid for in Azure when rotate-root generates a new client secret. Defaults to 182 days or 6 months, 1 day and 13 hours.',
+    // default is 15768000 sec. The api docs say 182 days, but this should be updated to 182.5 days.
+    helperTextDisabled: 'Vault will use the default of 182 days.',
+    helperTextEnabled:
+      'Specifies how long the root password is valid for in Azure when rotate-root generates a new client secret.',
   })
   rootPasswordTtl;
 
@@ -64,11 +71,9 @@ export default class AzureConfig extends Model {
     return !!this.identityTokenAudience || !!this.identityTokenTtl;
   }
 
-  get isAccountPluginConfigured() {
-    // clientSecret is not checked here because it's never return by the API
-    // however it is an Azure account field
-    return !!this.rootPasswordTtl;
-  }
+  // the "clientSecret" param is not checked because it's never return by the API.
+  // thus we can never say for sure if the account accessType has been configured so we always return false
+  isAccountPluginConfigured = false;
 
   /* GETTERS used to generate array of fields to be displayed in: 
   1. details view
@@ -91,18 +96,22 @@ export default class AzureConfig extends Model {
   formFieldGroups(accessType = 'account') {
     const formFieldGroups = [];
     formFieldGroups.push({
-      default: ['subscriptionId', 'tenantId', 'clientId', 'environment'],
+      default: ['subscriptionId', 'tenantId', 'clientId'],
     });
+    if (accessType === 'account') {
+      formFieldGroups.push({
+        default: ['clientSecret'],
+      });
+    }
     if (accessType === 'wif') {
       formFieldGroups.push({
         default: ['identityTokenAudience', 'identityTokenTtl'],
       });
     }
-    if (accessType === 'account') {
-      formFieldGroups.push({
-        default: ['clientSecret', 'rootPasswordTtl'],
-      });
-    }
+    formFieldGroups.push({
+      'More options': ['environment', 'rootPasswordTtl'],
+    });
+
     return formFieldGroups;
   }
 }

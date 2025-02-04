@@ -92,14 +92,14 @@ require (
 	github.com/hashicorp/go-gcp-common v0.9.1
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-kms-wrapping/entropy/v2 v2.0.1
-	github.com/hashicorp/go-kms-wrapping/v2 v2.0.16
-	github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2 v2.0.9
-	github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms/v2 v2.0.3
-	github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2 v2.0.9
-	github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 v2.0.11
-	github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms/v2 v2.0.12
-	github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2 v2.0.7
-	github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2 v2.0.12
+	github.com/hashicorp/go-kms-wrapping/v2 v2.0.18
+	github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2 v2.0.10
+	github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms/v2 v2.0.4
+	github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2 v2.0.11
+	github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 v2.0.12
+	github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms/v2 v2.0.13
+	github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2 v2.0.9
+	github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2 v2.0.13
 	github.com/hashicorp/go-memdb v1.3.4
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-plugin v1.6.1
@@ -112,7 +112,7 @@ require (
 	github.com/hashicorp/go-secure-stdlib/kv-builder v0.1.2
 	github.com/hashicorp/go-secure-stdlib/mlock v0.1.3
 	github.com/hashicorp/go-secure-stdlib/nonceutil v0.1.0
-	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.8
+	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.9
 	github.com/hashicorp/go-secure-stdlib/password v0.1.1
 	github.com/hashicorp/go-secure-stdlib/permitpool v1.0.0
 	github.com/hashicorp/go-secure-stdlib/reloadutil v0.1.1
