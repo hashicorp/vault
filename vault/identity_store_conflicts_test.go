@@ -220,13 +220,15 @@ func TestDuplicateRenameResolver(t *testing.T) {
 
 			// Simulate a MemDB lookup
 			existingEntity := seenEntities[name]
-			_, err := r.ResolveEntities(context.Background(), existingEntity, entity)
+			renamed, err := r.ResolveEntities(context.Background(), existingEntity, entity)
 			require.NoError(t, err)
 
 			if existingEntity != nil {
+				require.True(t, renamed)
 				require.Equal(t, name+"-"+id, entity.Name)
 				require.Equal(t, existingEntity.ID, entity.Metadata["duplicate_of_canonical_id"])
 			} else {
+				require.False(t, renamed)
 				seenEntities[name] = entity
 			}
 
@@ -239,13 +241,15 @@ func TestDuplicateRenameResolver(t *testing.T) {
 
 			// More MemDB mocking
 			existingGroup := seenGroups[name]
-			_, err = r.ResolveGroups(context.Background(), existingGroup, group)
+			renamed, err = r.ResolveGroups(context.Background(), existingGroup, group)
 			require.NoError(t, err)
 
 			if existingGroup != nil {
+				require.True(t, renamed)
 				require.Equal(t, name+"-"+id, group.Name)
 				require.Equal(t, existingGroup.ID, group.Metadata["duplicate_of_canonical_id"])
 			} else {
+				require.False(t, renamed)
 				seenGroups[name] = group
 			}
 		}
