@@ -69,7 +69,7 @@ export default RESTAdapter.extend({
     let url = intendedUrl;
     let type = method;
     let options = passedOptions;
-    let { host } = this.config;
+    const { host } = this.config;
 
     const controlGroup = this.controlGroup;
     const controlGroupToken = controlGroup.tokenForUrl(url);
@@ -89,14 +89,7 @@ export default RESTAdapter.extend({
     }
     const opts = this._preRequest(url, options, method);
 
-    console.log('ajax url', url);
-    console.log('host?', this.config.host);
-
-    if (!url.startsWith('http')) {
-      console.log('replacing', host, url)
-      url = `${host}${url}`;
-      console.log(url);
-    }
+    if (!url.startsWith('http')) url = `${host}${url}`;
 
     return this._super(url, type, opts).then((...args) => {
       if (controlGroupToken) {

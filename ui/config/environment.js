@@ -80,7 +80,7 @@ module.exports = function (environment) {
   }
 
   ENV.welcomeMessage = process.env.UI_AUTH_WELCOME;
-  ENV.host = process.env.VAULT_ADDR || 'http://127.0.0.1:8200';
+  ENV.host = 'http://127.0.0.1:8401';
 
   return ENV;
 };

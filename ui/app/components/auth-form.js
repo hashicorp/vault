@@ -39,6 +39,7 @@ const DEFAULTS = {
 };
 
 export default Component.extend(DEFAULTS, {
+  config: service(),
   router: service(),
   auth: service(),
   flashMessages: service(),
@@ -68,6 +69,7 @@ export default Component.extend(DEFAULTS, {
       namespace: ns,
       selectedAuth: newMethod,
       oldSelectedAuth: oldMethod,
+      config,
     } = this;
     next(() => {
       if (!token && (oldNS === null || oldNS !== ns)) {
@@ -85,6 +87,9 @@ export default Component.extend(DEFAULTS, {
         this.resetDefaults();
       }
       this.set('oldSelectedAuth', newMethod);
+
+      console.log(config)
+      if (config.host) this.optionalHost = config.host;
     });
   },
 
@@ -234,6 +239,11 @@ export default Component.extend(DEFAULTS, {
       if (token) {
         this.set('token', token);
       }
+
+      if (this.optionalHost) {
+        // set the host before you go too wild
+      }
+
       this.set('error', null);
       // if callback from oidc, jwt, or saml we have a token at this point
       const backend = token ? this.getAuthBackend('token') : this.selectedAuthBackend || {};
