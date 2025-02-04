@@ -17,9 +17,11 @@ import (
 	"github.com/hashicorp/vault/helper/versions"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/rotation"
 )
 
 var (
@@ -49,6 +51,8 @@ type DatabaseConfig struct {
 	// role-level by the role's skip_import_rotation field. The default is
 	// false. Enterprise only.
 	SkipStaticRoleImportRotation bool `json:"skip_static_role_import_rotation" structs:"skip_static_role_import_rotation" mapstructure:"skip_static_role_import_rotation"`
+
+	automatedrotationutil.AutomatedRotationParams
 }
 
 // ConnectionDetails represents the DatabaseConfig.ConnectionDetails map as a
@@ -263,6 +267,7 @@ func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 		},
 	}
 	AddConnectionFieldsEnt(fields)
+	automatedrotationutil.AddAutomatedRotationFields(fields)
 
 	return &framework.Path{
 		Pattern: fmt.Sprintf("config/%s", framework.GenericNameRegex("name")),
@@ -409,6 +414,7 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 		}
 
 		resp.Data = structs.New(config).Map()
+		config.PopulateAutomatedRotationData(resp.Data)
 		return resp, nil
 	}
 }
@@ -500,6 +506,10 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			config.SkipStaticRoleImportRotation = skipImportRotationRaw.(bool)
 		}
 
+		if err := config.ParseAutomatedRotationFields(data); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+
 		// Remove these entries from the data before we store it keyed under
 		// ConnectionDetails.
 		delete(data.Raw, "name")
@@ -510,6 +520,10 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		delete(data.Raw, "root_rotation_statements")
 		delete(data.Raw, "password_policy")
 		delete(data.Raw, "skip_static_role_import_rotation")
+		delete(data.Raw, "rotation_schedule")
+		delete(data.Raw, "rotation_window")
+		delete(data.Raw, "rotation_period")
+		delete(data.Raw, "disable_automated_rotation")
 
 		id, err := uuid.GenerateUUID()
 		if err != nil {
@@ -590,6 +604,36 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		}
 
 		b.dbEvent(ctx, "config-write", req.Path, name, true)
+
+		// Disable Automated Rotation and Deregister credentials if required
+		if config.DisableAutomatedRotation {
+			deregisterReq := &rotation.RotationJobDeregisterRequest{
+				MountType: req.MountType,
+				ReqPath:   req.Path,
+			}
+			err := b.System().DeregisterRotationJob(ctx, deregisterReq)
+			if err != nil {
+				return logical.ErrorResponse("error de-registering rotation job: %s", err), nil
+			}
+
+		} else {
+			// Now that the root config is set up, register the rotation job if it's required
+			if config.ShouldRegisterRotationJob() {
+				cfgReq := &rotation.RotationJobConfigureRequest{
+					MountType:        req.MountType,
+					ReqPath:          req.Path,
+					RotationSchedule: config.RotationSchedule,
+					RotationWindow:   config.RotationWindow,
+					RotationPeriod:   config.RotationPeriod,
+				}
+
+				_, err = b.System().RegisterRotationJob(ctx, cfgReq)
+				if err != nil {
+					return logical.ErrorResponse("error registering rotation job: %s", err), nil
+				}
+			}
+		}
+
 		if len(resp.Warnings) == 0 {
 			return nil, nil
 		}

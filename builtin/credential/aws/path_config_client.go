@@ -14,9 +14,11 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginidentityutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/rotation"
 )
 
 func (b *backend) pathConfigClient() *framework.Path {
@@ -130,6 +132,7 @@ func (b *backend) pathConfigClient() *framework.Path {
 		HelpDescription: pathConfigClientHelpDesc,
 	}
 	pluginidentityutil.AddPluginIdentityTokenFields(p.Fields)
+	automatedrotationutil.AddAutomatedRotationFields(p.Fields)
 
 	return p
 }
@@ -193,6 +196,7 @@ func (b *backend) pathConfigClientRead(ctx context.Context, req *logical.Request
 	}
 
 	clientConfig.PopulatePluginIdentityTokenData(configData)
+	clientConfig.PopulateAutomatedRotationData(configData)
 	return &logical.Response{
 		Data: configData,
 	}, nil
@@ -363,6 +367,10 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
+	if err := configEntry.ParseAutomatedRotationFields(data); err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
 	// handle mutual exclusivity
 	if configEntry.IdentityTokenAudience != "" && configEntry.AccessKey != "" {
 		return logical.ErrorResponse("only one of 'access_key' or 'identity_token_audience' can be set"), nil
@@ -381,6 +389,35 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 				return logical.ErrorResponse(err.Error()), nil
 			}
 			return nil, err
+		}
+	}
+
+	// Disable Automated Rotation and Deregister credentials if required
+	if configEntry.DisableAutomatedRotation {
+		deregisterReq := &rotation.RotationJobDeregisterRequest{
+			MountType: req.MountType,
+			ReqPath:   req.Path,
+		}
+		err := b.System().DeregisterRotationJob(ctx, deregisterReq)
+		if err != nil {
+			return logical.ErrorResponse("error de-registering rotation job: %s", err), nil
+		}
+
+	} else {
+		// Now that the root config is set up, register the rotation job if it's required
+		if configEntry.ShouldRegisterRotationJob() {
+			cfgReq := &rotation.RotationJobConfigureRequest{
+				MountType:        req.MountType,
+				ReqPath:          req.Path,
+				RotationSchedule: configEntry.RotationSchedule,
+				RotationWindow:   configEntry.RotationWindow,
+				RotationPeriod:   configEntry.RotationPeriod,
+			}
+
+			_, err = b.System().RegisterRotationJob(ctx, cfgReq)
+			if err != nil {
+				return logical.ErrorResponse("error registering rotation job: %s", err), nil
+			}
 		}
 	}
 
@@ -424,6 +461,7 @@ func (b *backend) configClientToEntry(conf *clientConfig) (*logical.StorageEntry
 // interact with the AWS EC2 API.
 type clientConfig struct {
 	pluginidentityutil.PluginIdentityTokenParams
+	automatedrotationutil.AutomatedRotationParams
 
 	AccessKey              string   `json:"access_key"`
 	SecretKey              string   `json:"secret_key"`
