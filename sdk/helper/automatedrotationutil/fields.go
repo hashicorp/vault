@@ -61,6 +61,11 @@ func (p *AutomatedRotationParams) ParseAutomatedRotationFields(d *framework.Fiel
 		return fmt.Errorf("must include both schedule and window")
 	}
 
+	_, err := rotation.DefaultScheduler.Parse(p.RotationSchedule)
+	if err != nil {
+		return fmt.Errorf("failed to parse provided rotation_schedule: %w", err)
+	}
+
 	p.DisableAutomatedRotation = d.Get("disable_automated_rotation").(bool)
 
 	return nil
@@ -108,21 +113,14 @@ func AddAutomatedRotationFields(m map[string]*framework.FieldSchema) {
 	}
 }
 
-// HandleRotationJobOperation is a helper function to register and deregister rotation jobs
-// from a plugin.
+// HandleRotationJobOperation is a helper method to register and deregister rotation jobs
+// from a plugin and returns a standardized response with errors/warnings.
 // revertStorageFunc is a function that should store back the original config before any
 // fields were updated.
 func (p *AutomatedRotationParams) HandleRotationJobOperation(ctx context.Context, b *framework.Backend, req *logical.Request, revertStorageFunc func() error) *logical.Response {
-	// Disable Automated Rotation and Deregister credentials if required
 	if p.DisableAutomatedRotation {
-		deregisterReq := &rotation.RotationJobDeregisterRequest{
-			MountType: req.MountType,
-			ReqPath:   req.Path,
-		}
-
-		b.Logger().Debug("Deregistering rotation job", "mount", req.MountPoint+req.Path)
-		err := b.System().DeregisterRotationJob(ctx, deregisterReq)
-		if err != nil {
+		// Disable automated rotation and deregister credentials if required.
+		if err := p.HandleDeregisterRotationJob(ctx, b, req); err != nil {
 			resp := logical.ErrorResponse("error deregistering rotation job but config was successfully updated: %s", err)
 			resp.AddWarning("config was successfully updated despite failing to disable automated rotation")
 
@@ -132,19 +130,9 @@ func (p *AutomatedRotationParams) HandleRotationJobOperation(ctx context.Context
 
 			return nil
 		}
-	} else if p.ShouldRegisterRotationJob() {
-		// Now that the root config is set up, register the rotation job if it's required.
-		cfgReq := &rotation.RotationJobConfigureRequest{
-			MountType:        req.MountType,
-			ReqPath:          req.Path,
-			RotationSchedule: p.RotationSchedule,
-			RotationWindow:   p.RotationWindow,
-			RotationPeriod:   p.RotationPeriod,
-		}
-
-		b.Logger().Debug("Registering rotation job", "mount", req.MountPoint+req.Path)
-		_, err := b.System().RegisterRotationJob(ctx, cfgReq)
-		if err != nil {
+	} else {
+		// Register the rotation job if it's required.
+		if err := p.HandleRegisterRotationJob(ctx, b, req); err != nil {
 			resp := logical.ErrorResponse("error registering rotation job but config was successfully updated: %s", err)
 			resp.AddWarning("config was successfully updated despite failing to enable automated rotation")
 
@@ -159,7 +147,8 @@ func (p *AutomatedRotationParams) HandleRotationJobOperation(ctx context.Context
 	return nil
 }
 
-// HandleRegisterRotationJob is a helper function to register rotation jobs from a plugin.
+// HandleRegisterRotationJob is a helper method to register rotation jobs from a plugin.
+// It is up to callers to perform cleanup or storage backouts if necessary.
 func (p *AutomatedRotationParams) HandleRegisterRotationJob(ctx context.Context, b *framework.Backend, req *logical.Request) error {
 	// Now that the root config is set up, register the rotation job if it's required.
 	if p.ShouldRegisterRotationJob() {
@@ -180,7 +169,8 @@ func (p *AutomatedRotationParams) HandleRegisterRotationJob(ctx context.Context,
 	return nil
 }
 
-// HandleDeregisterRotationJob is a helper function to deregister rotation jobs from a plugin.
+// HandleDeregisterRotationJob is a helper method to deregister rotation jobs from a plugin.
+// It is up to callers to perform cleanup or storage backouts if necessary.
 func (p *AutomatedRotationParams) HandleDeregisterRotationJob(ctx context.Context, b *framework.Backend, req *logical.Request) error {
 	// Disable Automated Rotation and Deregister credentials if required
 	deregisterReq := &rotation.RotationJobDeregisterRequest{
