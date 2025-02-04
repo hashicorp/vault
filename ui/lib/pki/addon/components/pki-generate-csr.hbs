@@ -32,7 +32,7 @@
                 <LinkTo @route="keys.key.details" @models={{array @model.backend @model.keyId}}>
                   {{@model.keyId}}
                 </LinkTo>
-              {{else if (value)}}
+              {{else if value}}
                 {{value}}
                 {{! it's unlikely but if a value is returned for privateKey and privateKeyType we want to display it, otherwise we show the "internal" badge below }}
               {{else}}
