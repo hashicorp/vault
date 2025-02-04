@@ -201,9 +201,14 @@ export default ApplicationAdapter.extend({
     const id = snapshot.attr('name');
     let data = {};
     if (roleType === 'static') {
-      data = await this.staticRoles(backend, id).then((resp) => resp.data);
-      // combines incoming rotation_period with existing data, if no change comes in, the data stays the same
-      data = { ...data, ...snapshotData };
+      await this.staticRoles(backend, id).then((resp) => {
+        data = {
+          credential_type: resp.data.credential_type,
+          db_name: resp.data.db_name,
+          ...snapshotData, // put in rotation period change, if no change, no impact to post call or role data
+          username: resp.data.username,
+        };
+      });
     }
 
     return this.ajax(this.urlFor(backend, id, roleType), 'POST', { data }).then(() => data);
