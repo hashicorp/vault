@@ -1752,8 +1752,8 @@ func TestIdentityStoreLoadingDuplicateReporting(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 
 	seedval := rand.Int63()
-	if os.Getenv("VAULT_TEST_IDENTITY_STORE_DETERMINISTIC_SEED") != "" {
-		seedval, err = strconv.ParseInt(os.Getenv("VAULT_TEST_IDENTITY_STORE_DETERMINISTIC_SEED"), 10, 64)
+	if os.Getenv("VAULT_TEST_IDENTITY_STORE_SEED") != "" {
+		seedval, err = strconv.ParseInt(os.Getenv("VAULT_TEST_IDENTITY_STORE_SEED"), 10, 64)
 		require.NoError(t, err)
 	}
 	seed := rand.New(rand.NewSource(seedval)) // Seed for deterministic test
