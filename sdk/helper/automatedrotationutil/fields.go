@@ -45,9 +45,11 @@ func (p *AutomatedRotationParams) ParseAutomatedRotationFields(d *framework.Fiel
 		}
 		p.RotationSchedule = rotationScheduleRaw.(string)
 
-		_, err := rotation.DefaultScheduler.Parse(p.RotationSchedule)
-		if err != nil {
-			return fmt.Errorf("failed to parse provided rotation_schedule: %w", err)
+		if p.RotationSchedule != "" {
+			_, err := rotation.DefaultScheduler.Parse(p.RotationSchedule)
+			if err != nil {
+				return fmt.Errorf("failed to parse provided rotation_schedule: %w", err)
+			}
 		}
 	}
 
