@@ -1,0 +1,67 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div class="shw-page-wrapper">
+
+  <h1>Vault Components Showcase</h1>
+
+  <hr />
+
+  <h2>Form Components</h2>
+
+  <h3>FormFieldLabel</h3>
+
+  <pre>Only Label</pre>
+  <FormFieldLabel @label="This is the label" />
+
+  <pre>Label with HelpText</pre>
+  <FormFieldLabel @label="This is the label" @helpText="This is the help text" />
+
+  <pre>Only SubText</pre>
+  <FormFieldLabel @subText="This is the subtext" />
+
+  <pre>SubText with DocLink</pre>
+  <FormFieldLabel @subText="This is the subtext" @docLink="#" />
+
+  <pre>Label + SubText</pre>
+  <FormFieldLabel @label="This is the label" @subText="This is the subtext" />
+
+  <pre>Label with HelpText + SubText with DocLink</pre>
+  <FormFieldLabel @label="This is the label" @helpText="This is the help text" @subText="This is the subtext" @docLink="#" />
+
+  <hr />
+
+  <h3>FormField</h3>
+
+  <hr />
+
+  <h3>FormError</h3>
+
+  <pre>Yielded text</pre>
+  <FormError>This is the error text</FormError>
+
+  <hr />
+
+  <h3>FormSaveButtons</h3>
+
+  <pre>Save</pre>
+  <FormSaveButtons @saveButtonText="Save" />
+
+  <pre>Save / Loading state (isSaving=true)</pre>
+  <FormSaveButtons @saveButtonText="Save" @isSaving={{true}} />
+
+  <pre>Save + Cancel (onCancel)</pre>
+  <FormSaveButtons @saveButtonText="Save" @cancelButtonText="Cancel" @onCancel={{this.noop}} />
+
+  <pre>Save + Cancel (cancelLinkParams)</pre>
+  <FormSaveButtons @saveButtonText="Save" @cancelButtonText="Cancel" @cancelLinkParams={{array "vault.cluster.storage"}} />
+
+  <pre>Save (isSaving=true / saveButtonText="Loading") + Cancel</pre>
+  <FormSaveButtons @saveButtonText="Save" @isSaving={{true}} @cancelButtonText="Cancel" @onCancel={{this.noop}} />
+
+  <pre>Without top border (includeBox=false)</pre>
+  <FormSaveButtons @saveButtonText="Save" @cancelButtonText="Cancel" @onCancel={{this.noop}} @includeBox={{false}} />
+
+</div>
