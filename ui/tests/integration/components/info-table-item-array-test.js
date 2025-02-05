@@ -87,6 +87,7 @@ module('Integration | Component | InfoTableItemArray', function (hooks) {
       <InfoTableItemArray
         @displayArray={{this.displayArray}}
         @isLink={{this.isLink}}
+        @label="my label"
         @modelType={{this.modelType}}
         @queryParam={{this.queryParam}}
         @backend={{this.backend}}
