@@ -201,14 +201,10 @@ export default ApplicationAdapter.extend({
     const id = snapshot.attr('name');
     let data = {};
     if (roleType === 'static') {
-      await this.staticRoles(backend, id).then((resp) => {
-        data = {
-          credential_type: resp.data.credential_type,
-          db_name: resp.data.db_name,
-          ...snapshotData, // put in rotation period change, if no change, no impact to post call or role data
-          username: resp.data.username,
-        };
-      });
+      data = {
+        ...snapshotData,
+        username: snapshot.attr('username'),
+      };
     } else {
       data = snapshotData;
     }
