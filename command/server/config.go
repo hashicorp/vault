@@ -1338,6 +1338,9 @@ func (c *Config) Sanitized() map[string]interface{} {
 			sanitizedStorage["raft"] = map[string]interface{}{
 				"max_entry_size": c.Storage.Config["max_entry_size"],
 			}
+			for k, v := range c.Storage.Config {
+				sanitizedStorage["raft"].(map[string]interface{})[k] = v
+			}
 		}
 
 		result["storage"] = sanitizedStorage

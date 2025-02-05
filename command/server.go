@@ -1639,6 +1639,10 @@ func (c *ServerCommand) Run(args []string) int {
 				c.logger.Warn(cErr.String())
 			}
 
+			if err := core.ReloadRaftConfig(config.Storage.Config); err != nil {
+				c.logger.Warn("error reloading raft config", "error", err.Error())
+			}
+
 			// Note that seal reloading can also be triggered via Core.TriggerSealReload.
 			// See the call to Core.SetSealReloadFunc above.
 			if reloaded, err := c.reloadSealsOnSigHup(ctx, core, config); err != nil {
