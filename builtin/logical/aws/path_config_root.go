@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginidentityutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/rotation"
 )
 
 // A single default template that supports both the different credential types (IAM/STS) that are capped at differing length limits (64 chars/32 chars respectively)
@@ -108,11 +109,11 @@ func (b *backend) pathConfigRootRead(ctx context.Context, req *logical.Request, 
 	b.clientMutex.RLock()
 	defer b.clientMutex.RUnlock()
 
-	config, err := getConfigFromStorage(ctx, req)
+	config, exists, err := getConfigFromStorage(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	if config == nil {
+	if !exists {
 		return nil, nil
 	}
 
@@ -159,14 +160,8 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 	b.clientMutex.Lock()
 	defer b.clientMutex.Unlock()
 
-	// Check for existing config.
-	cfg, err := getConfigFromStorage(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get a backup for reverting storage in case of failure.
-	previousCfg, err := getConfigFromStorage(ctx, req)
+	// check for existing config
+	previousCfg, previousCfgExists, err := getConfigFromStorage(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -212,24 +207,48 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 	}
 
 	// Save the initial config only if it does not already exist
-	if previousCfg != nil {
+	if !previousCfgExists {
 		if err := putConfigToStorage(ctx, req, &rc); err != nil {
 			return nil, err
 		}
 	}
 
-	if resp := cfg.HandleRotationJobOperation(ctx, b.Backend, req, func() error {
-		// Attempt to back out the storage update
-		entry, err := logical.StorageEntryJSON("config", previousCfg)
+	// Now that the root config is set up, register the rotation job if it required
+	if rc.ShouldRegisterRotationJob() {
+		cfgReq := &rotation.RotationJobConfigureRequest{
+			Name:             rootRotationJobName,
+			MountType:        req.MountType,
+			ReqPath:          req.Path,
+			RotationSchedule: rc.RotationSchedule,
+			RotationWindow:   rc.RotationWindow,
+			RotationPeriod:   rc.RotationPeriod,
+		}
+
+		_, err = b.System().RegisterRotationJob(ctx, cfgReq)
 		if err != nil {
-			return err
+			return logical.ErrorResponse("error registering rotation job: %s", err), nil
 		}
-		if err := req.Storage.Put(ctx, entry); err != nil {
-			return err
+	}
+
+	// Disable Automated Rotation and Deregister credentials if required
+	if rc.DisableAutomatedRotation {
+		// Ensure de-registering only occurs on updates and if
+		// a credential has actually been registered (rotation_period or rotation_schedule is set)
+		deregisterReq := &rotation.RotationJobDeregisterRequest{
+			MountType: req.MountType,
+			ReqPath:   req.Path,
 		}
-		return nil
-	}); resp != nil {
-		return resp, nil
+		if previousCfgExists && previousCfg.ShouldRegisterRotationJob() {
+			err := b.System().DeregisterRotationJob(ctx, deregisterReq)
+			if err != nil {
+				return logical.ErrorResponse("error de-registering rotation job: %s", err), nil
+			}
+		}
+	}
+
+	// update config entry with rotation ID
+	if err := putConfigToStorage(ctx, req, &rc); err != nil {
+		return nil, err
 	}
 
 	// clear possible cached IAM / STS clients after successfully updating
@@ -240,22 +259,22 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 	return nil, nil
 }
 
-func getConfigFromStorage(ctx context.Context, req *logical.Request) (*rootConfig, error) {
+func getConfigFromStorage(ctx context.Context, req *logical.Request) (*rootConfig, bool, error) {
 	entry, err := req.Storage.Get(ctx, "config/root")
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if entry == nil {
-		return nil, nil
+		return nil, false, nil
 	}
 
 	var config rootConfig
 
 	if err := entry.DecodeJSON(&config); err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
-	return &config, nil
+	return &config, true, nil
 }
 
 func putConfigToStorage(ctx context.Context, req *logical.Request, rc *rootConfig) error {

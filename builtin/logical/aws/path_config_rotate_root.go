@@ -37,61 +37,47 @@ func pathConfigRotateRoot(b *backend) *framework.Path {
 }
 
 func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	config, err := getConfigFromStorage(ctx, req)
+	// have to get the client config first because that takes out a read lock
+	client, err := b.clientIAM(ctx, req.Storage)
 	if err != nil {
 		return nil, err
+	}
+	if client == nil {
+		return nil, fmt.Errorf("nil IAM client")
+	}
+
+	b.clientMutex.Lock()
+	defer b.clientMutex.Unlock()
+
+	rawRootConfig, err := req.Storage.Get(ctx, "config/root")
+	if err != nil {
+		return nil, err
+	}
+	if rawRootConfig == nil {
+		return nil, fmt.Errorf("no configuration found for config/root")
+	}
+	var config rootConfig
+	if err := rawRootConfig.DecodeJSON(&config); err != nil {
+		return nil, fmt.Errorf("error reading root configuration: %w", err)
 	}
 
 	if config.AccessKey == "" || config.SecretKey == "" {
 		return logical.ErrorResponse("Cannot call config/rotate-root when either access_key or secret_key is empty"), nil
 	}
 
-	if err := b.rotateRootCredential(ctx, req); err != nil {
-		return nil, err
-	}
-
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"access_key": config.AccessKey,
-		},
-	}, nil
-}
-
-func (b *backend) rotateRootCredential(ctx context.Context, req *logical.Request) error {
-	// have to get the client config first because that takes out a read lock
-	client, err := b.clientIAM(ctx, req.Storage)
-	if err != nil {
-		return err
-	}
-	if client == nil {
-		return fmt.Errorf("nil IAM client")
-	}
-
-	b.clientMutex.Lock()
-	defer b.clientMutex.Unlock()
-
-	config, err := getConfigFromStorage(ctx, req)
-	if err != nil {
-		return err
-	}
-
-	if config.AccessKey == "" || config.SecretKey == "" {
-		return fmt.Errorf("cannot call config/rotate-root when either access_key or secret_key is empty")
-	}
-
 	var getUserInput iam.GetUserInput // empty input means get current user
 	getUserRes, err := client.GetUserWithContext(ctx, &getUserInput)
 	if err != nil {
-		return fmt.Errorf("error calling GetUser: %w", err)
+		return nil, fmt.Errorf("error calling GetUser: %w", err)
 	}
 	if getUserRes == nil {
-		return fmt.Errorf("nil response from GetUser")
+		return nil, fmt.Errorf("nil response from GetUser")
 	}
 	if getUserRes.User == nil {
-		return fmt.Errorf("nil user returned from GetUser")
+		return nil, fmt.Errorf("nil user returned from GetUser")
 	}
 	if getUserRes.User.UserName == nil {
-		return fmt.Errorf("nil UserName returned from GetUser")
+		return nil, fmt.Errorf("nil UserName returned from GetUser")
 	}
 
 	createAccessKeyInput := iam.CreateAccessKeyInput{
@@ -99,13 +85,13 @@ func (b *backend) rotateRootCredential(ctx context.Context, req *logical.Request
 	}
 	createAccessKeyRes, err := client.CreateAccessKeyWithContext(ctx, &createAccessKeyInput)
 	if err != nil {
-		return fmt.Errorf("error calling CreateAccessKey: %w", err)
+		return nil, fmt.Errorf("error calling CreateAccessKey: %w", err)
 	}
 	if createAccessKeyRes.AccessKey == nil {
-		return fmt.Errorf("nil response from CreateAccessKey")
+		return nil, fmt.Errorf("nil response from CreateAccessKey")
 	}
 	if createAccessKeyRes.AccessKey.AccessKeyId == nil || createAccessKeyRes.AccessKey.SecretAccessKey == nil {
-		return fmt.Errorf("nil AccessKeyId or SecretAccessKey returned from CreateAccessKey")
+		return nil, fmt.Errorf("nil AccessKeyId or SecretAccessKey returned from CreateAccessKey")
 	}
 
 	oldAccessKey := config.AccessKey
@@ -113,7 +99,13 @@ func (b *backend) rotateRootCredential(ctx context.Context, req *logical.Request
 	config.AccessKey = *createAccessKeyRes.AccessKey.AccessKeyId
 	config.SecretKey = *createAccessKeyRes.AccessKey.SecretAccessKey
 
-	putConfigToStorage(ctx, req, config)
+	newEntry, err := logical.StorageEntryJSON("config/root", config)
+	if err != nil {
+		return nil, fmt.Errorf("error generating new config/root JSON: %w", err)
+	}
+	if err := req.Storage.Put(ctx, newEntry); err != nil {
+		return nil, fmt.Errorf("error saving new config/root: %w", err)
+	}
 
 	b.iamClient = nil
 	b.stsClient = nil
@@ -124,10 +116,14 @@ func (b *backend) rotateRootCredential(ctx context.Context, req *logical.Request
 	}
 	_, err = client.DeleteAccessKeyWithContext(ctx, &deleteAccessKeyInput)
 	if err != nil {
-		return fmt.Errorf("error deleting old access key: %w", err)
+		return nil, fmt.Errorf("error deleting old access key: %w", err)
 	}
 
-	return nil
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"access_key": config.AccessKey,
+		},
+	}, nil
 }
 
 const pathConfigRotateRootHelpSyn = `
