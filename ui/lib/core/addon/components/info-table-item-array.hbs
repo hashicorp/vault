@@ -15,7 +15,7 @@
                 <span>{{item}}</span>
                 {{#if (not-eq wildcardCount undefined)}}
                   <Hds::Badge
-                    @text="includes {{pluralize wildcardCount @wildcardLabel}}"
+                    @text="includes {{pluralize wildcardCount this.wildcardLabel}}"
                     data-test-count={{wildcardCount}}
                   />
                 {{/if}}
