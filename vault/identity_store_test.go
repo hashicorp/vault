@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"os"
 	"regexp"
 	"slices"
 	"strconv"
@@ -19,7 +20,6 @@ import (
 	"github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
 	credGithub "github.com/hashicorp/vault/builtin/credential/github"
-	"github.com/hashicorp/vault/builtin/credential/userpass"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/activationflags"
 	"github.com/hashicorp/vault/helper/identity"
@@ -1416,12 +1416,65 @@ func TestIdentityStoreInvalidate_TemporaryEntity(t *testing.T) {
 // the identity cleanup rename resolver to ensure that loading is deterministic
 // for both.
 func TestIdentityStoreLoadingIsDeterministic(t *testing.T) {
-	t.Run(t.Name()+"-error-resolver", func(t *testing.T) {
-		identityStoreLoadingIsDeterministic(t, false)
-	})
-	t.Run(t.Name()+"-identity-cleanup", func(t *testing.T) {
-		identityStoreLoadingIsDeterministic(t, true)
-	})
+	seedval := rand.Int63()
+	if os.Getenv("VAULT_TEST_IDENTITY_STORE_SEED") != "" {
+		var err error
+		seedval, err = strconv.ParseInt(os.Getenv("VAULT_TEST_IDENTITY_STORE_SEED"), 10, 64)
+		require.NoError(t, err)
+	}
+	seed := rand.New(rand.NewSource(seedval)) // Seed for deterministic test
+	defer t.Logf("Test generated with seed: %d", seedval)
+
+	tests := []struct {
+		name  string
+		flags *determinismTestFlags
+	}{
+		{
+			name: "error-resolver-primary",
+			flags: &determinismTestFlags{
+				identityDeduplication: false,
+				secondary:             false,
+				seed:                  seed,
+			},
+		},
+		{
+			name: "identity-cleanup-primary",
+			flags: &determinismTestFlags{
+				identityDeduplication: true,
+				secondary:             false,
+				seed:                  seed,
+			},
+		},
+
+		{
+			name: "error-resolver-secondary",
+			flags: &determinismTestFlags{
+				identityDeduplication: false,
+				secondary:             true,
+				seed:                  seed,
+			},
+		},
+		{
+			name: "identity-cleanup-secondary",
+			flags: &determinismTestFlags{
+				identityDeduplication: true,
+				secondary:             true,
+				seed:                  seed,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(t.Name()+"-"+test.name, func(t *testing.T) {
+			identityStoreLoadingIsDeterministic(t, test.flags)
+		})
+	}
+}
+
+type determinismTestFlags struct {
+	identityDeduplication bool
+	secondary             bool
+	seed                  *rand.Rand
 }
 
 // identityStoreLoadingIsDeterministic is a property-based test helper that
@@ -1432,7 +1485,7 @@ func TestIdentityStoreLoadingIsDeterministic(t *testing.T) {
 // deterministic anyway if all data in storage was correct see comments inline
 // for examples of ways storage can be corrupt with respect to the expected
 // schema invariants.
-func identityStoreLoadingIsDeterministic(t *testing.T, identityDeduplication bool) {
+func identityStoreLoadingIsDeterministic(t *testing.T, flags *determinismTestFlags) {
 	// Create some state in store that could trigger non-deterministic behavior.
 	// The nature of the identity store schema is such that the order of loading
 	// entities etc shouldn't matter even if it was non-deterministic, however due
@@ -1456,7 +1509,7 @@ func identityStoreLoadingIsDeterministic(t *testing.T, identityDeduplication boo
 		Logger:          logger,
 		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		CredentialBackends: map[string]logical.Factory{
-			"userpass": userpass.Factory,
+			"userpass": credUserpass.Factory,
 		},
 	}
 
@@ -1470,6 +1523,10 @@ func identityStoreLoadingIsDeterministic(t *testing.T, identityDeduplication boo
 
 	ctx := context.Background()
 
+	seed := flags.seed
+	identityDeduplication := flags.identityDeduplication
+	secondary := flags.secondary
+
 	// We create 100 entities each with 1 non-local alias and 1 local alias. We
 	// then randomly create duplicate alias or local alias entries with a
 	// probability that is unrealistic but ensures we have duplicates on every
@@ -1478,9 +1535,9 @@ func identityStoreLoadingIsDeterministic(t *testing.T, identityDeduplication boo
 		name := fmt.Sprintf("entity-%d", i)
 		alias := fmt.Sprintf("alias-%d", i)
 		localAlias := fmt.Sprintf("localalias-%d", i)
-		e := makeEntityForPacker(t, name, c.identityStore.entityPacker)
-		attachAlias(t, e, alias, upme)
-		attachAlias(t, e, localAlias, localMe)
+		e := makeEntityForPacker(t, name, c.identityStore.entityPacker, seed)
+		attachAlias(t, e, alias, upme, seed)
+		attachAlias(t, e, localAlias, localMe, seed)
 		err = TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e.ID, e)
 		require.NoError(t, err)
 
@@ -1489,35 +1546,35 @@ func identityStoreLoadingIsDeterministic(t *testing.T, identityDeduplication boo
 		// few double and maybe triple duplicates of each type every few test runs
 		// and may have duplicates of both types or neither etc.
 		pDup := 0.3
-		rnd := rand.Float64()
+		rnd := seed.Float64()
 		dupeNum := 1
 		for rnd < pDup && dupeNum < 10 {
-			e := makeEntityForPacker(t, fmt.Sprintf("entity-%d-dup-%d", i, dupeNum), c.identityStore.entityPacker)
-			attachAlias(t, e, alias, upme)
+			e := makeEntityForPacker(t, fmt.Sprintf("entity-%d-dup-%d", i, dupeNum), c.identityStore.entityPacker, seed)
+			attachAlias(t, e, alias, upme, seed)
 			err = TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e.ID, e)
 			require.NoError(t, err)
 			// Toss again to see if we continue
-			rnd = rand.Float64()
+			rnd = seed.Float64()
 			dupeNum++
 		}
 		// Toss the coin again to see if there are any local dupes
 		dupeNum = 1
-		rnd = rand.Float64()
+		rnd = seed.Float64()
 		for rnd < pDup && dupeNum < 10 {
-			e := makeEntityForPacker(t, fmt.Sprintf("entity-%d-localdup-%d", i, dupeNum), c.identityStore.entityPacker)
-			attachAlias(t, e, localAlias, localMe)
+			e := makeEntityForPacker(t, fmt.Sprintf("entity-%d-localdup-%d", i, dupeNum), c.identityStore.entityPacker, seed)
+			attachAlias(t, e, localAlias, localMe, seed)
 			err = TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e.ID, e)
 			require.NoError(t, err)
-			rnd = rand.Float64()
+			rnd = seed.Float64()
 			dupeNum++
 		}
 		// See if we should add entity _name_ duplicates too (with no aliases)
-		rnd = rand.Float64()
+		rnd = seed.Float64()
 		for rnd < pDup {
-			e := makeEntityForPacker(t, name, c.identityStore.entityPacker)
+			e := makeEntityForPacker(t, name, c.identityStore.entityPacker, seed)
 			err = TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e.ID, e)
 			require.NoError(t, err)
-			rnd = rand.Float64()
+			rnd = seed.Float64()
 		}
 		// One more edge case is that it's currently possible as of the time of
 		// writing for a failure during entity invalidation to result in a permanent
@@ -1543,7 +1600,7 @@ func identityStoreLoadingIsDeterministic(t *testing.T, identityDeduplication boo
 		if i%2 == 0 {
 			alias = fmt.Sprintf("groupalias-%d", i)
 		}
-		e := makeGroupWithNameAndAlias(t, name, alias, c.identityStore.groupPacker, upme)
+		e := makeGroupWithNameAndAlias(t, name, alias, c.identityStore.groupPacker, upme, seed)
 		err = TestHelperWriteToStoragePacker(ctx, c.identityStore.groupPacker, e.ID, e)
 		require.NoError(t, err)
 	}
@@ -1551,18 +1608,20 @@ func identityStoreLoadingIsDeterministic(t *testing.T, identityDeduplication boo
 	// non-deterministic behavior.
 	for i := 0; i <= 10; i++ {
 		name := fmt.Sprintf("group-dup-%d", i)
-		e := makeGroupWithNameAndAlias(t, name, "groupalias-dup", c.identityStore.groupPacker, upme)
+		e := makeGroupWithNameAndAlias(t, name, "groupalias-dup", c.identityStore.groupPacker, upme, seed)
 		err = TestHelperWriteToStoragePacker(ctx, c.identityStore.groupPacker, e.ID, e)
 		require.NoError(t, err)
 	}
 	// Add a second and third groups with duplicate names too.
 	for _, name := range []string{"group-0", "group-1", "group-1"} {
-		e := makeGroupWithNameAndAlias(t, name, "", c.identityStore.groupPacker, upme)
+		e := makeGroupWithNameAndAlias(t, name, "", c.identityStore.groupPacker, upme, seed)
 		err = TestHelperWriteToStoragePacker(ctx, c.identityStore.groupPacker, e.ID, e)
 		require.NoError(t, err)
 	}
 
-	entIdentityStoreDeterminismTestSetup(t, ctx, c, upme, localMe)
+	if secondary {
+		entIdentityStoreDeterminismSecondaryTestSetup(t, ctx, c, upme, localMe, seed)
+	}
 
 	// Storage is now primed for the test.
 
@@ -1599,7 +1658,7 @@ func identityStoreLoadingIsDeterministic(t *testing.T, identityDeduplication boo
 		err := c.identityStore.resetDB()
 		require.NoError(t, err)
 
-		err = c.identityStore.loadArtifacts(ctx)
+		err = c.identityStore.loadArtifacts(ctx, true)
 		if i > 0 {
 			require.Equal(t, prevErr, err)
 		}
@@ -1652,7 +1711,9 @@ func identityStoreLoadingIsDeterministic(t *testing.T, identityDeduplication boo
 		// note `lastIDs` argument is not needed anymore but we can't change the
 		// signature without breaking enterprise. It's simpler to keep it unused
 		// for now until both parts of this merge.
-		entIdentityStoreDeterminismAssert(t, i, loadedNames, nil)
+		if secondary {
+			entIdentityStoreDeterminismSecondaryAssert(t, i, loadedNames, nil)
+		}
 
 		if i > 0 {
 			// Should be in the same order if we are deterministic since MemDB has strong ordering.
@@ -1676,7 +1737,7 @@ func TestIdentityStoreLoadingDuplicateReporting(t *testing.T) {
 		Logger:          logger,
 		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		CredentialBackends: map[string]logical.Factory{
-			"userpass": userpass.Factory,
+			"userpass": credUserpass.Factory,
 		},
 	}
 
@@ -1690,9 +1751,16 @@ func TestIdentityStoreLoadingDuplicateReporting(t *testing.T) {
 
 	ctx := namespace.RootContext(nil)
 
-	identityCreateCaseDuplicates(t, ctx, c, upme, localMe)
+	seedval := rand.Int63()
+	if os.Getenv("VAULT_TEST_IDENTITY_STORE_SEED") != "" {
+		seedval, err = strconv.ParseInt(os.Getenv("VAULT_TEST_IDENTITY_STORE_SEED"), 10, 64)
+		require.NoError(t, err)
+	}
+	seed := rand.New(rand.NewSource(seedval)) // Seed for deterministic test
+	defer t.Logf("Test generated with seed %d", seedval)
+	identityCreateCaseDuplicates(t, ctx, c, upme, localMe, seed)
 
-	entIdentityStoreDuplicateReportTestSetup(t, ctx, c, rootToken)
+	entIdentityStoreDuplicateReportTestSetup(t, ctx, c, rootToken, seed)
 
 	// Storage is now primed for the test.
 
@@ -1711,7 +1779,7 @@ func TestIdentityStoreLoadingDuplicateReporting(t *testing.T) {
 	}
 
 	logger.RegisterSink(unsealLogger)
-	err = c.identityStore.loadArtifacts(ctx)
+	err = c.identityStore.loadArtifacts(ctx, true)
 	require.NoError(t, err)
 	logger.DeregisterSink(unsealLogger)
 
