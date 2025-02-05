@@ -113,10 +113,11 @@ func AddAutomatedRotationFields(m map[string]*framework.FieldSchema) {
 	}
 }
 
-// HandleRotationJobOperation is a helper method to register and deregister rotation jobs
-// from a plugin and returns a standardized response with errors/warnings.
-// revertStorageFunc is a function that should store back the original config before any
-// fields were updated.
+// HandleRotationJobOperation is a helper method wrapper to the two individual helper methods
+// that register and deregister a rotation job each, and returns a standardized error response
+// with a warning in the event of an unexpected error.
+// revertStorageFunc is a function that should revert the original config back in storege before
+// any fields were updated.
 func (p *AutomatedRotationParams) HandleRotationJobOperation(ctx context.Context, b *framework.Backend, req *logical.Request, revertStorageFunc func() error) *logical.Response {
 	if p.DisableAutomatedRotation {
 		// Disable automated rotation and deregister credentials if required.
