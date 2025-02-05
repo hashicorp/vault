@@ -1070,7 +1070,7 @@ func (b *RaftBackend) SetRemovedCallback(cb func()) {
 	b.removedCallback = cb
 }
 
-func ApplyConfigSettings(logger hclog.Logger, parsedConf map[string]string, config *raft.Config) error {
+func ApplyConfigSettings(logger log.Logger, parsedConf map[string]string, config *raft.Config) error {
 	config.Logger = logger
 	multiplierRaw, ok := parsedConf["performance_multiplier"]
 	multiplier := 5
