@@ -1,0 +1,75 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/* SHOWCASE OF COMPONENTS */
+
+.shw-page-wrapper {
+  padding: 24px 48px;
+
+  /* ------------------ */
+
+  /* local styling for showcase text elements [intentionally scrappy but simple to use] */
+
+  h1:not([class]) {
+    font-family: $family-sans;
+    font-size: 48px;
+    line-height: 1.2em;
+    font-weight: 900;
+    color: #000;
+    margin: 24px 0 8px;
+  }
+
+  h2:not([class]) {
+    font-family: $family-sans;
+    font-size: 32px;
+    line-height: 1.2em;
+    font-weight: 700;
+    color: #000;
+    margin: 24px 0 8px;
+  }
+
+  h3:not([class]) {
+    font-family: $family-sans;
+    font-size: 24px;
+    line-height: 1.2em;
+    font-weight: bold;
+    color: #000;
+    margin: 24px 0 8px;
+  }
+
+  h4:not([class]) {
+    font-family: $family-sans;
+    font-size: 16px;
+    line-height: 1.2em;
+    font-weight: bold;
+    color: #000;
+    margin: 24px 0 8px;
+  }
+
+  pre:not([class]) {
+    font-family: $family-monospace;
+    font-size: 11px;
+    line-height: 1.2em;
+    font-weight: bold;
+    color: #999;
+    margin: 24px 0 4px;
+  }
+
+  hr:not([class]) {
+    border: none;
+    background: none;
+    border-top: 1px solid #bac1cc;
+    margin: 48px 0;
+  }
+
+  hr:not([class])[level='2'] {
+    border: none;
+    background: none;
+    border-top: 1px dotted #bac1cc;
+    margin: 36px 0;
+  }
+
+  /* ------------------ */
+}
