@@ -9,6 +9,7 @@ import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { capabilitiesStub } from 'vault/tests/helpers/stubs';
+import { click, fillIn } from '@ember/test-helpers';
 
 module('Integration | Component | database-role-edit', function (hooks) {
   setupRenderingTest(hooks);
@@ -34,6 +35,19 @@ module('Integration | Component | database-role-edit', function (hooks) {
     });
     this.modelStatic = this.store.peekRecord('database/role', 'my-static-role');
     this.modelDynamic = this.store.peekRecord('database/role', 'my-dynamic-role');
+  });
+
+  test('it should let user edit a static role when given update capability', async function (assert) {
+    this.server.post('/sys/capabilities-self', capabilitiesStub('database/static-creds/my-role', ['update']));
+
+    // renders edit page, with update policy the user is able to edit & save
+    await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="edit"/>`);
+    await fillIn('[data-test-ttl-value="Rotation period"]', '20');
+    await click('[data-test-secret-save]');
+
+    // show role detail page and verify that the rotation period changed
+    await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="show"/>`);
+    assert.dom('[data-test-row-value="Rotation period"]').hasText('20 days');
   });
 
   test('it should show Get credentials button when a user has the correct policy', async function (assert) {
