@@ -211,29 +211,29 @@ func (b *databaseBackend) reloadPlugin() framework.OperationFunc {
 		}
 
 		var successfullyReloaded string
-		if len(reloaded) == 0 {
+		if len(reloaded) > 0 {
+			b.dbEvent(ctx, "reload", req.Path, "", true, "plugin_name", pluginName)
+			// gather successful reloads so we can report those in the event
+			// that there are any failures
+			successfullyReloaded = fmt.Sprintf("successfully reloaded %d connection(s): %s; ", len(reloaded), strings.Join(reloaded, ", "))
+		} else {
 			msg := fmt.Sprintf("no connections were found with plugin_name %q", pluginName)
 			b.Logger().Debug(msg)
 			// TODO: fix this. Warnings are not bubbled up to the user because
 			// the vault package's reloadMatchingPlugin() disregards the
 			// logical.Response that we modify here
 			resp.AddWarning(msg)
-		} else if len(reloaded) > 0 {
-			b.dbEvent(ctx, "reload", req.Path, "", true, "plugin_name", pluginName)
-			// gather successful reloads so we can report those in the event
-			// that there are any failures
-			successfullyReloaded = fmt.Sprintf("successfully reloaded %d connection(s): %s; ", len(reloaded), strings.Join(reloaded, ", "))
 		}
 
 		if len(reloadFailed) > 0 {
-			// Some connections were not reloaded so we return an error because TODO.
-			// We prepend the error with any successful reloads so that those are reported to the client.
-			return nil, fmt.Errorf(
+			// Some connections were not reloaded. We prepend the error with
+			// any successful reloads so that those are reported to the client.
+			return logical.ErrorResponse(fmt.Sprintf(
 				"%sfailed to reload %d connection(s): %s; ",
 				successfullyReloaded,
 				len(reloadFailed),
 				strings.Join(reloadFailed, ", "),
-			)
+			)), nil
 		}
 
 		return resp, nil
