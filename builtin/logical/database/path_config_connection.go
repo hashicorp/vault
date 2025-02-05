@@ -177,6 +177,7 @@ func (b *databaseBackend) reloadPlugin() framework.OperationFunc {
 			return nil, err
 		}
 		reloaded := []string{}
+		reloadFailed := []string{}
 		for _, connName := range connNames {
 			entry, err := req.Storage.Get(ctx, fmt.Sprintf("config/%s", connName))
 			if err != nil {
@@ -192,15 +193,13 @@ func (b *databaseBackend) reloadPlugin() framework.OperationFunc {
 			}
 			if config.PluginName == pluginName {
 				if err := b.reloadConnection(ctx, req.Storage, connName); err != nil {
-					var successfullyReloaded string
-					if len(reloaded) > 0 {
-						successfullyReloaded = fmt.Sprintf("successfully reloaded %d connection(s): %s; ",
-							len(reloaded),
-							strings.Join(reloaded, ", "))
-					}
-					return nil, fmt.Errorf("%sfailed to reload connection %q: %w", successfullyReloaded, connName, err)
+					b.Logger().Error("failed to reload", "connection", connName, "error", err)
+					reloadFailed = append(reloadFailed, connName)
+					b.dbEvent(ctx, "reload-connection-fail", req.Path, "", false, "name", connName)
+				} else {
+					reloaded = append(reloaded, connName)
+					b.dbEvent(ctx, "reload-connection", req.Path, "", true, "name", connName)
 				}
-				reloaded = append(reloaded, connName)
 			}
 		}
 
@@ -211,10 +210,32 @@ func (b *databaseBackend) reloadPlugin() framework.OperationFunc {
 			},
 		}
 
+		var successfullyReloaded string
 		if len(reloaded) == 0 {
-			resp.AddWarning(fmt.Sprintf("no connections were found with plugin_name %q", pluginName))
+			msg := fmt.Sprintf("no connections were found with plugin_name %q", pluginName)
+			b.Logger().Debug(msg)
+			// TODO: fix this. Warnings are not bubbled up to the user because
+			// the vault package's reloadMatchingPlugin() disregards the
+			// logical.Response that we modify here
+			resp.AddWarning(msg)
+		} else if len(reloaded) > 0 {
+			b.dbEvent(ctx, "reload", req.Path, "", true, "plugin_name", pluginName)
+			// gather successful reloads so we can report those in the event
+			// that there are any failures
+			successfullyReloaded = fmt.Sprintf("successfully reloaded %d connection(s): %s; ", len(reloaded), strings.Join(reloaded, ", "))
 		}
-		b.dbEvent(ctx, "reload", req.Path, "", true, "plugin_name", pluginName)
+
+		if len(reloadFailed) > 0 {
+			// Some connections were not reloaded so we return an error because TODO.
+			// We prepend the error with any successful reloads so that those are reported to the client.
+			return nil, fmt.Errorf(
+				"%sfailed to reload %d connection(s): %s; ",
+				successfullyReloaded,
+				len(reloadFailed),
+				strings.Join(reloadFailed, ", "),
+			)
+		}
+
 		return resp, nil
 	}
 }
