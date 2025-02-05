@@ -44,6 +44,11 @@ func (p *AutomatedRotationParams) ParseAutomatedRotationFields(d *framework.Fiel
 			return ErrRotationMutuallyExclusiveFields
 		}
 		p.RotationSchedule = rotationScheduleRaw.(string)
+
+		_, err := rotation.DefaultScheduler.Parse(p.RotationSchedule)
+		if err != nil {
+			return fmt.Errorf("failed to parse provided rotation_schedule: %w", err)
+		}
 	}
 
 	if windowOk {
@@ -59,11 +64,6 @@ func (p *AutomatedRotationParams) ParseAutomatedRotationFields(d *framework.Fiel
 
 	if (scheduleOk && !windowOk) || (windowOk && !scheduleOk) {
 		return fmt.Errorf("must include both schedule and window")
-	}
-
-	_, err := rotation.DefaultScheduler.Parse(p.RotationSchedule)
-	if err != nil {
-		return fmt.Errorf("failed to parse provided rotation_schedule: %w", err)
 	}
 
 	p.DisableAutomatedRotation = d.Get("disable_automated_rotation").(bool)
