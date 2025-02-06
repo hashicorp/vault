@@ -10,6 +10,7 @@ import (
 	"path"
 
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -75,4 +76,9 @@ func (c *Core) mountEntrySysView(entry *MountEntry) extendedSystemView {
 
 func (c *Core) entBuiltinPluginMetrics(ctx context.Context, entry *MountEntry, val float32) error {
 	return nil
+}
+
+// entSetExternalPluginConfig (Vault Community edition) makes no changes to config for external plugins.
+func entSetExternalPluginConfig(_ *pluginutil.PluginRunner, _ map[string]string) {
+	// No-op
 }
