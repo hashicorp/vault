@@ -1,0 +1,6 @@
+```release-note:change
+agent/config: Configuration values including IPv6 addresses will be automatically translated and displayed conformant to RFC-5952 §4.
+```
+```release-note:change
+proxy/config: Configuration values including IPv6 addresses will be automatically translated and displayed conformant to RFC-5952 §4.
+```
