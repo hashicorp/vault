@@ -2196,3 +2196,105 @@ func TestProxy_Config_ReloadTls(t *testing.T) {
 		t.Fatalf("got a non-zero exit status: %d, stdout/stderr: %s", code, output)
 	}
 }
+
+// TestProxy_Config_Normalization verifies that the vault address is correctly
+// normalized to conform to RFC-5942 §4 when configured by a config file,
+// environment variables, or CLI flags.
+// See: https://rfc-editor.org/rfc/rfc5952.html
+func TestProxy_Config_Normalization(t *testing.T) {
+	for name, test := range map[string]struct {
+		args     []string
+		envVars  map[string]string
+		cfg      string
+		expected *proxyConfig.Config
+	}{
+		"ipv4": {
+			cfg: `
+vault {
+  address = "https://127.0.0.1:8200"
+}
+`,
+			expected: &proxyConfig.Config{
+				Vault: &proxyConfig.Vault{
+					Address: "https://127.0.0.1:8200",
+				},
+			},
+		},
+		"ipv6 config": {
+			cfg: `
+vault {
+  address = "https://[2001:0db8::0001]:8200"
+}
+`,
+			expected: &proxyConfig.Config{
+				Vault: &proxyConfig.Vault{
+					// Use the normalized version in the config
+					Address: "https://[2001:db8::1]:8200",
+				},
+			},
+		},
+		"ipv6 cli arg overrides": {
+			args: []string{"-address=https://[2001:0:0:1:0:0:0:1]:8200"},
+			cfg: `
+vault {
+  address = "https://[2001:0db8::0001]:8200"
+}
+`,
+			expected: &proxyConfig.Config{
+				Vault: &proxyConfig.Vault{
+					// Use a normalized version of the args address
+					Address: "https://[2001:0:0:1::1]:8200",
+				},
+			},
+		},
+		"ipv6 env var overrides": {
+			envVars: map[string]string{
+				"VAULT_ADDR": "https://[2001:DB8:AC3:FE4::1]:8200",
+			},
+			cfg: `
+vault {
+  address = "https://[2001:0db8::0001]:8200"
+}
+`,
+			expected: &proxyConfig.Config{
+				Vault: &proxyConfig.Vault{
+					// Use a normalized version of the env var address
+					Address: "https://[2001:db8:ac3:fe4::1]:8200",
+				},
+			},
+		},
+		"ipv6 all uses cli overrides": {
+			args: []string{"-address=https://[2001:0:0:1:0:0:0:1]:8200"},
+			envVars: map[string]string{
+				"VAULT_ADDR": "https://[2001:DB8:AC3:FE4::1]:8200",
+			},
+			cfg: `
+vault {
+  address = "https://[2001:0db8::0001]:8200"
+}
+`,
+			expected: &proxyConfig.Config{
+				Vault: &proxyConfig.Vault{
+					// Use a normalized version of the args address
+					Address: "https://[2001:0:0:1::1]:8200",
+				},
+			},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			for k, v := range test.envVars {
+				t.Setenv(k, v)
+			}
+			configFile := populateTempFile(t, "proxy-config.hcl", test.cfg)
+			cfg, err := proxyConfig.LoadConfigFile(configFile.Name())
+			require.NoError(t, err)
+
+			cmd := &ProxyCommand{BaseCommand: &BaseCommand{}}
+			f := cmd.Flags()
+			require.NoError(t, f.Parse(test.args))
+
+			cmd.applyConfigOverrides(f, cfg)
+			require.Equal(t, test.expected.Vault.Address, cfg.Vault.Address)
+		})
+	}
+}

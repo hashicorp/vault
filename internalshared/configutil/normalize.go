@@ -33,19 +33,16 @@ func NormalizeAddr(address string) string {
 		// We haven't been given a URL. Try and parse it as an IP address
 		ip = net.ParseIP(address)
 		if ip == nil {
-			// We haven't been given a URL or IP address, try parsing an IP:Port
-			// combination.
-			idx := strings.LastIndex(address, ":")
-			if idx > 0 {
-				// We've perhaps received an IP:Port address
-				addr := address[:idx]
-				port = address[idx+1:]
-				if strings.HasPrefix(addr, "[") && strings.HasSuffix(addr, "]") {
-					addr = strings.TrimPrefix(strings.TrimSuffix(addr, "]"), "[")
-					bracketedIPv6 = true
-				}
-				ip = net.ParseIP(addr)
+			// We can't parse it as a strict IP address. It could be some form of
+			// destination address (user@addr) and/or an IP:Port combo.
+
+			// Try destination address.
+			if idx := strings.Index(address, "@"); idx > 0 {
+				return address[:idx+1] + NormalizeAddr(address[idx+1:])
 			}
+
+			// Try parsing an IP:Port combination.
+			ip, port, bracketedIPv6 = ipPort(address)
 		}
 	}
 
@@ -82,10 +79,40 @@ func NormalizeAddr(address string) string {
 		}
 
 		// Handle just an IP address
+		if bracketedIPv6 {
+			return fmt.Sprintf("[%s]", v6.String())
+		}
 		return v6.String()
 	}
 
 	// It shouldn't be possible to get to this point. If we somehow we manage
 	// to, return the string unchanged.
 	return address
+}
+
+func ipPort(address string) (net.IP, string, bool) {
+	// Check for a bracked IPv6 string with no port
+	if isBracketedString(address) {
+		return net.ParseIP(address[1 : len(address)-1]), "", true
+	}
+
+	// Check for a IP:Port that is not bracketed
+	idx := strings.LastIndex(address, ":")
+	if idx < 0 {
+		return net.ParseIP(address), "", false
+	}
+
+	// Extract the address and port
+	addr := address[:idx]
+	port := address[idx+1:]
+	if isBracketedString(addr) {
+		ip, _, _ := ipPort(addr)
+		return ip, port, true
+	}
+
+	return net.ParseIP(addr), port, false
+}
+
+func isBracketedString(in string) bool {
+	return strings.HasPrefix(in, "[") && strings.HasSuffix(in, "]")
 }

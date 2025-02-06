@@ -460,34 +460,38 @@ func (i *uint64Value) Hidden() bool     { return i.hidden }
 
 // -- StringVar and stringValue
 type StringVar struct {
-	Name       string
-	Aliases    []string
-	Usage      string
-	Default    string
-	Hidden     bool
-	EnvVar     string
-	Target     *string
-	Completion complete.Predictor
+	Name        string
+	Aliases     []string
+	Usage       string
+	Default     string
+	Hidden      bool
+	EnvVar      string
+	Target      *string
+	Normalizers []func(string) string
+	Completion  complete.Predictor
 }
 
 func (f *FlagSet) StringVar(i *StringVar) {
-	initial := i.Default
-	if v, exist := os.LookupEnv(i.EnvVar); exist {
-		initial = v
+	if i == nil {
+		return
 	}
 
-	def := ""
-	if i.Default != "" {
-		def = i.Default
+	value := i.Default
+	if v, exist := os.LookupEnv(i.EnvVar); exist {
+		value = v
+	}
+
+	for _, f := range i.Normalizers {
+		value = f(value)
 	}
 
 	f.VarFlag(&VarFlag{
 		Name:       i.Name,
 		Aliases:    i.Aliases,
 		Usage:      i.Usage,
-		Default:    def,
+		Default:    i.Default,
 		EnvVar:     i.EnvVar,
-		Value:      newStringValue(initial, i.Target, i.Hidden),
+		Value:      newStringValue(value, i.Target, i.Hidden),
 		Completion: i.Completion,
 	})
 }
@@ -658,39 +662,44 @@ func appendDurationSuffix(s string) string {
 
 // -- StringSliceVar and stringSliceValue
 type StringSliceVar struct {
-	Name       string
-	Aliases    []string
-	Usage      string
-	Default    []string
-	Hidden     bool
-	EnvVar     string
-	Target     *[]string
-	Completion complete.Predictor
+	Name        string
+	Aliases     []string
+	Usage       string
+	Default     []string
+	Hidden      bool
+	EnvVar      string
+	Target      *[]string
+	Completion  complete.Predictor
+	Normalizers []func(string) string
 }
 
-func (f *FlagSet) StringSliceVar(i *StringSliceVar) {
-	initial := i.Default
-	if v, exist := os.LookupEnv(i.EnvVar); exist {
+func (f *FlagSet) StringSliceVar(in *StringSliceVar) {
+	initial := in.Default
+	if v, exist := os.LookupEnv(in.EnvVar); exist {
 		parts := strings.Split(v, ",")
 		for i := range parts {
-			parts[i] = strings.TrimSpace(parts[i])
+			part := strings.TrimSpace(parts[i])
+			for _, f := range in.Normalizers {
+				part = f(part)
+			}
+			parts[i] = part
 		}
 		initial = parts
 	}
 
 	def := ""
-	if i.Default != nil {
-		def = strings.Join(i.Default, ",")
+	if in.Default != nil {
+		def = strings.Join(in.Default, ",")
 	}
 
 	f.VarFlag(&VarFlag{
-		Name:       i.Name,
-		Aliases:    i.Aliases,
-		Usage:      i.Usage,
+		Name:       in.Name,
+		Aliases:    in.Aliases,
+		Usage:      in.Usage,
 		Default:    def,
-		EnvVar:     i.EnvVar,
-		Value:      newStringSliceValue(initial, i.Target, i.Hidden),
-		Completion: i.Completion,
+		EnvVar:     in.EnvVar,
+		Value:      newStringSliceValue(initial, in.Target, in.Hidden),
+		Completion: in.Completion,
 	})
 }
 
