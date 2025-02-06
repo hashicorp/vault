@@ -146,6 +146,7 @@ type ExtendedSystemView interface {
 type PasswordGenerator func() (password string, err error)
 
 type StaticSystemView struct {
+	EntStaticSystemView
 	DefaultLeaseTTLVal           time.Duration
 	MaxLeaseTTLVal               time.Duration
 	SudoPrivilegeVal             bool
