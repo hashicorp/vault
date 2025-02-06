@@ -1,0 +1,870 @@
+---
+id: 9e86cdd7-f337-4217-8064-1ecc104e009d
+name: Vault installation to Google Kubernetes Engine via Helm
+short_name: Vault installation to GKE via Helm
+description: >-
+  Deploy Vault on Google Kubernetes Engine (GKE) with Integrated Storage using
+  the official Helm chart.
+products_used:
+  - vault
+default_collection_context: vault/kubernetes
+---
+
+Google Kubernetes Engine (GKE) can run Vault in its secured and managed
+Kubernetes service in standard or autopilot mode. Standard mode gives you the
+flexibility to configure the cluster's underlying infrastructure while autopilot
+mode gives you an optimized cluster with a hands-off experience.
+
+In this tutorial, you create a cluster in GKE, install Vault in
+high-availability (HA) mode via the Helm chart and then configure the
+authentication between Vault and the cluster. Then you deploy a web application
+with deployment annotations so the application's secrets are installed via the
+Vault Agent injector service.
+
+## Prerequisites
+
+This tutorial requires a [Google Cloud account], [Google Cloud command-line
+interface (CLI)], [Kubernetes
+CLI](https://kubernetes.io/docs/tasks/tools/install-kubectl/) and the [Helm
+CLI](https://helm.sh/docs/helm/).
+
+First, create a [Google Cloud account].
+
+Next, install [Google Cloud CLI], [kubectl
+CLI](https://kubernetes.io/docs/tasks/tools/install-kubectl/) and [helm
+CLI](https://github.com/helm/helm#install).
+
+<Tabs>
+<Tab heading="Homebrew on macOS">
+
+
+Install `gcloud` with [Homebrew](https://brew.sh).
+
+```shell-session
+$ brew install google-cloud-sdk
+```
+
+Install `kubectl` with Homebrew.
+
+```shell-session
+$ brew install kubernetes-cli
+```
+
+Install `helm` with Homebrew.
+
+```shell-session
+$ brew install helm
+```
+
+</Tab>
+<Tab heading="Chocolatey on Windows">
+
+
+Install `gcloud` with [Chocolatey](https://chocolatey.org/).
+
+```shell-session
+$ choco install gcloudsdk
+```
+
+Install `kubectl` with Chocolatey.
+
+```shell-session
+$ choco install kubernetes-cli
+```
+
+Install `helm` with Chocolatey.
+
+```shell-session
+$ choco install kubernetes-helm
+```
+
+</Tab>
+</Tabs>
+
+
+Next, connect the `gcloud` CLI with your Google account.
+
+```shell-session
+$ gcloud auth login
+```
+
+This command launches the browser and requires that you authenticate with your
+Google account credentials.
+
+Next, initialize the `gcloud` CLI.
+
+```shell-session
+$ gcloud init
+```
+
+This initialization process may ask you to create a Google Cloud project. A
+project is a uniquely identified namespace that organizes all your Google Cloud
+resources. If you already have a project associated with your account, it may
+be important to create a new project.
+
+If required, create a Google Cloud project with a unique identifier.
+
+```shell-session
+$ gcloud projects create learn-hashicorp-UNIQUE_ID
+```
+
+The `gcloud` CLI manages Google Cloud resources for the project you select as
+your current project.
+
+If you created a project, you need to set this project as your current project.
+
+```shell-session
+$ gcloud config set project learn-hashicorp-UNIQUE_ID
+```
+
+The project may create resources within a variety of different compute zones
+spread across the world.
+
+Display all the possible compute zones.
+
+```shell-session
+$ gcloud compute zones list
+
+NAME                       REGION                   STATUS  NEXT_MAINTENANCE  TURNDOWN_DATE
+us-east1-b                 us-east1                 UP
+us-east1-c                 us-east1                 UP
+us-east1-d                 us-east1                 UP
+us-east4-c                 us-east4                 UP
+...snip...
+```
+
+The output displays a table of the compute zones with their name and current
+status.
+
+Set a default compute zone and region from the list with the UP status.
+
+```shell-session
+$ gcloud config set compute/region us-west1
+```
+
+## Start cluster
+
+For a project to create a Kubernetes cluster requires that the container service
+is enabled.
+
+Enable the Google container service.
+
+```shell-session
+$ gcloud services enable container.googleapis.com
+```
+
+A Vault cluster that is launched in high-availability requires a Kubernetes
+cluster with three nodes. You can manually create these nodes or use the
+AutoPilot mode.
+
+<Tabs>
+<Tab heading="Autopilot">
+
+Create a cluster in Autopilot mode named `learn-vault`.
+
+```shell-session
+$ gcloud container clusters create-auto learn-vault
+
+...
+Creating cluster learn-vault in us-west1...done.
+Created [https://container.googleapis.com/v1/projects/learn-hashicorp-UNIQUE_ID/zones/us-west1/clusters/learn-vault].
+To inspect the contents of your cluster, go to: https://console.cloud.google.com/kubernetes/workload_/gcloud/us-west1/learn-vault?project=learn-hashicorp-UNIQUE_ID
+kubeconfig entry generated for learn-vault.
+NAME         LOCATION  MASTER_VERSION   MASTER_IP      MACHINE_TYPE  NODE_VERSION     NUM_NODES  STATUS
+learn-vault  us-west1  1.21.5-gke.1302  34.82.120.195  e2-medium     1.21.5-gke.1302  3          RUNNING
+```
+
+</Tab>
+
+<Tab heading="Standard">
+
+Create a cluster named `learn-vault` with `3` nodes.
+
+```shell-session
+$ gcloud container clusters create learn-vault --num-nodes=3
+Creating cluster learn-vault in us-west1.
+...
+Created [https://container.googleapis.com/v1/projects/learn-hashicorp-UNIQUE_ID/zones/us-west1/clusters/learn-vault].
+To inspect the contents of your cluster, go to: https://console.cloud.google.com/kubernetes/workload_/gcloud/us-west1/learn-vault?project=learn-hashicorp-UNIQUE_ID
+kubeconfig entry generated for learn-vault.
+NAME         LOCATION   MASTER_VERSION    MASTER_IP      MACHINE_TYPE   NODE_VERSION      NUM_NODES  STATUS
+learn-vault  us-west1   1.16.15-gke.4300  35.227.91.160  n1-standard-1  1.16.15-gke.4300  3          RUNNING
+```
+
+</Tab>
+</Tabs>
+
+The cluster is created, deployed and then health-checked. When the cluster is
+ready the command modifies the `kubectl` configuration so that the commands you
+issue are performed against that cluster.
+
+<Tip title="Managing multiple clusters">
+
+ `kubectl` enables you to manage [multiple
+clusters](https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/)
+through the context configuration. You display the available contexts `kubectl config get-contexts` and set the context by name `kubectl config use-context NAME`.
+
+</Tip>
+
+Display the nodes of the cluster.
+
+```shell-session
+$ kubectl get nodes
+NAME                                         STATUS   ROLES    AGE   VERSION
+gk3-learn-vault-default-pool-c4d4759d-w5g2   Ready    <none>   7m13s   v1.21.5-gke.1302
+gk3-learn-vault-default-pool-dbb32d2b-qcl7   Ready    <none>   7m13s   v1.21.5-gke.1302
+gk3-learn-vault-default-pool-bd170fcf-0vqg   Ready    <none>   7m13s   v1.21.5-gke.1302
+```
+
+Autopilot displays a smaller set of nodes but more are provisioned as needed.
+
+The cluster is ready.
+
+## Install the Vault Helm chart
+
+The recommended way to run Vault on Kubernetes is via the [Helm
+chart](/vault/docs/platform/k8s/helm).
+
+Add the HashiCorp Helm repository.
+
+```shell-session
+$ helm repo add hashicorp https://helm.releases.hashicorp.com
+"hashicorp" has been added to your repositories
+```
+
+Update all the repositories to ensure `helm` is aware of the latest versions.
+
+```shell-session
+$ helm repo update
+Hang tight while we grab the latest from your chart repositories...
+...Successfully got an update from the "hashicorp" chart repository
+Update Complete. ⎈Happy Helming!⎈
+```
+
+Search for all the Vault Helm chart versions.
+
+```shell-session
+$ helm search repo vault --versions
+NAME           	CHART VERSION	APP VERSION	DESCRIPTION
+hashicorp/vault	0.18.0       	1.9.0      	Official HashiCorp Vault Chart
+hashicorp/vault	0.17.1       	1.8.4      	Official HashiCorp Vault Chart
+hashicorp/vault	0.17.0       	1.8.4      	Official HashiCorp Vault Chart
+hashicorp/vault	0.16.1       	1.8.3      	Official HashiCorp Vault Chart
+```
+
+The Vault Helm chart contains all the necessary components to run Vault in
+several different modes.
+
+<Note title="Default behavior">
+
+ By default, it launches Vault on a single pod in
+standalone mode with a file storage backend. Enabling high-availability with
+Raft Integrated Storage requires that you override these defaults.
+
+</Note>
+
+Install the latest version of the Vault Helm chart in HA mode with integrated
+storage.
+
+```shell-session
+$ helm install vault hashicorp/vault \
+    --set='server.ha.enabled=true' \
+    --set='server.ha.raft.enabled=true'
+```
+
+The Vault pods and Vault Agent Injector pod are deployed in the default
+namespace.
+
+Get all the pods within the default namespace.
+
+```shell-session
+$ kubectl get pods
+NAME                                    READY   STATUS    RESTARTS   AGE
+vault-0                                 0/1     Running   0          30s
+vault-1                                 0/1     Running   0          30s
+vault-2                                 0/1     Running   0          30s
+vault-agent-injector-56bf46695f-crqqn   1/1     Running   0          30s
+```
+
+The `vault-0`, `vault-1`, and `vault-2` pods deployed run a Vault server and
+report that they are `Running` but that they are not ready (`0/1`). This is
+because the status check defined in a
+[readinessProbe](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes)
+returns a non-zero exit code.
+
+The `vault-agent-injector` pod deployed is a Kubernetes Mutation Webhook
+Controller. The controller intercepts pod events and applies mutations to the
+pod if specific annotations exist within the request.
+
+Retrieve the status of Vault on the `vault-0` pod.
+
+```shell-session
+$ kubectl exec vault-0 -- vault status
+Key                Value
+---                -----
+Seal Type          shamir
+Initialized        false
+Sealed             true
+Total Shares       0
+Threshold          0
+Unseal Progress    0/0
+Unseal Nonce       n/a
+Version            n/a
+HA Enabled         false
+command terminated with exit code 2
+```
+
+The [status command](/vault/docs/commands/status)
+reports that Vault is not initialized and that it is
+[sealed](/vault/docs/concepts/seal#why). For Vault to
+authenticate with Kubernetes and manage secrets requires that that is
+initialized and unsealed.
+
+## Initialize and unseal one Vault pod
+
+Vault starts
+[uninitialized](/vault/docs/commands/operator/init)
+and in the [sealed](/vault/docs/concepts/seal#why) state.
+Prior to initialization the Integrated Storage backend is not prepared to
+receive data.
+
+Initialize Vault with one key share and one key threshold.
+
+```shell-session
+$ kubectl exec vault-0 -- vault operator init -key-shares=1 -key-threshold=1 -format=json > cluster-keys.json
+```
+
+The [`operator init`](/vault/docs/commands/operator/init) command
+generates a root key that it disassembles into key shares `-key-shares=1` and
+then sets the number of key shares required to unseal Vault `-key-threshold=1`.
+These key shares are written to the output as unseal keys in JSON format
+`-format=json`. Here the output is redirected to a file named
+`cluster-keys.json`.
+
+Display the unseal key found in `cluster-keys.json`.
+
+```shell-session
+$ cat cluster-keys.json | jq -r ".unseal_keys_b64[]"
+rrUtT32GztRy/pVWmcH0ZQLCCXon/TxCgi40FL1Zzus=
+```
+
+<Warning title="Insecure operation">
+
+ Do not run an unsealed Vault in production with a
+single key share and a single key threshold. This approach is only used here to
+simplify the unsealing process for this demonstration.
+
+</Warning>
+
+Create a variable named `VAULT_UNSEAL_KEY` to capture the Vault unseal key.
+
+```shell-session
+$ VAULT_UNSEAL_KEY=$(cat cluster-keys.json | jq -r ".unseal_keys_b64[]")
+```
+
+After initialization, Vault is configured to know where and how to access the
+storage, but does not know how to decrypt any of it.
+[Unsealing](/vault/docs/concepts/seal#unsealing) is
+the process of constructing the root key necessary to read the decryption key
+to decrypt the data, allowing access to the Vault.
+
+Unseal Vault running on the `vault-0` pod.
+
+```shell-session
+$ kubectl exec vault-0 -- vault operator unseal $VAULT_UNSEAL_KEY
+Key                     Value
+---                     -----
+Seal Type               shamir
+Initialized             true
+Sealed                  false
+Total Shares            1
+Threshold               1
+Version                 1.5.4
+Cluster Name            vault-cluster-4752e6ca
+Cluster ID              de2b0fe9-ce24-59e5-c766-a4e2ac7df643
+HA Enabled              true
+HA Cluster              n/a
+HA Mode                 standby
+Active Node Address     <none>
+Raft Committed Index    24
+Raft Applied Index      24
+```
+
+The `operator unseal` command reports that Vault is initialized and unsealed.
+
+<Warning title="Insecure operation">
+
+ Providing the unseal key with the command writes the
+key to your shell's history. This approach is only used here to simplify the
+unsealing process for this demonstration.
+
+</Warning>
+
+Retrieve the status of Vault on the `vault-0` pod.
+
+```shell-session
+$ kubectl exec vault-0 -- vault status
+Key                     Value
+---                     -----
+Seal Type               shamir
+Initialized             true
+Sealed                  false
+Total Shares            1
+Threshold               1
+Version                 1.5.4
+Cluster Name            vault-cluster-4752e6ca
+Cluster ID              de2b0fe9-ce24-59e5-c766-a4e2ac7df643
+HA Enabled              true
+HA Cluster              https://vault-0.vault-internal:8201
+HA Mode                 active
+Raft Committed Index    29
+Raft Applied Index      29
+```
+
+The Vault server is initialized and unsealed.
+
+## Join the other Vaults to the Vault cluster
+
+The Vault server running on the `vault-0` pod is a Vault HA cluster with a
+single node. To display the list of nodes requires that you are logging in with
+the root token.
+
+Display the root token found in `cluster-keys.json`.
+
+```shell-session
+$ cat cluster-keys.json | jq -r ".root_token"
+```
+
+Create a variable named `CLUSTER_ROOT_TOKEN` to capture the Vault unseal key.
+
+```shell-session
+$ CLUSTER_ROOT_TOKEN=$(cat cluster-keys.json | jq -r ".root_token")
+```
+
+Login with the root token on the `vault-0` pod.
+
+```shell-session
+$ kubectl exec vault-0 -- vault login $CLUSTER_ROOT_TOKEN
+Success! You are now authenticated. The token information displayed below
+is already stored in the token helper. You do NOT need to run "vault login"
+again. Future Vault requests will automatically use this token.
+
+Key                  Value
+---                  -----
+token                s.fgoUNVHDrdwlxftvM48A0yxa
+token_accessor       vmPnI3OT0mxrI7UEa8RfJvvr
+token_duration       ∞
+token_renewable      false
+token_policies       ["root"]
+identity_policies    []
+policies             ["root"]
+```
+
+<Warning title="Insecure operation">
+
+ The login command stores the root token in a file for
+the container user. Subsequent commands are executed with that token. This
+approach is only used here to simplify the cluster configuration demonstration.
+
+</Warning>
+
+List all the nodes within the Vault cluster for the `vault-0` pod.
+
+```shell-session
+$ kubectl exec vault-0 -- vault operator raft list-peers
+Node                                    Address                        State     Voter
+----                                    -------                        -----     -----
+09d9b35d-0336-7de7-cc94-90a1f3a0aff8    vault-0.vault-internal:8201    leader    true
+```
+
+This displays the one node within the Vault cluster. This cluster is addressable
+through the Kubernetes service `vault-0.vault-internal` created by the Helm
+chart. The Vault servers on the other pods need to join this cluster and be
+unsealed.
+
+Join the Vault server on `vault-1` to the Vault cluster.
+
+```shell-session
+$ kubectl exec vault-1 -- vault operator raft join http://vault-0.vault-internal:8200
+Key       Value
+---       -----
+Joined    true
+```
+
+This Vault server joins the cluster sealed. To unseal the Vault server requires
+the same unseal key, `VAULT_UNSEAL_KEY`, provided to the first Vault server.
+
+Unseal the Vault server on `vault-1` with the unseal key.
+
+```shell-session
+$ kubectl exec vault-1 -- vault operator unseal $VAULT_UNSEAL_KEY
+Key                Value
+---                -----
+Seal Type          shamir
+Initialized        true
+Sealed             true
+Total Shares       1
+Threshold          1
+Unseal Progress    0/1
+Unseal Nonce       n/a
+Version            1.5.4
+HA Enabled         true
+```
+
+The Vault server on `vault-1` is now a functional node within the Vault cluster.
+
+Join the Vault server on `vault-2` to the Vault cluster.
+
+```shell-session
+$ kubectl exec vault-2 -- vault operator raft join http://vault-0.vault-internal:8200
+Key       Value
+---       -----
+Joined    true
+```
+
+Unseal the Vault server on `vault-2` with the unseal key.
+
+```shell-session
+$ kubectl exec vault-2 -- vault operator unseal $VAULT_UNSEAL_KEY
+Key                Value
+---                -----
+Seal Type          shamir
+Initialized        true
+Sealed             true
+Total Shares       1
+Threshold          1
+Unseal Progress    0/1
+Unseal Nonce       n/a
+Version            1.5.4
+HA Enabled         true
+```
+
+The Vault server on `vault-2` is now a functional node within the Vault cluster.
+
+List all the nodes within the Vault cluster for the `vault-0` pod.
+
+```shell-session
+$ kubectl exec vault-0 -- vault operator raft list-peers
+Node                                    Address                        State       Voter
+----                                    -------                        -----       -----
+09d9b35d-0336-7de7-cc94-90a1f3a0aff8    vault-0.vault-internal:8201    leader      true
+7078a8b7-7948-c224-a97f-af64771ad999    vault-1.vault-internal:8201    follower    true
+aaf46893-0a93-17ce-115e-f57033d7f41d    vault-2.vault-internal:8201    follower    true
+```
+
+This displays all three nodes within the Vault cluster.
+
+Get all the pods within the default namespace.
+
+```shell-session
+$ kubectl get pods
+NAME                                    READY   STATUS    RESTARTS   AGE
+vault-0                                 1/1     Running   0          5m49s
+vault-1                                 1/1     Running   0          5m48s
+vault-2                                 1/1     Running   0          5m47s
+vault-agent-injector-5945fb98b5-vzbqv   1/1     Running   0          5m50s
+```
+
+The `vault-0`, `vault-1`, and `vault-2` pods report that they are `Running` and
+ready (`1/1`).
+
+## Set a secret in Vault
+
+The web application that you deploy in the [Deploy web
+application](#deploy-web-application) section, expects Vault to store a
+username and password at the path `secret/webapp/config`. To create this secret
+requires you to login with the root token, enable the [key-value secret
+engine](/vault/docs/secrets/kv/kv-v2), and store a
+secret username and password at that defined path.
+
+First, start an interactive shell session on the `vault-0` pod.
+
+```shell-session
+$ kubectl exec --stdin=true --tty=true vault-0 -- /bin/sh
+/ $
+```
+
+Your system prompt is replaced with a new prompt `/ $`.
+
+<Note>
+
+ the prompt within this section is shown as `$` but the commands are
+intended to be executed within this interactive shell on the `vault-0`
+container.
+
+</Note>
+
+Enable kv-v2 secrets at the path `secret`.
+
+```shell-session
+$ vault secrets enable -path=secret kv-v2
+Success! Enabled the kv-v2 secrets engine at: secret/
+```
+
+Create a secret at path `secret/devwebapp/config` with a `username` and
+`password`.
+
+```shell-session
+$ vault kv put secret/devwebapp/config username='giraffe' password='salsa'
+Key              Value
+---              -----
+created_time     2020-12-11T19:14:05.170436863Z
+deletion_time    n/a
+destroyed        false
+version          1
+```
+
+Verify that the secret is defined at the path `secret/data/devwebapp/config`.
+
+```shell-session
+$ vault kv get secret/devwebapp/config
+====== Metadata ======
+Key              Value
+---              -----
+created_time     2020-12-11T19:14:05.170436863Z
+deletion_time    n/a
+destroyed        false
+version          1
+
+====== Data ======
+Key         Value
+---         -----
+password    salsa
+username    giraffe
+```
+
+<Note title="Learn more">
+
+ For more information refer to the [Versioned Key/Value
+Secrets Engine](/vault/tutorials/secrets-management/versioned-kv) tutorial.
+
+</Note>
+
+You successfully created the secret for the web application.
+
+Lastly, exit the `vault-0` pod.
+
+```shell-session
+$ exit
+```
+
+## Configure Kubernetes authentication
+
+The initial [root
+token](/vault/docs/concepts/tokens#root-tokens) is a
+privileged user that can perform any operation at any path. The web application
+only requires the ability to read secrets defined at a single path. This
+application should authenticate and be granted a token with limited access.
+
+<Note title="Best practice">
+
+ We recommend that [root
+tokens](/vault/docs/concepts/tokens#root-tokens) are
+used only for initial setup of an authentication method and policies. Afterwards
+they should be revoked. This tutorial does not show you how to revoke the root
+token.
+
+</Note>
+
+Vault provides a [Kubernetes
+authentication](/vault/docs/auth/kubernetes) method
+that enables clients to authenticate with a Kubernetes Service Account
+Token.
+
+First, start an interactive shell session on the `vault-0` pod.
+
+```shell-session
+$ kubectl exec --stdin=true --tty=true vault-0 -- /bin/sh
+/ $
+```
+
+Your system prompt is replaced with a new prompt `/ $`.
+
+<Note>
+
+ the prompt within this section is shown as `$` but the commands are
+intended to be executed within this interactive shell on the `vault-0`
+container.
+
+</Note>
+
+Enable the Kubernetes authentication method.
+
+```shell-session
+$ vault auth enable kubernetes
+Success! Enabled kubernetes auth method at: kubernetes/
+```
+
+Vault accepts a service token from any client within the Kubernetes cluster.
+During authentication, Vault verifies that the service account token is valid by
+querying a token review Kubernetes endpoint.
+
+Configure the Kubernetes authentication method to use the location of the
+Kubernetes API. It will automatically use the pod's own identity to
+authenticate with Kubernetes when querying the token review API.
+
+~> For the best compatibility with recent Kubernetes versions, ensure you
+  are using Vault v1.9.3 or greater.
+
+```shell-session
+$ vault write auth/kubernetes/config \
+    kubernetes_host="https://$KUBERNETES_PORT_443_TCP_ADDR:443"
+```
+
+The environment variable `KUBERNETES_PORT_443_TCP_ADDR` is defined and references
+the internal network address of the Kubernetes host.
+
+For a client of the Vault server to read the secret data defined in the [Set a
+secret in Vault](#set-a-secret-in-vault) step requires that the read
+capability be granted for the path `secret/data/devwebapp/config`.
+
+Write out the policy named `devwebapp` that enables the `read` capability
+for secrets at path `secret/data/devwebapp/config`
+
+```shell-session
+$ vault policy write devwebapp - <<EOF
+path "secret/data/devwebapp/config" {
+  capabilities = ["read"]
+}
+EOF
+```
+
+Create a Kubernetes authentication role named `devweb-app`.
+
+```shell-session
+$ vault write auth/kubernetes/role/devweb-app \
+        bound_service_account_names=internal-app \
+        bound_service_account_namespaces=default \
+        policies=devwebapp \
+        ttl=24h
+```
+
+The role connects a Kubernetes service account, `internal-app` (created in the
+next step), and namespace, `default`, with the Vault policy, `devwebapp`. The
+tokens returned after authentication are valid for 24 hours.
+
+Lastly, exit the `vault-0` pod.
+
+```shell-session
+$ exit
+```
+
+## Deploy web application
+
+The web application pod requires the creation of the `internal-app` Kubernetes
+service account specified in the Vault Kubernetes authentication role created in
+the [Configure Kubernetes authentication](#configure-kubernetes-authentication)
+step.
+
+Create a Kubernetes service account named `internal-app`.
+
+```shell-session
+$ kubectl create sa internal-app
+```
+
+Define a pod named `devwebapp` with the web application.
+
+```shell-session
+$ cat > devwebapp.yaml <<EOF
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: devwebapp
+  labels:
+    app: devwebapp
+  annotations:
+    vault.hashicorp.com/agent-inject: "true"
+    vault.hashicorp.com/role: "devweb-app"
+    vault.hashicorp.com/agent-inject-secret-credentials.txt: "secret/data/devwebapp/config"
+spec:
+  serviceAccountName: internal-app
+  containers:
+    - name: devwebapp
+      image: jweissig/app:0.0.1
+EOF
+```
+
+This definition creates a pod with the specified container running with the
+`internal-app` Kubernetes service account. The container within the pod is
+unaware of the Vault cluster. The Vault Injector service reads the
+[annotations](/vault/docs/platform/k8s/injector#annotations)
+to find the secret path, stored within Vault at `secret/data/devwebapp/config`
+and the file location, `/vault/secrets/secret-credentials.txt`, to mount
+that secret with the pod.
+
+<Note title="Learn more">
+
+ For more information about annotations refer to the
+[Injecting Secrets into Kubernetes Pods via Vault Agent
+Injector](/vault/tutorials/kubernetes/kubernetes-sidecar) tutorial.
+
+</Note>
+
+Create the `devwebapp` pod.
+
+```shell-session
+$ kubectl apply --filename devwebapp.yaml
+```
+
+Get all the pods within the default namespace.
+
+```shell-session
+$ kubectl get pods
+devwebapp                               2/2     Running   0          6s
+vault-0                                 1/1     Running   0          8m48s
+vault-1                                 1/1     Running   0          8m48s
+vault-2                                 1/1     Running   0          8m48s
+vault-agent-injector-56bf46695f-gdpsz   1/1     Running   0          8m48s
+```
+
+Wait until the `devwebapp` pod reports that is running and ready (`2/2`).
+
+Display the secrets written to the file `/vault/secrets/secret-credentials.txt`
+on the `devwebapp` pod.
+
+```shell-session
+$ kubectl exec --stdin=true --tty=true devwebapp -c devwebapp -- cat /vault/secrets/credentials.txt
+data: map[password:salsa username:giraffe]
+metadata: map[created_time:2020-12-11T19:14:05.170436863Z deletion_time: destroyed:false version:1]
+```
+
+The result displays the unformatted secret data present on the container.
+
+<Tip title="Format data">
+
+ A
+[template](/vault/tutorials/kubernetes/kubernetes-sidecar#apply-a-template-to-the-injected-secrets)
+can be applied to structure this data to meet the needs of the application.
+
+</Tip>
+
+## Clean up
+
+Destroy the cluster.
+
+```shell-session
+$ gcloud container clusters delete learn-vault
+```
+
+The cluster is destroyed.
+
+## Next Steps
+
+You launched Vault in high-availability mode with a Helm chart. Learn more about
+the Vault Helm chart by reading the
+[documentation](/vault/docs/platform/k8s) or exploring the
+[project source code](https://github.com/hashicorp/vault-helm).
+
+GKE provides the autopilot and standard modes to manage the underlying
+infrastructure. Learn more about these modes by reading the [Autopilot
+mode](https://cloud.google.com/kubernetes-engine/docs/concepts/autopilot-overview).
+
+The pod you deployed used annotations to inject the secret into the file system.
+Explore how pods can retrieve secrets through the [Vault Injector service via
+annotations](/vault/tutorials/kubernetes/kubernetes-sidecar), or secrets [mounted on
+ephemeral volumes](/vault/tutorials/kubernetes/kubernetes-secret-store-driver).
+
+[google cloud account]: https://console.cloud.google.com
+[google cloud command-line interface (cli)]: https://cloud.google.com/sdk/docs/quickstart
+[google cloud cli]: https://cloud.google.com/sdk/docs/quickstart

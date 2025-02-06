@@ -29,6 +29,24 @@
     ]
   },
 
+
+   {
+      "title": "New stuff",
+      "routes": [
+         {
+            "title": "Overview",
+            "path": "run-on-kubernetes"
+         },
+         {
+            "title": "AWS EKS Anywhere",
+            "path": "run-on-kubernetes/aws-eks-anywhere"
+         },
+         {
+            "title": "AWS EKS Anywhere",
+            "path": "run-on-kubernetes/kubernetes-google-cloud-gke"
+          }
+      ]
+   },
   {
     "divider": true
   },

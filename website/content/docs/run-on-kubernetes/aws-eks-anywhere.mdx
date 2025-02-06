@@ -1,0 +1,740 @@
+---
+layout: docs
+page_title: Deploy Vault on Amazon EKS Anywhere
+description: >-
+  Learn how to deploy Vault on an Amazon EKS Anywhere cluster and enable Kubernetes auth method.
+---
+
+# Deploy Vault in Amazon Elastic Kubernetes Service (EKS) Anywhere
+
+This is a guide on deploying Vault in Amazon Elastic Kubernetes
+Service (EKS) Anywhere. 
+
+There are several layers in
+this stack and this tutorial will help you set up your infrastructure
+end-to-end.
+
+The bottom-most layer of the stack consists of Bare Metal with VMware's vSphere
+as the first layer of abstraction. Amazon EKS runs on top of that as the
+Kubernetes distribution with Vault running as the secrets manager for it. 
+
+## Prerequisites
+
+This tutorial requires the following prerequisites to follow this tutorial:
+
+- A copy of  `VMware-VCSA-all-<version>.iso` is in an s3 bucket in your AWS account.
+- Download the version of the [vSan Management SDK for
+Python](https://developer.broadcom.com/sdks/vsan-management-sdk-for-python/latest) matching the version ofthe server in the previous step.  Copy the **bindings >vsanmgmtObjects.py** and **samplecode>vsanapiutils.py** to the s3 bucket.
+- The Amazon S3 bucket should look simiar to following
+
+<CodeBlockConfig hideClipboard>
+
+```plain-text
+Object Store Root: 
+    |__ Bucket_Name 
+        |__ VMware-VCSA-all-7.0.3-18700403.iso
+        |__ vsanapiutils.py
+        |__ vsanmgmtObjects.py
+```
+
+</CodeBlockConfig>
+
+- AWS account with permissions for S3 and EKS services  
+   - [AWS CLI](https://aws.amazon.com/cli/)
+- **One of** the following:
+   - [Amazon EKS Anywhere cluster](https://anywhere.eks.amazonaws.com/docs/tasks/cluster/cluster-verify/) already deployed
+   - Access to VMware [vCenter](https://www.vmware.com/products/vsphere.html) cluster
+   - Equinix [bare metal](https://metal.equinix.com/), [Terraform](/terraform/) and [VMware account](https://customerconnect.vmware.com/login) with access to vCenter Server Appliance (VCSA) binary
+
+- Vault Enterprise license (if using Enterprise version of Vault)
+- Administrative machine prerequisites:
+   - [Docker 20.x.x](https://docs.docker.com/get-docker/)
+   - [Kubernetes command-line interface
+   (CLI)](https://kubernetes.io/docs/tasks/tools/install-kubectl/)  
+   - [Helm CLI](https://helm.sh/docs/helm/) installed 
+   - Mac OS (10.15) or Ubuntu (20.04.2 LTS)
+      - 4 CPU cores
+      - 16GB memory
+      - 30GB free disk space
+
+<Note>
+
+ If you already have a Amazon EKS Anywhere cluster, skip to [deploy Vault on
+Amazon EKS Anywhere section](#deploy-vault-on-amazon-eks-anywhere-section).
+
+</Note>
+
+<Note>
+
+ If you already have a VMware vCenter deployment with these
+ [prerequisites](https://anywhere.eks.amazonaws.com/docs/reference/vsphere/vsphere-prereq/),
+ skip to the [deploy Amazon EKS Anywhere on
+ vCenter](#deploy-amazon-eks-anywhere-on-vcenter) section.
+
+</Note>
+
+## Deploy Amazon EKS Anywhere on vCenter
+
+If you're using a self deployed vCenter cluster, refer the [Amazon EKS Anywhere
+create production
+cluster](https://anywhere.eks.amazonaws.com/docs/getting-started/production-environment/)
+guide.
+
+1. Login to vCenter and create resource pool under **Metal (Datacenter) > Metal1
+(Cluster) > EKSA** (New resource Pool).
+   ![vCenter dashboard](/img/vault/aws-eks-anywhere.png)
+
+1. Install `eksctl` and `eksctl-anywhere` with [homebrew](http://brew.sh/).
+
+   <Note>
+
+   Refer to the [Install EKS
+      Anywhere](https://anywhere.eks.amazonaws.com/docs/getting-started/install/)
+      documentation for more details.
+
+   </Note>
+
+   ```shell-session 
+   $ brew install aws/tap/eks-anywhere
+   ``` 
+
+1. Verify the installed version. 
+
+   ```shell-session 
+   $ eksctl anywhere version 
+   ```
+
+1. Generate a yaml file to deploy Amazon EKS Anywhere.
+
+   ```shell-session
+   $ CLUSTER_NAME=mgmt eksctl anywhere generate clusterconfig $CLUSTER_NAME \
+      --provider vsphere > eksa-mgmt-cluster.yaml
+   ```
+
+1. Edit the control plane configuration in `eksa-mgmt-cluster.yaml`.
+
+   <CodeBlockConfig filename="eksa-mgmt-cluster.yaml">
+
+   ```yaml 
+   …
+   …
+   controlPlaneConfiguration:
+     count: 2
+     endpoint:
+       host: "172.16.0.150" # required unique IP outside DHCP block
+     machineGroupRef:
+   …
+   …
+   ```
+
+   </CodeBlockConfig>
+
+   The CIDR block is defined, and the first 100 IPs are reserved for DHCP, so a
+   good one would be `172.16.0.150`.
+
+1. Install `govc` CLI from the [`vmware/govmomi`
+repository](https://github.com/vmware/govmomi/tree/master/govc).
+
+1. Set the `GOVC_INSECURE` environment variable value to 1 to disable certificate
+verification.
+
+   ```shell-session 
+   $ export GOVC_INSECURE=1
+   ```
+
+1. Set the `GOVC_URL` environment variable to the URL of ESXi or vCenter instance
+to connect to.
+
+   ```shell-session 
+   $ export GOVC_URL=145.40.103.170
+   ```
+
+1. Set the `GOVC_USERNAME` environment variable to the usename to use if not
+specified in GOVC_URL.
+
+   ```shell-session 
+   $ export GOVC_USERNAME="Administrator@vsphere.local"
+   ```
+
+1. Set the `GOVC_PASSWORD` environment variable value to the password to use if
+not specified in GOVC_URL.
+
+   ```shell-session 
+   $ export GOVC_PASSWORD="<VCENTER_PASSWORD>"
+   ```
+
+1. Use `govc` CLI to retrieve info about vCenter cluster. 
+
+   ```shell-session 
+   $ govc datacenter.info
+
+   Name:                Metal
+     Path:              /Metal
+     Hosts:             3
+     Clusters:          1
+     Virtual Machines:  11
+     Networks:          2
+     Datastores:        4
+   ```
+
+1. Use the private network for VMs in configuration: **vCenter console > Network**.
+
+1. Generate thumbprint for vSphere. This is required when the connection is not
+insecure.
+
+   ```shell-session 
+   $ govc about.cert -thumbprint -k
+
+   145.40.103.170 61:B3:02:85:48:3F:A7:44:0E:3B:A0:AF:E8:38:11:62:79:16:E9:21
+   ```
+
+1. Edit the vSphere Data center configuration with the information gathered from
+   the previous step.
+
+   <CodeBlockConfig filename="eksa-mgmt-cluster.yaml">
+
+   ```yaml 
+   …
+   …
+   apiVersion: anywhere.eks.amazonaws.com/v1alpha1
+   kind: VSphereDatacenterConfig
+   metadata:
+     name: eks-mgmt
+   spec:
+     datacenter: "Metal" #required 
+     insecure: false #setting it to true might throw error
+     network: "VM Private Net 1" #required 
+     server: "145.40.103.170" #required - vSphere server
+     thumbprint: "61:B3:02:85:48:3F:A7:44:0E:3B:A0:AF:E8:38:11:62:79:16:E9:21"
+   …
+   …
+   ```
+
+   </CodeBlockConfig>
+   
+   <Warning>
+
+   There are some issues when setting the connection as insecure (as of Feb 2022), the Amazon EKS Anywhere team is working on resolving it.
+
+   </Warning>
+
+1. Edit vSphere machine configs to use the appropriate datastore and resource
+pool.
+
+   <CodeBlockConfig filename="eksa-mgmt-cluster.yaml">
+
+   ```yaml 
+   …
+   …
+   kind: VSphereMachineConfig
+   metadata:
+     name: mgmt-cp
+   spec:
+     datastore: vsanDatastore #required 
+   …
+   …
+     resourcePool: /Metal/host/Metal-1/Resources/EKSA #required
+   …
+   …
+   kind: VSphereMachineConfig
+   metadata:
+     name: mgmt
+   spec:
+     datastore: vsanDatastore #required 
+   …
+   …
+     resourcePool: /Metal/host/Metal-1/Resources/EKSA #required
+   …
+   …
+   kind: VSphereMachineConfig
+   metadata:
+     name: mgmt-etcd
+   spec:
+     datastore: vsanDatastore #required 
+   …
+   …
+     resourcePool: /Metal/host/Metal-1/Resources/EKSA #required
+   …
+   …
+   ```
+
+   </CodeBlockConfig>
+
+1. Set the `EKSA_VSPHERE_USERNAME` environment variable.
+
+   ```shell-session 
+   $ export EKSA_VSPHERE_USERNAME='Administrator@vsphere.local'
+   ```
+
+1. Set the `EKSA_VSPHERE_PASSWORD` environment variable.
+
+   ```shell-session
+   $ export EKSA_VSPHERE_PASSWORD='<VCENTER_PASSWORD>'
+   ```
+
+1. Set the `EKSA_LICENSE` environment variable. This is **not** required if you
+already have one.
+
+   ```shell-session
+   $ export EKSA_LICENSE='my-license-here' 
+   ```
+
+1. Deploy Amazon EKS Anywhere.
+
+   ```shell-session 
+   $ eksctl anywhere create cluster -f eksa-mgmt-cluster.yaml
+   ```
+   
+   ![Output](/img/vault/aws-eks-anywhere-output.png)
+
+1. Store the `kubeconfig` file. You need to store `kubeconfig` in bastion or use
+VPN from the [optional
+step](#setup-vpn-to-connect-to-vcenter-cluster-via-cli-optioal).
+
+   ```shell-session 
+   $ export KUBECONFIG=${PWD}/${CLUSTER_NAME}/${CLUSTER_NAME}-Amazon EKS Anywhere-cluster.kubeconfig
+   ```
+   
+1. Display the nodes of the cluster.
+
+   ```shell-session 
+   $ kubectl get nodes
+
+   NAME           STATUS   ROLES                  AGE   VERSION
+   172.16.0.134   Ready    <none>                 16d   v1.21.6
+   172.16.0.53    Ready    <none>                 16d   v1.21.6
+   172.16.0.63    Ready    control-plane,master   16d   v1.21.6
+   172.16.0.97    Ready    control-plane,master   16d   v1.21.6
+   ```
+
+## Deploy Vault on Amazon EKS Anywhere
+
+Vault installation on Amazon EKS Anywhere is same as any kubernetes
+installation. For a step-by-step intruction, refer to the [Vault on Kubernetes
+Deployment Guide](/vault/tutorials/kubernetes/kubernetes-raft-deployment-guide).
+
+1. Create a `vault` directory and change the working directory to the `vault`
+directory.
+
+   ```shell-session 
+   $ mkdir vault && cd vault
+   ```
+
+1. Create a configuration file to configure Vault installation.
+
+   ```shell-session 
+   $ vi config.yaml
+   server:
+     standalone:
+       enabled: true
+       config: |
+         ui = true
+
+         listener "tcp" {
+           tls_disable = 1
+           address = "[::]:8200"
+           cluster_address = "[::]:8201"
+         }
+         storage "file" {
+           path = "/vault/data"
+         }
+     service:
+       enabled: true
+   ui:
+     enabled: true
+     serviceType: NodePort
+   ```
+
+1. Create a new namespace for the Vault installation.
+
+   ```shell-session 
+   $ kubectl create ns vault
+   ```
+   
+1. To access the Vault Helm chart, add the Hashicorp Helm repository.
+
+   ```shell-session 
+   $ helm repo add hashicorp https://helm.releases.hashicorp.com
+   ```
+
+1. Install the Vault helm chart. 
+
+   ```shell-session 
+   $ helm install vault hashicorp/vault --namespace vault -f config.yaml
+   ```
+
+1. Initialize and unseal Vault.
+
+   ```shell-session 
+   $ kubectl exec --stdin=true --tty=true vault-0 -- vault operator init
+   
+   Unseal Key 1: MBFSDepD9E6whREc6Dj+k3pMaKJ6cCnCUWcySJQymObb
+   Unseal Key 2: zQj4v22k9ixegS+94HJwmIaWLBL3nZHe1i+b/wHz25fr
+   Unseal Key 3: 7dbPPeeGGW3SmeBFFo04peCKkXFuuyKc8b2DuntA4VU5
+   Unseal Key 4: tLt+ME7Z7hYUATfWnuQdfCEgnKA2L173dptAwfmenCdf
+   Unseal Key 5: vYt9bxLr0+OzJ8m7c7cNMFj7nvdLljj0xWRbpLezFAI9
+
+   Initial Root Token: s.zJNwZlRrqISjyBHFMiEca6GF
+   ```
+
+   The output displays the key shares and initial root key generated.
+   
+   <Note>
+
+   These keys are critical to both the security and the operation 
+      of Vault and should be treated as per your company's sensitive data policy.
+
+   </Note>
+
+1. Unseal the Vault server using the unseal keys until the key threshold is met.
+
+   ```shell-session 
+   $ kubectl exec --stdin=true --tty=true vault-0 -- vault operator unseal 
+   Unseal Key (will be hidden):
+   ```
+   
+   When prompted, enter the Unseal Key 1 value.
+
+   ```shell-session 
+   $ kubectl exec --stdin=true --tty=true vault-0 -- vault operator unseal 
+   Unseal Key (will be hidden):
+   ```
+   
+   When prompted, enter the Unseal Key 2 value.
+   
+   ```shell-session 
+   $ kubectl exec --stdin=true --tty=true vault-0 -- vault operator unseal 
+   Unseal Key (will be hidden):
+   ```
+   
+   When prompted, enter the Unseal Key 3 value.
+
+1. Validate that Vault is up and running. 
+
+   ```shell-session 
+   $ kubectl get pods --selector='app.kubernetes.io/name=vault'
+
+   NAME                                    READY   STATUS    RESTARTS   AGE
+   vault-0                                 1/1     Running   0          1m49s
+   vault-1                                 1/1     Running   0          1m49s
+   ```
+
+1. Display all Vault services.
+
+   ```shell-session 
+   $ kubectl get services -n vault --selector='app.kubernetes.io/name=vault-ui'
+
+   NAME       TYPE       CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
+   vault-ui   NodePort   10.97.113.241   <none>        8200:30096/TCP   16d
+   ```
+
+1. Display the nodes of the cluster.
+
+   ```shell-session 
+   $ kubectl get nodes
+
+   NAME           STATUS   ROLES                  AGE   VERSION
+   172.16.0.134   Ready    <none>                 16d   v1.21.6
+   172.16.0.53    Ready    <none>                 16d   v1.21.6
+   172.16.0.63    Ready    control-plane,master   16d   v1.21.6
+   172.16.0.97    Ready    control-plane,master   16d   v1.21.6
+   ```
+
+1. Install the HashiCorp tap, a repository of all our Homebrew packages.
+
+   ```shell-session 
+   $ brew tap hashicorp/tap
+   ```
+
+1. Install Vault with hashicorp/tap/vault.
+
+   ```shell-session 
+   $ brew install hashicorp/tap/vault
+   ```
+
+1. Set the `VAULT_ADDR` environment variable. Since we exposed Vault using
+`NodePort`, Vault will be available at `172.16.0.97:8200`. Access it from your
+bastion host or VPN from the [optional
+step](#setup-vpn-to-connect-to-vcenter-cluster-via-cli-optioal).
+
+   ```shell-session 
+   $ export VAULT_ADDR='http://172.16.0.97:30096'
+   ```
+
+1. Set the `VAULT_TOKEN` environment variable value to the initial root token
+value generated during the Vault initialization.
+
+   ```shell-session
+   $ export VAULT_TOKEN="s.zJNwZlRrqISjyBHFMiEca6GF"
+   ```
+
+1. Enable the kv secrets engine.
+
+   ```shell-session 
+   $ vault secrets enable -path=kv kv
+
+   Success! Enabled the kv secrets engine at: kv/
+   ```
+
+ 1. Store some test data at `kv/hello`.
+ 
+   ```shell-session 
+   $ vault kv put kv/hello target=world
+
+   Key                Value
+   ---                -----
+   created_time       2022-03-21T21:23:00.540998543Z
+   custom_metadata    <nil>
+   deletion_time      n/a
+   destroyed          false
+   version            1
+   ```
+
+1. Read the stored data to verify. 
+
+   ```shell-session 
+   $ vault kv get kv/hello
+
+   ======= Metadata =======
+   Key                Value
+   ---                -----
+   created_time       2022-03-21T21:23:00.540998543Z
+   custom_metadata    <nil>
+   deletion_time      n/a
+   destroyed          false
+   version            1
+
+   ===== Data =====
+   Key       Value
+   ---       -----
+   target    world
+   ```
+
+### Configure Kubernetes auth method
+
+<Note>
+
+ Refer to the [Vault Agent with
+Kubernetes](/vault/tutorials/kubernetes/agent-kubernetes) tutorial for more details.
+
+</Note>
+
+1. Retrieve the additional configuration by cloning the
+`hashicorp/learn-vault-agent` repository from GitHub.
+
+   ```shell-session 
+   $ git clone https://github.com/hashicorp-education/learn-vault-agent
+   ```
+
+1. Change the working directory to `learn-vault-agent/vault-agent-k8s-demo`.
+
+   ```shell-session 
+   $ cd learn-vault-agent/vault-agent-k8s-demo
+   ```
+
+1. Update the vault-auth service account.
+
+   ```shell-session 
+   $ kubectl apply --filename vault-auth-service-account.yaml
+   ```
+
+1. Create a read-only policy, `myapp-kv-ro` in Vault.
+
+   ```shell-session
+   $ vault policy write myapp-kv-ro - <<EOF
+   path "secret/data/myapp/*" {
+       capabilities = ["read", "list"]
+   }
+   EOF
+   ```
+
+1. Create some test data at the `secret/myapp` path.
+
+   ```shell-session
+   $ vault kv put secret/myapp/config \
+         username='appuser' \
+         password='suP3rsec(et!' \
+         ttl='30s'
+   ```
+
+1. Set the `K8S_HOST` environment variable value to minikube IP address.
+
+   ```shell-session
+   $ export K8S_HOST=$(kubectl config view --raw --minify --flatten \
+       --output 'jsonpath={.clusters[].cluster.server}')
+   ```
+
+1. Enable the Kubernetes auth method at the default path.
+
+   ```shell-session
+   $ vault auth enable kubernetes
+   
+   Success! Enabled kubernetes auth method at: kubernetes/
+   ```
+
+1. Configure the kubernetes auth method.
+
+   <Note title="Version compatibility">
+
+   Starting in v1.24, Kubernetes will no longer
+      auto-generate the [Secret
+      object](https://kubernetes.io/docs/concepts/configuration/secret/#service-account-token-secrets).
+      So, for the best compatibility with recent Kubernetes versions, ensure you
+      are using Vault v1.9.3 or greater.
+
+   </Note>
+
+   ```shell-session
+   $ vault write auth/kubernetes/config \
+        kubernetes_host="$K8S_HOST"
+   ```
+
+   **Output:** 
+   
+   <CodeBlockConfig hideClipboard>
+   
+   ```plaintext
+   Success! Data written to: auth/kubernetes/config
+   ```
+   
+   </CodeBlockConfig>
+
+1. Create a role named, `example`, that maps the Kubernetes Service Account to
+   Vault policies and default token TTL.
+
+   ```shell-session
+   $ vault write auth/kubernetes/role/example \
+        bound_service_account_names=vault-auth \
+        bound_service_account_namespaces=default \
+        token_policies=myapp-kv-ro \
+        ttl=24h
+   ```
+
+   **Output:** 
+   
+   <CodeBlockConfig hideClipboard>
+   
+   ```plaintext
+   Success! Data written to: auth/kubernetes/role/example
+   ```
+   
+   </CodeBlockConfig>
+
+### Verify the Kubernetes auth method configuration
+
+1. Create a variable named `EXTERNAL_VAULT_ADDR`.
+
+   ```shell-session
+   $ export EXTERNAL_VAULT_ADDR="172.16.0.97:30096"
+   ```
+   
+1. Define a Pod with a container.
+
+   ```shell-session
+   $ cat > devwebapp.yaml <<EOF
+   apiVersion: v1
+   kind: Pod
+   metadata:
+     name: devwebapp
+     labels:
+       app: devwebapp
+   spec:
+     serviceAccountName: vault-auth
+     containers:
+       - name: devwebapp
+         image: burtlo/devwebapp-ruby:k8s
+         env:
+           - name: VAULT_ADDR
+             value: "http://$EXTERNAL_VAULT_ADDR:8200"
+   EOF
+   ```
+
+   The Pod is named `devwebapp` and runs with the `vault-auth` service account.
+
+1. Create the `devwebapp` pod in the `default` namespace
+
+   ```shell-session
+   $ kubectl apply --filename devwebapp.yaml --namespace default
+   ```
+
+1. Display all the pods in the default namespace.
+
+   ```shell-session
+   $ kubectl get pods
+   
+   NAME        READY   STATUS    RESTARTS   AGE
+   devwebapp   1/1     Running   0          77s
+   ```
+
+   Wait until the `devwebapp` pod is running and ready (`1/1`).
+
+1. Start an interactive shell session on the `devwebapp` pod.
+
+   ```shell-session
+   $ kubectl exec --stdin=true --tty=true devwebapp -- /bin/sh
+   #
+   ```
+
+   Your system prompt is replaced with a new prompt `#`.
+
+1. Set `KUBE_TOKEN` to the service account token.
+
+   ```shell-session
+   $ export KUBE_TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+   ```
+
+1. Authenticate with Vault through the `example` role with the `KUBE_TOKEN`.
+
+   ```shell-session
+   $ curl --request POST \
+       --data '{"jwt": "'"$KUBE_TOKEN"'", "role": "example"}' \
+       $VAULT_ADDR/v1/auth/kubernetes/login
+   ```
+   
+   **Example output:** 
+   
+   <CodeBlockConfig hideClipboard>
+   
+   ```json 
+   {
+     "request_id": "2febc920-6feb-182a-19cd-c95c0cd70bf7",
+     "lease_id": "",
+     "renewable": false,
+     "lease_duration": 0,
+     "data": null,
+     "wrap_info": null,
+     "warnings": null,
+     "auth": {
+       "client_token": "s.ZOZk5OkIW1rbdMEqGmwJW7vj",
+       "accessor": "yPwZcQG6LP721LryKzkgA4eA",
+       "policies": [
+         "default",
+         "myapp-kv-ro"
+       ],
+       "token_policies": [
+         "default",
+         "myapp-kv-ro"
+       ],
+       "metadata": {
+         "role": "example",
+         "service_account_name": "vault-auth",
+         "service_account_namespace": "default",
+         "service_account_secret_name": "",
+         "service_account_uid": "649f0652-42ef-44ba-a416-76862bc1b6c3"
+       },
+       "lease_duration": 86400,
+       "renewable": true,
+       "entity_id": "3f684285-bc1c-6b9e-e580-4ce310c956b2",
+       "token_type": "service",
+       "orphan": true
+     }
+   }
+   ```
+   
+   </CodeBlockConfig>
+
+## Help and reference
+
+- [Injecting Secrets into Kubernetes Pods via Vault Agent Containers](/vault/tutorials/kubernetes/kubernetes-sidecar)
+- [Vault Installation to Amazon Elastic Kubernetes Service via Helm](/vault/tutorials/kubernetes/kubernetes-amazon-eks)
+- [Vault documentation](/vault/docs/platform/k8s)
