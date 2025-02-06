@@ -963,7 +963,6 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 		return nil, err
 	}
 
-	// Set up conf to pass in plugin_name
 	conf := make(map[string]string)
 	var runningSha string
 	factory, ok := c.credentialBackends[t]
@@ -991,6 +990,7 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 		entSetExternalPluginConfig(plug, conf)
 	}
 
+	// Set up conf to pass in plugin_name
 	for k, v := range entry.Options {
 		conf[k] = v
 	}

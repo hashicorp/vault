@@ -1692,7 +1692,6 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		return nil, err
 	}
 
-	// Set up conf to pass in plugin_name
 	conf := make(map[string]string)
 	var runningSha string
 	factory, ok := c.logicalBackends[t]
@@ -1720,6 +1719,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		entSetExternalPluginConfig(plug, conf)
 	}
 
+	// Set up conf to pass in plugin_name
 	for k, v := range entry.Options {
 		conf[k] = v
 	}
