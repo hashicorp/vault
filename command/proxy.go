@@ -865,10 +865,11 @@ func (c *ProxyCommand) applyConfigOverrides(f *FlagSets, config *proxyConfig.Con
 	})
 
 	c.setStringFlag(f, config.Vault.Address, &StringVar{
-		Name:    flagNameAddress,
-		Target:  &c.flagAddress,
-		Default: "https://127.0.0.1:8200",
-		EnvVar:  api.EnvVaultAddress,
+		Name:        flagNameAddress,
+		Target:      &c.flagAddress,
+		Default:     "https://127.0.0.1:8200",
+		EnvVar:      api.EnvVaultAddress,
+		Normalizers: []func(string) string{configutil.NormalizeAddr},
 	})
 	config.Vault.Address = c.flagAddress
 	c.setStringFlag(f, config.Vault.CACert, &StringVar{
