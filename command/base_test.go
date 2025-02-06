@@ -115,6 +115,8 @@ func TestClient_HCPConfiguration(t *testing.T) {
 	}
 }
 
+// Test_FlagSet_StringVar_Normalizers verifies that the normalizer callbacks
+// works as expected.
 func Test_FlagSet_StringVar_Normalizers(t *testing.T) {
 	appendA := func(in string) string { return in + "a" }
 	prependB := func(in string) string { return "b" + in }

@@ -2197,18 +2197,18 @@ func TestProxy_Config_ReloadTls(t *testing.T) {
 	}
 }
 
-// TestProxy_Config_Normalization verifies that the vault address is correctly
+// TestProxy_Config_AddrConformance verifies that the vault address is correctly
 // normalized to conform to RFC-5942 §4 when configured by a config file,
 // environment variables, or CLI flags.
 // See: https://rfc-editor.org/rfc/rfc5952.html
-func TestProxy_Config_Normalization(t *testing.T) {
+func TestProxy_Config_AddrConformance(t *testing.T) {
 	for name, test := range map[string]struct {
 		args     []string
 		envVars  map[string]string
 		cfg      string
 		expected *proxyConfig.Config
 	}{
-		"ipv4": {
+		"ipv4 config": {
 			cfg: `
 vault {
   address = "https://127.0.0.1:8200"
@@ -2282,19 +2282,29 @@ vault {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
+			// In CI our tests are run with VAULT_ADDR=, which will break our tests
+			// because it'll default to an unset address. Ensure that's cleared out
+			// of the environment.
+			t.Cleanup(func() {
+				os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+			})
+			os.Unsetenv(api.EnvVaultAddress)
 			for k, v := range test.envVars {
 				t.Setenv(k, v)
 			}
-			configFile := populateTempFile(t, "proxy-config.hcl", test.cfg)
+
+			configFile := populateTempFile(t, "proxy-"+strings.ReplaceAll(name, " ", "-"), test.cfg)
 			cfg, err := proxyConfig.LoadConfigFile(configFile.Name())
 			require.NoError(t, err)
+			require.NotEmptyf(t, cfg.Vault.Address, "proxy config is missing address: %+v", cfg.Vault)
 
 			cmd := &ProxyCommand{BaseCommand: &BaseCommand{}}
 			f := cmd.Flags()
-			require.NoError(t, f.Parse(test.args))
+			args := append([]string{}, test.args...)
+			require.NoError(t, f.Parse(args))
 
 			cmd.applyConfigOverrides(f, cfg)
-			require.Equal(t, test.expected.Vault.Address, cfg.Vault.Address)
+			require.Equalf(t, test.expected.Vault.Address, cfg.Vault.Address, "proxy config is missing address: config: %+v, flags: %+v", cfg.Vault, f)
 		})
 	}
 }

@@ -471,18 +471,27 @@ type StringVar struct {
 	Completion  complete.Predictor
 }
 
+func (s *StringVar) SetTarget(val string) {
+	if s == nil {
+		return
+	}
+
+	for _, f := range s.Normalizers {
+		val = f(val)
+	}
+
+	*s.Target = val
+}
+
 func (f *FlagSet) StringVar(i *StringVar) {
 	if i == nil {
 		return
 	}
 
-	value := i.Default
-	if v, exist := os.LookupEnv(i.EnvVar); exist {
-		value = v
-	}
-
-	for _, f := range i.Normalizers {
-		value = f(value)
+	val := i.Default
+	envVar, ok := os.LookupEnv(i.EnvVar)
+	if ok {
+		val = envVar
 	}
 
 	f.VarFlag(&VarFlag{
@@ -491,27 +500,47 @@ func (f *FlagSet) StringVar(i *StringVar) {
 		Usage:      i.Usage,
 		Default:    i.Default,
 		EnvVar:     i.EnvVar,
-		Value:      newStringValue(value, i.Target, i.Hidden),
+		Value:      newStringValue(val, i.Target, i.Hidden, i.Normalizers),
 		Completion: i.Completion,
 	})
 }
 
 type stringValue struct {
-	hidden bool
-	target *string
+	hidden      bool
+	target      *string
+	normalizers []func(string) string
 }
 
-func newStringValue(def string, target *string, hidden bool) *stringValue {
-	*target = def
-	return &stringValue{
-		hidden: hidden,
-		target: target,
+func newStringValue(val string, target *string, hidden bool, normalizers []func(string) string) *stringValue {
+	sv := &stringValue{
+		hidden:      hidden,
+		target:      target,
+		normalizers: append(normalizers, strings.TrimSpace),
 	}
+	sv.set(val)
+
+	return sv
 }
 
 func (s *stringValue) Set(val string) error {
-	*s.target = val
+	s.set(val)
 	return nil
+}
+
+func (s *stringValue) set(val string) {
+	*s.target = s.normalize(val)
+}
+
+func (s *stringValue) normalize(in string) string {
+	if s == nil || len(s.normalizers) < 1 {
+		return in
+	}
+
+	for _, f := range s.normalizers {
+		in = f(in)
+	}
+
+	return in
 }
 
 func (s *stringValue) Get() interface{} { return *s.target }
@@ -662,44 +691,39 @@ func appendDurationSuffix(s string) string {
 
 // -- StringSliceVar and stringSliceValue
 type StringSliceVar struct {
-	Name        string
-	Aliases     []string
-	Usage       string
-	Default     []string
-	Hidden      bool
-	EnvVar      string
-	Target      *[]string
-	Completion  complete.Predictor
-	Normalizers []func(string) string
+	Name       string
+	Aliases    []string
+	Usage      string
+	Default    []string
+	Hidden     bool
+	EnvVar     string
+	Target     *[]string
+	Completion complete.Predictor
 }
 
-func (f *FlagSet) StringSliceVar(in *StringSliceVar) {
-	initial := in.Default
-	if v, exist := os.LookupEnv(in.EnvVar); exist {
+func (f *FlagSet) StringSliceVar(i *StringSliceVar) {
+	initial := i.Default
+	if v, exist := os.LookupEnv(i.EnvVar); exist {
 		parts := strings.Split(v, ",")
 		for i := range parts {
-			part := strings.TrimSpace(parts[i])
-			for _, f := range in.Normalizers {
-				part = f(part)
-			}
-			parts[i] = part
+			parts[i] = strings.TrimSpace(parts[i])
 		}
 		initial = parts
 	}
 
 	def := ""
-	if in.Default != nil {
-		def = strings.Join(in.Default, ",")
+	if i.Default != nil {
+		def = strings.Join(i.Default, ",")
 	}
 
 	f.VarFlag(&VarFlag{
-		Name:       in.Name,
-		Aliases:    in.Aliases,
-		Usage:      in.Usage,
+		Name:       i.Name,
+		Aliases:    i.Aliases,
+		Usage:      i.Usage,
 		Default:    def,
-		EnvVar:     in.EnvVar,
-		Value:      newStringSliceValue(initial, in.Target, in.Hidden),
-		Completion: in.Completion,
+		EnvVar:     i.EnvVar,
+		Value:      newStringSliceValue(initial, i.Target, i.Hidden),
+		Completion: i.Completion,
 	})
 }
 
