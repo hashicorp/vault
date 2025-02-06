@@ -339,6 +339,9 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 	return b.pathIssueSignCert(ctx, req, data, entry, true, true)
 }
 
+// pathIssueSignCert is called by issueSignEmptyCert (to validate an issuer) in which case it is not handling the
+// request, only serving to provide useful (error) information to a request
+// pathIssueSignCert is also the handler for issuing and signing endpoints, in which case it serves requests entirely
 func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, data *framework.FieldData, role *issuing.RoleEntry, useCSR, useCSRValues bool) (*logical.Response, error) {
 	// Error out early if incompatible fields set:
 	certMetadata, metadataInRequest := data.GetOk("cert_metadata")
@@ -638,7 +641,7 @@ This path requires a CSR; if you want Vault to generate a private key
 for you, use the issue path instead.
 `
 
-func (b *backend) pathIssueSignEmptyCert(ctx context.Context, req *logical.Request, issuerName string) error {
+func (b *backend) issueSignEmptyCert(ctx context.Context, req *logical.Request, issuerName string) error {
 	emptyRole := &issuing.RoleEntry{
 		AllowLocalhost:    true,
 		AllowedBaseDomain: "*",
@@ -660,7 +663,7 @@ func (b *backend) pathIssueSignEmptyCert(ctx context.Context, req *logical.Reque
 	schema = addNonCACommonFields(addIssueAndSignCommonFields(schema))
 	emptyData := &framework.FieldData{
 		Raw: map[string]interface{}{
-			"ttl": "30s",
+			"ttl": "300s",
 		},
 		Schema: schema,
 	}

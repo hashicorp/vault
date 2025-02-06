@@ -719,21 +719,23 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		// Building the chain will write the issuer to disk; no need to do it
 		// twice.
 		modified = false
-		err := sc.rebuildIssuersChains(issuer)
+		err = sc.rebuildIssuersChains(issuer)
 		if err != nil {
 			return nil, err
 		}
 
-		// TODO: Should this be in rebuild issuer chain (?)
-		err = b.pathIssueSignEmptyCert(ctx, req, issuer.Name)
-		if err != nil {
-			return nil, err
+		if issuer.Usage.HasUsage(issuing.IssuanceUsage) {
+			// Issuer has been saved by building the chain above
+			err = b.issueSignEmptyCert(ctx, req, issuer.Name)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 	}
 
 	if modified {
-		err := sc.writeIssuer(issuer)
+		err = sc.writeIssuer(issuer)
 		if err != nil {
 			return nil, err
 		}
