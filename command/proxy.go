@@ -943,13 +943,13 @@ func (c *ProxyCommand) setStringFlag(f *FlagSets, configVal string, fVar *String
 		// Don't do anything as the flag is already set from the command line
 	case flagEnvSet:
 		// Use value from env var
-		*fVar.Target = flagEnvValue
+		fVar.SetTarget(flagEnvValue)
 	case configVal != "":
 		// Use value from config
-		*fVar.Target = configVal
+		fVar.SetTarget(configVal)
 	default:
 		// Use the default value
-		*fVar.Target = fVar.Default
+		fVar.SetTarget(fVar.Default)
 	}
 }
 

@@ -266,7 +266,6 @@ func (c *ServerCommand) Flags() *FlagSets {
 			"localhost.localdomain, and the host name as alternate DNS names, " +
 			"and 127.0.0.1 as an alternate IP address. This flag can be specified " +
 			"multiple times to specify multiple SANs.",
-		Normalizers: []func(string) string{configutil.NormalizeAddr},
 	})
 
 	f.StringVar(&StringVar{
