@@ -18,7 +18,7 @@
   <div>
     {{@model.mountPath}}
     <div>
-      <span class="tag">{{@model.mountType}}</span>
+      <Hds::Badge @text={{@model.mountType}} class="has-right-margin-8" />
       <code class="has-text-grey is-size-8">{{@model.mountAccessor}}</code>
     </div>
   </div>
