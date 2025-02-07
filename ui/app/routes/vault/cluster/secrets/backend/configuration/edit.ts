@@ -22,6 +22,7 @@ import type VersionService from 'vault/services/version';
 const MOUNT_CONFIG_MODEL_NAMES: Record<string, string[]> = {
   aws: ['aws/root-config', 'aws/lease-config'],
   azure: ['azure/config'],
+  gcp: ['gcp/config'],
   ssh: ['ssh/ca-config'],
 };
 

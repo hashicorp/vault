@@ -1467,7 +1467,18 @@ func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, log
 	logicalBackends[mountTypeIdentity] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
 		identityLogger := logger.Named("identity")
 		c.AddLogger(identityLogger)
-		return NewIdentityStore(ctx, c, config, identityLogger)
+
+		idStore, err := NewIdentityStore(ctx, c, config, identityLogger)
+		if err != nil {
+			return nil, fmt.Errorf("error creating identity store: %w", err)
+		}
+
+		// Wire up the idStoreBackend to support the activation flag
+		if c.systemBackend != nil {
+			c.systemBackend.idStoreBackend = idStore.Backend
+		}
+
+		return idStore, nil
 	}
 
 	c.logicalBackends = logicalBackends
@@ -2471,7 +2482,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	}
 
 	// Run setup-like functions
-	if err := runUnsealSetupFunctions(ctx, buildUnsealSetupFunctionSlice(c)); err != nil {
+	if err := runUnsealSetupFunctions(ctx, buildUnsealSetupFunctionSlice(c, true)); err != nil {
 		return err
 	}
 
@@ -2572,7 +2583,7 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 // buildUnsealSetupFunctionSlice returns a slice of functions, tailored for this
 // Core's replication state, that can be passed to the runUnsealSetupFunctions
 // function.
-func buildUnsealSetupFunctionSlice(c *Core) []func(context.Context) error {
+func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Context) error {
 	// setupFunctions is a slice of functions that need to be called in order,
 	// that if any return an error, processing should immediately cease.
 	setupFunctions := []func(context.Context) error{
@@ -2628,7 +2639,12 @@ func buildUnsealSetupFunctionSlice(c *Core) []func(context.Context) error {
 		setupFunctions = append(setupFunctions, c.loadAudits)
 		setupFunctions = append(setupFunctions, c.setupAuditedHeadersConfig)
 		setupFunctions = append(setupFunctions, c.setupAudits)
-		setupFunctions = append(setupFunctions, c.loadIdentityStoreArtifacts)
+		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
+			if c.identityStore == nil {
+				return nil
+			}
+			return c.identityStore.loadArtifacts(ctx, isActive)
+		})
 		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
 			return loadPolicyMFAConfigs(ctx, c)
 		})
@@ -3627,6 +3643,15 @@ func (c *Core) SanitizedConfig() map[string]interface{} {
 func (c *Core) LogFormat() string {
 	conf := c.rawConfig.Load()
 	return conf.(*server.Config).LogFormat
+}
+
+// administrativeNamespacePath returns the configured administrative namespace path.
+func (c *Core) administrativeNamespacePath() string {
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		return ""
+	}
+	return conf.(*server.Config).AdministrativeNamespacePath
 }
 
 // LogLevel returns the log level provided by level provided by config, CLI flag, or env

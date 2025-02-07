@@ -23,9 +23,11 @@ import (
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/timeutil"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
 	"github.com/mitchellh/mapstructure"
@@ -1329,7 +1331,7 @@ func TestActivityLog_loadCurrentClientSegment(t *testing.T) {
 	for _, tc := range testCases {
 		data, err := proto.Marshal(tc.entities)
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		WriteToStorage(t, core, ActivityLogPrefix+tc.path, data)
 	}
@@ -1442,7 +1444,7 @@ func TestActivityLog_loadPriorEntitySegment(t *testing.T) {
 	for _, tc := range testCases {
 		data, err := proto.Marshal(tc.entities)
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		WriteToStorage(t, core, ActivityLogPrefix+tc.path, data)
 	}
@@ -1488,7 +1490,7 @@ func TestActivityLog_loadTokenCount(t *testing.T) {
 
 	data, err := proto.Marshal(tokenCount)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	testCases := []struct {
@@ -1622,7 +1624,7 @@ func setupActivityRecordsInStorage(t *testing.T, base time.Time, includeEntities
 				Clients: []*activity.EntityRecord{entityRecord},
 			})
 			if err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 			if i == 0 {
 				WriteToStorage(t, core, ActivityLogPrefix+"entity/"+fmt.Sprint(monthsAgo.Unix())+"/0", entityData)
@@ -1648,7 +1650,7 @@ func setupActivityRecordsInStorage(t *testing.T, base time.Time, includeEntities
 
 		tokenData, err := proto.Marshal(tokenCount)
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 
 		WriteToStorage(t, core, ActivityLogPrefix+"directtokens/"+fmt.Sprint(base.Unix())+"/0", tokenData)
@@ -1922,8 +1924,19 @@ func (f *fakeResponseWriter) WriteHeader(statusCode int) {
 // their parents.
 func TestActivityLog_IncludeNamespace(t *testing.T) {
 	root := namespace.RootNamespace
-	a := &ActivityLog{}
+	coreConfig := &CoreConfig{
+		RawConfig: &server.Config{
+			SharedConfig: &configutil.SharedConfig{AdministrativeNamespacePath: "admin/"},
+		},
+		AdministrativeNamespacePath: "admin/",
+	}
+	core, _, _ := TestCoreUnsealedWithConfig(t, coreConfig)
+	a := core.activityLog
 
+	adminNs := &namespace.Namespace{
+		ID:   "adminID",
+		Path: "admin/",
+	}
 	nsA := &namespace.Namespace{
 		ID:   "aaaaa",
 		Path: "a/",
@@ -1936,13 +1949,15 @@ func TestActivityLog_IncludeNamespace(t *testing.T) {
 		ID:   "bbbbb",
 		Path: "a/b/",
 	}
-
 	testCases := []struct {
 		QueryNS  *namespace.Namespace
 		RecordNS *namespace.Namespace
 		Expected bool
 	}{
+		// deleted namespace records must be included in root and admin namespaces
 		{root, nil, true},
+		{adminNs, nil, true},
+
 		{root, root, true},
 		{root, nsA, true},
 		{root, nsAB, true},
@@ -1958,7 +1973,6 @@ func TestActivityLog_IncludeNamespace(t *testing.T) {
 		{nsC, nsA, false},
 		{nsC, nsAB, false},
 	}
-
 	for _, tc := range testCases {
 		if a.includeInResponse(tc.QueryNS, tc.RecordNS) != tc.Expected {
 			t.Errorf("bad response for query %v record %v, expected %v",
@@ -4064,7 +4078,7 @@ func TestActivityLog_partialMonthClientCountWithMultipleMountPaths(t *testing.T)
 			Clients: []*activity.EntityRecord{entityRecord},
 		})
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		storagePath := fmt.Sprintf("%sentity/%d/%d", ActivityLogPrefix, timeutil.StartOfMonth(now).Unix(), i)
 		WriteToStorage(t, core, storagePath, entityData)

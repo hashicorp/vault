@@ -74,7 +74,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
   });
 
   test('it filters by name and engine type', async function (assert) {
-    assert.expect(4);
+    assert.expect(5);
     const enginePath1 = `aws-1-${this.uid}`;
     const enginePath2 = `aws-2-${this.uid}`;
 
@@ -100,6 +100,9 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await click(`#filter-by-engine-name ${GENERAL.searchSelect.removeSelected}`);
     const rowsAgain = document.querySelectorAll('[data-test-secrets-backend-link]');
     assert.ok(rowsAgain.length > 1, 'filter has been removed');
+
+    // verify overflow style exists on engine name
+    assert.dom('[data-test-secret-path]').hasClass('overflow-wrap', 'secret engine name has overflow class ');
 
     // cleanup
     await runCmd(deleteEngineCmd(enginePath1));

@@ -782,6 +782,10 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		return nil, err
 	}
 	b.dbEvent(ctx, fmt.Sprintf("static-role-%s", req.Operation), req.Path, name, true)
+
+	if len(response.Warnings) == 0 {
+		return nil, nil
+	}
 	return response, nil
 }
 

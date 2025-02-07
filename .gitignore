@@ -133,4 +133,6 @@ website/components/node_modules
 tools/godoctests/.bin
 tools/gonilnilfunctions/.bin
 tools/codechecker/.bin
+tools/pipeline/.bin
+tools/pipeline/pipeline
 .ci-bootstrap
