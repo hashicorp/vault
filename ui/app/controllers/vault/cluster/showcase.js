@@ -8,6 +8,10 @@ import { action } from '@ember/object';
 // import { tracked } from '@glimmer/tracking';
 
 export default class ShowcaseController extends Controller {
+  // ###########################################
+  // FORMFIELD
+  // ###########################################
+
   jsonExample = JSON.stringify(
     { type: 'JSON', text: 'Lorem ipsum', value: 1234, object: { a: 'b', c: [9, 8, 7] } },
     null,
@@ -232,6 +236,26 @@ export default class ShowcaseController extends Controller {
     }
     return fieldValue;
   }
+
+  // ###########################################
+  // READONLY-FORMFIELD
+  // ###########################################
+
+  @action
+  dynamicReadonlyFormFieldValue(attrType, variant) {
+    let value;
+    // if (attrType === 'select') {
+    // } else {
+    // }
+    if (variant === 'with value' || variant === 'with value + helpText + subText') {
+      value = 'Lorem ipsum';
+    }
+    return value;
+  }
+
+  // ###########################################
+  // OTHER
+  // ###########################################
 
   @action
   noop() {}
