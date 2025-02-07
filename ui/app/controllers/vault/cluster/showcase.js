@@ -254,6 +254,48 @@ export default class ShowcaseController extends Controller {
   }
 
   // ###########################################
+  // OBJECT-LIST-INPUT
+  // ###########################################
+
+  @action
+  dynamicObjectListInputObjectKeys(variant) {
+    // any variant needs the definition of the object keys
+    if (variant) {
+      return [
+        { label: 'Label for input A', key: 'A', placeholder: 'Placeholder for A' },
+        { label: 'Label for input B', key: 'B', placeholder: 'Placeholder for B' },
+        { label: 'Label for input C', key: 'C' },
+      ];
+    }
+  }
+
+  @action
+  dynamicObjectListInputInputValue(variant) {
+    let inputValue = [];
+    if (variant === 'with single set of values') {
+      inputValue = [{ A: 'First value for A', B: 'First value for B', C: '' }];
+    } else if (variant === 'with multiple sets of values' || variant === 'with validation error') {
+      inputValue = [
+        { A: 'First value for A', B: 'First value for B', C: '' },
+        { A: 'Second value for A', B: 'Second value for B', C: '' },
+      ];
+    }
+    return inputValue;
+  }
+
+  @action
+  dynamicObjectListInputValidationErrors(variant) {
+    let validationErrors = [];
+    if (variant === 'with validation error') {
+      validationErrors = [
+        { A: { errors: ['Error message for first A'], isValid: false } },
+        { B: { errors: ['Error message for second B'], isValid: false } },
+      ];
+    }
+    return validationErrors;
+  }
+
+  // ###########################################
   // OTHER
   // ###########################################
 
