@@ -486,6 +486,24 @@
 
   <h3>TextFile</h3>
 
-  <p>TODO</p>
+  {{#let
+    (array "base" "base / upload only" "with label" "with helpText + subText + docLink" "with validation error")
+    as |variants index|
+  }}
+    {{#each variants as |variant|}}
+      {{#unless (eq index 0)}}
+        <hr level="2" />
+      {{/unless}}
+      <pre>{{capitalize variant}}</pre>
+      <TextFile
+        @uploadOnly={{if (eq variant "base / upload only") true false}}
+        @label={{if (not (or (eq variant "base") (eq variant "base / upload only"))) "This is the label of the 'Select'"}}
+        @helpText={{if (eq variant "with helpText + subText + docLink") "This is the helptext"}}
+        @subText={{if (eq variant "with helpText + subText + docLink") "This is the subtext"}}
+        @docLink={{if (eq variant "with helpText + subText + docLink") "/#"}}
+        @validationError={{if (eq variant "with validation error") "This is the validation error message"}}
+      />
+    {{/each}}
+  {{/let}}
 
 </div>
