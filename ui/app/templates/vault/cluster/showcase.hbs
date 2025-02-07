@@ -414,7 +414,22 @@
 
   <h3>InputSearch</h3>
 
-  <p>TODO</p>
+  <blockquote>This component renders an input that fires a callback on "keyup" containing the input's value</blockquote>
+
+  <pre>Base</pre>
+  <InputSearch @id="input-search-base" />
+
+  <pre>With label</pre>
+  <InputSearch @id="input-search-with-label" @label="This is the label" />
+
+  <pre>With subText</pre>
+  <InputSearch @id="input-search-with-subtext" @label="This is the label" @subText="This is the subtext" />
+
+  <pre>With placeholder</pre>
+  <InputSearch @id="input-search-with-placeholder" @label="This is the label" @placeholder="This is the placeholder" />
+
+  <pre>With value</pre>
+  <InputSearch @id="input-search-with-value" @label="This is the label" @initialValue="Lorem ipsum" />
 
   <hr />
 
