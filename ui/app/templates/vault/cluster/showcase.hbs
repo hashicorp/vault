@@ -437,7 +437,29 @@
 
   <h3>KvSuggestionInput</h3>
 
-  <p>TODO</p>
+  <blockquote>Input component that fetches secrets at a provided mount path and displays them as suggestions in a dropdown.
+    As the user types the result set will be filtered providing suggestions for the user to select. After the input debounce
+    wait time (500ms), if the value ends in a slash, secrets will be fetched at that path. The new result set will then be
+    displayed in the dropdown as suggestions for the newly inputted path. Selecting a suggestion will append it to the input
+    value. This allows the user to build a full path to a secret for the provided mount. This is useful for helping the user
+    find deeply nested secrets given the path based policy system. If the user does not have list permission they are still
+    able to enter a path to a secret but will not see suggestions. Input is disabled when mount path is not provided</blockquote>
+
+  {{#let (array "base" "with label" "with subText" "no mountpath") as |variants index|}}
+    {{#each variants as |variant|}}
+      {{#unless (eq index 0)}}
+        <hr level="2" />
+      {{/unless}}
+      <pre>{{capitalize variant}}</pre>
+      <KvSuggestionInput
+        @label={{unless (eq variant "base") "This is the label of the 'KvSuggestionInput'"}}
+        @subText={{if (eq variant "with subText") "This is the subtext"}}
+        @value="lorem-ipsum/"
+        @mountPath={{(unless (eq variant "no mountpath") "secret/")}}
+        @onChange={{this.noop}}
+      />
+    {{/each}}
+  {{/let}}
 
   <hr />
 
