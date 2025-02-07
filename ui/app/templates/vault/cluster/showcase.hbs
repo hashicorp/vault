@@ -255,4 +255,69 @@
   <pre>Without top border (includeBox=false)</pre>
   <FormSaveButtons @saveButtonText="Save" @cancelButtonText="Cancel" @onCancel={{this.noop}} @includeBox={{false}} />
 
+  <hr />
+
+  <h3>ReadonlyFormField</h3>
+
+  {{#let
+    (array
+      (hash
+        attrType="text"
+        variants=(array "base" "with label" "with helpText + subText" "with value" "with value + helpText + subText")
+      )
+      (hash
+        attrType="password"
+        variants=(array "base" "with label" "with helpText + subText" "with value" "with value + helpText + subText")
+      )
+      (hash
+        attrType="date"
+        variants=(array "base" "with label" "with helpText + subText" "with value" "with value + helpText + subText")
+      )
+      (hash
+        attrType="select"
+        variants=(array "base" "with label" "with helpText + subText" "with value" "with value + helpText + subText")
+      )
+    )
+    as |ReadonlyFormFieldTypes|
+  }}
+    {{#each ReadonlyFormFieldTypes as |ReadonlyFormFieldType index|}}
+      {{#unless (eq index 0)}}
+        <hr level="2" />
+      {{/unless}}
+      {{#let ReadonlyFormFieldType.attrType ReadonlyFormFieldType.variants as |attrType variants|}}
+        <h4>Input type="{{attrType}}"</h4>
+        {{#each variants as |variant|}}
+          <pre>{{capitalize variant}}</pre>
+          <ReadonlyFormField
+            @value={{this.dynamicReadonlyFormFieldValue attrType variant}}
+            @attr={{(hash
+              name=(concat attrType "-" variant)
+              type=attrType
+              options=(hash
+                label=(unless (eq variant "base") (concat "This is the label of the readonly '" attrType "' type of field"))
+                helpText=(if
+                  (or
+                    (eq variant "with helpText")
+                    (eq variant "with helpText + subText")
+                    (eq variant "with value + helpText + subText")
+                  )
+                  "This is the help text"
+                )
+                subText=(if
+                  (or
+                    (eq variant "with subText")
+                    (eq variant "with helpText + subText")
+                    (eq variant "with value + helpText + subText")
+                  )
+                  "This is the subtext"
+                )
+                possibleValues=(if (eq attrType "select") (array "a" "b" "c"))
+              )
+            )}}
+          />
+        {{/each}}
+      {{/let}}
+    {{/each}}
+  {{/let}}
+
 </div>
