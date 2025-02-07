@@ -210,8 +210,10 @@ export default class FormFieldComponent extends Component {
   handleChecklist(event) {
     let updatedValue = this.args.model[this.valuePath];
     if (event.target.checked) {
+      // TODO! this triggers an error? `updatedValue` is an item/value, not an array!
       updatedValue = addToArray(updatedValue, event.target.value);
     } else {
+      // TODO! this triggers an error? `updatedValue` is an item/value, not an array!
       updatedValue = removeFromArray(updatedValue, event.target.value);
     }
     this.setAndBroadcast(updatedValue);

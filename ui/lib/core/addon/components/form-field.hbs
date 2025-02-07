@@ -61,7 +61,8 @@
         {{#each @attr.options.possibleValues as |option|}}
           <G.CheckboxField
             class={{if this.validationError "has-error-border"}}
-            checked={{includes option (get @model this.valuePath)}}
+            {{! TODO! here I've replaced `includes` with `eq` because it was not working: `includes` expects a list/array as second argument, while here we're passing a single value - see: https://github.com/DockYard/ember-composable-helpers?tab=readme-ov-file#includes }}
+            checked={{eq option (get @model this.valuePath)}}
             @value={{option}}
             @id={{option}}
             {{on "change" this.handleChecklist}}
