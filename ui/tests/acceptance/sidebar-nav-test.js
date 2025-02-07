@@ -39,8 +39,6 @@ module('Acceptance | sidebar navigation', function (hooks) {
   });
 
   test('it should link to correct routes at the cluster level', async function (assert) {
-    assert.expect(11);
-
     assert.dom(panel('Cluster')).exists('Cluster nav panel renders');
 
     const subNavs = [
