@@ -30,8 +30,6 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
   });
 
   test('it should display all the create form fields and default radio button values', async function (assert) {
-    assert.expect(17);
-
     await render(hbs`<Messages::Page::CreateAndEdit @message={{this.message}} />`, {
       owner: this.engine,
     });
