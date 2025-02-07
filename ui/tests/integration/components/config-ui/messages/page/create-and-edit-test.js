@@ -22,7 +22,7 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    const now = new Date('2023-07-02T00:00:00Z'); // Sat Jul 01 2023 17:00:00 GMT-0700 (PST)
+    const now = new Date('2023-07-02T00:00:00Z'); // stub "now" for testing
     sinon.replace(timestamp, 'now', sinon.fake.returns(now));
     this.context = { owner: this.engine };
     this.store = this.owner.lookup('service:store');
