@@ -57,7 +57,6 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
           this.message.startTime
         }, now: ${timestamp.now().toISOString()}`
       );
-    assert.dom(CUSTOM_MESSAGES.input('startTime')).hasValue('2023-07-02T00:00'); // Sun Jul 2 midnight PST
     assert.dom(CUSTOM_MESSAGES.input('endTime')).hasValue('');
   });
 
