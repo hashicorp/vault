@@ -88,11 +88,11 @@ func (p *AutomatedRotationParams) ShouldRegisterRotationJob() bool {
 func (p *AutomatedRotationParams) ShouldDeregisterRotationJob(previousConfig AutomatedRotationParams) bool {
 	return previousConfig.HasRotationJobConfigured() &&
 		(p.DisableAutomatedRotation ||
-			(p.RotationSchedule == "" && p.RotationPeriod == 0 && p.RotationWindow == 0))
+			(p.RotationSchedule == "" && p.RotationPeriod == 0))
 }
 
 func (p *AutomatedRotationParams) HasRotationJobConfigured() bool {
-	return !p.DisableAutomatedRotation && p.RotationSchedule != "" && p.RotationPeriod != 0 && p.RotationWindow != 0
+	return !p.DisableAutomatedRotation && (p.RotationSchedule != "" || p.RotationPeriod != 0)
 }
 
 // AddAutomatedRotationFields adds plugin identity token fields to the given
