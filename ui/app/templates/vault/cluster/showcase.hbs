@@ -342,7 +342,25 @@
 
   <h3>AutocompleteInput</h3>
 
-  <p>TODO</p>
+  {{#let (array "base" "with label" "with subText" "with placeholder" "with value") as |variants index|}}
+    {{#each variants as |variant|}}
+      {{#unless (eq index 0)}}
+        <hr level="2" />
+      {{/unless}}
+      <pre>{{capitalize variant}}</pre>
+      <AutocompleteInput
+        @label={{unless (eq variant "base") "This is the label of the 'AutocompleteInput' type of input"}}
+        @subText={{if (or (eq variant "with subText") (eq variant "with value + subText")) "Type '$' to see autocomplete"}}
+        @placeholder={{if (eq variant "with placeholder") "This is the placeholder text"}}
+        @value={{if (eq variant "with value") "Lorem"}}
+        @optionsTrigger="$"
+        @options={{(array
+          (hash label="Lorem" value="lorem") (hash label="Ipsum" value="ipsum") (hash label="Dolor" value="dolor")
+        )}}
+        @onChange={{this.noop}}
+      />
+    {{/each}}
+  {{/let}}
 
   <hr />
 
