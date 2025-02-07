@@ -49,9 +49,15 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
     assert.dom(CUSTOM_MESSAGES.field('message')).exists();
     assert.dom('[data-test-kv-key="0"]').exists();
     assert.dom('[data-test-kv-value="0"]').exists();
-    assert.dom(CUSTOM_MESSAGES.input('startTime')).exists();
+    assert
+      .dom(CUSTOM_MESSAGES.input('startTime'))
+      .hasValue(
+        format(addDays(startOfDay(timestamp.now()), 1), datetimeLocalStringFormat),
+        `message startTime defaults to midnight of following day. test context startTime: ${
+          this.message.startTime
+        }, now: ${timestamp.now().toISOString()}`
+      );
     assert.dom(CUSTOM_MESSAGES.input('startTime')).hasValue('2023-07-02T00:00'); // Sun Jul 2 midnight PST
-    assert.dom(CUSTOM_MESSAGES.input('endTime')).exists();
     assert.dom(CUSTOM_MESSAGES.input('endTime')).hasValue('');
   });
 
