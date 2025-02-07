@@ -57,6 +57,18 @@
     margin: 24px 0 4px;
   }
 
+  blockquote:not([class]) {
+    display: block;
+    font-family: $family-monospace;
+    font-size: 12px;
+    line-height: 1.4em;
+    color: #666;
+    font-style: italic;
+    margin: 24px 0 32px;
+    padding-left: 12px;
+    border-left: 2px solid #ccc;
+  }
+
   hr:not([class]) {
     border: none;
     background: none;

@@ -366,13 +366,36 @@
 
   <h3>CommandInput</h3>
 
-  <p>TODO</p>
+  <p>Not used in the codebase</p>
 
   <hr />
 
   <h3>EnableInput</h3>
 
-  <p>TODO</p>
+  <blockquote>EnableInput components render a disabled input with a hardcoded masked value beside an "Edit" button to
+    "enable" the input. Clicking "Edit" hides the disabled input and renders the yielded component. This way any data
+    management is handled by the parent. These are useful for editing inputs of sensitive values not returned by the API. The
+    extra click ensures the user is intentionally editing the field.</blockquote>
+
+  <pre>With generic input / with Input placeholder (@label)</pre>
+  <div {{style width="fit-content"}}>
+    <EnableInput @label="This is the label">
+      <Input @type="text" @value="This input is yielded" />
+    </EnableInput>
+  </div>
+
+  <pre>With generic input / with ReadonlyFormField placeholder (@attr)</pre>
+  <div {{style width="fit-content"}}>
+    <EnableInput
+      @attr={{(hash
+        name="EnableInputWithReadonlyFormField"
+        type="text"
+        options=(hash label="This is the label" helpText="This is the help text" subText="This is the subtext")
+      )}}
+    >
+      <Input @type="text" @value="This input is yielded" />
+    </EnableInput>
+  </div>
 
   <hr />
 
