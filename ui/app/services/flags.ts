@@ -12,6 +12,7 @@ import type StoreService from 'vault/services/store';
 import type VersionService from 'vault/services/version';
 import type PermissionsService from 'vault/services/permissions';
 import type ConfigService from 'vault/services/config';
+import HostService from './host';
 
 const FLAGS = {
   vaultCloudNamespace: 'VAULT_CLOUD_ADMIN_NAMESPACE',
@@ -24,7 +25,7 @@ const FLAGS = {
  */
 
 export default class flagsService extends Service {
-  @service declare readonly config: ConfigService;
+  @service declare readonly host: HostService;
   @service declare readonly version: VersionService;
   @service declare readonly store: StoreService;
   @service declare readonly permissions: PermissionsService;
@@ -42,7 +43,7 @@ export default class flagsService extends Service {
 
   getFeatureFlags = keepLatestTask(async () => {
     try {
-      const { host } = this.config;
+      const { host } = this.host;
       const result = await fetch(`${host}/v1/sys/internal/ui/feature-flags`, {
         method: 'GET',
       });

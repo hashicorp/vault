@@ -39,7 +39,7 @@ const DEFAULTS = {
 };
 
 export default Component.extend(DEFAULTS, {
-  config: service(),
+  host: service(),
   router: service(),
   auth: service(),
   flashMessages: service(),
@@ -69,7 +69,7 @@ export default Component.extend(DEFAULTS, {
       namespace: ns,
       selectedAuth: newMethod,
       oldSelectedAuth: oldMethod,
-      config,
+      host,
     } = this;
     next(() => {
       if (!token && (oldNS === null || oldNS !== ns)) {
@@ -88,8 +88,7 @@ export default Component.extend(DEFAULTS, {
       }
       this.set('oldSelectedAuth', newMethod);
 
-      console.log(config)
-      if (config.host) this.optionalHost = config.host;
+      if (host.host) this.optionalHost = host.host;
     });
   },
 

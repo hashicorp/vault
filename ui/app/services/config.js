@@ -5,7 +5,12 @@ export default class ConfigService extends Service {
   configFor(key) {
     return getOwner(this).resolveRegistration('config:environment')[key];
   }
-  app = Object.freeze(this.configFor('APP'));
-  environment = this.configFor('environment');
-  host = this.configFor('host');
+
+  constructor() {
+    super();
+
+    this.app = Object.freeze(this.configFor('APP'));
+    this.environment = this.configFor('environment');
+    this.host = this.configFor('host');
+  }
 }

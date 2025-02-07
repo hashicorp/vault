@@ -15,7 +15,7 @@ const { POLLING_URLS, NAMESPACE_ROOT_URLS } = APP;
 
 export default RESTAdapter.extend({
   auth: service(),
-  config: service(),
+  hostService: service('host'),
   namespaceService: service('namespace'),
   controlGroup: service(),
 
@@ -69,7 +69,7 @@ export default RESTAdapter.extend({
     let url = intendedUrl;
     let type = method;
     let options = passedOptions;
-    const { host } = this.config;
+    const { host } = this.hostService;
 
     const controlGroup = this.controlGroup;
     const controlGroupToken = controlGroup.tokenForUrl(url);
