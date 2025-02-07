@@ -94,4 +94,3 @@ resource "enos_remote_exec" "scan_logs_for_secrets" {
     }
   }
 }
-
