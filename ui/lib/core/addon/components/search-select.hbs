@@ -68,16 +68,15 @@
               {{get selected this.idKey}}
             </small>
           {{else}}
-            <div class="list-item-text has-right-margin-xxs text-overflow-ellipsis">
+            <div class="list-item-text has-right-margin-4 text-overflow-ellipsis">
               {{selected.id}}
               {{#if @wildcardLabel}}
                 {{#if (is-wildcard-string selected.id)}}
                   {{#let (filter-wildcard selected this.allOptions) as |wildcardCount|}}
-                    <span class="tag is-light has-text-grey-dark" data-test-count={{wildcardCount}}>
-                      includes
-                      {{wildcardCount}}
-                      {{if (eq wildcardCount 1) @wildcardLabel (pluralize @wildcardLabel)}}
-                    </span>
+                    <Hds::Badge
+                      @text="includes {{pluralize wildcardCount @wildcardLabel}}"
+                      data-test-count={{wildcardCount}}
+                    />
                   {{/let}}
                 {{/if}}
               {{/if}}
