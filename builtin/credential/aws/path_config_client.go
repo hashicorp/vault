@@ -392,32 +392,33 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 		}
 	}
 
-	// Disable Automated Rotation and Deregister credentials if required
-	if configEntry.DisableAutomatedRotation {
+	var performedRotationManagerOpern string
+	if configEntry.ShouldDeregisterRotationJob() {
+		performedRotationManagerOpern = "deregistration"
+		// Disable Automated Rotation and Deregister credentials if required
 		deregisterReq := &rotation.RotationJobDeregisterRequest{
-			MountType: req.MountType,
-			ReqPath:   req.Path,
+			MountPoint: req.MountPoint,
+			ReqPath:    req.Path,
 		}
-		err := b.System().DeregisterRotationJob(ctx, deregisterReq)
-		if err != nil {
+
+		b.Logger().Debug("Deregistering rotation job", "mount", req.MountPoint+req.Path)
+		if err := b.System().DeregisterRotationJob(ctx, deregisterReq); err != nil {
 			return logical.ErrorResponse("error de-registering rotation job: %s", err), nil
 		}
+	} else if configEntry.ShouldRegisterRotationJob() {
+		performedRotationManagerOpern = "registration"
+		// Register the rotation job if it's required.
+		cfgReq := &rotation.RotationJobConfigureRequest{
+			MountPoint:       req.MountPoint,
+			ReqPath:          req.Path,
+			RotationSchedule: configEntry.RotationSchedule,
+			RotationWindow:   configEntry.RotationWindow,
+			RotationPeriod:   configEntry.RotationPeriod,
+		}
 
-	} else {
-		// Now that the root config is set up, register the rotation job if it's required
-		if configEntry.ShouldRegisterRotationJob() {
-			cfgReq := &rotation.RotationJobConfigureRequest{
-				MountType:        req.MountType,
-				ReqPath:          req.Path,
-				RotationSchedule: configEntry.RotationSchedule,
-				RotationWindow:   configEntry.RotationWindow,
-				RotationPeriod:   configEntry.RotationPeriod,
-			}
-
-			_, err = b.System().RegisterRotationJob(ctx, cfgReq)
-			if err != nil {
-				return logical.ErrorResponse("error registering rotation job: %s", err), nil
-			}
+		b.Logger().Debug("Registering rotation job", "mount", req.MountPoint+req.Path)
+		if _, err = b.System().RegisterRotationJob(ctx, cfgReq); err != nil {
+			return logical.ErrorResponse("error de-registering rotation job: %s", err), nil
 		}
 	}
 
@@ -433,6 +434,10 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 
 	if changedCreds || changedOtherConfig || req.Operation == logical.CreateOperation {
 		if err := req.Storage.Put(ctx, entry); err != nil {
+			if performedRotationManagerOpern != "" {
+				b.Logger().Error("write to storage failed but the rotation manager still succeeded.",
+					"operation", performedRotationManagerOpern, "mount", req.MountPoint, "path", req.Path)
+			}
 			return nil, err
 		}
 	}

@@ -579,8 +579,43 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		if versions.IsBuiltinVersion(config.PluginVersion) {
 			config.PluginVersion = ""
 		}
+
+		var performedRotationManagerOpern string
+		if config.ShouldDeregisterRotationJob() {
+			performedRotationManagerOpern = "deregistration"
+			// Disable Automated Rotation and Deregister credentials if required
+			deregisterReq := &rotation.RotationJobDeregisterRequest{
+				MountPoint: req.MountPoint,
+				ReqPath:    req.Path,
+			}
+
+			b.Logger().Debug("Deregistering rotation job", "mount", req.MountPoint+req.Path)
+			if err := b.System().DeregisterRotationJob(ctx, deregisterReq); err != nil {
+				return logical.ErrorResponse("error de-registering rotation job: %s", err), nil
+			}
+		} else if config.ShouldRegisterRotationJob() {
+			performedRotationManagerOpern = "registration"
+			// Register the rotation job if it's required.
+			cfgReq := &rotation.RotationJobConfigureRequest{
+				MountPoint:       req.MountPoint,
+				ReqPath:          req.Path,
+				RotationSchedule: config.RotationSchedule,
+				RotationWindow:   config.RotationWindow,
+				RotationPeriod:   config.RotationPeriod,
+			}
+
+			b.Logger().Debug("Registering rotation job", "mount", req.MountPoint+req.Path)
+			if _, err = b.System().RegisterRotationJob(ctx, cfgReq); err != nil {
+				return logical.ErrorResponse("error de-registering rotation job: %s", err), nil
+			}
+		}
+
 		err = storeConfig(ctx, req.Storage, name, config)
 		if err != nil {
+			if performedRotationManagerOpern != "" {
+				b.Logger().Error("write to storage failed but the rotation manager still succeeded.",
+					"operation", performedRotationManagerOpern, "mount", req.MountPoint, "path", req.Path)
+			}
 			return nil, err
 		}
 
@@ -604,35 +639,6 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		}
 
 		b.dbEvent(ctx, "config-write", req.Path, name, true)
-
-		// Disable Automated Rotation and Deregister credentials if required
-		if config.DisableAutomatedRotation {
-			deregisterReq := &rotation.RotationJobDeregisterRequest{
-				MountType: req.MountType,
-				ReqPath:   req.Path,
-			}
-			err := b.System().DeregisterRotationJob(ctx, deregisterReq)
-			if err != nil {
-				return logical.ErrorResponse("error de-registering rotation job: %s", err), nil
-			}
-
-		} else {
-			// Now that the root config is set up, register the rotation job if it's required
-			if config.ShouldRegisterRotationJob() {
-				cfgReq := &rotation.RotationJobConfigureRequest{
-					MountType:        req.MountType,
-					ReqPath:          req.Path,
-					RotationSchedule: config.RotationSchedule,
-					RotationWindow:   config.RotationWindow,
-					RotationPeriod:   config.RotationPeriod,
-				}
-
-				_, err = b.System().RegisterRotationJob(ctx, cfgReq)
-				if err != nil {
-					return logical.ErrorResponse("error registering rotation job: %s", err), nil
-				}
-			}
-		}
 
 		if len(resp.Warnings) == 0 {
 			return nil, nil
