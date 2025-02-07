@@ -184,8 +184,6 @@ module('Acceptance | auth', function (hooks) {
   });
 
   test('it shows the push notification warning after submit', async function (assert) {
-    assert.expect(1);
-
     this.server.get(
       '/auth/token/lookup-self',
       async () => {
