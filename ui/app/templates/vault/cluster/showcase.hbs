@@ -459,7 +459,28 @@
 
   <h3>Select</h3>
 
-  <p>TODO</p>
+  {{#let (array "base" "with label" "with no default" "with selected value" "inline" "full width") as |variants index|}}
+    {{#each variants as |variant|}}
+      {{#unless (eq index 0)}}
+        <hr level="2" />
+      {{/unless}}
+      <pre>{{capitalize variant}}</pre>
+      <Select
+        @label={{unless (eq variant "base") "This is the label of the 'Select'"}}
+        @selectedValue={{if (eq variant "with selected value") 123456}}
+        @labelAttribute="label"
+        @valueAttribute="value"
+        @options={{(array
+          (hash label="Lorem ipsum" value="lorem")
+          (hash label="123456" value=123456)
+          (hash label="Disabled option" value="disabled" isDisabled=true)
+        )}}
+        @isInline={{if (eq variant "inline") true false}}
+        @isFullwidth={{if (eq variant "full width") true false}}
+        @onChange={{this.noop}}
+      />
+    {{/each}}
+  {{/let}}
 
   <hr />
 
