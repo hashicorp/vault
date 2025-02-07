@@ -14,6 +14,7 @@ import { format, addDays, startOfDay } from 'date-fns';
 import { CUSTOM_MESSAGES } from 'vault/tests/helpers/config-ui/message-selectors';
 import timestamp from 'core/utils/timestamp';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import sinon from 'sinon';
 
 module('Integration | Component | messages/page/create-and-edit', function (hooks) {
   setupRenderingTest(hooks);
@@ -21,6 +22,8 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
+    const now = new Date('2023-07-02T00:00:00Z'); // Sat Jul 01 2023 17:00:00 GMT-0700 (PST)
+    sinon.replace(timestamp, 'now', sinon.fake.returns(now));
     this.context = { owner: this.engine };
     this.store = this.owner.lookup('service:store');
     this.message = this.store.createRecord('config-ui/message');
@@ -47,9 +50,7 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
     assert.dom('[data-test-kv-key="0"]').exists();
     assert.dom('[data-test-kv-value="0"]').exists();
     assert.dom(CUSTOM_MESSAGES.input('startTime')).exists();
-    assert
-      .dom(CUSTOM_MESSAGES.input('startTime'))
-      .hasValue(format(addDays(startOfDay(timestamp.now()), 1), datetimeLocalStringFormat));
+    assert.dom(CUSTOM_MESSAGES.input('startTime')).hasValue('2023-07-02T00:00'); // Sun Jul 2 midnight PST
     assert.dom(CUSTOM_MESSAGES.input('endTime')).exists();
     assert.dom(CUSTOM_MESSAGES.input('endTime')).hasValue('');
   });
