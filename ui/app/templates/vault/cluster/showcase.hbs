@@ -465,7 +465,54 @@
 
   <h3>MaskedInput</h3>
 
-  <p>TODO</p>
+  <blockquote><code>MaskedInput</code>
+    components are textarea inputs where the input is hidden. They are used to enter sensitive information like passwords.</blockquote>
+
+  {{#let
+    (array
+      "base"
+      "with label"
+      "with value"
+      "allow download"
+      "allow copy + download"
+      "display only"
+      "display only with value"
+      "display only with empty string as value"
+    )
+    as |variants index|
+  }}
+    {{#each variants as |variant|}}
+      {{#unless (eq index 0)}}
+        <hr level="2" />
+      {{/unless}}
+      <pre>{{capitalize variant}}</pre>
+      <MaskedInput
+        @name={{concat "masked-input-" variant}}
+        @value={{if
+          (or
+            (eq variant "with value")
+            (eq variant "allow download")
+            (eq variant "allow copy + download")
+            (eq variant "display only with value")
+          )
+          "lorem ipsum"
+          (if (eq variant "display only with empty string as value") "")
+        }}
+        @allowCopy={{if (or (eq variant "allow copy") (eq variant "allow copy + download")) true false}}
+        @allowDownload={{if (or (eq variant "allow download") (eq variant "allow copy + download")) true false}}
+        @displayOnly={{if
+          (or
+            (eq variant "display only")
+            (eq variant "display only with value")
+            (eq variant "display only with empty string as value")
+          )
+          true
+          false
+        }}
+        @onChange={{this.noop}}
+      />
+    {{/each}}
+  {{/let}}
 
   <hr />
 
