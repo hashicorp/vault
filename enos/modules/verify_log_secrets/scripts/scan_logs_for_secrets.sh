@@ -43,18 +43,10 @@ if ! sudo chmod +r audit.log; then
   fail "failed to scan vault audit log: could not make audit log copy readable"
 fi
 
-# Create a radar index file. It takes a little time for the namespace to be up and running.
-max_retries=5
-for attempt in $(seq 1 $max_retries); do
-  if out=$($radar_bin_path index vault --offline --disable-ui --outfile index.jsonl 2>&1); then
-    echo "Vault radar index generated successfully."
-    break
-  else
-    echo "Attempt $attempt failed: $out"
-    [ "$attempt" -eq $max_retries ] && fail "failed to generate vault-radar index after $max_retries attempts: $out"
-    sleep 2
-  fi
-done
+# Create a radar index file of our KVv2 secret values.
+if ! out=$($radar_bin_path index vault --offline --disable-ui --outfile index.jsonl 2>&1); then
+  fail "failed to generate vault-radar index of vault cluster: $out"
+fi
 
 # Write our ignore rules to avoid known false positives.
 mkdir -p "$HOME/.hashicorp/vault-radar"
