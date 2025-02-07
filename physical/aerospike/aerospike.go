@@ -11,7 +11,8 @@ import (
 	"strings"
 	"time"
 
-	aero "github.com/aerospike/aerospike-client-go/v5"
+	aero "github.com/aerospike/aerospike-client-go/v7"
+	"github.com/aerospike/aerospike-client-go/v7/types"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -25,8 +26,6 @@ const (
 
 	defaultHostname = "127.0.0.1"
 	defaultPort     = 3000
-
-	keyNotFoundError = "Key not found"
 )
 
 // AerospikeBackend is a physical backend that stores data in Aerospike.
@@ -163,17 +162,17 @@ func (a *AerospikeBackend) Get(_ context.Context, key string) (*physical.Entry, 
 		return nil, err
 	}
 
-	record, err := a.client.Get(nil, aeroKey)
-	if err != nil {
-		if strings.Contains(err.Error(), keyNotFoundError) {
+	record, aerr := a.client.Get(nil, aeroKey)
+	if aerr != nil {
+		if aerr.Matches(types.KEY_NOT_FOUND_ERROR) {
 			return nil, nil
 		}
-		return nil, err
+		return nil, aerr
 	}
 
 	value, ok := record.Bins[valueBin]
 	if !ok {
-		return nil, fmt.Errorf("Value bin was not found in the record")
+		return nil, fmt.Errorf("value bin was not found in the record")
 	}
 
 	return &physical.Entry{
@@ -242,13 +241,13 @@ func parseHostList(list string) ([]*aero.Host, error) {
 			}
 			hostList = append(hostList, aero.NewHost(split[0], port))
 		default:
-			return nil, fmt.Errorf("Invalid 'hostlist' configuration")
+			return nil, fmt.Errorf("invalid host configuration: %s", host)
 		}
 	}
 	return hostList, nil
 }
 
 func hash(s string) string {
-	hash := sha256.Sum256([]byte(s))
-	return fmt.Sprintf("%x", hash[:])
+	checksum := sha256.Sum256([]byte(s))
+	return fmt.Sprintf("%x", checksum[:])
 }
