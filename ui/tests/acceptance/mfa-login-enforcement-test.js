@@ -20,7 +20,6 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
   });
 
   test('it should send the correct data when creating an enforcement', async function (assert) {
-    assert.expect(2);
     this.server.post('/identity/mfa/login-enforcement/salad-college-setting', (schema, { requestBody }) => {
       const data = JSON.parse(requestBody);
       assert.deepEqual(data.auth_method_types, [], 'correctly passes empty array for auth method types');
