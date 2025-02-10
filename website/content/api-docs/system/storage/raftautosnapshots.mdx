@@ -140,16 +140,15 @@ parameters in the context of AWS EKS & S3 configuration.
 
 - `azure_account_name` `(string)` - Azure account name.
 
+- `azure_auth_mode` `(string)` - One of `shared` or `managed`.
+
 - `azure_account_key` `(string)` - Azure account key. Used for `shared` authentication.
 
 - `azure_client_id` `(string)` - Azure Client ID. Used for `managed` authentication.
 
-- `azure_auth_mode` `(string)` - One of `shared` or `managed`.
-
 - `azure_blob_environment` `(string)` - Azure blob environment.
 
-- `azure_endpoint` `(string)` - Azure blob storage endpoint. This is typically
-  only set when using a non-Azure implementation like Azurite.
+- `azure_endpoint` `(string)` - Azure blob storage endpoint. Set this when using a non-Azure implementation like Azurite.
 
 ### Sample payload
 
@@ -173,7 +172,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/storage/raft/snapshot-auto/config/config1
 ```
 
-## List automated snapshots configs
+## List automated snapshots configuration
 
 **This endpoint requires sudo capability.**
 

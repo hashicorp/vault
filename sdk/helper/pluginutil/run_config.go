@@ -30,6 +30,7 @@ const (
 )
 
 type PluginClientConfig struct {
+	EntPluginClientConfig
 	Name            string
 	PluginType      consts.PluginType
 	Version         string
