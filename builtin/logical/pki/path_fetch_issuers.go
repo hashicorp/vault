@@ -727,7 +727,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 
 		if issuer.Usage.HasUsage(issuing.IssuanceUsage) {
 			// Issuer has been saved by building the chain above
-			err = b.issueSignEmptyCert(ctx, req, issuer.Name)
+			err = b.issueSignEmptyCert(ctx, req, issuer.ID.String())
 			if err != nil {
 				issuer.ManualChain = oldChain
 				newErr := sc.rebuildIssuersChains(issuer)

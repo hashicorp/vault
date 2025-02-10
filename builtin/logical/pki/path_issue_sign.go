@@ -663,7 +663,8 @@ func (b *backend) issueSignEmptyCert(ctx context.Context, req *logical.Request, 
 	schema = addNonCACommonFields(addIssueAndSignCommonFields(schema))
 	emptyData := &framework.FieldData{
 		Raw: map[string]interface{}{
-			"ttl": "300s",
+			"ttl":        "300s",
+			"issuer_ref": issuerName,
 		},
 		Schema: schema,
 	}

@@ -40,8 +40,9 @@ func TestManualChainValidation(t *testing.T) {
 
 	// Sign the intermediate CSR
 	resp, err = client.Logical().Write(mount+"/issuer/rootCa/sign-intermediate", map[string]interface{}{
-		"csr": intermediateCSR,
-		"ttl": "7100h",
+		"csr":         intermediateCSR,
+		"ttl":         "7100h",
+		"common_name": "Test Int A",
 	})
 	require.NoError(t, err, "failed signing intermediary CSR")
 	intermediateCertPEM := resp.Data["certificate"].(string)
@@ -72,8 +73,9 @@ func TestManualChainValidation(t *testing.T) {
 
 	// Sign the intermediate CSR
 	resp, err = client.Logical().Write(mount+"/issuer/intA/sign-intermediate", map[string]interface{}{
-		"csr": subIntermediateCSR,
-		"ttl": "7100h",
+		"csr":         subIntermediateCSR,
+		"ttl":         "7100h",
+		"common_name": "Test Int B",
 	})
 	require.NoError(t, err, "failed signing intermediary CSR")
 	subIntermediateCertPEM := resp.Data["certificate"].(string)
@@ -94,11 +96,12 @@ func TestManualChainValidation(t *testing.T) {
 
 	// Try to Set Int-B Manual Chain to Just Be Root-A; Expect An Error
 	resp, err = client.Logical().Write(mount+"/issuer/intB", map[string]interface{}{
+		"issuer_name":  "intB",
 		"manual_chain": []string{"intB", "rootCa"}, // Misses "intA" which issued "intB"
 	})
 	require.Error(t, err, "failed updating intermediary cert")
 
 	resp, err = client.Logical().Read(mount + "/issuer/intB")
 	require.NoError(t, err, "failed reading intermediary cert")
-	require.Equal(t, resp.Data["manual_chain"], "")
+	require.Nil(t, resp.Data["manual_chain"], "error reverting manual chain, got non-nil manual chain")
 }
