@@ -281,8 +281,8 @@ func TestBackend_PathConfigRoot_RegisterRootRotation(t *testing.T) {
 	configData := map[string]interface{}{
 		"access_key":        "access-key",
 		"secret_key":        "secret-key",
-		"rotation_schedule": "*/30 * * * * *",
-		"rotation_window":   60,
+		"rotation_schedule": "*/1 * * * *",
+		"rotation_window":   120,
 	}
 
 	configReq := &logical.Request{
