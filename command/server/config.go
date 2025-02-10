@@ -993,11 +993,11 @@ func ParseStorage(result *Config, list *ast.ObjectList, name string) error {
 
 	// Override with top-level values if they are set
 	if result.APIAddr != "" {
-		redirectAddr = result.APIAddr
+		redirectAddr = configutil.NormalizeAddr(result.APIAddr)
 	}
 
 	if result.ClusterAddr != "" {
-		clusterAddr = result.ClusterAddr
+		clusterAddr = configutil.NormalizeAddr(result.ClusterAddr)
 	}
 
 	if result.DisableClusteringRaw != nil {
@@ -1205,11 +1205,11 @@ func parseHAStorage(result *Config, list *ast.ObjectList, name string) error {
 
 	// Override with top-level values if they are set
 	if result.APIAddr != "" {
-		redirectAddr = result.APIAddr
+		redirectAddr = configutil.NormalizeAddr(result.APIAddr)
 	}
 
 	if result.ClusterAddr != "" {
-		clusterAddr = result.ClusterAddr
+		clusterAddr = configutil.NormalizeAddr(result.ClusterAddr)
 	}
 
 	if result.DisableClusteringRaw != nil {
