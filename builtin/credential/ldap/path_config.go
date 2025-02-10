@@ -7,6 +7,8 @@ import (
 	"context"
 	"strings"
 
+	"github.com/hashicorp/vault/sdk/rotation"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -16,6 +18,8 @@ import (
 )
 
 const userFilterWarning = "userfilter configured does not consider userattr and may result in colliding entity aliases on logins"
+
+const rootRotationJobName = "ldap-auth-root-creds"
 
 func pathConfig(b *backend) *framework.Path {
 	p := &framework.Path{
@@ -220,7 +224,33 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 		cfg.PasswordPolicy = passwordPolicy.(string)
 	}
 
-	// Do rotation here
+	if cfg.DisableAutomatedRotation {
+		dr := &rotation.RotationJobDeregisterRequest{
+			MountType: req.MountPoint,
+			ReqPath:   req.Path,
+		}
+
+		err := b.System().DeregisterRotationJob(ctx, dr)
+		if err != nil {
+			return logical.ErrorResponse("error de-registering rotation job: %s", err), nil
+		}
+	} else if cfg.ShouldRegisterRotationJob() {
+		// Now that the root config is set up, register the rotation job if it's required.
+		r := &rotation.RotationJobConfigureRequest{
+			Name:             rootRotationJobName,
+			MountType:        req.MountPoint,
+			ReqPath:          req.Path,
+			RotationSchedule: cfg.RotationSchedule,
+			RotationWindow:   cfg.RotationWindow,
+			RotationPeriod:   cfg.RotationPeriod,
+		}
+
+		b.Logger().Debug("registering rotation job", "mount", r.MountType, "path", r.ReqPath)
+		_, err = b.System().RegisterRotationJob(ctx, r)
+		if err != nil {
+			return logical.ErrorResponse("error registering rotation job: %s", err), nil
+		}
+	}
 
 	entry, err := logical.StorageEntryJSON("config", cfg)
 	if err != nil {
