@@ -4,10 +4,13 @@
 package automatedrotationutil
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/rotation"
 )
 
 var (
@@ -41,6 +44,13 @@ func (p *AutomatedRotationParams) ParseAutomatedRotationFields(d *framework.Fiel
 			return ErrRotationMutuallyExclusiveFields
 		}
 		p.RotationSchedule = rotationScheduleRaw.(string)
+
+		if p.RotationSchedule != "" {
+			_, err := rotation.DefaultScheduler.Parse(p.RotationSchedule)
+			if err != nil {
+				return fmt.Errorf("failed to parse provided rotation_schedule: %w", err)
+			}
+		}
 	}
 
 	if windowOk {
@@ -75,6 +85,16 @@ func (p *AutomatedRotationParams) ShouldRegisterRotationJob() bool {
 	return p.RotationSchedule != "" || p.RotationPeriod != 0
 }
 
+func (p *AutomatedRotationParams) ShouldDeregisterRotationJob(previousConfig AutomatedRotationParams) bool {
+	return previousConfig.HasRotationJobConfigured() &&
+		(p.DisableAutomatedRotation ||
+			(p.RotationSchedule == "" && p.RotationPeriod == 0))
+}
+
+func (p *AutomatedRotationParams) HasRotationJobConfigured() bool {
+	return !p.DisableAutomatedRotation && (p.RotationSchedule != "" || p.RotationPeriod != 0)
+}
+
 // AddAutomatedRotationFields adds plugin identity token fields to the given
 // field schema map.
 func AddAutomatedRotationFields(m map[string]*framework.FieldSchema) {
@@ -103,4 +123,76 @@ func AddAutomatedRotationFields(m map[string]*framework.FieldSchema) {
 		}
 		m[name] = schema
 	}
+}
+
+// HandleRotationJobOperation is a helper method wrapper to the two individual helper methods
+// that register and deregister a rotation job each, and returns a standardized error response
+// with a warning in the event of an unexpected error.
+// rollbackStorageFunc is a function that should rollback the original config in storage to before
+// any fields were updated.
+func (p *AutomatedRotationParams) HandleRotationJobOperation(ctx context.Context, b *framework.Backend, req *logical.Request, previousConfig AutomatedRotationParams, rollbackStorageFunc func() error) error {
+	if p.ShouldDeregisterRotationJob(previousConfig) {
+		// Disable automated rotation and deregister credentials if required.
+		if err := p.HandleDeregisterRotationJob(ctx, b, req); err != nil {
+			derr := fmt.Errorf("failed to deregister rotation job: %w", err)
+			if serr := rollbackStorageFunc(); serr != nil {
+				return fmt.Errorf("%w: failed to rollback config values: %w", derr, serr)
+			}
+
+			return derr
+		}
+	} else if p.ShouldRegisterRotationJob() {
+		// Register the rotation job if it's required.
+		if err := p.HandleRegisterRotationJob(ctx, b, req); err != nil {
+			derr := fmt.Errorf("failed to register rotation job: %w", err)
+			if serr := rollbackStorageFunc(); serr != nil {
+				return fmt.Errorf("%w: failed to rollback config values: %w", derr, serr)
+			}
+
+			return derr
+		}
+	}
+
+	return nil
+}
+
+// HandleRegisterRotationJob is a helper method to register rotation jobs from a plugin.
+// Callers are responsible for validating when to register a RotationJob, such as by
+// using ShouldRegisterRotationJob().
+// Callers are responsible for performing cleanup or storage rollbacks if necessary.
+func (p *AutomatedRotationParams) HandleRegisterRotationJob(ctx context.Context, b *framework.Backend, req *logical.Request) error {
+	// Now that the root config is set up, register the rotation job if it's required.
+	cfgReq := &rotation.RotationJobConfigureRequest{
+		MountType:        req.MountType,
+		ReqPath:          req.Path,
+		RotationSchedule: p.RotationSchedule,
+		RotationWindow:   p.RotationWindow,
+		RotationPeriod:   p.RotationPeriod,
+	}
+
+	b.Logger().Debug("Registering rotation job", "mount", req.MountPoint+req.Path)
+	if _, err := b.System().RegisterRotationJob(ctx, cfgReq); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// HandleDeregisterRotationJob is a helper method to deregister rotation jobs from a plugin.
+// Callers are responsible for validating when to register a RotationJob, such as by
+// using ShouldDeregisterRotationJob().
+// Callers are responsible for performing cleanup or storage rollbacks if necessary.
+func (p *AutomatedRotationParams) HandleDeregisterRotationJob(ctx context.Context, b *framework.Backend, req *logical.Request) error {
+	// Disable Automated Rotation and Deregister credentials if required
+	deregisterReq := &rotation.RotationJobDeregisterRequest{
+		MountType: req.MountType,
+		ReqPath:   req.Path,
+	}
+
+	b.Logger().Debug("Deregistering rotation job", "mount", req.MountPoint+req.Path)
+	if err := b.System().DeregisterRotationJob(ctx, deregisterReq); err != nil {
+		return err
+	}
+
+	return nil
 }
