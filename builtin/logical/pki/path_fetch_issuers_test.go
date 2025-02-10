@@ -10,6 +10,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestManualChainValidation creates a series of issuers, and then tries to set the manual_chain on the final issuer
+// to something completely incorrect (missing an intermediate issuer).  In this case, the attempt to write the manual
+// chain throws an error, and the manual chain is not updated.
 func TestManualChainValidation(t *testing.T) {
 	// Set Up a Cluster
 	cluster, client := setupTestPkiCluster(t)
