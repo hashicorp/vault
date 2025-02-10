@@ -435,10 +435,6 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		}
 	}
 
-	if err := issuing.VerifyCertificate(sc.GetContext(), sc.GetStorage(), issuerId, parsedBundle); err != nil {
-		return nil, err
-	}
-
 	generateLease := false
 	if role.GenerateLease != nil && *role.GenerateLease {
 		generateLease = true
@@ -446,6 +442,10 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 
 	resp, err := signIssueApiResponse(b, data, parsedBundle, signingBundle, generateLease, warnings)
 	if err != nil {
+		return nil, err
+	}
+
+	if err = issuing.VerifyCertificate(sc.GetContext(), sc.GetStorage(), issuerId, parsedBundle); err != nil {
 		return nil, err
 	}
 

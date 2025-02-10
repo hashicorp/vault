@@ -714,6 +714,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	}
 
 	if updateChain {
+		oldChain := issuer.ManualChain
 		issuer.ManualChain = constructedChain
 
 		// Building the chain will write the issuer to disk; no need to do it
@@ -728,7 +729,12 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 			// Issuer has been saved by building the chain above
 			err = b.issueSignEmptyCert(ctx, req, issuer.Name)
 			if err != nil {
-				return nil, err
+				issuer.ManualChain = oldChain
+				newErr := sc.rebuildIssuersChains(issuer)
+				if newErr != nil {
+					return logical.ErrorResponse("error reverting bad chain update, state unknown: %v, \ninitial error: %v", newErr.Error(), err.Error()), nil
+				}
+				return logical.ErrorResponse("other changes to issuer may be persisted.  Error setting manual chain, issuer would be unusuable with this chain: %v", err), nil
 			}
 		}
 
@@ -985,15 +991,30 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 		}
 
 		if updateChain {
+			oldChain := issuer.ManualChain
 			issuer.ManualChain = constructedChain
 
 			// Building the chain will write the issuer to disk; no need to do it
 			// twice.
 			modified = false
-			err := sc.rebuildIssuersChains(issuer)
+			err = sc.rebuildIssuersChains(issuer)
 			if err != nil {
 				return nil, err
 			}
+			// If this issuer is supposed to be issuing certificates, test that will work
+			if issuer.Usage.HasUsage(issuing.IssuanceUsage) {
+				// Issuer has been saved by building the chain above
+				err = b.issueSignEmptyCert(ctx, req, issuer.Name)
+				if err != nil {
+					issuer.ManualChain = oldChain
+					newErr := sc.rebuildIssuersChains(issuer)
+					if newErr != nil {
+						return logical.ErrorResponse("error reverting bad chain update, state unknown: %v, \ninitial error: %v", newErr.Error(), err.Error()), nil
+					}
+					return logical.ErrorResponse("other changes to issuer may be persisted.  Error setting manual chain, issuer would be unusuable with this chain: %v", err), nil
+				}
+			}
+
 		}
 	}
 
