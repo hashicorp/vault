@@ -7,6 +7,8 @@ import (
 	"context"
 	"strings"
 
+	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
@@ -53,6 +55,8 @@ func pathConfig(b *backend) *framework.Path {
 		Type:        framework.TypeString,
 		Description: "Password policy to use to rotate the root password",
 	}
+
+	automatedrotationutil.AddAutomatedRotationFields(p.Fields)
 
 	return p
 }
@@ -137,6 +141,8 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 
 	data := cfg.PasswordlessMap()
 	cfg.PopulateTokenData(data)
+	cfg.PopulateAutomatedRotationData(data)
+
 	data["password_policy"] = cfg.PasswordPolicy
 
 	resp := &logical.Response{
@@ -207,9 +213,15 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
+	if err := cfg.ParseAutomatedRotationFields(d); err != nil {
+		return nil, err
+	}
+
 	if passwordPolicy, ok := d.GetOk("password_policy"); ok {
 		cfg.PasswordPolicy = passwordPolicy.(string)
 	}
+
+	// Do rotation here
 
 	entry, err := logical.StorageEntryJSON("config", cfg)
 	if err != nil {
@@ -251,6 +263,7 @@ func (b *backend) getConfigFieldData() (*framework.FieldData, error) {
 type ldapConfigEntry struct {
 	tokenutil.TokenParams
 	*ldaputil.ConfigEntry
+	automatedrotationutil.AutomatedRotationParams
 
 	PasswordPolicy string `json:"password_policy"`
 }
