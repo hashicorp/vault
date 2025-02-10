@@ -44,7 +44,8 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 		return logical.ErrorResponse(responseError.Error()), nil
 	}
 
-	return nil, nil
+	// naturally this is `nil, nil` if the err is nil
+	return nil, err
 }
 
 // responseError exists to capture the cases in the old rotate call that returned specific error responses
