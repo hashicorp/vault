@@ -9,19 +9,19 @@ terraform {
   }
 }
 
-variable "aws_test_region" {
+variable "aws_region" {
   type        = string
   description = "AWS region for aws secrets engine"
   default     = "us-east-1"
 }
 
-variable "aws_test_access_key_id" {
+variable "aws_access_key_id" {
   type        = string
   description = "AWS access key for aws secrets engine"
   default     = null
 }
 
-variable "aws_test_access_secret_key" {
+variable "aws_access_secret_key" {
   type        = string
   description = "AWS secret access key for aws secrets engine"
   default     = null

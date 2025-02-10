@@ -525,9 +525,9 @@ scenario "smoke" {
 
     variables {
       hosts                 = step.create_vault_cluster_targets.hosts
-      aws_test_region            = var.aws_region
-      aws_test_access_key_id     = var.aws_access_key_id
-      aws_test_access_secret_key = var.aws_access_secret_key
+      aws_region            = var.aws_region
+      aws_access_key_id     = var.aws_access_key_id
+      aws_access_secret_key = var.aws_access_secret_key
       leader_host           = step.get_vault_cluster_ips.leader_host
       vault_addr            = step.create_vault_cluster.api_addr_localhost
       vault_install_dir     = global.vault_install_dir[matrix.artifact_type]

@@ -3,23 +3,23 @@
 
 locals {
   // Variables
-  aws_mount                  = "aws"     # aws engine
-  aws_role                   = "test-role"
-  aws_region            = var.aws_test_region
-  aws_access_key_id     = var.aws_test_access_key_id
-  aws_access_secret_key = var.aws_test_access_secret_key
+  aws_mount             = "aws"     # aws engine
+  aws_role              = "test-role"
+  aws_region            = var.aws_region
+  aws_access_key_id     = var.aws_access_key_id
+  aws_access_secret_key = var.aws_access_secret_key
 
   // Output
   aws_output = {
-    mount                  = local.aws_mount
-    role                   = local.aws_role
-    region                 = local.aws_region
-    test_access_key_id     = local.aws_access_key_id
-    test_access_secret_key = local.aws_access_secret_key
+    mount             = local.aws_mount
+    role              = local.aws_role
+    region            = local.aws_region
+    access_key_id     = local.aws_access_key_id
+    access_secret_key = local.aws_access_secret_key
   }
 }
 
-output "aws_engine" {
+output "aws" {
   value = local.aws_output
 }
 
@@ -47,9 +47,9 @@ resource "enos_remote_exec" "aws_generate_creds" {
   depends_on = [enos_remote_exec.secrets_enable_aws_secret]
   for_each   = var.hosts
   environment = {
-    AWS_REGION            = var.aws_test_region
-    AWS_ACCESS_KEY_ID     = var.aws_test_access_key_id
-    AWS_SECRET_ACCESS_KEY = var.aws_test_access_secret_key
+    AWS_REGION            = local.aws_region
+    AWS_ACCESS_KEY_ID     = local.aws_access_key_id
+    AWS_SECRET_ACCESS_KEY = local.aws_access_secret_key
     AWS_ROLE              = local.aws_role
     MOUNT                 = local.aws_mount
     VAULT_ADDR            = var.vault_addr

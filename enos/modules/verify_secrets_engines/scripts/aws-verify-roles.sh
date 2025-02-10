@@ -40,7 +40,7 @@ echo "Verifying Root Access Key"
 "$binpath" read "${MOUNT}/config/root" | jq -r '.data.access_key'
 ROOT_ACCESS_KEY=$("$binpath" read "${MOUNT}/config/root" | jq -r '.data.access_key')
 echo "----------------${ROOT_ACCESS_KEY}---------${AWS_ACCESS_KEY_ID}"
-[[ "$ROOT_ACCESS_KEY" == "$AWS_ACCESS_KEY_ID" ]] && fail "AWS Access Key does not match: $ROOT_ACCESS_KEY, $AWS_ACCESS_KEY_ID"
+[[ "$ROOT_ACCESS_KEY" != "$AWS_ACCESS_KEY_ID" ]] && fail "AWS Access Key does not match: $ROOT_ACCESS_KEY, $AWS_ACCESS_KEY_ID"
 
 # Read role
-"$binpath" read "${MOUNT}/sts/creds/${AWS_ROLE}"
+"$binpath" read "${MOUNT}/creds/${AWS_ROLE}"
