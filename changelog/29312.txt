@@ -1,0 +1,5 @@
+```release-note:bug
+identity/oidc (enterprise): Fix delays in rotation and invalidation of OIDC keys when there are too many namespaces.
+The Cache-Control header returned by the identity/oidc/.well-known/keys endpoint now depends only on the named keys for
+the queried namespace.
+```
