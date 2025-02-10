@@ -618,7 +618,7 @@ message RegisterRotationJobResponse {
 
 message RotationJobInput {
   string name = 1;
-  string mount_type = 2;
+  string mount_point = 2;
   string path = 3;
   string rotation_schedule = 4;
   int64 rotation_window = 5;
@@ -626,7 +626,7 @@ message RotationJobInput {
 }
 
 message DeregisterRotationRequestInput {
-  string mount_type = 1;
+  string mount_point = 1;
   string req_path = 2;
 }
 
