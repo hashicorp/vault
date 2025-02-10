@@ -226,8 +226,8 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 
 	if cfg.DisableAutomatedRotation {
 		dr := &rotation.RotationJobDeregisterRequest{
-			MountType: req.MountPoint,
-			ReqPath:   req.Path,
+			MountPoint: req.MountPoint,
+			ReqPath:    req.Path,
 		}
 
 		err := b.System().DeregisterRotationJob(ctx, dr)
@@ -238,14 +238,14 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 		// Now that the root config is set up, register the rotation job if it's required.
 		r := &rotation.RotationJobConfigureRequest{
 			Name:             rootRotationJobName,
-			MountType:        req.MountPoint,
+			MountPoint:       req.MountPoint,
 			ReqPath:          req.Path,
 			RotationSchedule: cfg.RotationSchedule,
 			RotationWindow:   cfg.RotationWindow,
 			RotationPeriod:   cfg.RotationPeriod,
 		}
 
-		b.Logger().Debug("registering rotation job", "mount", r.MountType, "path", r.ReqPath)
+		b.Logger().Debug("registering rotation job", "mount", r.MountPoint, "path", r.ReqPath)
 		_, err = b.System().RegisterRotationJob(ctx, r)
 		if err != nil {
 			return logical.ErrorResponse("error registering rotation job: %s", err), nil
