@@ -14,9 +14,11 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginidentityutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/rotation"
 )
 
 func (b *backend) pathConfigClient() *framework.Path {
@@ -130,6 +132,7 @@ func (b *backend) pathConfigClient() *framework.Path {
 		HelpDescription: pathConfigClientHelpDesc,
 	}
 	pluginidentityutil.AddPluginIdentityTokenFields(p.Fields)
+	automatedrotationutil.AddAutomatedRotationFields(p.Fields)
 
 	return p
 }
@@ -193,6 +196,7 @@ func (b *backend) pathConfigClientRead(ctx context.Context, req *logical.Request
 	}
 
 	clientConfig.PopulatePluginIdentityTokenData(configData)
+	clientConfig.PopulateAutomatedRotationData(configData)
 	return &logical.Response{
 		Data: configData,
 	}, nil
@@ -363,6 +367,10 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
+	if err := configEntry.ParseAutomatedRotationFields(data); err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
 	// handle mutual exclusivity
 	if configEntry.IdentityTokenAudience != "" && configEntry.AccessKey != "" {
 		return logical.ErrorResponse("only one of 'access_key' or 'identity_token_audience' can be set"), nil
@@ -384,6 +392,36 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 		}
 	}
 
+	var performedRotationManagerOpern string
+	if configEntry.ShouldDeregisterRotationJob() {
+		performedRotationManagerOpern = "deregistration"
+		// Disable Automated Rotation and Deregister credentials if required
+		deregisterReq := &rotation.RotationJobDeregisterRequest{
+			MountPoint: req.MountPoint,
+			ReqPath:    req.Path,
+		}
+
+		b.Logger().Debug("Deregistering rotation job", "mount", req.MountPoint+req.Path)
+		if err := b.System().DeregisterRotationJob(ctx, deregisterReq); err != nil {
+			return logical.ErrorResponse("error deregistering rotation job: %s", err), nil
+		}
+	} else if configEntry.ShouldRegisterRotationJob() {
+		performedRotationManagerOpern = "registration"
+		// Register the rotation job if it's required.
+		cfgReq := &rotation.RotationJobConfigureRequest{
+			MountPoint:       req.MountPoint,
+			ReqPath:          req.Path,
+			RotationSchedule: configEntry.RotationSchedule,
+			RotationWindow:   configEntry.RotationWindow,
+			RotationPeriod:   configEntry.RotationPeriod,
+		}
+
+		b.Logger().Debug("Registering rotation job", "mount", req.MountPoint+req.Path)
+		if _, err = b.System().RegisterRotationJob(ctx, cfgReq); err != nil {
+			return logical.ErrorResponse("error registering rotation job: %s", err), nil
+		}
+	}
+
 	// Since this endpoint supports both create operation and update operation,
 	// the error checks for access_key and secret_key not being set are not present.
 	// This allows calling this endpoint multiple times to provide the values.
@@ -396,6 +434,10 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 
 	if changedCreds || changedOtherConfig || req.Operation == logical.CreateOperation {
 		if err := req.Storage.Put(ctx, entry); err != nil {
+			if performedRotationManagerOpern != "" {
+				b.Logger().Error("write to storage failed but the rotation manager still succeeded.",
+					"operation", performedRotationManagerOpern, "mount", req.MountPoint, "path", req.Path)
+			}
 			return nil, err
 		}
 	}
@@ -424,6 +466,7 @@ func (b *backend) configClientToEntry(conf *clientConfig) (*logical.StorageEntry
 // interact with the AWS EC2 API.
 type clientConfig struct {
 	pluginidentityutil.PluginIdentityTokenParams
+	automatedrotationutil.AutomatedRotationParams
 
 	AccessKey              string   `json:"access_key"`
 	SecretKey              string   `json:"secret_key"`
