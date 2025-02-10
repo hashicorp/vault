@@ -29,7 +29,6 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-retryablehttp"
-	"github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"golang.org/x/net/http2"
@@ -379,14 +378,11 @@ func (c *Config) configureTLS(t *TLSConfig) error {
 	if t.CACert != "" || len(t.CACertBytes) != 0 || t.CAPath != "" {
 		c.curlCACert = t.CACert
 		c.curlCAPath = t.CAPath
-		rootConfig := &rootcerts.Config{
-			CAFile:        t.CACert,
-			CACertificate: t.CACertBytes,
-			CAPath:        t.CAPath,
-		}
-		if err := rootcerts.ConfigureTLS(clientTLSConfig, rootConfig); err != nil {
+		certPool, err := loadCACerts(t.CACert, t.CACertBytes, t.CAPath)
+		if err != nil {
 			return err
 		}
+		clientTLSConfig.RootCAs = certPool
 	}
 
 	if t.Insecure {
