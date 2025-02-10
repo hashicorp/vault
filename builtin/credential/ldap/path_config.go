@@ -7,9 +7,8 @@ import (
 	"context"
 	"strings"
 
-	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
-
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
