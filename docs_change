@@ -1,0 +1,41 @@
+diff --git a/website/content/docs/configuration/adaptive-overload-protection.mdx b/website/content/docs/configuration/adaptive-overload-protection.mdx
+index 295e5c1b3f..208413f776 100644
+--- a/website/content/docs/configuration/adaptive-overload-protection.mdx
++++ b/website/content/docs/configuration/adaptive-overload-protection.mdx
+@@ -10,7 +10,9 @@ description: |-
+ 
+ @include 'alerts/enterprise-only.mdx'
+ 
+-@include 'alerts/beta.mdx'
++<Note title="Enabled by default">
++  As of Vault 1.18.0, adaptive overload protection is enabled by default
++</Note>
+ 
+ Configure the `adaptive_overload_protection` stanza to control overload
+ protection features for your Vault server.
+@@ -41,6 +43,5 @@ These parameters apply to the `adaptive_overload_protection` stanza in the Vault
+ configuration file:
+ 
+ - `disable_write_controller` `(bool: <optional>)`: Disables the adaptive write
+-  overload controller. Defaults to `true` (controller disabled). Set
+-  `disable_write_controller` to `false` to enable the write controller and opt
+-  in to the beta functionality.
+\ No newline at end of file
++  overload controller. Defaults to `false` (controller enabled). Set
++  `disable_write_controller` to `true` to disable the write controller.
+diff --git a/website/data/docs-nav-data.json b/website/data/docs-nav-data.json
+index 85d88840bb..dd4093cff3 100644
+--- a/website/data/docs-nav-data.json
++++ b/website/data/docs-nav-data.json
+@@ -578,6 +578,11 @@
+       },
+       {
+         "title": "Adaptive overload protection",
++        "badge": {
++          "text": "ENTERPRISE",
++          "type": "outlined",
++          "color": "neutral"
++        },
+         "path": "configuration/adaptive-overload-protection"
+       },
+       {

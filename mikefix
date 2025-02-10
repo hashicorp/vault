@@ -1,0 +1,117 @@
+diff --git a/vault/identity_store_conflicts.go b/vault/identity_store_conflicts.go
+index aabae064f1..7a3e5a86ae 100644
+--- a/vault/identity_store_conflicts.go
++++ b/vault/identity_store_conflicts.go
+@@ -28,6 +28,7 @@ type ConflictResolver interface {
+ 	ResolveEntities(ctx context.Context, existing, duplicate *identity.Entity) (bool, error)
+ 	ResolveGroups(ctx context.Context, existing, duplicate *identity.Group) (bool, error)
+ 	ResolveAliases(ctx context.Context, parent *identity.Entity, existing, duplicate *identity.Alias) (bool, error)
++	String() string
+ }
+ 
+ // errorResolver is a ConflictResolver that logs a warning message when a
+@@ -36,6 +37,10 @@ type errorResolver struct {
+ 	logger log.Logger
+ }
+ 
++func (r *errorResolver) String() string {
++	return "errorResolver"
++}
++
+ // ResolveEntities logs a warning message when a pre-existing Entity is found
+ // and returns a duplicate name error, which should be handled by the caller by
+ // putting the system in case-sensitive mode.
+@@ -122,6 +127,10 @@ func newDuplicateReportingErrorResolver(logger hclog.Logger) *duplicateReporting
+ 	}
+ }
+ 
++func (r *duplicateReportingErrorResolver) String() string {
++	return "duplicateReportingErrorResolver"
++}
++
+ func (r *duplicateReportingErrorResolver) ResolveEntities(ctx context.Context, existing, duplicate *identity.Entity) (bool, error) {
+ 	entityKey := fmt.Sprintf("%s/%s", duplicate.NamespaceID, strings.ToLower(duplicate.Name))
+ 	r.seenEntities[entityKey] = append(r.seenEntities[entityKey], duplicate)
+@@ -373,6 +382,10 @@ type renameResolver struct {
+ 	logger log.Logger
+ }
+ 
++func (r *renameResolver) String() string {
++	return "renameResolver"
++}
++
+ // ResolveEntities renames an entity duplicate in a deterministic way so that
+ // all entities end up addressable by a unique name still. We rename the
+ // pre-existing entity such that only the last occurrence retains its unmodified
+diff --git a/vault/identity_store_test.go b/vault/identity_store_test.go
+index 2eee8ad7d9..d7fb9ab4c4 100644
+--- a/vault/identity_store_test.go
++++ b/vault/identity_store_test.go
+@@ -1470,11 +1470,6 @@ func identityStoreLoadingIsDeterministic(t *testing.T, identityDeduplication boo
+ 
+ 	ctx := context.Background()
+ 
+-	if identityDeduplication {
+-		err = c.FeatureActivationFlags.Write(ctx, activationflags.IdentityDeduplication, true)
+-		require.NoError(t, err)
+-	}
+-
+ 	// We create 100 entities each with 1 non-local alias and 1 local alias. We
+ 	// then randomly create duplicate alias or local alias entries with a
+ 	// probability that is unrealistic but ensures we have duplicates on every
+@@ -1571,10 +1566,39 @@ func identityStoreLoadingIsDeterministic(t *testing.T, identityDeduplication boo
+ 
+ 	// Storage is now primed for the test.
+ 
++	// Seal and unseal to reload the identity store
++	require.NoError(t, c.Seal(rootToken))
++	require.True(t, c.Sealed())
++	for _, key := range sealKeys {
++		unsealed, err := c.Unseal(key)
++		require.NoError(t, err, "failed unseal on initial attempt")
++		if unsealed {
++			break
++		}
++	}
++	require.False(t, c.Sealed())
++	require.IsType(t, &duplicateReportingErrorResolver{}, c.identityStore.conflictResolver)
++
++	if identityDeduplication {
++		err = c.FeatureActivationFlags.Write(ctx, activationflags.IdentityDeduplication, true)
++		// c.identityStore.activateDeduplication()
++		require.NoError(t, c.Seal(rootToken))
++		require.True(t, c.Sealed())
++		for _, key := range sealKeys {
++			unsealed, err := c.Unseal(key)
++			require.NoError(t, err, "failed unseal on initial attempt")
++			if unsealed {
++				break
++			}
++		}
++		require.NoError(t, err)
++	}
++
+ 	// To test that this is deterministic we need to load from storage a bunch of
+ 	// times and make sure we get the same result. For easier debugging we'll
+ 	// build a list of human readable ids that we can compare.
+ 	prevLoadedNames := []string{}
++	prevResolver := c.identityStore.conflictResolver.String()
+ 	for i := 0; i < 10; i++ {
+ 		// Seal and unseal to reload the identity store
+ 		require.NoError(t, c.Seal(rootToken))
+@@ -1588,6 +1612,15 @@ func identityStoreLoadingIsDeterministic(t *testing.T, identityDeduplication boo
+ 		}
+ 		require.False(t, c.Sealed())
+ 
++		if identityDeduplication {
++			require.Equal(t, prevResolver, c.identityStore.conflictResolver.String())
++			require.False(t, c.identityStore.disableLowerCasedNames)
++			require.True(t, c.FeatureActivationFlags.IsActivationFlagEnabled(activationflags.IdentityDeduplication))
++			require.IsType(t, &renameResolver{}, c.identityStore.conflictResolver)
++		}
++
++		prevResolver = c.identityStore.conflictResolver.String()
++
+ 		// Identity store should be loaded now. Check it's contents.
+ 		loadedNames := []string{}
+ 

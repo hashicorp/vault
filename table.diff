@@ -1,0 +1,249 @@
+diff --git a/vault/identity_store.go b/vault/identity_store.go
+index 709e9861f8..e72d5a19f9 100644
+--- a/vault/identity_store.go
++++ b/vault/identity_store.go
+@@ -6,6 +6,7 @@ package vault
+ import (
+ 	"context"
+ 	"fmt"
++	"github.com/ryanuber/columnize"
+ 	"reflect"
+ 	"strings"
+ 	"time"
+@@ -58,21 +59,20 @@ func (i *IdentityStore) resetDB() error {
+ 
+ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendConfig, logger log.Logger) (*IdentityStore, error) {
+ 	iStore := &IdentityStore{
+-		view:             config.StorageView,
+-		logger:           logger,
+-		router:           core.router,
+-		redirectAddr:     core.redirectAddr,
+-		localNode:        core,
+-		namespacer:       core,
+-		metrics:          core.MetricSink(),
+-		totpPersister:    core,
+-		groupUpdater:     core,
+-		tokenStorer:      core,
+-		entityCreator:    core,
+-		mountLister:      core,
+-		mfaBackend:       core.loginMFABackend,
+-		aliasLocks:       locksutil.CreateLocks(),
+-		renameDuplicates: core.FeatureActivationFlags,
++		view:          config.StorageView,
++		logger:        logger,
++		router:        core.router,
++		redirectAddr:  core.redirectAddr,
++		localNode:     core,
++		namespacer:    core,
++		metrics:       core.MetricSink(),
++		totpPersister: core,
++		groupUpdater:  core,
++		tokenStorer:   core,
++		entityCreator: core,
++		mountLister:   core,
++		mfaBackend:    core.loginMFABackend,
++		aliasLocks:    locksutil.CreateLocks(),
+ 	}
+ 
+ 	// Create a memdb instance, which by default, operates on lower cased
+@@ -109,7 +109,6 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
+ 		Paths:          iStore.paths(),
+ 		Invalidate:     iStore.Invalidate,
+ 		InitializeFunc: iStore.initialize,
+-		ActivationFunc: iStore.activateDeduplication,
+ 		PathsSpecial: &logical.Paths{
+ 			Unauthenticated: []string{
+ 				"oidc/.well-known/*",
+@@ -122,7 +121,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
+ 			},
+ 		},
+ 		PeriodicFunc: func(ctx context.Context, req *logical.Request) error {
+-			iStore.oidcPeriodicFunc(ctx, req.Storage)
++			iStore.oidcPeriodicFunc(ctx)
+ 
+ 			return nil
+ 		},
+@@ -644,6 +643,173 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
+ 	}
+ }
+ 
++// columnOutput prints the list of items as a table with no headers.
++func columnOutput(list []string, c *columnize.Config) string {
++	if len(list) == 0 {
++		return ""
++	}
++
++	if c == nil {
++		c = &columnize.Config{}
++	}
++	if c.Glue == "" {
++		c.Glue = "    "
++	}
++	if c.Empty == "" {
++		c.Empty = "n/a"
++	}
++
++	return columnize.Format(list, c)
++}
++
++// tableOutput prints the list of items as columns, where the first row is
++// the list of headers.
++func tableOutput(list []string, c *columnize.Config) string {
++	if len(list) == 0 {
++		return ""
++	}
++
++	delim := "|"
++	if c != nil && c.Delim != "" {
++		delim = c.Delim
++	}
++
++	underline := ""
++	headers := strings.Split(list[0], delim)
++	for i, h := range headers {
++		h = strings.TrimSpace(h)
++		u := strings.Repeat("-", len(h))
++
++		underline = underline + u
++		if i != len(headers)-1 {
++			underline = underline + delim
++		}
++	}
++
++	list = append(list, "")
++	copy(list[2:], list[1:])
++	list[1] = underline
++
++	return columnOutput(list, c)
++}
++
++type TableSort int
++
++const (
++	InvalidSort TableSort = iota
++	ByID
++	ByName
++	ByBucket
++	ByNamespace
++	ByMountAccessor
++)
++
++// PrintTable provides a formatted string showing the current contents of a table
++// in the inmemDB
++func (i *IdentityStore) PrintTable(tableName string, sort TableSort) (string, error) {
++	var tableString string
++	var err error
++	switch tableName {
++	case entitiesTable:
++		tableString, err = i.printEntityTable(sort)
++		if err != nil {
++			return "", err
++		}
++	case entityAliasesTable:
++		tableString, err = i.printEntityAliasTable(sort)
++		if err != nil {
++			return "", err
++		}
++	}
++	return tableString, nil
++}
++
++func (i *IdentityStore) printEntityAliasTable(sort TableSort) (string, error) {
++	out := []string{"ID | Name | MountAccessor | Local | Local_Bucket_Key | Namespace_ID"}
++	txn := i.db.Txn(false)
++
++	var index string
++	switch sort {
++	case ByID:
++		index = "id"
++	case ByName:
++		index = "factors"
++	case ByMountAccessor:
++		index = "factors"
++	case ByBucket:
++		index = "local_bucket_key"
++	case ByNamespace:
++		index = "namespace_id"
++	default:
++		return "", fmt.Errorf("invalid sort")
++	}
++
++	iter, err := txn.Get(entityAliasesTable, index)
++	if err != nil {
++		return "", err
++	}
++
++	for {
++		raw := iter.Next()
++		if raw == nil {
++			break
++		}
++		e := raw.(*identity.Alias)
++		out = append(out, fmt.Sprintf("%s | %s | %s | %t | %s | %s",
++			e.ID,
++			e.Name,
++			e.MountAccessor,
++			e.Local,
++			e.LocalBucketKey,
++			e.NamespaceID,
++		))
++	}
++	txn.Abort()
++	return tableOutput(out, nil), nil
++}
++
++func (i *IdentityStore) printEntityTable(sort TableSort) (string, error) {
++	out := []string{"ID | Name | Merged_Entity_IDs | Aliases | Bucket_Key | Namespace_ID"}
++	txn := i.db.Txn(false)
++
++	var index string
++	switch sort {
++	case ByID:
++		index = "id"
++	case ByName:
++		index = "name"
++	case ByBucket:
++		index = "bucket_key"
++	case ByNamespace:
++		index = "namespace_id"
++	default:
++		return "", fmt.Errorf("invalid sort")
++	}
++
++	iter, err := txn.Get(entitiesTable, index)
++	if err != nil {
++		return "", err
++	}
++
++	for {
++		raw := iter.Next()
++		if raw == nil {
++			break
++		}
++		e := raw.(*identity.Entity)
++		out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s | %s",
++			e.ID,
++			e.Name,
++			e.MergedEntityIDs,
++			e.Aliases,
++			e.BucketKey,
++			e.NamespaceID,
++		))
++	}
++	txn.Abort()
++	return tableOutput(out, nil), nil
++}
++
+ func (i *IdentityStore) invalidateEntityBucket(ctx context.Context, key string) {
+ 	txn := i.db.Txn(true)
+ 	defer txn.Abort()
+@@ -885,7 +1051,8 @@ func (i *IdentityStore) invalidateOIDCToken(ctx context.Context) {
+ 		return
+ 	}
+ 
+-	// Wipe the cache for the requested namespace
++	// Wipe the cache for the requested namespace. This will also clear
++	// the shared namespace as well.
+ 	if err := i.oidcCache.Flush(ns); err != nil {
+ 		i.logger.Error("error flushing oidc cache", "error", err)
+ 		return
