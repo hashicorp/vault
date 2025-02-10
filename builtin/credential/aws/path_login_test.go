@@ -363,6 +363,8 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config := logical.TestBackendConfig()
 	config.StorageView = storage
+	config.System = &testSystemView{}
+
 	b, err := Backend(config)
 	if err != nil {
 		t.Fatal(err)

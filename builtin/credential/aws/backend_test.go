@@ -473,6 +473,7 @@ func TestBackend_ConfigClient(t *testing.T) {
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
+	config.System = &testSystemView{}
 
 	b, err := Backend(config)
 	if err != nil {
