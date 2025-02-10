@@ -50,5 +50,6 @@ output "state" {
     identity = local.identity_output
     kv       = local.kv_output
     pki      = local.pki_output
+    ssh      = local.ssh_output
   }
 }
