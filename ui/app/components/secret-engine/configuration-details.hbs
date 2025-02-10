@@ -3,40 +3,32 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-{{#if @configModels.length}}
-  {{#each @configModels as |configModel|}}
-    {{#each configModel.attrs as |attr|}}
-      {{! public key while not sensitive when editing/creating, should be hidden by default on viewing }}
-      {{#if (or attr.options.sensitive (eq attr.name "publicKey"))}}
-        <InfoTableRow
-          alwaysRender={{not (is-empty-value (get configModel attr.name))}}
-          @label={{or attr.options.label (to-label attr.name)}}
-          @value={{get configModel (or attr.options.fieldValue attr.name)}}
-        >
-          {{#if (or attr.options.sensitive (eq attr.name "publicKey"))}}
-            <MaskedInput
-              @value={{get configModel attr.name}}
-              @name={{attr.name}}
-              @displayOnly={{true}}
-              @allowCopy={{true}}
-            />
-          {{/if}}
-        </InfoTableRow>
-      {{else}}
-        <InfoTableRow
-          @alwaysRender={{not (is-empty-value (get @model attr.name))}}
-          @label={{or attr.options.label (to-label attr.name)}}
-          @value={{get configModel (or attr.options.fieldValue attr.name)}}
-        />
-      {{/if}}
-    {{/each}}
+{{#each @configModels as |configModel|}}
+  {{#each configModel.displayAttrs as |attr|}}
+    {{! public key while not sensitive when editing/creating, should be hidden by default on viewing }}
+    {{#if (or attr.options.sensitive (eq attr.name "publicKey"))}}
+      <InfoTableRow
+        alwaysRender={{not (is-empty-value (get configModel attr.name))}}
+        @label={{or attr.options.label (to-label attr.name)}}
+        @value={{get configModel (or attr.options.fieldValue attr.name)}}
+      >
+        <MaskedInput @value={{get configModel attr.name}} @name={{attr.name}} @displayOnly={{true}} @allowCopy={{true}} />
+      </InfoTableRow>
+    {{else}}
+      <InfoTableRow
+        @alwaysRender={{not (is-empty-value (get @model attr.name))}}
+        @label={{or attr.options.label (to-label attr.name)}}
+        @value={{get configModel (or attr.options.fieldValue attr.name)}}
+        @formatTtl={{eq attr.options.editType "ttl"}}
+      />
+    {{/if}}
   {{/each}}
 {{else}}
   {{! Prompt user to configure the secret engine }}
   <EmptyState
     data-test-config-cta
     @title="{{@typeDisplay}} not configured"
-    @message="Get started by configuring your {{@typeDisplay}} engine."
+    @message="Get started by configuring your {{@typeDisplay}} secrets engine."
   >
     <Hds::Link::Standalone
       @icon="chevron-right"
@@ -46,4 +38,4 @@
       @model={{@id}}
     />
   </EmptyState>
-{{/if}}
+{{/each}}

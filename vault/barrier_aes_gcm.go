@@ -621,6 +621,11 @@ func (b *AESGCMBarrier) Rotate(ctx context.Context, randomSource io.Reader) (uin
 	term := b.keyring.ActiveTerm()
 	newTerm := term + 1
 
+	if newTerm < term {
+		// We've rolled over the uint32, don't allow this
+		return 0, errors.New("failed to generate a new term value due to integer overflow")
+	}
+
 	// Add a new encryption key
 	newKeyring, err := b.keyring.AddKey(&Key{
 		Term:    newTerm,
@@ -1276,6 +1281,8 @@ func (b *AESGCMBarrier) persistEncryptions(ctx context.Context) error {
 			newKeyring := b.keyring.Clone()
 			err := b.persistKeyringBestEffort(ctx, newKeyring)
 			if err != nil {
+				// because Keys are pointer addressed, we need to undo the update to the Encryption count here
+				activeKey.Encryptions -= uint64(newEncs)
 				return err
 			}
 			b.UnaccountedEncryptions.Sub(newEncs)

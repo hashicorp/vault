@@ -1,10 +1,10 @@
 ---
 layout: docs
-page_title: Agent Sidecar Injector Annotations
-description: This section documents the configurable annotations for the Vault Agent Injector.
+page_title: Vault Agent Injector annotations
+description: Learn about the configurable annotations for the Vault Agent Injector.
 ---
 
-# Annotations
+# Vault Agent Injector annotations
 
 The following are the available annotations for the injector. These annotations
 are organized into two sections: agent and vault. All of the annotations below
@@ -28,7 +28,7 @@ them, optional commands to run, etc.
 
 - `vault.hashicorp.com/agent-image` - name of the Vault docker image to use. This
   value overrides the default image configured in the injector and is usually
-  not needed. Defaults to `hashicorp/vault:1.18.1`.
+  not needed. Defaults to `hashicorp/vault:1.18.2`.
 
 - `vault.hashicorp.com/agent-init-first` - configures the pod to run the Vault Agent
   init container first if `true` (last if `false`). This is useful when other init

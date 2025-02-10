@@ -35,7 +35,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
     this.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.backend, route: 'list' },
-      { label: 'edit' },
+      { label: 'Edit' },
     ];
     setRunOptions({
       rules: {

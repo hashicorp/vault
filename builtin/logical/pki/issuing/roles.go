@@ -53,6 +53,7 @@ type RoleEntry struct {
 	EmailProtectionFlag           bool          `json:"email_protection_flag"`
 	UseCSRCommonName              bool          `json:"use_csr_common_name"`
 	UseCSRSANs                    bool          `json:"use_csr_sans"`
+	SerialNumberSource            string        `json:"serial_number_source"`
 	KeyType                       string        `json:"key_type"`
 	KeyBits                       int           `json:"key_bits"`
 	UsePSS                        bool          `json:"use_pss"`
@@ -114,6 +115,7 @@ func (r *RoleEntry) ToResponseData() map[string]interface{} {
 		"email_protection_flag":              r.EmailProtectionFlag,
 		"use_csr_common_name":                r.UseCSRCommonName,
 		"use_csr_sans":                       r.UseCSRSANs,
+		"serial_number_source":               r.SerialNumberSource,
 		"key_type":                           r.KeyType,
 		"key_bits":                           r.KeyBits,
 		"signature_bits":                     r.SignatureBits,
@@ -376,6 +378,7 @@ func SignVerbatimRoleWithOpts(opts ...RoleModifier) *RoleEntry {
 		KeyType:                   "any",
 		UseCSRCommonName:          true,
 		UseCSRSANs:                true,
+		SerialNumberSource:        "json-csr",
 		AllowedOtherSANs:          []string{"*"},
 		AllowedSerialNumbers:      []string{"*"},
 		AllowedURISANs:            []string{"*"},

@@ -97,6 +97,12 @@ are unaffected.
 
 @include 'application-of-sentinel-rgps-via-identity-groups.mdx'
 
+### Activity Log Changes
+
+#### Disable client counting activity
+
+License utilization cannot be reported if client counting is disabled. As of Vault Enterprise 1.13.4 and later, client counting cannot be disabled using `/sys/internal/counters/config` endpoint when automated license utilization reporting is enabled.
+
 ## Known issues
 
 @include 'tokenization-rotation-persistence.mdx'

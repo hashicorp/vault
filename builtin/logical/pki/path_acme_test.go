@@ -32,6 +32,7 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -60,7 +61,7 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			baseAcmeURL := "/v1/pki/" + tc.prefixUrl
-			accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+			accountKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 			require.NoError(t, err, "failed creating rsa key")
 
 			acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)
@@ -592,7 +593,7 @@ func TestAcmeAccountsCrossingDirectoryPath(t *testing.T) {
 	defer cluster.Cleanup()
 
 	baseAcmeURL := "/v1/pki/acme/"
-	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	accountKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	require.NoError(t, err, "failed creating rsa key")
 
 	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
@@ -628,7 +629,7 @@ func TestAcmeEabCrossingDirectoryPath(t *testing.T) {
 	require.NoError(t, err)
 
 	baseAcmeURL := "/v1/pki/acme/"
-	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	accountKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	require.NoError(t, err, "failed creating rsa key")
 
 	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
@@ -838,7 +839,7 @@ func TestAcmeTruncatesToIssuerExpiry(t *testing.T) {
 	require.NoError(t, err, "failed updating issuer name")
 
 	baseAcmeURL := "/v1/pki/issuer/short-ca/acme/"
-	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	accountKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	require.NoError(t, err, "failed creating rsa key")
 
 	acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)
@@ -910,7 +911,7 @@ func TestAcmeRoleExtKeyUsage(t *testing.T) {
 	_, err := client.Logical().Write("pki/roles/"+roleName, roleOpt)
 
 	baseAcmeURL := "/v1/pki/roles/" + roleName + "/acme/"
-	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	accountKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	require.NoError(t, err, "failed creating rsa key")
 
 	require.NoError(t, err, "failed creating role test-role")
@@ -1179,7 +1180,7 @@ func TestAcmeWithCsrIncludingBasicConstraintExtension(t *testing.T) {
 	defer cancel()
 
 	baseAcmeURL := "/v1/pki/acme/"
-	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	accountKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	require.NoError(t, err, "failed creating rsa key")
 
 	acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)
@@ -1511,7 +1512,7 @@ func TestAcmeValidationError(t *testing.T) {
 	defer cancel()
 
 	baseAcmeURL := "/v1/pki/acme/"
-	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	accountKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	require.NoError(t, err, "failed creating rsa key")
 
 	acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)
@@ -1619,12 +1620,12 @@ func TestAcmeRevocationAcrossAccounts(t *testing.T) {
 	defer cancel()
 
 	baseAcmeURL := "/v1/pki/acme/"
-	accountKey1, err := rsa.GenerateKey(rand.Reader, 2048)
+	accountKey1, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	require.NoError(t, err, "failed creating rsa key")
 
 	acmeClient1 := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey1)
 
-	leafKey, certs := doACMEWorkflow(t, vaultClient, acmeClient1)
+	_, leafKey, certs := doACMEWorkflow(t, vaultClient, acmeClient1)
 	acmeCert, err := x509.ParseCertificate(certs[0])
 	require.NoError(t, err, "failed parsing acme cert bytes")
 
@@ -1674,7 +1675,7 @@ func TestAcmeRevocationAcrossAccounts(t *testing.T) {
 		"revocation time was not greater than 0, cert was not revoked: %v", revocationTimeInt)
 
 	// Make sure we can revoke a certificate without a registered ACME account
-	leafKey2, certs2 := doACMEWorkflow(t, vaultClient, acmeClient1)
+	_, leafKey2, certs2 := doACMEWorkflow(t, vaultClient, acmeClient1)
 
 	acmeClient3 := getAcmeClientForCluster(t, cluster, baseAcmeURL, nil)
 	err = acmeClient3.RevokeCert(ctx, leafKey2, certs2[0], acme.CRLReasonUnspecified)
@@ -1718,7 +1719,7 @@ func TestAcmeMaxTTL(t *testing.T) {
 	require.NoError(t, err, "error configuring acme")
 
 	// First Create Our Client
-	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	accountKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	require.NoError(t, err, "failed creating rsa key")
 	acmeClient := getAcmeClientForCluster(t, cluster, "/v1/pki/acme/", accountKey)
 
@@ -1780,7 +1781,94 @@ func TestAcmeMaxTTL(t *testing.T) {
 	require.Less(t, acmeCertNotAfter, maxTTL.Add(buffer), "ACME cert: %v should have been less than max TTL was %v", acmeCert.NotAfter, maxTTL)
 }
 
-func doACMEWorkflow(t *testing.T, vaultClient *api.Client, acmeClient *acme.Client) (*ecdsa.PrivateKey, [][]byte) {
+// TestVaultOperatorACMEDisableWorkflow validates that the Vault management API for ACME accounts works as expected.
+func TestVaultOperatorACMEDisableWorkflow(t *testing.T) {
+	t.Parallel()
+	cluster, vaultClient, _ := setupAcmeBackend(t)
+	defer cluster.Cleanup()
+	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	// Make sure we can call list on an empty ACME mount
+	resp, err := vaultClient.Logical().ListWithContext(testCtx, "pki/acme/mgmt/account/keyid")
+	require.NoError(t, err, "failed listing acme accounts")
+	require.Nil(t, resp, "expected nil, nil response on list of an empty mount")
+
+	// Make sure we get nil, nil response when trying to read a non-existent key (the API returns this for a 404)
+	resp, err = vaultClient.Logical().ReadWithContext(testCtx, "pki/acme/mgmt/account/keyid/doesnotexist")
+	require.NoError(t, err, "failed reading non-existent ACME key")
+	require.Nil(t, resp, "expected nil, nil response on a non-existent ACME key")
+
+	// Make sure we get an error response when trying to write to a non-existent key, unlike read the write call returns an error.
+	_, err = vaultClient.Logical().WriteWithContext(testCtx, "pki/acme/mgmt/account/keyid/doesnotexist", map[string]interface{}{"status": "valid"})
+	require.ErrorContains(t, err, "did not exist", "failed writing non-existent ACME key")
+
+	baseAcmeURL := "/v1/pki/acme/"
+	accountKey1, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
+	require.NoError(t, err, "failed creating rsa key")
+
+	acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey1)
+	acct, _, _ := doACMEWorkflow(t, vaultClient, acmeClient)
+
+	// ACME client KID is formatted as https://127.0.0.1:60777/v1/pki/acme/account/45f52b66-a3ed-4080-dec7-cdcff1ef189f
+	acmeClientKid := acmeClient.KID
+
+	// Make sure we can call list on an empty ACME mount
+	resp, err = vaultClient.Logical().ListWithContext(testCtx, "pki/acme/mgmt/account/keyid")
+	require.NoError(t, err, "failed listing acme accounts")
+	require.NotNil(t, resp, "expected non-nil response on list on ACME keyid")
+	keysFromList := resp.Data["keys"].([]interface{})
+	require.Len(t, keysFromList, 1, "expected one key in the list")
+	kid := keysFromList[0].(string)
+	require.True(t, strings.HasSuffix(string(acmeClientKid), kid), "expected key to match the one the ACME client has")
+
+	// Make sure we can read the key we just listed
+	resp, err = vaultClient.Logical().ReadWithContext(testCtx, "pki/acme/mgmt/account/keyid/"+kid)
+	require.NoError(t, err, "failed reading ACME with account key")
+	require.NotNil(t, resp, "read response was nil on ACME keyid")
+	require.Equal(t, "acme/", resp.Data["directory"], "expected directory field in response")
+	require.Equal(t, kid, resp.Data["key_id"], "expected key_id field in response")
+	require.Equal(t, "valid", resp.Data["status"], "expected status field in response")
+	require.NotEmpty(t, resp.Data["created_time"], "expected created_time field in response")
+	require.NotEmpty(t, resp.Data["orders"], "expected orders field in response")
+	require.Empty(t, resp.Data["revoked_time"], "expected revoked_time field in response")
+	require.Empty(t, resp.Data["eab"], "expected eab field in response to be empty")
+	orders := resp.Data["orders"].([]interface{})
+	require.Len(t, orders, 1, "expected one order in the list")
+	order := orders[0].(map[string]interface{})
+	require.NotEmpty(t, order["order_id"], "expected order_id field in response")
+	require.NotEmpty(t, order["cert_expiry"], "expected cert_expiry field in response")
+	require.NotEmpty(t, order["cert_serial_number"], "expected cert_serial_number field in response")
+
+	// Make sure we can update the status of the account to revoked and the revoked_time field is set
+	resp, err = vaultClient.Logical().WriteWithContext(testCtx, "pki/acme/mgmt/account/keyid/"+kid, map[string]interface{}{"status": "revoked"})
+	require.NoError(t, err, "failed updating writing ACME with account key")
+	require.NotNil(t, resp, "expected non-nil response on write to ACME keyid")
+	require.Equal(t, "acme/", resp.Data["directory"], "expected directory field in response")
+	require.Equal(t, kid, resp.Data["key_id"], "expected key_id field in response")
+	require.Equal(t, "revoked", resp.Data["status"], "expected status field in response")
+	require.NotEmpty(t, resp.Data["created_time"], "expected created_time field in response")
+	require.NotEmpty(t, resp.Data["revoked_time"], "expected revoked_time field in response")
+	require.Empty(t, resp.Data["eab"], "expected eab field in response to be empty")
+	require.Empty(t, resp.Data["orders"], "write response should not contain orders")
+
+	// Now make sure that we can't use the ACME account anymore
+	identifiers := []string{"*.localdomain"}
+	_, err = acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{
+		{Type: "dns", Value: identifiers[0]},
+	})
+	require.ErrorContains(t, err, "account in status: revoked", "Requesting an order with a revoked account should have failed")
+
+	// Switch the account back to valid and make sure we can use it again
+	resp, err = vaultClient.Logical().WriteWithContext(testCtx, "pki/acme/mgmt/account/keyid/"+kid, map[string]interface{}{"status": "valid"})
+	require.NoError(t, err, "failed updating writing ACME with account key")
+	require.Empty(t, resp.Data["revoked_time"], "revoked_time should have been reset")
+	require.Equal(t, "valid", resp.Data["status"], "status should have been reset to valid")
+
+	doACMEOrderWorkflow(t, vaultClient, acmeClient, acct)
+}
+
+func doACMEWorkflow(t *testing.T, vaultClient *api.Client, acmeClient *acme.Client) (*acme.Account, *ecdsa.PrivateKey, [][]byte) {
 	testCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -1794,6 +1882,14 @@ func doACMEWorkflow(t *testing.T, vaultClient *api.Client, acmeClient *acme.Clie
 			require.NoError(t, err, "failed registering account")
 		}
 	}
+
+	csrKey, certs := doACMEOrderWorkflow(t, vaultClient, acmeClient, acct)
+	return acct, csrKey, certs
+}
+
+func doACMEOrderWorkflow(t *testing.T, vaultClient *api.Client, acmeClient *acme.Client, acct *acme.Account) (*ecdsa.PrivateKey, [][]byte) {
+	testCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
 	// Create an order
 	identifiers := []string{"*.localdomain"}
@@ -1946,7 +2042,7 @@ func TestACMEClientRequestLimits(t *testing.T) {
 	for _, tc := range cases {
 
 		// First Create Our Client
-		accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+		accountKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 		require.NoError(t, err, "failed creating rsa key")
 		acmeClient := getAcmeClientForCluster(t, cluster, "/v1/pki/acme/", accountKey)
 

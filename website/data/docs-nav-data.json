@@ -11,16 +11,20 @@
     "title": "Get Started",
     "routes": [
       {
-        "title": "CLI Quick Start",
-        "href": "https://learn.hashicorp.com/collections/vault/getting-started"
-      },
-      {
-        "title": "HCP Quick Start",
-        "href": "https://learn.hashicorp.com/collections/vault/cloud"
-      },
-      {
-        "title": "Developer Quick Start",
+        "title": "Developer quick start",
         "path": "get-started/developer-qs"
+      },
+      {
+        "title": "Operations quick start",
+        "path": "get-started/operations-qs"
+      },
+      {
+        "title": "Vault foundations tutorials",
+        "href": "/vault/tutorials/get-started"
+      },
+      {
+        "title": "HCP Vault Dedicated tutorials",
+        "href": "/vault/tutorials/get-started-hcp-vault-dedicated"
       }
     ]
   },
@@ -234,8 +238,16 @@
         "path": "concepts/ha"
       },
       {
+        "title": "Production hardening",
+        "path": "concepts/production-hardening"
+      },
+      {
         "title": "Storage",
         "path": "concepts/storage"
+      },
+      {
+        "title": "Tune server performance",
+        "path": "concepts/tune-server-performance"
       },
       {
         "title": "Cloud access management",
@@ -255,6 +267,10 @@
           {
             "title": "Migration checklist",
             "path": "concepts/integrated-storage/migration-checklist"
+          },
+          {
+            "title": "Migrate Consul storage",
+            "path": "concepts/integrated-storage/migrate-consul-storage"
           }
         ]
       },
@@ -308,14 +324,14 @@
         "path": "concepts/duration-format"
       },
       {
-        "title": "User Lockout",
+        "title": "User lockout",
         "path": "concepts/user-lockout"
       },
       {
         "title": "Events",
         "path": "concepts/events",
         "badge": {
-          "text": "ENTERPRISE",
+          "text": "ENT",
           "type": "outlined",
           "color": "neutral"
         }
@@ -324,7 +340,7 @@
         "title": "Filtering",
         "path": "concepts/filtering",
         "badge": {
-          "text": "ENTERPRISE",
+          "text": "ENT",
           "type": "outlined",
           "color": "neutral"
         }
@@ -332,7 +348,7 @@
       {
         "title": "Adaptive overload protection",
         "badge": {
-          "text": "ENTERPRISE",
+          "text": "ENT",
           "type": "outlined",
           "color": "neutral"
         },
@@ -353,8 +369,12 @@
     "title": "Configuration",
     "routes": [
       {
-        "title": "Overview",
+        "title": "Parameter overview ",
         "path": "configuration"
+      },
+      {
+        "title": "GUI configuration",
+        "path": "configuration/ui"
       },
       {
         "title": "Programmatic best practices",
@@ -373,6 +393,40 @@
         "path": "configuration/create-lease-count-quota"
       },
       {
+        "title": "Configure completed request logging",
+        "path": "configuration/log-requests-level"
+      },
+      {
+        "title": "Configure entropy augmentation",
+        "badge": {
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
+        },
+        "path": "configuration/entropy-augmentation"
+      },
+
+      { "heading": "Configuration stanzas" },
+
+      {
+        "title": "<code>adaptive_overload_protection</code>",
+        "badge": {
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
+        },
+        "path": "configuration/adaptive-overload-protection"
+      },
+      {
+        "title": "<code>kms_library</code>",
+        "badge": {
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
+        },
+        "path": "configuration/kms-library"
+      },
+      {
         "title": "<code>listener</code>",
         "routes": [
           {
@@ -380,10 +434,10 @@
             "path": "configuration/listener"
           },
           {
-            "title": "TCP",
+            "title": "TCP listener configuration",
             "routes": [
               {
-                "title": "Overview",
+                "title": "Basic configuration",
                 "path": "configuration/listener/tcp"
               },
               {
@@ -393,7 +447,7 @@
             ]
           },
           {
-            "title": "Unix",
+            "title": "Unix listener configuration",
             "path": "configuration/listener/unix"
           }
         ]
@@ -401,7 +455,7 @@
       {
         "title": "<code>replication</code>",
         "badge": {
-          "text": "ENTERPRISE",
+          "text": "ENT",
           "type": "outlined",
           "color": "neutral"
         },
@@ -410,7 +464,7 @@
       {
         "title": "<code>reporting</code>",
         "badge": {
-          "text": "ENTERPRISE",
+          "text": "ENT",
           "type": "outlined",
           "color": "neutral"
         },
@@ -424,18 +478,19 @@
             "path": "configuration/seal"
           },
           {
-            "title": "Seal best practices",
+            "title": "Sealing best practices",
             "path": "configuration/seal/seal-best-practices"
           },
           {
-            "title": "High Availability",
+            "title": "Configure HA for seals",
             "badge": {
-              "text": "ENTERPRISE",
+              "text": "ENT",
               "type": "outlined",
               "color": "neutral"
             },
             "path": "configuration/seal/seal-ha"
           },
+          { "heading": "Seal wrapper options" },
           {
             "title": "AliCloud KMS",
             "path": "configuration/seal/alicloudkms"
@@ -459,18 +514,18 @@
           {
             "title": "HSM PKCS11",
             "badge": {
-              "text": "ENTERPRISE",
+              "text": "ENT",
               "type": "outlined",
               "color": "neutral"
             },
             "path": "configuration/seal/pkcs11"
           },
           {
-            "title": "Vault Transit",
+            "title": "Transit plugin",
             "path": "configuration/seal/transit"
           },
           {
-            "title": "Transit best practices",
+            "title": "Auto-unseal best practices for Transit",
             "path": "configuration/seal/transit-best-practices"
           }
         ]
@@ -478,7 +533,7 @@
       {
         "title": "<code>sentinel</code>",
         "badge": {
-          "text": "ENTERPRISE",
+          "text": "ENT",
           "type": "outlined",
           "color": "neutral"
         },
@@ -491,6 +546,7 @@
             "title": "Overview",
             "path": "configuration/service-registration"
           },
+          { "heading": "Service registration options" },
           {
             "title": "Consul",
             "path": "configuration/service-registration/consul"
@@ -505,9 +561,10 @@
         "title": "<code>storage</code>",
         "routes": [
           {
-            "title": "Overview",
+            "title": "Backend storage for Vault",
             "path": "configuration/storage"
           },
+          { "heading": "Storage options" },
           {
             "title": "Aerospike",
             "path": "configuration/storage/aerospike"
@@ -545,7 +602,7 @@
             "path": "configuration/storage/etcd"
           },
           {
-            "title": "Filesystem",
+            "title": "File system",
             "path": "configuration/storage/filesystem"
           },
           {
@@ -561,8 +618,12 @@
             "path": "configuration/storage/google-cloud-storage"
           },
           {
-            "title": "In-Memory",
+            "title": "In-memory storage",
             "path": "configuration/storage/in-memory"
+          },
+          {
+            "title": "Integrated storage (Raft)",
+            "path": "configuration/storage/raft"
           },
           {
             "title": "Manta",
@@ -585,10 +646,6 @@
             "path": "configuration/storage/postgresql"
           },
           {
-            "title": "Integrated Storage (Raft)",
-            "path": "configuration/storage/raft"
-          },
-          {
             "title": "S3",
             "path": "configuration/storage/s3"
           },
@@ -607,43 +664,8 @@
         "path": "configuration/telemetry"
       },
       {
-        "title": "Adaptive overload protection",
-        "badge": {
-          "text": "ENTERPRISE",
-          "type": "outlined",
-          "color": "neutral"
-        },
-        "path": "configuration/adaptive-overload-protection"
-      },
-      {
-        "title": "<code>ui</code>",
-        "path": "configuration/ui"
-      },
-      {
         "title": "<code>user_lockout</code>",
         "path": "configuration/user-lockout"
-      },
-      {
-        "title": "<code>Log Completed Requests</code>",
-        "path": "configuration/log-requests-level"
-      },
-      {
-        "title": "<code>Entropy Augmentation</code>",
-        "badge": {
-          "text": "ENTERPRISE",
-          "type": "outlined",
-          "color": "neutral"
-        },
-        "path": "configuration/entropy-augmentation"
-      },
-      {
-        "title": "<code>kms_library</code>",
-        "badge": {
-          "text": "ENTERPRISE",
-          "type": "outlined",
-          "color": "neutral"
-        },
-        "path": "configuration/kms-library"
       }
     ]
   },
@@ -1181,7 +1203,7 @@
         "title": "Custom Messages",
         "path": "ui/custom-messages",
         "badge": {
-          "text": "ENTERPRISE",
+          "text": "ENT",
           "type": "outlined",
           "color": "neutral"
         }
@@ -1264,7 +1286,7 @@
             ]
           },
           {
-            "title": "Sinks",
+            "title": "Token sinks",
             "routes": [
               {
                 "title": "File",
@@ -1296,7 +1318,7 @@
                 "title": "Improve Vault traffic resiliency",
                 "path": "agent-and-proxy/proxy/caching/static-secret-caching",
                 "badge": {
-                  "text": "ENTERPRISE",
+                  "text": "ENT",
                   "type": "outlined",
                   "color": "neutral"
                 }
@@ -1527,7 +1549,7 @@
       {
         "title": "Key Management",
         "badge": {
-          "text": "ENTERPRISE",
+          "text": "ENT",
           "type": "outlined",
           "color": "neutral"
         },
@@ -1581,8 +1603,7 @@
           },
           {
             "title": "KV version  2",
-            "routes":
-            [
+            "routes": [
               {
                 "title": "Overview",
                 "path": "secrets/kv/kv-v2"
@@ -1605,6 +1626,10 @@
                   {
                     "title": "Read data",
                     "path": "secrets/kv/kv-v2/cookbook/read-data"
+                  },
+                  {
+                    "title": "Read subkeys",
+                    "path": "secrets/kv/kv-v2/cookbook/read-subkey"
                   },
                   {
                     "title": "Set max data versions",
@@ -1643,7 +1668,7 @@
       {
         "title": "KMIP",
         "badge": {
-          "text": "ENTERPRISE",
+          "text": "ENT",
           "type": "outlined",
           "color": "neutral"
         },
@@ -1700,7 +1725,7 @@
           {
             "title": "Certificate Issuance External Policy Service (CIEPS)",
             "badge": {
-              "text": "ENTERPRISE",
+              "text": "ENT",
               "type": "outlined",
               "color": "neutral"
             },
@@ -1710,7 +1735,7 @@
             "title": "Enrollment over Secure Transport (EST)",
             "path": "secrets/pki/est",
             "badge": {
-              "text": "ENTERPRISE",
+              "text": "ENT",
               "type": "outlined",
               "color": "neutral"
             },
@@ -1719,7 +1744,7 @@
           {
             "title": "Certificate Management Protocol (CMPv2)",
             "badge": {
-              "text": "ENTERPRISE",
+              "text": "ENT",
               "type": "outlined",
               "color": "neutral"
             },
@@ -1753,7 +1778,7 @@
         ]
       },
       {
-        "title": "Terraform Cloud",
+        "title": "HCP Terraform",
         "path": "secrets/terraform"
       },
       {
@@ -1763,7 +1788,7 @@
       {
         "title": "Transform",
         "badge": {
-          "text": "ENTERPRISE",
+          "text": "ENT",
           "type": "outlined",
           "color": "neutral"
         },
@@ -1779,7 +1804,7 @@
           {
             "title": "Tokenization Transform",
             "badge": {
-              "text": "ENTERPRISE",
+              "text": "ENT",
               "type": "outlined",
               "color": "neutral"
             },
@@ -1809,7 +1834,7 @@
   {
     "title": "Secrets Sync",
     "badge": {
-      "text": "ENTERPRISE",
+      "text": "ENT",
       "type": "outlined",
       "color": "neutral"
     },
@@ -1819,23 +1844,23 @@
         "path": "sync"
       },
       {
-        "title": "AWS Secrets Manager",
+        "title": "Sync to AWS Secrets Manager",
         "path": "sync/awssm"
       },
       {
-        "title": "Azure Key Vault",
+        "title": "Sync to Azure Key Vault",
         "path": "sync/azurekv"
       },
       {
-        "title": "GCP Secret Manager",
+        "title": "Sync to GCP Secret Manager",
         "path": "sync/gcpsm"
       },
       {
-        "title": "GitHub",
+        "title": "Sync to GitHub",
         "path": "sync/github"
       },
       {
-        "title": "Vercel Project",
+        "title": "Sync to Vercel Project",
         "path": "sync/vercelproject"
       }
     ]
@@ -1843,7 +1868,7 @@
   {
     "title": "Secrets Import",
     "badge": {
-      "text": "ENTERPRISE",
+      "text": "ENT",
       "type": "outlined",
       "color": "neutral"
     },
@@ -1858,17 +1883,25 @@
         }
       },
       {
+        "title": "AWS Secret Manager",
+        "path": "import/awssm"
+      },
+      {
+        "title": "Azure KeyVault",
+        "path": "import/azurekv"
+      },
+      {
         "title": "GCP Secret Manager",
         "path": "import/gcpsm"
       },
       {
-        "title": "Mappings",
-        "path": "import/mappings"
+        "title": "HashiCorp Vault",
+        "path": "import/vault"
       }
     ]
   },
   {
-    "title": "Auth Methods",
+    "title": "AuthN methods",
     "routes": [
       {
         "title": "Overview",
@@ -1878,11 +1911,11 @@
         "title": "AppRole",
         "routes": [
           {
-            "title": "Overview",
+            "title": "Use AppRole authN",
             "path": "auth/approle"
           },
           {
-            "title": "Recommended pattern",
+            "title": "AppRole best practices",
             "path": "auth/approle/approle-pattern"
           }
         ]
@@ -1915,14 +1948,14 @@
         "title": "JWT/OIDC",
         "routes": [
           {
-            "title": "Overview",
+            "title": "Use JWT/OIDC",
             "path": "auth/jwt"
           },
           {
-            "title": "OIDC Providers",
+            "title": "OIDC providers",
             "routes": [
               {
-                "title": "Overview",
+                "title": "OIDC provider list",
                 "path": "auth/jwt/oidc-providers"
               },
               {
@@ -1966,7 +1999,7 @@
                 "path": "auth/jwt/oidc-providers/secureauth"
               },
               {
-                "title": "IBM ISAM",
+                "title": "IBM Verify",
                 "path": "auth/jwt/oidc-providers/ibmisam"
               }
             ]
@@ -1989,11 +2022,11 @@
         "title": "Login MFA",
         "routes": [
           {
-            "title": "Overview",
+            "title": "Setup login MFA",
             "path": "auth/login-mfa"
           },
           {
-            "title": "FAQ",
+            "title": "Login MFA FAQ",
             "path": "auth/login-mfa/faq"
           }
         ]
@@ -2011,15 +2044,15 @@
         "path": "auth/radius"
       },
       {
-        "title": "SAML",
+        "title": "Use SAML authentication",
         "badge": {
-          "text": "ENTERPRISE",
+          "text": "ENT",
           "type": "outlined",
           "color": "neutral"
         },
         "routes": [
           {
-            "title": "Overview",
+            "title": "Set up SAML authN",
             "path": "auth/saml"
           },
           {
@@ -2110,7 +2143,7 @@
         "title": "Plugin Development — Event Notifications",
         "path": "plugins/plugin-development-event-notifications",
         "badge": {
-          "text": "ENTERPRISE",
+          "text": "ENT",
           "type": "outlined",
           "color": "neutral"
         }
@@ -2519,6 +2552,31 @@
         "path": "upgrading/raft-wal"
       },
       {
+        "title": "Resolve duplicate identities",
+        "routes": [
+          {
+            "title": "Process overview",
+            "path": "upgrading/deduplication"
+          },
+          {
+            "title": "Fix different-case entity alias duplicates",
+            "path": "upgrading/deduplication/different-case"
+          },
+          {
+            "title": "Fix entity and group duplicates",
+            "path": "upgrading/deduplication/entity-group"
+          },
+          {
+            "title": "Resolve ACL policy templates",
+            "path": "upgrading/deduplication/acl-policy-templates"
+          },
+          {
+            "title": "Resolve Terraform config",
+            "path": "upgrading/deduplication/terraform-refs"
+          }
+        ]
+      },
+      {
         "title": "Upgrade to 1.19.x",
         "path": "upgrading/upgrade-to-1.19.x"
       },
@@ -2901,14 +2959,14 @@
         "path": "enterprise"
       },
       {
-        "title": "License",
+        "title": "Licensing",
         "routes": [
           {
             "title": "Overview",
             "path": "enterprise/license"
           },
           {
-            "title": "Autoloading",
+            "title": "Autoload an enterprise license",
             "path": "enterprise/license/autoloading"
           },
           {
@@ -2920,7 +2978,7 @@
             "path": "enterprise/license/manual-reporting"
           },
           {
-            "title": "Product usage reporting",
+            "title": "Anonymous product usage reporting",
             "path": "enterprise/license/product-usage-reporting"
           },
           {
@@ -2941,7 +2999,7 @@
         "title": "Replication",
         "routes": [
           {
-            "title": "Overview",
+            "title": "Replication support in Vault",
             "path": "enterprise/replication"
           },
           {
@@ -2954,82 +3012,82 @@
         "title": "HSM Support",
         "routes": [
           {
-            "title": "Overview",
+            "title": "HSM support overview",
             "path": "enterprise/hsm"
           },
           {
-            "title": "Behavioral Changes",
+            "title": "How HSM changes Vault",
             "path": "enterprise/hsm/behavior"
           },
           {
-            "title": "Security",
+            "title": "HSM security details",
             "path": "enterprise/hsm/security"
           }
         ]
       },
       {
-        "title": "PKCS11 Provider",
+        "title": "PKCS11 provider",
         "routes": [
           {
-            "title": "Overview",
+            "title": "PKCS#11 support in Vault",
             "path": "enterprise/pkcs11-provider"
           },
           {
-            "title": "AWS KMS XKS",
+            "title": "Use PKCS#11 with AWS KMS",
             "path": "enterprise/pkcs11-provider/aws-xks"
           },
           {
-            "title": "Oracle TDE",
+            "title": "Use PKCS#11 with Oracle TDE",
             "path": "enterprise/pkcs11-provider/oracle-tde"
           }
         ]
       },
       {
-        "title": "Automated Integrated Storage Snapshots",
+        "title": "Automatic snapshots with integrated storage",
         "path": "enterprise/automated-integrated-storage-snapshots"
       },
       {
-        "title": "Automated Upgrades",
+        "title": "Automatically upgrade Vault clusters",
         "path": "enterprise/automated-upgrades"
       },
       {
-        "title": "Redundancy Zones",
+        "title": "Use redundancy zones",
         "path": "enterprise/redundancy-zones"
       },
       {
-        "title": "Lease Count Quotas",
+        "title": "Enforce lease count quotas",
         "path": "enterprise/lease-count-quotas"
       },
       {
-        "title": "Entropy Augmentation",
+        "title": "Augment entropy with external samples",
         "path": "enterprise/entropy-augmentation"
       },
       {
         "title": "FIPS",
         "routes": [
           {
-            "title": "Overview",
+            "title": "FIPS compliance in Vault",
             "path": "enterprise/fips"
           },
           {
-            "title": "FIPS 140-2 Inside Vault",
+            "title": "Built-in FIPS 140-2 support",
             "path": "enterprise/fips/fips1402"
           },
           {
-            "title": "Seal Wrap for FIPS 140-2",
+            "title": "Seal wrap for FIPS compliance",
             "path": "enterprise/fips/sealwrap"
           }
         ]
       },
       {
-        "title": "Seal Wrap",
+        "title": "Wrap seals with encryption",
         "path": "enterprise/sealwrap"
       },
       {
-        "title": "Namespaces",
+        "title": "Namespaces and SMT",
         "routes": [
           {
-            "title": "Overview",
+            "title": "Namespace + SMT support in Vault",
             "path": "enterprise/namespaces"
           },
           {
@@ -3040,7 +3098,7 @@
             "title": "Run Vault with many namespaces",
             "path": "enterprise/namespaces/namespace-limits",
             "badge": {
-              "text": "ENTERPRISE",
+              "text": "ENT",
               "type": "outlined",
               "color": "neutral"
             }
@@ -3049,23 +3107,23 @@
             "title": "Configure cross namespace access",
             "path": "enterprise/namespaces/configure-cross-namespace-access",
             "badge": {
-              "text": "ENTERPRISE",
+              "text": "ENT",
               "type": "outlined",
               "color": "neutral"
             }
           },
           {
-            "title": "Structure guide",
+            "title": "Best practices for namespaces",
             "path": "enterprise/namespaces/namespace-structure"
           }
         ]
       },
       {
-        "title": "Performance Standbys",
+        "title": "Use performance standby nodes",
         "path": "enterprise/performance-standby"
       },
       {
-        "title": "Eventual Consistency",
+        "title": "Data consistency for replication",
         "path": "enterprise/consistency"
       },
       {
@@ -3082,57 +3140,57 @@
         ]
       },
       {
-        "title": "Control Groups",
+        "title": "Use control group authZ ",
         "path": "enterprise/control-groups"
       },
       {
-        "title": "Managed Keys",
+        "title": "3rd party key management",
         "path": "enterprise/managed-keys"
       },
       {
-        "title": "MFA",
+        "title": "Multi-factor authN",
         "routes": [
           {
-            "title": "Overview",
+            "title": "MFA support in Vault",
             "path": "enterprise/mfa"
           },
           {
-            "title": "Duo MFA",
+            "title": "Configure Duo for MFA",
             "path": "enterprise/mfa/mfa-duo"
           },
           {
-            "title": "Okta MFA",
+            "title": "Configure Okta for MFA",
             "path": "enterprise/mfa/mfa-okta"
           },
           {
-            "title": "PingID MFA",
+            "title": "Configure PingID for MFA",
             "path": "enterprise/mfa/mfa-pingid"
           },
           {
-            "title": "TOTP MFA",
+            "title": "Configure TOTP for MFA",
             "path": "enterprise/mfa/mfa-totp"
           }
         ]
       },
       {
-        "title": "Sentinel",
+        "title": "Manage policies as code",
         "routes": [
           {
-            "title": "Overview",
+            "title": "Mange Vault policies with Sentinel",
             "path": "enterprise/sentinel"
           },
           {
-            "title": "Examples",
-            "path": "enterprise/sentinel/examples"
+            "title": "Sentinel properties for Vault",
+            "path": "enterprise/sentinel/properties"
           },
           {
-            "title": "Properties",
-            "path": "enterprise/sentinel/properties"
+            "title": "Sentinel examples",
+            "path": "enterprise/sentinel/examples"
           }
         ]
       },
       {
-        "title": "HCP Vault",
+        "title": "HCP Vault docs",
         "href": "https://cloud.hashicorp.com/docs/vault"
       }
     ]

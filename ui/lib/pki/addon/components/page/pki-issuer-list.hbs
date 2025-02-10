@@ -65,22 +65,22 @@
               <span class="has-text-weight-semibold is-underline">
                 {{pkiIssuer.issuerRef}}
                 {{#if pkiIssuer.issuerName}}
-                  <span class="tag has-text-grey-dark">{{pkiIssuer.id}}</span>
+                  <Hds::Badge @text={{pkiIssuer.id}} />
                 {{/if}}
               </span>
               <div class="is-flex-row has-left-margin-l has-top-margin-xs">
                 {{#if pkiIssuer.isDefault}}
-                  <span class="tag has-text-grey-dark" data-test-is-default={{idx}}>default issuer</span>
+                  <Hds::Badge @text="default issuer" data-test-is-default={{idx}} class="has-right-margin-8" />
                 {{/if}}
                 {{#if (not-eq pkiIssuer.isRoot undefined)}}
-                  <span class="tag has-text-grey-dark" data-test-is-root-tag={{idx}}>{{if
-                      pkiIssuer.isRoot
-                      "root"
-                      "intermediate"
-                    }}</span>
+                  <Hds::Badge
+                    @text={{if pkiIssuer.isRoot "root" "intermediate"}}
+                    data-test-is-root-tag={{idx}}
+                    class="has-right-margin-8"
+                  />
                 {{/if}}
                 {{#if pkiIssuer.serialNumber}}
-                  <span class="tag is-transparent has-right-margin-none" data-test-serial-number={{idx}}>
+                  <span class="is-flex-v-centered has-side-padding-8" data-test-serial-number={{idx}}>
                     <InfoTooltip>
                       Serial number
                     </InfoTooltip>
@@ -88,7 +88,7 @@
                   </span>
                 {{/if}}
                 {{#if pkiIssuer.parsedCertificate.common_name}}
-                  <span class="tag is-transparent has-left-margin-none" data-test-common-name={{idx}}>
+                  <span class="is-flex-v-centered has-side-padding-8" data-test-common-name={{idx}}>
                     <InfoTooltip>
                       Common name
                     </InfoTooltip>

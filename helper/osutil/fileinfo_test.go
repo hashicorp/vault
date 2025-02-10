@@ -74,10 +74,10 @@ func TestCheckPathInfo(t *testing.T) {
 
 		err = checkPathInfo(info, "testFile", tc.uid, int(tc.permissions))
 		if tc.expectError && err == nil {
-			t.Errorf("invalid result. expected error")
+			t.Error("invalid result. expected error")
 		}
 		if !tc.expectError && err != nil {
-			t.Errorf(err.Error())
+			t.Error(err.Error())
 		}
 
 		err = os.RemoveAll("testFile")

@@ -9,13 +9,18 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginidentityutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/rotation"
 )
 
 // A single default template that supports both the different credential types (IAM/STS) that are capped at differing length limits (64 chars/32 chars respectively)
-const defaultUserNameTemplate = `{{ if (eq .Type "STS") }}{{ printf "vault-%s-%s"  (unix_time) (random 20) | truncate 32 }}{{ else }}{{ printf "vault-%s-%s-%s" (printf "%s-%s" (.DisplayName) (.PolicyName) | truncate 42) (unix_time) (random 20) | truncate 64 }}{{ end }}`
+const (
+	defaultUserNameTemplate = `{{ if (eq .Type "STS") }}{{ printf "vault-%s-%s"  (unix_time) (random 20) | truncate 32 }}{{ else }}{{ printf "vault-%s-%s-%s" (printf "%s-%s" (.DisplayName) (.PolicyName) | truncate 42) (unix_time) (random 20) | truncate 64 }}{{ end }}`
+	rootRotationJobName     = "aws-root-creds"
+)
 
 func pathConfigRoot(b *backend) *framework.Path {
 	p := &framework.Path{
@@ -52,6 +57,14 @@ func pathConfigRoot(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Specific region for STS API calls.",
 			},
+			"sts_fallback_endpoints": {
+				Type:        framework.TypeCommaStringSlice,
+				Description: "Fallback endpoints if sts_endpoint is unreachable",
+			},
+			"sts_fallback_regions": {
+				Type:        framework.TypeCommaStringSlice,
+				Description: "Fallback regions if sts_region is unreachable",
+			},
 			"max_retries": {
 				Type:        framework.TypeInt,
 				Default:     aws.UseServiceDefaultRetries,
@@ -87,6 +100,7 @@ func pathConfigRoot(b *backend) *framework.Path {
 		HelpDescription: pathConfigRootHelpDesc,
 	}
 	pluginidentityutil.AddPluginIdentityTokenFields(p.Fields)
+	automatedrotationutil.AddAutomatedRotationFields(p.Fields)
 
 	return p
 }
@@ -95,32 +109,30 @@ func (b *backend) pathConfigRootRead(ctx context.Context, req *logical.Request, 
 	b.clientMutex.RLock()
 	defer b.clientMutex.RUnlock()
 
-	entry, err := req.Storage.Get(ctx, "config/root")
+	config, exists, err := getConfigFromStorage(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	if entry == nil {
+	if !exists {
 		return nil, nil
 	}
 
-	var config rootConfig
-
-	if err := entry.DecodeJSON(&config); err != nil {
-		return nil, err
-	}
-
 	configData := map[string]interface{}{
-		"access_key":        config.AccessKey,
-		"region":            config.Region,
-		"iam_endpoint":      config.IAMEndpoint,
-		"sts_endpoint":      config.STSEndpoint,
-		"sts_region":        config.STSRegion,
-		"max_retries":       config.MaxRetries,
-		"username_template": config.UsernameTemplate,
-		"role_arn":          config.RoleARN,
+		"access_key":             config.AccessKey,
+		"region":                 config.Region,
+		"iam_endpoint":           config.IAMEndpoint,
+		"sts_endpoint":           config.STSEndpoint,
+		"sts_region":             config.STSRegion,
+		"sts_fallback_endpoints": config.STSFallbackEndpoints,
+		"sts_fallback_regions":   config.STSFallbackRegions,
+		"max_retries":            config.MaxRetries,
+		"username_template":      config.UsernameTemplate,
+		"role_arn":               config.RoleARN,
 	}
 
 	config.PopulatePluginIdentityTokenData(configData)
+	config.PopulateAutomatedRotationData(configData)
+
 	return &logical.Response{
 		Data: configData,
 	}, nil
@@ -138,21 +150,39 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 		usernameTemplate = defaultUserNameTemplate
 	}
 
+	stsFallbackEndpoints := data.Get("sts_fallback_endpoints").([]string)
+	stsFallbackRegions := data.Get("sts_fallback_regions").([]string)
+
+	if len(stsFallbackEndpoints) != len(stsFallbackRegions) {
+		return logical.ErrorResponse("fallback endpoints and fallback regions must be the same length"), nil
+	}
+
 	b.clientMutex.Lock()
 	defer b.clientMutex.Unlock()
 
+	// check for existing config
+	previousCfg, previousCfgExists, err := getConfigFromStorage(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
 	rc := rootConfig{
-		AccessKey:        data.Get("access_key").(string),
-		SecretKey:        data.Get("secret_key").(string),
-		IAMEndpoint:      iamendpoint,
-		STSEndpoint:      stsendpoint,
-		STSRegion:        stsregion,
-		Region:           region,
-		MaxRetries:       maxretries,
-		UsernameTemplate: usernameTemplate,
-		RoleARN:          roleARN,
+		AccessKey:            data.Get("access_key").(string),
+		SecretKey:            data.Get("secret_key").(string),
+		IAMEndpoint:          iamendpoint,
+		STSEndpoint:          stsendpoint,
+		STSRegion:            stsregion,
+		STSFallbackEndpoints: stsFallbackEndpoints,
+		STSFallbackRegions:   stsFallbackRegions,
+		Region:               region,
+		MaxRetries:           maxretries,
+		UsernameTemplate:     usernameTemplate,
+		RoleARN:              roleARN,
 	}
 	if err := rc.ParsePluginIdentityTokenFields(data); err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+	if err := rc.ParseAutomatedRotationFields(data); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
@@ -176,12 +206,48 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 		}
 	}
 
-	entry, err := logical.StorageEntryJSON("config/root", rc)
-	if err != nil {
-		return nil, err
+	// Save the initial config only if it does not already exist
+	if !previousCfgExists {
+		if err := putConfigToStorage(ctx, req, &rc); err != nil {
+			return nil, err
+		}
 	}
 
-	if err := req.Storage.Put(ctx, entry); err != nil {
+	// Now that the root config is set up, register the rotation job if it required
+	if rc.ShouldRegisterRotationJob() {
+		cfgReq := &rotation.RotationJobConfigureRequest{
+			Name:             rootRotationJobName,
+			MountType:        req.MountType,
+			ReqPath:          req.Path,
+			RotationSchedule: rc.RotationSchedule,
+			RotationWindow:   rc.RotationWindow,
+			RotationPeriod:   rc.RotationPeriod,
+		}
+
+		_, err = b.System().RegisterRotationJob(ctx, cfgReq)
+		if err != nil {
+			return logical.ErrorResponse("error registering rotation job: %s", err), nil
+		}
+	}
+
+	// Disable Automated Rotation and Deregister credentials if required
+	if rc.DisableAutomatedRotation {
+		// Ensure de-registering only occurs on updates and if
+		// a credential has actually been registered (rotation_period or rotation_schedule is set)
+		deregisterReq := &rotation.RotationJobDeregisterRequest{
+			MountType: req.MountType,
+			ReqPath:   req.Path,
+		}
+		if previousCfgExists && previousCfg.ShouldRegisterRotationJob() {
+			err := b.System().DeregisterRotationJob(ctx, deregisterReq)
+			if err != nil {
+				return logical.ErrorResponse("error de-registering rotation job: %s", err), nil
+			}
+		}
+	}
+
+	// update config entry with rotation ID
+	if err := putConfigToStorage(ctx, req, &rc); err != nil {
 		return nil, err
 	}
 
@@ -193,18 +259,52 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 	return nil, nil
 }
 
+func getConfigFromStorage(ctx context.Context, req *logical.Request) (*rootConfig, bool, error) {
+	entry, err := req.Storage.Get(ctx, "config/root")
+	if err != nil {
+		return nil, false, err
+	}
+	if entry == nil {
+		return nil, false, nil
+	}
+
+	var config rootConfig
+
+	if err := entry.DecodeJSON(&config); err != nil {
+		return nil, false, err
+	}
+
+	return &config, true, nil
+}
+
+func putConfigToStorage(ctx context.Context, req *logical.Request, rc *rootConfig) error {
+	entry, err := logical.StorageEntryJSON("config/root", rc)
+	if err != nil {
+		return err
+	}
+
+	if err := req.Storage.Put(ctx, entry); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 type rootConfig struct {
 	pluginidentityutil.PluginIdentityTokenParams
+	automatedrotationutil.AutomatedRotationParams
 
-	AccessKey        string `json:"access_key"`
-	SecretKey        string `json:"secret_key"`
-	IAMEndpoint      string `json:"iam_endpoint"`
-	STSEndpoint      string `json:"sts_endpoint"`
-	STSRegion        string `json:"sts_region"`
-	Region           string `json:"region"`
-	MaxRetries       int    `json:"max_retries"`
-	UsernameTemplate string `json:"username_template"`
-	RoleARN          string `json:"role_arn"`
+	AccessKey            string   `json:"access_key"`
+	SecretKey            string   `json:"secret_key"`
+	IAMEndpoint          string   `json:"iam_endpoint"`
+	STSEndpoint          string   `json:"sts_endpoint"`
+	STSRegion            string   `json:"sts_region"`
+	STSFallbackEndpoints []string `json:"sts_fallback_endpoints"`
+	STSFallbackRegions   []string `json:"sts_fallback_regions"`
+	Region               string   `json:"region"`
+	MaxRetries           int      `json:"max_retries"`
+	UsernameTemplate     string   `json:"username_template"`
+	RoleARN              string   `json:"role_arn"`
 }
 
 const pathConfigRootHelpSyn = `

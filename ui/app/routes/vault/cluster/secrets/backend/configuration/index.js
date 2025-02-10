@@ -5,8 +5,7 @@
 
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
-import { CONFIGURABLE_SECRET_ENGINES } from 'vault/helpers/mountable-secret-engines';
-import { allEngines } from 'vault/helpers/mountable-secret-engines';
+import { CONFIGURABLE_SECRET_ENGINES, allEngines } from 'vault/helpers/mountable-secret-engines';
 import { reject } from 'rsvp';
 
 /**
@@ -64,9 +63,14 @@ export default class SecretsBackendConfigurationRoute extends Route {
   }
 
   fetchConfig(type, id) {
+    // id is the path where the backend is mounted since there's only one config per engine (often this path is referred to just as backend)
     switch (type) {
       case 'aws':
         return this.fetchAwsConfigs(id);
+      case 'azure':
+        return this.fetchAzureConfig(id);
+      case 'gcp':
+        return this.fetchGcpConfig(id);
       case 'ssh':
         return this.fetchSshCaConfig(id);
       default:
@@ -82,8 +86,8 @@ export default class SecretsBackendConfigurationRoute extends Route {
     const configLease = await this.fetchAwsConfig(id, 'aws/lease-config');
     let issuer = null;
     if (this.version.isEnterprise && configRoot) {
-      // Issuer is an enterprise only related feature
-      // Issuer is also a global endpoint that doesn't mean anything in the AWS secret details context if WIF related fields on the rootConfig have not been set.
+      // issuer is an enterprise only related feature
+      // issuer is also a global endpoint that doesn't mean anything in the AWS secret details context if WIF related fields on the rootConfig have not been set.
       const WIF_FIELDS = ['roleArn', 'identityTokenAudience', 'identityTokenTtl'];
       WIF_FIELDS.some((field) => configRoot[field]) ? (issuer = await this.fetchIssuer()) : null;
     }
@@ -97,6 +101,50 @@ export default class SecretsBackendConfigurationRoute extends Route {
     } catch (e) {
       if (e.httpStatus === 404) {
         // a 404 error is thrown when the lease config hasn't been set yet.
+        return;
+      }
+      throw e;
+    }
+  }
+
+  async fetchAzureConfig(id) {
+    try {
+      const azureModel = await this.store.queryRecord('azure/config', { backend: id });
+      let issuer = null;
+      if (this.version.isEnterprise) {
+        // Issuer is an enterprise only related feature
+        // Issuer is also a global endpoint that doesn't mean anything in the Azure secret details context if WIF related fields on the azureConfig have not been set.
+        const WIF_FIELDS = ['identityTokenAudience', 'identityTokenTtl'];
+        WIF_FIELDS.some((field) => azureModel[field]) ? (issuer = await this.fetchIssuer()) : null;
+      }
+      const configArray = [];
+      if (azureModel.isConfigured) configArray.push(azureModel);
+      if (issuer) configArray.push(issuer);
+      return configArray;
+    } catch (e) {
+      if (e.httpStatus === 404) {
+        // a 404 error is thrown when Azure's config hasn't been set yet.
+        return;
+      }
+      throw e;
+    }
+  }
+
+  async fetchGcpConfig(id) {
+    try {
+      const gcpModel = await this.store.queryRecord('gcp/config', { backend: id });
+      let issuer = null;
+      if (this.version.isEnterprise) {
+        const WIF_FIELDS = ['identityTokenAudience', 'identityTokenTtl', 'serviceAccountEmail'];
+        WIF_FIELDS.some((field) => gcpModel[field]) ? (issuer = await this.fetchIssuer()) : null;
+      }
+      const configArray = [];
+      if (gcpModel) configArray.push(gcpModel);
+      if (issuer) configArray.push(issuer);
+      return configArray;
+    } catch (e) {
+      if (e.httpStatus === 404) {
+        // a 404 error is thrown when GCP's config hasn't been set yet.
         return;
       }
       throw e;

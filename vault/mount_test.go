@@ -144,6 +144,8 @@ func TestCore_DefaultMountTable(t *testing.T) {
 
 	c.mountsLock.Lock()
 	defer c.mountsLock.Unlock()
+	c2.mountsLock.Lock()
+	defer c2.mountsLock.Unlock()
 	if diff := deep.Equal(c.mounts.sortEntriesByPath(), c2.mounts.sortEntriesByPath()); len(diff) > 0 {
 		t.Fatalf("mismatch: %v", diff)
 	}
@@ -192,6 +194,8 @@ func TestCore_Mount(t *testing.T) {
 	// Verify matching mount tables
 	c.mountsLock.Lock()
 	defer c.mountsLock.Unlock()
+	c2.mountsLock.Lock()
+	defer c2.mountsLock.Unlock()
 	if diff := deep.Equal(c.mounts.sortEntriesByPath(), c2.mounts.sortEntriesByPath()); len(diff) > 0 {
 		t.Fatalf("mismatch: %v", diff)
 	}
@@ -266,6 +270,8 @@ func TestCore_Mount_kv_generic(t *testing.T) {
 	// Verify matching mount tables
 	c.mountsLock.Lock()
 	defer c.mountsLock.Unlock()
+	c2.mountsLock.Lock()
+	defer c2.mountsLock.Unlock()
 	if diff := deep.Equal(c.mounts.sortEntriesByPath(), c2.mounts.sortEntriesByPath()); len(diff) > 0 {
 		t.Fatalf("mismatch: %v", diff)
 	}

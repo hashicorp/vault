@@ -18,6 +18,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 )
 
 type CertBuilder struct {
@@ -166,7 +168,7 @@ type KeyWrapper struct {
 func NewPrivateKey(t *testing.T) (key KeyWrapper) {
 	t.Helper()
 
-	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	privKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatalf("Unable to generate key for cert: %s", err)
 	}

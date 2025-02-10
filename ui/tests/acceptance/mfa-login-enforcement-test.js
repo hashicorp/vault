@@ -106,7 +106,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
     assert.dom('[data-test-list-item]').exists({ count: enforcements.length }, 'Enforcements list renders');
     assert
       .dom(`[data-test-list-item="${item.name}"] svg`)
-      .hasClass('flight-icon-lock', 'Lock icon renders for list item');
+      .hasClass('hds-icon-lock', 'Lock icon renders for list item');
     assert.dom(`[data-test-list-item-title="${item.name}"]`).hasText(item.name, 'Enforcement name renders');
 
     await click('[data-test-popup-menu-trigger]');
@@ -132,7 +132,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
     await click(`[data-test-list-item="${enforcement.name}"]`);
     // heading
     assert.dom('h1').includesText(enforcement.name, 'Name renders in title');
-    assert.dom('h1 svg').hasClass('flight-icon-lock', 'Lock icon renders in title');
+    assert.dom('h1 svg').hasClass('hds-icon-lock', 'Lock icon renders in title');
     assert.dom('[data-test-tab="targets"]').hasClass('active', 'Targets tab is active by default');
     await waitFor('[data-test-target]', { timeout: 5000 });
     assert.dom('[data-test-target]').exists({ count: 4 }, 'Targets render in list');

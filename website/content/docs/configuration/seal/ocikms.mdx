@@ -1,12 +1,11 @@
 ---
 layout: docs
-page_title: OCI KMS - Seals - Configuration
-description: |-
-  The OCI KMS seal configures Vault to use OCI KMS as the seal wrapping
-  mechanism.
+page_title: OCI KM seal configuration
+description: >-
+  Configure Vault sealing to use OCI KMS.
 ---
 
-# `ocikms` seal
+# OCI KMS seal configuration
 
 <Note title="Seal wrapping requires Vault Enterprise">
 
@@ -60,6 +59,8 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   If it is `false`, Vault authenticates using the instance principal from the compute instance. See Authentication section for details. Default is `false`.
 
 - `disabled` `(string: "")`: Set this to `true` if Vault is migrating from an auto seal configuration. Otherwise, set to `false`.
+
+`key_id` can be an [indirect value reference](/vault/docs/configuration/seal#indirect-value-references).
 
 Refer to the [Seal Migration](/vault/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
 

@@ -977,6 +977,14 @@ func (c *TestClusterCore) ClusterListener() *cluster.Listener {
 	return c.getClusterListener()
 }
 
+// NetworkLayer returns the network layer for the cluster core. This can be used
+// in conjunction with the cluster.InmemLayer to disconnect specific nodes from
+// the cluster when we need to simulate abrupt node failure or a network
+// partition in NewTestCluster tests.
+func (c *TestClusterCore) NetworkLayer() cluster.NetworkLayer {
+	return c.Core.clusterNetworkLayer
+}
+
 func (c *TestCluster) Cleanup() {
 	c.Logger.Info("cleaning up vault cluster")
 	if tl, ok := c.Logger.(*corehelpers.TestLogger); ok {
@@ -1451,6 +1459,7 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 	}
 
 	if base != nil {
+		coreConfig.ClusterHeartbeatInterval = base.ClusterHeartbeatInterval
 		coreConfig.DetectDeadlocks = TestDeadlockDetection
 		coreConfig.RawConfig = base.RawConfig
 		coreConfig.DisableCache = base.DisableCache
@@ -2216,6 +2225,10 @@ var (
 )
 
 func TestUserpassMount(c *Core, local bool) (*MountEntry, error) {
+	return TestUserpassMountContext(namespace.RootContext(nil), c, local)
+}
+
+func TestUserpassMountContext(ctx context.Context, c *Core, local bool) (*MountEntry, error) {
 	name := "userpass"
 	if local {
 		name += "-local"
@@ -2225,10 +2238,12 @@ func TestUserpassMount(c *Core, local bool) (*MountEntry, error) {
 		Path:        name + "/",
 		Type:        "userpass",
 		Description: name,
-		Accessor:    name,
-		Local:       local,
+		// Don't specify an accessor so we use a random one otherwise we will cause
+		// horrible issues when we try to create a new mount on a different
+		// namespace but they have the same accessor!
+		Local: local,
 	}
-	if err := c.enableCredential(namespace.RootContext(nil), userpassMe); err != nil {
+	if err := c.enableCredential(ctx, userpassMe); err != nil {
 		return nil, err
 	}
 	return userpassMe, nil

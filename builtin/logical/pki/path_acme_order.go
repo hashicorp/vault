@@ -580,7 +580,7 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 		return nil, "", fmt.Errorf("%w: refusing to sign CSR: %s", ErrBadCSR, err.Error())
 	}
 
-	if err = parsedBundle.Verify(); err != nil {
+	if err = issuing.VerifyCertificate(ac.Context, ac.sc.Storage, issuerId, parsedBundle); err != nil {
 		return nil, "", fmt.Errorf("verification of parsed bundle failed: %w", err)
 	}
 

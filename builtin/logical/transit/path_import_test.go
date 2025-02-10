@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/tink-crypto/tink-go/v2/kwp/subtle"
 )
@@ -162,7 +163,7 @@ func TestTransit_Import(t *testing.T) {
 	t.Run(
 		"import into a key fails before wrapping key is read",
 		func(t *testing.T) {
-			fakeWrappingKey, err := rsa.GenerateKey(rand.Reader, 4096)
+			fakeWrappingKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 4096)
 			if err != nil {
 				t.Fatalf("failed to generate fake wrapping key: %s", err)
 			}
@@ -502,7 +503,7 @@ func TestTransit_ImportVersion(t *testing.T) {
 	t.Run(
 		"import into a key version fails before wrapping key is read",
 		func(t *testing.T) {
-			fakeWrappingKey, err := rsa.GenerateKey(rand.Reader, 4096)
+			fakeWrappingKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 4096)
 			if err != nil {
 				t.Fatalf("failed to generate fake wrapping key: %s", err)
 			}
@@ -1027,11 +1028,11 @@ func generateKey(keyType string) (interface{}, error) {
 	case "ecdsa-p521":
 		return ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	case "rsa-2048":
-		return rsa.GenerateKey(rand.Reader, 2048)
+		return cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	case "rsa-3072":
-		return rsa.GenerateKey(rand.Reader, 3072)
+		return cryptoutil.GenerateRSAKey(rand.Reader, 3072)
 	case "rsa-4096":
-		return rsa.GenerateKey(rand.Reader, 4096)
+		return cryptoutil.GenerateRSAKey(rand.Reader, 4096)
 	default:
 		return nil, fmt.Errorf("failed to generate unsupported key type: %s", keyType)
 	}

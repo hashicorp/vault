@@ -880,6 +880,11 @@ func TestPki_RolePatch(t *testing.T) {
 			Patched: true,
 		},
 		{
+			Field:   "serial_number_source",
+			Before:  "json-csr",
+			Patched: "json",
+		},
+		{
 			Field:   "ou",
 			Before:  []string{"crypto"},
 			Patched: []string{"cryptosec"},

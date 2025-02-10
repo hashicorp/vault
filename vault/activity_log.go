@@ -36,29 +36,23 @@ import (
 const (
 	// activitySubPath is the directory under the system view where
 	// the log will be stored.
-	activitySubPath            = "counters/activity/"
-	activityEntityBasePath     = "log/entity/"
-	activityTokenBasePath      = "log/directtokens/"
-	activityTokenLocalBasePath = "local/" + activityTokenBasePath
-	activityQueryBasePath      = "queries/"
-	activityConfigKey          = "config"
-	activityIntentLogKey       = "endofmonth"
-	activityGlobalPathPrefix   = "global/"
-	activityLocalPathPrefix    = "local/"
+	activitySubPath        = "counters/activity/"
+	activityEntityBasePath = "log/entity/"
+	activityTokenBasePath  = "log/directtokens/"
+	activityQueryBasePath  = "queries/"
+	activityConfigKey      = "config"
+	activityIntentLogKey   = "endofmonth"
 
 	activityACMERegenerationKey = "acme-regeneration"
 	// sketch for each month that stores hash of client ids
 	distinctClientsBasePath = "log/distinctclients/"
 
 	// for testing purposes (public as needed)
-	ActivityLogPrefix       = "sys/counters/activity/log/"
-	ActivityGlobalLogPrefix = "sys/counters/activity/global/log/"
-	ActivityLogLocalPrefix  = "sys/counters/activity/local/log/"
-	ActivityPrefix          = "sys/counters/activity/"
+	ActivityLogPrefix = "sys/counters/activity/log/"
+	ActivityPrefix    = "sys/counters/activity/"
 
-	// Time to wait before a perf standby sends data to the active node, or
-	// before the active node of a performance secondary sends global data to the primary.
-	activityFragmentSendInterval = 10 * time.Minute
+	// Time to wait on perf standby before sending fragment
+	activityFragmentStandbyTime = 10 * time.Minute
 
 	// Time between writes of segment to storage
 	activitySegmentInterval = 10 * time.Minute
@@ -144,20 +138,12 @@ type ActivityLog struct {
 
 	// ActivityLog.l protects the configuration settings, except enable, and any modifications
 	// to the current segment.
-	// Acquire "l" before fragmentLock, globalFragmentLock, and localFragmentLock if all must be held.
+	// Acquire "l" before fragmentLock if both must be held.
 	l sync.RWMutex
 
 	// fragmentLock protects enable, partialMonthClientTracker, fragment,
 	// standbyFragmentsReceived.
 	fragmentLock sync.RWMutex
-
-	// localFragmentLock protects partialMonthLocalClientTracker, localFragment,
-	// standbyLocalFragmentsReceived.
-	localFragmentLock sync.RWMutex
-
-	// globalFragmentLock protects enable secondaryGlobalClientFragments, standbyGlobalFragmentsReceived, currentGlobalFragment
-	// and globalPartialMonthClientTracker
-	globalFragmentLock sync.RWMutex
 
 	// enabled indicates if the activity log is enabled for this cluster.
 	// This is protected by fragmentLock so we can check with only
@@ -181,19 +167,12 @@ type ActivityLog struct {
 	nodeID string
 
 	// current log fragment (may be nil)
-	fragment *activity.LogFragment
+	fragment         *activity.LogFragment
+	fragmentCreation time.Time
 
 	// Channel to signal a new fragment has been created
 	// so it's appropriate to start the timer.
 	newFragmentCh chan struct{}
-
-	// current local log fragment (may be nil)
-	localFragment *activity.LogFragment
-
-	// Channel to signal a new global fragment has been created
-	// so it's appropriate to start the timer. Once the timer finishes
-	// the secondary will send currentGlobalFragment to the primary
-	newGlobalClientFragmentCh chan struct{}
 
 	// Channel for sending fragment immediately
 	sendCh chan struct{}
@@ -204,23 +183,8 @@ type ActivityLog struct {
 	// track metadata and contents of the most recent log segment
 	currentSegment segmentInfo
 
-	// track metadata and contents of the most recent global log segment
-	currentGlobalSegment segmentInfo
-
-	// track metadata and contents of the most recent local log segment
-	currentLocalSegment segmentInfo
-
 	// Fragments received from performance standbys
 	standbyFragmentsReceived []*activity.LogFragment
-
-	// Local fragments received from performance standbys
-	standbyLocalFragmentsReceived []*activity.LogFragment
-
-	// Global fragments received from performance standbys
-	standbyGlobalFragmentsReceived []*activity.LogFragment
-
-	// Fragments of global clients received from performance secondaries
-	secondaryGlobalClientFragments []*activity.LogFragment
 
 	// precomputed queries
 	queryStore          *activity.PrecomputedQueryStore
@@ -241,12 +205,6 @@ type ActivityLog struct {
 	// partialMonthClientTracker tracks active clients this month.  Protected by fragmentLock.
 	partialMonthClientTracker map[string]*activity.EntityRecord
 
-	// partialMonthLocalClientTracker tracks active local clients this month.  Protected by localFragmentLock.
-	partialMonthLocalClientTracker map[string]*activity.EntityRecord
-
-	// globalPartialMonthClientTracker tracks active clients this month.  Protected by globalFragmentLock.
-	globalPartialMonthClientTracker map[string]*activity.EntityRecord
-
 	inprocessExport *atomic.Bool
 
 	// clock is used to support manipulating time in unit and integration tests
@@ -254,9 +212,6 @@ type ActivityLog struct {
 	// precomputedQueryWritten receives an element whenever a precomputed query
 	// is written. It's used for unit testing
 	precomputedQueryWritten chan struct{}
-
-	// currentGlobalFragment tracks the global clients of all the clients in memory
-	currentGlobalFragment *activity.LogFragment
 }
 
 // These non-persistent configuration options allow us to disable
@@ -279,18 +234,6 @@ type ActivityLogCoreConfig struct {
 	Clock timeutil.Clock
 
 	DisableInvalidation bool
-
-	// GlobalFragmentSendInterval sets the interval to send global data from the secondary to the primary
-	// This is only for testing purposes
-	GlobalFragmentSendInterval time.Duration
-
-	// PerfStandbyFragmentSendInterval sets the interval to send fragment data from the perf standby to the active
-	// This is only for testing purposes
-	PerfStandbyFragmentSendInterval time.Duration
-
-	// StorageWriteTestingInterval sets the interval flush data to the storage.
-	// This is only for testing purposes
-	StorageWriteTestingInterval time.Duration
 }
 
 // ActivityLogExportRecord is the output structure for activity export
@@ -361,20 +304,17 @@ func NewActivityLog(core *Core, logger log.Logger, view *BarrierView, metrics me
 		clock = timeutil.DefaultClock{}
 	}
 	a := &ActivityLog{
-		core:                            core,
-		configOverrides:                 &core.activityLogConfig,
-		logger:                          logger,
-		view:                            view,
-		metrics:                         metrics,
-		nodeID:                          hostname,
-		newFragmentCh:                   make(chan struct{}, 1),
-		sendCh:                          make(chan struct{}, 1), // buffered so it can be triggered by fragment size
-		doneCh:                          make(chan struct{}, 1),
-		partialMonthClientTracker:       make(map[string]*activity.EntityRecord),
-		partialMonthLocalClientTracker:  make(map[string]*activity.EntityRecord),
-		newGlobalClientFragmentCh:       make(chan struct{}, 1),
-		globalPartialMonthClientTracker: make(map[string]*activity.EntityRecord),
-		clock:                           clock,
+		core:                      core,
+		configOverrides:           &core.activityLogConfig,
+		logger:                    logger,
+		view:                      view,
+		metrics:                   metrics,
+		nodeID:                    hostname,
+		newFragmentCh:             make(chan struct{}, 1),
+		sendCh:                    make(chan struct{}, 1), // buffered so it can be triggered by fragment size
+		doneCh:                    make(chan struct{}, 1),
+		partialMonthClientTracker: make(map[string]*activity.EntityRecord),
+		clock:                     clock,
 		currentSegment: segmentInfo{
 			startTimestamp: 0,
 			currentClients: &activity.EntityActivityLog{
@@ -388,38 +328,9 @@ func NewActivityLog(core *Core, logger log.Logger, view *BarrierView, metrics me
 			},
 			clientSequenceNumber: 0,
 		},
-		currentGlobalSegment: segmentInfo{
-			startTimestamp: 0,
-			currentClients: &activity.EntityActivityLog{
-				Clients: make([]*activity.EntityRecord, 0),
-			},
-			// tokenCount is deprecated, but must still exist for the current segment
-			// so the fragment that was using TWEs before the 1.9 changes
-			// can be flushed to the current segment.
-			tokenCount: &activity.TokenCount{
-				CountByNamespaceID: make(map[string]uint64),
-			},
-			clientSequenceNumber: 0,
-		},
-		currentLocalSegment: segmentInfo{
-			startTimestamp: 0,
-			currentClients: &activity.EntityActivityLog{
-				Clients: make([]*activity.EntityRecord, 0),
-			},
-			// tokenCount is deprecated, but must still exist for the current segment
-			// so the fragment that was using TWEs before the 1.9 changes
-			// can be flushed to the current segment.
-			tokenCount: &activity.TokenCount{
-				CountByNamespaceID: make(map[string]uint64),
-			},
-			clientSequenceNumber: 0,
-		},
-		standbyFragmentsReceived:       make([]*activity.LogFragment, 0),
-		standbyLocalFragmentsReceived:  make([]*activity.LogFragment, 0),
-		standbyGlobalFragmentsReceived: make([]*activity.LogFragment, 0),
-		secondaryGlobalClientFragments: make([]*activity.LogFragment, 0),
-		inprocessExport:                atomic.NewBool(false),
-		precomputedQueryWritten:        make(chan struct{}),
+		standbyFragmentsReceived: make([]*activity.LogFragment, 0),
+		inprocessExport:          atomic.NewBool(false),
+		precomputedQueryWritten:  make(chan struct{}),
 	}
 
 	config, err := a.loadConfigOrDefault(core.activeContext)
@@ -462,45 +373,13 @@ func (a *ActivityLog) saveCurrentSegmentToStorageLocked(ctx context.Context, for
 	defer a.metrics.MeasureSinceWithLabels([]string{"core", "activity", "segment_write"},
 		a.clock.Now(), []metricsutil.Label{})
 
-	// Swap out the pending regular fragments
+	// Swap out the pending fragments
 	a.fragmentLock.Lock()
-	currentFragment := a.fragment
+	localFragment := a.fragment
 	a.fragment = nil
 	standbys := a.standbyFragmentsReceived
 	a.standbyFragmentsReceived = make([]*activity.LogFragment, 0)
 	a.fragmentLock.Unlock()
-
-	a.globalFragmentLock.Lock()
-	secondaryGlobalClients := a.secondaryGlobalClientFragments
-	a.secondaryGlobalClientFragments = make([]*activity.LogFragment, 0)
-	standbyGlobalClients := a.standbyGlobalFragmentsReceived
-	a.standbyGlobalFragmentsReceived = make([]*activity.LogFragment, 0)
-	globalClients := a.currentGlobalFragment
-	a.currentGlobalFragment = nil
-	a.globalFragmentLock.Unlock()
-
-	if !a.core.IsPerfSecondary() {
-		if a.currentGlobalFragment != nil {
-			a.metrics.IncrCounterWithLabels([]string{"core", "activity", "global_fragment_size"},
-				float32(len(globalClients.Clients)),
-				[]metricsutil.Label{
-					{"type", "client"},
-				})
-		}
-		var globalReceivedFragmentTotal int
-		for _, globalReceivedFragment := range secondaryGlobalClients {
-			globalReceivedFragmentTotal += len(globalReceivedFragment.Clients)
-		}
-		for _, globalReceivedFragment := range standbyGlobalClients {
-			globalReceivedFragmentTotal += len(globalReceivedFragment.Clients)
-		}
-		a.metrics.IncrCounterWithLabels([]string{"core", "activity", "global_received_fragment_size"},
-			float32(globalReceivedFragmentTotal),
-			[]metricsutil.Label{
-				{"type", "client"},
-			})
-
-	}
 
 	// If segment start time is zero, do not update or write
 	// (even if force is true).  This can happen if activityLog is
@@ -509,54 +388,24 @@ func (a *ActivityLog) saveCurrentSegmentToStorageLocked(ctx context.Context, for
 		return nil
 	}
 
-	if ret := a.createCurrentSegmentFromFragments(ctx, append(standbys, currentFragment), &a.currentSegment, force, ""); ret != nil {
-		return ret
-	}
-
-	// If we are the primary, store global clients
-	// Create fragments from global clients and store the segment
-	if !a.core.IsPerfSecondary() {
-		globalFragments := append(append(secondaryGlobalClients, globalClients), standbyGlobalClients...)
-		if ret := a.createCurrentSegmentFromFragments(ctx, globalFragments, &a.currentGlobalSegment, force, activityGlobalPathPrefix); ret != nil {
-			return ret
-		}
-	}
-
-	// Swap out the pending local fragments
-	a.localFragmentLock.Lock()
-	localFragment := a.localFragment
-	a.localFragment = nil
-	standbyLocalFragments := a.standbyLocalFragmentsReceived
-	a.standbyLocalFragmentsReceived = make([]*activity.LogFragment, 0)
-	a.localFragmentLock.Unlock()
-
-	// Measure the current local fragment
+	// Measure the current fragment
 	if localFragment != nil {
-		a.metrics.IncrCounterWithLabels([]string{"core", "activity", "local_fragment_size"},
+		a.metrics.IncrCounterWithLabels([]string{"core", "activity", "fragment_size"},
 			float32(len(localFragment.Clients)),
 			[]metricsutil.Label{
 				{"type", "entity"},
 			})
-		a.metrics.IncrCounterWithLabels([]string{"core", "activity", "local_fragment_size"},
+		a.metrics.IncrCounterWithLabels([]string{"core", "activity", "fragment_size"},
 			float32(len(localFragment.NonEntityTokens)),
 			[]metricsutil.Label{
 				{"type", "direct_token"},
 			})
 	}
 
-	// store local fragments
-	if ret := a.createCurrentSegmentFromFragments(ctx, append(standbyLocalFragments, localFragment), &a.currentLocalSegment, force, activityLocalPathPrefix); ret != nil {
-		return ret
-	}
-
-	return nil
-}
-
-func (a *ActivityLog) createCurrentSegmentFromFragments(ctx context.Context, fragments []*activity.LogFragment, currentSegment *segmentInfo, force bool, storagePathPrefix string) error {
 	// Collect new entities and new tokens.
 	saveChanges := false
 	newEntities := make(map[string]*activity.EntityRecord)
-	for _, f := range fragments {
+	for _, f := range append(standbys, localFragment) {
 		if f == nil {
 			continue
 		}
@@ -566,7 +415,7 @@ func (a *ActivityLog) createCurrentSegmentFromFragments(ctx context.Context, fra
 		for _, e := range f.Clients {
 			// We could sort by timestamp to see which is first.
 			// We'll ignore that; the order of the append above means
-			// that we choose entries in currentFragment over those
+			// that we choose entries in localFragment over those
 			// from standby nodes.
 			newEntities[e.ClientID] = e
 		}
@@ -580,7 +429,7 @@ func (a *ActivityLog) createCurrentSegmentFromFragments(ctx context.Context, fra
 			// a.partialMonthClientTracker.nonEntityCountByNamespaceID. This preserves backward
 			// compatibility for the precomputedQueryWorkers and the segment storing
 			// logic.
-			currentSegment.tokenCount.CountByNamespaceID[ns] += val
+			a.currentSegment.tokenCount.CountByNamespaceID[ns] += val
 		}
 	}
 
@@ -589,14 +438,14 @@ func (a *ActivityLog) createCurrentSegmentFromFragments(ctx context.Context, fra
 	}
 
 	// Will all new entities fit?  If not, roll over to a new segment.
-	available := ActivitySegmentClientCapacity - len(currentSegment.currentClients.Clients)
+	available := ActivitySegmentClientCapacity - len(a.currentSegment.currentClients.Clients)
 	remaining := available - len(newEntities)
 	excess := 0
 	if remaining < 0 {
 		excess = -remaining
 	}
 
-	segmentClients := currentSegment.currentClients.Clients
+	segmentClients := a.currentSegment.currentClients.Clients
 	excessClients := make([]*activity.EntityRecord, 0, excess)
 	for _, record := range newEntities {
 		if available > 0 {
@@ -606,8 +455,9 @@ func (a *ActivityLog) createCurrentSegmentFromFragments(ctx context.Context, fra
 			excessClients = append(excessClients, record)
 		}
 	}
-	currentSegment.currentClients.Clients = segmentClients
-	err := a.saveCurrentSegmentInternal(ctx, force, *currentSegment, storagePathPrefix)
+	a.currentSegment.currentClients.Clients = segmentClients
+
+	err := a.saveCurrentSegmentInternal(ctx, force)
 	if err != nil {
 		// The current fragment(s) have already been placed into the in-memory
 		// segment, but we may lose any excess (in excessClients).
@@ -617,7 +467,7 @@ func (a *ActivityLog) createCurrentSegmentFromFragments(ctx context.Context, fra
 	}
 
 	if available <= 0 {
-		if currentSegment.clientSequenceNumber >= activityLogMaxSegmentPerMonth {
+		if a.currentSegment.clientSequenceNumber >= activityLogMaxSegmentPerMonth {
 			// Cannot send as Warn because it will repeat too often,
 			// and disabling/renabling would be complicated.
 			a.logger.Trace("too many segments in current month", "dropped", len(excessClients))
@@ -625,13 +475,13 @@ func (a *ActivityLog) createCurrentSegmentFromFragments(ctx context.Context, fra
 		}
 
 		// Rotate to next segment
-		currentSegment.clientSequenceNumber += 1
+		a.currentSegment.clientSequenceNumber += 1
 		if len(excessClients) > ActivitySegmentClientCapacity {
 			a.logger.Warn("too many new active clients, dropping tail", "clients", len(excessClients))
 			excessClients = excessClients[:ActivitySegmentClientCapacity]
 		}
-		currentSegment.currentClients.Clients = excessClients
-		err := a.saveCurrentSegmentInternal(ctx, force, *currentSegment, storagePathPrefix)
+		a.currentSegment.currentClients.Clients = excessClients
+		err := a.saveCurrentSegmentInternal(ctx, force)
 		if err != nil {
 			return err
 		}
@@ -640,12 +490,12 @@ func (a *ActivityLog) createCurrentSegmentFromFragments(ctx context.Context, fra
 }
 
 // :force: forces a save of tokens/entities even if the in-memory log is empty
-func (a *ActivityLog) saveCurrentSegmentInternal(ctx context.Context, force bool, currentSegment segmentInfo, storagePathPrefix string) error {
-	_, err := a.saveSegmentEntitiesInternal(ctx, currentSegment, force, storagePathPrefix)
+func (a *ActivityLog) saveCurrentSegmentInternal(ctx context.Context, force bool) error {
+	_, err := a.saveSegmentEntitiesInternal(ctx, a.currentSegment, force)
 	if err != nil {
 		return err
 	}
-	_, err = a.saveSegmentTokensInternal(ctx, currentSegment, force)
+	_, err = a.saveSegmentTokensInternal(ctx, a.currentSegment, force)
 	return err
 }
 
@@ -654,7 +504,7 @@ func (a *ActivityLog) saveSegmentTokensInternal(ctx context.Context, currentSegm
 		return "", nil
 	}
 	// RFC (VLT-120) defines this as 1-indexed, but it should be 0-indexed
-	tokenPath := fmt.Sprintf("%s%d/0", activityTokenLocalBasePath, currentSegment.startTimestamp)
+	tokenPath := fmt.Sprintf("%s%d/0", activityTokenBasePath, currentSegment.startTimestamp)
 	// We must still allow for the tokenCount of the current segment to
 	// be written to storage, since if we remove this code we will incur
 	// data loss for one segment's worth of TWEs.
@@ -664,15 +514,15 @@ func (a *ActivityLog) saveSegmentTokensInternal(ctx context.Context, currentSegm
 	switch {
 	case err != nil:
 		a.logger.Error(fmt.Sprintf("unable to retrieve oldest version timestamp: %s", err.Error()))
-	case len(currentSegment.tokenCount.CountByNamespaceID) > 0 &&
+	case len(a.currentSegment.tokenCount.CountByNamespaceID) > 0 &&
 		(oldestUpgradeTime.Add(time.Duration(trackedTWESegmentPeriod * time.Hour)).Before(time.Now())):
 		a.logger.Error(fmt.Sprintf("storing nonzero token count over a month after vault was upgraded to %s", oldestVersion))
 	default:
-		if len(currentSegment.tokenCount.CountByNamespaceID) > 0 {
+		if len(a.currentSegment.tokenCount.CountByNamespaceID) > 0 {
 			a.logger.Info("storing nonzero token count")
 		}
 	}
-	tokenCount, err := proto.Marshal(currentSegment.tokenCount)
+	tokenCount, err := proto.Marshal(a.currentSegment.tokenCount)
 	if err != nil {
 		return "", err
 	}
@@ -689,10 +539,10 @@ func (a *ActivityLog) saveSegmentTokensInternal(ctx context.Context, currentSegm
 	return tokenPath, nil
 }
 
-func (a *ActivityLog) saveSegmentEntitiesInternal(ctx context.Context, currentSegment segmentInfo, force bool, storagePathPrefix string) (string, error) {
-	entityPath := fmt.Sprintf("%s%s%d/%d", storagePathPrefix, activityEntityBasePath, currentSegment.startTimestamp, currentSegment.clientSequenceNumber)
+func (a *ActivityLog) saveSegmentEntitiesInternal(ctx context.Context, currentSegment segmentInfo, force bool) (string, error) {
+	entityPath := fmt.Sprintf("%s%d/%d", activityEntityBasePath, currentSegment.startTimestamp, currentSegment.clientSequenceNumber)
 
-	for _, client := range currentSegment.currentClients.Clients {
+	for _, client := range a.currentSegment.currentClients.Clients {
 		// Explicitly catch and throw clear error message if client ID creation and storage
 		// results in a []byte that doesn't assert into a valid string.
 		if !utf8.ValidString(client.ClientID) {
@@ -736,7 +586,7 @@ func parseSegmentNumberFromPath(path string) (int, bool) {
 // sorted last to first
 func (a *ActivityLog) availableLogs(ctx context.Context, upTo time.Time) ([]time.Time, error) {
 	paths := make([]string, 0)
-	for _, basePath := range []string{activityEntityBasePath, activityLocalPathPrefix + activityEntityBasePath, activityGlobalPathPrefix + activityEntityBasePath, activityTokenLocalBasePath} {
+	for _, basePath := range []string{activityEntityBasePath, activityTokenBasePath} {
 		p, err := a.view.List(ctx, basePath)
 		if err != nil {
 			return nil, err
@@ -785,25 +635,8 @@ func (a *ActivityLog) getMostRecentActivityLogSegment(ctx context.Context, now t
 }
 
 // getLastEntitySegmentNumber returns the (non-negative) last segment number for the :startTime:, if it exists
-func (a *ActivityLog) getLastEntitySegmentNumber(ctx context.Context, startTime time.Time) (uint64, uint64, uint64, bool, error) {
-	segmentHighestNum, segmentPresent, err := a.getLastSegmentNumberByEntityPath(ctx, activityEntityBasePath+fmt.Sprint(startTime.Unix())+"/")
-	if err != nil {
-		return 0, 0, 0, false, err
-	}
-	globalHighestNum, globalSegmentPresent, err := a.getLastSegmentNumberByEntityPath(ctx, activityGlobalPathPrefix+activityEntityBasePath+fmt.Sprint(startTime.Unix())+"/")
-	if err != nil {
-		return 0, 0, 0, false, err
-	}
-	localHighestNum, localSegmentPresent, err := a.getLastSegmentNumberByEntityPath(ctx, activityLocalPathPrefix+activityEntityBasePath+fmt.Sprint(startTime.Unix())+"/")
-	if err != nil {
-		return 0, 0, 0, false, err
-	}
-
-	return segmentHighestNum, uint64(localHighestNum), uint64(globalHighestNum), (segmentPresent || localSegmentPresent || globalSegmentPresent), nil
-}
-
-func (a *ActivityLog) getLastSegmentNumberByEntityPath(ctx context.Context, entityPath string) (uint64, bool, error) {
-	p, err := a.view.List(ctx, entityPath)
+func (a *ActivityLog) getLastEntitySegmentNumber(ctx context.Context, startTime time.Time) (uint64, bool, error) {
+	p, err := a.view.List(ctx, activityEntityBasePath+fmt.Sprint(startTime.Unix())+"/")
 	if err != nil {
 		return 0, false, err
 	}
@@ -817,14 +650,12 @@ func (a *ActivityLog) getLastSegmentNumberByEntityPath(ctx context.Context, enti
 		}
 	}
 
-	segmentPresent := true
-	segmentHighestNum := uint64(highestNum)
 	if highestNum < 0 {
 		// numbers less than 0 are invalid. if a negative number is the highest value, there isn't a segment
-		segmentHighestNum = 0
-		segmentPresent = false
+		return 0, false, nil
 	}
-	return segmentHighestNum, segmentPresent, nil
+
+	return uint64(highestNum), true, nil
 }
 
 // WalkEntitySegments loads each of the entity segments for a particular start time
@@ -863,7 +694,7 @@ func (a *ActivityLog) WalkTokenSegments(ctx context.Context,
 	startTime time.Time,
 	walkFn func(*activity.TokenCount),
 ) error {
-	basePath := activityTokenLocalBasePath + fmt.Sprint(startTime.Unix()) + "/"
+	basePath := activityTokenBasePath + fmt.Sprint(startTime.Unix()) + "/"
 	pathList, err := a.view.List(ctx, basePath)
 	if err != nil {
 		return err
@@ -907,7 +738,6 @@ func (a *ActivityLog) loadPriorEntitySegment(ctx context.Context, startTime time
 	}
 
 	a.l.RLock()
-	defer a.l.RUnlock()
 	a.fragmentLock.Lock()
 	// Handle the (unlikely) case where the end of the month has been reached while background loading.
 	// Or the feature has been disabled.
@@ -917,62 +747,15 @@ func (a *ActivityLog) loadPriorEntitySegment(ctx context.Context, startTime time
 		}
 	}
 	a.fragmentLock.Unlock()
-
-	// load all the active global clients
-	globalPath := activityGlobalPathPrefix + activityEntityBasePath + fmt.Sprint(startTime.Unix()) + "/" + strconv.FormatUint(sequenceNum, 10)
-	data, err = a.view.Get(ctx, globalPath)
-	if err != nil {
-		return err
-	}
-	if data == nil {
-		return nil
-	}
-	out = &activity.EntityActivityLog{}
-	err = proto.Unmarshal(data.Value, out)
-	if err != nil {
-		return err
-	}
-	a.globalFragmentLock.Lock()
-	// Handle the (unlikely) case where the end of the month has been reached while background loading.
-	// Or the feature has been disabled.
-	if a.enabled && startTime.Unix() == a.currentGlobalSegment.startTimestamp {
-		for _, ent := range out.Clients {
-			a.globalPartialMonthClientTracker[ent.ClientID] = ent
-		}
-	}
-	a.globalFragmentLock.Unlock()
-
-	// load all the active local clients
-	localPath := activityLocalPathPrefix + activityEntityBasePath + fmt.Sprint(startTime.Unix()) + "/" + strconv.FormatUint(sequenceNum, 10)
-	data, err = a.view.Get(ctx, localPath)
-	if err != nil {
-		return err
-	}
-	if data == nil {
-		return nil
-	}
-	out = &activity.EntityActivityLog{}
-	err = proto.Unmarshal(data.Value, out)
-	if err != nil {
-		return err
-	}
-	a.localFragmentLock.Lock()
-	// Handle the (unlikely) case where the end of the month has been reached while background loading.
-	// Or the feature has been disabled.
-	if a.enabled && startTime.Unix() == a.currentLocalSegment.startTimestamp {
-		for _, ent := range out.Clients {
-			a.partialMonthLocalClientTracker[ent.ClientID] = ent
-		}
-	}
-	a.localFragmentLock.Unlock()
+	a.l.RUnlock()
 
 	return nil
 }
 
 // loadCurrentClientSegment loads the most recent segment (for "this month")
 // into memory (to append new entries), and to the partialMonthClientTracker to
-// avoid duplication call with fragmentLock, globalFragmentLock, localFragmentLock and l held.
-func (a *ActivityLog) loadCurrentClientSegment(ctx context.Context, startTime time.Time, sequenceNum uint64, localSegmentSequenceNumber uint64, globalSegmentSequenceNumber uint64) error {
+// avoid duplication call with fragmentLock and l held.
+func (a *ActivityLog) loadCurrentClientSegment(ctx context.Context, startTime time.Time, sequenceNum uint64) error {
 	path := activityEntityBasePath + fmt.Sprint(startTime.Unix()) + "/" + strconv.FormatUint(sequenceNum, 10)
 	data, err := a.view.Get(ctx, path)
 	if err != nil {
@@ -1006,81 +789,13 @@ func (a *ActivityLog) loadCurrentClientSegment(ctx context.Context, startTime ti
 		a.partialMonthClientTracker[client.ClientID] = client
 	}
 
-	// load current global segment
-	path = activityGlobalPathPrefix + activityEntityBasePath + fmt.Sprint(startTime.Unix()) + "/" + strconv.FormatUint(globalSegmentSequenceNumber, 10)
-	data, err = a.view.Get(ctx, path)
-	if err != nil {
-		return err
-	}
-	if data == nil {
-		return nil
-	}
-
-	out = &activity.EntityActivityLog{}
-	err = proto.Unmarshal(data.Value, out)
-	if err != nil {
-		return err
-	}
-
-	if !a.core.perfStandby {
-		a.currentGlobalSegment = segmentInfo{
-			startTimestamp: startTime.Unix(),
-			currentClients: &activity.EntityActivityLog{
-				Clients: out.Clients,
-			},
-			tokenCount: &activity.TokenCount{
-				CountByNamespaceID: make(map[string]uint64),
-			},
-			clientSequenceNumber: sequenceNum,
-		}
-	} else {
-		// populate this for edge case checking (if end of month passes while background loading on standby)
-		a.currentGlobalSegment.startTimestamp = startTime.Unix()
-	}
-	for _, client := range out.Clients {
-		a.globalPartialMonthClientTracker[client.ClientID] = client
-	}
-
-	// load current local segment
-	path = activityLocalPathPrefix + activityEntityBasePath + fmt.Sprint(startTime.Unix()) + "/" + strconv.FormatUint(localSegmentSequenceNumber, 10)
-	data, err = a.view.Get(ctx, path)
-	if err != nil {
-		return err
-	}
-	if data == nil {
-		return nil
-	}
-
-	out = &activity.EntityActivityLog{}
-	err = proto.Unmarshal(data.Value, out)
-	if err != nil {
-		return err
-	}
-
-	if !a.core.perfStandby {
-		a.currentLocalSegment = segmentInfo{
-			startTimestamp: startTime.Unix(),
-			currentClients: &activity.EntityActivityLog{
-				Clients: out.Clients,
-			},
-			tokenCount:           a.currentLocalSegment.tokenCount,
-			clientSequenceNumber: sequenceNum,
-		}
-	} else {
-		// populate this for edge case checking (if end of month passes while background loading on standby)
-		a.currentLocalSegment.startTimestamp = startTime.Unix()
-	}
-	for _, client := range out.Clients {
-		a.partialMonthLocalClientTracker[client.ClientID] = client
-	}
-
 	return nil
 }
 
 // tokenCountExists checks if there's a token log for :startTime:
 // this function should be called with the lock held
 func (a *ActivityLog) tokenCountExists(ctx context.Context, startTime time.Time) (bool, error) {
-	p, err := a.view.List(ctx, activityTokenLocalBasePath+fmt.Sprint(startTime.Unix())+"/")
+	p, err := a.view.List(ctx, activityTokenBasePath+fmt.Sprint(startTime.Unix())+"/")
 	if err != nil {
 		return false, err
 	}
@@ -1105,7 +820,7 @@ func (a *ActivityLog) loadTokenCount(ctx context.Context, startTime time.Time) e
 		return nil
 	}
 
-	path := activityTokenLocalBasePath + fmt.Sprint(startTime.Unix()) + "/0"
+	path := activityTokenBasePath + fmt.Sprint(startTime.Unix()) + "/0"
 	data, err := a.view.Get(ctx, path)
 	if err != nil {
 		return err
@@ -1129,7 +844,6 @@ func (a *ActivityLog) loadTokenCount(ctx context.Context, startTime time.Time) e
 	// so that TWEs counted before the introduction of a client ID for TWEs are
 	// still reported in the partial client counts.
 	a.currentSegment.tokenCount = out
-	a.currentLocalSegment.tokenCount = out
 
 	return nil
 }
@@ -1153,42 +867,33 @@ func (a *ActivityLog) entityBackgroundLoader(ctx context.Context, wg *sync.WaitG
 }
 
 // Initialize a new current segment, based on the current time.
-// Call with fragmentLock, globalFragmentLock, localFragmentLock and l held.
+// Call with fragmentLock and l held.
 func (a *ActivityLog) startNewCurrentLogLocked(now time.Time) {
 	a.logger.Trace("initializing new log")
 	a.resetCurrentLog()
-	a.setCurrentSegmentTimeLocked(now)
+	a.currentSegment.startTimestamp = now.Unix()
 }
 
-// Should be called with fragmentLock, globalFragmentLock, localFragmentLock and l held.
+// Should be called with fragmentLock and l held.
 func (a *ActivityLog) newMonthCurrentLogLocked(currentTime time.Time) {
 	a.logger.Trace("continuing log to new month")
 	a.resetCurrentLog()
 	monthStart := timeutil.StartOfMonth(currentTime.UTC())
-	a.setCurrentSegmentTimeLocked(monthStart)
+	a.currentSegment.startTimestamp = monthStart.Unix()
 }
 
 // Initialize a new current segment, based on the given time
-// should be called with fragmentLock, globalFragmentLock, localFragmentLock and l held.
+// should be called with fragmentLock and l held.
 func (a *ActivityLog) newSegmentAtGivenTime(t time.Time) {
 	timestamp := t.Unix()
 
 	a.logger.Trace("starting a segment", "timestamp", timestamp)
 	a.resetCurrentLog()
-	a.setCurrentSegmentTimeLocked(t)
-}
-
-// Sets the timestamp of all the segments to the given time.
-// should be called with l held.
-func (a *ActivityLog) setCurrentSegmentTimeLocked(t time.Time) {
-	timestamp := t.Unix()
 	a.currentSegment.startTimestamp = timestamp
-	a.currentGlobalSegment.startTimestamp = timestamp
-	a.currentLocalSegment.startTimestamp = timestamp
 }
 
 // Reset all the current segment state.
-// Should be called with fragmentLock, globalFragmentLock, localFragmentLock and l held.
+// Should be called with fragmentLock and l held.
 func (a *ActivityLog) resetCurrentLog() {
 	a.currentSegment.startTimestamp = 0
 	a.currentSegment.currentClients = &activity.EntityActivityLog{
@@ -1203,55 +908,40 @@ func (a *ActivityLog) resetCurrentLog() {
 
 	a.currentSegment.clientSequenceNumber = 0
 
-	// global segment
-	a.currentGlobalSegment.startTimestamp = 0
-	a.currentGlobalSegment.currentClients = &activity.EntityActivityLog{
-		Clients: make([]*activity.EntityRecord, 0),
-	}
-	a.currentGlobalSegment.clientSequenceNumber = 0
-
-	// local segment
-	a.currentLocalSegment.startTimestamp = 0
-	a.currentLocalSegment.currentClients = &activity.EntityActivityLog{
-		Clients: make([]*activity.EntityRecord, 0),
-	}
-	a.currentLocalSegment.clientSequenceNumber = 0
-
 	a.fragment = nil
 	a.partialMonthClientTracker = make(map[string]*activity.EntityRecord)
 
-	a.currentGlobalFragment = nil
-	a.globalPartialMonthClientTracker = make(map[string]*activity.EntityRecord)
-
-	a.localFragment = nil
-	a.partialMonthLocalClientTracker = make(map[string]*activity.EntityRecord)
-
 	a.standbyFragmentsReceived = make([]*activity.LogFragment, 0)
-	a.standbyLocalFragmentsReceived = make([]*activity.LogFragment, 0)
-	a.standbyGlobalFragmentsReceived = make([]*activity.LogFragment, 0)
-	a.secondaryGlobalClientFragments = make([]*activity.LogFragment, 0)
 }
 
 func (a *ActivityLog) deleteLogWorker(ctx context.Context, startTimestamp int64, whenDone chan struct{}) {
-	entityPathsToDelete := make([]string, 0)
-	entityPathsToDelete = append(entityPathsToDelete, fmt.Sprintf("%v%v/", activityEntityBasePath, startTimestamp))
-	entityPathsToDelete = append(entityPathsToDelete, fmt.Sprintf("%s%v%v/", activityGlobalPathPrefix, activityEntityBasePath, startTimestamp))
-	entityPathsToDelete = append(entityPathsToDelete, fmt.Sprintf("%s%v%v/", activityLocalPathPrefix, activityEntityBasePath, startTimestamp))
-	entityPathsToDelete = append(entityPathsToDelete, fmt.Sprintf("%v%v/", activityTokenLocalBasePath, startTimestamp))
+	entityPath := fmt.Sprintf("%v%v/", activityEntityBasePath, startTimestamp)
+	tokenPath := fmt.Sprintf("%v%v/", activityTokenBasePath, startTimestamp)
 
-	for _, path := range entityPathsToDelete {
-		segments, err := a.view.List(ctx, path)
+	entitySegments, err := a.view.List(ctx, entityPath)
+	if err != nil {
+		a.logger.Error("could not list entity paths", "error", err)
+		return
+	}
+	for _, p := range entitySegments {
+		err = a.view.Delete(ctx, entityPath+p)
 		if err != nil {
-			a.logger.Error("could not list segment path", "error", err)
-			return
-		}
-		for _, p := range segments {
-			err = a.view.Delete(ctx, path+p)
-			if err != nil {
-				a.logger.Error("could not delete log", "error", err)
-			}
+			a.logger.Error("could not delete entity log", "error", err)
 		}
 	}
+
+	tokenSegments, err := a.view.List(ctx, tokenPath)
+	if err != nil {
+		a.logger.Error("could not list token paths", "error", err)
+		return
+	}
+	for _, p := range tokenSegments {
+		err = a.view.Delete(ctx, tokenPath+p)
+		if err != nil {
+			a.logger.Error("could not delete token log", "error", err)
+		}
+	}
+
 	// Allow whoever started this as a goroutine to wait for it to finish.
 	close(whenDone)
 }
@@ -1277,11 +967,6 @@ func (a *ActivityLog) refreshFromStoredLog(ctx context.Context, wg *sync.WaitGro
 	defer a.l.Unlock()
 	a.fragmentLock.Lock()
 	defer a.fragmentLock.Unlock()
-	a.globalFragmentLock.Lock()
-	defer a.globalFragmentLock.Unlock()
-	// startNewCurrentLogLocked below calls resetCurrentLog which is protected by  fragmentLock, globalFragmentLock, localFragmentLock and l
-	a.localFragmentLock.Lock()
-	defer a.localFragmentLock.Unlock()
 
 	decreasingLogTimes, err := a.getMostRecentActivityLogSegment(ctx, now)
 	if err != nil {
@@ -1350,7 +1035,7 @@ func (a *ActivityLog) refreshFromStoredLog(ctx context.Context, wg *sync.WaitGro
 	}
 
 	// load entity logs from storage into memory
-	lastSegment, localLastSegment, globalLastSegment, segmentsExist, err := a.getLastEntitySegmentNumber(ctx, mostRecent)
+	lastSegment, segmentsExist, err := a.getLastEntitySegmentNumber(ctx, mostRecent)
 	if err != nil {
 		return err
 	}
@@ -1359,7 +1044,7 @@ func (a *ActivityLog) refreshFromStoredLog(ctx context.Context, wg *sync.WaitGro
 		return nil
 	}
 
-	err = a.loadCurrentClientSegment(ctx, mostRecent, lastSegment, localLastSegment, globalLastSegment)
+	err = a.loadCurrentClientSegment(ctx, mostRecent, lastSegment)
 	if err != nil || lastSegment == 0 {
 		return err
 	}
@@ -1408,9 +1093,6 @@ func (a *ActivityLog) SetConfig(ctx context.Context, config activityConfig) {
 
 	// enabled is protected by fragmentLock
 	a.fragmentLock.Lock()
-	// startNewCurrentLogLocked and resetCurrentLog is protected by fragmentLock, globalFragmentLock, localFragmentLock and l
-	a.localFragmentLock.Lock()
-	a.globalFragmentLock.Lock()
 	originalEnabled := a.enabled
 	switch config.Enabled {
 	case "enable":
@@ -1425,7 +1107,7 @@ func (a *ActivityLog) SetConfig(ctx context.Context, config activityConfig) {
 		a.logger.Info("activity log enable changed", "original", originalEnabled, "current", a.enabled)
 	}
 
-	if !a.enabled && a.currentSegment.startTimestamp != 0 && a.currentGlobalSegment.startTimestamp != 0 && a.currentLocalSegment.startTimestamp != 0 {
+	if !a.enabled && a.currentSegment.startTimestamp != 0 {
 		a.logger.Trace("deleting current segment")
 		a.deleteDone = make(chan struct{})
 		// this is called from a request under stateLock, so use activeContext
@@ -1434,7 +1116,7 @@ func (a *ActivityLog) SetConfig(ctx context.Context, config activityConfig) {
 	}
 
 	forceSave := false
-	if a.enabled && a.currentSegment.startTimestamp == 0 && a.currentGlobalSegment.startTimestamp == 0 && a.currentLocalSegment.startTimestamp == 0 {
+	if a.enabled && a.currentSegment.startTimestamp == 0 {
 		a.startNewCurrentLogLocked(a.clock.Now().UTC())
 		// Force a save so we can distinguish between
 		//
@@ -1448,14 +1130,10 @@ func (a *ActivityLog) SetConfig(ctx context.Context, config activityConfig) {
 		forceSave = true
 	}
 	a.fragmentLock.Unlock()
-	a.localFragmentLock.Unlock()
-	a.globalFragmentLock.Unlock()
 
 	if forceSave {
 		// l is still held here
-		a.saveCurrentSegmentInternal(ctx, true, a.currentSegment, "")
-		a.saveCurrentSegmentInternal(ctx, true, a.currentGlobalSegment, activityGlobalPathPrefix)
-		a.saveCurrentSegmentInternal(ctx, true, a.currentLocalSegment, activityLocalPathPrefix)
+		a.saveCurrentSegmentInternal(ctx, true)
 	}
 
 	a.defaultReportMonths = config.DefaultReportMonths
@@ -1546,9 +1224,6 @@ func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup, r
 	} else {
 		if !c.activityLogConfig.DisableFragmentWorker {
 			go manager.activeFragmentWorker(ctx)
-			if c.IsPerfSecondary() {
-				go manager.secondaryFragmentWorker(ctx)
-			}
 		}
 
 		doRegeneration := !reload && !manager.hasRegeneratedACME(ctx)
@@ -1700,97 +1375,6 @@ func (a *ActivityLog) StartOfNextMonth() time.Time {
 	return timeutil.StartOfNextMonth(segmentStart)
 }
 
-// secondaryFragmentWorker handles scheduling global client fragments
-// to send via RPC to the primary; it runs on performance secondaries
-func (a *ActivityLog) secondaryFragmentWorker(ctx context.Context) {
-	timer := a.clock.NewTimer(time.Duration(0))
-	fragmentWaiting := false
-	// Eat first event, so timer is stopped
-	<-timer.C
-
-	endOfMonth := a.clock.NewTimer(a.StartOfNextMonth().Sub(a.clock.Now()))
-	if a.configOverrides.DisableTimers {
-		endOfMonth.Stop()
-	}
-	sendInterval := activityFragmentSendInterval
-	// This changes the interval to a duration that was set for testing purposes
-	if a.configOverrides.GlobalFragmentSendInterval.Microseconds() > 0 {
-		sendInterval = a.configOverrides.GlobalFragmentSendInterval
-	}
-
-	sendFunc := func() {
-		ctx, cancel := context.WithTimeout(ctx, activityFragmentSendTimeout)
-		defer cancel()
-		err := a.sendGlobalClients(ctx)
-		if err != nil {
-			a.logger.Warn("activity log global fragment lost", "error", err)
-		}
-	}
-
-	for {
-		select {
-		case <-a.doneCh:
-			// Shutting down activity log.
-			if fragmentWaiting && !timer.Stop() {
-				<-timer.C
-			}
-			if !endOfMonth.Stop() {
-				<-endOfMonth.C
-			}
-			return
-		case <-a.newGlobalClientFragmentCh:
-			// New fragment created, start the timer if not
-			// already running
-			if !fragmentWaiting {
-				fragmentWaiting = true
-				if !a.configOverrides.DisableTimers {
-					a.logger.Trace("reset global fragment timer")
-					timer.Reset(sendInterval)
-				}
-			}
-		case <-timer.C:
-			a.logger.Trace("sending global fragment on timer expiration")
-			fragmentWaiting = false
-			sendFunc()
-		case <-a.sendCh:
-			a.logger.Trace("sending global fragment on request")
-			// It might be that we get sendCh before fragmentCh
-			// if a fragment is created and then immediately fills
-			// up to its limit. So we attempt to send even if the timer's
-			// not running.
-			if fragmentWaiting {
-				fragmentWaiting = false
-				if !timer.Stop() {
-					<-timer.C
-				}
-			}
-			sendFunc()
-		case <-endOfMonth.C:
-			a.logger.Trace("sending global fragment on end of month")
-			// Flush the current fragment, if any
-			if fragmentWaiting {
-				fragmentWaiting = false
-				if !timer.Stop() {
-					<-timer.C
-				}
-			}
-			sendFunc()
-
-			// clear active entity set
-			a.globalFragmentLock.Lock()
-			a.globalPartialMonthClientTracker = make(map[string]*activity.EntityRecord)
-
-			a.globalFragmentLock.Unlock()
-
-			// Set timer for next month.
-			// The current segment *probably* hasn't been set yet (via invalidation),
-			// so don't rely on it.
-			target := timeutil.StartOfNextMonth(a.clock.Now().UTC())
-			endOfMonth.Reset(target.Sub(a.clock.Now()))
-		}
-	}
-}
-
 // perfStandbyFragmentWorker handles scheduling fragments
 // to send via RPC; it runs on perf standby nodes only.
 func (a *ActivityLog) perfStandbyFragmentWorker(ctx context.Context) {
@@ -1802,12 +1386,6 @@ func (a *ActivityLog) perfStandbyFragmentWorker(ctx context.Context) {
 	endOfMonth := a.clock.NewTimer(a.StartOfNextMonth().Sub(a.clock.Now()))
 	if a.configOverrides.DisableTimers {
 		endOfMonth.Stop()
-	}
-
-	sendInterval := activityFragmentSendInterval
-	// This changes the interval to a duration that was set for testing purposes
-	if a.configOverrides.PerfStandbyFragmentSendInterval.Microseconds() > 0 {
-		sendInterval = a.configOverrides.PerfStandbyFragmentSendInterval
 	}
 
 	sendFunc := func() {
@@ -1837,7 +1415,7 @@ func (a *ActivityLog) perfStandbyFragmentWorker(ctx context.Context) {
 				fragmentWaiting = true
 				if !a.configOverrides.DisableTimers {
 					a.logger.Trace("reset fragment timer")
-					timer.Reset(sendInterval)
+					timer.Reset(activityFragmentStandbyTime)
 				}
 			}
 		case <-timer.C:
@@ -1874,11 +1452,6 @@ func (a *ActivityLog) perfStandbyFragmentWorker(ctx context.Context) {
 
 			a.fragmentLock.Unlock()
 
-			// clear local active entity set
-			a.localFragmentLock.Lock()
-			a.partialMonthLocalClientTracker = make(map[string]*activity.EntityRecord)
-			a.localFragmentLock.Unlock()
-
 			// Set timer for next month.
 			// The current segment *probably* hasn't been set yet (via invalidation),
 			// so don't rely on it.
@@ -1891,13 +1464,7 @@ func (a *ActivityLog) perfStandbyFragmentWorker(ctx context.Context) {
 // activeFragmentWorker handles scheduling the write of the next
 // segment.  It runs on active nodes only.
 func (a *ActivityLog) activeFragmentWorker(ctx context.Context) {
-	writeInterval := activitySegmentInterval
-	// This changes the interval to a duration that was set for testing purposes
-	if a.configOverrides.StorageWriteTestingInterval.Microseconds() > 0 {
-		writeInterval = a.configOverrides.StorageWriteTestingInterval
-	}
-
-	ticker := a.clock.NewTicker(writeInterval)
+	ticker := a.clock.NewTicker(activitySegmentInterval)
 
 	endOfMonth := a.clock.NewTimer(a.StartOfNextMonth().Sub(a.clock.Now()))
 	if a.configOverrides.DisableTimers {
@@ -2010,12 +1577,7 @@ func (a *ActivityLog) HandleEndOfMonth(ctx context.Context, currentTime time.Tim
 	// in the previous month, and recover by calling newMonthCurrentLog
 	// again and triggering the precomputed query.
 	a.fragmentLock.Lock()
-	// calls newMonthCurrentLogLocked which is protected by  fragmentLock, globalFragmentLock, localFragmentLock and l
-	a.localFragmentLock.Lock()
-	a.globalFragmentLock.Lock()
 	a.newMonthCurrentLogLocked(currentTime)
-	a.globalFragmentLock.Unlock()
-	a.localFragmentLock.Unlock()
 	a.fragmentLock.Unlock()
 
 	// Work on precomputed queries in background
@@ -2061,29 +1623,13 @@ func (c *Core) ResetActivityLog() []*activity.LogFragment {
 
 	allFragments := make([]*activity.LogFragment, 1)
 	a.fragmentLock.Lock()
-
 	allFragments[0] = a.fragment
 	a.fragment = nil
+
 	allFragments = append(allFragments, a.standbyFragmentsReceived...)
 	a.standbyFragmentsReceived = make([]*activity.LogFragment, 0)
-	a.secondaryGlobalClientFragments = make([]*activity.LogFragment, 0)
 	a.partialMonthClientTracker = make(map[string]*activity.EntityRecord)
 	a.fragmentLock.Unlock()
-
-	// local fragments
-	a.localFragmentLock.Lock()
-	allFragments = append(allFragments, a.localFragment)
-	a.localFragment = nil
-	allFragments = append(allFragments, a.standbyLocalFragmentsReceived...)
-	a.standbyLocalFragmentsReceived = make([]*activity.LogFragment, 0)
-	a.partialMonthLocalClientTracker = make(map[string]*activity.EntityRecord)
-	a.localFragmentLock.Unlock()
-
-	// global fragments
-	a.globalFragmentLock.Lock()
-	a.globalPartialMonthClientTracker = make(map[string]*activity.EntityRecord)
-	a.standbyGlobalFragmentsReceived = make([]*activity.LogFragment, 0)
-	a.globalFragmentLock.Unlock()
 	return allFragments
 }
 
@@ -2121,16 +1667,11 @@ func (a *ActivityLog) AddActivityToFragment(clientID string, namespaceID string,
 
 	a.fragmentLock.RLock()
 	if a.enabled {
-		_, presentInRegularClientMap := a.partialMonthClientTracker[clientID]
-		_, presentInLocalClientmap := a.partialMonthLocalClientTracker[clientID]
-		if presentInRegularClientMap || presentInLocalClientmap {
-			present = true
-		}
+		_, present = a.partialMonthClientTracker[clientID]
 	} else {
 		present = true
 	}
 	a.fragmentLock.RUnlock()
-
 	if present {
 		return
 	}
@@ -2139,23 +1680,12 @@ func (a *ActivityLog) AddActivityToFragment(clientID string, namespaceID string,
 	a.fragmentLock.Lock()
 	defer a.fragmentLock.Unlock()
 
-	a.localFragmentLock.Lock()
-	defer a.localFragmentLock.Unlock()
-
-	a.globalFragmentLock.Lock()
-	defer a.globalFragmentLock.Unlock()
-
 	// Re-check entity ID after re-acquiring lock
-	_, presentInRegularClientMap := a.partialMonthClientTracker[clientID]
-	_, presentInLocalClientmap := a.partialMonthLocalClientTracker[clientID]
-	if presentInRegularClientMap || presentInLocalClientmap {
-		present = true
-	}
+	_, present = a.partialMonthClientTracker[clientID]
 	if present {
 		return
 	}
 
-	// create fragments if doesn't already exist
 	a.createCurrentFragment()
 
 	clientRecord := &activity.EntityRecord{
@@ -2174,73 +1704,20 @@ func (a *ActivityLog) AddActivityToFragment(clientID string, namespaceID string,
 		clientRecord.NonEntity = true
 	}
 
-	// add the clients to the regular fragment
 	a.fragment.Clients = append(a.fragment.Clients, clientRecord)
 	a.partialMonthClientTracker[clientRecord.ClientID] = clientRecord
-
-	if local, _ := a.isClientLocal(clientRecord); local {
-		// If the client is local then add the client to the current local fragment
-		a.localFragment.Clients = append(a.localFragment.Clients, clientRecord)
-		a.partialMonthLocalClientTracker[clientRecord.ClientID] = clientRecord
-	} else {
-		if _, ok := a.globalPartialMonthClientTracker[clientRecord.ClientID]; !ok {
-			// If the client is not local and has not already been seen, then add the client
-			// to the current global fragment
-			a.currentGlobalFragment.Clients = append(a.currentGlobalFragment.Clients, clientRecord)
-			a.globalPartialMonthClientTracker[clientRecord.ClientID] = clientRecord
-		}
-	}
 }
 
-// isClientLocal checks whether the given client is on a local mount.
-// In all other cases, we will assume it is a global client.
-func (a *ActivityLog) isClientLocal(client *activity.EntityRecord) (bool, error) {
-	if !utf8.ValidString(client.ClientID) {
-		return false, fmt.Errorf("client ID %q is not a valid string", client.ClientID)
-	}
-	// Tokens are not replicated to performance secondary clusters
-	if client.GetClientType() == nonEntityTokenActivityType {
-		return true, nil
-	}
-	mountEntry := a.core.router.MatchingMountByAccessor(client.MountAccessor)
-	// If the mount entry is nil, this means the mount has been deleted. We will assume it was replicated because we do not want to
-	// over count clients
-	if mountEntry != nil && mountEntry.Local {
-		return true, nil
-	}
-
-	return false, nil
-}
-
-// Create the fragments (regular fragment, local fragment and global fragment) if it doesn't already exist.
-// Must be called with the fragmentLock, localFragmentLock and globalFragmentLock held.
+// Create the current fragment if it doesn't already exist.
+// Must be called with the lock held.
 func (a *ActivityLog) createCurrentFragment() {
 	if a.fragment == nil {
-		// create regular fragment
 		a.fragment = &activity.LogFragment{
 			OriginatingNode: a.nodeID,
 			Clients:         make([]*activity.EntityRecord, 0, 120),
 			NonEntityTokens: make(map[string]uint64),
 		}
-
-		// create local fragment
-		a.localFragment = &activity.LogFragment{
-			OriginatingNode: a.nodeID,
-			Clients:         make([]*activity.EntityRecord, 0, 120),
-			NonEntityTokens: make(map[string]uint64),
-		}
-
-		// create global fragment
-		a.currentGlobalFragment = &activity.LogFragment{
-			OriginatingCluster: a.core.ClusterID(),
-			Clients:            make([]*activity.EntityRecord, 0),
-		}
-
-		if a.core.IsPerfSecondary() {
-			// Signal that a new global segment is available, start
-			// the timer to send it
-			a.newGlobalClientFragmentCh <- struct{}{}
-		}
+		a.fragmentCreation = a.clock.Now().UTC()
 
 		// Signal that a new segment is available, start
 		// the timer to send it.
@@ -2248,79 +1725,23 @@ func (a *ActivityLog) createCurrentFragment() {
 	}
 }
 
-func (a *ActivityLog) receivedGlobalClientFragments(fragment *activity.LogFragment) {
-	a.logger.Trace("received fragment from secondary", "cluster_id", fragment.GetOriginatingCluster())
-
-	a.globalFragmentLock.Lock()
-	defer a.globalFragmentLock.Unlock()
-
-	if !a.enabled {
-		return
-	}
-
-	for _, e := range fragment.Clients {
-		a.globalPartialMonthClientTracker[e.ClientID] = e
-	}
-
-	a.secondaryGlobalClientFragments = append(a.secondaryGlobalClientFragments, fragment)
-}
-
 func (a *ActivityLog) receivedFragment(fragment *activity.LogFragment) {
 	a.logger.Trace("received fragment from standby", "node", fragment.OriginatingNode)
-
-	isLocalFragment := false
-	if !a.enabled {
-		return
-	}
 
 	a.fragmentLock.Lock()
 	defer a.fragmentLock.Unlock()
 
-	// Check if the received fragment from standby is a local fragment.
-	// A fragment can have all local clients or all non-local clients except for regular fragment (which has both currently but will be modified to only hold non-local clients later).
-	// Check the first client to identify the type of fragment.
-	if len(fragment.Clients) > 0 {
-		client := fragment.Clients[0]
-		if local, _ := a.isClientLocal(client); local {
-			isLocalFragment = true
-
-			a.localFragmentLock.Lock()
-			defer a.localFragmentLock.Unlock()
-		} else {
-			a.globalFragmentLock.Lock()
-			defer a.globalFragmentLock.Unlock()
-		}
+	if !a.enabled {
+		return
 	}
 
 	for _, e := range fragment.Clients {
 		a.partialMonthClientTracker[e.ClientID] = e
-		if isLocalFragment {
-			a.partialMonthLocalClientTracker[e.ClientID] = e
-		} else {
-			a.globalPartialMonthClientTracker[e.ClientID] = e
-		}
 	}
 
 	a.standbyFragmentsReceived = append(a.standbyFragmentsReceived, fragment)
 
-	if isLocalFragment {
-		a.standbyLocalFragmentsReceived = append(a.standbyLocalFragmentsReceived, fragment)
-	} else {
-		a.standbyGlobalFragmentsReceived = append(a.standbyGlobalFragmentsReceived, fragment)
-	}
-
 	// TODO: check if current segment is full and should be written
-}
-
-// returns the active local and global clients for the current month
-func (a *ActivityLog) GetAllPartialMonthClients() (map[string]*activity.EntityRecord, map[string]*activity.EntityRecord) {
-	a.localFragmentLock.Lock()
-	defer a.localFragmentLock.Unlock()
-
-	a.globalFragmentLock.Lock()
-	defer a.globalFragmentLock.Unlock()
-
-	return a.partialMonthLocalClientTracker, a.globalPartialMonthClientTracker
 }
 
 type ResponseCounts struct {
@@ -2380,8 +1801,9 @@ func (c *Core) ActivityLogInjectResponse(ctx context.Context, pq *activity.Preco
 
 func (a *ActivityLog) includeInResponse(query *namespace.Namespace, record *namespace.Namespace) bool {
 	if record == nil {
-		// Deleted namespace, only include in root queries
-		return query.ID == namespace.RootNamespaceID
+		// Deleted namespace, only include in root or admin namespace (if configured) queries
+		adminNsPath := namespace.Canonicalize(a.core.administrativeNamespacePath())
+		return query.ID == namespace.RootNamespaceID || (adminNsPath != "" && query.Path == adminNsPath)
 	}
 	return record.HasParent(query)
 }
@@ -3264,7 +2686,6 @@ func (a *ActivityLog) retentionWorker(ctx context.Context, currentTime time.Time
 // Periodic report of number of active entities, with the current month.
 // We don't break this down by namespace because that would require going to storage (that information
 // is not currently stored in memory.)
-// TODO: to deprecate. These metrics are not useful anymore
 func (a *ActivityLog) PartialMonthMetrics(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
 	a.fragmentLock.RLock()
 	defer a.fragmentLock.RUnlock()
@@ -3299,9 +2720,6 @@ func (a *ActivityLog) populateNamespaceAndMonthlyBreakdowns() (map[int64]*proces
 	byNamespace := make(map[string]*processByNamespace)
 	byMonth := make(map[int64]*processMonth)
 	for _, e := range a.partialMonthClientTracker {
-		processClientRecord(e, byNamespace, byMonth, a.clock.Now())
-	}
-	for _, e := range a.partialMonthLocalClientTracker {
 		processClientRecord(e, byNamespace, byMonth, a.clock.Now())
 	}
 	return byMonth, byNamespace
@@ -3755,16 +3173,6 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 								return fmt.Errorf("failed to process local entity alias")
 							}
 
-							record.MountType, ok = alias["mount_type"].(string)
-							if !ok {
-								return fmt.Errorf("failed to process mount type")
-							}
-
-							record.MountPath, ok = alias["mount_path"].(string)
-							if !ok {
-								return fmt.Errorf("failed to process mount path")
-							}
-
 							entityAliasMetadata, ok := alias["metadata"].(map[string]string)
 							if !ok {
 								return fmt.Errorf("failed to process entity alias metadata")
@@ -3782,6 +3190,23 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 							if entityAliasCustomMetadata != nil {
 								record.EntityAliasCustomMetadata = entityAliasCustomMetadata
 							}
+
+							valResp := a.core.router.ValidateMountByAccessor(e.MountAccessor)
+							if valResp == nil {
+								record.MountType = ""
+								record.MountPath = fmt.Sprintf(DeletedMountFmt, e.MountAccessor)
+							} else {
+								record.MountType, ok = alias["mount_type"].(string)
+								if !ok {
+									return fmt.Errorf("failed to process mount type")
+								}
+								record.MountPath, ok = alias["mount_path"].(string)
+								if !ok {
+									return fmt.Errorf("failed to process mount path")
+								}
+
+							}
+
 						}
 					} else {
 						// fetch mount directly to ensure mount type and path are populated

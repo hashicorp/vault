@@ -201,6 +201,7 @@ func (c *forwardingClient) startHeartbeat() {
 				c.core.logger.Debug("forwarding: error sending echo request to active node", "error", err)
 				return
 			}
+			c.core.rpcLastSuccessfulHeartbeat.Store(now)
 			if resp == nil {
 				c.core.logger.Debug("forwarding: empty echo response from active node")
 				return
@@ -214,6 +215,9 @@ func (c *forwardingClient) startHeartbeat() {
 			atomic.StoreUint32(c.core.activeNodeReplicationState, resp.ReplicationState)
 		}
 
+		// store a value before the first tick to indicate that we've started
+		// sending heartbeats
+		c.core.rpcLastSuccessfulHeartbeat.Store(time.Now())
 		tick()
 
 		for {

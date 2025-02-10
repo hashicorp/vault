@@ -1,0 +1,160 @@
+---
+layout: docs
+page_title: Resolve Terraform config
+description: >-
+  Fix external reference behavior for deduplicated entities and groups in
+  Terraform config files.
+---
+
+# Resolve deduplication impact on Terraform resource references
+
+Fix external reference behavior in Terraform configuration files for entities
+and groups renamed during identity deduplication.
+
+<Tip title="Assumptions">
+
+- You are running Vault 1.19 or later.
+- You have [deduplication **renaming** targets in your system logs](/vault/docs/upgrading/identity-deduplication). 
+- You have admin permission on the relevant Vault server or cluster.
+
+</Tip>
+
+
+## How renaming affects external references
+
+Renaming entities and groups can break references in Terraform (and other
+external services) when those reference refer directly to the entity or group by
+name. For example, assume you have a Terraform configuration file with named
+identity resources like the following:
+
+<CodeBlockConfig highlight="11,16" hideClipboard="true">
+
+```hcl
+terraform {
+  required_providers {
+    vault = {
+      source = "hashicorp/vault"
+    }
+  }
+}
+
+provider "vault" {}
+
+resource "vault_identity_entity" "BOB" {
+  name      = "BOB"
+  policies  = ["TEST"]
+}
+
+resource "vault_identity_entity" "bob" {
+    name      = "bob"
+    policies  = ["test"]
+}
+```
+
+</CodeBlockConfig>
+
+By default, Vault ignore case when matching identities, treats `BOB` and `bob`
+as the same name, and rejects the second resource as a duplicate. However, if
+your Vault cluster is running in a mode that allows both resource names due to
+historical issues, the resources might exist as separate entities.
+
+If Vault identifies `bob` and `BOB` as duplicates during deduplication, it
+renames one of the identities `<name>-<uuid>`. After deduplication, Terraform
+tries to reapply the previous name for the related resource, but the in-place
+update fails because the existing resource now violates the case-insensitive
+name constraint on the Vault side.
+
+For example:
+
+<CodeBlockConfig highlight="2,3,11,21,28" hideClipboard="true">
+
+```
+➜  tf_dupe_testing terraform apply
+vault_identity_entity.bob: Refreshing state... [id=e8c5e633-fe37-5a49-4a29-32e2643d03bd]
+vault_identity_entity.BOB: Refreshing state... [id=2577bc3f-67ab-dab7-93dc-e86f78194ff0]
+
+Terraform used the selected providers to generate the following execution plan. Resource
+actions are indicated with the following symbols:
+  ~ update in-place
+
+Terraform will perform the following actions:
+
+  # vault_identity_entity.bob will be updated in-place
+  ~ resource "vault_identity_entity" "bob" {
+      + external_policies = false
+        id                = "e8c5e633-fe37-5a49-4a29-32e2643d03bd"
+      ~ name              = "bob-e8c5e633-fe37-5a49-4a29-32e2643d03bd" -> "bob"
+        # (3 unchanged attributes hidden)
+    }
+
+...
+
+vault_identity_entity.bob: Modifying... [id=e8c5e633-fe37-5a49-4a29-32e2643d03bd]
+╷
+│ Error: error updating IdentityEntity "e8c5e633-fe37-5a49-4a29-32e2643d03bd": Error making API request.
+│
+│ URL: PUT https://127.0.0.1:8200/v1/identity/entity/id/e8c5e633-fe37-5a49-4a29-32e2643d03bd
+│ Code: 400. Errors:
+│
+│ * entity name is already in use
+│
+│   with vault_identity_entity.bob,
+│   on main.tf line 17, in resource "vault_identity_entity" "bob":
+│   17: resource "vault_identity_entity" "bob" {
+```
+
+</CodeBlockConfig>
+
+
+## Solution
+
+The easiest way to deal with renamed entities and groups is to manually update the
+the associated resource in your Terraform configuration with the updated name
+before forcing deduplication.
+
+<Tip>
+
+Use the same process to identify and update target names for other external
+systems that reference an entity or group by name.
+
+</Tip>
+
+For example, if your system logs include lines like the following:
+
+<CodeBlockConfig hideClipboard="true">
+
+```text
+2025-01-28T13:15:13.641-0800 [WARN]  identity: entity "bob" with namespace ID "admin" duplicates 1 others: id=8ad26e0c-8cf6-5b67-7c77-6571fa374881 force_deduplication="would not rename"
+2025-01-28T13:15:13.641-0800 [WARN]  identity: entity "BOB" with namespace ID "admin" duplicates 1 others: id=9fe86ea0-f80c-1199-5ad1-1d01ab70237f force_deduplication="would rename to BOB-9fe86ea0-f80c-1199-5ad1-1d01ab70237f"
+```
+
+</CodeBlockConfig>
+
+You would update any resources associated with `BOB` in your Terraform
+configuration files. For example:
+
+<CodeBlockConfig highlight="11,16" hideClipboard="true">
+
+```hcl
+terraform {
+  required_providers {
+    vault = {
+      source = "hashicorp/vault"
+    }
+  }
+}
+
+provider "vault" {}
+
+resource "vault_identity_entity" "BOB-9fe86ea0-f80c-1199-5ad1-1d01ab70237f" {
+  name      = "BOB-9fe86ea0-f80c-1199-5ad1-1d01ab70237f"
+  policies  = ["TEST"]
+}
+
+resource "vault_identity_entity" "bob" {
+  name      = "bob"
+  policies  = ["test"]
+}
+```
+
+</CodeBlockConfig>

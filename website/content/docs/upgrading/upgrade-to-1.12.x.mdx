@@ -29,6 +29,12 @@ processes were killed after a successful mount and then respawned when a
 request is routed to them. Vault 1.12.0 introduced auto mutual TLS for
 secrets/auth plugins so we do not lazy load them on startup anymore.
 
+### Activity Log Changes
+
+#### Disable client counting activity
+
+License utilization cannot be reported if client counting is disabled. As of Vault Enterprise 1.12.8 and later, client counting cannot be disabled using `/sys/internal/counters/config` endpoint when automated license utilization reporting is enabled.
+
 ## Known issues
 
 ### Pinning to builtin plugin versions may cause failure on upgrade

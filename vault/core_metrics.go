@@ -491,6 +491,68 @@ func (c *Core) walkKvMountSecrets(ctx context.Context, m *kvMount) {
 	}
 }
 
+// GetTotalPkiRoles returns the total roles across all PKI mounts in Vault
+func (c *Core) GetTotalPkiRoles(ctx context.Context) int {
+	c.mountsLock.RLock()
+	defer c.mountsLock.RUnlock()
+
+	numRoles := 0
+
+	for _, entry := range c.mounts.Entries {
+		secretType := entry.Type
+		if secretType == pluginconsts.SecretEnginePki {
+			listRequest := &logical.Request{
+				Operation: logical.ListOperation,
+				Path:      entry.namespace.Path + entry.Path + "roles",
+			}
+			resp, err := c.router.Route(ctx, listRequest)
+			if err != nil || resp == nil {
+				continue
+			}
+			rawKeys, ok := resp.Data["keys"]
+			if !ok {
+				continue
+			}
+			keys, ok := rawKeys.([]string)
+			if ok {
+				numRoles += len(keys)
+			}
+		}
+	}
+	return numRoles
+}
+
+// GetTotalPkiIssuers returns the total issuers across all PKI mounts in Vault
+func (c *Core) GetTotalPkiIssuers(ctx context.Context) int {
+	c.mountsLock.RLock()
+	defer c.mountsLock.RUnlock()
+
+	numRoles := 0
+
+	for _, entry := range c.mounts.Entries {
+		secretType := entry.Type
+		if secretType == pluginconsts.SecretEnginePki {
+			listRequest := &logical.Request{
+				Operation: logical.ListOperation,
+				Path:      entry.namespace.Path + entry.Path + "issuers",
+			}
+			resp, err := c.router.Route(ctx, listRequest)
+			if err != nil || resp == nil {
+				continue
+			}
+			rawKeys, ok := resp.Data["keys"]
+			if !ok {
+				continue
+			}
+			keys, ok := rawKeys.([]string)
+			if ok {
+				numRoles += len(keys)
+			}
+		}
+	}
+	return numRoles
+}
+
 // getMinNamespaceSecrets is expected to be called on the output
 // of GetKvUsageMetrics to get the min number of secrets in a single namespace.
 func getMinNamespaceSecrets(mapOfNamespacesToSecrets map[string]int) int {
@@ -540,22 +602,15 @@ func getMeanNamespaceSecrets(mapOfNamespacesToSecrets map[string]int) int {
 func (c *Core) GetSecretEngineUsageMetrics() map[string]int {
 	mounts := make(map[string]int)
 
-	c.authLock.RLock()
-	defer c.authLock.RUnlock()
-
-	// we don't grab the statelock, so this code might run during or after the seal process.
-	// Therefore, we need to check if c.auth is nil. If we do not, this will panic when
-	// run after seal.
-	if c.auth == nil {
-		return mounts
-	}
+	c.mountsLock.RLock()
+	defer c.mountsLock.RUnlock()
 
 	for _, entry := range c.mounts.Entries {
-		authType := entry.Type
-		if _, ok := mounts[authType]; !ok {
-			mounts[authType] = 1
+		mountType := entry.Type
+		if _, ok := mounts[mountType]; !ok {
+			mounts[mountType] = 1
 		} else {
-			mounts[authType] += 1
+			mounts[mountType] += 1
 		}
 	}
 	return mounts
@@ -567,13 +622,6 @@ func (c *Core) GetAuthMethodUsageMetrics() map[string]int {
 
 	c.authLock.RLock()
 	defer c.authLock.RUnlock()
-
-	// we don't grab the statelock, so this code might run during or after the seal process.
-	// Therefore, we need to check if c.auth is nil. If we do not, this will panic when
-	// run after seal.
-	if c.auth == nil {
-		return mounts
-	}
 
 	for _, entry := range c.auth.Entries {
 		authType := entry.Type

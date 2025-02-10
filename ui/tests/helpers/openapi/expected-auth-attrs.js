@@ -180,6 +180,12 @@ const cert = {
       fieldGroup: 'default',
       type: 'boolean',
     },
+    enableMetadataOnFailures: {
+      editType: 'boolean',
+      fieldGroup: 'default',
+      helpText: 'If set, metadata of the client certificate will be returned on authentication failures.',
+      type: 'boolean',
+    },
     ocspCacheSize: {
       editType: 'number',
       helpText: 'The size of the in memory OCSP response cache, shared by all configured certs',
@@ -841,6 +847,13 @@ const ldap = {
       helpText: 'Use anonymous bind to discover the bind DN of a user (optional)',
       fieldGroup: 'default',
       label: 'Discover DN',
+      type: 'boolean',
+    },
+    enableSamaccountnameLogin: {
+      editType: 'boolean',
+      fieldGroup: 'default',
+      helpText:
+        'If true, matching sAMAccountName attribute values will be allowed to login when upndomain is defined.',
       type: 'boolean',
     },
     groupattr: {

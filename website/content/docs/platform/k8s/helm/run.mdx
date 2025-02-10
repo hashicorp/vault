@@ -1,13 +1,13 @@
 ---
 layout: docs
-page_title: Running Vault - Kubernetes
+page_title: Run Vault on Kubernetes
 description: >-
-  Vault can run directly on Kubernetes in various configurations.  For
+  Run Vault directly on Kubernetes in various configurations. For
   pure-Kubernetes workloads, this enables Vault to also exist purely within
   Kubernetes.
 ---
 
-# Run Vault on kubernetes
+# Run Vault on Kubernetes
 
 Vault works with Kubernetes in various modes: `dev`, `standalone`, `ha`,
 and `external`.
@@ -409,14 +409,14 @@ Next, list the Helm versions and choose the desired version to install.
 ```bash
 $ helm search repo hashicorp/vault
 NAME           	CHART VERSION	APP VERSION	DESCRIPTION
-hashicorp/vault	0.29.0       	1.18.1     	Official HashiCorp Vault Chart
+hashicorp/vault	0.29.1       	1.18.1     	Official HashiCorp Vault Chart
 ```
 
 Next, test the upgrade with `--dry-run` first to verify the changes sent to the
 Kubernetes cluster.
 
 ```shell-session
-$ helm upgrade vault hashicorp/vault --version=0.29.0 \
+$ helm upgrade vault hashicorp/vault --version=0.29.1 \
     --set='server.image.repository=vault' \
     --set='server.image.tag=123.456' \
     --dry-run
