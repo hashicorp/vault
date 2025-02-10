@@ -540,7 +540,7 @@ func getJSONExport(t *testing.T, client *api.Client, now time.Time) (map[string]
 // getCSVExport fetches activity export records using csv format. All flattened
 // map and slice fields will be unflattened so that the a proper ActivityLogExportRecord
 // can be formed. The records will returned as a map keyed by client ID.
-func getCSVExport(t *testing.T, client *api.Client, monthsPreviousTo int, now time.Time) (map[string]vault.ActivityLogExportRecord, error) {
+func getCSVExport(t *testing.T, client *api.Client, now time.Time) (map[string]vault.ActivityLogExportRecord, error) {
 	t.Helper()
 
 	boolFields := map[string]struct{}{
@@ -559,7 +559,7 @@ func getCSVExport(t *testing.T, client *api.Client, monthsPreviousTo int, now ti
 	}
 
 	resp, err := client.Logical().ReadRawWithData("sys/internal/counters/activity/export", map[string][]string{
-		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(monthsPreviousTo, now)).Format(time.RFC3339)},
+		"start_time": {now.Format(time.RFC3339)},
 		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
 		"format":     {"csv"},
 	})
