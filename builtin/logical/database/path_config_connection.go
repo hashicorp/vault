@@ -17,11 +17,9 @@ import (
 	"github.com/hashicorp/vault/helper/versions"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/rotation"
 )
 
 var (
@@ -51,8 +49,6 @@ type DatabaseConfig struct {
 	// role-level by the role's skip_import_rotation field. The default is
 	// false. Enterprise only.
 	SkipStaticRoleImportRotation bool `json:"skip_static_role_import_rotation" structs:"skip_static_role_import_rotation" mapstructure:"skip_static_role_import_rotation"`
-
-	automatedrotationutil.AutomatedRotationParams
 }
 
 // ConnectionDetails represents the DatabaseConfig.ConnectionDetails map as a
@@ -267,7 +263,6 @@ func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 		},
 	}
 	AddConnectionFieldsEnt(fields)
-	automatedrotationutil.AddAutomatedRotationFields(fields)
 
 	return &framework.Path{
 		Pattern: fmt.Sprintf("config/%s", framework.GenericNameRegex("name")),
@@ -414,7 +409,6 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 		}
 
 		resp.Data = structs.New(config).Map()
-		config.PopulateAutomatedRotationData(resp.Data)
 		return resp, nil
 	}
 }
@@ -506,10 +500,6 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			config.SkipStaticRoleImportRotation = skipImportRotationRaw.(bool)
 		}
 
-		if err := config.ParseAutomatedRotationFields(data); err != nil {
-			return logical.ErrorResponse(err.Error()), nil
-		}
-
 		// Remove these entries from the data before we store it keyed under
 		// ConnectionDetails.
 		delete(data.Raw, "name")
@@ -520,10 +510,6 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		delete(data.Raw, "root_rotation_statements")
 		delete(data.Raw, "password_policy")
 		delete(data.Raw, "skip_static_role_import_rotation")
-		delete(data.Raw, "rotation_schedule")
-		delete(data.Raw, "rotation_window")
-		delete(data.Raw, "rotation_period")
-		delete(data.Raw, "disable_automated_rotation")
 
 		id, err := uuid.GenerateUUID()
 		if err != nil {
@@ -579,43 +565,8 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		if versions.IsBuiltinVersion(config.PluginVersion) {
 			config.PluginVersion = ""
 		}
-
-		var performedRotationManagerOpern string
-		if config.ShouldDeregisterRotationJob() {
-			performedRotationManagerOpern = "deregistration"
-			// Disable Automated Rotation and Deregister credentials if required
-			deregisterReq := &rotation.RotationJobDeregisterRequest{
-				MountPoint: req.MountPoint,
-				ReqPath:    req.Path,
-			}
-
-			b.Logger().Debug("Deregistering rotation job", "mount", req.MountPoint+req.Path)
-			if err := b.System().DeregisterRotationJob(ctx, deregisterReq); err != nil {
-				return logical.ErrorResponse("error deregistering rotation job: %s", err), nil
-			}
-		} else if config.ShouldRegisterRotationJob() {
-			performedRotationManagerOpern = "registration"
-			// Register the rotation job if it's required.
-			cfgReq := &rotation.RotationJobConfigureRequest{
-				MountPoint:       req.MountPoint,
-				ReqPath:          req.Path,
-				RotationSchedule: config.RotationSchedule,
-				RotationWindow:   config.RotationWindow,
-				RotationPeriod:   config.RotationPeriod,
-			}
-
-			b.Logger().Debug("Registering rotation job", "mount", req.MountPoint+req.Path)
-			if _, err = b.System().RegisterRotationJob(ctx, cfgReq); err != nil {
-				return logical.ErrorResponse("error registering rotation job: %s", err), nil
-			}
-		}
-
 		err = storeConfig(ctx, req.Storage, name, config)
 		if err != nil {
-			if performedRotationManagerOpern != "" {
-				b.Logger().Error("write to storage failed but the rotation manager still succeeded.",
-					"operation", performedRotationManagerOpern, "mount", req.MountPoint, "path", req.Path)
-			}
 			return nil, err
 		}
 
@@ -639,7 +590,6 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		}
 
 		b.dbEvent(ctx, "config-write", req.Path, name, true)
-
 		if len(resp.Warnings) == 0 {
 			return nil, nil
 		}
