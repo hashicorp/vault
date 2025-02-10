@@ -315,6 +315,8 @@ func TestBackend_pathLogin_NoClientConfig(t *testing.T) {
 	storage := new(logical.InmemStorage)
 	config := logical.TestBackendConfig()
 	config.StorageView = storage
+	config.System = &testSystemView{}
+
 	b, err := Backend(config)
 	if err != nil {
 		t.Fatal(err)
@@ -572,6 +574,8 @@ func TestBackend_pathLogin_IAMRoleResolution(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config := logical.TestBackendConfig()
 	config.StorageView = storage
+	config.System = &testSystemView{}
+
 	b, err := Backend(config)
 	if err != nil {
 		t.Fatal(err)
@@ -672,6 +676,8 @@ func TestBackend_defaultAliasMetadata(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config := logical.TestBackendConfig()
 	config.StorageView = storage
+	config.System = &testSystemView{}
+
 	b, err := Backend(config)
 	if err != nil {
 		t.Fatal(err)
