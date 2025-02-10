@@ -5039,6 +5039,8 @@ func TestActivityLog_Export_CSV_Header(t *testing.T) {
 	require.Empty(t, deep.Equal(expectedColumnIndex, encoder.columnIndex))
 }
 
+// TestActivityLog_partialMonthClientCountUsingWriteExport verifies that the writeExport
+// helper method properly writes the data in buffer according to the start of month date
 func TestActivityLog_partialMonthClientCountUsingWriteExport(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 	now := time.Now().UTC()
