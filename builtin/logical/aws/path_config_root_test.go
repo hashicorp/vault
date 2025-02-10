@@ -21,6 +21,7 @@ import (
 func TestBackend_PathConfigRoot(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
+	config.System = &testSystemView{}
 
 	b := Backend(config)
 	if err := b.Setup(context.Background(), config); err != nil {
@@ -307,4 +308,8 @@ func (d testSystemView) GenerateIdentityToken(_ context.Context, _ *pluginutil.I
 
 func (d testSystemView) RegisterRotationJob(_ context.Context, _ *rotation.RotationJobConfigureRequest) (string, error) {
 	return "", automatedrotationutil.ErrRotationManagerUnsupported
+}
+
+func (d testSystemView) DeregisterRotationJob(_ context.Context, _ *rotation.RotationJobDeregisterRequest) error {
+	return nil
 }

@@ -403,7 +403,7 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 
 		b.Logger().Debug("Deregistering rotation job", "mount", req.MountPoint+req.Path)
 		if err := b.System().DeregisterRotationJob(ctx, deregisterReq); err != nil {
-			return logical.ErrorResponse("error de-registering rotation job: %s", err), nil
+			return logical.ErrorResponse("error deregistering rotation job: %s", err), nil
 		}
 	} else if configEntry.ShouldRegisterRotationJob() {
 		performedRotationManagerOpern = "registration"
@@ -418,7 +418,7 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 
 		b.Logger().Debug("Registering rotation job", "mount", req.MountPoint+req.Path)
 		if _, err = b.System().RegisterRotationJob(ctx, cfgReq); err != nil {
-			return logical.ErrorResponse("error de-registering rotation job: %s", err), nil
+			return logical.ErrorResponse("error registering rotation job: %s", err), nil
 		}
 	}
 

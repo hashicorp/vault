@@ -150,10 +150,19 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 
 	if rc == nil {
 		// Baseline
-		rc = &rootConfig{
-			AccessKey: data.Get("access_key").(string),
-			SecretKey: data.Get("secret_key").(string),
-		}
+		rc = &rootConfig{}
+	}
+
+	if accessKey, ok := data.GetOk("access_key"); ok {
+		rc.AccessKey = accessKey.(string)
+	} else if req.Operation == logical.CreateOperation {
+		rc.AccessKey = data.Get("access_key").(string)
+	}
+
+	if secretKey, ok := data.GetOk("secret_key"); ok {
+		rc.SecretKey = secretKey.(string)
+	} else if req.Operation == logical.CreateOperation {
+		rc.SecretKey = data.Get("secret_key").(string)
 	}
 
 	if region, ok := data.GetOk("region"); ok {
@@ -252,7 +261,7 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 
 		b.Logger().Debug("Deregistering rotation job", "mount", req.MountPoint+req.Path)
 		if err := b.System().DeregisterRotationJob(ctx, deregisterReq); err != nil {
-			return logical.ErrorResponse("error de-registering rotation job: %s", err), nil
+			return logical.ErrorResponse("error deregistering rotation job: %s", err), nil
 		}
 	} else if rc.ShouldRegisterRotationJob() {
 		performedRotationManagerOpern = "registration"
@@ -267,7 +276,7 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 
 		b.Logger().Debug("Registering rotation job", "mount", req.MountPoint+req.Path)
 		if _, err = b.System().RegisterRotationJob(ctx, cfgReq); err != nil {
-			return logical.ErrorResponse("error de-registering rotation job: %s", err), nil
+			return logical.ErrorResponse("error registering rotation job: %s", err), nil
 		}
 	}
 
