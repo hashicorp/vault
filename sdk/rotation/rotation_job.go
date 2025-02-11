@@ -10,6 +10,11 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
+const (
+	PerformedRegistration   = "registration"
+	PerformedDeregistration = "deregistration"
+)
+
 // RotationOptions is an embeddable struct to capture common rotation
 // settings between a Secret and Auth
 type RotationOptions struct {
