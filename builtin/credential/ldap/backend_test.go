@@ -47,7 +47,7 @@ func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	config.System = testSystemView{}
+	config.System = sv
 
 	b := Backend()
 	if b == nil {
