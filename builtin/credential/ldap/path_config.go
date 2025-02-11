@@ -5,6 +5,7 @@ package ldap
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/rotation"
@@ -224,7 +225,9 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 		cfg.PasswordPolicy = passwordPolicy.(string)
 	}
 
-	if cfg.DisableAutomatedRotation {
+	var rotOp string
+	if cfg.ShouldDeregisterRotationJob() {
+		rotOp = "deregistration"
 		dr := &rotation.RotationJobDeregisterRequest{
 			MountPoint: req.MountPoint,
 			ReqPath:    req.Path,
@@ -235,6 +238,7 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 			return logical.ErrorResponse("error de-registering rotation job: %s", err), nil
 		}
 	} else if cfg.ShouldRegisterRotationJob() {
+		rotOp = "registration"
 		// Now that the root config is set up, register the rotation job if it's required.
 		r := &rotation.RotationJobConfigureRequest{
 			Name:             rootRotationJobName,
@@ -252,12 +256,26 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 		}
 	}
 
+	wrapRotationError := func(innerError error) error {
+		wrappedError := fmt.Errorf("write to storage failed, but the rotation manager still succeeded: "+
+			"operation=%s, mount=%s, path=%s, storageError=%s", rotOp, req.MountPoint, req.Path, err)
+		return wrappedError
+	}
+
 	entry, err := logical.StorageEntryJSON("config", cfg)
 	if err != nil {
-		return nil, err
+		var wrappedError error
+		if rotOp != "" {
+			wrappedError = wrapRotationError(err)
+		}
+		return nil, wrappedError
 	}
 	if err := req.Storage.Put(ctx, entry); err != nil {
-		return nil, err
+		var wrappedError error
+		if rotOp != "" {
+			wrappedError = wrapRotationError(err)
+		}
+		return nil, wrappedError
 	}
 
 	if warnings := b.checkConfigUserFilter(cfg); len(warnings) > 0 {
