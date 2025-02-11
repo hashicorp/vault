@@ -16,9 +16,7 @@
           <span class="has-text-weight-semibold has-text-black">
             {{@model.name}}
           </span>
-          <span class="tag has-left-margin-xs">
-            {{@model.id}}
-          </span>
+          <Hds::Badge @text={{@model.id}} class="has-left-margin-xs" />
           <div class="has-top-margin-xs">
             <code class="is-size-9">
               Namespace:

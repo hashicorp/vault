@@ -200,3 +200,8 @@ label {
 .hds-form-masked-input .hds-form-masked-input__toggle-button {
   margin-right: $spacing-12;
 }
+
+// <Hds::Text::Code> this applies to code elements that are placed within a surrounding text - not for standalone use
+.hds-text.code-in-text {
+  background-color: var(--token-color-surface-strong);
+}
