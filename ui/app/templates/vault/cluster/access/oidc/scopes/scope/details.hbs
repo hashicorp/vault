@@ -56,12 +56,9 @@
 <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
   <InfoTableRow @label="Name" @value={{this.model.name}} />
   <InfoTableRow @label="Description" @value={{this.model.description}} />
-  <JsonEditor
-    @title="JSON Template"
-    @mode="ruby"
-    @value={{this.model.template}}
-    @readOnly={{true}}
-    class="has-top-margin-xl has-bottom-margin-xl"
-    data-test-oidc-scope-json
-  />
+  <Hds::CodeBlock @value={{this.model.template}} @language="ruby" @hasCopyButton={{true}} as |CB|>
+    <CB.Title @tag="h3">
+      JSON Template
+    </CB.Title>
+  </Hds::CodeBlock>
 </div>
