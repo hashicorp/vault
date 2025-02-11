@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/rotation"
 )
 
 var (
@@ -41,6 +42,14 @@ func (p *AutomatedRotationParams) ParseAutomatedRotationFields(d *framework.Fiel
 			return ErrRotationMutuallyExclusiveFields
 		}
 		p.RotationSchedule = rotationScheduleRaw.(string)
+
+		// parse schedule to ensure it is valid
+		if p.RotationSchedule != "" {
+			_, err := rotation.DefaultScheduler.Parse(p.RotationSchedule)
+			if err != nil {
+				return fmt.Errorf("failed to parse provided rotation_schedule: %w", err)
+			}
+		}
 	}
 
 	if windowOk {
@@ -73,6 +82,10 @@ func (p *AutomatedRotationParams) PopulateAutomatedRotationData(m map[string]int
 
 func (p *AutomatedRotationParams) ShouldRegisterRotationJob() bool {
 	return p.RotationSchedule != "" || p.RotationPeriod != 0
+}
+
+func (p *AutomatedRotationParams) ShouldDeregisterRotationJob() bool {
+	return p.DisableAutomatedRotation || (p.RotationSchedule == "" && p.RotationPeriod == 0)
 }
 
 // AddAutomatedRotationFields adds plugin identity token fields to the given
