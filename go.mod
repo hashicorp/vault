@@ -159,13 +159,13 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.9.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.20.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.13.0
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.14.4
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.14.5
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.10.0
 	github.com/hashicorp/vault-testing-stepwise v0.3.2
-	github.com/hashicorp/vault/api v1.15.0
+	github.com/hashicorp/vault/api v1.16.0
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
-	github.com/hashicorp/vault/sdk v0.14.1
+	github.com/hashicorp/vault/sdk v0.15.0
 	github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230201201504-b741fa893d77
 	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
 	github.com/jackc/pgx/v4 v4.18.3
