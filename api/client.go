@@ -300,7 +300,7 @@ func appendCerts(certPool *x509.CertPool, path string) error {
 	}
 
 	if !certPool.AppendCertsFromPEM(pem) {
-		return errors.New("couldn't parse PEM")
+		return errors.New("could not parse PEM")
 	}
 	return nil
 }
@@ -312,12 +312,12 @@ func loadCACerts(CACertFile string, CACertBytes []byte, CAPath string) (*x509.Ce
 	case CACertFile != "":
 		certPool = x509.NewCertPool()
 		if err := appendCerts(certPool, CACertFile); err != nil {
-			return nil, fmt.Errorf("Error loading CA File %s: %w", CACertFile, err)
+			return nil, fmt.Errorf("error loading CA file %s: %w", CACertFile, err)
 		}
 	case len(CACertBytes) > 0:
 		certPool = x509.NewCertPool()
 		if !certPool.AppendCertsFromPEM(CACertBytes) {
-			return nil, errors.New("couldn't parse PEM")
+			return nil, errors.New("could not parse PEM")
 		}
 	case CAPath != "":
 		certPool = x509.NewCertPool()
@@ -336,7 +336,7 @@ func loadCACerts(CACertFile string, CACertBytes []byte, CAPath string) (*x509.Ce
 			return err
 		})
 		if err != nil {
-			return nil, fmt.Errorf("Error loading file from CAPath: %w", err)
+			return nil, fmt.Errorf("error loading file from CAPath: %w", err)
 		}
 	}
 
