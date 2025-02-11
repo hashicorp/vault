@@ -47,13 +47,14 @@
 </Toolbar>
 <div class="box is-bottomless is-fullwidth is-marginless">
   <div class="field">
-    <JsonEditor
-      @title="Policy"
-      @subTitle={{if (eq this.policyType "acl") (concat this.uppercase this.model.format " format")}}
-      @value={{this.model.policy}}
-      @readOnly={{true}}
-      @mode="ruby"
-    />
+    <Hds::CodeBlock @value={{this.model.policy}} @hasCopyButton={{true}} @maxHeight="300px" @language="ruby" as |CB|>
+      <CB.Title @tag="h3">
+        Policy
+      </CB.Title>
+      <CB.Description>
+        ({{if (eq this.policyType "acl") (concat this.uppercase this.model.format " format")}})
+      </CB.Description>
+    </Hds::CodeBlock>
   </div>
   {{#if this.model.paths}}
     <div class="field box is-shadowless no-bottom-padding is-marginless">
