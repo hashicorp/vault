@@ -52,14 +52,11 @@
 {{#if @model.generatedRoleRules}}
   <div class="has-top-margin-xl" data-test-generated-role-rules>
     <h2 class="title is-4">Generated role rules</h2>
-    <JsonEditor
-      @title="Role rules"
-      @value={{@model.generatedRoleRules}}
-      @mode="ruby"
-      @readOnly={{true}}
-      @showToolbar={{true}}
-      @theme="hashi auto-height"
-    />
+    <Hds::CodeBlock @value={{@model.generatedRoleRules}} @language="ruby" @hasCopyButton={{true}} as |CB|>
+      <CB.Title @tag="h3">
+        Role rules
+      </CB.Title>
+    </Hds::CodeBlock>
   </div>
 {{/if}}
 
