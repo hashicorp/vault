@@ -11,6 +11,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
+	"github.com/hashicorp/vault/sdk/rotation"
+
 	goldap "github.com/go-ldap/ldap/v3"
 	"github.com/go-test/deep"
 	hclog "github.com/hashicorp/go-hclog"
@@ -25,9 +28,26 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+type testSystemView struct {
+	logical.StaticSystemView
+}
+
+func (d testSystemView) RegisterRotationJob(_ context.Context, _ *rotation.RotationJobConfigureRequest) (string, error) {
+	return "", automatedrotationutil.ErrRotationManagerUnsupported
+}
+
+func (d testSystemView) DeregisterRotationJob(_ context.Context, _ *rotation.RotationJobDeregisterRequest) error {
+	return nil
+}
+
 func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
+	sv := testSystemView{}
+	sv.MaxLeaseTTLVal = time.Hour * 2 * 24
+	sv.DefaultLeaseTTLVal = time.Minute
+
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
+	config.System = testSystemView{}
 
 	b := Backend()
 	if b == nil {
