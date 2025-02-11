@@ -422,15 +422,17 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 func factory(t *testing.T) logical.Backend {
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 32
+
+	sv := testSystemView{}
+	sv.DefaultLeaseTTLVal = defaultLeaseTTLVal
+	sv.MaxLeaseTTLVal = maxLeaseTTLVal
+
 	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: hclog.New(&hclog.LoggerOptions{
 			Name:  "FactoryLogger",
 			Level: hclog.Debug,
 		}),
-		System: &logical.StaticSystemView{
-			DefaultLeaseTTLVal: defaultLeaseTTLVal,
-			MaxLeaseTTLVal:     maxLeaseTTLVal,
-		},
+		System: sv,
 	})
 	if err != nil {
 		t.Fatalf("Unable to create backend: %s", err)
