@@ -10,6 +10,9 @@
       {{#each this.settingFields as |attr|}}
         {{#if (and (eq @mode "edit") (eq attr.name "username"))}}
           <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
+          {{! should this be hidden or displayed but disabled? since it only affects initial creation }}
+        {{else if (and (eq @mode "edit") (eq attr.name "skip_import_rotation"))}}
+          <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
         {{else}}
           <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
         {{/if}}
