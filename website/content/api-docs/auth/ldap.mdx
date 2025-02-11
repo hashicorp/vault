@@ -108,11 +108,11 @@ This endpoint configures the LDAP auth method.
 - `enable_samaccountname_login` `(bool: false)` - (Optional) Lets Active Directory
   LDAP users log in using `sAMAccountName` or `userPrincipalName` when the
   `upndomain` parameter is set.
-- `rotation_period` `(string/int)` – Enterprise Only: Specifies the amount of time Vault should
+- `rotation_period` `(string/int)` – <EnterpriseAlert product="vault" inline /> Specifies the amount of time Vault should
   wait before rotating the root credential. The minimum is 5 seconds.  Uses [duration
   format strings](/vault/docs/concepts/duration-format). Mutually exclusive
   with `rotation_schedule`.
-- `rotation_schedule` `(string)` – Enterprise Only: A cron-style string that will define the
+- `rotation_schedule` `(string)` – <EnterpriseAlert product="vault" inline /> A cron-style string that will define the
   schedule on which root rotations should occur. This should be a "standard"
   [cron-style](https://en.wikipedia.org/wiki/Cron) string made of five fields
   of which each entry defines the minute, hour, day of month, month, and day of
@@ -122,13 +122,15 @@ This endpoint configures the LDAP auth method.
   ~> **Warning**: The `rotation_period` and `rotation_schedule` fields are
   mutually exclusive. One of them must be set but not both.
 
-- `rotation_window` `(string/int)` – Enterprise Only: Specifies the amount of time in which the
+- `rotation_window` `(string/int)` – <EnterpriseAlert product="vault" inline /> Specifies the amount of time in which the
   root rotation is allowed to occur starting from a given `rotation_schedule`. If
   the root credential is not rotated during this window, due to a failure or
   otherwise, it will not be rotated until the next scheduled rotation. The
   minimum is 1 hour. Uses [duration format strings](/vault/docs/concepts/duration-format).
   Optional when `rotation_schedule` is set and disallowed when `rotation_period`
   is set.
+- `disable_automated_rotation` `(bool: false)` - <EnterpriseAlert product="vault" inline /> Cancels all upcoming rotations
+  of the root credential until unset.
 
 @include 'tokenfields.mdx'
 
