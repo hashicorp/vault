@@ -6,6 +6,7 @@ package aws
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -282,11 +283,12 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 
 	// Save the config
 	if err := putConfigToStorage(ctx, req, rc); err != nil {
+		wrappedError := err
 		if performedRotationManagerOpern != "" {
-			b.Logger().Error("write to storage failed but the rotation manager still succeeded.",
-				"operation", performedRotationManagerOpern, "mount", req.MountPoint, "path", req.Path)
+			wrappedError = fmt.Errorf("write to storage failed but the rotation manager still succeeded; "+
+				"operation=%s, mount=%s, path=%s, storageError=%s", performedRotationManagerOpern, req.MountPoint, req.Path, err)
 		}
-		return nil, err
+		return nil, wrappedError
 	}
 
 	// clear possible cached IAM / STS clients after successfully updating

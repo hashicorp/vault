@@ -6,6 +6,7 @@ package awsauth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/textproto"
 	"net/url"
@@ -434,11 +435,12 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 
 	if changedCreds || changedOtherConfig || req.Operation == logical.CreateOperation {
 		if err := req.Storage.Put(ctx, entry); err != nil {
+			wrappedError := err
 			if performedRotationManagerOpern != "" {
-				b.Logger().Error("write to storage failed but the rotation manager still succeeded.",
-					"operation", performedRotationManagerOpern, "mount", req.MountPoint, "path", req.Path)
+				wrappedError = fmt.Errorf("write to storage failed but the rotation manager still succeeded; "+
+					"operation=%s, mount=%s, path=%s, storageError=%s", performedRotationManagerOpern, req.MountPoint, req.Path, err)
 			}
-			return nil, err
+			return nil, wrappedError
 		}
 	}
 

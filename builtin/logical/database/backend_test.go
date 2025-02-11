@@ -773,6 +773,10 @@ func TestBackend_connectionCrud(t *testing.T) {
 		"plugin_version":                     "",
 		"verify_connection":                  false,
 		"skip_static_role_import_rotation":   false,
+		"rotation_schedule":                  "",
+		"rotation_period":                    json.Number("0"),
+		"rotation_window":                    json.Number("0"),
+		"disable_automated_rotation":         false,
 	}
 	resp, err = client.Read("database/config/plugin-test")
 	if err != nil {
@@ -780,6 +784,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 	}
 
 	delete(resp.Data["connection_details"].(map[string]interface{}), "name")
+	delete(resp.Data, "AutomatedRotationParams")
 	if diff := deep.Equal(resp.Data, expected); diff != nil {
 		t.Fatal(strings.Join(diff, "\n"))
 	}
