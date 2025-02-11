@@ -63,8 +63,8 @@ func (p *AutomatedRotationParams) ParseAutomatedRotationFields(d *framework.Fiel
 		p.RotationPeriod = rotationPeriodRaw.(int)
 	}
 
-	if (scheduleOk && !windowOk) || (windowOk && !scheduleOk) {
-		return fmt.Errorf("must include both schedule and window")
+	if windowOk && !scheduleOk {
+		return fmt.Errorf("cannot use rotation_window without rotation_schedule")
 	}
 
 	p.DisableAutomatedRotation = d.Get("disable_automated_rotation").(bool)
