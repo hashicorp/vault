@@ -576,7 +576,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 
 		var performedRotationManagerOpern string
 		if config.ShouldDeregisterRotationJob() {
-			performedRotationManagerOpern = "deregistration"
+			performedRotationManagerOpern = rotation.PerformedDeregistration
 			// Disable Automated Rotation and Deregister credentials if required
 			deregisterReq := &rotation.RotationJobDeregisterRequest{
 				MountPoint: req.MountPoint,
@@ -588,7 +588,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 				return logical.ErrorResponse("error deregistering rotation job: %s", err), nil
 			}
 		} else if config.ShouldRegisterRotationJob() {
-			performedRotationManagerOpern = "registration"
+			performedRotationManagerOpern = rotation.PerformedRegistration
 			// Register the rotation job if it's required.
 			cfgReq := &rotation.RotationJobConfigureRequest{
 				MountPoint:       req.MountPoint,
@@ -611,6 +611,9 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		}
 		err = storeConfig(ctx, req.Storage, name, config)
 		if err != nil {
+			b.Logger().Error("write to storage failed but the rotation manager still succeeded.",
+				"operation", performedRotationManagerOpern, "mount", req.MountPoint, "path", req.Path)
+
 			wrappedError := err
 			if performedRotationManagerOpern != "" {
 				wrappedError = fmt.Errorf("write to storage failed but the rotation manager still succeeded; "+

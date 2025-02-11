@@ -21,7 +21,6 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/database/schedule"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/syncmap"
-	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
@@ -136,104 +135,8 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 			if err != nil {
 				return err
 			}
-
-			if name == "" {
-				return errors.New("empty rotation name")
-			}
-
-			config, err := b.DatabaseConfig(ctx, request.Storage, name)
-			if err != nil {
-				return err
-			}
-
-			rootUsername, ok := config.ConnectionDetails["username"].(string)
-			if !ok || rootUsername == "" {
-				return fmt.Errorf("unable to rotate root credentials: no username in configuration")
-			}
-
-			rootPassword, ok := config.ConnectionDetails["password"].(string)
-			if !ok || rootPassword == "" {
-				return fmt.Errorf("unable to rotate root credentials: no password in configuration")
-			}
-
-			dbi, err := b.GetConnection(ctx, request.Storage, name)
-			if err != nil {
-				return err
-			}
-
-			// Take the write lock on the instance
-			dbi.Lock()
-			defer func() {
-				dbi.Unlock()
-				// Even on error, still remove the connection
-				b.ClearConnectionId(name, dbi.id)
-			}()
-			defer func() {
-				// Close the plugin
-				dbi.closed = true
-				if err := dbi.database.Close(); err != nil {
-					b.Logger().Error("error closing the database plugin connection", "err", err)
-				}
-			}()
-
-			generator, err := newPasswordGenerator(nil)
-			if err != nil {
-				return fmt.Errorf("failed to construct credential generator: %s", err)
-			}
-			generator.PasswordPolicy = config.PasswordPolicy
-
-			// Generate new credentials
-			oldPassword := config.ConnectionDetails["password"].(string)
-			newPassword, err := generator.generate(ctx, &b, dbi.database)
-			if err != nil {
-				b.CloseIfShutdown(dbi, err)
-				return fmt.Errorf("failed to generate password: %s", err)
-			}
-			config.ConnectionDetails["password"] = newPassword
-
-			// Write a WAL entry
-			walID, err := framework.PutWAL(ctx, request.Storage, rotateRootWALKey, &rotateRootCredentialsWAL{
-				ConnectionName: name,
-				UserName:       rootUsername,
-				OldPassword:    oldPassword,
-				NewPassword:    newPassword,
-			})
-			if err != nil {
-				return err
-			}
-
-			updateReq := v5.UpdateUserRequest{
-				Username:       rootUsername,
-				CredentialType: v5.CredentialTypePassword,
-				Password: &v5.ChangePassword{
-					NewPassword: newPassword,
-					Statements: v5.Statements{
-						Commands: config.RootCredentialsRotateStatements,
-					},
-				},
-			}
-			newConfigDetails, err := dbi.database.UpdateUser(ctx, updateReq, true)
-			if err != nil {
-				return fmt.Errorf("failed to update user: %w", err)
-			}
-			if newConfigDetails != nil {
-				config.ConnectionDetails = newConfigDetails
-			}
-
-			if versions.IsBuiltinVersion(config.PluginVersion) {
-				config.PluginVersion = ""
-			}
-			err = storeConfig(ctx, request.Storage, name, config)
-			if err != nil {
-				return err
-			}
-
-			err = framework.DeleteWAL(ctx, request.Storage, walID)
-			if err != nil {
-				b.Logger().Warn("unable to delete WAL", "error", err, "WAL ID", walID)
-			}
-
-			return nil
+			_, err = b.rotateRootCredentials(ctx, request, name)
+			return err
 		},
 	}
 

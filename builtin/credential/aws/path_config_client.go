@@ -395,7 +395,7 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 
 	var performedRotationManagerOpern string
 	if configEntry.ShouldDeregisterRotationJob() {
-		performedRotationManagerOpern = "deregistration"
+		performedRotationManagerOpern = rotation.PerformedDeregistration
 		// Disable Automated Rotation and Deregister credentials if required
 		deregisterReq := &rotation.RotationJobDeregisterRequest{
 			MountPoint: req.MountPoint,
@@ -407,7 +407,7 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 			return logical.ErrorResponse("error deregistering rotation job: %s", err), nil
 		}
 	} else if configEntry.ShouldRegisterRotationJob() {
-		performedRotationManagerOpern = "registration"
+		performedRotationManagerOpern = rotation.PerformedRegistration
 		// Register the rotation job if it's required.
 		cfgReq := &rotation.RotationJobConfigureRequest{
 			MountPoint:       req.MountPoint,
@@ -435,6 +435,9 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 
 	if changedCreds || changedOtherConfig || req.Operation == logical.CreateOperation {
 		if err := req.Storage.Put(ctx, entry); err != nil {
+			b.Logger().Error("write to storage failed but the rotation manager still succeeded.",
+				"operation", performedRotationManagerOpern, "mount", req.MountPoint, "path", req.Path)
+
 			wrappedError := err
 			if performedRotationManagerOpern != "" {
 				wrappedError = fmt.Errorf("write to storage failed but the rotation manager still succeeded; "+
