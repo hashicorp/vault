@@ -70,28 +70,28 @@ export default class ApiService extends Service {
   };
 
   postRequest = async (context: ResponseContext) => {
-    const response: ApiError = (await context.response?.json()) || {};
-    const { status } = context.response;
+    const { response, url } = context;
+    const { headers, status, statusText } = response;
 
     // backwards compatibility with Ember Data
-    if (status >= 400) {
-      response.httpStatus = context.response?.status;
-      response.path = context.url;
+    if (status >= 400 && headers.get('Content-Length')) {
+      const error: ApiError = (await response?.json()) || {};
+      error.httpStatus = response?.status;
+      error.path = url;
       // Most of the time when the Vault API returns an error, the response looks like:
       // { errors: ['some error message']}
       // But sometimes (eg RespondWithStatusCode) it looks like this:
       // { data: { error: 'some error message' } }
-      if (response?.data?.error && !response.errors) {
+      if (error?.data?.error && !error.errors) {
         // Normalize the errors from RespondWithStatusCode
-        response.errors = [response.data.error];
+        error.errors = [error.data.error];
       }
 
-      const blob = new Blob([JSON.stringify(response, null, 2)], { type: 'application/json' });
-      const { headers, status, statusText } = context.response || {};
+      const blob = new Blob([JSON.stringify(error, null, 2)], { type: 'application/json' });
       return new Response(blob, { headers, status, statusText });
     }
 
-    return context.response;
+    return response;
   };
 
   configuration = new Configuration({
