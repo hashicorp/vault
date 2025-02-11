@@ -257,6 +257,8 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	}
 
 	wrapRotationError := func(innerError error) error {
+		b.Logger().Error("write to storage failed but the rotation manager still succeeded.",
+			"operation", rotOp, "mount", req.MountPoint, "path", req.Path)
 		wrappedError := fmt.Errorf("write to storage failed, but the rotation manager still succeeded: "+
 			"operation=%s, mount=%s, path=%s, storageError=%s", rotOp, req.MountPoint, req.Path, err)
 		return wrappedError
