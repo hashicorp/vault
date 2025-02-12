@@ -2035,14 +2035,6 @@ func (i *IdentityStore) UpsertGroupInTxn(ctx context.Context, txn *memdb.Txn, gr
 		return fmt.Errorf("group is nil")
 	}
 
-	g, err := i.MemDBGroupByName(ctx, group.Name, true)
-	if err != nil {
-		return err
-	}
-	if g != nil {
-		group.ID = g.ID
-	}
-
 	// Increment the modify index of the group
 	group.ModifyIndex++
 
