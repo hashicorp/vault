@@ -73,8 +73,11 @@ export default class ApiService extends Service {
     const { response, url } = context;
     const { headers, status, statusText } = response;
 
+    if (!headers.get('Content-Length')) {
+      return response;
+    }
     // backwards compatibility with Ember Data
-    if (status >= 400 && headers.get('Content-Length')) {
+    if (status >= 400) {
       const error: ApiError = (await response?.json()) || {};
       error.httpStatus = response?.status;
       error.path = url;
@@ -89,9 +92,13 @@ export default class ApiService extends Service {
 
       const blob = new Blob([JSON.stringify(error, null, 2)], { type: 'application/json' });
       return new Response(blob, { headers, status, statusText });
+    } else {
+      // the responses in the OpenAPI spec don't account for the return values to be under the 'data' key
+      // extract the data from the response so that it is returned by the client
+      const { data } = (await response?.json()) || {};
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      return new Response(blob, { headers, status, statusText });
     }
-
-    return response;
   };
 
   configuration = new Configuration({
