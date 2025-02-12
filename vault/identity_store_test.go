@@ -1536,13 +1536,12 @@ func identityStoreLoadingIsDeterministic(t *testing.T, flags *determinismTestFla
 	for i := 0; i <= 100; i++ {
 		name := fmt.Sprintf("entity-%d", i)
 		alias := fmt.Sprintf("alias-%d", i)
-		localAlias := fmt.Sprintf("localalias-%d", i)
+		// localAlias := fmt.Sprintf("localalias-%d", i)
 		e := makeEntityForPacker(t, name, c.identityStore.entityPacker, seed)
 		attachAlias(t, e, alias, upme, seed)
-		err = TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e.ID, e)
+		// attachAlias(t, e, localAlias, localMe, seed)
 
-		attachAlias(t, e, localAlias, localMe, seed)
-		err = TestHelperWriteToStoragePackerForLocalAlias(ctx, c.identityStore, e)
+		err = c.identityStore.persistEntity(ctx, e)
 		require.NoError(t, err)
 
 		// Subset of entities get a duplicate alias and/or duplicate local alias.
@@ -1555,7 +1554,8 @@ func identityStoreLoadingIsDeterministic(t *testing.T, flags *determinismTestFla
 		for rnd < pDup && dupeNum < 10 {
 			e := makeEntityForPacker(t, fmt.Sprintf("entity-%d-dup-%d", i, dupeNum), c.identityStore.entityPacker, seed)
 			attachAlias(t, e, alias, upme, seed)
-			err = TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e.ID, e)
+
+			err = c.identityStore.persistEntity(ctx, e)
 			require.NoError(t, err)
 			// Toss again to see if we continue
 			rnd = seed.Float64()
@@ -1566,11 +1566,11 @@ func identityStoreLoadingIsDeterministic(t *testing.T, flags *determinismTestFla
 		rnd = seed.Float64()
 		for rnd < pDup && dupeNum < 10 {
 			e := makeEntityForPacker(t, fmt.Sprintf("entity-%d-localdup-%d", i, dupeNum), c.identityStore.entityPacker, seed)
-			err = TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e.ID, e)
-
-			attachAlias(t, e, localAlias, localMe, seed)
-			err = TestHelperWriteToStoragePackerForLocalAlias(ctx, c.identityStore, e)
+			// attachAlias(t, e, localAlias, localMe, seed)
+			// err = TestHelperWriteToStoragePackerForLocalAlias(ctx, c.identityStore, e)
+			err = c.identityStore.persistEntity(ctx, e)
 			require.NoError(t, err)
+
 			rnd = seed.Float64()
 			dupeNum++
 		}
@@ -1578,7 +1578,7 @@ func identityStoreLoadingIsDeterministic(t *testing.T, flags *determinismTestFla
 		rnd = seed.Float64()
 		for rnd < pDup {
 			e := makeEntityForPacker(t, name, c.identityStore.entityPacker, seed)
-			err = TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e.ID, e)
+			err = c.identityStore.persistEntity(ctx, e)
 			require.NoError(t, err)
 			rnd = seed.Float64()
 		}
