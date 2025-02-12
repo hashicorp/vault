@@ -118,7 +118,7 @@ func patchMountPath(data *logical.EventData, pluginInfo *logical.EventPluginInfo
 // the namespace and plugin info automatically.
 // The context passed in is currently ignored to ensure that the event is sent if the context is short-lived,
 // such as with an HTTP request context.
-func (bus *EventBus) SendEventInternal(_ context.Context, ns *namespace.Namespace, pluginInfo *logical.EventPluginInfo, eventType logical.EventType, data *logical.EventData) error {
+func (bus *EventBus) SendEventInternal(_ context.Context, ns *namespace.Namespace, pluginInfo *logical.EventPluginInfo, eventType logical.EventType, forwarded bool, data *logical.EventData) error {
 	if ns == nil {
 		return namespace.ErrNoNamespace
 	}
@@ -126,10 +126,16 @@ func (bus *EventBus) SendEventInternal(_ context.Context, ns *namespace.Namespac
 		return ErrNotStarted
 	}
 	eventReceived := &logical.EventReceived{
-		Event:      patchMountPath(data, pluginInfo),
 		Namespace:  ns.Path,
 		EventType:  string(eventType),
 		PluginInfo: pluginInfo,
+	}
+	// If the event has been forwarded downstream, no need to patch the mount
+	// path again
+	if forwarded {
+		eventReceived.Event = data
+	} else {
+		eventReceived.Event = patchMountPath(data, pluginInfo)
 	}
 
 	// We can't easily know when the SendEvent is complete, so we can't call the cancel function.
@@ -161,10 +167,10 @@ func (bus *EventBus) WithPlugin(ns *namespace.Namespace, eventPluginInfo *logica
 // This function does *not* wait for all subscribers to acknowledge before returning.
 // The context passed in is currently ignored.
 func (bus *pluginEventBus) SendEvent(ctx context.Context, eventType logical.EventType, data *logical.EventData) error {
-	return bus.bus.SendEventInternal(ctx, bus.namespace, bus.pluginInfo, eventType, data)
+	return bus.bus.SendEventInternal(ctx, bus.namespace, bus.pluginInfo, eventType, false, data)
 }
 
-func NewEventBus(localClusterID string, logger hclog.Logger) (*EventBus, error) {
+func NewEventBus(localNodeID string, logger hclog.Logger) (*EventBus, error) {
 	broker, err := eventlogger.NewBroker()
 	if err != nil {
 		return nil, err
@@ -180,7 +186,7 @@ func NewEventBus(localClusterID string, logger hclog.Logger) (*EventBus, error) 
 		logger = hclog.Default().Named("events")
 	}
 
-	sourceUrl, err := url.Parse("vault://" + localClusterID)
+	sourceUrl, err := url.Parse("vault://" + localNodeID)
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +204,7 @@ func NewEventBus(localClusterID string, logger hclog.Logger) (*EventBus, error) 
 		formatterNodeID:            formatterNodeID,
 		timeout:                    defaultTimeout,
 		cloudEventsFormatterFilter: cloudEventsFormatterFilter,
-		filters:                    NewFilters(localClusterID),
+		filters:                    NewFilters(localNodeID),
 	}, nil
 }
 
@@ -334,6 +340,11 @@ func (bus *EventBus) NotifyOnLocalFilterChanges(ctx context.Context) (<-chan []F
 // NotifyOnClusterFilterChanges returns a channel that receives changes to the filter for the given cluster.
 func (bus *EventBus) NotifyOnClusterFilterChanges(ctx context.Context, cluster string) (<-chan []FilterChange, context.CancelFunc, error) {
 	return bus.filters.watch(ctx, clusterID(cluster))
+}
+
+// NewAllEventsSubscription creates a new subscription to all events.
+func (bus *EventBus) NewAllEventsSubscription(ctx context.Context) (<-chan *eventlogger.Event, context.CancelFunc, error) {
+	return bus.subscribeInternal(ctx, nil, "*", "", nil)
 }
 
 // NewGlobalSubscription creates a new subscription to all events that match the global filter.

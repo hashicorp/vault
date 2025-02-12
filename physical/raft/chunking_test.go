@@ -34,7 +34,7 @@ func TestRaft_Chunking_Lifecycle(t *testing.T) {
 
 	t.Log("applying configuration")
 
-	b.applyConfigSettings(raft.DefaultConfig())
+	ApplyConfigSettings(b.logger, b.conf, raft.DefaultConfig())
 
 	t.Log("chunking")
 
@@ -119,7 +119,7 @@ func TestFSM_Chunking_TermChange(t *testing.T) {
 
 	t.Log("applying configuration")
 
-	b.applyConfigSettings(raft.DefaultConfig())
+	ApplyConfigSettings(b.logger, b.conf, raft.DefaultConfig())
 
 	t.Log("chunking")
 

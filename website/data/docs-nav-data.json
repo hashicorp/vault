@@ -2552,6 +2552,31 @@
         "path": "upgrading/raft-wal"
       },
       {
+        "title": "Resolve duplicate identities",
+        "routes": [
+          {
+            "title": "Process overview",
+            "path": "upgrading/deduplication"
+          },
+          {
+            "title": "Fix different-case entity alias duplicates",
+            "path": "upgrading/deduplication/different-case"
+          },
+          {
+            "title": "Fix entity and group duplicates",
+            "path": "upgrading/deduplication/entity-group"
+          },
+          {
+            "title": "Resolve ACL policy templates",
+            "path": "upgrading/deduplication/acl-policy-templates"
+          },
+          {
+            "title": "Resolve Terraform config",
+            "path": "upgrading/deduplication/terraform-refs"
+          }
+        ]
+      },
+      {
         "title": "Upgrade to 1.19.x",
         "path": "upgrading/upgrade-to-1.19.x"
       },

@@ -713,14 +713,22 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	switch req.Operation {
 	case logical.CreateOperation:
 		if role.SkipImportRotation {
-			b.Logger().Trace("skipping static role import rotation", "role", name)
-			// synthetically set lastVaultRotation to now, so that it gets
-			// queued correctly
-			lastVaultRotation = time.Now()
-			// we intentionally do not set role.StaticAccount.LastVaultRotation
+			b.Logger().Debug("skipping static role import rotation", "role", name)
+
+			// Synthetically set lastVaultRotation to now, so that it gets
+			// queued correctly.
+			// NOTE: We intentionally do not set role.StaticAccount.LastVaultRotation
 			// because the zero value indicates Vault has not rotated the
 			// password yet
+			lastVaultRotation = time.Now()
+
+			// NextVaultRotation allows calculating the TTL on GET /static-creds
+			// requests and to calculate the queue priority in populateQueue()
+			// across restarts. We can't rely on LastVaultRotation in these
+			// cases bacause, when import rotation is skipped, LastVaultRotation
+			// is set to a zero value in storage.
 			role.StaticAccount.SetNextVaultRotation(lastVaultRotation)
+
 			// we were told to not rotate, just add the entry
 			err := b.StoreStaticRole(ctx, req.Storage, role)
 			if err != nil {
@@ -936,7 +944,7 @@ type staticAccount struct {
 // querying for the next schedule expiry since the last known vault rotation.
 func (s *staticAccount) NextRotationTime() time.Time {
 	if s.UsesRotationPeriod() {
-		return s.LastVaultRotation.Add(s.RotationPeriod)
+		return s.NextVaultRotation
 	}
 	return s.Schedule.Next(time.Now())
 }
@@ -985,7 +993,8 @@ func (s *staticAccount) ShouldRotate(priority int64, t time.Time) bool {
 	return priority <= t.Unix() && s.IsInsideRotationWindow(t)
 }
 
-// SetNextVaultRotation
+// SetNextVaultRotation sets the next vault rotation to time t plus the role's
+// rotation period or to the next schedule.
 func (s *staticAccount) SetNextVaultRotation(t time.Time) {
 	if s.UsesRotationPeriod() {
 		s.NextVaultRotation = t.Add(s.RotationPeriod)
