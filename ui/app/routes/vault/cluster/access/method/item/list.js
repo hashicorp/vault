@@ -5,12 +5,14 @@
 
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
-import { singularize } from 'ember-inflector';
+import { pluralize } from 'ember-inflector';
+import { capitalize } from '@ember/string';
 import ListRoute from 'vault/mixins/list-route';
 
 export default Route.extend(ListRoute, {
   pagination: service(),
   pathHelp: service('path-help'),
+  api: service(),
 
   getMethodAndModelInfo() {
     const { item_type: itemType } = this.paramsFor('vault.cluster.access.method.item');
@@ -20,26 +22,36 @@ export default Route.extend(ListRoute, {
     return { apiPath, type, authMethodPath, itemType, methodModel };
   },
 
-  model() {
+  async model() {
     const { type, authMethodPath, itemType } = this.getMethodAndModelInfo();
     const { page, pageFilter } = this.paramsFor(this.routeName);
-    const modelType = `generated-${singularize(itemType)}-${type}`;
+    const payload = {
+      [`${type}MountPath`]: authMethodPath,
+      list: true,
+    };
+    // examples -> userpassListUser, kubernetesListAuthRoles, ldapListGroups
+    const listItem = type === 'kubernetes' && itemType === 'role' ? 'authRole' : itemType;
+    const authListMethod = `${type}List${capitalize(pluralize(listItem))}`;
 
-    return this.pagination
-      .lazyPaginatedQuery(modelType, {
-        responsePath: 'data.keys',
-        page: page,
-        pageFilter: pageFilter,
-        type: itemType,
-        id: authMethodPath,
-      })
-      .catch((err) => {
-        if (err.httpStatus === 404) {
-          return [];
-        } else {
-          throw err;
-        }
+    try {
+      const { keys } = await this.api.auth[authListMethod](payload);
+      // it would likely be better to update the template/component to use the keys directly
+      // for now we are trying to make as few changes as possible
+      const mappedKeys = keys.map((key) => ({ id: key }));
+      return this.pagination.paginate(mappedKeys, {
+        page,
+        pageSize: 3,
+        filter: pageFilter,
+        filterKey: 'id',
       });
+    } catch (error) {
+      const err = (await error.response?.json()) || error;
+      if (err.httpStatus === 404) {
+        return [];
+      } else {
+        throw err;
+      }
+    }
   },
 
   actions: {
