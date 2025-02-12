@@ -16,11 +16,9 @@ import (
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
-	"google.golang.org/protobuf/types/known/anypb"
 )
 
 func entityPathFields() map[string]*framework.FieldSchema {
@@ -984,7 +982,6 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 	var fromEntityGroups []*identity.Group
 
 	toEntityAccessors := make(map[string][]string)
-
 	for _, alias := range toEntity.Aliases {
 		if accessors, ok := toEntityAccessors[alias.MountAccessor]; !ok {
 			// While it is not supported to have multiple aliases with the same mount accessor in one entity
@@ -1029,16 +1026,16 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 			if toAliasIds, ok := toEntityAccessors[fromAlias.MountAccessor]; ok {
 				for _, toAliasId := range toAliasIds {
 					// When forceMergeAliases is true (as part of the merge-during-upsert case), we make the decision
-					// for the user, and keep the to_entity alias, merging the from_entity
+					// for the user, and keep the from_entity alias
 					// This case's code is the same as when the user selects to keep the from_entity alias
-					// but is kept separate for clarity
+					// but is kept separate for clarity.
 					if forceMergeAliases {
 						i.logger.Info("Deleting to_entity alias during entity merge", "to_entity", toEntity.ID, "deleted_alias", toAliasId)
 						err := i.MemDBDeleteAliasByIDInTxn(txn, toAliasId, false)
 						if err != nil {
 							return nil, fmt.Errorf("aborting entity merge - failed to delete orphaned alias %q during merge into entity %q: %w", toAliasId, toEntity.ID, err), nil
 						}
-						// Remove the alias from the entity's list in memory too!
+						//// Remove the alias from the entity's list in memory too!
 						toEntity.DeleteAliasByID(toAliasId)
 					} else if strutil.StrListContains(conflictingAliasIDsToKeep, toAliasId) {
 						i.logger.Info("Deleting from_entity alias during entity merge", "from_entity", fromEntityID, "deleted_alias", fromAlias.ID)
@@ -1047,7 +1044,7 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 							return nil, fmt.Errorf("aborting entity merge - failed to delete orphaned alias %q during merge into entity %q: %w", fromAlias.ID, toEntity.ID, err), nil
 						}
 						// Remove the alias from the entity's list in memory too!
-						toEntity.DeleteAliasByID(toAliasId)
+						toEntity.DeleteAliasByID(fromAlias.ID)
 
 						// Continue to next alias, as there's no alias to merge left in the from_entity
 						continue
@@ -1076,7 +1073,9 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 			}
 
 			// Add the alias to the desired entity
-			toEntity.Aliases = append(toEntity.Aliases, fromAlias)
+			// toEntity.Aliases = append(toEntity.Aliases, fromAlias)
+			toEntity.UpsertAlias(fromAlias)
+
 		}
 
 		// If told to, merge policies
@@ -1140,16 +1139,7 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 
 	if persist && !isPerfSecondaryOrStandby {
 		// Persist the entity which we are merging to
-		toEntityAsAny, err := anypb.New(toEntity)
-		if err != nil {
-			return nil, err, nil
-		}
-		item := &storagepacker.Item{
-			ID:      toEntity.ID,
-			Message: toEntityAsAny,
-		}
-
-		err = i.entityPacker.PutItem(ctx, item)
+		err = i.persistEntity(ctx, toEntity)
 		if err != nil {
 			return nil, err, nil
 		}

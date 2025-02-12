@@ -751,7 +751,7 @@ func (i *IdentityStore) invalidateEntityBucket(ctx context.Context, key string) 
 				}
 			}
 
-			err = i.upsertEntityInTxn(ctx, txn, bucketEntity, nil, false)
+			err = i.upsertEntityInTxn(ctx, txn, bucketEntity, nil, false, false)
 			if err != nil {
 				i.logger.Error("failed to update entity in MemDB", "entity_id", bucketEntity.ID, "error", err)
 				return
@@ -1415,7 +1415,7 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 	}
 
 	// Update MemDB and persist entity object
-	err = i.upsertEntityInTxn(ctx, txn, entity, nil, true)
+	err = i.upsertEntityInTxn(ctx, txn, entity, nil, true, false)
 	if err != nil {
 		return entity, entityCreated, err
 	}
