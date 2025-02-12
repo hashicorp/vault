@@ -188,4 +188,39 @@ export default class Pagination extends Service {
     }
     this.lazyCaches.clear();
   }
+
+  paginate(data, { page, pageSize, filter, filterKey }) {
+    if (!Array.isArray(data) || !data.length) {
+      return data;
+    }
+
+    let filteredData = data;
+    // filter data before paginating if filter is provided
+    if (filter) {
+      filteredData = data.filter((item) => {
+        const filterValue = filterKey ? item[filterKey] : item;
+        filteredData = filterValue.toLowerCase().includes(filter.toLowerCase());
+      });
+    }
+
+    if (page) {
+      const size = pageSize || DEFAULT_PAGE_SIZE;
+      const lastPage = Math.floor(filteredData.length / size);
+      const start = (page - 1) * size;
+      const end = start + size;
+      filteredData = filteredData.slice(start, end);
+      // add meta data previously from lazyPaginatedQuery since components expect it
+      filteredData.meta = {
+        currentPage: page,
+        lastPage,
+        nextPage: page + 1,
+        prevPage: page - 1,
+        total: data.length,
+        filteredTotal: filteredData.length,
+        pageSize: size,
+      };
+    }
+
+    return filteredData;
+  }
 }
