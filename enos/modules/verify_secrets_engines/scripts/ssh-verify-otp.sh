@@ -19,7 +19,7 @@ binpath=${VAULT_INSTALL_DIR}/vault
 test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
 export VAULT_FORMAT=json
-if ! otp_output=$("$binpath" write ssh/creds/$OTP_ROLE_NAME ip=$TARGET_IP 2>&1); then
+if ! otp_output=$("$binpath" write ssh/creds/"$OTP_ROLE_NAME" ip="$TARGET_IP" 2>&1); then
   fail "failed to generate OTP credential: $otp_output"
 fi
 

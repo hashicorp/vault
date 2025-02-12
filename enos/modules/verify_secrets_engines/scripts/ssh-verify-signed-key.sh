@@ -19,7 +19,7 @@ binpath=${VAULT_INSTALL_DIR}/vault
 test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
 export VAULT_FORMAT=json
-if ! signed_key_output=$("$binpath" write -field=signed_key ssh/sign/$ROLE_NAME public_key=@$PUBLIC_KEY_PATH 2>&1); then
+if ! signed_key_output=$("$binpath" write -field=signed_key ssh/sign/"$ROLE_NAME" public_key=@"$PUBLIC_KEY_PATH" 2>&1); then
   fail "failed to sign SSH key: $signed_key_output"
 fi
 
