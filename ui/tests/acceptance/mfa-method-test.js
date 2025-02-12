@@ -66,7 +66,7 @@ module('Acceptance | mfa-method', function (hooks) {
     assert
       .dom(`[data-test-mfa-method-list-item="${model.id}"]`)
       .includesText(
-        `${model.name} ${model.id} Namespace: ${model.namespace_id}`,
+        `${model.name} ${model.id} Namespace: ${model.namespace_path}`,
         'Copy renders for list item'
       );
 
