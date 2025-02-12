@@ -1035,7 +1035,7 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 						if err != nil {
 							return nil, fmt.Errorf("aborting entity merge - failed to delete orphaned alias %q during merge into entity %q: %w", toAliasId, toEntity.ID, err), nil
 						}
-						//// Remove the alias from the entity's list in memory too!
+						// Remove the alias from the entity's list in memory too!
 						toEntity.DeleteAliasByID(toAliasId)
 					} else if strutil.StrListContains(conflictingAliasIDsToKeep, toAliasId) {
 						i.logger.Info("Deleting from_entity alias during entity merge", "from_entity", fromEntityID, "deleted_alias", fromAlias.ID)
@@ -1073,7 +1073,6 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 			}
 
 			// Add the alias to the desired entity
-			// toEntity.Aliases = append(toEntity.Aliases, fromAlias)
 			toEntity.UpsertAlias(fromAlias)
 
 		}

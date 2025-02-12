@@ -2888,15 +2888,26 @@ func attachAlias(t *testing.T, e *identity.Entity, name string, me *MountEntry, 
 }
 
 func TestHelperWriteToStoragePackerForLocalAlias(ctx context.Context, i *IdentityStore, entity *identity.Entity) error {
-	localAliases, err := i.parseLocalAliases(entity.ID)
-	if err != nil {
-		return err
-	}
-	if localAliases == nil {
-		localAliases = &identity.LocalAliases{}
+	// Separate the local and non-local aliases.
+	var localAliases []*identity.Alias
+
+	for _, alias := range entity.Aliases {
+		switch alias.Local {
+		case true:
+			localAliases = append(localAliases, alias)
+		}
 	}
 
-	marshaledAliases, err := anypb.New(localAliases)
+	if len(localAliases) == 0 {
+		return nil
+	}
+
+	// Store the local aliases separately.
+	aliases := &identity.LocalAliases{
+		Aliases: localAliases,
+	}
+
+	marshaledAliases, err := anypb.New(aliases)
 	if err != nil {
 		return err
 	}
