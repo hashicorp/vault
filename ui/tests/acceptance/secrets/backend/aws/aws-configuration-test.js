@@ -171,8 +171,9 @@ module('Acceptance | aws | configuration', function (hooks) {
       await runCmd(`delete sys/mounts/${path}`);
     });
 
-    test('it should show identityTokenTtl or maxRetries even they have not been set', async function (assert) {
-      // testing this scenario to document the intention that we will show fields that have not been set but are returned by the api due to defaults
+    test('it should show identityTokenTtl or maxRetries even if they have not been set', async function (assert) {
+      // documenting the intention that we show fields that have not been set but are returned by the api due to defaults
+      // this test also documents that maxRetries returns 0 while the API docs indicate -1 is the default value
       const path = `aws-${this.uid}`;
       await enablePage.enable('aws', path);
 
