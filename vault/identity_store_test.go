@@ -68,7 +68,7 @@ func TestIdentityStore_DeleteEntityAlias(t *testing.T) {
 		BucketKey:   c.identityStore.entityPacker.BucketKey("testEntityID"),
 	}
 
-	err := c.identityStore.upsertEntityInTxn(context.Background(), txn, entity, nil, false)
+	err := c.identityStore.upsertEntityInTxn(context.Background(), txn, entity, nil, false, false)
 	require.NoError(t, err)
 
 	err = c.identityStore.deleteAliasesInEntityInTxn(txn, entity, []*identity.Alias{alias, alias2})
@@ -1416,58 +1416,60 @@ func TestIdentityStoreInvalidate_TemporaryEntity(t *testing.T) {
 // the identity cleanup rename resolver to ensure that loading is deterministic
 // for both.
 func TestIdentityStoreLoadingIsDeterministic(t *testing.T) {
-	seedval := rand.Int63()
-	if os.Getenv("VAULT_TEST_IDENTITY_STORE_SEED") != "" {
-		var err error
-		seedval, err = strconv.ParseInt(os.Getenv("VAULT_TEST_IDENTITY_STORE_SEED"), 10, 64)
-		require.NoError(t, err)
-	}
-	seed := rand.New(rand.NewSource(seedval)) // Seed for deterministic test
-	defer t.Logf("Test generated with seed: %d", seedval)
+	for i := 0; i < 50; i++ {
+		seedval := rand.Int63()
+		if os.Getenv("VAULT_TEST_IDENTITY_STORE_SEED") != "" {
+			var err error
+			seedval, err = strconv.ParseInt(os.Getenv("VAULT_TEST_IDENTITY_STORE_SEED"), 10, 64)
+			require.NoError(t, err)
+		}
+		seed := rand.New(rand.NewSource(seedval)) // Seed for deterministic test
+		defer t.Logf("Test generated with seed: %d", seedval)
 
-	tests := []struct {
-		name  string
-		flags *determinismTestFlags
-	}{
-		{
-			name: "error-resolver-primary",
-			flags: &determinismTestFlags{
-				identityDeduplication: false,
-				secondary:             false,
-				seed:                  seed,
+		tests := []struct {
+			name  string
+			flags *determinismTestFlags
+		}{
+			{
+				name: "error-resolver-primary",
+				flags: &determinismTestFlags{
+					identityDeduplication: false,
+					secondary:             false,
+					seed:                  seed,
+				},
 			},
-		},
-		{
-			name: "identity-cleanup-primary",
-			flags: &determinismTestFlags{
-				identityDeduplication: true,
-				secondary:             false,
-				seed:                  seed,
+			{
+				name: "identity-cleanup-primary",
+				flags: &determinismTestFlags{
+					identityDeduplication: true,
+					secondary:             false,
+					seed:                  seed,
+				},
 			},
-		},
 
-		{
-			name: "error-resolver-secondary",
-			flags: &determinismTestFlags{
-				identityDeduplication: false,
-				secondary:             true,
-				seed:                  seed,
+			{
+				name: "error-resolver-secondary",
+				flags: &determinismTestFlags{
+					identityDeduplication: false,
+					secondary:             true,
+					seed:                  seed,
+				},
 			},
-		},
-		{
-			name: "identity-cleanup-secondary",
-			flags: &determinismTestFlags{
-				identityDeduplication: true,
-				secondary:             true,
-				seed:                  seed,
+			{
+				name: "identity-cleanup-secondary",
+				flags: &determinismTestFlags{
+					identityDeduplication: true,
+					secondary:             true,
+					seed:                  seed,
+				},
 			},
-		},
-	}
+		}
 
-	for _, test := range tests {
-		t.Run(t.Name()+"-"+test.name, func(t *testing.T) {
-			identityStoreLoadingIsDeterministic(t, test.flags)
-		})
+		for _, test := range tests {
+			t.Run(t.Name()+"-"+test.name, func(t *testing.T) {
+				identityStoreLoadingIsDeterministic(t, test.flags)
+			})
+		}
 	}
 }
 
@@ -1537,8 +1539,10 @@ func identityStoreLoadingIsDeterministic(t *testing.T, flags *determinismTestFla
 		localAlias := fmt.Sprintf("localalias-%d", i)
 		e := makeEntityForPacker(t, name, c.identityStore.entityPacker, seed)
 		attachAlias(t, e, alias, upme, seed)
-		attachAlias(t, e, localAlias, localMe, seed)
 		err = TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e.ID, e)
+
+		attachAlias(t, e, localAlias, localMe, seed)
+		err = TestHelperWriteToStoragePackerForLocalAlias(ctx, c.identityStore, e)
 		require.NoError(t, err)
 
 		// Subset of entities get a duplicate alias and/or duplicate local alias.
@@ -1562,8 +1566,10 @@ func identityStoreLoadingIsDeterministic(t *testing.T, flags *determinismTestFla
 		rnd = seed.Float64()
 		for rnd < pDup && dupeNum < 10 {
 			e := makeEntityForPacker(t, fmt.Sprintf("entity-%d-localdup-%d", i, dupeNum), c.identityStore.entityPacker, seed)
-			attachAlias(t, e, localAlias, localMe, seed)
 			err = TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e.ID, e)
+
+			attachAlias(t, e, localAlias, localMe, seed)
+			err = TestHelperWriteToStoragePackerForLocalAlias(ctx, c.identityStore, e)
 			require.NoError(t, err)
 			rnd = seed.Float64()
 			dupeNum++
@@ -1624,20 +1630,20 @@ func identityStoreLoadingIsDeterministic(t *testing.T, flags *determinismTestFla
 	}
 
 	// Storage is now primed for the test.
+	require.NoError(t, c.Seal(rootToken))
+	require.True(t, c.Sealed())
+	for _, key := range sealKeys {
+		unsealed, err := c.Unseal(key)
+		require.NoError(t, err, "failed unseal on initial assertions")
+		if unsealed {
+			break
+		}
+	}
+	require.False(t, c.Sealed())
 
 	if identityDeduplication {
 		// Perform an initial Seal/Unseal with duplicates injected to assert
 		// initial state.
-		require.NoError(t, c.Seal(rootToken))
-		require.True(t, c.Sealed())
-		for _, key := range sealKeys {
-			unsealed, err := c.Unseal(key)
-			require.NoError(t, err, "failed unseal on initial assertions")
-			if unsealed {
-				break
-			}
-		}
-		require.False(t, c.Sealed())
 
 		// Test out the system backend ActivationFunc wiring
 		c.FeatureActivationFlags.ActivateInMem(activationflags.IdentityDeduplication, true)
@@ -1687,10 +1693,6 @@ func identityStoreLoadingIsDeterministic(t *testing.T, flags *determinismTestFla
 				loadedNames = append(loadedNames, a.Name)
 			}
 		}
-		// This is a non-triviality check to make sure we actually loaded stuff and
-		// are not just passing because of a bug in the test.
-		numLoaded := len(loadedNames)
-		require.Greater(t, numLoaded, 300, "not enough entities and aliases loaded on attempt %d", i)
 
 		// Standalone alias query
 		iter, err = tx.LowerBound(entityAliasesTable, "id", "")
@@ -1699,6 +1701,11 @@ func identityStoreLoadingIsDeterministic(t *testing.T, flags *determinismTestFla
 			a := item.(*identity.Alias)
 			loadedNames = append(loadedNames, a.Name)
 		}
+
+		// This is a non-triviality check to make sure we actually loaded stuff and
+		// are not just passing because of a bug in the test.
+		numLoaded := len(loadedNames)
+		require.Greater(t, numLoaded, 300, "not enough entities and aliases loaded on attempt %d", i)
 
 		// Groups
 		iter, err = tx.LowerBound(groupsTable, "id", "")

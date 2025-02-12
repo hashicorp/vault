@@ -585,23 +585,23 @@ LOOP:
 					if err != nil && !i.disableLowerCasedNames {
 						return err
 					}
+
 					persist := false
 					if modified {
-						// If we modified the group we need to persist the changes to avoid bugs
+						// If we modified the entity, we need to persist the changes to avoid bugs
 						// where memDB and storage are out of sync in the future (e.g. after
 						// invalidations of other items in the same bucket later). We do this
 						// _even_ if `persist=false` because it is in general during unseal but
 						// this is exactly when we need to fix these. We must be _really_
 						// careful to only do this on primary active node though which is the
 						// only source of truth that should have write access to groups across a
-						// cluster since they are always non-local. Note that we check !Stadby
-						// and !secondary because we still need to write back even if this is a
-						// single cluster with no replication setup and I'm not _sure_ that we
-						// report such a cluster as a primary.
+						// cluster since they are always non-local. Note that we check !Standby
+						// and !Secondary because we still need to write back even if this is a
+						// single cluster with no replication.
+
 						if !i.localNode.ReplicationState().HasState(
 							consts.ReplicationDRSecondary|
-								consts.ReplicationPerformanceSecondary|
-								consts.ReplicationPerformanceStandby,
+								consts.ReplicationPerformanceSecondary,
 						) && isActive {
 							persist = true
 						}
@@ -631,8 +631,24 @@ LOOP:
 						tx = i.db.Txn(true)
 						defer tx.Abort()
 					}
-					// Only update MemDB and don't hit the storage again
-					err = i.upsertEntityInTxn(nsCtx, tx, entity, nil, persist)
+
+					// The persistMerges flag is used to fix a non-determinism issue in duplicate entities with global alias merges.
+					// This does not solve the case for local alias merges.
+					// Previously, alias merges could inconsistently flip between nodes due to bucket invalidation
+					// and reprocessing on standbys, leading to divergence from the primary.
+					// This flag ensures deterministic merges across all nodes by preventing unintended reinsertions
+					// of previously merged entities during bucket diffs.
+					persistMerges := false
+					if !i.localNode.ReplicationState().HasState(
+						consts.ReplicationDRSecondary|
+							consts.ReplicationPerformanceSecondary,
+					) && isActive {
+						persistMerges = true
+					}
+
+					// Only update MemDB and don't hit the storage again unless we are
+					// merging and on a primary active node.
+					err = i.upsertEntityInTxn(nsCtx, tx, entity, nil, persist, persistMerges)
 					if err != nil {
 						return fmt.Errorf("failed to update entity in MemDB: %w", err)
 					}
@@ -730,8 +746,10 @@ func getAccessorsOnDuplicateAliases(aliases []*identity.Alias) []string {
 // false, then storage will not be updated. When an alias is transferred from
 // one entity to another, both the source and destination entities should get
 // updated, in which case, callers should send in both entity and
-// previousEntity.
-func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, entity *identity.Entity, previousEntity *identity.Entity, persist bool) error {
+// previousEntity. persistMerges is ignored if persist = true but if persist =
+// false it allows the caller to request that we persist the data only if it is
+// changes by a merge caused by a duplicate alias.
+func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, entity *identity.Entity, previousEntity *identity.Entity, persist, persistMerges bool) error {
 	defer metrics.MeasureSince([]string{"identity", "upsert_entity_txn"}, time.Now())
 	var err error
 
@@ -811,7 +829,8 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 				"entity_aliases", entity.Aliases,
 				"alias_by_factors", aliasByFactors)
 
-			respErr, intErr := i.mergeEntityAsPartOfUpsert(ctx, txn, entity, aliasByFactors.CanonicalID, persist)
+			persistMerge := persist || persistMerges
+			respErr, intErr := i.mergeEntityAsPartOfUpsert(ctx, txn, entity, aliasByFactors.CanonicalID, persistMerge)
 			switch {
 			case respErr != nil:
 				return respErr
@@ -970,7 +989,7 @@ func (i *IdentityStore) processLocalAlias(ctx context.Context, lAlias *logical.A
 		if err := i.MemDBUpsertAliasInTxn(txn, alias, false); err != nil {
 			return nil, err
 		}
-		if err := i.upsertEntityInTxn(ctx, txn, entity, nil, false); err != nil {
+		if err := i.upsertEntityInTxn(ctx, txn, entity, nil, false, false); err != nil {
 			return nil, err
 		}
 		txn.Commit()
@@ -1018,6 +1037,7 @@ func (i *IdentityStore) persistEntity(ctx context.Context, entity *identity.Enti
 	// Separate the local and non-local aliases.
 	var localAliases []*identity.Alias
 	var nonLocalAliases []*identity.Alias
+
 	for _, alias := range entity.Aliases {
 		switch alias.Local {
 		case true:
@@ -1076,7 +1096,7 @@ func (i *IdentityStore) upsertEntity(ctx context.Context, entity *identity.Entit
 	txn := i.db.Txn(true)
 	defer txn.Abort()
 
-	err := i.upsertEntityInTxn(ctx, txn, entity, previousEntity, persist)
+	err := i.upsertEntityInTxn(ctx, txn, entity, previousEntity, persist, false)
 	if err != nil {
 		return err
 	}
@@ -2872,6 +2892,29 @@ func attachAlias(t *testing.T, e *identity.Entity, name string, me *MountEntry, 
 	}
 	e.UpsertAlias(a)
 	return a
+}
+
+func TestHelperWriteToStoragePackerForLocalAlias(ctx context.Context, i *IdentityStore, entity *identity.Entity) error {
+	localAliases, err := i.parseLocalAliases(entity.ID)
+	if err != nil {
+		return err
+	}
+	if localAliases == nil {
+		localAliases = &identity.LocalAliases{}
+	}
+
+	marshaledAliases, err := anypb.New(localAliases)
+	if err != nil {
+		return err
+	}
+	if err := i.localAliasPacker.PutItem(ctx, &storagepacker.Item{
+		ID:      entity.ID,
+		Message: marshaledAliases,
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func identityCreateCaseDuplicates(t *testing.T, ctx context.Context, c *Core, upme, localme *MountEntry, seed *rand.Rand) {
