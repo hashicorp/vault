@@ -5,6 +5,7 @@ package ldap
 
 import (
 	"context"
+	"errors"
 
 	"github.com/go-ldap/ldap/v3"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -36,17 +37,33 @@ func pathConfigRotateRoot(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	err := b.rotateRootCredential(ctx, req)
+	var responseError responseError
+	if errors.As(err, &responseError) {
+		return logical.ErrorResponse(responseError.Error()), nil
+	}
+
+	// naturally this is `nil, nil` if the err is nil
+	return nil, err
+}
+
+// responseError exists to capture the cases in the old rotate call that returned specific error responses
+type responseError struct {
+	error
+}
+
+func (b *backend) rotateRootCredential(ctx context.Context, req *logical.Request) error {
 	// lock the backend's state - really just the config state - for mutating
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
 	cfg, err := b.Config(ctx, req)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if cfg == nil {
-		return logical.ErrorResponse("attempted to rotate root on an undefined config"), nil
+		return responseError{errors.New("attempted to rotate root on an undefined config")}
 	}
 
 	u, p := cfg.BindDN, cfg.BindPassword
@@ -55,7 +72,7 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("auth is not using authenticated search, no root to rotate")
 		}
-		return logical.ErrorResponse("auth is not using authenticated search, no root to rotate"), nil
+		return responseError{errors.New("auth is not using authenticated search, no root to rotate")}
 	}
 
 	// grab our ldap client
@@ -66,12 +83,12 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 
 	conn, err := client.DialLDAP(cfg.ConfigEntry)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	err = conn.Bind(u, p)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	lreq := &ldap.ModifyRequest{
@@ -85,27 +102,27 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 		newPassword, err = base62.Random(defaultPasswordLength)
 	}
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	lreq.Replace("userPassword", []string{newPassword})
 
 	err = conn.Modify(lreq)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	// update config with new password
 	cfg.BindPassword = newPassword
 	entry, err := logical.StorageEntryJSON("config", cfg)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if err := req.Storage.Put(ctx, entry); err != nil {
 		// we might have to roll-back the password here?
-		return nil, err
+		return err
 	}
 
-	return nil, nil
+	return nil
 }
 
 const pathConfigRotateRootHelpSyn = `
