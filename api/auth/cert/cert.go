@@ -26,28 +26,40 @@ var _ api.AuthMethod = (*CertAuth)(nil)
 
 type LoginOption func(a *CertAuth) error
 
-// NewCertAuth initializes a new cert auth method interface to be
+// NewCertAuth initializes a new Cert auth method interface to be
 // passed as a parameter to the client.Auth().Login method.
 //
-// Supported options: WithClientCertAndKey, WithInsecure
-//
-// https://developer.hashicorp.com/vault/api-docs/auth/cert#login-with-tls-certificate-method
-func NewCertAuth(roleName string, opts ...LoginOption) (*CertAuth, error) {
-	a := &CertAuth{
-		role: roleName,
+// Supported options: WithCACert, WithCACertBytes, WithInsecure
+func NewCertAuth(roleName, clientCert, clientKey string, opts ...LoginOption) (*CertAuth, error) {
+	if roleName == "" {
+		return nil, fmt.Errorf("no role name provided for login")
 	}
 
+	if clientCert == "" || clientKey == "" {
+		return nil, fmt.Errorf("client certificate and key must be provided")
+	}
+
+	a := &CertAuth{
+		role:       roleName,
+		clientCert: clientCert,
+		clientKey:  clientKey,
+	}
+
+	// Loop through each option
 	for _, opt := range opts {
+		// Call the option giving the instantiated
+		// *CertAuth as the argument
 		err := opt(a)
 		if err != nil {
 			return nil, fmt.Errorf("error with login option: %w", err)
 		}
 	}
 
+	// return the modified auth struct instance
 	return a, nil
 }
 
-// Login sets up the required request body for the cert auth method's /login
+// Login sets up the required request body for the Cert auth method's /login
 // endpoint, and performs a write to it.
 // It adds the client cert and key to the request.
 func (a *CertAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, error) {
@@ -113,7 +125,6 @@ func (a *CertAuth) httpClient() (*http.Client, error) {
 			CAPath:        a.caCert,
 			CACertificate: a.caCertBytes,
 		})
-
 		if err != nil {
 			return nil, fmt.Errorf("unable to configure TLS: %w", err)
 		}
@@ -141,15 +152,6 @@ func WithCACert(caCert string) LoginOption {
 func WithCACertBytes(caCertBytes []byte) LoginOption {
 	return func(a *CertAuth) error {
 		a.caCertBytes = caCertBytes
-		return nil
-	}
-}
-
-// WithClientCertAndKey sets the client cert and key to be used for the login request.
-func WithClientCertAndKey(clientCert, clientKey string) LoginOption {
-	return func(a *CertAuth) error {
-		a.clientCert = clientCert
-		a.clientKey = clientKey
 		return nil
 	}
 }

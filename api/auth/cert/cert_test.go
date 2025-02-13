@@ -29,24 +29,27 @@ func TestLogin(t *testing.T) {
 
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
-	ln, sv := runTestServer(t, certDir, func(w http.ResponseWriter, r *http.Request) {
+	ln := runTestServer(t, certDir, func(w http.ResponseWriter, r *http.Request) {
+		wg.Done()
+
 		if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
 			t.Fatalf("no client cert provided")
 		}
 
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"auth": {"client_token": "test-token"}}`))
-
-		wg.Done()
 	})
-	defer sv.Shutdown(context.Background())
 
 	// Create a new CertAuth struct.
 	auth, err := NewCertAuth(
 		"role-name",
+		filepath.Join(certDir, "client_cert.pem"),
+		filepath.Join(certDir, "client_key.pem"),
 		WithCACert(filepath.Join(certDir, "ca_cert.pem")),
-		WithClientCertAndKey(filepath.Join(certDir, "client_cert.pem"), filepath.Join(certDir, "client_key.pem")),
 	)
+	if err != nil {
+		t.Fatalf("failed to create CertAuth: %v", err)
+	}
 
 	cfg := api.DefaultConfig()
 	cfg.Address = fmt.Sprintf("https://%s", ln.Addr())
@@ -56,9 +59,13 @@ func TestLogin(t *testing.T) {
 		t.Fatalf("failed to create client: %v", err)
 	}
 
-	_, err = auth.Login(context.Background(), client)
+	secret, err := auth.Login(context.Background(), client)
 	if err != nil {
 		t.Fatalf("failed to login: %v", err)
+	}
+
+	if secret == nil || secret.Auth == nil || secret.Auth.ClientToken != "test-token" {
+		t.Fatalf("unexpected response: %v", secret)
 	}
 
 	done := make(chan struct{})
@@ -75,7 +82,7 @@ func TestLogin(t *testing.T) {
 	}
 }
 
-func runTestServer(t *testing.T, certDir string, fn http.HandlerFunc) (net.Listener, *http.Server) {
+func runTestServer(t *testing.T, certDir string, fn http.HandlerFunc) net.Listener {
 	certPool, err := rootcerts.LoadCACerts(&rootcerts.Config{
 		CAPath: filepath.Join(certDir, "ca_cert.pem"),
 	})
@@ -91,7 +98,7 @@ func runTestServer(t *testing.T, certDir string, fn http.HandlerFunc) (net.Liste
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		t.Fatalf("err: %s", err)
+		t.Fatalf("failed to create listener: %v", err)
 	}
 
 	sv := &http.Server{
@@ -99,11 +106,16 @@ func runTestServer(t *testing.T, certDir string, fn http.HandlerFunc) (net.Liste
 		Handler:   http.HandlerFunc(fn),
 	}
 
+	t.Cleanup(func() {
+		sv.Close()
+		ln.Close()
+	})
+
 	go func() {
 		sv.ServeTLS(ln, filepath.Join(certDir, "server_cert.pem"), filepath.Join(certDir, "server_key.pem"))
 	}()
 
-	return ln, sv
+	return ln
 }
 
 func createCertificatePairs(t *testing.T) string {
