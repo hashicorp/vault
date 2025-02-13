@@ -35,7 +35,7 @@ locals {
   ecdsa_curve   = lookup(local.ecdsa_curve_map, local.ca_key_type, null)
 
   // Response data
-  ssh_sign_key_data    = jsondecode(enos_remote_exec.ssh_sign_key.stdout).data
+  ssh_sign_key_data      = jsondecode(enos_remote_exec.ssh_sign_key.stdout).data
   ssh_generate_otp_data  = jsondecode(enos_remote_exec.ssh_generate_otp.stdout).data
   ssh_generate_cert_data = jsondecode(enos_remote_exec.ssh_generate_cert.stdout).data
 
@@ -49,7 +49,7 @@ locals {
     test_ip       = local.ssh_test_ip
     test_user     = local.ssh_test_user
     data = {
-      sign_key    = local.ssh_sign_key_data
+      sign_key      = local.ssh_sign_key_data
       generate_otp  = local.ssh_generate_otp_data
       generate_cert = local.ssh_generate_cert_data
     }
