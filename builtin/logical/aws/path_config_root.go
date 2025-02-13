@@ -283,11 +283,10 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 
 	// Save the config
 	if err := putConfigToStorage(ctx, req, rc); err != nil {
-		b.Logger().Error("write to storage failed but the rotation manager still succeeded.",
-			"operation", performedRotationManagerOpern, "mount", req.MountPoint, "path", req.Path)
-
 		wrappedError := err
 		if performedRotationManagerOpern != "" {
+			b.Logger().Error("write to storage failed but the rotation manager still succeeded.",
+				"operation", performedRotationManagerOpern, "mount", req.MountPoint, "path", req.Path)
 			wrappedError = fmt.Errorf("write to storage failed but the rotation manager still succeeded; "+
 				"operation=%s, mount=%s, path=%s, storageError=%s", performedRotationManagerOpern, req.MountPoint, req.Path, err)
 		}
