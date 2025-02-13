@@ -9,18 +9,24 @@ fail() {
   exit 1
 }
 
-[[ -z "$ROLE_NAME" ]] && fail "ROLE_NAME env variable has not been set"
-[[ -z "$PUBLIC_KEY_PATH" ]] && fail "PUBLIC_KEY_PATH env variable has not been set"
+[[ -z "$SIGNED_KEY" ]] && fail "SIGNED_KEY env variable has not been set"
+[[ -z "$CA_KEY_TYPE" ]] && fail "CA_KEY_TYPE env variable has not been set"
 [[ -z "$VAULT_ADDR" ]] && fail "VAULT_ADDR env variable has not been set"
 [[ -z "$VAULT_TOKEN" ]] && fail "VAULT_TOKEN env variable has not been set"
 [[ -z "$VAULT_INSTALL_DIR" ]] && fail "VAULT_INSTALL_DIR env variable has not been set"
 
-binpath=${VAULT_INSTALL_DIR}/vault
-test -x "$binpath" || fail "unable to locate vault binary at $binpath"
+SIGNED_KEY_PATH="/signed-key.pub"
 
-export VAULT_FORMAT=json
-if ! signed_key_output=$("$binpath" write -field=signed_key ssh/sign/"$ROLE_NAME" public_key=@"$PUBLIC_KEY_PATH" 2>&1); then
-  fail "failed to sign SSH key: $signed_key_output"
+# Save the signed key to a file
+echo "$SIGNED_KEY" > "$SIGNED_KEY_PATH"
+
+# Inspect the signed key
+if ! ssh_key_info=$(ssh-keygen -Lf "$SIGNED_KEY_PATH"); then
+  fail "Failed to verify signed SSH key"
 fi
 
-echo "Signed SSH key obtained successfully."
+# Extract key type
+ca_key_type=$(echo "$ssh_key_info" | grep "Type:" | awk '{print $2}')
+if [[ "$ca_key_type" != *"$CA_KEY_TYPE"* ]]; then
+  fail "Key type mismatch: expected $CA_KEY_TYPE, got $ca_key_type"
+fi
