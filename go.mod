@@ -124,7 +124,7 @@ require (
 	github.com/hashicorp/go-version v1.7.0
 	github.com/hashicorp/golang-lru v1.0.2
 	github.com/hashicorp/golang-lru/v2 v2.0.7
-	github.com/hashicorp/hcl v1.0.1-vault-5
+	github.com/hashicorp/hcl v1.0.1-vault-7
 	github.com/hashicorp/hcl/v2 v2.16.2
 	github.com/hashicorp/hcp-link v0.2.1
 	github.com/hashicorp/hcp-scada-provider v0.2.2
@@ -151,7 +151,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.6.0
 	github.com/hashicorp/vault-plugin-database-snowflake v0.13.0
 	github.com/hashicorp/vault-plugin-mock v0.16.1
-	github.com/hashicorp/vault-plugin-secrets-ad v0.19.0
+	github.com/hashicorp/vault-plugin-secrets-ad v0.20.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.19.0
 	github.com/hashicorp/vault-plugin-secrets-azure v0.20.1
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.21.0
