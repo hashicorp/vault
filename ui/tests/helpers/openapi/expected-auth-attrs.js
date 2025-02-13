@@ -105,6 +105,13 @@ const azure = {
         'The OAuth2 client secret to connection to Azure. This value can also be provided with the AZURE_CLIENT_SECRET environment variable.',
       type: 'string',
     },
+    disableAutomatedRotation: {
+      editType: 'boolean',
+      fieldGroup: 'default',
+      helpText:
+        'If set to true, will deregister all registered rotation jobs from the RotationManager for the plugin.',
+      type: 'boolean',
+    },
     environment: {
       editType: 'string',
       fieldGroup: 'default',
@@ -141,6 +148,27 @@ const azure = {
       fieldGroup: 'default',
       helpText:
         'The TTL of the root password in Azure. This can be either a number of seconds or a time formatted duration (ex: 24h, 48ds)',
+    },
+    rotationPeriod: {
+      editType: 'number',
+      fieldGroup: 'default',
+      helpText:
+        'TTL for automatic credential rotation of the given username. Mutually exclusive with rotation_schedule',
+      type: 'number',
+    },
+    rotationSchedule: {
+      editType: 'string',
+      fieldGroup: 'default',
+      helpText:
+        'CRON-style string that will define the schedule on which rotations should occur. Mutually exclusive with rotation_period',
+      type: 'string',
+    },
+    rotationWindow: {
+      editType: 'number',
+      fieldGroup: 'default',
+      helpText:
+        'Specifies the amount of time in which the rotation is allowed to occur starting from a given rotation_schedule',
+      type: 'number',
     },
     tenantId: {
       editType: 'string',
