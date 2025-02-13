@@ -46,7 +46,6 @@ export default Route.extend(ListRoute, {
       }));
       return this.pagination.paginate(mappedKeys, {
         page,
-        pageSize: 3,
         filter: pageFilter,
         filterKey: 'id',
       });
