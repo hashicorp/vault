@@ -9,7 +9,7 @@ export default Factory.extend({
   api_hostname: 'api-foobar.duosecurity.com',
   mount_accessor: '',
   name: '', // returned but cannot be set at this time
-  // namespace_path: 'root', commented out for testing behavior when this is not present
+  namespace_path: '', // the root namespace returns an empty string for the path
   pushinfo: '',
   type: 'duo',
   use_passcode: false,

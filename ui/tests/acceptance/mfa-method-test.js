@@ -87,17 +87,15 @@ module('Acceptance | mfa-method', function (hooks) {
     );
   });
 
-  test('it should display an empty namespace', async function (assert) {
+  test('it should not display for the root namespace', async function (assert) {
     await visit('/vault/access/mfa');
     const methods = this.getMethods();
-    const model = this.store.peekRecord('mfa-method', methods[1].id);
-    assert.strictEqual(model.namespace_path, undefined, 'Namespace path is unset');
+    const duoModel = this.store.peekRecord('mfa-method', methods[1].id);
+    assert.strictEqual(duoModel.namespace_path, '', 'Namespace path is unset');
     assert
-      .dom(`[data-test-mfa-method-list-item="${model.id}"]`)
-      .includesText(
-        `${model.name} ${model.id} Namespace:`,
-        'Copy renders for list item without namespace path'
-      );
+      .dom(`[data-test-mfa-method-list-item="${duoModel.id}"]`)
+      .includesText(`${duoModel.name} ${duoModel.id}`, 'Copy renders for list item without namespace path')
+      .doesNotContainText('Namespace:', 'Does not include the namespace label');
   });
 
   test('it should display method details', async function (assert) {
