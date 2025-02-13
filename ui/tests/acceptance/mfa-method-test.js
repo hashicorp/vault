@@ -87,6 +87,19 @@ module('Acceptance | mfa-method', function (hooks) {
     );
   });
 
+  test('it should display an empty namespace', async function (assert) {
+    await visit('/vault/access/mfa');
+    const methods = this.getMethods();
+    const model = this.store.peekRecord('mfa-method', methods[1].id);
+    assert.strictEqual(model.namespace_path, undefined, 'Namespace path is unset');
+    assert
+      .dom(`[data-test-mfa-method-list-item="${model.id}"]`)
+      .includesText(
+        `${model.name} ${model.id} Namespace:`,
+        'Copy renders for list item without namespace path'
+      );
+  });
+
   test('it should display method details', async function (assert) {
     // ensure methods are tied to an enforcement
     this.server.get('/identity/mfa/login-enforcement', () => {
