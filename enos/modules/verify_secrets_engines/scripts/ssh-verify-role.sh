@@ -26,8 +26,7 @@ fi
 # Extract actual key type
 key_type=$(echo "$output" | jq -r '.data.key_type')
 
-# Verify 
+# Verify
 if [[ "$key_type" != "$KEY_TYPE" ]]; then
   fail "Key type mismatch: expected $KEY_TYPE, got $key_type"
 fi
-
