@@ -302,6 +302,12 @@ For example, if you start with a 5-node cluster:
 You should always maintain quorum to limit the impact on failure tolerance when
 changing or scaling your Vault instance.
 
+<Note>
+
+Be aware that you need to adjust peers as needed during scaling events, as purposeful scaling events to increase or reduce cluster size can transpire in a minimal time window. Consider this if you use Autopilot for automatic server cleanup because your scaling time window can be shorter than the default [dead_server_last_contract_threshold](/vault/docs/concepts/integrated-storage/autopilot#dead_server_last_contact_threshold), and you need to adjust this value in such cases.
+
+</Note>
+
 ### Redundancy Zones
 
 If you are using autopilot with [redundancy zones](/vault/docs/enterprise/redundancy-zones),
