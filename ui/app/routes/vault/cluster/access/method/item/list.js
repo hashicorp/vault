@@ -37,7 +37,13 @@ export default Route.extend(ListRoute, {
       const { keys } = await this.api.auth[authListMethod](payload);
       // it would likely be better to update the template/component to use the keys directly
       // for now we are trying to make as few changes as possible
-      const mappedKeys = keys.map((key) => ({ id: key }));
+      // add some additional information necessary to delete method in generated-item-list component
+      const mappedKeys = keys.map((key) => ({
+        id: key,
+        type,
+        listItem,
+        authMethodPath,
+      }));
       return this.pagination.paginate(mappedKeys, {
         page,
         pageSize: 3,
