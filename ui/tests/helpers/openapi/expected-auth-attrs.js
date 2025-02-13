@@ -378,6 +378,13 @@ const gcp = {
       fieldGroup: 'default',
       type: 'object',
     },
+    disableAutomatedRotation: {
+      editType: 'boolean',
+      fieldGroup: 'default',
+      helpText:
+        'If set to true, will deregister all registered rotation jobs from the RotationManager for the plugin.',
+      type: 'boolean',
+    },
     gceAlias: {
       editType: 'string',
       helpText: 'Indicates what value to use when generating an alias for GCE authentications.',
@@ -416,6 +423,27 @@ const gcp = {
       editType: 'ttl',
       fieldGroup: 'default',
       helpText: 'Time-to-live of plugin identity tokens',
+    },
+    rotationPeriod: {
+      editType: 'number',
+      fieldGroup: 'default',
+      helpText:
+        'TTL for automatic credential rotation of the given username. Mutually exclusive with rotation_schedule',
+      type: 'number',
+    },
+    rotationSchedule: {
+      editType: 'string',
+      fieldGroup: 'default',
+      helpText:
+        'CRON-style string that will define the schedule on which rotations should occur. Mutually exclusive with rotation_period',
+      type: 'string',
+    },
+    rotationWindow: {
+      editType: 'number',
+      fieldGroup: 'default',
+      helpText:
+        'Specifies the amount of time in which the rotation is allowed to occur starting from a given rotation_schedule',
+      type: 'number',
     },
     serviceAccountEmail: {
       editType: 'string',
