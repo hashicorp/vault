@@ -1008,6 +1008,21 @@ func (i *IdentityStore) cacheTemporaryEntity(ctx context.Context, entity *identi
 	return nil
 }
 
+func splitLocalAliases(entity *identity.Entity) ([]*identity.Alias, []*identity.Alias) {
+	var localAliases []*identity.Alias
+	var nonLocalAliases []*identity.Alias
+
+	for _, alias := range entity.Aliases {
+		if alias.Local {
+			localAliases = append(localAliases, alias)
+		} else {
+			nonLocalAliases = append(nonLocalAliases, alias)
+		}
+	}
+
+	return nonLocalAliases, localAliases
+}
+
 func (i *IdentityStore) persistEntity(ctx context.Context, entity *identity.Entity) error {
 	// If the entity that is passed into this function is resulting from a memdb
 	// query without cloning, then modifying it will result in a direct DB edit,
@@ -1020,17 +1035,7 @@ func (i *IdentityStore) persistEntity(ctx context.Context, entity *identity.Enti
 	}
 
 	// Separate the local and non-local aliases.
-	var localAliases []*identity.Alias
-	var nonLocalAliases []*identity.Alias
-
-	for _, alias := range entity.Aliases {
-		switch alias.Local {
-		case true:
-			localAliases = append(localAliases, alias)
-		default:
-			nonLocalAliases = append(nonLocalAliases, alias)
-		}
-	}
+	nonLocalAliases, localAliases := splitLocalAliases(entity)
 
 	// Store the entity with non-local aliases.
 	entity.Aliases = nonLocalAliases
