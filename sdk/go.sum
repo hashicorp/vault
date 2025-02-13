@@ -182,8 +182,8 @@ github.com/hashicorp/go-immutable-radix v1.3.1 h1:DKHmCUm2hRBK510BaiZlwvpD40f8bJ
 github.com/hashicorp/go-immutable-radix v1.3.1/go.mod h1:0y9vanUI8NX6FsYoO3zeMjhV/C5i9g4Q3DwcSNZ4P60=
 github.com/hashicorp/go-kms-wrapping/entropy/v2 v2.0.1 h1:KIge4FHZEDb2/xjaWgmBheCTgRL6HV4sgTfDsH876L8=
 github.com/hashicorp/go-kms-wrapping/entropy/v2 v2.0.1/go.mod h1:aHO1EoFD0kBYLBedqxXgalfFT8lrWfP7kpuSoaqGjH0=
-github.com/hashicorp/go-kms-wrapping/v2 v2.0.16 h1:WZeXfD26QMWYC35at25KgE021SF9L3u9UMHK8fJAdV0=
-github.com/hashicorp/go-kms-wrapping/v2 v2.0.16/go.mod h1:ZiKZctjRTLEppuRwrttWkp71VYMbTTCkazK4xT7U/NQ=
+github.com/hashicorp/go-kms-wrapping/v2 v2.0.18 h1:DLfC677GfKEpSAFpEWvl1vXsGpEcSHmbhBaPLrdDQHc=
+github.com/hashicorp/go-kms-wrapping/v2 v2.0.18/go.mod h1:t/eaR/mi2mw3klfl1WEAuiLKrlZ/Q8cosmsT+RIPLu0=
 github.com/hashicorp/go-multierror v1.1.1 h1:H5DkEtf6CXdFp0N0Em5UCwQpXMWke8IA0+lD48awMYo=
 github.com/hashicorp/go-multierror v1.1.1/go.mod h1:iw975J/qwKPdAO1clOe2L8331t/9/fmwbPZ6JB6eMoM=
 github.com/hashicorp/go-plugin v1.6.1 h1:P7MR2UP6gNKGPp+y7EZw2kOiq4IR9WiqLvp0XOsVdwI=
@@ -195,12 +195,12 @@ github.com/hashicorp/go-rootcerts v1.0.2 h1:jzhAVGtqPKbwpyCPELlgNWhE1znq+qwJtW5O
 github.com/hashicorp/go-rootcerts v1.0.2/go.mod h1:pqUvnprVnM5bf7AOirdbb01K4ccR319Vf4pU3K5EGc8=
 github.com/hashicorp/go-secure-stdlib/base62 v0.1.2 h1:ET4pqyjiGmY09R5y+rSd70J2w45CtbWDNvGqWp/R3Ng=
 github.com/hashicorp/go-secure-stdlib/base62 v0.1.2/go.mod h1:EdWO6czbmthiwZ3/PUsDV+UD1D5IRU4ActiaWGwt0Yw=
-github.com/hashicorp/go-secure-stdlib/cryptoutil v0.1.0 h1:4B46+S65WqQUlp0rX2F7TX6/p0HmUZsDD+cVzFTwztw=
-github.com/hashicorp/go-secure-stdlib/cryptoutil v0.1.0/go.mod h1:hH8rgXHh9fPSDPerG6WzABHsHF+9ZpLhRI1LPk4JZ8c=
+github.com/hashicorp/go-secure-stdlib/cryptoutil v0.1.1 h1:VaLXp47MqD1Y2K6QVrA9RooQiPyCgAbnfeJg44wKuJk=
+github.com/hashicorp/go-secure-stdlib/cryptoutil v0.1.1/go.mod h1:hH8rgXHh9fPSDPerG6WzABHsHF+9ZpLhRI1LPk4JZ8c=
 github.com/hashicorp/go-secure-stdlib/mlock v0.1.3 h1:kH3Rhiht36xhAfhuHyWJDgdXXEx9IIZhDGRk24CDhzg=
 github.com/hashicorp/go-secure-stdlib/mlock v0.1.3/go.mod h1:ov1Q0oEDjC3+A4BwsG2YdKltrmEw8sf9Pau4V9JQ4Vo=
-github.com/hashicorp/go-secure-stdlib/parseutil v0.1.8 h1:iBt4Ew4XEGLfh6/bPk4rSYmuZJGizr6/x/AEizP0CQc=
-github.com/hashicorp/go-secure-stdlib/parseutil v0.1.8/go.mod h1:aiJI+PIApBRQG7FZTEBx5GiiX+HbOHilUdNxUZi4eV0=
+github.com/hashicorp/go-secure-stdlib/parseutil v0.1.9 h1:FW0YttEnUNDJ2WL9XcrrfteS1xW8u+sh4ggM8pN5isQ=
+github.com/hashicorp/go-secure-stdlib/parseutil v0.1.9/go.mod h1:Ll013mhdmsVDuoIXVfBtvgGJsXDYkTw1kooNcoCXuE0=
 github.com/hashicorp/go-secure-stdlib/password v0.1.1 h1:6JzmBqXprakgFEHwBgdchsjaA9x3GyjdI568bXKxa60=
 github.com/hashicorp/go-secure-stdlib/password v0.1.1/go.mod h1:9hH302QllNwu1o2TGYtSk8I8kTAN0ca1EHpwhm5Mmzo=
 github.com/hashicorp/go-secure-stdlib/permitpool v1.0.0 h1:U6y5MXGiDVOOtkWJ6o/tu1TxABnI0yKTQWJr7z6BpNk=

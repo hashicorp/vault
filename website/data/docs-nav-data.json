@@ -404,10 +404,10 @@
           "color": "neutral"
         },
         "path": "configuration/entropy-augmentation"
-      },  
-      
+      },
+
       { "heading": "Configuration stanzas" },
-    
+
       {
         "title": "<code>adaptive_overload_protection</code>",
         "badge": {
@@ -1883,12 +1883,20 @@
         }
       },
       {
+        "title": "AWS Secret Manager",
+        "path": "import/awssm"
+      },
+      {
+        "title": "Azure KeyVault",
+        "path": "import/azurekv"
+      },
+      {
         "title": "GCP Secret Manager",
         "path": "import/gcpsm"
       },
       {
-        "title": "Mappings",
-        "path": "import/mappings"
+        "title": "HashiCorp Vault",
+        "path": "import/vault"
       }
     ]
   },
@@ -2544,6 +2552,31 @@
         "path": "upgrading/raft-wal"
       },
       {
+        "title": "Resolve duplicate identities",
+        "routes": [
+          {
+            "title": "Process overview",
+            "path": "upgrading/deduplication"
+          },
+          {
+            "title": "Fix different-case entity alias duplicates",
+            "path": "upgrading/deduplication/different-case"
+          },
+          {
+            "title": "Fix entity and group duplicates",
+            "path": "upgrading/deduplication/entity-group"
+          },
+          {
+            "title": "Resolve ACL policy templates",
+            "path": "upgrading/deduplication/acl-policy-templates"
+          },
+          {
+            "title": "Resolve Terraform config",
+            "path": "upgrading/deduplication/terraform-refs"
+          }
+        ]
+      },
+      {
         "title": "Upgrade to 1.19.x",
         "path": "upgrading/upgrade-to-1.19.x"
       },
@@ -2926,14 +2959,14 @@
         "path": "enterprise"
       },
       {
-        "title": "License",
+        "title": "Licensing",
         "routes": [
           {
             "title": "Overview",
             "path": "enterprise/license"
           },
           {
-            "title": "Autoloading",
+            "title": "Autoload an enterprise license",
             "path": "enterprise/license/autoloading"
           },
           {
@@ -2945,7 +2978,7 @@
             "path": "enterprise/license/manual-reporting"
           },
           {
-            "title": "Product usage reporting",
+            "title": "Anonymous product usage reporting",
             "path": "enterprise/license/product-usage-reporting"
           },
           {
@@ -2966,7 +2999,7 @@
         "title": "Replication",
         "routes": [
           {
-            "title": "Overview",
+            "title": "Replication support in Vault",
             "path": "enterprise/replication"
           },
           {
@@ -2979,82 +3012,82 @@
         "title": "HSM Support",
         "routes": [
           {
-            "title": "Overview",
+            "title": "HSM support overview",
             "path": "enterprise/hsm"
           },
           {
-            "title": "Behavioral Changes",
+            "title": "How HSM changes Vault",
             "path": "enterprise/hsm/behavior"
           },
           {
-            "title": "Security",
+            "title": "HSM security details",
             "path": "enterprise/hsm/security"
           }
         ]
       },
       {
-        "title": "PKCS11 Provider",
+        "title": "PKCS11 provider",
         "routes": [
           {
-            "title": "Overview",
+            "title": "PKCS#11 support in Vault",
             "path": "enterprise/pkcs11-provider"
           },
           {
-            "title": "AWS KMS XKS",
+            "title": "Use PKCS#11 with AWS KMS",
             "path": "enterprise/pkcs11-provider/aws-xks"
           },
           {
-            "title": "Oracle TDE",
+            "title": "Use PKCS#11 with Oracle TDE",
             "path": "enterprise/pkcs11-provider/oracle-tde"
           }
         ]
       },
       {
-        "title": "Automated Integrated Storage Snapshots",
+        "title": "Automatic snapshots with integrated storage",
         "path": "enterprise/automated-integrated-storage-snapshots"
       },
       {
-        "title": "Automated Upgrades",
+        "title": "Automatically upgrade Vault clusters",
         "path": "enterprise/automated-upgrades"
       },
       {
-        "title": "Redundancy Zones",
+        "title": "Use redundancy zones",
         "path": "enterprise/redundancy-zones"
       },
       {
-        "title": "Lease Count Quotas",
+        "title": "Enforce lease count quotas",
         "path": "enterprise/lease-count-quotas"
       },
       {
-        "title": "Entropy Augmentation",
+        "title": "Augment entropy with external samples",
         "path": "enterprise/entropy-augmentation"
       },
       {
         "title": "FIPS",
         "routes": [
           {
-            "title": "Overview",
+            "title": "FIPS compliance in Vault",
             "path": "enterprise/fips"
           },
           {
-            "title": "FIPS 140-2 Inside Vault",
+            "title": "Built-in FIPS 140-2 support",
             "path": "enterprise/fips/fips1402"
           },
           {
-            "title": "Seal Wrap for FIPS 140-2",
+            "title": "Seal wrap for FIPS compliance",
             "path": "enterprise/fips/sealwrap"
           }
         ]
       },
       {
-        "title": "Seal Wrap",
+        "title": "Wrap seals with encryption",
         "path": "enterprise/sealwrap"
       },
       {
-        "title": "Namespaces",
+        "title": "Namespaces and SMT",
         "routes": [
           {
-            "title": "Overview",
+            "title": "Namespace + SMT support in Vault",
             "path": "enterprise/namespaces"
           },
           {
@@ -3080,17 +3113,17 @@
             }
           },
           {
-            "title": "Structure guide",
+            "title": "Best practices for namespaces",
             "path": "enterprise/namespaces/namespace-structure"
           }
         ]
       },
       {
-        "title": "Performance Standbys",
+        "title": "Use performance standby nodes",
         "path": "enterprise/performance-standby"
       },
       {
-        "title": "Eventual Consistency",
+        "title": "Data consistency for replication",
         "path": "enterprise/consistency"
       },
       {
@@ -3107,57 +3140,57 @@
         ]
       },
       {
-        "title": "Control Groups",
+        "title": "Use control group authZ ",
         "path": "enterprise/control-groups"
       },
       {
-        "title": "Managed Keys",
+        "title": "3rd party key management",
         "path": "enterprise/managed-keys"
       },
       {
-        "title": "MFA",
+        "title": "Multi-factor authN",
         "routes": [
           {
-            "title": "Overview",
+            "title": "MFA support in Vault",
             "path": "enterprise/mfa"
           },
           {
-            "title": "Duo MFA",
+            "title": "Configure Duo for MFA",
             "path": "enterprise/mfa/mfa-duo"
           },
           {
-            "title": "Okta MFA",
+            "title": "Configure Okta for MFA",
             "path": "enterprise/mfa/mfa-okta"
           },
           {
-            "title": "PingID MFA",
+            "title": "Configure PingID for MFA",
             "path": "enterprise/mfa/mfa-pingid"
           },
           {
-            "title": "TOTP MFA",
+            "title": "Configure TOTP for MFA",
             "path": "enterprise/mfa/mfa-totp"
           }
         ]
       },
       {
-        "title": "Sentinel",
+        "title": "Manage policies as code",
         "routes": [
           {
-            "title": "Overview",
+            "title": "Mange Vault policies with Sentinel",
             "path": "enterprise/sentinel"
           },
           {
-            "title": "Examples",
-            "path": "enterprise/sentinel/examples"
+            "title": "Sentinel properties for Vault",
+            "path": "enterprise/sentinel/properties"
           },
           {
-            "title": "Properties",
-            "path": "enterprise/sentinel/properties"
+            "title": "Sentinel examples",
+            "path": "enterprise/sentinel/examples"
           }
         ]
       },
       {
-        "title": "HCP Vault",
+        "title": "HCP Vault docs",
         "href": "https://cloud.hashicorp.com/docs/vault"
       }
     ]
