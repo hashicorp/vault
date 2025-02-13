@@ -137,6 +137,7 @@ export default Route.extend({
       kv: 'secret',
       keymgmt: `keymgmt/${options.queryParams?.itemType || 'key'}`,
       generic: 'secret',
+      totp: 'totp',
     };
     return types[engineType];
   },

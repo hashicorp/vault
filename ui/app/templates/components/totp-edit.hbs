@@ -1,0 +1,136 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<PageHeader as |p|>
+  <p.top>
+    <KeyValueHeader
+      @baseKey={{this.model}}
+      @path="vault.cluster.secrets.backend.list"
+      @mode={{this.mode}}
+      @root={{this.root}}
+      @showCurrent={{true}}
+    />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-secret-header>
+      {{#if (eq this.mode "create")}}
+        Create a TOTP key
+      {{else if (eq this.mode "edit")}}
+        Edit TOTP key
+      {{else}}
+        TOTP key
+        <code>{{this.model.id}}</code>
+      {{/if}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+{{#if (eq this.mode "show")}}
+  <Toolbar>
+    <ToolbarActions>
+      {{#if this.model.canDelete}}
+        <ConfirmAction
+          @buttonText="Delete key"
+          class="toolbar-button"
+          @buttonColor="secondary"
+          @onConfirmAction={{action "delete"}}
+        />
+        <div class="toolbar-separator"></div>
+      {{/if}}
+      {{#if this.model.canUpdate}}
+        <ToolbarSecretLink @secret={{this.model.id}} @mode="edit" data-test-edit-link @replace={{true}}>
+          Edit key
+        </ToolbarSecretLink>
+      {{/if}}
+    </ToolbarActions>
+  </Toolbar>
+{{/if}}
+
+{{#if (or (eq this.mode "edit") (eq this.mode "create"))}}
+  {{#if this.hasGenerated}}
+    <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+      <MessageError @model={{this.model}} />
+      {{#unless this.model.isError}}
+        <Hds::Alert @type="inline" @color="warning" class="has-top-bottom-margin" data-test-warning as |A|>
+          <A.Title>Warning</A.Title>
+          <A.Description>
+            You will not be able to access this information later, so please copy the information below.
+          </A.Description>
+        </Hds::Alert>
+      {{/unless}}
+      {{#each this.model.generatedAttrs as |attr|}}
+        <InfoTableRow
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{get this.model attr.name}}
+        />
+      {{/each}}
+      <div class="list-item-row">
+        <div class="center-display">
+          <QrCode
+            @text={{this.model.url}}
+            @colorLight="#F7F7F7"
+            @width={{200}}
+            @height={{200}}
+            @correctLevel="L"
+            data-test-qrcode
+          />
+        </div>
+      </div>
+    </div>
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <div class="control">
+        <Hds::Button @text="Continue" @color="secondary" {{on "click" this.reset}} data-test-back-button />
+      </div>
+    </div>
+  {{else}}
+    <form onsubmit={{action "createOrUpdate" "create"}}>
+      <div class="box is-sideless is-fullwidth is-marginless">
+        <MessageError @model={{this.model}} />
+        <NamespaceReminder @mode={{this.mode}} @noun="TOTP key" />
+        {{#if (eq this.mode "create")}}
+          {{#each this.model.createAttrs as |attr|}}
+            <FormField
+              @attr={{attr}}
+              @model={{this.model}}
+              @modelValidations={{@modelValidations}}
+              @showHelpText={{@showHelpText}}
+            />
+          {{/each}}
+        {{/if}}
+        <FormFieldGroupsLoop @model={{this.model}} @mode={{this.mode}} />
+      </div>
+      <div class="field is-grouped-split box is-fullwidth is-bottomless">
+        <Hds::ButtonSet>
+          <Hds::Button @text={{if (eq this.mode "create") "Create key" "Save"}} type="submit" data-test-totp-create />
+          {{#if (eq this.mode "create")}}
+            <Hds::Button
+              @text="Cancel"
+              @color="secondary"
+              @route="vault.cluster.secrets.backend.list-root"
+              @model={{this.model.backend}}
+              @query={{hash tab="key"}}
+            />
+          {{else}}
+            <Hds::Button
+              @text="Cancel"
+              @color="secondary"
+              @route="vault.cluster.secrets.backend.show"
+              @models={{array this.model.backend this.model.id}}
+            />
+          {{/if}}
+        </Hds::ButtonSet>
+      </div>
+    </form>
+  {{/if}}
+{{else}}
+  <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+    {{#each this.model.attrs as |attr|}}
+      <InfoTableRow
+        @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+        @value={{get this.model attr.name}}
+      />
+    {{/each}}
+  </div>
+{{/if}}

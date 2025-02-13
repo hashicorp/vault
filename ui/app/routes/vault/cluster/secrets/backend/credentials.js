@@ -7,8 +7,11 @@ import { resolve } from 'rsvp';
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import ControlGroupError from 'vault/lib/control-group-error';
+import { later } from '@ember/runloop';
+import timestamp from 'core/utils/timestamp';
+import { getUnixTime } from 'date-fns';
 
-const SUPPORTED_DYNAMIC_BACKENDS = ['database', 'ssh', 'aws'];
+const SUPPORTED_DYNAMIC_BACKENDS = ['database', 'ssh', 'aws', 'totp'];
 
 export default Route.extend({
   templateName: 'vault/cluster/secrets/backend/credentials',
@@ -64,15 +67,32 @@ export default Route.extend({
     }
   },
 
+  getTOTPCode(backend, keyName) {
+    return this.store.adapterFor('totp').generateCode(backend, keyName);
+  },
+
+  async getTOTPKey(backend, keyName) {
+    try {
+      const key = await this.store.queryRecord('totp', { id: keyName, backend });
+      return key;
+    } catch (e) {
+      // swallow error, non-essential data
+      return;
+    }
+  },
+
   async model(params) {
     const role = params.secret;
     const { id: backendPath, type: backendType } = this.modelFor('vault.cluster.secrets.backend');
     const roleType = params.roleType;
-    let dbCred, awsRole;
+    let dbCred, awsRole, totpCode;
     if (backendType === 'database') {
       dbCred = await this.getDatabaseCredential(backendPath, role, roleType);
     } else if (backendType === 'aws') {
       awsRole = await this.getAwsRole(backendPath, role);
+    } else if (backendType === 'totp') {
+      totpCode = await this.getTOTPCode(backendPath, role);
+      totpCode.period = (await this.getTOTPKey(backendPath, role))?.period;
     }
 
     return resolve({
@@ -82,7 +102,19 @@ export default Route.extend({
       roleType,
       dbCred,
       awsRoleType: awsRole?.credentialType,
+      totpCode,
     });
+  },
+
+  async afterModel(model, transition) {
+    if (model.backendType === 'totp' && model.totpCode.period) {
+      later(
+        () => {
+          this.refresh();
+        },
+        (model.totpCode.period - (getUnixTime(timestamp.now()) % model.totpCode.period)) * 1000
+      );
+    }
   },
 
   resetController(controller) {
