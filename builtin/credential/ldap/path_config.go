@@ -8,14 +8,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/sdk/rotation"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/rotation"
 )
 
 const userFilterWarning = "userfilter configured does not consider userattr and may result in colliding entity aliases on logins"
@@ -227,7 +226,7 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 
 	var rotOp string
 	if cfg.ShouldDeregisterRotationJob() {
-		rotOp = "deregistration"
+		rotOp = rotation.PerformedDeregistration
 		dr := &rotation.RotationJobDeregisterRequest{
 			MountPoint: req.MountPoint,
 			ReqPath:    req.Path,
@@ -238,7 +237,7 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 			return logical.ErrorResponse("error de-registering rotation job: %s", err), nil
 		}
 	} else if cfg.ShouldRegisterRotationJob() {
-		rotOp = "registration"
+		rotOp = rotation.PerformedRegistration
 		// Now that the root config is set up, register the rotation job if it's required.
 		r := &rotation.RotationJobConfigureRequest{
 			Name:             rootRotationJobName,
