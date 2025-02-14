@@ -898,6 +898,13 @@ const ldap = {
       fieldGroup: 'default',
       type: 'string',
     },
+    disableAutomatedRotation: {
+      editType: 'boolean',
+      fieldGroup: 'default',
+      helpText:
+        'If set to true, will deregister all registered rotation jobs from the RotationManager for the plugin.',
+      type: 'boolean',
+    },
     discoverdn: {
       editType: 'boolean',
       helpText: 'Use anonymous bind to discover the bind DN of a user (optional)',
@@ -961,6 +968,27 @@ const ldap = {
       helpText:
         'Timeout, in seconds, for the connection when making requests against the server before returning back an error.',
       fieldGroup: 'default',
+    },
+    rotationPeriod: {
+      editType: 'number',
+      fieldGroup: 'default',
+      helpText:
+        'TTL for automatic credential rotation of the given username. Mutually exclusive with rotation_schedule',
+      type: 'number',
+    },
+    rotationSchedule: {
+      editType: 'string',
+      fieldGroup: 'default',
+      helpText:
+        'CRON-style string that will define the schedule on which rotations should occur. Mutually exclusive with rotation_period',
+      type: 'string',
+    },
+    rotationWindow: {
+      editType: 'number',
+      fieldGroup: 'default',
+      helpText:
+        'Specifies the amount of time in which the rotation is allowed to occur starting from a given rotation_schedule',
+      type: 'number',
     },
     starttls: {
       editType: 'boolean',
