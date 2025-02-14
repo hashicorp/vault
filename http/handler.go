@@ -72,7 +72,7 @@ const (
 	VaultForwardHeaderName      = "X-Vault-Forward"
 	VaultInconsistentForward    = "forward-active-node"
 	VaultInconsistentFail       = "fail"
-
+	CustomUiDir                 = "/Users/emoncuso/lab/standalone-vault-ui/http/web_ui"
 	// DefaultMaxRequestSize is the default maximum accepted request size. This
 	// is to prevent a denial of service attack where no Content-Length is
 	// provided and the server is fed ever more data until it exhausts memory.
@@ -206,6 +206,8 @@ func handler(props *vault.HandlerProperties) http.Handler {
 			if uiBuiltIn {
 				mux.Handle("/ui/", http.StripPrefix("/ui/", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()}))))))
 				mux.Handle("/robots.txt", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()})))))
+			} else if customUiDir := os.Getenv("VAULT_CUSTOM_UI_DIR"); customUiDir != "" {
+				mux.Handle("/ui/", http.StripPrefix("/ui/", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: http.Dir(customUiDir)}))))))
 			} else {
 				mux.Handle("/ui/", handleUIHeaders(core, handleUIStub()))
 			}
