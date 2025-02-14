@@ -75,14 +75,8 @@ export default Route.extend(ListRoute, {
 
   setupController(controller) {
     this._super(...arguments);
-    const { apiPath, authMethodPath, itemType, methodModel } = this.getMethodAndModelInfo();
+    const { itemType, methodModel } = this.getMethodAndModelInfo();
     controller.set('itemType', itemType);
     controller.set('methodModel', methodModel);
-    this.pathHelp.getPaths(apiPath, authMethodPath, itemType).then((paths) => {
-      controller.set(
-        'paths',
-        paths.paths.filter((path) => path.navigation && path.itemType.includes(itemType))
-      );
-    });
   },
 });
