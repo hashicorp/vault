@@ -299,7 +299,7 @@ func (b *backend) validateRoleName(name string) error {
 // validateIAMUser checks the user information we have for the role against the information on AWS. On a create, it uses the username
 // to retrieve the user information and _sets_ the userID. On update, it validates the userID and username.
 func (b *backend) validateIAMUserExists(ctx context.Context, storage logical.Storage, entry *staticRoleEntry, isCreate bool) error {
-	c, err := b.nonCachedClientIAM(ctx, storage, b.Logger(), entry)
+	c, err := b.getNonCachedIAMClient(ctx, storage, *entry)
 	if err != nil {
 		return fmt.Errorf("unable to get client to validate username %q: %w", entry.Username, err)
 	}

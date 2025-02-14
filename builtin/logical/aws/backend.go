@@ -12,6 +12,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
@@ -86,6 +87,10 @@ func Backend(_ *logical.BackendConfig) *backend {
 
 type backend struct {
 	*framework.Backend
+
+	// Function pointer used to override the IAM client creation for mocked testing
+	// If set, this function will be called instead of creating real IAM clients
+	nonCachedClientIAMTest func(context.Context, logical.Storage, hclog.Logger, *staticRoleEntry) (iamiface.IAMAPI, error)
 
 	// Mutex to protect access to reading and writing policies
 	roleMutex sync.RWMutex
@@ -249,4 +254,14 @@ func (b *backend) initialize(ctx context.Context, request *logical.Initializatio
 		}
 	}
 	return nil
+}
+
+// getNonCachedIAMClient returns an IAM client. In a test env, if a mocked client creation
+// function is set (nonCachedClientIAMTest), it will be used instead of the default client creation function.
+// This allows us to mock AWS clients in tests.
+func (b *backend) getNonCachedIAMClient(ctx context.Context, storage logical.Storage, cfg staticRoleEntry) (iamiface.IAMAPI, error) {
+	if b.nonCachedClientIAMTest != nil {
+		return b.nonCachedClientIAMTest(ctx, storage, b.Logger(), &cfg)
+	}
+	return b.nonCachedClientIAM(ctx, storage, b.Logger(), &cfg)
 }

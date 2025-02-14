@@ -88,7 +88,7 @@ func (b *backend) rotateCredential(ctx context.Context, storage logical.Storage)
 // createCredential will create a new iam credential, deleting the oldest one if necessary.
 func (b *backend) createCredential(ctx context.Context, storage logical.Storage, cfg staticRoleEntry, shouldLockStorage bool) (*awsCredentials, error) {
 	// Always create a fresh client
-	iamClient, err := b.nonCachedClientIAM(ctx, storage, b.Logger(), &cfg)
+	iamClient, err := b.getNonCachedIAMClient(ctx, storage, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get IAM client for role %q: %w", cfg.Name, err)
 	}
