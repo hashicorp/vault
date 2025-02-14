@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
@@ -148,21 +149,33 @@ func (b *backend) getRootConfigs(ctx context.Context, s logical.Storage, clientT
 	return configs, nil
 }
 
-func (b *backend) nonCachedClientIAM(ctx context.Context, s logical.Storage, logger hclog.Logger) (*iam.IAM, error) {
-	awsConfig, err := b.getRootConfigs(ctx, s, "iam", logger)
-	if err != nil {
-		return nil, err
+func (b *backend) nonCachedClientIAM(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (*iam.IAM, error) {
+	var awsConfig *aws.Config
+	var err error
+
+	if entry != nil && entry.AssumeRoleARN != "" {
+		awsConfig, err = b.assumeRoleStatic(ctx, s, entry)
+		if err != nil {
+			return nil, fmt.Errorf("failed to assume role %q: %w", entry.AssumeRoleARN, err)
+		}
+	} else {
+		configs, err := b.getRootConfigs(ctx, s, "iam", logger)
+		if err != nil {
+			return nil, err
+		}
+		if len(configs) != 1 {
+			return nil, errors.New("could not obtain aws config")
+		}
+		awsConfig = configs[0]
 	}
-	if len(awsConfig) != 1 {
-		return nil, errors.New("could not obtain aws config")
-	}
-	sess, err := session.NewSession(awsConfig[0])
+
+	sess, err := session.NewSession(awsConfig)
 	if err != nil {
 		return nil, err
 	}
 	client := iam.New(sess)
 	if client == nil {
-		return nil, fmt.Errorf("could not obtain iam client")
+		return nil, fmt.Errorf("could not obtain IAM client")
 	}
 	return client, nil
 }
@@ -195,6 +208,62 @@ func (b *backend) nonCachedClientSTS(ctx context.Context, s logical.Storage, log
 	}
 
 	return nil, fmt.Errorf("could not obtain sts client")
+}
+
+// assumeRoleStatic assumes an AWS role for cross-account static role management.
+// It uses the role ARN and session name provided in the staticRoleEntry configuration
+// to generate credentials for the assumed role.
+func (b *backend) assumeRoleStatic(ctx context.Context, s logical.Storage, entry *staticRoleEntry) (*aws.Config, error) {
+	if entry.AssumeRoleARN == "" {
+		return nil, fmt.Errorf("assume_role_arn must be specified for cross-account role management")
+	}
+
+	if entry.AssumeRoleSessionName == "" {
+		return nil, fmt.Errorf("assume_role_session_name must be specified for cross-account role management")
+	}
+
+	assumeRoleInput := &sts.AssumeRoleInput{
+		RoleArn:         aws.String(entry.AssumeRoleARN),
+		RoleSessionName: aws.String(entry.AssumeRoleSessionName),
+	}
+
+	// Add External ID if specified
+	if entry.ExternalID != "" {
+		assumeRoleInput.ExternalId = aws.String(entry.ExternalID)
+	}
+
+	stsClient, err := b.nonCachedClientSTS(ctx, s, b.Logger())
+	if stsClient == nil {
+		return nil, fmt.Errorf("STS client is nil: %w", err)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to create STS client: %w", err)
+	}
+	region := stsClient.Client.Config.Region // extract region from STS client config
+
+	// Assume the role
+	output, err := stsClient.AssumeRoleWithContext(ctx, assumeRoleInput)
+	if err != nil {
+		return nil, fmt.Errorf("failed to assume role %s: %w", entry.AssumeRoleARN, err)
+	}
+	b.Logger().Debug("Successfully assumed role", "role", entry.AssumeRoleARN, "access_key", *output.Credentials.AccessKeyId)
+
+	if output.Credentials == nil {
+		return nil, fmt.Errorf("STS response missing credentials for role %s", entry.AssumeRoleARN)
+	}
+
+	// Create new AWS credentials
+	creds := credentials.NewStaticCredentials(
+		*output.Credentials.AccessKeyId,
+		*output.Credentials.SecretAccessKey,
+		*output.Credentials.SessionToken,
+	)
+	config := &aws.Config{
+		Credentials: creds,
+		Region:      region,
+	}
+
+	return config, nil
 }
 
 // PluginIdentityTokenFetcher fetches plugin identity tokens from Vault. It is provided

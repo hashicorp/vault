@@ -131,8 +131,9 @@ func (b *backend) clearClients() {
 }
 
 // clientIAM returns the configured IAM client. If nil, it constructs a new one
-// and returns it, setting it the internal variable
-func (b *backend) clientIAM(ctx context.Context, s logical.Storage) (iamiface.IAMAPI, error) {
+// and returns it, setting it the internal variable.
+// entry is only needed when configuring the client to use for role assumption.
+func (b *backend) clientIAM(ctx context.Context, s logical.Storage, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
 	b.clientMutex.RLock()
 	if b.iamClient != nil {
 		b.clientMutex.RUnlock()
@@ -150,10 +151,11 @@ func (b *backend) clientIAM(ctx context.Context, s logical.Storage) (iamiface.IA
 		return b.iamClient, nil
 	}
 
-	iamClient, err := b.nonCachedClientIAM(ctx, s, b.Logger())
+	iamClient, err := b.nonCachedClientIAM(ctx, s, b.Logger(), entry)
 	if err != nil {
 		return nil, err
 	}
+
 	b.iamClient = iamClient
 
 	return b.iamClient, nil
