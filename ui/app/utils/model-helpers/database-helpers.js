@@ -179,6 +179,7 @@ export const AVAILABLE_PLUGIN_TYPES = [
       { attr: 'username_template', group: 'pluginConfig' },
       { attr: 'disable_escaping', group: 'pluginConfig' },
       { attr: 'root_rotation_statements', group: 'statements' },
+      { attr: 'skip_static_role_import_rotation', group: 'pluginConfig', isEnterprise: true },
       { attr: 'self_managed', group: 'pluginConfig', isEnterprise: true },
       { attr: 'private_key', group: 'pluginConfig', subgroup: 'TLS options' },
       { attr: 'tls_ca', group: 'pluginConfig', subgroup: 'TLS options' },
