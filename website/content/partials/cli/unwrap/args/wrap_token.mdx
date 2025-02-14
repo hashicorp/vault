@@ -1,0 +1,12 @@
+<a id="unwrap-arg-wrap_token" />
+
+**`wrap_token (string : "<client_authN_token>")`**
+
+Vault token used to wrap data. By default, Vault uses the client authentication
+token.
+
+**Do not set `wrap_token` if the current client token is also the wrap token**.
+Vault revokes wrap tokens duplicated in the same call. Revoking wrap tokens
+leaves the wrapped data inaccessible.
+
+**Example**: `"3de9ece1-b347-e143-29b0-dc2dc31caafd"`

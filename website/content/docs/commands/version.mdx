@@ -1,21 +1,80 @@
 ---
 layout: docs
-page_title: version - Command
-description: The "version" command prints the version of Vault.
+page_title: "version - Vault CLI"
+description: >-
+  Print version information for the current Vault CLI.
 ---
 
-# version
+# `version`
 
-The `version` command prints the Vault version:
+Print version information for the **local CLI**. For version information related to
+the Vault instance, use
+[`vault version-history`](/vault/docs/commands/version-history).
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault [version | -v | --version]
+
+$ vault version [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`vault version` prints version details for the local Vault CLI.
+
+- Version number
+- Github commit ID for the associated build
+- Timestamp for the associated build
+
+The output syntax is:
+
+```bash
+Vault <version> (<build_commit_ID), built <build_timestamp>
+```
+
+Vault also aliases the `version` command with CLI-level flags: `-v` and
+`--version`
+
+
+<Tip title="Related API endpoints">
+
+  None.
+
+</Tip>
+
+## Command arguments
+
+None.
+
+## Command options
+
+None.
+
+## Command flags
+
+None.
+
+## Standard flags
+
+None.
+
+## Examples
+
+Print CLI version information:
 
 ```shell-session
 $ vault version
-Vault v1.2.3
+
+Vault v1.17.5 (4d0c53e84094b8017d32b6e5b7f8142035c8837f), built 2024-08-30T15:54:57Z
 ```
 
-It can also be printed by adding the flags `--version` or `-v` to the `vault` command:
+Print CLI version information with the `--version` flag alias:
 
 ```shell-session
-$ vault -v
-Vault v1.2.3, built 2022-05-03T08:34:11Z
+$ vault --version
+
+Vault v1.17.5 (4d0c53e84094b8017d32b6e5b7f8142035c8837f), built 2024-08-30T15:54:57Z
 ```
