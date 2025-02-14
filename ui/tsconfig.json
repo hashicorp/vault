@@ -90,5 +90,7 @@
     "lib/sync/**/*",
     "mirage/**/*"
   ],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules"],
+  "module": "ESNext",
+  "moduleResolution": "Bundler"
 }

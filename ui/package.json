@@ -163,6 +163,7 @@
     "loader.js": "^4.7.0",
     "miragejs": "^0.1.48",
     "normalize.css": "4.1.1",
+    "openapi-typescript": "^7.6.1",
     "pkijs": "^2.2.2",
     "prettier": "3.0.3",
     "prettier-eslint-cli": "^7.1.0",
