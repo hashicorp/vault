@@ -100,7 +100,7 @@ func TestStaticRolesValidation(t *testing.T) {
 				t.Fatal(err)
 			}
 			// Used to override the real IAM client creation to return the mocked client
-			b.nonCachedClientIAMTest = func(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
+			b.nonCachedClientIAMFunc = func(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
 				return miam, nil
 			}
 			if err := b.Setup(bgCTX, config); err != nil {
@@ -247,7 +247,7 @@ func TestStaticRolesWrite(t *testing.T) {
 
 			b := Backend(config)
 			// Used to override the real IAM client creation to return the mocked client
-			b.nonCachedClientIAMTest = func(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
+			b.nonCachedClientIAMFunc = func(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
 				return miam, nil
 			}
 			if err := b.Setup(bgCTX, config); err != nil {
@@ -463,7 +463,7 @@ func TestStaticRoleDelete(t *testing.T) {
 
 			b := Backend(config)
 			// Used to override the real IAM client creation to return the mocked client
-			b.nonCachedClientIAMTest = func(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
+			b.nonCachedClientIAMFunc = func(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
 				return miam, nil
 			}
 

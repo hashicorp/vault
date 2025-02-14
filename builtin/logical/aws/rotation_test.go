@@ -149,7 +149,7 @@ func TestRotation(t *testing.T) {
 				}
 
 				// Used to override the IAM client creation to return the mocked client
-				b.nonCachedClientIAMTest = func(ctx context.Context, storage logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
+				b.nonCachedClientIAMFunc = func(ctx context.Context, storage logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
 					if entry.Username == cred.config.Username && entry.ID == cred.config.ID {
 						return miam, nil
 					}
@@ -202,7 +202,7 @@ func TestRotation(t *testing.T) {
 			}
 
 			// Set the IAM mock client to be used in the rotation
-			b.nonCachedClientIAMTest = func(ctx context.Context, storage logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
+			b.nonCachedClientIAMFunc = func(ctx context.Context, storage logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
 				return miam, nil
 			}
 
@@ -353,7 +353,7 @@ func TestCreateCredential(t *testing.T) {
 
 			b := Backend(config)
 
-			b.nonCachedClientIAMTest = func(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
+			b.nonCachedClientIAMFunc = func(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
 				return fiam, nil
 			}
 
@@ -419,7 +419,7 @@ func TestRequeueOnError(t *testing.T) {
 	}
 
 	// Used to override the IAM real client creation to return the mocked client
-	b.nonCachedClientIAMTest = func(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
+	b.nonCachedClientIAMFunc = func(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
 		return miam, nil
 	}
 
@@ -446,7 +446,7 @@ func TestRequeueOnError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("couldn't initialize the mock iam: %s", err)
 	}
-	b.nonCachedClientIAMTest = func(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
+	b.nonCachedClientIAMFunc = func(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
 		return miam, nil
 	}
 
@@ -523,7 +523,7 @@ func Test_RotationQueueInitialized(t *testing.T) {
 				b.minAllowableRotationPeriod = 1 * time.Second
 
 				// Used to override the IAM real client creation to return the mocked client
-				b.nonCachedClientIAMTest = func(ctx context.Context, storage logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
+				b.nonCachedClientIAMFunc = func(ctx context.Context, storage logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
 					return mockClient, nil
 				}
 

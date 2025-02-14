@@ -90,7 +90,7 @@ type backend struct {
 
 	// Function pointer used to override the IAM client creation for mocked testing
 	// If set, this function will be called instead of creating real IAM clients
-	nonCachedClientIAMTest func(context.Context, logical.Storage, hclog.Logger, *staticRoleEntry) (iamiface.IAMAPI, error)
+	nonCachedClientIAMFunc func(context.Context, logical.Storage, hclog.Logger, *staticRoleEntry) (iamiface.IAMAPI, error)
 
 	// Mutex to protect access to reading and writing policies
 	roleMutex sync.RWMutex
@@ -257,11 +257,11 @@ func (b *backend) initialize(ctx context.Context, request *logical.Initializatio
 }
 
 // getNonCachedIAMClient returns an IAM client. In a test env, if a mocked client creation
-// function is set (nonCachedClientIAMTest), it will be used instead of the default client creation function.
+// function is set (nonCachedClientIAMFunc), it will be used instead of the default client creation function.
 // This allows us to mock AWS clients in tests.
 func (b *backend) getNonCachedIAMClient(ctx context.Context, storage logical.Storage, cfg staticRoleEntry) (iamiface.IAMAPI, error) {
-	if b.nonCachedClientIAMTest != nil {
-		return b.nonCachedClientIAMTest(ctx, storage, b.Logger(), &cfg)
+	if b.nonCachedClientIAMFunc != nil {
+		return b.nonCachedClientIAMFunc(ctx, storage, b.Logger(), &cfg)
 	}
 	return b.nonCachedClientIAM(ctx, storage, b.Logger(), &cfg)
 }
