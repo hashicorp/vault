@@ -149,14 +149,15 @@ export default class MountBackendForm extends Component<Args> {
       const data = mountModel.serialize();
 
       if (this.args.mountType === 'secret') {
-        const payload = { path, mountsEnableSecretsEngineRequest: data };
-        yield this.api.sys.mountsEnableSecretsEngine(payload);
+        // leaving secrets as is for now using Ember Data
+        yield mountModel.save();
       } else {
+        // testing api service and generated client on auth mounts
         const payload = { path, authEnableMethodRequest: data };
         yield this.api.sys.authEnableMethod(payload);
       }
     } catch (error) {
-      const err: ApiError = yield (error as ErrorContext).response?.json();
+      const err: ApiError = yield (error as ErrorContext).response?.json() || error;
 
       if (err.httpStatus === 403) {
         this.flashMessages.danger(
