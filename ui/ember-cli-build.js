@@ -39,6 +39,9 @@ const appConfig = {
     enableTypeScriptTransform: true,
     throwUnlessParallelizable: true,
   },
+  'ember-simple-auth': {
+    useSessionSetupMethod: true,
+  },
   hinting: isTest,
   tests: isTest,
   sourcemaps: {
