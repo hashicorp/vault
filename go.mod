@@ -141,7 +141,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-cf v0.20.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.20.0
 	github.com/hashicorp/vault-plugin-auth-jwt v0.23.0
-	github.com/hashicorp/vault-plugin-auth-kerberos v0.13.0
+	github.com/hashicorp/vault-plugin-auth-kerberos v0.14.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.21.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.18.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.13.0
@@ -151,7 +151,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.6.0
 	github.com/hashicorp/vault-plugin-database-snowflake v0.13.0
 	github.com/hashicorp/vault-plugin-mock v0.16.1
-	github.com/hashicorp/vault-plugin-secrets-ad v0.19.0
+	github.com/hashicorp/vault-plugin-secrets-ad v0.20.1
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.19.0
 	github.com/hashicorp/vault-plugin-secrets-azure v0.21.0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.21.0
