@@ -1801,7 +1801,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ember/test-waiters@npm:^2.4.3 || ^3.0.0, @ember/test-waiters@npm:^3.0.2, @ember/test-waiters@npm:^3.1.0":
+"@ember/test-waiters@npm:^2.4.3 || ^3.0.0, @ember/test-waiters@npm:^3, @ember/test-waiters@npm:^3.0.2, @ember/test-waiters@npm:^3.1.0":
   version: 3.1.0
   resolution: "@ember/test-waiters@npm:3.1.0"
   dependencies:
@@ -1813,7 +1813,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@embroider/addon-shim@npm:^1.0.0, @embroider/addon-shim@npm:^1.2.0, @embroider/addon-shim@npm:^1.6.0, @embroider/addon-shim@npm:^1.8.0, @embroider/addon-shim@npm:^1.8.3, @embroider/addon-shim@npm:^1.8.6, @embroider/addon-shim@npm:^1.8.7, @embroider/addon-shim@npm:^1.8.9":
+"@embroider/addon-shim@npm:^1.0.0, @embroider/addon-shim@npm:^1.2.0, @embroider/addon-shim@npm:^1.6.0, @embroider/addon-shim@npm:^1.7.1, @embroider/addon-shim@npm:^1.8.0, @embroider/addon-shim@npm:^1.8.3, @embroider/addon-shim@npm:^1.8.6, @embroider/addon-shim@npm:^1.8.7, @embroider/addon-shim@npm:^1.8.9":
   version: 1.9.0
   resolution: "@embroider/addon-shim@npm:1.9.0"
   dependencies:
@@ -8102,6 +8102,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"ember-cookies@npm:^1.3.0":
+  version: 1.3.0
+  resolution: "ember-cookies@npm:1.3.0"
+  dependencies:
+    "@embroider/addon-shim": ^1.7.1
+  peerDependencies:
+    ember-source: ">=4.0"
+  checksum: 571e5eae28255b2312f2d3f92d5e6c3bce7d7c4b3d8f4a06a7ef82a4e043545458022fe6dd3d56a8f22e022595857cd8bb3f021161cf6d1413fc9ca4a54093f5
+  languageName: node
+  linkType: hard
+
 "ember-data@npm:~5.3.2":
   version: 5.3.9
   resolution: "ember-data@npm:5.3.9"
@@ -8525,6 +8536,26 @@ __metadata:
     glob: ^7.1.6
     hash-for-dep: ^1.5.1
   checksum: 17e2f2a03cdf0ae9c5f4b0bd25a1b631849392b31e7bc4d376253511d1d6bc7338253fb36a4d7323ceb6b0eb319399a7e964a50ad9df381e64c4ac0d5b07a0b6
+  languageName: node
+  linkType: hard
+
+"ember-simple-auth@npm:^7.1.3":
+  version: 7.1.3
+  resolution: "ember-simple-auth@npm:7.1.3"
+  dependencies:
+    "@ember/test-waiters": ^3
+    "@embroider/addon-shim": ^1.0.0
+    "@embroider/macros": ^1.0.0
+    ember-cli-is-package-missing: ^1.0.0
+    ember-cookies: ^1.3.0
+    silent-error: ^1.0.0
+  peerDependencies:
+    "@ember/test-helpers": ">= 3 || > 2.7"
+    ember-source: ">=4.0"
+  peerDependenciesMeta:
+    "@ember/test-helpers":
+      optional: true
+  checksum: f88223064468020f3cf21a2cff2b0ee820284606b63ceeb766e7e9db6e80cfb856c80f3175ac9e622193c0d5ac278576c8c2d877c10347e6f97d034985a4421e
   languageName: node
   linkType: hard
 
@@ -18233,6 +18264,7 @@ __metadata:
     ember-resolver: ^11.0.1
     ember-responsive: 5.0.0
     ember-service-worker: "meirish/ember-service-worker#configurable-scope"
+    ember-simple-auth: ^7.1.3
     ember-sinon-qunit: ^7.4.0
     ember-source: ~5.8.0
     ember-style-modifier: ^4.1.0

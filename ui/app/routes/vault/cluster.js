@@ -29,6 +29,7 @@ export const getManagedNamespace = (nsParam, root) => {
 
 export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   auth: service(),
+  session: service(),
   currentCluster: service(),
   customMessages: service(),
   flagsService: service('flags'),
@@ -54,7 +55,9 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     return cluster?.id ?? null;
   },
 
-  async beforeModel() {
+  async beforeModel(transition) {
+    this.session.requireAuthentication(transition, 'vault.cluster.auth');
+
     const params = this.paramsFor(this.routeName);
     let namespace = params.namespaceQueryParam;
     const currentTokenName = this.auth.currentTokenName;
