@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -155,39 +154,9 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 
 	// other params are optional if we're not Creating
 
-	// Cross-account fields validation
-	rawAssumeRoleARN, hasAssumeRoleARN := data.GetOk(paramAssumeRoleARN)
-	rawRoleSessionName, hasRoleSessionName := data.GetOk(paramRoleSessionName)
-
-	// If assume role ARN is provided, role session name must also be provided, and vice versa
-	if hasAssumeRoleARN != hasRoleSessionName {
-		return nil, fmt.Errorf("both assume_role_arn and assume_role_session_name must be provided together")
-	}
-
-	if hasAssumeRoleARN {
-		assumeRoleARN := rawAssumeRoleARN.(string)
-		roleSessionName := rawRoleSessionName.(string)
-
-		if assumeRoleARN == "" && roleSessionName == "" {
-			return nil, fmt.Errorf("assume_role_arn and assume_role_session_name must not be empty")
-		}
-
-		// Validate assume_role_arn format
-		if !strings.HasPrefix(assumeRoleARN, "arn:aws:iam::") {
-			return nil, fmt.Errorf("invalid assume_role_arn format, must be in the format 'arn:aws:iam::<account-id>:role/<role-name>'")
-		}
-
-		config.AssumeRoleARN = assumeRoleARN
-		config.AssumeRoleSessionName = roleSessionName
-
-		if rawExternalID, ok := data.GetOk(paramExternalID); ok {
-			config.ExternalID = rawExternalID.(string)
-		}
-	} else {
-		// Clear assume role fields if assume role is not used
-		config.AssumeRoleARN = ""
-		config.AssumeRoleSessionName = ""
-		config.ExternalID = ""
+	err = validateAssumeRoleFields(data, &config)
+	if err != nil {
+		return nil, err
 	}
 
 	if rawUsername, ok := data.GetOk(paramUsername); ok {

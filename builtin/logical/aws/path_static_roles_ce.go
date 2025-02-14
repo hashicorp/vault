@@ -5,9 +5,17 @@
 
 package aws
 
-import "github.com/hashicorp/vault/sdk/framework"
+import (
+	"fmt"
+
+	"github.com/hashicorp/vault/sdk/framework"
+)
 
 // AddStaticAssumeRoleFieldsEnt is a no-op for community edition
 func AddStaticAssumeRoleFieldsEnt(fields map[string]*framework.FieldSchema) {
 	// no-op
+}
+
+func validateAssumeRoleFields(data *framework.FieldData, config *staticRoleEntry) error {
+	return fmt.Errorf("assumeRoleStatic is not supported in this version of Vault")
 }
