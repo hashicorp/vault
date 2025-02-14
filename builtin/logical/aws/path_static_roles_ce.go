@@ -17,5 +17,13 @@ func AddStaticAssumeRoleFieldsEnt(fields map[string]*framework.FieldSchema) {
 }
 
 func validateAssumeRoleFields(data *framework.FieldData, config *staticRoleEntry) error {
-	return fmt.Errorf("assumeRoleStatic is not supported in this version of Vault")
+	_, hasAssumeRoleARN := data.GetOk(paramAssumeRoleARN)
+	_, hasRoleSessionName := data.GetOk(paramRoleSessionName)
+	_, hasExternalID := data.GetOk(paramExternalID)
+
+	if hasAssumeRoleARN || hasRoleSessionName || hasExternalID {
+		return fmt.Errorf("cross-account static roles are only supported in Vault Enterprise")
+	}
+
+	return nil
 }
