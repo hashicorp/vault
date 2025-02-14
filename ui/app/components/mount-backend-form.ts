@@ -14,9 +14,10 @@ import { isAddonEngine, allEngines } from 'vault/helpers/mountable-secret-engine
 
 import type FlashMessageService from 'vault/services/flash-messages';
 import type Store from '@ember-data/store';
-
 import type { AuthEnableModel } from 'vault/routes/vault/cluster/settings/auth/enable';
 import type { MountSecretBackendModel } from 'vault/routes/vault/cluster/settings/mount-secret-backend';
+import type ApiService from 'vault/services/api';
+import type { ApiError } from 'vault/services/api';
 
 /**
  * @module MountBackendForm
@@ -41,12 +42,13 @@ interface Args {
 export default class MountBackendForm extends Component<Args> {
   @service declare readonly store: Store;
   @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly api: ApiService;
 
   // validation related properties
   @tracked modelValidations = null;
   @tracked invalidFormAlert = null;
 
-  @tracked errorMessage = '';
+  @tracked errorMessage: string | string[] = '';
 
   willDestroy() {
     // components are torn down after store is unloaded and will cause an error if attempt to unload record
@@ -143,8 +145,24 @@ export default class MountBackendForm extends Component<Args> {
       changedAttrKeys.includes('maxVersions');
 
     try {
-      yield mountModel.save();
-    } catch (err) {
+      if (this.args.mountType === 'secret') {
+        yield mountModel.save();
+      } else {
+        const body = mountModel.serialize();
+        // the typical code flow for this will not need to be wrapped in a try/catch
+        // preserving for now to allow secrets to still use Ember Data
+        const { error } = yield this.api.post('/sys/auth/{path}', {
+          params: { path: { path } },
+          body,
+        });
+
+        if (error) {
+          throw error;
+        }
+      }
+    } catch (error) {
+      const err = error as ApiError;
+
       if (err.httpStatus === 403) {
         this.flashMessages.danger(
           'You do not have access to the sys/mounts endpoint. The secret engine was not mounted.'
