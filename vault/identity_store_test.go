@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -1668,11 +1669,20 @@ func identityStoreLoadingIsDeterministic(t *testing.T, flags *determinismTestFla
 		err := c.identityStore.resetDB()
 		require.NoError(t, err)
 
+		logger.Info(" ==> BEGIN LOAD ARTIFACTS", "i", i)
+
+		logBuf, stopCapture := startLogCapture(t, logger)
+
 		err = c.identityStore.loadArtifacts(ctx, true)
+
+		stopCapture()
+
 		if i > 0 {
 			require.Equal(t, prevErr, err)
 		}
 		prevErr = err
+
+		logger.Info(" ==> END LOAD ARTIFACTS ", "i", i)
 
 		// Identity store should be loaded now. Check it's contents.
 		loadedNames := []string{}
@@ -1727,6 +1737,17 @@ func identityStoreLoadingIsDeterministic(t *testing.T, flags *determinismTestFla
 		}
 
 		if i > 0 {
+			// We should never need to merge due to duplicate aliases after the first
+			// load since that should have merged everything and persisted a clean
+			// state. This is likely to mean the next case will fail anyway but it
+			// helps diagnose a specific way in which this test can fail to make
+			// debugging easier.
+			for _, log := range logBuf.Lines() {
+				require.NotContains(t, log, "these entities are being merged",
+					"Merging entities on attempt %d. "+
+						"Loads after the first one should not need to merge aliases.", i)
+			}
+
 			// Should be in the same order if we are deterministic since MemDB has strong ordering.
 			require.Equal(t, prevLoadedNames, loadedNames, "different result on attempt %d", i)
 		}
@@ -1776,23 +1797,12 @@ func TestIdentityStoreLoadingDuplicateReporting(t *testing.T) {
 	// Storage is now primed for the test.
 
 	// Setup a logger we can use to capture unseal logs
-	var unsealLogs []string
-	unsealLogger := &logFn{
-		fn: func(msg string, args []interface{}) {
-			pairs := make([]string, 0, len(args)/2)
-			for pair := range slices.Chunk(args, 2) {
-				// Yes this will panic if we didn't log an even number of args but thats
-				// OK because that's a bug!
-				pairs = append(pairs, fmt.Sprintf("%s=%s", pair[0], pair[1]))
-			}
-			unsealLogs = append(unsealLogs, fmt.Sprintf("%s: %s", msg, strings.Join(pairs, " ")))
-		},
-	}
+	logBuf, stopCapture := startLogCapture(t, logger)
 
-	logger.RegisterSink(unsealLogger)
 	err = c.identityStore.loadArtifacts(ctx, true)
+	stopCapture()
+
 	require.NoError(t, err)
-	logger.DeregisterSink(unsealLogger)
 
 	// Identity store should be loaded now. Check it's contents.
 
@@ -1802,7 +1812,7 @@ func TestIdentityStoreLoadingDuplicateReporting(t *testing.T) {
 	// broken behavior!
 	numDupes := make(map[string]int)
 	duplicateCountRe := regexp.MustCompile(`(\d+) (different-case( local)? entity alias|entity|group) duplicates found`)
-	for _, log := range unsealLogs {
+	for _, log := range logBuf.Lines() {
 		if matches := duplicateCountRe.FindStringSubmatch(log); len(matches) >= 3 {
 			num, _ := strconv.Atoi(matches[1])
 			numDupes[matches[2]] = num
@@ -1816,11 +1826,47 @@ func TestIdentityStoreLoadingDuplicateReporting(t *testing.T) {
 	require.Equal(t, wantGroups, numDupes["group"])
 }
 
-type logFn struct {
-	fn func(msg string, args []interface{})
+type concurrentLogBuffer struct {
+	m sync.Mutex
+	b []string
 }
 
 // Accept implements hclog.SinkAdapter
-func (f *logFn) Accept(name string, level hclog.Level, msg string, args ...interface{}) {
-	f.fn(msg, args)
+func (c *concurrentLogBuffer) Accept(name string, level hclog.Level, msg string, args ...interface{}) {
+	pairs := make([]string, 0, len(args)/2)
+	for pair := range slices.Chunk(args, 2) {
+		// Yes this will panic if we didn't log an even number of args but thats
+		// OK because that's a bug!
+		pairs = append(pairs, fmt.Sprintf("%s=%s", pair[0], pair[1]))
+	}
+	line := fmt.Sprintf("%s: %s", msg, strings.Join(pairs, " "))
+
+	c.m.Lock()
+	defer c.m.Unlock()
+
+	c.b = append(c.b, line)
+}
+
+// Lines returns all the lines logged since starting the capture.
+func (c *concurrentLogBuffer) Lines() []string {
+	c.m.Lock()
+	defer c.m.Unlock()
+
+	return c.b
+}
+
+// startLogCaptue attaches a logFn to the logger and returns a channel that will
+// be sent each line of log output in a basec flat text format. It returns a
+// cancel/stop func that should be called when capture should stop or at the end
+// of processing.
+func startLogCapture(t *testing.T, logger *corehelpers.TestLogger) (*concurrentLogBuffer, func()) {
+	t.Helper()
+	b := &concurrentLogBuffer{
+		b: make([]string, 0, 1024),
+	}
+	logger.RegisterSink(b)
+	stop := func() {
+		logger.DeregisterSink(b)
+	}
+	return b, stop
 }

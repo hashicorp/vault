@@ -756,6 +756,7 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 
 	aliasFactors := make([]string, len(entity.Aliases))
 
+	hasMerged := false
 	for index, alias := range entity.Aliases {
 		// Verify that alias is not associated to a different one already
 		aliasByFactors, err := i.MemDBAliasByFactors(alias.MountAccessor, alias.Name, false, false)
@@ -823,8 +824,25 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 				return intErr
 			}
 
-			// The entity and aliases will be loaded into memdb and persisted
-			// as a result of the merge, so we are done here
+			// // The entity and aliases will be loaded into memdb and persisted
+			// // as a result of the merge, so we are done here
+			// return nil
+
+			// The merge will have inserted the merged entity and it's aliases into
+			// MemDB, so we don't need to continue with the rest of the method after
+			// this loop. In fact we used to just return here, but that misses a
+			// subtle edge-case: if there were _multiple_ duplicates aliases pointing
+			// to multiple other entities then we have only merged one of them on this
+			// pass and still have duplicates that will merge in future loads. We try
+			// to do a single pass rather than introduce non-determinism into the
+			// result by needing arbitrary number of unseals before we get to a steady
+			// duplicate-free state.
+			hasMerged = true
+			continue
+		}
+
+		if hasMerged {
+			// We performed at least one merge in the loop above so we are now done
 			return nil
 		}
 
