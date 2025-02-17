@@ -1800,6 +1800,19 @@ func TestIdentityStoreLoadingDuplicateReporting(t *testing.T) {
 	require.Equal(t, wantGroups, numDupes["group"])
 }
 
+// logFn is a type we used to use here before concurrentLogBuffer was added.
+// It's used in other tests in Enterprise so we need to keep it around to avoid
+// breaking the build during merge
+type logFn struct {
+	fn func(msg string, args []interface{})
+}
+
+func (f *logFn) Accept(name string, level hclog.Level, msg string, args ...interface{}) {
+	f.fn(msg, args)
+}
+
+// concrrentLogBuffer is a simple hclog sink that captures log output in an
+// slice of lines in a goroutine-safe way. Use `startLogCapture` to use it.
 type concurrentLogBuffer struct {
 	m sync.Mutex
 	b []string
