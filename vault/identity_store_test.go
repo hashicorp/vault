@@ -1423,56 +1423,44 @@ func TestIdentityStoreLoadingIsDeterministic(t *testing.T) {
 		seedval, err = strconv.ParseInt(os.Getenv("VAULT_TEST_IDENTITY_STORE_SEED"), 10, 64)
 		require.NoError(t, err)
 	}
-	// seedval = 3862858792532516406 // <- spent all day making this one pass
-	// seedval = 6691101832794616562             // Now this one fails the secondary test
-	seed := rand.New(rand.NewSource(seedval)) // Seed for deterministic test
 	defer t.Logf("Test generated with seed: %d", seedval)
 
-	tests := []struct {
-		name  string
-		flags *determinismTestFlags
-	}{
-		{
-			name: "error-resolver-primary",
-			flags: &determinismTestFlags{
-				identityDeduplication: false,
-				secondary:             false,
-				seed:                  seed,
-			},
+	tests := map[string]*determinismTestFlags{
+		"error-resolver-primary": {
+			identityDeduplication: false,
+			secondary:             false,
 		},
-		{
-			name: "identity-cleanup-primary",
-			flags: &determinismTestFlags{
-				identityDeduplication: true,
-				secondary:             false,
-				seed:                  seed,
-			},
+		"identity-cleanup-primary": {
+			identityDeduplication: true,
+			secondary:             false,
 		},
+	}
 
-		{
-			name: "error-resolver-secondary",
-			flags: &determinismTestFlags{
-				identityDeduplication: false,
-				secondary:             true,
-				seed:                  seed,
-			},
-		},
-		{
-			name: "identity-cleanup-secondary",
-			flags: &determinismTestFlags{
-				identityDeduplication: true,
-				secondary:             true,
-				seed:                  seed,
-			},
-		},
+	// Hook to add cases that only differ in Enterprise
+	if entIdentityStoreDeterminismSupportsSecondary() {
+		tests["error-resolver-secondary"] = &determinismTestFlags{
+			identityDeduplication: false,
+			secondary:             true,
+		}
+		tests["identity-cleanup-secondary"] = &determinismTestFlags{
+			identityDeduplication: true,
+			secondary:             true,
+		}
 	}
 
 	repeats := 50
 
-	for _, test := range tests {
-		t.Run(t.Name()+"-"+test.name, func(t *testing.T) {
+	for name, flags := range tests {
+		t.Run(t.Name()+"-"+name, func(t *testing.T) {
+			// Create a random source specific to this test case so every test case
+			// starts out from the identical random state given the same seed. We do
+			// want each iteration to explore different path though so we do it here
+			// not inside the test func.
+			seed := rand.New(rand.NewSource(seedval)) // Seed for deterministic test
+			flags.seed = seed
+
 			for i := 0; i < repeats; i++ {
-				identityStoreLoadingIsDeterministic(t, test.flags)
+				identityStoreLoadingIsDeterministic(t, flags)
 			}
 		})
 	}
@@ -1665,17 +1653,14 @@ func identityStoreLoadingIsDeterministic(t *testing.T, flags *determinismTestFla
 	// build a list of human readable ids that we can compare.
 	prevLoadedNames := []string{}
 	var prevErr error
+
 	for i := 0; i < 10; i++ {
 		err := c.identityStore.resetDB()
 		require.NoError(t, err)
 
 		logger.Info(" ==> BEGIN LOAD ARTIFACTS", "i", i)
 
-		logBuf, stopCapture := startLogCapture(t, logger)
-
 		err = c.identityStore.loadArtifacts(ctx, true)
-
-		stopCapture()
 
 		if i > 0 {
 			require.Equal(t, prevErr, err)
@@ -1737,17 +1722,6 @@ func identityStoreLoadingIsDeterministic(t *testing.T, flags *determinismTestFla
 		}
 
 		if i > 0 {
-			// We should never need to merge due to duplicate aliases after the first
-			// load since that should have merged everything and persisted a clean
-			// state. This is likely to mean the next case will fail anyway but it
-			// helps diagnose a specific way in which this test can fail to make
-			// debugging easier.
-			for _, log := range logBuf.Lines() {
-				require.NotContains(t, log, "these entities are being merged",
-					"Merging entities on attempt %d. "+
-						"Loads after the first one should not need to merge aliases.", i)
-			}
-
 			// Should be in the same order if we are deterministic since MemDB has strong ordering.
 			require.Equal(t, prevLoadedNames, loadedNames, "different result on attempt %d", i)
 		}

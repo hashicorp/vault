@@ -879,7 +879,7 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 			return errors.New("to_entity_id should not be present in from_entity_ids"), nil, nil
 		}
 
-		fromEntity, err := i.MemDBEntityByID(fromEntityID, false)
+		fromEntity, err := i.MemDBEntityByIDInTxn(txn, fromEntityID, false)
 		if err != nil {
 			return nil, err, nil
 		}
@@ -999,7 +999,7 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 			return errors.New("to_entity_id should not be present in from_entity_ids"), nil, nil
 		}
 
-		fromEntity, err := i.MemDBEntityByID(fromEntityID, true)
+		fromEntity, err := i.MemDBEntityByIDInTxn(txn, fromEntityID, true)
 		if err != nil {
 			return nil, err, nil
 		}
@@ -1022,6 +1022,13 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		}
 
 		for _, fromAlias := range fromEntity.Aliases {
+			// We're going to modify this alias but it's still a pointer to the one in
+			// MemDB that could be being read by other goroutines even though we might
+			// be removing from MemDB really shortly...
+			fromAlias, err = fromAlias.Clone()
+			if err != nil {
+				return nil, err, nil
+			}
 			// If true, we need to handle conflicts (conflict = both aliases share the same mount accessor)
 			if toAliasIds, ok := toEntityAccessors[fromAlias.MountAccessor]; ok {
 				for _, toAliasId := range toAliasIds {
