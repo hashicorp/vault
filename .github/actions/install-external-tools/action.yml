@@ -23,7 +23,8 @@ runs:
     - uses: ./.github/actions/set-up-staticcheck
       # We assume that the Go toolchain will be managed by the caller workflow so we don't set one
       # up here.
-      # Protobuf tool versions should match what's in Vault's go.mod.
+      # All tool versions should match the versions in tools/tool.sh
+      # Protobuf tool versions should match what's in Vault's go.mod
     - run: ./.github/scripts/retry-command.sh go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.3
       shell: bash
     - run: ./.github/scripts/retry-command.sh go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1

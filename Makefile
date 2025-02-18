@@ -283,7 +283,7 @@ check-proto-delta: prep
 	@echo "==> Checking for a delta in proto generated Go files..."
 	@echo "==> Deleting all *.pg.go files..."
 	find . -type f -name '*.pb.go' -delete -print0
-	@$(MAKE) -f $(THIS_FILE) proto
+	@$(MAKE) -f $(THIS_FILE) $GOPATH/bin/proto
 	@if ! git diff --exit-code; then echo "Go protobuf bindings need to be regenerated. Run 'make proto' to fix them." && exit 1; fi
 
 .PHONY:check-sempgrep

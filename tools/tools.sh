@@ -36,6 +36,7 @@ install_external() {
   # If you update this please update check_external below as well as our external tools
   # install action .github/actions/install-external-tools/action.yml
   #
+  # All tool versions should match the versions in .github/actions/install-external-tools/action.yml
   # Protobuf tool versions should match what's in Vault's go.mod.
   tools=(
     honnef.co/go/tools/cmd/staticcheck@v0.6.0
