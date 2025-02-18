@@ -26,7 +26,7 @@ runs:
       # Protobuf tool versions should match what's in Vault's go.mod.
     - run: ./.github/scripts/retry-command.sh go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.3
       shell: bash
-    - run: ./.github/scripts/retry-command.sh go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.36.3
+    - run: ./.github/scripts/retry-command.sh go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
       shell: bash
     - run: ./.github/scripts/retry-command.sh go install github.com/favadi/protoc-go-inject-tag@v1.4.0
       shell: bash
