@@ -13,7 +13,7 @@ inputs:
   version:
     description: "The version to install (default: latest)"
     type: string
-    default: v1.28.0
+    default: "v1.28.0"
 
 outputs:
   destination:
