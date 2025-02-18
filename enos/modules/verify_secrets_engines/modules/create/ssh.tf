@@ -108,7 +108,7 @@ resource "enos_remote_exec" "ssh_configure_ca" {
   depends_on = [enos_remote_exec.secrets_enable_ssh]
   environment = {
     REQPATH           = "ssh/config/ca"
-    PAYLOAD           = jsonencode({ key_type = local.ca_key_type, default_user = local.ssh_test_user })
+    PAYLOAD           = jsonencode({ key_type = local.ca_key_type })
     VAULT_ADDR        = var.vault_addr
     VAULT_TOKEN       = var.vault_root_token
     VAULT_INSTALL_DIR = var.vault_install_dir
@@ -128,7 +128,7 @@ resource "enos_remote_exec" "ssh_create_role" {
   depends_on = [enos_remote_exec.ssh_configure_ca]
   environment = {
     REQPATH           = "ssh/roles/${local.ssh_role_name}"
-    PAYLOAD           = jsonencode({ key_type = local.role_key_type })
+    PAYLOAD           = jsonencode({ key_type = local.role_key_type, default_user = local.ssh_test_user })
     VAULT_ADDR        = var.vault_addr
     VAULT_TOKEN       = var.vault_root_token
     VAULT_INSTALL_DIR = var.vault_install_dir
