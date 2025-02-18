@@ -84,11 +84,9 @@
         />
       {{/if}}
       {{#unless this.showFileUpload}}
-        <div class="has-top-margin-xs">
-          <span class="is-size-9 has-text-grey has-bottom-margin-l">
-            You can use Alt+Tab (Option+Tab on MacOS) in the code editor to skip to the next field.
-          </span>
-        </div>
+        <span class="is-size-9 has-text-grey has-bottom-margin-l has-top-margin-xs" data-test-alt-tab-message>
+          You can use Alt+Tab (Option+Tab on MacOS) in the code editor to skip to the next field.
+        </span>
       {{/unless}}
     </div>
     {{#each @model.additionalAttrs as |attr|}}
