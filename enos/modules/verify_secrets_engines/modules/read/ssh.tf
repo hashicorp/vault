@@ -8,6 +8,7 @@ resource "enos_remote_exec" "ssh_verify_role" {
   environment = {
     ROLE_NAME         = var.create_state.ssh.role_name
     KEY_TYPE          = var.create_state.ssh.role_key_type
+    DEFAULT_USER      = var.create_state.ssh.test_user
     VAULT_ADDR        = var.vault_addr
     VAULT_TOKEN       = local.user_login_data.auth.client_token
     VAULT_INSTALL_DIR = var.vault_install_dir

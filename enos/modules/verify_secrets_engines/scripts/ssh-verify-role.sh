@@ -11,6 +11,7 @@ fail() {
 
 [[ -z "$ROLE_NAME" ]] && fail "ROLE_NAME env variable has not been set"
 [[ -z "$KEY_TYPE" ]] && fail "KEY_TYPE env variable has not been set"
+[[ -z "$DEFAULT_USER" ]] && fail "DEFAULT_USER env variable has not been set"
 [[ -z "$VAULT_ADDR" ]] && fail "VAULT_ADDR env variable has not been set"
 [[ -z "$VAULT_TOKEN" ]] && fail "VAULT_TOKEN env variable has not been set"
 [[ -z "$VAULT_INSTALL_DIR" ]] && fail "VAULT_INSTALL_DIR env variable has not been set"
@@ -25,8 +26,13 @@ fi
 
 # Extract actual key type
 key_type=$(echo "$output" | jq -r '.data.key_type')
+default_user=$(echo "$output" | jq -r '.data.default_user')
 
 # Verify
 if [[ "$key_type" != "$KEY_TYPE" ]]; then
   fail "Key type mismatch: expected $KEY_TYPE, got $key_type"
+fi
+
+if [[ "$default_user" != "$DEFAULT_USER" ]]; then
+  fail "Default user mismatch: expected $DEFAULT_USER, got $default_user"
 fi
