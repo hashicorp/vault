@@ -23,15 +23,16 @@ runs:
     - uses: ./.github/actions/set-up-staticcheck
       # We assume that the Go toolchain will be managed by the caller workflow so we don't set one
       # up here.
-    - run: ./.github/scripts/retry-command.sh go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+      # Protobuf tool versions should match what's in Vault's go.mod.
+    - run: ./.github/scripts/retry-command.sh go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.3
       shell: bash
-    - run: ./.github/scripts/retry-command.sh go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+    - run: ./.github/scripts/retry-command.sh go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.36.3
       shell: bash
-    - run: ./.github/scripts/retry-command.sh go install github.com/favadi/protoc-go-inject-tag@latest
+    - run: ./.github/scripts/retry-command.sh go install github.com/favadi/protoc-go-inject-tag@v1.4.0
       shell: bash
-    - run: ./.github/scripts/retry-command.sh go install golang.org/x/tools/cmd/goimports@latest
+    - run: ./.github/scripts/retry-command.sh go install golang.org/x/tools/cmd/goimports@v0.30.0
       shell: bash
-    - run: ./.github/scripts/retry-command.sh go install github.com/golangci/revgrep/cmd/revgrep@latest
+    - run: ./.github/scripts/retry-command.sh go install github.com/golangci/revgrep/cmd/revgrep@v0.8.0
       shell: bash
-    - run: ./.github/scripts/retry-command.sh go install github.com/loggerhead/enumer@latest
+    - run: ./.github/scripts/retry-command.sh go install github.com/loggerhead/enumer@v1.5.11
       shell: bash
