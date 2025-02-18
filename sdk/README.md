@@ -28,7 +28,7 @@ Emitting metrics to `armon/go-metrics` is officially deprecated. Usage of `armon
 **Migration**
 To migrate an application currently using the older `armon/go-metrics` to instead use `hashicorp/go-metrics` the following should be done.
 
-1. Upgrade libraries using `armon/go-metrics` to consume `hashicorp/go-metrics/compat` instead. This should involve only changing import statements. All repositories in the `hashicorp` namespace
+1. Upgrade libraries using `armon/go-metrics` to consume `hashicorp/go-metrics/compat` instead. This should involve only changing import statements. All repositories in the `hashicorp` namespace will be migrated by February of 2025.
 2. Update an applications library dependencies to those that have the compatibility layer configured.
 3. Update the application to use `hashicorp/go-metrics` for configuring metrics export instead of `armon/go-metrics`
    * Replace all application imports of `github.com/armon/go-metrics` with `github.com/hashicorp/go-metrics`
