@@ -34,5 +34,5 @@ runs:
       shell: bash
     - run: ./.github/scripts/retry-command.sh go install github.com/golangci/revgrep/cmd/revgrep@v0.8.0
       shell: bash
-    - run: ./.github/scripts/retry-command.sh go install github.com/loggerhead/enumer@v1.5.11
+    - run: ./.github/scripts/retry-command.sh go install github.com/loggerhead/enumer@v0.0.0-20240225233120-0aebd7ae8325
       shell: bash
