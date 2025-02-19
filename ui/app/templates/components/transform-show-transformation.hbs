@@ -10,7 +10,8 @@
         @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
         @value={{stringify (get this.model attr.name)}}
       />
-    {{else if (eq attr.type "array")}}
+      {{! allowed_roles are passed as an array. If the list exceeds 5, it will be truncated, and the user will be redirected to the roles list view. }}
+    {{else if (eq attr.name "allowed_roles")}}
       <InfoTableRow
         @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
         @value={{get this.model attr.name}}
@@ -25,7 +26,6 @@
       <InfoTableRow
         @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
         @value={{get this.model attr.name}}
-        @type={{attr.type}}
       />
     {{/if}}
   {{/each}}
