@@ -37,7 +37,8 @@ module('Integration | Component | tools/wrap', function (hooks) {
     await this.renderComponent();
 
     assert.dom('h1').hasText('Wrap Data', 'Title renders');
-    assert.dom('label').hasText('Data to wrap (json-formatted)');
+    assert.dom('[data-test-toggle-label="KV view"]').hasText('KV view');
+    assert.dom('[data-test-component="json-editor-title"]').hasText('Data to wrap (json-formatted)');
     assert.strictEqual(codemirror().getValue(' '), '{ }', 'json editor initializes with empty object');
     assert.dom(TTL.toggleByLabel('Wrap TTL')).isNotChecked('Wrap TTL defaults to unchecked');
     assert.dom(TS.submit).isEnabled();
@@ -104,6 +105,53 @@ module('Integration | Component | tools/wrap', function (hooks) {
     await click(TS.submit);
   });
 
+  test('it toggles between views and preserves input data', async function (assert) {
+    assert.expect(4);
+    await this.renderComponent();
+    await codemirror().setValue(this.wrapData);
+    assert.dom('[data-test-component="json-editor-title"]').hasText('Data to wrap (json-formatted)');
+    await click('[data-test-toggle-input="KV view"]');
+    assert.dom('[data-test-component="json-editor-title"]').doesNotExist();
+    await click('[data-test-toggle-input="KV view"]');
+    assert.dom('[data-test-component="json-editor-title"]').exists();
+    assert.strictEqual(
+      codemirror().getValue(' '),
+      `{   \"foo": \"bar" }`, // eslint-disable-line no-useless-escape
+      'json editor has original data'
+    );
+  });
+
+  test('it submits from kv view', async function (assert) {
+    assert.expect(6);
+
+    const flashSpy = sinon.spy(this.owner.lookup('service:flash-messages'), 'success');
+
+    this.server.post('sys/wrapping/wrap', (schema, { requestBody, requestHeaders }) => {
+      const payload = JSON.parse(requestBody);
+      assert.propEqual(payload, JSON.parse(this.wrapData), `payload contains data: ${requestBody}`);
+      assert.strictEqual(requestHeaders['X-Vault-Wrap-TTL'], '30m', 'request header has default wrap ttl');
+      return {
+        wrap_info: {
+          token: this.token,
+          accessor: '5yjKx6Om9NmBx1mjiN1aIrnm',
+          ttl: 1800,
+          creation_time: '2024-06-07T12:02:22.096254-07:00',
+          creation_path: 'sys/wrapping/wrap',
+        },
+      };
+    });
+
+    await this.renderComponent();
+    await codemirror().setValue(this.wrapData);
+    await click('[data-test-toggle-input="KV view"]');
+    await click(TS.submit);
+    await waitUntil(() => find(TS.toolsInput('wrapping-token')));
+    assert.true(flashSpy.calledWith('Wrap was successful.'), 'it renders success flash');
+    assert.dom(TS.toolsInput('wrapping-token')).hasText(this.token);
+    assert.dom('label').hasText('Wrapped token');
+    assert.dom('.CodeMirror').doesNotExist();
+  });
+
   test('it resets on done', async function (assert) {
     await this.renderComponent();
     await codemirror().setValue(this.wrapData);
@@ -126,7 +174,11 @@ module('Integration | Component | tools/wrap', function (hooks) {
 
     await waitUntil(() => find(TS.button('Back')));
     await click(TS.button('Back'));
-    assert.strictEqual(codemirror().getValue(' '), `{"foo": "bar"}`, 'json editor has original data');
+    assert.strictEqual(
+      codemirror().getValue(' '),
+      `{   \"foo": \"bar" }`, // eslint-disable-line no-useless-escape
+      'json editor has original data'
+    );
     assert.dom(TTL.toggleByLabel('Wrap TTL')).isNotChecked('Wrap TTL defaults to unchecked');
   });
 

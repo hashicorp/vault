@@ -7,6 +7,7 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
+import { stringify } from 'core/helpers/stringify';
 import errorMessage from 'vault/utils/error-message';
 
 /**
@@ -24,15 +25,31 @@ export default class ToolsWrap extends Component {
   @tracked buttonDisabled = false;
   @tracked token = '';
   @tracked wrapTTL = null;
-  @tracked wrapData = '{\n}';
+  @tracked wrapData;
   @tracked errorMessage = '';
+  @tracked showKvObject = false;
+  get jsonWrapStartValue() {
+    return '{\n}';
+  }
+
+  get startingValue() {
+    // must pass the third param called "space" in JSON.stringify to structure object with whitespace
+    // otherwise the following codemirror modifier check will pass `this._editor.getValue() !== namedArgs.content` and _setValue will be called.
+    // the method _setValue moves the cursor to the beginning of the text field.
+    // the effect is that the cursor jumps after the first key input.
+    return JSON.stringify({ '': '' }, null, 2);
+  }
+
+  get stringifiedWrapData() {
+    return this?.wrapData ? stringify([this.wrapData], {}) : this.jsonWrapStartValue;
+  }
 
   @action
   reset(clearData = true) {
     this.token = '';
     this.errorMessage = '';
     this.wrapTTL = null;
-    if (clearData) this.wrapData = '{\n}';
+    if (clearData) this.wrapData = '';
   }
 
   @action
@@ -46,13 +63,13 @@ export default class ToolsWrap extends Component {
     codemirror.performLint();
     const hasErrors = codemirror?.state.lint.marked?.length > 0;
     this.buttonDisabled = hasErrors;
-    if (!hasErrors) this.wrapData = val;
+    if (!hasErrors) this.wrapData = JSON.parse(val);
   }
 
   @action
   async handleSubmit(evt) {
     evt.preventDefault();
-    const data = JSON.parse(this.wrapData);
+    const data = this.wrapData;
     const wrapTTL = this.wrapTTL || null;
 
     try {
