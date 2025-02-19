@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -44,14 +45,47 @@ func (i *IdentityStore) loadArtifacts(ctx context.Context, isActive bool) error 
 		return nil
 	}
 
+	loadFuncEntities := func(context.Context) error {
+		reload, err := i.loadEntities(ctx, isActive, false)
+		if err != nil {
+			return fmt.Errorf("failed to load entities: %w", err)
+		}
+		if reload {
+			// The persistMerges flag is used to fix a non-determinism issue in duplicate entities with global alias merges.
+			// This does not solve the case for local alias merges.
+			// Previously, alias merges could inconsistently flip between nodes due to bucket invalidation
+			// and reprocessing on standbys, leading to divergence from the primary.
+			// This flag ensures deterministic merges across all nodes by preventing unintended reinsertions
+			// of previously merged entities during bucket diffs.
+			persistMerges := false
+			if !i.localNode.ReplicationState().HasState(
+				consts.ReplicationDRSecondary|
+					consts.ReplicationPerformanceSecondary,
+			) && isActive {
+				persistMerges = true
+			}
+
+			// Since we're reloading entities, we need to inform the ConflictResolver about it so that it can
+			// clean up data related to the previous load.
+			i.conflictResolver.Reload(ctx)
+
+			_, err := i.loadEntities(ctx, isActive, persistMerges)
+			if err != nil {
+				return fmt.Errorf("failed to load entities: %w", err)
+			}
+		}
+		return nil
+	}
+
 	loadFunc := func(context.Context) error {
 		i.logger.Debug("loading identity store artifacts with",
 			"case_sensitive", !i.disableLowerCasedNames,
 			"conflict_resolver", i.conflictResolver)
 
-		if err := i.loadEntities(ctx, isActive); err != nil {
+		if err := loadFuncEntities(ctx); err != nil {
 			return fmt.Errorf("failed to load entities: %w", err)
 		}
+
 		if err := i.loadGroups(ctx, isActive); err != nil {
 			return fmt.Errorf("failed to load groups: %w", err)
 		}
@@ -440,14 +474,18 @@ func (i *IdentityStore) loadCachedEntitiesOfLocalAliases(ctx context.Context) er
 	return nil
 }
 
-func (i *IdentityStore) loadEntities(ctx context.Context, isActive bool) error {
+func (i *IdentityStore) loadEntities(ctx context.Context, isActive bool, persistMerges bool) (bool, error) {
 	// Accumulate existing entities
 	i.logger.Debug("loading entities")
 	existing, err := i.entityPacker.View().List(ctx, storagepacker.StoragePackerBucketsPrefix)
 	if err != nil {
-		return fmt.Errorf("failed to scan for entities: %w", err)
+		return false, fmt.Errorf("failed to scan for entities: %w", err)
 	}
 	i.logger.Debug("entities collected", "num_existing", len(existing))
+
+	// Reponsible for flagging callers if entities should be reloaded in case
+	// entity merges need to be persisted.
+	var reload atomic.Bool
 
 	duplicatedAccessors := make(map[string]struct{})
 	// Make the channels used for the worker pool. We send the index into existing
@@ -632,36 +670,27 @@ LOOP:
 						defer tx.Abort()
 					}
 
-					// The persistMerges flag is used to fix a non-determinism issue in duplicate entities with global alias merges.
-					// This does not solve the case for local alias merges.
-					// Previously, alias merges could inconsistently flip between nodes due to bucket invalidation
-					// and reprocessing on standbys, leading to divergence from the primary.
-					// This flag ensures deterministic merges across all nodes by preventing unintended reinsertions
-					// of previously merged entities during bucket diffs.
-					persistMerges := false
-					if !i.localNode.ReplicationState().HasState(
-						consts.ReplicationDRSecondary|
-							consts.ReplicationPerformanceSecondary,
-					) && isActive {
-						persistMerges = true
-					}
-
 					// Only update MemDB and don't hit the storage again unless we are
 					// merging and on a primary active node.
-					err = i.upsertEntityInTxn(nsCtx, tx, entity, nil, persist, persistMerges)
+					shouldReload, err := i.upsertEntityInTxn(nsCtx, tx, entity, nil, persist, persistMerges)
 					if err != nil {
 						return fmt.Errorf("failed to update entity in MemDB: %w", err)
 					}
 					upsertedItems += toBeUpserted
+
+					if shouldReload {
+						reload.CompareAndSwap(false, true)
+					}
 				}
 				if upsertedItems > 0 {
 					tx.Commit()
 				}
 				return nil
 			}
+
 			err := load(entities)
 			if err != nil {
-				return err
+				return false, err
 			}
 
 		}
@@ -670,7 +699,7 @@ LOOP:
 	// Let all go routines finish
 	wg.Wait()
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	// Flatten the map into a list of keys, in order to log them
@@ -685,7 +714,7 @@ LOOP:
 		i.logger.Info("entities restored")
 	}
 
-	return nil
+	return reload.Load(), nil
 }
 
 // loadLocalAliasesForEntity upserts local aliases into the entity by retrieving
@@ -749,16 +778,15 @@ func getAccessorsOnDuplicateAliases(aliases []*identity.Alias) []string {
 // previousEntity. persistMerges is ignored if persist = true but if persist =
 // false it allows the caller to request that we persist the data only if it is
 // changes by a merge caused by a duplicate alias.
-func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, entity *identity.Entity, previousEntity *identity.Entity, persist, persistMerges bool) error {
+func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, entity *identity.Entity, previousEntity *identity.Entity, persist, persistMerges bool) (reload bool, err error) {
 	defer metrics.MeasureSince([]string{"identity", "upsert_entity_txn"}, time.Now())
-	var err error
 
 	if txn == nil {
-		return errors.New("txn is nil")
+		return false, errors.New("txn is nil")
 	}
 
 	if entity == nil {
-		return errors.New("entity is nil")
+		return false, errors.New("entity is nil")
 	}
 
 	if entity.NamespaceID == "" {
@@ -766,16 +794,16 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 	}
 
 	if previousEntity != nil && previousEntity.NamespaceID != entity.NamespaceID {
-		return errors.New("entity and previous entity are not in the same namespace")
+		return false, errors.New("entity and previous entity are not in the same namespace")
 	}
 
 	aliasFactors := make([]string, len(entity.Aliases))
 
 	for index, alias := range entity.Aliases {
 		// Verify that alias is not associated to a different one already
-		aliasByFactors, err := i.MemDBAliasByFactors(alias.MountAccessor, alias.Name, false, false)
+		aliasByFactors, err := i.MemDBAliasByFactorsInTxn(txn, alias.MountAccessor, alias.Name, false, false)
 		if err != nil {
-			return err
+			return false, err
 		}
 
 		if alias.NamespaceID == "" {
@@ -786,14 +814,14 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 		case aliasByFactors == nil:
 			// Not found, no merging needed, just check namespace
 			if alias.NamespaceID != entity.NamespaceID {
-				return errors.New("alias and entity are not in the same namespace")
+				return false, errors.New("alias and entity are not in the same namespace")
 			}
 
 		case aliasByFactors.CanonicalID == entity.ID:
 			// Lookup found the same entity, so it's already attached to the
 			// right place
 			if aliasByFactors.NamespaceID != entity.NamespaceID {
-				return errors.New("alias from factors and entity are not in the same namespace")
+				return false, errors.New("alias from factors and entity are not in the same namespace")
 			}
 
 		case previousEntity != nil && aliasByFactors.CanonicalID == previousEntity.ID:
@@ -833,14 +861,14 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 			respErr, intErr := i.mergeEntityAsPartOfUpsert(ctx, txn, entity, aliasByFactors.CanonicalID, persistMerge)
 			switch {
 			case respErr != nil:
-				return respErr
+				return false, respErr
 			case intErr != nil:
-				return intErr
+				return false, intErr
 			}
 
 			// The entity and aliases will be loaded into memdb and persisted
 			// as a result of the merge, so we are done here
-			return nil
+			return true, nil
 		}
 
 		// This is subtle. We want to call `ResolveAliases` so that the resolver can
@@ -871,13 +899,13 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 		// especially desirable to me, but we'd rather not change behavior for now.
 		if strutil.StrListContains(aliasFactors, i.sanitizeName(alias.Name)+alias.MountAccessor) &&
 			conflictErr != nil && !i.disableLowerCasedNames {
-			return conflictErr
+			return false, conflictErr
 		}
 
 		// Insert or update alias in MemDB using the transaction created above
 		err = i.MemDBUpsertAliasInTxn(txn, alias, false)
 		if err != nil {
-			return err
+			return false, err
 		}
 
 		aliasFactors[index] = i.sanitizeName(alias.Name) + alias.MountAccessor
@@ -887,13 +915,13 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 	if previousEntity != nil {
 		err = i.MemDBUpsertEntityInTxn(txn, previousEntity)
 		if err != nil {
-			return err
+			return false, err
 		}
 
 		if persist {
 			// Persist the previous entity object
 			if err := i.persistEntity(ctx, previousEntity); err != nil {
-				return err
+				return false, err
 			}
 		}
 	}
@@ -901,16 +929,16 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 	// Insert or update entity in MemDB using the transaction created above
 	err = i.MemDBUpsertEntityInTxn(txn, entity)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	if persist {
 		if err := i.persistEntity(ctx, entity); err != nil {
-			return err
+			return false, err
 		}
 	}
 
-	return nil
+	return false, nil
 }
 
 func (i *IdentityStore) processLocalAlias(ctx context.Context, lAlias *logical.Alias, entity *identity.Entity, updateDb bool) (*identity.Alias, error) {
@@ -989,7 +1017,7 @@ func (i *IdentityStore) processLocalAlias(ctx context.Context, lAlias *logical.A
 		if err := i.MemDBUpsertAliasInTxn(txn, alias, false); err != nil {
 			return nil, err
 		}
-		if err := i.upsertEntityInTxn(ctx, txn, entity, nil, false, false); err != nil {
+		if _, err := i.upsertEntityInTxn(ctx, txn, entity, nil, false, false); err != nil {
 			return nil, err
 		}
 		txn.Commit()
@@ -1023,6 +1051,21 @@ func (i *IdentityStore) cacheTemporaryEntity(ctx context.Context, entity *identi
 	return nil
 }
 
+func splitLocalAliases(entity *identity.Entity) ([]*identity.Alias, []*identity.Alias) {
+	var localAliases []*identity.Alias
+	var nonLocalAliases []*identity.Alias
+
+	for _, alias := range entity.Aliases {
+		if alias.Local {
+			localAliases = append(localAliases, alias)
+		} else {
+			nonLocalAliases = append(nonLocalAliases, alias)
+		}
+	}
+
+	return nonLocalAliases, localAliases
+}
+
 func (i *IdentityStore) persistEntity(ctx context.Context, entity *identity.Entity) error {
 	// If the entity that is passed into this function is resulting from a memdb
 	// query without cloning, then modifying it will result in a direct DB edit,
@@ -1035,17 +1078,7 @@ func (i *IdentityStore) persistEntity(ctx context.Context, entity *identity.Enti
 	}
 
 	// Separate the local and non-local aliases.
-	var localAliases []*identity.Alias
-	var nonLocalAliases []*identity.Alias
-
-	for _, alias := range entity.Aliases {
-		switch alias.Local {
-		case true:
-			localAliases = append(localAliases, alias)
-		default:
-			nonLocalAliases = append(nonLocalAliases, alias)
-		}
-	}
+	nonLocalAliases, localAliases := splitLocalAliases(entity)
 
 	// Store the entity with non-local aliases.
 	entity.Aliases = nonLocalAliases
@@ -1096,7 +1129,7 @@ func (i *IdentityStore) upsertEntity(ctx context.Context, entity *identity.Entit
 	txn := i.db.Txn(true)
 	defer txn.Abort()
 
-	err := i.upsertEntityInTxn(ctx, txn, entity, previousEntity, persist, false)
+	_, err := i.upsertEntityInTxn(ctx, txn, entity, previousEntity, persist, false)
 	if err != nil {
 		return err
 	}
@@ -2892,40 +2925,6 @@ func attachAlias(t *testing.T, e *identity.Entity, name string, me *MountEntry, 
 	}
 	e.UpsertAlias(a)
 	return a
-}
-
-func TestHelperWriteToStoragePackerForLocalAlias(ctx context.Context, i *IdentityStore, entity *identity.Entity) error {
-	// Separate the local and non-local aliases.
-	var localAliases []*identity.Alias
-
-	for _, alias := range entity.Aliases {
-		switch alias.Local {
-		case true:
-			localAliases = append(localAliases, alias)
-		}
-	}
-
-	if len(localAliases) == 0 {
-		return nil
-	}
-
-	// Store the local aliases separately.
-	aliases := &identity.LocalAliases{
-		Aliases: localAliases,
-	}
-
-	marshaledAliases, err := anypb.New(aliases)
-	if err != nil {
-		return err
-	}
-	if err := i.localAliasPacker.PutItem(ctx, &storagepacker.Item{
-		ID:      entity.ID,
-		Message: marshaledAliases,
-	}); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func identityCreateCaseDuplicates(t *testing.T, ctx context.Context, c *Core, upme, localme *MountEntry, seed *rand.Rand) {
