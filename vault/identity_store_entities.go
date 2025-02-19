@@ -879,7 +879,7 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 			return errors.New("to_entity_id should not be present in from_entity_ids"), nil, nil
 		}
 
-		fromEntity, err := i.MemDBEntityByID(fromEntityID, false)
+		fromEntity, err := i.MemDBEntityByIDInTxn(txn, fromEntityID, false)
 		if err != nil {
 			return nil, err, nil
 		}
@@ -999,7 +999,7 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 			return errors.New("to_entity_id should not be present in from_entity_ids"), nil, nil
 		}
 
-		fromEntity, err := i.MemDBEntityByID(fromEntityID, true)
+		fromEntity, err := i.MemDBEntityByIDInTxn(txn, fromEntityID, true)
 		if err != nil {
 			return nil, err, nil
 		}
@@ -1022,6 +1022,13 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		}
 
 		for _, fromAlias := range fromEntity.Aliases {
+			// We're going to modify this alias but it's still a pointer to the one in
+			// MemDB that could be being read by other goroutines even though we might
+			// be removing from MemDB really shortly...
+			fromAlias, err = fromAlias.Clone()
+			if err != nil {
+				return nil, err, nil
+			}
 			// If true, we need to handle conflicts (conflict = both aliases share the same mount accessor)
 			if toAliasIds, ok := toEntityAccessors[fromAlias.MountAccessor]; ok {
 				for _, toAliasId := range toAliasIds {
@@ -1043,8 +1050,8 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 						if err != nil {
 							return nil, fmt.Errorf("aborting entity merge - failed to delete orphaned alias %q during merge into entity %q: %w", fromAlias.ID, toEntity.ID, err), nil
 						}
-						// Remove the alias from the entity's list in memory too!
-						toEntity.DeleteAliasByID(fromAlias.ID)
+						// Don't need to alter toEntity aliases since we it never contained
+						// the alias we're deleting.
 
 						// Continue to next alias, as there's no alias to merge left in the from_entity
 						continue
@@ -1067,14 +1074,12 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 
 			fromAlias.MergedFromCanonicalIDs = append(fromAlias.MergedFromCanonicalIDs, fromEntity.ID)
 
-			err = i.MemDBUpsertAliasInTxn(txn, fromAlias, false)
-			if err != nil {
-				return nil, fmt.Errorf("failed to update alias during merge: %w", err), nil
-			}
+			// We don't insert into MemDB right now because we'll do that for all the
+			// aliases we want to end up with at the end to ensure they are inserted
+			// in the same order as when they load from storage next time.
 
 			// Add the alias to the desired entity
 			toEntity.UpsertAlias(fromAlias)
-
 		}
 
 		// If told to, merge policies
@@ -1119,6 +1124,30 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 			if err != nil {
 				return nil, err, nil
 			}
+		}
+	}
+
+	// Normalize Alias order. We do this because we persist NonLocal and Local
+	// aliases separately and so after next reload local aliases will all come
+	// after non-local ones. While it's logically equivalent, it makes reasoning
+	// about merges and determinism very hard if the order of things in MemDB can
+	// change from one unseal to the next so we are especially careful to ensure
+	// it's exactly the same whether we just merged or on a subsequent load.
+	// persistEntities will already split these up and persist them separately, so
+	// we're kinda duplicating effort and code here but this should't happen often
+	// so I think it's fine.
+	nonLocalAliases, localAliases := splitLocalAliases(toEntity)
+	toEntity.Aliases = append(nonLocalAliases, localAliases...)
+
+	// Don't forget to insert aliases into alias table that were part of
+	// `toEntity` but were not merged above (because they didn't conflict). This
+	// might re-insert the same aliases we just inserted above again but that's a
+	// no-op. TODO: maybe we could remove the memdb updates in the loop above and
+	// have them all be inserted here.
+	for _, alias := range toEntity.Aliases {
+		err = i.MemDBUpsertAliasInTxn(txn, alias, false)
+		if err != nil {
+			return nil, err, nil
 		}
 	}
 
