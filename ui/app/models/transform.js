@@ -4,7 +4,6 @@
  */
 
 import Model, { attr } from '@ember-data/model';
-import { computed } from '@ember/object';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
@@ -40,33 +39,45 @@ const TWEAK_SOURCE = [
   },
 ];
 
-export default Model.extend({
-  name: attr('string', {
-    // CBS TODO: make this required for making a transformation
-    label: 'Name',
+// TODO: add modelValidations, requires restructuring the error message flow into the components.
+export default class TransformModel extends Model {
+  @attr('string', {
+    readOnly: true,
+  })
+  backend;
+
+  @attr('string', {
     readOnly: true,
     subText: 'The name for your transformation. This cannot be edited later.',
-  }),
-  type: attr('string', {
+  })
+  name;
+
+  @attr('string', {
     defaultValue: 'fpe',
     label: 'Type',
     possibleValues: TYPES,
     subText:
       'Vault provides two types of transformations: Format Preserving Encryption (FPE) is reversible, while Masking is not. This cannot be edited later.',
-  }),
-  tweak_source: attr('string', {
+  })
+  type;
+
+  @attr('string', {
     defaultValue: 'supplied',
     label: 'Tweak source',
     possibleValues: TWEAK_SOURCE,
     subText: `A tweak value is used when performing FPE transformations. This can be supplied, generated, or internal.`, // CBS TODO: I do not include the link here.  Need to figure out the best way to approach this.
-  }),
-  masking_character: attr('string', {
+  })
+  tweak_source;
+
+  @attr('string', {
     characterLimit: 1,
     defaultValue: '*',
     label: 'Masking character',
     subText: 'Specify which character you’d like to mask your data.',
-  }),
-  template: attr('array', {
+  })
+  masking_character;
+
+  @attr('string', {
     editType: 'searchSelect',
     isSectionHeader: true,
     fallbackComponent: 'string-list',
@@ -76,8 +87,10 @@ export default Model.extend({
     onlyAllowExisting: true,
     subText:
       'Templates allow Vault to determine what and how to capture the value to be transformed. Type to use an existing template or create a new one.',
-  }),
-  allowed_roles: attr('array', {
+  })
+  template;
+
+  @attr('array', {
     editType: 'searchSelect',
     isSectionHeader: true,
     label: 'Allowed roles',
@@ -85,36 +98,47 @@ export default Model.extend({
     models: ['transform/role'],
     subText: 'Search for an existing role, type a new role to create it, or use a wildcard (*).',
     wildcardLabel: 'role',
-  }),
-  deletion_allowed: attr('boolean', {
+  })
+  allowed_roles;
+
+  @attr('boolean', {
     label: 'Allow deletion',
     subText:
       'If checked, this transform can be deleted otherwise deletion is blocked. Note that deleting the transform deletes the underlying key which makes decoding of tokenized values impossible without restoring from a backup.',
-  }),
-  convergent: attr('boolean', {
+  })
+  deletion_allowed;
+
+  @attr('boolean', {
     label: 'Use convergent tokenization',
     subText:
       "This cannot be edited later. If checked, tokenization of the same plaintext more than once results in the same token. Defaults to false as unique tokens are more desirable from a security standpoint if there isn't a use-case need for convergence.",
-  }),
-  stores: attr('array', {
+  })
+  convergent;
+
+  @attr('array', {
     label: 'Stores',
     editType: 'stringArray',
     subText:
       "The list of tokenization stores to use for tokenization state. Vault's internal storage is used by default.",
-  }),
-  mapping_mode: attr('string', {
+  })
+  stores;
+
+  @attr('string', {
     defaultValue: 'default',
     subText:
       'Specifies the mapping mode for stored tokenization values. "default" is strongly recommended for highest security, "exportable" allows for all plaintexts to be decoded via the export-decoded endpoint in an emergency.',
-  }),
-  max_ttl: attr({
+  })
+  mapping_mode;
+
+  @attr({
     editType: 'ttl',
     defaultValue: '0',
     label: 'Maximum TTL (time-to-live) of a token',
     helperTextDisabled: 'If "0" or unspecified, tokens may have no expiration.',
-  }),
+  })
+  max_ttl;
 
-  transformAttrs: computed('type', function () {
+  get transformAttrs() {
     // allowed_roles not included so it displays at the bottom of the form
     const baseAttrs = ['name', 'type', 'deletion_allowed'];
     switch (this.type) {
@@ -127,14 +151,11 @@ export default Model.extend({
       default:
         return [...baseAttrs];
     }
-  }),
+  }
 
-  transformFieldAttrs: computed('transformAttrs', function () {
+  get transformFieldAttrs() {
     return expandAttributeMeta(this, this.transformAttrs);
-  }),
+  }
 
-  backend: attr('string', {
-    readOnly: true,
-  }),
-  updatePath: lazyCapabilities(apiPath`${'backend'}/transformation/${'id'}`, 'backend', 'id'),
-});
+  @lazyCapabilities(apiPath`${'backend'}/transformation/${'id'}`, 'backend', 'id') updatePath;
+}
