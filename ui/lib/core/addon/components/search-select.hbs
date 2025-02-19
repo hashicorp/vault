@@ -36,6 +36,7 @@
     {{/if}}
     {{#unless this.hidePowerSelect}}
       <PowerSelect
+        data-test-power-select
         @eventType="click"
         @placeholder={{@placeholder}}
         @searchEnabled={{this.searchEnabled}}

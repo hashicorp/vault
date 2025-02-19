@@ -230,7 +230,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     await settled();
     await click('#allowed_roles [data-test-selected-list-button="delete"]');
 
-    await transformationsPage.save();
+    await transformationsPage.edit();
     await settled();
     assert.dom('.flash-message.is-info').exists('Shows info message since role could not be updated');
     assert.strictEqual(
@@ -241,6 +241,36 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     assert
       .dom('[data-test-row-value="Allowed roles"]')
       .doesNotExist('Allowed roles are no longer on the transformation');
+  });
+
+  test('it allows user to add and then edit template on a transformation', async function (assert) {
+    const transformationName = 'my-transformation';
+    await visit('/vault/settings/mount-secret-backend');
+    const backend = `transform-${uuidv4()}`;
+    await mountBackend('transform', backend);
+    await templatesPage.createLink();
+
+    await transformationsPage.name(transformationName);
+    await clickTrigger('#template');
+    await selectChoose('#template', '.ember-power-select-option', 0);
+    await transformationsPage.submit();
+    await settled();
+    assert.dom('[data-test-row-value="Template"]').hasText('builtin/creditcardnumber');
+
+    await templatesPage.editLink();
+    await settled();
+    assert
+      .dom('[data-test-selected-option="0"]')
+      .hasText('builtin/creditcardnumber', 'renders the saved template on edit');
+    assert
+      .dom('#template .ember-power-select-trigger')
+      .doesNotExist('No option to select new template because one is already selected');
+
+    await click('#template [data-test-selected-list-button="delete"]');
+    await clickTrigger('#template');
+    await selectChoose('#template', '.ember-power-select-option', 0);
+    await transformationsPage.edit();
+    assert.dom('[data-test-row-value="Template"]').hasText('builtin/socialsecuritynumber');
   });
 
   test('it allows creation and edit of a template', async function (assert) {

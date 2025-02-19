@@ -52,6 +52,9 @@ const storeService = Service.extend({
             { id: 'barfoo1', name: 'different' },
           ]);
           break;
+        case 'transform/template':
+          resolve([{ id: 'some-string', name: 'some-string', searchText: 'some-string', addToolTip: false }]);
+          break;
         case 'some/model':
           resolve([
             { id: 'model-a-id', name: 'model-a', uuid: 'a123', type: 'a' },
@@ -171,6 +174,34 @@ module('Integration | Component | search select', function (hooks) {
     // verify overflow styling on input field exists
     assert.dom('.list-item-text').exists('selected option field has width set');
     assert.dom('.text-overflow-ellipsis').exists('selected option text has overflow class');
+  });
+
+  test('it shows passed in string when trigger is clicked', async function (assert) {
+    const models = ['transform/template'];
+    this.set('models', models);
+    this.set('onChange', sinon.spy());
+    await render(hbs`
+      <SearchSelect
+        @label="stringtest"
+        @models={{this.models}}
+        @backend="transform"
+        @inputValue="some-string"
+        @onChange={{this.onChange}}
+        @disallowNewItems={{true}}
+        @selectLimit={{1}}
+      />
+    `);
+
+    assert.strictEqual(
+      component.selectedOptions.objectAt(0).text,
+      'some-string',
+      'the selected text is correct'
+    );
+    assert.strictEqual(component.selectedOptions.length, 1, 'there is one selected option');
+    assert.false(component.hasTrigger, 'does not render power select');
+
+    await component.deleteButtons.objectAt(0).click();
+    assert.true(component.hasTrigger, 'power select shows after deleting selected option');
   });
 
   test('it filters options and adds option to create new item when text is entered', async function (assert) {
