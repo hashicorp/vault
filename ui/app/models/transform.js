@@ -77,11 +77,11 @@ export default class TransformModel extends Model {
   })
   masking_character;
 
-  @attr('array', {
+  // TODO: add presence required validation for template
+  @attr('string', {
     editType: 'searchSelect',
     isSectionHeader: true,
-    fallbackComponent: 'input-list',
-    label: 'Template', // CBS TODO: make this required for making a transformation
+    fallbackComponent: 'input-search',
     models: ['transform/template'],
     selectLimit: 1,
     onlyAllowExisting: true,
