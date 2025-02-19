@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/go-test/deep"
+	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/vault"
@@ -42,6 +42,8 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 				"cluster_addr":       "http://127.0.0.1:8201",
 				"disable_clustering": false,
 				"raft": map[string]interface{}{
+					"path":           "/storage/path/raft",
+					"node_id":        "raft1",
 					"max_entry_size": "2097152",
 				},
 			},
@@ -199,7 +201,7 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 			testResponseBody(t, resp, &actual)
 			expected["request_id"] = actual["request_id"]
 
-			if diff := deep.Equal(actual, expected); len(diff) > 0 {
+			if diff := cmp.Diff(actual, expected); len(diff) > 0 {
 				t.Fatalf("bad mismatch response body: diff: %v", diff)
 			}
 		})

@@ -13,7 +13,7 @@ import (
 const (
 	// Minimum allowed value for rotation_window
 	minRotationWindowSeconds = 3600
-	parseOptions             = cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow
+	parseOptions             = cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow
 )
 
 // RotationSchedule holds the parsed and unparsed versions of the schedule, along with the projected next rotation time.
