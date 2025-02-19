@@ -1,0 +1,3 @@
+```release-note:bug
+core/seal (enterprise): Fix problem with nodes unable to join Raft clusters with Seal High Availability enabled.
+```

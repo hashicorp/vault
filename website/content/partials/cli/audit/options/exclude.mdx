@@ -1,4 +1,4 @@
-<a id="audit-exclude" />
+<a id="audit-option-exclude" />
 
 **`exclude (string : "")`** <EnterpriseAlert inline="true" />
 
@@ -14,8 +14,9 @@ audit entry before writing to the audit device.
   definitions to `exclude`:
 
   ```
-  $  vault audit enable exclude=@rules.json file file_path="/var/logs/vault/audit.log"'
+  $ vault audit enable    \
+      exclude=@rules.json \
+      file file_path="/var/logs/vault/audit.log"'
   ```
 
 </Tip>
-

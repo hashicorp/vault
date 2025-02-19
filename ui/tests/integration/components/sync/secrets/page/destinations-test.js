@@ -134,7 +134,7 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
 
     const { icon, name, type, deleteAction } = destinations.list;
 
-    assert.dom(icon).hasClass('flight-icon-aws-color', 'Correct icon renders');
+    assert.dom(icon).hasClass('hds-icon-aws-color', 'Correct icon renders');
     assert.dom(name).hasText('destination-aws', 'Name renders');
     assert.dom(type).hasText('AWS Secrets Manager', 'Type renders');
 

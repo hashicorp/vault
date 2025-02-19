@@ -141,6 +141,15 @@ func ErrorResponse(text string, vargs ...interface{}) *Response {
 	}
 }
 
+// ErrorResponseWithData is used to format an error response with additional data returned
+// within the "data" sub-field of the Data field. Useful to return additional information to the client
+// and or appear within audited responses.
+func ErrorResponseWithData(data interface{}, text string, vargs ...interface{}) *Response {
+	resp := ErrorResponse(text, vargs...)
+	resp.Data["data"] = data
+	return resp
+}
+
 // ListResponse is used to format a response to a list operation.
 func ListResponse(keys []string) *Response {
 	resp := &Response{

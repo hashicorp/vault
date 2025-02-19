@@ -1,12 +1,11 @@
 ---
 layout: docs
-page_title: DynamoDB - Storage Backends - Configuration
-description: |-
-  The DynamoDB storage backend is used to persist Vault's data in DynamoDB
-  table.
+page_title: DynamoDB configuration
+description: >-
+  Configure Vault backend storage to use DynamoDB tables.
 ---
 
-# DynamoDB storage backend
+# DynamoDB configuration for Vault backend storage
 
 The DynamoDB storage backend is used to persist Vault's data in
 [DynamoDB][dynamodb] table.
@@ -34,6 +33,15 @@ see the [official AWS DynamoDB documentation][dynamodb-rw-capacity].
 
 ## DynamoDB parameters
 
+- `billing_mode` `(string: "PROVISIONED")` - Specifies which billing mode should be
+  be used for the table. Choices are "PROVISIONED" or "PAY_PER_REQUEST". You can
+  also configure billing mode with the `AWS_DYNAMODB_BILLING_MODE` environment variable .
+
+- `dynamodb_allow_updates` `(string: "")` - Specifices if the billing mode or the
+  read/write capacity of the table should be updated if the provided values differ
+  from the existing table. You can also configure updates with the 
+  `AWS_DYNAMODB_ALLOW_UPDATES` environment variable.
+
 - `endpoint` `(string: "")` – Specifies an alternative, AWS compatible, DynamoDB
   endpoint. This can also be provided via the environment variable
   `AWS_DYNAMODB_ENDPOINT`.
@@ -50,8 +58,8 @@ see the [official AWS DynamoDB documentation][dynamodb-rw-capacity].
 
 - `read_capacity` `(int: 5)` – Specifies the maximum number of reads consumed
   per second on the table, for use if Vault creates the DynamoDB table. This has
-  no effect if the `table` already exists. This can also be provided via the
-  environment variable `AWS_DYNAMODB_READ_CAPACITY`.
+  no effect if the `table` already exists and `dynamodb_allow_updates` is unset.
+  You can also set the read capacity with the `AWS_DYNAMODB_READ_CAPACITY` environment variable.
 
 - `table` `(string: "vault-dynamodb-backend")` – Specifies the name of the
   DynamoDB table in which to store Vault data. If the specified table does not
@@ -61,8 +69,8 @@ see the [official AWS DynamoDB documentation][dynamodb-rw-capacity].
 
 - `write_capacity` `(int: 5)` – Specifies the maximum number of writes performed
   per second on the table, for use if Vault creates the DynamoDB table. This value
-  has no effect if the `table` already exists. This can also be provided via the
-  environment variable `AWS_DYNAMODB_WRITE_CAPACITY`.
+  has no effect if the `table` already exists and `dynamodb_allow_updates` is unset.
+  You can also set the write capacity with the `AWS_DYNAMODB_WRITE_CAPACITY` environment variable.
 
 The following settings are used for authenticating to AWS. If you are
 running your Vault server on an EC2 instance, you can also make use of the EC2
@@ -105,7 +113,8 @@ the required operations on the DynamoDB table:
         "dynamodb:Query",
         "dynamodb:UpdateItem",
         "dynamodb:Scan",
-        "dynamodb:DescribeTable"
+        "dynamodb:DescribeTable",
+        "dynamodb:UpdateTable"
       ],
       "Effect": "Allow",
       "Resource": [ "arn:aws:dynamodb:us-east-1:... dynamodb table ARN" ]
@@ -147,13 +156,15 @@ resource "aws_dynamodb_table" "dynamodb-table" {
 }
 ```
 
-If a table with the configured name already exists, Vault will not modify it -
+By default, Vault will not modify the table if a table with the configured name already exists
 and the Vault configuration values of `read_capacity` and `write_capacity` have
-no effect.
+no effect. If the `dynamodb_allow_updates` field is set, then Vault will try to update
+the table if the provided `billing_mode`, `read_capacity` or `write_capacity` differ
+from the existing table's values.
 
-If the table does not already exist, Vault will try to create it, with read and
-write capacities set to the values of `read_capacity` and `write_capacity`
-respectively.
+If the table does not already exist, Vault will try to create it, with billing mode,
+read and write capacities set to the values of `billing_mode`, `read_capacity` and
+`write_capacity` respectively.
 
 ## AWS instance metadata timeout
 

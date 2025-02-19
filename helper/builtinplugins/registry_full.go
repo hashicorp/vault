@@ -99,44 +99,44 @@ func newFullAddonRegistry() *registry {
 			"snowflake-database-plugin":         {Factory: dbSnowflake.New},
 		},
 		logicalBackends: map[string]logicalBackend{
-			"ad": {
+			pluginconsts.SecretEngineAD: {
 				Factory:           logicalAd.Factory,
 				DeprecationStatus: consts.Deprecated,
 			},
-			"alicloud": {Factory: logicalAlicloud.Factory},
-			"aws":      {Factory: logicalAws.Factory},
-			"azure":    {Factory: logicalAzure.Factory},
-			"cassandra": {
+			pluginconsts.SecretEngineAlicloud: {Factory: logicalAlicloud.Factory},
+			pluginconsts.SecretEngineAWS:      {Factory: logicalAws.Factory},
+			pluginconsts.SecretEngineAzure:    {Factory: logicalAzure.Factory},
+			pluginconsts.SecretEngineCassandra: {
 				Factory:           removedFactory,
 				DeprecationStatus: consts.Removed,
 			},
-			"consul":     {Factory: logicalConsul.Factory},
-			"gcp":        {Factory: logicalGcp.Factory},
-			"gcpkms":     {Factory: logicalGcpKms.Factory},
-			"kubernetes": {Factory: logicalKube.Factory},
-			"mongodb": {
+			pluginconsts.SecretEngineConsul:     {Factory: logicalConsul.Factory},
+			pluginconsts.SecretEngineGCP:        {Factory: logicalGcp.Factory},
+			pluginconsts.SecretEngineGCPKMS:     {Factory: logicalGcpKms.Factory},
+			pluginconsts.SecretEngineKubernetes: {Factory: logicalKube.Factory},
+			pluginconsts.SecretEngineMongoDB: {
 				Factory:           removedFactory,
 				DeprecationStatus: consts.Removed,
 			},
-			"mongodbatlas": {Factory: logicalMongoAtlas.Factory},
-			"mssql": {
+			pluginconsts.SecretEngineMongoDBAtlas: {Factory: logicalMongoAtlas.Factory},
+			pluginconsts.SecretEngineMSSQL: {
 				Factory:           removedFactory,
 				DeprecationStatus: consts.Removed,
 			},
-			"mysql": {
+			pluginconsts.SecretEngineMySQL: {
 				Factory:           removedFactory,
 				DeprecationStatus: consts.Removed,
 			},
-			"nomad":    {Factory: logicalNomad.Factory},
-			"openldap": {Factory: logicalLDAP.Factory},
-			"ldap":     {Factory: logicalLDAP.Factory},
-			"postgresql": {
+			pluginconsts.SecretEngineNomad:    {Factory: logicalNomad.Factory},
+			pluginconsts.SecretEngineOpenLDAP: {Factory: logicalLDAP.Factory},
+			pluginconsts.SecretEngineLDAP:     {Factory: logicalLDAP.Factory},
+			pluginconsts.SecretEnginePostgresql: {
 				Factory:           removedFactory,
 				DeprecationStatus: consts.Removed,
 			},
-			"rabbitmq":  {Factory: logicalRabbit.Factory},
-			"terraform": {Factory: logicalTerraform.Factory},
-			"totp":      {Factory: logicalTotp.Factory},
+			pluginconsts.SecretEngineRabbitMQ:  {Factory: logicalRabbit.Factory},
+			pluginconsts.SecretEngineTerraform: {Factory: logicalTerraform.Factory},
+			pluginconsts.SecretEngineTOTP:      {Factory: logicalTotp.Factory},
 		},
 	}
 }

@@ -1131,6 +1131,15 @@ const pki = {
       label: 'Require Common Name',
       type: 'boolean',
     },
+    serialNumberSource: {
+      defaultValue: 'json-csr',
+      editType: 'string',
+      fieldGroup: 'default',
+      helpText:
+        'Source for the certificate subject serial number. If "json-csr" (default), the value from the JSON serial_number field is used, falling back to the value in the CSR if empty. If "json", the value from the serial_number JSON field is used, ignoring the value in the CSR.',
+      label: 'Serial number source',
+      type: 'string',
+    },
     serverFlag: {
       editType: 'boolean',
       helpText:
@@ -1234,6 +1243,34 @@ const pki = {
       label: 'Exclude Common Name from Subject Alternative Names (SANs)',
       type: 'boolean',
     },
+    excludedDnsDomains: {
+      editType: 'stringArray',
+      fieldGroup: 'default',
+      helpText:
+        'Domains for which this certificate is not allowed to sign or issue child certificates (see https://tools.ietf.org/html/rfc5280#section-4.2.1.10).',
+      label: 'Excluded DNS Domains',
+    },
+    excludedEmailAddresses: {
+      editType: 'stringArray',
+      fieldGroup: 'default',
+      helpText:
+        'Email addresses for which this certificate is not allowed to sign or issue child certificates (see https://tools.ietf.org/html/rfc5280#section-4.2.1.10).',
+      label: 'Excluded email addresses',
+    },
+    excludedIpRanges: {
+      editType: 'stringArray',
+      fieldGroup: 'default',
+      helpText:
+        'IP ranges for which this certificate is not allowed to sign or issue child certificates (see https://tools.ietf.org/html/rfc5280#section-4.2.1.10). Ranges must be specified in the notation of IP address and prefix length, like "192.0.2.0/24" or "2001:db8::/32", as defined in RFC 4632 and RFC 4291.',
+      label: 'Excluded IP ranges',
+    },
+    excludedUriDomains: {
+      editType: 'stringArray',
+      fieldGroup: 'default',
+      helpText:
+        'URI domains for which this certificate is not allowed to sign or issue child certificates (see https://tools.ietf.org/html/rfc5280#section-4.2.1.10).',
+      label: 'Excluded URI domains',
+    },
     format: {
       editType: 'string',
       helpText:
@@ -1311,6 +1348,27 @@ const pki = {
         'Domains for which this certificate is allowed to sign or issue child certificates. If set, all DNS names (subject and alt) on child certs must be exact matches or subsets of the given domains (see https://tools.ietf.org/html/rfc5280#section-4.2.1.10).',
       fieldGroup: 'default',
       label: 'Permitted DNS Domains',
+    },
+    permittedEmailAddresses: {
+      editType: 'stringArray',
+      fieldGroup: 'default',
+      helpText:
+        'Email addresses for which this certificate is allowed to sign or issue child certificates (see https://tools.ietf.org/html/rfc5280#section-4.2.1.10).',
+      label: 'Permitted email addresses',
+    },
+    permittedIpRanges: {
+      editType: 'stringArray',
+      fieldGroup: 'default',
+      helpText:
+        'IP ranges for which this certificate is allowed to sign or issue child certificates (see https://tools.ietf.org/html/rfc5280#section-4.2.1.10). Ranges must be specified in the notation of IP address and prefix length, like "192.0.2.0/24" or "2001:db8::/32", as defined in RFC 4632 and RFC 4291.',
+      label: 'Permitted IP ranges',
+    },
+    permittedUriDomains: {
+      editType: 'stringArray',
+      fieldGroup: 'default',
+      helpText:
+        'URI domains for which this certificate is allowed to sign or issue child certificates (see https://tools.ietf.org/html/rfc5280#section-4.2.1.10).',
+      label: 'Permitted URI domains',
     },
     postalCode: {
       editType: 'stringArray',

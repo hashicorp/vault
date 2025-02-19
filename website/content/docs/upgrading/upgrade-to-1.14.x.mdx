@@ -35,6 +35,16 @@ is measuring cumulative time writing, and not the distribution of individual wri
 
 @include 'application-of-sentinel-rgps-via-identity-groups.mdx'
 
+### Activity Log Changes
+
+#### Disable client counting activity
+
+License utilization cannot be reported if client counting is disabled. 
+
+As of Vault Enterprise 1.14.10 and later, client counting cannot be disabled using `/sys/internal/counters/config` endpoint as manual license utilization reporting is always enabled.
+
+As of Vault Enterprise 1.14.0 and later, client counting cannot be disabled using `/sys/internal/counters/config` endpoint when automated license utilization reporting is enabled.
+
 ## Known issues and workarounds
 
 @include 'known-issues/ui-pki-control-groups.mdx'

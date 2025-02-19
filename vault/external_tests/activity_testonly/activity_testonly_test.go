@@ -86,7 +86,7 @@ func Test_ActivityLog_LoseLeadership(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	_, _, err = clientcountutil.NewActivityLogData(client).
+	_, err = clientcountutil.NewActivityLogData(client).
 		NewCurrentMonthData().
 		NewClientsSeen(10).
 		Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES)
@@ -121,7 +121,7 @@ func Test_ActivityLog_ClientsOverlapping(t *testing.T) {
 		"enabled": "enable",
 	})
 	require.NoError(t, err)
-	_, _, err = clientcountutil.NewActivityLogData(client).
+	_, err = clientcountutil.NewActivityLogData(client).
 		NewPreviousMonthData(1).
 		NewClientsSeen(7).
 		NewCurrentMonthData().
@@ -169,7 +169,7 @@ func Test_ActivityLog_ClientsNewCurrentMonth(t *testing.T) {
 		"enabled": "enable",
 	})
 	require.NoError(t, err)
-	_, _, err = clientcountutil.NewActivityLogData(client).
+	_, err = clientcountutil.NewActivityLogData(client).
 		NewPreviousMonthData(1).
 		NewClientsSeen(5).
 		NewCurrentMonthData().
@@ -203,7 +203,7 @@ func Test_ActivityLog_EmptyDataMonths(t *testing.T) {
 		"enabled": "enable",
 	})
 	require.NoError(t, err)
-	_, _, err = clientcountutil.NewActivityLogData(client).
+	_, err = clientcountutil.NewActivityLogData(client).
 		NewCurrentMonthData().
 		NewClientsSeen(10).
 		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
@@ -243,7 +243,7 @@ func Test_ActivityLog_FutureEndDate(t *testing.T) {
 		"enabled": "enable",
 	})
 	require.NoError(t, err)
-	_, _, err = clientcountutil.NewActivityLogData(client).
+	_, err = clientcountutil.NewActivityLogData(client).
 		NewPreviousMonthData(1).
 		NewClientsSeen(10).
 		NewCurrentMonthData().
@@ -316,7 +316,7 @@ func Test_ActivityLog_ClientTypeResponse(t *testing.T) {
 			_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
 				"enabled": "enable",
 			})
-			_, _, err = clientcountutil.NewActivityLogData(client).
+			_, err = clientcountutil.NewActivityLogData(client).
 				NewCurrentMonthData().
 				NewClientsSeen(10, clientcountutil.WithClientType(tc.clientType)).
 				Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES)
@@ -369,7 +369,7 @@ func Test_ActivityLogCurrentMonth_Response(t *testing.T) {
 			_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
 				"enabled": "enable",
 			})
-			_, _, err = clientcountutil.NewActivityLogData(client).
+			_, err = clientcountutil.NewActivityLogData(client).
 				NewCurrentMonthData().
 				NewClientsSeen(10, clientcountutil.WithClientType(tc.clientType)).
 				Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES)
@@ -420,7 +420,7 @@ func Test_ActivityLog_Deduplication(t *testing.T) {
 			_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
 				"enabled": "enable",
 			})
-			_, _, err = clientcountutil.NewActivityLogData(client).
+			_, err = clientcountutil.NewActivityLogData(client).
 				NewPreviousMonthData(3).
 				NewClientsSeen(10, clientcountutil.WithClientType(tc.clientType)).
 				NewPreviousMonthData(2).
@@ -462,7 +462,7 @@ func Test_ActivityLog_MountDeduplication(t *testing.T) {
 	require.NoError(t, err)
 	now := time.Now().UTC()
 
-	_, _, err = clientcountutil.NewActivityLogData(client).
+	_, err = clientcountutil.NewActivityLogData(client).
 		NewPreviousMonthData(1).
 		NewClientSeen(clientcountutil.WithClientMount("sys")).
 		NewClientSeen(clientcountutil.WithClientMount("secret")).
@@ -496,12 +496,12 @@ func Test_ActivityLog_MountDeduplication(t *testing.T) {
 }
 
 // getJSONExport is used to fetch activity export records using json format.
-// The records will returned as a map keyed by client ID.
-func getJSONExport(t *testing.T, client *api.Client, monthsPreviousTo int, now time.Time) (map[string]vault.ActivityLogExportRecord, error) {
+// The records will be returned as a map keyed by client ID.
+func getJSONExport(t *testing.T, client *api.Client, startTime time.Time, now time.Time) (map[string]vault.ActivityLogExportRecord, error) {
 	t.Helper()
 
 	resp, err := client.Logical().ReadRawWithData("sys/internal/counters/activity/export", map[string][]string{
-		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(monthsPreviousTo, now)).Format(time.RFC3339)},
+		"start_time": {startTime.Format(time.RFC3339)},
 		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
 		"format":     {"json"},
 	})
@@ -540,7 +540,7 @@ func getJSONExport(t *testing.T, client *api.Client, monthsPreviousTo int, now t
 // getCSVExport fetches activity export records using csv format. All flattened
 // map and slice fields will be unflattened so that the a proper ActivityLogExportRecord
 // can be formed. The records will returned as a map keyed by client ID.
-func getCSVExport(t *testing.T, client *api.Client, monthsPreviousTo int, now time.Time) (map[string]vault.ActivityLogExportRecord, error) {
+func getCSVExport(t *testing.T, client *api.Client, startTime time.Time, now time.Time) (map[string]vault.ActivityLogExportRecord, error) {
 	t.Helper()
 
 	boolFields := map[string]struct{}{
@@ -559,7 +559,7 @@ func getCSVExport(t *testing.T, client *api.Client, monthsPreviousTo int, now ti
 	}
 
 	resp, err := client.Logical().ReadRawWithData("sys/internal/counters/activity/export", map[string][]string{
-		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(monthsPreviousTo, now)).Format(time.RFC3339)},
+		"start_time": {startTime.Format(time.RFC3339)},
 		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
 		"format":     {"csv"},
 	})
@@ -669,7 +669,7 @@ func Test_ActivityLog_Export_Sudo(t *testing.T) {
 
 	rootToken := client.Token()
 
-	_, _, err = clientcountutil.NewActivityLogData(client).
+	_, err = clientcountutil.NewActivityLogData(client).
 		NewCurrentMonthData().
 		NewClientsSeen(10).
 		Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES)
@@ -677,7 +677,8 @@ func Test_ActivityLog_Export_Sudo(t *testing.T) {
 	require.NoError(t, err)
 
 	// Ensure access via root token
-	clients, err := getJSONExport(t, client, 1, now)
+	startTime := timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now))
+	clients, err := getJSONExport(t, client, startTime, now)
 	require.NoError(t, err)
 	require.Len(t, clients, 10)
 
@@ -696,7 +697,7 @@ path "sys/internal/counters/activity/export" {
 	client.SetToken(nonSudoToken)
 
 	// Ensure no access via token without sudo access
-	clients, err = getJSONExport(t, client, 1, now)
+	clients, err = getJSONExport(t, client, startTime, now)
 	require.ErrorContains(t, err, "permission denied")
 
 	client.SetToken(rootToken)
@@ -715,7 +716,7 @@ path "sys/internal/counters/activity/export" {
 	client.SetToken(sudoToken)
 
 	// Ensure access via token with sudo access
-	clients, err = getJSONExport(t, client, 1, now)
+	clients, err = getJSONExport(t, client, startTime, now)
 	require.NoError(t, err)
 	require.Len(t, clients, 10)
 }
@@ -845,7 +846,7 @@ func TestHandleQuery_MultipleMounts(t *testing.T) {
 			}
 
 			// Write all the client count data
-			_, _, err = activityLogGenerator.Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
+			_, err = activityLogGenerator.Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
 			require.NoError(t, err)
 
 			endOfCurrentMonth := timeutil.EndOfMonth(time.Now().UTC())

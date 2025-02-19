@@ -1,0 +1,6 @@
+```release-note:improvement
+ui: Adds ability to edit, create, and view the Azure secrets engine configuration.
+```
+```release-note:improvement
+ui (enterprise): Allow WIF configuration on the Azure secrets engine.
+```

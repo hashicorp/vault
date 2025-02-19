@@ -97,6 +97,7 @@ func TestBackend_RoleUpgrade(t *testing.T) {
 	backend := &databaseBackend{}
 
 	roleExpected := &roleEntry{
+		Name: "test",
 		Statements: v4.Statements{
 			CreationStatements: "test",
 			Creation:           []string{"test"},
@@ -211,6 +212,11 @@ func TestBackend_config_connection(t *testing.T) {
 			"password_policy":                    "",
 			"plugin_version":                     "",
 			"verify_connection":                  false,
+			"skip_static_role_import_rotation":   false,
+			"rotation_schedule":                  "",
+			"rotation_period":                    0,
+			"rotation_window":                    0,
+			"disable_automated_rotation":         false,
 		}
 		configReq.Operation = logical.ReadOperation
 		resp, err = b.HandleRequest(namespace.RootContext(nil), configReq)
@@ -219,6 +225,7 @@ func TestBackend_config_connection(t *testing.T) {
 		}
 
 		delete(resp.Data["connection_details"].(map[string]interface{}), "name")
+		delete(resp.Data, "AutomatedRotationParams")
 		if !reflect.DeepEqual(expected, resp.Data) {
 			t.Fatalf("bad: expected:%#v\nactual:%#v\n", expected, resp.Data)
 		}
@@ -266,6 +273,11 @@ func TestBackend_config_connection(t *testing.T) {
 			"password_policy":                    "",
 			"plugin_version":                     "",
 			"verify_connection":                  false,
+			"skip_static_role_import_rotation":   false,
+			"rotation_schedule":                  "",
+			"rotation_period":                    0,
+			"rotation_window":                    0,
+			"disable_automated_rotation":         false,
 		}
 		configReq.Operation = logical.ReadOperation
 		resp, err = b.HandleRequest(namespace.RootContext(nil), configReq)
@@ -274,6 +286,7 @@ func TestBackend_config_connection(t *testing.T) {
 		}
 
 		delete(resp.Data["connection_details"].(map[string]interface{}), "name")
+		delete(resp.Data, "AutomatedRotationParams")
 		if !reflect.DeepEqual(expected, resp.Data) {
 			t.Fatalf("bad: expected:%#v\nactual:%#v\n", expected, resp.Data)
 		}
@@ -310,6 +323,11 @@ func TestBackend_config_connection(t *testing.T) {
 			"password_policy":                    "",
 			"plugin_version":                     "",
 			"verify_connection":                  false,
+			"skip_static_role_import_rotation":   false,
+			"rotation_schedule":                  "",
+			"rotation_period":                    0,
+			"rotation_window":                    0,
+			"disable_automated_rotation":         false,
 		}
 		configReq.Operation = logical.ReadOperation
 		resp, err = b.HandleRequest(namespace.RootContext(nil), configReq)
@@ -318,6 +336,7 @@ func TestBackend_config_connection(t *testing.T) {
 		}
 
 		delete(resp.Data["connection_details"].(map[string]interface{}), "name")
+		delete(resp.Data, "AutomatedRotationParams")
 		if !reflect.DeepEqual(expected, resp.Data) {
 			t.Fatalf("bad: expected:%#v\nactual:%#v\n", expected, resp.Data)
 		}
@@ -417,7 +436,7 @@ func TestBackend_basic(t *testing.T) {
 	defer b.Cleanup(context.Background())
 
 	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
-	defer cleanup()
+	t.Cleanup(cleanup)
 
 	// Configure a connection
 	data := map[string]interface{}{
@@ -768,6 +787,11 @@ func TestBackend_connectionCrud(t *testing.T) {
 		"password_policy":                    "",
 		"plugin_version":                     "",
 		"verify_connection":                  false,
+		"skip_static_role_import_rotation":   false,
+		"rotation_schedule":                  "",
+		"rotation_period":                    json.Number("0"),
+		"rotation_window":                    json.Number("0"),
+		"disable_automated_rotation":         false,
 	}
 	resp, err = client.Read("database/config/plugin-test")
 	if err != nil {
@@ -775,6 +799,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 	}
 
 	delete(resp.Data["connection_details"].(map[string]interface{}), "name")
+	delete(resp.Data, "AutomatedRotationParams")
 	if diff := deep.Equal(resp.Data, expected); diff != nil {
 		t.Fatal(strings.Join(diff, "\n"))
 	}

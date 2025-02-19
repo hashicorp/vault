@@ -346,6 +346,13 @@ $ vault secrets tune \
   -audit-non-hmac-request-keys=street_address \
   -audit-non-hmac-request-keys=postal_code \
   -audit-non-hmac-request-keys=permitted_dns_domains \
+  -audit-non-hmac-request-keys=permitted_email_addresses \
+  -audit-non-hmac-request-keys=permitted_ip_ranges \
+  -audit-non-hmac-request-keys=permitted_uri_domains \
+  -audit-non-hmac-request-keys=excluded_dns_domains \
+  -audit-non-hmac-request-keys=excluded_email_addresses \
+  -audit-non-hmac-request-keys=excluded_ip_ranges \
+  -audit-non-hmac-request-keys=excluded_uri_domains \
   -audit-non-hmac-request-keys=policy_identifiers \
   -audit-non-hmac-request-keys=ext_key_usage_oids \
   -audit-non-hmac-request-keys=csr \

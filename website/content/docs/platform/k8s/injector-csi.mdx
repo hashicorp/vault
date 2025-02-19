@@ -1,18 +1,18 @@
 ---
 layout: docs
-page_title: Agent Injector vs. Vault CSI Provider
-description: This section compares Sidecar Injector and Vault CSI Provider for Kubernetes and Vault integration.
+page_title: Vault Agent Injector vs. Vault CSI Provider
+description: Compares Vault Agent Injector and Vault CSI Provider for Kubernetes and Vault integration.
 ---
 
-# Agent injector vs. Vault CSI provider
+# Vault Agent Injector vs. Vault CSI Provider
 
 This document explores two different methods for integrating HashiCorp Vault with Kubernetes. The information provided is intended for DevOps practitioners who understand secret management concepts and are familiar with HashiCorp Vault and Kubernetes. This document also offers practical guidance to help you understand and choose the best method for your use case.
 
 Information contained within this document details the contrast between the Agent Injector, also referred as _Vault Sidecar_ or _Sidecar_ in this document, and the Vault Container Storage Interface (CSI) provider used to integrate Vault and Kubernetes.
 
-## Vault sidecar agent injector
+## Vault Agent Injector
 
-The [Vault Sidecar Agent Injector](/vault/docs/platform/k8s/injector) leverages the [sidecar pattern](https://docs.microsoft.com/en-us/azure/architecture/patterns/sidecar) to alter pod specifications to include a Vault Agent container that renders Vault secrets to a shared memory volume. By rendering secrets to a shared volume, containers within the pod can consume Vault secrets without being Vault-aware. The injector is a Kubernetes mutating webhook controller. The controller intercepts pod events and applies mutations to the pod if annotations exist within the request. This functionality is provided by the [vault-k8s](https://github.com/hashicorp/vault-k8s) project and can be automatically installed and configured using the Vault Helm chart.
+The [Vault Agent Injector](/vault/docs/platform/k8s/injector) leverages the [sidecar pattern](https://docs.microsoft.com/en-us/azure/architecture/patterns/sidecar) to alter pod specifications to include a Vault Agent container that renders Vault secrets to a shared memory volume. By rendering secrets to a shared volume, containers within the pod can consume Vault secrets without being Vault-aware. The injector is a Kubernetes mutating webhook controller. The controller intercepts pod events and applies mutations to the pod if annotations exist within the request. This functionality is provided by the [vault-k8s](https://github.com/hashicorp/vault-k8s) project and can be automatically installed and configured using the Vault Helm chart.
 
 ![Vault Sidecar Injection Workflow](/img/vault-sidecar-inject-workflow.png)
 

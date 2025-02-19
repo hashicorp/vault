@@ -1,0 +1,3 @@
+```release-note:improvement
+events (enterprise): Send events downstream to a performance standby node only when there is a subscriber on the standby node with a filter matching the events.
+```

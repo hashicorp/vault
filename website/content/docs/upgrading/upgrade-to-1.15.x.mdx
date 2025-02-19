@@ -85,6 +85,12 @@ kubectl exec -ti <NAME> -- wget https://github.com/moparisthebest/static-curl/re
 
 **NOTE:** When using this option you'll want to verify that the static binary comes from a trusted source.
 
+## Activity Log Changes
+
+### Disable client counting activity
+
+License utilization cannot be reported if client counting is disabled. As of Vault Enterprise 1.15.6 and later, client counting cannot be disabled using `/sys/internal/counters/config` endpoint as manual license utilization reporting is always enabled.
+
 ## Known issues and workarounds
 
 @include 'known-issues/1_15-auto-upgrade.mdx'

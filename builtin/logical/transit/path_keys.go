@@ -60,7 +60,7 @@ func (b *backend) pathKeys() *framework.Path {
 				Description: `
 The type of key to create. Currently, "aes128-gcm96" (symmetric), "aes256-gcm96" (symmetric), "ecdsa-p256"
 (asymmetric), "ecdsa-p384" (asymmetric), "ecdsa-p521" (asymmetric), "ed25519" (asymmetric), "rsa-2048" (asymmetric), "rsa-3072"
-(asymmetric), "rsa-4096" (asymmetric) are supported.  Defaults to "aes256-gcm96".
+(asymmetric), "rsa-4096" (asymmetric), "ml-dsa" (asymmetric) are supported.  Defaults to "aes256-gcm96".
 `,
 			},
 
@@ -130,6 +130,21 @@ key.`,
 				Type:        framework.TypeString,
 				Description: "The UUID of the managed key to use for this transit key",
 			},
+			"parameter_set": {
+				Type: framework.TypeString,
+				Description: `The parameter set to use. Applies to ML-DSA and SLH-DSA key types.
+For ML-DSA key types, valid values are 44, 65, or 87.`,
+			},
+			"hybrid_key_type_pqc": {
+				Type: framework.TypeString,
+				Description: `The key type of the post-quantum key to use for hybrid signature schemes.
+Supported types are: ML-DSA.`,
+			},
+			"hybrid_key_type_ec": {
+				Type: framework.TypeString,
+				Description: `The key type of the elliptic curve key to use for hybrid signature schemes.
+Supported types are: ecdsa-p256, ecdsa-p384, ecdsa-p521, and ed25519.`,
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -178,6 +193,9 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 	autoRotatePeriod := time.Second * time.Duration(d.Get("auto_rotate_period").(int))
 	managedKeyName := d.Get("managed_key_name").(string)
 	managedKeyId := d.Get("managed_key_id").(string)
+	parameterSet := d.Get("parameter_set").(string)
+	pqcKeyType := d.Get("hybrid_key_type_pqc").(string)
+	ecKeyType := d.Get("hybrid_key_type_ec").(string)
 
 	if autoRotatePeriod != 0 && autoRotatePeriod < time.Hour {
 		return logical.ErrorResponse("auto rotate period must be 0 to disable or at least an hour"), nil
@@ -227,6 +245,26 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		polReq.KeyType = keysutil.KeyType_AES128_CMAC
 	case "aes256-cmac":
 		polReq.KeyType = keysutil.KeyType_AES256_CMAC
+	case "ml-dsa":
+		polReq.KeyType = keysutil.KeyType_ML_DSA
+
+		if parameterSet != keysutil.ParameterSet_ML_DSA_44 &&
+			parameterSet != keysutil.ParameterSet_ML_DSA_65 &&
+			parameterSet != keysutil.ParameterSet_ML_DSA_87 {
+			return logical.ErrorResponse(fmt.Sprintf("invalid parameter set %s for key type %s", parameterSet, keyType)), logical.ErrInvalidRequest
+		}
+
+		polReq.ParameterSet = parameterSet
+	case "hybrid":
+		polReq.KeyType = keysutil.KeyType_HYBRID
+
+		var err error
+		polReq.HybridConfig, err = getHybridKeyConfig(pqcKeyType, parameterSet, ecKeyType)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("invalid config for hybrid key: %s", err)), logical.ErrInvalidRequest
+		}
+
+		polReq.ParameterSet = parameterSet
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
 	}
@@ -251,6 +289,10 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 
 	if polReq.KeyType.CMACSupported() && !constants.IsEnterprise {
 		return logical.ErrorResponse(ErrCmacEntOnly.Error()), logical.ErrInvalidRequest
+	}
+
+	if polReq.KeyType.IsPQC() && !constants.IsEnterprise {
+		return logical.ErrorResponse(ErrPQCEntOnly.Error()), logical.ErrInvalidRequest
 	}
 
 	p, upserted, err := b.GetPolicy(ctx, polReq, b.GetRandomReader())
@@ -281,6 +323,7 @@ type asymKey struct {
 	PublicKey        string    `json:"public_key" structs:"public_key" mapstructure:"public_key"`
 	CertificateChain string    `json:"certificate_chain" structs:"certificate_chain" mapstructure:"certificate_chain"`
 	CreationTime     time.Time `json:"creation_time" structs:"creation_time" mapstructure:"creation_time"`
+	HybridPublicKey  string    `json:"hybrid_public_key" structs:"hybrid_public_key" mapstructure:"hybrid_public_key"`
 }
 
 func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -370,6 +413,15 @@ func (b *backend) formatKeyPolicy(p *keysutil.Policy, context []byte) (*logical.
 		}
 	}
 
+	if p.ParameterSet != "" {
+		resp.Data["parameter_set"] = p.ParameterSet
+	}
+
+	if p.Type == keysutil.KeyType_HYBRID {
+		resp.Data["hybrid_key_type_pqc"] = p.HybridConfig.PQCKeyType.String()
+		resp.Data["hybrid_key_type_ec"] = p.HybridConfig.ECKeyType.String()
+	}
+
 	switch p.Type {
 	case keysutil.KeyType_AES128_GCM96, keysutil.KeyType_AES256_GCM96, keysutil.KeyType_ChaCha20_Poly1305:
 		retKeys := map[string]int64{}
@@ -378,7 +430,7 @@ func (b *backend) formatKeyPolicy(p *keysutil.Policy, context []byte) (*logical.
 		}
 		resp.Data["keys"] = retKeys
 
-	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521, keysutil.KeyType_ED25519, keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096:
+	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521, keysutil.KeyType_ED25519, keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096, keysutil.KeyType_ML_DSA, keysutil.KeyType_HYBRID:
 		retKeys := map[string]map[string]interface{}{}
 		for k, v := range p.Keys {
 			key := asymKey{
@@ -441,6 +493,8 @@ func (b *backend) formatKeyPolicy(p *keysutil.Policy, context []byte) (*logical.
 					return nil, err
 				}
 				key.PublicKey = pubKey
+			case keysutil.KeyType_ML_DSA:
+				key.Name = "ml-dsa-" + p.ParameterSet
 			}
 
 			retKeys[k] = structs.New(key).Map()
@@ -461,6 +515,38 @@ func (b *backend) pathPolicyDelete(ctx context.Context, req *logical.Request, d 
 	}
 
 	return nil, nil
+}
+
+func getHybridKeyConfig(pqcKeyType, parameterSet, ecKeyType string) (keysutil.HybridKeyConfig, error) {
+	config := keysutil.HybridKeyConfig{}
+
+	switch pqcKeyType {
+	case "ml-dsa":
+		config.PQCKeyType = keysutil.KeyType_ML_DSA
+
+		if parameterSet != keysutil.ParameterSet_ML_DSA_44 &&
+			parameterSet != keysutil.ParameterSet_ML_DSA_65 &&
+			parameterSet != keysutil.ParameterSet_ML_DSA_87 {
+			return keysutil.HybridKeyConfig{}, fmt.Errorf("invalid parameter set %s for key type %s", parameterSet, pqcKeyType)
+		}
+	default:
+		return keysutil.HybridKeyConfig{}, fmt.Errorf("invalid PQC key type: %s", pqcKeyType)
+	}
+
+	switch ecKeyType {
+	case "ecdsa-p256":
+		config.ECKeyType = keysutil.KeyType_ECDSA_P256
+	case "ecdsa-p384":
+		config.ECKeyType = keysutil.KeyType_ECDSA_P384
+	case "ecdsa-p521":
+		config.ECKeyType = keysutil.KeyType_ECDSA_P521
+	case "ed25519":
+		config.ECKeyType = keysutil.KeyType_ED25519
+	default:
+		return keysutil.HybridKeyConfig{}, fmt.Errorf("invalid key type for hybrid key: %s", ecKeyType)
+	}
+
+	return config, nil
 }
 
 const pathPolicyHelpSyn = `Managed named encryption keys`

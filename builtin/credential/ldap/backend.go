@@ -55,8 +55,9 @@ func Backend() *backend {
 			pathConfigRotateRoot(&b),
 		},
 
-		AuthRenew:   b.pathLoginRenew,
-		BackendType: logical.TypeCredential,
+		AuthRenew:        b.pathLoginRenew,
+		BackendType:      logical.TypeCredential,
+		RotateCredential: b.rotateRootCredential,
 	}
 
 	return &b
@@ -121,14 +122,12 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		if b.Logger().IsDebug() {
 			b.Logger().Debug(errString)
 		}
-		ldapResponse.AddWarning(errString)
 	}
 
 	for _, warning := range c.Warnings {
 		if b.Logger().IsDebug() {
 			b.Logger().Debug(string(warning))
 		}
-		ldapResponse.AddWarning(string(warning))
 	}
 
 	var allGroups []string

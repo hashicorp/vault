@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/rpc"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -28,6 +29,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
+	"github.com/mitchellh/mapstructure"
 )
 
 const (
@@ -37,6 +39,8 @@ const (
 	databaseStaticRolePath  = "static-role/"
 	minRootCredRollbackAge  = 1 * time.Minute
 )
+
+var databaseConfigNameFromRotationIDRegex = regexp.MustCompile("^.+/config/(.+$)")
 
 type dbPluginInstance struct {
 	sync.RWMutex
@@ -126,6 +130,14 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 		WALRollback:       b.walRollback,
 		WALRollbackMinAge: minRootCredRollbackAge,
 		BackendType:       logical.TypeLogical,
+		RotateCredential: func(ctx context.Context, request *logical.Request) error {
+			name, err := b.getDatabaseConfigNameFromRotationID(request.RotationID)
+			if err != nil {
+				return err
+			}
+			_, err = b.rotateRootCredentials(ctx, request, name)
+			return err
+		},
 	}
 
 	b.logger = conf.Logger
@@ -205,6 +217,19 @@ func (b *databaseBackend) DatabaseConfig(ctx context.Context, s logical.Storage,
 	return &config, nil
 }
 
+// ConnectionDetails decodes the DatabaseConfig.ConnectionDetails map into a
+// struct
+func (b *databaseBackend) ConnectionDetails(ctx context.Context, config *DatabaseConfig) (*ConnectionDetails, error) {
+	cd := &ConnectionDetails{}
+
+	err := mapstructure.WeakDecode(config.ConnectionDetails, &cd)
+	if err != nil {
+		return nil, err
+	}
+
+	return cd, nil
+}
+
 type upgradeStatements struct {
 	// This json tag has a typo in it, the new version does not. This
 	// necessitates this upgrade logic.
@@ -228,6 +253,20 @@ func (b *databaseBackend) StaticRole(ctx context.Context, s logical.Storage, rol
 	return b.roleAtPath(ctx, s, roleName, databaseStaticRolePath)
 }
 
+func (b *databaseBackend) StoreStaticRole(ctx context.Context, s logical.Storage, r *roleEntry) error {
+	logger := b.Logger().With("role", r.Name, "database", r.DBName)
+	entry, err := logical.StorageEntryJSON(databaseStaticRolePath+r.Name, r)
+	if err != nil {
+		logger.Error("unable to encode entry for storage", "error", err)
+		return err
+	}
+	if err := s.Put(ctx, entry); err != nil {
+		logger.Error("unable to write to storage", "error", err)
+		return err
+	}
+	return nil
+}
+
 func (b *databaseBackend) roleAtPath(ctx context.Context, s logical.Storage, roleName string, pathPrefix string) (*roleEntry, error) {
 	entry, err := s.Get(ctx, pathPrefix+roleName)
 	if err != nil {
@@ -245,6 +284,11 @@ func (b *databaseBackend) roleAtPath(ctx context.Context, s logical.Storage, rol
 	var result roleEntry
 	if err := entry.DecodeJSON(&result); err != nil {
 		return nil, err
+	}
+
+	// handle upgrade for new field Name
+	if result.Name == "" {
+		result.Name = roleName
 	}
 
 	switch {
@@ -448,6 +492,17 @@ func (b *databaseBackend) dbEvent(ctx context.Context,
 	if err != nil && !errors.Is(err, framework.ErrNoEvents) {
 		b.Logger().Error("Error sending event", "error", err)
 	}
+}
+
+func (b *databaseBackend) getDatabaseConfigNameFromRotationID(path string) (string, error) {
+	if !databaseConfigNameFromRotationIDRegex.MatchString(path) {
+		return "", fmt.Errorf("no name found from rotation ID")
+	}
+	res := databaseConfigNameFromRotationIDRegex.FindStringSubmatch(path)
+	if len(res) != 2 {
+		return "", fmt.Errorf("unexpected number of matches (%d) for name in rotation ID", len(res))
+	}
+	return res[1], nil
 }
 
 const backendHelp = `

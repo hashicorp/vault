@@ -43,7 +43,7 @@
                 {{or val.label val.value val}}
                 {{#if val.helpText}}
                   <Hds::TooltipButton @text={{val.helpText}} aria-label="More information">
-                    <FlightIcon @name="info" />
+                    <Hds::Icon @name="info" @isInline={{true}} />
                   </Hds::TooltipButton>
                 {{/if}}
                 {{#if this.hasRadioSubText}}

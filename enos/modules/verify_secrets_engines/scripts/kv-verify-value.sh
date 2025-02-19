@@ -21,8 +21,9 @@ binpath=${VAULT_INSTALL_DIR}/vault
 test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
 export VAULT_FORMAT=json
-if res=$("$binpath" kv get "$MOUNT/$SECRET_PATH"); then
-  if jq -Merc --arg VALUE "$VALUE" --arg KEY "$KEY" '.data[$KEY] == $VALUE' <<< "$res"; then
+if res=$("$binpath" kv get -mount="$MOUNT" "$SECRET_PATH"); then
+  # Note that this expects KVv2 response payloads. KVv1 does not include doubly nested .data
+  if jq -Merc --arg VALUE "$VALUE" --arg KEY "$KEY" '.data.data[$KEY] == $VALUE' <<< "$res"; then
     printf "kv %s/%s %s=%s is valid\n" "$MOUNT" "$SECRET_PATH" "$KEY" "$VALUE"
     exit 0
   fi

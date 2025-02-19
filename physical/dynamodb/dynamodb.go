@@ -28,6 +28,7 @@ import (
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -47,6 +48,10 @@ const (
 	// DefaultDynamoDBWriteCapacity is the default write capacity
 	// that is used when none is configured explicitly.
 	DefaultDynamoDBWriteCapacity = 5
+
+	// DefaultDynamoDBBillingMode is the default billing mode
+	// that is used when none is configured explicitly.
+	DefaultDynamoDBBillingMode = "PROVISIONED"
 
 	// DynamoDBEmptyPath is the string that is used instead of
 	// empty strings when stored in DynamoDB.
@@ -122,7 +127,7 @@ type DynamoDBLockRecord struct {
 }
 
 type PermitPoolWithMetrics struct {
-	physical.PermitPool
+	permitpool.Pool
 	pendingPermits int32
 	poolSize       int
 }
@@ -167,6 +172,17 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 		writeCapacity = DefaultDynamoDBWriteCapacity
 	}
 
+	billingMode := os.Getenv("AWS_DYNAMODB_BILLING_MODE")
+	if billingMode == "" {
+		billingMode = conf["billing_mode"]
+		if billingMode == "" {
+			billingMode = DefaultDynamoDBBillingMode
+		}
+	}
+	if billingMode != "PROVISIONED" && billingMode != "PAY_PER_REQUEST" {
+		return nil, fmt.Errorf("invalid billing mode: %q", billingMode)
+	}
+
 	endpoint := os.Getenv("AWS_DYNAMODB_ENDPOINT")
 	if endpoint == "" {
 		endpoint = conf["endpoint"]
@@ -198,6 +214,12 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 		}
 	}
 
+	dynamodbAllowUpdates := os.Getenv("AWS_DYNAMODB_ALLOW_UPDATES")
+	if dynamodbAllowUpdates == "" {
+		dynamodbAllowUpdates = conf["dynamodb_allow_updates"]
+	}
+	allowUpdates := dynamodbAllowUpdates != ""
+
 	credsConfig := &awsutil.CredentialsConfig{
 		AccessKey:    conf["access_key"],
 		SecretKey:    conf["secret_key"],
@@ -228,7 +250,7 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 
 	client := dynamodb.New(awsSession)
 
-	if err := ensureTableExists(client, table, readCapacity, writeCapacity); err != nil {
+	if err := ensureTableExists(client, table, readCapacity, writeCapacity, billingMode, allowUpdates); err != nil {
 		return nil, err
 	}
 
@@ -301,7 +323,9 @@ func (d *DynamoDBBackend) Put(ctx context.Context, entry *physical.Entry) error 
 func (d *DynamoDBBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"dynamodb", "get"}, time.Now())
 
-	d.permitPool.Acquire()
+	if err := d.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer d.permitPool.Release()
 
 	resp, err := d.client.GetItemWithContext(ctx, &dynamodb.GetItemInput{
@@ -417,7 +441,9 @@ func (d *DynamoDBBackend) List(ctx context.Context, prefix string) ([]string, er
 		},
 	}
 
-	d.permitPool.Acquire()
+	if err := d.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer d.permitPool.Release()
 
 	err := d.client.QueryPagesWithContext(ctx, queryInput, func(out *dynamodb.QueryOutput, lastPage bool) bool {
@@ -470,7 +496,9 @@ func (d *DynamoDBBackend) hasChildren(ctx context.Context, prefix string, exclud
 		Limit: aws.Int64(int64(len(exclude) + 1)),
 	}
 
-	d.permitPool.Acquire()
+	if err := d.permitPool.Acquire(ctx); err != nil {
+		return false, err
+	}
 	defer d.permitPool.Release()
 
 	out, err := d.client.QueryWithContext(ctx, queryInput)
@@ -526,8 +554,9 @@ func (d *DynamoDBBackend) batchWriteRequests(ctx context.Context, requests []*dy
 		requests = requests[batchSize:]
 
 		var err error
-
-		d.permitPool.Acquire()
+		if err := d.permitPool.Acquire(ctx); err != nil {
+			return err
+		}
 
 		boff := backoff.NewExponentialBackOff()
 		boff.MaxElapsedTime = 600 * time.Second
@@ -814,21 +843,17 @@ WatchLoop:
 }
 
 // ensureTableExists creates a DynamoDB table with a given
-// DynamoDB client. If the table already exists, it is not
-// being reconfigured.
-func ensureTableExists(client *dynamodb.DynamoDB, table string, readCapacity, writeCapacity int) error {
-	_, err := client.DescribeTable(&dynamodb.DescribeTableInput{
+// DynamoDB client.
+// If the table already exists, it is not being reconfigured unless allowUpdates is true.
+func ensureTableExists(client *dynamodb.DynamoDB, table string, readCapacity, writeCapacity int, billingMode string, allowUpdates bool) error {
+	tableDescription, err := client.DescribeTable(&dynamodb.DescribeTableInput{
 		TableName: aws.String(table),
 	})
 	if err != nil {
 		if awsError, ok := err.(awserr.Error); ok {
 			if awsError.Code() == "ResourceNotFoundException" {
-				_, err := client.CreateTable(&dynamodb.CreateTableInput{
+				createTableRequest := &dynamodb.CreateTableInput{
 					TableName: aws.String(table),
-					ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
-						ReadCapacityUnits:  aws.Int64(int64(readCapacity)),
-						WriteCapacityUnits: aws.Int64(int64(writeCapacity)),
-					},
 					KeySchema: []*dynamodb.KeySchemaElement{{
 						AttributeName: aws.String("Path"),
 						KeyType:       aws.String("HASH"),
@@ -843,7 +868,18 @@ func ensureTableExists(client *dynamodb.DynamoDB, table string, readCapacity, wr
 						AttributeName: aws.String("Key"),
 						AttributeType: aws.String("S"),
 					}},
-				})
+				}
+				if billingMode == "PAY_PER_REQUEST" {
+					// PAY_PER_REQUEST doesn't require setting capacity units
+					createTableRequest.BillingMode = aws.String(billingMode)
+				} else {
+					createTableRequest.BillingMode = aws.String(billingMode)
+					createTableRequest.ProvisionedThroughput = &dynamodb.ProvisionedThroughput{
+						ReadCapacityUnits:  aws.Int64(int64(readCapacity)),
+						WriteCapacityUnits: aws.Int64(int64(writeCapacity)),
+					}
+				}
+				_, err := client.CreateTable(createTableRequest)
 				if err != nil {
 					return err
 				}
@@ -860,8 +896,48 @@ func ensureTableExists(client *dynamodb.DynamoDB, table string, readCapacity, wr
 		}
 		return err
 	}
+	if allowUpdates && shouldUpdateTable(tableDescription.Table, billingMode, readCapacity, writeCapacity) {
+		// this will only change the BillingMode or the read/write capacity
+		updateTableRequest := &dynamodb.UpdateTableInput{
+			TableName: aws.String(table),
+		}
+		if billingMode == "PAY_PER_REQUEST" {
+			// PAY_PER_REQUEST doesn't require setting capacity units
+			updateTableRequest.BillingMode = aws.String(billingMode)
+		} else {
+			updateTableRequest.BillingMode = aws.String(billingMode)
+			updateTableRequest.ProvisionedThroughput = &dynamodb.ProvisionedThroughput{
+				ReadCapacityUnits:  aws.Int64(int64(readCapacity)),
+				WriteCapacityUnits: aws.Int64(int64(writeCapacity)),
+			}
+		}
+		_, err := client.UpdateTable(updateTableRequest)
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
+}
+
+// shouldUpdateTable compares the billingMode and provisioned capacity of the existing table with the
+// desired billingMode and capacity
+func shouldUpdateTable(tableDescription *dynamodb.TableDescription, billingMode string, readCapacity, writeCapacity int) bool {
+	existingBillingMode := "PROVISIONED"
+	// the dynamodb service returns nil when PROVISIONED is the billingMode
+	// as it is the default
+	billingSummary := tableDescription.BillingModeSummary
+	if billingSummary != nil {
+		existingBillingMode = *(billingSummary.BillingMode)
+	}
+	if existingBillingMode != billingMode {
+		return true
+	}
+	provisionedThroughput := tableDescription.ProvisionedThroughput
+	if int64(readCapacity) != *(provisionedThroughput.ReadCapacityUnits) && int64(writeCapacity) != *(provisionedThroughput.WriteCapacityUnits) {
+		return true
+	}
+	return false
 }
 
 // recordPathForVaultKey transforms a vault key into
@@ -928,34 +1004,38 @@ func isConditionCheckFailed(err error) bool {
 // number of permits which emits metrics
 func NewPermitPoolWithMetrics(permits int) *PermitPoolWithMetrics {
 	return &PermitPoolWithMetrics{
-		PermitPool:     *physical.NewPermitPool(permits),
+		Pool:           *permitpool.New(permits),
 		pendingPermits: 0,
 		poolSize:       permits,
 	}
 }
 
 // Acquire returns when a permit has been acquired
-func (c *PermitPoolWithMetrics) Acquire() {
+func (c *PermitPoolWithMetrics) Acquire(ctx context.Context) error {
 	atomic.AddInt32(&c.pendingPermits, 1)
 	c.emitPermitMetrics()
-	c.PermitPool.Acquire()
+	err := c.Pool.Acquire(ctx)
 	atomic.AddInt32(&c.pendingPermits, -1)
 	c.emitPermitMetrics()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Release returns a permit to the pool
 func (c *PermitPoolWithMetrics) Release() {
-	c.PermitPool.Release()
+	c.Pool.Release()
 	c.emitPermitMetrics()
 }
 
 // Get the number of requests in the permit pool
 func (c *PermitPoolWithMetrics) CurrentPermits() int {
-	return c.PermitPool.CurrentPermits()
+	return c.Pool.CurrentPermits()
 }
 
 func (c *PermitPoolWithMetrics) emitPermitMetrics() {
 	metrics.SetGauge([]string{"dynamodb", "permit_pool", "pending_permits"}, float32(c.pendingPermits))
-	metrics.SetGauge([]string{"dynamodb", "permit_pool", "active_permits"}, float32(c.PermitPool.CurrentPermits()))
+	metrics.SetGauge([]string{"dynamodb", "permit_pool", "active_permits"}, float32(c.Pool.CurrentPermits()))
 	metrics.SetGauge([]string{"dynamodb", "permit_pool", "pool_size"}, float32(c.poolSize))
 }

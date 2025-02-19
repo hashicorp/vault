@@ -24,6 +24,7 @@ import (
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ocsp"
 )
 
@@ -201,6 +202,51 @@ func testAccStepResolveRoleExpectRoleResolutionToFail(t *testing.T, connState tl
 			errString, ok := resp.Data["error"].(string)
 			if !ok {
 				t.Fatal("Error not part of response.")
+			}
+
+			if _, dataKeyExists := resp.Data["data"]; dataKeyExists {
+				t.Fatal("metadata key 'data' existed in response without feature enabled")
+			}
+
+			if !strings.Contains(errString, certAuthFailMsg) {
+				t.Fatalf("Error was not due to invalid role name. Error: %s", errString)
+			}
+			return nil
+		},
+		Data: map[string]interface{}{
+			"name": certName,
+		},
+	}
+}
+
+func testAccStepResolveRoleExpectRoleResolutionToFailWithData(t *testing.T, connState tls.ConnectionState, certName string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation:       logical.ResolveRoleOperation,
+		Path:            "login",
+		Unauthenticated: true,
+		ConnState:       &connState,
+		ErrorOk:         true,
+		Check: func(resp *logical.Response) error {
+			if resp == nil && !resp.IsError() {
+				t.Fatalf("Response was not an error: resp:%#v", resp)
+			}
+
+			errString, ok := resp.Data["error"].(string)
+			if !ok {
+				t.Fatal("Error not part of response.")
+			}
+
+			dataKeysRaw, dataKeyExists := resp.Data["data"]
+			if !dataKeyExists {
+				t.Fatal("metadata key 'data' did not exist in response feature enabled")
+			}
+			dataKeys, ok := dataKeysRaw.(map[string]string)
+			if !ok {
+				t.Fatalf("the 'data' field was not a map: %T", dataKeysRaw)
+			}
+
+			for _, key := range []string{"common_name", "serial_number", "authority_key_id", "subject_key_id"} {
+				require.Contains(t, dataKeys, key, "response metadata key %s was missing in response: %v", key, resp)
 			}
 
 			if !strings.Contains(errString, certAuthFailMsg) {
@@ -420,6 +466,44 @@ func TestCert_RoleResolveOCSP(t *testing.T) {
 	}
 }
 
-func serialFromBigInt(serial *big.Int) string {
-	return strings.TrimSpace(certutil.GetHexFormatted(serial.Bytes(), ":"))
+// TestCert_MetadataOnFailure verifies that we return the cert metadata
+// in the response on failures if the configuration option is enabled.
+func TestCert_MetadataOnFailure(t *testing.T) {
+	certTemplate := &x509.Certificate{
+		Subject: pkix.Name{
+			CommonName: "example.com",
+		},
+		DNSNames:    []string{"example.com"},
+		IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
+		ExtKeyUsage: []x509.ExtKeyUsage{
+			x509.ExtKeyUsageServerAuth,
+			x509.ExtKeyUsageClientAuth,
+		},
+		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement,
+		SerialNumber: big.NewInt(mathrand.Int63()),
+		NotBefore:    time.Now().Add(-30 * time.Second),
+		NotAfter:     time.Now().Add(262980 * time.Hour),
+	}
+
+	tempDir, connState, err := generateTestCertAndConnState(t, certTemplate)
+	if tempDir != "" {
+		defer os.RemoveAll(tempDir)
+	}
+	if err != nil {
+		t.Fatalf("error testing connection state: %v", err)
+	}
+	ca, err := ioutil.ReadFile(filepath.Join(tempDir, "ca_cert.pem"))
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: testFactory(t),
+		Steps: []logicaltest.TestStep{
+			testStepEnableMetadataFailures(),
+			testAccStepCert(t, "web", ca, "foo", allowed{dns: "example.com"}, false),
+			testAccStepLoginWithName(t, connState, "web"),
+			testAccStepResolveRoleExpectRoleResolutionToFailWithData(t, connState, "notweb"),
+		},
+	})
 }

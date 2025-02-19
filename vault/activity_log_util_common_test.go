@@ -978,7 +978,7 @@ func Test_ActivityLog_ComputeCurrentMonth_NamespaceMounts(t *testing.T) {
 			correctMountPaths := func(namespaces []*activity.MonthlyNamespaceRecord) {
 				for _, ns := range namespaces {
 					for _, mount := range ns.Mounts {
-						mount.MountPath = fmt.Sprintf(deletedMountFmt, mount.MountPath)
+						mount.MountPath = fmt.Sprintf(DeletedMountFmt, mount.MountPath)
 					}
 				}
 			}
@@ -988,14 +988,6 @@ func Test_ActivityLog_ComputeCurrentMonth_NamespaceMounts(t *testing.T) {
 			equalActivityMonthRecords(t, tc.wantMonth, monthRecord)
 		})
 	}
-}
-
-// writeGlobalEntitySegment writes a single global segment file with the given time and index for an entity
-func writeGlobalEntitySegment(t *testing.T, core *Core, ts time.Time, index int, item *activity.EntityActivityLog) {
-	t.Helper()
-	protoItem, err := proto.Marshal(item)
-	require.NoError(t, err)
-	WriteToStorage(t, core, makeSegmentPath(t, activityGlobalPathPrefix+activityEntityBasePath, ts, index), protoItem)
 }
 
 // writeEntitySegment writes a single segment file with the given time and index for an entity
@@ -1011,7 +1003,7 @@ func writeTokenSegment(t *testing.T, core *Core, ts time.Time, index int, item *
 	t.Helper()
 	protoItem, err := proto.Marshal(item)
 	require.NoError(t, err)
-	WriteToStorage(t, core, makeSegmentPath(t, activityTokenLocalBasePath, ts, index), protoItem)
+	WriteToStorage(t, core, makeSegmentPath(t, activityTokenBasePath, ts, index), protoItem)
 }
 
 // makeSegmentPath formats the path for a segment at a particular time and index
@@ -1028,9 +1020,8 @@ func TestSegmentFileReader_BadData(t *testing.T) {
 	now := time.Now()
 
 	// write bad data that won't be able to be unmarshaled at index 0
-	WriteToStorage(t, core, makeSegmentPath(t, activityTokenLocalBasePath, now, 0), []byte("fake data"))
+	WriteToStorage(t, core, makeSegmentPath(t, activityTokenBasePath, now, 0), []byte("fake data"))
 	WriteToStorage(t, core, makeSegmentPath(t, activityEntityBasePath, now, 0), []byte("fake data"))
-	WriteToStorage(t, core, makeSegmentPath(t, activityGlobalPathPrefix+activityEntityBasePath, now, 0), []byte("fake data"))
 
 	// write entity at index 1
 	entity := &activity.EntityActivityLog{Clients: []*activity.EntityRecord{
@@ -1039,9 +1030,6 @@ func TestSegmentFileReader_BadData(t *testing.T) {
 		},
 	}}
 	writeEntitySegment(t, core, now, 1, entity)
-
-	// write global data at index 1
-	writeGlobalEntitySegment(t, core, now, 1, entity)
 
 	// write token at index 1
 	token := &activity.TokenCount{CountByNamespaceID: map[string]uint64{
@@ -1056,14 +1044,6 @@ func TestSegmentFileReader_BadData(t *testing.T) {
 	require.Error(t, err)
 	// then, the reader can read the good entity at index 1
 	gotEntity, err := reader.ReadEntity(context.Background())
-	require.True(t, proto.Equal(gotEntity, entity))
-	require.Nil(t, err)
-
-	// first the bad global entity is read, which returns an error
-	_, err = reader.ReadGlobalEntity(context.Background())
-	require.Error(t, err)
-	// then, the reader can read the good entity at index 1
-	gotEntity, err = reader.ReadGlobalEntity(context.Background())
 	require.True(t, proto.Equal(gotEntity, entity))
 	require.Nil(t, err)
 
@@ -1083,9 +1063,8 @@ func TestSegmentFileReader_MissingData(t *testing.T) {
 	now := time.Now()
 	// write entities and tokens at indexes 0, 1, 2
 	for i := 0; i < 3; i++ {
-		WriteToStorage(t, core, makeSegmentPath(t, activityTokenLocalBasePath, now, i), []byte("fake data"))
+		WriteToStorage(t, core, makeSegmentPath(t, activityTokenBasePath, now, i), []byte("fake data"))
 		WriteToStorage(t, core, makeSegmentPath(t, activityEntityBasePath, now, i), []byte("fake data"))
-		WriteToStorage(t, core, makeSegmentPath(t, activityGlobalPathPrefix+activityEntityBasePath, now, i), []byte("fake data"))
 
 	}
 	// write entity at index 3
@@ -1095,8 +1074,6 @@ func TestSegmentFileReader_MissingData(t *testing.T) {
 		},
 	}}
 	writeEntitySegment(t, core, now, 3, entity)
-	// write global entity at index 3
-	writeGlobalEntitySegment(t, core, now, 3, entity)
 	// write token at index 3
 	token := &activity.TokenCount{CountByNamespaceID: map[string]uint64{
 		"ns": 1,
@@ -1107,9 +1084,8 @@ func TestSegmentFileReader_MissingData(t *testing.T) {
 
 	// delete the indexes 0, 1, 2
 	for i := 0; i < 3; i++ {
-		require.NoError(t, core.barrier.Delete(context.Background(), makeSegmentPath(t, activityTokenLocalBasePath, now, i)))
+		require.NoError(t, core.barrier.Delete(context.Background(), makeSegmentPath(t, activityTokenBasePath, now, i)))
 		require.NoError(t, core.barrier.Delete(context.Background(), makeSegmentPath(t, activityEntityBasePath, now, i)))
-		require.NoError(t, core.barrier.Delete(context.Background(), makeSegmentPath(t, activityGlobalPathPrefix+activityEntityBasePath, now, i)))
 	}
 
 	// we expect the reader to only return the data at index 3, and then be done
@@ -1123,12 +1099,6 @@ func TestSegmentFileReader_MissingData(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, proto.Equal(gotToken, token))
 	_, err = reader.ReadToken(context.Background())
-	require.Equal(t, err, io.EOF)
-
-	gotEntity, err = reader.ReadGlobalEntity(context.Background())
-	require.NoError(t, err)
-	require.True(t, proto.Equal(gotEntity, entity))
-	_, err = reader.ReadGlobalEntity(context.Background())
 	require.Equal(t, err, io.EOF)
 }
 

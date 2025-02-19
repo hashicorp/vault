@@ -8,6 +8,7 @@ package transit
 import (
 	"context"
 
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -24,3 +25,11 @@ func (b *backend) periodicFuncEnt(_ context.Context, _ *logical.Request) error {
 func (b *backend) cleanupEnt(_ context.Context) {}
 
 func (b *backend) setupEnt() {}
+
+func entEncodePrivateKey(_ string, p *keysutil.Policy, _ *keysutil.KeyEntry) (string, error) {
+	return "", nil
+}
+
+func entEncodePublicKey(_ string, p *keysutil.Policy, _ *keysutil.KeyEntry) (string, error) {
+	return "", nil
+}

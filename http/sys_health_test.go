@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSysHealth_get(t *testing.T) {
@@ -214,4 +215,30 @@ func TestSysHealth_head(t *testing.T) {
 			t.Fatalf("HEAD %v expected no body, received \"%v\".", queryurl, data)
 		}
 	}
+}
+
+// TestSysHealth_Removed checks that a removed node returns a 530 and sets
+// removed from cluster to be true. The test also checks that the removedcode
+// query parameter is respected.
+func TestSysHealth_Removed(t *testing.T) {
+	core, err := vault.TestCoreWithMockRemovableNodeHABackend(t, true)
+	require.NoError(t, err)
+	vault.TestCoreInit(t, core)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	raw, err := http.Get(addr + "/v1/sys/health")
+	require.NoError(t, err)
+	testResponseStatus(t, raw, 530)
+	healthResp := HealthResponse{}
+	testResponseBody(t, raw, &healthResp)
+	require.NotNil(t, healthResp.RemovedFromCluster)
+	require.True(t, *healthResp.RemovedFromCluster)
+
+	raw, err = http.Get(addr + "/v1/sys/health?removedcode=299")
+	require.NoError(t, err)
+	testResponseStatus(t, raw, 299)
+	secondHealthResp := HealthResponse{}
+	testResponseBody(t, raw, &secondHealthResp)
+	require.NotNil(t, secondHealthResp.RemovedFromCluster)
+	require.True(t, *secondHealthResp.RemovedFromCluster)
 }

@@ -108,7 +108,7 @@ func TestTransit_HMAC(t *testing.T) {
 					t.Fatalf("error validating hmac: %s", errStr)
 				}
 				if resp.Data["valid"].(bool) == false {
-					t.Fatalf(fmt.Sprintf("error validating hmac;\nreq:\n%#v\nresp:\n%#v", *req, *resp))
+					t.Fatalf("error validating hmac;\nreq:\n%#v\nresp:\n%#v", *req, *resp)
 				}
 			}
 			req.Path = strings.ReplaceAll(req.Path, "hmac", "verify")

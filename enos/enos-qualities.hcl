@@ -405,6 +405,10 @@ quality "vault_audit_log" {
   description = "The Vault audit sub-system is enabled with the log and writes to a log"
 }
 
+quality "vault_audit_log_secrets" {
+  description = "The Vault audit sub-system does not output secret values"
+}
+
 quality "vault_audit_socket" {
   description = "The Vault audit sub-system is enabled with the socket and writes to a socket"
 }
@@ -490,6 +494,10 @@ quality "vault_init" {
   description = "Vault initializes the cluster with the given seal parameters"
 }
 
+quality "vault_journal_secrets" {
+  description = "The Vault systemd journal does not output secret values"
+}
+
 quality "vault_license_required_ent" {
   description = "Vault Enterprise requires a license in order to start"
 }
@@ -530,6 +538,14 @@ quality "vault_proxy_cli_access" {
   description = <<-EOF
     The Vault CLI accesses tokens through the Vault proxy without a VAULT_TOKEN available
   EOF
+}
+
+quality "vault_radar_index_create" {
+  description = "Vault radar is able to create an index from KVv2 mounts"
+}
+
+quality "vault_radar_scan_file" {
+  description = "Vault radar is able to scan a file for secrets"
 }
 
 quality "vault_raft_voters" {

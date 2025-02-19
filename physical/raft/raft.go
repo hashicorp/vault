@@ -25,6 +25,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-raftchunking"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/raft"
 	autopilot "github.com/hashicorp/raft-autopilot"
@@ -175,7 +176,7 @@ type RaftBackend struct {
 	serverAddressProvider raft.ServerAddressProvider
 
 	// permitPool is used to limit the number of concurrent storage calls.
-	permitPool *physical.PermitPool
+	permitPool *permitpool.Pool
 
 	// maxEntrySize imposes a size limit (in bytes) on a raft entry (put or transaction).
 	// It is suggested to use a value of 2x the Raft chunking size for optimal
@@ -256,7 +257,9 @@ type RaftBackend struct {
 	// limits.
 	specialPathLimits map[string]uint64
 
-	removed atomic.Bool
+	removed              *atomic.Bool
+	removedCallback      func()
+	removedServerCleanup func(context.Context, string) (bool, error)
 }
 
 func (b *RaftBackend) IsNodeRemoved(ctx context.Context, nodeID string) (bool, error) {
@@ -276,9 +279,28 @@ func (b *RaftBackend) IsRemoved() bool {
 	return b.removed.Load()
 }
 
+var removedKey = []byte("removed")
+
 func (b *RaftBackend) RemoveSelf() error {
 	b.removed.Store(true)
-	return nil
+	return b.stableStore.SetUint64(removedKey, 1)
+}
+
+func (b *RaftBackend) SetRemovedServerCleanupFunc(f func(context.Context, string) (bool, error)) {
+	b.l.Lock()
+	b.removedServerCleanup = f
+	b.l.Unlock()
+}
+
+func (b *RaftBackend) RemovedServerCleanup(ctx context.Context, nodeID string) (bool, error) {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	if b.removedServerCleanup != nil {
+		return b.removedServerCleanup(ctx, nodeID)
+	}
+
+	return false, nil
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
@@ -592,6 +614,14 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		snapStore = newSnapshotStoreDelay(snapStore, backendConfig.SnapshotDelay, logger)
 	}
 
+	isRemoved := new(atomic.Bool)
+	removedVal, err := stableStore.GetUint64(removedKey)
+	if err != nil {
+		logger.Debug("error checking if this node is removed. continuing under the assumption that it's not", "error", err)
+	}
+	if removedVal == 1 {
+		isRemoved.Store(true)
+	}
 	return &RaftBackend{
 		logger:                        logger,
 		fsm:                           fsm,
@@ -603,7 +633,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		closers:                       closers,
 		dataDir:                       backendConfig.Path,
 		localID:                       backendConfig.NodeId,
-		permitPool:                    physical.NewPermitPool(physical.DefaultParallelOperations),
+		permitPool:                    permitpool.New(physical.DefaultParallelOperations),
 		maxEntrySize:                  backendConfig.MaxEntrySize,
 		maxMountAndNamespaceEntrySize: backendConfig.MaxMountAndNamespaceTableEntrySize,
 		maxBatchEntries:               backendConfig.MaxBatchEntries,
@@ -618,6 +648,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		raftLogVerifierEnabled:        backendConfig.RaftLogVerifierEnabled,
 		raftLogVerificationInterval:   backendConfig.RaftLogVerificationInterval,
 		effectiveSDKVersion:           version.GetVersion().Version,
+		removed:                       isRemoved,
 	}, nil
 }
 
@@ -789,7 +820,9 @@ func (b *RaftBackend) applyVerifierCheckpoint() error {
 	data := make([]byte, 1)
 	data[0] = byte(verifierCheckpointOp)
 
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(context.Background()); err != nil {
+		return err
+	}
 	b.l.RLock()
 
 	var err error
@@ -1030,9 +1063,15 @@ func (b *RaftBackend) SetRestoreCallback(restoreCb restoreCallback) {
 	b.fsm.l.Unlock()
 }
 
-func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
-	config.Logger = b.logger
-	multiplierRaw, ok := b.conf["performance_multiplier"]
+func (b *RaftBackend) SetRemovedCallback(cb func()) {
+	b.l.Lock()
+	defer b.l.Unlock()
+	b.removedCallback = cb
+}
+
+func ApplyConfigSettings(logger log.Logger, parsedConf map[string]string, config *raft.Config) error {
+	config.Logger = logger
+	multiplierRaw, ok := parsedConf["performance_multiplier"]
 	multiplier := 5
 	if ok {
 		var err error
@@ -1045,7 +1084,7 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 	config.HeartbeatTimeout *= time.Duration(multiplier)
 	config.LeaderLeaseTimeout *= time.Duration(multiplier)
 
-	snapThresholdRaw, ok := b.conf["snapshot_threshold"]
+	snapThresholdRaw, ok := parsedConf["snapshot_threshold"]
 	if ok {
 		var err error
 		snapThreshold, err := strconv.Atoi(snapThresholdRaw)
@@ -1055,7 +1094,7 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 		config.SnapshotThreshold = uint64(snapThreshold)
 	}
 
-	trailingLogsRaw, ok := b.conf["trailing_logs"]
+	trailingLogsRaw, ok := parsedConf["trailing_logs"]
 	if ok {
 		var err error
 		trailingLogs, err := strconv.Atoi(trailingLogsRaw)
@@ -1064,7 +1103,7 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 		}
 		config.TrailingLogs = uint64(trailingLogs)
 	}
-	snapshotIntervalRaw, ok := b.conf["snapshot_interval"]
+	snapshotIntervalRaw, ok := parsedConf["snapshot_interval"]
 	if ok {
 		var err error
 		snapshotInterval, err := parseutil.ParseDurationSecond(snapshotIntervalRaw)
@@ -1082,7 +1121,7 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 	// scheduler.
 	config.BatchApplyCh = true
 
-	b.logger.Trace("applying raft config", "inputs", b.conf)
+	logger.Trace("applying raft config", "inputs", parsedConf)
 	return nil
 }
 
@@ -1107,9 +1146,12 @@ type SetupOpts struct {
 	// We pass it in though because it can be overridden in tests or via ENV in
 	// core.
 	EffectiveSDKVersion string
+
+	// RemovedCallback is the function to call when the node has been removed
+	RemovedCallback func()
 }
 
-func (b *RaftBackend) StartRecoveryCluster(ctx context.Context, peer Peer) error {
+func (b *RaftBackend) StartRecoveryCluster(ctx context.Context, peer Peer, removedCallback func()) error {
 	recoveryModeConfig := &raft.Configuration{
 		Servers: []raft.Server{
 			{
@@ -1122,6 +1164,7 @@ func (b *RaftBackend) StartRecoveryCluster(ctx context.Context, peer Peer) error
 	return b.SetupCluster(context.Background(), SetupOpts{
 		StartAsLeader:      true,
 		RecoveryModeConfig: recoveryModeConfig,
+		RemovedCallback:    removedCallback,
 	})
 }
 
@@ -1157,7 +1200,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 
 	// Setup the raft config
 	raftConfig := raft.DefaultConfig()
-	if err := b.applyConfigSettings(raftConfig); err != nil {
+	if err := ApplyConfigSettings(b.logger, b.conf, raftConfig); err != nil {
 		return err
 	}
 
@@ -1391,6 +1434,9 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		}
 	}
 
+	if opts.RemovedCallback != nil {
+		b.removedCallback = opts.RemovedCallback
+	}
 	b.StartRemovedChecker(ctx)
 
 	b.logger.Trace("finished setting up raft cluster")
@@ -1430,21 +1476,45 @@ func (b *RaftBackend) StartRemovedChecker(ctx context.Context) {
 	go func() {
 		ticker := time.NewTicker(time.Second)
 		defer ticker.Stop()
+		hasBeenPresent := false
 
 		logger := b.logger.Named("removed.checker")
 		for {
 			select {
 			case <-ticker.C:
+				// If the raft cluster has been torn down (which will happen on
+				// seal) the raft backend will be uninitialized. We want to exit
+				// the loop in that case. If the cluster unseals, we'll get a
+				// new backend setup and that will have its own removed checker.
+
+				// There is a ctx.Done() check below that will also exit, but
+				// in most (if not all) places we pass in context.Background()
+				// to this function. Checking initialization will prevent this
+				// loop from continuing to run after the raft backend is stopped
+				// regardless of the context.
+				if !b.Initialized() {
+					return
+				}
 				removed, err := b.IsNodeRemoved(ctx, b.localID)
 				if err != nil {
 					logger.Error("failed to check if node is removed", "node ID", b.localID, "error", err)
 					continue
 				}
-				if removed {
+				if !removed {
+					hasBeenPresent = true
+				}
+				// the node must have been previously present in the config,
+				// only then should we consider it removed and shutdown
+				if removed && hasBeenPresent {
 					err := b.RemoveSelf()
 					if err != nil {
 						logger.Error("failed to remove self", "node ID", b.localID, "error", err)
 					}
+					b.l.RLock()
+					if b.removedCallback != nil {
+						b.removedCallback()
+					}
+					b.l.RUnlock()
 					return
 				}
 			case <-ctx.Done():
@@ -1756,7 +1826,9 @@ func (b *RaftBackend) Delete(ctx context.Context, path string) error {
 			},
 		},
 	}
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer b.permitPool.Release()
 
 	b.l.RLock()
@@ -1776,7 +1848,9 @@ func (b *RaftBackend) Get(ctx context.Context, path string) (*physical.Entry, er
 		return nil, err
 	}
 
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer b.permitPool.Release()
 
 	if err := ctx.Err(); err != nil {
@@ -1819,7 +1893,9 @@ func (b *RaftBackend) Put(ctx context.Context, entry *physical.Entry) error {
 		},
 	}
 
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer b.permitPool.Release()
 
 	b.l.RLock()
@@ -1839,7 +1915,9 @@ func (b *RaftBackend) List(ctx context.Context, prefix string) ([]string, error)
 		return nil, err
 	}
 
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer b.permitPool.Release()
 
 	if err := ctx.Err(); err != nil {
@@ -1894,7 +1972,9 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 		command.Operations[i] = op
 	}
 
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer b.permitPool.Release()
 
 	b.l.RLock()
@@ -2241,4 +2321,18 @@ func isRaftLogVerifyCheckpoint(l *raft.Log) bool {
 
 	// Must be the last chunk of a chunked object that has chunking meta
 	return false
+}
+
+func (b *RaftBackend) ReloadConfig(config raft.ReloadableConfig) error {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	if b.raft != nil {
+		if err := b.raft.ReloadConfig(config); err != nil {
+			return err
+		} else {
+			b.logger.Info("reloaded raft config", "settings", config)
+		}
+	}
+	return nil
 }

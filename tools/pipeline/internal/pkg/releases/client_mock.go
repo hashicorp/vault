@@ -7,7 +7,6 @@ import (
 	"context"
 
 	"github.com/Masterminds/semver"
-
 	"github.com/hashicorp/releases-api/pkg/models"
 )
 

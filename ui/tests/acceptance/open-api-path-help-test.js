@@ -80,7 +80,7 @@ function secretEngineHelper(test, secretEngine) {
       assert.deepEqual(
         Object.keys(result).sort(),
         Object.keys(expected).sort(),
-        `getProps returns expected attributes for ${modelName}`
+        `getProps returns expected attributes for ${modelName} (help url: "${helpUrl}")`
       );
       Object.keys(expected).forEach((attrName) => {
         assert.deepEqual(result[attrName], expected[attrName], `${attrName} attribute details match`);
