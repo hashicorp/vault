@@ -5,8 +5,6 @@
 
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
-import { pluralize } from 'ember-inflector';
-import { capitalize } from '@ember/string';
 import ListRoute from 'vault/mixins/list-route';
 
 export default Route.extend(ListRoute, {
@@ -22,19 +20,41 @@ export default Route.extend(ListRoute, {
     return { apiPath, type, authMethodPath, itemType, methodModel };
   },
 
+  fetchListItems(type, itemType, authMethodPath) {
+    const { auth } = this.api;
+    if (type === 'userpass') {
+      return auth.userpassListUsers({ userpassMountPath: authMethodPath, list: 'true' });
+    }
+    if (type === 'kubernetes') {
+      return auth.kubernetesListAuthRoles({ kubernetesMountPath: authMethodPath, list: 'true' });
+    }
+    if (type === 'ldap') {
+      const payload = {
+        ldapMountPath: authMethodPath,
+        list: 'true' /* as const */,
+      };
+      return itemType === 'group' ? auth.ldapListGroups(payload) : auth.ldapListUsers(payload);
+    }
+    if (type === 'okta') {
+      const payload = {
+        oktaMountPath: authMethodPath,
+        list: 'true' /* as const */,
+      };
+      return itemType === 'group' ? auth.oktaListGroups(payload) : auth.oktaListUsers(payload);
+    }
+    if (type === 'radius') {
+      return auth.radiusListUsers({ radiusMountPath: authMethodPath, list: 'true' });
+    }
+  },
+
   async model() {
     const { type, authMethodPath, itemType } = this.getMethodAndModelInfo();
     const { page, pageFilter } = this.paramsFor(this.routeName);
-    const payload = {
-      [`${type}MountPath`]: authMethodPath,
-      list: true,
-    };
     // examples -> userpassListUser, kubernetesListAuthRoles, ldapListGroups
     const listItem = type === 'kubernetes' && itemType === 'role' ? 'authRole' : itemType;
-    const authListMethod = `${type}List${capitalize(pluralize(listItem))}`;
 
     try {
-      const { keys } = await this.api.auth[authListMethod](payload);
+      const { keys } = await this.fetchListItems(type, itemType, authMethodPath);
       // it would likely be better to update the template/component to use the keys directly
       // for now we are trying to make as few changes as possible
       // add some additional information necessary to delete method in generated-item-list component
