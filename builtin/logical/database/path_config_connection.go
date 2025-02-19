@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/url"
 	"sort"
-	"strings"
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/go-uuid"
@@ -194,11 +193,12 @@ func (b *databaseBackend) reloadPlugin() framework.OperationFunc {
 			if config.PluginName == pluginName {
 				if err := b.reloadConnection(ctx, req.Storage, connName); err != nil {
 					b.Logger().Error("failed to reload", "connection", connName, "error", err)
-					reloadFailed = append(reloadFailed, connName)
 					b.dbEvent(ctx, "reload-connection-fail", req.Path, "", false, "name", connName)
+					reloadFailed = append(reloadFailed, connName)
 				} else {
-					reloaded = append(reloaded, connName)
+					b.Logger().Debug("reloaded", "connection", connName)
 					b.dbEvent(ctx, "reload-connection", req.Path, "", true, "name", connName)
+					reloaded = append(reloaded, connName)
 				}
 			}
 		}
@@ -210,30 +210,10 @@ func (b *databaseBackend) reloadPlugin() framework.OperationFunc {
 			},
 		}
 
-		var successfullyReloaded string
 		if len(reloaded) > 0 {
 			b.dbEvent(ctx, "reload", req.Path, "", true, "plugin_name", pluginName)
-			// gather successful reloads so we can report those in the event
-			// that there are any failures
-			successfullyReloaded = fmt.Sprintf("successfully reloaded %d connection(s): %s; ", len(reloaded), strings.Join(reloaded, ", "))
-		} else {
-			msg := fmt.Sprintf("no connections were found with plugin_name %q", pluginName)
-			b.Logger().Debug(msg)
-			// TODO: fix this. Warnings are not bubbled up to the user because
-			// the vault package's reloadMatchingPlugin() disregards the
-			// logical.Response that we modify here
-			resp.AddWarning(msg)
-		}
-
-		if len(reloadFailed) > 0 {
-			// Some connections were not reloaded. We prepend the error with
-			// any successful reloads so that those are reported to the client.
-			return logical.ErrorResponse(fmt.Sprintf(
-				"%sfailed to reload %d connection(s): %s; ",
-				successfullyReloaded,
-				len(reloadFailed),
-				strings.Join(reloadFailed, ", "),
-			)), nil
+		} else if len(reloaded) == 0 && len(reloadFailed) == 0 {
+			b.Logger().Debug("no connections were found", "plugin_name", pluginName)
 		}
 
 		return resp, nil

@@ -890,7 +890,7 @@ func TestExternalPlugin_DatabaseReload(t *testing.T) {
 	_, err = client.Sys().ReloadPlugin(&api.ReloadPluginInput{
 		Plugin: plugin.Name,
 	})
-	require.ErrorContains(t, err, "1 error occurred:\n\t* failed to reload \"vault-plugin-database-postgresql\" database plugin(s) mounted under database/: successfully reloaded 3 connection(s): vault-plugin-database-postgresql-0, vault-plugin-database-postgresql-2, vault-plugin-database-postgresql-3; failed to reload 1 connection(s): vault-plugin-database-postgresql-1;")
+	require.NoError(t, err)
 
 	if err := client.Sys().Unmount(plugin.Name); err != nil {
 		t.Fatal(err)
