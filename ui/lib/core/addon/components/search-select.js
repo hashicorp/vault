@@ -110,9 +110,9 @@ export default class SearchSelect extends Component {
   }
 
   formatInputAndUpdateDropdown(inputValues) {
-    // for model attrs that use editType: 'searchSelect', and the API returns them as a string
-    // we need to wrap them in an array to match the format of the dropdownOptions
-    // ex: model/transform.js -> template
+    // For model attributes using editType: 'searchSelect' where the API returns a string,
+    // we need to wrap the value in an array to match the format expected by the dropdownOptions.
+    // Example: model/transform.js -> template
     inputValues = Array.isArray(inputValues) ? inputValues : [inputValues];
     // inputValues are initially an array of strings from @inputValue
     // map over so selectedOptions are objects
