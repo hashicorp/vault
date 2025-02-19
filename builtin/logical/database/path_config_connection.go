@@ -192,11 +192,11 @@ func (b *databaseBackend) reloadPlugin() framework.OperationFunc {
 			}
 			if config.PluginName == pluginName {
 				if err := b.reloadConnection(ctx, req.Storage, connName); err != nil {
-					b.Logger().Error("failed to reload", "connection", connName, "error", err)
+					b.Logger().Error("failed to reload connection", "name", connName, "error", err)
 					b.dbEvent(ctx, "reload-connection-fail", req.Path, "", false, "name", connName)
 					reloadFailed = append(reloadFailed, connName)
 				} else {
-					b.Logger().Debug("reloaded", "connection", connName)
+					b.Logger().Debug("reloaded connection", "name", connName)
 					b.dbEvent(ctx, "reload-connection", req.Path, "", true, "name", connName)
 					reloaded = append(reloaded, connName)
 				}
