@@ -224,7 +224,7 @@ static-dist-dev: ember-dist-dev
 
 proto: check-tools-external
 	@echo "==> Generating Go code from protobufs..."
-	PATH="$(go env GOPATH)/bin" buf generate
+	buf generate
 
 	# No additional sed expressions should be added to this list. Going forward
 	# we should just use the variable names choosen by protobuf. These are left

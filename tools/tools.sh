@@ -58,8 +58,6 @@ install_external() {
   for tool in "${tools[@]}"; do
     go_install "$tool"
   done
-
-  export PATH="$PATH:$(go env GOPATH)/bin"
 }
 
 # Check that all tools are installed
