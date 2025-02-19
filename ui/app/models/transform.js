@@ -77,10 +77,10 @@ export default class TransformModel extends Model {
   })
   masking_character;
 
-  @attr('string', {
+  @attr('array', {
     editType: 'searchSelect',
     isSectionHeader: true,
-    fallbackComponent: 'string-list',
+    fallbackComponent: 'input-list',
     label: 'Template', // CBS TODO: make this required for making a transformation
     models: ['transform/template'],
     selectLimit: 1,

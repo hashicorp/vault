@@ -26,7 +26,6 @@
       <InfoTableRow
         @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
         @value={{get this.model attr.name}}
-        @type={{attr.type}}
       />
     {{/if}}
   {{/each}}
