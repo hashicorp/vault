@@ -1801,8 +1801,9 @@ func (c *Core) ActivityLogInjectResponse(ctx context.Context, pq *activity.Preco
 
 func (a *ActivityLog) includeInResponse(query *namespace.Namespace, record *namespace.Namespace) bool {
 	if record == nil {
-		// Deleted namespace, only include in root queries
-		return query.ID == namespace.RootNamespaceID
+		// Deleted namespace, only include in root or admin namespace (if configured) queries
+		adminNsPath := namespace.Canonicalize(a.core.administrativeNamespacePath())
+		return query.ID == namespace.RootNamespaceID || (adminNsPath != "" && query.Path == adminNsPath)
 	}
 	return record.HasParent(query)
 }
@@ -2970,6 +2971,11 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 	}
 	defer a.inprocessExport.Store(false)
 
+	// Normalize the start time to the beginning of the month to keep consistency with the sys/counters API
+	// Without this, if the start time falls within the same month as the billing start date, the Export API
+	// could omit data that the sys/counters API includes, leading to discrepancies
+	startTime = timeutil.StartOfMonth(startTime)
+
 	// Find the months with activity log data that are between the start and end
 	// months. We want to walk this in cronological order so the oldest instance of a
 	// client usage is recorded, not the most recent.
@@ -3172,16 +3178,6 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 								return fmt.Errorf("failed to process local entity alias")
 							}
 
-							record.MountType, ok = alias["mount_type"].(string)
-							if !ok {
-								return fmt.Errorf("failed to process mount type")
-							}
-
-							record.MountPath, ok = alias["mount_path"].(string)
-							if !ok {
-								return fmt.Errorf("failed to process mount path")
-							}
-
 							entityAliasMetadata, ok := alias["metadata"].(map[string]string)
 							if !ok {
 								return fmt.Errorf("failed to process entity alias metadata")
@@ -3199,6 +3195,23 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 							if entityAliasCustomMetadata != nil {
 								record.EntityAliasCustomMetadata = entityAliasCustomMetadata
 							}
+
+							valResp := a.core.router.ValidateMountByAccessor(e.MountAccessor)
+							if valResp == nil {
+								record.MountType = ""
+								record.MountPath = fmt.Sprintf(DeletedMountFmt, e.MountAccessor)
+							} else {
+								record.MountType, ok = alias["mount_type"].(string)
+								if !ok {
+									return fmt.Errorf("failed to process mount type")
+								}
+								record.MountPath, ok = alias["mount_path"].(string)
+								if !ok {
+									return fmt.Errorf("failed to process mount path")
+								}
+
+							}
+
 						}
 					} else {
 						// fetch mount directly to ensure mount type and path are populated

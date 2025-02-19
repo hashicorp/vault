@@ -15,9 +15,11 @@ scenario "dev_single_cluster" {
     In order to execute this scenario you'll need to install the enos CLI:
       brew tap hashicorp/tap && brew update && brew install hashicorp/tap/enos
 
-    You'll also need access to an AWS account with an SSH keypair.
-    Perform the steps here to get AWS access with Doormat https://eng-handbook.hashicorp.services/internal-tools/enos/common-setup-steps/#authenticate-with-doormat
-    Perform the steps here to get an AWS keypair set up: https://eng-handbook.hashicorp.services/internal-tools/enos/common-setup-steps/#set-your-aws-key-pair-name-and-private-key
+    You'll also need access to an AWS account via Doormat, follow the guide here:
+      https://eng-handbook.hashicorp.services/internal-tools/enos/getting-started/#authenticate-to-aws-with-doormat
+
+    Follow this guide to get an SSH keypair set up in the AWS account:
+      https://eng-handbook.hashicorp.services/internal-tools/enos/getting-started/#set-your-aws-key-pair-name-and-private-key
 
     Please note that this scenario requires several inputs variables to be set in order to function
     properly. While not all variants will require all variables, it's suggested that you look over
@@ -44,6 +46,9 @@ scenario "dev_single_cluster" {
     dev_consul_version        = "1.18.1"
     vault_license_path        = "./support/vault.hclic"
     vault_product_version     = "1.16.2"
+    Alternatively, you can set them in your environment:
+    export ENOS_VAR_aws_region="us-west-2"
+    export ENOS_VAR_vault_license_path="./support/vault.hclic"
 
     Alternatively, you can set them in your environment:
     export ENOS_VAR_aws_region="us-west-2"
@@ -154,15 +159,18 @@ scenario "dev_single_cluster" {
         artifactory_host:
           The artifactory host to search. It's very unlikely that you'll want to change this. The
           default value is the HashiCorp Artifactory instance.
-        artifactory_repo
+        artifactory_repo:
           The artifactory host to search. It's very unlikely that you'll want to change this. The
           default value is where CRT will publish packages.
-        artifactory_username
+        artifactory_username:
           The artifactory username associated with your token. You'll need this if you wish to use
           deb or rpm artifacts! You can request access via Okta.
-        artifactory_token
+        artifactory_token:
           The artifactory token associated with your username. You'll need this if you wish to use
           deb or rpm artifacts! You can create a token by logging into Artifactory via Okta.
+        dev_build_local_ui:
+          If you are not testing any changes in the UI, set to false. This will save time by not
+          building the entire UI. If you need to test the UI, set to true.
         vault_product_version:
           When using the artifact:rpm or artifact:deb variants we'll use this variable to determine
           which version of the Vault pacakge we should fetch from Artifactory.

@@ -294,20 +294,16 @@ beginning of secret names. To prevent Vault from modifying secrets that were not
 created by a sync operation, you can use a role binding against the resource
 name with the `startsWith` condition:
 
-  <CodeBlockConfig hideClipboard>
-
+  ```
     resource.name.startsWith("projects/<project_number>/secrets/vault")
-
-  </CodeBlockConfig>
+  ```
 
 To prevent out-of-band overwrites, simply add a negative condition with `!` on any
 write-access role bindings not being used by Vault that contain Secret Manager permissions:
 
-  <CodeBlockConfig hideClipboard>
-
+  ```
     !(resource.name.startsWith("projects/<project_number>/secrets/vault"))
-
-  </CodeBlockConfig>
+  ```
 
 To add conditions to IAM principles in GCP, click "+ADD IAM CONDITION" on the **Assign Roles** screen.
 

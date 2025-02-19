@@ -21,6 +21,7 @@ import (
 func TestBackend_PathConfigRoot(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
+	config.System = &testSystemView{}
 
 	b := Backend(config)
 	if err := b.Setup(context.Background(), config); err != nil {
@@ -43,7 +44,6 @@ func TestBackend_PathConfigRoot(t *testing.T) {
 		"identity_token_ttl":         int64(0),
 		"rotation_schedule":          "",
 		"rotation_window":            0,
-		"rotation_id":                "",
 		"disable_automated_rotation": false,
 	}
 
@@ -104,7 +104,6 @@ func TestBackend_PathConfigRoot_STSFallback(t *testing.T) {
 		"identity_token_ttl":         int64(0),
 		"rotation_schedule":          "",
 		"rotation_window":            0,
-		"rotation_id":                "",
 		"disable_automated_rotation": false,
 	}
 
@@ -154,7 +153,6 @@ func TestBackend_PathConfigRoot_STSFallback(t *testing.T) {
 		"identity_token_ttl":         int64(0),
 		"rotation_schedule":          "",
 		"rotation_window":            0,
-		"rotation_id":                "",
 		"disable_automated_rotation": false,
 	}
 
@@ -283,8 +281,8 @@ func TestBackend_PathConfigRoot_RegisterRootRotation(t *testing.T) {
 	configData := map[string]interface{}{
 		"access_key":        "access-key",
 		"secret_key":        "secret-key",
-		"rotation_schedule": "*/30 * * * * *",
-		"rotation_window":   60,
+		"rotation_schedule": "*/1 * * * *",
+		"rotation_window":   120,
 	}
 
 	configReq := &logical.Request{
@@ -308,6 +306,10 @@ func (d testSystemView) GenerateIdentityToken(_ context.Context, _ *pluginutil.I
 	return nil, pluginidentityutil.ErrPluginWorkloadIdentityUnsupported
 }
 
-func (d testSystemView) RegisterRotationJob(_ context.Context, _ *rotation.RotationJob) (string, error) {
+func (d testSystemView) RegisterRotationJob(_ context.Context, _ *rotation.RotationJobConfigureRequest) (string, error) {
 	return "", automatedrotationutil.ErrRotationManagerUnsupported
+}
+
+func (d testSystemView) DeregisterRotationJob(_ context.Context, _ *rotation.RotationJobDeregisterRequest) error {
+	return nil
 }

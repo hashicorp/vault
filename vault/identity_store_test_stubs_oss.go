@@ -7,20 +7,21 @@ package vault
 
 import (
 	"context"
+	"math/rand"
 	"testing"
 )
 
 //go:generate go run github.com/hashicorp/vault/tools/stubmaker
 
-func entIdentityStoreDeterminismTestSetup(t *testing.T, ctx context.Context, c *Core, me, localme *MountEntry) {
+func entIdentityStoreDeterminismSecondaryTestSetup(t *testing.T, ctx context.Context, c *Core, me, localme *MountEntry, seed *rand.Rand) {
 	// no op
 }
 
-func entIdentityStoreDeterminismAssert(t *testing.T, i int, loadedIDs, lastIDs []string) {
+func entIdentityStoreDeterminismSecondaryAssert(t *testing.T, i int, loadedIDs, lastIDs []string) {
 	// no op
 }
 
-func entIdentityStoreDuplicateReportTestSetup(t *testing.T, ctx context.Context, c *Core, rootToken string) {
+func entIdentityStoreDuplicateReportTestSetup(t *testing.T, ctx context.Context, c *Core, rootToken string, seed *rand.Rand) {
 	// no op
 }
 

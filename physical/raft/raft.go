@@ -25,6 +25,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-raftchunking"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/raft"
 	autopilot "github.com/hashicorp/raft-autopilot"
@@ -175,7 +176,7 @@ type RaftBackend struct {
 	serverAddressProvider raft.ServerAddressProvider
 
 	// permitPool is used to limit the number of concurrent storage calls.
-	permitPool *physical.PermitPool
+	permitPool *permitpool.Pool
 
 	// maxEntrySize imposes a size limit (in bytes) on a raft entry (put or transaction).
 	// It is suggested to use a value of 2x the Raft chunking size for optimal
@@ -616,7 +617,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	isRemoved := new(atomic.Bool)
 	removedVal, err := stableStore.GetUint64(removedKey)
 	if err != nil {
-		logger.Error("error checking if this node is removed. continuing under the assumption that it's not", "error", err)
+		logger.Debug("error checking if this node is removed. continuing under the assumption that it's not", "error", err)
 	}
 	if removedVal == 1 {
 		isRemoved.Store(true)
@@ -632,7 +633,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		closers:                       closers,
 		dataDir:                       backendConfig.Path,
 		localID:                       backendConfig.NodeId,
-		permitPool:                    physical.NewPermitPool(physical.DefaultParallelOperations),
+		permitPool:                    permitpool.New(physical.DefaultParallelOperations),
 		maxEntrySize:                  backendConfig.MaxEntrySize,
 		maxMountAndNamespaceEntrySize: backendConfig.MaxMountAndNamespaceTableEntrySize,
 		maxBatchEntries:               backendConfig.MaxBatchEntries,
@@ -819,7 +820,9 @@ func (b *RaftBackend) applyVerifierCheckpoint() error {
 	data := make([]byte, 1)
 	data[0] = byte(verifierCheckpointOp)
 
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(context.Background()); err != nil {
+		return err
+	}
 	b.l.RLock()
 
 	var err error
@@ -1066,9 +1069,9 @@ func (b *RaftBackend) SetRemovedCallback(cb func()) {
 	b.removedCallback = cb
 }
 
-func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
-	config.Logger = b.logger
-	multiplierRaw, ok := b.conf["performance_multiplier"]
+func ApplyConfigSettings(logger log.Logger, parsedConf map[string]string, config *raft.Config) error {
+	config.Logger = logger
+	multiplierRaw, ok := parsedConf["performance_multiplier"]
 	multiplier := 5
 	if ok {
 		var err error
@@ -1081,7 +1084,7 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 	config.HeartbeatTimeout *= time.Duration(multiplier)
 	config.LeaderLeaseTimeout *= time.Duration(multiplier)
 
-	snapThresholdRaw, ok := b.conf["snapshot_threshold"]
+	snapThresholdRaw, ok := parsedConf["snapshot_threshold"]
 	if ok {
 		var err error
 		snapThreshold, err := strconv.Atoi(snapThresholdRaw)
@@ -1091,7 +1094,7 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 		config.SnapshotThreshold = uint64(snapThreshold)
 	}
 
-	trailingLogsRaw, ok := b.conf["trailing_logs"]
+	trailingLogsRaw, ok := parsedConf["trailing_logs"]
 	if ok {
 		var err error
 		trailingLogs, err := strconv.Atoi(trailingLogsRaw)
@@ -1100,7 +1103,7 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 		}
 		config.TrailingLogs = uint64(trailingLogs)
 	}
-	snapshotIntervalRaw, ok := b.conf["snapshot_interval"]
+	snapshotIntervalRaw, ok := parsedConf["snapshot_interval"]
 	if ok {
 		var err error
 		snapshotInterval, err := parseutil.ParseDurationSecond(snapshotIntervalRaw)
@@ -1118,7 +1121,7 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 	// scheduler.
 	config.BatchApplyCh = true
 
-	b.logger.Trace("applying raft config", "inputs", b.conf)
+	logger.Trace("applying raft config", "inputs", parsedConf)
 	return nil
 }
 
@@ -1197,7 +1200,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 
 	// Setup the raft config
 	raftConfig := raft.DefaultConfig()
-	if err := b.applyConfigSettings(raftConfig); err != nil {
+	if err := ApplyConfigSettings(b.logger, b.conf, raftConfig); err != nil {
 		return err
 	}
 
@@ -1823,7 +1826,9 @@ func (b *RaftBackend) Delete(ctx context.Context, path string) error {
 			},
 		},
 	}
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer b.permitPool.Release()
 
 	b.l.RLock()
@@ -1843,7 +1848,9 @@ func (b *RaftBackend) Get(ctx context.Context, path string) (*physical.Entry, er
 		return nil, err
 	}
 
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer b.permitPool.Release()
 
 	if err := ctx.Err(); err != nil {
@@ -1886,7 +1893,9 @@ func (b *RaftBackend) Put(ctx context.Context, entry *physical.Entry) error {
 		},
 	}
 
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer b.permitPool.Release()
 
 	b.l.RLock()
@@ -1906,7 +1915,9 @@ func (b *RaftBackend) List(ctx context.Context, prefix string) ([]string, error)
 		return nil, err
 	}
 
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer b.permitPool.Release()
 
 	if err := ctx.Err(); err != nil {
@@ -1961,7 +1972,9 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 		command.Operations[i] = op
 	}
 
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer b.permitPool.Release()
 
 	b.l.RLock()
@@ -2308,4 +2321,18 @@ func isRaftLogVerifyCheckpoint(l *raft.Log) bool {
 
 	// Must be the last chunk of a chunked object that has chunking meta
 	return false
+}
+
+func (b *RaftBackend) ReloadConfig(config raft.ReloadableConfig) error {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	if b.raft != nil {
+		if err := b.raft.ReloadConfig(config); err != nil {
+			return err
+		} else {
+			b.logger.Info("reloaded raft config", "settings", config)
+		}
+	}
+	return nil
 }

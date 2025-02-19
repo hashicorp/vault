@@ -19,15 +19,29 @@ import type VersionService from 'vault/services/version';
 // It generates config models based on the engine type.
 // Saving and updating of those models are done within the engine specific components.
 
-const CONFIG_ADAPTERS_PATHS: Record<string, string[]> = {
-  aws: ['aws/lease-config', 'aws/root-config'],
+const MOUNT_CONFIG_MODEL_NAMES: Record<string, string[]> = {
+  aws: ['aws/root-config', 'aws/lease-config'],
   azure: ['azure/config'],
+  gcp: ['gcp/config'],
   ssh: ['ssh/ca-config'],
 };
 
 export default class SecretsBackendConfigurationEdit extends Route {
   @service declare readonly store: Store;
   @service declare readonly version: VersionService;
+
+  standardizedModelName(type: string, modelName: string) {
+    // to determine if there is an additional config model, we check if the modelName is the same as the second element in the array.
+    const path =
+      MOUNT_CONFIG_MODEL_NAMES[type] && MOUNT_CONFIG_MODEL_NAMES[type].length > 1
+        ? MOUNT_CONFIG_MODEL_NAMES[type][1]
+        : null;
+    if (modelName === path) {
+      return 'additional-config-model';
+    } else {
+      return 'mount-config-model';
+    }
+  }
 
   async model() {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
@@ -43,12 +57,12 @@ export default class SecretsBackendConfigurationEdit extends Route {
     // generate the model based on the engine type.
     // and pre-set model with type and backend e.g. {type: ssh, id: ssh-123}
     const model: Record<string, unknown> = { type, id: backend };
-    for (const adapterPath of CONFIG_ADAPTERS_PATHS[type] as string[]) {
-      // convert the adapterPath with a name that can be passed to the components
-      // ex: adapterPath = ssh/ca-config, convert to: ssh-ca-config so that you can pass to component @model={{this.model.ssh-ca-config}}
-      const standardizedKey = adapterPath.replace(/\//g, '-');
+    for (const modelName of MOUNT_CONFIG_MODEL_NAMES[type] as string[]) {
+      // create a key that corresponds with the model order
+      // ex: modelName = aws/lease-config, convert to: additional-config-model so that you can pass to component @additionalConfigModel={{this.model.additional-config-model}}
+      const standardizedKey = this.standardizedModelName(type, modelName);
       try {
-        const configModel = await this.store.queryRecord(adapterPath, {
+        const configModel = await this.store.queryRecord(modelName, {
           backend,
           type,
         });
@@ -56,7 +70,7 @@ export default class SecretsBackendConfigurationEdit extends Route {
         // so instead of checking a catch or httpStatus, we check if the model is configured based on the getter `isConfigured` on the engine's model
         // if the engine is not configured we update the record to get the default values
         if (!configModel.isConfigured && type === 'azure') {
-          model[standardizedKey] = await this.store.createRecord(adapterPath, {
+          model[standardizedKey] = await this.store.createRecord(modelName, {
             backend,
             type,
           });
@@ -71,7 +85,7 @@ export default class SecretsBackendConfigurationEdit extends Route {
           e.httpStatus === 404 ||
           (type === 'ssh' && e.httpStatus === 400 && errorMessage(e) === `keys haven't been configured yet`)
         ) {
-          model[standardizedKey] = await this.store.createRecord(adapterPath, {
+          model[standardizedKey] = await this.store.createRecord(modelName, {
             backend,
             type,
           });

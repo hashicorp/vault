@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/hashicorp/vault/helper/activationflags"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -35,8 +36,7 @@ This path responds to the following HTTP methods.
 	PUT|POST /<feature-name>/activate
 		Activates the specified feature. Cannot be undone.`
 
-	activationFlagIdentityCleanup = "force-identity-deduplication"
-	activationFlagTest            = "activation-test"
+	activationFlagTest = "activation-test"
 )
 
 // These variables should only be mutated during initialization or server construction.
@@ -86,7 +86,7 @@ func (b *SystemBackend) activationFlagsPaths() []*framework.Path {
 			HelpDescription: helpDescription,
 		},
 		{
-			Pattern: fmt.Sprintf("%s/%s/%s", prefixActivationFlags, activationFlagIdentityCleanup, verbActivationFlagsActivate),
+			Pattern: fmt.Sprintf("%s/%s/%s", prefixActivationFlags, activationflags.IdentityDeduplication, verbActivationFlagsActivate),
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: prefixActivationFlags,
 				OperationVerb:   verbActivationFlagsActivate,
@@ -131,7 +131,7 @@ func (b *SystemBackend) writeActivationFlagWrite(ctx context.Context, req *logic
 	// Removes /verb from the path
 	featureName := trimPrefix[:strings.LastIndex(trimPrefix, "/")]
 
-	err := b.Core.FeatureActivationFlags.Write(ctx, featureName, isActivate)
+	err := b.Core.FeatureActivationFlags.SetActivationFlagEnabled(ctx, featureName, isActivate)
 	if err != nil {
 		return nil, fmt.Errorf("failed to write new activation flags: %w", err)
 	}
@@ -156,4 +156,16 @@ func (b *SystemBackend) activationFlagsToResponse(activationFlags []string) *log
 			fieldActivated: activationFlags,
 		},
 	}
+}
+
+// activateIdentityDeduplication activates the identity deduplication feature.
+func (b *SystemBackend) activateIdentityDeduplication(ctx context.Context, _ *logical.Request) error {
+	if b.idStoreBackend == nil || b.idStoreBackend.ActivationFunc == nil {
+		return nil
+	}
+
+	if err := b.idStoreBackend.ActivationFunc(ctx, nil); err != nil {
+		return fmt.Errorf("failed to activate identity deduplication: %w", err)
+	}
+	return nil
 }

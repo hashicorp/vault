@@ -34,6 +34,7 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
+	config.System = &testSystemView{}
 
 	b, err := Backend(config)
 	if err != nil {
@@ -260,6 +261,7 @@ func TestBackend_ConfigTidyIdentities(t *testing.T) {
 		config := logical.TestBackendConfig()
 		storage := &logical.InmemStorage{}
 		config.StorageView = storage
+		config.System = &testSystemView{}
 
 		b, err := Backend(config)
 		if err != nil {
@@ -317,6 +319,7 @@ func TestBackend_ConfigTidyRoleTags(t *testing.T) {
 		config := logical.TestBackendConfig()
 		storage := &logical.InmemStorage{}
 		config.StorageView = storage
+		config.System = &testSystemView{}
 
 		b, err := Backend(config)
 		if err != nil {
@@ -374,6 +377,7 @@ func TestBackend_TidyIdentities(t *testing.T) {
 		config := logical.TestBackendConfig()
 		storage := &logical.InmemStorage{}
 		config.StorageView = storage
+		config.System = &testSystemView{}
 
 		b, err := Backend(config)
 		if err != nil {
@@ -424,6 +428,7 @@ func TestBackend_TidyRoleTags(t *testing.T) {
 		config := logical.TestBackendConfig()
 		storage := &logical.InmemStorage{}
 		config.StorageView = storage
+		config.System = &testSystemView{}
 
 		b, err := Backend(config)
 		if err != nil {
@@ -473,6 +478,7 @@ func TestBackend_ConfigClient(t *testing.T) {
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
+	config.System = &testSystemView{}
 
 	b, err := Backend(config)
 	if err != nil {
@@ -614,6 +620,7 @@ func TestBackend_pathConfigCertificate(t *testing.T) {
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
+	config.System = &testSystemView{}
 
 	b, err := Backend(config)
 	if err != nil {
@@ -771,6 +778,8 @@ func TestBackend_parseAndVerifyRoleTagValue(t *testing.T) {
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
+	config.System = &testSystemView{}
+
 	b, err := Backend(config)
 	if err != nil {
 		t.Fatal(err)
@@ -853,6 +862,8 @@ func TestBackend_PathRoleTag(t *testing.T) {
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
+	config.System = &testSystemView{}
+
 	b, err := Backend(config)
 	if err != nil {
 		t.Fatal(err)
@@ -920,6 +931,8 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 		storage := &logical.InmemStorage{}
 		config := logical.TestBackendConfig()
 		config.StorageView = storage
+		config.System = &testSystemView{}
+
 		b, err := Backend(config)
 		if err != nil {
 			t.Fatal(err)
@@ -1379,6 +1392,8 @@ func TestBackend_pathStsConfig(t *testing.T) {
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
+	config.System = &testSystemView{}
+
 	b, err := Backend(config)
 	if err != nil {
 		t.Fatal(err)
