@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/database: Fix a bug where a global database plugin reload exits if any of the database connections are not available
+```
