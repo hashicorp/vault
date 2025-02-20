@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/rotation"
 )
 
 var (
@@ -26,10 +27,6 @@ type AutomatedRotationParams struct {
 	// RotationPeriod is an alternate choice for simple time-to-live based rotation timing.
 	RotationPeriod int `json:"rotation_period"`
 
-	// RotationID is the unique ID of the registered rotation job.
-	// Used by the plugin to track the rotation.
-	RotationID string `json:"rotation_id"`
-
 	// If set, will deregister all registered rotation jobs from the RotationManager for plugin.
 	DisableAutomatedRotation bool `json:"disable_automated_rotation"`
 }
@@ -45,6 +42,14 @@ func (p *AutomatedRotationParams) ParseAutomatedRotationFields(d *framework.Fiel
 			return ErrRotationMutuallyExclusiveFields
 		}
 		p.RotationSchedule = rotationScheduleRaw.(string)
+
+		// parse schedule to ensure it is valid
+		if p.RotationSchedule != "" {
+			_, err := rotation.DefaultScheduler.Parse(p.RotationSchedule)
+			if err != nil {
+				return fmt.Errorf("failed to parse provided rotation_schedule: %w", err)
+			}
+		}
 	}
 
 	if windowOk {
@@ -58,8 +63,8 @@ func (p *AutomatedRotationParams) ParseAutomatedRotationFields(d *framework.Fiel
 		p.RotationPeriod = rotationPeriodRaw.(int)
 	}
 
-	if (scheduleOk && !windowOk) || (windowOk && !scheduleOk) {
-		return fmt.Errorf("must include both schedule and window")
+	if windowOk && !scheduleOk {
+		return fmt.Errorf("cannot use rotation_window without rotation_schedule")
 	}
 
 	p.DisableAutomatedRotation = d.Get("disable_automated_rotation").(bool)
@@ -72,12 +77,15 @@ func (p *AutomatedRotationParams) PopulateAutomatedRotationData(m map[string]int
 	m["rotation_schedule"] = p.RotationSchedule
 	m["rotation_window"] = p.RotationWindow
 	m["rotation_period"] = p.RotationPeriod
-	m["rotation_id"] = p.RotationID
 	m["disable_automated_rotation"] = p.DisableAutomatedRotation
 }
 
 func (p *AutomatedRotationParams) ShouldRegisterRotationJob() bool {
 	return p.RotationSchedule != "" || p.RotationPeriod != 0
+}
+
+func (p *AutomatedRotationParams) ShouldDeregisterRotationJob() bool {
+	return p.DisableAutomatedRotation || (p.RotationSchedule == "" && p.RotationPeriod == 0)
 }
 
 // AddAutomatedRotationFields adds plugin identity token fields to the given
@@ -95,10 +103,6 @@ func AddAutomatedRotationFields(m map[string]*framework.FieldSchema) {
 		"rotation_period": {
 			Type:        framework.TypeInt,
 			Description: "TTL for automatic credential rotation of the given username. Mutually exclusive with rotation_schedule",
-		},
-		"rotation_id": {
-			Type:        framework.TypeInt,
-			Description: "Unique ID of the registered rotation job",
 		},
 		"disable_automated_rotation": {
 			Type:        framework.TypeBool,

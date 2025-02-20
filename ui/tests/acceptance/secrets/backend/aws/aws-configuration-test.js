@@ -40,7 +40,7 @@ module('Acceptance | aws | configuration', function (hooks) {
     return authPage.login();
   });
 
-  module('isEnterprise', function (hooks) {
+  module('Enterprise', function (hooks) {
     hooks.beforeEach(function () {
       this.version.type = 'enterprise';
     });
@@ -171,7 +171,9 @@ module('Acceptance | aws | configuration', function (hooks) {
       await runCmd(`delete sys/mounts/${path}`);
     });
 
-    test('it should not show identityTokenTtl or maxRetries if they have not been set', async function (assert) {
+    test('it should show identityTokenTtl or maxRetries even if they have not been set', async function (assert) {
+      // documenting the intention that we show fields that have not been set but are returned by the api due to defaults
+      // this test also documents that maxRetries returns 0 while the API docs indicate -1 is the default value
       const path = `aws-${this.uid}`;
       await enablePage.enable('aws', path);
 
@@ -188,8 +190,10 @@ module('Acceptance | aws | configuration', function (hooks) {
       // the Serializer removes these two from the payload if the API returns their default value.
       assert
         .dom(GENERAL.infoRowValue('Identity token TTL'))
-        .doesNotExist('Identity token TTL does not show.');
-      assert.dom(GENERAL.infoRowValue('Max retries')).doesNotExist('Max retries does not show.');
+        .hasText('0', 'Identity token TTL shows default.');
+      assert
+        .dom(GENERAL.infoRowValue('Max retries'))
+        .hasText('0', 'Max retries shows 0 indicating the default will be used.');
       // cleanup
       await runCmd(`delete sys/mounts/${path}`);
     });
@@ -338,7 +342,7 @@ module('Acceptance | aws | configuration', function (hooks) {
     });
   });
 
-  module('isCommunity', function (hooks) {
+  module('Community', function (hooks) {
     hooks.beforeEach(function () {
       this.version.type = 'community';
     });

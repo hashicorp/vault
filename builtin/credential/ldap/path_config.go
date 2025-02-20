@@ -5,16 +5,21 @@ package ldap
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/rotation"
 )
 
 const userFilterWarning = "userfilter configured does not consider userattr and may result in colliding entity aliases on logins"
+
+const rootRotationJobName = "ldap-auth-root-creds"
 
 func pathConfig(b *backend) *framework.Path {
 	p := &framework.Path{
@@ -53,6 +58,8 @@ func pathConfig(b *backend) *framework.Path {
 		Type:        framework.TypeString,
 		Description: "Password policy to use to rotate the root password",
 	}
+
+	automatedrotationutil.AddAutomatedRotationFields(p.Fields)
 
 	return p
 }
@@ -137,6 +144,8 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 
 	data := cfg.PasswordlessMap()
 	cfg.PopulateTokenData(data)
+	cfg.PopulateAutomatedRotationData(data)
+
 	data["password_policy"] = cfg.PasswordPolicy
 
 	resp := &logical.Response{
@@ -207,16 +216,67 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
+	if err := cfg.ParseAutomatedRotationFields(d); err != nil {
+		return nil, err
+	}
+
 	if passwordPolicy, ok := d.GetOk("password_policy"); ok {
 		cfg.PasswordPolicy = passwordPolicy.(string)
 	}
 
+	var rotOp string
+	if cfg.ShouldDeregisterRotationJob() {
+		rotOp = rotation.PerformedDeregistration
+		dr := &rotation.RotationJobDeregisterRequest{
+			MountPoint: req.MountPoint,
+			ReqPath:    req.Path,
+		}
+
+		err := b.System().DeregisterRotationJob(ctx, dr)
+		if err != nil {
+			return logical.ErrorResponse("error de-registering rotation job: %s", err), nil
+		}
+	} else if cfg.ShouldRegisterRotationJob() {
+		rotOp = rotation.PerformedRegistration
+		// Now that the root config is set up, register the rotation job if it's required.
+		r := &rotation.RotationJobConfigureRequest{
+			Name:             rootRotationJobName,
+			MountPoint:       req.MountPoint,
+			ReqPath:          req.Path,
+			RotationSchedule: cfg.RotationSchedule,
+			RotationWindow:   cfg.RotationWindow,
+			RotationPeriod:   cfg.RotationPeriod,
+		}
+
+		b.Logger().Debug("registering rotation job", "mount", r.MountPoint, "path", r.ReqPath)
+		_, err = b.System().RegisterRotationJob(ctx, r)
+		if err != nil {
+			return logical.ErrorResponse("error registering rotation job: %s", err), nil
+		}
+	}
+
+	wrapRotationError := func(innerError error) error {
+		b.Logger().Error("write to storage failed but the rotation manager still succeeded.",
+			"operation", rotOp, "mount", req.MountPoint, "path", req.Path)
+		wrappedError := fmt.Errorf("write to storage failed, but the rotation manager still succeeded: "+
+			"operation=%s, mount=%s, path=%s, storageError=%s", rotOp, req.MountPoint, req.Path, err)
+		return wrappedError
+	}
+
 	entry, err := logical.StorageEntryJSON("config", cfg)
 	if err != nil {
-		return nil, err
+		var wrappedError error
+		if rotOp != "" {
+			wrappedError = wrapRotationError(err)
+		}
+		return nil, wrappedError
 	}
 	if err := req.Storage.Put(ctx, entry); err != nil {
-		return nil, err
+		var wrappedError error
+		if rotOp != "" {
+			wrappedError = wrapRotationError(err)
+		}
+		return nil, wrappedError
 	}
 
 	if warnings := b.checkConfigUserFilter(cfg); len(warnings) > 0 {
@@ -251,6 +311,7 @@ func (b *backend) getConfigFieldData() (*framework.FieldData, error) {
 type ldapConfigEntry struct {
 	tokenutil.TokenParams
 	*ldaputil.ConfigEntry
+	automatedrotationutil.AutomatedRotationParams
 
 	PasswordPolicy string `json:"password_policy"`
 }

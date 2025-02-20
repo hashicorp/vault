@@ -846,7 +846,7 @@ $ curl \
 
 </CodeBlockConfig>
 
-### Sample request 
+### Sample request
 
 The following example retrieves the client count for a single month.
 
@@ -1039,13 +1039,13 @@ The `/sys/internal/counters/config` endpoint is used to configure logging of act
   discard any data recorded for that month, but does not delete previous months.
   <Note>
 
-  <EnterpriseAlert product="vault" inline /> 
-  
-  License utilization cannot be reported if client counting is disabled. 
-  
+  <EnterpriseAlert product="vault" inline />
+
+  License utilization cannot be reported if client counting is disabled.
+
   As of 1.16.0, 1.15.6 and 1.14.10, client counting cannot be disabled as manual license utilization reporting is always enabled.
-  
-  As of 1.14.0, 1.13.4, 1.12.8 and 1.11.12, client counting cannot be disabled when automated license utilization reporting is enabled. 
+
+  As of 1.14.0, 1.13.4, 1.12.8 and 1.11.12, client counting cannot be disabled when automated license utilization reporting is enabled.
   </Note>
 - `retention_months` `(integer: 48)` - The number of months of history to retain. The minimum is 48 months and the maximum is 60 months.
 
@@ -1133,7 +1133,7 @@ provided start and end times. The returned set of client information will be
 deduplicated over the time window and will show the earliest activity logged for
 each client. The output will be ordered chronologically by month of activity.
 
-<Note title="Techn preview">
+<Note title="Tech preview">
 
 This endpoint is currently in tech preview status.
 
@@ -1155,8 +1155,8 @@ it may be up to 20 minutes delayed.
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
 
-| Method | Path                                      |
-| :----- | :---------------------------------------- |
+| Method | Path                                     |
+|:-------|:-----------------------------------------|
 | `GET`  | `/sys/internal/counters/activity/export` |
 
 ### Parameters

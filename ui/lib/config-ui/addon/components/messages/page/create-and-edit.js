@@ -11,6 +11,7 @@ import { service } from '@ember/service';
 import { action } from '@ember/object';
 import Ember from 'ember';
 import { isAfter } from 'date-fns';
+import timestamp from 'core/utils/timestamp';
 
 /**
  * @module Page::CreateAndEditMessageForm
@@ -63,7 +64,7 @@ export default class MessagesList extends Component {
       const modalMessages = this.args.messages?.filter((message) => message.type === 'modal') || [];
       const hasExpiredModalMessages = modalMessages.every((message) => {
         if (!message.endTime) return false;
-        return isAfter(new Date(), new Date(message.endTime));
+        return isAfter(timestamp.now(), new Date(message.endTime));
       });
 
       if (!hasExpiredModalMessages && this.args.hasSomeActiveModals && this.args.message.type === 'modal') {
