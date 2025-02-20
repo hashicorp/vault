@@ -5,6 +5,7 @@
 
 import Component from '@glimmer/component';
 import { getStatementFields, getRoleFields } from '../utils/model-helpers/database-helpers';
+// import { set } from '@ember/object';
 
 /**
  * @module DatabaseRoleSettingForm
@@ -25,7 +26,14 @@ export default class DatabaseRoleSettingForm extends Component {
   get settingFields() {
     if (!this.args.roleType) return null;
     const dbValidFields = getRoleFields(this.args.roleType);
+
+    if (dbValidFields.includes('skip_import_rotation')) {
+      // skipImport ? set(this.args.model, 'skip_import_rotation', checked) : '';
+      this.args.attrs.find((x) => x.name === 'skip_import_rotation').options.defaultValue =
+        this.args.dbSkipImport;
+    }
     return this.args.attrs.filter((a) => {
+      // console.log(a);
       return dbValidFields.includes(a.name);
     });
   }
