@@ -22,7 +22,7 @@ import { assert } from '@ember/debug';
  *
  // * component functionality
  * @param {function} onChange - The onchange action for this form field. ** SEE EXAMPLE ** mfa-login-enforcement-form.js (onMethodChange) for example when selecting models from a hasMany relationship
- * @param {array} [inputValue] - Array of strings corresponding to the input's initial value, e.g. an array of model ids that on edit will appear as selected items below the input
+ * @param {array || string} [inputValue] - This can be either an array of strings or a single string, depending on the value returned from the API. inputValue represents the input's initial value, which is often the response from the API on an edit view. For example, it could be an array of model IDs that, when editing, will appear as selected items below the input.
  * @param {boolean} [disallowNewItems=false] - Controls whether or not the user can add a new item if none found
  * @param {boolean} [shouldRenderName=false] - By default an item's id renders in the dropdown, `true` displays the name with its id in smaller text beside it *NOTE: the boolean flips automatically with 'identity' models or if this.idKey !== 'id'
  * @param {string} [nameKey="name"] - if shouldRenderName=true, you can use this arg to specify which key to use for the rendered name. Defaults to "name".
@@ -83,6 +83,12 @@ export default class SearchSelect extends Component {
     return this.args.objectKeys ? this.args.objectKeys[0] : 'id';
   }
 
+  get inputValue() {
+    const inputValue = { ...this.args };
+    // Return the inputValue as an array, ensuring compatibility with dropdownOptions.
+    return Array.isArray(inputValue) ? inputValue : inputValue ? [inputValue] : [];
+  }
+
   get shouldRenderName() {
     return this.args.models?.some((model) => model.includes('identity')) ||
       this.idKey !== 'id' ||
@@ -109,14 +115,12 @@ export default class SearchSelect extends Component {
     });
   }
 
-  formatInputAndUpdateDropdown(inputValues) {
-    // For model attributes using editType: 'searchSelect' where the API returns a string,
-    // we need to wrap the value in an array to match the format expected by the dropdownOptions.
-    // Example: model/transform.js -> template
-    inputValues = Array.isArray(inputValues) ? inputValues : [inputValues];
-    // inputValues are initially an array of strings from @inputValue
-    // map over so selectedOptions are objects
-    return inputValues.map((option) => {
+  formatInputAndUpdateDropdown(inputValue) {
+    // if there are no input values, return an empty array
+    if (inputValue.length < 1) return [];
+
+    return inputValue.map((option) => {
+      // find the matching option in the dropdownOptions
       const matchingOption = this.dropdownOptions.find((opt) => opt[this.idKey] === option);
       // tooltip text comes from return of parent function
       const addTooltip = this.args.renderInfoTooltip
@@ -155,9 +159,7 @@ export default class SearchSelect extends Component {
 
         if (!this.args.parentManageSelected) {
           //  set selectedOptions and remove matches from dropdown list
-          this.selectedOptions = this.args.inputValue
-            ? this.formatInputAndUpdateDropdown(this.args.inputValue)
-            : [];
+          this.selectedOptions = this.formatInputAndUpdateDropdown(this.inputValue);
         }
       }
       return;
@@ -195,9 +197,7 @@ export default class SearchSelect extends Component {
     }
 
     // after all models are queried, set selectedOptions and remove matches from dropdown list
-    this.selectedOptions = this.args.inputValue
-      ? this.formatInputAndUpdateDropdown(this.args.inputValue)
-      : [];
+    this.selectedOptions = this.formatInputAndUpdateDropdown(this.inputValue);
   }
 
   @action
