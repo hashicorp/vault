@@ -44,6 +44,7 @@
 /website/data/          @hashicorp/vault-education-approvers
 /website/public/        @hashicorp/vault-education-approvers
 /website/content/       @hashicorp/vault-education-approvers
+/website/templates/     @hashicorp/vault-education-approvers
 
 # Plugin docs
 /website/content/docs/plugins/              @hashicorp/vault-ecosystem @hashicorp/vault-education-approvers
