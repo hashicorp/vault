@@ -63,7 +63,7 @@
         <InfoTableRow @label={{target.label}} class="is-flex-grow-1 has-no-shadow">
           {{#if target.value.id}}
             {{target.value.name}}
-            <span class="tag has-left-margin-s">{{target.value.id}}</span>
+            <Hds::Badge @text={{target.value.id}} class="has-left-margin-s" />
           {{else}}
             {{target.value}}
           {{/if}}

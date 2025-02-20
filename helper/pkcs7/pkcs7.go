@@ -81,6 +81,10 @@ var (
 	OIDEncryptionAlgorithmAES256GCM  = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 1, 46}
 )
 
+func GetHashForDigestAlgorithm(digestAlg asn1.ObjectIdentifier) (crypto.Hash, error) {
+	return getHashForOID(digestAlg)
+}
+
 func getHashForOID(oid asn1.ObjectIdentifier) (crypto.Hash, error) {
 	switch {
 	case oid.Equal(OIDDigestAlgorithmSHA1), oid.Equal(OIDDigestAlgorithmECDSASHA1),

@@ -70,6 +70,7 @@ module('Integration | Component | InfoTableItemArray', function (hooks) {
   test('it renders', async function (assert) {
     await render(hbs`<InfoTableItemArray
         @displayArray={{this.displayArray}}
+        @label="my label"
       />`);
 
     assert.dom('[data-test-info-table-item-array]').exists();
@@ -86,6 +87,7 @@ module('Integration | Component | InfoTableItemArray', function (hooks) {
       <InfoTableItemArray
         @displayArray={{this.displayArray}}
         @isLink={{this.isLink}}
+        @label="my label"
         @modelType={{this.modelType}}
         @queryParam={{this.queryParam}}
         @backend={{this.backend}}

@@ -1790,11 +1790,22 @@ func TestIdentityStoreLoadingDuplicateReporting(t *testing.T) {
 	// many of these cases and seems strange to encode in a test that we want
 	// broken behavior!
 	numDupes := make(map[string]int)
+	uniqueIDs := make(map[string]struct{})
 	duplicateCountRe := regexp.MustCompile(`(\d+) (different-case( local)? entity alias|entity|group) duplicates found`)
+	// Be sure not to match attributes like alias_id= because there are dupes
+	// there. The report lines we care about always have a space before the id
+	// pair.
+	propsRe := regexp.MustCompile(`\s(id=(\S+))`)
 	for _, log := range unsealLogs {
 		if matches := duplicateCountRe.FindStringSubmatch(log); len(matches) >= 3 {
 			num, _ := strconv.Atoi(matches[1])
 			numDupes[matches[2]] = num
+		}
+		if propMatches := propsRe.FindStringSubmatch(log); len(propMatches) >= 3 {
+			artifactID := propMatches[2]
+			require.NotContains(t, uniqueIDs, artifactID,
+				"duplicate ID reported in logs for different artifacts")
+			uniqueIDs[artifactID] = struct{}{}
 		}
 	}
 	t.Logf("numDupes: %v", numDupes)

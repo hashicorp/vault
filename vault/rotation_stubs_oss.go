@@ -29,5 +29,5 @@ func (c *Core) RegisterRotationJob(_ context.Context, _ *rotation.RotationJob) (
 }
 
 func (c *Core) DeregisterRotationJob(_ context.Context, _ *rotation.RotationJobDeregisterRequest) error {
-	return automatedrotationutil.ErrRotationManagerUnsupported
+	return nil
 }

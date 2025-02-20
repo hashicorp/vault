@@ -1388,6 +1388,22 @@ func createRoleWithData(t *testing.T, b *databaseBackend, s logical.Storage, moc
 	}
 }
 
+func readStaticCred(t *testing.T, b *databaseBackend, s logical.Storage, mockDB *mockNewDatabase, roleName string) *logical.Response {
+	t.Helper()
+	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
+		Return(v5.UpdateUserResponse{}, nil).
+		Once()
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "static-creds/" + roleName,
+		Storage:   s,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatal(resp, err)
+	}
+	return resp
+}
+
 const testRoleStaticCreate = `
 CREATE ROLE "{{name}}" WITH
   LOGIN

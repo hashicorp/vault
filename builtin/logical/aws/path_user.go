@@ -175,7 +175,7 @@ func (b *backend) pathUserRollback(ctx context.Context, req *logical.Request, _k
 	username := entry.UserName
 
 	// Get the client
-	client, err := b.clientIAM(ctx, req.Storage)
+	client, err := b.clientIAM(ctx, req.Storage, nil)
 	if err != nil {
 		return err
 	}

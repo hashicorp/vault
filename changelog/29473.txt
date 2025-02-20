@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets(pki): Error if attempt to set a manual chain on an issuer that can't issue any certificate.
+```

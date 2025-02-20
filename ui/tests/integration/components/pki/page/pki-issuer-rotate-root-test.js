@@ -215,7 +215,7 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
     assert.dom(GENERAL.infoRowValue('Issuer name')).exists();
     assert.dom(GENERAL.infoRowValue('Issuing CA')).exists();
     assert.dom(GENERAL.infoRowValue('Private key')).exists();
-    assert.dom(`${GENERAL.infoRowValue('Private key type')} span`).hasText('rsa');
+    assert.dom(`${GENERAL.infoRowValue('Private key type')}`).hasText('rsa');
     assert.dom(GENERAL.infoRowValue('Serial number')).hasText(this.returnedData.serial_number);
     assert.dom(GENERAL.infoRowValue('Key ID')).hasText(this.returnedData.key_id);
 
@@ -254,8 +254,8 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
     assert.dom(GENERAL.infoRowValue('Certificate')).exists();
     assert.dom(GENERAL.infoRowValue('Issuer name')).exists();
     assert.dom(GENERAL.infoRowValue('Issuing CA')).exists();
-    assert.dom(`${GENERAL.infoRowValue('Private key')} span`).hasText('internal');
-    assert.dom(`${GENERAL.infoRowValue('Private key type')} span`).hasText('internal');
+    assert.dom(`${GENERAL.infoRowValue('Private key')} div`).hasText('internal');
+    assert.dom(`${GENERAL.infoRowValue('Private key type')} div`).hasText('internal');
     assert.dom(GENERAL.infoRowValue('Serial number')).hasText(this.returnedData.serial_number);
     assert.dom(GENERAL.infoRowValue('Key ID')).hasText(this.returnedData.key_id);
 

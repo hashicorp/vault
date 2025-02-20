@@ -818,8 +818,9 @@ func TestSubscribeGlobal_WithApply(t *testing.T) {
 	}
 }
 
-// TestSubscribeCluster tests that the cluster filter subscription mechanism works.
-func TestSubscribeCluster(t *testing.T) {
+// TestSubscribeClusterNode tests that the cluster node filter subscription
+// mechanism works.
+func TestSubscribeClusterNode(t *testing.T) {
 	bus, err := NewEventBus("", nil)
 	if err != nil {
 		t.Fatal(err)
@@ -830,7 +831,7 @@ func TestSubscribeCluster(t *testing.T) {
 	bus.filters.addPattern("somecluster", []string{""}, "abc*")
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	t.Cleanup(cancelFunc)
-	ch, cancel2, err := bus.NewClusterSubscription(ctx, "somecluster")
+	ch, cancel2, err := bus.NewClusterNodeSubscription(ctx, "somecluster")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -854,8 +855,9 @@ func TestSubscribeCluster(t *testing.T) {
 	}
 }
 
-// TestSubscribeCluster_WithApply tests that the cluster filter subscription mechanism works when using ApplyClusterFilterChanges.
-func TestSubscribeCluster_WithApply(t *testing.T) {
+// TestSubscribeClusterNode_WithApply tests that the cluster node filter
+// subscription mechanism works when using ApplyClusterNodeFilterChanges.
+func TestSubscribeClusterNode_WithApply(t *testing.T) {
 	bus, err := NewEventBus("", nil)
 	if err != nil {
 		t.Fatal(err)
@@ -865,14 +867,14 @@ func TestSubscribeCluster_WithApply(t *testing.T) {
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	t.Cleanup(cancelFunc)
-	bus.ApplyClusterFilterChanges("somecluster", []FilterChange{
+	bus.ApplyClusterNodeFilterChanges("somecluster", []FilterChange{
 		{
 			Operation:         FilterChangeAdd,
 			NamespacePatterns: []string{""},
 			EventTypePattern:  "abc*",
 		},
 	})
-	ch, cancel2, err := bus.NewClusterSubscription(ctx, "somecluster")
+	ch, cancel2, err := bus.NewClusterNodeSubscription(ctx, "somecluster")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -937,8 +939,9 @@ func TestClearGlobalFilter(t *testing.T) {
 	}
 }
 
-// TestClearClusterFilter tests that clearing a cluster filter means no messages get through.
-func TestClearClusterFilter(t *testing.T) {
+// TestClearClusterNodeFilter tests that clearing a cluster node filter means no
+// messages get through.
+func TestClearClusterNodeFilter(t *testing.T) {
 	bus, err := NewEventBus("", nil)
 	if err != nil {
 		t.Fatal(err)
@@ -948,15 +951,15 @@ func TestClearClusterFilter(t *testing.T) {
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	t.Cleanup(cancelFunc)
-	bus.ApplyClusterFilterChanges("somecluster", []FilterChange{
+	bus.ApplyClusterNodeFilterChanges("somecluster", []FilterChange{
 		{
 			Operation:         FilterChangeAdd,
 			NamespacePatterns: []string{""},
 			EventTypePattern:  "abc*",
 		},
 	})
-	bus.ClearClusterFilter("somecluster")
-	ch, cancel2, err := bus.NewClusterSubscription(ctx, "somecluster")
+	bus.ClearClusterNodeFilter("somecluster")
+	ch, cancel2, err := bus.NewClusterNodeSubscription(ctx, "somecluster")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1020,7 +1023,8 @@ func TestNotifyOnGlobalFilterChanges(t *testing.T) {
 	}
 }
 
-// TestNotifyOnLocalFilterChanges tests that notifications on local cluster filter changes are sent.
+// TestNotifyOnLocalFilterChanges tests that notifications on local cluster node
+// filter changes are sent.
 func TestNotifyOnLocalFilterChanges(t *testing.T) {
 	bus, err := NewEventBus("somecluster", nil)
 	if err != nil {
@@ -1037,7 +1041,7 @@ func TestNotifyOnLocalFilterChanges(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(cancel2)
-	bus.ApplyClusterFilterChanges("somecluster", []FilterChange{
+	bus.ApplyClusterNodeFilterChanges("somecluster", []FilterChange{
 		{
 			Operation:         FilterChangeAdd,
 			NamespacePatterns: []string{""},

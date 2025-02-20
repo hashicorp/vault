@@ -10,9 +10,7 @@
         {{uppercase this.policyType}}
         Policies
         {{#if (not-eq this.policyType "acl")}}
-          <span class="tag" aria-label="Enforcement level: {{this.model.enforcementLevel}}">
-            Sentinel
-          </span>
+          <Hds::Badge @text="Sentinel" />
         {{/if}}
       </h1>
     </p.levelLeft>

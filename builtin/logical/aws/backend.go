@@ -10,10 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
@@ -77,89 +76,8 @@ func Backend(_ *logical.BackendConfig) *backend {
 			return nil
 		},
 		RotateCredential: func(ctx context.Context, req *logical.Request) error {
-			// the following code is a modified version of the rotate-root method
-			client, err := b.clientIAM(ctx, req.Storage)
-			if err != nil {
-				return err
-			}
-			if client == nil {
-				return fmt.Errorf("nil IAM client")
-			}
-
-			b.clientMutex.Lock()
-			defer b.clientMutex.Unlock()
-
-			rawRootConfig, err := req.Storage.Get(ctx, "config/root")
-			if err != nil {
-				return err
-			}
-			if rawRootConfig == nil {
-				return fmt.Errorf("no configuration found for config/root")
-			}
-			var config rootConfig
-			if err := rawRootConfig.DecodeJSON(&config); err != nil {
-				return fmt.Errorf("error reading root configuration: %w", err)
-			}
-
-			if config.AccessKey == "" || config.SecretKey == "" {
-				return fmt.Errorf("cannot call config/rotate-root when either access_key or secret_key is empty")
-			}
-
-			var getUserInput iam.GetUserInput // empty input means get current user
-			getUserRes, err := client.GetUserWithContext(ctx, &getUserInput)
-			if err != nil {
-				return fmt.Errorf("error calling GetUser: %w", err)
-			}
-			if getUserRes == nil {
-				return fmt.Errorf("nil response from GetUser")
-			}
-			if getUserRes.User == nil {
-				return fmt.Errorf("nil user returned from GetUser")
-			}
-			if getUserRes.User.UserName == nil {
-				return fmt.Errorf("nil UserName returned from GetUser")
-			}
-
-			createAccessKeyInput := iam.CreateAccessKeyInput{
-				UserName: getUserRes.User.UserName,
-			}
-			createAccessKeyRes, err := client.CreateAccessKeyWithContext(ctx, &createAccessKeyInput)
-			if err != nil {
-				return fmt.Errorf("error calling CreateAccessKey: %w", err)
-			}
-			if createAccessKeyRes.AccessKey == nil {
-				return fmt.Errorf("nil response from CreateAccessKey")
-			}
-			if createAccessKeyRes.AccessKey.AccessKeyId == nil || createAccessKeyRes.AccessKey.SecretAccessKey == nil {
-				return fmt.Errorf("nil AccessKeyId or SecretAccessKey returned from CreateAccessKey")
-			}
-
-			oldAccessKey := config.AccessKey
-
-			config.AccessKey = *createAccessKeyRes.AccessKey.AccessKeyId
-			config.SecretKey = *createAccessKeyRes.AccessKey.SecretAccessKey
-
-			newEntry, err := logical.StorageEntryJSON("config/root", config)
-			if err != nil {
-				return fmt.Errorf("error generating new config/root JSON: %w", err)
-			}
-			if err := req.Storage.Put(ctx, newEntry); err != nil {
-				return fmt.Errorf("error saving new config/root: %w", err)
-			}
-
-			b.iamClient = nil
-			b.stsClient = nil
-
-			deleteAccessKeyInput := iam.DeleteAccessKeyInput{
-				AccessKeyId: aws.String(oldAccessKey),
-				UserName:    getUserRes.User.UserName,
-			}
-			_, err = client.DeleteAccessKeyWithContext(ctx, &deleteAccessKeyInput)
-			if err != nil {
-				return fmt.Errorf("error deleting old access key: %w", err)
-			}
-
-			return nil
+			_, err := b.rotateRoot(ctx, req)
+			return err
 		},
 		BackendType: logical.TypeLogical,
 	}
@@ -169,6 +87,10 @@ func Backend(_ *logical.BackendConfig) *backend {
 
 type backend struct {
 	*framework.Backend
+
+	// Function pointer used to override the IAM client creation for mocked testing
+	// If set, this function will be called instead of creating real IAM clients
+	nonCachedClientIAMFunc func(context.Context, logical.Storage, hclog.Logger, *staticRoleEntry) (iamiface.IAMAPI, error)
 
 	// Mutex to protect access to reading and writing policies
 	roleMutex sync.RWMutex
@@ -214,8 +136,9 @@ func (b *backend) clearClients() {
 }
 
 // clientIAM returns the configured IAM client. If nil, it constructs a new one
-// and returns it, setting it the internal variable
-func (b *backend) clientIAM(ctx context.Context, s logical.Storage) (iamiface.IAMAPI, error) {
+// and returns it, setting it the internal variable.
+// entry is only needed when configuring the client to use for role assumption.
+func (b *backend) clientIAM(ctx context.Context, s logical.Storage, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
 	b.clientMutex.RLock()
 	if b.iamClient != nil {
 		b.clientMutex.RUnlock()
@@ -233,10 +156,11 @@ func (b *backend) clientIAM(ctx context.Context, s logical.Storage) (iamiface.IA
 		return b.iamClient, nil
 	}
 
-	iamClient, err := b.nonCachedClientIAM(ctx, s, b.Logger())
+	iamClient, err := b.nonCachedClientIAM(ctx, s, b.Logger(), entry)
 	if err != nil {
 		return nil, err
 	}
+
 	b.iamClient = iamClient
 
 	return b.iamClient, nil
@@ -330,4 +254,14 @@ func (b *backend) initialize(ctx context.Context, request *logical.Initializatio
 		}
 	}
 	return nil
+}
+
+// getNonCachedIAMClient returns an IAM client. In a test env, if a mocked client creation
+// function is set (nonCachedClientIAMFunc), it will be used instead of the default client creation function.
+// This allows us to mock AWS clients in tests.
+func (b *backend) getNonCachedIAMClient(ctx context.Context, storage logical.Storage, cfg staticRoleEntry) (iamiface.IAMAPI, error) {
+	if b.nonCachedClientIAMFunc != nil {
+		return b.nonCachedClientIAMFunc(ctx, storage, b.Logger(), &cfg)
+	}
+	return b.nonCachedClientIAM(ctx, storage, b.Logger(), &cfg)
 }

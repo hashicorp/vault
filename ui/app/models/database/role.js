@@ -54,6 +54,12 @@ export default Model.extend({
       'Specifies the amount of time Vault should wait before rotating the password. The minimum is 5 seconds. Default is 24 hours.',
     helperTextEnabled: 'Vault will rotate password after',
   }),
+  skip_import_rotation: attr({
+    label: 'Skip initial rotation',
+    editType: 'boolean',
+    defaultValue: false,
+    subText: 'When unchecked, Vault automatically rotates the password upon creation',
+  }),
   creation_statements: attr('array', {
     editType: 'stringArray',
   }),
@@ -110,6 +116,7 @@ export default Model.extend({
       'max_ttl',
       'username',
       'rotation_period',
+      'skip_import_rotation',
       'creation_statements',
       'creation_statement', // for editType: JSON
       'revocation_statements',

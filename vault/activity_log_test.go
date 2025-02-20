@@ -5038,3 +5038,88 @@ func TestActivityLog_Export_CSV_Header(t *testing.T) {
 
 	require.Empty(t, deep.Equal(expectedColumnIndex, encoder.columnIndex))
 }
+
+// TestActivityLog_partialMonthClientCountUsingWriteExport verifies that the writeExport
+// method returns the same number of clients when queried with a start_time that is at
+// different times during the same month.
+func TestActivityLog_partialMonthClientCountUsingWriteExport(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	now := time.Now().UTC()
+	a, expectedClients, _ := setupActivityRecordsInStorage(t, timeutil.StartOfMonth(now), true, true)
+
+	// clients[0] belongs to previous month
+	// the rest belong to the current month
+	expectedCurrentMonthClients := expectedClients[1:]
+
+	type record struct {
+		ClientID      string `json:"client_id"`
+		NamespaceID   string `json:"namespace_id"`
+		Timestamp     string `json:"timestamp"`
+		NonEntity     bool   `json:"non_entity"`
+		MountAccessor string `json:"mount_accessor"`
+		ClientType    string `json:"client_type"`
+	}
+
+	startOfMonth := timeutil.StartOfMonth(now)
+	endOfMonth := timeutil.EndOfMonth(now)
+	middleOfMonth := startOfMonth.Add(endOfMonth.Sub(startOfMonth) / 2)
+	testCases := []struct {
+		name               string
+		requestedStartTime time.Time
+	}{
+		{
+			name:               "start time is the start of the current month",
+			requestedStartTime: startOfMonth,
+		},
+		{
+			name:               "start time is the middle of the current month",
+			requestedStartTime: middleOfMonth,
+		},
+		{
+			name:               "start time is the end of the current month",
+			requestedStartTime: endOfMonth,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			rw := &fakeResponseWriter{
+				buffer:  &bytes.Buffer{},
+				headers: http.Header{},
+			}
+
+			// Test different start times but keep the end time at the end of the current month
+			// Start time of any timestamp within the current month should result in the same output from the export API
+			if err := a.writeExport(ctx, rw, "json", tc.requestedStartTime, endOfMonth); err != nil {
+				t.Fatal(err)
+			}
+
+			// Convert the json objects from the buffer and compare the results
+			var results []record
+			jsonObjects := strings.Split(strings.TrimSpace(rw.buffer.String()), "\n")
+			for _, jsonObject := range jsonObjects {
+				if jsonObject == "" {
+					continue
+				}
+
+				var result record
+				if err := json.Unmarshal([]byte(jsonObject), &result); err != nil {
+					t.Fatalf("Error unmarshaling JSON object: %v\nJSON: %s", err, jsonObject)
+				}
+				results = append(results, result)
+			}
+
+			// Compare expectedClients with actualClients
+			for i := range expectedCurrentMonthClients {
+				resultTimeStamp, err := time.Parse(time.RFC3339, results[i].Timestamp)
+				require.NoError(t, err)
+				require.Equal(t, expectedCurrentMonthClients[i].ClientID, results[i].ClientID)
+				require.Equal(t, expectedCurrentMonthClients[i].NamespaceID, results[i].NamespaceID)
+				require.Equal(t, expectedCurrentMonthClients[i].Timestamp, resultTimeStamp.Unix())
+				require.Equal(t, expectedCurrentMonthClients[i].NonEntity, results[i].NonEntity)
+				require.Equal(t, expectedCurrentMonthClients[i].MountAccessor, results[i].MountAccessor)
+				require.Equal(t, expectedCurrentMonthClients[i].ClientType, results[i].ClientType)
+			}
+		})
+	}
+}

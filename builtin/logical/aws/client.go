@@ -148,21 +148,33 @@ func (b *backend) getRootConfigs(ctx context.Context, s logical.Storage, clientT
 	return configs, nil
 }
 
-func (b *backend) nonCachedClientIAM(ctx context.Context, s logical.Storage, logger hclog.Logger) (*iam.IAM, error) {
-	awsConfig, err := b.getRootConfigs(ctx, s, "iam", logger)
-	if err != nil {
-		return nil, err
+func (b *backend) nonCachedClientIAM(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (*iam.IAM, error) {
+	var awsConfig *aws.Config
+	var err error
+
+	if entry != nil && entry.AssumeRoleARN != "" {
+		awsConfig, err = b.assumeRoleStatic(ctx, s, entry)
+		if err != nil {
+			return nil, fmt.Errorf("failed to assume role %q: %w", entry.AssumeRoleARN, err)
+		}
+	} else {
+		configs, err := b.getRootConfigs(ctx, s, "iam", logger)
+		if err != nil {
+			return nil, err
+		}
+		if len(configs) != 1 {
+			return nil, errors.New("could not obtain aws config")
+		}
+		awsConfig = configs[0]
 	}
-	if len(awsConfig) != 1 {
-		return nil, errors.New("could not obtain aws config")
-	}
-	sess, err := session.NewSession(awsConfig[0])
+
+	sess, err := session.NewSession(awsConfig)
 	if err != nil {
 		return nil, err
 	}
 	client := iam.New(sess)
 	if client == nil {
-		return nil, fmt.Errorf("could not obtain iam client")
+		return nil, fmt.Errorf("could not obtain IAM client")
 	}
 	return client, nil
 }

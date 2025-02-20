@@ -18,9 +18,9 @@ several challenges, including:
 - Increased exposure risk from data sprawl.
 - Increased risk of outdated and out-of-sync information.
 
-Using Vault as a single source of truth for sensitive data increases
+Using Vault as a single source of truth (SSOT) for sensitive data increases
 security and reduces management overhead, but migrating preexisting data from multiple
-and/or varied sources can be complex and costly.
+and/or varied sources can be complex and costly. 
 
 The secrets import process helps you automate and streamline your sensitive data
 migration with codified import plans as HCL files. Import plans tell Vault which KVv2 secrets
@@ -29,8 +29,8 @@ read from, and how to filter this data. Three HCL blocks make this possible:
 
 - The `destination` block defines target KVv2 mounts.
 - The `source` block provides credentials for connecting to the external system.
-- The `mapping` block defines how Vault should decide which data gets imported (and possibly
-  transformed) before writing the information to KVv2.
+- The `mapping` block defines how Vault should decide which data gets imported before
+  writing the information to KVv2.
 
 ## Destinations
 
@@ -40,6 +40,7 @@ an optional namespace. The combination of these represent the exact location in 
 Vault instance you want the information stored.
 
 ### HCL syntax
+
 
 ```hcl
 destination_vault {
@@ -57,25 +58,23 @@ destination_vault {
 - `address` `(string)` - Optional network address of the Vault server with the
   KVv2 secrets engine enabled. By default, the Vault client's address will be used.
 
-- `credentials_file` `(string)` - Optional path to authentication token for the Vault
-  server at the specified address. By default, the Vault client's token will be used.
+- `token` `(string)` - Optional authentication token for the Vault server at the
+  specified address. By default, the Vault client's token will be used.
 
 - `namespace` `(string)` - Optional namespace path containing the specified KVv2
   mount. By default, Vault looks for the KVv2 mount under the root namespace.
+
+
 
 ## Sources
 
 Vault can import secrets from the following sources:
 - [GCP Secret Manager](/vault/docs/import/gcpsm)
-- [AWS Secret Manager](/vault/docs/import/awssm)
-- [Azure KeyVault](/vault/docs/import/azurekv)
-- [HashiCorp Vault](/vault/docs/import/vault)
 
-To pull data from a source during import, Vault needs credentials for the
+To pull data from a source during import, Vault needs read credentials for the
 external system. You can provide credentials directly as part of the import
 plan, or use Vault to automatically generate dynamic credentials if you already
-have the corresponding secrets engine configured.  Otherwise credentials will be
-fetched from the default locations appropriate to the external system.
+have the corresponding secrets engine configured.
 
 ### HCL syntax
 
@@ -84,45 +83,46 @@ information required by the target system or the secrets engine to leverage. For
 
 ```hcl
 source_gcp {
-  name             = "my-gcp-source-1"
-  credentials_file = "/path/to/service-account-key.json"
+  name        = "my-gcp-source-1"
+  credentials = "@/path/to/service-account-key.json"
 }
 ```
 
 - `name` `(string: <required>)` - A unique name for the source block that can be
   referenced in subsequent mapping blocks.
 
-- `credentials_file` `(string: <required>)` - Path to a credential file with
+- `credentials` `(string: <required>)` - Path to a credential file or token with
   read permissions for the target system.
 
 Depending on the source system, additional information may be required. Refer to
 the connection documentation for your source system to determine the full set of
 required fields for that system type.
 
+
+
 ## Mappings
 
 Mappings glue the source and destination together and filter the migrated data,
-to determine what is imported and what is ignored.
+to determine what is imported and what is ignored. Vault currently supports the
+following mapping methods:
+
+- [mapping_passthrough](/vault/docs/import/mappings#passthrough)
+- [mapping_metadata](/vault/docs/import/mappings#metadata)
+- [mapping_regex](/vault/docs/import/mappings#regex)
 
 ### HCL syntax
 
-Mapping blocks require a name, a source name, a destination name, and any corresponding
-transformations or filters that apply for each mapping type. Example:
+Mapping blocks start with `mapping_<filter_type>` and require a source name,
+destination name, an execution priority, and any corresponding transformations
+or filters that apply for each mapping type. For example:
 
 ```hcl
-mapping {
+mapping_regex {
   name        = "my-map-1"
   source      = "my-gcp-source-1"
   destination = "my-dest-1"
-  filter      = "Secret.Name matches `(foo|bar)`"
-  transform "exact" {
-    from = "foo"
-    to = "foosball"
-  }
-  transform "regexp" {
-    from = "foo(.*)"
-    to = "bar$1"
-  }
+  priority    = 1
+  expression  = "^database/.*$"
 }
 ```
 
@@ -134,58 +134,20 @@ mapping {
 - `destination` `(string: <required>)` - The name of a previously defined
   destination block **to** which the data should be written.
 
-- `filter` `(string: "")` - Optional string containing a (`bexpr` style boolean expression)[https://github.com/hashicorp/go-bexpr]
- that limits which secrets Vault imports from the source.
+- `priority` `(integer: <required>)` - The order in which Vault should apply the
+  mapping block during the import process. The lower the number, the higher the
+  priority. For example, a mapping with priority 1 executes before a mapping
+  with priority 2.
 
-#### Filters
+Depending on the filter type, additional fields may be required or possible. Refer
+to the [import mappings documentation](/vault/docs/import/mappings) for the available
+supported options and for a list of each mapping's specific fields.
 
-Filters describes conditions for secret fields that a source secret must meet to be imported. You can filter against the following secret fields:
+<Tip title="Priority matters">
 
-- `Secret.Name` - The name of the source secret
-- `Secret.Tags` - A map of key-value user-defined metadata associated with the source secret
+  Vault applies mapping definitions in priority order and a given secret only
+  matches to the first mapping that applies. Once Vault imports a secret with a
+  particular mapping, subsequent reads from the same source will ignore that
+  secret. See the [priority section](/vault/docs/import/mappings#priority) for an example.
 
-You can also apply simple binary conditions to input values:
-
-- `Secret.Name != "foo"`
-- `Secret.Tags.Team matches "my-dept.*"`
-- `Secret.Tags contains "my-required-tag-name"`
-
-These can be combined using `and`, `or`, and `not`:
-
-- `(Secret.Name == "foo" or Secret.Tags.Team == "my-team") and Secret.Tags.Category = "my-cat"`
-
-#### Transformers
-
-Transform stanzas come in two forms: `exact` and `regexp`.
-
-An exact transform allows renaming a secret during import, so that the `from` secret name
-is imported into Vault as a secret named `to`.  In the following example it, takes a source secret
-named `foo` and transforms it to `foosball` during import.
-
-```hcl
-  transform "exact" {
-    from = "foo"
-    to = "foosball"
-  }
-```
-
-`regexp` transforms rename secrets during import using
-[Go regular expression syntax](https://github.com/google/re2/wiki/Syntax). For
-example, the transform below imports any secret in the source whose name starts
-with `foo` and replaces the `foo` prefix with `bar`.
-
-```hcl
-  transform "regexp" {
-    from = "foo(.*)"
-    to = "bar$1"
-  }
-  transform "regexp" {
-    from = "foo(?P<suffix>.*)"
-    to = "bar$suffix"
-  }
-```
-
-The `from` value supports parentheses to bookend capture groups and named
-capture groups using the syntax `(?P<name>re)`. When you use named capture
-groups, you can reference the named group in the `to` value. For example,
-`$name` instead of `$1`.
+</Tip>

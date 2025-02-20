@@ -32,9 +32,11 @@
                 <LinkTo @route="keys.key.details" @models={{array @model.backend @model.keyId}}>
                   {{@model.keyId}}
                 </LinkTo>
+              {{else if value}}
+                {{value}}
+                {{! it's unlikely but if a value is returned for privateKey and privateKeyType we want to display it, otherwise we show the "internal" badge below }}
               {{else}}
-                {{! this block only ever renders privateKey and privateKeyType }}
-                <span class="{{unless value 'tag'}}">{{or value "internal"}}</span>
+                <Hds::Badge @text="internal" />
               {{/if}}
             </InfoTableRow>
           {{/let}}

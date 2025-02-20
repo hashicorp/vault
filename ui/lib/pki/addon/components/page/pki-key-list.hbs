@@ -37,7 +37,7 @@
               </span>
               <div class="is-flex-row has-left-margin-l has-top-margin-xs">
                 {{#if pkiKey.keyName}}
-                  <span class="tag has-text-grey-dark" data-test-key="id">{{pkiKey.id}}</span>
+                  <Hds::Badge @text={{pkiKey.id}} data-test-key="id" />
                 {{/if}}
               </div>
             </div>

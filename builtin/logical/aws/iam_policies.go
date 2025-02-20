@@ -66,7 +66,7 @@ func (b *backend) getGroupPolicies(ctx context.Context, s logical.Storage, iamGr
 		return nil, nil, nil
 	}
 
-	iamClient, err = b.clientIAM(ctx, s)
+	iamClient, err = b.clientIAM(ctx, s, nil)
 	if err != nil {
 		return nil, nil, err
 	}

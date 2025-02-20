@@ -11,6 +11,8 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -97,7 +99,10 @@ func TestStaticRolesValidation(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			b.iamClient = miam
+			// Used to override the real IAM client creation to return the mocked client
+			b.nonCachedClientIAMFunc = func(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
+				return miam, nil
+			}
 			if err := b.Setup(bgCTX, config); err != nil {
 				t.Fatal(err)
 			}
@@ -241,7 +246,10 @@ func TestStaticRolesWrite(t *testing.T) {
 			}
 
 			b := Backend(config)
-			b.iamClient = miam
+			// Used to override the real IAM client creation to return the mocked client
+			b.nonCachedClientIAMFunc = func(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
+				return miam, nil
+			}
 			if err := b.Setup(bgCTX, config); err != nil {
 				t.Fatal(err)
 			}
@@ -454,7 +462,10 @@ func TestStaticRoleDelete(t *testing.T) {
 			}
 
 			b := Backend(config)
-			b.iamClient = miam
+			// Used to override the real IAM client creation to return the mocked client
+			b.nonCachedClientIAMFunc = func(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
+				return miam, nil
+			}
 
 			// put in storage
 			staticRole := staticRoleEntry{

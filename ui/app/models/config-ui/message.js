@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 import Model, { attr } from '@ember-data/model';
+import timestamp from 'core/utils/timestamp';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { isAfter, addDays, startOfDay, parseISO, isBefore } from 'date-fns';
 import { withModelValidations } from 'vault/decorators/model-validations';
@@ -109,7 +110,9 @@ export default class MessageModel extends Model {
     editType: 'dateTimeLocal',
     label: 'Message starts',
     subText: 'Defaults to 12:00 a.m. the following day (local timezone).',
-    defaultValue: addDays(startOfDay(new Date()), 1).toISOString(),
+    defaultValue() {
+      return addDays(startOfDay(timestamp.now()), 1).toISOString();
+    },
   })
   startTime;
   @attr('dateTimeLocal', { editType: 'yield', label: 'Message expires' }) endTime;
@@ -126,7 +129,7 @@ export default class MessageModel extends Model {
 
   // date helpers
   get isStartTimeAfterToday() {
-    return isAfter(parseISO(this.startTime), new Date());
+    return isAfter(parseISO(this.startTime), timestamp.now());
   }
 
   // capabilities

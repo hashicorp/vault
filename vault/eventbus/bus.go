@@ -220,10 +220,10 @@ func (bus *EventBus) SubscribeMultipleNamespaces(ctx context.Context, namespaceP
 	return bus.subscribeInternal(ctx, namespacePathPatterns, pattern, bexprFilter, nil)
 }
 
-// subscribeInternal creates the pipeline and connects it to the event bus to receive events.
-// if the cluster is specified, then the namespacePathPatterns, pattern, and bexprFilter are ignored, and instead this
-// subscription will be tied to the given cluster's filter.
-func (bus *EventBus) subscribeInternal(ctx context.Context, namespacePathPatterns []string, pattern string, bexprFilter string, cluster *string) (<-chan *eventlogger.Event, context.CancelFunc, error) {
+// subscribeInternal creates the pipeline and connects it to the event bus to receive events. If the
+// clusterNode is specified, then the namespacePathPatterns, pattern, and bexprFilter are ignored,
+// and instead this subscription will be tied to the given cluster node's filter.
+func (bus *EventBus) subscribeInternal(ctx context.Context, namespacePathPatterns []string, pattern string, bexprFilter string, clusterNode *string) (<-chan *eventlogger.Event, context.CancelFunc, error) {
 	// subscriptions are still stored even if the bus has not been started
 	pipelineID, err := uuid.GenerateUUID()
 	if err != nil {
@@ -241,8 +241,8 @@ func (bus *EventBus) subscribeInternal(ctx context.Context, namespacePathPattern
 	}
 
 	var filterNode *eventlogger.Filter
-	if cluster != nil {
-		filterNode, err = newClusterFilterNode(bus.filters, clusterID(*cluster))
+	if clusterNode != nil {
+		filterNode, err = newClusterNodeFilterNode(bus.filters, clusterNodeID(*clusterNode))
 		if err != nil {
 			return nil, nil, err
 		}
@@ -265,7 +265,7 @@ func (bus *EventBus) subscribeInternal(ctx context.Context, namespacePathPattern
 
 	ctx, cancel := context.WithCancel(ctx)
 	asyncNode := newAsyncNode(ctx, bus.logger, bus.broker, func() {
-		if cluster == nil {
+		if clusterNode == nil {
 			bus.filters.removePattern(bus.filters.self, namespacePathPatterns, pattern)
 		}
 	})
@@ -307,9 +307,9 @@ func (bus *EventBus) GlobalMatch(ns *namespace.Namespace, eventType logical.Even
 	return bus.filters.globalMatch(ns, eventType)
 }
 
-// ApplyClusterFilterChanges applies the given filter changes to the cluster's filters.
-func (bus *EventBus) ApplyClusterFilterChanges(c string, changes []FilterChange) {
-	bus.filters.applyChanges(clusterID(c), changes)
+// ApplyClusterNodeFilterChanges applies the given filter changes to the cluster node's filters.
+func (bus *EventBus) ApplyClusterNodeFilterChanges(c string, changes []FilterChange) {
+	bus.filters.applyChanges(clusterNodeID(c), changes)
 }
 
 // ApplyGlobalFilterChanges applies the given filter changes to the global filters.
@@ -322,9 +322,9 @@ func (bus *EventBus) ClearGlobalFilter() {
 	bus.filters.clearGlobalPatterns()
 }
 
-// ClearClusterFilter removes all entries from the given cluster's filter.
-func (bus *EventBus) ClearClusterFilter(id string) {
-	bus.filters.clearClusterPatterns(clusterID(id))
+// ClearClusterNodeFilter removes all entries from the given cluster node's filter.
+func (bus *EventBus) ClearClusterNodeFilter(id string) {
+	bus.filters.clearClusterNodePatterns(clusterNodeID(id))
 }
 
 // NotifyOnGlobalFilterChanges returns a channel that receives changes to the global filter.
@@ -332,14 +332,14 @@ func (bus *EventBus) NotifyOnGlobalFilterChanges(ctx context.Context) (<-chan []
 	return bus.filters.watch(ctx, globalCluster)
 }
 
-// NotifyOnLocalFilterChanges returns a channel that receives changes to the filter for the current cluster.
+// NotifyOnLocalFilterChanges returns a channel that receives changes to the filter for the current cluster node.
 func (bus *EventBus) NotifyOnLocalFilterChanges(ctx context.Context) (<-chan []FilterChange, context.CancelFunc, error) {
-	return bus.NotifyOnClusterFilterChanges(ctx, string(bus.filters.self))
+	return bus.NotifyOnClusterNodeFilterChanges(ctx, string(bus.filters.self))
 }
 
-// NotifyOnClusterFilterChanges returns a channel that receives changes to the filter for the given cluster.
-func (bus *EventBus) NotifyOnClusterFilterChanges(ctx context.Context, cluster string) (<-chan []FilterChange, context.CancelFunc, error) {
-	return bus.filters.watch(ctx, clusterID(cluster))
+// NotifyOnClusterNodeFilterChanges returns a channel that receives changes to the filter for the given cluster node.
+func (bus *EventBus) NotifyOnClusterNodeFilterChanges(ctx context.Context, clusterNode string) (<-chan []FilterChange, context.CancelFunc, error) {
+	return bus.filters.watch(ctx, clusterNodeID(clusterNode))
 }
 
 // NewAllEventsSubscription creates a new subscription to all events.
@@ -353,18 +353,18 @@ func (bus *EventBus) NewGlobalSubscription(ctx context.Context) (<-chan *eventlo
 	return bus.subscribeInternal(ctx, nil, "", "", &g)
 }
 
-// NewClusterSubscription creates a new subscription to all events that match the given cluster's filter.
-func (bus *EventBus) NewClusterSubscription(ctx context.Context, cluster string) (<-chan *eventlogger.Event, context.CancelFunc, error) {
-	return bus.subscribeInternal(ctx, nil, "", "", &cluster)
+// NewClusterNodeSubscription creates a new subscription to all events that match the given cluster node's filter.
+func (bus *EventBus) NewClusterNodeSubscription(ctx context.Context, clusterNode string) (<-chan *eventlogger.Event, context.CancelFunc, error) {
+	return bus.subscribeInternal(ctx, nil, "", "", &clusterNode)
 }
 
-// creates a new filter node that is tied to the filter for a given cluster
-func newClusterFilterNode(filters *Filters, c clusterID) (*eventlogger.Filter, error) {
+// creates a new filter node that is tied to the filter for a given cluster node
+func newClusterNodeFilterNode(filters *Filters, c clusterNodeID) (*eventlogger.Filter, error) {
 	return &eventlogger.Filter{
 		Predicate: func(e *eventlogger.Event) (bool, error) {
 			eventRecv := e.Payload.(*logical.EventReceived)
 			eventNs := strings.Trim(eventRecv.Namespace, "/")
-			if filters.clusterMatch(c, &namespace.Namespace{
+			if filters.clusterNodeMatch(c, &namespace.Namespace{
 				Path: eventNs,
 			}, logical.EventType(eventRecv.EventType)) {
 				return true, nil

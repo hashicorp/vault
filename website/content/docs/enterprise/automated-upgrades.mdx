@@ -31,7 +31,7 @@ Autopilot subsystem within Vault will promote the new version nodes to voters wh
 running the latest Vault version equals or exceeds the number of pre-existing nodes. Vault then demotes
 the previous version's nodes to non-voters. Finally, leadership transfers from the prior leader to a
 randomly selected node running the newest Vault version and waits for the user to remove the previous
-nodes from the cluster.
+nodes from the cluster. Be aware that Autopilot [dead server cleanup](/vault/docs/concepts/integrated-storage/autopilot#dead-server-cleanup) automatically removes nodes deemed unhealthy from the Raft cluster when enabled.
 
 Below is a flowchart depicting Autopilot's automated upgrade state machine.
 

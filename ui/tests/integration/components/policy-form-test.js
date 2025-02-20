@@ -16,6 +16,7 @@ const SELECTORS = {
   uploadFileToggle: '[data-test-policy-edit-toggle]',
   policyEditor: '[data-test-policy-editor]',
   policyUpload: '[data-test-text-file-input]',
+  altTabMessage: '[data-test-alt-tab-message]',
   saveButton: '[data-test-policy-save]',
   cancelButton: '[data-test-policy-cancel]',
   error: '[data-test-message-error]',
@@ -156,6 +157,22 @@ module('Integration | Component | policy-form', function (hooks) {
     assert.dom(SELECTORS.nameInput).hasValue('test-policy', 'it fills in policy name');
     await click(SELECTORS.saveButton);
     assert.propEqual(this.onSave.lastCall.args[0].policy, policy, 'policy content saves in correct format');
+  });
+
+  test('it shows alt + tab message only when json editor is visible', async function (assert) {
+    await render(hbs`
+    <PolicyForm
+      @model={{this.model}}
+      @onCancel={{this.onCancel}}
+      @onSave={{this.onSave}}
+    />
+    `);
+    assert.dom(SELECTORS.altTabMessage).exists({ count: 1 }, 'Alt tab message shows');
+    assert.dom(SELECTORS.policyEditor).exists({ count: 1 }, 'Policy editor is shown');
+
+    await click(SELECTORS.uploadFileToggle);
+    assert.dom(SELECTORS.policyUpload).exists({ count: 1 }, 'Policy upload is shown after toggle');
+    assert.dom(SELECTORS.altTabMessage).doesNotExist('Alt tab message is not shown');
   });
 
   test('it renders the form to edit existing ACL policy', async function (assert) {

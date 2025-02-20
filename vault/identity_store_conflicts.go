@@ -103,7 +103,7 @@ type duplicateReportingErrorResolver struct {
 	// when in case-sensitive mode.
 	//
 	// Since this is only ever called from `load*` methods on IdentityStore during
-	// an unseal we can assume that it's all from a single goroutine and does'nt
+	// an unseal we can assume that it's all from a single goroutine and doesn't
 	// need locking.
 	seenEntities     map[string][]*identity.Entity
 	seenGroups       map[string][]*identity.Group
@@ -316,8 +316,7 @@ type Warner interface {
 	Warn(msg string, args ...interface{})
 }
 
-// TODO set this correctly.
-const identityDuplicateReportUrl = "https://developer.hashicorp.com/vault/docs/upgrading/identity-deduplication"
+const identityDuplicateReportUrl = "https://developer.hashicorp.com/vault/docs/upgrading/deduplication"
 
 func (r *duplicateReportingErrorResolver) LogReport(log Warner) {
 	report := r.Report()

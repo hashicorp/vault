@@ -4,9 +4,10 @@
  */
 
 import Component from '@glimmer/component';
-import { tracked } from '@glimmer/tracking';
-import { service } from '@ember/service';
+import { assert } from '@ember/debug';
 import { action } from '@ember/object';
+import { service } from '@ember/service';
+import { tracked } from '@glimmer/tracking';
 
 /**
  * @module InfoTableItemArray
@@ -36,6 +37,11 @@ export default class InfoTableItemArray extends Component {
   @tracked itemNameById; // object is only created if renderItemName=true
   @tracked fetchComplete = false;
 
+  constructor() {
+    super(...arguments);
+    assert('@label is required for InfoTableItemArray components', this.args.label);
+  }
+
   get rootRoute() {
     return this.args.rootRoute || 'vault.cluster.secrets.backend.list-root';
   }
@@ -56,6 +62,10 @@ export default class InfoTableItemArray extends Component {
       return displayArray.slice(0, 5);
     }
     return displayArray;
+  }
+
+  get wildcardLabel() {
+    return this.args.wildcardLabel || '';
   }
 
   @action async fetchOptions() {

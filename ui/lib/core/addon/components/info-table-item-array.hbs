@@ -13,10 +13,12 @@
             {{#if (is-wildcard-string item)}}
               {{#let (filter-wildcard item this.allOptions) as |wildcardCount|}}
                 <span>{{item}}</span>
-                <span class="tag is-light has-text-grey-dark" data-test-count={{wildcardCount}}>
-                  {{if (not-eq wildcardCount undefined) (concat "includes " wildcardCount)}}
-                  {{if (eq wildcardCount 1) @wildcardLabel (pluralize @wildcardLabel)}}
-                </span>
+                {{#if (not-eq wildcardCount undefined)}}
+                  <Hds::Badge
+                    @text="includes {{pluralize wildcardCount this.wildcardLabel}}"
+                    data-test-count={{wildcardCount}}
+                  />
+                {{/if}}
                 {{#if (eq this.displayArrayTruncated.lastObject item)}}
                   <LinkTo @route={{this.rootRoute}} @query={{hash tab=@queryParam}}>
                     <span data-test-view-all={{lowercase @label}}>View all {{lowercase @label}}.</span>

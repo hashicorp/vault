@@ -1,0 +1,3 @@
+```release-note:feature
+**Automated Root Rotation**: A schedule or ttl can be defined for automated rotation of the root credential.
+```
