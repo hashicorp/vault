@@ -37,7 +37,7 @@ module('Integration | Component | tools/wrap', function (hooks) {
     await this.renderComponent();
 
     assert.dom('h1').hasText('Wrap Data', 'Title renders');
-    assert.dom('[data-test-toggle-label="KV view"]').hasText('KV view');
+    assert.dom('[data-test-toggle-label="json"]').hasText('JSON');
     assert.dom('[data-test-component="json-editor-title"]').hasText('Data to wrap (json-formatted)');
     assert.strictEqual(codemirror().getValue(' '), '{ }', 'json editor initializes with empty object');
     assert.dom(TTL.toggleByLabel('Wrap TTL')).isNotChecked('Wrap TTL defaults to unchecked');
@@ -110,9 +110,9 @@ module('Integration | Component | tools/wrap', function (hooks) {
     await this.renderComponent();
     await codemirror().setValue(this.wrapData);
     assert.dom('[data-test-component="json-editor-title"]').hasText('Data to wrap (json-formatted)');
-    await click('[data-test-toggle-input="KV view"]');
+    await click('[data-test-toggle-input="json"]');
     assert.dom('[data-test-component="json-editor-title"]').doesNotExist();
-    await click('[data-test-toggle-input="KV view"]');
+    await click('[data-test-toggle-input="json"]');
     assert.dom('[data-test-component="json-editor-title"]').exists();
     assert.strictEqual(
       codemirror().getValue(' '),
@@ -143,7 +143,7 @@ module('Integration | Component | tools/wrap', function (hooks) {
 
     await this.renderComponent();
     await codemirror().setValue(this.wrapData);
-    await click('[data-test-toggle-input="KV view"]');
+    await click('[data-test-toggle-input="json"]');
     await click(TS.submit);
     await waitUntil(() => find(TS.toolsInput('wrapping-token')));
     assert.true(flashSpy.calledWith('Wrap was successful.'), 'it renders success flash');

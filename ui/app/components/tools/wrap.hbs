@@ -40,18 +40,14 @@
     <div class="box is-sideless is-fullwidth is-marginless">
       <NamespaceReminder @mode="perform" @noun="wrap" />
       <MessageError @errorMessage={{this.errorMessage}} />
-      <Toggle @name="KV view" @checked={{this.showKvObject}} @onChange={{fn (mut this.showKvObject)}}>
-        <span class="has-text-grey">KV view</span>
-      </Toggle>
-      {{#if this.showKvObject}}
-        <KvObjectEditor
-          class="has-top-margin-m"
-          @label="Data to Wrap"
-          @value={{this.wrapData}}
-          @onChange={{fn (mut this.wrapData)}}
-          @warnNonStringValues={{true}}
-        />
-      {{else}}
+      <Toolbar>
+        <ToolbarFilters>
+          <Toggle @name="json" @checked={{this.showJson}} @onChange={{fn (mut this.showJson)}}>
+            <span class="has-text-grey">JSON</span>
+          </Toggle>
+        </ToolbarFilters>
+      </Toolbar>
+      {{#if this.showJson}}
         <div class="field">
           <div class="control">
             <JsonEditor
@@ -62,6 +58,14 @@
             />
           </div>
         </div>
+      {{else}}
+        <KvObjectEditor
+          class="has-top-margin-m"
+          @label="Data to Wrap"
+          @value={{this.wrapData}}
+          @onChange={{fn (mut this.wrapData)}}
+          @warnNonStringValues={{true}}
+        />
       {{/if}}
       <TtlPicker
         @label="Wrap TTL"

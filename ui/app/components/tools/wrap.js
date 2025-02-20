@@ -27,7 +27,7 @@ export default class ToolsWrap extends Component {
   @tracked wrapTTL = null;
   @tracked wrapData;
   @tracked errorMessage = '';
-  @tracked showKvObject = false;
+  @tracked showJson = true;
   get jsonWrapStartValue() {
     return '{\n}';
   }
