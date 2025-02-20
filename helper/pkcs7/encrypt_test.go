@@ -9,6 +9,7 @@ import (
 func TestEncrypt(t *testing.T) {
 	modes := []int{
 		EncryptionAlgorithmDESCBC,
+		EncryptionAlgorithmDESEDE3CBC,
 		EncryptionAlgorithmAES128CBC,
 		EncryptionAlgorithmAES256CBC,
 		EncryptionAlgorithmAES128GCM,
@@ -49,7 +50,9 @@ func TestEncrypt(t *testing.T) {
 func TestEncryptUsingPSK(t *testing.T) {
 	modes := []int{
 		EncryptionAlgorithmDESCBC,
+		EncryptionAlgorithmDESEDE3CBC,
 		EncryptionAlgorithmAES128GCM,
+		EncryptionAlgorithmAES256GCM,
 	}
 
 	for _, mode := range modes {
@@ -60,9 +63,16 @@ func TestEncryptUsingPSK(t *testing.T) {
 		switch mode {
 		case EncryptionAlgorithmDESCBC:
 			key = []byte("64BitKey")
+		case EncryptionAlgorithmDESEDE3CBC:
+			key = []byte("192BitKeyForMoreSecurity")
 		case EncryptionAlgorithmAES128GCM:
 			key = []byte("128BitKey4AESGCM")
+		case EncryptionAlgorithmAES256GCM:
+			key = []byte("256BitKey4AESGCM256BitKey4AESGCM")
+		default:
+			t.Errorf("unsupported mode %d", mode)
 		}
+
 		ciphertext, err := EncryptUsingPSK(plaintext, key)
 		if err != nil {
 			t.Fatal(err)

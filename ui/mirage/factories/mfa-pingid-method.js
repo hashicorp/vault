@@ -13,5 +13,5 @@ export default Factory.extend({
   org_alias: 'foobarbaz',
   type: 'pingid',
   username_template: '',
-  namespace_id: 'root',
+  namespace_path: 'admin/',
 });
