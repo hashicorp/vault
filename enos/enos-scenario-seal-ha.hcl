@@ -891,6 +891,7 @@ scenario "seal_ha" {
     depends_on = [
       step.wait_for_seal_rewrap,
       step.verify_secrets_engines_read,
+      step.verify_log_secrets,
     ]
 
     providers = {
