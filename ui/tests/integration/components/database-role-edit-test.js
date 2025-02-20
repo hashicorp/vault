@@ -22,6 +22,7 @@ module('Integration | Component | database-role-edit', function (hooks) {
       database: ['my-mongodb-database'],
       backend: 'database',
       username: 'staticTestUser',
+      skip_import_rotation: false,
       type: 'static',
       name: 'my-static-role',
       id: 'my-static-role',
@@ -56,6 +57,31 @@ module('Integration | Component | database-role-edit', function (hooks) {
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="edit"/>`);
     await fillIn('[data-test-ttl-value="Rotation period"]', '20');
     await click('[data-test-secret-save]');
+  });
+
+  test('it should successfully create user with skip import rotation', async function (assert) {
+    this.server.post('/sys/capabilities-self', capabilitiesStub('database/static-creds/my-role', ['create']));
+    this.server.post(`/database/static-roles/my-static-role`, (schema, req) => {
+      assert.true(true, 'request made to create static role');
+      assert.propEqual(
+        JSON.parse(req.requestBody),
+        {
+          path: 'static-roles',
+          username: 'staticTestUser',
+          rotation_period: '172800s', // 2 days in seconds
+          skip_import_rotation: true,
+        },
+        'it creates a static role with correct payload'
+      );
+    });
+
+    await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="create"/>`);
+    await fillIn('[data-test-ttl-value="Rotation period"]', '2');
+    await click('[data-test-input="skip_import_rotation"]');
+    await click('[data-test-secret-save]');
+
+    await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="show"/>`);
+    assert.dom('[data-test-value-div="Skip initial rotation"]').containsText('Yes');
   });
 
   test('it should show Get credentials button when a user has the correct policy', async function (assert) {
