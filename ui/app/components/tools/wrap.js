@@ -25,12 +25,9 @@ export default class ToolsWrap extends Component {
   @tracked buttonDisabled = false;
   @tracked token = '';
   @tracked wrapTTL = null;
-  @tracked wrapData;
+  @tracked wrapData = null;
   @tracked errorMessage = '';
   @tracked showJson = true;
-  get jsonWrapStartValue() {
-    return '{\n}';
-  }
 
   get startingValue() {
     // must pass the third param called "space" in JSON.stringify to structure object with whitespace
@@ -41,7 +38,12 @@ export default class ToolsWrap extends Component {
   }
 
   get stringifiedWrapData() {
-    return this?.wrapData ? stringify([this.wrapData], {}) : this.jsonWrapStartValue;
+    return this?.wrapData ? stringify([this.wrapData], {}) : this.startingValue;
+  }
+
+  @action handleToggle() {
+    this.showJson = !this.showJson;
+    this.buttonDisabled = false;
   }
 
   @action
@@ -49,7 +51,9 @@ export default class ToolsWrap extends Component {
     this.token = '';
     this.errorMessage = '';
     this.wrapTTL = null;
-    if (clearData) this.wrapData = '';
+    if (clearData) {
+      this.wrapData = null;
+    }
   }
 
   @action

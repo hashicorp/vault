@@ -42,26 +42,23 @@
       <MessageError @errorMessage={{this.errorMessage}} />
       <Toolbar>
         <ToolbarFilters>
-          <Toggle @name="json" @checked={{this.showJson}} @onChange={{fn (mut this.showJson)}}>
+          <Toggle @name="json" @checked={{this.showJson}} @onChange={{action "handleToggle"}}>
             <span class="has-text-grey">JSON</span>
           </Toggle>
         </ToolbarFilters>
       </Toolbar>
       {{#if this.showJson}}
-        <div class="field">
-          <div class="control">
-            <JsonEditor
-              @title="Data to wrap"
-              @subTitle="json-formatted"
-              @value={{this.stringifiedWrapData}}
-              @valueUpdated={{this.codemirrorUpdated}}
-            />
-          </div>
-        </div>
+        <JsonEditor
+          class="has-top-margin-s"
+          @title="Data to wrap"
+          @subTitle="json-formatted"
+          @value={{this.stringifiedWrapData}}
+          @valueUpdated={{this.codemirrorUpdated}}
+        />
       {{else}}
         <KvObjectEditor
-          class="has-top-margin-m"
-          @label="Data to Wrap"
+          class="has-top-margin-l"
+          @label="Data to wrap"
           @value={{this.wrapData}}
           @onChange={{fn (mut this.wrapData)}}
           @warnNonStringValues={{true}}
