@@ -7,6 +7,7 @@ import (
 	"context"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
@@ -43,7 +44,8 @@ func TestBackend_PathConfigRoot(t *testing.T) {
 		"identity_token_audience":    "",
 		"identity_token_ttl":         int64(0),
 		"rotation_schedule":          "",
-		"rotation_window":            0,
+		"rotation_period":            time.Duration(0).Seconds(),
+		"rotation_window":            time.Duration(0).Seconds(),
 		"disable_automated_rotation": false,
 	}
 
@@ -69,8 +71,6 @@ func TestBackend_PathConfigRoot(t *testing.T) {
 	}
 
 	delete(configData, "secret_key")
-	// remove rotation_period from response for comparison with original config
-	delete(resp.Data, "rotation_period")
 	require.Equal(t, configData, resp.Data)
 	if !reflect.DeepEqual(resp.Data, configData) {
 		t.Errorf("bad: expected to read config root as %#v, got %#v instead", configData, resp.Data)
@@ -103,7 +103,7 @@ func TestBackend_PathConfigRoot_STSFallback(t *testing.T) {
 		"identity_token_audience":    "",
 		"identity_token_ttl":         int64(0),
 		"rotation_schedule":          "",
-		"rotation_window":            0,
+		"rotation_window":            time.Duration(0).Seconds(),
 		"disable_automated_rotation": false,
 	}
 
@@ -152,7 +152,7 @@ func TestBackend_PathConfigRoot_STSFallback(t *testing.T) {
 		"identity_token_audience":    "",
 		"identity_token_ttl":         int64(0),
 		"rotation_schedule":          "",
-		"rotation_window":            0,
+		"rotation_window":            time.Duration(0).Seconds(),
 		"disable_automated_rotation": false,
 	}
 

@@ -214,8 +214,8 @@ func TestBackend_config_connection(t *testing.T) {
 			"verify_connection":                  false,
 			"skip_static_role_import_rotation":   false,
 			"rotation_schedule":                  "",
-			"rotation_period":                    0,
-			"rotation_window":                    0,
+			"rotation_period":                    time.Duration(0).Seconds(),
+			"rotation_window":                    time.Duration(0).Seconds(),
 			"disable_automated_rotation":         false,
 		}
 		configReq.Operation = logical.ReadOperation
@@ -225,7 +225,6 @@ func TestBackend_config_connection(t *testing.T) {
 		}
 
 		delete(resp.Data["connection_details"].(map[string]interface{}), "name")
-		delete(resp.Data, "AutomatedRotationParams")
 		if !reflect.DeepEqual(expected, resp.Data) {
 			t.Fatalf("bad: expected:%#v\nactual:%#v\n", expected, resp.Data)
 		}
@@ -275,8 +274,8 @@ func TestBackend_config_connection(t *testing.T) {
 			"verify_connection":                  false,
 			"skip_static_role_import_rotation":   false,
 			"rotation_schedule":                  "",
-			"rotation_period":                    0,
-			"rotation_window":                    0,
+			"rotation_period":                    time.Duration(0).Seconds(),
+			"rotation_window":                    time.Duration(0).Seconds(),
 			"disable_automated_rotation":         false,
 		}
 		configReq.Operation = logical.ReadOperation
@@ -325,8 +324,8 @@ func TestBackend_config_connection(t *testing.T) {
 			"verify_connection":                  false,
 			"skip_static_role_import_rotation":   false,
 			"rotation_schedule":                  "",
-			"rotation_period":                    0,
-			"rotation_window":                    0,
+			"rotation_period":                    time.Duration(0).Seconds(),
+			"rotation_window":                    time.Duration(0).Seconds(),
 			"disable_automated_rotation":         false,
 		}
 		configReq.Operation = logical.ReadOperation
