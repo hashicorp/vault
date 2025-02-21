@@ -3569,6 +3569,113 @@ template {
 	}
 }
 
+// TestAgent_Config_AddrConformance verifies that the vault address is correctly
+// normalized to conform to RFC-5942 §4 when configured by a config file,
+// environment variables, or CLI flags.
+// See: https://rfc-editor.org/rfc/rfc5952.html
+func TestAgent_Config_AddrConformance(t *testing.T) {
+	for name, test := range map[string]struct {
+		args     []string
+		envVars  map[string]string
+		cfg      string
+		expected *agentConfig.Config
+	}{
+		"ipv4 config": {
+			cfg: `
+vault {
+  address = "https://127.0.0.1:8200"
+}`,
+			expected: &agentConfig.Config{
+				Vault: &agentConfig.Vault{
+					Address: "https://127.0.0.1:8200",
+				},
+			},
+		},
+		"ipv6 config": {
+			cfg: `
+vault {
+  address = "https://[2001:0db8::0001]:8200"
+}`,
+			expected: &agentConfig.Config{
+				Vault: &agentConfig.Vault{
+					// Use the normalized version in the config
+					Address: "https://[2001:db8::1]:8200",
+				},
+			},
+		},
+		"ipv6 cli arg overrides": {
+			args: []string{"-address=https://[2001:0:0:1:0:0:0:1]:8200"},
+			cfg: `
+vault {
+  address = "https://[2001:0db8::0001]:8200"
+}`,
+			expected: &agentConfig.Config{
+				Vault: &agentConfig.Vault{
+					// Use a normalized version of the args address
+					Address: "https://[2001:0:0:1::1]:8200",
+				},
+			},
+		},
+		"ipv6 env var overrides": {
+			envVars: map[string]string{
+				"VAULT_ADDR": "https://[2001:DB8:AC3:FE4::1]:8200",
+			},
+			cfg: `
+vault {
+  address = "https://[2001:0db8::0001]:8200"
+}`,
+			expected: &agentConfig.Config{
+				Vault: &agentConfig.Vault{
+					// Use a normalized version of the env var address
+					Address: "https://[2001:db8:ac3:fe4::1]:8200",
+				},
+			},
+		},
+		"ipv6 all uses cli overrides": {
+			args: []string{"-address=https://[2001:0:0:1:0:0:0:1]:8200"},
+			envVars: map[string]string{
+				"VAULT_ADDR": "https://[2001:DB8:AC3:FE4::1]:8200",
+			},
+			cfg: `
+vault {
+  address = "https://[2001:0db8::0001]:8200"
+}`,
+			expected: &agentConfig.Config{
+				Vault: &agentConfig.Vault{
+					// Use a normalized version of the args address
+					Address: "https://[2001:0:0:1::1]:8200",
+				},
+			},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			// In CI our tests are run with VAULT_ADDR=, which will break our tests
+			// because it'll default to an unset address. Ensure that's cleared out
+			// of the environment.
+			t.Cleanup(func() {
+				os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+			})
+			os.Unsetenv(api.EnvVaultAddress)
+			for k, v := range test.envVars {
+				t.Setenv(k, v)
+			}
+
+			configFile := populateTempFile(t, "agent-"+strings.ReplaceAll(name, " ", "-"), test.cfg)
+			cfg, err := agentConfig.LoadConfigFile(configFile.Name())
+			require.NoError(t, err)
+			require.NotEmptyf(t, cfg.Vault.Address, "agent config is missing address: %+v", cfg.Vault)
+
+			cmd := &AgentCommand{BaseCommand: &BaseCommand{}}
+			f := cmd.Flags()
+			args := append([]string{}, test.args...)
+			require.NoError(t, f.Parse(args))
+
+			cmd.applyConfigOverrides(f, cfg)
+			require.Equalf(t, test.expected.Vault.Address, cfg.Vault.Address, "agent config is missing address: config: %+v, flags: %+v", cfg.Vault, f)
+		})
+	}
+}
+
 // Get a randomly assigned port and then free it again before returning it.
 // There is still a race when trying to use it, but should work better
 // than a static port.

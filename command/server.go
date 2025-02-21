@@ -278,11 +278,12 @@ func (c *ServerCommand) Flags() *FlagSets {
 	})
 
 	f.StringVar(&StringVar{
-		Name:    "dev-listen-address",
-		Target:  &c.flagDevListenAddr,
-		Default: "127.0.0.1:8200",
-		EnvVar:  "VAULT_DEV_LISTEN_ADDRESS",
-		Usage:   "Address to bind to in \"dev\" mode.",
+		Name:        "dev-listen-address",
+		Target:      &c.flagDevListenAddr,
+		Default:     "127.0.0.1:8200",
+		EnvVar:      "VAULT_DEV_LISTEN_ADDRESS",
+		Usage:       "Address to bind to in \"dev\" mode.",
+		Normalizers: []func(string) string{configutil.NormalizeAddr},
 	})
 	f.BoolVar(&BoolVar{
 		Name:    "dev-no-store-token",
@@ -798,7 +799,7 @@ func (c *ServerCommand) setupStorage(config *server.Config) (physical.Backend, e
 		}
 	case storageTypeRaft:
 		if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
-			config.ClusterAddr = envCA
+			config.ClusterAddr = configutil.NormalizeAddr(envCA)
 		}
 		if len(config.ClusterAddr) == 0 {
 			return nil, errors.New("Cluster address must be set when using raft storage")

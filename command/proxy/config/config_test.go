@@ -10,6 +10,7 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/stretchr/testify/require"
 )
 
 // TestLoadConfigFile_ProxyCache tests loading a config file containing a cache
@@ -201,5 +202,128 @@ func TestLoadConfigFile_ProxyCacheStaticSecrets(t *testing.T) {
 	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
+	}
+}
+
+// Test_LoadConfigFile_AutoAuth_AddrConformance verifies basic config file
+// loading in addition to RFC-5942 §4 normalization of auto-auth methods.
+// See: https://rfc-editor.org/rfc/rfc5952.html
+func Test_LoadConfigFile_AutoAuth_AddrConformance(t *testing.T) {
+	t.Parallel()
+
+	for name, method := range map[string]*Method{
+		"aws": {
+			Type:      "aws",
+			MountPath: "auth/aws",
+			Namespace: "aws-namespace/",
+			Config: map[string]any{
+				"role": "foobar",
+			},
+		},
+		"azure": {
+			Type:      "azure",
+			MountPath: "auth/azure",
+			Namespace: "azure-namespace/",
+			Config: map[string]any{
+				"authenticate_from_environment": true,
+				"role":                          "dev-role",
+				"resource":                      "https://[2001:0:0:1::1]",
+			},
+		},
+		"gcp": {
+			Type:      "gcp",
+			MountPath: "auth/gcp",
+			Namespace: "gcp-namespace/",
+			Config: map[string]any{
+				"role":            "dev-role",
+				"service_account": "https://[2001:db8:ac3:fe4::1]",
+			},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			config, err := LoadConfigFile("./test-fixtures/config-auto-auth-" + name + ".hcl")
+			require.NoError(t, err)
+
+			expected := &Config{
+				SharedConfig: &configutil.SharedConfig{
+					PidFile: "./pidfile",
+					Listeners: []*configutil.Listener{
+						{
+							Type:        "unix",
+							Address:     "/path/to/socket",
+							TLSDisable:  true,
+							SocketMode:  "configmode",
+							SocketUser:  "configuser",
+							SocketGroup: "configgroup",
+						},
+						{
+							Type:       "tcp",
+							Address:    "2001:db8::1:8200", // Normalized
+							TLSDisable: true,
+						},
+						{
+							Type:       "tcp",
+							Address:    "[2001:0:0:1::1]:3000", // Normalized
+							Role:       "metrics_only",
+							TLSDisable: true,
+						},
+						{
+							Type:        "tcp",
+							Role:        "default",
+							Address:     "2001:db8:0:1:1:1:1:1:8400", // Normalized
+							TLSKeyFile:  "/path/to/cakey.pem",
+							TLSCertFile: "/path/to/cacert.pem",
+						},
+					},
+				},
+				Vault: &Vault{
+					Address:          "https://[2001:db8::1]:8200", // Normalized
+					CACert:           "config_ca_cert",
+					CAPath:           "config_ca_path",
+					TLSSkipVerifyRaw: interface{}("true"),
+					TLSSkipVerify:    true,
+					ClientCert:       "config_client_cert",
+					ClientKey:        "config_client_key",
+					Retry: &Retry{
+						NumRetries: 12,
+					},
+				},
+				AutoAuth: &AutoAuth{
+					Method: method, // Method properties are normalized correctly
+					Sinks: []*Sink{
+						{
+							Type:   "file",
+							DHType: "curve25519",
+							DHPath: "/tmp/file-foo-dhpath",
+							AAD:    "foobar",
+							Config: map[string]interface{}{
+								"path": "/tmp/file-foo",
+							},
+						},
+					},
+				},
+				APIProxy: &APIProxy{
+					EnforceConsistency:  "always",
+					WhenInconsistent:    "retry",
+					UseAutoAuthTokenRaw: true,
+					UseAutoAuthToken:    true,
+					ForceAutoAuthToken:  false,
+				},
+				Cache: &Cache{
+					Persist: &agentproxyshared.PersistConfig{
+						Type:                    "kubernetes",
+						Path:                    "/vault/agent-cache/",
+						KeepAfterImport:         true,
+						ExitOnErr:               true,
+						ServiceAccountTokenFile: "/tmp/serviceaccount/token",
+					},
+				},
+			}
+
+			config.Prune()
+			require.EqualValues(t, expected, config)
+		})
 	}
 }
