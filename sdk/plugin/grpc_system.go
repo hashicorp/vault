@@ -472,8 +472,8 @@ func (s *gRPCSystemViewServer) RegisterRotationJob(ctx context.Context, req *pb.
 		MountPoint:       req.Job.MountPoint,
 		ReqPath:          req.Job.Path,
 		RotationSchedule: req.Job.RotationSchedule,
-		RotationWindow:   int(req.Job.RotationWindow),
-		RotationPeriod:   int(req.Job.RotationPeriod),
+		RotationWindow:   time.Duration(req.Job.RotationWindow) * time.Second,
+		RotationPeriod:   time.Duration(req.Job.RotationPeriod) * time.Second,
 	}
 
 	rotationID, err := s.impl.RegisterRotationJob(ctx, cfgReq)

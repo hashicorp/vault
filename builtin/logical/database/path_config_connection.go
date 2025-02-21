@@ -415,6 +415,9 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 
 		resp.Data = structs.New(config).Map()
 		config.PopulateAutomatedRotationData(resp.Data)
+		// remove extra nested AutomatedRotationParams key
+		// before returning response
+		delete(resp.Data, "AutomatedRotationParams")
 		return resp, nil
 	}
 }
@@ -522,7 +525,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		delete(data.Raw, "skip_static_role_import_rotation")
 		delete(data.Raw, "rotation_schedule")
 		delete(data.Raw, "rotation_window")
-		delete(data.Raw, "rotation_ttl")
+		delete(data.Raw, "rotation_period")
 		delete(data.Raw, "disable_automated_rotation")
 
 		id, err := uuid.GenerateUUID()
