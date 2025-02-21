@@ -126,10 +126,14 @@ module('Integration | Component | tools/wrap', function (hooks) {
   });
 
   test('it submits from kv view', async function (assert) {
-    assert.expect(8);
+    assert.expect(6);
 
     const flashSpy = sinon.spy(this.owner.lookup('service:flash-messages'), 'success');
-    const updatedWrapData = JSON.stringify({ ...JSON.parse(this.wrapData), foo2: 'bar2' });
+    const updatedWrapData = JSON.stringify({
+      ...JSON.parse(this.wrapData),
+      foo2: 'bar2',
+      foo3: 'foo\nbar\nbaz',
+    });
 
     this.server.post('sys/wrapping/wrap', (schema, { requestBody, requestHeaders }) => {
       const payload = JSON.parse(requestBody);
@@ -149,15 +153,11 @@ module('Integration | Component | tools/wrap', function (hooks) {
     await this.renderComponent();
     await codemirror().setValue(this.wrapData);
     await click('[data-test-toggle-input="json"]');
-
-    const keyInput = find('[data-test-kv-key="1"]');
-    assert.ok(keyInput, 'Key input exists');
-
-    const valueInput = find('[data-test-kv-value="1"]');
-    assert.ok(keyInput, 'Value input exists');
-
-    await fillIn(keyInput, 'foo2');
-    await fillIn(valueInput, 'bar2');
+    await fillIn('[data-test-kv-key="1"]', 'foo2');
+    await fillIn('[data-test-kv-value="1"]', 'bar2');
+    await click('[data-test-kv-add-row="1"]');
+    await fillIn('[data-test-kv-key="2"]', 'foo3');
+    await fillIn('[data-test-kv-value="2"]', 'foo\nbar\nbaz');
     await click(TS.submit);
     await waitUntil(() => find(TS.toolsInput('wrapping-token')));
     assert.true(flashSpy.calledWith('Wrap was successful.'), 'it renders success flash');
