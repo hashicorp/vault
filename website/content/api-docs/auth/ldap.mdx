@@ -193,44 +193,6 @@ $ curl \
 }
 ```
 
-### Schedule-based root rotation
-
-<EnterpriseAlert product="vault" />
-
-The Azure secrets engine supports configuring schedule-based automatic
-credential rotation for static roles with the
-[rotation_schedule](/vault/api-docs/auth/ldap#rotation_schedule) field.
-For example:
-
-```shell-session
-$ vault write auth/ldap/config \
-    rotation_schedule="0 * * * SAT"
-```
-
-This configuration will set the role's credential rotation to occur on Saturday
-at 00:00.
-
-Additionally, this schedule-based approach allows for optionally configuring a
-[rotation_window](/vault/api-docs/auth/ldap#rotation_window) in which
-the automatic rotation is allowed to occur. For example:
-
-```shell-session
-$ vault write auth/ldap/config \
-    rotation_window="1h" \
-    rotation_schedule="0 * * * SAT"
-```
-
-This configuration will set rotations to occur on Saturday at 00:00. The 1
-hour `rotation_window` will prevent the rotation from occuring after 01:00. If
-the static role's credential is not rotated during this window, due to a failure
-or otherwise, it will not be rotated until the next scheduled rotation.
-
-!> The `rotation_period` and `rotation_schedule` fields are
-mutually exclusive. One of them must be set but not both.
-
-For more details on this operation, please see the
-[Root Credential Rotation](/vault/api-docs/auth/ldap#rotate-root) API docs.
-
 ## List LDAP groups
 
 This endpoint returns a list of existing groups in the method.
