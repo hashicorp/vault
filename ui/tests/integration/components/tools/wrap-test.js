@@ -39,7 +39,11 @@ module('Integration | Component | tools/wrap', function (hooks) {
     assert.dom('h1').hasText('Wrap Data', 'Title renders');
     assert.dom('[data-test-toggle-label="json"]').hasText('JSON');
     assert.dom('[data-test-component="json-editor-title"]').hasText('Data to wrap (json-formatted)');
-    assert.strictEqual(codemirror().getValue(' '), '{ }', 'json editor initializes with empty object');
+    assert.strictEqual(
+      codemirror().getValue(' '),
+      `{   \"\": \"\" }`, // eslint-disable-line no-useless-escape
+      'json editor initializes with empty object that includes whitespace'
+    );
     assert.dom(TTL.toggleByLabel('Wrap TTL')).isNotChecked('Wrap TTL defaults to unchecked');
     assert.dom(TS.submit).isEnabled();
     assert.dom(TS.toolsInput('wrapping-token')).doesNotExist();
@@ -122,13 +126,14 @@ module('Integration | Component | tools/wrap', function (hooks) {
   });
 
   test('it submits from kv view', async function (assert) {
-    assert.expect(6);
+    assert.expect(8);
 
     const flashSpy = sinon.spy(this.owner.lookup('service:flash-messages'), 'success');
+    const updatedWrapData = JSON.stringify({ ...JSON.parse(this.wrapData), foo2: 'bar2' });
 
     this.server.post('sys/wrapping/wrap', (schema, { requestBody, requestHeaders }) => {
       const payload = JSON.parse(requestBody);
-      assert.propEqual(payload, JSON.parse(this.wrapData), `payload contains data: ${requestBody}`);
+      assert.propEqual(payload, JSON.parse(updatedWrapData), `payload contains data: ${requestBody}`);
       assert.strictEqual(requestHeaders['X-Vault-Wrap-TTL'], '30m', 'request header has default wrap ttl');
       return {
         wrap_info: {
@@ -144,6 +149,15 @@ module('Integration | Component | tools/wrap', function (hooks) {
     await this.renderComponent();
     await codemirror().setValue(this.wrapData);
     await click('[data-test-toggle-input="json"]');
+
+    const keyInput = find('[data-test-kv-key="1"]');
+    assert.ok(keyInput, 'Key input exists');
+
+    const valueInput = find('[data-test-kv-value="1"]');
+    assert.ok(keyInput, 'Value input exists');
+
+    await fillIn(keyInput, 'foo2');
+    await fillIn(valueInput, 'bar2');
     await click(TS.submit);
     await waitUntil(() => find(TS.toolsInput('wrapping-token')));
     assert.true(flashSpy.calledWith('Wrap was successful.'), 'it renders success flash');
@@ -161,7 +175,11 @@ module('Integration | Component | tools/wrap', function (hooks) {
 
     await waitUntil(() => find(TS.button('Done')));
     await click(TS.button('Done'));
-    assert.strictEqual(codemirror().getValue(' '), '{ }', 'json editor resets to empty object');
+    assert.strictEqual(
+      codemirror().getValue(' '),
+      `{   \"\": \"\" }`, // eslint-disable-line no-useless-escape
+      'json editor initializes with empty object that includes whitespace'
+    );
     assert.dom(TTL.toggleByLabel('Wrap TTL')).isNotChecked('Wrap TTL resets to unchecked');
     await click(TTL.toggleByLabel('Wrap TTL'));
     assert.dom(TTL.valueInputByLabel('Wrap TTL')).hasValue('30', 'ttl resets to default when toggled');
