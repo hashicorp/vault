@@ -160,10 +160,65 @@ _Note_: When using _Authenticated Search_ for binding parameters (see above) the
 
 Use `vault path-help` for more details.
 
+### Root secret rotation
+
+<EnterpriseAlert product="vault" />
+
+- `rotation_schedule` (string, optional) - The schedule, in [cron-style time format](https://en.wikipedia.org/wiki/Cron), defining the schedule on which Vault should rotate the root token. See [rotation_schedule](/vault/api-docs/auth/ldap#rotation_schedule) and.
+- `rotation_window` (string, optional) - The maximum amount of time, in [duration format](https://pkg.go.dev/time#ParseDuration), allowed to complete a rotation when a scheduled token rotation occurs. See [rotation_window](/vault/api-docs/auth/ldap#rotation_window).
+- `rotation_period` (string, optional) - The amount of time, in [duration format](https://pkg.go.dev/time#ParseDuration), Vault should wait before rotating the root credential. See [rotation_period](/vault/api-docs/auth/ldap#rotation_period).
+
 ### Other
 
 - `username_as_alias` (bool, optional) - If set to true, forces the auth method to use the username passed by the user as the alias name.
 - `max_page_size` (int, optional) - If set to a value greater than 0, the LDAP backend will use the LDAP server's paged search control to request pages of up to the given size. This can be used to avoid hitting the LDAP server's maximum result size limit. Otherwise, the LDAP backend will not use the paged search control.
+
+## Root credential rotation
+
+The root bindpass can be rotated to a Vault-generated value that is not accessible by the operator.
+This will ensure that only Vault is able to access the "root" user that Vault uses to manipulate credentials.
+
+```shell-session
+vault write -f auth/azure/rotate-root
+```
+
+### Schedule-based root credential rotation
+
+<EnterpriseAlert product="vault" />
+
+The LDAP auth engine supports configuring schedule-based automatic
+credential rotation for the root credential with the
+[rotation_schedule](/vault/api-docs/auth/ldap#rotation_schedule) field.
+For example:
+
+```shell-session
+$ vault write auth/ldap/config \
+    rotation_schedule="0 * * * SAT"
+```
+
+This configuration will set the role's credential rotation to occur on Saturday
+at 00:00.
+
+Additionally, this schedule-based approach allows for optionally configuring a
+[rotation_window](/vault/api-docs/auth/ldap#rotation_window) in which
+the automatic rotation is allowed to occur. For example:
+
+```shell-session
+$ vault write auth/ldap/config \
+    rotation_window="1h" \
+    rotation_schedule="0 * * * SAT"
+```
+
+This configuration will set rotations to occur on Saturday at 00:00. The 1
+hour `rotation_window` will prevent the rotation from occuring after 01:00. If
+the static role's credential is not rotated during this window, due to a failure
+or otherwise, it will not be rotated until the next scheduled rotation.
+
+!> The `rotation_period` and `rotation_schedule` fields are
+mutually exclusive. One of them must be set but not both.
+
+For more details on this operation, please see the
+[Root Credential Rotation](/vault/api-docs/auth/ldap#rotate-root) API docs.
 
 ## Examples:
 
