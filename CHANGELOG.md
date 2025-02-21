@@ -29,9 +29,6 @@ CHANGES:
 * auth/ldap: No longer return authentication warnings to client. [[GH-29134](https://github.com/hashicorp/vault/pull/29134)]
 * auth/oci: Update plugin to v0.18.0 [[GH-29620](https://github.com/hashicorp/vault/pull/29620)]
 * core (enterprise): Add tracking of performance standbys by their HA node ID so that RPC connections can be more easily cleaned up when nodes are removed. [[GH-29303](https://github.com/hashicorp/vault/pull/29303)]
-* core/ha (enterprise): Failed attempts to become a performance standby node are now using an exponential backoff instead of a
-10 second delay in between retries. The backoff starts at 2s and increases by a factor of two until reaching
-the maximum of 16s. This should make unsealing of the node faster in some cases.
 * core/raft: Return an error on sys/storage/raft/join if a node that has been removed from raft cluster attempts to re-join when it still has existing raft data on disk. [[GH-29090](https://github.com/hashicorp/vault/pull/29090)]
 * database/couchbase: Update plugin to v0.13.0 [[GH-29543](https://github.com/hashicorp/vault/pull/29543)]
 * database/elasticsearch: Update plugin to v0.17.0 [[GH-29542](https://github.com/hashicorp/vault/pull/29542)]
@@ -113,6 +110,9 @@ HMAC'ed by default but can be configured to be via the `/sys/config/auditing/req
 * core: Added new `enable_post_unseal_trace` and `post_unseal_trace_directory` config options to generate Go traces during the post-unseal step for debug purposes. [[GH-28895](https://github.com/hashicorp/vault/pull/28895)]
 * core: Config reloading on SIGHUP now includes some Raft settings, which are now also present in `/sys/config/state/sanitized` output. [[GH-29485](https://github.com/hashicorp/vault/pull/29485)]
 * core: add support for reading certain sensitive seal wrap and managed key (enterprise) configuration values from the environment or files. [[GH-29402](https://github.com/hashicorp/vault/pull/29402)]
+* core/ha (enterprise): Failed attempts to become a performance standby node are now using an exponential backoff instead of a
+10 second delay in between retries. The backoff starts at 2s and increases by a factor of two until reaching
+the maximum of 16s. This should make unsealing of the node faster in some cases.
 * events (enterprise): Send events downstream to a performance standby node only when there is a subscriber on the standby node with a filter matching the events. [[GH-29618](https://github.com/hashicorp/vault/pull/29618)]
 * events (enterprise): Send events downstream to performance standby nodes in a cluster, removing the need to redirect client event subscriptions to the active node. [[GH-29470](https://github.com/hashicorp/vault/pull/29470)]
 * events (enterprise): Use the `path` event metadata field when authorizing a client's `subscribe` capability for consuming an event, instead of requiring `data_path` to be present in the event metadata.
