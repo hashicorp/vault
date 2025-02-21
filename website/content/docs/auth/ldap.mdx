@@ -193,7 +193,9 @@ For example:
 
 ```shell-session
 $ vault write auth/ldap/config \
+    ...
     rotation_schedule="0 * * * SAT"
+    ...
 ```
 
 This configuration will set the role's credential rotation to occur on Saturday
@@ -205,8 +207,10 @@ the automatic rotation is allowed to occur. For example:
 
 ```shell-session
 $ vault write auth/ldap/config \
+    ...
     rotation_window="1h" \
     rotation_schedule="0 * * * SAT"
+    ...
 ```
 
 This configuration will set rotations to occur on Saturday at 00:00. The 1
@@ -216,6 +220,10 @@ or otherwise, it will not be rotated until the next scheduled rotation.
 
 !> The `rotation_period` and `rotation_schedule` fields are
 mutually exclusive. One of them must be set but not both.
+
+Root rotation can be temporarily disabled by setting [disable_automated_rotation](/vault/api-docs/auth/ldap#disable_automated_rotation)
+to `true`. This will prevent any rotation of the root credential until the field is set to `false`. Note: This will reset
+the TTL if `rotation_period` is being used.
 
 For more details on this operation, please see the
 [Root Credential Rotation](/vault/api-docs/auth/ldap#rotate-root) API docs.
