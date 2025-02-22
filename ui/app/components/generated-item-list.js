@@ -5,9 +5,11 @@
 
 import { service } from '@ember/service';
 import Component from '@glimmer/component';
-import { action } from '@ember/object';
+import { task } from 'ember-concurrency';
 import { getOwner } from '@ember/owner';
 import { tracked } from '@glimmer/tracking';
+import { singularize } from 'ember-inflector';
+import { capitalize } from '@ember/string';
 
 /**
  * @module GeneratedItemList
@@ -27,12 +29,38 @@ import { tracked } from '@glimmer/tracking';
 export default class GeneratedItemList extends Component {
   @service router;
   @service pagination;
+  @service flashMessages;
+  @service api;
+
   @tracked itemToDelete = null;
 
-  @action
   refreshItemList() {
     const route = getOwner(this).lookup(`route:${this.router.currentRouteName}`);
     this.pagination.clearDataset();
     route.refresh();
+  }
+
+  @task
+  *deleteAuthMethod() {
+    const { id, type, listItem, authMethodPath } = this.itemToDelete;
+    try {
+      const nameKey = type === 'userpass' ? 'username' : 'name';
+      const payload = {
+        [`${type}MountPath`]: authMethodPath,
+        [nameKey]: id,
+      };
+      const authDeleteMethod = `${type}Delete${capitalize(listItem)}`;
+
+      yield this.api.auth[authDeleteMethod](payload);
+
+      const message = `Successfully deleted ${singularize(listItem)} ${id}.`;
+      this.flashMessages.success(message);
+      this.refreshItemList();
+    } catch (error) {
+      const e = (yield error.response?.json()) || error;
+      const errString = e.errors?.join(' ') || error.message;
+      const message = `There was an error deleting this ${singularize(listItem)}: ${errString}`;
+      this.flashMessages.danger(message);
+    }
   }
 }
