@@ -28,6 +28,7 @@ type ConflictResolver interface {
 	ResolveEntities(ctx context.Context, existing, duplicate *identity.Entity) (bool, error)
 	ResolveGroups(ctx context.Context, existing, duplicate *identity.Group) (bool, error)
 	ResolveAliases(ctx context.Context, parent *identity.Entity, existing, duplicate *identity.Alias) (bool, error)
+	Reload(ctx context.Context)
 }
 
 // errorResolver is a ConflictResolver that logs a warning message when a
@@ -91,6 +92,10 @@ func (r *errorResolver) ResolveAliases(ctx context.Context, parent *identity.Ent
 	return false, errDuplicateIdentityName
 }
 
+// Reload is a no-op for the errorResolver implementation.
+func (r *errorResolver) Reload(ctx context.Context) {
+}
+
 // duplicateReportingErrorResolver collects duplicate information and optionally
 // logs a report on all the duplicates. We don't embed an errorResolver here
 // because we _don't_ want it's side effect of warning on just some duplicates
@@ -142,6 +147,10 @@ func (r *duplicateReportingErrorResolver) ResolveAliases(ctx context.Context, pa
 		r.seenAliases[aliasKey] = append(r.seenAliases[aliasKey], duplicate)
 	}
 	return false, errDuplicateIdentityName
+}
+
+func (r *duplicateReportingErrorResolver) Reload(ctx context.Context) {
+	r.seenEntities = make(map[string][]*identity.Entity)
 }
 
 type identityDuplicateReportEntry struct {
@@ -428,4 +437,8 @@ func (r *renameResolver) ResolveGroups(ctx context.Context, existing, duplicate 
 // ResolveAliases is a no-op for the renameResolver implementation.
 func (r *renameResolver) ResolveAliases(ctx context.Context, parent *identity.Entity, existing, duplicate *identity.Alias) (bool, error) {
 	return false, nil
+}
+
+// Reload is a no-op for the renameResolver implementation.
+func (r *renameResolver) Reload(ctx context.Context) {
 }

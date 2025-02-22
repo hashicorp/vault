@@ -889,7 +889,7 @@ func TestOIDC_SignIDToken(t *testing.T) {
 
 	txn := c.identityStore.db.Txn(true)
 	defer txn.Abort()
-	err := c.identityStore.upsertEntityInTxn(ctx, txn, testEntity, nil, true)
+	_, err := c.identityStore.upsertEntityInTxn(ctx, txn, testEntity, nil, true, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1020,7 +1020,7 @@ func TestOIDC_SignIDToken_NilSigningKey(t *testing.T) {
 
 	txn := c.identityStore.db.Txn(true)
 	defer txn.Abort()
-	err := c.identityStore.upsertEntityInTxn(ctx, txn, testEntity, nil, true)
+	_, err := c.identityStore.upsertEntityInTxn(ctx, txn, testEntity, nil, true, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1497,7 +1497,7 @@ func TestOIDC_Path_Introspect(t *testing.T) {
 
 	txn := c.identityStore.db.Txn(true)
 	defer txn.Abort()
-	err = c.identityStore.upsertEntityInTxn(ctx, txn, testEntity, nil, true)
+	_, err = c.identityStore.upsertEntityInTxn(ctx, txn, testEntity, nil, true, false)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -6,6 +6,7 @@ package storagepacker
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"testing"
 
 	"github.com/golang/protobuf/proto"
@@ -64,6 +65,49 @@ func BenchmarkStoragePacker(b *testing.B) {
 		}
 		if fetchedItem != nil {
 			b.Fatalf("failed to delete item")
+		}
+	}
+}
+
+func BenchmarkStoragePacker_DeleteMultiple(b *testing.B) {
+	b.StopTimer()
+	storagePacker, err := NewStoragePacker(&logical.InmemStorage{}, log.New(&log.LoggerOptions{Name: "storagepackertest"}), "")
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	ctx := context.Background()
+
+	// Persist a storage entry
+	for i := 0; i <= 100000; i++ {
+		item := &Item{
+			ID: fmt.Sprintf("item%d", i),
+		}
+
+		err = storagePacker.PutItem(ctx, item)
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		// Verify that it can be read
+		fetchedItem, err := storagePacker.GetItem(item.ID)
+		if err != nil {
+			b.Fatal(err)
+		}
+		if fetchedItem == nil {
+			b.Fatalf("failed to read the stored item")
+		}
+
+		if item.ID != fetchedItem.ID {
+			b.Fatalf("bad: item ID; expected: %q\n actual: %q\n", item.ID, fetchedItem.ID)
+		}
+	}
+	b.StartTimer()
+
+	for i := 0; i < b.N; i++ {
+		err = storagePacker.DeleteItem(ctx, fmt.Sprintf("item%d", rand.Intn(100000)))
+		if err != nil {
+			b.Fatal(err)
 		}
 	}
 }
