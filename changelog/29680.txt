@@ -1,0 +1,4 @@
+```release-note:bug
+agent: Fixed an issue where giving the agent multiple config files could cause the merged config to be incorrect
+when `template_config` is set in one of the config files.
+```
