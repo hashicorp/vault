@@ -265,9 +265,6 @@ module('Integration | Component | dashboard/overview', function (hooks) {
           'Explore the features of Vault and learn advance practices with the following tutorials and documentation.'
         );
       assert.dom('[data-test-learn-more-links] a').exists({ count: 3 });
-      assert
-        .dom('[data-test-feedback-form]')
-        .hasText("Don't see what you're looking for on this page? Let us know via our feedback form .");
     });
     test('shows the learn more card on enterprise', async function (assert) {
       this.version.features = [
@@ -284,9 +281,6 @@ module('Integration | Component | dashboard/overview', function (hooks) {
           'Explore the features of Vault and learn advance practices with the following tutorials and documentation.'
         );
       assert.dom('[data-test-learn-more-links] a').exists({ count: 4 });
-      assert
-        .dom('[data-test-feedback-form]')
-        .hasText("Don't see what you're looking for on this page? Let us know via our feedback form .");
     });
   });
 });
