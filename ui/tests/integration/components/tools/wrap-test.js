@@ -204,12 +204,31 @@ module('Integration | Component | tools/wrap', function (hooks) {
     assert.dom(TTL.toggleByLabel('Wrap TTL')).isNotChecked('Wrap TTL defaults to unchecked');
   });
 
-  test('it disables/enables submit based on json linting', async function (assert) {
+  test('it renders/hides warning based on json linting', async function (assert) {
     await this.renderComponent();
     await codemirror().setValue(`{bad json}`);
-    assert.dom(TS.submit).isDisabled('submit disables if json editor has linting errors');
-
+    assert
+      .dom('[data-test-inline-alert]')
+      .hasText(
+        'JSON is unparsable. Fix linting errors to avoid data discrepancies.',
+        'Linting error message is shown for json view'
+      );
     await codemirror().setValue(this.wrapData);
-    assert.dom(TS.submit).isEnabled('submit reenables if json editor has no linting errors');
+    assert.dom('[data-test-inline-alert]').doesNotExist();
+  });
+
+  test('it hides json warning on done', async function (assert) {
+    await this.renderComponent();
+    await codemirror().setValue(`{bad json}`);
+    assert
+      .dom('[data-test-inline-alert]')
+      .hasText(
+        'JSON is unparsable. Fix linting errors to avoid data discrepancies.',
+        'Linting error message is shown for json view'
+      );
+    await click(TS.submit);
+    await waitUntil(() => find(TS.button('Done')));
+    await click(TS.button('Done'));
+    assert.dom('[data-test-inline-alert]').doesNotExist();
   });
 });

@@ -52,6 +52,7 @@ export default class ToolsWrap extends Component {
     this.token = '';
     this.errorMessage = '';
     this.wrapTTL = null;
+    this.hasLintingErrors = false;
     if (clearData) this.wrapData = null;
   }
 
@@ -71,8 +72,6 @@ export default class ToolsWrap extends Component {
   @action
   async handleSubmit(evt) {
     evt.preventDefault();
-
-    if (this.hasLintingErrors) return;
 
     const data = this.wrapData;
     const wrapTTL = this.wrapTTL || null;
