@@ -3,12 +3,14 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Model from '@ember-data/model';
+import type { Model } from 'vault/app-types';
 
-export default class PkiConfigUrlsModel extends Model {
+type PkiConfigUrlsModel = Model & {
   issuingCertificates: array;
   crlDistributionPoints: array;
   ocspServers: array;
   urlsPath: string;
   get canSet(): boolean;
-}
+};
+
+export default PkiConfigUrlsModel;
