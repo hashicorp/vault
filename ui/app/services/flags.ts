@@ -8,9 +8,11 @@ import { tracked } from '@glimmer/tracking';
 import { keepLatestTask } from 'ember-concurrency';
 import { DEBUG } from '@glimmer/env';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
+
 import type StoreService from 'vault/services/store';
 import type VersionService from 'vault/services/version';
 import type PermissionsService from 'vault/services/permissions';
+import type CapabilitiesModel from 'vault/models/capabilities';
 
 const FLAGS = {
   vaultCloudNamespace: 'VAULT_CLOUD_ADMIN_NAMESPACE',
@@ -80,12 +82,12 @@ export default class flagsService extends Service {
     return this.getActivatedFlags.perform();
   }
 
-  @lazyCapabilities(apiPath`sys/activation-flags/secrets-sync/activate`) secretsSyncActivatePath;
+  @lazyCapabilities(apiPath`sys/activation-flags/secrets-sync/activate`)
+  declare secretsSyncActivatePath: CapabilitiesModel;
 
   get canActivateSecretsSync() {
     return (
-      this.secretsSyncActivatePath.get('canCreate') !== false ||
-      this.secretsSyncActivatePath.get('canUpdate') !== false
+      this.secretsSyncActivatePath.canCreate !== false || this.secretsSyncActivatePath.canUpdate !== false
     );
   }
 

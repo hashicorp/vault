@@ -12,7 +12,9 @@ import type StoreService from 'vault/services/store';
 export default class ClientsRoute extends Route {
   @service declare readonly store: StoreService;
 
-  getVersionHistory() {
+  getVersionHistory(): Promise<
+    Array<{ version: string; previousVersion: string; timestampInstalled: string }>
+  > {
     return this.store
       .findAll('clients/version-history')
       .then((response) => {
