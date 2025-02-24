@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/cli"
+	"github.com/hashicorp/hcl/hcl/printer"
 	"github.com/posener/complete"
 )
 
@@ -18,6 +19,7 @@ var (
 
 type PolicyReadCommand struct {
 	*BaseCommand
+	flagRaw bool
 }
 
 func (c *PolicyReadCommand) Synopsis() string {
@@ -29,11 +31,16 @@ func (c *PolicyReadCommand) Help() string {
 Usage: vault policy read [options] [NAME]
 
   Prints the contents and metadata of the Vault policy named NAME. If the policy
-  does not exist, an error is returned.
+  does not exist, an error is returned. By default, the policy is formatted
+  according to HCL standards.
 
   Read the policy named "my-policy":
 
       $ vault policy read my-policy
+
+  Read the raw, unformatted policy:
+
+      $ vault policy read -raw my-policy
 
 ` + c.Flags().Help()
 
@@ -41,7 +48,17 @@ Usage: vault policy read [options] [NAME]
 }
 
 func (c *PolicyReadCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+
+	f := set.NewFlagSet("Command Options")
+	f.BoolVar(&BoolVar{
+		Name:    "raw",
+		Target:  &c.flagRaw,
+		Default: false,
+		Usage:   "Print raw, unformatted policy",
+	})
+
+	return set
 }
 
 func (c *PolicyReadCommand) AutocompleteArgs() complete.Predictor {
@@ -85,6 +102,16 @@ func (c *PolicyReadCommand) Run(args []string) int {
 	if rules == "" {
 		c.UI.Error(fmt.Sprintf("No policy named: %s", name))
 		return 2
+	}
+
+	// Format the policy unless raw output is requested
+	if !c.flagRaw {
+		formatted, err := printer.Format([]byte(rules))
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error formatting policy: %s", err))
+			return 2
+		}
+		rules = string(formatted)
 	}
 
 	switch Format(c.UI) {
