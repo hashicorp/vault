@@ -110,12 +110,14 @@ module('Integration | Component | tools/wrap', function (hooks) {
   });
 
   test('it toggles between views and preserves input data', async function (assert) {
-    assert.expect(4);
+    assert.expect(6);
     await this.renderComponent();
     await codemirror().setValue(this.wrapData);
     assert.dom('[data-test-component="json-editor-title"]').hasText('Data to wrap (json-formatted)');
     await click('[data-test-toggle-input="json"]');
     assert.dom('[data-test-component="json-editor-title"]').doesNotExist();
+    assert.dom('[data-test-kv-key="0"]').hasValue('foo');
+    assert.dom('[data-test-kv-value="0"]').hasValue('bar');
     await click('[data-test-toggle-input="json"]');
     assert.dom('[data-test-component="json-editor-title"]').exists();
     assert.strictEqual(
@@ -126,7 +128,7 @@ module('Integration | Component | tools/wrap', function (hooks) {
   });
 
   test('it submits from kv view', async function (assert) {
-    assert.expect(8);
+    assert.expect(6);
 
     const multilineData = `this is a multi-line secret
       that contains
@@ -157,8 +159,6 @@ module('Integration | Component | tools/wrap', function (hooks) {
     await click('[data-test-toggle-input="json"]');
     await fillIn('[data-test-kv-key="0"]', 'foo');
     await fillIn('[data-test-kv-value="0"]', 'bar');
-    assert.dom('[data-test-kv-key="0"]').hasValue('foo');
-    assert.dom('[data-test-kv-value="0"]').hasValue('bar');
     await click('[data-test-kv-add-row="0"]');
     await fillIn('[data-test-kv-key="1"]', 'foo2');
     await fillIn('[data-test-kv-value="1"]', multilineData);
