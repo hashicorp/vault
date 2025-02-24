@@ -41,7 +41,8 @@ export default class ToolsWrap extends Component {
     return this?.wrapData ? stringify([this.wrapData], {}) : this.startingValue;
   }
 
-  @action handleToggle() {
+  @action
+  handleToggle() {
     this.showJson = !this.showJson;
     this.buttonDisabled = false;
   }

@@ -42,7 +42,7 @@
       <MessageError @errorMessage={{this.errorMessage}} />
       <Toolbar>
         <ToolbarFilters>
-          <Toggle @name="json" @checked={{this.showJson}} @onChange={{action "handleToggle"}}>
+          <Toggle @name="json" @checked={{this.showJson}} @onChange={{this.handleToggle}}>
             <span class="has-text-grey">JSON</span>
           </Toggle>
         </ToolbarFilters>
