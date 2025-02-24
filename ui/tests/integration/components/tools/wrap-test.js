@@ -217,7 +217,7 @@ module('Integration | Component | tools/wrap', function (hooks) {
     assert.dom('[data-test-inline-alert]').doesNotExist();
   });
 
-  test('it hides json warning on done', async function (assert) {
+  test('it hides json warning on back and on done', async function (assert) {
     await this.renderComponent();
     await codemirror().setValue(`{bad json}`);
     assert
@@ -229,6 +229,18 @@ module('Integration | Component | tools/wrap', function (hooks) {
     await click(TS.submit);
     await waitUntil(() => find(TS.button('Done')));
     await click(TS.button('Done'));
+    assert.dom('[data-test-inline-alert]').doesNotExist();
+
+    await codemirror().setValue(`{bad json}`);
+    assert
+      .dom('[data-test-inline-alert]')
+      .hasText(
+        'JSON is unparsable. Fix linting errors to avoid data discrepancies.',
+        'Linting error message is shown for json view'
+      );
+    await click(TS.submit);
+    await waitUntil(() => find(TS.button('Back')));
+    await click(TS.button('Back'));
     assert.dom('[data-test-inline-alert]').doesNotExist();
   });
 });
