@@ -87,7 +87,8 @@ export default class flagsService extends Service {
 
   get canActivateSecretsSync() {
     return (
-      this.secretsSyncActivatePath.canCreate !== false || this.secretsSyncActivatePath.canUpdate !== false
+      this.secretsSyncActivatePath.get('canCreate') !== false ||
+      this.secretsSyncActivatePath.get('canUpdate') !== false
     );
   }
 
