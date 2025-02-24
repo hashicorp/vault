@@ -40,28 +40,6 @@
     "vault": "VAULT_REDIRECT_ADDR=http://127.0.0.1:8200 vault server -log-level=error -dev -dev-root-token-id=root -dev-ha -dev-transactional",
     "vault:cluster": "VAULT_REDIRECT_ADDR=http://127.0.0.1:8202 vault server -log-level=error -dev -dev-root-token-id=root -dev-listen-address=127.0.0.1:8202 -dev-ha -dev-transactional"
   },
-  "lint-staged": {
-    "*.js": [
-      "prettier --config .prettierrc.js --write",
-      "eslint --quiet",
-      "git add"
-    ],
-    "*.ts": [
-      "prettier --config .prettierrc.js --write",
-      "eslint --quiet",
-      "tsc --noEmit",
-      "git add"
-    ],
-    "*.hbs": [
-      "prettier --config .prettierrc.js --write",
-      "ember-template-lint --quiet",
-      "git add"
-    ],
-    "*.scss": [
-      "prettier --write",
-      "git add"
-    ]
-  },
   "devDependencies": {
     "@babel/cli": "^7.24.6",
     "@babel/core": "^7.23.2",
