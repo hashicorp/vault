@@ -51,9 +51,7 @@ export default class ToolsWrap extends Component {
     this.token = '';
     this.errorMessage = '';
     this.wrapTTL = null;
-    if (clearData) {
-      this.wrapData = null;
-    }
+    if (clearData) this.wrapData = null;
   }
 
   @action
