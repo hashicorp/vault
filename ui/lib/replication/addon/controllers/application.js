@@ -25,6 +25,9 @@ const DEFAULTS = {
 };
 const waiter = buildWaiter('replication-actions');
 
+/**
+ * @type Class
+ */
 export default Controller.extend(structuredClone(DEFAULTS), {
   isModalActive: false,
   isTokenCopied: false,
