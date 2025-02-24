@@ -6,15 +6,15 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 
-import type Store from '@ember-data/store';
+import type Store from 'vault/services/store';
 import type RouterService from '@ember/routing/router-service';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type Transition from '@ember/routing/transition';
 import type SyncDestinationModel from 'vault/models/sync/destination';
 
 interface RouteParams {
-  name: string;
-  type: string;
+  name?: string;
+  type?: string;
 }
 
 export default class SyncSecretsDestinationsDestinationRoute extends Route {
@@ -23,7 +23,7 @@ export default class SyncSecretsDestinationsDestinationRoute extends Route {
   @service declare readonly flashMessages: FlashMessageService;
 
   model(params: RouteParams) {
-    const { name, type } = params;
+    const { name = '', type } = params;
     return this.store.findRecord(`sync/destinations/${type}`, name);
   }
 

@@ -11,7 +11,7 @@ import type StoreService from 'vault/services/store';
 import type { SyncDestinationType } from 'vault/vault/helpers/sync-destinations';
 
 interface Params {
-  type: SyncDestinationType;
+  type?: SyncDestinationType;
 }
 
 export default class SyncSecretsDestinationsCreateDestinationRoute extends Route {
