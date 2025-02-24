@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import type { Model } from 'vault/app-types';
 import type CapabilitiesModel from 'vault/models/capabilities';
 
