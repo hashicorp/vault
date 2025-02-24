@@ -72,10 +72,17 @@
         @helperTextEnabled="Wrap will expire after"
         @changeOnInit={{true}}
       />
+      {{#if this.hasLintingErrors}}
+        <AlertInline
+          @color="warning"
+          class="has-top-padding-s"
+          @message="JSON is unparsable. Fix linting errors to avoid data discrepancies."
+        />
+      {{/if}}
     </div>
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">
-        <Hds::Button @text="Wrap data" type="submit" disabled={{this.buttonDisabled}} data-test-tools-submit />
+        <Hds::Button @text="Wrap data" type="submit" data-test-tools-submit />
       </div>
     </div>
   </form>

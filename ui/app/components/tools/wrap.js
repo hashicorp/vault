@@ -22,7 +22,7 @@ export default class ToolsWrap extends Component {
   @service store;
   @service flashMessages;
 
-  @tracked buttonDisabled = false;
+  @tracked hasLintingErrors = false;
   @tracked token = '';
   @tracked wrapTTL = null;
   @tracked wrapData = null;
@@ -44,7 +44,7 @@ export default class ToolsWrap extends Component {
   @action
   handleToggle() {
     this.showJson = !this.showJson;
-    this.buttonDisabled = false;
+    this.hasLintingErrors = false;
   }
 
   @action
@@ -64,14 +64,16 @@ export default class ToolsWrap extends Component {
   @action
   codemirrorUpdated(val, codemirror) {
     codemirror.performLint();
-    const hasErrors = codemirror?.state.lint.marked?.length > 0;
-    this.buttonDisabled = hasErrors;
-    if (!hasErrors) this.wrapData = JSON.parse(val);
+    this.hasLintingErrors = codemirror?.state.lint.marked?.length > 0;
+    if (!this.hasLintingErrors) this.wrapData = JSON.parse(val);
   }
 
   @action
   async handleSubmit(evt) {
     evt.preventDefault();
+
+    if (this.hasLintingErrors) return;
+
     const data = this.wrapData;
     const wrapTTL = this.wrapTTL || null;
 
