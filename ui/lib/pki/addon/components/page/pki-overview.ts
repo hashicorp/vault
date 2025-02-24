@@ -7,7 +7,8 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
-import type Store from '@ember-data/store';
+
+import type Store from 'vault/services/store';
 import type RouterService from '@ember/routing/router-service';
 import type PkiIssuerModel from 'vault/models/pki/issuer';
 import type PkiRoleModel from 'vault/models/pki/role';

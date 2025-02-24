@@ -7,7 +7,7 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { ldapBreadcrumbs, roleRoutes } from 'ldap/utils/ldap-breadcrumbs';
 
-import type Store from '@ember-data/store';
+import type Store from 'vault/services/store';
 import type LdapRoleModel from 'vault/models/ldap/role';
 import type Controller from '@ember/controller';
 import type Transition from '@ember/routing/transition';

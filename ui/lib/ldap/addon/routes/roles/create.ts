@@ -6,7 +6,7 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 
-import type Store from '@ember-data/store';
+import type Store from 'vault/services/store';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type LdapRoleModel from 'vault/models/ldap/role';
 import type Controller from '@ember/controller';

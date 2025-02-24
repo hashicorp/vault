@@ -9,7 +9,8 @@ import { task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import errorMessage from 'vault/utils/error-message';
-import type Store from '@ember-data/store';
+
+import type Store from 'vault/services/store';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type SecretMountPathService from 'vault/services/secret-mount-path';
 import type PkiRoleModel from 'vault/models/pki/role';

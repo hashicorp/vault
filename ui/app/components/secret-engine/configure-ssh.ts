@@ -14,7 +14,7 @@ import errorMessage from 'vault/utils/error-message';
 
 import type CaConfigModel from 'vault/models/ssh/ca-config';
 import type Router from '@ember/routing/router';
-import type Store from '@ember-data/store';
+import type Store from 'vault/services/store';
 import type FlashMessageService from 'vault/services/flash-messages';
 
 /**

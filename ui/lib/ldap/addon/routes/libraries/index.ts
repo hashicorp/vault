@@ -8,7 +8,7 @@ import { service } from '@ember/service';
 import { withConfig } from 'core/decorators/fetch-secrets-engine-config';
 import { hash } from 'rsvp';
 
-import type Store from '@ember-data/store';
+import type Store from 'vault/services/store';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type Transition from '@ember/routing/transition';
 import type LdapLibraryModel from 'vault/models/ldap/library';
@@ -51,7 +51,7 @@ export default class LdapLibrariesRoute extends Route {
 
     controller.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backendModel.id, route: 'overview', model: resolvedModel.backend },
+      { label: resolvedModel.backendModel.id, route: 'overview', model: resolvedModel.backendModel.id },
       { label: 'Libraries' },
     ];
   }

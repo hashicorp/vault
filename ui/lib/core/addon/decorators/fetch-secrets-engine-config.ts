@@ -5,10 +5,10 @@
 
 import Route from '@ember/routing/route';
 
-import type Store from '@ember-data/store';
+import type Store from 'vault/services/store';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type Transition from '@ember/routing/transition';
-import type Model from '@ember-data/model';
+import type MountConfigModel from 'vault/models/mount-config';
 import type AdapterError from 'ember-data/adapter'; // eslint-disable-line ember/use-ember-data-rfc-395-imports
 
 /**
@@ -34,7 +34,7 @@ export function withConfig(modelName: string) {
     }
 
     return class FetchSecretsEngineConfig extends SuperClass {
-      configModel: Model | null = null;
+      configModel: MountConfigModel | null = null;
       configError: AdapterError | null = null;
       promptConfig = false;
 

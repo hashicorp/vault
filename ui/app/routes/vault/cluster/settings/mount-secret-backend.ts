@@ -7,7 +7,7 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 
 import type { ModelFrom } from 'vault/vault/route';
-import type Store from '@ember-data/store';
+import type Store from 'vault/services/store';
 
 export type MountSecretBackendModel = ModelFrom<VaultClusterSettingsMountSecretBackendRoute>;
 
