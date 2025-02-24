@@ -2,8 +2,9 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
-
-import AdapterError from 'vault/adapters/error';
+// eslint-disable-next-line
+// @ts-ignore
+import AdapterError from '@ember-data/adapter/error';
 import { set } from '@ember/object';
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
