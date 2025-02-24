@@ -47,7 +47,7 @@ install_external() {
     github.com/loggerhead/enumer@v0.0.0-20240225233120-0aebd7ae8325
     github.com/rinchsan/gosimports/cmd/gosimports@v0.3.8
     golang.org/x/tools/cmd/goimports@v0.30.0
-    google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.3
+    google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.5
     google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
     gotest.tools/gotestsum@v1.12.0
     mvdan.cc/gofumpt@v0.7.0

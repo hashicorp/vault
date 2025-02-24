@@ -25,7 +25,7 @@ runs:
       # up here.
       # All tool versions should match the versions in tools/tool.sh
       # Protobuf tool versions should match what's in Vault's go.mod
-    - run: ./.github/scripts/retry-command.sh go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.3
+    - run: ./.github/scripts/retry-command.sh go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.5
       shell: bash
     - run: ./.github/scripts/retry-command.sh go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
       shell: bash
