@@ -7,7 +7,7 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { fromUnixTime } from 'date-fns';
 
-import type AdapterError from '@ember-data/adapter';
+import type AdapterError from 'ember-data/types/registries/adapter';
 import type FlagsService from 'vault/services/flags';
 import type NamespaceService from 'vault/services/namespace';
 import type StoreService from 'vault/services/store';
@@ -69,8 +69,8 @@ export default class ClientsCountsRoute extends Route {
   }
 
   async getActivity(params: ClientsCountsRouteParams): Promise<{
-    activity: ClientsActivityModel;
-    activityError: AdapterError;
+    activity?: ClientsActivityModel;
+    activityError?: AdapterError;
   }> {
     let activity, activityError;
     // if CE without start time we want to skip the activity call
@@ -88,7 +88,7 @@ export default class ClientsCountsRoute extends Route {
       try {
         activity = await this.store.queryRecord('clients/activity', query);
       } catch (error) {
-        activityError = error;
+        activityError = error as AdapterError;
       }
     }
     return {

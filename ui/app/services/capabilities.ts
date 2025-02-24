@@ -6,7 +6,7 @@
 import Service, { service } from '@ember/service';
 import { assert } from '@ember/debug';
 
-import type AdapterError from '@ember-data/adapter/error';
+import type AdapterError from 'vault/adapters/error';
 import type CapabilitiesModel from 'vault/vault/models/capabilities';
 import type StoreService from 'vault/services/store';
 
@@ -74,7 +74,7 @@ export default class CapabilitiesService extends Service {
     try {
       return this.request({ path });
     } catch (error) {
-      return error;
+      return error as AdapterError;
     }
   }
 
@@ -85,12 +85,12 @@ export default class CapabilitiesService extends Service {
   async _fetchSpecificCapability(
     path: string,
     capability: string
-  ): Promise<CapabilitiesModel> | AdapterError {
+  ): Promise<CapabilitiesModel | AdapterError> {
     try {
       const capabilities = await this.request({ path });
       return capabilities[capability];
     } catch (e) {
-      return e;
+      return e as AdapterError;
     }
   }
 

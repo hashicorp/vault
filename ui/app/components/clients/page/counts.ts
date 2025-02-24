@@ -11,7 +11,7 @@ import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { filteredTotalForMount, filterVersionHistory, TotalClients } from 'core/utils/client-count-utils';
 import { sanitizePath } from 'core/utils/sanitize-path';
 
-import type AdapterError from '@ember-data/adapter';
+import type AdapterError from 'ember-data/types/registries/adapter';
 import type FlagsService from 'vault/services/flags';
 import type StoreService from 'vault/services/store';
 import type VersionService from 'vault/services/version';
@@ -19,6 +19,7 @@ import type ClientsActivityModel from 'vault/models/clients/activity';
 import type ClientsConfigModel from 'vault/models/clients/config';
 import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
 import type NamespaceService from 'vault/services/namespace';
+
 interface Args {
   activity: ClientsActivityModel;
   activityError?: AdapterError;

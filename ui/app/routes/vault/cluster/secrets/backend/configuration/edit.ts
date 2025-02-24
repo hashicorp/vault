@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import AdapterError from '@ember-data/adapter/error';
+import AdapterError from 'vault/adapters/error';
 import { set } from '@ember/object';
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
@@ -11,7 +11,7 @@ import { CONFIGURABLE_SECRET_ENGINES, WIF_ENGINES } from 'vault/helpers/mountabl
 import errorMessage from 'vault/utils/error-message';
 import { action } from '@ember/object';
 
-import type Store from '@ember-data/store';
+import type Store from 'vault/services/store';
 import type SecretEngineModel from 'vault/models/secret-engine';
 import type VersionService from 'vault/services/version';
 
@@ -77,7 +77,8 @@ export default class SecretsBackendConfigurationEdit extends Route {
         } else {
           model[standardizedKey] = configModel;
         }
-      } catch (e: AdapterError) {
+      } catch (error) {
+        const e = error as AdapterError;
         // For most models if the adapter returns a 404, we want to create a new record.
         // The ssh secret engine however returns a 400 if the CA is not configured.
         // For ssh's 400 error, we want to create the CA config model.
