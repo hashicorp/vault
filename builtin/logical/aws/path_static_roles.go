@@ -21,16 +21,22 @@ import (
 const (
 	pathStaticRole = "static-roles"
 
-	paramRoleName       = "name"
-	paramUsername       = "username"
-	paramRotationPeriod = "rotation_period"
+	paramRoleName        = "name"
+	paramUsername        = "username"
+	paramRotationPeriod  = "rotation_period"
+	paramAssumeRoleARN   = "assume_role_arn"
+	paramRoleSessionName = "assume_role_session_name"
+	paramExternalID      = "external_id"
 )
 
 type staticRoleEntry struct {
-	Name           string        `json:"name" structs:"name" mapstructure:"name"`
-	ID             string        `json:"id" structs:"id" mapstructure:"id"`
-	Username       string        `json:"username" structs:"username" mapstructure:"username"`
-	RotationPeriod time.Duration `json:"rotation_period" structs:"rotation_period" mapstructure:"rotation_period"`
+	Name                  string        `json:"name" structs:"name" mapstructure:"name"`
+	ID                    string        `json:"id" structs:"id" mapstructure:"id"`
+	Username              string        `json:"username" structs:"username" mapstructure:"username"`
+	RotationPeriod        time.Duration `json:"rotation_period" structs:"rotation_period" mapstructure:"rotation_period"`
+	AssumeRoleARN         string        `json:"assume_role_arn" structs:"assume_role_arn" mapstructure:"assume_role_arn"`
+	AssumeRoleSessionName string        `json:"assume_role_session_name" structs:"assume_role_session_name" mapstructure:"assume_role_session_name"`
+	ExternalID            string        `json:"external_id" structs:"external_id" mapstructure:"external_id"`
 }
 
 func pathStaticRoles(b *backend) *framework.Path {
@@ -53,23 +59,12 @@ func pathStaticRoles(b *backend) *framework.Path {
 			},
 		}},
 	}
+	fields := roleResponse[http.StatusOK][0].Fields
+	AddStaticAssumeRoleFieldsEnt(fields)
 
 	return &framework.Path{
 		Pattern: fmt.Sprintf("%s/%s", pathStaticRole, framework.GenericNameWithAtRegex(paramRoleName)),
-		Fields: map[string]*framework.FieldSchema{
-			paramRoleName: {
-				Type:        framework.TypeString,
-				Description: descRoleName,
-			},
-			paramUsername: {
-				Type:        framework.TypeString,
-				Description: descUsername,
-			},
-			paramRotationPeriod: {
-				Type:        framework.TypeDurationSecond,
-				Description: descRotationPeriod,
-			},
-		},
+		Fields:  fields,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
@@ -158,6 +153,11 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 	}
 
 	// other params are optional if we're not Creating
+
+	err = validateAssumeRoleFields(data, &config)
+	if err != nil {
+		return nil, err
+	}
 
 	if rawUsername, ok := data.GetOk(paramUsername); ok {
 		config.Username = rawUsername.(string)
@@ -299,10 +299,11 @@ func (b *backend) validateRoleName(name string) error {
 // validateIAMUser checks the user information we have for the role against the information on AWS. On a create, it uses the username
 // to retrieve the user information and _sets_ the userID. On update, it validates the userID and username.
 func (b *backend) validateIAMUserExists(ctx context.Context, storage logical.Storage, entry *staticRoleEntry, isCreate bool) error {
-	c, err := b.clientIAM(ctx, storage)
+	c, err := b.getNonCachedIAMClient(ctx, storage, *entry)
 	if err != nil {
-		return fmt.Errorf("unable to validate username %q: %w", entry.Username, err)
+		return fmt.Errorf("unable to get client to validate username %q: %w", entry.Username, err)
 	}
+	b.iamClient = c
 
 	// we don't really care about the content of the result, just that it's not an error
 	out, err := c.GetUser(&iam.GetUserInput{
@@ -364,4 +365,7 @@ const (
 	descUsername       = "The IAM user to adopt as a static role."
 	descRotationPeriod = `Period by which to rotate the backing credential of the adopted user. 
 This can be a Go duration (e.g, '1m', 24h'), or an integer number of seconds.`
+	descAssumeRoleARN   = `The AWS ARN for the role to be assumed when interacting with the account specified.`
+	descRoleSessionName = `An identifier for the assumed role session.`
+	descExternalID      = `An external ID to be passed to the assumed role session.`
 )

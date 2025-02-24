@@ -231,7 +231,7 @@ func (s *gRPCSystemViewClient) RegisterRotationJob(ctx context.Context, req *rot
 	cfgReq := &pb.RegisterRotationJobRequest{
 		Job: &pb.RotationJobInput{
 			Name:             req.Name,
-			MountType:        req.MountType,
+			MountPoint:       req.MountPoint,
 			Path:             req.ReqPath,
 			RotationSchedule: req.RotationSchedule,
 			RotationWindow:   int64(req.RotationWindow),
@@ -248,8 +248,8 @@ func (s *gRPCSystemViewClient) RegisterRotationJob(ctx context.Context, req *rot
 func (s *gRPCSystemViewClient) DeregisterRotationJob(ctx context.Context, req *rotation.RotationJobDeregisterRequest) error {
 	_, err := s.client.DeregisterRotationJob(ctx, &pb.DeregisterRotationJobRequest{
 		Req: &pb.DeregisterRotationRequestInput{
-			MountType: req.MountType,
-			ReqPath:   req.ReqPath,
+			MountPoint: req.MountPoint,
+			ReqPath:    req.ReqPath,
 		},
 	})
 	if err != nil {
@@ -469,7 +469,7 @@ func (s *gRPCSystemViewServer) RegisterRotationJob(ctx context.Context, req *pb.
 
 	cfgReq := &rotation.RotationJobConfigureRequest{
 		Name:             req.Job.Name,
-		MountType:        req.Job.MountType,
+		MountPoint:       req.Job.MountPoint,
 		ReqPath:          req.Job.Path,
 		RotationSchedule: req.Job.RotationSchedule,
 		RotationWindow:   int(req.Job.RotationWindow),
@@ -493,8 +493,8 @@ func (s *gRPCSystemViewServer) DeregisterRotationJob(ctx context.Context, req *p
 	}
 
 	cfgReq := &rotation.RotationJobDeregisterRequest{
-		MountType: req.Req.MountType,
-		ReqPath:   req.Req.ReqPath,
+		MountPoint: req.Req.MountPoint,
+		ReqPath:    req.Req.ReqPath,
 	}
 
 	err := s.impl.DeregisterRotationJob(ctx, cfgReq)

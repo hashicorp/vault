@@ -42,6 +42,10 @@ func (b *backend) pathConfigRotateRoot() *framework.Path {
 }
 
 func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return b.rotateRoot(ctx, req)
+}
+
+func (b *backend) rotateRoot(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	// First get the AWS key and secret and validate that we _can_ rotate them.
 	// We need the read lock here to prevent anything else from mutating it while we're using it.
 	b.configMutex.Lock()
