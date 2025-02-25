@@ -6,7 +6,7 @@
 import Service, { service } from '@ember/service';
 import { assert } from '@ember/debug';
 
-import type AdapterError from 'vault/adapters/error';
+import type AdapterError from '@ember-data/adapter/error';
 import type CapabilitiesModel from 'vault/vault/models/capabilities';
 import type Store from '@ember-data/store';
 

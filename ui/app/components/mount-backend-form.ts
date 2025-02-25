@@ -14,8 +14,7 @@ import { isAddonEngine, allEngines } from 'vault/helpers/mountable-secret-engine
 
 import type FlashMessageService from 'vault/services/flash-messages';
 import type Store from '@ember-data/store';
-import type AdapterError from 'vault/adapters/error';
-import type { ApiError } from 'vault/adapters/error';
+import type AdapterError from '@ember-data/adapter/error';
 
 import type { AuthEnableModel } from 'vault/routes/vault/cluster/settings/auth/enable';
 import type { MountSecretBackendModel } from 'vault/routes/vault/cluster/settings/mount-secret-backend';
@@ -156,7 +155,7 @@ export default class MountBackendForm extends Component<Args> {
         return;
       }
       if (err.errors) {
-        const errors = err.errors.map((e: ApiError) => {
+        const errors = err.errors.map((e) => {
           if (typeof e === 'object') return e.title || e.message || JSON.stringify(e);
           return e;
         });

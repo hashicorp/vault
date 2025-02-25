@@ -7,7 +7,7 @@ import Error from 'ember-data/adapter/errors';
 
 export type ApiError = string | { [key: string]: unknown; title?: string; message?: string };
 
-type AdapterError = Error & {
+export default class AdapterError extends Error {
   httpStatus: number;
   path: string;
   message: string;
@@ -16,6 +16,4 @@ type AdapterError = Error & {
     [key: string]: unknown;
     error?: string;
   };
-};
-
-export default AdapterError;
+}

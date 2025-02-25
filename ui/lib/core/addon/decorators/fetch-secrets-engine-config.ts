@@ -9,7 +9,7 @@ import type Store from '@ember-data/store';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type Transition from '@ember/routing/transition';
 import type MountConfigModel from 'vault/models/mount-config';
-import type AdapterError from 'ember-data/adapter'; // eslint-disable-line ember/use-ember-data-rfc-395-imports
+import type AdapterError from '@ember-data/adapter/error';
 
 /**
  * for use in routes that need to be aware of the config for a secrets engine

@@ -11,7 +11,7 @@ import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { filteredTotalForMount, filterVersionHistory, TotalClients } from 'core/utils/client-count-utils';
 import { sanitizePath } from 'core/utils/sanitize-path';
 
-import type AdapterError from 'vault/adapters/error';
+import type AdapterError from '@ember-data/adapter/error';
 import type FlagsService from 'vault/services/flags';
 import type Store from '@ember-data/store';
 import type VersionService from 'vault/services/version';
