@@ -9,11 +9,20 @@ import { singularize } from 'ember-inflector';
 
 export default Route.extend({
   pathHelp: service('path-help'),
+  store: service(),
 
-  beforeModel() {
+  async beforeModel() {
     const { apiPath, type, authMethodPath, itemType } = this.getMethodAndModelInfo();
     const modelType = `generated-${singularize(itemType)}-${type}`;
-    return this.pathHelp.getNewModel(modelType, authMethodPath, apiPath, itemType);
+    await this.pathHelp.getNewModel(modelType, authMethodPath, apiPath, itemType);
+    // getNewModel also creates an adapter if one does not exist and sets the apiPath value initially
+    // this value will not change when routing between auth methods of the same type
+    // in the generated-item-list adapter there is a short circuit to update the apiPath value on query({ list: true })
+    // since we have removed that request to test the generated client it breaks the workflow
+    // example -> navigate to userpass1, then userpass2, create a user and they will be created in userpass1
+    // the apiPath value should be kept in sync at all times but since this will all be removed eventually -- hack it!
+    const adapter = this.store.adapterFor(modelType);
+    adapter.apiPath = apiPath;
   },
 
   getMethodAndModelInfo() {

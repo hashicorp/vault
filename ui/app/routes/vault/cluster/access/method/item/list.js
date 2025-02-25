@@ -5,12 +5,12 @@
 
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
-import { singularize } from 'ember-inflector';
 import ListRoute from 'vault/mixins/list-route';
 
 export default Route.extend(ListRoute, {
   pagination: service(),
   pathHelp: service('path-help'),
+  api: service(),
 
   getMethodAndModelInfo() {
     const { item_type: itemType } = this.paramsFor('vault.cluster.access.method.item');
@@ -20,26 +20,63 @@ export default Route.extend(ListRoute, {
     return { apiPath, type, authMethodPath, itemType, methodModel };
   },
 
-  model() {
+  fetchListItems(type, itemType, authMethodPath) {
+    const { auth } = this.api;
+    if (type === 'userpass') {
+      return auth.userpassListUsers({ userpassMountPath: authMethodPath, list: 'true' });
+    }
+    if (type === 'kubernetes') {
+      return auth.kubernetesListAuthRoles({ kubernetesMountPath: authMethodPath, list: 'true' });
+    }
+    if (type === 'ldap') {
+      const payload = {
+        ldapMountPath: authMethodPath,
+        list: 'true' /* as const */,
+      };
+      return itemType === 'group' ? auth.ldapListGroups(payload) : auth.ldapListUsers(payload);
+    }
+    if (type === 'okta') {
+      const payload = {
+        oktaMountPath: authMethodPath,
+        list: 'true' /* as const */,
+      };
+      return itemType === 'group' ? auth.oktaListGroups(payload) : auth.oktaListUsers(payload);
+    }
+    if (type === 'radius') {
+      return auth.radiusListUsers({ radiusMountPath: authMethodPath, list: 'true' });
+    }
+  },
+
+  async model() {
     const { type, authMethodPath, itemType } = this.getMethodAndModelInfo();
     const { page, pageFilter } = this.paramsFor(this.routeName);
-    const modelType = `generated-${singularize(itemType)}-${type}`;
+    // examples -> userpassListUser, kubernetesListAuthRoles, ldapListGroups
+    const listItem = type === 'kubernetes' && itemType === 'role' ? 'authRole' : itemType;
 
-    return this.pagination
-      .lazyPaginatedQuery(modelType, {
-        responsePath: 'data.keys',
-        page: page,
-        pageFilter: pageFilter,
-        type: itemType,
-        id: authMethodPath,
-      })
-      .catch((err) => {
-        if (err.httpStatus === 404) {
-          return [];
-        } else {
-          throw err;
-        }
+    try {
+      const { keys } = await this.fetchListItems(type, itemType, authMethodPath);
+      // it would likely be better to update the template/component to use the keys directly
+      // for now we are trying to make as few changes as possible
+      // add some additional information necessary to delete method in generated-item-list component
+      const mappedKeys = keys.map((key) => ({
+        id: key,
+        type,
+        listItem,
+        authMethodPath,
+      }));
+      return this.pagination.paginate(mappedKeys, {
+        page,
+        filter: pageFilter,
+        filterKey: 'id',
       });
+    } catch (error) {
+      const err = (await error.response?.json()) || error;
+      if (err.httpStatus === 404) {
+        return [];
+      } else {
+        throw err;
+      }
+    }
   },
 
   actions: {
@@ -58,14 +95,8 @@ export default Route.extend(ListRoute, {
 
   setupController(controller) {
     this._super(...arguments);
-    const { apiPath, authMethodPath, itemType, methodModel } = this.getMethodAndModelInfo();
+    const { itemType, methodModel } = this.getMethodAndModelInfo();
     controller.set('itemType', itemType);
     controller.set('methodModel', methodModel);
-    this.pathHelp.getPaths(apiPath, authMethodPath, itemType).then((paths) => {
-      controller.set(
-        'paths',
-        paths.paths.filter((path) => path.navigation && path.itemType.includes(itemType))
-      );
-    });
   },
 });

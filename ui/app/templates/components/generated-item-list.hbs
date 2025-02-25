@@ -96,16 +96,7 @@
         <ConfirmModal
           @color="critical"
           @onClose={{fn (mut this.itemToDelete) null}}
-          @onConfirm={{action
-            (perform
-              Item.callMethod
-              "destroyRecord"
-              this.itemToDelete
-              (concat "Successfully deleted " (singularize @itemType) " " this.itemToDelete.id ".")
-              (concat "There was an error deleting this " (singularize @itemType))
-              (action "refreshItemList")
-            )
-          }}
+          @onConfirm={{perform this.deleteAuthMethod}}
           @confirmTitle="Delete {{singularize @itemType}}?"
           @confirmMessage="Are you sure you want to delete {{singularize @itemType}} {{this.itemToDelete.id}}?"
         />

@@ -17,6 +17,8 @@ import type Store from '@ember-data/store';
 
 import type { AuthEnableModel } from 'vault/routes/vault/cluster/settings/auth/enable';
 import type { MountSecretBackendModel } from 'vault/routes/vault/cluster/settings/mount-secret-backend';
+import type ApiService from 'vault/services/api';
+import type { ErrorContext, ApiError } from 'vault/services/api';
 
 /**
  * @module MountBackendForm
@@ -41,12 +43,13 @@ interface Args {
 export default class MountBackendForm extends Component<Args> {
   @service declare readonly store: Store;
   @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly api: ApiService;
 
   // validation related properties
   @tracked modelValidations = null;
   @tracked invalidFormAlert = null;
 
-  @tracked errorMessage = '';
+  @tracked errorMessage: string | string[] = '';
 
   willDestroy() {
     // components are torn down after store is unloaded and will cause an error if attempt to unload record
@@ -143,8 +146,19 @@ export default class MountBackendForm extends Component<Args> {
       changedAttrKeys.includes('maxVersions');
 
     try {
-      yield mountModel.save();
-    } catch (err) {
+      const data = mountModel.serialize();
+
+      if (this.args.mountType === 'secret') {
+        // leaving secrets as is for now using Ember Data
+        yield mountModel.save();
+      } else {
+        // testing api service and generated client on auth mounts
+        const payload = { path, authEnableMethodRequest: data };
+        yield this.api.sys.authEnableMethod(payload);
+      }
+    } catch (error) {
+      const err: ApiError = yield (error as ErrorContext).response?.json() || error;
+
       if (err.httpStatus === 403) {
         this.flashMessages.danger(
           'You do not have access to the sys/mounts endpoint. The secret engine was not mounted.'
