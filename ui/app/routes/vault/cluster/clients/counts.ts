@@ -7,7 +7,7 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { fromUnixTime } from 'date-fns';
 
-import type AdapterError from 'ember-data/types/registries/adapter';
+import type AdapterError from 'vault/adapters/error';
 import type FlagsService from 'vault/services/flags';
 import type NamespaceService from 'vault/services/namespace';
 import type StoreService from 'vault/services/store';
