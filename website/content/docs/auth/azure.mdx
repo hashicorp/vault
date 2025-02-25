@@ -236,10 +236,10 @@ tool.
 
 ## Root credential rotation
 
-If the mount is configured with credentials directly, the credential's key may be
-rotated to a Vault-generated value that is not accessible by the operator.
-This will ensure that only Vault is able to access the "root" user that Vault uses to
-manipulate dynamic & static credentials.
+Mounts can rotate root credential keys configured directly within the mount.
+Rotating to a Vault-generated key makes the key value inaccessible to the
+operator and ensures only Vault can operate as a root user to manipulate dynamic
+and static credentials.
 
 ```shell-session
 vault write -f auth/azure/rotate-root
@@ -247,12 +247,12 @@ vault write -f auth/azure/rotate-root
 
 ### Schedule-based root credential rotation
 
-<EnterpriseAlert product="vault" />
+@include 'alerts/enterprise-only.mdx'
 
-The Azure auth engine supports configuring schedule-based automatic
-credential rotation for the root credential with the
-[rotation_schedule](/vault/api-docs/auth/azure#rotation_schedule) field.
-For example:
+Use the [`rotation_schedule`](/vault/api-docs/auth/azure#rotation_schedule) field
+to configure schedule-based, automatic credential rotation for root credentials in
+the Azure auth engine. For example, the following command set the rotation to
+occur every Saturday at midnight (00:00):
 
 ```shell-session
 $ vault write auth/azure/config \
@@ -261,12 +261,14 @@ $ vault write auth/azure/config \
     ...
 ```
 
-This configuration will set the role's credential rotation to occur on Saturday
-at 00:00.
-
-Additionally, this schedule-based approach allows for optionally configuring a
-[rotation_window](/vault/api-docs/auth/azure#rotation_window) in which
-the automatic rotation is allowed to occur. For example:
+Scheduled root credential rotation can also set a
+[rotation_window](/vault/api-docs/auth/azure#rotation_window) during which the
+scheduled rotation is allowed to occur. Vault will stop trying to rotate the
+credential once the window expires. For example, the following command tells
+Vault to rotate the credential on Saturday at midnight, but only within the span
+of an hour. If Vault cannot rotate the credential by 1:00, due to a failure
+or otherwise, Vault will stop trying to rotate the credential until the next
+scheduled rotation.
 
 ```shell-session
 $ vault write auth/azure/config \
@@ -276,20 +278,15 @@ $ vault write auth/azure/config \
     ...
 ```
 
-This configuration will set rotations to occur on Saturday at 00:00. The 1
-hour `rotation_window` will prevent the rotation from occuring after 01:00. If
-the static role's credential is not rotated during this window, due to a failure
-or otherwise, it will not be rotated until the next scheduled rotation.
+You can temporarily disable root rotation by setting
+[`disable_automated_rotation`](/vault/api-docs/auth/azure#disable_automated_rotation)
+to `true`. Setting the `disable_automated_rotation` field prevent any rotation
+of the root credential until the field is reset to `false`. If you use
+`rotation_period`, setting `disable_automated_rotation` also resets the credential
+TTL.
 
-!> The `rotation_period` and `rotation_schedule` fields are
-mutually exclusive. One of them must be set but not both.
-
-Root rotation can be temporarily disabled by setting [disable_automated_rotation](/vault/api-docs/auth/azure#disable_automated_rotation)
-to `true`. This will prevent any rotation of the root credential until the field is set to `false`. Note: This will reset
-the TTL if `rotation_period` is being used.
-
-For more details on this operation, please see the
-[Root Credential Rotation](/vault/api-docs/auth/azure#rotate-root) API docs.
+For more details on rotating root credentials in the Azure plugin, refer to the
+[Root credential rotation](/vault/api-docs/auth/azure#rotate-root) API docs.
 
 ## Azure managed identities
 
