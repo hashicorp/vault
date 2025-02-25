@@ -5,12 +5,12 @@
 
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
-import { singularize } from 'ember-inflector';
 import ListRoute from 'vault/mixins/list-route';
 
 export default Route.extend(ListRoute, {
   pagination: service(),
   pathHelp: service('path-help'),
+  api: service(),
 
   getMethodAndModelInfo() {
     const { item_type: itemType } = this.paramsFor('vault.cluster.access.method.item');
@@ -20,26 +20,92 @@ export default Route.extend(ListRoute, {
     return { apiPath, type, authMethodPath, itemType, methodModel };
   },
 
-  model() {
+  fetchListItems(type, itemType, authMethodPath) {
+    if (type === 'userpass') {
+      return this.api.get('/auth/{userpass_mount_path}/users/', {
+        params: {
+          path: { userpass_mount_path: authMethodPath },
+          query: { list: 'true' },
+        },
+      });
+    }
+    if (type === 'kubernetes') {
+      return this.api.get('/auth/{kubernetes_mount_path}/role/', {
+        params: {
+          path: { kubernetes_mount_path: authMethodPath },
+          query: { list: 'true' },
+        },
+      });
+    }
+    if (type === 'ldap') {
+      if (itemType === 'group') {
+        return this.api.get('/auth/{ldap_mount_path}/groups/', {
+          params: {
+            path: { ldap_mount_path: authMethodPath },
+            query: { list: 'true' },
+          },
+        });
+      }
+      if (itemType === 'user') {
+        return this.api.get('/auth/{ldap_mount_path}/users/', {
+          params: {
+            path: { ldap_mount_path: authMethodPath },
+            query: { list: 'true' },
+          },
+        });
+      }
+    }
+    if (type === 'okta') {
+      if (itemType === 'group') {
+        return this.api.get('/auth/{okta_mount_path}/groups/', {
+          params: {
+            path: { okta_mount_path: authMethodPath },
+            query: { list: 'true' },
+          },
+        });
+      }
+      if (itemType === 'user') {
+        return this.api.get('/auth/{okta_mount_path}/users/', {
+          params: {
+            path: { okta_mount_path: authMethodPath },
+            query: { list: 'true' },
+          },
+        });
+      }
+    }
+    if (type === 'radius') {
+      return this.api.get('/auth/{radius_mount_path}/users/', {
+        params: {
+          path: { radius_mount_path: authMethodPath },
+          query: { list: 'true' },
+        },
+      });
+    }
+  },
+
+  async model() {
     const { type, authMethodPath, itemType } = this.getMethodAndModelInfo();
     const { page, pageFilter } = this.paramsFor(this.routeName);
-    const modelType = `generated-${singularize(itemType)}-${type}`;
 
-    return this.pagination
-      .lazyPaginatedQuery(modelType, {
-        responsePath: 'data.keys',
-        page: page,
-        pageFilter: pageFilter,
-        type: itemType,
-        id: authMethodPath,
-      })
-      .catch((err) => {
-        if (err.httpStatus === 404) {
-          return [];
-        } else {
-          throw err;
-        }
+    const { data, error } = await this.fetchListItems(type, itemType, authMethodPath);
+
+    if (!error) {
+      // it would likely be better to update the template/component to use the keys directly
+      // for now we are trying to make as few changes as possible
+      const mappedKeys = data.keys.map((key) => ({ id: key }));
+      return this.pagination.paginate(mappedKeys, {
+        page,
+        pageSize: 3,
+        filter: pageFilter,
+        filterKey: 'id',
       });
+    }
+
+    if (error.httpStatus === 404) {
+      return [];
+    }
+
+    throw error;
   },
 
   actions: {
