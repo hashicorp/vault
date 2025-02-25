@@ -10,7 +10,7 @@ import { fromUnixTime } from 'date-fns';
 import type AdapterError from 'vault/adapters/error';
 import type FlagsService from 'vault/services/flags';
 import type NamespaceService from 'vault/services/namespace';
-import type StoreService from 'vault/services/store';
+import type Store from '@ember-data/store';
 import type VersionService from 'vault/services/version';
 import type { ModelFrom } from 'vault/vault/route';
 import type ClientsRoute from '../clients';
@@ -35,7 +35,7 @@ export type ClientsCountsRouteModel = ModelFrom<ClientsCountsRoute>;
 export default class ClientsCountsRoute extends Route {
   @service declare readonly flags: FlagsService;
   @service declare readonly namespace: NamespaceService;
-  @service declare readonly store: StoreService;
+  @service declare readonly store: Store;
   @service declare readonly version: VersionService;
 
   queryParams = {

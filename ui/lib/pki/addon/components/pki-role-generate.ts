@@ -11,7 +11,7 @@ import { tracked } from '@glimmer/tracking';
 import errorMessage from 'vault/utils/error-message';
 
 import type RouterService from '@ember/routing/router';
-import type Store from 'vault/services/store';
+import type Store from '@ember-data/store';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type DownloadService from 'vault/services/download';
 import type PkiCertificateGenerateModel from 'vault/models/pki/certificate/generate';

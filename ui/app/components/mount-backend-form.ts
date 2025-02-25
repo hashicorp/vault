@@ -13,7 +13,7 @@ import { methods } from 'vault/helpers/mountable-auth-methods';
 import { isAddonEngine, allEngines } from 'vault/helpers/mountable-secret-engines';
 
 import type FlashMessageService from 'vault/services/flash-messages';
-import type StoreService from 'vault/services/store';
+import type Store from '@ember-data/store';
 import type AdapterError from 'vault/adapters/error';
 import type { ApiError } from 'vault/adapters/error';
 
@@ -41,7 +41,7 @@ interface Args {
 }
 
 export default class MountBackendForm extends Component<Args> {
-  @service declare readonly store: StoreService;
+  @service declare readonly store: Store;
   @service declare readonly flashMessages: FlashMessageService;
 
   // validation related properties

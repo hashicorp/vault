@@ -8,7 +8,7 @@ import { assert } from '@ember/debug';
 
 import type AdapterError from 'vault/adapters/error';
 import type CapabilitiesModel from 'vault/vault/models/capabilities';
-import type StoreService from 'vault/services/store';
+import type Store from '@ember-data/store';
 
 interface Capabilities {
   canCreate: boolean;
@@ -25,7 +25,7 @@ interface MultipleCapabilities {
 }
 
 export default class CapabilitiesService extends Service {
-  @service declare readonly store: StoreService;
+  @service declare readonly store: Store;
 
   async request(query: { paths?: string[]; path?: string }) {
     if (query?.paths) {

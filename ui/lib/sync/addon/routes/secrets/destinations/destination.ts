@@ -6,7 +6,7 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 
-import type Store from 'vault/services/store';
+import type Store from '@ember-data/store';
 import type RouterService from '@ember/routing/router-service';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type Transition from '@ember/routing/transition';

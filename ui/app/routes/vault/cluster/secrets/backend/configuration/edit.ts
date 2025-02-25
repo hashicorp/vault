@@ -12,7 +12,7 @@ import { CONFIGURABLE_SECRET_ENGINES, WIF_ENGINES } from 'vault/helpers/mountabl
 import errorMessage from 'vault/utils/error-message';
 import { action } from '@ember/object';
 
-import type Store from 'vault/services/store';
+import type Store from '@ember-data/store';
 import type SecretEngineModel from 'vault/models/secret-engine';
 import type VersionService from 'vault/services/version';
 

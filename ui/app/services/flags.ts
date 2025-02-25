@@ -9,7 +9,7 @@ import { keepLatestTask } from 'ember-concurrency';
 import { DEBUG } from '@glimmer/env';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
-import type StoreService from 'vault/services/store';
+import type Store from '@ember-data/store';
 import type VersionService from 'vault/services/version';
 import type PermissionsService from 'vault/services/permissions';
 import type CapabilitiesModel from 'vault/models/capabilities';
@@ -26,7 +26,7 @@ const FLAGS = {
 
 export default class flagsService extends Service {
   @service declare readonly version: VersionService;
-  @service declare readonly store: StoreService;
+  @service declare readonly store: Store;
   @service declare readonly permissions: PermissionsService;
 
   @tracked activatedFlags: string[] = [];

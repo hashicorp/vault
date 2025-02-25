@@ -5,7 +5,7 @@
 
 import Route from '@ember/routing/route';
 
-import type Store from 'vault/services/store';
+import type Store from '@ember-data/store';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type Transition from '@ember/routing/transition';
 import type MountConfigModel from 'vault/models/mount-config';

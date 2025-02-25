@@ -7,7 +7,7 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 
 import type { ModelFrom } from 'vault/vault/route';
-import type Store from 'vault/services/store';
+import type Store from '@ember-data/store';
 
 export type AuthEnableModel = ModelFrom<VaultClusterSettingsAuthEnableRoute>;
 
