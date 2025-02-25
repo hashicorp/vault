@@ -36,20 +36,22 @@ install_external() {
   # If you update this please update check_external below as well as our external tools
   # install action .github/actions/install-external-tools/action.yml
   #
+  # All tool versions should match the versions in .github/actions/install-external-tools/action.yml
+  # Protobuf tool versions should match what's in Vault's go.mod.
   tools=(
-    honnef.co/go/tools/cmd/staticcheck@latest
+    honnef.co/go/tools/cmd/staticcheck@v0.6.0
     github.com/bufbuild/buf/cmd/buf@v1.45.0
-    github.com/favadi/protoc-go-inject-tag@latest
-    github.com/golangci/misspell/cmd/misspell@latest
-    github.com/golangci/revgrep/cmd/revgrep@latest
-    github.com/loggerhead/enumer@latest
-    github.com/rinchsan/gosimports/cmd/gosimports@latest
-    golang.org/x/tools/cmd/goimports@latest
-    google.golang.org/protobuf/cmd/protoc-gen-go@latest
-    google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
-    gotest.tools/gotestsum@latest
-    mvdan.cc/gofumpt@latest
-    mvdan.cc/sh/v3/cmd/shfmt@latest
+    github.com/favadi/protoc-go-inject-tag@v1.4.0
+    github.com/golangci/misspell/cmd/misspell@v0.6.0
+    github.com/golangci/revgrep/cmd/revgrep@v0.8.0
+    github.com/loggerhead/enumer@v0.0.0-20240225233120-0aebd7ae8325
+    github.com/rinchsan/gosimports/cmd/gosimports@v0.3.8
+    golang.org/x/tools/cmd/goimports@v0.30.0
+    google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.5
+    google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
+    gotest.tools/gotestsum@v1.12.0
+    mvdan.cc/gofumpt@v0.7.0
+    mvdan.cc/sh/v3/cmd/shfmt@v3.10.0
   )
 
   echo "==> Installing external tools..."
