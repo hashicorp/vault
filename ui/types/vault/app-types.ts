@@ -2,7 +2,7 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
-import type EmberDataModel from 'ember-data/model';
+import type EmberDataModel from 'ember-data/model'; // eslint-disable-line ember/use-ember-data-rfc-395-imports
 import type Owner from '@ember/owner';
 
 // Type that comes back from expandAttributeMeta
