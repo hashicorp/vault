@@ -3,7 +3,7 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
-## 1.19.0-rc1 Enterprise
+## 1.19.0-rc1
 ### February 20, 2025
 
 **Enterprise LTS:** Vault Enterprise 1.19 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
@@ -238,6 +238,7 @@ SECURITY:
 
 CHANGES:
 
+* core: Bump Go version to 1.23.6
 * raft/autopilot (enterprise): Alongside the CE autopilot update, update raft-autopilot-enterprise library to v0.3.0 and add enterprise-specific regression testing.
 * secrets/openldap: Update plugin to v0.14.5 [[GH-29551](https://github.com/hashicorp/vault/pull/29551)]
 
