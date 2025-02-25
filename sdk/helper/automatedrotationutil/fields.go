@@ -39,8 +39,8 @@ func (p *AutomatedRotationParams) ParseAutomatedRotationFields(d *framework.Fiel
 	rotationPeriodSecondsRaw, periodOk := d.GetOk("rotation_period")
 	disableRotation, disableRotationOk := d.GetOk("disable_automated_rotation")
 
-	if scheduleOk && rotationScheduleRaw.(string) != "" {
-		if periodOk && rotationPeriodSecondsRaw.(int) != 0 {
+	if scheduleOk {
+		if periodOk && rotationPeriodSecondsRaw.(int) != 0 && rotationScheduleRaw.(string) != "" {
 			return ErrRotationMutuallyExclusiveFields
 		}
 		p.RotationSchedule = rotationScheduleRaw.(string)
@@ -54,8 +54,8 @@ func (p *AutomatedRotationParams) ParseAutomatedRotationFields(d *framework.Fiel
 		}
 	}
 
-	if windowOk && rotationWindowSecondsRaw.(int) != 0 {
-		if periodOk && rotationPeriodSecondsRaw.(int) != 0 {
+	if windowOk {
+		if periodOk && rotationPeriodSecondsRaw.(int) != 0 && rotationWindowSecondsRaw.(int) != 0 {
 			return fmt.Errorf("rotation_window does not apply to period")
 		}
 		rotationWindowSeconds := rotationWindowSecondsRaw.(int)

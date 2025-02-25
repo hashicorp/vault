@@ -36,6 +36,7 @@ func TestParseAutomatedRotationFields(t *testing.T) {
 		name           string
 		data           *framework.FieldData
 		expectedParams *AutomatedRotationParams
+		initialParams  *AutomatedRotationParams
 		expectedError  string
 	}{
 		{
@@ -178,11 +179,37 @@ func TestParseAutomatedRotationFields(t *testing.T) {
 				DisableAutomatedRotation: false,
 			},
 		},
+		{
+			name: "zero-out-schedule-and-window-set-period",
+			data: &framework.FieldData{
+				Raw: map[string]interface{}{
+					"rotation_schedule": "",
+					"rotation_window":   "",
+					"rotation_period":   "2m",
+				},
+				Schema: schemaMap,
+			},
+			expectedParams: &AutomatedRotationParams{
+				RotationSchedule:         "",
+				RotationWindow:           0,
+				RotationPeriod:           2 * time.Minute,
+				DisableAutomatedRotation: false,
+			},
+			initialParams: &AutomatedRotationParams{
+				RotationSchedule:         "*/1 * * * *",
+				RotationWindow:           30 * time.Second,
+				RotationPeriod:           0,
+				DisableAutomatedRotation: false,
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &AutomatedRotationParams{}
+			if tt.initialParams != nil {
+				p = tt.initialParams
+			}
 			err := p.ParseAutomatedRotationFields(tt.data)
 			if err != nil {
 				if tt.expectedError == "" {
