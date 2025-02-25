@@ -40,8 +40,8 @@ type RotationJobConfigureRequest struct {
 	MountPoint       string
 	ReqPath          string
 	RotationSchedule string
-	RotationWindow   int
-	RotationPeriod   int
+	RotationWindow   time.Duration
+	RotationPeriod   time.Duration
 }
 
 type RotationJobDeregisterRequest struct {
@@ -58,7 +58,7 @@ func (s *RotationJob) Validate() error {
 		return fmt.Errorf("ReqPath is required")
 	}
 
-	if s.Schedule.RotationSchedule == "" && s.Schedule.RotationPeriod == 0 {
+	if s.Schedule.RotationSchedule == "" && s.Schedule.RotationPeriod.Seconds() == 0 {
 		return fmt.Errorf("RotationSchedule or RotationPeriod is required to set up rotation job")
 	}
 
@@ -78,8 +78,8 @@ func newRotationJob(configRequest *RotationJobConfigureRequest) (*RotationJob, e
 	rs := &RotationSchedule{
 		Schedule:          cronSc,
 		RotationSchedule:  configRequest.RotationSchedule,
-		RotationWindow:    time.Duration(configRequest.RotationWindow) * time.Second,
-		RotationPeriod:    time.Duration(configRequest.RotationPeriod) * time.Second,
+		RotationWindow:    configRequest.RotationWindow,
+		RotationPeriod:    configRequest.RotationPeriod,
 		NextVaultRotation: time.Time{},
 		LastVaultRotation: time.Time{},
 	}
