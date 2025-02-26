@@ -5,7 +5,7 @@
 
 import ApplicationSerializer from './application';
 
-export default ApplicationSerializer.extend({
+export default class TotpSerializer extends ApplicationSerializer {
   normalizeItems(payload, requestType) {
     if (
       requestType !== 'queryRecord' &&
@@ -24,5 +24,5 @@ export default ApplicationSerializer.extend({
     Object.assign(payload, payload.data);
     delete payload.data;
     return payload;
-  },
-});
+  }
+}
