@@ -247,7 +247,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     assert.strictEqual(rolesPage.listItemLinks.length, 1, 'renders a single role');
     await rolesPage.visitDetail({ backend, scope, role });
     // check that the role details looks right
-    assert.dom('h2').exists({ count: 2 }, 'renders correct section headings');
+    assert.dom('h2').exists({ count: 3 }, 'renders correct section headings');
     assert.dom('[data-test-inline-error-message]').hasText('This role allows all KMIP operations');
     ['Managed Cryptographic Objects', 'Object Attributes', 'Server', 'Other'].forEach((title) => {
       assert.dom(`[data-test-row-label="${title}"]`).exists(`Renders allowed operations row for: ${title}`);
