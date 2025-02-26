@@ -656,7 +656,7 @@ scenario "autopilot" {
     }
   }
 
-  step "verify_removed" {
+  step "verify_raft_node_removed" {
     description = <<-EOF
       Verify that the removed nodes are marked as such
     EOF

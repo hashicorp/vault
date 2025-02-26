@@ -302,7 +302,7 @@ module "vault_verify_removed_node" {
 }
 
 module "vault_verify_removed_node_shim" {
-  source            = "./modules/vault_removed_do_nothing"
+  source            = "./modules/vault_verify_removed_node_shim"
   vault_install_dir = var.vault_install_dir
 }
 
