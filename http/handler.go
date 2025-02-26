@@ -575,11 +575,24 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handle
 
 		// Split comma separated ones, which are common. This brings it in line
 		// to the multiple-header case.
+
+		// Go through the first 50 addresses and verify that they're all IPv4 or
+		// IPv6 addresses.
+		maxIPChecks := 50
+		numIPChecks := 0
 		var acc []string
 		for _, header := range headers {
 			vals := strings.Split(header, ",")
 			for _, v := range vals {
-				acc = append(acc, strings.TrimSpace(v))
+				trimmed := strings.TrimSpace(v)
+				if numIPChecks < maxIPChecks {
+					numIPChecks++
+					if _, err := sockaddr.NewIPAddr(trimmed); err != nil {
+						respondError(w, http.StatusBadRequest, fmt.Errorf("malformed x-forwarded-for IP address %s", trimmed))
+						return
+					}
+				}
+				acc = append(acc, trimmed)
 			}
 		}
 
