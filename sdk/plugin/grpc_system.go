@@ -234,8 +234,8 @@ func (s *gRPCSystemViewClient) RegisterRotationJob(ctx context.Context, req *rot
 			MountPoint:       req.MountPoint,
 			Path:             req.ReqPath,
 			RotationSchedule: req.RotationSchedule,
-			RotationWindow:   int64(req.RotationWindow),
-			RotationPeriod:   int64(req.RotationPeriod),
+			RotationWindow:   int64(req.RotationWindow.Seconds()),
+			RotationPeriod:   int64(req.RotationPeriod.Seconds()),
 		},
 	}
 	resp, err := s.client.RegisterRotationJob(ctx, cfgReq)
