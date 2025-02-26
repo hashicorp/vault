@@ -137,7 +137,7 @@ require (
 	github.com/hashicorp/raft-wal v0.4.0
 	github.com/hashicorp/vault-hcp-lib v0.0.0-20240704151836-a5c058ac604c
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.20.0
-	github.com/hashicorp/vault-plugin-auth-azure v0.20.0
+	github.com/hashicorp/vault-plugin-auth-azure v0.20.1
 	github.com/hashicorp/vault-plugin-auth-cf v0.20.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.20.0
 	github.com/hashicorp/vault-plugin-auth-jwt v0.23.0
@@ -221,7 +221,7 @@ require (
 	golang.org/x/crypto v0.35.0
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842
 	golang.org/x/net v0.35.0
-	golang.org/x/oauth2 v0.26.0
+	golang.org/x/oauth2 v0.27.0
 	golang.org/x/sync v0.11.0
 	golang.org/x/sys v0.30.0
 	golang.org/x/term v0.29.0
