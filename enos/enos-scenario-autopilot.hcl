@@ -665,7 +665,7 @@ scenario "autopilot" {
       step.create_vault_cluster,
       step.create_vault_cluster_targets,
       step.get_updated_vault_cluster_ips,
-      step.raft_remove_peer,
+      step.raft_remove_peers,
     ]
 
     providers = {
