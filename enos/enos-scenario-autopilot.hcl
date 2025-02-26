@@ -699,7 +699,7 @@ scenario "autopilot" {
     depends_on = [
       step.create_vault_cluster,
       step.raft_remove_peers,
-      step.verify_removed,
+      step.verify_raft_node_removed,
     ]
 
     providers = {
