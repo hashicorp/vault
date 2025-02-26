@@ -3,6 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import ClusterRoute from './cluster-route-base';
+import Store from 'ember-data/store';
 
-export default ClusterRoute;
+export default Store;

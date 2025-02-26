@@ -11,7 +11,7 @@ import { waitFor } from '@ember/test-waiters';
 import errorMessage from 'vault/utils/error-message';
 
 import type FlashMessageService from 'vault/services/flash-messages';
-import type StoreService from 'vault/services/store';
+import type Store from '@ember-data/store';
 import type RouterService from '@ember/routing/router-service';
 
 interface Args {
@@ -23,7 +23,7 @@ interface Args {
 
 export default class SyncActivationModal extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
-  @service declare readonly store: StoreService;
+  @service declare readonly store: Store;
   @service('app-router') declare readonly router: RouterService;
 
   @tracked hasConfirmedDocs = false;

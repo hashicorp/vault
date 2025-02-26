@@ -11,9 +11,10 @@ import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import errorMessage from 'vault/utils/error-message';
+
 import type FlashMessageService from 'vault/services/flash-messages';
 import type PkiActionModel from 'vault/models/pki/action';
-import type { ValidationMap } from 'vault/vault/app-types';
+import type { Model, ValidationMap } from 'vault/app-types';
 
 interface Args {
   model: PkiActionModel;
@@ -82,7 +83,7 @@ export default class PkiGenerateCsrComponent extends Component<Args> {
 
   @task
   @waitFor
-  *save(event: Event): Generator<Promise<boolean | PkiActionModel>> {
+  *save(event: Event): Generator<Promise<boolean | Model>> {
     event.preventDefault();
     try {
       const { model, onSave } = this.args;

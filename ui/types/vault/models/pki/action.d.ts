@@ -3,11 +3,10 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Model from '@ember-data/model';
-import { FormField, ModelValidations, StringMap } from 'vault/app-types';
-import CapabilitiesModel from '../capabilities';
+import type { StringMap, WithFormFieldsAndValidationsModel } from 'vault/app-types';
+import type CapabilitiesModel from '../capabilities';
 
-export default class PkiActionModel extends Model {
+type PkiActionModel = WithFormFieldsAndValidationsModel & {
   secretMountPath: unknown;
   actionType: string | null;
   pemBundle: string;
@@ -51,11 +50,11 @@ export default class PkiActionModel extends Model {
   generateIssuerRootPath: Promise<CapabilitiesModel>;
   generateIssuerCsrPath: Promise<CapabilitiesModel>;
   crossSignPath: string;
-  allFields: Array<FormField>;
-  validate(): ModelValidations;
   // Capabilities
   get canImportBundle(): boolean;
   get canGenerateIssuerRoot(): boolean;
   get canGenerateIssuerIntermediate(): boolean;
   get canCrossSign(): boolean;
-}
+};
+
+export default PkiActionModel;
