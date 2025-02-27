@@ -14,14 +14,13 @@ import (
 	"strings"
 	"time"
 
-	gocache "github.com/patrickmn/go-cache"
-
 	oktaold "github.com/chrismalek/oktasdk-go/okta"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	oktanew "github.com/okta/okta-sdk-golang/v5/okta"
+	gocache "github.com/patrickmn/go-cache"
 )
 
 const (
