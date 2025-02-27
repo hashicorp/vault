@@ -6,7 +6,7 @@
 import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { getRoleFields } from 'vault/utils/model-helpers/database-helpers';
-import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
+import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 export default class RoleModel extends Model {
   @attr('string', {
     readOnly: true,
@@ -36,11 +36,7 @@ export default class RoleModel extends Model {
   })
   type;
 
-  // idPrefix = 'role/';
-
-  get idPrefix() {
-    return 'role/'
-  }
+  idPrefix = 'role/';
 
   @attr({
     editType: 'ttl',
@@ -131,7 +127,7 @@ export default class RoleModel extends Model {
   get fieldAttrs() {
     // Main fields on edit/create form
     const fields = ['name', 'database', 'type'];
-    return JSON.stringify(fields);
+    return expandAttributeMeta(this, fields);
   }
 
   get showFields() {
@@ -141,7 +137,7 @@ export default class RoleModel extends Model {
     if (this.database[0] !== 'elasticsearch') {
       fields = fields.concat(['revocation_statements']);
     }
-    return fields;
+    return expandAttributeMeta(this, fields);
   }
 
   get roleSettingAttrs() {
@@ -160,7 +156,7 @@ export default class RoleModel extends Model {
       'rollback_statements',
       'renew_statements',
     ];
-    return JSON.stringify(allRoleSettingFields);
+    return expandAttributeMeta(this, allRoleSettingFields);
   }
 
   /* CAPABILITIES */
