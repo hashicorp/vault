@@ -125,7 +125,7 @@
     "ember-sinon-qunit": "^7.4.0",
     "ember-source": "~5.8.0",
     "ember-style-modifier": "^4.1.0",
-    "ember-svg-jar": "2.6.0",
+    "ember-svg-jar": "2.6.2",
     "ember-template-lint": "^6.0.0",
     "ember-template-lint-plugin-prettier": "^5.0.0",
     "ember-test-selectors": "6.0.0",
