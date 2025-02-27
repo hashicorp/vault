@@ -1645,8 +1645,10 @@ func identityStoreLoadingIsDeterministic(t *testing.T, flags *determinismTestFla
 
 		err := c.systemBackend.activateIdentityDeduplication(ctx, nil)
 		require.NoError(t, err)
-		require.IsType(t, &renameResolver{}, c.identityStore.conflictResolver)
-		require.False(t, c.identityStore.disableLowerCasedNames)
+		require.EventuallyWithT(t, func(collect *assert.CollectT) {
+			require.IsType(t, &renameResolver{}, c.identityStore.conflictResolver)
+			require.False(t, c.identityStore.disableLowerCasedNames)
+		}, 30*time.Second, 100*time.Millisecond, "timed out waiting for rename resolver")
 	}
 
 	// To test that this is deterministic we need to load from storage a bunch of
