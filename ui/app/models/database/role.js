@@ -8,7 +8,6 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { getRoleFields } from 'vault/utils/model-helpers/database-helpers';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { withModelValidations } from 'vault/decorators/model-validations';
-import { withFormFields } from 'vault/decorators/model-form-fields';
 
 const validations = {
   database: [
@@ -20,10 +19,18 @@ const validations = {
       message: 'Database is required',
     },
   ],
+  type: [{
+    validator(model){
+      const { type } = model;
+      if (type) return true;
+    },
+    message: 'role type is required'
+  }],
   username: [
     {
       validator(model) {
-        const { username } = model;
+        const { type, username } = model;
+        if (type === 'dynamic') return true;
         if (username) return true;
       },
       message: 'username is required'
@@ -31,8 +38,6 @@ const validations = {
   ]
 };
 @withModelValidations(validations)
-@withFormFields(['database', 'username'])
-
 export default class RoleModel extends Model {
   idPrefix = 'role/';
 
