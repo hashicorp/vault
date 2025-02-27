@@ -24,15 +24,14 @@ import {
   REDIRECT,
 } from 'vault/lib/route-paths';
 
+/**
+ * @type Class
+ */
 export default Route.extend({
   auth: service(),
   store: service(),
   router: service(),
 
-/**
- * @type Class
- */
-export default Route.extend(ClusterRoute, {
   model() {
     return this.modelFor('vault.cluster');
   },
