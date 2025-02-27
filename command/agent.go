@@ -939,10 +939,11 @@ func (c *AgentCommand) applyConfigOverrides(f *FlagSets, config *agentConfig.Con
 	})
 
 	c.setStringFlag(f, config.Vault.Address, &StringVar{
-		Name:    flagNameAddress,
-		Target:  &c.flagAddress,
-		Default: "https://127.0.0.1:8200",
-		EnvVar:  api.EnvVaultAddress,
+		Name:        flagNameAddress,
+		Target:      &c.flagAddress,
+		Default:     "https://127.0.0.1:8200",
+		EnvVar:      api.EnvVaultAddress,
+		Normalizers: []func(string) string{configutil.NormalizeAddr},
 	})
 	config.Vault.Address = c.flagAddress
 	c.setStringFlag(f, config.Vault.CACert, &StringVar{
@@ -1031,13 +1032,13 @@ func (c *AgentCommand) setStringFlag(f *FlagSets, configVal string, fVar *String
 		// Don't do anything as the flag is already set from the command line
 	case flagEnvSet:
 		// Use value from env var
-		*fVar.Target = flagEnvValue
+		fVar.SetTarget(flagEnvValue)
 	case configVal != "":
 		// Use value from config
-		*fVar.Target = configVal
+		fVar.SetTarget(configVal)
 	default:
 		// Use the default value
-		*fVar.Target = fVar.Default
+		fVar.SetTarget(fVar.Default)
 	}
 }
 

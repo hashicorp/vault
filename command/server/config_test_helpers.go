@@ -1247,13 +1247,13 @@ storage "cockroachdb" {
 		"consul": {
 			config: `
 storage "consul" {
-  address = "2001:db8:0:0:0:0:2:1:8500"
+  address = "[2001:db8:0:0:0:0:2:1]:8500"
   path    = "vault/"
 }`,
 			expected: &Storage{
 				Type: "consul",
 				Config: map[string]string{
-					"address": "2001:db8::2:1:8500",
+					"address": "[2001:db8::2:1]:8500",
 					"path":    "vault/",
 				},
 			},
@@ -1359,7 +1359,7 @@ storage "mssql" {
 		"mysql": {
 			config: `
 storage "mysql" {
-	address  = "2001:db8:0:0:0:0:2:1:3306"
+	address  = "[2001:db8:0:0:0:0:2:1]:3306"
   username = "user1234"
   password = "secret123!"
   database = "vault"
@@ -1367,7 +1367,7 @@ storage "mysql" {
 			expected: &Storage{
 				Type: "mysql",
 				Config: map[string]string{
-					"address":  "2001:db8::2:1:3306",
+					"address":  "[2001:db8::2:1]:3306",
 					"username": "user1234",
 					"password": "secret123!",
 					"database": "vault",
@@ -1429,13 +1429,13 @@ storage "swift" {
 		"zookeeper": {
 			config: `
 storage "zookeeper" {
-	address = "2001:db8:0:0:0:0:2:1:2181"
+	address = "[2001:db8:0:0:0:0:2:1]:2181"
   path    = "vault/"
 }`,
 			expected: &Storage{
 				Type: "zookeeper",
 				Config: map[string]string{
-					"address": "2001:db8::2:1:2181",
+					"address": "[2001:db8::2:1]:2181",
 					"path":    "vault/",
 				},
 			},
