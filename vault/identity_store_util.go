@@ -145,11 +145,26 @@ func (i *IdentityStore) activateDeduplication(ctx context.Context, req *logical.
 		return fmt.Errorf("failed to reset existing identity state: %w", err)
 	}
 
-	if err := i.loadArtifacts(ctx, i.localNode.HAState() == consts.Active); err != nil {
-		return fmt.Errorf("failed to activate identity deduplication: %w", err)
-	}
+	go func() {
+		// If we fail to load from storage, we'll end up with a broken
+		// IdentityStore, so we're better of just sealing and letting another node
+		// take over!
+		if err := i.loadArtifacts(ctx, i.localNode.HAState() == consts.Active); err != nil {
+			i.logger.Error("failed to activate identity deduplication, shutting down", "error", err)
+			i.activationErrorHandler.Shutdown()
+			return
+		}
 
-	i.logger.Info("identity deduplication activated, identity store reload complete")
+		// Write to the test-synchronization channel if it's been created.
+		// Otherwise don't block trying to write to a nil chan.
+		select {
+		case i.activateDeduplicationDone <- struct{}{}:
+		default:
+		}
+
+		i.logger.Info("identity deduplication activated, identity store reload complete")
+	}()
+
 	return nil
 }
 
