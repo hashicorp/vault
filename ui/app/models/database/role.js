@@ -138,7 +138,7 @@ export default class Role extends Model {
     if (this.database[0] !== 'elasticsearch') {
       fields = fields.concat(['revocation_statements']);
     }
-    return JSON.stringify(fields);
+    return fields;
   }
 
   get roleSettingAttrs() {
@@ -171,41 +171,31 @@ export default class Role extends Model {
   @lazyCapabilities(apiPath`${'backend'}/static-creds/${'id'}`, 'backend', 'id') staticCredentialPath;
   @lazyCapabilities(apiPath`${'backend'}/config/${'database[0]'}`, 'backend', 'database') databasePath;
   @lazyCapabilities(apiPath`${'backend'}/rotate-role/${'id'}`, 'backend', 'id') rotateRolePath;
-
-  // @alias('secretPath.canUpdate') canEditRole;
-  // @alias('secretPath.canDelete') canDelete;
-  // @alias('dynamicPath.canCreate') canCreateDynamic;
-  // @alias('staticPath.canCreate') canCreateStatic;
-
-  // @alias('credentialPath.canRead') canGenerateCredentials;
-  // @alias('staticCredentialPath.canRead') canGetCredentials;
-  // @alias('databasePath.canUpdate') canUpdateDb;
-  // @alias('rotateRolePath.canUpdate') canRotateRoleCredentials;
   
   get canEditRole(){
-    return this.secretPath.canUpdate;
+    return this.secretPath.get('canUpdate');
   }
 
   get canDelete() {
-    return this.secretPath.canDelete;
+    return this.secretPath.get('canDelete');
   }
 
   get canCreateDynamic() {
-    return this.dynamicPath.canCreate;
+    return this.dynamicPath.get('canCreate');
   }
   get canCreateStatic() {
-    return this.staticPath.canCreate;
+    return this.staticPath.get('canCreate');
   }
   get canGenerateCredentials() {
-    return this.credentialPath.canRead;
+    return this.credentialPath.get('canRead');
   }
   get canGetCredentials(){
-    return this.staticCredentialPath.canRead;
+    return this.staticCredentialPath.get('canRead');
   }
   get canUpdateDb() {
-    return this.databasePath.canUpdate;
+    return this.databasePath.get('canUpdate');
   }
   get canRotateRoleCredentials(){
-    return this.rotateRolePath.canUpdate;
+    return this.rotateRolePath.get('canUpdate');
   }
 }
