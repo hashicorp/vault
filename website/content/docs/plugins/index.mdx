@@ -32,6 +32,16 @@ and can be used without any prerequisite steps.
 External plugins are not shipped with Vault and require additional operator
 intervention to run.
 
+Vault's external plugins are completely separate, standalone applications that
+Vault executes and communicates with over RPC. Each time a Vault secret engine,
+auth method, or database plugin is mounted, a new process or container is spawned. However,
+plugins can be made to implement [plugin multiplexing](/vault/docs/plugins/plugin-architecture#plugin-multiplexing)
+to improve performance. Plugin multiplexing allows plugin instances to be
+reused across all mounts of a given type.
+
+-> **NOTE:** See the [Vault Integrations](/vault/integrations) page to find a
+curated collection of official, partner, and community Vault plugins.
+
 ### Community plugins
 
 To run an external Community plugin, a binary or container image of the plugin is required.
@@ -45,19 +55,9 @@ Containerized plugins can also be built.
 
 @include 'alerts/enterprise-and-hcp.mdx'
 
-To run an external Enterprise plugin, an `.zip` artifact of the plugin is required.
+To run an external Enterprise plugin, a `.zip` plugin artifact is required.
 Enterprise plugin artifacts can be obtained from
 [releases.hashicorp.com](https://releases.hashicorp.com/).
-
-Vault's external plugins are completely separate, standalone applications that
-Vault executes and communicates with over RPC. Each time a Vault secret engine,
-auth method, or database plugin is mounted, a new process or container is spawned. However,
-plugins can be made to implement [plugin multiplexing](/vault/docs/plugins/plugin-architecture#plugin-multiplexing)
-to improve performance. Plugin multiplexing allows plugin instances to be
-reused across all mounts of a given type.
-
--> **NOTE:** See the [Vault Integrations](/vault/integrations) page to find a
-curated collection of official, partner, and community Vault plugins.
 
 ## Plugin versioning
 

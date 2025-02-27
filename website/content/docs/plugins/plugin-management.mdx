@@ -41,6 +41,12 @@ Success! Registered plugin: passthrough-plugin
 
 @include 'alerts/enterprise-and-hcp.mdx'
 
+#### Compatible Vault Enterprise versions
+- 1.16.16+
+- 1.17.12+
+- 1.18.5+
+- 1.19.0+
+
 Before registering an enterprise plugin, ensure that the plugin artifact
 compatible with the system that runs Vault Enterprise is downloaded from
 the [releases](https://releases.hashicorp.com/) and placed in the plugin
@@ -51,36 +57,16 @@ in any way. Vault Enterprise will verify the plugin's integrity
 and compatibility and unzip during the registration process.
 
 ```shell-session
-$ vault plugin register -version=<version of the plugin> \
-    secret \                  # type
-    vault-plugin-secrets-keymgmt
+$ vault plugin register 
+    -version=<version of the plugin> # version must match the plugin version on the releases page
+    secret \                         # type
+    vault-plugin-secrets-keymgmt     # name must match the plugin name on the releases page
 
 Success! Registered plugin: vault-plugin-secrets-keymgmt
 ```
 
-For example:
-
-The system running Vault Enterprise is linux/amd64. To register Key Management
-secrets engine v0.16.0+ent, vault-plugin-secrets-keymgmt_v0.16.0+ent_linux_amd64.zip
-needs to be downloaded and placed in the plugin directory.
-
-<CodeBlockConfig hideClipboard>
-
-  ```shell-session
-  $ vault plugin register -version=0.16.0+ent \
-  secret \
-  vault-plugin-secrets-keymgmt
-
-  Success! Registered plugin: vault-plugin-secrets-keymgmt
-
-  $ vault plugin list secret
-  Name                                      Version
-  ----                                      -------
-  vault-plugin-secrets-keymgmt              v0.16.0+ent
-  # ...
-  ```
-
-</CodeBlockConfig>
+See [plugin register](/vault/docs/commands/plugin/register) for more details on 
+how to register Enterprise plugins.
 
 ## Enabling/Disabling external plugins
 
