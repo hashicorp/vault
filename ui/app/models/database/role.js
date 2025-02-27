@@ -7,8 +7,7 @@ import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { getRoleFields } from 'vault/utils/model-helpers/database-helpers';
 import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
-@withExpandedAttributes()
-export default class Role extends Model {
+export default class RoleModel extends Model {
   @attr('string', {
     readOnly: true,
   })
@@ -37,7 +36,11 @@ export default class Role extends Model {
   })
   type;
 
-  idPrefix = 'role/';
+  // idPrefix = 'role/';
+
+  get idPrefix() {
+    return 'role/'
+  }
 
   @attr({
     editType: 'ttl',
