@@ -187,6 +187,7 @@
     "rollup": "~2.79.2",
     "serialize-javascript": "^3.1.0",
     "underscore": "^1.12.1",
+    "undici": "^6.21.1",
     "xmlhttprequest-ssl": "^1.6.2",
     "@embroider/macros": "^1.15.0",
     "socket.io": "^4.6.2",
