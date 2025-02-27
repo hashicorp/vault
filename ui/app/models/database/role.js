@@ -7,7 +7,10 @@ import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { getRoleFields } from 'vault/utils/model-helpers/database-helpers';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
+
 export default class RoleModel extends Model {
+  idPrefix = 'role/';
+
   @attr('string', {
     readOnly: true,
   })
@@ -35,8 +38,6 @@ export default class RoleModel extends Model {
     possibleValues: ['static', 'dynamic'],
   })
   type;
-
-  idPrefix = 'role/';
 
   @attr({
     editType: 'ttl',
@@ -170,8 +171,8 @@ export default class RoleModel extends Model {
   @lazyCapabilities(apiPath`${'backend'}/static-creds/${'id'}`, 'backend', 'id') staticCredentialPath;
   @lazyCapabilities(apiPath`${'backend'}/config/${'database[0]'}`, 'backend', 'database') databasePath;
   @lazyCapabilities(apiPath`${'backend'}/rotate-role/${'id'}`, 'backend', 'id') rotateRolePath;
-  
-  get canEditRole(){
+
+  get canEditRole() {
     return this.secretPath.get('canUpdate');
   }
 
@@ -182,19 +183,24 @@ export default class RoleModel extends Model {
   get canCreateDynamic() {
     return this.dynamicPath.get('canCreate');
   }
+
   get canCreateStatic() {
     return this.staticPath.get('canCreate');
   }
+
   get canGenerateCredentials() {
     return this.credentialPath.get('canRead');
   }
-  get canGetCredentials(){
+
+  get canGetCredentials() {
     return this.staticCredentialPath.get('canRead');
   }
+
   get canUpdateDb() {
     return this.databasePath.get('canUpdate');
   }
-  get canRotateRoleCredentials(){
+
+  get canRotateRoleCredentials() {
     return this.rotateRolePath.get('canUpdate');
   }
 }
