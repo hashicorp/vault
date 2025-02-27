@@ -81,7 +81,7 @@ export default class DatabaseRoleEdit extends Component {
     evt.preventDefault();
     this.loading = true;
     const { isValid, state, invalidFormMessage } = this.args.model.validate();
-    this.modelValidations = isValid? null : state;
+    this.modelValidations = isValid ? null : state;
     this.invalidFormAlert = invalidFormMessage;
 
     const mode = this.args.mode;

@@ -19,13 +19,15 @@ const validations = {
       message: 'Database is required',
     },
   ],
-  type: [{
-    validator(model){
-      const { type } = model;
-      if (type) return true;
+  type: [
+    {
+      validator(model) {
+        const { type } = model;
+        if (type) return true;
+      },
+      message: 'role type is required',
     },
-    message: 'role type is required'
-  }],
+  ],
   username: [
     {
       validator(model) {
@@ -33,9 +35,9 @@ const validations = {
         if (type === 'dynamic') return true;
         if (username) return true;
       },
-      message: 'username is required'
-    }
-  ]
+      message: 'username is required',
+    },
+  ],
 };
 @withModelValidations(validations)
 export default class RoleModel extends Model {
