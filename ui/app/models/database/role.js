@@ -4,19 +4,24 @@
  */
 
 import Model, { attr } from '@ember-data/model';
-import { computed } from '@ember/object';
-import { alias } from '@ember/object/computed';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
-import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { getRoleFields } from 'vault/utils/model-helpers/database-helpers';
+import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
-export default Model.extend({
-  idPrefix: 'role/',
-  backend: attr('string', { readOnly: true }),
-  name: attr('string', {
+export default class RoleModel extends Model {
+  idPrefix = 'role/';
+
+  @attr('string', {
+    readOnly: true,
+  })
+  backend;
+
+  @attr('string', {
     label: 'Role name',
-  }),
-  database: attr('array', {
+  })
+  name;
+
+  @attr('array', {
     label: 'Connection name',
     editType: 'searchSelect',
     fallbackComponent: 'string-list',
@@ -24,80 +29,107 @@ export default Model.extend({
     selectLimit: 1,
     onlyAllowExisting: true,
     subText: 'The database connection for which credentials will be generated.',
-  }),
-  type: attr('string', {
+  })
+  database;
+
+  @attr('string', {
     label: 'Type of role',
     noDefault: true,
     possibleValues: ['static', 'dynamic'],
-  }),
-  default_ttl: attr({
+  })
+  type;
+
+  @attr({
     editType: 'ttl',
     defaultValue: '1h',
     label: 'Generated credentials’s Time-to-Live (TTL)',
     helperTextDisabled: 'Vault will use a TTL of 1 hour.',
     defaultShown: 'Engine default',
-  }),
-  max_ttl: attr({
+  })
+  default_ttl;
+
+  @attr({
     editType: 'ttl',
     defaultValue: '24h',
     label: 'Generated credentials’s maximum Time-to-Live (Max TTL)',
     helperTextDisabled: 'Vault will use a TTL of 24 hours.',
     defaultShown: 'Engine default',
-  }),
-  username: attr('string', {
+  })
+  max_ttl;
+
+  @attr('string', {
     subText: 'The database username that this Vault role corresponds to.',
-  }),
-  rotation_period: attr({
+  })
+  username;
+
+  @attr({
     editType: 'ttl',
     defaultValue: '24h',
     helperTextDisabled:
       'Specifies the amount of time Vault should wait before rotating the password. The minimum is 5 seconds. Default is 24 hours.',
     helperTextEnabled: 'Vault will rotate password after',
-  }),
-  skip_import_rotation: attr({
+  })
+  rotation_period;
+
+  @attr({
     label: 'Skip initial rotation',
     editType: 'boolean',
     defaultValue: false,
     subText: 'When unchecked, Vault automatically rotates the password upon creation',
-  }),
-  creation_statements: attr('array', {
+  })
+  skip_import_rotation;
+
+  @attr('array', {
     editType: 'stringArray',
-  }),
-  revocation_statements: attr('array', {
-    editType: 'stringArray',
-    defaultShown: 'Default',
-  }),
-  rotation_statements: attr('array', {
-    editType: 'stringArray',
-    defaultShown: 'Default',
-  }),
-  rollback_statements: attr('array', {
+  })
+  creation_statements;
+
+  @attr('array', {
     editType: 'stringArray',
     defaultShown: 'Default',
-  }),
-  renew_statements: attr('array', {
+  })
+  revocation_statements;
+
+  @attr('array', {
     editType: 'stringArray',
     defaultShown: 'Default',
-  }),
-  creation_statement: attr('string', {
+  })
+  rotation_statements;
+
+  @attr('array', {
+    editType: 'stringArray',
+    defaultShown: 'Default',
+  })
+  rollback_statements;
+
+  @attr('array', {
+    editType: 'stringArray',
+    defaultShown: 'Default',
+  })
+  renew_statements;
+
+  @attr('string', {
     editType: 'json',
     allowReset: true,
     theme: 'hashi short',
     defaultShown: 'Default',
-  }),
-  revocation_statement: attr('string', {
+  })
+  creation_statement;
+
+  @attr('string', {
     editType: 'json',
     allowReset: true,
     theme: 'hashi short',
     defaultShown: 'Default',
-  }),
+  })
+  revocation_statement;
 
   /* FIELD ATTRIBUTES */
   get fieldAttrs() {
     // Main fields on edit/create form
     const fields = ['name', 'database', 'type'];
     return expandAttributeMeta(this, fields);
-  },
+  }
 
   get showFields() {
     let fields = ['name', 'database', 'type'];
@@ -107,9 +139,9 @@ export default Model.extend({
       fields = fields.concat(['revocation_statements']);
     }
     return expandAttributeMeta(this, fields);
-  },
+  }
 
-  roleSettingAttrs: computed(function () {
+  get roleSettingAttrs() {
     // logic for which get displayed is on DatabaseRoleSettingForm
     const allRoleSettingFields = [
       'default_ttl',
@@ -126,25 +158,49 @@ export default Model.extend({
       'renew_statements',
     ];
     return expandAttributeMeta(this, allRoleSettingFields);
-  }),
+  }
 
   /* CAPABILITIES */
   // only used for secretPath
-  path: attr('string', { readOnly: true }),
+  @attr('string', { readOnly: true }) path;
 
-  secretPath: lazyCapabilities(apiPath`${'backend'}/${'path'}/${'id'}`, 'backend', 'path', 'id'),
-  canEditRole: alias('secretPath.canUpdate'),
-  canDelete: alias('secretPath.canDelete'),
-  dynamicPath: lazyCapabilities(apiPath`${'backend'}/roles/+`, 'backend'),
-  canCreateDynamic: alias('dynamicPath.canCreate'),
-  staticPath: lazyCapabilities(apiPath`${'backend'}/static-roles/+`, 'backend'),
-  canCreateStatic: alias('staticPath.canCreate'),
-  credentialPath: lazyCapabilities(apiPath`${'backend'}/creds/${'id'}`, 'backend', 'id'),
-  staticCredentialPath: lazyCapabilities(apiPath`${'backend'}/static-creds/${'id'}`, 'backend', 'id'),
-  canGenerateCredentials: alias('credentialPath.canRead'),
-  canGetCredentials: alias('staticCredentialPath.canRead'),
-  databasePath: lazyCapabilities(apiPath`${'backend'}/config/${'database[0]'}`, 'backend', 'database'),
-  canUpdateDb: alias('databasePath.canUpdate'),
-  rotateRolePath: lazyCapabilities(apiPath`${'backend'}/rotate-role/${'id'}`, 'backend', 'id'),
-  canRotateRoleCredentials: alias('rotateRolePath.canUpdate'),
-});
+  @lazyCapabilities(apiPath`${'backend'}/${'path'}/${'id'}`, 'backend', 'path', 'id') secretPath;
+  @lazyCapabilities(apiPath`${'backend'}/roles/+`, 'backend') dynamicPath;
+  @lazyCapabilities(apiPath`${'backend'}/static-roles/+`, 'backend') staticPath;
+  @lazyCapabilities(apiPath`${'backend'}/creds/${'id'}`, 'backend', 'id') credentialPath;
+  @lazyCapabilities(apiPath`${'backend'}/static-creds/${'id'}`, 'backend', 'id') staticCredentialPath;
+  @lazyCapabilities(apiPath`${'backend'}/config/${'database[0]'}`, 'backend', 'database') databasePath;
+  @lazyCapabilities(apiPath`${'backend'}/rotate-role/${'id'}`, 'backend', 'id') rotateRolePath;
+
+  get canEditRole() {
+    return this.secretPath.get('canUpdate');
+  }
+
+  get canDelete() {
+    return this.secretPath.get('canDelete');
+  }
+
+  get canCreateDynamic() {
+    return this.dynamicPath.get('canCreate');
+  }
+
+  get canCreateStatic() {
+    return this.staticPath.get('canCreate');
+  }
+
+  get canGenerateCredentials() {
+    return this.credentialPath.get('canRead');
+  }
+
+  get canGetCredentials() {
+    return this.staticCredentialPath.get('canRead');
+  }
+
+  get canUpdateDb() {
+    return this.databasePath.get('canUpdate');
+  }
+
+  get canRotateRoleCredentials() {
+    return this.rotateRolePath.get('canUpdate');
+  }
+}
