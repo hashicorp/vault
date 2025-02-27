@@ -16,6 +16,9 @@ export default class DatabaseRoleEdit extends Component {
   @service flashMessages;
   @service store;
 
+  @tracked modelValidations;
+  @tracked invalidFormAlert;
+
   constructor() {
     super(...arguments);
     if (this.args.initialKey) {
@@ -77,6 +80,9 @@ export default class DatabaseRoleEdit extends Component {
   handleCreateEditRole(evt) {
     evt.preventDefault();
     this.loading = true;
+    const { isValid, state, invalidFormMessage } = this.args.model.validate();
+    this.modelValidations = isValid? null : state;
+    this.invalidFormAlert = invalidFormMessage;
 
     const mode = this.args.mode;
     const roleSecret = this.args.model;

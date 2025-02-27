@@ -7,6 +7,31 @@ import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { getRoleFields } from 'vault/utils/model-helpers/database-helpers';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
+import { withModelValidations } from 'vault/decorators/model-validations';
+import { withFormFields } from 'vault/decorators/model-form-fields';
+
+const validations = {
+  database: [
+    {
+      validator(model) {
+        const { database } = model;
+        if (database) return true;
+      },
+      message: 'Database is required',
+    },
+  ],
+  username: [
+    {
+      validator(model) {
+        const { username } = model;
+        if (username) return true;
+      },
+      message: 'username is required'
+    }
+  ]
+};
+@withModelValidations(validations)
+@withFormFields(['database', 'username'])
 
 export default class RoleModel extends Model {
   idPrefix = 'role/';
