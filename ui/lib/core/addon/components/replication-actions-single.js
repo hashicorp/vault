@@ -5,6 +5,9 @@
 
 import Component from '@ember/component';
 
+/**
+ * @type Class
+ */
 export default Component.extend({
   onSubmit() {},
   replicationMode: null,

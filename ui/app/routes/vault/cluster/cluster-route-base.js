@@ -29,6 +29,10 @@ export default Route.extend({
   store: service(),
   router: service(),
 
+/**
+ * @type Class
+ */
+export default Route.extend(ClusterRoute, {
   model() {
     return this.modelFor('vault.cluster');
   },

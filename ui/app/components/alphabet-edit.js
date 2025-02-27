@@ -5,4 +5,4 @@
 
 import TransformBase from './transform-edit-base';
 
-export default class AlphabetEdit extends TransformBase {}
+export default TransformBase;

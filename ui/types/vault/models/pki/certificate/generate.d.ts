@@ -3,11 +3,10 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { FormField, FormFieldGroups } from 'vault/app-types';
-import PkiCertificateBaseModel from './base';
+import type PkiCertificateBaseModel from './base';
 
-export default class PkiCertificateGenerateModel extends PkiCertificateBaseModel {
+type PkiCertificateGenerateModel = PkiCertificateBaseModel & {
   role: string;
-  formFields: FormField[];
-  formFieldGroups: FormFieldGroups;
-}
+};
+
+export default PkiCertificateGenerateModel;
