@@ -159,7 +159,7 @@ supplied name.
 
 - `sha256` `(string: <required>)` – The SHA256 sum of a Community plugin
   binary or the OCI image. Before a plugin is run, its SHA will be checked against this value.
-  If they do not match the plugin can not be run. If the plugin is Enterprise, the value is not required.
+  If the actual SHA of the plugin binary and the SHA provided in `sha256` do not match, Vault will not run the plugin. The `sha256` parameter is only required for Community plugins. Enterprise plugins do not require SHA confirmation.
 
 - `command` `(string: <required>)` - Specifies the command used to execute the
   plugin. This is relative to the plugin directory. e.g. `"myplugin"`, or if `oci_image`
