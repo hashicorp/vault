@@ -43,7 +43,7 @@ func NormalizeAddr(addr string) string {
 			return addr
 		}
 
-		// If we've been given a bracketed IP address, return the address without
+		// If we've been given a bracketed IP address, return the address
 		// normalized without brackets.
 		ip := net.ParseIP(addr[1 : len(addr)-1])
 		if ip != nil {

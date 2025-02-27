@@ -1084,7 +1084,7 @@ var autoAuthMethodKeys = map[string][]string{
 }
 
 // normalizeAutoAuthMethod takes a storage name, a configuration key
-// and it's associated value and will normalize any URLs, IP addresses, or
+// and its associated value and will normalize any URLs, IP addresses, or
 // host:port style addresses.
 func normalizeAutoAuthMethod(method string, key string, value string) (string, error) {
 	keys, ok := autoAuthMethodKeys[method]
