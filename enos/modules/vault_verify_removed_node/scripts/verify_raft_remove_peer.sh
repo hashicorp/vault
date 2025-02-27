@@ -16,7 +16,7 @@ binpath=${VAULT_INSTALL_DIR}/vault
 test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
 getSysHealth() {
-  $binpath read -format=json sys/health sealedcode=299 haunhealthycode=299 removedcode=299 | jq -eMc '.removed_from_cluster'
+  $binpath read -format=json sys/health sealedcode=299 haunhealthycode=299 removedcode=299 | jq -eMc '.data.removed_from_cluster'
 }
 
 getStatus() {
