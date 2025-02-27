@@ -2,7 +2,7 @@
 layout: docs
 page_title: Plugin management
 description: >-
-   Learn how to manage external plugins that are implemented using Vault's plugin system.
+Learn how to manage external plugins that are implemented using Vault's plugin system.
 ---
 
 # Plugin management
@@ -26,6 +26,8 @@ Before an external plugin can be mounted, it needs to be
 plugin catalog to ensure the plugin invoked by Vault is authentic and maintains
 integrity:
 
+### Community plugins
+
 ```shell-session
 $ vault plugin register -sha256=<SHA256 Hex value of the plugin binary> \
     secret \                  # type
@@ -33,6 +35,51 @@ $ vault plugin register -sha256=<SHA256 Hex value of the plugin binary> \
 
 Success! Registered plugin: passthrough-plugin
 ```
+
+### Enterprise plugins
+
+@include 'alerts/enterprise-and-hcp.mdx'
+
+Before registering an enterprise plugin, ensure that the plugin artifact
+compatible with the system that runs Vault Enterprise is downloaded from
+the [releases](https://releases.hashicorp.com/) and placed in the plugin
+directory.
+
+~> Note: Enterprise plugins artifacts should not be unzipped or modified
+in any way. Vault Enterprise will verify the plugin's integrity
+and compatibility and unzip during the registration process.
+
+```shell-session
+$ vault plugin register -version=<version of the plugin> \
+    secret \                  # type
+    vault-plugin-secrets-keymgmt
+
+Success! Registered plugin: vault-plugin-secrets-keymgmt
+```
+
+For example:
+
+The system running Vault Enterprise is linux/amd64. To register Key Management
+secrets engine v0.16.0+ent, vault-plugin-secrets-keymgmt_v0.16.0+ent_linux_amd64.zip
+needs to be downloaded and placed in the plugin directory.
+
+<CodeBlockConfig hideClipboard>
+
+  ```shell-session
+  $ vault plugin register -version=0.16.0+ent \
+  secret \
+  vault-plugin-secrets-keymgmt
+
+  Success! Registered plugin: vault-plugin-secrets-keymgmt
+
+  $ vault plugin list secret
+  Name                                      Version
+  ----                                      -------
+  vault-plugin-secrets-keymgmt              v0.16.0+ent
+  # ...
+  ```
+
+</CodeBlockConfig>
 
 ## Enabling/Disabling external plugins
 
@@ -102,6 +149,7 @@ an external version of it in order to use this workflow. Check the
 [releases](https://releases.hashicorp.com/) page for the latest prebuilt plugin
 binaries.
 
+#### Community plugins
 ```shell-session
 $ vault plugin register -sha256=<SHA256 Hex value of the plugin binary> \
     -env HTTP_PROXY=eu.example.com \
@@ -118,6 +166,16 @@ $ vault plugin register -sha256=<SHA256 Hex value of the plugin binary> \
 Success! Registered plugin: jwt-us
 ```
 
+#### Enterprise plugins
+```shell-session
+$ vault plugin register -version=<version of the plugin> \
+    -env HTTP_PROXY=example.com \
+    secret \
+    vault-plugin-secrets-keymgmt
+
+Success! Registered plugin: vault-plugin-secrets-keymgmt
+```
+
 You can then enable each plugin on its own path, and configure clients that
 should be associated with one or the other appropriately:
 
@@ -127,4 +185,7 @@ Success! Enabled the jwt-eu auth method at: auth/jwt-eu/
 
 $ vault auth enable jwt-us
 Success! Enabled the jwt-us auth method at: auth/jwt-us/
+
+$ vault secrets enable vault-plugin-secrets-keymgmt
+Success! Enabled the vault-plugin-secrets-keymgmt secrets engine at: vault-plugin-secrets-keymgmt/
 ```
