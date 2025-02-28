@@ -150,7 +150,7 @@ func (i *IdentityStore) activateDeduplication(ctx context.Context, req *logical.
 		// IdentityStore, so we're better of just sealing and letting another node
 		// take over!
 		if err := i.loadArtifacts(ctx, i.localNode.HAState() == consts.Active); err != nil {
-			i.logger.Error("failed to activate identity deduplication, shutting down", "error", err)
+			i.logger.Error("failed to activate identity deduplication, shutting down")
 			i.activationErrorHandler.Shutdown()
 			return
 		}
