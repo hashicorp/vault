@@ -13,7 +13,7 @@ The plugin's type of "auth", "database", or "secret" must be included.
 
 ## Examples
 
-Register a plugin:
+Register a Community or custom plugin:
 
 ```shell-session
 $ vault plugin register \
@@ -22,13 +22,40 @@ $ vault plugin register \
 Success! Registered plugin: my-custom-plugin
 ```
 
-Register a plugin with custom args:
+Register an Enterprise plugin:
+
+-> **Note:** See [Plugin managment for Enterprise plugins](/vault/docs/plugins/plugin-management#enterprise-plugins)
+for details on Vault Enterprise compatible versions.
+
+Before registering Key Management secrets engine v0.16.0+ent for the linux/amd64 system that runs Vault Enterprise,
+`vault-plugin-secrets-keymgmt_v0.16.0+ent_linux_amd64.zip` needs to be downloaded from
+https://releases.hashicorp.com/vault-plugin-secrets-keymgmt and placed in the plugin directory.
+
+```shell-session
+$ vault plugin register 
+    -version=0.16.0+ent \                      # version must match the plugin version on the releases page
+    secret \        
+    vault-plugin-secrets-keymgmt               # name must match the plugin name on the releases page
+Success! Registered plugin: vault-plugin-secrets-keymgmt
+```
+
+Register a Community or custom plugin with custom args:
 
 ```shell-session
 $ vault plugin register \
     -sha256=d3f0a8be02f6c074cf38c9c99d4d04c9c6466249 \
     -args=--with-glibc,--with-curl-bindings \
     auth my-custom-plugin
+```
+
+Register an Enterprise plugin with custom args:
+
+```shell-session
+$ vault plugin register
+    -version=0.16.0+ent \                      # version must match the plugin version on the releases page
+    -args=--with-glibc,--with-curl-bindings \
+    secret \
+    vault-plugin-secrets-keymgmt               # name must match the plugin name on the releases page
 ```
 
 ## Usage
@@ -45,7 +72,8 @@ flags](/vault/docs/commands) included on all commands.
 ### Command options
 
 - `-sha256` `(string: <required>)` - SHA256 of the plugin binary or the OCI image
-  provided. This is required for all plugins.
+  provided. This is required for all Community plugins.
+  If the plugin is Enterprise, the value is not required.
 
 - `-args` `([]string: [])` - Argument to pass to the plugin when starting. This
   flag can be specified multiple times to specify multiple args.

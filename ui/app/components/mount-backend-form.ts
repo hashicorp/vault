@@ -14,6 +14,7 @@ import { isAddonEngine, allEngines } from 'vault/helpers/mountable-secret-engine
 
 import type FlashMessageService from 'vault/services/flash-messages';
 import type Store from '@ember-data/store';
+import type AdapterError from '@ember-data/adapter/error';
 
 import type { AuthEnableModel } from 'vault/routes/vault/cluster/settings/auth/enable';
 import type { MountSecretBackendModel } from 'vault/routes/vault/cluster/settings/mount-secret-backend';
@@ -46,7 +47,7 @@ export default class MountBackendForm extends Component<Args> {
   @tracked modelValidations = null;
   @tracked invalidFormAlert = null;
 
-  @tracked errorMessage = '';
+  @tracked errorMessage: string | string[] = '';
 
   willDestroy() {
     // components are torn down after store is unloaded and will cause an error if attempt to unload record
@@ -144,7 +145,9 @@ export default class MountBackendForm extends Component<Args> {
 
     try {
       yield mountModel.save();
-    } catch (err) {
+    } catch (error) {
+      const err = error as AdapterError;
+
       if (err.httpStatus === 403) {
         this.flashMessages.danger(
           'You do not have access to the sys/mounts endpoint. The secret engine was not mounted.'
