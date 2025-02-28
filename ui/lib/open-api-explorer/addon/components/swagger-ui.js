@@ -15,7 +15,6 @@ import SwaggerUIBundle from 'swagger-ui-dist/swagger-ui-bundle.js';
 import { camelize } from '@ember/string';
 
 const { APP } = openApiExplorerConfig;
-const { environment } = config;
 
 export default class SwaggerUiComponent extends Component {
   @service auth;
@@ -86,7 +85,7 @@ export default class SwaggerUiComponent extends Component {
       // 'list' expands tags, but not operations
       docExpansion: 'list',
       operationsSorter: 'alpha',
-      displayOperationId: environment === 'development',
+      displayOperationId: config.environment === 'development',
       filter: true,
       // this makes sure we show the x-vault- options
       showExtensions: true,

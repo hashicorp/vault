@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { fillIn, render, typeIn, waitFor } from '@ember/test-helpers';
+import { fillIn, render, typeIn } from '@ember/test-helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { hbs } from 'ember-cli-htmlbars';
@@ -40,7 +40,6 @@ module('Integration | Component | open-api-explorer | swagger-ui', function (hoo
 
   test('it renders', async function (assert) {
     await this.renderComponent();
-    await waitFor(SELECTORS.container);
 
     assert.dom(SELECTORS.container).exists('renders component');
     assert.dom(SELECTORS.apiPathBlock).exists({ count: this.totalApiPaths }, 'renders all api paths');
@@ -58,12 +57,13 @@ module('Integration | Component | open-api-explorer | swagger-ui', function (hoo
   });
 
   test('it should render camelized operation ids', async function (assert) {
-    sinon.stub(config, 'environment').value('development');
+    const envStub = sinon.stub(config, 'environment').value('development');
 
     await this.renderComponent();
-    await waitFor(SELECTORS.operationId);
 
     const id = this.openApiResponse.paths['/auth/token/create'].post.operationId;
     assert.dom(SELECTORS.operationId).hasText(camelize(id), 'renders camelized operation id');
+
+    envStub.restore();
   });
 });
