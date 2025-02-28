@@ -4,46 +4,49 @@
  */
 
 import Component from '@glimmer/component';
-import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import { later, cancel } from '@ember/runloop';
-import timestamp from 'core/utils/timestamp';
-import { getUnixTime } from 'date-fns';
+import { task, timeout } from 'ember-concurrency';
 
 export default class GenerateCredentialsTotp extends Component {
+  @tracked elapsedTime = 0;
+
   title = 'Generate TOTP code';
 
-  @tracked elapsedTime = 0;
-  nextTick = null;
+  constructor() {
+    super(...arguments);
+    this.startTimer.perform();
+  }
 
   get remainingTime() {
     const { model } = this.args;
 
     if (!model.period) {
-      return;
+      return 0; // TODO improve this
     }
 
     return model.period - this.elapsedTime;
   }
 
-  @action
-  cancelTimer() {
-    cancel(this.nextTick);
-  }
-
-  @action
-  startTimer() {
+  @task({ restartable: true })
+  *startTimer() {
     const { model } = this.args;
-
     if (model.period) {
-      this.nextTick = later(
-        this,
-        function () {
-          this.elapsedTime = getUnixTime(timestamp.now()) % model.period;
-          this.startTimer();
-        },
-        1000
-      );
+      while (this.elapsedTime <= model.period) {
+        yield timeout(1000);
+        this.elapsedTime += 1;
+      }
+
+      if (this.elapsedTime > model.period) {
+        this.elapsedTime = 0;
+        this.startTimer.perform();
+      }
     }
   }
+
+  willDestroy() {
+    super.willDestroy();
+    this.startTimer.cancelAll();
+  }
 }
+
+// TODO this isn't perfect and currently doesn't reset the code at zero nor when refreshing
