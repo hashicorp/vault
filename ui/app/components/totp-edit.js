@@ -3,31 +3,45 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import RoleEdit from './role-edit';
+import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
+import { service } from '@ember/service';
+import { isBlank } from '@ember/utils';
+import { task, waitForEvent } from 'ember-concurrency';
 
-export default class TotpEdit extends RoleEdit {
+const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
+const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
+
+export default class TotpEdit extends Component {
+  @service router;
+
   @tracked hasGenerated = false;
   successCallback;
 
-  init() {
-    super.init(...arguments);
-    this.set('backendType', 'totp');
+  get mode() {
+    return this.args.mode || 'show';
+  }
+
+  get model() {
+    return this.args.model;
   }
 
   persist(method, successCallback) {
-    const model = this.model;
-    return model[method]().then(() => {
-      if (!model.isError) {
-        if (model.backend === 'totp' && model.generate) {
+    return this.model[method]().then(() => {
+      if (!this.model.isError) {
+        if (this.model.backend === 'totp' && this.model.generate) {
           this.hasGenerated = true;
           this.successCallback = successCallback;
         } else {
-          successCallback(model);
+          successCallback(this.model);
         }
       }
     });
+  }
+
+  transitionToRoute() {
+    this.router.transitionTo(...arguments);
   }
 
   @action
@@ -35,4 +49,38 @@ export default class TotpEdit extends RoleEdit {
     this.model.unloadRecord();
     this.successCallback(null);
   }
+
+  @action
+  delete() {
+    this.persist('destroyRecord', () => {
+      this.transitionToRoute(LIST_ROOT_ROUTE);
+    });
+  }
+
+  @action
+  createOrUpdate(type, event) {
+    event.preventDefault();
+
+    // all of the attributes with fieldValue:'id' are called `name`
+    const modelId = this.model.id || this.model.name;
+    // prevent from submitting if there's no key
+    // maybe do something fancier later
+    if (type === 'create' && isBlank(modelId)) {
+      return;
+    }
+
+    this.persist('save', () => {
+      this.transitionToRoute(SHOW_ROUTE, modelId);
+    });
+  }
+
+  @(task(function* () {
+    while (true) {
+      const event = yield waitForEvent(document.body, 'keyup');
+      this.onEscape(event);
+    }
+  })
+    .on('didInsertElement')
+    .cancelOn('willDestroyElement'))
+  waitForKeyUp;
 }

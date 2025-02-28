@@ -6,41 +6,41 @@
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader
-      @baseKey={{this.model}}
+      @baseKey={{@model}}
       @path="vault.cluster.secrets.backend.list"
-      @mode={{this.mode}}
-      @root={{this.root}}
+      @mode={{@mode}}
+      @root={{@root}}
       @showCurrent={{true}}
     />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header>
-      {{#if (eq this.mode "create")}}
+      {{#if (eq @mode "create")}}
         Create a TOTP key
-      {{else if (eq this.mode "edit")}}
+      {{else if (eq @mode "edit")}}
         Edit TOTP key
       {{else}}
         TOTP key
-        <code>{{this.model.id}}</code>
+        <code>{{@model.id}}</code>
       {{/if}}
     </h1>
   </p.levelLeft>
 </PageHeader>
 
-{{#if (eq this.mode "show")}}
+{{#if (eq @mode "show")}}
   <Toolbar>
     <ToolbarActions>
-      {{#if this.model.canDelete}}
+      {{#if @model.canDelete}}
         <ConfirmAction
           @buttonText="Delete key"
           class="toolbar-button"
           @buttonColor="secondary"
-          @onConfirmAction={{action "delete"}}
+          @onConfirmAction={{this.delete}}
         />
         <div class="toolbar-separator"></div>
       {{/if}}
-      {{#if this.model.canUpdate}}
-        <ToolbarSecretLink @secret={{this.model.id}} @mode="edit" data-test-edit-link @replace={{true}}>
+      {{#if @model.canUpdate}}
+        <ToolbarSecretLink @secret={{@model.id}} @mode="edit" data-test-edit-link @replace={{true}}>
           Edit key
         </ToolbarSecretLink>
       {{/if}}
@@ -48,11 +48,11 @@
   </Toolbar>
 {{/if}}
 
-{{#if (or (eq this.mode "edit") (eq this.mode "create"))}}
+{{#if (or (eq @mode "edit") (eq @mode "create"))}}
   {{#if this.hasGenerated}}
     <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-      <MessageError @model={{this.model}} />
-      {{#unless this.model.isError}}
+      <MessageError @model={{@model}} />
+      {{#unless @model.isError}}
         <Hds::Alert @type="inline" @color="warning" class="has-top-bottom-margin" data-test-warning as |A|>
           <A.Title>Warning</A.Title>
           <A.Description>
@@ -60,16 +60,16 @@
           </A.Description>
         </Hds::Alert>
       {{/unless}}
-      {{#each this.model.generatedAttrs as |attr|}}
+      {{#each @model.generatedAttrs as |attr|}}
         <InfoTableRow
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-          @value={{get this.model attr.name}}
+          @value={{get @model attr.name}}
         />
       {{/each}}
       <div class="list-item-row">
         <div class="center-display">
           <QrCode
-            @text={{this.model.url}}
+            @text={{@model.url}}
             @colorLight="#F7F7F7"
             @width={{200}}
             @height={{200}}
@@ -87,29 +87,29 @@
   {{else}}
     <form onsubmit={{action "createOrUpdate" "create"}}>
       <div class="box is-sideless is-fullwidth is-marginless">
-        <MessageError @model={{this.model}} />
-        <NamespaceReminder @mode={{this.mode}} @noun="TOTP key" />
-        {{#if (eq this.mode "create")}}
-          {{#each this.model.createAttrs as |attr|}}
+        <MessageError @model={{@model}} />
+        <NamespaceReminder @mode={{@mode}} @noun="TOTP key" />
+        {{#if (eq @mode "create")}}
+          {{#each @model.createAttrs as |attr|}}
             <FormField
               @attr={{attr}}
-              @model={{this.model}}
+              @model={{@model}}
               @modelValidations={{@modelValidations}}
               @showHelpText={{@showHelpText}}
             />
           {{/each}}
         {{/if}}
-        <FormFieldGroupsLoop @model={{this.model}} @mode={{this.mode}} />
+        <FormFieldGroupsLoop @model={{@model}} @mode={{@mode}} />
       </div>
       <div class="field is-grouped-split box is-fullwidth is-bottomless">
         <Hds::ButtonSet>
-          <Hds::Button @text={{if (eq this.mode "create") "Create key" "Save"}} type="submit" data-test-totp-create />
-          {{#if (eq this.mode "create")}}
+          <Hds::Button @text={{if (eq @mode "create") "Create key" "Save"}} type="submit" data-test-totp-create />
+          {{#if (eq @mode "create")}}
             <Hds::Button
               @text="Cancel"
               @color="secondary"
               @route="vault.cluster.secrets.backend.list-root"
-              @model={{this.model.backend}}
+              @model={{@model.backend}}
               @query={{hash tab="key"}}
             />
           {{else}}
@@ -117,7 +117,7 @@
               @text="Cancel"
               @color="secondary"
               @route="vault.cluster.secrets.backend.show"
-              @models={{array this.model.backend this.model.id}}
+              @models={{array @model.backend @model.id}}
             />
           {{/if}}
         </Hds::ButtonSet>
@@ -126,10 +126,10 @@
   {{/if}}
 {{else}}
   <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-    {{#each this.model.attrs as |attr|}}
+    {{#each @model.attrs as |attr|}}
       <InfoTableRow
         @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-        @value={{get this.model attr.name}}
+        @value={{get @model attr.name}}
       />
     {{/each}}
   </div>
