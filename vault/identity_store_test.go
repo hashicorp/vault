@@ -1643,7 +1643,9 @@ func identityStoreLoadingIsDeterministic(t *testing.T, flags *determinismTestFla
 		c.FeatureActivationFlags.ActivateInMem(activationflags.IdentityDeduplication, true)
 		require.NoError(t, err)
 
+		c.identityStore.activateDeduplicationDone = make(chan struct{})
 		err := c.systemBackend.activateIdentityDeduplication(ctx, nil)
+		<-c.identityStore.activateDeduplicationDone
 		require.NoError(t, err)
 		require.IsType(t, &renameResolver{}, c.identityStore.conflictResolver)
 		require.False(t, c.identityStore.disableLowerCasedNames)
@@ -1664,6 +1666,12 @@ func identityStoreLoadingIsDeterministic(t *testing.T, flags *determinismTestFla
 		}
 		prevErr = err
 
+		// Try to drain the channel if it's been created (if deduplication was
+		// enabled), but don't block in case it wasn't!
+		select {
+		case <-c.identityStore.activateDeduplicationDone:
+		default:
+		}
 		// Identity store should be loaded now. Check it's contents.
 		loadedNames := []string{}
 
