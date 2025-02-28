@@ -32,7 +32,7 @@ const validations = {
     {
       validator(model) {
         const { type, username } = model;
-        if (type === 'dynamic') return true;
+        if (!type || type === 'dynamic') return true;
         if (username) return true;
       },
       message: 'username is required',

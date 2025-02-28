@@ -79,35 +79,39 @@ export default class DatabaseRoleEdit extends Component {
   @action
   handleCreateEditRole(evt) {
     evt.preventDefault();
-    this.loading = true;
     const { isValid, state, invalidFormMessage } = this.args.model.validate();
     this.modelValidations = isValid ? null : state;
     this.invalidFormAlert = invalidFormMessage;
 
-    const mode = this.args.mode;
-    const roleSecret = this.args.model;
-    const secretId = roleSecret.name;
-    if (mode === 'create') {
-      roleSecret.set('id', secretId);
-      const path = roleSecret.type === 'static' ? 'static-roles' : 'roles';
-      roleSecret.set('path', path);
+    if (isValid) {
+      this.loading = true;
+      const mode = this.args.mode;
+      const roleSecret = this.args.model;
+      const secretId = roleSecret.name;
+      if (mode === 'create') {
+        roleSecret.set('id', secretId);
+        const path = roleSecret.type === 'static' ? 'static-roles' : 'roles';
+        roleSecret.set('path', path);
+      }
+      return roleSecret
+        .save()
+        .then(() => {
+          try {
+            this.router.transitionTo(SHOW_ROUTE, `role/${secretId}`);
+          } catch (e) {
+            console.debug(e); // eslint-disable-line
+          }
+        })
+        .catch((e) => {
+          const errorMessage = e.errors?.join('. ') || e.message;
+          this.flashMessages.danger(
+            errorMessage || 'Could not save the role. Please check Vault logs for more information.'
+          );
+          this.loading = false;
+        });
+    } else {
+      this.flashMessages.danger(`${this.invalidFormAlert} \n Please address them and try again.`);
     }
-    return roleSecret
-      .save()
-      .then(() => {
-        try {
-          this.router.transitionTo(SHOW_ROUTE, `role/${secretId}`);
-        } catch (e) {
-          console.debug(e); // eslint-disable-line
-        }
-      })
-      .catch((e) => {
-        const errorMessage = e.errors?.join('. ') || e.message;
-        this.flashMessages.danger(
-          errorMessage || 'Could not save the role. Please check Vault logs for more information.'
-        );
-        this.loading = false;
-      });
   }
   @action
   rotateRoleCred(id) {
