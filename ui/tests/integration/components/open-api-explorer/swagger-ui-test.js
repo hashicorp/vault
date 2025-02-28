@@ -66,4 +66,14 @@ module('Integration | Component | open-api-explorer | swagger-ui', function (hoo
 
     envStub.restore();
   });
+
+  test('it should not render operation ids in production', async function (assert) {
+    const envStub = sinon.stub(config, 'environment').value('production');
+
+    await this.renderComponent();
+
+    assert.dom(SELECTORS.operationId).doesNotExist('operation ids are hidden in production environment');
+
+    envStub.restore();
+  });
 });
