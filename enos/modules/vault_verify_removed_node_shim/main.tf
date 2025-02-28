@@ -58,11 +58,6 @@ variable "cluster_port" {
   description = "The cluster port for vault"
 }
 
-variable "cluster_name" {
-  type        = string
-  description = "The name of the vault cluster"
-}
-
 variable "ip_version" {
   type        = number
   description = "The IP version to use for the Vault TCP listeners"
