@@ -61,7 +61,7 @@ module('Integration | Component | open-api-explorer | swagger-ui', function (hoo
     sinon.stub(config, 'environment').value('development');
 
     await this.renderComponent();
-    await waitFor(SELECTORS.container);
+    await waitFor(SELECTORS.operationId);
 
     const id = this.openApiResponse.paths['/auth/token/create'].post.operationId;
     assert.dom(SELECTORS.operationId).hasText(camelize(id), 'renders camelized operation id');
