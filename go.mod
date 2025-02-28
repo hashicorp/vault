@@ -96,7 +96,7 @@ require (
 	github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2 v2.0.10
 	github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms/v2 v2.0.4
 	github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2 v2.0.11
-	github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 v2.0.13
+	github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 v2.0.12
 	github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms/v2 v2.0.13
 	github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2 v2.0.9
 	github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2 v2.0.13
