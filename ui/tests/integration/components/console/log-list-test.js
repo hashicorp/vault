@@ -19,7 +19,7 @@ module('Integration | Component | console/log list', function (hooks) {
 
     this.set('content', listContent);
 
-    await render(hbs`{{console/log-list content=this.content}}`);
+    await render(hbs`<Console::LogList @content={{this.content}} />`);
 
     assert.dom('pre').includesText(`${expectedText}`);
   });
