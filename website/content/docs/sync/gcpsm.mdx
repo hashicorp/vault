@@ -131,7 +131,7 @@ globally when the client has the required permissions.
 
 ### Encryption keys
 
-Vault can leverage customer-managed encryption keys (CMEK) to encrypt secrets in GCP Secret Manager instead of Google-managed keys
+Vault can leverage customer-managed encryption keys (CMEK) instead of Google-managed keys to encrypt secrets in GCP Secret Manager 
 as part of the replication policy. To use CMEK, you must first create key ring(s) and key(s) as desired, ensuring that the key quantity
 corresponds with the planned replication policy. The key rings and keys must be created before configuring the sync destination.
 
@@ -142,10 +142,10 @@ replication location list. GCP key names are expected in the format of the entir
 ## Permissions
 
 Enabling the Secret Manager API and the Cloud Resource Manager API's are prerequisites to using secrets sync with
-GCP Secret Manager. Once both API's are enabled, it may take several minutes for the changes to take effect within
+GCP Secret Manager. Once both APIs are enabled, it may take several minutes for the changes to take effect within
 the GCP project. 
 
-After the necessary API's are active, the credentials given to Vault must have the following permissions to synchronize secrets:
+After the necessary APIs are active, the credentials given to Vault must have the following permissions to synchronize secrets:
 
 ```shell-session
 secretmanager.secrets.create
