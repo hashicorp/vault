@@ -3,14 +3,15 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { isEmpty } from '@ember/utils';
 import ApplicationAdapter from './application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
+import { isEmpty } from '@ember/utils';
 
 export default class TotpAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
   createOrUpdate(store, type, snapshot, requestType) {
+    // TODO, unsure why request type is needed, but updates currently fail
     const { name, backend } = snapshot.record;
     const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot, requestType);
@@ -37,12 +38,8 @@ export default class TotpAdapter extends ApplicationAdapter {
     return this.ajax(this.urlForKey(snapshot.record.backend, id), 'DELETE');
   }
 
-  pathForType() {
-    return 'keys';
-  }
-
   urlForKey(backend, id) {
-    let url = `${this.buildURL()}/${encodePath(backend)}/${this.pathForType()}/`;
+    let url = `${this.buildURL()}/${encodePath(backend)}/keys/`;
 
     if (!isEmpty(id)) {
       url = url + encodePath(id);
@@ -51,7 +48,7 @@ export default class TotpAdapter extends ApplicationAdapter {
     return url;
   }
 
-  optionsForQuery(id, action) {
+  optionsForQuery(action) {
     const data = {};
 
     if (action === 'query') {
@@ -63,7 +60,7 @@ export default class TotpAdapter extends ApplicationAdapter {
 
   fetchByQuery(query, action) {
     const { id, backend } = query;
-    return this.ajax(this.urlForKey(backend, id), 'GET', this.optionsForQuery(id, action)).then((resp) => {
+    return this.ajax(this.urlForKey(backend, id), 'GET', this.optionsForQuery(action)).then((resp) => {
       resp.id = id;
       resp.backend = backend;
       return resp;
