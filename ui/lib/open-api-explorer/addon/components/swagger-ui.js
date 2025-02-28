@@ -8,11 +8,13 @@ import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import parseURL from 'core/utils/parse-url';
-import config from 'open-api-explorer/config/environment';
+import config from 'vault/config/environment';
+import openApiExplorerConfig from 'open-api-explorer/config/environment';
 import { guidFor } from '@ember/object/internals';
 import SwaggerUIBundle from 'swagger-ui-dist/swagger-ui-bundle.js';
+import { camelize } from '@ember/string';
 
-const { APP } = config;
+const { APP } = openApiExplorerConfig;
 
 export default class SwaggerUiComponent extends Component {
   @service auth;
@@ -49,16 +51,41 @@ export default class SwaggerUiComponent extends Component {
     };
   }
 
+  // the operationId values in the spec are dasherized
+  // camelize the values so they match the function names in the generated API client SDK
+  CamelizeOperationIdPlugin() {
+    return {
+      wrapComponents: {
+        operation:
+          (Original, { React }) =>
+          (props) => {
+            const { operation } = props;
+            const operationId = operation.get('operationId');
+
+            if (operationId) {
+              return React.createElement(Original, {
+                ...props,
+                operation: operation.set('operationId', camelize(operationId)),
+              });
+            }
+
+            return React.createElement(Original, props);
+          },
+      },
+    };
+  }
+
   CONFIG = (SwaggerUIBundle, componentInstance) => {
     return {
       dom_id: `#${componentInstance.inputId}`,
       url: '/v1/sys/internal/specs/openapi',
       deepLinking: false,
       presets: [SwaggerUIBundle.presets.apis],
-      plugins: [SwaggerUIBundle.plugins.DownloadUrl, this.SearchFilterPlugin],
+      plugins: [SwaggerUIBundle.plugins.DownloadUrl, this.SearchFilterPlugin, this.CamelizeOperationIdPlugin],
       // 'list' expands tags, but not operations
       docExpansion: 'list',
       operationsSorter: 'alpha',
+      displayOperationId: config.environment === 'development',
       filter: true,
       // this makes sure we show the x-vault- options
       showExtensions: true,
