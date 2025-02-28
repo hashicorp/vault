@@ -3,8 +3,10 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
-## 1.19.0-rc1 Enterprise
+## 1.19.0-rc1
 ### February 20, 2025
+
+**Enterprise LTS:** Vault Enterprise 1.19 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
 
 SECURITY:
 
@@ -226,6 +228,46 @@ Unblocks customers that were stuck in a failing loop when attempting to rotate s
 * ui: MFA methods now display the namespace path instead of the namespace id. [[GH-29588](https://github.com/hashicorp/vault/pull/29588)]
 * ui: No longer running decodeURIComponent on KVv2 list view allowing percent encoded data-octets in path name. [[GH-28698](https://github.com/hashicorp/vault/pull/28698)]
 * vault/diagnose: Fix time to expiration reporting within the TLS verification to not be a month off. [[GH-29128](https://github.com/hashicorp/vault/pull/29128)]
+
+## 1.18.5
+### February 25, 2025
+
+SECURITY:
+
+* raft/snapshotagent (enterprise): upgrade raft-snapshotagent to v0.2.0
+
+CHANGES:
+
+* core: Bump Go version to 1.23.6
+* raft/autopilot (enterprise): Alongside the CE autopilot update, update raft-autopilot-enterprise library to v0.3.0 and add enterprise-specific regression testing.
+* secrets/openldap: Update plugin to v0.14.5 [[GH-29551](https://github.com/hashicorp/vault/pull/29551)]
+
+FEATURES:
+
+* **Plugins**: Allow Enterprise plugins to run externally on Vault Enterprise only.
+
+IMPROVEMENTS:
+
+* raft/autopilot: We've updated the autopilot reconciliation logic (by updating the raft-autopilot dependency to v0.3.0) to avoid artificially increasing the quorum in presence of an unhealthy node. Now autopilot will start the reconciliation process by attempting to demote a failed voter node before any promotions, fixing the issue where Vault would initially increase quorum when faced with a failure of a voter node. In certain configurations, especially when using Vault Enterprise Redundancy Zones and losing a voter then a non-voter in quick succession, this would lead to a loss of quorum and cluster failure. [[GH-29306](https://github.com/hashicorp/vault/pull/29306)]
+* ui: Application static breadcrumbs should be formatted in title case. [[GH-29206](https://github.com/hashicorp/vault/pull/29206)]
+
+BUG FIXES:
+
+* activity: Show activity records from clients created in deleted namespaces when activity log is queried from admin namespace. [[GH-29432](https://github.com/hashicorp/vault/pull/29432)]
+* core/managed-keys (enterprise): Allow mechanism numbers above 32 bits in PKCS#11 managed keys.
+* core: Fix bug when if failing to persist the barrier keyring to track encryption counts, the number of outstanding encryptions remains added to the count, overcounting encryptions. [[GH-29506](https://github.com/hashicorp/vault/pull/29506)]
+* database: Fix a bug where static role passwords are erroneously rotated across backend restarts when using skip import rotation. [[GH-29537](https://github.com/hashicorp/vault/pull/29537)]
+* export API: Normalize the start_date parameter to the start of the month as is done in the sys/counters API to keep the results returned from both of the API's consistent. [[GH-29562](https://github.com/hashicorp/vault/pull/29562)]
+* export API: Normalize the start_date parameter to the start of the month as is done in the sys/counters API to keep the results returned from both of the API's consistent.
+* identity/oidc (enterprise): Fix delays in rotation and invalidation of OIDC keys when there are too many namespaces.
+The Cache-Control header returned by the identity/oidc/.well-known/keys endpoint now depends only on the named keys for
+the queried namespace. [[GH-29312](https://github.com/hashicorp/vault/pull/29312)]
+* secrets-sync (enterprise): Add new parameters for destination configs to specify allowlists for IP's and ports.
+* secrets/pki: fixes issue #28749 requiring all chains to be single line of authority. [[GH-29342](https://github.com/hashicorp/vault/pull/29342)]
+* ui (enterprise): Fixes token renewal to ensure capability checks are performed in the relevant namespace, resolving 'Not authorized' errors for resources that users have permission to access. [[GH-29416](https://github.com/hashicorp/vault/pull/29416)]
+* ui/database: Fixes 'cannot update static username' error when updating static role's rotation period [[GH-29498](https://github.com/hashicorp/vault/pull/29498)]
+* ui: Fixes text overflow on Secrets engines and Auth Engines list views for long names & descriptions [[GH-29430](https://github.com/hashicorp/vault/pull/29430)]
+* ui: MFA methods now display the namespace path instead of the namespace id. [[GH-29588](https://github.com/hashicorp/vault/pull/29588)]
 
 ## 1.18.4
 ### January 30, 2025
@@ -569,6 +611,42 @@ use versioned plugins. [[GH-27881](https://github.com/hashicorp/vault/pull/27881
 * ui: fix namespace picker not working when in small screen where the sidebar is collapsed by default. [[GH-27728](https://github.com/hashicorp/vault/pull/27728)]
 * ui: fixes renew-self being called right after login for non-renewable tokens [[GH-28204](https://github.com/hashicorp/vault/pull/28204)]
 * ui: fixes toast (flash) alert message saying "created" when deleting a kv v2 secret [[GH-28093](https://github.com/hashicorp/vault/pull/28093)]
+
+## 1.17.12 Enterprise
+### February 25, 2025
+
+SECURITY:
+
+* raft/snapshotagent (enterprise): upgrade raft-snapshotagent to v0.2.0
+
+CHANGES:
+
+* core: Bump Go version to 1.23.6
+* raft/autopilot (enterprise): Alongside the CE autopilot update, update raft-autopilot-enterprise library to v0.3.0 and add enterprise-specific regression testing.
+* secrets/openldap: Update plugin to v0.13.5
+
+FEATURES:
+
+* **Plugins**: Allow Enterprise plugins to run externally on Vault Enterprise only.
+
+IMPROVEMENTS:
+
+* raft/autopilot: We've updated the autopilot reconciliation logic (by updating the raft-autopilot dependency to v0.3.0) to avoid artificially increasing the quorum in presence of an unhealthy node. Now autopilot will start the reconciliation process by attempting to demote a failed voter node before any promotions, fixing the issue where Vault would initially increase quorum when faced with a failure of a voter node. In certain configurations, especially when using Vault Enterprise Redundancy Zones and losing a voter then a non-voter in quick succession, this would lead to a loss of quorum and cluster failure. [[GH-29306](https://github.com/hashicorp/vault/pull/29306)]
+* ui: Application static breadcrumbs should be formatted in title case. [[GH-29206](https://github.com/hashicorp/vault/pull/29206)]
+
+BUG FIXES:
+
+* activity: Show activity records from clients created in deleted namespaces when activity log is queried from admin namespace. [[GH-29432](https://github.com/hashicorp/vault/pull/29432)]
+* core/managed-keys (enterprise): Allow mechanism numbers above 32 bits in PKCS#11 managed keys.
+* core: Fix bug when if failing to persist the barrier keyring to track encryption counts, the number of outstanding encryptions remains added to the count, overcounting encryptions. [[GH-29506](https://github.com/hashicorp/vault/pull/29506)]
+* identity/oidc (enterprise): Fix delays in rotation and invalidation of OIDC keys when there are too many namespaces.
+The Cache-Control header returned by the identity/oidc/.well-known/keys endpoint now depends only on the named keys for
+the queried namespace. [[GH-29312](https://github.com/hashicorp/vault/pull/29312)]
+* secrets-sync (enterprise): Add new parameters for destination configs to specify allowlists for IP's and ports.
+* secrets/pki: fixes issue #28749 requiring all chains to be single line of authority. [[GH-29342](https://github.com/hashicorp/vault/pull/29342)]
+* ui (enterprise): Fixes token renewal to ensure capability checks are performed in the relevant namespace, resolving 'Not authorized' errors for resources that users have permission to access. [[GH-29416](https://github.com/hashicorp/vault/pull/29416)]
+* ui/database: Fixes 'cannot update static username' error when updating static role's rotation period [[GH-29498](https://github.com/hashicorp/vault/pull/29498)]
+* ui: Fixes text overflow on Secrets engines and Auth Engines list views for long names & descriptions [[GH-29430](https://github.com/hashicorp/vault/pull/29430)]
 
 ## 1.17.11 Enterprise
 ### January 30, 2025
@@ -1066,6 +1144,39 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 * ui: fix issue where a month without new clients breaks the client count dashboard [[GH-27352](https://github.com/hashicorp/vault/pull/27352)]
 * ui: fixed a bug where the replication pages did not update display when navigating between DR and performance [[GH-26325](https://github.com/hashicorp/vault/pull/26325)]
 * ui: fixes undefined start time in filename for downloaded client count attribution csv [[GH-26485](https://github.com/hashicorp/vault/pull/26485)]
+
+## 1.16.16 Enterprise
+### February 25, 2025
+
+**Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
+SECURITY:
+
+* raft/snapshotagent (enterprise): upgrade raft-snapshotagent to v0.2.0
+
+CHANGES:
+
+* build: Drop `netbsd/386` and `netbsd/arm` builds as downstream modules no longer support them.
+* core: Bump Go version to 1.23.6.
+* raft/autopilot (enterprise): Alongside the CE autopilot update, update raft-autopilot-enterprise library to v0.3.0 and add enterprise-specific regression testing.
+* secrets/openldap: Update plugin to v0.12.4
+
+FEATURES:
+
+* **Plugins**: Allow Enterprise plugins to run externally on Vault Enterprise only.
+
+IMPROVEMENTS:
+
+* raft/autopilot: We've updated the autopilot reconciliation logic (by updating the raft-autopilot dependency to v0.3.0) to avoid artificially increasing the quorum in presence of an unhealthy node. Now autopilot will start the reconciliation process by attempting to demote a failed voter node before any promotions, fixing the issue where Vault would initially increase quorum when faced with a failure of a voter node. In certain configurations, especially when using Vault Enterprise Redundancy Zones and losing a voter then a non-voter in quick succession, this would lead to a loss of quorum and cluster failure. [[GH-29306](https://github.com/hashicorp/vault/pull/29306)]
+
+BUG FIXES:
+
+* activity: Show activity records from clients created in deleted namespaces when activity log is queried from admin namespace. [[GH-29432](https://github.com/hashicorp/vault/pull/29432)]
+* core/managed-keys (enterprise): Allow mechanism numbers above 32 bits in PKCS#11 managed keys.
+* core: Fix bug when if failing to persist the barrier keyring to track encryption counts, the number of outstanding encryptions remains added to the count, overcounting encryptions. [[GH-29506](https://github.com/hashicorp/vault/pull/29506)]
+* secrets-sync (enterprise): Add new parameters for destination configs to specify allowlists for IP's and ports.
+* secrets/pki: fixes issue #28749 requiring all chains to be single line of authority. [[GH-29342](https://github.com/hashicorp/vault/pull/29342)]
+* ui/database: Fixes 'cannot update static username' error when updating static role's rotation period [[GH-29498](https://github.com/hashicorp/vault/pull/29498)]
 
 ## 1.16.15 Enterprise
 ### January 30, 2025

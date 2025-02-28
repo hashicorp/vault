@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -16,6 +17,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -62,6 +64,15 @@ func (c *Core) generateAuditTestProbe() (*logical.LogInput, error) {
 	}, nil
 }
 
+// auditBackendEntryAddrs maps a backend type to entry options that may need
+// to be normalized for conformance. All audit backends must have an entry.
+var auditBackendEntryAddrs = map[string][]string{
+	"file":   {},
+	"noop":   {},
+	"socket": {"address"},
+	"syslog": {},
+}
+
 // enableAudit is used to enable a new audit backend that didn't exist in storage beforehand.
 func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage bool) error {
 	// Check ahead of time if the type of audit device we're trying to enable is configured in Vault.
@@ -82,6 +93,17 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	// Ensure there is a name
 	if entry.Path == "/" {
 		return fmt.Errorf("backend path must be specified: %w", audit.ErrExternalOptions)
+	}
+
+	// Normalize any entries that might have addresses
+	keys, ok := auditBackendEntryAddrs[entry.Type]
+	if !ok {
+		return fmt.Errorf("backend type '%s' is missing normalization entry", entry.Type)
+	}
+	for k, v := range entry.Options {
+		if slices.Contains(keys, k) {
+			entry.Options[k] = configutil.NormalizeAddr(v)
+		}
 	}
 
 	if skipTestRaw, ok := entry.Options["skip_test"]; ok {

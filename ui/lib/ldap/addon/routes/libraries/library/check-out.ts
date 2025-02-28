@@ -15,7 +15,6 @@ import type Controller from '@ember/controller';
 import type Transition from '@ember/routing/transition';
 import type { Breadcrumb } from 'vault/vault/app-types';
 import { LdapLibraryCheckOutCredentials } from 'vault/vault/adapters/ldap/library';
-import type AdapterError from 'ember-data/adapter'; // eslint-disable-line ember/use-ember-data-rfc-395-imports
 import { ldapBreadcrumbs, libraryRoutes } from 'ldap/utils/ldap-breadcrumbs';
 
 interface LdapLibraryCheckOutController extends Controller {
@@ -36,7 +35,7 @@ export default class LdapLibraryCheckOutRoute extends Route {
     }
   }
   model(_params: object, transition: Transition) {
-    const ttl = transition.to?.queryParams['ttl'];
+    const ttl = transition.to?.queryParams['ttl'] as string;
     const library = this.modelFor('libraries.library') as LdapLibraryModel;
     return library.checkOutAccount(ttl);
   }
@@ -59,7 +58,7 @@ export default class LdapLibraryCheckOutRoute extends Route {
   }
 
   @action
-  error(error: AdapterError) {
+  error(error: Error) {
     // if check-out fails, return to library details route
     const message = errorMessage(error, 'Error checking out account. Please try again or contact support.');
     this.flashMessages.danger(message);

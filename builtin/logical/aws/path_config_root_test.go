@@ -29,7 +29,58 @@ func TestBackend_PathConfigRoot(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Create operation
 	configData := map[string]interface{}{
+		"access_key":                 "AKIAEXAMPLE",
+		"secret_key":                 "RandomData",
+		"region":                     "us-west-2",
+		"iam_endpoint":               "https://iam.amazonaws.com",
+		"sts_endpoint":               "https://sts.us-west-2.amazonaws.com",
+		"sts_region":                 "",
+		"sts_fallback_endpoints":     []string{},
+		"sts_fallback_regions":       []string{},
+		"role_arn":                   "",
+		"identity_token_audience":    "",
+		"identity_token_ttl":         int64(0),
+		"rotation_schedule":          "",
+		"rotation_period":            time.Duration(0).Seconds(),
+		"rotation_window":            time.Duration(0).Seconds(),
+		"disable_automated_rotation": false,
+	}
+
+	configReq := &logical.Request{
+		Operation: logical.CreateOperation,
+		Storage:   config.StorageView,
+		Path:      "config/root",
+		Data:      configData,
+	}
+
+	resp, err := b.HandleRequest(context.Background(), configReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: config writing failed: resp:%#v\n err: %v", resp, err)
+	}
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Storage:   config.StorageView,
+		Path:      "config/root",
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: config reading failed: resp:%#v\n err: %v", resp, err)
+	}
+
+	// Ensure default values are enforced
+	configData["max_retries"] = -1
+	configData["username_template"] = defaultUserNameTemplate
+
+	delete(configData, "secret_key")
+	require.Equal(t, configData, resp.Data)
+	if !reflect.DeepEqual(resp.Data, configData) {
+		t.Errorf("bad: expected to read config root as %#v, got %#v instead", configData, resp.Data)
+	}
+
+	// Update operation
+	configData = map[string]interface{}{
 		"access_key":                 "AKIAEXAMPLE",
 		"secret_key":                 "RandomData",
 		"region":                     "us-west-2",
@@ -49,14 +100,14 @@ func TestBackend_PathConfigRoot(t *testing.T) {
 		"disable_automated_rotation": false,
 	}
 
-	configReq := &logical.Request{
+	configReq = &logical.Request{
 		Operation: logical.UpdateOperation,
 		Storage:   config.StorageView,
 		Path:      "config/root",
 		Data:      configData,
 	}
 
-	resp, err := b.HandleRequest(context.Background(), configReq)
+	resp, err = b.HandleRequest(context.Background(), configReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: config writing failed: resp:%#v\n err: %v", resp, err)
 	}
