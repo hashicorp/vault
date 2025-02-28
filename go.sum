@@ -1108,8 +1108,8 @@ github.com/go-git/go-git/v5 v5.11.0/go.mod h1:6GFcX2P3NM7FPBfpePbpLd21XxsgdAt+lK
 github.com/go-gl/glfw v0.0.0-20190409004039-e6da0acd62b1/go.mod h1:vR7hzQXu2zJy9AVAgeJqvqgH9Q5CA+iKCZ2gyEVpxRU=
 github.com/go-gl/glfw/v3.3/glfw v0.0.0-20191125211704-12ad95a8df72/go.mod h1:tQ2UAYgL5IevRw8kRxooKSPJfGvJ9fJQFa0TUsXzTg8=
 github.com/go-gl/glfw/v3.3/glfw v0.0.0-20200222043503-6f7a984d4dc4/go.mod h1:tQ2UAYgL5IevRw8kRxooKSPJfGvJ9fJQFa0TUsXzTg8=
-github.com/go-jose/go-jose/v3 v3.0.3 h1:fFKWeig/irsp7XD2zBxvnmA/XaRWp5V3CBsZXJF7G7k=
-github.com/go-jose/go-jose/v3 v3.0.3/go.mod h1:5b+7YgP7ZICgJDBdfjZaIt+H/9L9T/YQrVfLAMboGkQ=
+github.com/go-jose/go-jose/v3 v3.0.4 h1:Wp5HA7bLQcKnf6YYao/4kpRpVMp/yf6+pJKV8WFSaNY=
+github.com/go-jose/go-jose/v3 v3.0.4/go.mod h1:5b+7YgP7ZICgJDBdfjZaIt+H/9L9T/YQrVfLAMboGkQ=
 github.com/go-jose/go-jose/v4 v4.0.5 h1:M6T8+mKZl/+fNNuFHvGIzDz7BTLQPIounk/b9dw3AaE=
 github.com/go-jose/go-jose/v4 v4.0.5/go.mod h1:s3P1lRrkT8igV8D9OjyL4WRyHvjB6a4JSllnOrmmBOA=
 github.com/go-kit/kit v0.8.0/go.mod h1:xBxKIO96dXMWWy0MnWVtmwkA9/13aqxPnvrjFYMA2as=
@@ -1434,8 +1434,8 @@ github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms/v2 v2.0.4 h1:8XgCt3ZDf
 github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms/v2 v2.0.4/go.mod h1:Inx0DLGr58Un5TerS8je0SGZwKKihotqaxqoAKHpSmk=
 github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2 v2.0.11 h1:J9zGa9SlcOHT3SQTj0Vv3shHo0anWbs58weURGCgChI=
 github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2 v2.0.11/go.mod h1:iAOCu7/lG5eugg8+k7NVvQt0IpWT8s2Q9wnMtC/guM4=
-github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 v2.0.13 h1:Vh/i9Q0/2dpbK5FUPnpZJSIE6iPLe471Yvmi+CPnpS0=
-github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 v2.0.13/go.mod h1:fWxrv9YkAMqtsISde5mcutoMvuiH4kyg1AlDzzmqRh8=
+github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 v2.0.12 h1:ZL6jMQVOOvtog9/L9MLR1J7VssliIBVEFQlzKC9nn2c=
+github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 v2.0.12/go.mod h1:qAc0pzuhbesYKpFUmCWCPiOo6XdgpGEeYSE7Y7EXfgM=
 github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms/v2 v2.0.13 h1:NGBZnF+yPRZ3gjFl69Y2m58/U0iyB2oH9HaznL9tekA=
 github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms/v2 v2.0.13/go.mod h1:4Xb+6d8VPeDcUNuh4toPqJlDpkajeJyIQeg36TtWhKw=
 github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2 v2.0.9 h1:rlKOPHzZ41QeV/H6UIX2wVkPhLzVK+nKhLRIbIAZ0Yc=
@@ -1569,8 +1569,8 @@ github.com/hashicorp/vault-plugin-auth-azure v0.20.1 h1:oKbzERNhIMJvECQaouT8BKnn
 github.com/hashicorp/vault-plugin-auth-azure v0.20.1/go.mod h1:9SFxR96yYv7vxDvZZady3K0YKguSNU53d8WSrshHjlQ=
 github.com/hashicorp/vault-plugin-auth-cf v0.20.0 h1:KOdNy0uSffjw0sOU9zg9JgdCkuRPcqOjOIxyV2NZLjg=
 github.com/hashicorp/vault-plugin-auth-cf v0.20.0/go.mod h1:SO35/C2iS12kIqIoux4AB2QSQ2IO+hbZ4/UQrQDyawo=
-github.com/hashicorp/vault-plugin-auth-gcp v0.20.0 h1:lLraPAtOZtgVOp8gKDAQknNtrfc8cwENkQYQGDhsWA0=
-github.com/hashicorp/vault-plugin-auth-gcp v0.20.0/go.mod h1:2b9u99wmpmfBdohZO2PvqebYsaSfm8udfIm6KqXFXF0=
+github.com/hashicorp/vault-plugin-auth-gcp v0.20.1 h1:FlucOwK3h67+ThgAf5B2wHYxoI96ryAgyWThe5piE4g=
+github.com/hashicorp/vault-plugin-auth-gcp v0.20.1/go.mod h1:XVsmYHrJ0dByHIRXW7crHnXwV+QwZEOjaZBO1JlMQ5I=
 github.com/hashicorp/vault-plugin-auth-jwt v0.23.0 h1:LErXihivT7I8ZWB7jzQlp/IA54PdMWCaXNdkjmB0Z3c=
 github.com/hashicorp/vault-plugin-auth-jwt v0.23.0/go.mod h1:a/PUlLU88uUe1GtUTdSDkp/0HVXM7p9CY2vcwEh7NeU=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.14.0 h1:kJGBKDk8lJXftM8PVG9ars3NWHOdylJaeutTsI/7E0w=
@@ -1599,8 +1599,8 @@ github.com/hashicorp/vault-plugin-secrets-alicloud v0.19.0 h1:XH1typO/R5RlyyW5cm
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.19.0/go.mod h1:MxfMowH1VenMCtixd/mDqq9z10CBobzOMZJOXRLi0TA=
 github.com/hashicorp/vault-plugin-secrets-azure v0.21.1 h1:+9iHg7P71vVZ+1muAkao28tl6bf9qWw3VRWZmKSTswI=
 github.com/hashicorp/vault-plugin-secrets-azure v0.21.1/go.mod h1:IwfPcNyzaigu3LFy8yp+f1TVgBNdtJtTMERWhtDrXqw=
-github.com/hashicorp/vault-plugin-secrets-gcp v0.21.0 h1:ZVVVVWLDC/PxmKU92eAvIRQgFjDlnJtqWa8OF+RnK7Y=
-github.com/hashicorp/vault-plugin-secrets-gcp v0.21.0/go.mod h1:GCYpFSIzl00jeub1Yh80fnMLLnV88poCw3+Odpx2u/4=
+github.com/hashicorp/vault-plugin-secrets-gcp v0.21.1 h1:xEXWqoreWz4ZeZOaLbGpkUHDnJdsO7YADfARxoecsJg=
+github.com/hashicorp/vault-plugin-secrets-gcp v0.21.1/go.mod h1:PJwUCF6t95OSpkM15YJZJO8eSPYf/SjvEsrBJZrkzk8=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.20.0 h1:gFPxVPaFJjyPUF3GE7LwgGkVkQ+BA7BE775IfdznZ5M=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.20.0/go.mod h1:SgKyMgD4+Jj4jDRgFOactHENY7Vov6Hi0UdYWVO9NGY=
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.10.0 h1:Fw7s2f1WNW1GZgd3jb+7mkx6jPH528AFwWMHg9LarCQ=
