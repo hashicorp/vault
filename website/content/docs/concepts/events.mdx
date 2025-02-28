@@ -140,8 +140,7 @@ Here is an example event notification in JSON format:
 <Note title="Note">
 
 For multi-node Vault deployments, Vault only accepts subscriptions on the active node and performance standbys.
-If a client attempts to subscribe to events on a [non-performance standby node](/vault/docs/enterprise/performance-standby#disabling-performance-standbys), Vault will respond with a redirect to the active node.
-Vault uses the [`api_addr`](/vault/docs/configuration#api_addr) of the active node's configuration to route the redirect.
+Vault reroutes subscription requests made to [non-performance standby nodes](/vault/docs/enterprise/performance-standby#disabling-performance-standbys) to the active node based on the [`api_addr`](/vault/docs/configuration#api_addr) configuration setting on the active node.
 
 Vault deployments with performance replication must subscribe to events on the
 primary performance cluster. Vault ignores subscriptions made from secondary
