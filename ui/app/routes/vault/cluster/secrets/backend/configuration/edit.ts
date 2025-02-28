@@ -77,7 +77,8 @@ export default class SecretsBackendConfigurationEdit extends Route {
         } else {
           model[standardizedKey] = configModel;
         }
-      } catch (e: AdapterError) {
+      } catch (error) {
+        const e = error as AdapterError;
         // For most models if the adapter returns a 404, we want to create a new record.
         // The ssh secret engine however returns a 400 if the CA is not configured.
         // For ssh's 400 error, we want to create the CA config model.

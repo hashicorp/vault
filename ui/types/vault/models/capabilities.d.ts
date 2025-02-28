@@ -4,9 +4,9 @@
  */
 
 import ComputedProperty from '@ember/object/computed';
-import Model from '@ember-data/model';
+import { Model } from 'vault/app-types';
 
-interface CapabilitiesModel extends Model {
+type CapabilitiesModel = Model & {
   path: string;
   capabilities: Array<string>;
   canCreate: ComputedProperty<boolean | undefined>;
@@ -20,7 +20,7 @@ interface CapabilitiesModel extends Model {
   // inferring type from key name
   allowedParameters: Array<string>;
   deniedParameters: Array<string>;
-}
+};
 
 export default CapabilitiesModel;
 export const SUDO_PATHS: string[];
