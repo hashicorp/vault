@@ -2,32 +2,14 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
-
 import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { getRoleFields } from 'vault/utils/model-helpers/database-helpers';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { withModelValidations } from 'vault/decorators/model-validations';
-
 const validations = {
-  database: [
-    {
-      validator(model) {
-        const { database } = model;
-        if (database) return true;
-      },
-      message: 'Database is required',
-    },
-  ],
-  type: [
-    {
-      validator(model) {
-        const { type } = model;
-        if (type) return true;
-      },
-      message: 'role type is required',
-    },
-  ],
+  database: [{ type: 'presence', message: 'Database is required.' }],
+  type: [{ type: 'presence', message: 'Type is required.' }],
   username: [
     {
       validator(model) {
@@ -35,24 +17,15 @@ const validations = {
         if (!type || type === 'dynamic') return true;
         if (username) return true;
       },
-      message: 'username is required',
+      message: 'Username is required.',
     },
   ],
 };
 @withModelValidations(validations)
 export default class RoleModel extends Model {
   idPrefix = 'role/';
-
-  @attr('string', {
-    readOnly: true,
-  })
-  backend;
-
-  @attr('string', {
-    label: 'Role name',
-  })
-  name;
-
+  @attr('string', { readOnly: true }) backend;
+  @attr('string', { label: 'Role name' }) name;
   @attr('array', {
     label: 'Connection name',
     editType: 'searchSelect',
@@ -63,14 +36,12 @@ export default class RoleModel extends Model {
     subText: 'The database connection for which credentials will be generated.',
   })
   database;
-
   @attr('string', {
     label: 'Type of role',
     noDefault: true,
     possibleValues: ['static', 'dynamic'],
   })
   type;
-
   @attr({
     editType: 'ttl',
     defaultValue: '1h',
@@ -79,67 +50,54 @@ export default class RoleModel extends Model {
     defaultShown: 'Engine default',
   })
   default_ttl;
-
   @attr({
     editType: 'ttl',
     defaultValue: '24h',
-    label: 'Generated credentials’s maximum Time-to-Live (Max TTL)',
+    label: 'Generated credentials’s maximum Time-to-Live (Max TTL).',
     helperTextDisabled: 'Vault will use a TTL of 24 hours.',
     defaultShown: 'Engine default',
   })
   max_ttl;
-
-  @attr('string', {
-    subText: 'The database username that this Vault role corresponds to.',
-  })
-  username;
-
+  @attr('string', { subText: 'The database username that this Vault role corresponds to.' }) username;
   @attr({
     editType: 'ttl',
     defaultValue: '24h',
     helperTextDisabled:
       'Specifies the amount of time Vault should wait before rotating the password. The minimum is 5 seconds. Default is 24 hours.',
-    helperTextEnabled: 'Vault will rotate password after',
+    helperTextEnabled: 'Vault will rotate password after.',
   })
   rotation_period;
-
   @attr({
     label: 'Skip initial rotation',
     editType: 'boolean',
     defaultValue: false,
-    subText: 'When unchecked, Vault automatically rotates the password upon creation',
+    subText: 'When unchecked, Vault automatically rotates the password upon creation.',
   })
   skip_import_rotation;
-
   @attr('array', {
     editType: 'stringArray',
   })
   creation_statements;
-
   @attr('array', {
     editType: 'stringArray',
     defaultShown: 'Default',
   })
   revocation_statements;
-
   @attr('array', {
     editType: 'stringArray',
     defaultShown: 'Default',
   })
   rotation_statements;
-
   @attr('array', {
     editType: 'stringArray',
     defaultShown: 'Default',
   })
   rollback_statements;
-
   @attr('array', {
     editType: 'stringArray',
     defaultShown: 'Default',
   })
   renew_statements;
-
   @attr('string', {
     editType: 'json',
     allowReset: true,
@@ -147,7 +105,6 @@ export default class RoleModel extends Model {
     defaultShown: 'Default',
   })
   creation_statement;
-
   @attr('string', {
     editType: 'json',
     allowReset: true,
@@ -155,14 +112,12 @@ export default class RoleModel extends Model {
     defaultShown: 'Default',
   })
   revocation_statement;
-
   /* FIELD ATTRIBUTES */
   get fieldAttrs() {
     // Main fields on edit/create form
     const fields = ['name', 'database', 'type'];
     return expandAttributeMeta(this, fields);
   }
-
   get showFields() {
     let fields = ['name', 'database', 'type'];
     fields = fields.concat(getRoleFields(this.type)).concat(['creation_statements']);
@@ -172,7 +127,6 @@ export default class RoleModel extends Model {
     }
     return expandAttributeMeta(this, fields);
   }
-
   get roleSettingAttrs() {
     // logic for which get displayed is on DatabaseRoleSettingForm
     const allRoleSettingFields = [
@@ -191,11 +145,9 @@ export default class RoleModel extends Model {
     ];
     return expandAttributeMeta(this, allRoleSettingFields);
   }
-
   /* CAPABILITIES */
   // only used for secretPath
   @attr('string', { readOnly: true }) path;
-
   @lazyCapabilities(apiPath`${'backend'}/${'path'}/${'id'}`, 'backend', 'path', 'id') secretPath;
   @lazyCapabilities(apiPath`${'backend'}/roles/+`, 'backend') dynamicPath;
   @lazyCapabilities(apiPath`${'backend'}/static-roles/+`, 'backend') staticPath;
@@ -207,31 +159,24 @@ export default class RoleModel extends Model {
   get canEditRole() {
     return this.secretPath.get('canUpdate');
   }
-
   get canDelete() {
     return this.secretPath.get('canDelete');
   }
-
   get canCreateDynamic() {
     return this.dynamicPath.get('canCreate');
   }
-
   get canCreateStatic() {
     return this.staticPath.get('canCreate');
   }
-
   get canGenerateCredentials() {
     return this.credentialPath.get('canRead');
   }
-
   get canGetCredentials() {
     return this.staticCredentialPath.get('canRead');
   }
-
   get canUpdateDb() {
     return this.databasePath.get('canUpdate');
   }
-
   get canRotateRoleCredentials() {
     return this.rotateRolePath.get('canUpdate');
   }

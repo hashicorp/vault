@@ -37,7 +37,9 @@ module('Integration | Component | database-role-edit', function (hooks) {
     });
     this.store.pushPayload('database-role', {
       modelName: 'database/role',
+      database: ['my-mongodb-database'],
       id: 'test-role',
+      type: 'static',
       name: 'test-role',
     });
     this.modelStatic = this.store.peekRecord('database/role', 'my-static-role');
