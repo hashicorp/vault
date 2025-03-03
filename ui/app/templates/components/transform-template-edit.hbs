@@ -5,62 +5,51 @@
 
 <PageHeader as |p|>
   <p.top>
-    <KeyValueHeader
-      @baseKey={{hash display=this.model.id id=this.model.idForNav}}
-      @path="vault.cluster.secrets.backend.list"
-      @mode={{this.mode}}
-      @root={{this.root}}
-      @showCurrent={{true}}
-    />
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header="true">
-      {{#if (eq this.mode "create")}}
+      {{#if (eq @mode "create")}}
         Create Template
-      {{else if (eq this.mode "edit")}}
+      {{else if (eq @mode "edit")}}
         Edit Template
       {{else}}
         Template
-        <code>{{this.model.id}}</code>
+        <code>{{@model.id}}</code>
       {{/if}}
     </h1>
   </p.levelLeft>
 </PageHeader>
 
-{{#if (eq this.mode "show")}}
+{{#if (eq @mode "show")}}
   <Toolbar>
     <ToolbarActions>
-      {{#if this.model.updatePath.canDelete}}
+      {{#if @model.updatePath.canDelete}}
         <Hds::Button
           @text="Delete template"
           @color="secondary"
           class="toolbar-button"
-          {{on "click" (action "delete")}}
+          {{on "click" this.onDelete}}
           data-test-transformation-template-delete
         />
         <div class="toolbar-separator"></div>
       {{/if}}
-      {{#if this.model.updatePath.canUpdate}}
-        <ToolbarSecretLink
-          @secret={{concat this.model.idPrefix this.model.id}}
-          @mode="edit"
-          data-test-edit-link={{true}}
-          @replace={{true}}
-        >
+      {{#if @model.updatePath.canUpdate}}
+        <ToolbarLink @route="vault.cluster.secrets.backend.edit" @model={{concat "template/" @model.id}} data-test-edit-link>
           Edit template
-        </ToolbarSecretLink>
+        </ToolbarLink>
       {{/if}}
     </ToolbarActions>
   </Toolbar>
 {{/if}}
 
-{{#if (or (eq this.mode "edit") (eq this.mode "create"))}}
-  <form onsubmit={{action "createOrUpdate" this.mode}}>
+{{#if (or (eq @mode "edit") (eq @mode "create"))}}
+  <form onsubmit={{this.createOrUpdate}}>
     <div class="box is-sideless is-fullwidth is-marginless">
-      <MessageError @model={{this.model}} />
       <NamespaceReminder @mode={{this.mode}} @noun="transform template" />
-      {{#each this.model.writeAttrs as |attr|}}
-        {{#if (and (eq attr.name "name") (eq this.mode "edit"))}}
+      <MessageError @errorMessage={{this.errorMessage}} />
+      {{#each @model.writeAttrs as |attr|}}
+        {{#if (and (eq attr.name "name") (eq @mode "edit"))}}
           <label for={{attr.name}} class="is-label">
             {{attr.options.label}}
           </label>
@@ -72,32 +61,32 @@
             id={{attr.name}}
             autocomplete="off"
             spellcheck="false"
-            value={{or (get this.model attr.name) attr.options.defaultValue}}
+            value={{or (get @model attr.name) attr.options.defaultValue}}
             readonly={{true}}
             class="field input is-readOnly"
             type={{attr.type}}
           />
         {{else}}
           {{#if (eq attr.name "alphabet")}}
-            <TransformAdvancedTemplating @model={{this.model}} />
+            <TransformAdvancedTemplating @model={{@model}} />
           {{/if}}
-          <FormField data-test-field @attr={{attr}} @model={{this.model}} />
+          <FormField data-test-field @attr={{attr}} @model={{@model}} />
         {{/if}}
       {{/each}}
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
       <Hds::ButtonSet>
         <Hds::Button
-          @text={{if (eq this.mode "create") "Create template" "Save"}}
+          @text={{if (eq @mode "create") "Create template" "Save"}}
           type="submit"
           data-test-template-transform-create
         />
-        {{#if (eq this.mode "create")}}
+        {{#if (eq @mode "create")}}
           <Hds::Button
             @text="Cancel"
             @color="secondary"
             @route="vault.cluster.secrets.backend.list-root"
-            @model={{this.model.backend}}
+            @model={{@model.backend}}
             @query={{hash tab="template"}}
           />
         {{else}}
@@ -105,7 +94,7 @@
             @text="Cancel"
             @color="secondary"
             @route="vault.cluster.secrets.backend.show"
-            @models={{array this.model.backend (concat "template/" this.model.id)}}
+            @models={{array @model.backend (concat "template/" @model.id)}}
             @query={{hash tab="template"}}
           />
         {{/if}}
@@ -113,19 +102,14 @@
     </div>
   </form>
 {{else}}
-  {{#if this.model.displayErrors}}
-    <div class="has-top-margin-s">
-      <MessageError @model={{this.model}} />
-    </div>
-  {{/if}}
   <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-    {{#each this.model.readAttrs as |attr|}}
+    {{#each @model.readAttrs as |attr|}}
       {{#let (capitalize (or attr.options.label (humanize (dasherize attr.name)))) as |label|}}
         {{#if (eq attr.name "decodeFormats")}}
-          {{#if (not (is-empty-value this.model.decodeFormats))}}
+          {{#if (not (is-empty-value @model.decodeFormats))}}
             <InfoTableRow @label={{label}}>
               <div>
-                {{#each-in this.model.decodeFormats as |key value|}}
+                {{#each-in @model.decodeFormats as |key value|}}
                   <div class="transform-decode-formats">
                     <p class="is-label has-text-grey-light">{{key}}</p>
                     <p>{{value}}</p>
@@ -137,7 +121,7 @@
         {{else}}
           <InfoTableRow
             @label={{label}}
-            @value={{get this.model attr.name}}
+            @value={{get @model attr.name}}
             class={{if (eq attr.name "pattern") "transform-pattern-text"}}
           />
         {{/if}}
