@@ -53,7 +53,7 @@ export default class RoleModel extends Model {
   @attr({
     editType: 'ttl',
     defaultValue: '24h',
-    label: 'Generated credentials’s maximum Time-to-Live (Max TTL).',
+    label: 'Generated credentials’s maximum Time-to-Live (Max TTL)',
     helperTextDisabled: 'Vault will use a TTL of 24 hours.',
     defaultShown: 'Engine default',
   })
