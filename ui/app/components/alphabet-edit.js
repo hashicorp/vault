@@ -9,20 +9,18 @@ import { action } from '@ember/object';
 import { service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
 
-/** // ARG TODO
+/**
  * @module AlphabetEdit
- * `AlphabetEdit` is a component that will allow you to pick a file from the local file system. Once
- * loaded, this file will be emitted as a JS ArrayBuffer to the passed `onChange` callback.
+ * `AlphabetEdit` is a component allows you to create/edit or view an alphabet.
  *
  * @example
  * ```js
- *   <AlphabetEdit }} />
+ *   <AlphabetEdit @model={{this.model}} @mode={{this.mode}} />
  * ```
- * @param {object} model - This is the transform template model.
- * @param {string} mode - Determines if create or edit.
-
- *
+ * @param {object} model - This is the transform alphabet model.
+ * @param {string} mode - Is either show, create or edit.
  */
+
 export default class AlphabetEditComponent extends Component {
   @service flashMessages;
   @service router;
@@ -30,7 +28,7 @@ export default class AlphabetEditComponent extends Component {
   @tracked errorMessage = '';
 
   get breadcrumbs() {
-    // ideally this is created on the controller in the parent route but this is a generic route and requires a significant refactor.
+    // ideally this is created on the controller in the parent route but this is a generic route and adding breadcrumbs to the controller requires a larger refactor.
     const { backend } = this.args.model;
     return [
       {

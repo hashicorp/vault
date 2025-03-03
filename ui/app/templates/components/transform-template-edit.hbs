@@ -46,7 +46,7 @@
 {{#if (or (eq @mode "edit") (eq @mode "create"))}}
   <form onsubmit={{this.createOrUpdate}}>
     <div class="box is-sideless is-fullwidth is-marginless">
-      <NamespaceReminder @mode={{this.mode}} @noun="transform template" />
+      <NamespaceReminder @mode={{@mode}} @noun="transform template" />
       <MessageError @errorMessage={{this.errorMessage}} />
       {{#each @model.writeAttrs as |attr|}}
         {{#if (and (eq attr.name "name") (eq @mode "edit"))}}
