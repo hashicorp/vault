@@ -4,88 +4,106 @@
 package configutil
 
 import (
-	"fmt"
 	"net"
 	"net/url"
 	"strings"
 )
 
-// NormalizeAddr takes an address as a string and returns a normalized copy.
-// If the addr is a URL, IP Address, or host:port address that includes an IPv6
-// address, the normalized copy will be conformant with RFC-5942 §4
-// See: https://rfc-editor.org/rfc/rfc5952.html
-func NormalizeAddr(address string) string {
-	if address == "" {
+// NormalizeAddr takes a string of a Host, Host:Port, URL, or Destination
+// Address and returns a copy where any IP addresses have been normalized to be
+// conformant with RFC 5942 §4. If the input string does not match any of the
+// supported syntaxes, or the "host" section is not an IP address, the input
+// will be returned unchanged. Supported syntaxes are:
+//
+//	Host                 host                                or [host]
+//	Host:Port            host:port                           or [host]:port
+//	URL                  scheme://user@host/path?query#frag  or scheme://user@[host]/path?query#frag
+//	Destination Address  user@host:port                      or user@[host]:port
+//
+// See:
+//
+//	https://rfc-editor.org/rfc/rfc3986.html
+//	https://rfc-editor.org/rfc/rfc5942.html
+//	https://rfc-editor.org/rfc/rfc5952.html
+func NormalizeAddr(addr string) string {
+	if addr == "" {
 		return ""
 	}
 
-	var ip net.IP
-	var port string
-	bracketedIPv6 := false
+	// Host
+	ip := net.ParseIP(addr)
+	if ip != nil {
+		// net.IP.String() is RFC 5942 §4 compliant
+		return ip.String()
+	}
 
-	// Try parsing it as a URL
-	pu, err := url.Parse(address)
+	// [Host]
+	if strings.HasPrefix(addr, "[") && strings.HasSuffix(addr, "]") {
+		if len(addr) < 3 {
+			return addr
+		}
+
+		// If we've been given a bracketed IP address, return the address
+		// normalized without brackets.
+		ip := net.ParseIP(addr[1 : len(addr)-1])
+		if ip != nil {
+			return ip.String()
+		}
+
+		// Our input is not a valid schema.
+		return addr
+	}
+
+	// Host:Port
+	host, port, err := net.SplitHostPort(addr)
 	if err == nil {
-		// We've been given something that appears to be a URL. See if the hostname
-		// is an IP address
-		ip = net.ParseIP(pu.Hostname())
-	} else {
-		// We haven't been given a URL. Try and parse it as an IP address
-		ip = net.ParseIP(address)
+		ip := net.ParseIP(host)
 		if ip == nil {
-			// We haven't been given a URL or IP address, try parsing an IP:Port
-			// combination.
-			idx := strings.LastIndex(address, ":")
-			if idx > 0 {
-				// We've perhaps received an IP:Port address
-				addr := address[:idx]
-				port = address[idx+1:]
-				if strings.HasPrefix(addr, "[") && strings.HasSuffix(addr, "]") {
-					addr = strings.TrimPrefix(strings.TrimSuffix(addr, "]"), "[")
-					bracketedIPv6 = true
-				}
-				ip = net.ParseIP(addr)
-			}
-		}
-	}
-
-	// If our IP is nil whatever was passed in does not contain an IP address.
-	if ip == nil {
-		return address
-	}
-
-	if v4 := ip.To4(); v4 != nil {
-		return address
-	}
-
-	if v6 := ip.To16(); v6 != nil {
-		// net.IP String() will return IPv6 RFC-5952 conformant addresses.
-
-		if pu != nil {
-			// Return the URL in conformant fashion
-			if port := pu.Port(); port != "" {
-				pu.Host = fmt.Sprintf("[%s]:%s", v6.String(), port)
-			} else {
-				pu.Host = fmt.Sprintf("[%s]", v6.String())
-			}
-			return pu.String()
+			// Our host isn't an IP address so we can return it unchanged
+			return addr
 		}
 
-		// Handle IP:Port addresses
-		if port != "" {
-			// Return the address:port or [address]:port
-			if bracketedIPv6 {
-				return fmt.Sprintf("[%s]:%s", v6.String(), port)
-			} else {
-				return fmt.Sprintf("%s:%s", v6.String(), port)
-			}
-		}
-
-		// Handle just an IP address
-		return v6.String()
+		// net.JoinHostPort handles bracketing for RFC 5952 §6
+		return net.JoinHostPort(ip.String(), port)
 	}
 
-	// It shouldn't be possible to get to this point. If we somehow we manage
-	// to, return the string unchanged.
-	return address
+	// URL
+	u, err := url.Parse(addr)
+	if err == nil {
+		uhost := u.Hostname()
+		ip := net.ParseIP(uhost)
+		if ip == nil {
+			// Our URL doesn't contain an IP address so we can return our input unchanged.
+			return addr
+		} else {
+			uhost = ip.String()
+		}
+
+		if uport := u.Port(); uport != "" {
+			uhost = net.JoinHostPort(uhost, uport)
+		} else {
+			if !strings.HasPrefix(uhost, "[") && !strings.HasSuffix(uhost, "]") {
+				// Ensure the IPv6 URL host is bracketed post-normalization.
+				// When*url.URL.String() reassembles the URL it will not consider
+				// whether or not the  *url.URL.Host is RFC 5952 §6 and RFC 3986 §3.2.2
+				// conformant.
+				uhost = "[" + uhost + "]"
+			}
+		}
+		u.Host = uhost
+
+		return u.String()
+	}
+
+	// Destination Address
+	if idx := strings.LastIndex(addr, "@"); idx > 0 {
+		if idx+1 > len(addr) {
+			return addr
+		}
+
+		return addr[:idx+1] + NormalizeAddr(addr[idx+1:])
+	}
+
+	// Our input did not match our supported schemas. Return it unchanged.
+	return addr
 }
