@@ -66,7 +66,7 @@ module('Acceptance | mfa-method', function (hooks) {
     assert
       .dom(`[data-test-mfa-method-list-item="${model.id}"]`)
       .includesText(
-        `${model.name} ${model.id} Namespace: ${model.namespace_id}`,
+        `${model.name} ${model.id} Namespace: ${model.namespace_path}`,
         'Copy renders for list item'
       );
 
@@ -85,6 +85,17 @@ module('Acceptance | mfa-method', function (hooks) {
       'vault.cluster.access.mfa.methods.method.edit',
       'Edit more menu action transitions to method edit route'
     );
+  });
+
+  test('it should not display for the root namespace', async function (assert) {
+    await visit('/vault/access/mfa');
+    const methods = this.getMethods();
+    const duoModel = this.store.peekRecord('mfa-method', methods[1].id);
+    assert.strictEqual(duoModel.namespace_path, '', 'Namespace path is unset');
+    assert
+      .dom(`[data-test-mfa-method-list-item="${duoModel.id}"]`)
+      .includesText(`${duoModel.name} ${duoModel.id}`, 'Copy renders for list item without namespace path')
+      .doesNotContainText('Namespace:', 'Does not include the namespace label');
   });
 
   test('it should display method details', async function (assert) {
@@ -249,7 +260,9 @@ module('Acceptance | mfa-method', function (hooks) {
 
   test('it should edit methods', async function (assert) {
     await visit('/vault/access/mfa/methods');
-    const id = this.element.querySelector('[data-test-mfa-method-list-item] .tag').textContent.trim();
+    const id = this.element
+      .querySelector('[data-test-mfa-method-list-item] .hds-badge div')
+      .textContent.trim();
     const model = this.store.peekRecord('mfa-method', id);
     await click('[data-test-mfa-method-list-item] [data-test-popup-menu-trigger]');
     await click('[data-test-mfa-method-menu-link="edit"]');

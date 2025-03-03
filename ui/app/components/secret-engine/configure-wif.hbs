@@ -1,0 +1,132 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<form {{on "submit" (perform this.submitForm)}} aria-label="configure {{@type}} credentials" data-test-configure-form>
+  <NamespaceReminder @mode="save" @noun="configuration" />
+  <MessageError @errorMessage={{this.errorMessage}} />
+  {{! AWS specific note and section header }}
+  {{#if (eq @type "aws")}}
+    <p class="has-text-grey-dark has-top-bottom-margin" data-test-configure-note={{@type}}>
+      Note: the client uses the official AWS SDK and will use the specified credentials, environment credentials, shared file
+      credentials, or IAM role/ECS task credentials in that order.
+    </p>
+    <h2 class="title is-5 has-bottom-padding-s has-top-margin-l" data-test-access-title>
+      Access to AWS
+    </h2>
+  {{/if}}
+  <div class="box is-fullwidth is-sideless">
+    {{! Only enterprise users can change access type from "account" to "wif" }}
+    {{#if this.version.isEnterprise}}
+      <fieldset class="field form-fieldset" id="protection" data-test-access-type-section>
+        <legend class="is-label">Access Type</legend>
+        <p class="sub-text" data-test-access-type-subtext>
+          {{#if this.disableAccessType}}
+            You cannot edit Access Type if you have already saved access credentials.
+          {{else}}
+            Choose the way to configure access to
+            {{@displayName}}. Access can be configured either using
+            {{if (eq @type "aws") "IAM access keys" (concat @displayName " account credentials")}}
+            or with the Plugin Workload Identity Federation (WIF).
+          {{/if}}
+        </p>
+        <div>
+          <RadioButton
+            id="access-type-{{@type}}"
+            name="account"
+            class="radio"
+            data-test-access-type={{@type}}
+            @value="account"
+            @groupValue={{this.accessType}}
+            @onChange={{this.onChangeAccessType}}
+            @disabled={{this.disableAccessType}}
+          />
+          <label for="access-type-{{@type}}">{{@displayName}} account credentials</label>
+          <RadioButton
+            id="access-type-wif"
+            name="wif"
+            class="radio has-left-margin-m"
+            data-test-access-type="wif"
+            @value="wif"
+            @groupValue={{this.accessType}}
+            @onChange={{this.onChangeAccessType}}
+            @disabled={{this.disableAccessType}}
+          />
+          <label for="access-type-wif">Workload Identity Federation</label>
+        </div>
+      </fieldset>
+    {{/if}}
+    {{#if (eq this.accessType "wif")}}
+      {{! if access type is "wif" display Issuer and WIF fields }}
+      {{#each @issuerConfig.displayAttrs as |attr|}}
+        <FormField @attr={{attr}} @model={{@issuerConfig}} />
+      {{/each}}
+      <FormFieldGroups
+        @model={{@mountConfigModel}}
+        @mode={{if @mountConfigModel.isNew "create" "edit"}}
+        @groupName="fieldGroupsWif"
+      />
+    {{else}}
+      {{! otherwise display account credential fields }}
+      <FormFieldGroups
+        @model={{@mountConfigModel}}
+        @mode={{if @mountConfigModel.isNew "create" "edit"}}
+        @useEnableInput={{true}}
+        @groupName="fieldGroupsAccount"
+      />
+    {{/if}}
+    {{! additionalConfigModel fields show regardless of the vault version or what access type is selected }}
+    {{#if @additionalConfigModel}}
+      <h2 class="title is-5 has-bottom-padding-s has-top-margin-l" data-test-additional-config-model-title>
+        {{if (eq @type "aws") "Lease" "Additional"}}
+        Configuration
+      </h2>
+      <div class="box is-fullwidth is-sideless is-bottomless">
+        {{#each @additionalConfigModel.formFields as |attr|}}
+          <FormField @attr={{attr}} @model={{@additionalConfigModel}} @modelValidations={{this.modelValidations}} />
+        {{/each}}
+      </div>
+    {{/if}}
+  </div>
+
+  <Hds::ButtonSet>
+    <Hds::Button
+      @text="Save"
+      @icon={{if this.save.isRunning "loading"}}
+      type="submit"
+      disabled={{this.save.isRunning}}
+      data-test-save
+    />
+    <Hds::Button
+      @text="Cancel"
+      @color="secondary"
+      class="has-left-margin-s"
+      disabled={{this.save.isRunning}}
+      {{on "click" this.onCancel}}
+      data-test-cancel
+    />
+  </Hds::ButtonSet>
+  {{#if this.invalidFormAlert}}
+    <AlertInline data-test-invalid-form-alert class="has-top-padding-s" @type="danger" @message={{this.invalidFormAlert}} />
+  {{/if}}
+</form>
+
+{{#if this.saveIssuerWarning}}
+  <Hds::Modal @color="warning" @onClose={{action (mut this.saveIssuerWarning) ""}} data-test-issuer-warning as |M|>
+    <M.Header @icon="alert-circle">
+      Are you sure?
+    </M.Header>
+    <M.Body>
+      <p class="has-bottom-margin-s" data-test-issuer-warning-message>
+        {{this.saveIssuerWarning}}
+      </p>
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::ButtonSet>
+        <Hds::Button @text="Continue" {{on "click" this.continueSubmitForm}} data-test-issuer-save />
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} data-test-issuer-cancel />
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

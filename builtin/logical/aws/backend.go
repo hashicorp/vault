@@ -12,6 +12,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
@@ -74,6 +75,10 @@ func Backend(_ *logical.BackendConfig) *backend {
 			}
 			return nil
 		},
+		RotateCredential: func(ctx context.Context, req *logical.Request) error {
+			_, err := b.rotateRoot(ctx, req)
+			return err
+		},
 		BackendType: logical.TypeLogical,
 	}
 
@@ -82,6 +87,10 @@ func Backend(_ *logical.BackendConfig) *backend {
 
 type backend struct {
 	*framework.Backend
+
+	// Function pointer used to override the IAM client creation for mocked testing
+	// If set, this function will be called instead of creating real IAM clients
+	nonCachedClientIAMFunc func(context.Context, logical.Storage, hclog.Logger, *staticRoleEntry) (iamiface.IAMAPI, error)
 
 	// Mutex to protect access to reading and writing policies
 	roleMutex sync.RWMutex
@@ -127,8 +136,9 @@ func (b *backend) clearClients() {
 }
 
 // clientIAM returns the configured IAM client. If nil, it constructs a new one
-// and returns it, setting it the internal variable
-func (b *backend) clientIAM(ctx context.Context, s logical.Storage) (iamiface.IAMAPI, error) {
+// and returns it, setting it the internal variable.
+// entry is only needed when configuring the client to use for role assumption.
+func (b *backend) clientIAM(ctx context.Context, s logical.Storage, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
 	b.clientMutex.RLock()
 	if b.iamClient != nil {
 		b.clientMutex.RUnlock()
@@ -146,10 +156,11 @@ func (b *backend) clientIAM(ctx context.Context, s logical.Storage) (iamiface.IA
 		return b.iamClient, nil
 	}
 
-	iamClient, err := b.nonCachedClientIAM(ctx, s, b.Logger())
+	iamClient, err := b.nonCachedClientIAM(ctx, s, b.Logger(), entry)
 	if err != nil {
 		return nil, err
 	}
+
 	b.iamClient = iamClient
 
 	return b.iamClient, nil
@@ -243,4 +254,14 @@ func (b *backend) initialize(ctx context.Context, request *logical.Initializatio
 		}
 	}
 	return nil
+}
+
+// getNonCachedIAMClient returns an IAM client. In a test env, if a mocked client creation
+// function is set (nonCachedClientIAMFunc), it will be used instead of the default client creation function.
+// This allows us to mock AWS clients in tests.
+func (b *backend) getNonCachedIAMClient(ctx context.Context, storage logical.Storage, cfg staticRoleEntry) (iamiface.IAMAPI, error) {
+	if b.nonCachedClientIAMFunc != nil {
+		return b.nonCachedClientIAMFunc(ctx, storage, b.Logger(), &cfg)
+	}
+	return b.nonCachedClientIAM(ctx, storage, b.Logger(), &cfg)
 }

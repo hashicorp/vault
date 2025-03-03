@@ -14,9 +14,9 @@ import type SyncDestinationModel from 'vault/vault/models/sync/destination';
 import type Controller from '@ember/controller';
 
 interface SyncSecretsDestinationsIndexRouteParams {
-  name: string;
-  type: string;
-  page: string;
+  name?: string;
+  type?: string;
+  page?: string;
 }
 
 interface SyncSecretsDestinationsRouteModel {
@@ -71,7 +71,7 @@ export default class SyncSecretsDestinationsIndexRoute extends Route {
   }
 
   async model(params: SyncSecretsDestinationsIndexRouteParams) {
-    const { name, type, page } = params;
+    const { name = '', type = '', page } = params;
     return hash({
       destinations: this.pagination.lazyPaginatedQuery('sync/destination', {
         page: Number(page) || 1,

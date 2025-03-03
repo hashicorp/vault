@@ -24,8 +24,10 @@ import (
 	"github.com/hashicorp/go-uuid"
 	goversion "github.com/hashicorp/go-version"
 	lru "github.com/hashicorp/golang-lru/v2"
+	raftlib "github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/api"
 	httpPriority "github.com/hashicorp/vault/http/priority"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -1300,7 +1302,7 @@ func (c *Core) raftLeaderInfo(leaderInfo *raft.LeaderJoinInfo, disco *discover.D
 		}
 		for _, ip := range clusterIPs {
 			addr := formatDiscoveredAddr(ip, port)
-			u := fmt.Sprintf("%s://%s", scheme, addr)
+			u := configutil.NormalizeAddr(fmt.Sprintf("%s://%s", scheme, addr))
 			info := *leaderInfo
 			info.LeaderAPIAddr = u
 			ret = append(ret, &info)
@@ -1319,6 +1321,25 @@ func NewDelegateForCore(c *Core) *raft.Delegate {
 		c.logger.Error("failed to load autopilot persisted state from storage", "error", err)
 	}
 	return raft.NewDelegate(c.getRaftBackend(), persistedState, c.saveAutopilotPersistedState)
+}
+
+func (c *Core) ReloadRaftConfig(config map[string]string) error {
+	rb := c.getRaftBackend()
+	if rb == nil {
+		return nil
+	}
+	raftConfig := raftlib.DefaultConfig()
+	if err := raft.ApplyConfigSettings(c.logger, config, raftConfig); err != nil {
+		return err
+	}
+	rlconfig := raftlib.ReloadableConfig{
+		TrailingLogs:      raftConfig.TrailingLogs,
+		SnapshotInterval:  raftConfig.SnapshotInterval,
+		SnapshotThreshold: raftConfig.SnapshotThreshold,
+		HeartbeatTimeout:  raftConfig.HeartbeatTimeout,
+		ElectionTimeout:   raftConfig.ElectionTimeout,
+	}
+	return rb.ReloadConfig(rlconfig)
 }
 
 // getRaftBackend returns the RaftBackend from the HA or physical backend,

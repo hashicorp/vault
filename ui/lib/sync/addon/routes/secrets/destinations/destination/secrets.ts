@@ -13,7 +13,7 @@ import type SyncAssociationModel from 'vault/vault/models/sync/association';
 import type Controller from '@ember/controller';
 
 interface SyncDestinationSecretsRouteParams {
-  page: string;
+  page?: string;
 }
 
 interface SyncDestinationSecretsRouteModel {

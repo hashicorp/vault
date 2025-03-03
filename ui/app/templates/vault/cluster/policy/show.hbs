@@ -19,9 +19,7 @@
     <h1 class="title is-3" data-test-policy-name="true">
       {{this.model.id}}
       {{#if this.model.enforcementLevel}}
-        <span class="tag" aria-label="Enforcement level: {{this.model.enforcementLevel}}">
-          {{this.model.enforcementLevel}}
-        </span>
+        <Hds::Badge @text={{this.model.enforcementLevel}} aria-label="Enforcement level: {{this.model.enforcementLevel}}" />
       {{/if}}
     </h1>
   </p.levelLeft>
@@ -48,15 +46,18 @@
   </ToolbarActions>
 </Toolbar>
 <div class="box is-bottomless is-fullwidth is-marginless">
-  <div class="field">
-    <JsonEditor
-      @title="Policy"
-      @subTitle={{if (eq this.policyType "acl") (concat this.uppercase this.model.format " format")}}
-      @value={{this.model.policy}}
-      @readOnly={{true}}
-      @mode="ruby"
-    />
-  </div>
+  {{#if this.model.policy}}
+    <div class="field">
+      <Hds::CodeBlock @value={{this.model.policy}} @hasCopyButton={{true}} @maxHeight="300px" @language="ruby" as |CB|>
+        <CB.Title @tag="h3">
+          Policy
+        </CB.Title>
+        <CB.Description>
+          ({{if (eq this.policyType "acl") (concat this.uppercase this.model.format " format")}})
+        </CB.Description>
+      </Hds::CodeBlock>
+    </div>
+  {{/if}}
   {{#if this.model.paths}}
     <div class="field box is-shadowless no-bottom-padding is-marginless">
       <h2 class="title is-6">Paths</h2>

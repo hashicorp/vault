@@ -11,14 +11,15 @@ import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { filteredTotalForMount, filterVersionHistory, TotalClients } from 'core/utils/client-count-utils';
 import { sanitizePath } from 'core/utils/sanitize-path';
 
-import type AdapterError from '@ember-data/adapter';
+import type AdapterError from '@ember-data/adapter/error';
 import type FlagsService from 'vault/services/flags';
-import type StoreService from 'vault/services/store';
+import type Store from '@ember-data/store';
 import type VersionService from 'vault/services/version';
 import type ClientsActivityModel from 'vault/models/clients/activity';
 import type ClientsConfigModel from 'vault/models/clients/config';
 import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
 import type NamespaceService from 'vault/services/namespace';
+
 interface Args {
   activity: ClientsActivityModel;
   activityError?: AdapterError;
@@ -35,7 +36,7 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   @service declare readonly flags: FlagsService;
   @service declare readonly version: VersionService;
   @service declare readonly namespace: NamespaceService;
-  @service declare readonly store: StoreService;
+  @service declare readonly store: Store;
 
   get formattedStartDate() {
     return this.args.startTimestamp ? parseAPITimestamp(this.args.startTimestamp, 'MMMM yyyy') : null;

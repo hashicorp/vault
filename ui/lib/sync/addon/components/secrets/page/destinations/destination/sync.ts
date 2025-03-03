@@ -13,7 +13,7 @@ import errorMessage from 'vault/utils/error-message';
 
 import type SyncDestinationModel from 'vault/models/sync/destination';
 import type RouterService from '@ember/routing/router-service';
-import type StoreService from 'vault/services/store';
+import type Store from '@ember-data/store';
 import type PaginationService from 'vault/services/pagination';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type { SearchSelectOption } from 'vault/vault/app-types';
@@ -24,7 +24,7 @@ interface Args {
 
 export default class DestinationSyncPageComponent extends Component<Args> {
   @service('app-router') declare readonly router: RouterService;
-  @service declare readonly store: StoreService;
+  @service declare readonly store: Store;
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly pagination: PaginationService;
 
@@ -56,7 +56,7 @@ export default class DestinationSyncPageComponent extends Component<Args> {
   async fetchMounts() {
     try {
       const secretEngines = await this.store.query('secret-engine', {});
-      this.mounts = secretEngines.reduce((filtered, model) => {
+      this.mounts = secretEngines.reduce((filtered: SearchSelectOption[], model) => {
         if (model.type === 'kv' && model.version === 2) {
           filtered.push({ name: model.path, id: model.path });
         }

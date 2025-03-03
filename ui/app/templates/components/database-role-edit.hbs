@@ -2,10 +2,9 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 ~}}
-
 <PageHeader as |p|>
   <p.top>
-    <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{this.mode}} @root={{@root}} @showCurrent={{true}} />
+    <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{@mode}} @root={{@root}} @showCurrent={{true}} />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header="true">
@@ -19,7 +18,6 @@
     </h1>
   </p.levelLeft>
 </PageHeader>
-
 {{#if (eq @mode "show")}}
   <Toolbar>
     <ToolbarActions>
@@ -28,7 +26,7 @@
           @buttonText="Delete role"
           class="toolbar-button"
           @buttonColor="secondary"
-          @onConfirmAction={{action "delete"}}
+          @onConfirmAction={{this.delete}}
           @confirmTitle="Delete role?"
           @confirmMessage="This role will be permanently deleted. You will need to recreate it to use it again."
           data-test-database-role-delete
@@ -102,12 +100,13 @@
 {{else}}
   {{! Edit or Create }}
   <div class="box is-sideless is-fullwidth is-marginless">
-    <form {{on "submit" this.handleCreateEditRole}}>
+    <form {{on "submit" (perform this.handleCreateEditRole)}}>
+      <MessageError @errorMessage={{this.errorMessage}} />
       {{#each @model.fieldAttrs as |attr|}}
         {{#if (eq @mode "edit")}}
           <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
         {{else if (not-eq attr.options.readOnly true)}}
-          <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
+          <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
           {{! TODO: If database && !updateDB show warning }}
           {{#if (get this.warningMessages attr.name)}}
             <Hds::Alert @type="inline" @color="warning" class="has-top-margin-negative-s has-bottom-margin-s" as |A|>
@@ -117,44 +116,50 @@
           {{/if}}
         {{/if}}
       {{/each}}
-
       <DatabaseRoleSettingForm
         @attrs={{@model.roleSettingAttrs}}
         @roleType={{@model.type}}
         @model={{@model}}
         @mode={{@mode}}
         @dbType={{await this.databaseType}}
+        @modelValidations={{this.modelValidations}}
       />
-      <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
-        <div class="field is-grouped">
-          <Hds::ButtonSet>
-            <Hds::Button
-              @text={{if (eq @mode "create") "Create role" "Save"}}
-              @icon={{if this.loading "loading"}}
-              type="submit"
-              disabled={{this.loading}}
-              data-test-secret-save
-            />
-            <Hds::Button
-              @text="Cancel"
-              @color="secondary"
-              @route="vault.cluster.secrets.backend.list-root"
-              @model={{@model.backend}}
-              @query={{hash tab="role"}}
-              data-test-database-role-cancel
-            />
-          </Hds::ButtonSet>
-          {{#if (not (is-empty-value this.warningMessages))}}
-            <Hds::Alert @type="compact" @color="warning" class="has-left-margin-s" as |A|>
-              <A.Title>Warning</A.Title>
-              <A.Description>
-                You don't have permissions required to
-                {{if (eq @mode "create") "create" "update"}}
-                this role. See form for details.
-              </A.Description>
-            </Hds::Alert>
-          {{/if}}
-        </div>
+      <div class="field is-fullwidth box is-bottomless">
+        <Hds::ButtonSet>
+          <Hds::Button
+            @text={{if (eq @mode "create") "Create role" "Save"}}
+            @icon={{if this.handleCreateEditRole.isRunning "loading"}}
+            type="submit"
+            disabled={{this.handleCreateEditRole.isRunning}}
+            data-test-secret-save
+          />
+          <Hds::Button
+            @text="Cancel"
+            @color="secondary"
+            @route="vault.cluster.secrets.backend.list-root"
+            @model={{@model.backend}}
+            @query={{hash tab="role"}}
+            data-test-database-role-cancel
+          />
+        </Hds::ButtonSet>
+        {{#if this.invalidFormAlert}}
+          <AlertInline
+            data-test-invalid-form-alert
+            class="has-top-padding-s"
+            @type="danger"
+            @message={{this.invalidFormAlert}}
+          />
+        {{/if}}
+        {{#if (not (is-empty-value this.warningMessages))}}
+          <Hds::Alert @type="compact" @color="warning" class="has-left-margin-s" as |A|>
+            <A.Title>Warning</A.Title>
+            <A.Description>
+              You don't have permissions required to
+              {{if (eq @mode "create") "create" "update"}}
+              this role. See form for details.
+            </A.Description>
+          </Hds::Alert>
+        {{/if}}
       </div>
     </form>
   </div>

@@ -43,6 +43,8 @@ export const GENERAL = {
   infoRowValue: (label: string) => `[data-test-value-div="${label}"]`,
   inputByAttr: (attr: string) => `[data-test-input="${attr}"]`,
   selectByAttr: (attr: string) => `[data-test-select="${attr}"]`,
+  textToggle: '[data-test-text-toggle]',
+  textToggleTextarea: '[data-test-text-file-textarea]',
   toggleInput: (attr: string) => `[data-test-toggle-input="${attr}"]`,
   toggleGroup: (attr: string) => `[data-test-toggle-group="${attr}"]`,
   ttl: {

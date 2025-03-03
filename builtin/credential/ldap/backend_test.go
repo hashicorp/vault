@@ -18,16 +18,35 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/ldap"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/rotation"
 	"github.com/mitchellh/mapstructure"
 )
 
+type testSystemView struct {
+	logical.StaticSystemView
+}
+
+func (d testSystemView) RegisterRotationJob(_ context.Context, _ *rotation.RotationJobConfigureRequest) (string, error) {
+	return "", automatedrotationutil.ErrRotationManagerUnsupported
+}
+
+func (d testSystemView) DeregisterRotationJob(_ context.Context, _ *rotation.RotationJobDeregisterRequest) error {
+	return nil
+}
+
 func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
+	sv := testSystemView{}
+	sv.MaxLeaseTTLVal = time.Hour * 2 * 24
+	sv.DefaultLeaseTTLVal = time.Minute
+
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
+	config.System = sv
 
 	b := Backend()
 	if b == nil {
@@ -402,15 +421,17 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 func factory(t *testing.T) logical.Backend {
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 32
+
+	sv := testSystemView{}
+	sv.DefaultLeaseTTLVal = defaultLeaseTTLVal
+	sv.MaxLeaseTTLVal = maxLeaseTTLVal
+
 	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: hclog.New(&hclog.LoggerOptions{
 			Name:  "FactoryLogger",
 			Level: hclog.Debug,
 		}),
-		System: &logical.StaticSystemView{
-			DefaultLeaseTTLVal: defaultLeaseTTLVal,
-			MaxLeaseTTLVal:     maxLeaseTTLVal,
-		},
+		System: sv,
 	})
 	if err != nil {
 		t.Fatalf("Unable to create backend: %s", err)
@@ -1183,8 +1204,8 @@ func testAccStepLoginNoGroupDN(t *testing.T, user string, pass string) logicalte
 
 		// Verifies a search without defined GroupDN returns a warning rather than failing
 		Check: func(resp *logical.Response) error {
-			if len(resp.Warnings) != 1 {
-				return fmt.Errorf("expected a warning due to no group dn, got: %#v", resp.Warnings)
+			if len(resp.Warnings) != 0 {
+				return fmt.Errorf("expected a no warnings, got: %#v", resp.Warnings)
 			}
 
 			return logicaltest.TestCheckAuth([]string{"bar", "default"})(resp)

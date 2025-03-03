@@ -12,7 +12,7 @@ import Ember from 'ember';
 import { DEBUG } from '@glimmer/env';
 
 import type FlashMessageService from 'vault/services/flash-messages';
-import type StoreService from 'vault/services/store';
+import type Store from '@ember-data/store';
 import type VersionService from 'vault/services/version';
 import type FlagsService from 'vault/services/flags';
 import type { SyncDestinationAssociationMetrics } from 'vault/vault/adapters/sync/association';
@@ -28,7 +28,7 @@ interface Args {
 
 export default class SyncSecretsDestinationsPageComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
-  @service declare readonly store: StoreService;
+  @service declare readonly store: Store;
   @service declare readonly version: VersionService;
   @service declare readonly flags: FlagsService;
 
