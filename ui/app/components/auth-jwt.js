@@ -5,7 +5,7 @@
 import Ember from 'ember';
 import { service } from '@ember/service';
 // ARG NOTE: Once you remove outer-html after glimmerizing you can remove the outer-html component
-import Component from './outer-html';
+import Component from '@ember/component';
 import { task, timeout, waitForEvent } from 'ember-concurrency';
 import { debounce } from '@ember/runloop';
 
@@ -17,6 +17,8 @@ const ERROR_JWT_LOGIN = 'OIDC login is not configured for this mount';
 export { ERROR_WINDOW_CLOSED, ERROR_MISSING_PARAMS, ERROR_JWT_LOGIN };
 
 export default Component.extend({
+  tagName: '',
+
   store: service(),
   flagsService: service('flags'),
 

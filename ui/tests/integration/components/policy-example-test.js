@@ -12,7 +12,7 @@ import { setRunOptions } from 'ember-a11y-testing/test-support';
 const SELECTORS = {
   policyText: '[data-test-modal-title]',
   policyDescription: (type) => `[data-test-example-modal-text=${type}]`,
-  jsonText: '[data-test-component="code-mirror-modifier"]',
+  jsonText: '.hds-code-block',
   informationLink: '[data-test-example-modal-information-link]',
 };
 
