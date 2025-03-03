@@ -11,7 +11,7 @@ import errorMessage from 'vault/utils/error-message';
 
 /**
  * @module AlphabetEdit
- * `AlphabetEdit` is a component allows you to create/edit or view an alphabet.
+ * `AlphabetEdit` is a component that allows you to create/edit or view an alphabet.
  *
  * @example
  * ```js
@@ -56,12 +56,8 @@ export default class AlphabetEditComponent extends Component {
 
   @action async createOrUpdate(event) {
     event.preventDefault();
-    const { id, name } = this.args.model;
-    const modelId = id || name;
 
-    if (!modelId) return; // TODO should solve with modelValidations instead
-
-    if (!this.args.model?.hasDirtyAttributes) {
+    if (!this.args.model.hasDirtyAttributes) {
       this.flashMessages.info('No changes detected.');
       this.transition();
       return;
