@@ -4,7 +4,9 @@
  */
 
 import Model, { attr } from '@ember-data/model';
+// eslint-disable-next-line ember/no-computed-properties-in-native-classes
 import { alias } from '@ember/object/computed';
+// eslint-disable-next-line ember/no-computed-properties-in-native-classes
 import { computed } from '@ember/object';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
@@ -40,7 +42,7 @@ const validations = {
 
 @withModelValidations(validations)
 @withExpandedAttributes()
-export default class TotpModel extends Model {
+export default class TotpKeyModel extends Model {
   @attr('string', {
     readOnly: true,
   })
@@ -111,7 +113,8 @@ export default class TotpModel extends Model {
   @attr('string', {
     editDisabled: true,
     label: 'otpauth url',
-    helpText: 'If a URL is provided the other fields can be left empty. E.g. otpauth://totp/Vault:test@test.com?secret=Y64VEVMBTSXCYIWRSHRNDZW62MPGVU2G&issuer=Vault',
+    helpText:
+      'If a URL is provided the other fields can be left empty. E.g. otpauth://totp/Vault:test@test.com?secret=Y64VEVMBTSXCYIWRSHRNDZW62MPGVU2G&issuer=Vault',
   })
   url;
   @attr('string', {

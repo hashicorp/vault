@@ -5,7 +5,7 @@
 
 import ApplicationSerializer from './application';
 
-export default class TotpSerializer extends ApplicationSerializer {
+export default class TotpKeySerializer extends ApplicationSerializer {
   normalizeItems(payload, requestType) {
     if (
       requestType !== 'queryRecord' &&

@@ -7,7 +7,7 @@ import ApplicationAdapter from './application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { isEmpty } from '@ember/utils';
 
-export default class TotpAdapter extends ApplicationAdapter {
+export default class TotpKeyAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
   createOrUpdate(store, type, snapshot, requestType) {
