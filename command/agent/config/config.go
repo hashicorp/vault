@@ -183,6 +183,9 @@ type ExecConfig struct {
 func NewConfig() *Config {
 	return &Config{
 		SharedConfig: new(configutil.SharedConfig),
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 }
 
@@ -250,8 +253,13 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.DisableKeepAlivesTemplating = c2.DisableKeepAlivesTemplating
 	}
 
+	// Instead of checking if TemplateConfig is not nil, we compare against the default value
+	// that is set in NewConfig to determine if a TemplateConfig was specified in the config
+	defaultConfig := TemplateConfig{
+		MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+	}
 	result.TemplateConfig = c.TemplateConfig
-	if c2.TemplateConfig != nil {
+	if *c2.TemplateConfig != defaultConfig {
 		result.TemplateConfig = c2.TemplateConfig
 	}
 
@@ -1106,9 +1114,6 @@ func parseTemplateConfig(result *Config, list *ast.ObjectList) error {
 
 	templateConfigList := list.Filter(name)
 	if len(templateConfigList.Items) == 0 {
-		result.TemplateConfig = &TemplateConfig{
-			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
-		}
 		return nil
 	}
 

@@ -1100,6 +1100,55 @@ func TestLoadConfigFile_TemplateConfig(t *testing.T) {
 	}
 }
 
+// TestLoadConfigFile_TemplateConfig_MergeConfigs tests that in the case of multiple config files,
+// a provided TemplateConfig in one file is properly preserved in the merged config
+func TestLoadConfigFile_TemplateConfig_MergeConfigs(t *testing.T) {
+	configPaths := []string{
+		"./test-fixtures/config-template_config.hcl",
+		"./test-fixtures/config-template-min-no-auth.hcl",
+	}
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{},
+		Vault: &Vault{
+			Address: "http://127.0.0.1:1111",
+			Retry: &Retry{
+				NumRetries: 5,
+			},
+		},
+		TemplateConfig: &TemplateConfig{
+			ExitOnRetryFailure:    true,
+			StaticSecretRenderInt: 1 * time.Minute,
+			MaxConnectionsPerHost: 100,
+			LeaseRenewalThreshold: FloatPtr(0.8),
+		},
+		Templates: []*ctconfig.TemplateConfig{
+			{
+				Source:      pointerutil.StringPtr("/path/on/disk/to/template.ctmpl"),
+				Destination: pointerutil.StringPtr("/path/on/disk/where/template/will/render.txt"),
+			},
+			{
+				Source:      pointerutil.StringPtr("/path/on/disk/to/template2.ctmpl"),
+				Destination: pointerutil.StringPtr("/path/on/disk/where/template/will/render2.txt"),
+			},
+		},
+	}
+
+	cfg := NewConfig()
+	for _, path := range configPaths {
+		configFromPath, err := LoadConfigFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		cfg = cfg.Merge(configFromPath)
+	}
+
+	cfg.Prune()
+	if diff := deep.Equal(cfg, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
 // TestLoadConfigFile_Template tests template definitions in Vault Agent
 func TestLoadConfigFile_Template(t *testing.T) {
 	testCases := map[string]struct {
