@@ -67,13 +67,14 @@ export default Route.extend({
     }
   },
 
+  // TODO fix casing here
   getTOTPCode(backend, keyName) {
-    return this.store.adapterFor('totp').generateCode(backend, keyName);
+    return this.store.adapterFor('totp-key').generateCode(backend, keyName);
   },
 
   async getTOTPKey(backend, keyName) {
     try {
-      const key = await this.store.queryRecord('totp', { id: keyName, backend });
+      const key = await this.store.queryRecord('totp-key', { id: keyName, backend });
       return key;
     } catch (e) {
       // swallow error, non-essential data
@@ -106,7 +107,7 @@ export default Route.extend({
     });
   },
 
-  async afterModel(model, transition) {
+  async afterModel(model) {
     if (model.backendType === 'totp' && model.totpCode.period) {
       later(
         () => {
