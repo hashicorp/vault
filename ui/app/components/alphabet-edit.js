@@ -42,7 +42,7 @@ export default class AlphabetEditComponent extends Component {
   }
 
   transition(route = 'show') {
-    this.displayErrors = '';
+    this.errorMessage = '';
     const { backend, id } = this.args.model;
     if (route === 'list') {
       this.router.transitionTo('vault.cluster.secrets.backend.list-root', backend, {
