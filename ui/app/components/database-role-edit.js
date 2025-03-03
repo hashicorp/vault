@@ -117,7 +117,6 @@ export default class DatabaseRoleEdit extends Component {
       }
       try {
         await model.save();
-        this.resetErrors();
         this.router.transitionTo(SHOW_ROUTE, `role/${model.name}`);
       } catch (e) {
         this.errorMessage = errorMessage(e);
