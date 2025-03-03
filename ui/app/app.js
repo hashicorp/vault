@@ -27,6 +27,19 @@ export default class App extends Application {
         ],
       },
     },
+    registry: {
+      dependencies: {
+        services: [
+          'auth',
+          'flash-messages',
+          'namespace',
+          { 'app-router': 'router' },
+          'store',
+          'pagination',
+          'version',
+        ],
+      },
+    },
     'open-api-explorer': {
       dependencies: {
         services: ['auth', 'flash-messages', 'namespace', { 'app-router': 'router' }, 'version'],

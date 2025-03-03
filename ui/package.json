@@ -212,6 +212,7 @@
       "lib/ldap",
       "lib/open-api-explorer",
       "lib/pki",
+      "lib/registry",
       "lib/replication",
       "lib/service-worker-authenticated-download",
       "lib/sync"

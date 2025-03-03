@@ -15,6 +15,7 @@ Router.map(function () {
   this.route('vault', { path: '/' }, function () {
     this.route('cluster', { path: '/:cluster_name' }, function () {
       this.route('dashboard');
+      this.mount('registry');
       this.mount('config-ui');
       this.mount('sync');
       this.route('oidc-provider-ns', { path: '/*namespace/identity/oidc/provider/:provider_name/authorize' });
