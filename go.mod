@@ -137,7 +137,7 @@ require (
 	github.com/hashicorp/raft-wal v0.4.0
 	github.com/hashicorp/vault-hcp-lib v0.0.0-20240704151836-a5c058ac604c
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.20.0
-	github.com/hashicorp/vault-plugin-auth-azure v0.20.1
+	github.com/hashicorp/vault-plugin-auth-azure v0.20.2-0.20250301002102-d4dc2a572898
 	github.com/hashicorp/vault-plugin-auth-cf v0.20.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.20.1
 	github.com/hashicorp/vault-plugin-auth-jwt v0.23.0
@@ -350,7 +350,7 @@ require (
 	github.com/containerd/continuity v0.4.3 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/coreos/etcd v3.3.27+incompatible // indirect
-	github.com/coreos/go-oidc/v3 v3.11.0 // indirect
+	github.com/coreos/go-oidc/v3 v3.12.0 // indirect
 	github.com/coreos/go-semver v0.3.1 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/coreos/pkg v0.0.0-20220810130054-c7d1c02cb6cf // indirect
@@ -469,7 +469,7 @@ require (
 	github.com/microsoft/kiota-serialization-json-go v1.0.9 // indirect
 	github.com/microsoft/kiota-serialization-multipart-go v1.0.0 // indirect
 	github.com/microsoft/kiota-serialization-text-go v1.0.0 // indirect
-	github.com/microsoftgraph/msgraph-sdk-go v1.61.0 // indirect
+	github.com/microsoftgraph/msgraph-sdk-go v1.62.0 // indirect
 	github.com/microsoftgraph/msgraph-sdk-go-core v1.2.1 // indirect
 	github.com/miekg/dns v1.1.50 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect

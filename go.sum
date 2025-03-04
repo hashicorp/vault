@@ -943,8 +943,8 @@ github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc
 github.com/coreos/etcd v3.3.27+incompatible h1:QIudLb9KeBsE5zyYxd1mjzRSkzLg9Wf9QlRwFgd6oTA=
 github.com/coreos/etcd v3.3.27+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
 github.com/coreos/go-etcd v2.0.0+incompatible/go.mod h1:Jez6KQU2B/sWsbdaef3ED8NzMklzPG4d5KIOhIy30Tk=
-github.com/coreos/go-oidc/v3 v3.11.0 h1:Ia3MxdwpSw702YW0xgfmP1GVCMA9aEFWu12XUZ3/OtI=
-github.com/coreos/go-oidc/v3 v3.11.0/go.mod h1:gE3LgjOgFoHi9a4ce4/tJczr0Ai2/BoDhf0r5lltWI0=
+github.com/coreos/go-oidc/v3 v3.12.0 h1:sJk+8G2qq94rDI6ehZ71Bol3oUHy63qNYmkiSjrc/Jo=
+github.com/coreos/go-oidc/v3 v3.12.0/go.mod h1:gE3LgjOgFoHi9a4ce4/tJczr0Ai2/BoDhf0r5lltWI0=
 github.com/coreos/go-semver v0.2.0/go.mod h1:nnelYz7RCh+5ahJtPPxZlU+153eP4D4r3EedlOD2RNk=
 github.com/coreos/go-semver v0.3.1 h1:yi21YpKnrx1gt5R+la8n5WgS0kCrsPp33dmEyHReZr4=
 github.com/coreos/go-semver v0.3.1/go.mod h1:irMmmIw/7yzSRPWryHsK7EYSg09caPQL03VsM8rvUec=
@@ -1565,8 +1565,8 @@ github.com/hashicorp/vault-hcp-lib v0.0.0-20240704151836-a5c058ac604c h1:LCwgi0i
 github.com/hashicorp/vault-hcp-lib v0.0.0-20240704151836-a5c058ac604c/go.mod h1:Nb41BTPvmFbKB73D/+XpxIw6Nf2Rt+AOUvLzlDxwAGQ=
 github.com/hashicorp/vault-plugin-auth-alicloud v0.20.0 h1:yw96/zWrNPFTH8yTqTvVtraJ3EWk9vewvx1H7X6lekI=
 github.com/hashicorp/vault-plugin-auth-alicloud v0.20.0/go.mod h1:aAE14G1n1/Qw5/Vj+P0eaEuo8m6op2/3RhR4gN3q5AI=
-github.com/hashicorp/vault-plugin-auth-azure v0.20.1 h1:oKbzERNhIMJvECQaouT8BKnn6kfrtA7yeI4l4pdSGcc=
-github.com/hashicorp/vault-plugin-auth-azure v0.20.1/go.mod h1:9SFxR96yYv7vxDvZZady3K0YKguSNU53d8WSrshHjlQ=
+github.com/hashicorp/vault-plugin-auth-azure v0.20.2-0.20250301002102-d4dc2a572898 h1:rgFW+baBJ2zPhet+YXFsj2zqvROXOY+OT62nAIJi1ls=
+github.com/hashicorp/vault-plugin-auth-azure v0.20.2-0.20250301002102-d4dc2a572898/go.mod h1:A7wd6F/i+mwdCbGl7NfWP1rPNLNv9R6vUaVL9YRb9nU=
 github.com/hashicorp/vault-plugin-auth-cf v0.20.0 h1:KOdNy0uSffjw0sOU9zg9JgdCkuRPcqOjOIxyV2NZLjg=
 github.com/hashicorp/vault-plugin-auth-cf v0.20.0/go.mod h1:SO35/C2iS12kIqIoux4AB2QSQ2IO+hbZ4/UQrQDyawo=
 github.com/hashicorp/vault-plugin-auth-gcp v0.20.1 h1:FlucOwK3h67+ThgAf5B2wHYxoI96ryAgyWThe5piE4g=
@@ -1862,8 +1862,8 @@ github.com/microsoft/kiota-serialization-multipart-go v1.0.0 h1:3O5sb5Zj+moLBiJy
 github.com/microsoft/kiota-serialization-multipart-go v1.0.0/go.mod h1:yauLeBTpANk4L03XD985akNysG24SnRJGaveZf+p4so=
 github.com/microsoft/kiota-serialization-text-go v1.0.0 h1:XOaRhAXy+g8ZVpcq7x7a0jlETWnWrEum0RhmbYrTFnA=
 github.com/microsoft/kiota-serialization-text-go v1.0.0/go.mod h1:sM1/C6ecnQ7IquQOGUrUldaO5wj+9+v7G2W3sQ3fy6M=
-github.com/microsoftgraph/msgraph-sdk-go v1.61.0 h1:/dqZXI7VAHTAeddhEfEPLf1EXszaDAkLcC9dkOARPxI=
-github.com/microsoftgraph/msgraph-sdk-go v1.61.0/go.mod h1:2dZJTO/7S+UmfwKlPQg2vczpW7awcIEj1ZCgfZIf0V4=
+github.com/microsoftgraph/msgraph-sdk-go v1.62.0 h1:esS0oR36BXzMUFw3hr7U+BMKWfidOVGMbvDXe9TTcsc=
+github.com/microsoftgraph/msgraph-sdk-go v1.62.0/go.mod h1:2dZJTO/7S+UmfwKlPQg2vczpW7awcIEj1ZCgfZIf0V4=
 github.com/microsoftgraph/msgraph-sdk-go-core v1.2.1 h1:P1wpmn3xxfPMFJHg+PJPcusErfRkl63h6OdAnpDbkS8=
 github.com/microsoftgraph/msgraph-sdk-go-core v1.2.1/go.mod h1:vFmWQGWyLlhxCESNLv61vlE4qesBU+eWmEVH7DJSESA=
 github.com/miekg/dns v1.0.14/go.mod h1:W1PPwlIAgtquWBMBEV9nkV9Cazfe8ScdGz/Lj7v3Nrg=
