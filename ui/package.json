@@ -224,6 +224,7 @@
     "handlebars": "4.7.7",
     "highlight.js": "^10.4.1",
     "node-notifier": "^8.0.1",
+    "shared-secure-ui": "git+https://github.com/hashicorp/shared-secure-ui#workspace=shared-secure-ui",
     "uuid": "^9.0.0"
   },
   "packageManager": "yarn@3.5.0"

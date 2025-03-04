@@ -2402,7 +2402,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hashicorp/design-system-components@npm:~4.16.0":
+"@hashicorp/design-system-components@npm:^4.14.0, @hashicorp/design-system-components@npm:~4.16.0":
   version: 4.16.0
   resolution: "@hashicorp/design-system-components@npm:4.16.0"
   dependencies:
@@ -2448,14 +2448,26 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hashicorp/design-system-tokens@npm:^2.3.0":
+"@hashicorp/design-system-tokens@npm:^2.2.1, @hashicorp/design-system-tokens@npm:^2.3.0":
   version: 2.3.0
   resolution: "@hashicorp/design-system-tokens@npm:2.3.0"
   checksum: d05650366d4397d4f0bda23398b0f7354212571bcc02e074407da2104c6e455d7435a9bf7a322a3d8d74152defda705d19b1c8c7ec2bc1a807f0bc9600ed6bcf
   languageName: node
   linkType: hard
 
-"@hashicorp/flight-icons@npm:^3.9.0":
+"@hashicorp/ember-flight-icons@npm:^5.1.3":
+  version: 5.1.3
+  resolution: "@hashicorp/ember-flight-icons@npm:5.1.3"
+  dependencies:
+    "@embroider/addon-shim": ^1.8.7
+    "@hashicorp/flight-icons": ^3.5.0
+    decorator-transforms: ^1.1.0
+    ember-get-config: ^2.1.1
+  checksum: 62a6f4bcd6f1826afb1d9f3a52e073983ddca402f50217f9a2df20e42df44803d84b5bd7dc512c083e9b81b896f12243f433cbec77236a9010ac8ed183dde5b6
+  languageName: node
+  linkType: hard
+
+"@hashicorp/flight-icons@npm:^3.5.0, @hashicorp/flight-icons@npm:^3.9.0":
   version: 3.9.0
   resolution: "@hashicorp/flight-icons@npm:3.9.0"
   checksum: f32b6e273051b3d6eb1ce232d808e9a8d9dd2249c99bca2728daaf46ede324677774192f830a781a8e5c96fe283ae7fb61a9172c8f82231804b2c9153ce5d905
@@ -7355,7 +7367,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"decorator-transforms@npm:^1.0.1, decorator-transforms@npm:^1.2.1":
+"decorator-transforms@npm:^1.0.1, decorator-transforms@npm:^1.1.0, decorator-transforms@npm:^1.2.1":
   version: 1.2.1
   resolution: "decorator-transforms@npm:1.2.1"
   dependencies:
@@ -7365,7 +7377,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"decorator-transforms@npm:^2.0.0, decorator-transforms@npm:^2.3.0":
+"decorator-transforms@npm:^2.0.0, decorator-transforms@npm:^2.2.2, decorator-transforms@npm:^2.3.0":
   version: 2.3.0
   resolution: "decorator-transforms@npm:2.3.0"
   dependencies:
@@ -16361,7 +16373,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"rollup-pluginutils@npm:^2.6.0":
+"rollup-plugin-scss@npm:^4.0.1":
+  version: 4.0.1
+  resolution: "rollup-plugin-scss@npm:4.0.1"
+  dependencies:
+    rollup-pluginutils: ^2.3.3
+  checksum: 2864b98f5efe0d66900fc195060ac514143c11f934120fd009dd63679851a87195c0e3a9fff5715181d1d7a873ea24216e93bc6003b6f0311acdfe5926422f90
+  languageName: node
+  linkType: hard
+
+"rollup-pluginutils@npm:^2.3.3, rollup-pluginutils@npm:^2.6.0":
   version: 2.8.2
   resolution: "rollup-pluginutils@npm:2.8.2"
   dependencies:
@@ -16768,6 +16789,24 @@ __metadata:
   version: 1.2.0
   resolution: "setprototypeof@npm:1.2.0"
   checksum: be18cbbf70e7d8097c97f713a2e76edf84e87299b40d085c6bf8b65314e994cc15e2e317727342fa6996e38e1f52c59720b53fe621e2eb593a6847bf0356db89
+  languageName: node
+  linkType: hard
+
+"shared-secure-ui@git+https://github.com/hashicorp/shared-secure-ui#workspace=shared-secure-ui":
+  version: 0.0.0
+  resolution: "shared-secure-ui@https://github.com/hashicorp/shared-secure-ui.git#workspace=shared-secure-ui&commit=28f16b2781d6ae667a4291e0eab09fc19db3f37d"
+  dependencies:
+    "@embroider/addon-shim": ^1.8.9
+    "@hashicorp/design-system-components": ^4.14.0
+    "@hashicorp/design-system-tokens": ^2.2.1
+    "@hashicorp/ember-flight-icons": ^5.1.3
+    "@lineal-viz/lineal": ^0.5.1
+    decorator-transforms: ^2.2.2
+    ember-modifier: ^4.2.0
+    rollup-plugin-scss: ^4.0.1
+  peerDependencies:
+    ember-source: ">= 4.12.0"
+  checksum: ee4971fb3964bf41e6d37d39151797edbe0181e5637b6d0987dd7a30567fed8ae4ead3a1f6af1d93a089d455534d58c622d59239b7f17e590a7da2f9f1d454c6
   languageName: node
   linkType: hard
 
@@ -18944,6 +18983,7 @@ __metadata:
     qunit: ^2.20.0
     qunit-dom: ^2.0.0
     sass: ^1.66.3
+    shared-secure-ui: "git+https://github.com/hashicorp/shared-secure-ui#workspace=shared-secure-ui"
     shell-quote: ^1.8.1
     sinon: ^17.0.1
     string.prototype.endswith: ^0.2.0
