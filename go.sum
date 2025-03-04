@@ -1583,8 +1583,8 @@ github.com/hashicorp/vault-plugin-database-couchbase v0.13.0 h1:ql81GB+20ggmRCS/
 github.com/hashicorp/vault-plugin-database-couchbase v0.13.0/go.mod h1:lfCapwEocUz/lno6ABwxa/OXEHGdsAUejcI0Mlod6TE=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.17.0 h1:GPZFTWjSv85GWDtrxZ6uYXsxNu4utgr+m2+lP7KCOwU=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.17.0/go.mod h1:I2MnIah+ltWlJtmXFA2+KUaaW68TR0QM9JOPmq+Tbdo=
-github.com/hashicorp/vault-plugin-database-mongodbatlas v0.14.0 h1:llor1sH0gXaLbQFOidLSbSXKPPFBs16OpyKeAqbBdyI=
-github.com/hashicorp/vault-plugin-database-mongodbatlas v0.14.0/go.mod h1:hxuULBD5X4N1hi6PvMdbUdVTE94I/6dPWtT2+rRTTTM=
+github.com/hashicorp/vault-plugin-database-mongodbatlas v0.14.1-0.20250301002125-a9309500cb7b h1:dJk/y1p92v71n/J15h8KuODHdCHq1xmjymHXmdAGp+4=
+github.com/hashicorp/vault-plugin-database-mongodbatlas v0.14.1-0.20250301002125-a9309500cb7b/go.mod h1:rYp9rPIaZzMYbHZduSrS/ng9HFs/+58ucRLYfKBqbw0=
 github.com/hashicorp/vault-plugin-database-redis v0.5.0 h1:p0vLmwUs6Dyiwki6ibtizQ7b4rtx+y78J8kSkr4rsiQ=
 github.com/hashicorp/vault-plugin-database-redis v0.5.0/go.mod h1:RaY5jao0wibpMeH/1Jz0QwpH9GQ+vRay2wz5of08QsY=
 github.com/hashicorp/vault-plugin-database-redis-elasticache v0.6.0 h1:IkP+Ilb/jC2FLU4KAH9+ai0aaCP+GVmGdmIl981ZFs0=
@@ -2266,8 +2266,8 @@ go.etcd.io/etcd/client/v3 v3.5.17 h1:o48sINNeWz5+pjy/Z0+HKpj/xSnBkuVhVvXkjEXbqZY
 go.etcd.io/etcd/client/v3 v3.5.17/go.mod h1:j2d4eXTHWkT2ClBgnnEPm/Wuu7jsqku41v9DZ3OtjQo=
 go.mongodb.org/atlas v0.37.0 h1:zQnO1o5+bVP9IotpAYpres4UjMD2F4nwNEFTZhNL4ck=
 go.mongodb.org/atlas v0.37.0/go.mod h1:DJYtM+vsEpPEMSkQzJnFHrT0sP7ev6cseZc/GGjJYG8=
-go.mongodb.org/mongo-driver v1.17.2 h1:gvZyk8352qSfzyZ2UMWcpDpMSGEr1eqE4T793SqyhzM=
-go.mongodb.org/mongo-driver v1.17.2/go.mod h1:Hy04i7O2kC4RS06ZrhPRqj/u4DTYkFDAAccj+rVKqgQ=
+go.mongodb.org/mongo-driver v1.17.3 h1:TQyXhnsWfWtgAhMtOgtYHMTkZIfBTpMTsMnd9ZBeHxQ=
+go.mongodb.org/mongo-driver v1.17.3/go.mod h1:Hy04i7O2kC4RS06ZrhPRqj/u4DTYkFDAAccj+rVKqgQ=
 go.opencensus.io v0.21.0/go.mod h1:mSImk1erAIZhrmZN+AvHh14ztQfjbGwt4TtuofqLduU=
 go.opencensus.io v0.22.0/go.mod h1:+kGneAE2xo2IficOXnaByMWTGM9T73dGwxeWcUqIpI8=
 go.opencensus.io v0.22.2/go.mod h1:yxeiOL68Rb0Xd1ddK5vPZ/oVn4vY4Ynel7k9FzqtOIw=
