@@ -11,7 +11,7 @@
         {{#if (and (eq @mode "edit") (eq attr.name "username"))}}
           <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
         {{else}}
-          <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
+          <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} @modelValidations={{@modelValidations}} />
         {{/if}}
 
       {{/each}}
