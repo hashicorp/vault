@@ -1597,8 +1597,8 @@ github.com/hashicorp/vault-plugin-secrets-ad v0.20.1 h1:EC+ZwWP54cehgXk5BC8WKX8/
 github.com/hashicorp/vault-plugin-secrets-ad v0.20.1/go.mod h1:QeGpxzcU1EEZazRUiJNi4cIJ98f3JbgefhrFGkwI+h4=
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.19.0 h1:XH1typO/R5RlyyW5cm65+DDAnYmiA7xEdoRGGrB9xu0=
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.19.0/go.mod h1:MxfMowH1VenMCtixd/mDqq9z10CBobzOMZJOXRLi0TA=
-github.com/hashicorp/vault-plugin-secrets-azure v0.21.1 h1:+9iHg7P71vVZ+1muAkao28tl6bf9qWw3VRWZmKSTswI=
-github.com/hashicorp/vault-plugin-secrets-azure v0.21.1/go.mod h1:IwfPcNyzaigu3LFy8yp+f1TVgBNdtJtTMERWhtDrXqw=
+github.com/hashicorp/vault-plugin-secrets-azure v0.21.2-0.20250301001349-c1c0f4450c40 h1:yvb51hJPORwnSg55aT3HkC1tWkNl4XSFeadNvdy5KII=
+github.com/hashicorp/vault-plugin-secrets-azure v0.21.2-0.20250301001349-c1c0f4450c40/go.mod h1:rozg99hvGLqH3tY3rBYHTg05mnfN3sQ8KgoNe+ntGy8=
 github.com/hashicorp/vault-plugin-secrets-gcp v0.21.1 h1:xEXWqoreWz4ZeZOaLbGpkUHDnJdsO7YADfARxoecsJg=
 github.com/hashicorp/vault-plugin-secrets-gcp v0.21.1/go.mod h1:PJwUCF6t95OSpkM15YJZJO8eSPYf/SjvEsrBJZrkzk8=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.20.0 h1:gFPxVPaFJjyPUF3GE7LwgGkVkQ+BA7BE775IfdznZ5M=
@@ -1862,8 +1862,8 @@ github.com/microsoft/kiota-serialization-multipart-go v1.0.0 h1:3O5sb5Zj+moLBiJy
 github.com/microsoft/kiota-serialization-multipart-go v1.0.0/go.mod h1:yauLeBTpANk4L03XD985akNysG24SnRJGaveZf+p4so=
 github.com/microsoft/kiota-serialization-text-go v1.0.0 h1:XOaRhAXy+g8ZVpcq7x7a0jlETWnWrEum0RhmbYrTFnA=
 github.com/microsoft/kiota-serialization-text-go v1.0.0/go.mod h1:sM1/C6ecnQ7IquQOGUrUldaO5wj+9+v7G2W3sQ3fy6M=
-github.com/microsoftgraph/msgraph-sdk-go v1.61.0 h1:/dqZXI7VAHTAeddhEfEPLf1EXszaDAkLcC9dkOARPxI=
-github.com/microsoftgraph/msgraph-sdk-go v1.61.0/go.mod h1:2dZJTO/7S+UmfwKlPQg2vczpW7awcIEj1ZCgfZIf0V4=
+github.com/microsoftgraph/msgraph-sdk-go v1.62.0 h1:esS0oR36BXzMUFw3hr7U+BMKWfidOVGMbvDXe9TTcsc=
+github.com/microsoftgraph/msgraph-sdk-go v1.62.0/go.mod h1:2dZJTO/7S+UmfwKlPQg2vczpW7awcIEj1ZCgfZIf0V4=
 github.com/microsoftgraph/msgraph-sdk-go-core v1.2.1 h1:P1wpmn3xxfPMFJHg+PJPcusErfRkl63h6OdAnpDbkS8=
 github.com/microsoftgraph/msgraph-sdk-go-core v1.2.1/go.mod h1:vFmWQGWyLlhxCESNLv61vlE4qesBU+eWmEVH7DJSESA=
 github.com/miekg/dns v1.0.14/go.mod h1:W1PPwlIAgtquWBMBEV9nkV9Cazfe8ScdGz/Lj7v3Nrg=
