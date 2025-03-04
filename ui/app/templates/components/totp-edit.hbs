@@ -18,6 +18,7 @@
       {{#if (eq @mode "create")}}
         Create a TOTP key
       {{else if (eq @mode "edit")}}
+        {{! TODO remove support for this }}
         Edit TOTP key
       {{else}}
         TOTP key
@@ -28,109 +29,13 @@
 </PageHeader>
 
 {{#if (eq @mode "show")}}
-  <Toolbar>
-    <ToolbarActions>
-      {{#if @model.canDelete}}
-        <ConfirmAction
-          @buttonText="Delete key"
-          class="toolbar-button"
-          @buttonColor="secondary"
-          @onConfirmAction={{this.delete}}
-        />
-        <div class="toolbar-separator"></div>
-      {{/if}}
-      {{#if @model.canUpdate}}
-        <ToolbarSecretLink @secret={{@model.id}} @mode="edit" data-test-edit-link @replace={{true}}>
-          Edit key
-        </ToolbarSecretLink>
-      {{/if}}
-    </ToolbarActions>
-  </Toolbar>
+  <TotpKey::Details @model={{@model}} @delete={{this.delete}} />
 {{/if}}
 
-{{#if (or (eq @mode "edit") (eq @mode "create"))}}
+{{#if (eq @mode "create")}}
   {{#if this.hasGenerated}}
-    <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-      <MessageError @model={{@model}} />
-      {{#unless @model.isError}}
-        <Hds::Alert @type="inline" @color="warning" class="has-top-bottom-margin" data-test-warning as |A|>
-          <A.Title>Warning</A.Title>
-          <A.Description>
-            You will not be able to access this information later, so please copy the information below.
-          </A.Description>
-        </Hds::Alert>
-      {{/unless}}
-      {{#each @model.generatedAttrs as |attr|}}
-        <InfoTableRow
-          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-          @value={{get @model attr.name}}
-        />
-      {{/each}}
-      <div class="list-item-row">
-        <div class="center-display">
-          <QrCode
-            @text={{@model.url}}
-            @colorLight="#F7F7F7"
-            @width={{200}}
-            @height={{200}}
-            @correctLevel="L"
-            data-test-qrcode
-          />
-        </div>
-      </div>
-    </div>
-    <div class="field is-grouped box is-fullwidth is-bottomless">
-      <div class="control">
-        <Hds::Button @text="Continue" @color="secondary" {{on "click" this.reset}} data-test-back-button />
-      </div>
-    </div>
+    <TotpKey::QrCode @model={{@model}} @reset={{this.reset}} />
   {{else}}
-    <form onsubmit={{action "createOrUpdate" "create"}}>
-      <div class="box is-sideless is-fullwidth is-marginless">
-        <MessageError @model={{@model}} />
-        <NamespaceReminder @mode={{@mode}} @noun="TOTP key" />
-        {{#if (eq @mode "create")}}
-          {{#each @model.createAttrs as |attr|}}
-            <FormField
-              @attr={{attr}}
-              @model={{@model}}
-              @modelValidations={{@modelValidations}}
-              @showHelpText={{@showHelpText}}
-            />
-          {{/each}}
-        {{/if}}
-        <FormFieldGroupsLoop @model={{@model}} @mode={{@mode}} />
-      </div>
-      <div class="field is-grouped-split box is-fullwidth is-bottomless">
-        <Hds::ButtonSet>
-          <Hds::Button @text={{if (eq @mode "create") "Create key" "Save"}} type="submit" data-test-totp-create />
-          {{#if (eq @mode "create")}}
-            <Hds::Button
-              @text="Cancel"
-              @color="secondary"
-              @route="vault.cluster.secrets.backend.list-root"
-              @model={{@model.backend}}
-              @query={{hash tab="key"}}
-            />
-          {{else}}
-            <Hds::Button
-              @text="Cancel"
-              @color="secondary"
-              @route="vault.cluster.secrets.backend.show"
-              @models={{array @model.backend @model.id}}
-            />
-          {{/if}}
-        </Hds::ButtonSet>
-      </div>
-    </form>
+    <TotpKey::Create @create={{this.create}} @model={{@model}} @mode={{@mode}} />
   {{/if}}
-{{else}}
-  <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-    {{#each @model.attrs as |attr|}}
-      <InfoTableRow
-        @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-        @value={{get @model attr.name}}
-      />
-    {{/each}}
-  </div>
 {{/if}}

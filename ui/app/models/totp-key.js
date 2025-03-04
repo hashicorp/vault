@@ -71,9 +71,11 @@ export default class TotpKeyModel extends Model {
     editDisabled: true,
   })
   issuer;
-  @attr('number', {
-    editDisabled: true,
-    defaultValue: 30,
+  @attr({
+    label: 'Period',
+    editType: 'ttl',
+    helperTextEnabled: 'How long each generated TOTP is valid.',
+    defaultValue: 30, // API accepts both an integer as seconds and string with unit e.g 30 || '30s'
   })
   period;
 
