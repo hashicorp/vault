@@ -69,9 +69,10 @@ export default class RoleModel extends Model {
   rotation_period;
   @attr({
     label: 'Skip initial rotation',
-    editType: 'boolean',
+    editType: 'toggleButton',
     defaultValue: false,
-    subText: 'When unchecked, Vault automatically rotates the password upon creation.',
+    defaultSubText: 'Vault will rotate password for this static role on creation.',
+    subText: "Vault will not rotate this role's password on creation.",
   })
   skip_import_rotation;
   @attr('array', {

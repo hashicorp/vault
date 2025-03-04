@@ -65,7 +65,8 @@ export default class FormFieldComponent extends Component {
     'ttl',
     'toggleButton',
   ];
-  @tracked showInput = false;
+  @tracked showToggleTextInput = false;
+  @tracked toggleInput = false;
 
   constructor() {
     super(...arguments);
@@ -76,7 +77,8 @@ export default class FormFieldComponent extends Component {
       valuePath.toLowerCase() !== 'id'
     );
     const modelValue = model[valuePath];
-    this.showInput = !!modelValue;
+    this.showToggleTextInput = !!modelValue;
+    this.toggleInput = !!modelValue;
   }
 
   get hasRadioSubText() {
@@ -149,7 +151,7 @@ export default class FormFieldComponent extends Component {
     this.args.model.set(this.valuePath, value);
     this.onChange(this.valuePath, value);
   }
-  @action
+  @action //this is never used anywhere, remove?
   setAndBroadcastBool(trueVal, falseVal, event) {
     const valueToSet = event.target.checked === true ? trueVal : falseVal;
     this.setAndBroadcast(valueToSet);
@@ -178,12 +180,17 @@ export default class FormFieldComponent extends Component {
     }
   }
   @action
-  toggleShow() {
-    const value = !this.showInput;
-    this.showInput = value;
+  toggleTextShow() {
+    const value = !this.showToggleTextInput;
+    this.showToggleTextInput = value;
     if (!value) {
       this.setAndBroadcast(null);
     }
+  }
+  @action
+  toggleButton() {
+    this.toggleInput = !this.toggleInput;
+    this.setAndBroadcast(this.toggleInput);
   }
   @action
   handleKeyUp(maybeEvent) {

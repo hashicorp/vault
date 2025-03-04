@@ -191,13 +191,13 @@
     {{! Togglable Input }}
     <Toggle
       @name="toggle-{{@attr.name}}"
-      @onChange={{this.toggleShow}}
-      @checked={{this.showInput}}
+      @onChange={{this.toggleButton}}
+      @checked={{this.toggleInput}}
       data-test-toggle={{@attr.name}}
     >
       <span class="has-text-weight-bold is-large">{{this.labelString}}</span><br />
       <div class="description has-text-grey">
-        {{#if this.showInput}}
+        {{#if this.toggleInput}}
           <span>
             {{@attr.options.subText}}
           </span>
@@ -212,13 +212,13 @@
     {{! Togglable Text Input }}
     <Toggle
       @name="show-{{@attr.name}}"
-      @onChange={{this.toggleShow}}
-      @checked={{this.showInput}}
+      @onChange={{this.toggleTextShow}}
+      @checked={{this.showToggleTextInput}}
       data-test-toggle={{@attr.name}}
     >
       <span class="ttl-picker-label is-large">{{this.labelString}}</span><br />
       <div class="description has-text-grey">
-        {{#if this.showInput}}
+        {{#if this.showToggleTextInput}}
           <span>
             {{@attr.options.subText}}
             {{#if @attr.options.docLink}}
@@ -240,7 +240,7 @@
           </span>
         {{/if}}
       </div>
-      {{#if this.showInput}}
+      {{#if this.showToggleTextInput}}
         <input
           data-test-input={{@attr.name}}
           id={{@attr.name}}
