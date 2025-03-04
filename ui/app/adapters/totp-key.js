@@ -11,7 +11,6 @@ export default class TotpKeyAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
   createOrUpdate(store, type, snapshot, requestType) {
-    // TODO, unsure why request type is needed, but updates currently fail
     const { name, backend } = snapshot.record;
     const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot, requestType);
@@ -27,10 +26,6 @@ export default class TotpKeyAdapter extends ApplicationAdapter {
 
   createRecord() {
     return this.createOrUpdate(...arguments);
-  }
-
-  updateRecord() {
-    return this.createOrUpdate(...arguments, 'update');
   }
 
   deleteRecord(store, type, snapshot) {

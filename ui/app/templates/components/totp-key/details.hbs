@@ -6,12 +6,6 @@
   <ToolbarActions>
     {{#if @model.canDelete}}
       <ConfirmAction @buttonText="Delete key" class="toolbar-button" @buttonColor="secondary" @onConfirmAction={{@delete}} />
-      <div class="toolbar-separator"></div>
-    {{/if}}
-    {{#if @model.canUpdate}}
-      <ToolbarSecretLink @secret={{@model.id}} @mode="edit" data-test-edit-link @replace={{true}}>
-        Edit key
-      </ToolbarSecretLink>
     {{/if}}
   </ToolbarActions>
 </Toolbar>

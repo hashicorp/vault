@@ -17,9 +17,6 @@
     <h1 class="title is-3" data-test-secret-header>
       {{#if (eq @mode "create")}}
         Create a TOTP key
-      {{else if (eq @mode "edit")}}
-        {{! TODO remove support for this }}
-        Edit TOTP key
       {{else}}
         TOTP key
         <code>{{@model.id}}</code>

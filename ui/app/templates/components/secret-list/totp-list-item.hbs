@@ -33,9 +33,6 @@
         {{#if @item.canRead}}
           <dd.Interactive @text="Details" @route="vault.cluster.secrets.backend.show" @model={{@item.id}} />
         {{/if}}
-        {{#if @item.canUpdate}}
-          <dd.Interactive @text="Edit" @route="vault.cluster.secrets.backend.edit" @model={{@item.id}} />
-        {{/if}}
         {{#if @item.canDelete}}
           <dd.Interactive
             @text="Delete"

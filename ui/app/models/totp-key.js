@@ -43,6 +43,8 @@ const validations = {
 @withModelValidations(validations)
 @withExpandedAttributes()
 export default class TotpKeyModel extends Model {
+  // TODO fix spacings
+  // reaudit params, fix casings, check alias
   @attr('string', {
     readOnly: true,
   })
@@ -52,25 +54,19 @@ export default class TotpKeyModel extends Model {
 
   @attr('string', {
     fieldValue: 'name',
-    editDisabled: true,
   })
   account_name;
   @attr('string', {
-    editDisabled: true,
     possibleValues: ALGORITHMS,
     defaultValue: 'SHA1',
   })
   algorithm;
   @attr('number', {
-    editDisabled: true,
     possibleValues: DIGITS,
     defaultValue: 6,
   })
   digits;
-  @attr('string', {
-    editDisabled: true,
-  })
-  issuer;
+  @attr('string') issuer;
   @attr({
     label: 'Period',
     editType: 'ttl',
@@ -82,45 +78,38 @@ export default class TotpKeyModel extends Model {
   @attr('boolean', {
     defaultValue: false,
     label: 'Use Vault as provider for this key',
-    editDisabled: true,
   })
   generate;
 
   // Used when generate is true
   @attr('number', {
-    //defaultValue: 20,
-    editDisabled: true,
+    defaultValue: 20,
   })
   key_size;
   @attr('number', {
     possibleValues: SKEW,
-    //defaultValue: 1,
-    editDisabled: true,
+    defaultValue: 1,
   })
   skew;
   @attr('boolean', {
-    //defaultValue: true,
-    editDisabled: true,
+    defaultValue: true,
   })
   exported;
 
   // Doesn't really make sense as we can generate our own QR code from the url
   @attr('number', {
     defaultValue: 0,
-    editDisabled: true,
   })
   qr_size;
 
   // Used when generate is false
   @attr('string', {
-    editDisabled: true,
     label: 'otpauth url',
     helpText:
       'If a URL is provided the other fields can be left empty. E.g. otpauth://totp/Vault:test@test.com?secret=Y64VEVMBTSXCYIWRSHRNDZW62MPGVU2G&issuer=Vault',
   })
   url;
   @attr('string', {
-    editDisabled: true,
     label: 'Shared master key',
   })
   key;
@@ -141,6 +130,7 @@ export default class TotpKeyModel extends Model {
     return keys.map((k) => this.allByKey[k]);
   }
 
+  // todo move out of model
   @computed('generate', function () {
     const defaultFields = ['generate'];
     const options = ['algorithm', 'digits', 'period'];
@@ -173,6 +163,5 @@ export default class TotpKeyModel extends Model {
 
   @lazyCapabilities(apiPath`${'backend'}/keys/${'id'}`, 'backend', 'id') keyPath;
   @alias('keyPath.canRead') canRead;
-  @alias('keyPath.canUpdate') canUpdate;
   @alias('keyPath.canDelete') canDelete;
 }
