@@ -1,1 +1,47 @@
-<h1>plugins</h1>
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-registry-header="Vault registry">
+      Vault Registry
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+{{#each @model as |plugin|}}
+  <Hds::Card::Container
+    class="has-padding-l has-bottom-margin-m"
+    @level="mid"
+    @hasBorder="true"
+    data-test-card-plugin-container
+    ...attributes
+  >
+    <div class="is-flex">
+      <div class="is-flex-column is-flex-1">
+        <div class="has-bottom-padding-s">
+          <Hds::Text::Display>{{plugin.pluginName}}</Hds::Text::Display>
+          <Hds::Text::Body @tag="p" @color="foreground-faint" @size="200">by {{plugin.author}}</Hds::Text::Body>
+          <Hds::Text::Body @tag="p" @color="foreground-faint" @size="200">{{humanize plugin.pluginType}}</Hds::Text::Body>
+        </div>
+        <Hds::Text::Body @tag="p">{{plugin.description}}t</Hds::Text::Body>
+      </div>
+      <div class="is-flex-column is-flex-1">
+        <Hds::Text::Body class="has-text-right" @tag="p">
+          <span>
+            32k downloads
+            <Hds::Badge @text={{humanize plugin.official.tags}} @icon={{plugin.official.author}} />
+            <Hds::Badge @text={{plugin.tags}} @color={{if (eq plugin.tags "enterprise") "highlight"}} />
+          </span>
+        </Hds::Text::Body>
+        <Hds::Text::Body class="has-text-right" @tag="p">{{plugin.pluginVersion}}
+          published
+          {{date-format plugin.publishDate "MMM dd, yyyy"}}
+        </Hds::Text::Body>
+        <Hds::Text::Body class="has-text-right" @tag="p">
+          Compatible with Vault
+          {{plugin.pluginVersion}}
+        </Hds::Text::Body>
+      </div>
+    </div>
+  </Hds::Card::Container>
+{{/each}}
+
+{{!-- <VaultRegistry::Registry::Plugins @plugins={{@model}} /> --}}
