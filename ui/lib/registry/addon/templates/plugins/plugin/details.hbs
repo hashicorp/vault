@@ -1,0 +1,133 @@
+<PageHeader as |p|>
+  <p.top>
+    <h1 class="title is-3" data-test-registry-header="Vault registry">
+      {{@model.pluginName}}
+      <Hds::Badge @text={{humanize @model.official.tags}} @icon={{@model.official.author}} />
+    </h1>
+    <Hds::Text::Body class="has-bottom-margin-m" @tag="p" @color="foreground-faint" @size="200">by
+      {{@model.author}}</Hds::Text::Body>
+  </p.top>
+  <p.levelLeft>
+    <Hds::Text::Body @tag="p">{{@model.description}}</Hds::Text::Body>
+  </p.levelLeft>
+</PageHeader>
+
+<Hds::Card::Container
+  class="has-padding-m has-top-bottom-margin-12"
+  @level="mid"
+  @hasBorder="true"
+  data-test-card-plugin-container
+>
+  <div class="is-flex-between">
+    <div class="has-text-right">
+      <Hds::Text::Body @tag="p" @size="200" @color="foreground-faint">
+        Version
+        {{@model.pluginVersion}}
+        published
+        {{date-format @model.publishDate "MMM dd, yyyy"}}
+      </Hds::Text::Body>
+
+    </div>
+    <div class="has-text-right">
+      <Hds::Text::Body @tag="p">
+        {{humanize @model.pluginType}}
+      </Hds::Text::Body>
+      <Hds::Text::Body @tag="p">
+        32k downloads
+      </Hds::Text::Body>
+    </div>
+  </div>
+</Hds::Card::Container>
+
+<div class="is-flex-row gap-24">
+  <div class="is-flex-column">
+    <Hds::Card::Container
+      class="has-padding-m has-top-bottom-margin-12"
+      @level="mid"
+      @hasBorder="true"
+      data-test-card-plugin-container
+    >
+      <Hds::Text::Display @tag="h2">
+        Header
+      </Hds::Text::Display>
+      <Hds::Text::Body @tag="p">
+        Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's
+        standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a
+        type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining
+        essentially unchanged.
+      </Hds::Text::Body>
+      <Hds::Text::Display @tag="h2" class="has-top-margin-m">
+        Header
+      </Hds::Text::Display>
+      <Hds::Text::Body @tag="p">
+        Lorem Ipsum is simply dummy text of the printing and typesetting industry.
+        <Hds::CodeBlock
+          @language="javascript"
+          @hasCopyButton={{true}}
+          @copyButtonText="Copy javascript code"
+          @value="let codeLang=`JavaScript`;
+console.log(`I am ${codeLang} code`);"
+        />
+        Lorem Ipsum is simply dummy text of the printing and typesetting industry.
+        <Hds::CodeBlock
+          @language="javascript"
+          @hasCopyButton={{true}}
+          @copyButtonText="Copy javascript code"
+          @value="let codeLang=`JavaScript`;
+console.log(`I am ${codeLang} code`);"
+        />
+      </Hds::Text::Body>
+    </Hds::Card::Container>
+  </div>
+
+  <div class="is-flex-column">
+    <Hds::Card::Container
+      class="has-padding-m has-top-bottom-margin-12"
+      @level="mid"
+      @hasBorder="true"
+      data-test-card-plugin-container
+    >
+      <Hds::Text::Display @tag="h2">
+        Install for Vault
+      </Hds::Text::Display>
+      <Hds::Text::Body @tag="p">
+        Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's
+        standard dummy text ever since the 1500s, when an unknown printer.
+      </Hds::Text::Body>
+      <Hds::Button @text="Install" />
+    </Hds::Card::Container>
+
+    <Hds::Card::Container
+      class="has-padding-m has-top-bottom-margin-12"
+      @level="mid"
+      @hasBorder="true"
+      data-test-card-plugin-container
+    >
+      <Hds::Text::Display @tag="h2">
+        Compatibility
+      </Hds::Text::Display>
+      <Hds::Text::Body @tag="p">
+        Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's
+        standard dummy text ever since the 1500s, when an unknown printer.
+      </Hds::Text::Body>
+      <Hds::Table @caption="your custom, meaningful caption goes here">
+        <:head as |H|>
+          <H.Tr>
+            <H.Th>Plugin version</H.Th>
+            <H.Th>Vault versions</H.Th>
+          </H.Tr>
+        </:head>
+        <:body as |B|>
+          <B.Tr>
+            <B.Td>1.0.1 </B.Td>
+            <B.Td>1.0.2</B.Td>
+          </B.Tr>
+          <B.Tr>
+            <B.Td>1.17.2 </B.Td>
+            <B.Td>1.19.3</B.Td>
+          </B.Tr>
+        </:body>
+      </Hds::Table>
+    </Hds::Card::Container>
+  </div>
+</div>
