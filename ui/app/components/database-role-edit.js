@@ -67,6 +67,19 @@ export default class DatabaseRoleEdit extends Component {
     }
     return warnings;
   }
+
+  get skipImport() {
+    const backend = this.args.model?.backend;
+    const dbs = this.args.model?.database || [];
+    if (!backend || dbs.length === 0) {
+      return null;
+    }
+    return this.store
+      .queryRecord('database/connection', { id: dbs[0], backend })
+      .then((record) => record.skip_static_role_rotation_import)
+      .catch(() => null);
+  }
+
   get databaseType() {
     const backend = this.args.model?.backend;
     const dbs = this.args.model?.database || [];

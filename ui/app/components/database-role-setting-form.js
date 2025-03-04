@@ -33,10 +33,22 @@ export default class DatabaseRoleSettingForm extends Component {
   get statementFields() {
     const type = this.args.roleType;
     const plugin = this.args.dbType;
+
+    // set this here when db connection type is selected -- is there a better way?
+    this.setSkipImport();
+
     if (!type) return null;
     const dbValidFields = getStatementFields(type, plugin);
     return this.args.attrs.filter((a) => {
       return dbValidFields.includes(a.name);
     });
+  }
+
+  setSkipImport() {
+    const dbSkipValue = this.args.dbSkipImport;
+    const skipInput = this.args.attrs.find((x) => x.name === 'skip_import_rotation');
+    if (skipInput && dbSkipValue !== null) {
+      skipInput.options.defaultValue = dbSkipValue;
+    }
   }
 }
