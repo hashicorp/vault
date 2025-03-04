@@ -67,12 +67,7 @@ export default Route.extend({
     }
   },
 
-  // TODO fix casing here
-  getTOTPCode(backend, keyName) {
-    return this.store.adapterFor('totp-key').generateCode(backend, keyName);
-  },
-
-  async getTOTPKey(backend, keyName) {
+  async getTotpKey(backend, keyName) {
     try {
       const key = await this.store.queryRecord('totp-key', { id: keyName, backend });
       return key;
@@ -86,14 +81,13 @@ export default Route.extend({
     const role = params.secret;
     const { id: backendPath, type: backendType } = this.modelFor('vault.cluster.secrets.backend');
     const roleType = params.roleType;
-    let dbCred, awsRole, totpCode;
+    let dbCred, awsRole, totpCodePeriod;
     if (backendType === 'database') {
       dbCred = await this.getDatabaseCredential(backendPath, role, roleType);
     } else if (backendType === 'aws') {
       awsRole = await this.getAwsRole(backendPath, role);
     } else if (backendType === 'totp') {
-      totpCode = await this.getTOTPCode(backendPath, role);
-      totpCode.period = (await this.getTOTPKey(backendPath, role))?.period;
+      totpCodePeriod = (await this.getTotpKey(backendPath, role))?.period;
     }
 
     return resolve({
@@ -103,17 +97,17 @@ export default Route.extend({
       roleType,
       dbCred,
       awsRoleType: awsRole?.credentialType,
-      totpCode,
+      totpCodePeriod,
     });
   },
 
   async afterModel(model) {
-    if (model.backendType === 'totp' && model.totpCode.period) {
+    if (model.backendType === 'totp' && model.totpCodePeriod) {
       later(
         () => {
           this.refresh();
         },
-        (model.totpCode.period - (getUnixTime(timestamp.now()) % model.totpCode.period)) * 1000
+        (model.totpCodePeriod - (getUnixTime(timestamp.now()) % model.totpCodePeriod)) * 1000
       );
     }
   },
