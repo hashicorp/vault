@@ -43,7 +43,7 @@ require (
 	github.com/SAP/go-hdb v1.10.1
 	github.com/Sectorbob/mlab-ns2 v0.0.0-20171030222938-d3aa0c295a8a
 	github.com/aerospike/aerospike-client-go/v5 v5.6.0
-	github.com/aliyun/alibaba-cloud-sdk-go v1.63.84
+	github.com/aliyun/alibaba-cloud-sdk-go v1.63.89
 	github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5
 	github.com/apple/foundationdb/bindings/go v0.0.0-20190411004307-cd5c9d91fad2
 	github.com/armon/go-metrics v0.4.1
@@ -152,7 +152,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-snowflake v0.13.0
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.20.1
-	github.com/hashicorp/vault-plugin-secrets-alicloud v0.19.0
+	github.com/hashicorp/vault-plugin-secrets-alicloud v0.19.1-0.20250301003303-576e77bfef3b
 	github.com/hashicorp/vault-plugin-secrets-azure v0.21.1
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.21.1
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.20.0
