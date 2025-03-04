@@ -88,11 +88,11 @@ module('Acceptance | database workflow', function (hooks) {
           label: 'Root rotation statements',
           value: `Default`,
         },
-        { label: 'Skip initial rotation on static roles', value: `Default` },
+        { label: 'Skip initial rotation on static roles', value: 'No' },
       ];
     });
     test('create with rotate', async function (assert) {
-      assert.expect(24);
+      assert.expect(26);
       this.server.post('/:backend/rotate-root/:name', () => {
         assert.ok(true, 'rotate root called');
         new Response(204);
@@ -120,12 +120,16 @@ module('Acceptance | database workflow', function (hooks) {
       );
       assert.dom(PAGE.infoRow).exists({ count: this.expectedRows.length }, 'correct number of rows');
       this.expectedRows.forEach(({ label, value }) => {
+        const valueSelector =
+          label === 'Skip initial rotation on static roles'
+            ? PAGE.infoRowValueDiv(label)
+            : PAGE.infoRowValue(label);
         assert.dom(PAGE.infoRowLabel(label)).hasText(label, `Label for ${label} is correct`);
-        assert.dom(PAGE.infoRowValue(label)).hasText(value, `Value for ${label} is correct`);
+        assert.dom(valueSelector).hasText(value, `Value for ${label} is correct`);
       });
     });
     test('create without rotate', async function (assert) {
-      assert.expect(23);
+      assert.expect(25);
       this.server.post('/:backend/rotate-root/:name', () => {
         assert.notOk(true, 'rotate root called when it should not have been');
         new Response(204);
@@ -153,8 +157,12 @@ module('Acceptance | database workflow', function (hooks) {
       );
       assert.dom(PAGE.infoRow).exists({ count: this.expectedRows.length }, 'correct number of rows');
       this.expectedRows.forEach(({ label, value }) => {
+        const valueSelector =
+          label === 'Skip initial rotation on static roles'
+            ? PAGE.infoRowValueDiv(label)
+            : PAGE.infoRowValue(label);
         assert.dom(PAGE.infoRowLabel(label)).hasText(label, `Label for ${label} is correct`);
-        assert.dom(PAGE.infoRowValue(label)).hasText(value, `Value for ${label} is correct`);
+        assert.dom(valueSelector).hasText(value, `Value for ${label} is correct`);
       });
     });
     test('create failure', async function (assert) {
