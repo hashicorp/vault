@@ -187,6 +187,27 @@
       @value={{or (get @model this.valuePath) @attr.options.defaultValue}}
       @onChange={{this.onChangeWithEvent}}
     />
+  {{else if (eq @attr.options.editType "toggleButton")}}
+    {{! Togglable Input }}
+    <Toggle
+      @name="toggle-{{@attr.name}}"
+      @onChange={{this.toggleShow}}
+      @checked={{this.showInput}}
+      data-test-toggle={{@attr.name}}
+    >
+      <span class="has-text-weight-bold is-large">{{this.labelString}}</span><br />
+      <div class="description has-text-grey">
+        {{#if this.showInput}}
+          <span>
+            {{@attr.options.subText}}
+          </span>
+        {{else}}
+          <span>
+            {{or @attr.options.defaultSubText "Vault will use the engine default."}}
+          </span>
+        {{/if}}
+      </div>
+    </Toggle>
   {{else if (eq @attr.options.editType "optionalText")}}
     {{! Togglable Text Input }}
     <Toggle

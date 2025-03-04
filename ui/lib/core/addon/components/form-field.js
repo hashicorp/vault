@@ -63,6 +63,7 @@ export default class FormFieldComponent extends Component {
     'searchSelect',
     'stringArray',
     'ttl',
+    'toggleButton',
   ];
   @tracked showInput = false;
 
