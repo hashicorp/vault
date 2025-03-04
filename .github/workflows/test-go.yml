@@ -461,7 +461,7 @@ jobs:
         run: |
           tar -cvf '${{ steps.metadata.outputs.go-test-log-archive-name }}' -C "${{ steps.metadata.outputs.go-test-log-dir }}" .
       - name: Upload test logs archives
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
         with:
           name: ${{ steps.metadata.outputs.go-test-log-archive-name }}
           path: ${{ steps.metadata.outputs.go-test-log-archive-name }}
@@ -469,7 +469,7 @@ jobs:
         if: success() || failure()
       - name: Upload test results
         if: success() || failure()
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
         with:
           name: ${{ steps.metadata.outputs.go-test-results-upload-key }}
           path: |
@@ -509,7 +509,7 @@ jobs:
         if: |
           (success() || failure()) &&
           steps.data-race-check.outputs.data-race-result == 'failure'
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
         with:
           name: ${{ steps.metadata.outputs.data-race-log-upload-key }}
           path: ${{ steps.metadata.outputs.go-test-dir }}/${{ steps.metadata.outputs.data-race-log-file }}
@@ -582,7 +582,7 @@ jobs:
           '${{ steps.metadata.outputs.gotestsum-timing-events }}' \
           >> '${{ steps.metadata.outputs.failure-summary-file-name }}'
       - name: Upload failure summary
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
         if: success() || failure()
         with:
           name: ${{ steps.metadata.outputs.failure-summary-file-name }}
