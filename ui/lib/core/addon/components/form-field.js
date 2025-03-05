@@ -151,7 +151,7 @@ export default class FormFieldComponent extends Component {
     this.args.model.set(this.valuePath, value);
     this.onChange(this.valuePath, value);
   }
-  @action //this is never used anywhere, remove?
+  @action
   setAndBroadcastBool(trueVal, falseVal, event) {
     const valueToSet = event.target.checked === true ? trueVal : falseVal;
     this.setAndBroadcast(valueToSet);

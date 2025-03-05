@@ -34,7 +34,6 @@ export default class DatabaseRoleSettingForm extends Component {
   get statementFields() {
     const type = this.args.roleType;
     const plugin = this.args.dbType;
-
     if (!type) return null;
     const dbValidFields = getStatementFields(type, plugin);
     return this.args.attrs.filter((a) => {
