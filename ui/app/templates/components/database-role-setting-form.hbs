@@ -12,6 +12,16 @@
           <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
         {{else}}
           <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} @modelValidations={{@modelValidations}} />
+          {{#if
+            (and
+              (and (eq attr.name "skip_import_rotation") (eq @mode "create") (eq (get @model attr.name) (not @dbSkipImport)))
+            )
+          }}
+            <Hds::Alert @type="inline" @color="warning" class="has-top-margin-negative-s" as |A|>
+              <A.Title>Warning</A.Title>
+              <A.Description>This will override the connection default for this role.</A.Description>
+            </Hds::Alert>
+          {{/if}}
         {{/if}}
 
       {{/each}}
