@@ -89,7 +89,6 @@ module('Unit | Serializer | database/connection', function (hooks) {
       plugin_version: '',
       root_credentials_rotate_statements: [],
       root_rotation_statements: [],
-      skip_static_role_rotation_import: false,
       url: 'https://localhost:9200',
       username: 'root',
     };
@@ -140,7 +139,6 @@ module('Unit | Serializer | database/connection', function (hooks) {
       plugin_version: '',
       root_credentials_rotate_statements: [],
       root_rotation_statements: [],
-      skip_static_role_rotation_import: false,
       username: 'VAULTADMIN',
       verify_connection: true,
     };

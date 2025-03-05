@@ -166,7 +166,7 @@ module('Acceptance | database workflow', function (hooks) {
       });
     });
     test('create failure', async function (assert) {
-      assert.expect(25);
+      assert.expect(27);
       this.server.post('/:backend/rotate-root/:name', (schema, req) => {
         const okay = req.params.name !== 'bad-connection';
         assert.ok(okay, 'rotate root called but not for bad-connection');
