@@ -17312,13 +17312,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"string.prototype.endswith@npm:^0.2.0":
-  version: 0.2.0
-  resolution: "string.prototype.endswith@npm:0.2.0"
-  checksum: ee0d1619878a7525a6613da16b3a1d7f6d84a8d4414f78a8a1d24aef9789d4bd774d9e93eeb922a78e7f67d804e60f4cba314beb8f55327bff6e83ba39b91f24
-  languageName: node
-  linkType: hard
-
 "string.prototype.matchall@npm:^4.0.5, string.prototype.matchall@npm:^4.0.6":
   version: 4.0.12
   resolution: "string.prototype.matchall@npm:4.0.12"
@@ -17337,13 +17330,6 @@ __metadata:
     set-function-name: ^2.0.2
     side-channel: ^1.1.0
   checksum: 98a09d6af91bfc6ee25556f3d7cd6646d02f5f08bda55d45528ed273d266d55a71af7291fe3fc76854deffb9168cc1a917d0b07a7d5a178c7e9537c99e6d2b57
-  languageName: node
-  linkType: hard
-
-"string.prototype.startswith@npm:^0.2.0":
-  version: 0.2.0
-  resolution: "string.prototype.startswith@npm:0.2.0"
-  checksum: b4224e2454c276baf0609c76f5db0ee6355a89a649041df9a2e49b4cdf4b424dbebbe2c070a3b5f6f00594f8f8fa98415799c7211e873e13f6ee007daae73516
   languageName: node
   linkType: hard
 
@@ -18946,8 +18932,6 @@ __metadata:
     sass: ^1.66.3
     shell-quote: ^1.8.1
     sinon: ^17.0.1
-    string.prototype.endswith: ^0.2.0
-    string.prototype.startswith: ^0.2.0
     stylelint: ^15.11.0
     stylelint-config-standard: ^34.0.0
     stylelint-prettier: ^4.0.2
