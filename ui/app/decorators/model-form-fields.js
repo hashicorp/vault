@@ -31,7 +31,17 @@ export function withFormFields(propertyNames, groupPropertyNames) {
           this.formFields = expandAttributeMeta(this, propertyNames);
         }
         if (groupPropertyNames) {
-          this.formFieldGroups = fieldToAttrs(this, groupPropertyNames);
+          const allArrays = Object.keys(groupPropertyNames).every((key) =>
+            Array.isArray(groupPropertyNames[key])
+          );
+
+          if (allArrays) {
+            Object.keys(groupPropertyNames).forEach((key) => {
+              this[key] = fieldToAttrs(this, groupPropertyNames[key]);
+            });
+          } else {
+            this.formFieldGroups = fieldToAttrs(this, groupPropertyNames);
+          }
         }
         const allFields = [];
         this.eachAttribute(function (key) {

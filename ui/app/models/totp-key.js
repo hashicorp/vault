@@ -6,8 +6,7 @@
 import Model, { attr } from '@ember-data/model';
 // eslint-disable-next-line ember/no-computed-properties-in-native-classes
 import { alias } from '@ember/object/computed';
-// eslint-disable-next-line ember/no-computed-properties-in-native-classes
-import { computed } from '@ember/object';
+import { withFormFields } from 'vault/decorators/model-form-fields';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
@@ -17,7 +16,7 @@ const DIGITS = [6, 8];
 const SKEW = [0, 1];
 
 const validations = {
-  account_name: [
+  accountName: [
     { type: 'presence', message: "Account name can't be blank." },
     {
       type: 'containsWhiteSpace',
@@ -35,38 +34,76 @@ const validations = {
   digits: [
     { validator: (value) => DIGITS.includes(value), message: 'Digits must be one of ' + DIGITS.join(', ') },
   ],
+  name: [
+    { type: 'presence', message: "Name can't be blank." },
+    {
+      type: 'containsWhiteSpace',
+      message:
+        "Name contains whitespace. If this is desired, you'll need to encode it with %20 in API requests.",
+      level: 'warn',
+    },
+  ],
   period: [{ type: 'number', message: 'Period must be a number.' }],
 
   skew: [{ validator: (value) => SKEW.includes(value), message: 'Skew must be one of ' + SKEW.join(', ') }],
 };
 
+const generatedDefaultFields = ['name', 'generate', 'issuer', 'accountName'];
+const nonGeneratedDefaultFields = [...generatedDefaultFields, 'url', 'key'];
+const totpCodeOptions = ['algorithm', 'digits', 'period'];
+const providerOptions = ['key_size', 'skew', 'exported', 'qr_size'];
+
+const generatedFormFieldGroups = [
+  {
+    default: generatedDefaultFields,
+  },
+  {
+    'TOTP Code Options': totpCodeOptions,
+  },
+  {
+    'Provider Options': providerOptions,
+  },
+];
+
+const nonGeneratedFormFieldGroups = [
+  {
+    default: nonGeneratedDefaultFields,
+  },
+  {
+    'TOTP Code Options': totpCodeOptions,
+  },
+];
+
+const formFieldGroupsCombined = {
+  generatedFormFieldGroups,
+  nonGeneratedFormFieldGroups,
+};
 @withModelValidations(validations)
 @withExpandedAttributes()
+@withFormFields(null, formFieldGroupsCombined)
 export default class TotpKeyModel extends Model {
-  // TODO fix spacings
-  // reaudit params, fix casings, check alias
   @attr('string', {
     readOnly: true,
   })
   backend;
 
-  @alias('account_name') name;
+  @attr('string') name;
+  @attr('string') accountName;
 
-  @attr('string', {
-    fieldValue: 'name',
-  })
-  account_name;
   @attr('string', {
     possibleValues: ALGORITHMS,
     defaultValue: 'SHA1',
   })
   algorithm;
+
   @attr('number', {
     possibleValues: DIGITS,
     defaultValue: 6,
   })
   digits;
+
   @attr('string') issuer;
+
   @attr({
     label: 'Period',
     editType: 'ttl',
@@ -86,11 +123,13 @@ export default class TotpKeyModel extends Model {
     defaultValue: 20,
   })
   key_size;
+
   @attr('number', {
     possibleValues: SKEW,
     defaultValue: 1,
   })
   skew;
+
   @attr('boolean', {
     defaultValue: true,
   })
@@ -104,11 +143,12 @@ export default class TotpKeyModel extends Model {
 
   // Used when generate is false
   @attr('string', {
-    label: 'otpauth url',
+    label: 'URL',
     helpText:
       'If a URL is provided the other fields can be left empty. E.g. otpauth://totp/Vault:test@test.com?secret=Y64VEVMBTSXCYIWRSHRNDZW62MPGVU2G&issuer=Vault',
   })
   url;
+
   @attr('string', {
     label: 'Shared master key',
   })
@@ -121,7 +161,7 @@ export default class TotpKeyModel extends Model {
   barcode;
 
   get attrs() {
-    const keys = ['account_name', 'algorithm', 'digits', 'issuer', 'period'];
+    const keys = ['accountName', 'name', 'algorithm', 'digits', 'issuer', 'period'];
     return keys.map((k) => this.allByKey[k]);
   }
 
@@ -130,38 +170,8 @@ export default class TotpKeyModel extends Model {
     return keys.map((k) => this.allByKey[k]);
   }
 
-  // todo move out of model
-  @computed('generate', function () {
-    const defaultFields = ['generate'];
-    const options = ['algorithm', 'digits', 'period'];
-    const providerOptions = [];
-
-    if (this.generate) {
-      providerOptions.push('key_size', 'skew', 'exported', 'qr_size');
-    } else {
-      defaultFields.push('url', 'key');
-    }
-
-    defaultFields.push('account_name', 'issuer');
-
-    const groups = [
-      { default: defaultFields },
-      {
-        Options: [...options],
-      },
-    ];
-
-    if (this.generate) {
-      groups.push({
-        'Provider options': [...providerOptions],
-      });
-    }
-
-    return this._expandGroups(groups);
-  })
-  fieldGroups;
-
   @lazyCapabilities(apiPath`${'backend'}/keys/${'id'}`, 'backend', 'id') keyPath;
   @alias('keyPath.canRead') canRead;
   @alias('keyPath.canDelete') canDelete;
+  //TODO remove these aliases
 }

@@ -7,17 +7,11 @@
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @model={{@model}} />
     <NamespaceReminder @mode={{@mode}} @noun="TOTP key" />
-    {{#if (eq @mode "create")}}
-      {{#each @model.createAttrs as |attr|}}
-        <FormField
-          @attr={{attr}}
-          @model={{@model}}
-          @modelValidations={{@modelValidations}}
-          @showHelpText={{@showHelpText}}
-        />
-      {{/each}}
-    {{/if}}
-    <FormFieldGroupsLoop @model={{@model}} @mode={{@mode}} />
+    <FormFieldGroups
+      @model={{@model}}
+      @mode={{@mode}}
+      @groupName={{if @model.generate "generatedFormFieldGroups" "nonGeneratedFormFieldGroups"}}
+    />
   </div>
   <div class="field is-grouped-split box is-fullwidth is-bottomless">
     <Hds::ButtonSet>
