@@ -54,6 +54,8 @@ mv "$SCRIPTS_DIR/openapi.json" "$API_CLIENT_DIR/openapi.json"
 echo "Generating API client..."
 echo
 cd "$API_CLIENT_DIR"
-npx @openapitools/openapi-generator-cli generate -i openapi.json -g typescript-fetch -o . --skip-validate-spec
+# config args specific to typescript-fetch generator
+GEN_CONFIG="prefixParameterInterfaces=true,useSingleRequestParameter=false,useSquareBracketsInArrayNames=true"
+npx @openapitools/openapi-generator-cli generate -i openapi.json -g typescript-fetch -o . --skip-validate-spec --additional-properties=${GEN_CONFIG}
 echo
 echo "API client generated successfully!"
