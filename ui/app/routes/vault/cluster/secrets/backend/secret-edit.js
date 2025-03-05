@@ -11,6 +11,9 @@ import Route from '@ember/routing/route';
 import { encodePath, normalizePath } from 'vault/utils/path-encoding-helpers';
 import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';
 
+/**
+ * @type Class
+ */
 export default Route.extend({
   store: service(),
   router: service(),
