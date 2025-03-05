@@ -1,0 +1,168 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3 has-bottom-margin-xs">License</h1>
+  </p.levelLeft>
+</PageHeader>
+
+<div class="box is-fullwidth is-sideless is-shadowless">
+  <h4 class="title is-6">Root mount</h4>
+  <Hds::Table @caption="Root mounted license features">
+    <:head as |H|>
+      <H.Tr>
+        <H.Th>Name</H.Th>
+        <H.Th>Configuration status</H.Th>
+        <H.Th>Included in license</H.Th>
+        <H.Th />
+      </H.Tr>
+    </:head>
+    <:body as |B|>
+      <B.Tr>
+        <B.Td>Disaster Recovery</B.Td>
+        <B.Td><Hds::Badge @text={{this.drStatus.text}} @color={{this.drStatus.color}} /></B.Td>
+        <B.Td><Hds::Icon @name="check" /></B.Td>
+        <B.Td><Hds::Dropdown as |D|>
+            <D.ToggleIcon @icon="more-horizontal" @text="Overflow Options" @hasChevron={{false}} />
+            <D.Interactive @route="vault.cluster.replication">Details</D.Interactive>
+          </Hds::Dropdown>
+        </B.Td>
+      </B.Tr>
+      <B.Tr>
+        <B.Td>Performance Replication</B.Td>
+        <B.Td><Hds::Badge @text={{this.performanceStatus.text}} @color={{this.performanceStatus.color}} /></B.Td>
+        <B.Td><Hds::Icon @name="check" /></B.Td>
+        <B.Td><Hds::Dropdown as |D|>
+            <D.ToggleIcon @icon="more-horizontal" @text="Overflow Options" @hasChevron={{false}} />
+            <D.Interactive @route="vault.cluster.replication">Details</D.Interactive>
+          </Hds::Dropdown>
+        </B.Td>
+      </B.Tr>
+      <B.Tr>
+        <B.Td>Secret Sync</B.Td>
+        <B.Td><Hds::Badge @text={{this.secretsSyncStatus.text}} @color={{this.secretsSyncStatus.color}} /></B.Td>
+        <B.Td><Hds::Icon @name="check" /></B.Td>
+        <B.Td><Hds::Dropdown as |D|>
+            <D.ToggleIcon @icon="more-horizontal" @text="Overflow Options" @hasChevron={{false}} />
+            <D.Interactive @route="vault.cluster.sync.secrets.overview">Details</D.Interactive>
+          </Hds::Dropdown>
+        </B.Td>
+      </B.Tr>
+      <B.Tr>
+        <B.Td>Automated Snapshots</B.Td>
+        <B.Td><Hds::Badge @text={{@automatedSnapshot.text}} @color={{@automatedSnapshot.color}} /></B.Td>
+        <B.Td><Hds::Icon @name="check" /></B.Td>
+        <B.Td><Hds::Dropdown as |D|>
+            <D.ToggleIcon @icon="more-horizontal" @text="Overflow Options" @hasChevron={{false}} />
+            <D.Interactive @route="vault.cluster.sync.secrets.overview">Details</D.Interactive>
+          </Hds::Dropdown>
+        </B.Td>
+      </B.Tr>
+      <B.Tr>
+        <B.Td>Namespaces</B.Td>
+        <B.Td>
+          <Hds::Badge
+            @text={{if
+              this.namespaceCount
+              (concat this.namespaceCount " mounted namespaces")
+              "You have no namespaces mounted"
+            }}
+            @color={{if this.namespaceCount "success" "warning"}}
+          />
+          <div><Hds::Text::Display color="faint" @size="100">{{this.namespaceDetails}}</Hds::Text::Display></div>
+        </B.Td>
+        <B.Td><Hds::Icon @name="check" /></B.Td>
+        <B.Td><Hds::Dropdown as |D|>
+            <D.ToggleIcon @icon="more-horizontal" @text="Overflow Options" @hasChevron={{false}} />
+            <D.Interactive @route="vault.cluster.sync.secrets.overview">details</D.Interactive>
+          </Hds::Dropdown>
+        </B.Td>
+      </B.Tr>
+    </:body>
+  </Hds::Table>
+  {{! Namespace mount }}
+  <h4 class="title is-6 has-top-margin-xl">Namespace mount</h4>
+  {{! The user must give permission to run the counts on each feature understanding how it affects their logs }}
+  <Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-l">
+    <Hds::Text::Body @tag="p" size="300" color="faint" class="has-bottom-margin-m">
+      You have
+      <Hds::Text::Display @weight="semibold" @size="300">{{this.namespaceCount}}</Hds::Text::Display>
+      namespaces mounted and
+      <Hds::Text::Display @weight="semibold" @size="300">{{this.namespaceLicenseFeaturesOnLicense}}</Hds::Text::Display>
+      out of the
+      <Hds::Text::Display @weight="semibold" @size="300">{{this.allNamespaceOnlyFeatures}}</Hds::Text::Display>
+      available namespace mounted license features included on your license. Select below the features for which you would
+      like to view usage data.
+    </Hds::Text::Body>
+
+    <CheckboxGrid
+      class="has-top-margin-l"
+      @name="namespaceFeatures"
+      @fields={{this.namespaceFeatures}}
+      @value={{this.namespaceFeaturesSelected}}
+      @onChange={{this.checkboxChange}}
+    />
+    {{! Badge counter the humber of newtwork request this will incure }}
+    {{! Need to show license features they have, grey out the ones they dont }}
+    <Hds::ButtonSet style="flex-direction: row-reverse">
+      <Hds::BadgeCount
+        @text="This will result in {{this.networkRequestCounter}} network requests"
+        @type="outlined"
+        class="has-top-margin-m"
+      />
+      <Hds::Button
+        @text="Get Namespace data"
+        @color="tertiary"
+        disabled={{(or this.fetchNamespaceFeaturesData.isRunning (not this.namespaceFeaturesSelected.length))}}
+        @icon={{if this.fetchNamespaceFeaturesData.isRunning "loading" "reload"}}
+        {{on "click" (perform this.fetchNamespaceFeaturesData)}}
+      />
+    </Hds::ButtonSet>
+  </Hds::Card::Container>
+
+  {{#if this.openKmipModal}}
+    {{log this.secretEngineData "secret engine data"}}
+    {{log this.kmipMountData "kmip mount data"}}
+    <Hds::Modal id="kmip-modal" @size="large" @onClose={{fn (mut this.openKmipModal) false}} as |M|>
+      <M.Header data-test-modal-title="kmip-modal">
+        KMIP Secret Engine Mount Details
+      </M.Header>
+      <M.Body>
+        <Hds::Card::Container @level="base" @hasBorder={{true}} class="has-padding-m has-bottom-margin-m">
+          <div class="flex space-between">
+            <Hds::Text::Body @tag="p">
+              The total number of KMIP secret engine mounts in your Vault cluster across the root and namespace mounts.
+            </Hds::Text::Body>
+            <Hds::Text::Body @tag="h3" @size="300" @weight="semibold">
+              {{this.totalKmipMounts}}
+            </Hds::Text::Body>
+          </div>
+        </Hds::Card::Container>
+        <Hds::Table @caption="Products that use Helios">
+          <:head as |H|>
+            <H.Tr>
+              <H.Th>Namespace</H.Th>
+              <H.Th>Number of KMIP mounts</H.Th>
+            </H.Tr>
+          </:head>
+          <:body as |B|>
+            {{#each-in this.kmipMountData as |ns count|}}
+              <B.Tr>
+                <B.Td>{{if (eq ns " ") "root" ns}}</B.Td>
+                <B.Td>{{count}}</B.Td>
+              </B.Tr>
+            {{/each-in}}
+          </:body>
+        </Hds::Table>
+
+        {{log this.secretEngineData}}
+      </M.Body>
+      <M.Footer as |F|>
+        <Hds::Button @text="Close" {{on "click" F.close}} />
+      </M.Footer>
+    </Hds::Modal>
+  {{/if}}
+</div>

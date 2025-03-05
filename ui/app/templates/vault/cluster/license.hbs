@@ -2,12 +2,26 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 ~}}
+<div class="has-top-margin-xl">
+  <Hds::PageHeader as |PH|>
+    <PH.Title>License</PH.Title>
+    <PH.Subtitle>Page subtitle</PH.Subtitle>
+    <PH.Description>Description of the page. Personally think we should link to the license docs here?!</PH.Description>
+  </Hds::PageHeader>
+</div>
 
 <LicenseInfo
-  @startTime={{this.model.startTime}}
-  @expirationTime={{this.model.expirationTime}}
-  @licenseId={{this.model.licenseId}}
-  @features={{this.model.features}}
-  @autoloaded={{this.model.autoloaded}}
-  @performanceStandbyCount={{this.model.performanceStandbyCount}}
+  @startTime={{this.model.license.startTime}}
+  @expirationTime={{this.model.license.expirationTime}}
+  @licenseId={{this.model.license.licenseId}}
+  @features={{this.model.license.features}}
+  @autoloaded={{this.model.license.autoloaded}}
+  @performanceStandbyCount={{this.model.license.performanceStandbyCount}}
+/>
+
+<LicenseProofOfValue
+  @model={{this.model.license}}
+  @replication={{this.model.replication}}
+  @automatedSnapshot={{this.model.automatedSnapshot}}
+  @namespaces={{this.model.namespaces}}
 />
