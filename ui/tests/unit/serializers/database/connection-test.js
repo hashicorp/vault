@@ -26,6 +26,7 @@ module('Unit | Serializer | database/connection', function (hooks) {
       url: 'http://localhost:9200',
       username: 'elastic',
       password: 'changeme',
+      skip_static_role_rotation_import: false,
       tls_ca: 'some-value',
       ca_cert: undefined, // does not send undefined values
     });
@@ -38,6 +39,7 @@ module('Unit | Serializer | database/connection', function (hooks) {
       url: 'http://localhost:9200',
       username: 'elastic',
       password: 'changeme',
+      skip_static_role_rotation_import: false,
       insecure: false,
     };
 
@@ -87,6 +89,7 @@ module('Unit | Serializer | database/connection', function (hooks) {
       plugin_version: '',
       root_credentials_rotate_statements: [],
       root_rotation_statements: [],
+      skip_static_role_rotation_import: false,
       url: 'https://localhost:9200',
       username: 'root',
     };
@@ -137,6 +140,7 @@ module('Unit | Serializer | database/connection', function (hooks) {
       plugin_version: '',
       root_credentials_rotate_statements: [],
       root_rotation_statements: [],
+      skip_static_role_rotation_import: false,
       username: 'VAULTADMIN',
       verify_connection: true,
     };

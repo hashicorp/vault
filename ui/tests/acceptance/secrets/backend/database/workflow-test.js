@@ -201,8 +201,12 @@ module('Acceptance | database workflow', function (hooks) {
       );
       assert.dom(PAGE.infoRow).exists({ count: this.expectedRows.length }, 'correct number of rows');
       this.expectedRows.forEach(({ label, value }) => {
+        const valueSelector =
+          label === 'Skip initial rotation on static roles'
+            ? PAGE.infoRowValueDiv(label)
+            : PAGE.infoRowValue(label);
         assert.dom(PAGE.infoRowLabel(label)).hasText(label, `Label for ${label} is correct`);
-        assert.dom(PAGE.infoRowValue(label)).hasText(value, `Value for ${label} is correct`);
+        assert.dom(valueSelector).hasText(value, `Value for ${label} is correct`);
       });
     });
 
