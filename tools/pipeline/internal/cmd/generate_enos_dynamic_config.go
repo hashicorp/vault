@@ -6,10 +6,9 @@ package cmd
 import (
 	"context"
 
-	"github.com/spf13/cobra"
-
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/generate"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/releases"
+	"github.com/spf13/cobra"
 )
 
 // skipVersionsDefault are versions that we skip by default. This list can grow as necessary.
