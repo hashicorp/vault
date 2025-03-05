@@ -2947,3 +2947,23 @@ func makeLocalAliasWithName(t *testing.T, name, entityID string, bucketKey strin
 		},
 	}
 }
+
+// MakeDeduplicationDoneChan creates a new done channel for synchronization
+// with tests outside of the vault package (e.g. in external_tests).
+func (i *IdentityStore) MakeDeduplicationDoneChan() {
+	i.activateDeduplicationDone = make(chan struct{})
+}
+
+// WaitForActivateDeduplicationDone is a test helper to wait for the identity
+// deduplication activation to finish.
+func (i *IdentityStore) WaitForActivateDeduplicationDone(ctx context.Context) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, 90*time.Second)
+	defer cancel()
+	select {
+	case <-i.activateDeduplicationDone:
+		return nil
+	case <-timeoutCtx.Done():
+		return fmt.Errorf("timed out waiting for deduplication")
+
+	}
+}
