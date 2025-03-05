@@ -141,27 +141,33 @@
             </Hds::Text::Body>
           </div>
         </Hds::Card::Container>
-        <Hds::Table @caption="Products that use Helios">
-          <:head as |H|>
-            <H.Tr>
-              <H.Th>Namespace</H.Th>
-              <H.Th>Number of KMIP mounts</H.Th>
-            </H.Tr>
-          </:head>
-          <:body as |B|>
-            {{#each-in this.kmipMountData as |ns count|}}
-              <B.Tr>
-                <B.Td>{{if (eq ns " ") "root" ns}}</B.Td>
-                <B.Td>{{count}}</B.Td>
-              </B.Tr>
-            {{/each-in}}
-          </:body>
-        </Hds::Table>
+        {{! TODO hack, didn't see option to add max-height on and hds table? }}
+        <div style="max-height: 300px; overflow-y: auto;">
+          {{! TODO: pass in @model based on hds docs so we can take advantage of filtering, sorting, etc. }}
+          {{! TODO maybe add searchSelect? }}
+          <Hds::Table @caption="TODO">
+            <:head as |H|>
+              <H.Tr>
+                <H.Th>Namespace</H.Th>
+                <H.Th>Number of KMIP mounts</H.Th>
+              </H.Tr>
+            </:head>
+            <:body as |B|>
+              {{#each-in this.kmipMountData as |ns count|}}
+                <B.Tr>
+                  <B.Td>{{if (eq ns " ") "root" ns}}</B.Td>
+                  <B.Td>{{count}}</B.Td>
+                </B.Tr>
+              {{/each-in}}
+            </:body>
+          </Hds::Table>
+        </div>
 
         {{log this.secretEngineData}}
       </M.Body>
       <M.Footer as |F|>
         <Hds::Button @text="Close" {{on "click" F.close}} />
+        <Hds::Button @text="Scopes" @icon="arrow-right" {{on "click" F.close}} />
       </M.Footer>
     </Hds::Modal>
   {{/if}}
