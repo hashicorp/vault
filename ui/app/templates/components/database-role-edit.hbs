@@ -106,7 +106,30 @@
         {{#if (eq @mode "edit")}}
           <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
         {{else if (not-eq attr.options.readOnly true)}}
-          <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
+          {{#if (eq attr.name "type")}}
+            {{#if @model.database}}
+              <FormField
+                data-test-field={{true}}
+                @attr={{attr}}
+                @model={{@model}}
+                @modelValidations={{this.modelValidations}}
+              />
+            {{else}}
+              <div class="has-bottom-margin-s">
+                <Hds::Alert @icon={{false}} @type="inline" as |A|>
+                  <A.Title>Type of role</A.Title>
+                  <A.Description>Select a connection first</A.Description>
+                </Hds::Alert>
+              </div>
+            {{/if}}
+          {{else}}
+            <FormField
+              data-test-field={{true}}
+              @attr={{attr}}
+              @model={{@model}}
+              @modelValidations={{this.modelValidations}}
+            />
+          {{/if}}
           {{! TODO: If database && !updateDB show warning }}
           {{#if (get this.warningMessages attr.name)}}
             <Hds::Alert @type="inline" @color="warning" class="has-top-margin-negative-s has-bottom-margin-s" as |A|>

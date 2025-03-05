@@ -200,7 +200,7 @@ export default Model.extend({
   }),
 
   // ENTERPRISE ONLY
-  skip_static_role_rotation_import: attr('boolean', {
+  skip_static_role_rotation_import: attr({
     editType: 'toggleButton',
     label: 'Skip initial rotation on static roles',
     defaultSubText:

@@ -23,6 +23,7 @@ import { getStatementFields, getRoleFields } from '../utils/model-helpers/databa
 
 export default class DatabaseRoleSettingForm extends Component {
   get settingFields() {
+    this.setSkipImport();
     if (!this.args.roleType) return null;
     const dbValidFields = getRoleFields(this.args.roleType);
     return this.args.attrs.filter((a) => {
@@ -34,9 +35,6 @@ export default class DatabaseRoleSettingForm extends Component {
     const type = this.args.roleType;
     const plugin = this.args.dbType;
 
-    // set this here when db connection type is selected -- is there a better way?
-    this.setSkipImport();
-
     if (!type) return null;
     const dbValidFields = getStatementFields(type, plugin);
     return this.args.attrs.filter((a) => {
@@ -44,6 +42,9 @@ export default class DatabaseRoleSettingForm extends Component {
     });
   }
 
+  /**
+   * Sets default value for skip_import_rotation based on parent db config value
+   */
   setSkipImport() {
     const dbSkipValue = this.args.dbSkipImport;
     const skipInput = this.args.attrs.find((x) => x.name === 'skip_import_rotation');
