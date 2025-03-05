@@ -6,7 +6,7 @@ import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 
 /**
- * @module LicenseProofOfValueComponent component TODO.
+ * @module LicenseProofOfValueComponent component TODO POL: rename this component....
  * 
  * @example
  * <LicenseProofOfValue
@@ -22,6 +22,7 @@ import { waitFor } from '@ember/test-waiters';
 // warning = not enabled but on license
 // nuetral = not enabled and not on license
 
+// used for checkboxes
 const NAMESPACE_FEATURES = [
   { key: 'sentinel', label: 'Sentinel' },
   { key: 'sealWrapping', label: 'Seal Wrapping' },
@@ -37,24 +38,36 @@ export default class LicenseProofOfValueComponent extends Component {
 
   @service flags;
   @service store;
-  @tracked namespaceFeaturesSelected = [];
+  @tracked namespaceFeaturesSelected = []; // TODO POL: rename this to something more descriptive?
   @tracked secretEngineData;
   @tracked openKmipModal = false;
   @tracked totalKmipMounts = 0;
 
+  /** METHODS */
   licenseHasFeature(featureName) {
+    // check if a license is included in the users license.features lists
+    // TODO POL: this could be on the license service maybe? or a helper?
     const { features } = this.args.model;
     return features ? features.includes(featureName) : false;
   }
 
-  @action checkboxChange(name, value) {
-    this.namespaceFeaturesSelected = value;
+  countNestedItems(arr) {
+    let count = 0;
+    for (let i = 0; i < arr.length; i++) {
+      if (typeof arr[i] === 'string' && arr[i].includes('/')) {
+        count++;
+      }
+    }
+    return count;
   }
 
+  /** GETTERS */
   get networkRequestCounter() {
+    // TODO POL: this isn't accurate. Placeholder for now, but we'll need to revisit when we have a better handle on the number of network request made for each namespace mounted feature
     return this.namespaceFeaturesSelected.length * this.namespaceCount;
   }
 
+  // ROOT MOUNT STATUS GETTERS (if new component these will move with it)
   get drStatus() {
     const { dr } = this.args.replication;
     const color = this.licenseHasFeature('DR Replication')
@@ -104,43 +117,16 @@ export default class LicenseProofOfValueComponent extends Component {
     return { color, text };
   }
 
-  get kmipStatus() {
-    // TODO return, maybe disable if not on license?
-    const color = this.licenseHasFeature('KMIP') ? 'critical' : 'critical';
-    const text = this.licenseHasFeature('KMIP') ? 'revist' : 'revisit';
-
-    return { color, text };
-  }
-
-  get transformStatus() {
-    const color = this.licenseHasFeature('Transform Secrets Engine') ? 'critical' : 'critical';
-    const text = this.licenseHasFeature('Transform Secrets Engine') ? 'revist' : 'revisit';
-
-    return { color, text };
-  }
-
   get namespaceCount() {
     const { data } = this.args.namespaces;
-    // if no data.keys does not exists return 0
-    // TODO handle error case
     return !data.keys ? 0 : data.keys.length;
-    // example data
+    // example of namespace data that is returned to us
     // data": {
     //     "keys": [
     //         "ns1/",
     //         "ns1/ns-child/"
     //     ]
     // },
-  }
-
-  countNestedItems(arr) {
-    let count = 0;
-    for (let i = 0; i < arr.length; i++) {
-      if (typeof arr[i] === 'string' && arr[i].includes('/')) {
-        count++;
-      }
-    }
-    return count;
   }
 
   get namespaceDetails() {
@@ -163,20 +149,16 @@ export default class LicenseProofOfValueComponent extends Component {
       }
     }
     const percentNested = Number(nestedCount / data.keys.length).toFixed(2) * 100;
+    // TODO POL: this text could use some TLC or wordsmithing
     return `${percentNested}% of your namespaces are nested.
     You have a total of ${maxSlashes} levels of nesting.`;
   }
 
-  get namespaceLicenseFeaturesOnLicense() {
-    // count the features returned on the model
-    // TODO account for namespace only feature
-    return this.args.model.features.length;
+  /** ACTIONS */
+  @action checkboxChange(name, value) {
+    this.namespaceFeaturesSelected = value;
   }
-
-  get allNamespaceOnlyFeatures() {
-    return 17; // need to think on this
-  }
-
+  // ARG TODO: revisit the KMIP flow and organize
   get kmipMountData() {
     // secretEngine data includes all secret-engine mounts for all namespaces
     // we want to pull out the kmip specific data making it easier to pass into the modal table
@@ -197,6 +179,8 @@ export default class LicenseProofOfValueComponent extends Component {
   }
 
   sortObjectsWithEmptyKeyFirst(obj) {
+    // TODO POL: if we use the @model on the table we get sorting for free
+    // TODO POL: maybe a helper instead of a method?
     const keys = Object.keys(obj);
 
     keys.sort((a, b) => {
@@ -250,7 +234,8 @@ export default class LicenseProofOfValueComponent extends Component {
     }
   }
 
-  // TODO naming here could use some love because we filter out only Secret Engine types
+  /** ASYNC namespace data fetching */
+  // TODO POL: naming here could use some love because we filter out only Secret Engine types
   async fetchMountsByAllNamespaces() {
     // ideally this would be on a route or service. but hackweek for now.
     const { data } = this.args.namespaces; // data.keys has the array of namespaces
