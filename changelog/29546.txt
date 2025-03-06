@@ -1,0 +1,3 @@
+```release-note:improvement
+api/client: Add Cert auth method support. This allows the client to authenticate using a client certificate.
+```
