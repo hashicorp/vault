@@ -9,6 +9,7 @@ import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 import { isBlank } from '@ember/utils';
 
+// TODO add jsdoc documentation
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
@@ -27,6 +28,7 @@ export default class TotpEdit extends Component {
   }
 
   persist(method, successCallback) {
+    // TODO refactor this further
     return this.model[method]().then(() => {
       if (!this.model.isError) {
         if (this.model.backend === 'totp' && this.model.generate) {
