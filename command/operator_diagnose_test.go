@@ -653,6 +653,19 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				},
 			},
 		},
+		{
+			"diagnose_invalid_config_duplicate_keys",
+			[]string{
+				"-config", "./server/test-fixtures/diagnose_invalid_config_duplicate_key.hcl",
+			},
+			[]*diagnose.Result{
+				{
+					Name:    "Parse Configuration",
+					Status:  diagnose.ErrorStatus,
+					Message: "Could not parse configuration: error loading configuration from ./server/test-fixtures/diagnose_invalid_config_duplicate_key.hcl: The argument \"address\" at 11:3 was already set. Each argument can only be defined once.",
+				},
+			},
+		},
 	}
 
 	t.Run("validations", func(t *testing.T) {
