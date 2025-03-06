@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { resolve } from 'rsvp';
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import ControlGroupError from 'vault/lib/control-group-error';
@@ -80,6 +79,7 @@ export default Route.extend({
   async model(params) {
     const role = params.secret;
     const { id: backendPath, type: backendType } = this.modelFor('vault.cluster.secrets.backend');
+    const backendData = { backendPath, backendType };
     const roleType = params.roleType;
     let dbCred, awsRole, totpCodePeriod;
     if (backendType === 'database') {
@@ -88,17 +88,16 @@ export default Route.extend({
       awsRole = await this.getAwsRole(backendPath, role);
     } else if (backendType === 'totp') {
       totpCodePeriod = (await this.getTotpKey(backendPath, role))?.period;
+      return { ...backendData, keyName: role, totpCodePeriod };
     }
 
-    return resolve({
-      backendPath,
-      backendType,
+    return {
+      ...backendData,
       roleName: role,
       roleType,
       dbCred,
       awsRoleType: awsRole?.credentialType,
-      totpCodePeriod,
-    });
+    };
   },
 
   async afterModel(model) {
