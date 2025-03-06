@@ -61,8 +61,7 @@ export default class TotpEdit extends Component {
   @action
   create(event) {
     event.preventDefault();
-    // all of the attributes with fieldValue:'id' are called `name`
-    const modelId = this.model.id || this.model.name;
+    const modelId = this.model.name;
     // prevent from submitting if there's no key
     // maybe do something fancier later
     if (isBlank(modelId)) {
