@@ -17,7 +17,7 @@ module('Integration | Component | console/log text', function (hooks) {
     const text = 'Success! You did a thing!';
     this.set('content', text);
 
-    await render(hbs`{{console/log-text content=this.content}}`);
+    await render(hbs`<Console::LogText @content={{this.content}} />`);
 
     assert.dom('pre').includesText(text);
   });

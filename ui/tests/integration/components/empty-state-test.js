@@ -15,7 +15,7 @@ module('Integration | Component | empty-state', function (hooks) {
     // Set any properties with this.set('myProperty', 'value');
     // Handle any actions with this.set('myAction', function(val) { ... });
 
-    await render(hbs`{{empty-state}}`);
+    await render(hbs`<EmptyState />`);
 
     assert.dom(this.element).hasText('');
 
