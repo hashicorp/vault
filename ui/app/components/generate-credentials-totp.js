@@ -23,27 +23,27 @@ export default class GenerateCredentialsTotp extends Component {
   }
 
   get remainingTime() {
-    const { model } = this.args;
+    const { totpCodePeriod } = this.args;
 
-    if (!model.totpCodePeriod) {
+    if (!totpCodePeriod) {
       return 0; // TODO improve this
     }
 
-    return model.totpCodePeriod - this.elapsedTime;
+    return totpCodePeriod - this.elapsedTime;
   }
 
   @task({ restartable: true })
   *startTimer() {
-    const { model } = this.args;
-    if (model.totpCodePeriod) {
-      while (this.elapsedTime <= model.totpCodePeriod) {
+    const { backendPath, keyName, totpCodePeriod } = this.args;
+    if (totpCodePeriod) {
+      while (this.elapsedTime <= totpCodePeriod) {
         yield timeout(1000);
         this.elapsedTime += 1;
       }
 
-      if (this.elapsedTime > model.totpCodePeriod) {
+      if (this.elapsedTime > totpCodePeriod) {
         this.elapsedTime = 0;
-        this.generateTotpCode(model.backendPath, model.roleName);
+        this.generateTotpCode(backendPath, keyName);
         this.startTimer.perform();
       }
     }
