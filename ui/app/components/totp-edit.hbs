@@ -26,13 +26,13 @@
 </PageHeader>
 
 {{#if (eq @mode "show")}}
-  <TotpKey::Details @model={{@model}} @delete={{this.delete}} />
+  <Totp::KeyDetails @model={{@model}} @delete={{this.delete}} />
 {{/if}}
 
 {{#if (eq @mode "create")}}
   {{#if this.hasGenerated}}
-    <TotpKey::QrCode @model={{@model}} @reset={{this.reset}} />
+    <Totp::KeyQrCode @model={{@model}} @reset={{this.reset}} />
   {{else}}
-    <TotpKey::Create @create={{this.create}} @model={{@model}} @mode={{@mode}} />
+    <Totp::KeyCreate @create={{this.create}} @model={{@model}} @mode={{@mode}} />
   {{/if}}
 {{/if}}
