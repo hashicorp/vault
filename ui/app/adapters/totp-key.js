@@ -10,10 +10,11 @@ import { isEmpty } from '@ember/utils';
 export default class TotpKeyAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
-  createOrUpdate(store, type, snapshot, requestType) {
+  // TOTP keys can only be created, so no need for an update method
+  createRecord(store, type, snapshot) {
     const { name, backend } = snapshot.record;
     const serializer = store.serializerFor(type.modelName);
-    const data = serializer.serialize(snapshot, requestType);
+    const data = serializer.serialize(snapshot);
     const url = this.urlForKey(backend, name);
 
     return this.ajax(url, 'POST', { data }).then((resp) => {
@@ -22,10 +23,6 @@ export default class TotpKeyAdapter extends ApplicationAdapter {
       response.data.id = name;
       return response;
     });
-  }
-
-  createRecord() {
-    return this.createOrUpdate(...arguments);
   }
 
   deleteRecord(store, type, snapshot) {
@@ -43,31 +40,21 @@ export default class TotpKeyAdapter extends ApplicationAdapter {
     return url;
   }
 
-  optionsForQuery(action) {
-    const data = {};
-
-    if (action === 'query') {
-      data.list = true;
-    }
-
-    return { data };
-  }
-
-  fetchByQuery(query, action) {
-    const { id, backend } = query;
-    return this.ajax(this.urlForKey(backend, id), 'GET', this.optionsForQuery(action)).then((resp) => {
-      resp.id = id;
+  query(store, type, query) {
+    const { backend } = query;
+    return this.ajax(this.urlForKey(backend), 'GET', { data: { list: true } }).then((resp) => {
       resp.backend = backend;
       return resp;
     });
   }
 
-  query(store, type, query) {
-    return this.fetchByQuery(query, 'query');
-  }
-
   queryRecord(store, type, query) {
-    return this.fetchByQuery(query, 'queryRecord');
+    const { id, backend } = query;
+    return this.ajax(this.urlForKey(backend, id), 'GET').then((resp) => {
+      resp.id = id;
+      resp.backend = backend;
+      return resp;
+    });
   }
 
   generateCode(backend, id) {
