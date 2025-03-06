@@ -1836,6 +1836,7 @@ func (b *backend) tidyStatusStart(config *tidyConfig) {
 		tidyCrossRevokedCerts:   config.CrossRevokedCerts,
 		tidyAcme:                config.TidyAcme,
 		tidyCertMetadata:        config.CertMetadata,
+		tidyCMPV2NonceStore:     config.CMPV2NonceStore,
 		pauseDuration:           config.PauseDuration.String(),
 
 		state:       tidyStatusStarted,
