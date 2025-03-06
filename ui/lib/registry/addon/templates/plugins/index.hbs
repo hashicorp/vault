@@ -7,42 +7,44 @@
 </PageHeader>
 
 {{#each @model as |plugin|}}
-  <LinkTo @route="plugins.plugin.details" @models={{array plugin.id}}>
-    <Hds::Card::Container
-      class="has-padding-l has-bottom-margin-m"
-      @level="mid"
-      @hasBorder="true"
-      data-test-card-plugin-container
-    >
-      <div class="is-flex">
-        <div class="is-flex-column is-flex-1">
-          <div class="has-bottom-padding-s">
-            <Hds::Text::Display>{{plugin.pluginName}}</Hds::Text::Display>
-            <Hds::Text::Body @tag="p" @color="foreground-faint" @size="200">by {{plugin.author}}</Hds::Text::Body>
-            <Hds::Text::Body @tag="p" @color="foreground-faint" @size="200">{{humanize plugin.pluginType}}</Hds::Text::Body>
-          </div>
-          <Hds::Text::Body @tag="p">{{plugin.description}}t</Hds::Text::Body>
+  <Hds::Card::Container
+    class="has-padding-l has-bottom-margin-m has-top-margin-m"
+    @level="mid"
+    @hasBorder="true"
+    data-test-card-plugin-container
+  >
+    <div class="is-flex">
+      <div class="is-flex-column is-flex-1">
+        <div class="has-bottom-padding-s">
+          <Hds::Text::Display>{{plugin.pluginName}}</Hds::Text::Display>
+          <Hds::Text::Body @tag="p" @color="foreground-faint" @size="200">by {{plugin.author}}</Hds::Text::Body>
+          <Hds::Text::Body @tag="p" @color="foreground-faint" @size="200">{{humanize plugin.pluginType}}</Hds::Text::Body>
         </div>
-        <div class="is-flex-column is-flex-1">
-          <Hds::Text::Body class="has-text-right" @tag="p">
-            <span>
-              32k downloads
-              <Hds::Badge @text={{humanize plugin.official.tags}} @icon={{plugin.official.author}} />
-              <Hds::Badge @text={{plugin.tags}} @color={{if (eq plugin.tags "enterprise") "highlight"}} />
-            </span>
-          </Hds::Text::Body>
-          <Hds::Text::Body class="has-text-right" @tag="p">{{plugin.pluginVersion}}
-            published
-            {{date-format plugin.publishDate "MMM dd, yyyy"}}
-          </Hds::Text::Body>
-          <Hds::Text::Body class="has-text-right" @tag="p">
-            Compatible with Vault
-            {{plugin.pluginVersion}}
-          </Hds::Text::Body>
-        </div>
+        <Hds::Text::Body @tag="p">{{plugin.description}}t</Hds::Text::Body>
       </div>
-    </Hds::Card::Container>
-  </LinkTo>
+      <div class="is-flex-column is-flex-1 has-text-right">
+        <Hds::Text::Body @tag="p">
+          <span>
+            32k downloads
+            {{#each plugin.tags as |tag|}}
+              <Hds::Badge @text={{humanize tag}} @icon={{if (eq tag "official") "hashicorp"}} />
+            {{/each}}
+          </span>
+        </Hds::Text::Body>
+        <Hds::Text::Body @tag="p">{{plugin.pluginVersion}}
+          published
+          {{date-format plugin.publishDate "MMM dd, yyyy"}}
+        </Hds::Text::Body>
+        <Hds::Text::Body @tag="p">
+          Compatible with Vault
+          {{plugin.pluginVersion}}
+        </Hds::Text::Body>
+        <LinkTo @route="plugins.plugin.details" @models={{array plugin.id}}>
+          View Plugin
+        </LinkTo>
+      </div>
+    </div>
+  </Hds::Card::Container>
 {{/each}}
 
 {{!-- <VaultRegistry::Registry::Plugins @plugins={{@model}} /> --}}
