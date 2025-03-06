@@ -66,7 +66,7 @@ export default class FormFieldComponent extends Component {
     'toggleButton',
   ];
   @tracked showToggleTextInput = false;
-  @tracked toggleInput = false;
+  @tracked toggleInputEnabled = false;
 
   constructor() {
     super(...arguments);
@@ -78,7 +78,7 @@ export default class FormFieldComponent extends Component {
     );
     const modelValue = model[valuePath];
     this.showToggleTextInput = !!modelValue;
-    this.toggleInput = !!modelValue;
+    this.toggleInputEnabled = !!modelValue;
   }
 
   get hasRadioSubText() {
@@ -189,8 +189,8 @@ export default class FormFieldComponent extends Component {
   }
   @action
   toggleButton() {
-    this.toggleInput = !this.toggleInput;
-    this.setAndBroadcast(this.toggleInput);
+    this.toggleInputEnabled = !this.toggleInputEnabled;
+    this.setAndBroadcast(this.toggleInputEnabled);
   }
   @action
   handleKeyUp(maybeEvent) {

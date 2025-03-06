@@ -18,7 +18,7 @@ import { getStatementFields, getRoleFields } from '../utils/model-helpers/databa
  * @param {object} model - ember data model which should be updated on change
  * @param {string} [roleType] - role type controls which attributes are shown
  * @param {string} [mode=create] - mode of the form (eg. create or edit)
- * @param {string} [dbType=default] - type of database, eg 'mongodb-database-plugin'
+ * @param {object} dbParams - holds database config values, (plugin_name [eg 'mongodb-database-plugin'], skip_static_role_rotation_import)
  */
 
 export default class DatabaseRoleSettingForm extends Component {
@@ -33,9 +33,9 @@ export default class DatabaseRoleSettingForm extends Component {
 
   get statementFields() {
     const type = this.args.roleType;
-    const plugin = this.args.dbType;
-    if (!type) return null;
-    const dbValidFields = getStatementFields(type, plugin);
+    const params = this.args.dbParams;
+    if (!type || !params) return null;
+    const dbValidFields = getStatementFields(type, params.plugin_name);
     return this.args.attrs.filter((a) => {
       return dbValidFields.includes(a.name);
     });
@@ -45,10 +45,18 @@ export default class DatabaseRoleSettingForm extends Component {
    * Sets default value for skip_import_rotation based on parent db config value
    */
   setSkipImport() {
-    const dbSkipValue = this.args.dbSkipImport;
+    const params = this.args.dbParams;
+    if (!params) return;
     const skipInput = this.args.attrs.find((x) => x.name === 'skip_import_rotation');
-    if (skipInput && dbSkipValue !== null) {
-      skipInput.options.defaultValue = dbSkipValue;
-    }
+    skipInput.options.defaultValue = params.skip_static_role_rotation_import;
+  }
+
+  get isOverridden() {
+    const params = this.args.dbParams;
+    if (this.args.mode !== 'create' || !params) return null;
+
+    const dbSkip = params.skip_static_role_rotation_import;
+    const staticVal = this.args.model.get('skip_import_rotation');
+    return this.args.mode === 'create' && dbSkip !== staticVal;
   }
 }

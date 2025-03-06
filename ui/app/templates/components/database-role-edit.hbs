@@ -115,12 +115,10 @@
                 @modelValidations={{this.modelValidations}}
               />
             {{else}}
-              <div class="has-bottom-margin-s">
-                <Hds::Alert @icon={{false}} @type="inline" as |A|>
-                  <A.Title>Type of role</A.Title>
-                  <A.Description>Select a connection first</A.Description>
-                </Hds::Alert>
-              </div>
+              <EmptyState
+                @title="No database connection selected"
+                @message="Select a connection to be able to select a role type."
+              />
             {{/if}}
           {{else}}
             <FormField
@@ -144,8 +142,7 @@
         @roleType={{@model.type}}
         @model={{@model}}
         @mode={{@mode}}
-        @dbType={{await this.databaseType}}
-        @dbSkipImport={{await this.skipImport}}
+        @dbParams={{await this.databaseParams}}
         @modelValidations={{this.modelValidations}}
       />
       <div class="field is-fullwidth box is-bottomless">

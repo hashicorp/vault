@@ -192,20 +192,19 @@
     <Toggle
       @name="toggle-{{@attr.name}}"
       @onChange={{this.toggleButton}}
-      @checked={{this.toggleInput}}
+      @checked={{this.toggleInputEnabled}}
       data-test-toggle={{@attr.name}}
+      disabled={{this.disabled}}
     >
       <span class="has-text-weight-bold is-large">{{this.labelString}}</span><br />
-      <div class="description has-text-grey">
-        {{#if this.toggleInput}}
-          <span>
+      <div class="description has-text-grey" data-test-toggle-subtext>
+        <span>
+          {{#if this.toggleInputEnabled}}
             {{@attr.options.subText}}
-          </span>
-        {{else}}
-          <span>
+          {{else}}
             {{or @attr.options.defaultSubText "Vault will use the engine default."}}
-          </span>
-        {{/if}}
+          {{/if}}
+        </span>
       </div>
     </Toggle>
   {{else if (eq @attr.options.editType "optionalText")}}

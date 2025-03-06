@@ -8,15 +8,11 @@
   {{#if this.settingFields}}
     <div class="form-section">
       {{#each this.settingFields as |attr|}}
-        {{#if (and (eq @mode "edit") (eq attr.name "username"))}}
+        {{#if (and (eq @mode "edit") (or (eq attr.name "skip_import_rotation") (eq attr.name "username")))}}
           <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
         {{else}}
           <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} @modelValidations={{@modelValidations}} />
-          {{#if
-            (and
-              (and (eq attr.name "skip_import_rotation") (eq @mode "create") (eq (get @model attr.name) (not @dbSkipImport)))
-            )
-          }}
+          {{#if (and (eq attr.name "skip_import_rotation") this.isOverridden)}}
             <Hds::Alert @type="inline" @color="warning" class="has-top-margin-negative-s" as |A|>
               <A.Title>Warning</A.Title>
               <A.Description>This will override the connection default for this role.</A.Description>
