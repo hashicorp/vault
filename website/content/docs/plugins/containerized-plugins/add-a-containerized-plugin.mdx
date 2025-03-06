@@ -158,7 +158,7 @@ secrets plugin for Docker:
    ```
 1. Build the container image and assign an identifiable tag.
    ```shell-session
-   $ docker build -t hashicorp/vault-plugin-secrets-kv:mycontainer .
+   $ docker build -t hashicorp/vault-plugin-secrets-kv:1.0.0 .
    ```
 
 ## Step 5: Register the plugin
@@ -181,7 +181,7 @@ other external plugin that is available locally to Vault.
    $ export SHA256=$(docker images \
        --no-trunc \
        --format="{{ .ID }}" \
-       hashicorp/vault-plugin-secrets-kv:mycontainer | cut -d: -f2)
+       hashicorp/vault-plugin-secrets-kv:1.0.0 | cut -d: -f2)
    ```
    
    </CodeBlockConfig>
@@ -201,7 +201,7 @@ other external plugin that is available locally to Vault.
    ```shell-session
    $ vault plugin register \
        -sha256="${SHA256}" \
-       -oci_image=hashicorp/vault-plugin-secrets-kv:mycontainer \
+       -oci_image=hashicorp/vault-plugin-secrets-kv:1.0.0 \
        secret my-kv-container
    ```
    
@@ -303,7 +303,7 @@ To use an alternative runtime:
    $ vault plugin register \
       -runtime=docker-rt   \
       -sha256="${SHA256}"  \
-      -oci_image=hashicorp/vault-plugin-secrets-kv:mycontainer \
+      -oci_image=hashicorp/vault-plugin-secrets-kv:1.0.0 \
       secret my-kv-container
    ```
 
