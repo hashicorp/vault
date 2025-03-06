@@ -6,9 +6,6 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import ControlGroupError from 'vault/lib/control-group-error';
-import { later } from '@ember/runloop';
-import timestamp from 'core/utils/timestamp';
-import { getUnixTime } from 'date-fns';
 
 const SUPPORTED_DYNAMIC_BACKENDS = ['database', 'ssh', 'aws', 'totp'];
 
@@ -98,17 +95,6 @@ export default Route.extend({
       dbCred,
       awsRoleType: awsRole?.credentialType,
     };
-  },
-
-  async afterModel(model) {
-    if (model.backendType === 'totp' && model.totpCodePeriod) {
-      later(
-        () => {
-          this.refresh();
-        },
-        (model.totpCodePeriod - (getUnixTime(timestamp.now()) % model.totpCodePeriod)) * 1000
-      );
-    }
   },
 
   resetController(controller) {
