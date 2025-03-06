@@ -8,7 +8,6 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 import { isBlank } from '@ember/utils';
-import { task, waitForEvent } from 'ember-concurrency';
 
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
@@ -72,14 +71,4 @@ export default class TotpEdit extends Component {
       this.transitionToRoute(SHOW_ROUTE, modelId);
     });
   }
-
-  @(task(function* () {
-    while (true) {
-      const event = yield waitForEvent(document.body, 'keyup');
-      this.onEscape(event);
-    }
-  })
-    .on('didInsertElement')
-    .cancelOn('willDestroyElement'))
-  waitForKeyUp;
 }
