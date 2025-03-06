@@ -31,10 +31,10 @@ export default class TotpKeyAdapter extends ApplicationAdapter {
   }
 
   urlForKey(backend, id) {
-    let url = `${this.buildURL()}/${encodePath(backend)}/keys/`;
+    let url = `${this.buildURL()}/${encodePath(backend)}/keys`;
 
     if (!isEmpty(id)) {
-      url = url + encodePath(id);
+      url = `${url}/${encodePath(id)}`;
     }
 
     return url;
