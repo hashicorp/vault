@@ -27,9 +27,7 @@
 
 {{#if (eq @mode "show")}}
   <Totp::KeyDetails @model={{@model}} @delete={{this.delete}} />
-{{/if}}
-
-{{#if (eq @mode "create")}}
+{{else if (eq @mode "create")}}
   {{#if this.hasGenerated}}
     <Totp::KeyQrCode @model={{@model}} @reset={{this.reset}} />
   {{else}}
