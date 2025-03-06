@@ -17,8 +17,8 @@ export default class GenerateCredentialsTotp extends Component {
 
   constructor() {
     super(...arguments);
-    const { model } = this.args;
-    this.generateTotpCode(model.backendPath, model.roleName);
+    const { backendPath, keyName } = this.args;
+    this.generateTotpCode(backendPath, keyName);
     this.startTimer.perform();
   }
 
