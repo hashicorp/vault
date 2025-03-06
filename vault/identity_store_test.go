@@ -1641,9 +1641,10 @@ func identityStoreLoadingIsDeterministic(t *testing.T, flags *determinismTestFla
 		c.FeatureActivationFlags.ActivateInMem(activationflags.IdentityDeduplication, true)
 		require.NoError(t, err)
 
-		c.identityStore.activateDeduplicationDone = make(chan struct{})
+		c.identityStore.MakeDeduplicationDoneChan()
 		err := c.systemBackend.activateIdentityDeduplication(ctx, nil)
-		<-c.identityStore.activateDeduplicationDone
+		require.NoError(t, err)
+		err = c.identityStore.WaitForActivateDeduplicationDone(ctx)
 		require.NoError(t, err)
 		require.IsType(t, &renameResolver{}, c.identityStore.conflictResolver)
 		require.False(t, c.identityStore.disableLowerCasedNames)
