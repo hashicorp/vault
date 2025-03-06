@@ -13,7 +13,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	metrics "github.com/hashicorp/go-metrics"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"google.golang.org/grpc/status"
 )
 
