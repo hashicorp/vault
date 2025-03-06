@@ -17,8 +17,6 @@ export default class GenerateCredentialsTotp extends Component {
 
   constructor() {
     super(...arguments);
-    const { backendPath, keyName } = this.args;
-    this.generateTotpCode(backendPath, keyName);
     this.startTimer.perform();
   }
 
@@ -36,6 +34,7 @@ export default class GenerateCredentialsTotp extends Component {
   *startTimer() {
     const { backendPath, keyName, totpCodePeriod } = this.args;
     if (totpCodePeriod) {
+      this.generateTotpCode(backendPath, keyName);
       while (this.elapsedTime <= totpCodePeriod) {
         yield timeout(1000);
         this.elapsedTime += 1;
@@ -59,11 +58,4 @@ export default class GenerateCredentialsTotp extends Component {
       return;
     }
   }
-
-  willDestroy() {
-    super.willDestroy();
-    this.startTimer.cancelAll();
-  }
 }
-
-// TODO this isn't perfect and currently doesn't reset the code at zero nor when refreshing
