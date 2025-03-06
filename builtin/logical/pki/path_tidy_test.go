@@ -614,7 +614,7 @@ func TestCertStorageMetrics(t *testing.T) {
 
 	// We set up a metrics accumulator
 	inmemSink := metrics.NewInmemSink(
-		2*newPeriod, // A short time period is ideal here to test metrics are emitted every periodic func
+		2*newPeriod,  // A short time period is ideal here to test metrics are emitted every periodic func
 		10*newPeriod) // Do not keep a huge amount of metrics in the sink forever, clear them out to save memory usage.
 
 	metricsConf := metrics.DefaultConfig("")
