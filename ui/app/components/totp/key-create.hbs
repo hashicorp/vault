@@ -7,8 +7,7 @@
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @model={{@model}} />
     <NamespaceReminder @mode={{@mode}} @noun="TOTP key" />
-
-    {{#each (if @model.generate @generatedFields @nonGeneratedFields) as |field|}}
+    {{#each @keyFormFields as |field|}}
       {{#let (find-by "name" field @model.allFields) as |attr|}}
         {{! TODO add model validations }}
         <FormField @attr={{attr}} @model={{@model}} data-test-field />

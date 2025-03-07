@@ -18,15 +18,11 @@ export default class TotpEdit extends Component {
 
   @tracked hasGenerated = false;
   successCallback;
-  generatedDefaultFields = ['name', 'generate', 'issuer', 'accountName'];
-  nonGeneratedDefaultFields = [...this.generatedDefaultFields, 'url', 'key'];
 
-  get generatedFields() {
-    return this.generatedDefaultFields;
-  }
-
-  get nonGeneratedFields() {
-    return this.nonGeneratedDefaultFields;
+  get keyFormFields() {
+    const generated = ['name', 'generate', 'issuer', 'accountName'];
+    const nonGenerated = [...generated, 'url', 'key'];
+    return this.args.model.generate ? generated : nonGenerated;
   }
 
   get mode() {
