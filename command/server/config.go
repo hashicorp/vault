@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-discover"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
@@ -1101,20 +1102,17 @@ func normalizeRaftRetryJoin(val any) ([]byte, error) {
 		for k, v := range stanza {
 			switch k {
 			case "auto_join":
-				pairs := strings.Split(v.(string), " ")
-				for i, pair := range pairs {
-					pairParts := strings.Split(pair, "=")
-					if len(pairParts) != 2 {
-						return nil, fmt.Errorf("malformed auto_join pair %s, expected key=value", pair)
-					}
+				cfg, err := discover.Parse(v.(string))
+				if err != nil {
+					return nil, err
+				}
+				for k, v := range cfg {
 					// These are auto_join keys that are valid for the provider in go-discover
-					if slices.Contains([]string{"domain", "auth_url", "url", "host"}, pairParts[0]) {
-						pairParts[1] = configutil.NormalizeAddr(pairParts[1])
-						pair = strings.Join(pairParts, "=")
-						pairs[i] = pair
+					if slices.Contains([]string{"domain", "auth_url", "url", "host"}, k) {
+						cfg[k] = configutil.NormalizeAddr(v)
 					}
 				}
-				normalizedStanza[k] = strings.Join(pairs, " ")
+				normalizedStanza[k] = cfg.String()
 			case "leader_api_addr":
 				normalizedStanza[k] = configutil.NormalizeAddr(v.(string))
 			default:
