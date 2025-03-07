@@ -230,43 +230,43 @@ storage_destination "raft" {
 
 		// missing source
 		verifyBad(`
-		storage_destination "raft" {
-		 path = "dest_path"
-		}`)
+storage_destination "raft" {
+ path = "dest_path"
+}`)
 
 		// missing destination
 		verifyBad(`
-		storage_source "consul" {
-		 path = "src_path"
-		}`)
+storage_source "consul" {
+ path = "src_path"
+}`)
 
 		// duplicate source
 		verifyBad(`
-		storage_source "consul" {
-		 path = "src_path"
-		}
-		
-		storage_source "raft" {
-		 path = "src_path"
-		}
-		
-		storage_destination "raft" {
-		 path = "dest_path"
-		}`)
+storage_source "consul" {
+ path = "src_path"
+}
+
+storage_source "raft" {
+ path = "src_path"
+}
+
+storage_destination "raft" {
+ path = "dest_path"
+}`)
 
 		// duplicate destination
 		verifyBad(`
-		storage_source "consul" {
-		 path = "src_path"
-		}
-		
-		storage_destination "raft" {
-		 path = "dest_path"
-		}
-		
-		storage_destination "consul" {
-		 path = "dest_path"
-		}`)
+storage_source "consul" {
+ path = "src_path"
+}
+
+storage_destination "raft" {
+ path = "dest_path"
+}
+
+storage_destination "consul" {
+ path = "dest_path"
+}`)
 
 		// duplicate key
 		verifyBad(`
