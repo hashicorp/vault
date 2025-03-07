@@ -60,7 +60,7 @@ To understand if you need to take action, consult
 demonstrates the log lines to watch for and how to ensure your resolve
 duplicates safely.
 
-### LDAP user DN search with `upndomain` ((#ldap))
+### LDAP user DN search with `upndomain`
 
 The github.com/hashicorp/cap/ldap dependency has been upgraded to include a security improvement
 which may be a breaking change for users. The enhancement ensures that user DN searches with
@@ -76,6 +76,10 @@ error if multiple users are returned.
 Vault 1.19.0 collects anonymous usage data about the Vault cluster and
 automatically sends the cluster usage data with the standard utilization data
 reported through automated license reporting.
+
+### RADIUS authentication is no longer case sensitive ((#case-sensitive))
+
+As of Vault 1.19.0 the RADIUS authentication plugin will not force case sensitivity when entered.
 
 
 ## Known issues and workarounds
