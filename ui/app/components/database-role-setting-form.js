@@ -22,42 +22,35 @@ import { getStatementFields, getRoleFields } from '../utils/model-helpers/databa
  */
 
 export default class DatabaseRoleSettingForm extends Component {
+  get dbConfig() {
+    return this.args.dbParams;
+  }
+
   get settingFields() {
-    this.setSkipImport();
-    if (!this.args.roleType) return null;
+    if (!this.args.roleType || !this.dbConfig) return null;
     const dbValidFields = getRoleFields(this.args.roleType);
     return this.args.attrs.filter((a) => {
+      // Sets default value for skip_import_rotation based on parent db config value
+      if (a.name === 'skip_import_rotation' && this.args.mode === 'create') {
+        a.options.defaultValue = this.dbConfig.skip_static_role_rotation_import;
+      }
       return dbValidFields.includes(a.name);
     });
   }
 
   get statementFields() {
     const type = this.args.roleType;
-    const params = this.args.dbParams;
     if (!type) return null;
-    const dbValidFields = getStatementFields(type, params ? params.plugin_name : null);
+    const dbValidFields = getStatementFields(type, this.dbConfig ? this.dbConfig.plugin_name : null);
     return this.args.attrs.filter((a) => {
       return dbValidFields.includes(a.name);
     });
   }
 
-  /**
-   * Sets default value for skip_import_rotation based on parent db config value
-   */
-  setSkipImport() {
-    const params = this.args.dbParams;
-    if (!params) return;
-    const skipInput = this.args.attrs.find((x) => x.name === 'skip_import_rotation');
-    if (skipInput) {
-      skipInput.options.defaultValue = params.skip_static_role_rotation_import;
-    }
-  }
-
   get isOverridden() {
-    const params = this.args.dbParams;
-    if (this.args.mode !== 'create' || !params) return null;
+    if (this.args.mode !== 'create' || !this.dbConfig) return null;
 
-    const dbSkip = params.skip_static_role_rotation_import;
+    const dbSkip = this.dbConfig.skip_static_role_rotation_import;
     const staticVal = this.args.model.get('skip_import_rotation');
     return this.args.mode === 'create' && dbSkip !== staticVal;
   }
