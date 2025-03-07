@@ -3,18 +3,18 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { resolve, allSettled } from 'rsvp';
-import { isEmpty } from '@ember/utils';
 import ApplicationAdapter from './application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
+import { isEmpty } from '@ember/utils';
 
-export default ApplicationAdapter.extend({
-  namespace: 'v1',
+export default class TotpKeyAdapter extends ApplicationAdapter {
+  namespace = 'v1';
 
-  createOrUpdate(store, type, snapshot, requestType) {
+  // TOTP keys can only be created, so no need for an update method
+  createRecord(store, type, snapshot) {
     const { name, backend } = snapshot.record;
     const serializer = store.serializerFor(type.modelName);
-    const data = serializer.serialize(snapshot, requestType);
+    const data = serializer.serialize(snapshot);
     const url = this.urlForKey(backend, name);
 
     return this.ajax(url, 'POST', { data }).then((resp) => {
@@ -23,65 +23,43 @@ export default ApplicationAdapter.extend({
       response.data.id = name;
       return response;
     });
-  },
-
-  createRecord() {
-    return this.createOrUpdate(...arguments);
-  },
-
-  updateRecord() {
-    return this.createOrUpdate(...arguments, 'update');
-  },
+  }
 
   deleteRecord(store, type, snapshot) {
     const { id } = snapshot;
     return this.ajax(this.urlForKey(snapshot.record.backend, id), 'DELETE');
-  },
-
-  pathForType() {
-    return 'keys';
-  },
+  }
 
   urlForKey(backend, id) {
-    let url = `${this.buildURL()}/${encodePath(backend)}/${this.pathForType()}/`;
+    let url = `${this.buildURL()}/${encodePath(backend)}/keys`;
 
     if (!isEmpty(id)) {
-      url = url + encodePath(id);
+      url = `${url}/${encodePath(id)}`;
     }
 
     return url;
-  },
+  }
 
-  optionsForQuery(id, action) {
-    const data = {};
+  query(store, type, query) {
+    const { backend } = query;
+    return this.ajax(this.urlForKey(backend), 'GET', { data: { list: true } }).then((resp) => {
+      resp.backend = backend;
+      return resp;
+    });
+  }
 
-    if (action === 'query') {
-      data.list = true;
-    }
-
-    return { data };
-  },
-
-  fetchByQuery(query, action) {
+  queryRecord(store, type, query) {
     const { id, backend } = query;
-    return this.ajax(this.urlForKey(backend, id), 'GET', this.optionsForQuery(id, action)).then((resp) => {
+    return this.ajax(this.urlForKey(backend, id), 'GET').then((resp) => {
       resp.id = id;
       resp.backend = backend;
       return resp;
     });
-  },
-
-  query(store, type, query) {
-    return this.fetchByQuery(query, 'query');
-  },
-
-  queryRecord(store, type, query) {
-    return this.fetchByQuery(query, 'queryRecord');
-  },
+  }
 
   generateCode(backend, id) {
     return this.ajax(`${this.buildURL()}/${encodePath(backend)}/code/${id}`, 'GET').then((res) => {
       return res.data;
     });
-  },
-});
+  }
+}
