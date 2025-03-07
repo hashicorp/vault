@@ -114,11 +114,6 @@
                 @model={{@model}}
                 @modelValidations={{this.modelValidations}}
               />
-            {{else}}
-              <EmptyState
-                @title="No database connection selected"
-                @message="Select a connection to be able to select a role type."
-              />
             {{/if}}
           {{else}}
             <FormField
@@ -137,14 +132,21 @@
           {{/if}}
         {{/if}}
       {{/each}}
-      <DatabaseRoleSettingForm
-        @attrs={{@model.roleSettingAttrs}}
-        @roleType={{@model.type}}
-        @model={{@model}}
-        @mode={{@mode}}
-        @dbParams={{await this.databaseParams}}
-        @modelValidations={{this.modelValidations}}
-      />
+      {{#if @model.database}}
+        <DatabaseRoleSettingForm
+          @attrs={{@model.roleSettingAttrs}}
+          @roleType={{@model.type}}
+          @model={{@model}}
+          @mode={{@mode}}
+          @dbParams={{await this.databaseParams}}
+          @modelValidations={{this.modelValidations}}
+        />
+      {{else}}
+        <EmptyState
+          @title="No database connection selected"
+          @message="Choose a connection to be able to configure a role type."
+        />
+      {{/if}}
       <div class="field is-fullwidth box is-bottomless">
         <Hds::ButtonSet>
           <Hds::Button
