@@ -7,23 +7,15 @@
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @model={{@model}} />
     <NamespaceReminder @mode={{@mode}} @noun="TOTP key" />
-    {{#if @model.generate}}
-      {{#each @generatedFields as |field|}}
-        {{#let (find-by "name" field @model.allFields) as |attr|}}
-          {{! TODO add model validations }}
-          <FormField @attr={{attr}} @model={{@model}} data-test-field />
-        {{/let}}{{/each}}
-    {{else}}
-      {{#each @nonGeneratedFields as |field|}}
-        {{#let (find-by "name" field @model.allFields) as |attr|}}
-          {{! TODO add model validations }}
-          <FormField @attr={{attr}} @model={{@model}} data-test-field />
-        {{/let}}
-      {{/each}}
-    {{/if}}
+
+    {{#each (if @model.generate @generatedFields @nonGeneratedFields) as |field|}}
+      {{#let (find-by "name" field @model.allFields) as |attr|}}
+        {{! TODO add model validations }}
+        <FormField @attr={{attr}} @model={{@model}} data-test-field />
+      {{/let}}
+    {{/each}}
 
     <Totp::KeyCreateToggleGroups @model={{@model}} />
-
   </div>
   <div class="field is-grouped-split box is-fullwidth is-bottomless">
     <Hds::ButtonSet>
