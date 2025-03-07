@@ -597,6 +597,12 @@ func testUnknownFieldValidationHcl(t *testing.T) {
 	}
 }
 
+func testDuplicateKeyValidationHcl(t *testing.T) {
+	_, err := LoadConfigFile("./test-fixtures/invalid_config_duplicate_key.hcl")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "Each argument can only be defined once")
+}
+
 // testConfigWithAdministrativeNamespaceJson tests that a config with a valid administrative namespace path is correctly validated and loaded.
 func testConfigWithAdministrativeNamespaceJson(t *testing.T) {
 	config, err := LoadConfigFile("./test-fixtures/config_with_valid_admin_ns.json")

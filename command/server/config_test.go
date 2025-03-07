@@ -95,6 +95,10 @@ func TestUnknownFieldValidationListenerAndStorage(t *testing.T) {
 	testUnknownFieldValidationStorageAndListener(t)
 }
 
+func TestDuplicateKeyValidationHcl(t *testing.T) {
+	testDuplicateKeyValidationHcl(t)
+}
+
 func TestExperimentsConfigParsing(t *testing.T) {
 	const envKey = "VAULT_EXPERIMENTS"
 	originalValue := validExperiments
