@@ -2308,3 +2308,14 @@ vault {
 		})
 	}
 }
+
+func TestProxy_Config_HclDuplicateKeyInvalid(t *testing.T) {
+	configFile := populateTempFile(t, "proxy-config.hcl", `
+vault {
+	  address = "https://test.com"
+	  address = "https://test.com"
+}`)
+	_, err := proxyConfig.LoadConfigFile(configFile.Name())
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "Each argument can only be defined once")
+}
