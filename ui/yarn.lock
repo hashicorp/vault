@@ -2462,6 +2462,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@hashicorp/vault-client-typescript@file:./api-client::locator=vault%40workspace%3A.":
+  version: 0.0.0
+  resolution: "@hashicorp/vault-client-typescript@file:./api-client#./api-client::hash=bd40d2&locator=vault%40workspace%3A."
+  checksum: ed1531369dd76f230fa2b3277b60845156ea2b152728aa40fac8068471e14a9cf8bb5f0e8e254a2b76476e0b1dc76aa068cbe84fd55065f0cf8a23b094b7456b
+  languageName: node
+  linkType: hard
+
 "@humanwhocodes/config-array@npm:^0.13.0":
   version: 0.13.0
   resolution: "@humanwhocodes/config-array@npm:0.13.0"
@@ -18829,6 +18836,7 @@ __metadata:
     "@glimmer/component": ^1.1.2
     "@glimmer/tracking": ^1.1.2
     "@hashicorp/design-system-components": ~4.16.0
+    "@hashicorp/vault-client-typescript": "file:./api-client"
     "@icholy/duration": ^5.1.0
     "@lineal-viz/lineal": ^0.5.1
     "@tsconfig/ember": ^2.0.0
