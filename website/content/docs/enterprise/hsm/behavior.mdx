@@ -48,8 +48,8 @@ encryption key are supported when using an HSM.
 
 ## Performance and availability
 
-When Vault uses an HSM to generate various Critical Security Parameters (CSPs)
-or for entropy augmentation, it needs the HSM to be online and available, to
+When Vault uses an HSM to generate various Critical Security Parameters (CSPs),
+or for entropy augmentation, it needs the HSM to be online and available to
 process these requests. Additionally, some operations that interact with the HSM
 can happen more frequently than key generation, and may impact performance. For
 example, mount with seal wrapping enabled will interact with the HSM on every
