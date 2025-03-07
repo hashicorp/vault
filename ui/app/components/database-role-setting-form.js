@@ -48,7 +48,9 @@ export default class DatabaseRoleSettingForm extends Component {
     const params = this.args.dbParams;
     if (!params) return;
     const skipInput = this.args.attrs.find((x) => x.name === 'skip_import_rotation');
-    skipInput.options.defaultValue = params.skip_static_role_rotation_import;
+    if (skipInput) {
+      skipInput.options.defaultValue = params.skip_static_role_rotation_import;
+    }
   }
 
   get isOverridden() {

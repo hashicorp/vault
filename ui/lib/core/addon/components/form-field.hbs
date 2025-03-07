@@ -200,9 +200,9 @@
       <div class="description has-text-grey" data-test-toggle-subtext>
         <span>
           {{#if this.toggleInputEnabled}}
-            {{@attr.options.subText}}
+            {{@attr.options.enabledSubText}}
           {{else}}
-            {{or @attr.options.defaultSubText "Vault will use the engine default."}}
+            {{@attr.options.disabledSubText}}
           {{/if}}
         </span>
       </div>
