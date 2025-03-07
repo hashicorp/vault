@@ -1,0 +1,163 @@
+---
+layout: docs
+page_title: "1.19.0 release notes"
+description: |-
+  Key updates for  Vault 1.19.0
+---
+
+# Vault 1.19.0 release notes
+
+**GA date:** 2025-03-05
+
+@include 'release-notes/intro.mdx'
+
+## Important changes
+
+| Change                                        | Description
+|---------------------------------------------- |------------
+| Support change (1.16.x)                       | 1.16.x moves to long term support and 1.19 becomes the current LTS version.
+| New behavior (1.19.0)                         | [Changed behavior for Ed25519 signatures in Transit plugin](/vault/docs/upgrading/upgrade-to-1.19.x#ed25519)
+| New behavior (1.19.0)                         | [Duplicate identity cleanup and forced deduplication](/vault/docs/upgrading/upgrade-to-1.19.x#dedupe)
+| Breaking change (1.19)                        | [LDAP security improvement impacting user DN search with `upndomain`](/vault/docs/upgrading/upgrade-to-1.19.x#ldap-user-dn-search-with-upndomain)
+| New behavior (1.19.0)                         | [Anonymized cluster data returned with license utilization](/vault/docs/upgrading/upgrade-to-1.19.x#anon-data)
+| Known issue (1.19.x, 1.18.x, 1.17.x, 1.16.x)  | [Duplicate HSM keys creation when migrating to HSM from Shamir](/vault/docs/upgrading/upgrade-to-1.19.x#hsm-keys)
+| New behavior (1.19.0)                         | [Uppercase values are no longer forced to lower case](/vault/docs/upgrading/upgrade-to-1.19.x#case-sensitive)
+
+## Vault companion updates
+
+Companion updates are Vault updates that live outside the main Vault binary.
+
+**None**.
+
+## Community updates
+
+Follow the learn more links for more information, or browse the list of
+[Vault tutorials updated to highlight changes for the most recent GA release](/vault/tutorials/new-release).
+
+
+<table>
+  <thead>
+    <tr>
+      <th style={{verticalAlign: 'middle'}}>Release</th>
+      <th style={{verticalAlign: 'middle'}}>Update</th>
+      <th style={{verticalAlign: 'middle'}}>Description</th>
+    </tr>
+  </thead>
+
+  <tbody>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Faster availability after restart 
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Identity loading on restart is up to 40% faster and Vault logs include new
+      diagnostic information to troubleshoot cluster slowness with the
+      `post_unseal_trace_directory` configuration setting.
+      <br /><br />
+      Learn more: <a href="/vault/docs/configuration#enable_post_unseal_trace">`post_unseal_trace_directory` parameter details</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Raft integrated storage
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>ENHANCED</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Corrects a previous issue with Raft nodes generating stale data by
+      preventing stale nodes from servicing requests to the cluster.
+    </td>
+  </tr>
+
+  </tbody>
+</table>
+
+## Enterprise updates
+
+<table>
+  <thead>
+    <tr>
+      <th style={{verticalAlign: 'middle'}}>Release</th>
+      <th style={{verticalAlign: 'middle'}}>Update</th>
+      <th style={{verticalAlign: 'middle'}}>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Identity
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>ENHANCED</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Opt-in resolution of accidental duplicates in the identity system with a
+      gated feature to force deduplication.
+      <br /><br />
+      Learn more: <a href="/vault/docs/upgrading/deduplication">Find and resolve duplicate Vault identities</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Autopilot
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>ENHANCED</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Improved upgrade stability with better cluster leadership reconciliation.
+      <br /><br />
+      Learn more: <a href="/vault/docs/concepts/integrated-storage/autopilot">Autopilot overview</a>
+    </td>
+  </tr>
+
+   <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Database support
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Transition static database accounts without immediate rotation, precise
+      timing, or coordinating with maintenance windows.
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle', rowSpan: '2'}}>
+      Events
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Subscribe to event notifications on all Vault nodes within a cluster.
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Notification subscriptions for secret deletion no longer requires a root
+      token.
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Plugin support
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Run Vault Enterprise plugins external to Vault. Running plugins externally
+      is useful in deployments when the plugin requires different environment
+      variable values than the Vault binary.
+    </td>
+  </tr>
+
+  </tbody>
+</table>
+
+## Feature deprecations and EOL
+
+Deprecated in 1.19.x | Retired in 1.19.x
+-------------------- | ---------------
+None                 | None
+
+@include 'release-notes/deprecation-note.mdx'

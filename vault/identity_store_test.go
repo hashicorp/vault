@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -68,7 +69,7 @@ func TestIdentityStore_DeleteEntityAlias(t *testing.T) {
 		BucketKey:   c.identityStore.entityPacker.BucketKey("testEntityID"),
 	}
 
-	err := c.identityStore.upsertEntityInTxn(context.Background(), txn, entity, nil, false)
+	_, err := c.identityStore.upsertEntityInTxn(context.Background(), txn, entity, nil, false, false)
 	require.NoError(t, err)
 
 	err = c.identityStore.deleteAliasesInEntityInTxn(txn, entity, []*identity.Alias{alias, alias2})
@@ -1422,51 +1423,45 @@ func TestIdentityStoreLoadingIsDeterministic(t *testing.T) {
 		seedval, err = strconv.ParseInt(os.Getenv("VAULT_TEST_IDENTITY_STORE_SEED"), 10, 64)
 		require.NoError(t, err)
 	}
-	seed := rand.New(rand.NewSource(seedval)) // Seed for deterministic test
 	defer t.Logf("Test generated with seed: %d", seedval)
 
-	tests := []struct {
-		name  string
-		flags *determinismTestFlags
-	}{
-		{
-			name: "error-resolver-primary",
-			flags: &determinismTestFlags{
-				identityDeduplication: false,
-				secondary:             false,
-				seed:                  seed,
-			},
+	tests := map[string]*determinismTestFlags{
+		"error-resolver-primary": {
+			identityDeduplication: false,
+			secondary:             false,
 		},
-		{
-			name: "identity-cleanup-primary",
-			flags: &determinismTestFlags{
-				identityDeduplication: true,
-				secondary:             false,
-				seed:                  seed,
-			},
-		},
-
-		{
-			name: "error-resolver-secondary",
-			flags: &determinismTestFlags{
-				identityDeduplication: false,
-				secondary:             true,
-				seed:                  seed,
-			},
-		},
-		{
-			name: "identity-cleanup-secondary",
-			flags: &determinismTestFlags{
-				identityDeduplication: true,
-				secondary:             true,
-				seed:                  seed,
-			},
+		"identity-cleanup-primary": {
+			identityDeduplication: true,
+			secondary:             false,
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(t.Name()+"-"+test.name, func(t *testing.T) {
-			identityStoreLoadingIsDeterministic(t, test.flags)
+	// Hook to add cases that only differ in Enterprise
+	if entIdentityStoreDeterminismSupportsSecondary() {
+		tests["error-resolver-secondary"] = &determinismTestFlags{
+			identityDeduplication: false,
+			secondary:             true,
+		}
+		tests["identity-cleanup-secondary"] = &determinismTestFlags{
+			identityDeduplication: true,
+			secondary:             true,
+		}
+	}
+
+	repeats := 50
+
+	for name, flags := range tests {
+		t.Run(t.Name()+"-"+name, func(t *testing.T) {
+			// Create a random source specific to this test case so every test case
+			// starts out from the identical random state given the same seed. We do
+			// want each iteration to explore different path though so we do it here
+			// not inside the test func.
+			seed := rand.New(rand.NewSource(seedval)) // Seed for deterministic test
+			flags.seed = seed
+
+			for i := 0; i < repeats; i++ {
+				identityStoreLoadingIsDeterministic(t, flags)
+			}
 		})
 	}
 }
@@ -1538,7 +1533,8 @@ func identityStoreLoadingIsDeterministic(t *testing.T, flags *determinismTestFla
 		e := makeEntityForPacker(t, name, c.identityStore.entityPacker, seed)
 		attachAlias(t, e, alias, upme, seed)
 		attachAlias(t, e, localAlias, localMe, seed)
-		err = TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e.ID, e)
+
+		err = c.identityStore.persistEntity(ctx, e)
 		require.NoError(t, err)
 
 		// Subset of entities get a duplicate alias and/or duplicate local alias.
@@ -1551,7 +1547,8 @@ func identityStoreLoadingIsDeterministic(t *testing.T, flags *determinismTestFla
 		for rnd < pDup && dupeNum < 10 {
 			e := makeEntityForPacker(t, fmt.Sprintf("entity-%d-dup-%d", i, dupeNum), c.identityStore.entityPacker, seed)
 			attachAlias(t, e, alias, upme, seed)
-			err = TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e.ID, e)
+
+			err = c.identityStore.persistEntity(ctx, e)
 			require.NoError(t, err)
 			// Toss again to see if we continue
 			rnd = seed.Float64()
@@ -1563,8 +1560,9 @@ func identityStoreLoadingIsDeterministic(t *testing.T, flags *determinismTestFla
 		for rnd < pDup && dupeNum < 10 {
 			e := makeEntityForPacker(t, fmt.Sprintf("entity-%d-localdup-%d", i, dupeNum), c.identityStore.entityPacker, seed)
 			attachAlias(t, e, localAlias, localMe, seed)
-			err = TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e.ID, e)
+			err = c.identityStore.persistEntity(ctx, e)
 			require.NoError(t, err)
+
 			rnd = seed.Float64()
 			dupeNum++
 		}
@@ -1572,7 +1570,7 @@ func identityStoreLoadingIsDeterministic(t *testing.T, flags *determinismTestFla
 		rnd = seed.Float64()
 		for rnd < pDup {
 			e := makeEntityForPacker(t, name, c.identityStore.entityPacker, seed)
-			err = TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e.ID, e)
+			err = c.identityStore.persistEntity(ctx, e)
 			require.NoError(t, err)
 			rnd = seed.Float64()
 		}
@@ -1624,26 +1622,29 @@ func identityStoreLoadingIsDeterministic(t *testing.T, flags *determinismTestFla
 	}
 
 	// Storage is now primed for the test.
+	require.NoError(t, c.Seal(rootToken))
+	require.True(t, c.Sealed())
+	for _, key := range sealKeys {
+		unsealed, err := c.Unseal(key)
+		require.NoError(t, err, "failed unseal on initial assertions")
+		if unsealed {
+			break
+		}
+	}
+	require.False(t, c.Sealed())
 
 	if identityDeduplication {
 		// Perform an initial Seal/Unseal with duplicates injected to assert
 		// initial state.
-		require.NoError(t, c.Seal(rootToken))
-		require.True(t, c.Sealed())
-		for _, key := range sealKeys {
-			unsealed, err := c.Unseal(key)
-			require.NoError(t, err, "failed unseal on initial assertions")
-			if unsealed {
-				break
-			}
-		}
-		require.False(t, c.Sealed())
 
 		// Test out the system backend ActivationFunc wiring
 		c.FeatureActivationFlags.ActivateInMem(activationflags.IdentityDeduplication, true)
 		require.NoError(t, err)
 
+		c.identityStore.MakeDeduplicationDoneChan()
 		err := c.systemBackend.activateIdentityDeduplication(ctx, nil)
+		require.NoError(t, err)
+		err = c.identityStore.WaitForActivateDeduplicationDone(ctx)
 		require.NoError(t, err)
 		require.IsType(t, &renameResolver{}, c.identityStore.conflictResolver)
 		require.False(t, c.identityStore.disableLowerCasedNames)
@@ -1654,15 +1655,27 @@ func identityStoreLoadingIsDeterministic(t *testing.T, flags *determinismTestFla
 	// build a list of human readable ids that we can compare.
 	prevLoadedNames := []string{}
 	var prevErr error
+
 	for i := 0; i < 10; i++ {
 		err := c.identityStore.resetDB()
 		require.NoError(t, err)
 
+		logger.Info(" ==> BEGIN LOAD ARTIFACTS", "i", i)
+
 		err = c.identityStore.loadArtifacts(ctx, true)
+
 		if i > 0 {
 			require.Equal(t, prevErr, err)
 		}
 		prevErr = err
+
+		// Try to drain the channel if it's been created (if deduplication was
+		// enabled), but don't block in case it wasn't!
+		select {
+		case <-c.identityStore.activateDeduplicationDone:
+		default:
+		}
+		logger.Info(" ==> END LOAD ARTIFACTS ", "i", i)
 
 		// Identity store should be loaded now. Check it's contents.
 		loadedNames := []string{}
@@ -1674,23 +1687,24 @@ func identityStoreLoadingIsDeterministic(t *testing.T, flags *determinismTestFla
 		require.NoError(t, err)
 		for item := iter.Next(); item != nil; item = iter.Next() {
 			e := item.(*identity.Entity)
-			loadedNames = append(loadedNames, e.Name)
+			loadedNames = append(loadedNames, e.NamespaceID+"/"+e.Name+"_"+e.ID)
 			for _, a := range e.Aliases {
-				loadedNames = append(loadedNames, a.Name)
+				loadedNames = append(loadedNames, a.MountAccessor+"/"+a.Name+"_"+a.ID)
 			}
 		}
-		// This is a non-triviality check to make sure we actually loaded stuff and
-		// are not just passing because of a bug in the test.
-		numLoaded := len(loadedNames)
-		require.Greater(t, numLoaded, 300, "not enough entities and aliases loaded on attempt %d", i)
 
 		// Standalone alias query
 		iter, err = tx.LowerBound(entityAliasesTable, "id", "")
 		require.NoError(t, err)
 		for item := iter.Next(); item != nil; item = iter.Next() {
 			a := item.(*identity.Alias)
-			loadedNames = append(loadedNames, a.Name)
+			loadedNames = append(loadedNames, "fromAliasTable:"+a.MountAccessor+"/"+a.Name+"_"+a.ID)
 		}
+
+		// This is a non-triviality check to make sure we actually loaded stuff and
+		// are not just passing because of a bug in the test.
+		numLoaded := len(loadedNames)
+		require.Greater(t, numLoaded, 300, "not enough entities and aliases loaded on attempt %d", i)
 
 		// Groups
 		iter, err = tx.LowerBound(groupsTable, "id", "")
@@ -1765,23 +1779,12 @@ func TestIdentityStoreLoadingDuplicateReporting(t *testing.T) {
 	// Storage is now primed for the test.
 
 	// Setup a logger we can use to capture unseal logs
-	var unsealLogs []string
-	unsealLogger := &logFn{
-		fn: func(msg string, args []interface{}) {
-			pairs := make([]string, 0, len(args)/2)
-			for pair := range slices.Chunk(args, 2) {
-				// Yes this will panic if we didn't log an even number of args but thats
-				// OK because that's a bug!
-				pairs = append(pairs, fmt.Sprintf("%s=%s", pair[0], pair[1]))
-			}
-			unsealLogs = append(unsealLogs, fmt.Sprintf("%s: %s", msg, strings.Join(pairs, " ")))
-		},
-	}
+	logBuf, stopCapture := startLogCapture(t, logger)
 
-	logger.RegisterSink(unsealLogger)
 	err = c.identityStore.loadArtifacts(ctx, true)
+	stopCapture()
+
 	require.NoError(t, err)
-	logger.DeregisterSink(unsealLogger)
 
 	// Identity store should be loaded now. Check it's contents.
 
@@ -1790,22 +1793,11 @@ func TestIdentityStoreLoadingDuplicateReporting(t *testing.T) {
 	// many of these cases and seems strange to encode in a test that we want
 	// broken behavior!
 	numDupes := make(map[string]int)
-	uniqueIDs := make(map[string]struct{})
 	duplicateCountRe := regexp.MustCompile(`(\d+) (different-case( local)? entity alias|entity|group) duplicates found`)
-	// Be sure not to match attributes like alias_id= because there are dupes
-	// there. The report lines we care about always have a space before the id
-	// pair.
-	propsRe := regexp.MustCompile(`\s(id=(\S+))`)
-	for _, log := range unsealLogs {
+	for _, log := range logBuf.Lines() {
 		if matches := duplicateCountRe.FindStringSubmatch(log); len(matches) >= 3 {
 			num, _ := strconv.Atoi(matches[1])
 			numDupes[matches[2]] = num
-		}
-		if propMatches := propsRe.FindStringSubmatch(log); len(propMatches) >= 3 {
-			artifactID := propMatches[2]
-			require.NotContains(t, uniqueIDs, artifactID,
-				"duplicate ID reported in logs for different artifacts")
-			uniqueIDs[artifactID] = struct{}{}
 		}
 	}
 	t.Logf("numDupes: %v", numDupes)
@@ -1816,11 +1808,60 @@ func TestIdentityStoreLoadingDuplicateReporting(t *testing.T) {
 	require.Equal(t, wantGroups, numDupes["group"])
 }
 
+// logFn is a type we used to use here before concurrentLogBuffer was added.
+// It's used in other tests in Enterprise so we need to keep it around to avoid
+// breaking the build during merge
 type logFn struct {
 	fn func(msg string, args []interface{})
 }
 
-// Accept implements hclog.SinkAdapter
 func (f *logFn) Accept(name string, level hclog.Level, msg string, args ...interface{}) {
 	f.fn(msg, args)
+}
+
+// concrrentLogBuffer is a simple hclog sink that captures log output in an
+// slice of lines in a goroutine-safe way. Use `startLogCapture` to use it.
+type concurrentLogBuffer struct {
+	m sync.Mutex
+	b []string
+}
+
+// Accept implements hclog.SinkAdapter
+func (c *concurrentLogBuffer) Accept(name string, level hclog.Level, msg string, args ...interface{}) {
+	pairs := make([]string, 0, len(args)/2)
+	for pair := range slices.Chunk(args, 2) {
+		// Yes this will panic if we didn't log an even number of args but thats
+		// OK because that's a bug!
+		pairs = append(pairs, fmt.Sprintf("%s=%s", pair[0], pair[1]))
+	}
+	line := fmt.Sprintf("%s: %s", msg, strings.Join(pairs, " "))
+
+	c.m.Lock()
+	defer c.m.Unlock()
+
+	c.b = append(c.b, line)
+}
+
+// Lines returns all the lines logged since starting the capture.
+func (c *concurrentLogBuffer) Lines() []string {
+	c.m.Lock()
+	defer c.m.Unlock()
+
+	return c.b
+}
+
+// startLogCaptue attaches a logFn to the logger and returns a channel that will
+// be sent each line of log output in a basec flat text format. It returns a
+// cancel/stop func that should be called when capture should stop or at the end
+// of processing.
+func startLogCapture(t *testing.T, logger *corehelpers.TestLogger) (*concurrentLogBuffer, func()) {
+	t.Helper()
+	b := &concurrentLogBuffer{
+		b: make([]string, 0, 1024),
+	}
+	logger.RegisterSink(b)
+	stop := func() {
+		logger.DeregisterSink(b)
+	}
+	return b, stop
 }

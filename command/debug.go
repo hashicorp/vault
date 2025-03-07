@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/osutil"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/version"
@@ -211,7 +212,7 @@ Usage: vault debug [options]
   output. The command uses the Vault address and token as specified via
   the login command, environment variables, or CLI flags.
 
-  To create a debug package using default duration and interval values in the 
+  To create a debug package using default duration and interval values in the
   current directory that captures all applicable targets:
 
   $ vault debug
@@ -495,7 +496,7 @@ func (c *DebugCommand) preflight(rawArgs []string) (string, error) {
 
 	// Populate initial index fields
 	c.debugIndex = &debugIndex{
-		VaultAddress:           client.Address(),
+		VaultAddress:           configutil.NormalizeAddr(client.Address()),
 		ClientVersion:          version.GetVersion().VersionNumber(),
 		ServerVersion:          serverHealth.Version,
 		Compress:               c.flagCompress,
