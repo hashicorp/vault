@@ -48,39 +48,9 @@ const validations = {
   skew: [{ validator: (value) => SKEW.includes(value), message: 'Skew must be one of ' + SKEW.join(', ') }],
 };
 
-const generatedDefaultFields = ['name', 'generate', 'issuer', 'accountName'];
-const nonGeneratedDefaultFields = [...generatedDefaultFields, 'url', 'key'];
-const totpCodeOptions = ['algorithm', 'digits', 'period'];
-const providerOptions = ['key_size', 'skew', 'exported', 'qr_size'];
-
-const generatedFormFieldGroups = [
-  {
-    default: generatedDefaultFields,
-  },
-  {
-    'TOTP Code Options': totpCodeOptions,
-  },
-  {
-    'Provider Options': providerOptions,
-  },
-];
-
-const nonGeneratedFormFieldGroups = [
-  {
-    default: nonGeneratedDefaultFields,
-  },
-  {
-    'TOTP Code Options': totpCodeOptions,
-  },
-];
-
-const formFieldGroupsCombined = {
-  generatedFormFieldGroups,
-  nonGeneratedFormFieldGroups,
-};
 @withModelValidations(validations)
 @withExpandedAttributes()
-@withFormFields(null, formFieldGroupsCombined)
+@withFormFields()
 export default class TotpKeyModel extends Model {
   @attr('string', {
     readOnly: true,

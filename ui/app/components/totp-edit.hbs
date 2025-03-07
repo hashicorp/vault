@@ -31,6 +31,12 @@
   {{#if this.hasGenerated}}
     <Totp::KeyQrCode @model={{@model}} @reset={{this.reset}} />
   {{else}}
-    <Totp::KeyCreate @create={{this.create}} @model={{@model}} @mode={{@mode}} />
+    <Totp::KeyCreate
+      @create={{this.create}}
+      @model={{@model}}
+      @mode={{@mode}}
+      @generatedFields={{this.generatedFields}}
+      @nonGeneratedFields={{this.nonGeneratedFields}}
+    />
   {{/if}}
 {{/if}}

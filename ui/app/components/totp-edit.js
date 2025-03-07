@@ -18,6 +18,16 @@ export default class TotpEdit extends Component {
 
   @tracked hasGenerated = false;
   successCallback;
+  generatedDefaultFields = ['name', 'generate', 'issuer', 'accountName'];
+  nonGeneratedDefaultFields = [...this.generatedDefaultFields, 'url', 'key'];
+
+  get generatedFields() {
+    return this.generatedDefaultFields;
+  }
+
+  get nonGeneratedFields() {
+    return this.nonGeneratedDefaultFields;
+  }
 
   get mode() {
     return this.args.mode || 'show';
