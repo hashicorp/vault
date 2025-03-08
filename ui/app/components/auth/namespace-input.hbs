@@ -1,0 +1,11 @@
+<div class="background-neutral-50 has-padding-l">
+  <Hds::Form::TextInput::Field
+    data-test-auth-form-ns-input
+    name="namespace"
+    @value={{@namespace}}
+    {{on "input" @updateNamespace}}
+    as |F|
+  >
+    <F.Label>Namespace</F.Label>
+  </Hds::Form::TextInput::Field>
+</div>

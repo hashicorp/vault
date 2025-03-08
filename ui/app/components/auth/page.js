@@ -28,6 +28,7 @@ export default class AuthPage extends Component {
 
   @tracked mfaErrors;
   @tracked mfaAuthData;
+  @tracked authMethodType = 'token';
 
   get namespaceInput() {
     const namespaceQP = this.args.namespaceQueryParam;
@@ -45,7 +46,14 @@ export default class AuthPage extends Component {
 
   @action
   handleNamespaceUpdate(event) {
+    console.log(event, 'hello?');
     this.args.onNamespaceUpdate(event.target.value);
+  }
+
+  @action
+  handleAuthChange(type) {
+    debugger;
+    this.authMethodType = type;
   }
 
   @action

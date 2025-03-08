@@ -39,9 +39,12 @@
               {{on "click" (fn (mut this.mfaAuthData) null)}}
             />
           {{/if}}
-          <h1 class="title is-3">
+          {{!-- <h1 class="title is-3">
             {{if this.mfaAuthData "Authenticate" "Sign in to Vault"}}
-          </h1>
+          </h1> --}}
+          <Hds::Text::Display class="has-bottom-padding-s" @tag="h2" @size="500">
+            Sign in to Vault
+          </Hds::Text::Display>
         </div>
       {{/if}}
     </:header>
@@ -49,7 +52,7 @@
     <:subHeader>
       {{#if (has-feature "Namespaces")}}
         {{#unless this.mfaAuthData}}
-          <Toolbar class="toolbar-namespace-picker">
+          {{!-- <Toolbar class="toolbar-namespace-picker">
             <div class="field is-horizontal" data-test-namespace-toolbar>
               <div class="field-label is-normal">
                 <label class="is-label" for="namespace">Namespace</label>
@@ -79,7 +82,7 @@
                 </div>
               </div>
             </div>
-          </Toolbar>
+          </Toolbar> --}}
         {{/unless}}
       {{/if}}
     </:subHeader>
@@ -93,13 +96,49 @@
           @onError={{fn (mut this.mfaErrors)}}
         />
       {{else}}
-        <Auth::LoginForm
+        {{!-- <Auth::LoginForm
           @wrappedToken={{@wrappedToken}}
           @cluster={{@cluster}}
           @namespace={{@namespaceQueryParam}}
           @selectedAuth={{@authMethodQueryParam}}
           @onSuccess={{this.onAuthResponse}}
-        />
+        /> --}}
+        {{log @authMethodQueryParam}}
+        <Auth::FormTemplate
+          @wrappedToken={{@wrappedToken}}
+          @cluster={{@cluster}}
+          @namespace={{@namespaceQueryParam}}
+          @updateNamespace={{this.handleNamespaceUpdate}}
+          @onSuccess={{this.onAuthResponse}}
+          @onAuthChange={{this.handleAuthChange}}
+          @selectedAuth={{this.authMethodType}}
+        >
+          <:tabs>
+            <Hds::Tabs @onClickTab={{this.onTabClick}} as |T|>
+              {{#each-in this.authTabs as |methodType mounts|}}
+                <T.Tab>{{this.displayName methodType}}</T.Tab>
+
+                <T.Panel>
+                  {{#if (gt mounts.length 1)}}
+                    <Hds::Form::Select::Field name="path" as |F|>
+                      <F.Label>Mount path</F.Label>
+                      <F.Options>
+                        {{#each mounts as |mount|}}
+                          <option value={{mount.path}}>{{mount.path}}</option>
+                        {{/each}}
+                      </F.Options>
+                    </Hds::Form::Select::Field>
+                  {{else}}
+                    {{#let (get mounts "0") as |mount|}}
+                      <Hds::Form::TextInput::Field readonly name="type" @value={{mount.path}} />
+                    {{/let}}
+                  {{/if}}
+                </T.Panel>
+              {{/each-in}}
+            </Hds::Tabs>
+          </:tabs>
+        </Auth::FormTemplate>
+
       {{/if}}
     </:content>
 

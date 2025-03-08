@@ -1,0 +1,35 @@
+{{#let (component (concat "auth/form/" this.selectedAuth)) as |Component|}}
+  <Component
+    @authType={{@selectedAuth}}
+    @wrappedToken={{@wrappedToken}}
+    @onSuccess={{@onSuccess}}
+    @onError={{this.handleError}}
+  >
+    <:namespace>
+      {{#if this.version.isEnterprise}}
+        <Auth::NamespaceInput @updateNamespace={{@updateNamespace}} @value={{@namespace}} />
+      {{/if}}
+    </:namespace>
+    <:options>
+      <div class="splash-page-form-fields">
+        {{#if this.isDirectLink}}
+          <Hds::Button @text="Back" />
+          <Hds::Form::TextInput::Field readonly name="type" @value={{this.authType}} />
+          <Hds::Form::TextInput::Field readonly name="path" @value={{this.mountPath}} />
+        {{else if this.signInWithAll}}
+          <Hds::Button @text="Back" {{on "click" (fn (mut this.signInWithAll) false)}} />
+          <Hds::Form::Select::Field @options={{this.allTypes}} name="type" {{on "input" this.handleInput}} />
+          <Hds::Form::TextInput::Field name="path" {{on "input" this.handleInput}} />
+        {{else}}
+          <Hds::Form::Select::Field @options={{this.allTypes}} name="type" />
+          <Hds::Form::TextInput::Field name="path" />
+        {{/if}}
+      </div>
+    </:options>
+    <:footer>
+      {{#if this.showOtherLink}}
+        <Hds::Button @text="Sign in with other methods" {{on "click" (fn (mut this.logInWithOther) true)}} />
+      {{/if}}
+    </:footer>
+  </Component>
+{{/let}}
