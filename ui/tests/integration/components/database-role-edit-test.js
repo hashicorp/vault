@@ -94,7 +94,7 @@ module('Integration | Component | database-role-edit', function (hooks) {
 
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="create"/>`);
     await fillIn('[data-test-ttl-value="Rotation period"]', '2');
-    await click('[data-test-input="skip_import_rotation"]');
+    await click('[data-test-toggle="skip_import_rotation"]');
     await click('[data-test-secret-save]');
 
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="show"/>`);

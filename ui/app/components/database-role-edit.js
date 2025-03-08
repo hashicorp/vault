@@ -67,7 +67,8 @@ export default class DatabaseRoleEdit extends Component {
     }
     return warnings;
   }
-  get databaseType() {
+
+  get databaseParams() {
     const backend = this.args.model?.backend;
     const dbs = this.args.model?.database || [];
     if (!backend || dbs.length === 0) {
@@ -75,7 +76,10 @@ export default class DatabaseRoleEdit extends Component {
     }
     return this.store
       .queryRecord('database/connection', { id: dbs[0], backend })
-      .then((record) => record.plugin_name)
+      .then(({ plugin_name, skip_static_role_rotation_import }) => ({
+        plugin_name,
+        skip_static_role_rotation_import,
+      }))
       .catch(() => null);
   }
 

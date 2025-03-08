@@ -19,6 +19,7 @@ export default {
   hasStringList: isPresent('[data-test-component=string-list]'),
   hasTextFile: isPresent('[data-test-component=text-file]'),
   hasTTLPicker: isPresent('[data-test-toggle-input="Foo"]'),
+  hasToggleButton: isPresent('[data-test-toggle-input="toggle-foobar"]'),
   hasJSONEditor: isPresent('[data-test-component="code-mirror-modifier"]'),
   hasJSONClearButton: isPresent('[data-test-json-clear-button]'),
   hasInput: isPresent('input'),
@@ -36,6 +37,7 @@ export default {
   fields: collection('[data-test-field]', {
     clickLabel: clickable('label'),
     toggleTtl: clickable('[data-test-toggle-input="Foo"]'),
+    toggleButton: clickable('[data-test-toggle-input="toggle-foobar"]'),
     labelValue: text('[data-test-form-field-label]'),
     input: fillable('input'),
     ttlTime: fillable('[data-test-ttl-value]'),
