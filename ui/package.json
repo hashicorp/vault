@@ -218,6 +218,7 @@
   "dependencies": {
     "@babel/core": "^7.24.0",
     "@hashicorp/design-system-components": "~4.16.0",
+    "@hashicorp/vault-client-typescript": "file:./api-client",
     "ember-auto-import": "^2.7.2",
     "handlebars": "4.7.7",
     "highlight.js": "^10.4.1",
