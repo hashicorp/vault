@@ -195,6 +195,7 @@ data "aws_iam_policy_document" "enos_scenario" {
       "iam:DeleteRolePolicy",
       "iam:DetachRolePolicy",
       "iam:GetInstanceProfile",
+      "iam:GetPolicy",
       "iam:GetRole",
       "iam:GetRolePolicy",
       "iam:ListAccountAliases",
