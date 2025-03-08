@@ -48,3 +48,17 @@ nope = "true"
 		t.Errorf("bad error: %s", err.Error())
 	}
 }
+
+func TestParseConfig_HclDuplicateKey(t *testing.T) {
+	_, err := parseConfig(`
+token_helper = "/token"
+token_helper = "/token"
+`)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	if !strings.Contains(err.Error(), `Each argument can only be defined once`) {
+		t.Errorf("bad error: %s", err.Error())
+	}
+}
