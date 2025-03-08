@@ -33,6 +33,7 @@ export default Controller.extend({
   namespaceQueryParam: '',
 
   onQPChange: observer('namespaceQueryParam', function () {
+    console.log('hello?');
     this.namespaceService.setNamespace(this.namespaceQueryParam);
   }),
 
@@ -40,10 +41,4 @@ export default Controller.extend({
   activeCluster: alias('auth.activeCluster'),
 
   permissionBanner: alias('permissions.permissionsBanner'),
-
-  actions: {
-    toggleConsole() {
-      this.toggleProperty('consoleOpen');
-    },
-  },
 });

@@ -30,6 +30,7 @@ export default ClusterRouteBase.extend({
   },
 
   afterModel() {
+    // TODO deprecate?
     if (config.welcomeMessage) {
       this.flashMessages.info(config.welcomeMessage, {
         sticky: true,
