@@ -780,7 +780,7 @@ func describeAzsTestUnauthorized(accessKey, secretKey, token string) error {
 				return nil
 			}
 		}
-		return err
+		return aerr
 	})
 }
 
