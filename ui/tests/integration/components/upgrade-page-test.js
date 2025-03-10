@@ -31,7 +31,7 @@ module('Integration | Component | upgrade page', function (hooks) {
 
   test('it renders with custom attributes', async function (assert) {
     await render(hbs`
-      {{upgrade-page title="Test Feature Title" minimumEdition="Vault Enterprise Premium"}}
+      <UpgradePage @title="Test Feature Title" @minimumEdition="Vault Enterprise Premium" />
           `);
 
     assert.dom('.page-header .title').hasText('Test Feature Title', 'renders custom page title');
