@@ -111,9 +111,9 @@ export default class DatabaseRoleEdit extends Component {
   handleCreateEditRole = task(
     waitFor(async (evt) => {
       evt.preventDefault();
-      this.resetErrors();
       const { mode, model } = this.args;
       if (!this.isValid()) return;
+      this.resetErrors();
       if (mode === 'create') {
         model.id = model.name;
         const path = model.type === 'static' ? 'static-roles' : 'roles';

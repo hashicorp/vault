@@ -8,6 +8,7 @@ import { getRoleFields } from 'vault/utils/model-helpers/database-helpers';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { withModelValidations } from 'vault/decorators/model-validations';
 const validations = {
+  name: [{ type: 'presence', message: 'Role name is required.' }],
   database: [{ type: 'presence', message: 'Database is required.' }],
   type: [{ type: 'presence', message: 'Type is required.' }],
   username: [
