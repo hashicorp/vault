@@ -59,7 +59,7 @@ const ALL_ATTRS = [
   { name: 'default_ttl', type: 'string', options: {} },
   { name: 'max_ttl', type: 'string', options: {} },
   { name: 'username', type: 'string', options: {} },
-  { name: 'skip_rotation_import', type: 'boolean', options: {} },
+  { name: 'skip_import_rotation', type: 'boolean', options: {} },
   { name: 'rotation_period', type: 'string', options: {} },
   { name: 'creation_statements', type: 'string', options: {} },
   { name: 'creation_statement', type: 'string', options: {} },

@@ -27,12 +27,13 @@ export default class DatabaseRoleSettingForm extends Component {
   }
 
   get settingFields() {
-    if (!this.args.roleType || !this.dbConfig) return null;
+    const dbValues = this.args.dbParams;
+    if (!this.args.roleType) return null;
     const dbValidFields = getRoleFields(this.args.roleType);
     return this.args.attrs.filter((a) => {
       // Sets default value for skip_import_rotation based on parent db config value
       if (a.name === 'skip_import_rotation' && this.args.mode === 'create') {
-        a.options.defaultValue = this.dbConfig.skip_static_role_rotation_import;
+        a.options.defaultValue = dbValues?.skip_static_role_rotation_import;
       }
       return dbValidFields.includes(a.name);
     });
