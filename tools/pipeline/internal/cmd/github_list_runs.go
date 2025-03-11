@@ -12,9 +12,8 @@ import (
 	"time"
 
 	ghclient "github.com/google/go-github/v68/github"
-	"github.com/spf13/cobra"
-
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/github"
+	"github.com/spf13/cobra"
 )
 
 var listGithubWorkflowRuns = &github.ListWorkflowRunsReq{}
