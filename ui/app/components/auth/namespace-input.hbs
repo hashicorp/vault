@@ -1,0 +1,44 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div class="background-neutral-50 has-padding-l">
+  {{#if @hvdManagedNamespace}}
+    <Hds::Form::Field @layout="vertical" disabled={{@disabled}} as |F|>
+      <F.Label>Namespace</F.Label>
+      <F.Control>
+        <Hds::SegmentedGroup class="is-fullwidth" as |SG|>
+          <SG.Label>Namespace</SG.Label>
+          <SG.TextInput
+            readonly
+            @type="text"
+            @value="/{{@hvdManagedNamespace}}"
+            class="one-fourth-width"
+            name="hvd-root-namespace"
+            data-test-managed-namespace-root
+          />
+          <SG.TextInput
+            {{on "input" @updateNamespace}}
+            @type="text"
+            name="namespace"
+            placeholder="/ (default)"
+            data-test-auth-form-ns-input
+          />
+        </Hds::SegmentedGroup>
+      </F.Control>
+    </Hds::Form::Field>
+  {{else}}
+    <Hds::Form::TextInput::Field
+      data-test-auth-form-ns-input
+      name="namespace"
+      placeholder="/ (root)"
+      @value={{@namespace}}
+      {{on "input" @updateNamespace}}
+      disabled={{@disabled}}
+      as |F|
+    >
+      <F.Label>Namespace</F.Label>
+    </Hds::Form::TextInput::Field>
+  {{/if}}
+</div>
