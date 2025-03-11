@@ -123,7 +123,11 @@ type IdentityStore struct {
 
 	// renameDuplicates holds the Core reference to feature activation flags, so
 	// we can set and query enablement of the deduplication feature.
-	renameDuplicates activationflags.ActivationManager
+	renameDuplicates       activationflags.ActivationManager
+	activationErrorHandler Sealer
+
+	// activateDeduplicationDone is a channel used for synchronization in testing
+	activateDeduplicationDone chan struct{}
 }
 
 type groupDiff struct {
@@ -175,3 +179,9 @@ type MountLister interface {
 }
 
 var _ MountLister = &Core{}
+
+type Sealer interface {
+	Shutdown() error
+}
+
+var _ Sealer = &Core{}

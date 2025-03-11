@@ -5,44 +5,38 @@
 
 <PageHeader as |p|>
   <p.top>
-    <KeyValueHeader
-      @baseKey={{hash display=this.model.id id=this.model.idForNav}}
-      @path="vault.cluster.secrets.backend.list"
-      @mode={{this.mode}}
-      @root={{this.root}}
-      @showCurrent={{true}}
-    />
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header="true">
-      {{#if (eq this.mode "create")}}
+      {{#if (eq @mode "create")}}
         Create Alphabet
-      {{else if (eq this.mode "edit")}}
+      {{else if (eq @mode "edit")}}
         Edit Alphabet
       {{else}}
         Alphabet
-        <code>{{this.model.id}}</code>
+        <code>{{@model.id}}</code>
       {{/if}}
     </h1>
   </p.levelLeft>
 </PageHeader>
 
-{{#if (eq this.mode "show")}}
+{{#if (eq @mode "show")}}
   <Toolbar>
     <ToolbarActions>
-      {{#if this.model.updatePath.canDelete}}
+      {{#if @model.updatePath.canDelete}}
         <Hds::Button
           @text="Delete alphabet"
           @color="secondary"
           class="toolbar-button"
-          {{on "click" (action "delete")}}
+          {{on "click" this.onDelete}}
           data-test-transformation-alphabet-delete
         />
         <div class="toolbar-separator"></div>
       {{/if}}
-      {{#if this.model.updatePath.canUpdate}}
+      {{#if @model.updatePath.canUpdate}}
         <ToolbarSecretLink
-          @secret={{concat this.model.idPrefix this.model.id}}
+          @secret={{concat @model.idPrefix @model.id}}
           @mode="edit"
           data-test-edit-link={{true}}
           @replace={{true}}
@@ -54,13 +48,13 @@
   </Toolbar>
 {{/if}}
 
-{{#if (or (eq this.mode "edit") (eq this.mode "create"))}}
-  <form onsubmit={{action "createOrUpdate" this.mode}}>
+{{#if (or (eq @mode "edit") (eq @mode "create"))}}
+  <form onsubmit={{this.createOrUpdate}}>
     <div class="box is-sideless is-fullwidth is-marginless">
-      <MessageError @model={{this.model}} />
-      <NamespaceReminder @mode={{this.mode}} @noun="transform alphabet" />
-      {{#each this.model.attrs as |attr|}}
-        {{#if (and (eq attr.name "name") (eq this.mode "edit"))}}
+      <MessageError @errorMessage={{this.errorMessage}} />
+      <NamespaceReminder @mode={{@mode}} @noun="transform alphabet" />
+      {{#each @model.attrs as |attr|}}
+        {{#if (and (eq attr.name "name") (eq @mode "edit"))}}
           <label for={{attr.name}} class="is-label">
             {{attr.options.label}}
           </label>
@@ -72,29 +66,29 @@
             id={{attr.name}}
             autocomplete="off"
             spellcheck="false"
-            value={{or (get this.model attr.name) this.model.id}}
+            value={{or (get @model attr.name) @model.id}}
             readonly
             class="field input is-readOnly"
             type={{attr.type}}
           />
         {{else}}
-          <FormField data-test-field @attr={{attr}} @model={{this.model}} />
+          <FormField data-test-field @attr={{attr}} @model={{@model}} />
         {{/if}}
       {{/each}}
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
       <Hds::ButtonSet>
         <Hds::Button
-          @text={{if (eq this.mode "create") "Create alphabet" "Save"}}
+          @text={{if (eq @mode "create") "Create alphabet" "Save"}}
           type="submit"
           data-test-alphabet-transform-create
         />
-        {{#if (eq this.mode "create")}}
+        {{#if (eq @mode "create")}}
           <Hds::Button
             @text="Cancel"
             @color="secondary"
             @route="vault.cluster.secrets.backend.list-root"
-            @model={{this.model.backend}}
+            @model={{@model.backend}}
             @query={{hash tab="alphabet"}}
           />
         {{else}}
@@ -102,7 +96,7 @@
             @text="Cancel"
             @color="secondary"
             @route="vault.cluster.secrets.backend.show"
-            @models={{array this.model.backend (concat "alphabet/" this.model.id)}}
+            @models={{array @model.backend (concat "alphabet/" @model.id)}}
             @query={{hash tab="alphabet"}}
           />
         {{/if}}
@@ -110,29 +104,24 @@
     </div>
   </form>
 {{else}}
-  {{#if this.model.displayErrors}}
-    <div class="has-top-margin-s">
-      <MessageError @model={{this.model}} />
-    </div>
-  {{/if}}
   <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-    {{#each this.model.attrs as |attr|}}
+    {{#each @model.attrs as |attr|}}
       {{#if (eq attr.type "object")}}
         <InfoTableRow
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-          @value={{stringify (get this.model attr.name)}}
+          @value={{stringify (get @model attr.name)}}
         />
       {{else if (eq attr.type "array")}}
         <InfoTableRow
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-          @value={{get this.model attr.name}}
+          @value={{get @model attr.name}}
           @type={{attr.type}}
           @isLink={{eq attr.name "transformations"}}
         />
       {{else}}
         <InfoTableRow
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-          @value={{get this.model attr.name}}
+          @value={{get @model attr.name}}
         />
       {{/if}}
     {{/each}}

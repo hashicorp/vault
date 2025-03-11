@@ -4,9 +4,7 @@ page_title: Upgrading Plugins - Guides
 description: These are general upgrade instructions for Vault plugins.
 ---
 
-# Upgrading Vault plugins
-
-## Plugin upgrade procedure
+# Vault plugin upgrade procedure
 
 The following procedures detail steps for upgrading a plugin that has been mounted
 at a path on a running server. The steps are the same whether the plugin being
@@ -17,7 +15,7 @@ upgraded is built-in or external.
   [1.11.x version of this page](/vault/docs/v1.11.x/upgrading/plugins)
   for plugin upgrade instructions.
 
-### Upgrading auth and secrets plugins
+## Upgrading auth and secrets plugins
 
 The process is nearly identical for auth and secret plugins. If you are upgrading
 an auth plugin, just replace all usages of `secrets` or `secret` with `auth`.
@@ -80,7 +78,7 @@ Until the reload step, the mount will still run the first version of `my-secret-
 the reload is triggered, Vault will kill `my-secret-plugin`’s process and start the
 new plugin process for `my-secret-plugin` version 1.0.1.
 
-### Upgrading database plugins
+## Upgrading database plugins
 
 1. [Register][plugin_registration] the first version of your plugin to the catalog.
    Skip this step if your initial plugin is built-in or already registered.
@@ -142,10 +140,15 @@ Until the reload step, the mount will still run the first version of `my-db-plug
 the reload is triggered, Vault will kill `my-db-plugin`’s process and start the
 new plugin process for `my-db-plugin` version 1.0.1.
 
-### Downgrading plugins
+## Downgrading plugins
 
-Plugin downgrades follow the same procedure as upgrades. You can use the Vault
-plugin list command to check what plugin versions are available to downgrade to:
+Plugin downgrades follow the same general procedure as upgrades. First,
+register the version to downgrade to, pin that version, and finally issue a
+plugin reload command. To downgrade to a built-in plugin, remove the version
+pin and issue a plugin reload.
+
+You can use the Vault plugin list command to check what plugin versions are
+available to downgrade to:
 
 ```shell-session
 $ vault plugin list secret
@@ -157,26 +160,10 @@ aws                 v1.12.0+builtin.vault
 azure               v0.14.0+builtin
 cassandra           v1.12.0+builtin.vault
 consul              v1.12.0+builtin.vault
-gcp                 v0.14.0+builtin
-gcpkms              v0.13.0+builtin
-kv                  v0.13.3+builtin
-ldap                v1.12.0+builtin.vault
-mongodb             v1.12.0+builtin.vault
-mongodbatlas        v0.8.0+builtin
-mssql               v1.12.0+builtin.vault
-mysql               v1.12.0+builtin.vault
-nomad               v1.12.0+builtin.vault
-openldap            v0.9.0+builtin
-pki                 v1.12.0+builtin.vault
-postgresql          v1.12.0+builtin.vault
-rabbitmq            v1.12.0+builtin.vault
-ssh                 v1.12.0+builtin.vault
-terraform           v0.6.0+builtin
-totp                v1.12.0+builtin.vault
-transit             v1.12.0+builtin.vault
+...
 ```
 
-### Additional upgrade notes
+## Additional upgrade notes
 
 * As mentioned earlier, disabling existing mounts will wipe the existing data.
 * Overwriting an existing version in the catalog will affect all uses of that

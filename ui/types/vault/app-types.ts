@@ -2,7 +2,7 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
-import type EmberDataModel from '@ember-data/model';
+import type EmberDataModel from 'ember-data/model'; // eslint-disable-line ember/use-ember-data-rfc-395-imports
 import type Owner from '@ember/owner';
 
 // Type that comes back from expandAttributeMeta
@@ -43,22 +43,24 @@ export interface ModelValidations {
   invalidFormMessage: string;
 }
 
-export interface Model extends Omit<EmberDataModel, 'isNew'> {
+export type Model = Omit<EmberDataModel, 'isNew'> & {
   // override isNew which is a computed prop and ts will complain since it sees it as a function
   isNew: boolean;
-}
+};
 
-export interface WithFormFieldsModel extends Model {
+export type WithFormFieldsModel = Model & {
   formFields: Array<FormField>;
   formFieldGroups: FormFieldGroups;
   allFields: Array<FormField>;
-}
+};
 
-export interface WithValidationsModel extends Model {
+export type WithValidationsModel = Model & {
   validate(): ModelValidations;
-}
+};
 
-export interface WithFormFieldsAndValidationsModel extends WithFormFieldsModel, WithValidationsModel {}
+export type WithFormFieldsAndValidationsModel = WithFormFieldsModel & {
+  validate(): ModelValidations;
+};
 
 export interface Breadcrumb {
   label: string;

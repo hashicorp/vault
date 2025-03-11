@@ -9,12 +9,12 @@ import { hash } from 'rsvp';
 
 import type FlagsService from 'vault/services/flags';
 import type RouterService from '@ember/routing/router-service';
-import type StoreService from 'vault/services/store';
+import type Store from '@ember-data/store';
 import type VersionService from 'vault/services/version';
 
 export default class SyncSecretsOverviewRoute extends Route {
   @service('app-router') declare readonly router: RouterService;
-  @service declare readonly store: StoreService;
+  @service declare readonly store: Store;
   @service declare readonly flags: FlagsService;
   @service declare readonly version: VersionService;
 

@@ -40,16 +40,30 @@
     <div class="box is-sideless is-fullwidth is-marginless">
       <NamespaceReminder @mode="perform" @noun="wrap" />
       <MessageError @errorMessage={{this.errorMessage}} />
-      <div class="field">
-        <div class="control">
-          <JsonEditor
-            @title="Data to wrap"
-            @subTitle="json-formatted"
-            @value={{this.wrapData}}
-            @valueUpdated={{this.codemirrorUpdated}}
-          />
-        </div>
-      </div>
+      <Toolbar>
+        <ToolbarFilters>
+          <Toggle @name="json" @checked={{this.showJson}} @onChange={{this.handleToggle}}>
+            <span class="has-text-grey">JSON</span>
+          </Toggle>
+        </ToolbarFilters>
+      </Toolbar>
+      {{#if this.showJson}}
+        <JsonEditor
+          class="has-top-margin-s"
+          @title="Data to wrap"
+          @subTitle="json-formatted"
+          @value={{this.stringifiedWrapData}}
+          @valueUpdated={{this.codemirrorUpdated}}
+        />
+      {{else}}
+        <KvObjectEditor
+          class="has-top-margin-l"
+          @label="Data to wrap"
+          @value={{this.wrapData}}
+          @onChange={{fn (mut this.wrapData)}}
+          @warnNonStringValues={{true}}
+        />
+      {{/if}}
       <TtlPicker
         @label="Wrap TTL"
         @initialValue="30m"
@@ -58,10 +72,17 @@
         @helperTextEnabled="Wrap will expire after"
         @changeOnInit={{true}}
       />
+      {{#if this.hasLintingErrors}}
+        <AlertInline
+          @color="warning"
+          class="has-top-padding-s"
+          @message="JSON is unparsable. Fix linting errors to avoid data discrepancies."
+        />
+      {{/if}}
     </div>
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">
-        <Hds::Button @text="Wrap data" type="submit" disabled={{this.buttonDisabled}} data-test-tools-submit />
+        <Hds::Button @text="Wrap data" type="submit" data-test-tools-submit />
       </div>
     </div>
   </form>

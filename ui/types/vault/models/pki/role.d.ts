@@ -3,14 +3,13 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Model from '@ember-data/model';
-import { ModelValidations } from 'vault/app-types';
+import type { WithValidationsModel } from 'vault/app-types';
 
-export default class PkiRoleModel extends Model {
+type PkiRoleModel = WithValidationsModel & {
   name: string;
   issuerRef: string;
-  validate(): ModelValidations;
-  isNew: boolean;
   keyType: string;
   keyBits: string | undefined;
-}
+};
+
+export default PkiRoleModel;
