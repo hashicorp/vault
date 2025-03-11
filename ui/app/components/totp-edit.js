@@ -20,7 +20,7 @@ export default class TotpEdit extends Component {
   successCallback;
 
   get keyFormFields() {
-    const generated = ['name', 'generate', 'issuer', 'accountName'];
+    const generated = ['name', 'generate', 'issuer', 'accountName', 'exported'];
     const nonGenerated = [...generated, 'url', 'key'];
     return this.args.model.generate ? generated : nonGenerated;
   }

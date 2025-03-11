@@ -9,8 +9,7 @@
     <NamespaceReminder @mode={{@mode}} @noun="TOTP key" />
     {{#each @keyFormFields as |field|}}
       {{#let (find-by "name" field @model.allFields) as |attr|}}
-        {{! TODO add model validations }}
-        <FormField @attr={{attr}} @model={{@model}} data-test-field />
+        <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} data-test-field />
       {{/let}}
     {{/each}}
 
