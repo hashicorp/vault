@@ -134,5 +134,25 @@ module.exports = [
     source: '/vault/docs/command/web',
     destination: '/vault/docs/ui/web-cli',
     permanent: true,
+  },
+  {
+    source: '/vault/docs/install/:slug*',
+    destination: '/vault/docs/deploy/:slug',
+    permanent: true,
+  },
+  {
+    source: '/vault/docs/run-as-service',
+    destination: '/vault/docs/deploy/run-as-service',
+    permanent: true,
+  },
+  {
+    source: '/vault/docs/release-notes/:slug*',
+    destination: '/vault/docs/updates/release-notes',
+    permanent: true,
+  },
+  {
+    source: '/vault/docs/deprecation',
+    destination: '/vault/docs/updates/deprecation',
+    permanent: true,
   }
 ]
