@@ -121,7 +121,6 @@ export default Component.extend(DEFAULTS, {
   },
 
   getAuthBackend(type) {
-    // selectedAuthIsPath, literally just checks for trailing slash
     const { wrappedToken, methods, selectedAuth, selectedAuthIsPath: keyIsPath } = this;
     const selected = type || selectedAuth;
     if (!methods && !wrappedToken) {
@@ -238,38 +237,17 @@ export default Component.extend(DEFAULTS, {
       this.set('error', null);
       // if callback from oidc, jwt, or saml we have a token at this point
       const backend = token ? this.getAuthBackend('token') : this.selectedAuthBackend || {};
-      // backend = {
-      //   id: 'token',
-      //   path: 'token/',
-      //   type: 'token',
-      //   description: 'token based credentials',
-      //   config: null,
-      //   mountDescription: 'token based credentials',
-      // };
       const backendMeta = this.authMethods.find(
         (b) => (b.type || '').toLowerCase() === (backend.type || '').toLowerCase()
       );
-      // backendMeta = {
-      //   type: 'token',
-      //   typeDisplay: 'Token',
-      //   description: 'Token authentication.',
-      //   tokenPath: 'id',
-      //   displayNamePath: 'display_name',
-      //   formAttributes: ['token'],
-      // };
       const attributes = (backendMeta || {}).formAttributes || [];
-      // attributes = ['token'];
-      // key/value pairs of submitted form data
       const data = this.getProperties(...attributes);
-      // data = {token: "root"}
 
       if (passedData) {
         Object.assign(data, passedData);
       }
-      // instead, always use path here
       if (this.customPath || backend.id) {
         data.path = this.customPath || backend.id;
-        // data = { token: 'root', path: 'token' };
       }
       // add nonce field for okta backend
       if (backend.type === 'okta') {
