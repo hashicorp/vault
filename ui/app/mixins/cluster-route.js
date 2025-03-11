@@ -72,6 +72,7 @@ export default Mixin.create({
   targetRouteName(transition) {
     const cluster = this.clusterModel();
     const isAuthed = this.authToken();
+
     if (cluster.needsInit) {
       return INIT;
     }

@@ -11,6 +11,8 @@ import { sanitizePath } from 'core/utils/sanitize-path';
 export default Controller.extend({
   vaultController: controller('vault'),
   clusterController: controller('vault.cluster'),
+
+  analytics: service(),
   flashMessages: service(),
   namespaceService: service('namespace'),
   flagsService: service('flags'),
@@ -18,11 +20,14 @@ export default Controller.extend({
   auth: service(),
   router: service(),
   customMessages: service(),
+
   queryParams: [{ authMethod: 'with', oidcProvider: 'o' }],
+
   namespaceQueryParam: alias('clusterController.namespaceQueryParam'),
   wrappedToken: alias('vaultController.wrappedToken'),
   redirectTo: alias('vaultController.redirectTo'),
   hvdManagedNamespaceRoot: alias('flagsService.hvdManagedNamespaceRoot'),
+
   authMethod: '',
   oidcProvider: '',
 

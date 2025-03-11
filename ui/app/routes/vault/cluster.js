@@ -28,6 +28,7 @@ export const getManagedNamespace = (nsParam, root) => {
 };
 
 export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
+  analytics: service(),
   auth: service(),
   currentCluster: service(),
   customMessages: service(),
@@ -124,7 +125,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     .cancelOn('deactivate')
     .keepLatest(),
 
-  afterModel(model, transition) {
+  async afterModel(model, transition) {
     this._super(...arguments);
     this.currentCluster.setCluster(model);
     if (model.needsInit && this.auth.currentToken) {
@@ -137,6 +138,15 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     if (this.namespaceService.path && !this.version.hasNamespaces) {
       return this.router.transitionTo(this.routeName, { queryParams: { namespace: '' } });
     }
+
+    const license = await this.store.queryRecord('license', {});
+
+    this.analytics.identifyUser('', {
+      clusterId: model.id,
+      licenseId: license.licenseId,
+      version: this.version.version,
+    });
+
     return this.transitionToTargetRoute(transition);
   },
 
