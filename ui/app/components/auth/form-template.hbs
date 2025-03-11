@@ -5,10 +5,17 @@
 
 {{#if this.formComponent}}
   {{#let (component this.formComponent) as |AuthComponent|}}
-    <AuthComponent @authType={{@authType}} @cluster={{@cluster}} @onSuccess={{@onSuccess}} @wrappedToken={{@wrappedToken}}>
+    <AuthComponent
+      @authType={{@authType}}
+      @cluster={{@cluster}}
+      @onError={{@onError}}
+      @onSuccess={{@onSuccess}}
+      @wrappedToken={{@wrappedToken}}
+    >
       {{yield to="namespace"}}
-      {{yield to="options"}}
+      {{yield to="back"}}
       {{yield to="tabs"}}
+      {{yield to="error"}}
       {{yield to="footer"}}
     </AuthComponent>
   {{/let}}

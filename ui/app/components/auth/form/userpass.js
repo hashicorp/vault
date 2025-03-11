@@ -4,8 +4,8 @@
  */
 
 import AuthBase from './base';
-import { service } from '@ember/service';
 import { action } from '@ember/object';
+import { service } from '@ember/service';
 
 /**
  * @module Auth::Form::Userpass
@@ -28,14 +28,19 @@ export default class AuthFormUserpass extends AuthBase {
       data[key] = formData.get(key);
     }
 
-    const authResponse = await this.auth.authenticate({
-      clusterId: this.args.cluster.id,
-      backend: this.type,
-      data,
-      selectedAuth: this.type,
-    });
-    // responsible for redirect after auth data is persisted
-    // if auth service authSuccess method is called here, then we'd do that before calling parent onSuccess
-    this.args.onSuccess(authResponse, this.type);
+    try {
+      const authResponse = await this.auth.authenticate({
+        clusterId: this.args.cluster.id,
+        backend: this.type,
+        data,
+        selectedAuth: this.type,
+      });
+
+      // responsible for redirect after auth data is persisted
+      // if auth service authSuccess method is called here, then we'd do that before calling parent onSuccess
+      this.args.onSuccess(authResponse, this.type);
+    } catch (error) {
+      this.onError(error);
+    }
   }
 }

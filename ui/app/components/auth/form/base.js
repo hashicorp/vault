@@ -5,6 +5,7 @@
 
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
+import { service } from '@ember/service';
 
 /**
  * @module Auth::Base
@@ -15,6 +16,8 @@ import { action } from '@ember/object';
  */
 
 export default class AuthBase extends Component {
+  @service auth;
+
   maybeMask = (field) => {
     if (field === 'token' || field === 'password') {
       return 'password';
@@ -26,5 +29,12 @@ export default class AuthBase extends Component {
   async login(event) {
     event.preventDefault();
     // base login flow
+  }
+
+  onError(error) {
+    if (!this.auth.mfaError) {
+      const errorMessage = `Authentication failed: ${this.auth.handleError(error)}`;
+      this.args.onError(errorMessage);
+    }
   }
 }

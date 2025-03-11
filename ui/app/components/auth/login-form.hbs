@@ -2,22 +2,81 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 ~}}
-
-{{#if this.waitingForOktaNumberChallenge}}
-  <OktaNumberChallenge
-    @correctAnswer={{this.oktaNumberChallengeAnswer}}
-    @hasError={{this.authError}}
-    @onReturnToLogin={{this.onCancel}}
-  />
-{{else}}
-  <AuthForm
+{{#if (or this.selectedAuthMethod this.authTabs)}}
+  <Auth::FormTemplate
     @wrappedToken={{@wrappedToken}}
     @cluster={{@cluster}}
-    @namespace={{@namespace}}
-    @selectedAuth={{@selectedAuth}}
-    @error={{this.authError}}
-    @performAuth={{this.performAuth}}
-    @authIsRunning={{this.authenticate.isRunning}}
-    @delayIsIdle={{this.delayAuthMessageReminder.isIdle}}
-  />
+    @authType={{this.selectedAuthMethod}}
+    @onSuccess={{@onSuccess}}
+    @onError={{this.handleError}}
+  >
+    <:namespace>
+      {{#if this.version.isEnterprise}}
+        <Auth::NamespaceInput
+          @updateNamespace={{@handleNamespaceUpdate}}
+          @value={{this.namespaceInput}}
+          @hvdManagedNamespace={{this.flags.hvdManagedNamespaceRoot}}
+          @disabled={{@oidcProviderQueryParam}}
+        />
+      {{/if}}
+    </:namespace>
+    <:back>
+      {{! "Back" button shows when user has clicked "Sign in with other methods" }}
+      {{! TODO conditional will also check for whether or not customizations exist (not just for this.authTabs) }}
+      {{#if (and this.showAllMethods this.authTabs)}}
+        <Hds::Button
+          @text="Back"
+          {{on "click" (fn (mut this.showAllMethods) false)}}
+          class="has-left-margin-l"
+          @color="tertiary"
+          @icon="arrow-left"
+        />
+      {{/if}}
+    </:back>
+    <:tabs>
+      {{#if (and this.authTabs (not this.showAllMethods))}}
+        <Auth::Tabs
+          @authTabs={{this.authTabs}}
+          @displayNameHelper={{this.displayName}}
+          @onTabClick={{this.handleAuthSelect}}
+          @selectedAuthMethod={{this.selectedAuthMethod}}
+          @selectedTabIndex={{this.selectedTabIndex}}
+        />
+      {{else}}
+        <div class="has-left-margin-l has-bottom-margin-l has-right-margin-l">
+          <Hds::Form::Select::Field name="selectedAuthMethod" {{on "input" this.handleAuthSelect}} as |F|>
+            <F.Label class="has-top-padding-l">Auth method</F.Label>
+            <F.Options>
+              {{#each this.availableMethodTypes as |type|}}
+                <option selected={{eq this.selectedAuthMethod type}} value={{type}}>
+                  {{this.displayName type}}
+                </option>
+              {{/each}}
+            </F.Options>
+          </Hds::Form::Select::Field>
+          {{#if (not-eq @selectedAuthMethod "token")}}
+            <Hds::Form::TextInput::Field name="path" as |F|>
+              <F.Label class="has-top-padding-l">Mount path</F.Label>
+            </Hds::Form::TextInput::Field>
+          {{/if}}
+        </div>
+      {{/if}}
+    </:tabs>
+    <:error>
+      {{#if this.errorMessage}}
+        <MessageError @errorMessage={{this.errorMessage}} class="has-left-margin-l has-right-margin-l" />
+      {{/if}}
+    </:error>
+  </Auth::FormTemplate>
 {{/if}}
+{{#unless this.showAllMethods}}
+  <Hds::Button
+    @isInline={{true}}
+    @text="Sign in with other methods"
+    @color="tertiary"
+    @icon="arrow-right"
+    @iconPosition="trailing"
+    {{on "click" (fn (mut this.showAllMethods) true)}}
+    class="has-left-margin-m has-bottom-margin-l"
+  />
+{{/unless}}
