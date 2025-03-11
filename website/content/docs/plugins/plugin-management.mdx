@@ -1,11 +1,11 @@
 ---
 layout: docs
-page_title: Plugin management
+page_title: Plugin runtime settings
 description: >-
    Learn how to manage external plugins that are implemented using Vault's plugin system.
 ---
 
-# Plugin management
+# External plugin runtime settings
 
 External plugins are the components in Vault that can be implemented separately
 from Vault's built-in plugins. These plugins can be either authentication or
@@ -18,54 +18,6 @@ Consul), Vault will automatically attempt to determine the `api_addr` as well.
 
 Detailed information regarding the plugin system can be found in the
 [internals documentation](/vault/docs/plugins).
-
-## Registering external plugins
-
-Before an external plugin can be mounted, it needs to be
-[registered](/vault/docs/plugins/plugin-architecture#plugin-registration) in the
-plugin catalog to ensure the plugin invoked by Vault is authentic and maintains
-integrity:
-
-```shell-session
-$ vault plugin register -sha256=<SHA256 Hex value of the plugin binary> \
-    secret \                  # type
-    passthrough-plugin
-
-Success! Registered plugin: passthrough-plugin
-```
-
-## Enabling/Disabling external plugins
-
-After the plugin is registered, it can be mounted by specifying the registered
-plugin name:
-
-```shell-session
-$ vault secrets enable -path=my-secrets passthrough-plugin
-Success! Enabled the passthrough-plugin secrets engine at: my-secrets/
-```
-
-Listing secrets engines will display secrets engines that are mounted as
-plugins:
-
-```shell-session
-$ vault secrets list
-Path         Type       Accessor            Plugin              Default TTL  Max TTL  Force No Cache  Replication Behavior  Description
-my-secrets/  plugin     plugin_deb84140     passthrough-plugin  system       system   false           replicated
-```
-
-Disabling an external plugins is identical to disabling a built-in plugin:
-
-```shell-session
-$ vault secrets disable my-secrets
-```
-
-## Upgrading plugins
-
-Upgrade instructions can be found in the [Upgrading Plugins - Guides][upgrading_plugins]
-page.
-
-[api_addr]: /vault/docs/configuration#api_addr
-[upgrading_plugins]: /vault/docs/upgrading/plugins
 
 ## Plugin environment variables
 

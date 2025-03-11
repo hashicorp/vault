@@ -1,0 +1,124 @@
+---
+layout: docs
+page_title: Important changes
+description: >-
+  Deprecations, important or breaking changes, and remediation recommendations
+  for upgrading Vault.
+---
+
+# Important changes
+
+Always review important or breaking changes and remediation recommendations
+before upgrading Vault.
+
+<!--
+Change types:
+  - Bug
+  - New default
+  - New behavior
+  - Breaking change
+-->
+
+
+## Transit support for Ed25519ph and Ed25519ctx signatures ((#ed25519))
+
+| Change       | Affected version | Affected deployments
+| ------------ | ---------------- | --------------------
+| New behavior | 1.19.0           | Transit plugins using Ed25519 keys
+
+Prior versions of sign and verify API endpoints backed by an Ed25519 key ignored
+`prehashed=true` or `hash_algorithm=sha2-512` parameters. As a result, the
+endpoint always returned or verified a Pure Ed25519 signature.
+
+The Transit plugin now assumes input hashed using the SHA-512 algorithm and
+returns an Ed25519ph or Pure Ed25519 signature based on the configuration of
+`prehashed` and `hash_algorithm` parameters:
+
+| Vault edition | `prehashed` | `hash_algorithm`              | Return value
+| ------------- | ----------  | ---------------------------   | ------------
+| Enterprise    | not set     | not set                       | Pure Ed25519
+| Enterprise    | false       | any value other than sha2-512 | Pure Ed25519
+| Enterprise    | false       | sha2-512                      | Error
+| Enterprise    | true        | any value other than sha2-512 | Error
+| Enterprise    | true        | sha2-512                      | Ed25519ph
+| CE            | not set     | not set                       | Pure Ed25519
+| CE            | false       | any value other than sha2-512 | Pure Ed25519
+| CE            | false       | sha2-512                      | Error
+| CE            | true        | any value other than sha2-512 | Error
+| CE            | true        | sha2-512                      | Error
+
+### Recommendation
+
+TBD
+
+
+## Identity system duplicate cleanup ((#dedupe)) <EnterpriseAlert inline="true" />
+
+| Change       | Affected version | Affected deployments
+| ------------ | ---------------- | --------------------
+| New behavior | 1.19.0           | any
+
+Vault 1.19.0 includes a feature flag that, when enabled, forces deduplication of
+existing identities and forbids duplicate identities going forward. Once
+activated, the deduplication feature corrects historical identity bugs with a
+one-time deduplication process and restores Vault to secure, default behavior.
+
+Vault does not enforce deduplication until you activate the relevant feature
+flag.
+
+### Recommendation
+
+Vault 1.19.0 also includes improved reporting in server logs to help diagnose
+whether you have duplicate identities in your Vault instance. 
+
+After upgrading, review your server logs for identity duplicate reporting.
+
+refer to the [resolve duplicate identities](/vault/docs/upgrading/deduplication)
+guides to understand deduplication log messages, determine if you need to take
+action, make the necessary updates, and ensure the forced deduplication process
+resolves safely.
+
+
+## LDAP user DN search with `upndomain` ((#ldap))
+
+| Change   | Affected version | Affected deployments
+| -------- | ---------------- | --------------------
+| Breaking | 1.19.0           | any
+
+Security improvements to
+[`hashicorp/cap/ldap`](https://github.com/hashicorp/cap/tree/main/ldap) ensure
+that user DN searches with `upndomain` configured return an error if the search
+returns more than one result. 
+
+### Recommendation
+
+In previous Vault versions, DN searches with `upndomain` configured returned the
+last user found for searches with multiple results. Review and update any code
+that performs DN searches to handle multi-result errors and/or revise the search
+to ensure a single result.
+
+Refer to [the Github PR](https://github.com/hashicorp/cap/pull/151) for more
+details.
+
+
+## Duplicate unseal/seal wrap HSM keys ((#hsm-keys)) <EnterpriseAlert inline="true" />
+
+| Change | Affected version | Affected deployments
+| ------ | ---------------- | --------------------
+| Bug    | 1.19.0           | HSM-HA configurations migrating from Shamir to HSM-backed unseal/seal wraps.
+
+Vault may create duplicate HSM keys when you migrate from Shamir to an
+HSM-backed unseal configuration for high availability (HA) HSM deployments. Key
+duplication can happen even after a seal migration to HSM that initially
+appears successful.
+
+Duplicate HSM keys can cause the following errors:
+
+- intermittent read failures with errors such as `CKR_SIGNATURE_INVALID` and `CKR_KEY_HANDLE_INVALID` for
+[seal-wrapped values](/vault/docs/enterprise/sealwrap#wrapped-parameters).
+- nodes fail to unseal after a restart with errors such as `CKR_DATA_INVALID`.
+
+### Recommendation
+
+Always run Vault with `generate_key = false` and manually create all required
+keys within the HSM during the setup process.

@@ -1,0 +1,326 @@
+---
+layout: docs
+page_title: Use a custom token helper
+description: >-
+  The Vault CLI supports external token helpers to help simplify retrieving,
+  setting and erasing authentication tokens.
+---
+
+# Use a custom token helper
+
+A **token helper** is a program or script that saves, retrieves, or erases a
+saved authentication token.
+
+By default, the Vault CLI includes a token helper that caches tokens from any
+enabled authentication backend in a `~/.vault-token` file. You can customize
+the caching behavior with a custom token helper.
+
+## Step 1: Script your helper
+
+Your token helper must accept a single command-line argument:
+
+Argument | Action
+-------- | ------
+`get`    | Fetch and print a cached authentication token to `stdout`
+`store`  | Read an authentication token from `stdin` and save it in a secure location
+`erase`  | Delete a cached authentication token
+
+You can manage the authentication tokens in whatever way you prefer, but your
+helper must adhere to following output requirements:
+
+- Limit `stdout` writes to token strings.
+- Write all error messages to `stderr`.
+- Write all non-error and non-token output to `syslog` or a log file.
+- Return the status code `0` on success.
+- Return non-zero status codes for errors.
+
+## Step 2: Configure Vault
+
+To configure a custom token helper, edit (or create) a CLI configuration file
+called `.vault` under your home directory and set the `token_helper` parameter
+with the **fully qualified path** to your new helper:
+
+<Tabs>
+
+<Tab heading="Linux shell" group="nix">
+
+```
+echo 'token_helper = "/path/to/token/helper.sh"' >> ${HOME}/.vault
+```
+
+</Tab>
+
+<Tab heading="Powershell" group="ps">
+
+Make sure to use UTF-8 encoding (`ascii`) or Vault may complain about invalid
+characters when reading the configuration file:
+
+```powershell
+'token_helper = "\\path\\to\\token\\helper.ps1"' | `
+Out-File -FilePath ${env:USERPROFILE}/.vault -Encoding ascii -Append
+```
+
+</Tab>
+
+</Tabs>
+
+<Tip>
+
+  Make sure the script is executable by the Vault binary.
+
+</Tip>
+
+## Example token helper
+
+The following token helper manages tokens in a JSON file in the home directory
+called `.vault_tokens`.
+
+The helper relies on the `$VAULT_ADDR` environment variable to store and
+retrieve tokens from different Vault servers.
+
+
+<CodeTabs>
+
+```shell-session
+#!/bin/bash
+
+function write_error(){ >&2 echo $@; }
+
+# Customize the hash key for tokens. Currently, we remove the strings
+# 'https://', '.', and ':' from the passed address (Vault address environment
+# by default) because jq has trouble with special characeters in JSON field
+# names
+function createHashKey {
+  
+  local key=""
+
+  if [[ -z "${1}" ]] ; then key="${VAULT_ADDR}" 
+  else                      key="${1}"
+  fi
+  
+  # We index the token according to the Vault server address by default so
+  # return an error if the address is empty
+  if [[ -z "${key}" ]] ; then
+    write_error "Error: VAULT_ADDR environment variable unset."
+    exit 100
+  fi
+
+  key=${key//"http://"/""}
+  key=${key//"."/"_"}
+  key=${key//":"/"_"}
+
+  echo "addr-${key}"
+}
+
+TOKEN_FILE="${HOME}/.vault_token"
+KEY=$(createHashKey)
+TOKEN="null"
+
+# If the token file does not exist, create it
+if [ ! -f ${TOKEN_FILE} ] ; then
+   echo "{}" > ${TOKEN_FILE}
+fi
+
+case "${1}" in
+    "get")
+
+      # Read the current JSON data and pull the token associated with ${KEY}
+      TOKEN=$(cat ${TOKEN_FILE} | jq --arg key "${KEY}" -r '.[$key]')
+      
+      # If the token != to the string "null", print the token to stdout 
+      # jq returns "null" if the key was not found in the JSON data
+      if [ ! "${TOKEN}" == "null" ] ; then
+        echo "${TOKEN}"
+      fi
+      exit 0
+    ;;
+
+    "store")
+      
+      # Get the token from stdin
+      read TOKEN
+
+      # Read the current JSON data and add a new entry
+      JSON=$(
+        jq                      \
+        --arg key "${KEY}"      \
+        --arg token "${TOKEN}"  \
+        '.[$key] = $token' ${TOKEN_FILE}
+      )
+      
+    ;;
+
+    "erase")
+      # Read the current JSON data and remove the entry if it exists
+      JSON=$(
+        jq                      \
+        --arg key "${KEY}"      \
+        --arg token "${TOKEN}"  \
+        'del(.[$key])' ${TOKEN_FILE}
+      )
+    
+    ;;
+
+    *)
+      # change to stderr for real code
+      write_error "Error: Provide a valid command: get, store, or erase."
+      exit 101
+esac
+
+# Update the JSON file and return success
+echo $JSON | jq "." > ${TOKEN_FILE}
+exit 0
+```
+
+```powershell
+<#
+.Synopsis
+  Vault token helper script
+.INPUTS
+  Positional/command line argument: get, store, erase
+.OUTPUTS
+  get: prints a cached authentication token to stdin (if it exists)
+  store: no output, updates the token cache
+  erase: no output, updates the token cache
+#>
+
+<#
+.Synopsis
+  CreateHashKey
+.DESCRIPTION
+  Customize the hash key for tokens. Currently, we remove the strings
+  'https://', '.', and ':' from the passed address (Vault address environment by
+  default) variable to simplify the hash key string
+#>
+function CreateHashKey {
+
+  Param($address = "${env:VAULT_ADDR}")
+  
+  # We index the token according to the Vault server address by default so
+  # return an error if the address is empty
+  if ( -not $address) {
+    Write-Error "[Missing value] env:VAULT_ADDR currently unset."
+    exit 101
+  }
+
+  $key = ${address}.Replace("/","").Replace(".","_").Replace(":","_")
+  return ${key}.Replace("http_", "addr-")
+}
+
+<#
+.Synopsis
+  GetTokenCache
+.DESCRIPTION
+  Read in or create a new token cache and initialize the hash 
+#>
+function GetTokenCache {
+
+  Param($filename)
+
+  # Read the JSON file (token cache) and initialize the hash data or create an
+  # empty hash if the file does not exist yet
+  if ( Get-Item -Path "./${filename}" -ErrorAction SilentlyContinue ) {
+    $fileData = (Get-Content "${filename}" -Raw | ConvertFrom-Json -AsHashtable)
+  } else {
+    $fileData = (Write-Output "{}" | ConvertFrom-Json -AsHashtable)
+  } 
+
+  return $fileData
+}
+
+<#
+.Synopsis
+  UpdateTokenCache
+.DESCRIPTION
+  Write the token hash out to the cache 
+#>
+function UpdateTokenCache {
+
+  Param($filename, $fileData)
+  $jsonData = ($fileData | ConvertTo-Json) 
+
+  # Convert the hash to JSON and update the token cache
+  $jsonData | Out-File -Encoding ascii "${filename}"
+
+  return
+}
+
+$tokenFile = "${env:USERPROFILE}/.vault_token"
+$hashData  = (GetTokenCache "${tokenFile}")
+$key       = (CreateHashKey)
+$token     = $null
+
+switch -Exact -CaseSensitive (${args}[0]) {
+
+  "get" {
+    # Print the token to stdin and return success
+    Write-Output ${hashData}.${key}
+    exit 0
+  }
+
+  "store" {
+    $token = Read-Host
+    # Add the new token to the hash
+    $hashData["${key}"] = "${token}" 
+  }
+
+  "erase" {
+    # Erase the token entry if it exists
+    if ($hashData.ContainsKey("${key}") ) {
+      $hashData.Remove("${key}")
+    }
+  }
+
+  Default {
+    # The argument was invalid so return an error
+    Write-Error "[Invalid argument] Command must be: get, store, or erase."
+    exit 102
+  }
+
+}
+
+# Update the token cache and return success
+UpdateTokenCache ${tokenFile} ${hashData}
+
+exit 0
+```
+
+```ruby
+#!/usr/bin/env ruby
+
+require 'json'
+
+// We index the token according to the Vault server address
+// so the VAULT_ADDR variable is required 
+unless ENV['VAULT_ADDR']
+  STDERR.puts "No VAULT_ADDR environment variable set. Set it and run me again!"
+  exit 100
+end
+
+// If the token file does not exist, create and initialize the hashmap
+begin
+  tokens = JSON.parse(File.read("#{ENV['HOME']}/.vault_tokens"))
+rescue Errno::ENOENT => e
+  # file doesn't exist so create a blank hash for it
+  tokens = {}
+end
+
+// Get the first command line argument
+case ARGV.first
+when 'get'
+  // Write the token to stdout if it exists
+  print tokens[ENV['VAULT_ADDR']] if tokens[ENV['VAULT_ADDR']]
+  exit 0
+when 'store'
+  // Read the token from stdin
+  tokens[ENV['VAULT_ADDR']] = STDIN.read
+when 'erase'
+  // Delete the token entry if it exists
+  tokens.delete!(ENV['VAULT_ADDR'])
+end
+
+
+// Update the token file
+File.open("#{ENV['HOME']}/.vault_tokens", 'w') { |file| file.write(tokens.to_json) }
+```
+</CodeTabs>

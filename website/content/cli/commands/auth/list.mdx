@@ -1,0 +1,72 @@
+---
+layout: docs
+page_title: auth list - Command
+description: |-
+  The "auth list" command lists the auth methods enabled. The output lists the
+  enabled auth methods and options for those methods.
+---
+
+# auth list
+
+The `auth list` command lists the auth methods enabled. The output lists the
+enabled auth methods and options for those methods.
+
+## Deprecation status column
+
+As of 1.12, all built-in auth engines will have an associated Deprecation
+Status. This status will be reflected in the `Deprecation Status` column, seen
+below. All auth engines which are not provided by built-in plugins will show a
+`Deprecation Status` of "n/a".
+
+## Version columns
+
+The `-detailed` view displays some version information for each mount.
+
+The Version field indicates the configured version for the plugin. Empty, or "n/a",
+indicates the built-in or any matching unversioned plugin that may have been registered.
+
+Running Version indicates the actual plugin version running, which may differ from
+Version if the plugin hasn't been reloaded since the configured version was updated
+using the `secrets tune` command. Finally, the Running SHA256 field indicates the
+SHA256 sum of the running plugin's binary. This may be different from the SHA256
+registered in the catalog if the plugin hasn't been reloaded since the plugin
+version was overwritten in the catalog.
+
+## Examples
+
+List all auth methods:
+
+```shell-session
+$ vault auth list
+Path         Type        Description
+----         ----        -----------
+token/       token       token based credentials
+userpass/    userpass    n/a
+```
+
+List detailed auth method information:
+
+```shell-session
+$ vault auth list -detailed
+Path        Plugin     Accessor                 Default TTL    Max TTL    Token Type         Replication    Seal Wrap    External Entropy Access    Options    Description                UUID                                    Deprecation Status
+----        ------     --------                 -----------    -------    ----------         -----------    ---------    -----------------------    -------    -----------                ----                                    ------------------
+app-id/     app-id     auth_app-id_c88ad56f     system         system     default-service    replicated     false        false                      map[]      n/a                        a7c702b4-0dba-02b6-483c-2fd6be33240a    pending removal
+approle/    approle    auth_approle_95df932e    system         system     default-service    replicated     false        false                      map[]      n/a                        931df9d1-8737-b7dc-4ca2-3e0e892fce92    supported
+token/      token      auth_token_aafab997      system         system     default-service    replicated     false        false                      map[]      token based credentials    6eb5db7b-ac7f-4304-1f52-9b802c6f06c1    n/a
+```
+
+## Usage
+
+The following flags are available in addition to the [standard set of
+flags](/vault/docs/commands) included on all commands.
+
+### Output options
+
+- `-format` `(string: "table")` - Print the output in the given format. Valid
+  formats are "table", "json", or "yaml". This can also be specified via the
+  `VAULT_FORMAT` environment variable.
+
+### Command options
+
+- `-detailed` `(bool: false)` - Print detailed information such as configuration
+  and replication status about each auth method.
