@@ -15,7 +15,7 @@ module('Integration | Component | form-error', function (hooks) {
     // Set any properties with this.set('myProperty', 'value');
     // Handle any actions with this.set('myAction', function(val) { ... });
 
-    await render(hbs`{{form-error}}`);
+    await render(hbs`<FormError />`);
 
     assert.dom(this.element).hasText('');
 

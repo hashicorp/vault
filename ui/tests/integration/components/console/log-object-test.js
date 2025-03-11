@@ -19,7 +19,7 @@ module('Integration | Component | console/log object', function (hooks) {
     const expectedText = 'Key Value one two three four seven {"five":"six"} eight [5,6]';
     this.set('content', objectContent);
 
-    await render(hbs`{{console/log-object content=this.content}}`);
+    await render(hbs`<Console::LogObject @content={{this.content}} />`);
     assert.dom('pre').includesText(expectedText);
   });
 });

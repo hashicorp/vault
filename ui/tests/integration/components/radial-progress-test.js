@@ -19,7 +19,7 @@ module('Integration | Component | radial progress', function (hooks) {
     // We have to manually round the circumference, strokeDash, and strokeDashOffset because
     // ie11 truncates decimals differently than other browsers.
     const circumference = ((19 / 2) * Math.PI * 2).toFixed(2);
-    await render(hbs`{{radial-progress progressDecimal=0.5}}`);
+    await render(hbs`<RadialProgress @progressDecimal={{0.5}} />`);
 
     assert.strictEqual(component.viewBox, '0 0 20 20');
     assert.strictEqual(component.height, '20');

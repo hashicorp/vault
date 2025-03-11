@@ -16,20 +16,20 @@ module('Integration | Component | console/ui panel', function (hooks) {
   setupRenderingTest(hooks);
 
   test('it renders', async function (assert) {
-    await render(hbs`{{console/ui-panel}}`);
+    await render(hbs`<Console::UiPanel />`);
 
     assert.ok(component.hasInput);
   });
 
   test('it clears console input on enter', async function (assert) {
-    await render(hbs`{{console/ui-panel}}`);
+    await render(hbs`<Console::UiPanel />`);
     await component.runCommands('list this/thing/here', false);
     await settled();
     assert.strictEqual(component.consoleInputValue, '', 'empties input field on enter');
   });
 
   test('it clears the log when using clear command', async function (assert) {
-    await render(hbs`{{console/ui-panel}}`);
+    await render(hbs`<Console::UiPanel />`);
     await component.runCommands(
       ['list this/thing/here', 'list this/other/thing', 'read another/thing'],
       false
@@ -50,7 +50,7 @@ module('Integration | Component | console/ui panel', function (hooks) {
   });
 
   test('it adds command to history on enter', async function (assert) {
-    await render(hbs`{{console/ui-panel}}`);
+    await render(hbs`<Console::UiPanel />`);
 
     await component.runCommands('list this/thing/here', false);
     await settled();
@@ -67,7 +67,7 @@ module('Integration | Component | console/ui panel', function (hooks) {
   });
 
   test('it cycles through history with more than one command', async function (assert) {
-    await render(hbs`{{console/ui-panel}}`);
+    await render(hbs`<Console::UiPanel />`);
     await component.runCommands(['list this/thing/here', 'read that/thing/there', 'qwerty'], false);
     await settled();
     await component.up();
