@@ -87,6 +87,16 @@ runs:
       with:
         github-token: ${{ inputs.github-token }}
     - uses: ./.github/actions/install-external-tools
+    - if: inputs.goarch == 's390x' && inputs.vault-edition == 'ent.hsm'
+      name: Configure CGO compiler for HSM edition on s390x
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-multilib-s390x-linux-gnu
+        {
+          echo "CC=s390x-linux-gnu-gcc"
+          echo "CC_FOR_TARGET=s390x-linux-gnu-gcc"
+        } | tee -a "$GITHUB_ENV"
     - if: inputs.vault-edition != 'ce'
       name: Configure Git
       shell: bash

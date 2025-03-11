@@ -35,13 +35,16 @@ func testConfigRaftRetryJoin(t *testing.T) {
 	t.Parallel()
 
 	retryJoinExpected := []map[string]string{
+		// NOTE: Normalization handles IPv6 addresses and returns auto_join with
+		// sorted stable keys.
 		{"leader_api_addr": "http://127.0.0.1:8200"},
 		{"leader_api_addr": "http://[2001:db8::2:1]:8200"},
-		{"auto_join": "provider=mdns service=consul domain=2001:db8::2:1"},
-		{"auto_join": "provider=os tag_key=consul tag_value=server username=foo password=bar auth_url=https://[2001:db8::2:1]/auth"},
-		{"auto_join": "provider=triton account=testaccount url=https://[2001:db8::2:1] key_id=1234 tag_key=consul-role tag_value=server"},
-		{"auto_join": "provider=packet auth_token=token project=uuid url=https://[2001:db8::2:1] address_type=public_v6"},
-		{"auto_join": "provider=vsphere category_name=consul-role tag_name=consul-server host=https://[2001:db8::2:1] user=foo password=bar insecure_ssl=false"},
+		{"auto_join": "provider=mdns domain=2001:db8::2:1 service=consul"},
+		{"auto_join": "provider=os auth_url=https://[2001:db8::2:1]/auth password=bar tag_key=consul tag_value=server username=foo"},
+		{"auto_join": "provider=triton account=testaccount key_id=1234 tag_key=consul-role tag_value=server url=https://[2001:db8::2:1]"},
+		{"auto_join": "provider=packet address_type=public_v6 auth_token=token project=uuid url=https://[2001:db8::2:1]"},
+		{"auto_join": "provider=vsphere category_name=consul-role host=https://[2001:db8::2:1] insecure_ssl=false password=bar tag_name=consul-server user=foo"},
+		{"auto_join": "provider=k8s label_selector=\"app.kubernetes.io/name=vault, component=server\" namespace=vault"},
 	}
 	for _, cfg := range []string{
 		"attr",
