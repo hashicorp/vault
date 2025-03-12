@@ -17,7 +17,14 @@ const SKEW = [0, 1];
 
 const validations = {
   accountName: [
-    { type: 'presence', message: "Account name can't be blank." },
+    {
+      validator(model) {
+        const { generate } = model;
+        // this is required when generate is true
+        return generate ? false : true;
+      },
+      message: "Account name can't be blank when key provider is vault",
+    },
     {
       type: 'containsWhiteSpace',
       message:
@@ -25,15 +32,27 @@ const validations = {
       level: 'warn',
     },
   ],
-  algorithm: [
+  issuer: [
     {
-      validator: (value) => ALGORITHMS.includes(value),
-      message: 'Algorithm must be one of ' + ALGORITHMS.join(', '),
+      validator(model) {
+        const { generate } = model;
+        // this is required when generate is true
+        return generate ? false : true;
+      },
+      message: "Issuer can't be blank when key provider is vault",
     },
   ],
-  digits: [
-    { validator: (value) => DIGITS.includes(value), message: 'Digits must be one of ' + DIGITS.join(', ') },
+  key: [
+    {
+      validator(model) {
+        const { generate, url } = model;
+        // this is required when generate is false and url is blank
+        return !generate && (!url || url.trim() === '') ? false : true;
+      },
+      message: "Key can't be blank when URL is empty",
+    },
   ],
+  key_size: [{ type: 'number', message: 'Key size must be a number.' }],
   name: [
     { type: 'presence', message: "Name can't be blank." },
     {
@@ -43,9 +62,7 @@ const validations = {
       level: 'warn',
     },
   ],
-  period: [{ type: 'number', message: 'Period must be a number.' }],
-
-  skew: [{ validator: (value) => SKEW.includes(value), message: 'Skew must be one of ' + SKEW.join(', ') }],
+  qr_size: [{ type: 'number', message: 'QR size must be a number' }],
 };
 
 @withModelValidations(validations)
@@ -125,6 +142,7 @@ export default class TotpKeyModel extends Model {
 
   // Doesn't really make sense as we can generate our own QR code from the url
   @attr('number', {
+    label: 'QR size',
     defaultValue: 0,
   })
   qr_size;
