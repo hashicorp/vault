@@ -13,7 +13,7 @@ import (
 // ServeMultiplex is called from within a plugin and wraps the provided
 // Database implementation in a databasePluginRPCServer object and starts a
 // RPC server.
-func ServeMultiplex[CC, C any](builder *BackendBuilder[CC, C]) error {
+func ServeMultiplex[CC, C, R, S any](builder *BackendBuilder[CC, C, R, S]) error {
 	apiClientMeta := &api.PluginAPIClientMeta{}
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(os.Args[1:])

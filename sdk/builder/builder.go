@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-type BackendBuilder[CC any, C any] struct {
+type BackendBuilder[CC, C, R, S any] struct {
 	Name               string
 	Version            string
 	Type               logical.BackendType
@@ -22,6 +22,7 @@ type BackendBuilder[CC any, C any] struct {
 	WALRollbackMinAge time.Duration
 
 	ClientConfig *ClientConfig[CC, C]
+	Role         Role[R, C]
 }
 
 type ClientConfig[CC, C any] struct {
@@ -30,8 +31,8 @@ type ClientConfig[CC, C any] struct {
 }
 
 type Role[R, C any] struct {
-	Fields  map[string]*framework.FieldSchema
-	Secrets Secret[R, C]
+	Fields map[string]*framework.FieldSchema
+	Secret Secret[R, C]
 }
 
 type Secret[R, C any] struct {
@@ -42,7 +43,7 @@ type Secret[R, C any] struct {
 	RenewFunc    func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error)
 }
 
-func (bb *BackendBuilder[CC, C]) build() (*GenericBackend[CC, C], error) {
+func (bb *BackendBuilder[CC, C, R]) build() (*GenericBackend[CC, C], error) {
 	gb := &GenericBackend[CC, C]{}
 
 	gb.newClient = bb.ClientConfig.NewClientFunc
@@ -58,7 +59,7 @@ func (bb *BackendBuilder[CC, C]) build() (*GenericBackend[CC, C], error) {
 		PathsSpecial: &logical.Paths{
 			LocalStorage: []string{},
 			SealWrapStorage: []string{
-				"config",
+				configPath.Pattern,
 				//"role/*",
 			},
 		},
