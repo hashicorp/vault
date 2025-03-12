@@ -51,12 +51,14 @@ func (i *IdentityStore) loadArtifacts(ctx context.Context, isActive bool) error 
 			return fmt.Errorf("failed to load entities: %w", err)
 		}
 		if reload {
-			// The persistMerges flag is used to fix a non-determinism issue in duplicate entities with global alias merges.
-			// This does not solve the case for local alias merges.
-			// Previously, alias merges could inconsistently flip between nodes due to bucket invalidation
-			// and reprocessing on standbys, leading to divergence from the primary.
-			// This flag ensures deterministic merges across all nodes by preventing unintended reinsertions
-			// of previously merged entities during bucket diffs.
+			// The persistMerges flag is used to fix a non-determinism issue in
+			// duplicate entities with global alias merges. This does not solve the
+			// case for local alias merges. Previously, alias merges could
+			// inconsistently flip between nodes due to bucket invalidation and
+			// reprocessing on standbys, leading to divergence from the primary. This
+			// flag ensures deterministic merges across all nodes by preventing
+			// unintended reinsertions of previously merged entities during bucket
+			// diffs.
 			persistMerges := false
 			if !i.localNode.ReplicationState().HasState(
 				consts.ReplicationDRSecondary|
@@ -65,9 +67,14 @@ func (i *IdentityStore) loadArtifacts(ctx context.Context, isActive bool) error 
 				persistMerges = true
 			}
 
-			// Since we're reloading entities, we need to inform the ConflictResolver about it so that it can
-			// clean up data related to the previous load.
+			// Since we're reloading entities, we need to inform the ConflictResolver
+			// about it so that it can clean up data related to the previous load.
 			i.conflictResolver.Reload(ctx)
+
+			// We also need to start again from empty state or wild things can happen!
+			if err := i.resetDB(); err != nil {
+				return err
+			}
 
 			_, err := i.loadEntities(ctx, isActive, persistMerges)
 			if err != nil {
@@ -166,20 +173,21 @@ func (i *IdentityStore) loadArtifacts(ctx context.Context, isActive bool) error 
 // requests from updating MemDB state while we're modifying the underlying
 // schema and reloading from storage.
 func (i *IdentityStore) activateDeduplication(ctx context.Context, req *logical.Request) error {
-	i.lock.Lock()
-	defer i.lock.Unlock()
-
-	i.groupLock.Lock()
-	defer i.groupLock.Unlock()
-
-	i.logger.Info("activating identity deduplication, reloading identity store")
-
-	i.disableLowerCasedNames = false
-	if err := i.resetDB(); err != nil {
-		return fmt.Errorf("failed to reset existing identity state: %w", err)
-	}
-
 	go func() {
+		i.lock.Lock()
+		defer i.lock.Unlock()
+
+		i.groupLock.Lock()
+		defer i.groupLock.Unlock()
+
+		i.logger.Info("activating identity deduplication, reloading identity store")
+
+		i.disableLowerCasedNames = false
+		if err := i.resetDB(); err != nil {
+			i.logger.Error("failed to reset existing identity state: %w", err)
+			return
+		}
+
 		// If we fail to load from storage, we'll end up with a broken
 		// IdentityStore, so we're better of just sealing and letting another node
 		// take over!
