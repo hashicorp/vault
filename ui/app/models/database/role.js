@@ -21,6 +21,19 @@ const validations = {
       message: 'Username is required.',
     },
   ],
+  password: [
+    {
+      validator(model) {
+        const { type, skip_import_rotation, password } = model;
+        if (!type || type === 'dynamic') return true;
+        if (!skip_import_rotation) {
+          // password is required if using skip_import_rotation
+          if (password === undefined || password.trim().length === 0) return true;
+        }
+      },
+      message: 'Password is required.',
+    },
+  ],
 };
 @withModelValidations(validations)
 export default class RoleModel extends Model {
@@ -60,6 +73,7 @@ export default class RoleModel extends Model {
   })
   max_ttl;
   @attr('string', { subText: 'The database username that this Vault role corresponds to.' }) username;
+  @attr('string', { subText: 'The database password that this Vault role corresponds to.' }) password;
   @attr({
     editType: 'ttl',
     defaultValue: '24h',
@@ -135,6 +149,7 @@ export default class RoleModel extends Model {
       'default_ttl',
       'max_ttl',
       'username',
+      'password',
       'rotation_period',
       'skip_import_rotation',
       'creation_statements',
