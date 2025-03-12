@@ -26,10 +26,13 @@ export default class AuthFormToken extends AuthBase {
   @action
   async login(event) {
     event.preventDefault();
+    const formData = new FormData(event.target);
     const data = {};
-    this.loginFields.forEach((f) => {
-      data[f] = this.state[f];
-    });
+
+    for (const key of formData.keys()) {
+      data[key] = formData.get(key);
+    }
+
     const authResponse = await this.auth.authenticate({
       clusterId: this.args.cluster.id,
       backend: this.args.authType,
