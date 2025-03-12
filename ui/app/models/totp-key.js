@@ -19,9 +19,9 @@ const validations = {
   accountName: [
     {
       validator(model) {
-        const { generate } = model;
+        const { generate, accountName } = model;
         // this is required when generate is true
-        return generate ? false : true;
+        return generate && (!accountName || accountName.trim() === '') ? false : true;
       },
       message: "Account name can't be blank when key provider is vault",
     },
@@ -35,9 +35,9 @@ const validations = {
   issuer: [
     {
       validator(model) {
-        const { generate } = model;
+        const { generate, issuer } = model;
         // this is required when generate is true
-        return generate ? false : true;
+        return generate && (!issuer || issuer.trim() === '') ? false : true;
       },
       message: "Issuer can't be blank when key provider is vault",
     },
