@@ -21,7 +21,7 @@ export default class AuthFormTemplate extends Component {
   get formComponent() {
     // TODO comment in, mini array below is just for POC
     // const isSupported = supportedTypes(this.version.isEnterprise).includes(this.args.authType);
-    const isSupported = ['token', 'okta', 'userpass'].includes(this.args.authType);
+    const isSupported = ['token', 'okta', 'userpass', 'github'].includes(this.args.authType);
     const component = isSupported ? this.args.authType : 'base';
     // an Auth::Form::<Type> component exists for each type in supported-auth-backends
     // eventually "base" component could be leveraged for rendering custom auth plugins

@@ -1,9 +1,8 @@
 <form {{on "submit" this.login}}>
-
   {{yield}}
 
   <div class="margin-24">
-    {{#each this.showFields as |field|}}
+    {{#each this.loginFields as |field|}}
       <Hds::Form::TextInput::Field @type={{this.maybeMask field}} name={{field}} class="has-bottom-margin-m" as |F|>
         <F.Label>{{capitalize field}}</F.Label>
       </Hds::Form::TextInput::Field>

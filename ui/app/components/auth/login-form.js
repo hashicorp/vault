@@ -24,7 +24,7 @@ export default class AuthLoginForm extends Component {
   // form display logic
   @tracked authTabs = null; // listing visibility or backup types
   @tracked selectedTabIndex = 0;
-  @tracked showAllMethods = true;
+  @tracked showOtherMethods = true;
 
   // auth login variables
   @tracked selectedAuthMethod = null;
@@ -57,12 +57,12 @@ export default class AuthLoginForm extends Component {
   }
 
   @action
-  handleAuthSelect(e, idx) {
-    if (idx) {
+  handleAuthSelect(element, event, idx) {
+    if (element === 'tab') {
       this.selectedAuthMethod = Object.keys(this.authTabs)[idx];
       this.selectedTabIndex = idx;
     } else {
-      this.selectedAuthMethod = e.target.value;
+      this.selectedAuthMethod = event.target.value;
     }
   }
 
@@ -71,6 +71,32 @@ export default class AuthLoginForm extends Component {
     this.errorMessage = message;
   }
 
+  @action
+  onBackClick() {
+    this.showOtherMethods = false;
+
+    if (this.authTabs) {
+      // go back to tabs
+      // reset selected auth method to first tab
+      this.handleAuthSelect('tab', null, 0);
+    }
+    // if default method exists, this takes us to single default method
+    // do something about that here
+  }
+
+  @action
+  onShowOtherClick() {
+    this.showOtherMethods = true;
+
+    if (this.authTabs) {
+      // all methods render, reset dropdown
+      this.selectedAuthMethod = 'token';
+    }
+    // if default method set, this takes us to "backups"
+    // do something about that here
+  }
+
+  // this will be SO MUCH NICER with the auth updates that remove ember data
   fetchMounts = task(
     waitFor(async () => {
       try {
@@ -79,27 +105,28 @@ export default class AuthLoginForm extends Component {
             unauthenticated: true,
           },
         });
-        this.authTabs = unauthMounts.reduce((obj, m) => {
-          // serialize the ember data model into a regular ol' object
-          const mountData = m.serialize();
-          const methodType = mountData.type;
-          if (!Object.keys(obj).includes(methodType)) {
-            // create a new empty array for that type
-            obj[methodType] = [];
-          }
-          // push mount data into corresponding type's array
-          obj[methodType].push(mountData);
-          console;
-          return obj;
-        }, {});
+
+        if (unauthMounts.length !== 0) {
+          this.authTabs = unauthMounts.reduce((obj, m) => {
+            // serialize the ember data model into a regular ol' object
+            const mountData = m.serialize();
+            const methodType = mountData.type;
+            if (!Object.keys(obj).includes(methodType)) {
+              // create a new empty array for that type
+              obj[methodType] = [];
+            }
+            // push mount data into corresponding type's array
+            obj[methodType].push(mountData);
+            return obj;
+          }, {});
+
+          // set first tab as selected method
+          this.selectedAuthMethod = Object.keys(this.authTabs)[0];
+          // hide other methods to prioritize tabs (visible mounts)
+          this.showOtherMethods = false;
+        }
       } catch (e) {
         // if for some reason there's an error fetching mounts, swallow and just show standard form
-      }
-
-      if (this.authTabs) {
-        this.selectedAuthMethod = Object.keys(this.authTabs)[0];
-        // hide other methods to prioritize tabs (visible mounts)
-        this.showAllMethods = false;
       }
     })
   );
