@@ -196,6 +196,10 @@ resource "aws_instance" "targets" {
   subnet_id                            = data.aws_subnets.vpc.ids[tonumber(each.key) % length(data.aws_subnets.vpc.ids)]
   vpc_security_group_ids               = [aws_security_group.target.id]
 
+  root_block_device {
+    encrypted = true
+  }
+
   tags = merge(
     var.common_tags,
     {
