@@ -17,7 +17,7 @@ import (
 
 // GRPCClient (Vault CE edition) initializes and returns a gRPCClient with Database and
 // PluginVersion gRPC clients. It implements GRPCClient() defined
-// by GRPCPlugin interface in go-plugin/plugin.go
+// by GRPCPlugin interface in go-plugin/builder.go
 func (GRPCDatabasePlugin) GRPCClient(doneCtx context.Context, _ *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
 	client := gRPCClient{
 		client:        proto.NewDatabaseClient(c),
@@ -29,7 +29,7 @@ func (GRPCDatabasePlugin) GRPCClient(doneCtx context.Context, _ *plugin.GRPCBrok
 
 // GRPCServer (Vault CE edition) registers multiplexing server if the plugin supports it, and
 // registers the Database and PluginVersion gRPC servers. It implements GRPCServer() defined
-// by GRPCPlugin interface in go-plugin/plugin.go
+// by GRPCPlugin interface in go-plugin/builder.go
 func (d GRPCDatabasePlugin) GRPCServer(_ *plugin.GRPCBroker, s *grpc.Server) error {
 	var server gRPCServer
 
