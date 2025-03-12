@@ -21,20 +21,18 @@
   </:namespace>
   <:back>
     {{! "Back" button shows when user has clicked "Sign in with other methods" }}
-    {{! TODO conditional will also check for whether or not customizations exist (not just for this.authTabs) }}
-    {{#if (and this.showOtherMethods this.authTabs)}}
+    {{#if this.showOtherMethods}}
       <Hds::Button
         @text="Back"
-        {{on "click" this.onBackClick}}
+        {{on "click" this.toggleView}}
         class="has-left-margin-m"
         @color="tertiary"
         @icon="arrow-left"
       />
     {{/if}}
   </:back>
-  <:tabs>
-    {{#if (and this.authTabs (not this.showOtherMethods))}}
-      {{! TODO these have to move to parent :( }}
+  <:authSelectOptions>
+    {{#if this.showTabs}}
       <Auth::Tabs
         @authTabs={{this.authTabs}}
         @displayNameHelper={{this.displayName}}
@@ -61,13 +59,14 @@
         {{/if}}
       </div>
     {{/if}}
-  </:tabs>
+  </:authSelectOptions>
   <:error>
     {{#if this.errorMessage}}
       <MessageError @errorMessage={{this.errorMessage}} class="has-left-margin-l has-right-margin-l" />
     {{/if}}
   </:error>
 </Auth::FormTemplate>
+
 {{#unless this.showOtherMethods}}
   <Hds::Button
     @isInline={{true}}
@@ -75,7 +74,7 @@
     @color="tertiary"
     @icon="arrow-right"
     @iconPosition="trailing"
-    {{on "click" this.onShowOtherClick}}
+    {{on "click" this.toggleView}}
     class="has-left-margin-m has-bottom-margin-l"
   />
 {{/unless}}

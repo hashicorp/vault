@@ -34,7 +34,7 @@ export default class AuthLoginForm extends Component {
 
   constructor() {
     super(...arguments);
-    // todo fetch auth customization config here
+    // TODO fetch login customization config here
     this.fetchMounts.perform();
   }
 
@@ -56,14 +56,34 @@ export default class AuthLoginForm extends Component {
     return namespaceQP;
   }
 
+  get showTabs() {
+    switch (true) {
+      // listing visibility is set and user has NOT clicked "Sign in with other"
+      case this.authTabs && !this.showOtherMethods:
+        return true;
+      // TODO add case(s) for login customization (ent only)
+      // case this.defaultConfigured && this.showOtherMethods:
+      //   return true;
+      // if only backups set (maybe not allowed)
+      // case this.backupsConfigured && !this.showOtherMethods:
+      //   return true;
+      default:
+        return false;
+    }
+  }
+
   @action
   handleAuthSelect(element, event, idx) {
     if (element === 'tab') {
-      this.selectedAuthMethod = Object.keys(this.authTabs)[idx];
-      this.selectedTabIndex = idx;
+      this.setAuthTypeFromTab(idx);
     } else {
       this.selectedAuthMethod = event.target.value;
     }
+  }
+
+  setAuthTypeFromTab(idx) {
+    this.selectedAuthMethod = Object.keys(this.authTabs)[idx];
+    this.selectedTabIndex = idx;
   }
 
   @action
@@ -72,28 +92,16 @@ export default class AuthLoginForm extends Component {
   }
 
   @action
-  onBackClick() {
-    this.showOtherMethods = false;
+  toggleView() {
+    this.showOtherMethods = !this.showOtherMethods;
 
-    if (this.authTabs) {
-      // go back to tabs
+    if (this.showTabs) {
       // reset selected auth method to first tab
       this.handleAuthSelect('tab', null, 0);
-    }
-    // if default method exists, this takes us to single default method
-    // do something about that here
-  }
-
-  @action
-  onShowOtherClick() {
-    this.showOtherMethods = true;
-
-    if (this.authTabs) {
+    } else {
       // all methods render, reset dropdown
       this.selectedAuthMethod = 'token';
     }
-    // if default method set, this takes us to "backups"
-    // do something about that here
   }
 
   // this will be SO MUCH NICER with the auth updates that remove ember data
@@ -120,8 +128,8 @@ export default class AuthLoginForm extends Component {
             return obj;
           }, {});
 
-          // set first tab as selected method
-          this.selectedAuthMethod = Object.keys(this.authTabs)[0];
+          // set tracked selected auth type to first tab
+          this.setAuthTypeFromTab(0);
           // hide other methods to prioritize tabs (visible mounts)
           this.showOtherMethods = false;
         }
