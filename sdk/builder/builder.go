@@ -4,7 +4,6 @@
 package builder
 
 import (
-	"context"
 	"strings"
 	"time"
 
@@ -12,7 +11,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-type BackendBuilder[CC, C, R, S any] struct {
+type BackendBuilder[CC, C, R any] struct {
 	Name               string
 	Version            string
 	Type               logical.BackendType
@@ -21,37 +20,37 @@ type BackendBuilder[CC, C, R, S any] struct {
 	WALRollback       framework.WALRollbackFunc
 	WALRollbackMinAge time.Duration
 
-	ClientConfig *ClientConfig[CC, C]
-	Role         Role[R, C]
+	ClientConfig *ClientConfig[CC, C, R]
+	Role         *Role[R, C]
 }
 
-type ClientConfig[CC, C any] struct {
+type ClientConfig[CC, C, R any] struct {
 	NewClientFunc func(*CC) (*C, error)
 	Fields        map[string]*framework.FieldSchema
+	ValidateFunc  func(*CC) error
 }
 
 type Role[R, C any] struct {
-	Fields map[string]*framework.FieldSchema
-	Secret Secret[R, C]
+	Fields       map[string]*framework.FieldSchema
+	Secret       *Secret[R, C]
+	ValidateFunc func(*R) error
 }
 
 type Secret[R, C any] struct {
-	Type         string
-	Fields       map[string]*framework.FieldSchema
-	CreateSecret func(*R, *C) *logical.Response
-	RevokeFunc   func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error)
-	RenewFunc    func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error)
+	Type            string
+	Fields          map[string]*framework.FieldSchema
+	FetchSecretFunc func(req *logical.Request, d *framework.FieldData, client *C, role *R, resp *framework.Secret) (*logical.Response, error)
+	RevokeFunc      func(req *logical.Request, d *framework.FieldData, client *C, role *R) (*logical.Response, error)
+	RenewFunc       func(req *logical.Request, d *framework.FieldData, client *C, role *R) (*logical.Response, error)
 }
 
-func (bb *BackendBuilder[CC, C, R]) build() (*GenericBackend[CC, C], error) {
-	gb := &GenericBackend[CC, C]{}
+func (bb *BackendBuilder[CC, C, R]) build() (*GenericBackend[CC, C, R], error) {
+	gb := &GenericBackend[CC, C, R]{}
 
 	gb.newClient = bb.ClientConfig.NewClientFunc
 
-	configPath, err := gb.pathConfig(bb.ClientConfig.Fields)
-	if err != nil {
-		return nil, err
-	}
+	configPath := gb.pathConfig(bb.ClientConfig)
+	rolePaths := gb.pathRole(bb.Role)
 
 	gb.Backend = &framework.Backend{
 		BackendType: bb.Type,
@@ -60,13 +59,14 @@ func (bb *BackendBuilder[CC, C, R]) build() (*GenericBackend[CC, C], error) {
 			LocalStorage: []string{},
 			SealWrapStorage: []string{
 				configPath.Pattern,
-				//"role/*",
+				"role/*",
 			},
 		},
 		Paths: framework.PathAppend(
 			[]*framework.Path{
 				configPath,
 			},
+			rolePaths,
 		),
 		Secrets:           []*framework.Secret{},
 		Invalidate:        gb.invalidate,

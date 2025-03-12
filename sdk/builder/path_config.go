@@ -14,7 +14,41 @@ const (
 	configStoragePath = "config"
 )
 
-func (gb *GenericBackend[CC, C]) getConfig(ctx context.Context, s logical.Storage) (*CC, error) {
+var userClientConfig any
+
+// pathConfig extends the Vault API with a `/config`
+// endpoint for the backend. You can choose whether
+// or not certain attributes should be displayed,
+// required, and named. For example, password
+// is marked as sensitive and will not be output
+// when you read the configuration.
+func (gb *GenericBackend[CC, C, R]) pathConfig(inputConfig *ClientConfig[CC, C, R]) *framework.Path {
+	// userClientConfig = inputConfig
+
+	return &framework.Path{
+		Pattern: "config",
+		Fields:  inputConfig.Fields,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: gb.pathConfigRead,
+			},
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: gb.pathConfigWrite,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: gb.pathConfigWrite,
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: gb.pathConfigDelete,
+			},
+		},
+		ExistenceCheck:  gb.pathConfigExistenceCheck,
+		HelpSynopsis:    pathConfigHelpSynopsis,
+		HelpDescription: pathConfigHelpDescription,
+	}
+}
+
+func (gb *GenericBackend[CC, C, R]) getConfig(ctx context.Context, s logical.Storage) (*CC, error) {
 	entry, err := s.Get(ctx, configStoragePath)
 	if err != nil {
 		return nil, err
@@ -33,38 +67,8 @@ func (gb *GenericBackend[CC, C]) getConfig(ctx context.Context, s logical.Storag
 	return config, nil
 }
 
-// pathConfig extends the Vault API with a `/config`
-// endpoint for the backend. You can choose whether
-// or not certain attributes should be displayed,
-// required, and named. For example, password
-// is marked as sensitive and will not be output
-// when you read the configuration.
-func (gb *GenericBackend[CC, C]) pathConfig(fields map[string]*framework.FieldSchema) (*framework.Path, error) {
-	return &framework.Path{
-		Pattern: "config",
-		Fields:  fields,
-		Operations: map[logical.Operation]framework.OperationHandler{
-			logical.ReadOperation: &framework.PathOperation{
-				Callback: gb.pathConfigRead,
-			},
-			logical.CreateOperation: &framework.PathOperation{
-				Callback: gb.pathConfigWrite,
-			},
-			logical.UpdateOperation: &framework.PathOperation{
-				Callback: gb.pathConfigWrite,
-			},
-			logical.DeleteOperation: &framework.PathOperation{
-				Callback: gb.pathConfigDelete,
-			},
-		},
-		ExistenceCheck:  gb.pathConfigExistenceCheck,
-		HelpSynopsis:    pathConfigHelpSynopsis,
-		HelpDescription: pathConfigHelpDescription,
-	}, nil
-}
-
 // pathConfigExistenceCheck verifies if the configuration exists.
-func (gb *GenericBackend[CC, C]) pathConfigExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
+func (gb *GenericBackend[CC, C, R]) pathConfigExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
 	out, err := req.Storage.Get(ctx, req.Path)
 	if err != nil {
 		return false, fmt.Errorf("existence check failed: %w", err)
@@ -74,7 +78,7 @@ func (gb *GenericBackend[CC, C]) pathConfigExistenceCheck(ctx context.Context, r
 }
 
 // pathConfigRead reads the configuration and outputs non-sensitive information.
-func (gb *GenericBackend[CC, C]) pathConfigRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (gb *GenericBackend[CC, C, R]) pathConfigRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	config, err := gb.getConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
@@ -88,7 +92,7 @@ func (gb *GenericBackend[CC, C]) pathConfigRead(ctx context.Context, req *logica
 }
 
 // pathConfigWrite updates the configuration for the backend
-func (gb *GenericBackend[CC, C]) pathConfigWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (gb *GenericBackend[CC, C, R]) pathConfigWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	config, err := gb.getConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
@@ -128,7 +132,7 @@ func (gb *GenericBackend[CC, C]) pathConfigWrite(ctx context.Context, req *logic
 }
 
 // pathConfigDelete removes the configuration for the backend
-func (gb *GenericBackend[CC, C]) pathConfigDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (gb *GenericBackend[CC, C, R]) pathConfigDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	err := req.Storage.Delete(ctx, configStoragePath)
 
 	if err == nil {
@@ -137,6 +141,18 @@ func (gb *GenericBackend[CC, C]) pathConfigDelete(ctx context.Context, req *logi
 
 	return nil, err
 }
+
+//func (gb *GenericBackend[CC, C, R]) validateConfig(writeData map[string]any) error {
+//	fmt.Println("made it")
+//	inputConfig := userClientConfig.(ClientConfig[CC, C, R])
+//	result := new(CC)
+//	err := mapstructure.Decode(writeData, result)
+//	if err != nil {
+//		return err
+//	}
+//
+//	return inputConfig.ValidateFunc(result)
+//}
 
 // pathConfigHelpSynopsis summarizes the help text for the configuration
 const pathConfigHelpSynopsis = `Configure the HashiCups backend.`
