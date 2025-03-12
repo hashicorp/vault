@@ -4,17 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/mitchellh/mapstructure"
 )
 
 const (
 	configStoragePath = "config"
 )
-
-var userClientConfig any
 
 // pathConfig extends the Vault API with a `/config`
 // endpoint for the backend. You can choose whether
@@ -23,8 +23,6 @@ var userClientConfig any
 // is marked as sensitive and will not be output
 // when you read the configuration.
 func (gb *GenericBackend[CC, C, R]) pathConfig(inputConfig *ClientConfig[CC, C, R]) *framework.Path {
-	// userClientConfig = inputConfig
-
 	return &framework.Path{
 		Pattern: "config",
 		Fields:  inputConfig.Fields,
@@ -93,6 +91,7 @@ func (gb *GenericBackend[CC, C, R]) pathConfigRead(ctx context.Context, req *log
 
 // pathConfigWrite updates the configuration for the backend
 func (gb *GenericBackend[CC, C, R]) pathConfigWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	gb.Logger().Info("do we make it ?")
 	config, err := gb.getConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
@@ -105,15 +104,28 @@ func (gb *GenericBackend[CC, C, R]) pathConfigWrite(ctx context.Context, req *lo
 		}
 		config = new(CC)
 	}
+	gb.Logger().Info("do we make it ?")
 
 	writeData := structs.Map(config)
 
 	for k := range writeData {
-		if userInput, ok := data.GetOk(k); ok {
+		if userInput, ok := data.GetOk(strings.ToLower(k)); ok {
 			writeData[k] = userInput
 		} else if createOperation {
 			return nil, fmt.Errorf("missing %s in configuration", k)
 		}
+	}
+	gb.Logger().Info("do we make it ?")
+
+	result := new(CC)
+	err = mapstructure.Decode(writeData, result)
+	if err != nil {
+		return nil, err
+	}
+	err = gb.validateConfig(result)
+	if err != nil {
+		gb.Logger().Error("failed to validate plugin config", "error", err)
+		return nil, err
 	}
 
 	entry, err := logical.StorageEntryJSON(configStoragePath, writeData)
@@ -141,18 +153,6 @@ func (gb *GenericBackend[CC, C, R]) pathConfigDelete(ctx context.Context, req *l
 
 	return nil, err
 }
-
-//func (gb *GenericBackend[CC, C, R]) validateConfig(writeData map[string]any) error {
-//	fmt.Println("made it")
-//	inputConfig := userClientConfig.(ClientConfig[CC, C, R])
-//	result := new(CC)
-//	err := mapstructure.Decode(writeData, result)
-//	if err != nil {
-//		return err
-//	}
-//
-//	return inputConfig.ValidateFunc(result)
-//}
 
 // pathConfigHelpSynopsis summarizes the help text for the configuration
 const pathConfigHelpSynopsis = `Configure the HashiCups backend.`

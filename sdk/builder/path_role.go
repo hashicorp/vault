@@ -11,16 +11,12 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-var role any
-
 // pathRole extends the Vault API with a `/role`
 // endpoint for the backend. You can choose whether
 // or not certain attributes should be displayed,
 // required, and named. You can also define different
 // path patterns to list all roles.
 func (gb *GenericBackend[CC, C, R]) pathRole(inputRole *Role[R, C]) []*framework.Path {
-	role = inputRole
-
 	return []*framework.Path{
 		{
 			Pattern: "role/" + framework.GenericNameRegex("name"),
@@ -39,6 +35,7 @@ func (gb *GenericBackend[CC, C, R]) pathRole(inputRole *Role[R, C]) []*framework
 					Callback: gb.pathRolesDelete,
 				},
 			},
+			ExistenceCheck:  gb.pathRoleExistenceCheck("name"),
 			HelpSynopsis:    pathRoleHelpSynopsis,
 			HelpDescription: pathRoleHelpDescription,
 		},
@@ -52,6 +49,17 @@ func (gb *GenericBackend[CC, C, R]) pathRole(inputRole *Role[R, C]) []*framework
 			HelpSynopsis:    pathRoleListHelpSynopsis,
 			HelpDescription: pathRoleListHelpDescription,
 		},
+	}
+}
+
+func (gb *GenericBackend[CC, C, R]) pathRoleExistenceCheck(roleFieldName string) framework.ExistenceFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
+		rName := d.Get(roleFieldName).(string)
+		r, err := gb.getRole(ctx, req.Storage, rName)
+		if err != nil {
+			return false, err
+		}
+		return r != nil, nil
 	}
 }
 
@@ -109,7 +117,13 @@ func (gb *GenericBackend[CC, C, R]) pathRolesWrite(ctx context.Context, req *log
 		}
 	}
 
-	if err = gb.validateRole(writeData); err != nil {
+	// validate role
+	result := new(R)
+	err = mapstructure.Decode(writeData, result)
+	if err != nil {
+		return nil, err
+	}
+	if err = gb.validateRole(result); err != nil {
 		return nil, err
 	}
 
@@ -118,17 +132,6 @@ func (gb *GenericBackend[CC, C, R]) pathRolesWrite(ctx context.Context, req *log
 	}
 
 	return nil, nil
-}
-
-func (gb *GenericBackend[CC, C, R]) validateRole(writeData map[string]any) error {
-	inputRole := role.(Role[R, C])
-	result := new(R)
-	err := mapstructure.Decode(writeData, result)
-	if err != nil {
-		return err
-	}
-
-	return inputRole.ValidateFunc(result)
 }
 
 // pathRolesDelete makes a request to Vault storage to delete a role

@@ -48,6 +48,8 @@ func (bb *BackendBuilder[CC, C, R]) build() (*GenericBackend[CC, C, R], error) {
 	gb := &GenericBackend[CC, C, R]{}
 
 	gb.newClient = bb.ClientConfig.NewClientFunc
+	gb.validateConfig = bb.ClientConfig.ValidateFunc
+	gb.validateRole = bb.Role.ValidateFunc
 
 	configPath := gb.pathConfig(bb.ClientConfig)
 	rolePaths := gb.pathRole(bb.Role)

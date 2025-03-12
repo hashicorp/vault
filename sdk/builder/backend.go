@@ -14,9 +14,11 @@ import (
 
 type GenericBackend[CC, C, R any] struct {
 	*framework.Backend
-	lock      sync.RWMutex
-	client    *C
-	newClient func(*CC) (*C, error)
+	lock           sync.RWMutex
+	client         *C
+	newClient      func(*CC) (*C, error)
+	validateRole   func(*R) error
+	validateConfig func(*CC) error
 }
 
 var myBackend any
