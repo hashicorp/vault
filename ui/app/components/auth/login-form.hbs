@@ -2,70 +2,72 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 ~}}
-<Auth::FormTemplate
-  @wrappedToken={{@wrappedToken}}
-  @cluster={{@cluster}}
-  @authType={{this.selectedAuthMethod}}
-  @onSuccess={{@onSuccess}}
-  @onError={{this.handleError}}
->
-  <:namespace>
-    {{#if this.version.isEnterprise}}
-      <Auth::NamespaceInput
-        @updateNamespace={{@handleNamespaceUpdate}}
-        @value={{this.namespaceInput}}
-        @hvdManagedNamespace={{this.flags.hvdManagedNamespaceRoot}}
-        @disabled={{@oidcProviderQueryParam}}
-      />
-    {{/if}}
-  </:namespace>
-  <:back>
-    {{! "Back" button shows when user has clicked "Sign in with other methods" }}
-    {{#if this.showOtherMethods}}
-      <Hds::Button
-        @text="Back"
-        {{on "click" this.toggleView}}
-        class="has-left-margin-m"
-        @color="tertiary"
-        @icon="arrow-left"
-      />
-    {{/if}}
-  </:back>
-  <:authSelectOptions>
-    {{#if this.showTabs}}
-      <Auth::Tabs
-        @authTabs={{this.authTabs}}
-        @displayNameHelper={{this.displayName}}
-        @onTabClick={{fn this.handleAuthSelect "tab"}}
-        @selectedAuthMethod={{this.selectedAuthMethod}}
-        @selectedTabIndex={{this.selectedTabIndex}}
-      />
-    {{else}}
-      <div class="has-left-margin-l has-bottom-margin-l has-right-margin-l">
-        <Hds::Form::Select::Field name="selectedAuthMethod" {{on "input" (fn this.handleAuthSelect "dropdown")}} as |F|>
-          <F.Label class="has-top-padding-l">Auth method</F.Label>
-          <F.Options>
-            {{#each this.availableMethodTypes as |type|}}
-              <option selected={{eq this.selectedAuthMethod type}} value={{type}}>
-                {{this.displayName type}}
-              </option>
-            {{/each}}
-          </F.Options>
-        </Hds::Form::Select::Field>
-        {{#if (not-eq this.selectedAuthMethod "token")}}
-          <Hds::Form::TextInput::Field name="path" as |F|>
-            <F.Label class="has-top-padding-l">Mount path</F.Label>
-          </Hds::Form::TextInput::Field>
-        {{/if}}
-      </div>
-    {{/if}}
-  </:authSelectOptions>
-  <:error>
-    {{#if this.errorMessage}}
-      <MessageError @errorMessage={{this.errorMessage}} class="has-left-margin-l has-right-margin-l" />
-    {{/if}}
-  </:error>
-</Auth::FormTemplate>
+
+{{#if this.formComponent}}
+  {{#let (component this.formComponent) as |AuthFormComponent|}}
+    {{! renders Auth::Form::Base or Auth::Form::<Type>}}
+    <AuthFormComponent
+      @wrappedToken={{@wrappedToken}}
+      @cluster={{@cluster}}
+      @authType={{this.selectedAuthMethod}}
+      @onSuccess={{@onSuccess}}
+      @onError={{this.handleError}}
+    >
+      {{#if this.version.isEnterprise}}
+        <Auth::NamespaceInput
+          @updateNamespace={{@handleNamespaceUpdate}}
+          @value={{this.namespaceInput}}
+          @hvdManagedNamespace={{this.flags.hvdManagedNamespaceRoot}}
+          @disabled={{@oidcProviderQueryParam}}
+        />
+      {{/if}}
+
+      {{! "Back" button shows when user has clicked "Sign in with other methods" }}
+      {{#if this.showOtherMethods}}
+        <Hds::Button
+          @text="Back"
+          {{on "click" this.toggleView}}
+          class="has-left-margin-m"
+          @color="tertiary"
+          @icon="arrow-left"
+        />
+      {{/if}}
+
+      {{#if this.showTabs}}
+        <Auth::Tabs
+          @authTabs={{this.authTabs}}
+          @displayNameHelper={{this.displayName}}
+          @onTabClick={{fn this.handleAuthSelect "tab"}}
+          @selectedAuthMethod={{this.selectedAuthMethod}}
+          @selectedTabIndex={{this.selectedTabIndex}}
+        />
+      {{else}}
+        <div class="has-left-margin-l has-bottom-margin-l has-right-margin-l">
+          <Hds::Form::Select::Field name="selectedAuthMethod" {{on "input" (fn this.handleAuthSelect "dropdown")}} as |F|>
+            <F.Label class="has-top-padding-l">Auth method</F.Label>
+            <F.Options>
+              {{#each this.availableMethodTypes as |type|}}
+                <option selected={{eq this.selectedAuthMethod type}} value={{type}}>
+                  {{this.displayName type}}
+                </option>
+              {{/each}}
+            </F.Options>
+          </Hds::Form::Select::Field>
+          {{#if (not-eq this.selectedAuthMethod "token")}}
+            <Hds::Form::TextInput::Field name="path" as |F|>
+              <F.Label class="has-top-padding-l">Mount path</F.Label>
+            </Hds::Form::TextInput::Field>
+          {{/if}}
+        </div>
+      {{/if}}
+
+      {{#if this.errorMessage}}
+        <MessageError @errorMessage={{this.errorMessage}} class="has-left-margin-l has-right-margin-l" />
+      {{/if}}
+
+    </AuthFormComponent>
+  {{/let}}
+{{/if}}
 
 {{#unless this.showOtherMethods}}
   <Hds::Button

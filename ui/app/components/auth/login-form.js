@@ -42,6 +42,17 @@ export default class AuthLoginForm extends Component {
     return supportedTypes(this.version.isEnterprise);
   }
 
+  get formComponent() {
+    const { selectedAuthMethod } = this;
+    const isSupported = this.availableMethodTypes.includes(selectedAuthMethod);
+    const formFile = () => (['oidc', 'jwt'].includes(selectedAuthMethod) ? 'oidc-jwt' : selectedAuthMethod);
+    const component = isSupported ? formFile() : 'base';
+
+    // an Auth::Form::<Type> component exists for each type in supported-auth-backends
+    // eventually "base" component could be leveraged for rendering custom auth plugins
+    return `auth/form/${component}`;
+  }
+
   get namespaceInput() {
     const namespaceQP = this.args.namespace;
     if (this.flags.hvdManagedNamespaceRoot) {
