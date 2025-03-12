@@ -45,9 +45,9 @@ const validations = {
   key: [
     {
       validator(model) {
-        const { generate, url } = model;
+        const { generate, key, url } = model;
         // this is required when generate is false and url is blank
-        return !generate && (!url || url.trim() === '') ? false : true;
+        return !generate && (!url || url.trim() === '') && (!key || key.trim() === '') ? false : true;
       },
       message: "Key can't be blank when URL is empty",
     },
