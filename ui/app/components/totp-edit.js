@@ -7,7 +7,6 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
-import { isBlank } from '@ember/utils';
 
 // TODO add jsdoc documentation
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
@@ -17,6 +16,9 @@ export default class TotpEdit extends Component {
   @service router;
 
   @tracked hasGenerated = false;
+  @tracked invalidFormAlert = '';
+  @tracked modelValidations;
+
   successCallback;
 
   get keyFormFields() {
@@ -68,15 +70,15 @@ export default class TotpEdit extends Component {
   @action
   create(event) {
     event.preventDefault();
-    const modelId = this.model.name;
-    // prevent from submitting if there's no key
-    // maybe do something fancier later
-    if (isBlank(modelId)) {
-      return;
-    }
+    const { isValid, state, invalidFormMessage } = this.model.validate();
+    this.modelValidations = isValid ? null : state;
+    this.invalidFormAlert = invalidFormMessage;
+    if (isValid) {
+      const modelId = this.model.name;
 
-    this.persist('save', () => {
-      this.transitionToRoute(SHOW_ROUTE, modelId);
-    });
+      this.persist('save', () => {
+        this.transitionToRoute(SHOW_ROUTE, modelId);
+      });
+    }
   }
 }
