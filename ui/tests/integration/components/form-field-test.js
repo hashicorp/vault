@@ -112,8 +112,8 @@ module('Integration | Component | form field', function (hooks) {
       createAttr('foobar', 'toggleButton', {
         defaultValue: false,
         editType: 'toggleButton',
-        enabledSubText: 'Toggled on',
-        disabledSubText: 'Toggled off',
+        helperTextEnabled: 'Toggled on',
+        helperTextDisabled: 'Toggled off',
       })
     );
     assert.ok(component.hasToggleButton, 'renders a toggle button');

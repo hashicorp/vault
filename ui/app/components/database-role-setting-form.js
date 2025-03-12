@@ -18,7 +18,7 @@ import { getStatementFields, getRoleFields } from '../utils/model-helpers/databa
  * @param {object} model - ember data model which should be updated on change
  * @param {string} [roleType] - role type controls which attributes are shown
  * @param {string} [mode=create] - mode of the form (eg. create or edit)
- * @param {object} dbParams - holds database config values, (plugin_name [eg 'mongodb-database-plugin'], skip_static_role_rotation_import)
+ * @param {object} dbParams - holds database config values, { plugin_name: string [eg 'mongodb-database-plugin'], skip_static_role_rotation_import: boolean }
  */
 
 export default class DatabaseRoleSettingForm extends Component {

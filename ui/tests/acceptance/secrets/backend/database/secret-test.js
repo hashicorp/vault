@@ -574,13 +574,13 @@ module('Acceptance | secrets/database/*', function (hooks) {
     await rolePage.name('bar');
     assert
       .dom('[data-test-component="empty-state"]')
-      .exists({ count: 1 }, 'One empty state exists before selections made');
+      .exists({ count: 1 }, 'One empty state exists before database selection is made');
     await clickTrigger('#database');
     assert.strictEqual(searchSelectComponent.options.length, 1, 'list shows existing connections so far');
     await selectChoose('#database', '.ember-power-select-option', 0);
     assert
       .dom('[data-test-component="empty-state"]')
-      .exists({ count: 2 }, 'Two empty states exist before selections made');
+      .exists({ count: 2 }, 'Two empty states exist after a database is selected');
     await rolePage.roleType('static');
     assert.dom('[data-test-component="empty-state"]').doesNotExist('Empty states go away');
     assert.dom('[data-test-input="username"]').exists('Username field appears for static role');

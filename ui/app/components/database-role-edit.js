@@ -46,7 +46,7 @@ export default class DatabaseRoleEdit extends Component {
   isValid() {
     const { isValid, state } = this.args.model.validate();
     this.modelValidations = isValid ? null : state;
-    this.invalidFormAlert = 'There was an error submitting this form.';
+    this.invalidFormAlert = isValid ? '' : 'There was an error submitting this form.';
     return isValid;
   }
 
@@ -111,9 +111,10 @@ export default class DatabaseRoleEdit extends Component {
   handleCreateEditRole = task(
     waitFor(async (evt) => {
       evt.preventDefault();
+      this.resetErrors();
       const { mode, model } = this.args;
       if (!this.isValid()) return;
-      this.resetErrors();
+
       if (mode === 'create') {
         model.id = model.name;
         const path = model.type === 'static' ? 'static-roles' : 'roles';

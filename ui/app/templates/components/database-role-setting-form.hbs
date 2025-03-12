@@ -8,7 +8,7 @@
   {{#if this.settingFields}}
     <div class="form-section">
       {{#each this.settingFields as |attr|}}
-        {{#if (and (eq @mode "edit") (or (eq attr.name "skip_import_rotation") (eq attr.name "username")))}}
+        {{#if (and (eq @mode "edit") (includes attr.name (array "skip_import_rotation" "username")))}}
           <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
         {{else}}
           <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} @modelValidations={{@modelValidations}} />
