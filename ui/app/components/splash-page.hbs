@@ -12,7 +12,7 @@
       <div class="splash-page-sub-header" data-test-splash-page-sub-header>
         {{yield to="subHeader"}}
       </div>
-      <Hds::Card::Container @level="high" @hasBorder={{true}} data-test-splash-page-content>
+      <Hds::Card::Container @level="high" @hasBorder={{true}} class="overflow-auto" data-test-splash-page-content>
         {{yield to="content"}}
       </Hds::Card::Container>
       {{yield to="footer"}}
