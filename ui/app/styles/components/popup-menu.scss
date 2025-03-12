@@ -1,3 +1,8 @@
+@use '../utils/box-shadow_variables';
+@use '../utils/color_variables';
+@use '../utils/font_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -6,19 +11,19 @@
 // Popup menu no longer exists, but these styles are still used in some places
 .popup-menu-content,
 .ember-power-select-options {
-  border-radius: $radius;
+  border-radius: size_variables.$radius;
   margin: -2px 0 0 0;
 
   & > .box {
-    border-radius: $radius;
-    box-shadow: $box-shadow, $box-shadow-middle;
+    border-radius: size_variables.$radius;
+    box-shadow: box-shadow_variables.$box-shadow, box-shadow_variables.$box-shadow-middle;
     padding: 0;
     position: relative;
     width: 210px;
   }
 
   &.is-wide > .box {
-    width: $drawer-width;
+    width: size_variables.$drawer-width;
   }
 
   .confirm-action span .button {
@@ -28,7 +33,7 @@
   }
 
   .menu {
-    padding: $spacing-4 0;
+    padding: size_variables.$spacing-4 0;
   }
 
   button.link,
@@ -41,9 +46,9 @@
     border: none;
     display: block;
     height: auto;
-    font-size: $size-7;
-    font-weight: $font-weight-semibold;
-    padding: $spacing-10 $spacing-12;
+    font-size: size_variables.$size-7;
+    font-weight: font_variables.$font-weight-semibold;
+    padding: size_variables.$spacing-10 size_variables.$spacing-12;
     text-align: left;
     text-decoration: none;
     width: 100%;
@@ -53,13 +58,13 @@
   // so they match other dropdown elements until we replace popup-menu with Hds::Dropdown
   .hds-confirm-action-critical {
     &:hover {
-      background-color: $ui-gray-050;
+      background-color: color_variables.$ui-gray-050;
     }
     div,
     span {
-      margin-left: -$spacing-4;
-      font-size: $size-7;
-      font-weight: $font-weight-semibold;
+      margin-left: -(size_variables.$spacing-4);
+      font-size: size_variables.$size-7;
+      font-weight: font_variables.$font-weight-semibold;
     }
   }
 
@@ -67,26 +72,26 @@
   .ember-power-select-option,
   .ember-power-select-option[aria-current='true'],
   a {
-    background-color: $white;
-    color: $grey-darkest;
+    background-color: color_variables.$white;
+    color: color_variables.$grey-darkest;
 
     &:hover {
-      background-color: $ui-gray-050;
-      color: $ui-gray-900;
+      background-color: color_variables.$ui-gray-050;
+      color: color_variables.$ui-gray-900;
     }
 
     &.active,
     &.is-active {
       background-color: transparent;
-      color: $blue;
+      color: color_variables.$blue;
     }
 
     &.is-destroy {
-      color: $red;
+      color: color_variables.$red;
 
       &:hover {
-        background-color: $red;
-        color: $white;
+        background-color: color_variables.$red;
+        color: color_variables.$white;
       }
     }
 
@@ -105,29 +110,29 @@
   }
 
   .menu-label {
-    color: $grey-dark;
-    font-size: $size-9;
-    font-weight: $font-weight-normal;
+    color: color_variables.$grey-dark;
+    font-size: size_variables.$size-9;
+    font-weight: font_variables.$font-weight-normal;
     letter-spacing: 0;
     margin: 0;
-    padding: $spacing-8 $spacing-12 0;
+    padding: size_variables.$spacing-8 size_variables.$spacing-12 0;
     text-transform: uppercase;
   }
 
   .menu-content {
-    padding: $spacing-8 $spacing-12;
+    padding: size_variables.$spacing-8 size_variables.$spacing-12;
   }
 
   hr {
-    background-color: $ui-gray-200;
+    background-color: color_variables.$ui-gray-200;
     margin: 0;
   }
 }
 
 .popup-menu-content p {
   box-shadow: none;
-  padding-top: $spacing-8;
-  font-weight: $font-weight-semibold;
+  padding-top: size_variables.$spacing-8;
+  font-weight: font_variables.$font-weight-semibold;
 }
 
 .popup-menu-content .level-left {

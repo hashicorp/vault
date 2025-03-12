@@ -1,3 +1,8 @@
+@use '../utils/color_variables';
+@use '../utils/font_variables';
+@use '../utils/mixins';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -10,29 +15,29 @@
     line-height: normal;
 
     &:hover {
-      box-shadow: 0 0 0 1px rgba($grey-dark, 0.3);
+      box-shadow: 0 0 0 1px rgba(color_variables.$grey-dark, 0.3);
     }
 
     .toolbar-link {
-      color: $blue-500;
+      color: color_variables.$blue-500;
     }
   }
 
   .helper-text {
-    font-weight: $font-weight-normal;
+    font-weight: font_variables.$font-weight-normal;
   }
 
   .title.is-6 {
-    margin-bottom: $spacing-8;
+    margin-bottom: size_variables.$spacing-8;
   }
 
   .reindexing-alert,
   .syncing-alert {
-    margin-top: $spacing-36;
+    margin-top: size_variables.$spacing-36;
   }
 
   .selectable-card-container {
-    margin-top: $spacing-36;
+    margin-top: size_variables.$spacing-36;
     display: grid;
 
     &.primary,
@@ -40,22 +45,22 @@
       margin: 2rem 0 2rem 0;
       grid-template-columns: 1fr 2fr;
 
-      @include until($mobile) {
+      @include mixins.until(size_variables.$mobile) {
         grid-template-columns: 1fr;
       }
     }
 
     &.secondary {
       grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-      grid-gap: $spacing-36;
+      grid-gap: size_variables.$spacing-36;
     }
 
     .card-container {
       display: grid;
-      grid-gap: $spacing-12;
+      grid-gap: size_variables.$spacing-12;
       grid-template-columns: 1fr 1fr;
       grid-template-rows: 0.2fr 0.2fr 0.2fr;
-      padding: $spacing-24;
+      padding: size_variables.$spacing-24;
       line-height: 1.5;
 
       &.summary {
@@ -66,7 +71,7 @@
         box-shadow: none;
       }
 
-      @include until(1320px) {
+      @include mixins.until(1320px) {
         // prevent an issue with the card descriptions wrapping and expanding height
         min-height: 250px;
       }
@@ -120,12 +125,12 @@
     }
 
     &.summary {
-      margin-bottom: $spacing-36;
+      margin-bottom: size_variables.$spacing-36;
     }
   }
   .summary-state {
-    padding-bottom: $spacing-36;
-    border-bottom: 1px solid rgba($grey-dark, 0.3);
+    padding-bottom: size_variables.$spacing-36;
+    border-bottom: 1px solid rgba(color_variables.$grey-dark, 0.3);
   }
 
   // prevent double lines at the bottom of the dashboard
