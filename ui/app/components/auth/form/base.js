@@ -10,9 +10,10 @@ import { service } from '@ember/service';
 /**
  * @module Auth::Base
  *
- * @example
- *
- * @param {string} param -
+ * @param {string} authType - chosen login method type
+ * @param {object} cluster - The cluster model which contains information such as cluster id, name and boolean for if the cluster is in standby
+ * @param {function} onError - callback if there is a login error
+ * @param {function} onSuccess - calls onAuthResponse in auth/page redirects if successful
  */
 
 export default class AuthBase extends Component {
@@ -29,6 +30,13 @@ export default class AuthBase extends Component {
   async login(event) {
     event.preventDefault();
     // base login flow
+  }
+
+  // if we move auth service authSuccess method here (or to each auth method component)
+  // then call that before calling parent this.args.onSuccess
+  onSuccess(authResponse) {
+    //  responsible for redirect after auth data is persisted
+    this.args.onSuccess(authResponse, this.args.authType);
   }
 
   onError(error) {

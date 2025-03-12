@@ -15,8 +15,7 @@ import { service } from '@ember/service';
 export default class AuthFormUserpass extends AuthBase {
   @service auth;
 
-  showFields = ['username', 'password'];
-  type = 'userpass';
+  loginFields = ['username', 'password'];
 
   @action
   async login(event) {
@@ -31,14 +30,14 @@ export default class AuthFormUserpass extends AuthBase {
     try {
       const authResponse = await this.auth.authenticate({
         clusterId: this.args.cluster.id,
-        backend: this.type,
+        backend: this.args.authType,
         data,
-        selectedAuth: this.type,
+        selectedAuth: this.args.authType,
       });
 
       // responsible for redirect after auth data is persisted
       // if auth service authSuccess method is called here, then we'd do that before calling parent onSuccess
-      this.args.onSuccess(authResponse, this.type);
+      this.onSuccess(authResponse);
     } catch (error) {
       this.onError(error);
     }

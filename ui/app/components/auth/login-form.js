@@ -27,7 +27,7 @@ export default class AuthLoginForm extends Component {
   @tracked showOtherMethods = true;
 
   // auth login variables
-  @tracked selectedAuthMethod = null;
+  @tracked selectedAuthMethod = 'token';
   @tracked errorMessage = null;
 
   displayName = (type) => allSupportedAuthBackends().find((t) => t.type === type).typeDisplay;

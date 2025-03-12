@@ -34,6 +34,7 @@
   </:back>
   <:tabs>
     {{#if (and this.authTabs (not this.showOtherMethods))}}
+      {{! TODO these have to move to parent :( }}
       <Auth::Tabs
         @authTabs={{this.authTabs}}
         @displayNameHelper={{this.displayName}}

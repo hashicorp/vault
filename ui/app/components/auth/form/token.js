@@ -9,14 +9,13 @@ import { action } from '@ember/object';
 
 /**
  * @module Auth::Form::Token
- *
+ * see Auth::Base
  * */
 
 export default class AuthFormToken extends AuthBase {
   @service auth;
 
-  showFields = ['token'];
-  type = 'token';
+  loginFields = ['token'];
 
   // extrapolated data from auth service and SUPPORTED_AUTH_BACKENDS
   // depending on ember data affects on auth service, use this data here instead
@@ -28,18 +27,16 @@ export default class AuthFormToken extends AuthBase {
   async login(event) {
     event.preventDefault();
     const data = {};
-    this.showFields.forEach((f) => {
+    this.loginFields.forEach((f) => {
       data[f] = this.state[f];
     });
     const authResponse = await this.auth.authenticate({
       clusterId: this.args.cluster.id,
-      backend: this.type,
+      backend: this.args.authType,
       data,
-      selectedAuth: this.type,
+      selectedAuth: this.args.authType,
     });
 
-    // responsible for redirect after auth data is persisted
-    // if auth service authSuccess method is called here, then we'd do that before calling parent onSuccess
-    this.args.onSuccess(authResponse, this.type);
+    this.onSuccess(authResponse);
   }
 }

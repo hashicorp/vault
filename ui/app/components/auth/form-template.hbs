@@ -4,8 +4,9 @@
 ~}}
 
 {{#if this.formComponent}}
-  {{#let (component this.formComponent) as |AuthComponent|}}
-    <AuthComponent
+  {{#let (component this.formComponent) as |AuthFormComponent|}}
+    {{! renders Auth::Form::Base or Auth::Form::<Type>}}
+    <AuthFormComponent
       @authType={{@authType}}
       @cluster={{@cluster}}
       @onError={{@onError}}
@@ -17,6 +18,6 @@
       {{yield to="tabs"}}
       {{yield to="error"}}
       {{yield to="footer"}}
-    </AuthComponent>
+    </AuthFormComponent>
   {{/let}}
 {{/if}}

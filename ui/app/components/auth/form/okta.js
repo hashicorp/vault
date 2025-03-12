@@ -13,12 +13,11 @@ import { v4 as uuidv4 } from 'uuid';
 
 /**
  * @module Auth::Form::Okta
- *
+ * see Auth::Base
  * */
 
 export default class AuthFormOkta extends AuthBase {
-  showFields = ['username', 'password'];
-  type = 'okta';
+  loginFields = ['username', 'password'];
 
   @tracked challengeAnswer = '';
 
