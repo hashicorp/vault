@@ -56,6 +56,19 @@ export default class AuthLoginForm extends Component {
     return namespaceQP;
   }
 
+  get formFile() {
+    if (['oidc', 'jwt'].includes(this.selectedAuthMethod)) return 'oidc-jwt';
+    return this.selectedAuthMethod;
+  }
+
+  get formComponent() {
+    const isSupported = supportedTypes(this.version.isEnterprise).includes(this.selectedAuthMethod);
+    const component = isSupported ? this.formFile : 'base';
+    // an Auth::Form::<Type> component exists for each type in supported-auth-backends
+    // eventually "base" component could be leveraged for rendering custom auth plugins
+    return `auth/form/${component}`;
+  }
+
   @action
   handleAuthSelect(element, event, idx) {
     if (element === 'tab') {
