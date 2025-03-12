@@ -1,0 +1,47 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Hds::Tabs
+  @onClickTab={{@onTabClick}}
+  @selectedTabIndex={{@selectedTabIndex}}
+  class="has-left-margin-l has-bottom-margin-l has-right-margin-l"
+  as |T|
+>
+  {{#each-in @authTabs as |methodType mounts|}}
+    <T.Tab>{{@displayNameHelper methodType}}</T.Tab>
+    <T.Panel>
+      <div class="has-top-padding-m">
+        {{! for accessibility the DOM should only render relevant fields }}
+        {{#if (eq @selectedAuthMethod methodType)}}
+          {{#if (gt mounts.length 1)}}
+            {{! dropdown of mount paths }}
+            <Hds::Form::Select::Field name="path" as |F|>
+              <F.Label>Mount path</F.Label>
+              <F.Options>
+                {{#each mounts as |mount|}}
+                  <option value={{mount.path}}>{{mount.path}}</option>
+                {{/each}}
+              </F.Options>
+            </Hds::Form::Select::Field>
+          {{else}}
+            {{! readonly input of only available mount path }}
+            {{#let (get mounts "0") as |mount|}}
+              {{#if (and (eq @selectedAuthMethod "token") mount.description)}}
+                <Hds::Text::Body @tag="p" @color="faint">{{mount.description}}</Hds::Text::Body>
+              {{else}}
+                <Hds::Form::TextInput::Field readonly name="path" @value={{mount.path}} as |F|>
+                  <F.Label>Mount path</F.Label>
+                  {{#if mount.description}}
+                    <F.HelperText>{{mount.description}}</F.HelperText>
+                  {{/if}}
+                </Hds::Form::TextInput::Field>
+              {{/if}}
+            {{/let}}
+          {{/if}}
+        {{/if}}
+      </div>
+    </T.Panel>
+  {{/each-in}}
+</Hds::Tabs>

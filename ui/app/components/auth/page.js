@@ -4,7 +4,6 @@
  */
 
 import Component from '@glimmer/component';
-import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 
@@ -24,24 +23,8 @@ import { action } from '@ember/object';
  * */
 
 export default class AuthPage extends Component {
-  @service flags;
-
   @tracked mfaErrors;
   @tracked mfaAuthData;
-
-  get namespaceInput() {
-    const namespaceQP = this.args.namespaceQueryParam;
-    if (this.flags.hvdManagedNamespaceRoot) {
-      // When managed, the user isn't allowed to edit the prefix `admin/` for their nested namespace
-      const split = namespaceQP.split('/');
-      if (split.length > 1) {
-        split.shift();
-        return `/${split.join('/')}`;
-      }
-      return '';
-    }
-    return namespaceQP;
-  }
 
   @action
   handleNamespaceUpdate(event) {

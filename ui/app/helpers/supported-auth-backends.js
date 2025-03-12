@@ -5,6 +5,9 @@
 
 import { helper as buildHelper } from '@ember/component/helper';
 
+// TODO: move these helpers to a util?
+// Eventually will be reduced to just type and display name? All auth related metadata will move to corresponding auth component
+
 /**
  * These are all the auth methods with which a user can log into the UI.
  * This is a subset of the methods found in the `mountable-auth-methods` helper,
@@ -95,6 +98,11 @@ export function supportedAuthBackends() {
 
 export function allSupportedAuthBackends() {
   return [...SUPPORTED_AUTH_BACKENDS, ...ENTERPRISE_AUTH_METHODS];
+}
+
+export function supportedTypes(isEnterprise) {
+  const availableMethods = isEnterprise ? allSupportedAuthBackends() : supportedAuthBackends();
+  return availableMethods.map((method) => method.type);
 }
 
 export default buildHelper(supportedAuthBackends);
