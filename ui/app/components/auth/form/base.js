@@ -6,6 +6,8 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
+import { task } from 'ember-concurrency';
+import { waitFor } from '@ember/test-waiters';
 
 /**
  * @module Auth::Base
@@ -29,26 +31,27 @@ export default class AuthBase extends Component {
       data[key] = formData.get(key);
     }
 
-    this.login(data);
+    this.login.unlinked().perform(data);
   }
 
-  @action
-  async login(data) {
-    try {
-      const authResponse = await this.auth.authenticate({
-        clusterId: this.args.cluster.id,
-        backend: this.args.authType,
-        data,
-        selectedAuth: this.args.authType,
-      });
+  login = task(
+    waitFor(async (data) => {
+      try {
+        const authResponse = await this.auth.authenticate({
+          clusterId: this.args.cluster.id,
+          backend: this.args.authType,
+          data,
+          selectedAuth: this.args.authType,
+        });
 
-      // responsible for redirect after auth data is persisted
-      // if auth service authSuccess method is called here, then we'd do that before calling parent onSuccess
-      this.onSuccess(authResponse);
-    } catch (error) {
-      this.onError(error);
-    }
-  }
+        // responsible for redirect after auth data is persisted
+        // if auth service authSuccess method is called here, then we'd do that before calling parent onSuccess
+        this.onSuccess(authResponse);
+      } catch (error) {
+        this.onError(error);
+      }
+    })
+  );
 
   // if we move auth service authSuccess method here (or to each auth method component)
   // then call that before calling parent this.args.onSuccess

@@ -3,14 +3,33 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-{{#if this.pollForOktaNumberChallenge.isRunning}}
+{{#if this.waiting}}
   <OktaNumberChallenge
     @correctAnswer={{this.challengeAnswer}}
     @hasError={{this.authError}}
     @onReturnToLogin={{this.onCancel}}
   />
 {{else}}
-  <Auth::Form @onSubmit={{this.onSubmit}} @loginFields={{this.loginFields}}>
-    {{yield}}
-  </Auth::Form>
+  <form {{on "submit" this.onSubmit}}>
+
+    {{yield to="namespace"}}
+
+    <div class="has-padding-l">
+      {{yield to="back"}}
+      {{yield to="authSelectOptions"}}
+      {{yield to="error"}}
+
+      {{#each this.loginFields as |field|}}
+        {{! token or password should render as "password" types, otherwise render text inputs }}
+        {{#let (if (includes field (array "token" "password")) "password" "text") as |inputType|}}
+          <Hds::Form::TextInput::Field @type={{inputType}} name={{field}} class="has-bottom-margin-m" as |F|>
+            <F.Label>{{capitalize field}}</F.Label>
+          </Hds::Form::TextInput::Field>
+        {{/let}}
+      {{/each}}
+      <Hds::Button @text="Sign in" @isFullWidth={{true}} type="submit" class="has-top-margin-m has-bottom-margin-m" />
+
+      {{yield to="footer"}}
+    </div>
+  </form>
 {{/if}}
