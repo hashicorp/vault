@@ -8,7 +8,17 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 
-// TODO add jsdoc documentation
+/**
+ * @module TotpEdit
+ * `TotpEdit` is a component that allows you to create, view or delete a TOTP key or view the QR code of the key.
+ *
+ * @example
+ * ```js
+ *   <TotpEdit @model={{this.model}} @mode={{this.mode}} />
+ * ```
+ * @param {object} model - The totp edit model.
+ * @param {string} mode - The mode to render. Either 'create' or 'show'.
+ */
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
@@ -76,6 +86,7 @@ export default class TotpEdit extends Component {
     if (isValid) {
       const modelId = this.model.name;
 
+      // TODO verify url resolves for a key before submitting -> confusing error message
       this.persist('save', () => {
         this.transitionToRoute(SHOW_ROUTE, modelId);
       });
