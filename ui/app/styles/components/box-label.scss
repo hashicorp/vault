@@ -1,3 +1,10 @@
+@use '../utils/box-shadow_variables';
+@use '../utils/color_variables';
+@use '../utils/size_variables';
+@use '../core/box.scss';
+@use '../core/columns.scss';
+@use '../helper-classes/flexbox-and-grid.scss';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -11,11 +18,11 @@ label.box-label {
   @extend .box;
   @extend .is-centered;
 
-  border-color: $grey-light;
+  border-color: color_variables.$grey-light;
   border-radius: 3px;
-  box-shadow: $box-link-shadow;
+  box-shadow: box-shadow_variables.$box-link-shadow;
   text-decoration: none;
-  transition: box-shadow $speed;
+  transition: box-shadow size_variables.$speed;
   width: 100%;
 
   > div:first-child {
@@ -27,15 +34,15 @@ label.box-label {
   }
 
   &.is-selected {
-    box-shadow: $box-link-hover-shadow, $box-shadow-middle;
+    box-shadow: box-shadow_variables.$box-link-hover-shadow, box-shadow_variables.$box-shadow-middle;
 
     .icon {
-      color: $grey;
+      color: color_variables.$grey;
     }
   }
 
   .icon {
-    color: $grey-light;
+    color: color_variables.$grey-light;
   }
 
   input[type='radio'] {
@@ -43,7 +50,7 @@ label.box-label {
   }
 
   input[type='radio'] + label {
-    border: 1px solid $grey-light;
+    border: 1px solid color_variables.$grey-light;
     border-radius: 50%;
     cursor: pointer;
     display: block;
@@ -53,16 +60,16 @@ label.box-label {
   }
 
   input[type='radio']:checked + label {
-    background: $blue;
-    border: 1px solid $blue;
-    box-shadow: inset 0 0 0 0.15rem $white;
+    background: color_variables.$blue;
+    border: 1px solid color_variables.$blue;
+    box-shadow: inset 0 0 0 0.15rem color_variables.$white;
   }
 }
 
 .box-label-header {
-  color: $grey;
+  color: color_variables.$grey;
 
   .is-selected & {
-    color: $grey-darkest;
+    color: color_variables.$grey-darkest;
   }
 }
