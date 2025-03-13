@@ -4,8 +4,6 @@
  */
 
 import AuthBase from './base';
-import { service } from '@ember/service';
-import { action } from '@ember/object';
 
 /**
  * @module Auth::Form::Token
@@ -13,33 +11,15 @@ import { action } from '@ember/object';
  * */
 
 export default class AuthFormToken extends AuthBase {
-  @service auth;
-
   loginFields = ['token'];
 
-  // extrapolated data from auth service and SUPPORTED_AUTH_BACKENDS
-  // depending on ember data affects on auth service, use this data here instead
-  url = '/v1/auth/token/lookup-self';
-  displayNamePath = 'display_name';
-  tokenPath = 'id';
+  // idea: future improvement
+  // instead of the auth service "authenticate" calling await adapter.authenticate(options);
+  // which is prepared for any/all methods
+  // specific method data (like from SUPPORTED_AUTH_BACKENDS) could live here
+  // and remove the need for the authenticate method in the cluster.js adapter
 
-  @action
-  async login(event) {
-    event.preventDefault();
-    const formData = new FormData(event.target);
-    const data = {};
-
-    for (const key of formData.keys()) {
-      data[key] = formData.get(key);
-    }
-
-    const authResponse = await this.auth.authenticate({
-      clusterId: this.args.cluster.id,
-      backend: this.args.authType,
-      data,
-      selectedAuth: this.args.authType,
-    });
-
-    this.onSuccess(authResponse);
-  }
+  // url = '/v1/auth/token/lookup-self';
+  // displayNamePath = 'display_name';
+  // tokenPath = 'id';
 }

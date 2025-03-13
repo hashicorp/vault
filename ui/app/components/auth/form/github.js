@@ -4,7 +4,6 @@
  */
 
 import AuthBase from './base';
-import { action } from '@ember/object';
 
 /**
  * @module Auth::Form::Github
@@ -13,10 +12,4 @@ import { action } from '@ember/object';
 
 export default class AuthFormGithub extends AuthBase {
   loginFields = ['token'];
-
-  @action
-  async login(event) {
-    event.preventDefault();
-    // base login flow
-  }
 }

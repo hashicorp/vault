@@ -4,7 +4,6 @@
  */
 
 import AuthBase from './base';
-import { action } from '@ember/object';
 
 /**
  * @module Auth::Form::Saml
@@ -13,10 +12,4 @@ import { action } from '@ember/object';
 
 export default class AuthFormSaml extends AuthBase {
   loginFields = ['role'];
-
-  @action
-  async login(event) {
-    event.preventDefault();
-    // base login flow
-  }
 }

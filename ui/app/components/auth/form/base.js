@@ -19,17 +19,35 @@ import { service } from '@ember/service';
 export default class AuthBase extends Component {
   @service auth;
 
-  maybeMask = (field) => {
-    if (field === 'token' || field === 'password') {
-      return 'password';
+  @action
+  onSubmit(event) {
+    event.preventDefault();
+    const formData = new FormData(event.target);
+    const data = {};
+
+    for (const key of formData.keys()) {
+      data[key] = formData.get(key);
     }
-    return 'text';
-  };
+
+    this.login(data);
+  }
 
   @action
-  async login(event) {
-    event.preventDefault();
-    // base login flow
+  async login(data) {
+    try {
+      const authResponse = await this.auth.authenticate({
+        clusterId: this.args.cluster.id,
+        backend: this.args.authType,
+        data,
+        selectedAuth: this.args.authType,
+      });
+
+      // responsible for redirect after auth data is persisted
+      // if auth service authSuccess method is called here, then we'd do that before calling parent onSuccess
+      this.onSuccess(authResponse);
+    } catch (error) {
+      this.onError(error);
+    }
   }
 
   // if we move auth service authSuccess method here (or to each auth method component)

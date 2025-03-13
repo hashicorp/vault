@@ -4,7 +4,6 @@
  */
 
 import AuthBase from './base';
-import { action } from '@ember/object';
 
 /**
  * @module Auth::Form::Ldap
@@ -13,10 +12,4 @@ import { action } from '@ember/object';
 
 export default class AuthFormLdap extends AuthBase {
   loginFields = ['username', 'password'];
-
-  @action
-  async login(event) {
-    event.preventDefault();
-    // base login flow
-  }
 }

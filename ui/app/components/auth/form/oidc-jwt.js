@@ -4,7 +4,6 @@
  */
 
 import AuthBase from './base';
-import { action } from '@ember/object';
 
 // TODO separate these?? they use the same endpoint, so I think it makes sense to keep as one...tbd
 /**
@@ -14,10 +13,4 @@ import { action } from '@ember/object';
 
 export default class AuthFormOidcJwt extends AuthBase {
   loginFields = ['role'];
-
-  @action
-  async login(event) {
-    event.preventDefault();
-    // base login flow
-  }
 }

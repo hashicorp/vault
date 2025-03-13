@@ -1,0 +1,30 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{! 
+Template only form rendered by each auth method type. 
+Each backing component class is responsible for defining its loginFields. 
+The base.js component handles standard login workflows, but more complex methods can override by defining their own submit method.
+^ this will change when we break up the custom auth service and stop using the cluster adapter auth method
+}}
+
+<form {{on "submit" @onSubmit}}>
+
+  {{! yields elements from Auth::LoginTemplate }}
+  {{yield}}
+
+  <div class="margin-24">
+    {{#each @loginFields as |field|}}
+      {{! token or password should render as "password" types, otherwise render text inputs }}
+      {{#let (if (includes field (array "token" "password")) "password" "text") as |inputType|}}
+        <Hds::Form::TextInput::Field @type={{inputType}} name={{field}} class="has-bottom-margin-m" as |F|>
+          <F.Label>{{capitalize field}}</F.Label>
+        </Hds::Form::TextInput::Field>
+      {{/let}}
+    {{/each}}
+
+    <Hds::Button @text="Sign in" @isFullWidth={{true}} type="submit" class="has-top-margin-m has-bottom-margin-m" />
+  </div>
+</form>

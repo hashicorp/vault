@@ -22,14 +22,7 @@ export default class AuthFormOkta extends AuthBase {
   @tracked challengeAnswer = '';
 
   @action
-  async login(event) {
-    event.preventDefault();
-    const formData = new FormData(event.target);
-    const data = {};
-
-    for (const key of formData.keys()) {
-      data[key] = formData.get(key);
-    }
+  async login(data) {
     data.nonce = uuidv4();
 
     try {

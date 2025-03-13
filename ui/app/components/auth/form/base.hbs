@@ -3,15 +3,6 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<form {{on "submit" this.login}}>
+<Auth::Form @onSubmit={{this.onSubmit}} @loginFields={{this.loginFields}}>
   {{yield}}
-
-  <div class="margin-24">
-    {{#each this.loginFields as |field|}}
-      <Hds::Form::TextInput::Field @type={{this.maybeMask field}} name={{field}} class="has-bottom-margin-m" as |F|>
-        <F.Label>{{capitalize field}}</F.Label>
-      </Hds::Form::TextInput::Field>
-    {{/each}}
-    <Hds::Button @text="Sign in" @isFullWidth={{true}} type="submit" class="has-top-margin-m has-bottom-margin-m" />
-  </div>
-</form>
+</Auth::Form>

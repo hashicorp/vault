@@ -13,10 +13,10 @@ import { waitFor } from '@ember/test-waiters';
 import { allSupportedAuthBackends, supportedTypes } from 'vault/helpers/supported-auth-backends';
 
 /**
- * @module Auth::LoginForm 2.0
+ * @module Auth::LoginTemplate
  * */
 
-export default class AuthLoginForm extends Component {
+export default class AuthLoginTemplate extends Component {
   @service flags;
   @service store;
   @service version;
