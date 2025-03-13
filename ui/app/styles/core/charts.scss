@@ -1,3 +1,7 @@
+@use '../utils/color_variables';
+@use '../utils/font_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -33,21 +37,21 @@
 }
 
 .legend-label {
-  padding-left: $spacing-8;
-  padding-right: $spacing-36;
+  padding-left: size_variables.$spacing-8;
+  padding-right: size_variables.$spacing-36;
 }
 
 .chart-tooltip {
-  background-color: $black;
+  background-color: color_variables.$black;
   color: white;
-  font-size: $size-9;
+  font-size: size_variables.$size-9;
   padding: 6px;
-  border-radius: $radius-large;
+  border-radius: size_variables.$radius-large;
   flex-wrap: nowrap;
   width: fit-content;
 
   .bold {
-    font-weight: $font-weight-bold;
+    font-weight: font_variables.$font-weight-bold;
   }
 }
 
@@ -60,7 +64,7 @@
   height: 0;
   border-left: 5px solid transparent;
   border-right: 5px solid transparent;
-  border-top: 9px solid $black;
+  border-top: 9px solid color_variables.$black;
   position: absolute;
   opacity: 0.8;
   bottom: -9px;
@@ -69,21 +73,21 @@
 
 .has-grid {
   g > text {
-    color: $ui-gray-500;
-    font-size: $size-9;
+    color: color_variables.$ui-gray-500;
+    font-size: size_variables.$size-9;
   }
 
   g > line {
     // TODO: mix-blend doesn't work in firefox browser?
     mix-blend-mode: darken;
-    color: $ui-gray-300;
+    color: color_variables.$ui-gray-300;
   }
 }
 
 .is-horizontal {
   .tick > text {
-    font-weight: $font-weight-semibold;
-    font-size: $size-9;
+    font-weight: font_variables.$font-weight-semibold;
+    font-size: size_variables.$size-9;
   }
 }
 
@@ -95,16 +99,16 @@
     grid-column-end: 4;
     grid-row-start: 2;
     grid-row-end: 3;
-    margin-left: $spacing-48;
-    margin-right: $spacing-48;
+    margin-left: size_variables.$spacing-48;
+    margin-right: size_variables.$spacing-48;
   }
   .chart-container-right {
     grid-column-start: 1;
     grid-column-end: 4;
     grid-row-start: 3;
     grid-row-end: 4;
-    margin-left: $spacing-48;
-    margin-right: $spacing-48;
+    margin-left: size_variables.$spacing-48;
+    margin-right: size_variables.$spacing-48;
   }
 
   .timestamp {
