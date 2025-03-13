@@ -10,7 +10,6 @@ import (
 	"math/rand"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -491,9 +490,10 @@ func (i *IdentityStore) loadEntities(ctx context.Context, isActive bool, persist
 	}
 	i.logger.Debug("entities collected", "num_existing", len(existing))
 
-	// Reponsible for flagging callers if entities should be reloaded in case
-	// entity merges need to be persisted.
-	var reload atomic.Bool
+	// Track whether we performed entity merges during loading. Caller may need to
+	// know to work out if we need to persist them by re-running with
+	// persistMerges = true.
+	merged := false
 
 	duplicatedAccessors := make(map[string]struct{})
 	// Make the channels used for the worker pool. We send the index into existing
@@ -644,7 +644,6 @@ LOOP:
 						// cluster since they are always non-local. Note that we check !Standby
 						// and !Secondary because we still need to write back even if this is a
 						// single cluster with no replication.
-
 						if !i.localNode.ReplicationState().HasState(
 							consts.ReplicationDRSecondary|
 								consts.ReplicationPerformanceSecondary,
@@ -680,14 +679,14 @@ LOOP:
 
 					// Only update MemDB and don't hit the storage again unless we are
 					// merging and on a primary active node.
-					shouldReload, err := i.upsertEntityInTxn(nsCtx, tx, entity, nil, persist, persistMerges)
+					thisOneMerged, err := i.upsertEntityInTxn(nsCtx, tx, entity, nil, persist, persistMerges)
 					if err != nil {
 						return fmt.Errorf("failed to update entity in MemDB: %w", err)
 					}
 					upsertedItems += toBeUpserted
 
-					if shouldReload {
-						reload.CompareAndSwap(false, true)
+					if thisOneMerged {
+						merged = true
 					}
 				}
 				if upsertedItems > 0 {
@@ -700,7 +699,6 @@ LOOP:
 			if err != nil {
 				return false, err
 			}
-
 		}
 	}
 
@@ -722,7 +720,7 @@ LOOP:
 		i.logger.Info("entities restored")
 	}
 
-	return reload.Load(), nil
+	return merged, nil
 }
 
 // loadLocalAliasesForEntity upserts local aliases into the entity by retrieving
@@ -786,7 +784,7 @@ func getAccessorsOnDuplicateAliases(aliases []*identity.Alias) []string {
 // previousEntity. persistMerges is ignored if persist = true but if persist =
 // false it allows the caller to request that we persist the data only if it is
 // changes by a merge caused by a duplicate alias.
-func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, entity *identity.Entity, previousEntity *identity.Entity, persist, persistMerges bool) (reload bool, err error) {
+func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, entity *identity.Entity, previousEntity *identity.Entity, persist, persistMerges bool) (merged bool, err error) {
 	defer metrics.MeasureSince([]string{"identity", "upsert_entity_txn"}, time.Now())
 
 	if txn == nil {
