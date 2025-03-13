@@ -17,7 +17,7 @@ import (
 // or not certain attributes should be displayed,
 // required, and named. You can also define different
 // path patterns to list all roles.
-func (gb *GenericBackend[CC, C, R]) pathRole(inputRole *Role[R, C]) []*framework.Path {
+func (gb *GenericBackend[O, C, R]) pathRole(inputRole *Role[R, C]) []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "role/" + framework.GenericNameRegex("name"),
@@ -53,7 +53,7 @@ func (gb *GenericBackend[CC, C, R]) pathRole(inputRole *Role[R, C]) []*framework
 	}
 }
 
-func (gb *GenericBackend[CC, C, R]) pathRoleExistenceCheck(roleFieldName string) framework.ExistenceFunc {
+func (gb *GenericBackend[O, C, R]) pathRoleExistenceCheck(roleFieldName string) framework.ExistenceFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
 		rName := d.Get(roleFieldName).(string)
 		r, err := gb.getRole(ctx, req.Storage, rName)
@@ -65,7 +65,7 @@ func (gb *GenericBackend[CC, C, R]) pathRoleExistenceCheck(roleFieldName string)
 }
 
 // pathRolesList makes a request to Vault storage to retrieve a list of roles for the backend
-func (gb *GenericBackend[CC, C, R]) pathRolesList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (gb *GenericBackend[O, C, R]) pathRolesList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	entries, err := req.Storage.List(ctx, "role/")
 	if err != nil {
 		return nil, err
@@ -75,7 +75,7 @@ func (gb *GenericBackend[CC, C, R]) pathRolesList(ctx context.Context, req *logi
 }
 
 // pathRolesRead makes a request to Vault storage to read a role and return response data
-func (gb *GenericBackend[CC, C, R]) pathRolesRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (gb *GenericBackend[O, C, R]) pathRolesRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	role, err := gb.getRole(ctx, req.Storage, d.Get("name").(string))
 	if err != nil {
 		return nil, err
@@ -89,7 +89,7 @@ func (gb *GenericBackend[CC, C, R]) pathRolesRead(ctx context.Context, req *logi
 }
 
 // pathRolesWrite makes a request to Vault storage to update a role based on the attributes passed to the role configuration
-func (gb *GenericBackend[CC, C, R]) pathRolesWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (gb *GenericBackend[O, C, R]) pathRolesWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name, ok := data.GetOk("name")
 	if !ok {
 		return logical.ErrorResponse("missing role name"), nil
@@ -138,7 +138,7 @@ func (gb *GenericBackend[CC, C, R]) pathRolesWrite(ctx context.Context, req *log
 }
 
 // pathRolesDelete makes a request to Vault storage to delete a role
-func (gb *GenericBackend[CC, C, R]) pathRolesDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (gb *GenericBackend[O, C, R]) pathRolesDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	err := req.Storage.Delete(ctx, "role/"+d.Get("name").(string))
 	if err != nil {
 		return nil, fmt.Errorf("error deleting hashiCups role: %w", err)
@@ -148,7 +148,7 @@ func (gb *GenericBackend[CC, C, R]) pathRolesDelete(ctx context.Context, req *lo
 }
 
 // setRole adds the role to the Vault storage API
-func (gb *GenericBackend[CC, C, R]) setRole(ctx context.Context, s logical.Storage, name string, roleEntry map[string]interface{}) error {
+func (gb *GenericBackend[O, C, R]) setRole(ctx context.Context, s logical.Storage, name string, roleEntry map[string]interface{}) error {
 	entry, err := logical.StorageEntryJSON("role/"+name, roleEntry)
 	if err != nil {
 		return err
@@ -166,7 +166,7 @@ func (gb *GenericBackend[CC, C, R]) setRole(ctx context.Context, s logical.Stora
 }
 
 // getRole gets the role from the Vault storage API
-func (gb *GenericBackend[CC, C, R]) getRole(ctx context.Context, s logical.Storage, name string) (*R, error) {
+func (gb *GenericBackend[O, C, R]) getRole(ctx context.Context, s logical.Storage, name string) (*R, error) {
 	if name == "" {
 		return nil, fmt.Errorf("missing role name")
 	}

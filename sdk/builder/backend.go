@@ -12,29 +12,29 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-type GenericBackend[CC, C, R any] struct {
+type GenericBackend[O, C, R any] struct {
 	*framework.Backend
 	lock           sync.RWMutex
 	client         *C
-	newClient      func(*CC) (*C, error)
+	newClient      func(*O) (*C, error)
 	validateRole   func(*R) error
-	validateConfig func(*CC) error
+	validateConfig func(*O) error
 	role           *Role[R, C]
 }
 
 var myBackend any
 
-func (gb *GenericBackend[CC, C, R]) setBackend() {
+func (gb *GenericBackend[O, C, R]) setBackend() {
 	myBackend = gb
 }
 
-func (gb *GenericBackend[CC, C, R]) invalidate(_ context.Context, key string) {
+func (gb *GenericBackend[O, C, R]) invalidate(_ context.Context, key string) {
 	if key == "config" {
 		gb.reset()
 	}
 }
 
-func (gb *GenericBackend[CC, C, R]) reset() {
+func (gb *GenericBackend[O, C, R]) reset() {
 	gb.lock.Lock()
 	defer gb.lock.Unlock()
 	gb.client = nil
@@ -42,7 +42,7 @@ func (gb *GenericBackend[CC, C, R]) reset() {
 
 // getClient locks the backend as it configures and creates a
 // a new client for the target API
-func (gb *GenericBackend[CC, C, R]) getClient(ctx context.Context, s logical.Storage) (*C, error) {
+func (gb *GenericBackend[O, C, R]) getClient(ctx context.Context, s logical.Storage) (*C, error) {
 	gb.lock.Lock()
 	defer gb.lock.Unlock()
 
@@ -57,7 +57,7 @@ func (gb *GenericBackend[CC, C, R]) getClient(ctx context.Context, s logical.Sto
 	}
 
 	if gb.client == nil && config == nil {
-		config = new(CC)
+		config = new(O)
 	}
 
 	gb.client, err = gb.newClient(config)

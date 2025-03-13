@@ -8,7 +8,7 @@ import (
 )
 
 // return the secret
-func (gb *GenericBackend[CC, C, R]) secret(secret *Secret[R, C]) *framework.Secret {
+func (gb *GenericBackend[O, C, R]) secret(secret *Secret[R, C]) *framework.Secret {
 	return &framework.Secret{
 		Type:   secret.Type,
 		Fields: secret.Fields,
@@ -18,7 +18,7 @@ func (gb *GenericBackend[CC, C, R]) secret(secret *Secret[R, C]) *framework.Secr
 }
 
 // tokenRevoke removes the token from the Vault storage API and calls the client to revoke the token
-func (gb *GenericBackend[CC, C, R]) tokenRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (gb *GenericBackend[O, C, R]) tokenRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	client, role, err := gb.clientAndRole(ctx, req, d)
 	if err != nil {
 		return nil, err
@@ -28,7 +28,7 @@ func (gb *GenericBackend[CC, C, R]) tokenRevoke(ctx context.Context, req *logica
 }
 
 // tokenRenew calls the client to create a new token and stores it in the Vault storage API
-func (gb *GenericBackend[CC, C, R]) tokenRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (gb *GenericBackend[O, C, R]) tokenRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	client, role, err := gb.clientAndRole(ctx, req, d)
 	if err != nil {
 		return nil, err

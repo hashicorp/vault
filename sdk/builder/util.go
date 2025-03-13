@@ -10,7 +10,7 @@ import (
 )
 
 // tokenRevoke removes the token from the Vault storage API and calls the client to revoke the token
-func (gb *GenericBackend[CC, C, R]) clientAndRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*C, *R, error) {
+func (gb *GenericBackend[O, C, R]) clientAndRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*C, *R, error) {
 	roleName := d.Get("name").(string)
 
 	roleEntry, err := gb.getRole(ctx, req.Storage, roleName)

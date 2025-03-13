@@ -14,7 +14,7 @@ import (
 // or not certain attributes should be displayed,
 // required, and named. You can also define different
 // path patterns to list all roles.
-func (gb *GenericBackend[CC, C, R]) pathCredentials() *framework.Path {
+func (gb *GenericBackend[O, C, R]) pathCredentials() *framework.Path {
 	return &framework.Path{
 		Pattern: "creds/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
@@ -34,7 +34,7 @@ func (gb *GenericBackend[CC, C, R]) pathCredentials() *framework.Path {
 }
 
 // pathRolesRead makes a request to Vault storage to read a role and return response data
-func (gb *GenericBackend[CC, C, R]) pathCredentialsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (gb *GenericBackend[O, C, R]) pathCredentialsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	roleName := d.Get("name").(string)
 
 	roleEntry, err := gb.getRole(ctx, req.Storage, roleName)

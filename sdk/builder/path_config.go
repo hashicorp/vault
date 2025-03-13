@@ -22,7 +22,7 @@ const (
 // required, and named. For example, password
 // is marked as sensitive and will not be output
 // when you read the configuration.
-func (gb *GenericBackend[CC, C, R]) pathConfig(inputConfig *ClientConfig[CC, C, R]) *framework.Path {
+func (gb *GenericBackend[O, C, R]) pathConfig(inputConfig *ClientConfig[O, C, R]) *framework.Path {
 	return &framework.Path{
 		Pattern: "config",
 		Fields:  inputConfig.Fields,
@@ -46,7 +46,7 @@ func (gb *GenericBackend[CC, C, R]) pathConfig(inputConfig *ClientConfig[CC, C, 
 	}
 }
 
-func (gb *GenericBackend[CC, C, R]) getConfig(ctx context.Context, s logical.Storage) (*CC, error) {
+func (gb *GenericBackend[O, C, R]) getConfig(ctx context.Context, s logical.Storage) (*O, error) {
 	entry, err := s.Get(ctx, configStoragePath)
 	if err != nil {
 		return nil, err
@@ -56,7 +56,7 @@ func (gb *GenericBackend[CC, C, R]) getConfig(ctx context.Context, s logical.Sto
 		return nil, nil
 	}
 
-	config := new(CC)
+	config := new(O)
 	if err := entry.DecodeJSON(&config); err != nil {
 		return nil, fmt.Errorf("error reading root configuration: %w", err)
 	}
@@ -66,7 +66,7 @@ func (gb *GenericBackend[CC, C, R]) getConfig(ctx context.Context, s logical.Sto
 }
 
 // pathConfigExistenceCheck verifies if the configuration exists.
-func (gb *GenericBackend[CC, C, R]) pathConfigExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
+func (gb *GenericBackend[O, C, R]) pathConfigExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
 	out, err := req.Storage.Get(ctx, req.Path)
 	if err != nil {
 		return false, fmt.Errorf("existence check failed: %w", err)
@@ -76,7 +76,7 @@ func (gb *GenericBackend[CC, C, R]) pathConfigExistenceCheck(ctx context.Context
 }
 
 // pathConfigRead reads the configuration and outputs non-sensitive information.
-func (gb *GenericBackend[CC, C, R]) pathConfigRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (gb *GenericBackend[O, C, R]) pathConfigRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	config, err := gb.getConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
@@ -90,7 +90,7 @@ func (gb *GenericBackend[CC, C, R]) pathConfigRead(ctx context.Context, req *log
 }
 
 // pathConfigWrite updates the configuration for the backend
-func (gb *GenericBackend[CC, C, R]) pathConfigWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (gb *GenericBackend[O, C, R]) pathConfigWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	gb.Logger().Info("do we make it ?")
 	config, err := gb.getConfig(ctx, req.Storage)
 	if err != nil {
@@ -102,7 +102,7 @@ func (gb *GenericBackend[CC, C, R]) pathConfigWrite(ctx context.Context, req *lo
 		if !createOperation {
 			return nil, errors.New("config not found during update operation")
 		}
-		config = new(CC)
+		config = new(O)
 	}
 	gb.Logger().Info("do we make it ?")
 
@@ -117,7 +117,7 @@ func (gb *GenericBackend[CC, C, R]) pathConfigWrite(ctx context.Context, req *lo
 	}
 	gb.Logger().Info("do we make it ?")
 
-	result := new(CC)
+	result := new(O)
 	err = mapstructure.Decode(writeData, result)
 	if err != nil {
 		return nil, err
@@ -144,7 +144,7 @@ func (gb *GenericBackend[CC, C, R]) pathConfigWrite(ctx context.Context, req *lo
 }
 
 // pathConfigDelete removes the configuration for the backend
-func (gb *GenericBackend[CC, C, R]) pathConfigDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (gb *GenericBackend[O, C, R]) pathConfigDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	err := req.Storage.Delete(ctx, configStoragePath)
 
 	if err == nil {

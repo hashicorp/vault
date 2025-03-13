@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-type BackendBuilder[CC, C, R any] struct {
+type BackendBuilder[O, C, R any] struct {
 	version            string
 	backendType        logical.BackendType
 	backendHelpMessage string
@@ -19,14 +19,14 @@ type BackendBuilder[CC, C, R any] struct {
 	walRollback       framework.WALRollbackFunc
 	walRollbackMinAge time.Duration
 
-	clientConfig *ClientConfig[CC, C, R]
+	clientConfig *ClientConfig[O, C, R]
 	role         *Role[R, C]
 }
 
-type ClientConfig[CC, C, R any] struct {
-	NewClientFunc   func(*CC) (*C, error)
+type ClientConfig[O, C, R any] struct {
+	NewClientFunc   func(*O) (*C, error)
 	Fields          map[string]*framework.FieldSchema
-	ValidateFunc    func(*CC) error
+	ValidateFunc    func(*O) error
 	HelpSynopsis    string
 	HelpDescription string
 }
@@ -45,8 +45,8 @@ type Secret[R, C any] struct {
 	RenewFunc       func(req *logical.Request, d *framework.FieldData, client *C, role *R) (*logical.Response, error)
 }
 
-func (bb *BackendBuilder[CC, C, R]) build() (*GenericBackend[CC, C, R], error) {
-	gb := &GenericBackend[CC, C, R]{}
+func (bb *BackendBuilder[O, C, R]) build() (*GenericBackend[O, C, R], error) {
+	gb := &GenericBackend[O, C, R]{}
 
 	gb.newClient = bb.clientConfig.NewClientFunc
 	gb.validateConfig = bb.clientConfig.ValidateFunc
@@ -86,32 +86,32 @@ func (bb *BackendBuilder[CC, C, R]) build() (*GenericBackend[CC, C, R], error) {
 	return gb, nil
 }
 
-func (bb *BackendBuilder[CC, C, R]) WithVersion(version string) *BackendBuilder[CC, C, R] {
+func (bb *BackendBuilder[O, C, R]) WithVersion(version string) *BackendBuilder[O, C, R] {
 	bb.version = version
 	return bb
 }
 
-func (bb *BackendBuilder[CC, C, R]) WithBackendType(backendType logical.BackendType) *BackendBuilder[CC, C, R] {
+func (bb *BackendBuilder[O, C, R]) WithBackendType(backendType logical.BackendType) *BackendBuilder[O, C, R] {
 	bb.backendType = backendType
 	return bb
 }
 
-func (bb *BackendBuilder[CC, C, R]) WithBackendHelpMessage(backendHelpMessage string) *BackendBuilder[CC, C, R] {
+func (bb *BackendBuilder[O, C, R]) WithBackendHelpMessage(backendHelpMessage string) *BackendBuilder[O, C, R] {
 	bb.backendHelpMessage = backendHelpMessage
 	return bb
 }
 
-func (bb *BackendBuilder[CC, C, R]) WithWalRollbackFunc(wallRollBackFunc framework.WALRollbackFunc) *BackendBuilder[CC, C, R] {
+func (bb *BackendBuilder[O, C, R]) WithWalRollbackFunc(wallRollBackFunc framework.WALRollbackFunc) *BackendBuilder[O, C, R] {
 	bb.walRollback = wallRollBackFunc
 	return bb
 }
 
-func (bb *BackendBuilder[CC, C, R]) WithClientConfig(clientConfig *ClientConfig[CC, C, R]) *BackendBuilder[CC, C, R] {
+func (bb *BackendBuilder[O, C, R]) WithClientConfig(clientConfig *ClientConfig[O, C, R]) *BackendBuilder[O, C, R] {
 	bb.clientConfig = clientConfig
 	return bb
 }
 
-func (bb *BackendBuilder[CC, C, R]) WithRole(role *Role[R, C]) *BackendBuilder[CC, C, R] {
+func (bb *BackendBuilder[O, C, R]) WithRole(role *Role[R, C]) *BackendBuilder[O, C, R] {
 	bb.role = role
 	return bb
 }
