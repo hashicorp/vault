@@ -23,8 +23,6 @@ module('Integration | Component | totp-list-item', function (hooks) {
     assert.dom(`[data-test-secret-link=${item.id}`).exists('has correct link');
   });
 
-  // todo test that actions are present in toggle
-
   test('it has details and delete menu item', async function (assert) {
     const item = EmberObject.create({
       id: 'foo',
