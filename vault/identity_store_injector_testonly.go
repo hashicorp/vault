@@ -359,7 +359,7 @@ func (i *IdentityStore) createDuplicateEntityAliases() framework.OperationFunc {
 			flags.Count = 2
 		}
 
-		ids, _, err := i.CreateDuplicateEntityAliasesInStorage(ctx, flags)
+		ids, bucketIds, err := i.CreateDuplicateEntityAliasesInStorage(ctx, flags)
 		if err != nil {
 			i.logger.Error("error creating duplicate entities", "error", err)
 			return logical.ErrorResponse("error creating duplicate entities"), err
@@ -367,7 +367,8 @@ func (i *IdentityStore) createDuplicateEntityAliases() framework.OperationFunc {
 
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"entity_ids": ids,
+				"entity_ids":  ids,
+				"bucket_keys": bucketIds,
 			},
 		}, nil
 	}

@@ -199,7 +199,8 @@ func (s *StoragePacker) DeleteMultipleItems(ctx context.Context, logger hclog.Lo
 		// Look for a matching storage entries and delete them from the list.
 		for i := 0; i < len(bucket.Items); i++ {
 			if _, ok := itemsToRemove[bucket.Items[i].ID]; ok {
-				bucket.Items[i] = bucket.Items[len(bucket.Items)-1]
+				copy(bucket.Items[i:], bucket.Items[i+1:])
+				bucket.Items[len(bucket.Items)-1] = nil // allow GC
 				bucket.Items = bucket.Items[:len(bucket.Items)-1]
 
 				// Since we just moved a value to position i we need to

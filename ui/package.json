@@ -22,6 +22,7 @@
     "lint:js": "eslint . --cache",
     "lint:js:quiet": "eslint . --cache --quiet",
     "lint:js:fix": "eslint . --fix",
+    "lint:types": "tsc --noEmit",
     "fmt": "concurrently -c \"auto\" -n fmt: \"yarn:fmt:*\"",
     "fmt:js": "prettier --config .prettierrc.js --write '{app,tests,config,lib}/**/*.js'",
     "fmt:hbs": "prettier --config .prettierrc.js --write '**/*.hbs'",
@@ -29,8 +30,8 @@
     "start": "VAULT_ADDR=http://127.0.0.1:8200; ember server --proxy=$VAULT_ADDR",
     "start2": "ember server --proxy=http://127.0.0.1:8202 --port=4202",
     "start:chroot": "ember server --proxy=http://127.0.0.1:8300 --port=4300",
-    "test": "concurrently --kill-others-on-fail -P -c \"auto\" -n lint:js,lint:hbs,vault \"yarn:lint:js:quiet\" \"yarn:lint:hbs:quiet\" \"node scripts/start-vault.js {@}\" --",
-    "test:enos": "concurrently --kill-others-on-fail -P -c \"auto\" -n lint:js,lint:hbs,enos \"yarn:lint:js:quiet\" \"yarn:lint:hbs:quiet\" \"node scripts/enos-test-ember.js {@}\" --",
+    "test": "concurrently --kill-others-on-fail -P -c \"auto\" -n lint:js,lint:hbs,lint:types,vault \"yarn:lint:js:quiet\" \"yarn:lint:hbs:quiet\" \"yarn:lint:types\" \"node scripts/start-vault.js {@}\" --",
+    "test:enos": "concurrently --kill-others-on-fail -P -c \"auto\" -n lint:js,lint:hbs,lint:types,enos \"yarn:lint:js:quiet\" \"yarn:lint:hbs:quiet\" \"yarn:lint:types\" \"node scripts/enos-test-ember.js {@}\" --",
     "test:oss": "yarn run test -f='!enterprise'",
     "test:ent": "node scripts/start-vault.js -f='enterprise'",
     "test:quick": "node scripts/start-vault.js --split=8 --preserve-test-name --parallel",
@@ -38,22 +39,6 @@
     "test:filter": "node scripts/start-vault.js --server -f='!enterprise'",
     "vault": "VAULT_REDIRECT_ADDR=http://127.0.0.1:8200 vault server -log-level=error -dev -dev-root-token-id=root -dev-ha -dev-transactional",
     "vault:cluster": "VAULT_REDIRECT_ADDR=http://127.0.0.1:8202 vault server -log-level=error -dev -dev-root-token-id=root -dev-listen-address=127.0.0.1:8202 -dev-ha -dev-transactional"
-  },
-  "lint-staged": {
-    "*.js": [
-      "prettier --config .prettierrc.js --write",
-      "eslint --quiet",
-      "git add"
-    ],
-    "*.hbs": [
-      "prettier --config .prettierrc.js --write",
-      "ember-template-lint --quiet",
-      "git add"
-    ],
-    "*.scss": [
-      "prettier --write",
-      "git add"
-    ]
   },
   "devDependencies": {
     "@babel/cli": "^7.24.6",
@@ -71,13 +56,14 @@
     "@ember/render-modifiers": "^1.0.2",
     "@ember/string": "^3.1.1",
     "@ember/test-helpers": "^3.2.0",
-    "@ember/test-waiters": "^3.1.0",
+    "@ember/test-waiters": "^4.0.0",
     "@glimmer/component": "^1.1.2",
     "@glimmer/tracking": "^1.1.2",
     "@icholy/duration": "^5.1.0",
     "@lineal-viz/lineal": "^0.5.1",
     "@tsconfig/ember": "^2.0.0",
     "@types/d3-array": "^3.2.1",
+    "@types/ember-data": "^4.4.16",
     "@types/qunit": "^2.19.4",
     "@types/rsvp": "^4.0.4",
     "@types/shell-quote": "^1.7.1",
@@ -102,7 +88,7 @@
     "date-fns-tz": "^1.2.2",
     "deepmerge": "^4.0.0",
     "doctoc": "^2.2.0",
-    "dompurify": "^3.0.2",
+    "dompurify": "^3.2.4",
     "ember-a11y-testing": "^7.0.1",
     "ember-basic-dropdown": "^8.0.4",
     "ember-cli": "~5.8.0",
@@ -130,7 +116,7 @@
     "ember-modal-dialog": "^4.0.1",
     "ember-modifier": "^4.1.0",
     "ember-page-title": "^8.0.0",
-    "ember-power-select": "^8.1.0",
+    "ember-power-select": "^8.6.2",
     "ember-qrcode-shim": "^0.4.0",
     "ember-qunit": "^8.0.1",
     "ember-resolver": "^11.0.1",
@@ -172,8 +158,6 @@
     "sass": "^1.66.3",
     "shell-quote": "^1.8.1",
     "sinon": "^17.0.1",
-    "string.prototype.endswith": "^0.2.0",
-    "string.prototype.startswith": "^0.2.0",
     "stylelint": "^15.11.0",
     "stylelint-config-standard": "^34.0.0",
     "stylelint-prettier": "^4.0.2",
@@ -233,7 +217,7 @@
   },
   "dependencies": {
     "@babel/core": "^7.24.0",
-    "@hashicorp/design-system-components": "~4.13.0",
+    "@hashicorp/design-system-components": "~4.16.0",
     "ember-auto-import": "^2.7.2",
     "handlebars": "4.7.7",
     "highlight.js": "^10.4.1",
