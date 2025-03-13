@@ -41,8 +41,8 @@ func (gb *GenericBackend[CC, C, R]) pathConfig(inputConfig *ClientConfig[CC, C, 
 			},
 		},
 		ExistenceCheck:  gb.pathConfigExistenceCheck,
-		HelpSynopsis:    pathConfigHelpSynopsis,
-		HelpDescription: pathConfigHelpDescription,
+		HelpSynopsis:    inputConfig.HelpSynopsis,
+		HelpDescription: inputConfig.HelpDescription,
 	}
 }
 

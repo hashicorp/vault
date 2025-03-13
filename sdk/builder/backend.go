@@ -19,6 +19,7 @@ type GenericBackend[CC, C, R any] struct {
 	newClient      func(*CC) (*C, error)
 	validateRole   func(*R) error
 	validateConfig func(*CC) error
+	role           *Role[R, C]
 }
 
 var myBackend any

@@ -12,22 +12,23 @@ import (
 )
 
 type BackendBuilder[CC, C, R any] struct {
-	Name               string
-	Version            string
-	Type               logical.BackendType
-	BackendHelpMessage string
+	version            string
+	backendType        logical.BackendType
+	backendHelpMessage string
 
-	WALRollback       framework.WALRollbackFunc
-	WALRollbackMinAge time.Duration
+	walRollback       framework.WALRollbackFunc
+	walRollbackMinAge time.Duration
 
-	ClientConfig *ClientConfig[CC, C, R]
-	Role         *Role[R, C]
+	clientConfig *ClientConfig[CC, C, R]
+	role         *Role[R, C]
 }
 
 type ClientConfig[CC, C, R any] struct {
-	NewClientFunc func(*CC) (*C, error)
-	Fields        map[string]*framework.FieldSchema
-	ValidateFunc  func(*CC) error
+	NewClientFunc   func(*CC) (*C, error)
+	Fields          map[string]*framework.FieldSchema
+	ValidateFunc    func(*CC) error
+	HelpSynopsis    string
+	HelpDescription string
 }
 
 type Role[R, C any] struct {
@@ -47,16 +48,19 @@ type Secret[R, C any] struct {
 func (bb *BackendBuilder[CC, C, R]) build() (*GenericBackend[CC, C, R], error) {
 	gb := &GenericBackend[CC, C, R]{}
 
-	gb.newClient = bb.ClientConfig.NewClientFunc
-	gb.validateConfig = bb.ClientConfig.ValidateFunc
-	gb.validateRole = bb.Role.ValidateFunc
+	gb.newClient = bb.clientConfig.NewClientFunc
+	gb.validateConfig = bb.clientConfig.ValidateFunc
+	gb.validateRole = bb.role.ValidateFunc
 
-	configPath := gb.pathConfig(bb.ClientConfig)
-	rolePaths := gb.pathRole(bb.Role)
+	gb.role = bb.role
+
+	configPath := gb.pathConfig(bb.clientConfig)
+	rolePaths := gb.pathRole(bb.role)
+	credsPath := gb.pathCredentials()
 
 	gb.Backend = &framework.Backend{
-		BackendType: bb.Type,
-		Help:        strings.TrimSpace(bb.BackendHelpMessage),
+		BackendType: bb.backendType,
+		Help:        strings.TrimSpace(bb.backendHelpMessage),
 		PathsSpecial: &logical.Paths{
 			LocalStorage: []string{},
 			SealWrapStorage: []string{
@@ -67,14 +71,47 @@ func (bb *BackendBuilder[CC, C, R]) build() (*GenericBackend[CC, C, R], error) {
 		Paths: framework.PathAppend(
 			[]*framework.Path{
 				configPath,
+				credsPath,
 			},
 			rolePaths,
 		),
-		Secrets:           []*framework.Secret{},
+		Secrets: []*framework.Secret{
+			gb.secret(bb.role.Secret),
+		},
 		Invalidate:        gb.invalidate,
-		WALRollback:       bb.WALRollback,
-		WALRollbackMinAge: bb.WALRollbackMinAge,
-		RunningVersion:    bb.Version,
+		WALRollback:       bb.walRollback,
+		WALRollbackMinAge: bb.walRollbackMinAge,
+		RunningVersion:    bb.version,
 	}
 	return gb, nil
+}
+
+func (bb *BackendBuilder[CC, C, R]) WithVersion(version string) *BackendBuilder[CC, C, R] {
+	bb.version = version
+	return bb
+}
+
+func (bb *BackendBuilder[CC, C, R]) WithBackendType(backendType logical.BackendType) *BackendBuilder[CC, C, R] {
+	bb.backendType = backendType
+	return bb
+}
+
+func (bb *BackendBuilder[CC, C, R]) WithBackendHelpMessage(backendHelpMessage string) *BackendBuilder[CC, C, R] {
+	bb.backendHelpMessage = backendHelpMessage
+	return bb
+}
+
+func (bb *BackendBuilder[CC, C, R]) WithWalRollbackFunc(wallRollBackFunc framework.WALRollbackFunc) *BackendBuilder[CC, C, R] {
+	bb.walRollback = wallRollBackFunc
+	return bb
+}
+
+func (bb *BackendBuilder[CC, C, R]) WithClientConfig(clientConfig *ClientConfig[CC, C, R]) *BackendBuilder[CC, C, R] {
+	bb.clientConfig = clientConfig
+	return bb
+}
+
+func (bb *BackendBuilder[CC, C, R]) WithRole(role *Role[R, C]) *BackendBuilder[CC, C, R] {
+	bb.role = role
+	return bb
 }

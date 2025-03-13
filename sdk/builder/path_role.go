@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -36,8 +37,8 @@ func (gb *GenericBackend[CC, C, R]) pathRole(inputRole *Role[R, C]) []*framework
 				},
 			},
 			ExistenceCheck:  gb.pathRoleExistenceCheck("name"),
-			HelpSynopsis:    pathRoleHelpSynopsis,
-			HelpDescription: pathRoleHelpDescription,
+			HelpSynopsis:    rolesHelpSynopsis,
+			HelpDescription: rolesHelpDescription,
 		},
 		{
 			Pattern: "role/?$",
@@ -46,8 +47,8 @@ func (gb *GenericBackend[CC, C, R]) pathRole(inputRole *Role[R, C]) []*framework
 					Callback: gb.pathRolesList,
 				},
 			},
-			HelpSynopsis:    pathRoleListHelpSynopsis,
-			HelpDescription: pathRoleListHelpDescription,
+			HelpSynopsis:    pathRolesListHelpSynopsis,
+			HelpDescription: pathRolesListHelpDescription,
 		},
 	}
 }
@@ -107,13 +108,15 @@ func (gb *GenericBackend[CC, C, R]) pathRolesWrite(ctx context.Context, req *log
 		roleEntry = new(R)
 	}
 
-	writeData := structs.Map(roleEntry)
+	writeData := map[string]any{}
+	err = mapstructure.Decode(roleEntry, &writeData)
+	if err != nil {
+		return nil, err
+	}
 
 	for k := range writeData {
-		if userInput, ok := data.GetOk(k); ok {
+		if userInput, ok := data.GetOk(strings.ToLower(k)); ok {
 			writeData[k] = userInput
-		} else if createOperation {
-			return nil, fmt.Errorf("missing %s in configuration", k)
 		}
 	}
 
@@ -186,12 +189,8 @@ func (gb *GenericBackend[CC, C, R]) getRole(ctx context.Context, s logical.Stora
 }
 
 const (
-	pathRoleHelpSynopsis    = `Manages the Vault role for generating HashiCups tokens.`
-	pathRoleHelpDescription = `
-This path allows you to read and write roles used to generate HashiCups tokens.
-You can configure a role to manage a user's token by setting the username field.
-`
-
-	pathRoleListHelpSynopsis    = `List the existing roles in HashiCups backend`
-	pathRoleListHelpDescription = `Roles will be listed by the role name.`
+	rolesHelpSynopsis            = `Manage the roles that can be created with this secrets engine.`
+	rolesHelpDescription         = `This path lets you manage the roles that can be created with this secrets engine.`
+	pathRolesListHelpSynopsis    = `List the existing roles in this secrets engine.`
+	pathRolesListHelpDescription = `A list of existing role names will be returned.`
 )
