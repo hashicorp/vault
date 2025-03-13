@@ -205,9 +205,8 @@ versions as well.
 
 ### Migration post Vault 1.16.0 via Seal HA for Auto Seals (Enterprise)
 
-You can perform an online migration between auto-unseal types except for any Shamir
-seals using Seal High Availability (Seal HA) without
-any downtime.
+You can perform an online migration between most auto-unseal types using Seal High Availability (Seal HA) without any downtime.
+Seal HA does not support migrating Shamir seals.
 
 1. Edit the Vault configuration, and add the new target seal configuration.
 1. Send the Vault process the SIGHUP signal to trigger a configuration reload.
