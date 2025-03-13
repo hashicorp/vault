@@ -13,70 +13,73 @@
       @onSuccess={{@onSuccess}}
       @onError={{this.handleError}}
     >
-      {{#if this.version.isEnterprise}}
-        <Auth::NamespaceInput
-          @updateNamespace={{@handleNamespaceUpdate}}
-          @value={{this.namespaceInput}}
-          @hvdManagedNamespace={{this.flags.hvdManagedNamespaceRoot}}
-          @disabled={{@oidcProviderQueryParam}}
-        />
-      {{/if}}
+      <:namespace>
+        {{#if this.version.isEnterprise}}
+          <Auth::NamespaceInput
+            @updateNamespace={{@handleNamespaceUpdate}}
+            @value={{this.namespaceInput}}
+            @hvdManagedNamespace={{this.flags.hvdManagedNamespaceRoot}}
+            @disabled={{@oidcProviderQueryParam}}
+          />
+        {{/if}}
+      </:namespace>
 
       {{! "Back" button shows when user has clicked "Sign in with other methods" }}
-      {{#if this.showOtherMethods}}
-        <Hds::Button
-          @text="Back"
-          {{on "click" this.toggleView}}
-          class="has-left-margin-m"
-          @color="tertiary"
-          @icon="arrow-left"
-        />
-      {{/if}}
+      <:back>
+        {{#if this.showOtherMethods}}
+          <Hds::Button @text="Back" {{on "click" this.toggleView}} @color="tertiary" @icon="arrow-left" />
+        {{/if}}
+      </:back>
 
-      {{#if this.showTabs}}
-        <Auth::Tabs
-          @authTabs={{this.authTabs}}
-          @displayNameHelper={{this.displayName}}
-          @onTabClick={{fn this.handleAuthSelect "tab"}}
-          @selectedAuthMethod={{this.selectedAuthMethod}}
-          @selectedTabIndex={{this.selectedTabIndex}}
-        />
-      {{else}}
-        <div class="has-left-margin-l has-bottom-margin-l has-right-margin-l">
-          <Hds::Form::Select::Field name="selectedAuthMethod" {{on "input" (fn this.handleAuthSelect "dropdown")}} as |F|>
-            <F.Label class="has-top-padding-l">Auth method</F.Label>
-            <F.Options>
-              {{#each this.availableMethodTypes as |type|}}
-                <option selected={{eq this.selectedAuthMethod type}} value={{type}}>
-                  {{this.displayName type}}
-                </option>
-              {{/each}}
-            </F.Options>
-          </Hds::Form::Select::Field>
-          {{#if (not-eq this.selectedAuthMethod "token")}}
-            <Hds::Form::TextInput::Field name="path" as |F|>
-              <F.Label class="has-top-padding-l">Mount path</F.Label>
-            </Hds::Form::TextInput::Field>
+      {{! TABS OR DROPDOWN }}
+      <:authSelectOptions>
+        <div class="has-bottom-margin-m">
+          {{#if this.showTabs}}
+            <Auth::Tabs
+              @authTabs={{this.authTabs}}
+              @displayNameHelper={{this.displayName}}
+              @onTabClick={{fn this.handleAuthSelect "tab"}}
+              @selectedAuthMethod={{this.selectedAuthMethod}}
+              @selectedTabIndex={{this.selectedTabIndex}}
+            />
+          {{else}}
+            <Hds::Form::Select::Field name="selectedAuthMethod" {{on "input" (fn this.handleAuthSelect "dropdown")}} as |F|>
+              <F.Label class="has-top-margin-m">Auth method</F.Label>
+              <F.Options>
+                {{#each this.availableMethodTypes as |type|}}
+                  <option selected={{eq this.selectedAuthMethod type}} value={{type}}>
+                    {{this.displayName type}}
+                  </option>
+                {{/each}}
+              </F.Options>
+            </Hds::Form::Select::Field>
+            {{#if (not-eq this.selectedAuthMethod "token")}}
+              <Hds::Form::TextInput::Field name="path" as |F|>
+                <F.Label class="has-top-margin-m">Mount path</F.Label>
+              </Hds::Form::TextInput::Field>
+            {{/if}}
           {{/if}}
         </div>
-      {{/if}}
+      </:authSelectOptions>
 
-      {{#if this.errorMessage}}
-        <MessageError @errorMessage={{this.errorMessage}} class="has-left-margin-l has-right-margin-l" />
-      {{/if}}
+      <:error>
+        {{#if this.errorMessage}}
+          <MessageError @errorMessage={{this.errorMessage}} class="has-left-margin-l has-right-margin-l" />
+        {{/if}}
+      </:error>
 
+      <:footer>
+        {{#unless this.showOtherMethods}}
+          <Hds::Button
+            @isInline={{true}}
+            @text="Sign in with other methods"
+            @color="tertiary"
+            @icon="arrow-right"
+            @iconPosition="trailing"
+            {{on "click" this.toggleView}}
+          />
+        {{/unless}}
+      </:footer>
     </AuthFormComponent>
   {{/let}}
 {{/if}}
-
-{{#unless this.showOtherMethods}}
-  <Hds::Button
-    @isInline={{true}}
-    @text="Sign in with other methods"
-    @color="tertiary"
-    @icon="arrow-right"
-    @iconPosition="trailing"
-    {{on "click" this.toggleView}}
-    class="has-left-margin-m has-bottom-margin-l"
-  />
-{{/unless}}
