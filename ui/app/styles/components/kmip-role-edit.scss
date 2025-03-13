@@ -1,3 +1,6 @@
+@use '../utils/size_variables';
+@use '../core/box.scss';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -10,8 +13,8 @@
   @extend .box;
   flex: 1 1 auto;
   box-shadow: none;
-  padding: $spacing-4 0;
+  padding: size_variables.$spacing-4 0;
 }
 .kmip-role-allowed-operations .field {
-  margin-bottom: $spacing-4;
+  margin-bottom: size_variables.$spacing-4;
 }

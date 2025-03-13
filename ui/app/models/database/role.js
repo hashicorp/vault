@@ -8,6 +8,7 @@ import { getRoleFields } from 'vault/utils/model-helpers/database-helpers';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { withModelValidations } from 'vault/decorators/model-validations';
 const validations = {
+  name: [{ type: 'presence', message: 'Role name is required.' }],
   database: [{ type: 'presence', message: 'Database is required.' }],
   type: [{ type: 'presence', message: 'Type is required.' }],
   username: [
@@ -69,9 +70,10 @@ export default class RoleModel extends Model {
   rotation_period;
   @attr({
     label: 'Skip initial rotation',
-    editType: 'boolean',
-    defaultValue: false,
-    subText: 'When unchecked, Vault automatically rotates the password upon creation.',
+    editType: 'toggleButton',
+    defaultValue: false, // this defaultValue will be set in database-role-setting-form.js based on parent database value
+    helperTextDisabled: 'Vault will rotate password for this static role on creation.',
+    helperTextEnabled: "Vault will not rotate this role's password on creation.",
   })
   skip_import_rotation;
   @attr('array', {

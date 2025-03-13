@@ -15,7 +15,7 @@ description: |-
 
 | Change                                        | Description
 |---------------------------------------------- |------------
-| Support change (1.16.x)                       | 1.16.x moves to long term support and 1.19 becomes the current LTS version.
+| Support change (1.16.x)                       | 1.16.x moves to [long term support](/vault/docs/enterprise/lts) and 1.19 becomes the current LTS version.
 | New behavior (1.19.0)                         | [Changed behavior for Ed25519 signatures in Transit plugin](/vault/docs/upgrading/upgrade-to-1.19.x#ed25519)
 | New behavior (1.19.0)                         | [Duplicate identity cleanup and forced deduplication](/vault/docs/upgrading/upgrade-to-1.19.x#dedupe)
 | Breaking change (1.19)                        | [LDAP security improvement impacting user DN search with `upndomain`](/vault/docs/upgrading/upgrade-to-1.19.x#ldap-user-dn-search-with-upndomain)
@@ -115,24 +115,27 @@ Follow the learn more links for more information, or browse the list of
     <td style={{verticalAlign: 'middle'}}>
       Database support
     </td>
-    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>ENHANCED</td>
     <td style={{verticalAlign: 'middle'}}>
-      Transition static database accounts without immediate rotation, precise
+      Onboard static database accounts without immediate rotation, precise
       timing, or coordinating with maintenance windows.
+      <br /><br />
+      Learn more: <a href="/vault/docs/secrets/databases#onboarding-static-database-users">Onboarding static DB users</a>
     </td>
   </tr>
 
   <tr>
-    <td style={{verticalAlign: 'middle', rowSpan: '2'}}>
+    <td rowSpan={2} style={{verticalAlign: 'middle'}}>
       Events
     </td>
-    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>ENHANCED</td>
     <td style={{verticalAlign: 'middle'}}>
-      Subscribe to event notifications on all Vault nodes within a cluster.
+      Vault now sends event notifications to subscribers on all Vault nodes
+      within a cluster.
     </td>
   </tr>
   <tr>
-    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>ENHANCED</td>
     <td style={{verticalAlign: 'middle'}}>
       Notification subscriptions for secret deletion no longer requires a root
       token.
@@ -143,13 +146,73 @@ Follow the learn more links for more information, or browse the list of
     <td style={{verticalAlign: 'middle'}}>
       Plugin support
     </td>
-    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>ENHANCED</td>
     <td style={{verticalAlign: 'middle'}}>
       Run Vault Enterprise plugins external to Vault. Running plugins externally
       is useful in deployments when the plugin requires different environment
       variable values than the Vault binary.
     </td>
   </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Automated root credential rotation
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Use a rotation manager to regularly rotate credentials for
+      AWS (
+        <a href="/vault/docs/secrets/aws#schedule-based-root-credential-rotation">secrets</a>,
+        &nbsp;
+        <a href="/vault/docs/auth/aws#schedule-based-root-credential-rotation">authN</a>
+      ),
+      Azure (
+        <a href="/vault/docs/secrets/azure#root-credential-rotation">secrets</a>,
+        &nbsp;
+        <a href="/vault/api-docs/auth/azure#rotate-root">authN</a>
+      ),
+      GCP (
+        <a href="/vault/docs/secrets/gcp#root-credential-rotation">secrets</a>,
+        &nbsp;
+        <a href="/vault/api-docs/auth/gcp#rotate-root-credentials">authN</a>
+      ),
+      LDAP (
+        <a href="/vault/docs/secrets/ldap#root-credential-rotation">secrets</a>,
+        &nbsp;
+        <a href="/vault/docs/auth/ldap#root-credential-rotation">authN</a>
+      ),
+      and <a href="/vault/docs/secrets/databases#schedule-based-static-role-rotation">DB plugins</a>
+      &nbsp;
+      without manual intervention.
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      AWS plugin
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>ENHANCED</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Vault now supports AWS static role credentials for multiple AWS accounts
+      with a single mount path to better manage AWS credentials at scale.
+      <br /><br />
+      Learn more: <a href="/vault/docs/secrets/aws#sts-assumerole">STS AssumeRole</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      GUI support for WIF plugin configuration
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Use the Vault GUI to enable and configure WIF with
+      &nbsp;<a href="/vault/docs/secrets/aws#setup">AWS</a>,
+      &nbsp;<a href="/vault/docs/secrets/aws#setup">Azure</a>, and
+      &nbsp;<a href="/vault/docs/secrets/gcp#setup">GCP</a>
+    </td>
+  </tr>
+
 
   </tbody>
 </table>
@@ -158,6 +221,6 @@ Follow the learn more links for more information, or browse the list of
 
 Deprecated in 1.19.x | Retired in 1.19.x
 -------------------- | ---------------
-None                 | None
+None                 | [Active Directory plugin](/vault/docs/deprecation#ad-secrets-engine)
 
 @include 'release-notes/deprecation-note.mdx'

@@ -607,6 +607,17 @@ func (c *Core) GetSecretEngineUsageMetrics() map[string]int {
 
 	for _, entry := range c.mounts.Entries {
 		mountType := entry.Type
+
+		if mountType == mountTypeNSIdentity {
+			mountType = pluginconsts.SecretEngineIdentity
+		}
+		if mountType == mountTypeNSSystem {
+			mountType = pluginconsts.SecretEngineSystem
+		}
+		if mountType == mountTypeNSCubbyhole {
+			mountType = pluginconsts.SecretEngineCubbyhole
+		}
+
 		if _, ok := mounts[mountType]; !ok {
 			mounts[mountType] = 1
 		} else {
@@ -625,6 +636,11 @@ func (c *Core) GetAuthMethodUsageMetrics() map[string]int {
 
 	for _, entry := range c.auth.Entries {
 		authType := entry.Type
+
+		if authType == mountTypeNSToken {
+			authType = pluginconsts.AuthTypeToken
+		}
+
 		if _, ok := mounts[authType]; !ok {
 			mounts[authType] = 1
 		} else {
