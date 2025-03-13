@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{@mode}} @root={{@root}} @showCurrent={{true}} />
@@ -106,7 +106,23 @@
         {{#if (eq @mode "edit")}}
           <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
         {{else if (not-eq attr.options.readOnly true)}}
-          <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
+          {{#if (eq attr.name "type")}}
+            {{#if @model.database}}
+              <FormField
+                data-test-field={{true}}
+                @attr={{attr}}
+                @model={{@model}}
+                @modelValidations={{this.modelValidations}}
+              />
+            {{/if}}
+          {{else}}
+            <FormField
+              data-test-field={{true}}
+              @attr={{attr}}
+              @model={{@model}}
+              @modelValidations={{this.modelValidations}}
+            />
+          {{/if}}
           {{! TODO: If database && !updateDB show warning }}
           {{#if (get this.warningMessages attr.name)}}
             <Hds::Alert @type="inline" @color="warning" class="has-top-margin-negative-s has-bottom-margin-s" as |A|>
@@ -116,14 +132,21 @@
           {{/if}}
         {{/if}}
       {{/each}}
-      <DatabaseRoleSettingForm
-        @attrs={{@model.roleSettingAttrs}}
-        @roleType={{@model.type}}
-        @model={{@model}}
-        @mode={{@mode}}
-        @dbType={{await this.databaseType}}
-        @modelValidations={{this.modelValidations}}
-      />
+      {{#if @model.database}}
+        <DatabaseRoleSettingForm
+          @attrs={{@model.roleSettingAttrs}}
+          @roleType={{@model.type}}
+          @model={{@model}}
+          @mode={{@mode}}
+          @dbParams={{await this.databaseParams}}
+          @modelValidations={{this.modelValidations}}
+        />
+      {{else}}
+        <EmptyState
+          @title="No database connection selected"
+          @message="Choose a connection to be able to configure a role type."
+        />
+      {{/if}}
       <div class="field is-fullwidth box is-bottomless">
         <Hds::ButtonSet>
           <Hds::Button

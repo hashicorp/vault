@@ -46,7 +46,7 @@ export default class DatabaseRoleEdit extends Component {
   isValid() {
     const { isValid, state } = this.args.model.validate();
     this.modelValidations = isValid ? null : state;
-    this.invalidFormAlert = 'There was an error submitting this form.';
+    this.invalidFormAlert = isValid ? '' : 'There was an error submitting this form.';
     return isValid;
   }
 
@@ -67,7 +67,8 @@ export default class DatabaseRoleEdit extends Component {
     }
     return warnings;
   }
-  get databaseType() {
+
+  get databaseParams() {
     const backend = this.args.model?.backend;
     const dbs = this.args.model?.database || [];
     if (!backend || dbs.length === 0) {
@@ -75,7 +76,10 @@ export default class DatabaseRoleEdit extends Component {
     }
     return this.store
       .queryRecord('database/connection', { id: dbs[0], backend })
-      .then((record) => record.plugin_name)
+      .then(({ plugin_name, skip_static_role_rotation_import }) => ({
+        plugin_name,
+        skip_static_role_rotation_import,
+      }))
       .catch(() => null);
   }
 
@@ -110,6 +114,7 @@ export default class DatabaseRoleEdit extends Component {
       this.resetErrors();
       const { mode, model } = this.args;
       if (!this.isValid()) return;
+
       if (mode === 'create') {
         model.id = model.name;
         const path = model.type === 'static' ? 'static-roles' : 'roles';

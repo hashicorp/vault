@@ -420,9 +420,7 @@ func (c *ServerCommand) AutocompleteFlags() complete.Flags {
 }
 
 func (c *ServerCommand) flushLog() {
-	c.logger.(hclog.OutputResettable).ResetOutputWithFlush(&hclog.LoggerOptions{
-		Output: c.logWriter,
-	}, c.logGate)
+	c.logGate.Flush()
 }
 
 func (c *ServerCommand) parseConfig() (*server.Config, []configutil.ConfigError, error) {

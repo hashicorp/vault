@@ -1,3 +1,8 @@
+@use '../utils/box-shadow_variables';
+@use '../utils/color_variables';
+@use '../utils/font_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -6,7 +11,7 @@
 .namespace-picker {
   position: relative;
   color: var(--token-color-palette-neutral-300);
-  padding: $spacing-4 $spacing-8;
+  padding: size_variables.$spacing-4 size_variables.$spacing-8;
   width: 100%;
 }
 
@@ -21,7 +26,7 @@
   flex: 1 1 auto;
   height: 2rem;
   justify-content: space-between;
-  margin-right: $spacing-4;
+  margin-right: size_variables.$spacing-4;
   width: 100%;
 }
 
@@ -30,11 +35,11 @@
   max-height: 300px;
   overflow: auto;
   color: var(--token-color-foreground-primary);
-  border-radius: $radius;
-  box-shadow: $box-shadow, $box-shadow-high;
+  border-radius: size_variables.$radius;
+  box-shadow: box-shadow_variables.$box-shadow, box-shadow_variables.$box-shadow-high;
 
   &.ember-basic-dropdown-content {
-    background: $white;
+    background: color_variables.$white;
   }
 }
 
@@ -46,17 +51,17 @@
 }
 
 .namespace-header-bar {
-  padding: $spacing-4 $spacing-10;
-  border-bottom: 1px solid rgba($black, 0.1);
-  font-weight: $font-weight-semibold;
+  padding: size_variables.$spacing-4 size_variables.$spacing-10;
+  border-bottom: 1px solid rgba(color_variables.$black, 0.1);
+  font-weight: font_variables.$font-weight-semibold;
   min-height: 32px;
 }
 
 .namespace-manage-link {
-  border-top: 1px solid rgba($black, 0.1);
+  border-top: 1px solid rgba(color_variables.$black, 0.1);
 
   .level-left {
-    font-weight: $font-weight-bold;
+    font-weight: font_variables.$font-weight-bold;
     font-size: 14px;
   }
   .level-right {
@@ -70,15 +75,15 @@
 }
 
 .namespace-link {
-  color: $black;
+  color: color_variables.$black;
   text-decoration: none;
-  font-weight: $font-weight-semibold;
-  padding: $spacing-8 $spacing-10 $spacing-8 0;
+  font-weight: font_variables.$font-weight-semibold;
+  padding: size_variables.$spacing-8 size_variables.$spacing-10 size_variables.$spacing-8 0;
 }
 
 .namespace-link.is-current {
-  margin-top: $spacing-12;
-  margin-right: -$spacing-8;
+  margin-top: size_variables.$spacing-12;
+  margin-right: -(size_variables.$spacing-8);
 
   svg {
     margin-top: 2px;
@@ -87,11 +92,11 @@
 }
 
 .leaf-panel {
-  padding: $spacing-4 $spacing-10;
+  padding: size_variables.$spacing-4 size_variables.$spacing-10;
   transition: transform ease-in-out 250ms;
   will-change: transform;
   transform: translateX(0);
-  background: $white;
+  background: color_variables.$white;
   position: absolute;
   top: 0;
   left: 0;
@@ -101,7 +106,7 @@
 }
 
 .leaf-panel-left {
-  transform: translateX(-$drawer-width);
+  transform: translateX(-(size_variables.$drawer-width));
 }
 
 .leaf-panel-adding,
@@ -115,7 +120,7 @@
 .animated-list {
   .leaf-panel-exiting,
   .leaf-panel-adding {
-    transform: translateX($drawer-width);
+    transform: translateX(size_variables.$drawer-width);
     z-index: 20;
   }
 }
