@@ -8,145 +8,137 @@ description: >-
 
 # Seal/Unseal
 
-When a Vault server is started, it starts in a _sealed_ state. In this
-state, Vault is configured to know where and how to access the physical
-storage, but doesn't know how to decrypt any of it.
+When you start a Vault server, it starts in a sealed state. In this
+state, Vault has the necessary information to access the physical
+storage, but it cannot decrypt any of it.
 
-_Unsealing_ is the process of obtaining the plaintext root key necessary to
-read the decryption key to decrypt the data, allowing access to the Vault.
+Unsealing is the process of obtaining the plaintext root key that is necessary to
+read the decryption key and decrypt the data, allowing you to access the Vault.
 
-Prior to unsealing, almost no operations are possible with Vault. For
-example, authentication, managing the mount tables, etc. are all not possible.
+Prior to unsealing, almost no operations are possible with Vault.
 The only possible operations are to unseal the Vault and check the status
 of the seal.
 
 ## Why?
 
-The data stored by Vault is encrypted. Vault needs the _encryption key_ in order
-to decrypt the data. The encryption key is also stored with the data
-(in the _keyring_), but encrypted with another encryption key known as the _root key_.
+Vault encrypts the data it stores. It requires an encryption key
+to decrypt the data. Vault stores the encryption key with the data
+in the keyring. But the encryption key is encrypted using another key known as the root key.
 
-Therefore, to decrypt the data, Vault must decrypt the encryption key
-which requires the root key. Unsealing is the process of getting access to
-this root key. The root key is stored alongside all other Vault data,
-but is encrypted by yet another mechanism: the unseal key.
+To decrypt the data, you must use a root key to decrypt the encryption key.
+Unsealing is the process of getting access to
+this root key. The root key resides with all other Vault data,
+but you decrypt it using the unseal key.
 
-To recap: most Vault data is encrypted using the encryption key in the keyring;
-the keyring is encrypted by the root key; and the root key is encrypted by
+Vault encrypts most data using the encryption key in the keyring.
+However, it encrypts the keyring using the root key, and it reassembles the root key using
 the unseal key.
 
 ## Shamir seals
 
 ![Shahir seals](/img/vault-shamir-seal.png)
 
-The default Vault config uses a Shamir seal. Instead of distributing the unseal
-key as a single key to an operator, Vault uses an algorithm known as
+Instead of distributing the unseal
+key to an operator as a single key, the default Vault configuration uses an algorithm known as
 [Shamir's Secret Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing)
-to split the key into shares. A certain threshold of shares is required to
-reconstruct the unseal key, which is then used to decrypt the root key.
+to split the key into shares.
 
-This is the _unseal_ process: the shares are added one at a time (in any
-order) until enough shares are present to reconstruct the key and
-decrypt the root key.
+Vault requires a certain threshold of shares to reconstruct the unseal key.
+You add shares one at a time in any order until Vault has enough shares to reconstruct the key. Then, Vault uses the unseal key to decrypt the root key.
 
 ## Unsealing
 
-The unseal process is done by running `vault operator unseal` or via the API.
-This process is stateful: each key can be entered via multiple mechanisms from
-multiple client machines and it will work. This allows each share of the root
-key to be on a distinct client machine for better security.
+You can run the unseal process using the `vault operator unseal` command or via the API.
+The unseal process is stateful. You can enter each key using multiple mechanisms from
+multiple client machines. The process allows each share of the root
+key to reside on a distinct client machine for better security.
 
-Note that when using the Shamir seal with multiple nodes, each node must be
-unsealed with the required threshold of shares. Partial unsealing of each node
-is not distributed across the cluster.
+When you use the Shamir seal with multiple nodes, you must unseal each node with the required threshold of shares. Vault does not distribute any partially unsealed nodes across the cluster.
 
-Once a Vault node is unsealed, it remains unsealed until one of these things happens:
+Once you unseal a Vault node, it remains unsealed until one of the following happens:
 
-1. It is resealed via the API (see below).
+1. You reseal it using the API (see below).
 
-2. The server is restarted.
+2. You restart the server.
 
 3. Vault's storage layer encounters an unrecoverable error.
 
--> **Note:** Unsealing makes the process of automating a Vault install
+Unsealing nodes can make automating a Vault installation
 difficult. Automated tools can easily install, configure, and start Vault,
-but unsealing it using Shamir is a very manual process. For most users
-Auto Unseal will provide a better experience.
+but unsealing it using Shamir is a manual process. For most users
+Auto Unseal provides a better experience.
 
 ## Sealing
 
-There is also an API to seal the Vault. This will throw away the root
-key in memory and require another unseal process to restore it. Sealing
+There is also an API to seal the Vault. The API deletes the root
+key from memory and requires another unseal process to restore it. Sealing the Vault
 only requires a single operator with root privileges.
 
-This way, if there is a detected intrusion, the Vault data can be locked
-quickly to try to minimize damages. It can't be accessed again without
-access to the root key shares.
+If there is a detected intrusion, you can seal the Vault data quickly to try to minimize damages. Users cannot access the data again without access to the root key shares.
 
 ## Auto unseal
 
-Auto unseal was developed to aid in reducing the operational complexity of
+Auto unseal aids in reducing the operational complexity of
 keeping the unseal key secure. This feature delegates the responsibility of
-securing the unseal key from users to a trusted device or service. At startup
-Vault will connect to the device or service implementing the seal and ask it
-to decrypt the root key Vault read from storage.
+securing the unseal key from users to a trusted device or service. At startup,
+Vault connects to the trusted device or service and prompts it
+to decrypt the root key from storage.
 
 ![Auto Unseal](/img/vault-auto-unseal.png)
 
 There are certain operations in Vault besides unsealing that
-require a quorum of users to perform, e.g. generating a root token. When
-using a Shamir seal the unseal keys must be provided to authorize these
-operations. When using Auto Unseal these operations require _recovery
-keys_ instead.
+require a quorum of users to perform, for example, generating a root token. When
+you use a Shamir seal, you must provide the unseal keys to authorize these
+operations. When you use Auto Unseal, these operations require recovery
+keys instead.
 
-Just as the initialization process with a Shamir seal yields unseal keys,
-initializing with an Auto Unseal yields recovery keys.
+Just as the Shamir seal initialization process yields unseal keys,
+initializing operations with Auto Unseal yields recovery keys.
 
-It is still possible to seal a Vault node using the API. In this case Vault
-will remain sealed until restarted, or the unseal API is used, which with Auto
+It is still possible to seal a Vault node using the API. When you use the API, Vault remains sealed until you restart it, or use the unseal API. Auto
 Unseal requires the recovery key fragments instead of the unseal key fragments
-that would be provided with Shamir. The process remains the same.
+that the Shamir seal provides. The process remains the same.
 
-For a list of examples and supported providers, please see the
+For a list of examples and supported providers, please refer to the
 [seal documentation](/vault/docs/configuration/seal).
 
-When DR replication is enabled in Vault Enterprise, [Performance Standby](/vault/docs/enterprise/performance-standby) nodes on the DR cluster will seal themselves, so they must be restarted to be unsealed.
+When you enable DR replication in Vault Enterprise, [Performance Standby](/vault/docs/enterprise/performance-standby) nodes on the DR cluster seal themselves, so you must restart them to unseal them.
 
 <Warning title="Recovery keys cannot decrypt the root key">
 
-Recovery keys cannot decrypt the root key and thus are not sufficient to unseal
-Vault if the auto unseal mechanism isn't working. They are purely an authorization mechanism.
-Using auto unseal creates a strict Vault lifecycle dependency on the underlying seal mechanism. 
-This means that if the seal mechanism (such as the Cloud KMS key) becomes unavailable, 
-or deleted before the seal is migrated, then there is no ability to recover 
-access to the Vault cluster until the mechanism is available again. **If the seal 
+Recovery keys cannot decrypt the root key and therefore are not sufficient to unseal
+Vault if the auto unseal mechanism isn't working.
+Using auto unseal creates a strict Vault lifecycle dependency on the underlying seal mechanism.
+If a seal mechanism such as the Cloud KMS key becomes unavailable
+or is deleted before you migrate the seal, you cannot recover
+access to the Vault cluster until the mechanism is available again.
+
+**If the seal
 mechanism or its keys are permanently deleted, then the Vault cluster cannot be recovered, even
 from backups.**
 To mitigate this risk, we recommend careful controls around management of the seal
 mechanism, for example using
 [AWS Service Control Policies](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html)
 or similar.
-With Vault Enterprise secondary clusters (disaster or performance) can have a
-seal configured independently of the primary, and when properly configured guards
-against *some* of this risk.  Unreplicated items such as local mounts could still
-be lost.
+
+With Vault Enterprise, you can configure a secondary seal for disaster or performance clusters independently of the primary seal. When you properly configure a secondary seal, it guards
+against some of this risk.  You could still lose unreplicated items such as local mounts.
 
 </Warning>
 
 ## Recovery key
 
-When Vault is initialized while using an HSM or KMS, rather than unseal keys
-being returned to the operator, recovery keys are returned. These are generated
+When you initialize Vault using an HSM or KMS, Vault returns recovery keys to the operator rather than unseal keys. Recovery keys are generated
 from an internal recovery key that is split via Shamir's Secret Sharing, similar
-to Vault's treatment of unseal keys when running without an HSM or KMS.
+to Vault's treatment of unseal keys when you run it without an HSM or KMS.
 
-Details about initialization and rekeying follow. When performing an operation
-that uses recovery keys, such as `generate-root`, selection of the recovery
-keys for this purpose, rather than the barrier unseal keys, is automatic.
+When you perform an operation such as `generate-root`
+that uses recovery keys, Vault automatically selects the recovery
+keys for this purpose, rather than the barrier unseal keys.
 
 ### Initialization
 
-When initializing, the split is performed according to the following CLI flags
+When you initialize Vault, the split is performed according to the following CLI flags
 and their API equivalents in the [/sys/init](/vault/api-docs/system/init) endpoint:
 
 - `recovery-shares`: The number of shares into which to split the recovery
@@ -160,19 +152,17 @@ and their API equivalents in the [/sys/init](/vault/api-docs/system/init) endpoi
   API endpoint, although as with `pgp_keys` the object in the API endpoint is
   an array, not a string.
 
-Additionally, Vault will refuse to initialize if the option has not been set to
-generate a key, and no key is found. See
+Additionally, Vault does not initialize if you have not set the option to
+generate a key, and Vault does not find a key. Refer to
 [Configuration](/vault/docs/configuration/seal/pkcs11) for more details.
 
 ### Rekeying
 
 #### Unseal key
 
-Vault's unseal key can be rekeyed using a normal `vault operator rekey`
-operation from the CLI or the matching API calls. The rekey operation is
-authorized by meeting the threshold of recovery keys. After rekeying, the new
-barrier key is wrapped by the HSM or KMS and stored like the previous key; it is not
-returned to the users that submitted their recovery keys.
+You can rekey Vault's unseal key using a normal `vault operator rekey`
+operation from the CLI or the matching API calls. Vault authorizes the rekey operation when you meet the threshold of recovery keys. After rekeying, Vault wraps the new
+barrier key by the HSM or KMS and stores it like the previous key. Vault does not return the barrier key to the users that submitted their recovery keys.
 
 <EnterpriseAlert product="vault">
   Seal wrapping requires Vault Enterprise
@@ -267,7 +257,7 @@ any storage backend.
    Wait for a little while for the migration information to replicate to all the
    nodes in case of Integrated Storage. In enterprise Vault, switching an Auto seal
    implies that the seal wrapped storage entries get re-wrapped. Monitor the log
-   and wait until this process is complete (look for `seal re-wrap completed`). 
+   and wait until this process is complete (look for `seal re-wrap completed`).
 
 <Warning heading="Seal configuration changes will invoke rewrap">
 
@@ -344,8 +334,8 @@ migration will not happen again on the peer nodes.
 
 ## Seal high availability <EnterpriseAlert inline="true" />
 
-Seal high availability (Seal HA) allows the configuration of more than one auto 
-seal mechanism such that Vault can tolerate the temporary loss of a seal service 
+Seal high availability (Seal HA) allows the configuration of more than one auto
+seal mechanism such that Vault can tolerate the temporary loss of a seal service
 or device for a time.  With Seal HA configured with at least two and no more than
 three auto seals, Vault can also start up and unseal if one of the
 configured seals is still available (though Vault will remain in a degraded mode in
@@ -360,11 +350,11 @@ two different providers; or a mix of HSM, KMS, or Transit seals.
 When an operator configures an additional seal or removes a seal (one at a time)
 and restarts Vault, Vault will automatically detect that it needs to re-wrap
 CSPs and seal wrapped values, and will start the process.  Seal re-wrapping can
-be monitored via the logs or via the `sys/seal-status` endpoint.  While a 
+be monitored via the logs or via the `sys/seal-status` endpoint.  While a
 re-wrap is in progress (or could not complete successfully), changes to the
 seal configuration are not allowed.
 
-In additional to high availability, seal HA can be used to migrate between two 
+In additional to high availability, seal HA can be used to migrate between two
 auto seals in a simplified manner.  To migrate in this way:
 
 In additional to high availability, Seal HA can be used to migrate between two
@@ -373,7 +363,7 @@ auto seals in a [simplified manner.](#migration-post-vault-1-16-0-via-seal-ha-fo
 Note that Shamir seals are not auto seals and cannot be included in a Seal
 HA setup.  This is because auto seals support seal wrap while Shamir seals
 do not, so the loss of the auto seal does not necessarily leave Vault in a
-fully available state. 
+fully available state.
 
 ### Use and Configuration
 
