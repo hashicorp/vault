@@ -55,7 +55,7 @@
           @onError={{fn (mut this.mfaErrors)}}
         />
       {{else}}
-        <Auth::LoginTemplate
+        <Auth::FormTemplate
           @wrappedToken={{@wrappedToken}}
           @cluster={{@cluster}}
           @handleNamespaceUpdate={{this.handleNamespaceUpdate}}
