@@ -29,7 +29,7 @@ export default class KvListPageComponent extends Component {
   @service('app-router') router;
   @service pagination;
 
-  @tracked secretPath;
+  @tracked secretPath = this.args.pathToSecret;
   @tracked metadataToDelete = null; // set to the metadata intended to delete
 
   get mountPoint() {
@@ -78,8 +78,8 @@ export default class KvListPageComponent extends Component {
   }
 
   @action
-  handleSecretPathInput(value) {
-    this.secretPath = value;
+  handleSecretPathInput(event) {
+    this.secretPath = event.target.value;
   }
 
   @action

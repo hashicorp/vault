@@ -46,16 +46,20 @@
       >
         <:content>
           <form {{on "submit" this.transitionToSecretDetail}} class="has-top-margin-m">
-            <InputSearch
-              @id="search-input-kv-secret"
-              @initialValue={{@pathToSecret}}
-              @onChange={{this.handleSecretPathInput}}
-              @placeholder="secret/"
-              data-test-view-secret
-            />
+            <div class="field">
+              <Hds::Form::TextInput::Base
+                @id="search-input-kv-secret"
+                @value={{@pathToSecret}}
+                {{on "keyup" this.handleSecretPathInput}}
+                placeholder="secret/"
+                autocomplete="off"
+                data-test-view-secret
+                data-test-input-search="search-input-kv-secret"
+              />
+            </div>
             <Hds::Button
               @text={{this.buttonText}}
-              @color="secondary"
+              @color="primary"
               type="submit"
               disabled={{not this.secretPath}}
               data-test-submit-button
