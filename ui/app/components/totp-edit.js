@@ -58,7 +58,7 @@ export default class TotpEdit extends Component {
   }
 
   @action
-  async delete() {
+  async deleteKey() {
     try {
       await this.model.destroyRecord();
       this.transitionToRoute(LIST_ROOT_ROUTE);
@@ -68,7 +68,7 @@ export default class TotpEdit extends Component {
     }
   }
 
-  create = task(
+  createKey = task(
     waitFor(async (event) => {
       event.preventDefault();
       const { isValid, state, invalidFormMessage } = this.model.validate();
