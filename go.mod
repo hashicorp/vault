@@ -489,7 +489,7 @@ require (
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
-	github.com/opencontainers/runc v1.2.0-rc.1 // indirect
+	github.com/opencontainers/runc v1.2.0-rc.3 // indirect
 	github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b // indirect
 	github.com/oracle/oci-go-sdk/v59 v59.0.0 // indirect
 	github.com/oracle/oci-go-sdk/v60 v60.0.0 // indirect
