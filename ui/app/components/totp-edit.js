@@ -7,15 +7,16 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
+import { task } from 'ember-concurrency';
+import { waitFor } from '@ember/test-waiters';
 
 /**
  * @module TotpEdit
  * `TotpEdit` is a component that allows you to create, view or delete a TOTP key or view the QR code of the key.
  *
  * @example
- * ```js
  *   <TotpEdit @model={{this.model}} @mode={{this.mode}} />
- * ```
+ *
  * @param {object} model - The totp edit model.
  * @param {string} mode - The mode to render. Either 'create' or 'show'.
  */
@@ -67,7 +68,7 @@ export default class TotpEdit extends Component {
   @action
   reset() {
     this.model.unloadRecord();
-    this.successCallback(null);
+    this.transitionToRoute(SHOW_ROUTE, this.model.name);
   }
 
   @action
@@ -77,19 +78,20 @@ export default class TotpEdit extends Component {
     });
   }
 
-  @action
-  create(event) {
-    event.preventDefault();
-    const { isValid, state, invalidFormMessage } = this.model.validate();
-    this.modelValidations = isValid ? null : state;
-    this.invalidFormAlert = invalidFormMessage;
-    if (isValid) {
-      const modelId = this.model.name;
-
-      // TODO verify url resolves for a key before submitting -> confusing error message
-      this.persist('save', () => {
-        this.transitionToRoute(SHOW_ROUTE, modelId);
-      });
-    }
-  }
+  create = task(
+    waitFor(async (event) => {
+      event.preventDefault();
+      const { isValid, state, invalidFormMessage } = this.model.validate();
+      this.modelValidations = isValid ? null : state;
+      this.invalidFormAlert = invalidFormMessage;
+      if (!isValid) return;
+      try {
+        await this.model.save();
+        this.hasGenerated = true;
+      } catch (e) {
+        // todo
+        return;
+      }
+    })
+  );
 }

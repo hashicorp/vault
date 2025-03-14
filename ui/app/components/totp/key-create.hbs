@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<form {{on "submit" @create}}>
+<form {{on "submit" (perform @create)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @model={{@model}} />
     <NamespaceReminder @mode={{@mode}} @noun="TOTP key" />
