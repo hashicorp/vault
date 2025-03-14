@@ -47,20 +47,6 @@ export default class TotpEdit extends Component {
     return this.args.model;
   }
 
-  persist(method, successCallback) {
-    // TODO refactor this further
-    return this.model[method]().then(() => {
-      if (!this.model.isError) {
-        if (this.model.backend === 'totp' && this.model.generate) {
-          this.hasGenerated = true;
-          this.successCallback = successCallback;
-        } else {
-          successCallback(this.model);
-        }
-      }
-    });
-  }
-
   transitionToRoute() {
     this.router.transitionTo(...arguments);
   }
@@ -72,10 +58,14 @@ export default class TotpEdit extends Component {
   }
 
   @action
-  delete() {
-    this.persist('destroyRecord', () => {
+  async delete() {
+    try {
+      await this.model.destroyRecord();
       this.transitionToRoute(LIST_ROOT_ROUTE);
-    });
+    } catch (e) {
+      //todo
+      return;
+    }
   }
 
   create = task(
