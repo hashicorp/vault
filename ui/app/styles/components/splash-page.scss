@@ -33,3 +33,9 @@
 .splash-page-header {
   padding: size_variables.$spacing-14 0;
 }
+
+.splash-page-form-fields {
+  &.hds-form-field--layout-vertical {
+    padding: $spacing-24;
+  }
+}

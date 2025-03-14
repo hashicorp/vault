@@ -115,6 +115,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
       try {
         /* eslint-disable-next-line ember/no-controller-access-in-routes */
         yield this.controller.model.reload();
+        // method from mixin
         yield this.transitionToTargetRoute();
       } catch (e) {
         // we want to keep polling here
@@ -137,6 +138,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     if (this.namespaceService.path && !this.version.hasNamespaces) {
       return this.router.transitionTo(this.routeName, { queryParams: { namespace: '' } });
     }
+    // function from the cluster route
     return this.transitionToTargetRoute(transition);
   },
 
