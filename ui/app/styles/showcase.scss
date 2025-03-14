@@ -5,6 +5,8 @@
 
 /* SHOWCASE OF COMPONENTS */
 
+@use './utils/font_variables';
+
 .shw-page-wrapper {
   padding: 24px 48px;
 
@@ -13,7 +15,7 @@
   /* local styling for showcase text elements [intentionally scrappy but simple to use] */
 
   h1:not([class]) {
-    font-family: $family-sans;
+    font-family: font_variables.$family-sans;
     font-size: 48px;
     line-height: 1.2em;
     font-weight: 900;
@@ -22,7 +24,7 @@
   }
 
   h2:not([class]) {
-    font-family: $family-sans;
+    font-family: font_variables.$family-sans;
     font-size: 32px;
     line-height: 1.2em;
     font-weight: 700;
@@ -31,7 +33,7 @@
   }
 
   h3:not([class]) {
-    font-family: $family-sans;
+    font-family: font_variables.$family-sans;
     font-size: 24px;
     line-height: 1.2em;
     font-weight: bold;
@@ -40,7 +42,7 @@
   }
 
   h4:not([class]) {
-    font-family: $family-sans;
+    font-family: font_variables.$family-sans;
     font-size: 16px;
     line-height: 1.2em;
     font-weight: bold;
@@ -49,7 +51,7 @@
   }
 
   pre:not([class]) {
-    font-family: $family-monospace;
+    font-family: font_variables.$family-monospace;
     font-size: 11px;
     line-height: 1.2em;
     font-weight: bold;
@@ -59,7 +61,7 @@
 
   blockquote:not([class]) {
     display: block;
-    font-family: $family-monospace;
+    font-family: font_variables.$family-monospace;
     font-size: 12px;
     line-height: 1.4em;
     color: #666;
