@@ -155,28 +155,6 @@ func TestLdapAuthBackend_CaseSensitivity(t *testing.T) {
 	ctx := context.Background()
 
 	testVals := func(caseSensitive bool) {
-		// Clear storage
-		userList, err := storage.List(ctx, "user/")
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, user := range userList {
-			err = storage.Delete(ctx, "user/"+user)
-			if err != nil {
-				t.Fatal(err)
-			}
-		}
-		groupList, err := storage.List(ctx, "group/")
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, group := range groupList {
-			err = storage.Delete(ctx, "group/"+group)
-			if err != nil {
-				t.Fatal(err)
-			}
-		}
-
 		configReq := &logical.Request{
 			Path:      "config",
 			Operation: logical.ReadOperation,
@@ -283,6 +261,71 @@ func TestLdapAuthBackend_CaseSensitivity(t *testing.T) {
 		expected := []string{"grouppolicy", "userpolicy"}
 		if !reflect.DeepEqual(expected, resp.Auth.Policies) {
 			t.Fatalf("bad: policies: expected: %q, actual: %q", expected, resp.Auth.Policies)
+		}
+
+		// Test proper deletion of users
+		userReqDel := &logical.Request{
+			Operation: logical.DeleteOperation,
+			Data: map[string]interface{}{
+				"groups":   "EngineerS",
+				"policies": "userpolicy",
+			},
+			Path:    "users/hermeS conRad",
+			Storage: storage,
+		}
+		resp, err = b.HandleRequest(ctx, userReqDel)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%v resp:%#v", err, resp)
+		}
+		if caseSensitive {
+			// The online test server is actually case sensitive so we need to
+			// delete again so it works
+			userReq = &logical.Request{
+				Operation: logical.DeleteOperation,
+				Data: map[string]interface{}{
+					"groups":   "EngineerS",
+					"policies": "userpolicy",
+				},
+				Path:       "users/Hermes Conrad",
+				Storage:    storage,
+				Connection: &logical.Connection{},
+			}
+			resp, err = b.HandleRequest(ctx, userReq)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("err:%v resp:%#v", err, resp)
+			}
+		}
+
+		// Expect storage for user path to be cleared
+		userList, err := storage.List(ctx, "user/")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if userList != nil {
+			t.Fatalf("deletion of users failed")
+		}
+
+		// Test proper deletion of groups
+		groupReqDel := &logical.Request{
+			Operation: logical.DeleteOperation,
+			Data: map[string]interface{}{
+				"policies": "grouppolicy",
+			},
+			Path:    "groups/EngineerS",
+			Storage: storage,
+		}
+		resp, err = b.HandleRequest(ctx, groupReqDel)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%v resp:%#v", err, resp)
+		}
+
+		// Expect storage for group path to be cleared
+		groupList, err := storage.List(ctx, "group/")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if groupList != nil {
+			t.Fatalf("deletion of groups failed")
 		}
 	}
 
