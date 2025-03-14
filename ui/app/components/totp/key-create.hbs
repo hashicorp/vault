@@ -37,13 +37,11 @@
     </Hds::ButtonSet>
   </div>
   {{#if @invalidFormAlert}}
-    <div class="control">
-      <AlertInline
-        @type="danger"
-        class="has-top-padding-s"
-        @message={{@invalidFormAlert}}
-        data-test-totp-key-create-validation-error
-      />
-    </div>
+    <AlertInline
+      @type="danger"
+      class="has-top-padding-s"
+      @message={{@invalidFormAlert}}
+      data-test-totp-key-create-validation-error
+    />
   {{/if}}
 </form>
