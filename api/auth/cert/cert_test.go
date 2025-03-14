@@ -143,7 +143,7 @@ func TestLogin(t *testing.T) {
 }
 
 // TestNewDefaultCertAuthClient tests the NewDefaultCertAuthClient function validates inputs properly
-func TestNewDefaultCertAuthClient1(t *testing.T) {
+func TestNewDefaultCertAuthClient(t *testing.T) {
 	certs := createCertificates(t)
 	addr := "https://127.0.0.1:8200"
 	tlsConfig := &api.TLSConfig{
