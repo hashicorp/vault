@@ -39,7 +39,7 @@ const validations = {
 };
 @withModelValidations(validations)
 export default class RoleModel extends Model {
-  version = service();
+  @service version;
 
   idPrefix = 'role/';
 
@@ -187,10 +187,10 @@ export default class RoleModel extends Model {
       'renew_statements',
     ];
 
-    // better way to do this? - currently version returns undefined?
+    // remove enterprise-only attrs if on community
     if (!this.version.isEnterprise) {
       allRoleSettingFields = allRoleSettingFields.filter(
-        (role) => role !== 'skip_import_rotation' || role !== 'password'
+        (role) => !['skip_import_rotation', 'password'].includes(role)
       );
     }
 
