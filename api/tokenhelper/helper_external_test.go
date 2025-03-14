@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"runtime"
-	"strings"
 	"testing"
 )
 
@@ -57,16 +56,8 @@ func TestExternalTokenHelper(t *testing.T) {
 }
 
 func testExternalTokenHelper() *ExternalTokenHelper {
-	return &ExternalTokenHelper{BinaryPath: helperPath("helper"), Env: helperEnv()}
-}
-
-func helperPath(s ...string) string {
-	cs := []string{"-test.run=TestExternalTokenHelperProcess", "--"}
-	cs = append(cs, s...)
-	return fmt.Sprintf(
-		"%s %s",
-		os.Args[0],
-		strings.Join(cs, " "))
+	args := []string{"-test.run=TestExternalTokenHelperProcess", "--", "helper"}
+	return &ExternalTokenHelper{BinaryPath: os.Args[0], Args: args, Env: helperEnv()}
 }
 
 func helperEnv() []string {
