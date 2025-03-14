@@ -24,7 +24,6 @@ export default class AuthFormOkta extends AuthBase {
 
   @tracked challengeAnswer = null;
   @tracked waiting = false;
-  @tracked oktaError = '';
 
   login = task(
     waitFor(async (data) => {
