@@ -370,7 +370,15 @@
 
   <h3>CommandInput</h3>
 
-  <p>Not used in the codebase</p>
+  <Console::CommandInput
+    @isFullscreen={{false}}
+    @isRunning={{false}}
+    @value="lorem"
+    @onValueUpdate={{this.noop}}
+    @onFullscreen={{this.noop}}
+    @onExecuteCommand={{this.noop}}
+    @onShiftCommand={{this.noop}}
+  />
 
   <hr />
 
