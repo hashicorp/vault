@@ -3,19 +3,17 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<form {{on "submit" @create}}>
+<form {{on "submit" (perform @create)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @model={{@model}} />
     <NamespaceReminder @mode={{@mode}} @noun="TOTP key" />
-
-    {{#each (if @model.generate @generatedFields @nonGeneratedFields) as |field|}}
+    {{#each @keyFormFields as |field|}}
       {{#let (find-by "name" field @model.allFields) as |attr|}}
-        {{! TODO add model validations }}
-        <FormField @attr={{attr}} @model={{@model}} data-test-field />
+        <FormField @attr={{attr}} @model={{@model}} @modelValidations={{@modelValidations}} />
       {{/let}}
     {{/each}}
 
-    <Totp::KeyCreateToggleGroups @model={{@model}} />
+    <Totp::KeyCreateToggleGroups @model={{@model}} @modelValidations={{@modelValidations}} />
   </div>
   <div class="field is-grouped-split box is-fullwidth is-bottomless">
     <Hds::ButtonSet>
@@ -38,4 +36,7 @@
       {{/if}}
     </Hds::ButtonSet>
   </div>
+  {{#if @invalidFormAlert}}
+    <AlertInline @type="danger" class="has-top-padding-s" @message={{@invalidFormAlert}} />
+  {{/if}}
 </form>
