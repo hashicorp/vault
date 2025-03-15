@@ -41,7 +41,7 @@ install_external() {
     github.com/golangci/misspell/cmd/misspell@latest
     github.com/golangci/revgrep/cmd/revgrep@latest
     golang.org/x/tools/cmd/goimports@latest
-    google.golang.org/protobuf/cmd/protoc-gen-go@latest
+    google.golang.org/protobuf/cmd/protoc-gen-go@v1.34.1
     google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
     gotest.tools/gotestsum@latest
     honnef.co/go/tools/cmd/staticcheck@latest
