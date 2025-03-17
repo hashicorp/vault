@@ -81,6 +81,30 @@ export default class FormFieldComponent extends Component {
     this.toggleInputEnabled = !!modelValue;
   }
 
+  // ---------------------------------------------------------------
+  // IMPORTANT:
+  // this controls the top-level logic in the associated template
+  // to decide which type of form field to render (Vault or HDS)
+  // ---------------------------------------------------------------
+  //
+  get isHdsFormField() {
+    const { type, options } = this.args.attr;
+
+    // here we replicate the logic in the template, to make sure we don't change the order in which the "ifs" are evaluated
+    if (options?.possibleValues?.length > 0) {
+      // for now we leave these fields as they are
+      return false;
+    } else {
+      // converted to HDS fields
+      if ((type === 'number' || type === 'string') && options?.editType === 'password') {
+        return true;
+      } else {
+        // everything is the same as before
+        return false;
+      }
+    }
+  }
+
   get hasRadioSubText() {
     // for 'radio' editType, check to see if every of the possibleValues has a subText and label
     return this.args?.attr?.options?.possibleValues?.any((v) => v.subText);
