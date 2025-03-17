@@ -142,7 +142,7 @@ and their API equivalents in the [/sys/init](/vault/api-docs/system/init) endpoi
   the API endpoint.
 - `recovery-pgp-keys`: The PGP keys to use to encrypt the returned recovery
   key shares. This value is equivalent to the `recovery_pgp_keys` value in the
-  API endpoint, although as with `pgp_keys`. the object in the API endpoint is
+  API endpoint, although as with `pgp_keys` the object in the API endpoint is
   an array, not a string.
 
 Additionally, Vault does not initialize if you have not set the option to
@@ -153,7 +153,7 @@ generate a key, and Vault does not find a key. Refer to
 
 #### Unseal key
 
-You can rekey Vault's unseal key using a normal `vault operator rekey`
+You can rekey Vault's unseal key using a `vault operator rekey`
 operation from the CLI or the matching API calls. Vault authorizes the rekey operation when you meet the threshold of recovery keys. After rekeying, Vault wraps the new
 barrier key by the HSM or KMS and stores it like the previous key. Vault does not return the barrier key to the users that submitted their recovery keys.
 
