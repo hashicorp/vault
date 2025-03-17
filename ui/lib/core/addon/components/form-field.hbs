@@ -253,12 +253,6 @@
         />
       {{/if}}
     </Toggle>
-  {{else if (eq @attr.options.editType "toggle")}}
-    {{! Toggle without text input }}
-    <Toggle @name="show-{{@attr.name}}" @onChange={{this.setAndBroadcast}} data-test-toggle={{@attr.name}}>
-      <span class="ttl-picker-label is-large">{{this.labelString}}</span><br />
-      <span> {{@attr.options.subText}}</span>
-    </Toggle>
   {{else if (eq @attr.options.editType "stringArray")}}
     <StringList
       class={{if this.validationError "string-list-form-field-error"}}

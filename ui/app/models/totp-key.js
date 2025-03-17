@@ -133,7 +133,7 @@ export default class TotpKeyModel extends Model {
   skew;
 
   @attr('boolean', {
-    editType: 'toggle',
+    editType: 'toggleButton',
     defaultValue: true,
     // subText: 'Vault will not return QR code and url upon key creation.',
     // TODO check with design
