@@ -329,19 +329,6 @@
             oninput={{this.onChangeWithEvent}}
             class="textarea {{if this.validationError 'has-error-border'}}"
           ></textarea>
-        {{else if (eq @attr.options.editType "password")}}
-          {{! TODO! remove once it's thoroughly tested  }}
-          {{! NOTE: this code block should never be reached, but it's left here as fallback in case we missed something }}
-          <Input
-            data-test-input={{@attr.name}}
-            @type="password"
-            @value={{get @model this.valuePath}}
-            name={{@attr.name}}
-            class="input"
-            {{! Prevents browsers from auto-filling }}
-            autocomplete="new-password"
-            spellcheck="false"
-          />
         {{else if (eq @attr.options.editType "json")}}
           {{! JSON Editor }}
           {{#let (get @model this.valuePath) as |value|}}
