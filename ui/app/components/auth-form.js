@@ -45,7 +45,7 @@ export default Component.extend(DEFAULTS, {
   store: service(),
   csp: service('csp-event'),
   version: service(),
-  api: service('__api'),
+  api: service(),
 
   // set by query params, passed from parent Auth::Page component
   selectedAuth: null,
