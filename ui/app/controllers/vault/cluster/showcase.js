@@ -166,6 +166,30 @@ export default class ShowcaseController extends Controller {
           errors: ['This is the validation error message #1', 'This is the validation error message #2'],
         };
       }
+    } else if (editType === 'password') {
+      if (variant === 'with validation errors and warnings') {
+        modelValidations.password = {
+          isValid: false,
+          errors: ['This is the validation error message #1', 'This is the validation error message #2'],
+          warnings: [
+            'This is the validation warning message #1',
+            'This is the validation warning message #2',
+          ],
+        };
+      } else if (variant === 'with validation errors') {
+        modelValidations.password = {
+          isValid: false,
+          errors: ['This is the validation error message #1', 'This is the validation error message #2'],
+        };
+      } else if (variant === 'with validation warnings') {
+        modelValidations.password = {
+          isValid: true,
+          warnings: [
+            'This is the validation warning message #1',
+            'This is the validation warning message #2',
+          ],
+        };
+      }
     } else if (editType === 'ttl') {
       if (variant === 'with validation error') {
         // NOTICE: there is a bug in the CSS for the class "ttl-picker-form-field-error" because the border color is applied to the `input` child, but such element is hidden so the red border is not visible!
