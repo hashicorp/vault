@@ -8,6 +8,7 @@ import Model, { attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 import { withModelValidations } from 'vault/decorators/model-validations';
+import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { isPresent } from '@ember/utils';
 
@@ -66,6 +67,7 @@ const validations = {
 };
 
 @withModelValidations(validations)
+@withExpandedAttributes()
 @withFormFields()
 export default class TotpKeyModel extends Model {
   @attr('string', {
