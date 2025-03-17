@@ -20,17 +20,15 @@ of the seal.
 
 ## Why?
 
-Vault encrypts the data it stores. You must have an encryption key
-to decrypt the data. Vault stores the encryption key with the data
-in the keyring, but it encrypts the encryption key using another key known as the root key.
+Vault encrypts the data it stores.
+It encrypts most data using an encryption key stored in the keyring.
+You must have the encryption key to decrypt the data.
 
-You use the root key to decrypt the encryption key.
-The root key resides with all other Vault data,
-but you decrypt it using the unseal key.
+Vault encrypts the encryption key and the keyring itself using a root key.
+You use the root key to decrypt the encryption key, but you decrypt the root key using another key known as the unseal key.
 
-Vault encrypts most data using the encryption key in the keyring.
-However, it encrypts the keyring using the root key, and it reassembles the root key using
-the unseal key.
+To summarize, Vault encrypts most data using the encryption key.
+It encrypts the encryption key and the keyring using the root key, and it reassembles the root key using the unseal key.
 
 ## Shamir seals
 
