@@ -4,16 +4,13 @@
  */
 
 import authPage from 'vault/tests/pages/auth';
-import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
-import listPage from 'vault/tests/pages/secrets/backend/list';
-import { click, fillIn, currentURL, waitUntil } from '@ember/test-helpers';
+import { click, fillIn, currentURL, visit, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { v4 as uuidv4 } from 'uuid';
-import { spy } from 'sinon';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
-import { setupMirage } from 'ember-cli-mirage/test-support';
+import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
+import { v4 as uuidv4 } from 'uuid';
 
 const SELECTORS = {
   menuItem: (item) => `[data-test-popup-menu="${item}"]`,
@@ -21,7 +18,6 @@ const SELECTORS = {
 
 module('Acceptance | totp key backend', function (hooks) {
   setupApplicationTest(hooks);
-  setupMirage(hooks);
 
   const createVaultKey = async (keyName, issuer, accountName) => {
     await fillIn(GENERAL.inputByAttr('name'), keyName);
@@ -42,10 +38,6 @@ module('Acceptance | totp key backend', function (hooks) {
   };
 
   hooks.beforeEach(async function () {
-    const flash = this.owner.lookup('service:flash-messages');
-    this.flashSuccessSpy = spy(flash, 'success');
-    this.flashDangerSpy = spy(flash, 'danger');
-
     this.uid = uuidv4();
     this.mountPath = `totp-${this.uid}`;
     this.path = `totp-${this.uid}`;
@@ -57,7 +49,8 @@ module('Acceptance | totp key backend', function (hooks) {
 
     await authPage.login();
     // Setup TOTP engine
-    await enablePage.enable('totp', this.mountPath);
+    await visit('/vault/settings/mount-secret-backend');
+    await mountBackend('totp', this.mountPath);
   });
 
   test('it views a key via menu option', async function (assert) {
@@ -69,7 +62,7 @@ module('Acceptance | totp key backend', function (hooks) {
 
     await click(SES.createSecret);
     await createVaultKey(this.keyName, this.issuer, this.accountName);
-    await listPage.visit({ backend: this.path, id: this.keyName });
+    await visit(`/vault/secrets/${this.path}`);
     await click(GENERAL.menuTrigger);
     await click(`${SELECTORS.menuItem('details')}`);
 
@@ -93,7 +86,7 @@ module('Acceptance | totp key backend', function (hooks) {
     await click(SES.createSecret);
     await createVaultKey(this.keyName, this.issuer, this.accountName);
     await waitUntil(() => currentURL() === `/vault/secrets/${this.path}/show/${this.keyName}`);
-    await listPage.visit({ backend: this.path, id: this.keyName });
+    await visit(`/vault/secrets/${this.path}`);
     await click(GENERAL.menuTrigger);
     await click(GENERAL.confirmTrigger);
     await click(GENERAL.confirmButton);
