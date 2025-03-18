@@ -56,7 +56,7 @@
     "@ember/render-modifiers": "^1.0.2",
     "@ember/string": "^3.1.1",
     "@ember/test-helpers": "^3.2.0",
-    "@ember/test-waiters": "^3.1.0",
+    "@ember/test-waiters": "^4.0.0",
     "@glimmer/component": "^1.1.2",
     "@glimmer/tracking": "^1.1.2",
     "@icholy/duration": "^5.1.0",
@@ -158,8 +158,6 @@
     "sass": "^1.66.3",
     "shell-quote": "^1.8.1",
     "sinon": "^17.0.1",
-    "string.prototype.endswith": "^0.2.0",
-    "string.prototype.startswith": "^0.2.0",
     "stylelint": "^15.11.0",
     "stylelint-config-standard": "^34.0.0",
     "stylelint-prettier": "^4.0.2",
@@ -191,6 +189,7 @@
     "@embroider/macros": "^1.15.0",
     "socket.io": "^4.6.2",
     "json5": "^1.0.2",
+    "ember-cli-typescript": "^5.3.0",
     "lodash.template@^4.4.0": "patch:lodash.template@npm%3A4.5.0#./.yarn/patches/lodash.template-npm-4.5.0-5272df3039.patch",
     "lodash.template@^4.5.0": "patch:lodash.template@npm%3A4.5.0#./.yarn/patches/lodash.template-npm-4.5.0-5272df3039.patch"
   },
@@ -220,6 +219,7 @@
   "dependencies": {
     "@babel/core": "^7.24.0",
     "@hashicorp/design-system-components": "~4.16.0",
+    "@hashicorp/vault-client-typescript": "portal:./api-client",
     "ember-auto-import": "^2.7.2",
     "handlebars": "4.7.7",
     "highlight.js": "^10.4.1",

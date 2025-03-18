@@ -251,6 +251,20 @@ for each destination type below:
 * [AWS Access Management](/vault/docs/sync/awssm#access-management)
 * [GCP Access Management](/vault/docs/sync/gcpsm#access-management)
 
+### Endpoint security
+
+By default, Vault restricts the allowed IP addresses and port numbers used by the sync clients to safeguard against
+server-side request forgery (SSRF). All special purpose IPs defined at the IANA special-purpose registry for 
+[IPv4](https://www.iana.org/assignments/iana-ipv4-special-registry/iana-ipv4-special-registry.xhtml) and
+[IPv6](https://www.iana.org/assignments/iana-ipv6-special-registry/iana-ipv6-special-registry.xhtml) are blocked, while the only
+two allowed ports are 80 and 443.
+
+Both IP addresses and port numbers can be customized to fit the specific needs of the environment. This is useful in environments
+where the destination service is behind things such as a private endpoint, a load balancer, or a proxy. This strict networking policy
+can also be entirely disabled in environments where IP addresses or port numbers are not static values.
+Refer to the [API](#api) section for more information on these parameters.
+
+
 ## Reconciliation
 
 Vault Secrets Sync is designed to automatically recover from transient failures
