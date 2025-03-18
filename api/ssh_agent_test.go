@@ -5,6 +5,7 @@ package api
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"strings"
 	"testing"
@@ -32,6 +33,14 @@ func TestSSH_CreateTLSClient(t *testing.T) {
 	if client.config.HttpClient.Transport == nil {
 		panic(fmt.Sprintf("error creating client with TLS transport"))
 	}
+}
+
+// TestSSH_CannotLoadDuplicateKeys verifies a breaking change to the LoadSSHHelperConfig function exposed as part of
+// the API package that prevents the loading of duplicate keys in the configuration file.
+func TestSSH_CannotLoadDuplicateKeys(t *testing.T) {
+	_, err := LoadSSHHelperConfig("./test-fixtures/agent_config_duplicate_keys.hcl")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "Each argument can only be defined once")
 }
 
 func TestSSH_CreateTLSClient_tlsServerName(t *testing.T) {
