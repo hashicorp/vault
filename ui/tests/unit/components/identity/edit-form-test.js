@@ -31,7 +31,7 @@ module('Unit | Component | identity/edit-form', function (hooks) {
     {
       identityType: 'entity-alias',
       mode: 'create',
-      expected: 'vault.cluster.access.identity.aliases',
+      expected: ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY_ALIASES_SHOW,
     },
     {
       identityType: 'entity-alias',
@@ -51,7 +51,7 @@ module('Unit | Component | identity/edit-form', function (hooks) {
     {
       identityType: 'group-alias',
       mode: 'create',
-      expected: 'vault.cluster.access.identity.aliases',
+      expected: ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY_ALIASES_SHOW,
     },
     {
       identityType: 'group-alias',

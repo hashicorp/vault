@@ -9,6 +9,8 @@ export const ROUTES = {
 
   VAULT_CLUSTER_ACCESS_CONTROLGROUPS: 'vault.cluster.access.control-groups',
   VAULT_CLUSTER_ACCESS_IDENTITY: 'vault.cluster.access.identity',
+  VAULT_CLUSTER_ACCESS_IDENTITY_ALIASES_EDIT: 'vault.cluster.access.identity.aliases.edit',
+  VAULT_CLUSTER_ACCESS_IDENTITY_ALIASES_INDEX: 'vault.cluster.access.identity.aliases.index',
   VAULT_CLUSTER_ACCESS_IDENTITY_ALIASES_SHOW: 'vault.cluster.access.identity.aliases.show',
   VAULT_CLUSTER_ACCESS_IDENTITY_SHOW: 'vault.cluster.access.identity.show',
   VAULT_CLUSTER_ACCESS_LEASES: 'vault.cluster.access.leases',

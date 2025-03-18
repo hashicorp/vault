@@ -101,7 +101,7 @@ export const testAliasDeleteFromForm = async function (name, itemType, assert) {
   await settled();
   assert.strictEqual(
     currentRouteName(),
-    'vault.cluster.access.identity.aliases.edit',
+    ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY_ALIASES_EDIT,
     `${itemType}: navigates to edit on create`
   );
   await page.editForm.delete();
@@ -111,7 +111,7 @@ export const testAliasDeleteFromForm = async function (name, itemType, assert) {
   assert.dom(GENERAL.latestFlashContent).includesText(`Successfully deleted`);
   assert.strictEqual(
     currentRouteName(),
-    'vault.cluster.access.identity.aliases.index',
+    ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY_ALIASES_INDEX,
     `${itemType}: navigates to list page on delete`
   );
   assert.strictEqual(

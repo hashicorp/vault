@@ -20,8 +20,8 @@ export default Controller.extend({
       const isDelete = saveType === 'delete';
       const type = model.identityType;
       const listRoutes = {
-        'entity-alias': 'vault.cluster.access.identity.aliases.index',
-        'group-alias': 'vault.cluster.access.identity.aliases.index',
+        'entity-alias': ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY_ALIASES_INDEX,
+        'group-alias': ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY_ALIASES_INDEX,
         group: 'vault.cluster.access.identity.index',
         entity: 'vault.cluster.access.identity.index',
       };

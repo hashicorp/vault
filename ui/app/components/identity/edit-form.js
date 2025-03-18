@@ -34,11 +34,11 @@ export default Component.extend({
       'create-entity': ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY,
       'edit-entity': ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY_SHOW,
       'merge-entity-merge': ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY,
-      'create-entity-alias': 'vault.cluster.access.identity.aliases',
+      'create-entity-alias': ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY_ALIASES_SHOW,
       'edit-entity-alias': ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY_ALIASES_SHOW,
       'create-group': ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY,
       'edit-group': ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY_SHOW,
-      'create-group-alias': 'vault.cluster.access.identity.aliases',
+      'create-group-alias': ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY_ALIASES_SHOW,
       'edit-group-alias': ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY_ALIASES_SHOW,
     };
     const key = model ? `${mode}-${model.identityType}` : 'merge-entity-alias';
