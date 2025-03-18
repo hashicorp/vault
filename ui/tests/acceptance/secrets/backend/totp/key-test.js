@@ -6,7 +6,7 @@
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import listPage from 'vault/tests/pages/secrets/backend/list';
-import { click, fillIn, currentURL, settled, waitUntil } from '@ember/test-helpers';
+import { click, fillIn, currentURL, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -28,6 +28,7 @@ module('Acceptance | totp key backend', function (hooks) {
     await fillIn(GENERAL.inputByAttr('issuer'), issuer);
     await fillIn(GENERAL.inputByAttr('accountName'), accountName);
     await click('[data-test-totp-create]');
+    await click(GENERAL.backButton);
   };
 
   const createNonVaultKey = async (keyName, issuer, accountName, url) => {
@@ -36,8 +37,8 @@ module('Acceptance | totp key backend', function (hooks) {
     await fillIn(GENERAL.inputByAttr('issuer'), issuer);
     await fillIn(GENERAL.inputByAttr('accountName'), accountName);
     await fillIn(GENERAL.inputByAttr('url'), url);
-
     await click('[data-test-totp-create]');
+    await click(GENERAL.backButton);
   };
 
   hooks.beforeEach(async function () {
@@ -68,13 +69,18 @@ module('Acceptance | totp key backend', function (hooks) {
 
     await click(SES.createSecret);
     await createVaultKey(this.keyName, this.issuer, this.accountName);
-    await settled();
     await listPage.visit({ backend: this.path, id: this.keyName });
     await click(GENERAL.menuTrigger);
     await click(`${SELECTORS.menuItem('details')}`);
 
     assert.dom('.title').hasText(`TOTP key ${this.keyName}`);
     assert.dom('[data-test-totp-key-details]').exists();
+
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${this.path}/show/${this.keyName}`,
+      'After enabling totp secrets engine it navigates to keys list'
+    );
   });
 
   test('it deletes a key via menu option', async function (assert) {
@@ -86,7 +92,7 @@ module('Acceptance | totp key backend', function (hooks) {
 
     await click(SES.createSecret);
     await createVaultKey(this.keyName, this.issuer, this.accountName);
-    await settled();
+    await waitUntil(() => currentURL() === `/vault/secrets/${this.path}/show/${this.keyName}`);
     await listPage.visit({ backend: this.path, id: this.keyName });
     await click(GENERAL.menuTrigger);
     await click(GENERAL.confirmTrigger);
@@ -105,7 +111,7 @@ module('Acceptance | totp key backend', function (hooks) {
     assert.dom(SES.secretHeader).hasText('Create a TOTP key', 'It renders the create key page');
 
     await createVaultKey(this.keyName, this.issuer, this.accountName);
-    // await waitUntil(() => currentURL() === `/vault/secrets/${this.path}/show/${this.keyName}`);
+    await waitUntil(() => currentURL() === `/vault/secrets/${this.path}/show/${this.keyName}`);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${this.path}/show/${this.keyName}`,
@@ -123,7 +129,6 @@ module('Acceptance | totp key backend', function (hooks) {
     await click(SES.createSecret);
     assert.dom(SES.secretHeader).hasText('Create a TOTP key', 'It renders the create key page');
     await createNonVaultKey(this.keyName, this.issuer, this.accountName, this.url);
-
     await waitUntil(() => currentURL() === `/vault/secrets/${this.path}/show/${this.keyName}`);
     assert.strictEqual(
       currentURL(),
