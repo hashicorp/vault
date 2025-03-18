@@ -547,7 +547,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
       .doesNotExist('Roles card does not exist on overview w/ policy');
     assert.dom('.overview-card h2').hasText('1', 'Lists the correct number of connections');
     // confirm get credentials card is an option to select. Regression bug.
-    await typeIn('.ember-text-field', 'blah');
+    await typeIn('[data-test-input-search="search-input-role"]', 'blah');
     assert.dom('[data-test-get-credentials]').isEnabled();
     // [BANDAID] navigate away to fix test failing on capabilities-self check before teardown
     await visit('/vault/secrets');
