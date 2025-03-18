@@ -25,6 +25,7 @@ const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
 export default class TotpEdit extends Component {
   @service router;
+  @service flashMessages;
 
   @tracked hasGenerated = false;
   @tracked invalidFormAlert = '';
@@ -62,10 +63,11 @@ export default class TotpEdit extends Component {
     try {
       await this.model.destroyRecord();
       this.transitionToRoute(LIST_ROOT_ROUTE);
-    } catch (e) {
-      //todo
+    } catch (err) {
+      // err will display via model state
       return;
     }
+    this.flashMessages.success('Successfully deleted key');
   }
 
   createKey = task(
@@ -74,14 +76,16 @@ export default class TotpEdit extends Component {
       const { isValid, state, invalidFormMessage } = this.model.validate();
       this.modelValidations = isValid ? null : state;
       this.invalidFormAlert = invalidFormMessage;
+
       if (!isValid) return;
       try {
         await this.model.save();
         this.hasGenerated = true;
-      } catch (e) {
-        // todo
+      } catch (err) {
+        // err will display via model state
         return;
       }
+      this.flashMessages.success('Successfully created key');
     })
   );
 }
