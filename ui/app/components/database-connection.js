@@ -10,8 +10,7 @@ import { action } from '@ember/object';
 import { waitFor } from '@ember/test-waiters';
 import { task } from 'ember-concurrency';
 
-const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
-const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
+import { ROUTES } from 'vault/utils/routes';
 
 const getErrorMessage = (errors) => {
   let errorMessage = errors?.join('. ') || 'Something went wrong. Check the Vault logs for more information.';
@@ -76,7 +75,7 @@ export default class DatabaseConnectionEdit extends Component {
     if (this.continueWithRotate.isRunning) return;
     this.showSaveModal = false;
     const { name } = this.args.model;
-    this.transitionToRoute(SHOW_ROUTE, name);
+    this.transitionToRoute(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_SHOW, name);
   }
 
   continueWithRotate = task(
@@ -85,10 +84,10 @@ export default class DatabaseConnectionEdit extends Component {
       try {
         await this.rotateCredentials(backend, name);
         this.flashMessages.success(`Successfully rotated root credentials for connection "${name}"`);
-        this.transitionToRoute(SHOW_ROUTE, name);
+        this.transitionToRoute(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_SHOW, name);
       } catch (e) {
         this.flashMessages.danger(`Error rotating root credentials: ${e.errors}`);
-        this.transitionToRoute(SHOW_ROUTE, name);
+        this.transitionToRoute(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_SHOW, name);
       } finally {
         this.showSaveModal = false;
       }
@@ -103,7 +102,7 @@ export default class DatabaseConnectionEdit extends Component {
     secret
       .save()
       .then(() => {
-        this.transitionToRoute(SHOW_ROUTE, secretId);
+        this.transitionToRoute(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_SHOW, secretId);
       })
       .catch((e) => {
         const errorMessage = getErrorMessage(e.errors);
@@ -117,7 +116,7 @@ export default class DatabaseConnectionEdit extends Component {
     const secret = this.args.model;
     const backend = secret.backend;
     secret.destroyRecord().then(() => {
-      this.transitionToRoute(LIST_ROOT_ROUTE, backend);
+      this.transitionToRoute(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_LISTROOT, backend);
     });
   }
 

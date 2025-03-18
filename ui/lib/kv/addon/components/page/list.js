@@ -11,6 +11,7 @@ import { getOwner } from '@ember/owner';
 import { ancestorKeysForKey } from 'core/utils/key-utils';
 import errorMessage from 'vault/utils/error-message';
 import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
+import { ROUTES } from 'vault/utils/routes';
 
 /**
  * @module List
@@ -87,6 +88,6 @@ export default class KvListPageComponent extends Component {
     evt.preventDefault();
     pathIsDirectory(this.secretPath)
       ? this.router.transitionTo('vault.cluster.secrets.backend.kv.list-directory', this.secretPath)
-      : this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.index', this.secretPath);
+      : this.router.transitionTo(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_KV_SECRET_INDEX, this.secretPath);
   }
 }

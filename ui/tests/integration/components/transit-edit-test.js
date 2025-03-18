@@ -9,6 +9,7 @@ import { click, fillIn, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { capabilitiesStub } from 'vault/tests/helpers/stubs';
+import { ROUTES } from 'vault/utils/routes';
 
 const SELECTORS = {
   createForm: '[data-test-transit-create-form]',
@@ -29,7 +30,7 @@ module('Integration | Component | transit-edit', function (hooks) {
     this.backendCrumb = {
       label: 'transit',
       text: 'transit',
-      path: 'vault.cluster.secrets.backend.list-root',
+      path: ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_LISTROOT,
       model: 'transit',
     };
   });

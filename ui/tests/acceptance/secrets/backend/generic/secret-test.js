@@ -19,6 +19,7 @@ import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 
 import { create } from 'ember-cli-page-object';
 import { deleteEngineCmd, runCmd } from 'vault/tests/helpers/commands';
+import { ROUTES } from 'vault/utils/routes';
 
 const cli = create(consolePanel);
 
@@ -37,7 +38,7 @@ module('Acceptance | secrets/generic/create', function (hooks) {
     await listPage.visitRoot({ backend: path });
     assert.strictEqual(
       currentRouteName(),
-      'vault.cluster.secrets.backend.list-root',
+      ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_LISTROOT,
       'navigates to the list page'
     );
     assert.strictEqual(listPage.secrets.length, 1, 'lists one secret in the backend');
@@ -46,7 +47,7 @@ module('Acceptance | secrets/generic/create', function (hooks) {
     await editPage.createSecret(kvPath, 'foo', 'bar');
     assert.strictEqual(
       currentRouteName(),
-      'vault.cluster.secrets.backend.show',
+      ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_SHOW,
       'redirects to the show page'
     );
     assert.ok(showPage.editIsPresent, 'shows the edit button');

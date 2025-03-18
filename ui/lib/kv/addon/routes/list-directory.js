@@ -7,6 +7,7 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { hash } from 'rsvp';
 import { pathIsDirectory, breadcrumbsForSecret } from 'kv/utils/kv-breadcrumbs';
+import { ROUTES } from 'vault/utils/routes';
 
 export default class KvSecretsListRoute extends Route {
   @service pagination;
@@ -71,14 +72,14 @@ export default class KvSecretsListRoute extends Route {
     resolvedModel.failedDirectoryQuery =
       resolvedModel.secrets === 403 && pathIsDirectory(resolvedModel.pathToSecret);
 
-    let breadcrumbsArray = [{ label: 'Secrets', route: 'secrets', linkExternal: true }];
+    let breadcrumbsArray = [{ label: 'Secrets', route: ROUTES.SECRETS, linkExternal: true }];
     // if on top level don't link the engine breadcrumb label, but if within a directory, do link back to top level.
-    if (this.routeName === 'list') {
+    if (this.routeName === ROUTES.LIST) {
       breadcrumbsArray.push({ label: resolvedModel.backend });
     } else {
       breadcrumbsArray = [
         ...breadcrumbsArray,
-        { label: resolvedModel.backend, route: 'list', model: resolvedModel.backend },
+        { label: resolvedModel.backend, route: ROUTES.LIST, model: resolvedModel.backend },
         ...breadcrumbsForSecret(resolvedModel.backend, resolvedModel.pathToSecret, true),
       ];
     }

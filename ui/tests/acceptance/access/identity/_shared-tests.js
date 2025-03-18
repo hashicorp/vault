@@ -10,6 +10,7 @@ import page from 'vault/tests/pages/access/identity/create';
 import showPage from 'vault/tests/pages/access/identity/show';
 import indexPage from 'vault/tests/pages/access/identity/index';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { ROUTES } from 'vault/utils/routes';
 const SELECTORS = {
   identityRow: (name) => `[data-test-identity-row="${name}"]`,
   popupMenu: '[data-test-popup-menu-trigger]',
@@ -23,7 +24,7 @@ export const testCRUD = async (name, itemType, assert) => {
   assert.dom(GENERAL.latestFlashContent).includesText('Successfully saved');
   assert.strictEqual(
     currentRouteName(),
-    'vault.cluster.access.identity.show',
+    ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY_SHOW,
     `${itemType}: navigates to show on create`
   );
   assert.ok(showPage.nameContains(name), `${itemType}: renders the name on the show page`);

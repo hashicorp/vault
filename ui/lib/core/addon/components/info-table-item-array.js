@@ -8,6 +8,7 @@ import { assert } from '@ember/debug';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
+import { ROUTES } from 'vault/utils/routes';
 
 /**
  * @module InfoTableItemArray
@@ -43,11 +44,11 @@ export default class InfoTableItemArray extends Component {
   }
 
   get rootRoute() {
-    return this.args.rootRoute || 'vault.cluster.secrets.backend.list-root';
+    return this.args.rootRoute || ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_LISTROOT;
   }
 
   get itemRoute() {
-    return this.args.itemRoute || 'vault.cluster.secrets.backend.show';
+    return this.args.itemRoute || ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_SHOW;
   }
 
   get doNotTruncate() {

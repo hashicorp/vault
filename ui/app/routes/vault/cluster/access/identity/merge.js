@@ -6,15 +6,16 @@
 import Route from '@ember/routing/route';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
 import { service } from '@ember/service';
+import { ROUTES } from 'vault/utils/routes';
 
 export default Route.extend(UnloadModelRoute, {
   store: service(),
   router: service(),
 
   beforeModel() {
-    const itemType = this.modelFor('vault.cluster.access.identity');
+    const itemType = this.modelFor(ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY);
     if (itemType !== 'entity') {
-      return this.router.transitionTo('vault.cluster.access.identity');
+      return this.router.transitionTo(ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY);
     }
   },
 

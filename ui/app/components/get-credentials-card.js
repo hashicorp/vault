@@ -29,6 +29,7 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
+import { ROUTES } from 'vault/utils/routes';
 
 export default class GetCredentialsCard extends Component {
   @service router;
@@ -39,7 +40,7 @@ export default class GetCredentialsCard extends Component {
     evt.preventDefault();
     const role = this.role;
     if (role) {
-      this.router.transitionTo('vault.cluster.secrets.backend.credentials', role);
+      this.router.transitionTo(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_CREDENTIALS, role);
     }
   }
 

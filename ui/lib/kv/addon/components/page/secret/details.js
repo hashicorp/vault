@@ -12,6 +12,7 @@ import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { isDeleted } from 'kv/utils/kv-deleted';
 import { isAdvancedSecret } from 'core/utils/advanced-secret';
+import { ROUTES } from 'vault/utils/routes';
 
 /**
  * @module KvSecretDetails renders the key/value data of a KV secret.
@@ -133,7 +134,7 @@ export default class KvSecretDetails extends Component {
 
   transition() {
     // transition to the overview to prevent automatically reading sensitive secret data
-    this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.index');
+    this.router.transitionTo(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_KV_SECRET_INDEX);
   }
 
   get version() {

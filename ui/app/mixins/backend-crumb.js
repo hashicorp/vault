@@ -5,6 +5,7 @@
 
 import { computed } from '@ember/object';
 import Mixin from '@ember/object/mixin';
+import { ROUTES } from 'vault/utils/routes';
 
 export default Mixin.create({
   backendCrumb: computed('backend', function () {
@@ -17,7 +18,7 @@ export default Mixin.create({
     return {
       label: backend,
       text: backend,
-      path: 'vault.cluster.secrets.backend.list-root',
+      path: ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_LISTROOT,
       model: backend,
     };
   }),

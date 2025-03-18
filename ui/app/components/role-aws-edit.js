@@ -6,7 +6,7 @@
 import { isBlank } from '@ember/utils';
 import { set } from '@ember/object';
 import RoleEdit from './role-edit';
-const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
+import { ROUTES } from 'vault/utils/routes';
 
 export default RoleEdit.extend({
   actions: {
@@ -39,7 +39,7 @@ export default RoleEdit.extend({
 
       this.persist('save', () => {
         this.hasDataChanges();
-        this.transitionToRoute(SHOW_ROUTE, modelId);
+        this.transitionToRoute(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_SHOW, modelId);
       });
     },
 

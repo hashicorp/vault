@@ -36,10 +36,9 @@ import { tracked } from '@glimmer/tracking';
 import { isBlank, isNone } from '@ember/utils';
 import { task, waitForEvent } from 'ember-concurrency';
 import { WHITESPACE_WARNING } from 'vault/utils/model-helpers/validators';
+import { ROUTES } from 'vault/utils/routes';
 
 const LIST_ROUTE = 'vault.cluster.secrets.backend.list';
-const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
-const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
 export default class SecretCreateOrUpdate extends Component {
   @tracked codemirrorString = null;
@@ -96,7 +95,7 @@ export default class SecretCreateOrUpdate extends Component {
     if (parentKey) {
       this.transitionToRoute(LIST_ROUTE, parentKey);
     } else {
-      this.transitionToRoute(LIST_ROOT_ROUTE);
+      this.transitionToRoute(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_LISTROOT);
     }
   }
   pathHasWhiteSpace(value) {
@@ -188,7 +187,7 @@ export default class SecretCreateOrUpdate extends Component {
       this.flashMessages.success(
         `Secret ${secretPath} ${type === 'create' ? 'created' : 'updated'} successfully.`
       );
-      this.transitionToRoute(SHOW_ROUTE, secretPath);
+      this.transitionToRoute(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_SHOW, secretPath);
     });
   }
   @action

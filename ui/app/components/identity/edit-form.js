@@ -9,6 +9,7 @@ import { computed } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { humanize } from 'vault/helpers/humanize';
 import { waitFor } from '@ember/test-waiters';
+import { ROUTES } from 'vault/utils/routes';
 
 export default Component.extend({
   flashMessages: service(),
@@ -30,15 +31,15 @@ export default Component.extend({
   cancelLink: computed('mode', 'model.identityType', function () {
     const { model, mode } = this;
     const routes = {
-      'create-entity': 'vault.cluster.access.identity',
-      'edit-entity': 'vault.cluster.access.identity.show',
-      'merge-entity-merge': 'vault.cluster.access.identity',
+      'create-entity': ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY,
+      'edit-entity': ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY_SHOW,
+      'merge-entity-merge': ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY,
       'create-entity-alias': 'vault.cluster.access.identity.aliases',
-      'edit-entity-alias': 'vault.cluster.access.identity.aliases.show',
-      'create-group': 'vault.cluster.access.identity',
-      'edit-group': 'vault.cluster.access.identity.show',
+      'edit-entity-alias': ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY_ALIASES_SHOW,
+      'create-group': ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY,
+      'edit-group': ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY_SHOW,
       'create-group-alias': 'vault.cluster.access.identity.aliases',
-      'edit-group-alias': 'vault.cluster.access.identity.aliases.show',
+      'edit-group-alias': ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY_ALIASES_SHOW,
     };
     const key = model ? `${mode}-${model.identityType}` : 'merge-entity-alias';
     return routes[key];

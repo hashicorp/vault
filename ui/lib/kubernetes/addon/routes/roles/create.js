@@ -5,6 +5,7 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+import { ROUTES } from 'vault/utils/routes';
 
 export default class KubernetesRolesCreateRoute extends Route {
   @service store;
@@ -19,8 +20,8 @@ export default class KubernetesRolesCreateRoute extends Route {
     super.setupController(controller, resolvedModel);
 
     controller.breadcrumbs = [
-      { label: resolvedModel.backend, route: 'overview' },
-      { label: 'Roles', route: 'roles', model: resolvedModel.backend },
+      { label: resolvedModel.backend, route: ROUTES.SECRETS },
+      { label: 'Roles', route: ROUTES.ROLES, model: resolvedModel.backend },
       { label: 'Create' },
     ];
   }

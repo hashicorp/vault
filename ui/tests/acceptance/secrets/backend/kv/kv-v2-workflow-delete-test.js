@@ -15,6 +15,7 @@ import { click, currentRouteName, currentURL, waitUntil, visit } from '@ember/te
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import sinon from 'sinon';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { ROUTES } from 'vault/utils/routes';
 
 const ALL_DELETE_ACTIONS = ['delete', 'destroy', 'undelete'];
 const assertDeleteActions = (assert, expected = ['delete', 'destroy']) => {
@@ -335,7 +336,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assertDeleteActions(assert, ['undelete', 'destroy']);
       // undelete flow
       await click(PAGE.detail.undelete);
-      await waitUntil(() => currentRouteName() === 'vault.cluster.secrets.backend.kv.secret.index');
+      await waitUntil(() => currentRouteName() === ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_KV_SECRET_INDEX);
       assert
         .dom(GENERAL.overviewCard.container('Current version'))
         .hasText(`Current version The current version of this secret. 2`);

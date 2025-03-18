@@ -11,6 +11,7 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
 import sinon from 'sinon';
+import { ROUTES } from 'vault/utils/routes';
 
 const selectors = {
   name: '[data-test-input="issuerName"]',
@@ -42,7 +43,7 @@ module('Integration | Component | pki | Page::PkiIssuerEditPage::PkiIssuerEdit',
     const router = this.owner.lookup('service:router');
     const transitionSpy = sinon.stub(router, 'transitionTo');
     this.transitionCalled = () =>
-      transitionSpy.calledWith('vault.cluster.secrets.backend.pki.issuers.issuer.details');
+      transitionSpy.calledWith(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_PKI_ISSUERS_ISSUER_DETAILS);
 
     const store = this.owner.lookup('service:store');
     store.pushPayload('pki/issuer', {

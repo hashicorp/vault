@@ -9,13 +9,14 @@ import { set } from '@ember/object';
 import Route from '@ember/routing/route';
 import { TABS } from 'vault/helpers/tabs-for-identity-show';
 import { service } from '@ember/service';
+import { ROUTES } from 'vault/utils/routes';
 
 export default Route.extend({
   store: service(),
 
   model(params) {
     const { section } = params;
-    const itemType = this.modelFor('vault.cluster.access.identity') + '-alias';
+    const itemType = this.modelFor(ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY) + '-alias';
     const tabs = TABS[itemType];
     const modelType = `identity/${itemType}`;
     if (!tabs.includes(section)) {

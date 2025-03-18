@@ -6,12 +6,13 @@
 import Route from '@ember/routing/route';
 import UnsavedModelRoute from 'vault/mixins/unsaved-model-route';
 import { service } from '@ember/service';
+import { ROUTES } from 'vault/utils/routes';
 
 export default Route.extend(UnsavedModelRoute, {
   store: service(),
 
   model(params) {
-    const itemType = this.modelFor('vault.cluster.access.identity');
+    const itemType = this.modelFor(ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY);
     const modelType = `identity/${itemType}`;
     return this.store.findRecord(modelType, params.item_id);
   },

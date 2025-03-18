@@ -10,6 +10,7 @@ import { task } from 'ember-concurrency';
 import { service } from '@ember/service';
 import { pathIsFromDirectory } from 'kv/utils/kv-breadcrumbs';
 import errorMessage from 'vault/utils/error-message';
+import { ROUTES } from 'vault/utils/routes';
 
 /**
  * @module KvSecretCreate is used for creating the initial version of a secret
@@ -90,7 +91,7 @@ export default class KvSecretCreate extends Component {
       if (this.errorMessage) {
         this.invalidFormAlert = 'There was an error submitting this form.';
       } else {
-        this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.index', secret.path);
+        this.router.transitionTo(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_KV_SECRET_INDEX, secret.path);
       }
     }
   }

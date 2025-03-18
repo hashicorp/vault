@@ -5,6 +5,7 @@
 
 import { parentKeyForKey } from 'core/utils/key-utils';
 import EditBase from './secret-edit';
+import { ROUTES } from 'vault/utils/routes';
 
 export default EditBase.extend({
   queryParams: {
@@ -21,7 +22,7 @@ export default EditBase.extend({
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     if (this.backendType(backend) !== 'transit') {
       if (parentKey) {
-        return this.router.transitionTo('vault.cluster.secrets.backend.show', parentKey);
+        return this.router.transitionTo(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_SHOW, parentKey);
       } else {
         return this.router.transitionTo('vault.cluster.secrets.backend.show-root');
       }
@@ -34,16 +35,16 @@ export default EditBase.extend({
     controller.set('breadcrumbs', [
       {
         label: 'Secrets',
-        route: 'vault.cluster.secrets',
+        route: ROUTES.VAULT_CLUSTER_SECRETS,
       },
       {
         label: model.secret.backend,
-        route: 'vault.cluster.secrets.backend.list-root',
+        route: ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_LISTROOT,
         model: model.secret.backend,
       },
       {
         label: model.secret.id,
-        route: 'vault.cluster.secrets.backend.show',
+        route: ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_SHOW,
         models: [model.secret.backend, model.secret.id],
       },
       {

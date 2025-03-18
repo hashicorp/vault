@@ -15,6 +15,7 @@ import type FlashMessageService from 'vault/services/flash-messages';
 import type PkiIssuerModel from 'vault/models/pki/issuer';
 import { removeFromArray } from 'vault/helpers/remove-from-array';
 import { addToArray } from 'vault/helpers/add-to-array';
+import { ROUTES } from 'vault/utils/routes';
 
 interface Args {
   model: PkiIssuerModel;
@@ -33,7 +34,7 @@ export default class PkiIssuerEditComponent extends Component<Args> {
   }
 
   toDetails() {
-    this.router.transitionTo('vault.cluster.secrets.backend.pki.issuers.issuer.details');
+    this.router.transitionTo(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_PKI_ISSUERS_ISSUER_DETAILS);
   }
 
   @action

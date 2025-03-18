@@ -10,6 +10,7 @@ import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { removeFromArray } from 'vault/helpers/remove-from-array';
+import { ROUTES } from 'vault/utils/routes';
 
 /**
  * @module KeymgmtProviderEdit
@@ -54,7 +55,7 @@ export default class KeymgmtProviderEdit extends Component {
     const { model } = this.args;
     try {
       yield model.save();
-      this.router.transitionTo('vault.cluster.secrets.backend.show', model.id, {
+      this.router.transitionTo(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_SHOW, model.id, {
         queryParams: { itemType: 'provider' },
       });
     } catch (error) {

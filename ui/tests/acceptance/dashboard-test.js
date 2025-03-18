@@ -30,6 +30,7 @@ import { runCmd, deleteEngineCmd, createNS } from 'vault/tests/helpers/commands'
 import { DASHBOARD } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
 import { CUSTOM_MESSAGES } from 'vault/tests/helpers/config-ui/message-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { ROUTES } from 'vault/utils/routes';
 
 const authenticatedMessageResponse = {
   request_id: '664fbad0-fcd8-9023-4c5b-81a7962e9f4b',
@@ -306,7 +307,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await selectChoose(DASHBOARD.searchSelect('params'), 'some-role');
       assert.dom(DASHBOARD.actionButton('Issue leaf certificate')).exists({ count: 1 });
       await click(DASHBOARD.actionButton('Issue leaf certificate'));
-      assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.roles.role.generate');
+      assert.strictEqual(currentRouteName(), ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_PKI_ROLES_ROLE_GENERATE);
 
       await visit('/vault/dashboard');
 
@@ -319,7 +320,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await click(DASHBOARD.actionButton('View certificate'));
       assert.strictEqual(
         currentRouteName(),
-        'vault.cluster.secrets.backend.pki.certificates.certificate.details'
+        ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_PKI_CERTIFICATES_CERTIFICATE_DETAILS
       );
 
       await visit('/vault/dashboard');
@@ -331,7 +332,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom(DASHBOARD.actionButton('View issuer')).exists({ count: 1 });
       await selectChoose(DASHBOARD.searchSelect('params'), '.ember-power-select-option', 0);
       await click(DASHBOARD.actionButton('View issuer'));
-      assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.issuers.issuer.details');
+      assert.strictEqual(currentRouteName(), ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_PKI_ISSUERS_ISSUER_DETAILS);
 
       // cleanup engine mount
       await runCmd(deleteEngineCmd(backend));
@@ -370,7 +371,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom(DASHBOARD.actionButton('Generate credentials')).exists({ count: 1 });
       await selectChoose(DASHBOARD.searchSelect('params'), '.ember-power-select-option', 0);
       await click(DASHBOARD.actionButton('Generate credentials'));
-      assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.credentials');
+      assert.strictEqual(currentRouteName(), ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_CREDENTIALS);
       await runCmd(deleteEngineCmd(databaseBackend));
     });
 

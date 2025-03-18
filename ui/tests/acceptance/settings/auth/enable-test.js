@@ -11,6 +11,7 @@ import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { deleteAuthCmd, runCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { ROUTES } from 'vault/utils/routes';
 
 module('Acceptance | settings/auth/enable', function (hooks) {
   setupApplicationTest(hooks);
@@ -32,7 +33,7 @@ module('Acceptance | settings/auth/enable', function (hooks) {
       .hasText(`Successfully mounted the ${type} auth method at ${path}.`);
     assert.strictEqual(
       currentRouteName(),
-      'vault.cluster.settings.auth.configure.section',
+      ROUTES.VAULT_CLUSTER_SETTINGS_AUTH_CONFIGURE_SECTION,
       'redirects to the auth config page'
     );
 

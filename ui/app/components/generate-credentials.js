@@ -7,6 +7,7 @@ import { service } from '@ember/service';
 import { action } from '@ember/object';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
+import { ROUTES } from 'vault/utils/routes';
 
 const CREDENTIAL_TYPES = {
   ssh: {
@@ -63,7 +64,7 @@ export default class GenerateCredentials extends Component {
       return type.model;
     }
     // if we don't have a mode for that type then redirect them back to the backend list
-    this.router.transitionTo('vault.cluster.secrets.backend.list-root', this.args.backendPath);
+    this.router.transitionTo(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_LISTROOT, this.args.backendPath);
   }
 
   get helpText() {

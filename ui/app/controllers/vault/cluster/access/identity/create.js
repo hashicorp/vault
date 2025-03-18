@@ -5,13 +5,14 @@
 
 import Controller from '@ember/controller';
 import { service } from '@ember/service';
+import { ROUTES } from 'vault/utils/routes';
 
 /**
  * @type Class
  */
 export default Controller.extend({
   router: service(),
-  showRoute: 'vault.cluster.access.identity.show',
+  showRoute: ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY_SHOW,
   showTab: 'details',
 
   actions: {

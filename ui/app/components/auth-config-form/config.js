@@ -8,6 +8,7 @@ import { service } from '@ember/service';
 import Component from '@glimmer/component';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
+import { ROUTES } from 'vault/utils/routes';
 
 /**
  * @module AuthConfigForm/Config
@@ -38,7 +39,7 @@ export default class AuthConfigBase extends Component {
       }
       return;
     }
-    this.router.transitionTo('vault.cluster.access.methods').followRedirects();
+    this.router.transitionTo(ROUTES.VAULT_CLUSTER_ACCESS_METHODS).followRedirects();
     this.flashMessages.success('The configuration was saved successfully.');
   }
 }

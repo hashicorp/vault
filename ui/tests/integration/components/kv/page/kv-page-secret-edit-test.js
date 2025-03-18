@@ -14,6 +14,7 @@ import codemirror from 'vault/tests/helpers/codemirror';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { ROUTES } from 'vault/utils/routes';
 
 module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) {
   setupRenderingTest(hooks);
@@ -101,7 +102,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
     const [actual] = this.transitionStub.lastCall.args;
     assert.strictEqual(
       actual,
-      'vault.cluster.secrets.backend.kv.secret.index',
+      ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_KV_SECRET_INDEX,
       'router transitions to secret overview route on save'
     );
   });
@@ -199,7 +200,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
     const [actual] = this.transitionStub.lastCall.args;
     assert.strictEqual(
       actual,
-      'vault.cluster.secrets.backend.kv.secret.index',
+      ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_KV_SECRET_INDEX,
       'router transitions to secret overview route on cancel'
     );
   });

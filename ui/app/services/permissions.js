@@ -7,6 +7,7 @@ import Service, { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { sanitizePath, sanitizeStart } from 'core/utils/sanitize-path';
 import { task } from 'ember-concurrency';
+import { ROUTES } from 'vault/utils/routes';
 
 export const PERMISSIONS_BANNER_STATES = {
   readFailed: 'read-failed',
@@ -58,14 +59,14 @@ const API_PATHS = {
 };
 
 const API_PATHS_TO_ROUTE_PARAMS = {
-  'sys/auth': { route: 'vault.cluster.access.methods', models: [] },
-  'identity/entity/id': { route: 'vault.cluster.access.identity', models: ['entities'] },
-  'identity/group/id': { route: 'vault.cluster.access.identity', models: ['groups'] },
-  'sys/leases/lookup': { route: 'vault.cluster.access.leases', models: [] },
-  'sys/namespaces': { route: 'vault.cluster.access.namespaces', models: [] },
-  'sys/control-group/': { route: 'vault.cluster.access.control-groups', models: [] },
-  'identity/mfa/method': { route: 'vault.cluster.access.mfa', models: [] },
-  'identity/oidc/client': { route: 'vault.cluster.access.oidc', models: [] },
+  'sys/auth': { route: ROUTES.VAULT_CLUSTER_ACCESS_METHODS, models: [] },
+  'identity/entity/id': { route: ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY, models: ['entities'] },
+  'identity/group/id': { route: ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY, models: ['groups'] },
+  'sys/leases/lookup': { route: ROUTES.VAULT_CLUSTER_ACCESS_LEASES, models: [] },
+  'sys/namespaces': { route: ROUTES.VAULT_CLUSTER_ACCESS_NAMESPACES, models: [] },
+  'sys/control-group/': { route: ROUTES.VAULT_CLUSTER_ACCESS_CONTROLGROUPS, models: [] },
+  'identity/mfa/method': { route: ROUTES.VAULT_CLUSTER_ACCESS_MFA, models: [] },
+  'identity/oidc/client': { route: ROUTES.VAULT_CLUSTER_ACCESS_OIDC, models: [] },
 };
 
 /*

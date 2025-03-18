@@ -6,6 +6,7 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { tabsForAuthSection } from 'vault/helpers/tabs-for-auth-section';
+import { ROUTES } from 'vault/utils/routes';
 
 export default class SettingsAuthConfigureRoute extends Route {
   @service router;
@@ -13,6 +14,6 @@ export default class SettingsAuthConfigureRoute extends Route {
   beforeModel() {
     const model = this.modelFor('vault.cluster.settings.auth.configure');
     const section = tabsForAuthSection([model])[0].routeParams.slice().pop();
-    return this.router.transitionTo('vault.cluster.settings.auth.configure.section', section);
+    return this.router.transitionTo(ROUTES.VAULT_CLUSTER_SETTINGS_AUTH_CONFIGURE_SECTION, section);
   }
 }

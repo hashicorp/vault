@@ -26,6 +26,7 @@ import generatePage from 'vault/tests/pages/secrets/backend/ssh/generate-otp';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import { ROUTES } from 'vault/utils/routes';
 
 // There is duplication within this test suite. The duplication occurred because two test suites both testing ssh roles were merged.
 // refactoring the tests to remove the duplication would be a good next step as well as removing the tests/pages.
@@ -83,7 +84,7 @@ module('Acceptance | ssh | roles', function (hooks) {
     {
       type: 'otp',
       name: 'otprole',
-      credsRoute: 'vault.cluster.secrets.backend.credentials',
+      credsRoute: ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_CREDENTIALS,
       async fillInCreate() {
         await fillIn(GENERAL.inputByAttr('defaultUser'), 'admin');
         await click(GENERAL.toggleGroup('Options'));
@@ -198,7 +199,7 @@ module('Acceptance | ssh | roles', function (hooks) {
       await settled();
       assert.strictEqual(
         currentRouteName(),
-        'vault.cluster.secrets.backend.list-root',
+        ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_LISTROOT,
         'redirects to list page'
       );
       assert.ok(listPage.backendIsEmpty, 'no roles listed');
@@ -216,7 +217,7 @@ module('Acceptance | ssh | roles', function (hooks) {
       await settled();
       assert.strictEqual(
         currentRouteName(),
-        'vault.cluster.secrets.backend.show',
+        ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_SHOW,
         'redirects to the show page'
       );
       assert.ok(showPage.generateIsPresent, 'shows the generate button');
@@ -227,7 +228,7 @@ module('Acceptance | ssh | roles', function (hooks) {
       await settled();
       assert.strictEqual(
         currentRouteName(),
-        'vault.cluster.secrets.backend.credentials',
+        ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_CREDENTIALS,
         'navs to the credentials page'
       );
 

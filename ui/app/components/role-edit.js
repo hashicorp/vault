@@ -11,9 +11,7 @@ import Component from '@ember/component';
 import { set } from '@ember/object';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import keys from 'core/utils/key-codes';
-
-const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
-const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
+import { ROUTES } from 'vault/utils/routes';
 
 /**
  * @type Class
@@ -52,7 +50,7 @@ export default Component.extend(FocusOnInsertMixin, {
     if (e.keyCode !== keys.ESC || this.mode !== 'show') {
       return;
     }
-    this.transitionToRoute(LIST_ROOT_ROUTE);
+    this.transitionToRoute(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_LISTROOT);
   },
 
   hasDataChanges() {
@@ -82,7 +80,7 @@ export default Component.extend(FocusOnInsertMixin, {
 
       this.persist('save', () => {
         this.hasDataChanges();
-        this.transitionToRoute(SHOW_ROUTE, modelId);
+        this.transitionToRoute(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_SHOW, modelId);
       });
     },
 
@@ -97,7 +95,7 @@ export default Component.extend(FocusOnInsertMixin, {
     delete() {
       this.persist('destroyRecord', () => {
         this.hasDataChanges();
-        this.transitionToRoute(LIST_ROOT_ROUTE);
+        this.transitionToRoute(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_LISTROOT);
       });
     },
 

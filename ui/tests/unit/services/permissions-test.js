@@ -9,6 +9,7 @@ import Service from '@ember/service';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { PERMISSIONS_BANNER_STATES } from 'vault/services/permissions';
+import { ROUTES } from 'vault/utils/routes';
 
 const PERMISSIONS_RESPONSE = {
   data: {
@@ -84,7 +85,7 @@ module('Unit | Service | permissions', function (hooks) {
         capabilities: ['read'],
       },
     };
-    const expected = { route: 'vault.cluster.access.identity', models: ['entities'] };
+    const expected = { route: ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY, models: ['entities'] };
     this.service.set('exactPaths', accessPaths);
     assert.deepEqual(this.service.navPathParams('access'), expected);
   });

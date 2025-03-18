@@ -7,6 +7,7 @@ import EmberObject from '@ember/object';
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import sinon from 'sinon';
+import { ROUTES } from 'vault/utils/routes';
 
 module('Unit | Component | identity/edit-form', function (hooks) {
   setupTest(hooks);
@@ -15,17 +16,17 @@ module('Unit | Component | identity/edit-form', function (hooks) {
     {
       identityType: 'entity',
       mode: 'create',
-      expected: 'vault.cluster.access.identity',
+      expected: ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY,
     },
     {
       identityType: 'entity',
       mode: 'edit',
-      expected: 'vault.cluster.access.identity.show',
+      expected: ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY_SHOW,
     },
     {
       identityType: 'entity-merge',
       mode: 'merge',
-      expected: 'vault.cluster.access.identity',
+      expected: ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY,
     },
     {
       identityType: 'entity-alias',
@@ -35,17 +36,17 @@ module('Unit | Component | identity/edit-form', function (hooks) {
     {
       identityType: 'entity-alias',
       mode: 'edit',
-      expected: 'vault.cluster.access.identity.aliases.show',
+      expected: ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY_ALIASES_SHOW,
     },
     {
       identityType: 'group',
       mode: 'create',
-      expected: 'vault.cluster.access.identity',
+      expected: ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY,
     },
     {
       identityType: 'group',
       mode: 'edit',
-      expected: 'vault.cluster.access.identity.show',
+      expected: ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY_SHOW,
     },
     {
       identityType: 'group-alias',
@@ -55,7 +56,7 @@ module('Unit | Component | identity/edit-form', function (hooks) {
     {
       identityType: 'group-alias',
       mode: 'edit',
-      expected: 'vault.cluster.access.identity.aliases.show',
+      expected: ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY_ALIASES_SHOW,
     },
   ];
   testCases.forEach(function (testCase) {

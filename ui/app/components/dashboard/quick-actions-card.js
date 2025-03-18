@@ -8,6 +8,7 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
+import { ROUTES } from 'vault/utils/routes';
 /**
  * @module DashboardQuickActionsCard
  * DashboardQuickActionsCard component allows users to see a list of secrets engines filtered by
@@ -49,7 +50,7 @@ export default class DashboardQuickActionsCard extends Component {
           subText: 'Path of the secret you want to read.',
           buttonText: 'Read secrets',
           model: 'kv/metadata',
-          route: 'vault.cluster.secrets.backend.kv.secret.index',
+          route: ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_KV_SECRET_INDEX,
           nameKey: 'path',
           queryObject: { pathToSecret: '', backend: this.selectedEngine.id },
           objectKeys: ['path', 'id'],
@@ -59,7 +60,7 @@ export default class DashboardQuickActionsCard extends Component {
           title: 'Role to use',
           buttonText: 'Generate credentials',
           model: 'database/role',
-          route: 'vault.cluster.secrets.backend.credentials',
+          route: ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_CREDENTIALS,
           queryObject: { backend: this.selectedEngine.id },
         };
       case 'Issue certificate':
@@ -68,7 +69,7 @@ export default class DashboardQuickActionsCard extends Component {
           placeholder: 'Type to find a role',
           buttonText: 'Issue leaf certificate',
           model: 'pki/role',
-          route: 'vault.cluster.secrets.backend.pki.roles.role.generate',
+          route: ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_PKI_ROLES_ROLE_GENERATE,
           queryObject: { backend: this.selectedEngine.id },
         };
       case 'View certificate':
@@ -77,7 +78,7 @@ export default class DashboardQuickActionsCard extends Component {
           placeholder: '33:a3:...',
           buttonText: 'View certificate',
           model: 'pki/certificate/base',
-          route: 'vault.cluster.secrets.backend.pki.certificates.certificate.details',
+          route: ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_PKI_CERTIFICATES_CERTIFICATE_DETAILS,
           queryObject: { backend: this.selectedEngine.id },
         };
       case 'View issuer':
@@ -86,7 +87,7 @@ export default class DashboardQuickActionsCard extends Component {
           placeholder: 'Type issuer name or ID',
           buttonText: 'View issuer',
           model: 'pki/issuer',
-          route: 'vault.cluster.secrets.backend.pki.issuers.issuer.details',
+          route: ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_PKI_ISSUERS_ISSUER_DETAILS,
           nameKey: 'issuerName',
           queryObject: { backend: this.selectedEngine.id },
           objectKeys: ['id', 'issuerName'],
@@ -149,7 +150,7 @@ export default class DashboardQuickActionsCard extends Component {
       const path = this.paramValue.path || this.paramValue;
       route = pathIsDirectory(path)
         ? 'vault.cluster.secrets.backend.kv.list-directory'
-        : 'vault.cluster.secrets.backend.kv.secret.index';
+        : ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_KV_SECRET_INDEX;
       param = path;
     }
 

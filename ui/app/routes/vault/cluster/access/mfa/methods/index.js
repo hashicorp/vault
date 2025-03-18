@@ -5,6 +5,7 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+import { ROUTES } from 'vault/utils/routes';
 
 export default class MfaMethodsRoute extends Route {
   @service store;
@@ -22,7 +23,7 @@ export default class MfaMethodsRoute extends Route {
 
   afterModel(model) {
     if (model.length === 0) {
-      this.router.transitionTo('vault.cluster.access.mfa');
+      this.router.transitionTo(ROUTES.VAULT_CLUSTER_ACCESS_MFA);
     }
   }
   setupController(controller, model) {

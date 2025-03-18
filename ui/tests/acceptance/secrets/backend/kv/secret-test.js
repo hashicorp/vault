@@ -22,6 +22,7 @@ import codemirror from 'vault/tests/helpers/codemirror';
 import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SS } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import { ROUTES } from 'vault/utils/routes';
 
 const deleteEngine = async function (enginePath, assert) {
   await logout.visit();
@@ -107,7 +108,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await writeSecret(this.backend, secretPath, 'foo', 'bar');
       assert.strictEqual(
         currentRouteName(),
-        'vault.cluster.secrets.backend.kv.secret.index',
+        ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_KV_SECRET_INDEX,
         'redirects to the overview page'
       );
     });
@@ -154,7 +155,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await editPage.createSecret(secretPath, 'foo', 'bar');
       assert.strictEqual(
         currentRouteName(),
-        'vault.cluster.secrets.backend.show',
+        ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_SHOW,
         'redirects to the show page'
       );
       assert.ok(showPage.editIsPresent, 'shows the edit button');
@@ -212,7 +213,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await showPage.deleteSecretV1();
       assert.strictEqual(
         currentRouteName(),
-        'vault.cluster.secrets.backend.list-root',
+        ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_LISTROOT,
         'redirected to the list page on delete'
       );
     });
@@ -250,7 +251,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         await click(SS.secretLink());
         assert.strictEqual(
           currentRouteName(),
-          'vault.cluster.secrets.backend.show',
+          ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_SHOW,
           `${path}: show page renders correctly`
         );
       }
@@ -308,7 +309,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         await click(SS.secretLink());
         assert.strictEqual(
           currentRouteName(),
-          'vault.cluster.secrets.backend.show',
+          ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_SHOW,
           `${path}: show page renders correctly`
         );
         assert.dom('h1.title').hasText(`${path}/2`, 'shows correct page title');
@@ -345,7 +346,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
 
       assert.strictEqual(
         currentRouteName(),
-        'vault.cluster.secrets.backend.show',
+        ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_SHOW,
         'redirects to the show page'
       );
       assert.ok(showPage.editIsPresent, 'shows the edit button');

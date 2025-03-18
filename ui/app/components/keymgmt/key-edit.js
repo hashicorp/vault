@@ -9,6 +9,7 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
+import { ROUTES } from 'vault/utils/routes';
 
 /**
  * @module KeymgmtKeyEdit
@@ -23,8 +24,6 @@ import { waitFor } from '@ember/test-waiters';
  * @param {string} [tab=details] - Options are "details" or "versions" for the show mode only
  */
 
-const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
-const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 export default class KeymgmtKeyEdit extends Component {
   @service store;
   @service router;
@@ -54,7 +53,7 @@ export default class KeymgmtKeyEdit extends Component {
     const { model } = this.args;
     try {
       yield model.save();
-      this.router.transitionTo(SHOW_ROUTE, model.name);
+      this.router.transitionTo(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_SHOW, model.name);
     } catch (error) {
       let errorMessage = error;
       if (error.errors) {
@@ -65,7 +64,7 @@ export default class KeymgmtKeyEdit extends Component {
       if (!error.errors) {
         // If error was custom from save, only partial fail
         // so it's safe to show the key
-        this.router.transitionTo(SHOW_ROUTE, model.name);
+        this.router.transitionTo(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_SHOW, model.name);
       }
     }
   }
@@ -89,7 +88,7 @@ export default class KeymgmtKeyEdit extends Component {
     secret
       .destroyRecord()
       .then(() => {
-        this.router.transitionTo(LIST_ROOT_ROUTE, backend);
+        this.router.transitionTo(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_LISTROOT, backend);
       })
       .catch((e) => {
         this.flashMessages.danger(e.errors?.join('. '));

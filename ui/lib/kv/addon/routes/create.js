@@ -8,6 +8,7 @@ import { service } from '@ember/service';
 import { hash } from 'rsvp';
 import { withConfirmLeave } from 'core/decorators/confirm-leave';
 import { breadcrumbsForSecret } from 'kv/utils/kv-breadcrumbs';
+import { ROUTES } from 'vault/utils/routes';
 
 @withConfirmLeave('model.secret', ['model.metadata'])
 export default class KvSecretsCreateRoute extends Route {
@@ -31,8 +32,8 @@ export default class KvSecretsCreateRoute extends Route {
     super.setupController(controller, resolvedModel);
 
     const crumbs = [
-      { label: 'Secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backend, route: 'list', model: resolvedModel.backend },
+      { label: 'Secrets', route: ROUTES.SECRETS, linkExternal: true },
+      { label: resolvedModel.backend, route: ROUTES.LIST, model: resolvedModel.backend },
       ...breadcrumbsForSecret(resolvedModel.backend, resolvedModel.path),
       { label: 'Create' },
     ];

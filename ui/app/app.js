@@ -7,6 +7,7 @@ import Application from '@ember/application';
 import Resolver from 'ember-resolver';
 import loadInitializers from 'ember-load-initializers';
 import config from 'vault/config/environment';
+import { ROUTES } from 'vault/utils/routes';
 
 export default class App extends Application {
   modulePrefix = config.modulePrefix;
@@ -129,7 +130,7 @@ export default class App extends Application {
         ],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
-          externalMountIssuer: 'vault.cluster.secrets.backend.pki.issuers.issuer.details',
+          externalMountIssuer: ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_PKI_ISSUERS_ISSUER_DETAILS,
           secretsListRootConfiguration: 'vault.cluster.secrets.backend.configuration',
         },
       },
@@ -138,7 +139,7 @@ export default class App extends Application {
       dependencies: {
         services: ['flash-messages', 'flags', { 'app-router': 'router' }, 'store', 'pagination', 'version'],
         externalRoutes: {
-          kvSecretOverview: 'vault.cluster.secrets.backend.kv.secret.index',
+          kvSecretOverview: ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_KV_SECRET_INDEX,
           clientCountOverview: 'vault.cluster.clients',
         },
       },

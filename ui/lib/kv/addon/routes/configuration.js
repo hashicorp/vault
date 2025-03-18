@@ -6,6 +6,7 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { hash } from 'rsvp';
+import { ROUTES } from 'vault/utils/routes';
 
 export default class KvConfigurationRoute extends Route {
   @service store;
@@ -24,8 +25,8 @@ export default class KvConfigurationRoute extends Route {
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
     controller.breadcrumbs = [
-      { label: 'Secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.mountConfig.id, route: 'list', model: resolvedModel.engineConfig.backend },
+      { label: 'Secrets', route: ROUTES.SECRETS, linkExternal: true },
+      { label: resolvedModel.mountConfig.id, route: ROUTES.LIST, model: resolvedModel.engineConfig.backend },
       { label: 'Configuration' },
     ];
   }

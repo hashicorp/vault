@@ -13,6 +13,7 @@ import Component from '@glimmer/component';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';
 import keys from 'core/utils/key-codes';
+import { ROUTES } from 'vault/utils/routes';
 
 /**
  * @module NavigateInput
@@ -40,7 +41,7 @@ const routeFor = function (type, mode, urls) {
     'secrets-cert': 'vault.cluster.secrets.backend',
     'policy-show': 'vault.cluster.policy',
     'policy-list': 'vault.cluster.policies',
-    leases: 'vault.cluster.access.leases',
+    leases: ROUTES.VAULT_CLUSTER_ACCESS_LEASES,
   };
   // urls object should have create, list, show keys
   // so we'll return that here

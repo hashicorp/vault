@@ -5,6 +5,7 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+import { ROUTES } from 'vault/utils/routes';
 
 export default class KvErrorRoute extends Route {
   @service secretMountPath;
@@ -12,8 +13,12 @@ export default class KvErrorRoute extends Route {
   setupController(controller) {
     super.setupController(...arguments);
     controller.breadcrumbs = [
-      { label: 'Secrets', route: 'secrets', linkExternal: true },
-      { label: this.secretMountPath.currentPath, route: 'list', model: this.secretMountPath.currentPath },
+      { label: 'Secrets', route: ROUTES.SECRETS, linkExternal: true },
+      {
+        label: this.secretMountPath.currentPath,
+        route: ROUTES.LIST,
+        model: this.secretMountPath.currentPath,
+      },
     ];
     controller.mountName = this.secretMountPath.currentPath;
   }

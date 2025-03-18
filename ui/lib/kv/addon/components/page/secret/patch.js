@@ -10,6 +10,7 @@ import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import errorMessage from 'vault/utils/error-message';
+import { ROUTES } from 'vault/utils/routes';
 
 /**
  * @module KvSecretPatch
@@ -66,7 +67,7 @@ export default class KvSecretPatch extends Component {
     try {
       yield adapter.patchSecret(backend, path, patchData, version);
       this.flashMessages.success(`Successfully patched new version of ${path}.`);
-      this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.index');
+      this.router.transitionTo(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_KV_SECRET_INDEX);
     } catch (error) {
       if (error.message === 'Control Group encountered') {
         this.controlGroup.saveTokenFromError(error);
@@ -80,7 +81,7 @@ export default class KvSecretPatch extends Component {
 
   @action
   onCancel() {
-    this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.index');
+    this.router.transitionTo(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_KV_SECRET_INDEX);
   }
 
   isEmpty(object) {

@@ -5,6 +5,7 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+import { ROUTES } from 'vault/utils/routes';
 
 export default class KubernetesRoleEditRoute extends Route {
   @service store;
@@ -12,7 +13,7 @@ export default class KubernetesRoleEditRoute extends Route {
 
   model() {
     const backend = this.secretMountPath.currentPath;
-    const { name } = this.paramsFor('roles.role');
+    const { name } = this.paramsFor(ROUTES.ROLES_ROLE);
     return this.store.queryRecord('kubernetes/role', { backend, name });
   }
 
@@ -20,9 +21,9 @@ export default class KubernetesRoleEditRoute extends Route {
     super.setupController(controller, resolvedModel);
 
     controller.breadcrumbs = [
-      { label: resolvedModel.backend, route: 'overview' },
-      { label: 'Roles', route: 'roles', model: resolvedModel.backend },
-      { label: resolvedModel.name, route: 'roles.role' },
+      { label: resolvedModel.backend, route: ROUTES.OVERVIEW },
+      { label: 'Roles', route: ROUTES.ROLES, model: resolvedModel.backend },
+      { label: resolvedModel.name, route: ROUTES.ROLES_ROLE },
       { label: 'Edit' },
     ];
   }

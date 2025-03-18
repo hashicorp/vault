@@ -8,6 +8,8 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
+import { ROUTES } from 'vault/utils/routes';
+
 import enablePage from 'vault/tests/pages/settings/auth/enable';
 import page from 'vault/tests/pages/settings/auth/configure/index';
 import authPage from 'vault/tests/pages/auth';
@@ -25,7 +27,7 @@ module('Acceptance | settings/auth/configure', function (hooks) {
     const type = 'approle';
     await enablePage.enable(type, path);
     await page.visit({ path });
-    assert.strictEqual(currentRouteName(), 'vault.cluster.settings.auth.configure.section');
+    assert.strictEqual(currentRouteName(), ROUTES.VAULT_CLUSTER_SETTINGS_AUTH_CONFIGURE_SECTION);
     assert.strictEqual(
       currentURL(),
       `/vault/settings/auth/configure/${path}/options`,
@@ -38,7 +40,7 @@ module('Acceptance | settings/auth/configure', function (hooks) {
     const type = 'aws';
     await enablePage.enable(type, path);
     await page.visit({ path });
-    assert.strictEqual(currentRouteName(), 'vault.cluster.settings.auth.configure.section');
+    assert.strictEqual(currentRouteName(), ROUTES.VAULT_CLUSTER_SETTINGS_AUTH_CONFIGURE_SECTION);
     assert.strictEqual(
       currentURL(),
       `/vault/settings/auth/configure/${path}/client`,

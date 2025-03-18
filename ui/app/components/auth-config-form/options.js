@@ -10,6 +10,7 @@ import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { tracked } from '@glimmer/tracking';
 import errorMessage from 'vault/utils/error-message';
+import { ROUTES } from 'vault/utils/routes';
 
 /**
  * @module AuthConfigForm/Options
@@ -62,7 +63,7 @@ export default class AuthConfigOptions extends AuthConfigComponent {
       }
       throw err;
     }
-    this.router.transitionTo('vault.cluster.access.methods').followRedirects();
+    this.router.transitionTo(ROUTES.VAULT_CLUSTER_ACCESS_METHODS).followRedirects();
     this.flashMessages.success('The configuration was saved successfully.');
   }
 }

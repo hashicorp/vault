@@ -9,6 +9,7 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
+import { ROUTES } from 'vault/utils/routes';
 
 export default Route.extend(UnloadModelRoute, {
   store: service(),
@@ -35,7 +36,7 @@ export default Route.extend(UnloadModelRoute, {
       capabilities: hash({
         renew: this.store.findRecord('capabilities', 'sys/leases/renew'),
         revoke: this.store.findRecord('capabilities', 'sys/leases/revoke'),
-        leases: this.modelFor('vault.cluster.access.leases'),
+        leases: this.modelFor(ROUTES.VAULT_CLUSTER_ACCESS_LEASES),
       }),
     });
   },

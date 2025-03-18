@@ -12,6 +12,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { mountAuthCmd, runCmd } from 'vault/tests/helpers/commands';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
+import { ROUTES } from 'vault/utils/routes';
 
 const { searchSelect } = GENERAL;
 
@@ -26,7 +27,11 @@ module('Acceptance | auth-methods list view', function (hooks) {
 
   test('it navigates to auth method', async function (assert) {
     await visit('/vault/access/');
-    assert.strictEqual(currentRouteName(), 'vault.cluster.access.methods', 'navigates to the correct route');
+    assert.strictEqual(
+      currentRouteName(),
+      ROUTES.VAULT_CLUSTER_ACCESS_METHODS,
+      'navigates to the correct route'
+    );
     assert.dom('[data-test-sidebar-nav-link="Authentication Methods"]').hasClass('active');
   });
 

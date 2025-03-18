@@ -7,6 +7,7 @@ import { set } from '@ember/object';
 import { hash } from 'rsvp';
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+import { ROUTES } from 'vault/utils/routes';
 
 export default Route.extend({
   pagination: service(),
@@ -25,7 +26,7 @@ export default Route.extend({
 
   model(params) {
     const prefix = params.prefix || '';
-    if (this.modelFor('vault.cluster.access.leases').canList) {
+    if (this.modelFor(ROUTES.VAULT_CLUSTER_ACCESS_LEASES).canList) {
       return hash({
         leases: this.pagination
           .lazyPaginatedQuery('lease', {

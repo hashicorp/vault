@@ -12,6 +12,7 @@ import { service } from '@ember/service';
 import { normalizePath } from 'vault/utils/path-encoding-helpers';
 import { assert } from '@ember/debug';
 import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
+import { ROUTES } from 'vault/utils/routes';
 
 const SUPPORTED_BACKENDS = supportedSecretBackends();
 
@@ -80,7 +81,7 @@ export default Route.extend({
   beforeModel() {
     const secret = this.secretParam();
     const backend = this.enginePathParam();
-    const { tab } = this.paramsFor('vault.cluster.secrets.backend.list-root');
+    const { tab } = this.paramsFor(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_LISTROOT);
     const secretEngine = this.store.peekRecord('secret-engine', backend);
     const type = secretEngine?.engineType;
     assert('secretEngine.engineType is not defined', !!type);
@@ -91,7 +92,7 @@ export default Route.extend({
 
     const engineRoute = allEngines().find((engine) => engine.type === type)?.engineRoute;
     if (!type || !SUPPORTED_BACKENDS.includes(type)) {
-      return this.router.transitionTo('vault.cluster.secrets');
+      return this.router.transitionTo(ROUTES.VAULT_CLUSTER_SECRETS);
     }
     if (this.routeName === 'vault.cluster.secrets.backend.list' && !secret.endsWith('/')) {
       return this.router.replaceWith('vault.cluster.secrets.backend.list', secret + '/');

@@ -9,6 +9,7 @@ import { tracked } from '@glimmer/tracking';
 import { waitFor } from '@ember/test-waiters';
 import { task } from 'ember-concurrency';
 import errorMessage from 'vault/utils/error-message';
+import { ROUTES } from 'vault/utils/routes';
 
 /**
  * @module DatabaseRoleEdit component is used to configure a database role.
@@ -26,8 +27,6 @@ import errorMessage from 'vault/utils/error-message';
  * @param {string} mode - The mode to render. Either 'create' or 'edit'.
  * @param {string} [initialKey] - The initial key to set for the database role.
  */
-const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
-const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 export default class DatabaseRoleEdit extends Component {
   @service router;
   @service flashMessages;
@@ -85,7 +84,7 @@ export default class DatabaseRoleEdit extends Component {
 
   @action
   generateCreds(roleId, roleType = '') {
-    this.router.transitionTo('vault.cluster.secrets.backend.credentials', roleId, {
+    this.router.transitionTo(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_CREDENTIALS, roleId, {
       queryParams: { roleType },
     });
   }
@@ -98,7 +97,9 @@ export default class DatabaseRoleEdit extends Component {
       .destroyRecord()
       .then(() => {
         try {
-          this.router.transitionTo(LIST_ROOT_ROUTE, backend, { queryParams: { tab: 'role' } });
+          this.router.transitionTo(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_LISTROOT, backend, {
+            queryParams: { tab: 'role' },
+          });
         } catch (e) {
           console.debug(e); // eslint-disable-line
         }
@@ -122,7 +123,7 @@ export default class DatabaseRoleEdit extends Component {
       }
       try {
         await model.save();
-        this.router.transitionTo(SHOW_ROUTE, `role/${model.name}`);
+        this.router.transitionTo(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_SHOW, `role/${model.name}`);
       } catch (e) {
         this.errorMessage = errorMessage(e);
         this.flashMessages.danger(

@@ -7,6 +7,7 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { withConfig } from 'core/decorators/fetch-secrets-engine-config';
 import { hash } from 'rsvp';
+import { ROUTES } from 'vault/utils/routes';
 
 @withConfig('kubernetes/config')
 export default class KubernetesOverviewRoute extends Route {
@@ -26,7 +27,7 @@ export default class KubernetesOverviewRoute extends Route {
     super.setupController(controller, resolvedModel);
 
     controller.breadcrumbs = [
-      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: ROUTES.SECRETS, linkExternal: true },
       { label: resolvedModel.backend.id },
     ];
   }

@@ -12,9 +12,7 @@ import { set } from '@ember/object';
 
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import keys from 'core/utils/key-codes';
-
-const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
-const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
+import { ROUTES } from 'vault/utils/routes';
 
 export default Component.extend(FocusOnInsertMixin, {
   router: service(),
@@ -37,11 +35,11 @@ export default Component.extend(FocusOnInsertMixin, {
     const baseCrumbs = [
       {
         label: 'Secrets',
-        route: 'vault.cluster.secrets',
+        route: ROUTES.VAULT_CLUSTER_SECRETS,
       },
       {
         label: this.key.backend,
-        route: 'vault.cluster.secrets.backend.list-root',
+        route: ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_LISTROOT,
         model: this.key.backend,
       },
     ];
@@ -57,7 +55,7 @@ export default Component.extend(FocusOnInsertMixin, {
         ...baseCrumbs,
         {
           label: this.key.id,
-          route: 'vault.cluster.secrets.backend.show',
+          route: ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_SHOW,
           models: [this.key.backend, this.key.id],
           query: { tab: 'details' },
         },
@@ -86,7 +84,7 @@ export default Component.extend(FocusOnInsertMixin, {
     if (e.keyCode !== keys.ESC || this.mode !== 'show') {
       return;
     }
-    this.transitionToRoute(LIST_ROOT_ROUTE);
+    this.transitionToRoute(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_LISTROOT);
   },
 
   hasDataChanges() {
@@ -120,7 +118,9 @@ export default Component.extend(FocusOnInsertMixin, {
         'save',
         () => {
           this.hasDataChanges();
-          this.transitionToRoute(SHOW_ROUTE, keyId, { queryParams: { tab: 'details' } });
+          this.transitionToRoute(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_SHOW, keyId, {
+            queryParams: { tab: 'details' },
+          });
         },
         type === 'create'
       );
@@ -154,7 +154,7 @@ export default Component.extend(FocusOnInsertMixin, {
     deleteKey() {
       this.persistKey('destroyRecord', () => {
         this.hasDataChanges();
-        this.transitionToRoute(LIST_ROOT_ROUTE);
+        this.transitionToRoute(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_LISTROOT);
       });
     },
   },

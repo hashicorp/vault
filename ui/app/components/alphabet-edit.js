@@ -9,6 +9,8 @@ import { action } from '@ember/object';
 import { service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
 
+import { ROUTES } from 'vault/utils/routes';
+
 /**
  * @module AlphabetEdit
  * `AlphabetEdit` is a component that allows you to create/edit or view an alphabet.
@@ -33,7 +35,7 @@ export default class AlphabetEditComponent extends Component {
     return [
       {
         label: backend,
-        route: 'vault.cluster.secrets.backend.list-root',
+        route: ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_LISTROOT,
         model: backend,
         query: { tab: 'alphabet' },
       },
@@ -45,12 +47,12 @@ export default class AlphabetEditComponent extends Component {
     this.errorMessage = '';
     const { backend, id } = this.args.model;
     if (route === 'list') {
-      this.router.transitionTo('vault.cluster.secrets.backend.list-root', backend, {
+      this.router.transitionTo(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_LISTROOT, backend, {
         queryParams: { tab: 'alphabet' },
       });
       return;
     } else {
-      this.router.transitionTo('vault.cluster.secrets.backend.show', `alphabet/${id}`);
+      this.router.transitionTo(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_SHOW, `alphabet/${id}`);
     }
   }
 

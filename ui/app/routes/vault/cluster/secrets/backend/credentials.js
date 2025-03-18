@@ -7,6 +7,7 @@ import { resolve } from 'rsvp';
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import ControlGroupError from 'vault/lib/control-group-error';
+import { ROUTES } from 'vault/utils/routes';
 
 const SUPPORTED_DYNAMIC_BACKENDS = ['database', 'ssh', 'aws'];
 
@@ -20,7 +21,7 @@ export default Route.extend({
     const { id: backendPath, type: backendType } = this.modelFor('vault.cluster.secrets.backend');
     // redirect if the backend type does not support credentials
     if (!SUPPORTED_DYNAMIC_BACKENDS.includes(backendType)) {
-      return this.router.transitionTo('vault.cluster.secrets.backend.list-root', backendPath);
+      return this.router.transitionTo(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_LISTROOT, backendPath);
     }
     // hydrate model if backend type is ssh
     if (backendType === 'ssh') {

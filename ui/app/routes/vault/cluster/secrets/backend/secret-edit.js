@@ -10,6 +10,7 @@ import { service } from '@ember/service';
 import Route from '@ember/routing/route';
 import { encodePath, normalizePath } from 'vault/utils/path-encoding-helpers';
 import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';
+import { ROUTES } from 'vault/utils/routes';
 
 /**
  * @type Class
@@ -91,8 +92,8 @@ export default Route.extend({
             route = 'vault.cluster.secrets.backend.kv.create';
             params = [secretEngine.id];
             break;
-          case this.routeName === 'vault.cluster.secrets.backend.show':
-            route = 'vault.cluster.secrets.backend.kv.secret.index';
+          case this.routeName === ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_SHOW:
+            route = ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_KV_SECRET_INDEX;
             params = [secretEngine.id, secret];
             break;
           case this.routeName === 'vault.cluster.secrets.backend.edit':
@@ -100,7 +101,7 @@ export default Route.extend({
             params = [secretEngine.id, secret];
             break;
           default:
-            route = 'vault.cluster.secrets.backend.kv.secret.index';
+            route = ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_KV_SECRET_INDEX;
             params = [secretEngine.id, secret];
             break;
         }
@@ -111,7 +112,7 @@ export default Route.extend({
         if (parentKey) {
           this.router.transitionTo('vault.cluster.secrets.backend.list', encodePath(parentKey));
         } else {
-          this.router.transitionTo('vault.cluster.secrets.backend.list-root');
+          this.router.transitionTo(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_LISTROOT);
         }
         return;
       }

@@ -15,6 +15,7 @@ import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { clearRecords } from 'vault/tests/helpers/pki/pki-helpers';
 import { PKI_OVERVIEW } from 'vault/tests/helpers/pki/pki-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { ROUTES } from 'vault/utils/routes';
 const { overviewCard } = GENERAL;
 
 module('Acceptance | pki overview', function (hooks) {
@@ -106,7 +107,7 @@ module('Acceptance | pki overview', function (hooks) {
     await click(PKI_OVERVIEW.issueCertificatePowerSearch);
     await click(PKI_OVERVIEW.firstPowerSelectOption);
     await click(PKI_OVERVIEW.issueCertificateButton);
-    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.roles.role.generate');
+    assert.strictEqual(currentRouteName(), ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_PKI_ROLES_ROLE_GENERATE);
   });
 
   test('navigates to certificate details page for View Certificates card', async function (assert) {
@@ -117,7 +118,7 @@ module('Acceptance | pki overview', function (hooks) {
     await click(PKI_OVERVIEW.viewCertificateButton);
     assert.strictEqual(
       currentRouteName(),
-      'vault.cluster.secrets.backend.pki.certificates.certificate.details'
+      ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_PKI_CERTIFICATES_CERTIFICATE_DETAILS
     );
   });
 
@@ -127,6 +128,6 @@ module('Acceptance | pki overview', function (hooks) {
     await click(PKI_OVERVIEW.viewIssuerPowerSearch);
     await click(PKI_OVERVIEW.firstPowerSelectOption);
     await click(PKI_OVERVIEW.viewIssuerButton);
-    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.issuers.issuer.details');
+    assert.strictEqual(currentRouteName(), ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_PKI_ISSUERS_ISSUER_DETAILS);
   });
 });

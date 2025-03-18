@@ -5,6 +5,7 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+import { ROUTES } from 'vault/utils/routes';
 
 export default class MessagesCreateRoute extends Route {
   @service store;
@@ -45,7 +46,7 @@ export default class MessagesCreateRoute extends Route {
     super.setupController(controller, resolvedModel);
 
     controller.breadcrumbs = [
-      { label: 'Messages', route: 'messages', query: { authenticated: !!resolvedModel.authenticated } },
+      { label: 'Messages', route: ROUTES.messages, query: { authenticated: !!resolvedModel.authenticated } },
       { label: 'Create Message' },
     ];
   }

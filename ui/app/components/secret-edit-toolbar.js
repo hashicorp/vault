@@ -40,6 +40,7 @@ import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
+import { ROUTES } from 'vault/utils/routes';
 
 export default class SecretEditToolbar extends Component {
   @service store;
@@ -56,7 +57,7 @@ export default class SecretEditToolbar extends Component {
   @action
   handleDelete() {
     this.args.model.destroyRecord().then(() => {
-      this.router.transitionTo('vault.cluster.secrets.backend.list-root');
+      this.router.transitionTo(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_LISTROOT);
     });
   }
 

@@ -12,6 +12,7 @@ import { selectChoose } from 'ember-power-select/test-support';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { ROUTES } from 'vault/utils/routes';
 
 const storeService = Service.extend({
   query(modelType) {
@@ -79,7 +80,7 @@ module('Integration | Component | get-credentials-card', function (hooks) {
     await click('[data-test-get-credentials]');
     assert.propEqual(
       this.router.transitionTo.lastCall.args,
-      ['vault.cluster.secrets.backend.credentials', 'my-role'],
+      [ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_CREDENTIALS, 'my-role'],
       'transitionTo is called with correct route and role name'
     );
   });

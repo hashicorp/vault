@@ -7,6 +7,7 @@ import { service } from '@ember/service';
 import Component from '@ember/component';
 import { task } from 'ember-concurrency';
 import { underscore } from 'vault/helpers/underscore';
+import { ROUTES } from 'vault/utils/routes';
 
 export default Component.extend({
   store: service(),
@@ -63,7 +64,7 @@ export default Component.extend({
       return;
     }
     if (response) {
-      return this.router.transitionTo('vault.cluster.access.identity.show', response.id, 'details');
+      return this.router.transitionTo(ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY_SHOW, response.id, 'details');
     } else {
       flash.danger(`We were unable to find an identity ${type} with a "${param}" of "${paramValue}".`);
     }

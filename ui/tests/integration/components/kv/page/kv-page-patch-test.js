@@ -16,6 +16,7 @@ import { baseSetup } from 'vault/tests/helpers/kv/kv-run-commands';
 import codemirror from 'vault/tests/helpers/codemirror';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
+import { ROUTES } from 'vault/utils/routes';
 
 module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks) {
   setupRenderingTest(hooks);
@@ -94,7 +95,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
     const [route] = this.transitionStub.lastCall.args;
     assert.strictEqual(
       route,
-      'vault.cluster.secrets.backend.kv.secret.index',
+      ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_KV_SECRET_INDEX,
       `it transitions on cancel to: ${route}`
     );
   });
@@ -150,7 +151,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
       const [route] = this.transitionStub.lastCall.args;
       assert.strictEqual(
         route,
-        'vault.cluster.secrets.backend.kv.secret.index',
+        ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_KV_SECRET_INDEX,
         `it transitions on save to: ${route}`
       );
     });
@@ -181,7 +182,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
       const [route] = this.transitionStub.lastCall.args;
       assert.strictEqual(
         route,
-        'vault.cluster.secrets.backend.kv.secret.index',
+        ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_KV_SECRET_INDEX,
         `it transitions on save to: ${route}`
       );
     });
@@ -272,7 +273,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
       const [route] = this.transitionStub.lastCall.args;
       assert.strictEqual(
         route,
-        'vault.cluster.secrets.backend.kv.secret.index',
+        ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_KV_SECRET_INDEX,
         `it transitions on save to: ${route}`
       );
     });
@@ -296,7 +297,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
       const flash = this.flashSpy.lastCall?.args[0] || '';
       assert.strictEqual(
         route,
-        'vault.cluster.secrets.backend.kv.secret.index',
+        ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_KV_SECRET_INDEX,
         `it transitions to overview route: ${route}`
       );
       assert.strictEqual(
@@ -320,7 +321,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
       const flash = this.flashSpy.lastCall?.args[0] || '';
       assert.strictEqual(
         route,
-        'vault.cluster.secrets.backend.kv.secret.index',
+        ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_KV_SECRET_INDEX,
         `it transitions to overview route: ${route}`
       );
       assert.strictEqual(

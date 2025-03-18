@@ -10,6 +10,7 @@ import { set } from '@ember/object';
 import Route from '@ember/routing/route';
 import { TABS } from 'vault/helpers/tabs-for-identity-show';
 import { service } from '@ember/service';
+import { ROUTES } from 'vault/utils/routes';
 
 export default Route.extend({
   router: service(),
@@ -17,7 +18,7 @@ export default Route.extend({
 
   model(params) {
     const { section } = params;
-    const itemType = this.modelFor('vault.cluster.access.identity');
+    const itemType = this.modelFor(ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY);
     const tabs = TABS[itemType];
     const modelType = `identity/${itemType}`;
     if (!tabs.includes(section)) {
@@ -59,7 +60,7 @@ export default Route.extend({
   afterModel(resolvedModel) {
     const { section, model } = resolvedModel;
     if (model?.identityType === 'group' && model?.type === 'internal' && section === 'aliases') {
-      return this.router.transitionTo('vault.cluster.access.identity.show', model.id, 'details');
+      return this.router.transitionTo(ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY_SHOW, model.id, 'details');
     }
   },
 

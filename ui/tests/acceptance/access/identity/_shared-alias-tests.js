@@ -9,6 +9,7 @@ import page from 'vault/tests/pages/access/identity/aliases/add';
 import aliasIndexPage from 'vault/tests/pages/access/identity/aliases/index';
 import aliasShowPage from 'vault/tests/pages/access/identity/aliases/show';
 import createItemPage from 'vault/tests/pages/access/identity/create';
+import { ROUTES } from 'vault/utils/routes';
 
 export const testAliasCRUD = async function (name, itemType, assert) {
   if (itemType === 'groups') {
@@ -42,7 +43,7 @@ export const testAliasCRUD = async function (name, itemType, assert) {
   );
   assert.strictEqual(
     currentRouteName(),
-    'vault.cluster.access.identity.aliases.show',
+    ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY_ALIASES_SHOW,
     'navigates to the correct route'
   );
   assert.ok(aliasShowPage.nameContains(name), `${itemType}: renders the name on the show page`);

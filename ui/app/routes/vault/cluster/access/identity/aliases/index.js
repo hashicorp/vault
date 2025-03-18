@@ -6,12 +6,13 @@
 import Route from '@ember/routing/route';
 import ListRoute from 'core/mixins/list-route';
 import { service } from '@ember/service';
+import { ROUTES } from 'vault/utils/routes';
 
 export default Route.extend(ListRoute, {
   pagination: service(),
 
   model(params) {
-    const itemType = this.modelFor('vault.cluster.access.identity');
+    const itemType = this.modelFor(ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY);
     const modelType = `identity/${itemType}-alias`;
     return this.pagination
       .lazyPaginatedQuery(modelType, {
@@ -31,7 +32,7 @@ export default Route.extend(ListRoute, {
 
   setupController(controller) {
     this._super(...arguments);
-    controller.set('identityType', this.modelFor('vault.cluster.access.identity'));
+    controller.set('identityType', this.modelFor(ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY));
   },
 
   actions: {

@@ -12,6 +12,7 @@ import type Store from '@ember-data/store';
 import type RouterService from '@ember/routing/router-service';
 import type PkiIssuerModel from 'vault/models/pki/issuer';
 import type PkiRoleModel from 'vault/models/pki/role';
+import { ROUTES } from 'vault/utils/routes';
 
 interface Args {
   issuers: PkiIssuerModel[] | number;
@@ -30,18 +31,21 @@ export default class PkiOverview extends Component<Args> {
   @action
   transitionToViewCertificates() {
     this.router.transitionTo(
-      'vault.cluster.secrets.backend.pki.certificates.certificate.details',
+      ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_PKI_CERTIFICATES_CERTIFICATE_DETAILS,
       this.certificateValue
     );
   }
   @action
   transitionToIssueCertificates() {
-    this.router.transitionTo('vault.cluster.secrets.backend.pki.roles.role.generate', this.rolesValue);
+    this.router.transitionTo(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_PKI_ROLES_ROLE_GENERATE, this.rolesValue);
   }
 
   @action
   transitionToIssuerDetails() {
-    this.router.transitionTo('vault.cluster.secrets.backend.pki.issuers.issuer.details', this.issuerValue);
+    this.router.transitionTo(
+      ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_PKI_ISSUERS_ISSUER_DETAILS,
+      this.issuerValue
+    );
   }
 
   @action

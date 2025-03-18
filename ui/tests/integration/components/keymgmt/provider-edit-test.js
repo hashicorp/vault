@@ -10,10 +10,11 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, settled, fillIn } from '@ember/test-helpers';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { ROUTES } from 'vault/utils/routes';
 
 const ts = 'data-test-kms-provider';
 const root = {
-  path: 'vault.cluster.secrets.backend.list-root',
+  path: ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_LISTROOT,
   model: 'keymgmt',
   label: 'keymgmt',
   text: 'keymgmt',
@@ -177,7 +178,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
       transitionTo(path, model, { queryParams: { itemType } }) {
         assert.strictEqual(
           path,
-          'vault.cluster.secrets.backend.show',
+          ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_SHOW,
           'Show route sent in transitionTo on save'
         );
         assert.strictEqual(model, 'foo', 'Model id sent in transitionTo on save');
@@ -241,7 +242,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
       transitionTo(path, model, { queryParams: { itemType } }) {
         assert.strictEqual(
           path,
-          'vault.cluster.secrets.backend.show',
+          ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_SHOW,
           'Show route sent in transitionTo on save'
         );
         assert.strictEqual(model, 'foo', 'Model id sent in transitionTo on save');

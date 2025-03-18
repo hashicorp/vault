@@ -8,6 +8,7 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
+import { ROUTES } from 'vault/utils/routes';
 
 /**
  * @module TransformTemplateEdit
@@ -33,7 +34,7 @@ export default class TransformTemplateEditComponent extends Component {
     return [
       {
         label: backend,
-        route: 'vault.cluster.secrets.backend.list-root',
+        route: ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_LISTROOT,
         model: backend,
         query: { tab: 'template' },
       },
@@ -45,12 +46,12 @@ export default class TransformTemplateEditComponent extends Component {
     this.errorMessage = '';
     const { backend, id } = this.args.model;
     if (route === 'list') {
-      this.router.transitionTo('vault.cluster.secrets.backend.list-root', backend, {
+      this.router.transitionTo(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_LISTROOT, backend, {
         queryParams: { tab: 'template' },
       });
       return;
     } else {
-      this.router.transitionTo('vault.cluster.secrets.backend.show', `template/${id}`);
+      this.router.transitionTo(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_SHOW, `template/${id}`);
     }
   }
 

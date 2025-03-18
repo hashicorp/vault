@@ -15,6 +15,7 @@ import listPage from 'vault/tests/pages/secrets/backend/list';
 import authPage from 'vault/tests/pages/auth';
 import { assertSecretWrap } from 'vault/tests/helpers/components/secret-edit-toolbar';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import { ROUTES } from 'vault/utils/routes';
 
 module('Acceptance | secrets/cubbyhole/create', function (hooks) {
   setupApplicationTest(hooks);
@@ -37,7 +38,7 @@ module('Acceptance | secrets/cubbyhole/create', function (hooks) {
     await settled();
     assert.strictEqual(
       currentRouteName(),
-      'vault.cluster.secrets.backend.list-root',
+      ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_LISTROOT,
       'navigates to the list page'
     );
 
@@ -47,7 +48,7 @@ module('Acceptance | secrets/cubbyhole/create', function (hooks) {
     await settled();
     assert.strictEqual(
       currentRouteName(),
-      'vault.cluster.secrets.backend.show',
+      ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_SHOW,
       'redirects to the show page'
     );
     assert.ok(showPage.editIsPresent, 'shows the edit button');

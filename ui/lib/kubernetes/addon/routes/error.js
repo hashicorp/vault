@@ -5,6 +5,7 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+import { ROUTES } from 'vault/utils/routes';
 
 export default class KubernetesErrorRoute extends Route {
   @service secretMountPath;
@@ -12,8 +13,8 @@ export default class KubernetesErrorRoute extends Route {
   setupController(controller) {
     super.setupController(...arguments);
     controller.breadcrumbs = [
-      { label: 'Secrets', route: 'secrets', linkExternal: true },
-      { label: this.secretMountPath.currentPath, route: 'overview' },
+      { label: 'Secrets', route: ROUTES.SECRETS, linkExternal: true },
+      { label: this.secretMountPath.currentPath, route: ROUTES.OVERVIEW },
     ];
     controller.backend = this.modelFor('application');
   }

@@ -5,6 +5,7 @@
 
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
+import { ROUTES } from 'vault/utils/routes';
 export default Route.extend({
   flashMessages: service(),
   router: service(),
@@ -29,7 +30,7 @@ export default Route.extend({
   afterModel(model, transition) {
     const path = model && model.path;
     if (transition.targetName === this.routeName) {
-      return this.router.replaceWith('vault.cluster.secrets.backend.list-root', path);
+      return this.router.replaceWith(ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_LISTROOT, path);
     }
   },
 });

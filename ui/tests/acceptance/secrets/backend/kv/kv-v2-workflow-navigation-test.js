@@ -36,6 +36,7 @@ import {
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { setupControlGroup, grantAccess } from 'vault/tests/helpers/control-groups';
+import { ROUTES } from 'vault/utils/routes';
 
 const secretPath = `my-#:$=?-secret`;
 // This doesn't encode in a normal way, so hardcoding it here until we sort that out
@@ -91,7 +92,7 @@ const patchRedirectTest = (test, testCase) => {
       `/vault/secrets/${this.backend}/kv/app%2Fnested%2Fsecret`,
       'redirects to index'
     );
-    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.kv.secret.index');
+    assert.strictEqual(currentRouteName(), ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_KV_SECRET_INDEX);
   });
 };
 
@@ -501,7 +502,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       // overview tab
       assert.strictEqual(
         currentRouteName(),
-        'vault.cluster.secrets.backend.kv.secret.index',
+        ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_KV_SECRET_INDEX,
         'navs to overview'
       );
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath]);
@@ -1714,7 +1715,7 @@ path "${this.backend}/subkeys/*" {
       await click(FORM.cancelBtn);
       assert.strictEqual(
         currentRouteName(),
-        'vault.cluster.secrets.backend.kv.secret.index',
+        ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_KV_SECRET_INDEX,
         'navs back to overview'
       );
     });
@@ -1745,7 +1746,7 @@ path "${this.backend}/subkeys/*" {
         `/vault/secrets/${this.backend}/kv/app%2Fnested%2Fsecret`,
         'redirects to index'
       );
-      assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.kv.secret.index');
+      assert.strictEqual(currentRouteName(), ROUTES.VAULT_CLUSTER_SECRETS_BACKEND_KV_SECRET_INDEX);
     });
   });
 });

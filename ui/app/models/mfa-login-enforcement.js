@@ -11,6 +11,7 @@ import { withModelValidations } from 'vault/decorators/model-validations';
 import { isPresent } from '@ember/utils';
 import { service } from '@ember/service';
 import { addManyToArray, addToArray } from 'vault/helpers/add-to-array';
+import { ROUTES } from 'vault/utils/routes';
 
 const validations = {
   name: [{ type: 'presence', message: 'Name is required' }],
@@ -97,7 +98,7 @@ export default class MfaLoginEnforcementModel extends Model {
         targets = addToArray(targets, {
           key,
           icon: 'user',
-          link: 'vault.cluster.access.identity.show',
+          link: ROUTES.VAULT_CLUSTER_ACCESS_IDENTITY_SHOW,
           linkModels: [key.split('_')[1], model.id, 'details'],
           title: model.name,
           subTitle: model.id,

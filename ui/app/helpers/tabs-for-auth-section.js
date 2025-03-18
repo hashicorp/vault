@@ -6,85 +6,86 @@
 import { helper as buildHelper } from '@ember/component/helper';
 import { pluralize } from 'ember-inflector';
 import { capitalize } from '@ember/string';
+import { ROUTES } from 'vault/utils/routes';
 
 const TABS_FOR_SETTINGS = {
   aws: [
     {
       label: 'Client',
-      route: 'vault.cluster.settings.auth.configure.section',
+      route: ROUTES.VAULT_CLUSTER_SETTINGS_AUTH_CONFIGURE_SECTION,
       routeParams: ['client'],
     },
     {
       label: 'Identity Allow List Tidy',
-      route: 'vault.cluster.settings.auth.configure.section',
+      route: ROUTES.VAULT_CLUSTER_SETTINGS_AUTH_CONFIGURE_SECTION,
       routeParams: ['identity-accesslist'],
     },
     {
       label: 'Role Tag Deny List Tidy',
-      route: 'vault.cluster.settings.auth.configure.section',
+      route: ROUTES.VAULT_CLUSTER_SETTINGS_AUTH_CONFIGURE_SECTION,
       routeParams: ['roletag-denylist'],
     },
   ],
   azure: [
     {
       label: 'Configuration',
-      route: 'vault.cluster.settings.auth.configure.section',
+      route: ROUTES.VAULT_CLUSTER_SETTINGS_AUTH_CONFIGURE_SECTION,
       routeParams: ['configuration'],
     },
   ],
   github: [
     {
       label: 'Configuration',
-      route: 'vault.cluster.settings.auth.configure.section',
+      route: ROUTES.VAULT_CLUSTER_SETTINGS_AUTH_CONFIGURE_SECTION,
       routeParams: ['configuration'],
     },
   ],
   gcp: [
     {
       label: 'Configuration',
-      route: 'vault.cluster.settings.auth.configure.section',
+      route: ROUTES.VAULT_CLUSTER_SETTINGS_AUTH_CONFIGURE_SECTION,
       routeParams: ['configuration'],
     },
   ],
   jwt: [
     {
       label: 'Configuration',
-      route: 'vault.cluster.settings.auth.configure.section',
+      route: ROUTES.VAULT_CLUSTER_SETTINGS_AUTH_CONFIGURE_SECTION,
       routeParams: ['configuration'],
     },
   ],
   oidc: [
     {
       label: 'Configuration',
-      route: 'vault.cluster.settings.auth.configure.section',
+      route: ROUTES.VAULT_CLUSTER_SETTINGS_AUTH_CONFIGURE_SECTION,
       routeParams: ['configuration'],
     },
   ],
   kubernetes: [
     {
       label: 'Configuration',
-      route: 'vault.cluster.settings.auth.configure.section',
+      route: ROUTES.VAULT_CLUSTER_SETTINGS_AUTH_CONFIGURE_SECTION,
       routeParams: ['configuration'],
     },
   ],
   ldap: [
     {
       label: 'Configuration',
-      route: 'vault.cluster.settings.auth.configure.section',
+      route: ROUTES.VAULT_CLUSTER_SETTINGS_AUTH_CONFIGURE_SECTION,
       routeParams: ['configuration'],
     },
   ],
   okta: [
     {
       label: 'Configuration',
-      route: 'vault.cluster.settings.auth.configure.section',
+      route: ROUTES.VAULT_CLUSTER_SETTINGS_AUTH_CONFIGURE_SECTION,
       routeParams: ['configuration'],
     },
   ],
   radius: [
     {
       label: 'Configuration',
-      route: 'vault.cluster.settings.auth.configure.section',
+      route: ROUTES.VAULT_CLUSTER_SETTINGS_AUTH_CONFIGURE_SECTION,
       routeParams: ['configuration'],
     },
   ],
@@ -98,7 +99,7 @@ export function tabsForAuthSection([authMethodModel, sectionType = 'authSettings
     tabs = (TABS_FOR_SETTINGS[authMethodModel.type] || []).slice();
     tabs.push({
       label: 'Method Options',
-      route: 'vault.cluster.settings.auth.configure.section',
+      route: ROUTES.VAULT_CLUSTER_SETTINGS_AUTH_CONFIGURE_SECTION,
       routeParams: [authMethodModel.id, 'options'],
     });
     return tabs;
@@ -113,7 +114,7 @@ export function tabsForAuthSection([authMethodModel, sectionType = 'authSettings
     tabs = paths.compact().map((path) => {
       return {
         label: capitalize(pluralize(path.itemName)),
-        route: 'vault.cluster.access.method.item.list',
+        route: ROUTES.VAULT_CLUSTER_ACCESS_METHOD_ITEM_LIST,
         routeParams: [path.itemType],
       };
     });
@@ -122,7 +123,7 @@ export function tabsForAuthSection([authMethodModel, sectionType = 'authSettings
   }
   tabs.push({
     label: 'Configuration',
-    route: 'vault.cluster.access.method.section',
+    route: ROUTES.VAULT_CLUSTER_ACCESS_METHOD_SECTION,
     routeParams: ['configuration'],
   });
 
