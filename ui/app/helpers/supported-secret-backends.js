@@ -21,6 +21,7 @@ const SUPPORTED_SECRET_BACKENDS = [
   'ssh',
   'transform',
   'transit',
+  'totp',
 ];
 
 export function supportedSecretBackends() {
