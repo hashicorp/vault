@@ -72,7 +72,7 @@ module('Acceptance | totp key backend', function (hooks) {
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${this.path}/show/${this.keyName}`,
-      'After enabling totp secrets engine it navigates to keys list'
+      'After clicking details option it navigates to key detail view'
     );
   });
 
