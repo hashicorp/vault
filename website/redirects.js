@@ -154,5 +154,10 @@ module.exports = [
     source: '/vault/docs/deprecation',
     destination: '/vault/docs/updates/deprecation',
     permanent: true,
+  },
+  {
+    source: '/vault/docs/:version(v1\.(?:8|9)\.x)/agent-and-proxy/agent/generate-config',
+    destination: '/vault/docs/:version/agent/template-config',
+    permanent: true,
   }
 ]
