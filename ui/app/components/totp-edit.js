@@ -17,7 +17,7 @@ import { waitFor } from '@ember/test-waiters';
  * @example
  *   <TotpEdit @model={{this.model}} @mode={{this.mode}} />
  *
- * @param {object} model - The totp edit model.
+ * @param {object} model - The totp key ember data model.
  * @param {string} mode - The mode to render. Either 'create' or 'show'.
  */
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
