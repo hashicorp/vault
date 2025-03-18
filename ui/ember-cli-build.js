@@ -94,6 +94,7 @@ module.exports = function (defaults) {
   app.import(
     'node_modules/@hashicorp/design-system-components/dist/styles/@hashicorp/design-system-components.css'
   );
+  app.import('node_modules/shared-secure-ui/dist/styles/shared-secure-ui.css');
 
   return app.toTree();
 };

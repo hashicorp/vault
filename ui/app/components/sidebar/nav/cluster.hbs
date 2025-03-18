@@ -91,6 +91,10 @@
       data-test-sidebar-nav-link="Client Count"
     />
   {{/if}}
+  {{! TODO: Permissions? }}
+  {{#if (and this.version.isEnterprise this.isRootNamespace)}}
+    <Nav.Link @route="vault.cluster.usage" @text="Vault Usage" data-test-sidebar-nav-link="Vault Usage" />
+  {{/if}}
   {{#if
     (and
       this.version.features

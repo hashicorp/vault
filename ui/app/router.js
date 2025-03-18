@@ -36,6 +36,7 @@ Router.map(function () {
         this.route('config');
         this.route('edit');
       });
+      this.route('usage');
       this.route('storage', { path: '/storage/raft' });
       this.route('storage-restore', { path: '/storage/raft/restore' });
       this.route('settings', function () {
@@ -127,6 +128,7 @@ Router.map(function () {
               this.route('edit');
             });
           });
+
           this.route('keys', function () {
             this.route('create');
             this.route('key', { path: '/:name' }, function () {
