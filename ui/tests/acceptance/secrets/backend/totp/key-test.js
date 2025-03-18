@@ -15,6 +15,10 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
+const SELECTORS = {
+  menuItem: (item) => `[data-test-popup-menu="${item}"]`,
+};
+
 module('Acceptance | totp key backend', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
@@ -66,9 +70,9 @@ module('Acceptance | totp key backend', function (hooks) {
     await createVaultKey(this.keyName, this.issuer, this.accountName);
     await settled();
     await listPage.visit({ backend: this.path, id: this.keyName });
-    await click('[data-test-popup-menu-trigger]');
-    assert.dom('.hds-dropdown li:nth-of-type(1)').hasText('Details', 'first list item is "details"');
-    await click('.hds-dropdown li:nth-of-type(1) a');
+    await click(GENERAL.menuTrigger);
+    await click(`${SELECTORS.menuItem('details')}`);
+
     assert.dom('.title').hasText(`TOTP key ${this.keyName}`);
     assert.dom('[data-test-totp-key-details]').exists();
   });
@@ -84,10 +88,9 @@ module('Acceptance | totp key backend', function (hooks) {
     await createVaultKey(this.keyName, this.issuer, this.accountName);
     await settled();
     await listPage.visit({ backend: this.path, id: this.keyName });
-    await click('[data-test-popup-menu-trigger]');
-    assert.dom('.hds-dropdown li:nth-of-type(2)').hasText('Delete', 'first list item is "details"');
-    await click('.hds-dropdown li:nth-of-type(2) [data-test-confirm-action-trigger]');
-    await click('[data-test-confirm-button]');
+    await click(GENERAL.menuTrigger);
+    await click(GENERAL.confirmTrigger);
+    await click(GENERAL.confirmButton);
     assert.dom(SES.secretLink(this.keyName)).doesNotExist(`${this.keyName}: key is no longer in the list`);
   });
 

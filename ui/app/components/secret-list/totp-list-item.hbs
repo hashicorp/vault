@@ -31,7 +31,12 @@
           data-test-popup-menu-trigger
         />
         {{#if @item.canRead}}
-          <dd.Interactive @text="Details" @route="vault.cluster.secrets.backend.show" @model={{@item.id}} />
+          <dd.Interactive
+            @text="Details"
+            @route="vault.cluster.secrets.backend.show"
+            @model={{@item.id}}
+            data-test-popup-menu="details"
+          />
         {{/if}}
         {{#if @item.canDelete}}
           <dd.Interactive
