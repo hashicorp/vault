@@ -26,6 +26,16 @@ module('Acceptance | totp key backend', function (hooks) {
     await click('[data-test-totp-create]');
   };
 
+  const createNonVaultKey = async (keyName, issuer, accountName, url) => {
+    await click('[data-test-radio="Other service"]');
+    await fillIn(GENERAL.inputByAttr('name'), keyName);
+    await fillIn(GENERAL.inputByAttr('issuer'), issuer);
+    await fillIn(GENERAL.inputByAttr('accountName'), accountName);
+    await fillIn(GENERAL.inputByAttr('url'), url);
+
+    await click('[data-test-totp-create]');
+  };
+
   hooks.beforeEach(async function () {
     const flash = this.owner.lookup('service:flash-messages');
     this.flashSuccessSpy = spy(flash, 'success');
@@ -37,6 +47,8 @@ module('Acceptance | totp key backend', function (hooks) {
     this.keyName = 'totp-key';
     this.issuer = 'totp-issuer';
     this.accountName = 'totp-acount';
+    this.url =
+      'otpauth://totp/test-issuer:my-account?algorithm=SHA1&digits=6&issuer=test-issuer&period=30&secret=HICPOBIMFO4YYHFYX3QPVYUL2YEPVJKU';
 
     await authPage.login();
     // Setup TOTP engine
@@ -90,7 +102,26 @@ module('Acceptance | totp key backend', function (hooks) {
     assert.dom(SES.secretHeader).hasText('Create a TOTP key', 'It renders the create key page');
 
     await createVaultKey(this.keyName, this.issuer, this.accountName);
-    await waitUntil(() => currentURL() === `/vault/secrets/${this.path}/show/${this.keyName}`); // flaky without this
+    // await waitUntil(() => currentURL() === `/vault/secrets/${this.path}/show/${this.keyName}`);
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${this.path}/show/${this.keyName}`,
+      'totp: navigates to the show page on creation'
+    );
+  });
+
+  test('it creates a key with another service as the provider', async function (assert) {
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${this.path}/list`,
+      'After enabling totp secrets engine it navigates to keys list'
+    );
+
+    await click(SES.createSecret);
+    assert.dom(SES.secretHeader).hasText('Create a TOTP key', 'It renders the create key page');
+    await createNonVaultKey(this.keyName, this.issuer, this.accountName, this.url);
+
+    await waitUntil(() => currentURL() === `/vault/secrets/${this.path}/show/${this.keyName}`);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${this.path}/show/${this.keyName}`,
