@@ -1412,19 +1412,6 @@
         "path": "secrets"
       },
       {
-        "title": "Active Directory",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "secrets/ad"
-          },
-          {
-            "title": "Migration Guide",
-            "path": "secrets/ad/migration-guide"
-          }
-        ]
-      },
-      {
         "title": "AliCloud",
         "path": "secrets/alicloud"
       },
@@ -2835,6 +2822,10 @@
       {
         "title": "Overview",
         "path": "release-notes"
+      },
+      {
+        "title": "1.19.0",
+        "path": "release-notes/1.19.0"
       },
       {
         "title": "1.18.0",

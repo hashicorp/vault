@@ -598,7 +598,13 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handle
 			return
 		}
 
-		r.RemoteAddr = net.JoinHostPort(acc[indexToUse], port)
+		// check that the chosen address is a valid IP address
+		remoteAddr := acc[indexToUse]
+		if _, err := sockaddr.NewIPAddr(remoteAddr); err != nil {
+			respondError(w, http.StatusBadRequest, fmt.Errorf("malformed x-forwarded-for IP address %s", remoteAddr))
+			return
+		}
+		r.RemoteAddr = net.JoinHostPort(remoteAddr, port)
 
 		// Import the Client Certificate forwarded by the reverse proxy
 		// There should be only 1 instance of the header, but looping allows for more flexibility

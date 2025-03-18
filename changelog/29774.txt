@@ -1,0 +1,3 @@
+```release-note:change
+core: Verify that the client IP address extracted from an X-Forwarded-For header is a valid IPv4 or IPv6 address 
+```

@@ -1,0 +1,131 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<PageHeader as |p|>
+  <p.top>
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-secret-header="true">
+      {{#if (eq @mode "create")}}
+        Create Template
+      {{else if (eq @mode "edit")}}
+        Edit Template
+      {{else}}
+        Template
+        <code>{{@model.id}}</code>
+      {{/if}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+{{#if (eq @mode "show")}}
+  <Toolbar>
+    <ToolbarActions>
+      {{#if @model.updatePath.canDelete}}
+        <Hds::Button
+          @text="Delete template"
+          @color="secondary"
+          class="toolbar-button"
+          {{on "click" this.onDelete}}
+          data-test-transformation-template-delete
+        />
+        <div class="toolbar-separator"></div>
+      {{/if}}
+      {{#if @model.updatePath.canUpdate}}
+        <ToolbarLink @route="vault.cluster.secrets.backend.edit" @model={{concat "template/" @model.id}} data-test-edit-link>
+          Edit template
+        </ToolbarLink>
+      {{/if}}
+    </ToolbarActions>
+  </Toolbar>
+{{/if}}
+
+{{#if (or (eq @mode "edit") (eq @mode "create"))}}
+  <form onsubmit={{this.createOrUpdate}}>
+    <div class="box is-sideless is-fullwidth is-marginless">
+      <NamespaceReminder @mode={{@mode}} @noun="transform template" />
+      <MessageError @errorMessage={{this.errorMessage}} />
+      {{#each @model.writeAttrs as |attr|}}
+        {{#if (and (eq attr.name "name") (eq @mode "edit"))}}
+          <label for={{attr.name}} class="is-label">
+            {{attr.options.label}}
+          </label>
+          {{#if attr.options.subText}}
+            <p class="sub-text">{{attr.options.subText}}</p>
+          {{/if}}
+          <input
+            data-test-input={{attr.name}}
+            id={{attr.name}}
+            autocomplete="off"
+            spellcheck="false"
+            value={{or (get @model attr.name) attr.options.defaultValue}}
+            readonly={{true}}
+            class="field input is-readOnly"
+            type={{attr.type}}
+          />
+        {{else}}
+          {{#if (eq attr.name "alphabet")}}
+            <TransformAdvancedTemplating @model={{@model}} />
+          {{/if}}
+          <FormField data-test-field @attr={{attr}} @model={{@model}} />
+        {{/if}}
+      {{/each}}
+    </div>
+    <div class="field is-grouped-split box is-fullwidth is-bottomless">
+      <Hds::ButtonSet>
+        <Hds::Button
+          @text={{if (eq @mode "create") "Create template" "Save"}}
+          type="submit"
+          data-test-template-transform-create
+        />
+        {{#if (eq @mode "create")}}
+          <Hds::Button
+            @text="Cancel"
+            @color="secondary"
+            @route="vault.cluster.secrets.backend.list-root"
+            @model={{@model.backend}}
+            @query={{hash tab="template"}}
+          />
+        {{else}}
+          <Hds::Button
+            @text="Cancel"
+            @color="secondary"
+            @route="vault.cluster.secrets.backend.show"
+            @models={{array @model.backend (concat "template/" @model.id)}}
+            @query={{hash tab="template"}}
+          />
+        {{/if}}
+      </Hds::ButtonSet>
+    </div>
+  </form>
+{{else}}
+  <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+    {{#each @model.readAttrs as |attr|}}
+      {{#let (capitalize (or attr.options.label (humanize (dasherize attr.name)))) as |label|}}
+        {{#if (eq attr.name "decodeFormats")}}
+          {{#if (not (is-empty-value @model.decodeFormats))}}
+            <InfoTableRow @label={{label}}>
+              <div>
+                {{#each-in @model.decodeFormats as |key value|}}
+                  <div class="transform-decode-formats">
+                    <p class="is-label has-text-grey-light">{{key}}</p>
+                    <p>{{value}}</p>
+                  </div>
+                {{/each-in}}
+              </div>
+            </InfoTableRow>
+          {{/if}}
+        {{else}}
+          <InfoTableRow
+            @label={{label}}
+            @value={{get @model attr.name}}
+            class={{if (eq attr.name "pattern") "transform-pattern-text"}}
+          />
+        {{/if}}
+      {{/let}}
+    {{/each}}
+  </div>
+{{/if}}

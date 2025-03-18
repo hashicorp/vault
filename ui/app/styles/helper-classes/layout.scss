@@ -1,3 +1,5 @@
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -42,7 +44,7 @@
 }
 
 .top-xxs {
-  top: $spacing-4;
+  top: size_variables.$spacing-4;
 }
 
 // visibility
@@ -81,7 +83,7 @@
 }
 
 .is-medium-width {
-  width: calc($desktop / 2.5);
+  width: calc(size_variables.$desktop / 2.5);
 }
 
 .is-medium-height {
@@ -89,7 +91,7 @@
 }
 
 .is-calc-large-height {
-  height: calc($desktop * 0.66);
+  height: calc(size_variables.$desktop * 0.66);
 }
 
 // float
