@@ -92,8 +92,12 @@ export default class FormFieldComponent extends Component {
 
     // here we replicate the logic in the template, to make sure we don't change the order in which the "ifs" are evaluated
     if (options?.possibleValues?.length > 0) {
-      // we leave these fields as they are (for now)
-      return false;
+      if (options?.editType === 'checkboxList') {
+        return true;
+      } else {
+        // we still have to migrate the `radio` and `select` use cases
+        return false;
+      }
     } else {
       if (type === 'number' || type === 'string') {
         // here we will add the logic for `FormField` inputs (textarea, password, regular text input) that are "converted" to HDS fields
