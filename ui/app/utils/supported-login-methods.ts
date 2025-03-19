@@ -98,7 +98,10 @@ export const ENTERPRISE_AUTH_METHODS = [
 
 export const ALL_SUPPORTED_AUTH_METHODS = [...BASE_AUTH_METHODS, ...ENTERPRISE_AUTH_METHODS];
 
-export function supportedTypes(isEnterprise: boolean) {
+export const supportedTypes = (isEnterprise: boolean) => {
   const availableMethods = isEnterprise ? ALL_SUPPORTED_AUTH_METHODS : BASE_AUTH_METHODS;
-  return availableMethods.map((method: MethodData) => method.type);
-}
+  return availableMethods.map((m: MethodData) => m.type);
+};
+
+export const findMethod = (authType: string) =>
+  ALL_SUPPORTED_AUTH_METHODS.find((m: MethodData) => m.type === authType);
