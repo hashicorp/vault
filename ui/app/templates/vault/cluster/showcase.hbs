@@ -44,13 +44,15 @@
       (hash editType="boolean" variants=(array "base" "with label" "with helpText + subText + docLink" "checked" "disabled"))
       (hash
         editType="checkboxList"
-        variants=(array "base" "with label" "with helpText + subText + docLink" "with validation error")
+        variants=(array "base" "with label" "with helpText + subText + docLink" "with validation errors")
       )
       (hash
         editType="dateTimeLocal"
-        variants=(array "base" "with label" "with helpText + subText + docLink" "with value" "with validation error")
+        variants=(array "base" "with label" "with helpText + subText + docLink" "with value" "with validation errors")
       )
-      (hash editType="file" variants=(array "base" "with label" "with helpText + subText + docLink" "with validation error"))
+      (hash
+        editType="file" variants=(array "base" "with label" "with helpText + subText + docLink" "with validation errors")
+      )
       (hash
         editType="input"
         attrType="string"
@@ -61,7 +63,7 @@
           "with placeholder"
           "with value"
           "with character limit"
-          "with validation error"
+          "with validation errors"
           "readonly"
           "disabled"
         )
@@ -81,7 +83,7 @@
           "with key/value placeholders"
           "single row"
           "with value"
-          "with validation error"
+          "with validation errors"
           "with whitespace in key"
         )
       )
@@ -120,14 +122,25 @@
       )
       (hash
         editType="select"
-        variants=(array "base" "with label" "with helpText + subText" "with no default" "with value" "with validation error")
+        variants=(array
+          "base"
+          "with label"
+          "with label as section header"
+          "with helpText + subText"
+          "with helpText + subText + docLink"
+          "with no default"
+          "with value"
+          "with validation errors"
+          "with validation warnings"
+          "with validation errors and warnings"
+        )
       )
       (hash editType="stringArray" variants=(array "base" "with label" "with helpText + subText" "with value"))
       (hash editType="sensitive" variants=(array "base" "with label" "with value" "with copy"))
       (hash
         editType="textarea"
         attrType="string"
-        variants=(array "base" "with label" "with helpText + subText + docLink" "with value" "with validation error")
+        variants=(array "base" "with label" "with helpText + subText + docLink" "with value" "with validation errors")
       )
       (hash
         editType="ttl"
@@ -138,7 +151,7 @@
           "with value"
           "with value 0s"
           "with value 1h"
-          "with validation error"
+          "with validation errors"
           "with hidden toggle"
         )
       )
@@ -555,7 +568,7 @@
     object in the @objectKeys array. Labels render above each column.</blockquote>
 
   {{#let
-    (array "base" "with single set of values" "with multiple sets of values" "with validation error")
+    (array "base" "with single set of values" "with multiple sets of values" "with validation errors")
     as |variants index|
   }}
     {{#each variants as |variant|}}
@@ -606,7 +619,7 @@
     the input into a textarea</blockquote>
 
   {{#let
-    (array "base" "base / upload only" "with label" "with helpText + subText + docLink" "with validation error")
+    (array "base" "base / upload only" "with label" "with helpText + subText + docLink" "with validation errors")
     as |variants index|
   }}
     {{#each variants as |variant|}}
@@ -620,7 +633,7 @@
         @helpText={{if (eq variant "with helpText + subText + docLink") "This is the helptext"}}
         @subText={{if (eq variant "with helpText + subText + docLink") "This is the subtext"}}
         @docLink={{if (eq variant "with helpText + subText + docLink") "/#"}}
-        @validationError={{if (eq variant "with validation error") "This is the validation error message"}}
+        @validationError={{if (eq variant "with validation errors") "This is the validation error message"}}
       />
     {{/each}}
   {{/let}}
