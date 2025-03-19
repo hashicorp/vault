@@ -6,6 +6,9 @@
 {{! template-lint-configure simple-unless "warn" }}
 <div class="field" data-test-field={{or @attr.name true}}>
   {{#if this.isHdsFormField}}
+    {{! •••••••••••••••••••••••••••••••••••••••••••••••••••••••• }}
+    {{!                  HDS COMPONENTS - START                  }}
+    {{! •••••••••••••••••••••••••••••••••••••••••••••••••••••••• }}
     {{#if @attr.options.possibleValues}}
       {{#if (eq @attr.options.editType "checkboxList")}}
         <Hds::Form::Checkbox::Group @name={{@attr.name}} data-test-input={{@attr.name}} as |G|>
@@ -81,7 +84,13 @@
         </Hds::Form::Select::Field>
       {{/if}}
     {{/if}}
+    {{! •••••••••••••••••••••••••••••••••••••••••••••••••••••••• }}
+    {{!                  HDS COMPONENTS - END                  }}
+    {{! •••••••••••••••••••••••••••••••••••••••••••••••••••••••• }}
   {{else}}
+    {{! ≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠ }}
+    {{!                NON-HDS COMPONENTS - START                }}
+    {{! ≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠ }}
     {{#unless this.hideLabel}}
       <FormFieldLabel
         for={{@attr.name}}
@@ -439,7 +448,11 @@
         class={{if (eq @attr.options.editType "stringArray") "has-top-margin-negative-xxl"}}
       />
     {{/if}}
+    {{! ≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠ }}
+    {{!                NON-HDS COMPONENTS - END                  }}
+    {{! ≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠ }}
   {{/if}}
+  {{! ~~~~~~~~~~~~~~ COMMON PART - START ~~~~~~~~~~~~~~ }}
   {{#if this.validationWarning}}
     <AlertInline
       @type="warning"
@@ -449,4 +462,5 @@
       class={{if (and (not this.validationError) (eq @attr.options.editType "stringArray")) "has-top-margin-negative-xxl"}}
     />
   {{/if}}
+  {{! ~~~~~~~~~~~~~~ COMMON PART - END ~~~~~~~~~~~~~~ }}
 </div>
