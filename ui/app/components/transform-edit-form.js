@@ -5,4 +5,4 @@
 
 import TransformationEdit from './transformation-edit';
 
-export default TransformationEdit.extend({});
+export default TransformationEdit;

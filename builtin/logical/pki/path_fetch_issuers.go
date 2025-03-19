@@ -679,8 +679,10 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		}
 	}
 
+	var updatedIssuanceValidations bool
 	if updateEntIssuerFields(issuer, data, false) {
 		modified = true
+		updatedIssuanceValidations = true
 	}
 
 	// Updating the chain should be the last modification as there's a chance
@@ -714,19 +716,36 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	}
 
 	if updateChain {
+		oldChain := issuer.ManualChain
 		issuer.ManualChain = constructedChain
 
 		// Building the chain will write the issuer to disk; no need to do it
 		// twice.
 		modified = false
-		err := sc.rebuildIssuersChains(issuer)
+		err = sc.rebuildIssuersChains(issuer)
 		if err != nil {
 			return nil, err
 		}
+
+		if issuer.Usage.HasUsage(issuing.IssuanceUsage) {
+			// Issuer has been saved by building the chain above
+			err = b.issueSignEmptyCert(ctx, req, issuer.ID.String())
+			if err != nil {
+				issuer.ManualChain = oldChain
+				newErr := sc.rebuildIssuersChains(issuer)
+				if newErr != nil {
+					return logical.ErrorResponse("error reverting bad chain update, state unknown: %v, \ninitial error: %v", newErr.Error(), err.Error()), nil
+				}
+				return logical.ErrorResponse("other changes to issuer may be persisted.  Error setting manual chain, issuer would be unusuable with this chain: %v", err), nil
+			} else {
+				updatedIssuanceValidations = false
+			}
+		}
+
 	}
 
 	if modified {
-		err := sc.writeIssuer(issuer)
+		err = sc.writeIssuer(issuer)
 		if err != nil {
 			return nil, err
 		}
@@ -740,6 +759,12 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		_, aiaErr := ToURLEntries(sc, issuer.ID, issuer.AIAURIs)
 		if aiaErr != nil {
 			response.AddWarning(fmt.Sprintf("issuance may fail: %v\n\nConsider setting the cluster-local address if it is not already set.", aiaErr))
+		}
+	}
+	if updatedIssuanceValidations {
+		warning := checkIssuer(issuer, ctx, req, b)
+		if warning != "" {
+			response.AddWarning(warning)
 		}
 	}
 
@@ -944,6 +969,12 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 		issuer.AIAURIs = nil
 	}
 
+	updatedIssuanceValidations := false
+	if updateEntIssuerFields(issuer, data, true) {
+		modified = true
+		updatedIssuanceValidations = true
+	}
+
 	// Manual Chain Changes
 	newPathData, ok := data.GetOk("manual_chain")
 	if ok {
@@ -976,20 +1007,33 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 		}
 
 		if updateChain {
+			oldChain := issuer.ManualChain
 			issuer.ManualChain = constructedChain
 
 			// Building the chain will write the issuer to disk; no need to do it
 			// twice.
 			modified = false
-			err := sc.rebuildIssuersChains(issuer)
+			err = sc.rebuildIssuersChains(issuer)
 			if err != nil {
 				return nil, err
 			}
-		}
-	}
+			// If this issuer is supposed to be issuing certificates, test that will work
+			if issuer.Usage.HasUsage(issuing.IssuanceUsage) {
+				// Issuer has been saved by building the chain above
+				err = b.issueSignEmptyCert(ctx, req, issuer.Name)
+				if err != nil {
+					issuer.ManualChain = oldChain
+					newErr := sc.rebuildIssuersChains(issuer)
+					if newErr != nil {
+						return logical.ErrorResponse("error reverting bad chain update, state unknown: %v, \ninitial error: %v", newErr.Error(), err.Error()), nil
+					}
+					return logical.ErrorResponse("other changes to issuer may be persisted.  Error setting manual chain, issuer would be unusuable with this chain: %v", err), nil
+				} else {
+					updatedIssuanceValidations = false
+				}
+			}
 
-	if updateEntIssuerFields(issuer, data, true) {
-		modified = true
+		}
 	}
 
 	if modified {
@@ -1003,6 +1047,12 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 	if newName != oldName {
 		addWarningOnDereferencing(sc, oldName, response)
 	}
+	if updatedIssuanceValidations {
+		warning := checkIssuer(issuer, ctx, req, b)
+		if warning != "" {
+			response.AddWarning(warning)
+		}
+	}
 	if issuer.AIAURIs != nil && issuer.AIAURIs.EnableTemplating {
 		_, aiaErr := ToURLEntries(sc, issuer.ID, issuer.AIAURIs)
 		if aiaErr != nil {
@@ -1011,6 +1061,17 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 	}
 
 	return response, err
+}
+
+// checkIssuer looks at an issuer that has already been written, and returns a warning if it is not functional.
+func checkIssuer(issuer *issuing.IssuerEntry, ctx context.Context, req *logical.Request, b *backend) (warning string) {
+	if issuer.Usage.HasUsage(issuing.IssuanceUsage) {
+		err := b.issueSignEmptyCert(ctx, req, issuer.ID.String())
+		if err != nil {
+			return fmt.Sprintf("warning: issuer with issuance usage %s cannot issue certificates with this configuration: %v", issuer.ID.String(), err)
+		}
+	}
+	return ""
 }
 
 func (b *backend) pathGetRawIssuer(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {

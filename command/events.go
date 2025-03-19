@@ -11,10 +11,10 @@ import (
 	"os"
 	"strings"
 
+	"github.com/coder/websocket"
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
 	"github.com/posener/complete"
-	"nhooyr.io/websocket"
 )
 
 var (

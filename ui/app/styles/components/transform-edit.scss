@@ -1,19 +1,23 @@
+@use '../utils/color_variables';
+@use '../utils/font_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 .copy-text {
-  background: $ui-gray-010;
+  background: color_variables.$ui-gray-010;
 
   & > code {
-    color: $ui-gray-800;
+    color: color_variables.$ui-gray-800;
     padding: 14px;
   }
 }
 .transform-pattern-text div:not(:first-child) {
-  font-family: $family-monospace;
+  font-family: font_variables.$family-monospace;
 }
 .transform-decode-formats:not(:last-child) {
-  margin-bottom: $spacing-12;
+  margin-bottom: size_variables.$spacing-12;
 }

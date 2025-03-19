@@ -191,6 +191,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
           key_usage: ['DigitalSignature', 'KeyAgreement', 'KeyEncipherment'],
           not_before_duration: '30s',
           require_cn: true,
+          serial_number_source: 'json-csr',
           signature_bits: '384',
           use_csr_common_name: true,
           use_csr_sans: true,

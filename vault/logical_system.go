@@ -33,6 +33,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	semver "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/activationflags"
 	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
@@ -278,7 +279,9 @@ type SystemBackend struct {
 	logger               log.Logger
 	mfaBackend           *PolicyMFABackend
 	syncBackend          *SecretsSyncBackend
+	idStoreBackend       *framework.Backend
 	raftChallengeLimiter *rate.Limiter
+	activationFlags      *activationflags.FeatureActivationFlags
 }
 
 // handleConfigStateSanitized returns the current configuration state. The configuration
@@ -6485,7 +6488,7 @@ This path responds to the following HTTP methods.
 	},
 
 	"alias_identifier": {
-		`It is the name of the alias (user). For example, if the alias belongs to userpass backend, 
+		`It is the name of the alias (user). For example, if the alias belongs to userpass backend,
 	   the name should be a valid username within userpass auth method. If the alias belongs
 	    to an approle auth method, the name should be a valid RoleID`,
 		"",

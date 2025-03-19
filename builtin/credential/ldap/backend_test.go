@@ -18,16 +18,35 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/ldap"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/rotation"
 	"github.com/mitchellh/mapstructure"
 )
 
+type testSystemView struct {
+	logical.StaticSystemView
+}
+
+func (d testSystemView) RegisterRotationJob(_ context.Context, _ *rotation.RotationJobConfigureRequest) (string, error) {
+	return "", automatedrotationutil.ErrRotationManagerUnsupported
+}
+
+func (d testSystemView) DeregisterRotationJob(_ context.Context, _ *rotation.RotationJobDeregisterRequest) error {
+	return nil
+}
+
 func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
+	sv := testSystemView{}
+	sv.MaxLeaseTTLVal = time.Hour * 2 * 24
+	sv.DefaultLeaseTTLVal = time.Minute
+
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
+	config.System = sv
 
 	b := Backend()
 	if b == nil {
@@ -136,28 +155,6 @@ func TestLdapAuthBackend_CaseSensitivity(t *testing.T) {
 	ctx := context.Background()
 
 	testVals := func(caseSensitive bool) {
-		// Clear storage
-		userList, err := storage.List(ctx, "user/")
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, user := range userList {
-			err = storage.Delete(ctx, "user/"+user)
-			if err != nil {
-				t.Fatal(err)
-			}
-		}
-		groupList, err := storage.List(ctx, "group/")
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, group := range groupList {
-			err = storage.Delete(ctx, "group/"+group)
-			if err != nil {
-				t.Fatal(err)
-			}
-		}
-
 		configReq := &logical.Request{
 			Path:      "config",
 			Operation: logical.ReadOperation,
@@ -264,6 +261,71 @@ func TestLdapAuthBackend_CaseSensitivity(t *testing.T) {
 		expected := []string{"grouppolicy", "userpolicy"}
 		if !reflect.DeepEqual(expected, resp.Auth.Policies) {
 			t.Fatalf("bad: policies: expected: %q, actual: %q", expected, resp.Auth.Policies)
+		}
+
+		// Test proper deletion of users
+		userReqDel := &logical.Request{
+			Operation: logical.DeleteOperation,
+			Data: map[string]interface{}{
+				"groups":   "EngineerS",
+				"policies": "userpolicy",
+			},
+			Path:    "users/hermeS conRad",
+			Storage: storage,
+		}
+		resp, err = b.HandleRequest(ctx, userReqDel)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%v resp:%#v", err, resp)
+		}
+		if caseSensitive {
+			// The online test server is actually case sensitive so we need to
+			// delete again so it works
+			userReq = &logical.Request{
+				Operation: logical.DeleteOperation,
+				Data: map[string]interface{}{
+					"groups":   "EngineerS",
+					"policies": "userpolicy",
+				},
+				Path:       "users/Hermes Conrad",
+				Storage:    storage,
+				Connection: &logical.Connection{},
+			}
+			resp, err = b.HandleRequest(ctx, userReq)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("err:%v resp:%#v", err, resp)
+			}
+		}
+
+		// Expect storage for user path to be cleared
+		userList, err := storage.List(ctx, "user/")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if userList != nil {
+			t.Fatalf("deletion of users failed")
+		}
+
+		// Test proper deletion of groups
+		groupReqDel := &logical.Request{
+			Operation: logical.DeleteOperation,
+			Data: map[string]interface{}{
+				"policies": "grouppolicy",
+			},
+			Path:    "groups/EngineerS",
+			Storage: storage,
+		}
+		resp, err = b.HandleRequest(ctx, groupReqDel)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%v resp:%#v", err, resp)
+		}
+
+		// Expect storage for group path to be cleared
+		groupList, err := storage.List(ctx, "group/")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if groupList != nil {
+			t.Fatalf("deletion of groups failed")
 		}
 	}
 
@@ -402,15 +464,17 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 func factory(t *testing.T) logical.Backend {
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 32
+
+	sv := testSystemView{}
+	sv.DefaultLeaseTTLVal = defaultLeaseTTLVal
+	sv.MaxLeaseTTLVal = maxLeaseTTLVal
+
 	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: hclog.New(&hclog.LoggerOptions{
 			Name:  "FactoryLogger",
 			Level: hclog.Debug,
 		}),
-		System: &logical.StaticSystemView{
-			DefaultLeaseTTLVal: defaultLeaseTTLVal,
-			MaxLeaseTTLVal:     maxLeaseTTLVal,
-		},
+		System: sv,
 	})
 	if err != nil {
 		t.Fatalf("Unable to create backend: %s", err)

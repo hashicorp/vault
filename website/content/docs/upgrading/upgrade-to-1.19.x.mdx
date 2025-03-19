@@ -14,7 +14,7 @@ Vault 1.18. **Please read carefully**.
 
 ## Important changes
 
-### Transit support for Ed25519ph and Ed25519ctx signatures
+### Transit support for Ed25519ph and Ed25519ctx signatures ((#ed25519))
 
 **NOTE**: This only applies to Transit Ed25519 keys.
 
@@ -42,6 +42,24 @@ based on the table below.
 | CE            | true      | any value other than sha2-512 | An error is returned                       | Pure Ed25519                      |
 | CE            | true      | sha2-512                      | An error is returned (not supported on CE) | Pure Ed25519                      |
 
+### Identity system duplicate cleanup ((#dedupe))
+
+**Users should review their server logs after upgrading to see if identity
+duplicates are reported.**
+
+Vault 1.19.0 enables users impacted by historical identity duplicate bugs to
+manually trigger a one-time de-duplication process. This process restores the
+cluster to supported default behavior by resolving the duplicates.
+
+Vault 1.19.0 also includes improved reporting in server logs to help diagnose
+whether this de-duplication is required. No behavior will change until the
+operator activates the relevant flag via the API.
+
+To understand if you need to take action, consult
+[Resolve duplicate identities](/vault/docs/upgrading/deduplication) which
+demonstrates the log lines to watch for and how to ensure your resolve
+duplicates safely.
+
 ### LDAP user DN search with `upndomain`
 
 The github.com/hashicorp/cap/ldap dependency has been upgraded to include a security improvement
@@ -52,6 +70,18 @@ For more details, see https://github.com/hashicorp/cap/pull/151.
 In previous versions of Vault, multiple users could be returned when searching for the user DN
 with `upndomain` configured, and the last user would be selected. As of 1.19.x, such searches will
 error if multiple users are returned.
+
+### Anonymous usage data collection ((#anon-data)) <EnterpriseAlert inline="true" />
+
+Vault 1.19.0 collects
+[anonymous usage data](/vault/docs/enterprise/license/product-usage-reporting#anonymous-product-usage-reporting)
+about the Vault cluster and automatically sends the cluster usage data with the
+standard utilization data reported through automated license reporting.
+
+### RADIUS authentication is no longer case sensitive ((#case-sensitive))
+
+As of Vault 1.19.0 the RADIUS authentication plugin will not force case sensitivity when entered.
+
 
 ## Known issues and workarounds
 

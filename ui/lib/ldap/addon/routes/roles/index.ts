@@ -8,7 +8,7 @@ import { service } from '@ember/service';
 import { withConfig } from 'core/decorators/fetch-secrets-engine-config';
 import { hash } from 'rsvp';
 
-import type StoreService from 'vault/services/store';
+import type Store from '@ember-data/store';
 import type Transition from '@ember/routing/transition';
 import type LdapRoleModel from 'vault/models/ldap/role';
 import type SecretEngineModel from 'vault/models/secret-engine';
@@ -28,7 +28,7 @@ interface RouteController extends Controller {
 
 @withConfig('ldap/config')
 export default class LdapRolesIndexRoute extends LdapRolesRoute {
-  @service declare readonly store: StoreService; // necessary for @withConfig decorator
+  @service declare readonly store: Store; // necessary for @withConfig decorator
 
   declare promptConfig: boolean;
 

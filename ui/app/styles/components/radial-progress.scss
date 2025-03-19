@@ -1,3 +1,6 @@
+@use '../utils/color_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -7,11 +10,11 @@
   transform: rotate(-90deg) translateX(-20%);
 }
 .radial-progress circle {
-  stroke: rgba($grey-light, 0.5);
-  transition: stroke-dashoffset $speed ease-in;
+  stroke: rgba(color_variables.$grey-light, 0.5);
+  transition: stroke-dashoffset size_variables.$speed ease-in;
   will-change: stroke-dashoffset;
   stroke-linecap: round;
 }
 .radial-progress circle.progress-fill {
-  stroke: $green;
+  stroke: color_variables.$green;
 }

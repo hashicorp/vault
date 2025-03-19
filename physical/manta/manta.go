@@ -17,6 +17,7 @@ import (
 
 	metrics "github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/vault/sdk/physical"
 	triton "github.com/joyent/triton-go"
 	"github.com/joyent/triton-go/authentication"
@@ -28,7 +29,7 @@ const mantaDefaultRootStore = "/stor"
 
 type MantaBackend struct {
 	logger     log.Logger
-	permitPool *physical.PermitPool
+	permitPool *permitpool.Pool
 	client     *storage.StorageClient
 	directory  string
 }
@@ -95,7 +96,7 @@ func NewMantaBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		client:     client,
 		directory:  conf["directory"],
 		logger:     logger,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: permitpool.New(maxParInt),
 	}, nil
 }
 
@@ -103,7 +104,9 @@ func NewMantaBackend(conf map[string]string, logger log.Logger) (physical.Backen
 func (m *MantaBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"manta", "put"}, time.Now())
 
-	m.permitPool.Acquire()
+	if err := m.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer m.permitPool.Release()
 
 	r := bytes.NewReader(entry.Value)
@@ -121,7 +124,9 @@ func (m *MantaBackend) Put(ctx context.Context, entry *physical.Entry) error {
 func (m *MantaBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"manta", "get"}, time.Now())
 
-	m.permitPool.Acquire()
+	if err := m.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer m.permitPool.Release()
 
 	output, err := m.client.Objects().Get(ctx, &storage.GetObjectInput{
@@ -154,7 +159,9 @@ func (m *MantaBackend) Get(ctx context.Context, key string) (*physical.Entry, er
 func (m *MantaBackend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"manta", "delete"}, time.Now())
 
-	m.permitPool.Acquire()
+	if err := m.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer m.permitPool.Release()
 
 	if strings.HasSuffix(key, "/") {
@@ -210,7 +217,9 @@ func tryDeleteDirectory(ctx context.Context, m *MantaBackend, directoryPath stri
 func (m *MantaBackend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"manta", "list"}, time.Now())
 
-	m.permitPool.Acquire()
+	if err := m.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer m.permitPool.Release()
 
 	objs, err := m.client.Dir().List(ctx, &storage.ListDirectoryInput{

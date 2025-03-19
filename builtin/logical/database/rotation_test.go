@@ -1664,6 +1664,29 @@ func requireWALs(t *testing.T, storage logical.Storage, expectedCount int) []str
 	return wals
 }
 
+// getBackendWithConfig returns an initialized test backend for the given
+// BackendConfig
+func getBackendInitQueue(t *testing.T, c *logical.BackendConfig, tickInterval string) (*databaseBackend, *logical.BackendConfig, *mockNewDatabase) {
+	t.Helper()
+	// make queue ticks more frequent for tests
+	c.Config[queueTickIntervalKey] = tickInterval
+	c.StorageView = &logical.InmemStorage{}
+	// Create and init the backend ourselves instead of using a Factory because
+	// the factory function kicks off threads that cause racy tests.
+	b := Backend(c)
+	ctx := context.Background()
+	if err := b.Setup(ctx, c); err != nil {
+		t.Fatal(err)
+	}
+	b.schedule = &TestSchedule{}
+	b.credRotationQueue = queue.New()
+	b.initQueue(ctx, c)
+
+	mockDB := setupMockDB(b)
+
+	return b, c, mockDB
+}
+
 func getBackend(t *testing.T) (*databaseBackend, logical.Storage, *mockNewDatabase) {
 	t.Helper()
 	config := logical.TestBackendConfig()
@@ -1671,7 +1694,8 @@ func getBackend(t *testing.T) (*databaseBackend, logical.Storage, *mockNewDataba
 	// Create and init the backend ourselves instead of using a Factory because
 	// the factory function kicks off threads that cause racy tests.
 	b := Backend(config)
-	if err := b.Setup(context.Background(), config); err != nil {
+	ctx := context.Background()
+	if err := b.Setup(ctx, config); err != nil {
 		t.Fatal(err)
 	}
 	b.schedule = &TestSchedule{}

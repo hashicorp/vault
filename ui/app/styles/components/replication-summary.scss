@@ -1,3 +1,5 @@
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -13,7 +15,7 @@
   }
 
   .float-right {
-    margin: $spacing-12 0 $spacing-24 0;
+    margin: size_variables.$spacing-12 0 size_variables.$spacing-24 0;
     float: right;
   }
 }

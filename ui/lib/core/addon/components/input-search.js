@@ -37,7 +37,7 @@ export default class InputSearch extends Component {
   }
 
   @action
-  inputChanged() {
-    this.args.onChange(this.searchInput);
+  inputChanged(event) {
+    this.args.onChange(event.target.value);
   }
 }

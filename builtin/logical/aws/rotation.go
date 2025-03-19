@@ -59,6 +59,7 @@ func (b *backend) rotateCredential(ctx context.Context, storage logical.Storage)
 		return false, nil
 	}
 
+	b.Logger().Debug("rotating credential", "role", item.Key)
 	cfg := item.Value.(staticRoleEntry)
 
 	creds, err := b.createCredential(ctx, storage, cfg, true)
@@ -86,9 +87,10 @@ func (b *backend) rotateCredential(ctx context.Context, storage logical.Storage)
 
 // createCredential will create a new iam credential, deleting the oldest one if necessary.
 func (b *backend) createCredential(ctx context.Context, storage logical.Storage, cfg staticRoleEntry, shouldLockStorage bool) (*awsCredentials, error) {
-	iamClient, err := b.clientIAM(ctx, storage)
+	// Always create a fresh client
+	iamClient, err := b.getNonCachedIAMClient(ctx, storage, cfg)
 	if err != nil {
-		return nil, fmt.Errorf("unable to get the AWS IAM client: %w", err)
+		return nil, fmt.Errorf("failed to get IAM client for role %q: %w", cfg.Name, err)
 	}
 
 	// IAM users can have a most 2 sets of keys at a time.
@@ -190,8 +192,13 @@ func (b *backend) deleteCredential(ctx context.Context, storage logical.Storage,
 		return fmt.Errorf("couldn't delete from storage: %w", err)
 	}
 
+	iamClient, err := b.nonCachedClientIAM(ctx, storage, b.Logger(), &cfg)
+	if err != nil {
+		return fmt.Errorf("failed to get IAM client for role %q while deleting: %w", cfg.Name, err)
+	}
+
 	// because we have the information, this is the one we created, so it's safe for us to delete.
-	_, err = b.iamClient.DeleteAccessKey(&iam.DeleteAccessKeyInput{
+	_, err = iamClient.DeleteAccessKey(&iam.DeleteAccessKeyInput{
 		AccessKeyId: aws.String(creds.AccessKeyID),
 		UserName:    aws.String(cfg.Username),
 	})

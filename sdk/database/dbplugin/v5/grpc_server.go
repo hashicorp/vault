@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
@@ -20,21 +19,6 @@ import (
 )
 
 var _ proto.DatabaseServer = &gRPCServer{}
-
-type gRPCServer struct {
-	proto.UnimplementedDatabaseServer
-	logical.UnimplementedPluginVersionServer
-
-	// holds the non-multiplexed Database
-	// when this is set the plugin does not support multiplexing
-	singleImpl Database
-
-	// instances holds the multiplexed Databases
-	instances   map[string]Database
-	factoryFunc func() (interface{}, error)
-
-	sync.RWMutex
-}
 
 func (g *gRPCServer) getOrCreateDatabase(ctx context.Context) (Database, error) {
 	g.Lock()
@@ -171,12 +155,12 @@ func (g *gRPCServer) NewUser(ctx context.Context, req *proto.NewUserRequest) (*p
 
 func (g *gRPCServer) UpdateUser(ctx context.Context, req *proto.UpdateUserRequest) (*proto.UpdateUserResponse, error) {
 	if req.GetUsername() == "" {
-		return &proto.UpdateUserResponse{}, status.Errorf(codes.InvalidArgument, "no username provided")
+		return &proto.UpdateUserResponse{}, status.Error(codes.InvalidArgument, "no username provided")
 	}
 
 	dbReq, err := getUpdateUserRequest(req)
 	if err != nil {
-		return &proto.UpdateUserResponse{}, status.Errorf(codes.InvalidArgument, err.Error())
+		return &proto.UpdateUserResponse{}, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	impl, err := g.getDatabase(ctx)

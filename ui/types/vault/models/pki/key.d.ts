@@ -3,10 +3,9 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Model from '@ember-data/model';
-import { ModelValidations } from 'vault/app-types';
+import type { WithValidationsModel } from 'vault/app-types';
 
-export default class PkiKeyModel extends Model {
+type PkiKeyModel = WithValidationsModel & {
   secretMountPath: class;
   keyId: string;
   keyName: string;
@@ -15,12 +14,12 @@ export default class PkiKeyModel extends Model {
   keyBits: string;
   pemBundle: string;
   privateKey: string;
-  isNew: boolean;
   get backend(): string;
   get canRead(): boolean;
   get canEdit(): boolean;
   get canDelete(): boolean;
   get canGenerateKey(): boolean;
   get canImportKey(): boolean;
-  validate(): ModelValidations;
-}
+};
+
+export default PkiKeyModel;

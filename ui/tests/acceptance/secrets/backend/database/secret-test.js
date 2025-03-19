@@ -19,6 +19,8 @@ import logout from 'vault/tests/pages/logout';
 import searchSelect from 'vault/tests/pages/components/search-select';
 import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+
 const searchSelectComponent = create(searchSelect);
 
 const newConnection = async (
@@ -547,7 +549,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
       .doesNotExist('Roles card does not exist on overview w/ policy');
     assert.dom('.overview-card h2').hasText('1', 'Lists the correct number of connections');
     // confirm get credentials card is an option to select. Regression bug.
-    await typeIn('.ember-text-field', 'blah');
+    await typeIn(GENERAL.inputSearch('search-input-role'), 'blah');
     assert.dom('[data-test-get-credentials]').isEnabled();
     // [BANDAID] navigate away to fix test failing on capabilities-self check before teardown
     await visit('/vault/secrets');
@@ -574,13 +576,13 @@ module('Acceptance | secrets/database/*', function (hooks) {
     await rolePage.name('bar');
     assert
       .dom('[data-test-component="empty-state"]')
-      .exists({ count: 2 }, 'Two empty states exist before selections made');
+      .exists({ count: 1 }, 'One empty state exists before database selection is made');
     await clickTrigger('#database');
     assert.strictEqual(searchSelectComponent.options.length, 1, 'list shows existing connections so far');
     await selectChoose('#database', '.ember-power-select-option', 0);
     assert
       .dom('[data-test-component="empty-state"]')
-      .exists({ count: 2 }, 'Two empty states exist before selections made');
+      .exists({ count: 2 }, 'Two empty states exist after a database is selected');
     await rolePage.roleType('static');
     assert.dom('[data-test-component="empty-state"]').doesNotExist('Empty states go away');
     assert.dom('[data-test-input="username"]').exists('Username field appears for static role');

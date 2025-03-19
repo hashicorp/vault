@@ -35,7 +35,7 @@ import (
 
 var (
 	NotHAMember       = "node is not in HA cluster membership"
-	StatusNotHAMember = status.Errorf(codes.FailedPrecondition, NotHAMember)
+	StatusNotHAMember = status.Error(codes.FailedPrecondition, NotHAMember)
 )
 
 const haNodeIDKey = "ha_node_id"

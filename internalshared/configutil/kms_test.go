@@ -4,9 +4,11 @@
 package configutil
 
 import (
-	"os"
 	"reflect"
 	"testing"
+
+	"github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_getEnvConfig(t *testing.T) {
@@ -83,20 +85,377 @@ func Test_getEnvConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			for envName, envVal := range tt.envVars {
-				if err := os.Setenv(envName, envVal); err != nil {
-					t.Errorf("error setting environment vars for test: %s", err)
-				}
+				t.Setenv(envName, envVal)
 			}
 
 			if got := GetEnvConfigFunc(tt.kms); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getEnvConfig() = %v, want %v", got, tt.want)
 			}
+		})
+	}
+}
 
-			for env := range tt.envVars {
-				if err := os.Unsetenv(env); err != nil {
-					t.Errorf("error unsetting environment vars for test: %s", err)
-				}
+// TestParseKMSesURLConformance tests that all config attrs whose values can be
+// URLs, IP addresses, or host:port addresses, when configured with an IPv6
+// address, the normalized to be conformant with RFC-5942 §4
+// See: https://rfc-editor.org/rfc/rfc5952.html
+func TestParseKMSesURLConformance(t *testing.T) {
+	t.Parallel()
+
+	for name, tc := range map[string]struct {
+		config     string
+		expected   map[string]string
+		shouldFail bool
+	}{
+		"alicloudkms ipv4": {
+			config: `
+seal "alicloudkms" {
+  region     = "us-east-1"
+	domain     = "kms.us-east-1.aliyuncs.com"
+  access_key = "0wNEpMMlzy7szvai"
+  secret_key = "PupkTg8jdmau1cXxYacgE736PJj4cA"
+  kms_key_id = "08c33a6f-4e0a-4a1b-a3fa-7ddfa1d4fb73"
+}`,
+			expected: map[string]string{
+				"region":     "us-east-1",
+				"domain":     "kms.us-east-1.aliyuncs.com",
+				"access_key": "0wNEpMMlzy7szvai",
+				"secret_key": "PupkTg8jdmau1cXxYacgE736PJj4cA",
+				"kms_key_id": "08c33a6f-4e0a-4a1b-a3fa-7ddfa1d4fb73",
+			},
+		},
+		"alicloudkms ipv6": {
+			config: `
+seal "alicloudkms" {
+  region     = "us-east-1"
+	domain     = "2001:db8:0:0:0:0:2:1"
+  access_key = "0wNEpMMlzy7szvai"
+  secret_key = "PupkTg8jdmau1cXxYacgE736PJj4cA"
+  kms_key_id = "08c33a6f-4e0a-4a1b-a3fa-7ddfa1d4fb73"
+}`,
+			expected: map[string]string{
+				"region":     "us-east-1",
+				"domain":     "2001:db8::2:1",
+				"access_key": "0wNEpMMlzy7szvai",
+				"secret_key": "PupkTg8jdmau1cXxYacgE736PJj4cA",
+				"kms_key_id": "08c33a6f-4e0a-4a1b-a3fa-7ddfa1d4fb73",
+			},
+		},
+		"awskms ipv4": {
+			config: `
+seal "awskms" {
+  region     = "us-east-1"
+  access_key = "AKIAIOSFODNN7EXAMPLE"
+  secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+  kms_key_id = "19ec80b0-dfdd-4d97-8164-c6examplekey"
+	endpoint   = "https://vpce-0e1bb1852241f8cc6-pzi0do8n.kms.us-east-1.vpce.amazonaws.com"
+}`,
+			expected: map[string]string{
+				"region":     "us-east-1",
+				"access_key": "AKIAIOSFODNN7EXAMPLE",
+				"secret_key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+				"kms_key_id": "19ec80b0-dfdd-4d97-8164-c6examplekey",
+				"endpoint":   "https://vpce-0e1bb1852241f8cc6-pzi0do8n.kms.us-east-1.vpce.amazonaws.com",
+			},
+		},
+		"awskms ipv6": {
+			config: `
+seal "awskms" {
+  region     = "us-east-1"
+  access_key = "AKIAIOSFODNN7EXAMPLE"
+  secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+  kms_key_id = "19ec80b0-dfdd-4d97-8164-c6examplekey"
+  endpoint   = "https://[2001:db8:0:0:0:0:2:1]:5984/my-aws-endpoint"
+}`,
+			expected: map[string]string{
+				"region":     "us-east-1",
+				"access_key": "AKIAIOSFODNN7EXAMPLE",
+				"secret_key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+				"kms_key_id": "19ec80b0-dfdd-4d97-8164-c6examplekey",
+				"endpoint":   "https://[2001:db8::2:1]:5984/my-aws-endpoint",
+			},
+		},
+		"azurekeyvault ipv4": {
+			config: `
+seal "azurekeyvault" {
+  tenant_id      = "46646709-b63e-4747-be42-516edeaf1e14"
+  client_id      = "03dc33fc-16d9-4b77-8152-3ec568f8af6e"
+  client_secret  = "DUJDS3..."
+  vault_name     = "hc-vault"
+  key_name       = "vault_key"
+	resource       = "vault.azure.net"
+}`,
+			expected: map[string]string{
+				"tenant_id":     "46646709-b63e-4747-be42-516edeaf1e14",
+				"client_id":     "03dc33fc-16d9-4b77-8152-3ec568f8af6e",
+				"client_secret": "DUJDS3...",
+				"vault_name":    "hc-vault",
+				"key_name":      "vault_key",
+				"resource":      "vault.azure.net",
+			},
+		},
+		"azurekeyvault ipv6": {
+			config: `
+seal "azurekeyvault" {
+  tenant_id      = "46646709-b63e-4747-be42-516edeaf1e14"
+  client_id      = "03dc33fc-16d9-4b77-8152-3ec568f8af6e"
+  client_secret  = "DUJDS3..."
+  vault_name     = "hc-vault"
+  key_name       = "vault_key"
+  resource       = "2001:db8:0:0:0:0:2:1",
+}`,
+			expected: map[string]string{
+				"tenant_id":     "46646709-b63e-4747-be42-516edeaf1e14",
+				"client_id":     "03dc33fc-16d9-4b77-8152-3ec568f8af6e",
+				"client_secret": "DUJDS3...",
+				"vault_name":    "hc-vault",
+				"key_name":      "vault_key",
+				"resource":      "2001:db8::2:1",
+			},
+		},
+		"ocikms ipv4": {
+			config: `
+seal "ocikms" {
+	key_id               = "ocid1.key.oc1.iad.afnxza26aag4s.abzwkljsbapzb2nrha5nt3s7s7p42ctcrcj72vn3kq5qx"
+	crypto_endpoint      = "https://afnxza26aag4s-crypto.kms.us-ashburn-1.oraclecloud.com"
+	management_endpoint  = "https://afnxza26aag4s-management.kms.us-ashburn-1.oraclecloud.com"
+	auth_type_api_key    = "true"
+}`,
+			expected: map[string]string{
+				"key_id":              "ocid1.key.oc1.iad.afnxza26aag4s.abzwkljsbapzb2nrha5nt3s7s7p42ctcrcj72vn3kq5qx",
+				"crypto_endpoint":     "https://afnxza26aag4s-crypto.kms.us-ashburn-1.oraclecloud.com",
+				"management_endpoint": "https://afnxza26aag4s-management.kms.us-ashburn-1.oraclecloud.com",
+				"auth_type_api_key":   "true",
+			},
+		},
+		"ocikms ipv6": {
+			config: `
+seal "ocikms" {
+  key_id               = "https://[2001:db8:0:0:0:0:2:1]/abzwkljsbapzb2nrha5nt3s7s7p42ctcrcj72vn3kq5qx"
+  crypto_endpoint      = "https://[2001:db8:0:0:0:0:2:1]/afnxza26aag4s-crypto"
+  management_endpoint  = "https://[2001:db8:0:0:0:0:2:1]/afnxza26aag4s-management"
+  auth_type_api_key    = "true"
+}`,
+			expected: map[string]string{
+				"key_id":              "https://[2001:db8::2:1]/abzwkljsbapzb2nrha5nt3s7s7p42ctcrcj72vn3kq5qx",
+				"crypto_endpoint":     "https://[2001:db8::2:1]/afnxza26aag4s-crypto",
+				"management_endpoint": "https://[2001:db8::2:1]/afnxza26aag4s-management",
+				"auth_type_api_key":   "true",
+			},
+		},
+		"transit ipv4": {
+			config: `
+seal "transit" {
+  address            = "https://vault:8200"
+  token              = "s.Qf1s5zigZ4OX6akYjQXJC1jY"
+  disable_renewal    = "false"
+  key_name           = "transit_key_name"
+  mount_path         = "transit/"
+  namespace          = "ns1/"
+}
+`,
+			expected: map[string]string{
+				"address":         "https://vault:8200",
+				"token":           "s.Qf1s5zigZ4OX6akYjQXJC1jY",
+				"disable_renewal": "false",
+				"key_name":        "transit_key_name",
+				"mount_path":      "transit/",
+				"namespace":       "ns1/",
+			},
+		},
+		"transit ipv6": {
+			config: `
+seal "transit" {
+  address            = "https://[2001:db8:0:0:0:0:2:1]:8200"
+  token              = "s.Qf1s5zigZ4OX6akYjQXJC1jY"
+  disable_renewal    = "false"
+  key_name           = "transit_key_name"
+  mount_path         = "transit/"
+  namespace          = "ns1/"
+}
+`,
+			expected: map[string]string{
+				"address":         "https://[2001:db8::2:1]:8200",
+				"token":           "s.Qf1s5zigZ4OX6akYjQXJC1jY",
+				"disable_renewal": "false",
+				"key_name":        "transit_key_name",
+				"mount_path":      "transit/",
+				"namespace":       "ns1/",
+			},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			kmses, err := ParseKMSes(tc.config)
+			require.NoError(t, err)
+			require.Len(t, kmses, 1)
+			require.EqualValues(t, tc.expected, kmses[0].Config)
+		})
+	}
+}
+
+// TestMergeKMSEnvConfigAddrConformance tests that all env config whose values
+// can be URLs, IP addresses, or host:port addresses, when configured with an
+// an IPv6 address, the normalized to be conformant with RFC-5942 §4
+// See: https://rfc-editor.org/rfc/rfc5952.html
+func TestMergeKMSEnvConfigAddrConformance(t *testing.T) {
+	for name, tc := range map[string]struct {
+		sealType  string // default to name if none given
+		kmsConfig map[string]string
+		envVars   map[string]string
+		expected  map[string]string
+	}{
+		"alicloudkms": {
+			kmsConfig: map[string]string{
+				"region":     "us-east-1",
+				"domain":     "kms.us-east-1.aliyuncs.com",
+				"access_key": "0wNEpMMlzy7szvai",
+				"secret_key": "PupkTg8jdmau1cXxYacgE736PJj4cA",
+				"kms_key_id": "08c33a6f-4e0a-4a1b-a3fa-7ddfa1d4fb73",
+			},
+			envVars: map[string]string{"ALICLOUD_DOMAIN": "2001:db8:0:0:0:0:2:1"},
+			expected: map[string]string{
+				"region":     "us-east-1",
+				"domain":     "2001:db8::2:1",
+				"access_key": "0wNEpMMlzy7szvai",
+				"secret_key": "PupkTg8jdmau1cXxYacgE736PJj4cA",
+				"kms_key_id": "08c33a6f-4e0a-4a1b-a3fa-7ddfa1d4fb73",
+			},
+		},
+		"awskms": {
+			kmsConfig: map[string]string{
+				"region":     "us-east-1",
+				"access_key": "AKIAIOSFODNN7EXAMPLE",
+				"secret_key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+				"kms_key_id": "19ec80b0-dfdd-4d97-8164-c6examplekey",
+				"endpoint":   "https://vpce-0e1bb1852241f8cc6-pzi0do8n.kms.us-east-1.vpce.amazonaws.com",
+			},
+			envVars: map[string]string{"AWS_KMS_ENDPOINT": "https://[2001:db8:0:0:0:0:2:1]:5984/my-aws-endpoint"},
+			expected: map[string]string{
+				"region":     "us-east-1",
+				"access_key": "AKIAIOSFODNN7EXAMPLE",
+				"secret_key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+				"kms_key_id": "19ec80b0-dfdd-4d97-8164-c6examplekey",
+				"endpoint":   "https://[2001:db8::2:1]:5984/my-aws-endpoint",
+			},
+		},
+		"azurekeyvault": {
+			kmsConfig: map[string]string{
+				"tenant_id":     "46646709-b63e-4747-be42-516edeaf1e14",
+				"client_id":     "03dc33fc-16d9-4b77-8152-3ec568f8af6e",
+				"client_secret": "DUJDS3...",
+				"vault_name":    "hc-vault",
+				"key_name":      "vault_key",
+				"resource":      "vault.azure.net",
+			},
+			envVars: map[string]string{"AZURE_AD_RESOURCE": "2001:db8:0:0:0:0:2:1"},
+			expected: map[string]string{
+				"tenant_id":     "46646709-b63e-4747-be42-516edeaf1e14",
+				"client_id":     "03dc33fc-16d9-4b77-8152-3ec568f8af6e",
+				"client_secret": "DUJDS3...",
+				"vault_name":    "hc-vault",
+				"key_name":      "vault_key",
+				"resource":      "2001:db8::2:1",
+			},
+		},
+		"ocikms wrapper env vars": {
+			sealType: "ocikms",
+			kmsConfig: map[string]string{
+				"key_id":              "ocid1.key.oc1.iad.afnxza26aag4s.abzwkljsbapzb2nrha5nt3s7s7p42ctcrcj72vn3kq5qx",
+				"crypto_endpoint":     "https://afnxza26aag4s-crypto.kms.us-ashburn-1.oraclecloud.com",
+				"management_endpoint": "https://afnxza26aag4s-management.kms.us-ashburn-1.oraclecloud.com",
+				"auth_type_api_key":   "true",
+			},
+			envVars: map[string]string{
+				ocikms.EnvOciKmsWrapperKeyId:              "https://[2001:db8:0:0:0:0:2:1]/abzwkljsbapzb2nrha5nt3s7s7p42ctcrcj72vn3kq5qx",
+				ocikms.EnvOciKmsWrapperCryptoEndpoint:     "https://[2001:db8:0:0:0:0:2:1]/afnxza26aag4s-crypto",
+				ocikms.EnvOciKmsWrapperManagementEndpoint: "https://[2001:db8:0:0:0:0:2:1]/afnxza26aag4s-management",
+			},
+			expected: map[string]string{
+				"key_id":              "https://[2001:db8::2:1]/abzwkljsbapzb2nrha5nt3s7s7p42ctcrcj72vn3kq5qx",
+				"crypto_endpoint":     "https://[2001:db8::2:1]/afnxza26aag4s-crypto",
+				"management_endpoint": "https://[2001:db8::2:1]/afnxza26aag4s-management",
+				"auth_type_api_key":   "true",
+			},
+		},
+		"ocikms vault env vars": {
+			sealType: "ocikms",
+			kmsConfig: map[string]string{
+				"key_id":              "ocid1.key.oc1.iad.afnxza26aag4s.abzwkljsbapzb2nrha5nt3s7s7p42ctcrcj72vn3kq5qx",
+				"crypto_endpoint":     "https://afnxza26aag4s-crypto.kms.us-ashburn-1.oraclecloud.com",
+				"management_endpoint": "https://afnxza26aag4s-management.kms.us-ashburn-1.oraclecloud.com",
+				"auth_type_api_key":   "true",
+			},
+			envVars: map[string]string{
+				ocikms.EnvVaultOciKmsSealKeyId:              "https://[2001:db8:0:0:0:0:2:1]/abzwkljsbapzb2nrha5nt3s7s7p42ctcrcj72vn3kq5qx",
+				ocikms.EnvVaultOciKmsSealCryptoEndpoint:     "https://[2001:db8:0:0:0:0:2:1]/afnxza26aag4s-crypto",
+				ocikms.EnvVaultOciKmsSealManagementEndpoint: "https://[2001:db8:0:0:0:0:2:1]/afnxza26aag4s-management",
+			},
+			expected: map[string]string{
+				"key_id":              "https://[2001:db8::2:1]/abzwkljsbapzb2nrha5nt3s7s7p42ctcrcj72vn3kq5qx",
+				"crypto_endpoint":     "https://[2001:db8::2:1]/afnxza26aag4s-crypto",
+				"management_endpoint": "https://[2001:db8::2:1]/afnxza26aag4s-management",
+				"auth_type_api_key":   "true",
+			},
+		},
+		"transit addr not in config": {
+			sealType: "transit",
+			kmsConfig: map[string]string{
+				"token":           "s.Qf1s5zigZ4OX6akYjQXJC1jY",
+				"disable_renewal": "false",
+				"key_name":        "transit_key_name",
+				"mount_path":      "transit/",
+				"namespace":       "ns1/",
+			},
+			envVars: map[string]string{"VAULT_ADDR": "https://[2001:db8:0:0:0:0:2:1]:8200"},
+			expected: map[string]string{
+				// NOTE: If our address has not been configured we'll fall back to VAULT_ADDR for transit.
+				"address":         "https://[2001:db8::2:1]:8200",
+				"token":           "s.Qf1s5zigZ4OX6akYjQXJC1jY",
+				"disable_renewal": "false",
+				"key_name":        "transit_key_name",
+				"mount_path":      "transit/",
+				"namespace":       "ns1/",
+			},
+		},
+		"transit addr in config": {
+			sealType: "transit",
+			kmsConfig: map[string]string{
+				"address":         "https://vault:8200",
+				"token":           "s.Qf1s5zigZ4OX6akYjQXJC1jY",
+				"disable_renewal": "false",
+				"key_name":        "transit_key_name",
+				"mount_path":      "transit/",
+				"namespace":       "ns1/",
+			},
+			envVars: map[string]string{"VAULT_ADDR": "https://[2001:db8:0:0:0:0:2:1]:8200"},
+			expected: map[string]string{
+				// NOTE: If our address has been configured we don't consider VAULT_ADDR
+				"address":         "https://vault:8200",
+				"token":           "s.Qf1s5zigZ4OX6akYjQXJC1jY",
+				"disable_renewal": "false",
+				"key_name":        "transit_key_name",
+				"mount_path":      "transit/",
+				"namespace":       "ns1/",
+			},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			typ := name
+			if tc.sealType != "" {
+				typ = tc.sealType
 			}
+			kms := &KMS{
+				Type:   typ,
+				Config: tc.kmsConfig,
+			}
+
+			for envName, envVal := range tc.envVars {
+				t.Setenv(envName, envVal)
+			}
+
+			require.NoError(t, mergeKMSEnvConfig(kms))
+			require.EqualValues(t, tc.expected, kms.Config)
 		})
 	}
 }
