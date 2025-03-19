@@ -85,5 +85,11 @@
     margin: 36px 0;
   }
 
+  /* stylelint-disable-next-line selector-class-pattern */
+  .isHds {
+    border-left: 3px solid #06be03;
+    padding-left: 12px;
+  }
+
   /* ------------------ */
 }
