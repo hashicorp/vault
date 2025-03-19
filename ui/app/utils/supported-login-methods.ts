@@ -5,6 +5,7 @@
 
 /**
  * The web UI only supports logging in with these auth methods.
+ * The method data is all related to logic for authenticating via that method.
  * This is a subset of the methods found in the `mountable-auth-methods` helper,
  * which lists all the methods that can be enabled and mounted.
  */
@@ -18,7 +19,7 @@ interface MethodData {
   formAttributes: string[];
 }
 
-export const BASE_AUTH_METHODS = [
+export const BASE_LOGIN_METHODS = [
   {
     type: 'token',
     typeDisplay: 'Token',
@@ -85,7 +86,7 @@ export const BASE_AUTH_METHODS = [
   },
 ];
 
-export const ENTERPRISE_AUTH_METHODS = [
+const ENTERPRISE_LOGIN_METHODS = [
   {
     type: 'saml',
     typeDisplay: 'SAML',
@@ -96,12 +97,7 @@ export const ENTERPRISE_AUTH_METHODS = [
   },
 ];
 
-export const ALL_SUPPORTED_AUTH_METHODS = [...BASE_AUTH_METHODS, ...ENTERPRISE_AUTH_METHODS];
+export const ALL_LOGIN_METHODS = [...BASE_LOGIN_METHODS, ...ENTERPRISE_LOGIN_METHODS];
 
-export const supportedTypes = (isEnterprise: boolean) => {
-  const availableMethods = isEnterprise ? ALL_SUPPORTED_AUTH_METHODS : BASE_AUTH_METHODS;
-  return availableMethods.map((m: MethodData) => m.type);
-};
-
-export const findMethod = (authType: string) =>
-  ALL_SUPPORTED_AUTH_METHODS.find((m: MethodData) => m.type === authType);
+export const findLoginMethod = (authType: string) =>
+  ALL_LOGIN_METHODS.find((m: MethodData) => m.type === authType);
