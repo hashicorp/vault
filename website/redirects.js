@@ -159,5 +159,10 @@ module.exports = [
     source: '/vault/docs/:version(v1\.(?:8|9)\.x)/agent-and-proxy/agent/generate-config',
     destination: '/vault/docs/:version/agent/template-config',
     permanent: true,
+  },
+  {
+    source: '/vault/docs/faq/ssct',
+    destination: '/vault/docs/v1.10.x/faq/ssct',
+    permanent: true,
   }
 ]

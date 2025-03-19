@@ -279,11 +279,11 @@
       },
       {
         "title": "Vault foundations tutorials",
-        "href": "/vault/tutorials/get-started"
+        "href": "https://developer.hashicorp.com/vault/tutorials/get-started"
       },
       {
         "title": "HCP Vault Dedicated tutorials",
-        "href": "/vault/tutorials/get-started-hcp-vault-dedicated"
+        "href": "https://developer.hashicorp.com/vault/tutorials/get-started-hcp-vault-dedicated"
       }
     ]
   },
@@ -291,6 +291,83 @@
   
   { "divider": true },
   { "heading": "OPERATIONS" },
+
+
+  {
+    "title": "Get Vault",
+    "routes": [
+      {
+        "title": "Install options",
+        "path": "get-vault"
+      },
+      {
+        "title": "Build from code",
+        "path": "get-vault/build-from-code"
+      },
+      {
+        "title": "Package manager installs",
+        "href": "https://developer.hashicorp.com/vault/install/enterprise",
+        "badge": {
+          "text": "COMMUNITY",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
+        "title": "Package manager installs",
+        "href": "https://developer.hashicorp.com/vault/install/enterprise",
+        "badge": {
+          "text": "ENT",
+          "type": "filled",
+          "color": "neutral"
+        }
+      },
+      {
+        "title": "All Vault binaries",
+        "href": "https://releases.hashicorp.com/vault/"
+      },
+      {
+        "title": "Manually install a binary",
+        "path": "get-vault/install-binary"
+      }
+    ]
+  },
+
+  {
+    "title": "License Vault",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "license"
+      },
+      {
+        "title": "Autoload a license",
+        "path": "license/autoloading"
+      },
+      {
+        "title": "Change licenses",
+        "path": "license/change-license"
+      },
+      {
+        "title": "Anonymized usage reporting",
+        "path": "license/product-usage-reporting"
+      },
+      {
+        "title": "Utilization reporting",
+        "routes": [
+          {
+            "title": "Automatic ",
+            "path": "license/utilization/auto-reporting"
+          },
+          {
+            "title": "Manual",
+            "path": "license/utilization/manual-reporting"
+          }
+        ]
+      }
+    ]
+  },
+  
   {
     "title": "Configure Vault",
     "routes": [
@@ -411,7 +488,7 @@
             "title": "Configure HA for seals",
             "badge": {
               "text": "ENT",
-              "type": "outlined",
+              "type": "filled",
               "color": "neutral"
             },
             "path": "configuration/seal/seal-ha"
@@ -441,7 +518,7 @@
             "title": "HSM PKCS11",
             "badge": {
               "text": "ENT",
-              "type": "outlined",
+              "type": "filled",
               "color": "neutral"
             },
             "path": "configuration/seal/pkcs11"
@@ -592,45 +669,6 @@
       {
         "title": "<code>user_lockout</code>",
         "path": "configuration/user-lockout"
-      }
-    ]
-  },
-  {
-    "title": "Get Vault",
-    "routes": [
-      {
-        "title": "Install options",
-        "path": "get-vault"
-      },
-      {
-        "title": "Build from code",
-        "path": "get-vault/build-from-code"
-      },
-      {
-        "title": "Package manager installs",
-        "href": "https://developer.hashicorp.com/vault/install/enterprise",
-        "badge": {
-          "text": "COMMUNITY",
-          "type": "outlined",
-          "color": "neutral"
-        }
-      },
-      {
-        "title": "Package manager installs",
-        "href": "https://developer.hashicorp.com/vault/install/enterprise",
-        "badge": {
-          "text": "ENT",
-          "type": "filled",
-          "color": "neutral"
-        }
-      },
-      {
-        "title": "All Vault binaries",
-        "href": "https://releases.hashicorp.com/vault/"
-      },
-      {
-        "title": "Manually install a binary",
-        "path": "get-vault/install-binary"
       }
     ]
   },
@@ -1925,7 +1963,7 @@
             "title": "Certificate Issuance External Policy Service (CIEPS)",
             "badge": {
               "text": "ENT",
-              "type": "outlined",
+              "type": "filled",
               "color": "neutral"
             },
             "path": "secrets/pki/cieps"
@@ -1935,7 +1973,7 @@
             "path": "secrets/pki/est",
             "badge": {
               "text": "ENT",
-              "type": "outlined",
+              "type": "filled",
               "color": "neutral"
             }
           },
@@ -1943,7 +1981,7 @@
             "title": "Certificate Management Protocol (CMPv2)",
             "badge": {
               "text": "ENT",
-              "type": "outlined",
+              "type": "filled",
               "color": "neutral"
             },
             "path": "secrets/pki/cmpv2"
@@ -2003,7 +2041,7 @@
             "title": "Tokenization Transform",
             "badge": {
               "text": "ENT",
-              "type": "outlined",
+              "type": "filled",
               "color": "neutral"
             },
             "path": "secrets/transform/tokenization"
@@ -2033,7 +2071,7 @@
     "title": "Secrets Sync",
     "badge": {
       "text": "ENT",
-      "type": "outlined",
+      "type": "filled",
       "color": "neutral"
     },
     "routes": [
@@ -2067,7 +2105,7 @@
     "title": "Secrets Import",
     "badge": {
       "text": "ENT",
-      "type": "outlined",
+      "type": "filled",
       "color": "neutral"
     },
     "routes": [
@@ -2744,75 +2782,11 @@
     "divider": true
   },
   {
-    "title": "FAQ",
-    "routes": [
-      {
-        "title": "Overview",
-        "path": "faq"
-      },
-      {
-        "title": "License",
-        "href": "https://developer.hashicorp.com/vault/docs/enterprise/license/faq"
-      },
-      {
-        "title": "Client Count",
-        "href": "https://developer.hashicorp.com/vault/docs/concepts/client-count/faq"
-      },
-      {
-        "title": "Login MFA",
-        "href": "https://developer.hashicorp.com/vault/docs/auth/login-mfa/faq"
-      },
-      {
-        "title": "Server Side Consistent Token",
-        "path": "faq/ssct"
-      }
-    ]
-  },
-  {
-    "divider": true
-  },
-  {
-    "title": "Glossary",
-    "path": "glossary"
-  },
-  {
-    "divider": true
-  },
-  {
     "title": "Vault Enterprise",
     "routes": [
       {
         "title": "Overview",
         "path": "enterprise"
-      },
-      {
-        "title": "Licensing",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "enterprise/license"
-          },
-          {
-            "title": "Autoload an enterprise license",
-            "path": "enterprise/license/autoloading"
-          },
-          {
-            "title": "Automated license utilization reporting",
-            "path": "enterprise/license/utilization-reporting"
-          },
-          {
-            "title": "Manual license utilization reporting",
-            "path": "enterprise/license/manual-reporting"
-          },
-          {
-            "title": "Anonymous product usage reporting",
-            "path": "enterprise/license/product-usage-reporting"
-          },
-          {
-            "title": "FAQ",
-            "path": "enterprise/license/faq"
-          }
-        ]
       },
       {
         "title": "Long-term support (LTS)",
@@ -3022,14 +2996,13 @@
       }
     ]
   },
-  { "divider": true },
-  { "heading": "TO BE DELETED" },
   {
-    "title": "What is Vault?",
-    "path": "what-is-vault"
+    "divider": true
   },
   {
-    "title": "Use Cases",
-    "path": "use-cases"
-  }
+    "title": "Glossary",
+    "path": "glossary"
+  },
+  { "divider": true },
+  { "heading": "TO BE DELETED" }
 ]
