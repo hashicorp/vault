@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, currentURL, visit, waitUntil, find, fillIn } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { ALL_SUPPORTED_AUTH_METHODS, BASE_AUTH_METHODS } from 'vault/utils/supported-login-methods';
+import { ALL_SUPPORTED_AUTH_METHODS, BASE_AUTH_METHODS } from 'vault/utils/auth/supported-login-methods';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 import {
   createNS,

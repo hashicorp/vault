@@ -15,7 +15,7 @@ import { resolve, reject } from 'rsvp';
 
 import getStorage from 'vault/lib/token-storage';
 import ENV from 'vault/config/environment';
-import { findMethod } from 'vault/utils/supported-login-methods';
+import { findMethod } from 'vault/utils/auth/supported-login-methods';
 import { addToArray } from 'vault/helpers/add-to-array';
 
 const TOKEN_SEPARATOR = '☃';
