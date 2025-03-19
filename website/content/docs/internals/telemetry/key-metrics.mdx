@@ -205,6 +205,38 @@ Refer to the [Blocked audit devices](/vault/tutorials/monitoring/blocked-audit-d
 
 ## Resource metrics
 
+### Runtime metrics
+
+#### Metrics:
+
+`vault.runtime.num_goroutines`
+
+`vault.runtime.heap_objects`
+
+#### Background:
+
+A fundamental part of the Vault runtime are
+[`goroutines`](https://go.dev/tour/concurrency/1). `goroutines` are lightweight
+threads managed by the Go runtime that many functions within Vault create as
+part of the runtime.
+
+We recommend monitoring key metrics of the runtime to establish an accurate
+baseline and alerting thresholds for the health of your Vault installation. 
+
+#### Alerting:
+
+Two key alerting metrics to track are `vault.runtime.num_goroutines` and
+`vault.runtime.heap_objects`:
+
+- Sudden increases to `vault.runtime.num_goroutines` can indicate there is
+  something affecting system load warrant investigation.
+
+- Changes to `vault.runtime.heap_objects` can indicate memory pressure.
+
+Having accurate baselines and alert thresholds for `vault.runtime.heap_objects`
+and  `vault.runtime.heap_objects` can help you identify potential performance
+issues before they become a problem.
+
 ### Vault memory issues indicated by garbage collection
 
 #### Metrics:
