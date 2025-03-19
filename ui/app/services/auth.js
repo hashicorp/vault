@@ -15,13 +15,13 @@ import { resolve, reject } from 'rsvp';
 
 import getStorage from 'vault/lib/token-storage';
 import ENV from 'vault/config/environment';
-import { allSupportedAuthBackends } from 'vault/helpers/supported-auth-backends';
+import { ALL_SUPPORTED_AUTH_METHODS } from 'vault/utils/supported-login-methods';
 import { addToArray } from 'vault/helpers/add-to-array';
 
 const TOKEN_SEPARATOR = '☃';
 const TOKEN_PREFIX = 'vault-';
 const ROOT_PREFIX = '_root_';
-const BACKENDS = allSupportedAuthBackends();
+const BACKENDS = ALL_SUPPORTED_AUTH_METHODS;
 
 export { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX };
 

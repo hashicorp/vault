@@ -8,7 +8,7 @@ import { helper as buildHelper } from '@ember/component/helper';
 /**
  * These are all the auth methods that can be mounted.
  * Some methods may not be available for login via the UI,
- * which are in the `supported-auth-backends` helper.
+ * supported ones are defined in the `supported-login-methods` util.
  */
 
 const ENTERPRISE_AUTH_METHODS = [
