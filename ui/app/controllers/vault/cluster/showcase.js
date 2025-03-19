@@ -31,11 +31,11 @@ export default class ShowcaseController extends Controller {
     } else if (editType === 'checkboxList') {
       model.checkboxList = 'Ipsum';
     } else if (editType === 'dateTimeLocal') {
-      if (variant === 'with value' || variant === 'with validation error') {
+      if (variant === 'with value' || variant === 'with validation errors') {
         model.dateTimeLocal = new Date();
       }
     } else if (editType === 'input') {
-      if (variant === 'with value' || variant === 'with validation error') {
+      if (variant === 'with value' || variant === 'with validation errors') {
         model.input = 'Lorem ipsum dolor sit amet';
       } else if (variant === 'with character limit') {
         model.input = '123456789';
@@ -48,7 +48,7 @@ export default class ShowcaseController extends Controller {
         model.json = this.jsonExample;
       }
     } else if (editType === 'kv') {
-      if (variant === 'with value' || variant === 'with validation error') {
+      if (variant === 'with value' || variant === 'with validation errors') {
         model.kv = {
           'my-key': 'This is the value for `my-key`',
         };
@@ -98,11 +98,11 @@ export default class ShowcaseController extends Controller {
         model.sensitive = 'Lorem ipsum dolor';
       }
     } else if (editType === 'textarea') {
-      if (variant === 'with value' || variant === 'with validation error') {
+      if (variant === 'with value' || variant === 'with validation errors') {
         model.textarea = 'Lorem\nipsum\ndolor';
       }
     } else if (editType === 'ttl') {
-      if (variant === 'with value' || variant === 'with validation error') {
+      if (variant === 'with value' || variant === 'with validation errors') {
         model.ttl = 123;
       } else if (variant === 'with value 0s') {
         model.ttl = '0s';
@@ -117,21 +117,21 @@ export default class ShowcaseController extends Controller {
   dynamicFormFieldModelValidations(editType, variant) {
     const modelValidations = {};
     if (editType === 'checkboxList') {
-      if (variant === 'with validation error') {
+      if (variant === 'with validation errors') {
         modelValidations.checkboxList = {
           isValid: false,
           errors: ['This is the validation error message #1', 'This is the validation error message #2'],
         };
       }
     } else if (editType === 'dateTimeLocal') {
-      if (variant === 'with validation error') {
+      if (variant === 'with validation errors') {
         modelValidations.dateTimeLocal = {
           isValid: false,
           errors: ['This is the validation error message #1', 'This is the validation error message #2'],
         };
       }
     } else if (editType === 'file') {
-      if (variant === 'with validation error') {
+      if (variant === 'with validation errors') {
         // NOTICE! this generates a double error message, it's a bug in the code (error is already output by the `FormField`, see line 374, but is also output by `TextFile` via the argument `@validationError`)
         modelValidations.file = {
           isValid: false,
@@ -139,28 +139,45 @@ export default class ShowcaseController extends Controller {
         };
       }
     } else if (editType === 'kv') {
-      if (variant === 'with validation error') {
+      if (variant === 'with validation errors') {
         modelValidations.kv = {
           isValid: false,
           errors: ['This is the validation error message #1', 'This is the validation error message #2'],
         };
       }
     } else if (editType === 'stringArray') {
-      if (variant === 'with validation error') {
+      if (variant === 'with validation errors') {
         modelValidations.stringArray = {
           isValid: false,
           errors: ['This is the validation error message #1', 'This is the validation error message #2'],
         };
       }
     } else if (editType === 'select') {
-      if (variant === 'with validation error') {
+      if (variant === 'with validation errors and warnings') {
+        modelValidations.select = {
+          isValid: false,
+          errors: ['This is the validation error message #1', 'This is the validation error message #2'],
+          warnings: [
+            'This is the validation warning message #1',
+            'This is the validation warning message #2',
+          ],
+        };
+      } else if (variant === 'with validation errors') {
         modelValidations.select = {
           isValid: false,
           errors: ['This is the validation error message #1', 'This is the validation error message #2'],
         };
+      } else if (variant === 'with validation warnings') {
+        modelValidations.select = {
+          isValid: true,
+          warnings: [
+            'This is the validation warning message #1',
+            'This is the validation warning message #2',
+          ],
+        };
       }
     } else if (editType === 'textarea') {
-      if (variant === 'with validation error') {
+      if (variant === 'with validation errors') {
         modelValidations.textarea = {
           isValid: false,
           errors: ['This is the validation error message #1', 'This is the validation error message #2'],
@@ -191,7 +208,7 @@ export default class ShowcaseController extends Controller {
         };
       }
     } else if (editType === 'ttl') {
-      if (variant === 'with validation error') {
+      if (variant === 'with validation errors') {
         // NOTICE: there is a bug in the CSS for the class "ttl-picker-form-field-error" because the border color is applied to the `input` child, but such element is hidden so the red border is not visible!
         modelValidations.ttl = {
           isValid: false,
@@ -298,7 +315,7 @@ export default class ShowcaseController extends Controller {
     let inputValue = [];
     if (variant === 'with single set of values') {
       inputValue = [{ A: 'First value for A', B: 'First value for B', C: '' }];
-    } else if (variant === 'with multiple sets of values' || variant === 'with validation error') {
+    } else if (variant === 'with multiple sets of values' || variant === 'with validation errors') {
       inputValue = [
         { A: 'First value for A', B: 'First value for B', C: '' },
         { A: 'Second value for A', B: 'Second value for B', C: '' },
@@ -310,7 +327,7 @@ export default class ShowcaseController extends Controller {
   @action
   dynamicObjectListInputValidationErrors(variant) {
     let validationErrors = [];
-    if (variant === 'with validation error') {
+    if (variant === 'with validation errors') {
       validationErrors = [
         { A: { errors: ['Error message for first A'], isValid: false } },
         { B: { errors: ['Error message for second B'], isValid: false } },
