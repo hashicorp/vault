@@ -43,6 +43,7 @@
     (array
       (hash editType="boolean" variants=(array "base" "with label" "with helpText + subText + docLink" "checked" "disabled"))
       (hash
+        isHds=true
         editType="checkboxList"
         variants=(array
           "base"
@@ -103,6 +104,7 @@
         )
       )
       (hash
+        isHds=true
         editType="password"
         attrType="string"
         variants=(array
@@ -117,6 +119,7 @@
         )
       )
       (hash
+        isHds=true
         editType="radio"
         variants=(array
           "base"
@@ -136,6 +139,7 @@
         variants=(array "base" "with label" "with label as section header" "with helpText + subText" "with value")
       )
       (hash
+        isHds=true
         editType="select"
         variants=(array
           "base"
@@ -179,7 +183,7 @@
         <hr level="2" />
       {{/unless}}
       {{#let FormFieldType.editType FormFieldType.attrType FormFieldType.variants as |editType attrType variants|}}
-        <h4>Type "{{editType}}"</h4>
+        <h4>{{#if FormFieldType.isHds}}✅{{/if}} Type "{{editType}}"</h4>
         {{#each variants as |variant|}}
           {{#let
             (fn this.dynamicFormFieldOptionsModels editType)
@@ -189,6 +193,7 @@
           }}
             <pre>{{capitalize variant}}</pre>
             <FormField
+              class={{if FormFieldType.isHds "isHds"}}
               data-test-field={{true}}
               @attr={{(hash
                 name=(if
@@ -441,7 +446,7 @@
 
   <hr />
 
-  <h3>FilterInput</h3>
+  <h3>✅ FilterInput</h3>
 
   <pre>Base</pre>
   <FilterInput />
@@ -454,7 +459,7 @@
 
   <hr />
 
-  <h3>InputSearch</h3>
+  <h3>✅ InputSearch</h3>
 
   <blockquote>This component renders an input that fires a callback on "keyup" containing the input's value</blockquote>
 
@@ -556,7 +561,7 @@
 
   <hr />
 
-  <h3>NavigateInput</h3>
+  <h3>✅ NavigateInput</h3>
 
   <blockquote>NavigateInput components are used to filter list data.</blockquote>
 
