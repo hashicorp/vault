@@ -6,7 +6,24 @@
 {{! template-lint-configure simple-unless "warn" }}
 <div class="field" data-test-field={{or @attr.name true}}>
   {{#if this.isHdsFormField}}
-    {{! TODO the template logic for the form fields migrated to HDS will appear here }}
+    {{#if @attr.options.possibleValues}}
+      {{#if (eq @attr.options.editType "checkboxList")}}
+        <Hds::Form::Checkbox::Group @name={{@attr.name}} data-test-input={{@attr.name}} as |G|>
+          {{#each @attr.options.possibleValues as |option|}}
+            <G.CheckboxField
+              class={{if this.validationError "has-error-border"}}
+              checked={{includes option (get @model this.valuePath)}}
+              @value={{option}}
+              @id={{option}}
+              {{on "change" this.handleChecklist}}
+              as |F|
+            >
+              <F.Label>{{option}}</F.Label>
+            </G.CheckboxField>
+          {{/each}}
+        </Hds::Form::Checkbox::Group>
+      {{/if}}
+    {{/if}}
   {{else}}
     {{#unless this.hideLabel}}
       <FormFieldLabel
@@ -59,21 +76,6 @@
             </div>
           {{/each}}
         </div>
-      {{else if (eq @attr.options.editType "checkboxList")}}
-        <Hds::Form::Checkbox::Group @name={{@attr.name}} data-test-input={{@attr.name}} as |G|>
-          {{#each @attr.options.possibleValues as |option|}}
-            <G.CheckboxField
-              class={{if this.validationError "has-error-border"}}
-              checked={{includes option (get @model this.valuePath)}}
-              @value={{option}}
-              @id={{option}}
-              {{on "change" this.handleChecklist}}
-              as |F|
-            >
-              <F.Label>{{option}}</F.Label>
-            </G.CheckboxField>
-          {{/each}}
-        </Hds::Form::Checkbox::Group>
       {{else}}
         <div class="control is-expanded">
           <div class="select is-fullwidth">
