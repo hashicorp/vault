@@ -18,7 +18,7 @@ export default class KeyCreateToggleGroupsComponent extends Component {
     };
 
     if (generate) {
-      groups['Provider Options'] = ['key_size', 'skew', 'qr_size'];
+      groups['Provider Options'] = ['keySize', 'skew', 'qrSize'];
     }
 
     return groups;
