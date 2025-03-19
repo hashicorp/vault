@@ -8,7 +8,7 @@ import { service } from '@ember/service';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import apiPath from 'vault/utils/api-path';
 import { withModelValidations } from 'vault/decorators/model-validations';
-import { allMethods } from 'vault/helpers/mountable-auth-methods';
+import { findAuthMethod } from 'vault/utils/mountable-auth-methods';
 import lazyCapabilities from 'vault/macros/lazy-capabilities';
 import { action } from '@ember/object';
 import { camelize } from '@ember/string';
@@ -41,9 +41,8 @@ export default class AuthMethodModel extends Model {
     return this.type.replace(/^ns_/, '');
   }
   get icon() {
-    const authMethods = allMethods().find((backend) => backend.type === this.methodType);
-
-    return authMethods?.glyph || 'users';
+    const authMethod = findAuthMethod(this.methodType);
+    return authMethod?.glyph || 'users';
   }
   @attr('string', {
     editType: 'textarea',

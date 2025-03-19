@@ -6,7 +6,7 @@
 import Model, { attr, hasMany } from '@ember-data/model';
 import ArrayProxy from '@ember/array/proxy';
 import PromiseProxyMixin from '@ember/object/promise-proxy-mixin';
-import { methods } from 'vault/helpers/mountable-auth-methods';
+import { findAuthMethod } from 'vault/utils/mountable-auth-methods';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { isPresent } from '@ember/utils';
 import { service } from '@ember/service';
@@ -109,8 +109,7 @@ export default class MfaLoginEnforcementModel extends Model {
   }
 
   iconForMount(type) {
-    const mountableMethods = methods();
-    const mount = mountableMethods.find((method) => method.type === type);
+    const mount = findAuthMethod(type);
     return mount ? mount.glyph || mount.type : 'token';
   }
 }

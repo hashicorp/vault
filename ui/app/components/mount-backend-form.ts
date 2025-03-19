@@ -9,11 +9,12 @@ import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import { methods } from 'vault/helpers/mountable-auth-methods';
+import { mountableAuthMethods } from 'vault/utils/mountable-auth-methods';
 import { isAddonEngine, allEngines } from 'vault/helpers/mountable-secret-engines';
 
 import type FlashMessageService from 'vault/services/flash-messages';
 import type Store from '@ember-data/store';
+import type VersionService from 'vault/services/version';
 import type AdapterError from '@ember-data/adapter/error';
 
 import type { AuthEnableModel } from 'vault/routes/vault/cluster/settings/auth/enable';
@@ -40,8 +41,9 @@ interface Args {
 }
 
 export default class MountBackendForm extends Component<Args> {
-  @service declare readonly store: Store;
   @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly store: Store;
+  @service declare readonly version: VersionService;
 
   // validation related properties
   @tracked modelValidations = null;
@@ -65,7 +67,7 @@ export default class MountBackendForm extends Component<Args> {
     const mountTypes =
       this.args.mountType === 'secret'
         ? allEngines().map((engine) => engine.type)
-        : methods().map((auth) => auth.type);
+        : mountableAuthMethods(this.version.isEnterprise).map((auth) => auth.type);
     // if the current path has not been altered by user,
     // change it here to match the new type
     if (!currentPath || mountTypes.includes(currentPath)) {

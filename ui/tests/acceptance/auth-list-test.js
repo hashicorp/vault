@@ -12,7 +12,7 @@ import { login, loginNs } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
 import { supportedManagedAuthBackends } from 'vault/helpers/supported-managed-auth-backends';
 import { deleteAuthCmd, mountAuthCmd, runCmd, createNS } from 'vault/tests/helpers/commands';
-import { methods } from 'vault/helpers/mountable-auth-methods';
+import { mountableAuthMethods } from 'vault/utils/mountable-auth-methods';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SELECTORS = {
@@ -78,8 +78,8 @@ module('Acceptance | auth backend list', function (hooks) {
       await visit('/vault/access');
     });
 
-    // Test all auth methods, not just those you can log in with
-    methods()
+    // Test all auth methods (except enterprise), not just those you can log in with
+    mountableAuthMethods(false)
       .map((backend) => backend.type)
       .forEach((type) => {
         test(`${type} auth method`, async function (assert) {

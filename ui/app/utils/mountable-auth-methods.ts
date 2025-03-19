@@ -3,25 +3,14 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { helper as buildHelper } from '@ember/component/helper';
-
 /**
- * These are all the auth methods that can be mounted.
- * Some methods may not be available for login via the UI,
- * supported ones are defined in the `supported-login-methods` util.
+ * These are all the auth methods that can be mounted (enabled) in the UI.
+ * Token is not included because it cannot be enabled or disabled.
+ * The method data is all related to displaying each auth type.
+ * The `supported-login-methods` util handles method data related to authenticating
  */
 
-const ENTERPRISE_AUTH_METHODS = [
-  {
-    displayName: 'SAML',
-    value: 'saml',
-    type: 'saml',
-    category: 'generic',
-    glyph: 'saml-color',
-  },
-];
-
-const MOUNTABLE_AUTH_METHODS = [
+const BASE_AUTH_BACKENDS = [
   {
     displayName: 'AliCloud',
     value: 'alicloud',
@@ -122,12 +111,24 @@ const MOUNTABLE_AUTH_METHODS = [
   },
 ];
 
-export function methods() {
-  return MOUNTABLE_AUTH_METHODS.slice();
-}
+const ENTERPRISE_AUTH_BACKENDS = [
+  {
+    displayName: 'SAML',
+    value: 'saml',
+    type: 'saml',
+    category: 'generic',
+    glyph: 'saml-color',
+  },
+];
 
-export function allMethods() {
-  return [...MOUNTABLE_AUTH_METHODS, ...ENTERPRISE_AUTH_METHODS];
-}
+const ALL_AUTH_BACKENDS = [...BASE_AUTH_BACKENDS, ...ENTERPRISE_AUTH_BACKENDS];
 
-export default buildHelper(methods);
+// The UI supports management of these auth methods (i.e. configuring roles or users)
+// otherwise only configuration (enabling and mounting) of the method is supported.
+export const MANAGED_AUTH_BACKENDS = ['cert', 'kubernetes', 'ldap', 'okta', 'radius', 'userpass'];
+
+export const findAuthMethod = (authType: string) => ALL_AUTH_BACKENDS.find((m) => m.type === authType);
+
+export const mountableAuthMethods = (isEnterprise: boolean) => {
+  return isEnterprise ? ALL_AUTH_BACKENDS : BASE_AUTH_BACKENDS;
+};

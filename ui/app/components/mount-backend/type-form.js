@@ -5,7 +5,7 @@
 
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
-import { allMethods, methods } from 'vault/helpers/mountable-auth-methods';
+import { mountableAuthMethods } from 'vault/utils/mountable-auth-methods';
 import { allEngines, mountableEngines } from 'vault/helpers/mountable-secret-engines';
 
 /**
@@ -29,11 +29,9 @@ export default class MountBackendTypeForm extends Component {
     return this.version.isEnterprise ? allEngines() : mountableEngines();
   }
 
-  get authMethods() {
-    return this.version.isEnterprise ? allMethods() : methods();
-  }
-
   get mountTypes() {
-    return this.args.mountType === 'secret' ? this.secretEngines : this.authMethods;
+    return this.args.mountType === 'secret'
+      ? this.secretEngines
+      : mountableAuthMethods(this.version.isEnterprise);
   }
 }

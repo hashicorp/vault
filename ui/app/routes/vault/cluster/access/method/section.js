@@ -6,6 +6,7 @@
 import AdapterError from '@ember-data/adapter/error';
 import { set } from '@ember/object';
 import Route from '@ember/routing/route';
+import { MANAGED_AUTH_BACKENDS } from 'vault/utils/mountable-auth-methods';
 
 export default Route.extend({
   model(params) {
@@ -27,5 +28,6 @@ export default Route.extend({
       'paths',
       method.paths.paths.filter((path) => path.navigation)
     );
+    controller.set('isManaged', MANAGED_AUTH_BACKENDS.includes(method.type));
   },
 });

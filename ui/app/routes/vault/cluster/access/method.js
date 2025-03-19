@@ -7,7 +7,7 @@ import AdapterError from '@ember-data/adapter/error';
 import { set } from '@ember/object';
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { supportedManagedAuthBackends } from 'vault/helpers/supported-managed-auth-backends';
+import { MANAGED_AUTH_BACKENDS } from 'vault/utils/mountable-auth-methods';
 
 export default Route.extend({
   store: service(),
@@ -22,8 +22,7 @@ export default Route.extend({
         set(error, 'httpStatus', 404);
         throw error;
       }
-      const supportManaged = supportedManagedAuthBackends();
-      if (!supportManaged.includes(model.methodType)) {
+      if (!MANAGED_AUTH_BACKENDS.includes(model.methodType)) {
         // do not fetch path-help for unmanaged auth types
         model.set('paths', {
           apiPath: model.apiPath,
