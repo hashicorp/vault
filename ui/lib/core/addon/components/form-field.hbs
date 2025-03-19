@@ -26,7 +26,6 @@
           {{/if}}
           {{#each @attr.options.possibleValues as |option|}}
             <G.CheckboxField
-              class={{if this.validationError "has-error-border"}}
               checked={{includes option (get @model this.valuePath)}}
               @value={{option}}
               @id={{option}}
