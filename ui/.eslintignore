@@ -4,6 +4,7 @@
 # compiled output
 /dist/
 /tmp/
+/api-client/dist
 
 # dependencies
 /bower_components/
