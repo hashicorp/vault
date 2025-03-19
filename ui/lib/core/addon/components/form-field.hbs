@@ -423,14 +423,14 @@
         class={{if (eq @attr.options.editType "stringArray") "has-top-margin-negative-xxl"}}
       />
     {{/if}}
-    {{#if this.validationWarning}}
-      <AlertInline
-        @type="warning"
-        @message={{this.validationWarning}}
-        @paddingTop={{if (and (not this.validationError) (eq @attr.options.editType "ttl")) false true}}
-        data-test-validation-warning={{this.valuePath}}
-        class={{if (and (not this.validationError) (eq @attr.options.editType "stringArray")) "has-top-margin-negative-xxl"}}
-      />
-    {{/if}}
+  {{/if}}
+  {{#if this.validationWarning}}
+    <AlertInline
+      @type="warning"
+      @message={{this.validationWarning}}
+      @paddingTop={{if (and (not this.validationError) (eq @attr.options.editType "ttl")) false true}}
+      data-test-validation-warning={{this.valuePath}}
+      class={{if (and (not this.validationError) (eq @attr.options.editType "stringArray")) "has-top-margin-negative-xxl"}}
+    />
   {{/if}}
 </div>
