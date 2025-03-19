@@ -19,4 +19,6 @@ export interface AuthData {
 
 export default class AuthService extends Service {
   authData: AuthData;
+  currentToken: string;
+  setLastFetch: (time: number) => void;
 }
