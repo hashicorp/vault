@@ -10,6 +10,16 @@
  * The `supported-login-methods` util handles method data related to authenticating
  */
 
+const ENTERPRISE_AUTH_BACKENDS = [
+  {
+    displayName: 'SAML',
+    value: 'saml',
+    type: 'saml',
+    category: 'generic',
+    glyph: 'saml-color',
+  },
+];
+
 const BASE_AUTH_BACKENDS = [
   {
     displayName: 'AliCloud',
@@ -108,16 +118,6 @@ const BASE_AUTH_BACKENDS = [
     type: 'userpass',
     category: 'generic',
     glyph: 'users',
-  },
-];
-
-const ENTERPRISE_AUTH_BACKENDS = [
-  {
-    displayName: 'SAML',
-    value: 'saml',
-    type: 'saml',
-    category: 'generic',
-    glyph: 'saml-color',
   },
 ];
 
