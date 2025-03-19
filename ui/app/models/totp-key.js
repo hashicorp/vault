@@ -53,7 +53,7 @@ const validations = {
       message: "Key can't be blank if key is being passed from another service and the URL is empty.",
     },
   ],
-  key_size: [{ type: 'number', message: 'Key size must be a number.' }],
+  keySize: [{ type: 'number', message: 'Key size must be a number.' }],
   name: [
     { type: 'presence', message: "Name can't be blank." },
     {
@@ -63,7 +63,7 @@ const validations = {
       level: 'warn',
     },
   ],
-  qr_size: [{ type: 'number', message: 'QR size must be a number' }],
+  qrSize: [{ type: 'number', message: 'QR size must be a number' }],
 };
 
 @withModelValidations(validations)
@@ -126,7 +126,7 @@ export default class TotpKeyModel extends Model {
   @attr('number', {
     defaultValue: 20,
   })
-  key_size;
+  keySize;
 
   @attr('number', {
     possibleValues: SKEW,
@@ -147,7 +147,7 @@ export default class TotpKeyModel extends Model {
     label: 'QR size',
     defaultValue: 0,
   })
-  qr_size;
+  qrSize;
 
   // Used when generate is false
   @attr('string', {

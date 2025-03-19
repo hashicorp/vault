@@ -44,24 +44,20 @@ export default class TotpEdit extends Component {
     return this.args.mode || 'show';
   }
 
-  get model() {
-    return this.args.model;
-  }
-
   transitionToRoute() {
     this.router.transitionTo(...arguments);
   }
 
   @action
   reset() {
-    this.model.unloadRecord();
-    this.transitionToRoute(SHOW_ROUTE, this.model.name);
+    this.args.model.unloadRecord();
+    this.transitionToRoute(SHOW_ROUTE, this.args.model.name);
   }
 
   @action
   async deleteKey() {
     try {
-      await this.model.destroyRecord();
+      await this.args.model.destroyRecord();
       this.transitionToRoute(LIST_ROOT_ROUTE);
     } catch (err) {
       // err will display via model state
@@ -73,13 +69,17 @@ export default class TotpEdit extends Component {
   createKey = task(
     waitFor(async (event) => {
       event.preventDefault();
-      const { isValid, state, invalidFormMessage } = this.model.validate();
+      const { isValid, state, invalidFormMessage } = this.args.model.validate();
       this.modelValidations = isValid ? null : state;
       this.invalidFormAlert = invalidFormMessage;
 
       if (!isValid) return;
       try {
-        await this.model.save();
+        await this.args.model.save({
+          adapterOptions: {
+            keyFormFields: this.keyFormFields,
+          },
+        });
         this.hasGenerated = true;
       } catch (err) {
         // err will display via model state
