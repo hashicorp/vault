@@ -101,6 +101,10 @@ presets:
   enos:
     # Existing CI to be cleaned up later
     filters:
+      EC2Instance:
+        - property: Tags.Name
+          type: glob
+          value: "enos-integration*"
       LambdaFunction:
         - property: Name
           value: "enos_cleanup"
