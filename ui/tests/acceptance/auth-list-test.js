@@ -10,9 +10,8 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { login, loginNs } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
-import { supportedManagedAuthBackends } from 'vault/helpers/supported-managed-auth-backends';
 import { deleteAuthCmd, mountAuthCmd, runCmd, createNS } from 'vault/tests/helpers/commands';
-import { mountableAuthMethods } from 'vault/utils/mountable-auth-methods';
+import { MANAGED_AUTH_BACKENDS, mountableAuthMethods } from 'vault/utils/mountable-auth-methods';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SELECTORS = {
@@ -83,7 +82,6 @@ module('Acceptance | auth backend list', function (hooks) {
       .map((backend) => backend.type)
       .forEach((type) => {
         test(`${type} auth method`, async function (assert) {
-          const supportManaged = supportedManagedAuthBackends();
           const path = type === 'token' ? 'token' : `auth-list-${type}-${this.uid}`;
           if (type !== 'token') {
             await enablePage.enable(type, path);
@@ -100,7 +98,7 @@ module('Acceptance | auth backend list', function (hooks) {
 
           // all auth methods should be linkable
           await click(`[data-test-auth-backend-link="${path}"]`);
-          if (!supportManaged.includes(type)) {
+          if (!MANAGED_AUTH_BACKENDS.includes(type)) {
             assert.dom('[data-test-auth-section-tab]').exists({ count: 1 });
             assert
               .dom('[data-test-auth-section-tab]')

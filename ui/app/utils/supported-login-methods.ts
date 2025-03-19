@@ -6,7 +6,7 @@
 /**
  * The web UI only supports logging in with these auth methods.
  * The method data is all related to logic for authenticating via that method.
- * This is a subset of the methods found in the `mountable-auth-methods` helper,
+ * This is a subset of the methods found in the `mountable-auth-methods` util,
  * which lists all the methods that can be enabled and mounted.
  */
 
@@ -97,7 +97,11 @@ const ENTERPRISE_LOGIN_METHODS = [
   },
 ];
 
-export const ALL_LOGIN_METHODS = [...BASE_LOGIN_METHODS, ...ENTERPRISE_LOGIN_METHODS];
+const ALL_LOGIN_METHODS = [...BASE_LOGIN_METHODS, ...ENTERPRISE_LOGIN_METHODS];
+
+export const supportedLoginMethods = (isEnterprise: boolean) => {
+  return isEnterprise ? ALL_LOGIN_METHODS : BASE_LOGIN_METHODS;
+};
 
 export const findLoginMethod = (authType: string) =>
   ALL_LOGIN_METHODS.find((m: MethodData) => m.type === authType);
