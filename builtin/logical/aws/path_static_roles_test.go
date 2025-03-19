@@ -6,6 +6,7 @@ package aws
 import (
 	"context"
 	"errors"
+	"strconv"
 	"testing"
 	"time"
 
@@ -530,6 +531,61 @@ func TestStaticRoleDelete(t *testing.T) {
 				t.Fatal("size of queue changed after what should have been no deletion")
 			}
 		})
+	}
+}
+
+// TestStaticRolesList validates that we can list all the static roles in the storage backend.
+func TestStaticRolesList(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	bgCTX := context.Background()
+
+	staticRoles := []staticRoleEntry{}
+	for i := 1; i <= 10; i++ {
+		roles := staticRoleEntry{
+			Name:           "testrole" + strconv.Itoa(i),
+			Username:       "jane-doe",
+			RotationPeriod: 24 * time.Hour,
+		}
+		staticRoles = append(staticRoles, roles)
+	}
+
+	for _, role := range staticRoles {
+		entry, err := logical.StorageEntryJSON(formatRoleStoragePath(role.Name), role)
+		if err != nil {
+			t.Fatalf("failed to create storage entry for %s: %v", role.Name, err)
+		}
+		err = config.StorageView.Put(bgCTX, entry)
+		if err != nil {
+			t.Fatalf("failed to store role %s: %v", role.Name, err)
+		}
+	}
+
+	b := Backend(config)
+	resp, err := b.HandleRequest(bgCTX, &logical.Request{
+		Operation: logical.ListOperation,
+		Path:      "static-roles",
+		Storage:   config.StorageView,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: listing roles failed. resp:%#v\n err:%v", resp, err)
+	}
+
+	if len(resp.Data["keys"].([]string)) != 10 {
+		t.Fatalf("failed to list all 10 roles")
+	}
+
+	resp, err = b.HandleRequest(bgCTX, &logical.Request{
+		Operation: logical.ListOperation,
+		Path:      "static-roles/",
+		Storage:   config.StorageView,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: listing roles failed. resp:%#v\n err:%v", resp, err)
+	}
+
+	if len(resp.Data["keys"].([]string)) != 10 {
+		t.Fatalf("failed to list all 10 roles")
 	}
 }
 

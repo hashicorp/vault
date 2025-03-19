@@ -47,10 +47,13 @@ const appConfig = {
   sassOptions: {
     sourceMap: false,
     onlyIncluded: true,
+    quietDeps: true, // silences deprecation warnings from dependencies
     precision: 4,
     includePaths: [
       './node_modules/@hashicorp/design-system-components/dist/styles',
       './node_modules/@hashicorp/design-system-tokens/dist/products/css',
+      './node_modules/ember-basic-dropdown/',
+      './node_modules/ember-power-select/',
     ],
   },
   minifyCSS: {

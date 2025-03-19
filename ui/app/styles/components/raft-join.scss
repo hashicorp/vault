@@ -1,3 +1,6 @@
+@use '../utils/color_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -7,11 +10,11 @@
   margin-bottom: 0;
 }
 .raft-join .box.is-fullwidth {
-  padding-top: $spacing-12;
-  padding-bottom: $spacing-12;
+  padding-top: size_variables.$spacing-12;
+  padding-bottom: size_variables.$spacing-12;
 }
 .raft-join-unseal {
-  color: $orange;
-  font-size: $size-6;
+  color: color_variables.$orange;
+  font-size: size_variables.$size-6;
   display: inline-block;
 }

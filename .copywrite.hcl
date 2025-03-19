@@ -10,6 +10,7 @@ project {
   header_ignore = [
     "helper/pkcs7/**",
     "ui/node_modules/**",
+    "ui/api-client/**",
     "enos/modules/k8s_deploy_vault/raft-config.hcl",
     "plugins/database/postgresql/scram/**",
   ]

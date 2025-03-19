@@ -37,12 +37,13 @@
     "test:quick": "node scripts/start-vault.js --split=8 --preserve-test-name --parallel",
     "test:quick-oss": "node scripts/start-vault.js -f='!enterprise' --split=8 --preserve-test-name --parallel",
     "test:filter": "node scripts/start-vault.js --server -f='!enterprise'",
+    "test:dev": "node scripts/start-vault.js",
     "vault": "VAULT_REDIRECT_ADDR=http://127.0.0.1:8200 vault server -log-level=error -dev -dev-root-token-id=root -dev-ha -dev-transactional",
     "vault:cluster": "VAULT_REDIRECT_ADDR=http://127.0.0.1:8202 vault server -log-level=error -dev -dev-root-token-id=root -dev-listen-address=127.0.0.1:8202 -dev-ha -dev-transactional"
   },
   "devDependencies": {
     "@babel/cli": "^7.24.6",
-    "@babel/core": "^7.23.2",
+    "@babel/core": "^7.26.10",
     "@babel/eslint-parser": "^7.22.15",
     "@babel/plugin-proposal-class-properties": "^7.18.6",
     "@babel/plugin-proposal-decorators": "^7.23.2",
@@ -189,6 +190,7 @@
     "@embroider/macros": "^1.15.0",
     "socket.io": "^4.6.2",
     "json5": "^1.0.2",
+    "ember-cli-typescript": "^5.3.0",
     "lodash.template@^4.4.0": "patch:lodash.template@npm%3A4.5.0#./.yarn/patches/lodash.template-npm-4.5.0-5272df3039.patch",
     "lodash.template@^4.5.0": "patch:lodash.template@npm%3A4.5.0#./.yarn/patches/lodash.template-npm-4.5.0-5272df3039.patch"
   },
@@ -216,8 +218,9 @@
     ]
   },
   "dependencies": {
-    "@babel/core": "^7.24.0",
+    "@babel/core": "^7.26.10",
     "@hashicorp/design-system-components": "~4.16.0",
+    "@hashicorp/vault-client-typescript": "portal:./api-client",
     "ember-auto-import": "^2.7.2",
     "handlebars": "4.7.7",
     "highlight.js": "^10.4.1",

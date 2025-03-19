@@ -1,0 +1,3 @@
+```release-note:change
+ui: Removed `FormError` component (not used)
+```

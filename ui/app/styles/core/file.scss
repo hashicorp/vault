@@ -1,3 +1,9 @@
+@use '../utils/box-shadow_variables';
+@use '../utils/color_variables';
+@use '../utils/size_variables';
+@use '../core/buttons.scss';
+@use '../core/inputs.scss';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -11,8 +17,8 @@
 
 .file-cta {
   align-items: center;
-  border: $base-border;
-  border-radius: $radius;
+  border: box-shadow_variables.$base-border;
+  border-radius: size_variables.$radius;
   display: inline-flex;
   height: 2.25em;
   justify-content: flex-start;
@@ -26,7 +32,7 @@
   white-space: nowrap;
 
   &.button {
-    height: $size-2; // in older parts of the code (Ex: shamir-modal-flow) this class is not a button. In newer parts of the code it is, and height needs to match the height of a button (2.5rem).
+    height: size_variables.$size-2; // in older parts of the code (Ex: shamir-modal-flow) this class is not a button. In newer parts of the code it is, and height needs to match the height of a button (2.5rem).
   }
 
   &:disabled {
@@ -43,9 +49,9 @@
 .file-delete-button {
   @extend .button;
   @extend .is-transparent;
-  color: $grey;
+  color: color_variables.$grey;
   position: absolute;
-  right: $spacing-8;
+  right: size_variables.$spacing-8;
 }
 
 .file-icon {
@@ -77,8 +83,8 @@
 
 .file-name {
   @extend .input;
-  border: $base-border;
-  border-radius: $radius;
+  border: box-shadow_variables.$base-border;
+  border-radius: size_variables.$radius;
   box-shadow: 0 4px 1px rgba(10, 10, 10, 0.06) inset;
   display: block;
   font-size: 1em;
