@@ -27,7 +27,7 @@ module('Acceptance | totp key backend', function (hooks) {
     await fillIn(GENERAL.inputByAttr('name'), keyName);
     await fillIn(GENERAL.inputByAttr('issuer'), issuer);
     await fillIn(GENERAL.inputByAttr('accountName'), accountName);
-    await click('[data-test-totp-create]');
+    await click(GENERAL.saveButton);
     await click(GENERAL.backButton);
   };
 
@@ -38,7 +38,7 @@ module('Acceptance | totp key backend', function (hooks) {
     await fillIn(GENERAL.inputByAttr('accountName'), accountName);
     if (url) await fillIn(GENERAL.inputByAttr('url'), url);
     if (key) await fillIn(GENERAL.inputByAttr('key'), key);
-    await click('[data-test-totp-create]');
+    await click(GENERAL.saveButton);
   };
 
   hooks.beforeEach(async function () {

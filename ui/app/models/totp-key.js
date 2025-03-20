@@ -12,10 +12,6 @@ import { withExpandedAttributes } from 'vault/decorators/model-expanded-attribut
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { isPresent } from '@ember/utils';
 
-const ALGORITHMS = ['SHA1', 'SHA256', 'SHA512'];
-const DIGITS = [6, 8];
-const SKEW = [0, 1];
-
 const validations = {
   accountName: [
     {
@@ -86,13 +82,13 @@ export default class TotpKeyModel extends Model {
   accountName;
 
   @attr('string', {
-    possibleValues: ALGORITHMS,
+    possibleValues: ['SHA1', 'SHA256', 'SHA512'],
     defaultValue: 'SHA1',
   })
   algorithm;
 
   @attr('number', {
-    possibleValues: DIGITS,
+    possibleValues: [6, 8],
     defaultValue: 6,
   })
   digits;
@@ -129,7 +125,7 @@ export default class TotpKeyModel extends Model {
   keySize;
 
   @attr('number', {
-    possibleValues: SKEW,
+    possibleValues: [0, 1],
     defaultValue: 1,
   })
   skew;
