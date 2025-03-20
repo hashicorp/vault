@@ -130,8 +130,10 @@ export default class FormFieldComponent extends Component {
     return this.args.disabled || false;
   }
 
-  get showHelpText() {
-    return this.args.showHelpText === false ? false : true;
+  get hasHelpText() {
+    const helpText = this.args.attr?.options?.helpText;
+    if (this.args.showHelpText === false || !helpText) return '';
+    return helpText;
   }
 
   // used in the label element next to the form element
