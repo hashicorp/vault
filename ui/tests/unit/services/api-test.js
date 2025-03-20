@@ -70,50 +70,43 @@ module('Unit | Service | api', function (hooks) {
     assert.deepEqual(tokenContext, newContext, 'New context is returned when token is present');
   });
 
-  test('it should set headers', async function (assert) {
-    const headers = {
+  test('it should set default headers', async function (assert) {
+    const {
+      init: { headers },
+    } = await this.apiService.setHeaders({ init: { method: 'PATCH' } });
+
+    assert.strictEqual(
+      headers.get('X-Vault-Token'),
+      'foobar',
+      'Token header is set with value from auth service'
+    );
+    assert.strictEqual(
+      headers.get('X-Vault-Namespace'),
+      'another-ns',
+      'Namespace header is set with value from namespace service'
+    );
+    assert.strictEqual(
+      headers.get('Content-Type'),
+      'application/merge-patch+json',
+      'Content type header is set for PATCH method'
+    );
+  });
+
+  test('it should override default headers when set on request init', async function (assert) {
+    const initHeaders = {
       'X-Vault-Token': 'root',
       'X-Vault-Namespace': 'ns1',
     };
 
     const {
-      init: { headers: originalHeaders },
-    } = await this.apiService.setHeaders({ init: { headers } });
+      init: { headers },
+    } = await this.apiService.setHeaders({ init: { headers: initHeaders } });
 
+    assert.strictEqual(headers.get('X-Vault-Token'), 'root', 'Token header set on request init is preserved');
     assert.strictEqual(
-      originalHeaders.get('X-Vault-Token'),
-      'root',
-      'Original token header value is preserved'
-    );
-    assert.strictEqual(
-      originalHeaders.get('X-Vault-Namespace'),
+      headers.get('X-Vault-Namespace'),
       'ns1',
-      'Original namespace header value is preserved'
-    );
-
-    const {
-      init: { headers: newHeaders },
-    } = await this.apiService.setHeaders({ init: {} });
-
-    assert.strictEqual(
-      newHeaders.get('X-Vault-Token'),
-      'foobar',
-      'New token header value from auth service is set'
-    );
-    assert.strictEqual(
-      newHeaders.get('X-Vault-Namespace'),
-      'another-ns',
-      'New namespace header value from namespace service is set'
-    );
-
-    const {
-      init: { headers: contentTypeHeaders },
-    } = await this.apiService.setHeaders({ init: { method: 'PATCH' } });
-
-    assert.strictEqual(
-      contentTypeHeaders.get('Content-Type'),
-      'application/merge-patch+json',
-      'Content type header is set for PATCH method'
+      'Namespace header set on request init is preserved'
     );
   });
 
