@@ -16683,9 +16683,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"shared-secure-ui@git+https://github.com/hashicorp/shared-secure-ui#workspace=shared-secure-ui":
+"shared-secure-ui@git+https://github.com/hashicorp/shared-secure-ui#workspace=shared-secure-ui&commit=73fd0d1453e659d8c7060413be64471bc6f05f98":
   version: 0.0.0
-  resolution: "shared-secure-ui@https://github.com/hashicorp/shared-secure-ui.git#workspace=shared-secure-ui&commit=f46c5aab03fe4c2e820e6a28bbe39cce76b3d547"
+  resolution: "shared-secure-ui@https://github.com/hashicorp/shared-secure-ui.git#workspace=shared-secure-ui&commit=73fd0d1453e659d8c7060413be64471bc6f05f98"
   dependencies:
     "@embroider/addon-shim": ^1.8.9
     "@hashicorp/design-system-components": ^4.14.0
@@ -16697,7 +16697,7 @@ __metadata:
     rollup-plugin-scss: ^4.0.1
   peerDependencies:
     ember-source: ">= 4.12.0"
-  checksum: 8c39556164de94f2dfa367b30a58f7c906b3a6dcf19b2b6070515cb589b9a5fcfe9aa76aac1cbb3d310ec42932432c9b0a14d98d06a908eed72f22f89958c485
+  checksum: c5c9a2b4d1ca801bca1cc4f9958a3b6859431f9ecc8bfb1b65c3d8cc3dc2796ea20f322d7fe1f15e04caef6b8a059fc8c279a758d9c2571ac296890925e69cbd
   languageName: node
   linkType: hard
 
@@ -18861,7 +18861,7 @@ __metadata:
     qunit: ^2.20.0
     qunit-dom: ^2.0.0
     sass: ^1.66.3
-    shared-secure-ui: "git+https://github.com/hashicorp/shared-secure-ui#workspace=shared-secure-ui"
+    shared-secure-ui: "git+https://github.com/hashicorp/shared-secure-ui#workspace=shared-secure-ui&commit=73fd0d1453e659d8c7060413be64471bc6f05f98"
     shell-quote: ^1.8.1
     sinon: ^17.0.1
     stylelint: ^15.11.0
