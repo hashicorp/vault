@@ -43,7 +43,7 @@ export default class ApiService extends Service {
     const { url, init } = context;
     const controlGroupToken = this.controlGroup.tokenForUrl(url);
     let newUrl = url;
-    // if we have a Control Group token that matches the intendedUrl,
+    // if we have a Control Group token that matches the url,
     // unwrap it and return the unwrapped response as if it were the initial request
     // to do this, we rewrite the request
     if (controlGroupToken) {
