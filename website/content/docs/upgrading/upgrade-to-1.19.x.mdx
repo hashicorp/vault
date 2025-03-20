@@ -14,6 +14,10 @@ Vault 1.18. **Please read carefully**.
 
 ## Important changes
 
+### Azure auth plugin requires `resource_group_name`, `vm_name`, and `vmss_name` to match the JWT claims on login
+
+@include 'azure-auth-resource-group-vm-vmss-security-improvement.mdx'
+
 ### Transit support for Ed25519ph and Ed25519ctx signatures ((#ed25519))
 
 **NOTE**: This only applies to Transit Ed25519 keys.
