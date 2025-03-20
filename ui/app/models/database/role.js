@@ -32,6 +32,7 @@ const validations = {
           // password is required if using skip_import_rotation
           if (password === undefined || password.trim().length === 0) return true;
         }
+        if (skip_import_rotation && password) return true;
       },
       message: 'Password is required.',
     },
