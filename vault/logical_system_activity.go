@@ -29,6 +29,8 @@ const (
 
 	// WarningCurrentMonthIsAnEstimate is a warning string that is used to let the customer know that for this query, the current month's data is estimated.
 	WarningCurrentMonthIsAnEstimate = "Since this usage period includes both the current month and at least one historical month, counts returned in this usage period are an estimate. Client counts for this period will no longer be estimated at the start of the next month."
+
+	WarningProvidedStartAndEndTimesIgnored = "start_time and end_time parameters can only be used to specify the beginning or end of the same billing period. The values provided for these parameters are not supported and are ignored. Showing the data for the entire billing period corresponding to start_time. If start_time is not provided, the billing period is determined based on the end_time"
 )
 
 // activityQueryPath is available in every namespace
@@ -256,7 +258,22 @@ func queryContainsEstimates(startTime time.Time, endTime time.Time) bool {
 	return false
 }
 
-func parseStartEndTimes(d *framework.FieldData, billingStartTime time.Time) (time.Time, time.Time, error) {
+// alignToBillingPeriod identifies the start of a billing period to which the given time
+// belongs based on the start of the current billing period
+func alignToBillingPeriod(billingStartTime, givenTime time.Time) time.Time {
+	periodStart := billingStartTime
+	// keep moving 1 year (billing cycle duration) back if the given time is before the start of the current billing cycle
+	for givenTime.Before(periodStart) {
+		periodStart = periodStart.AddDate(-1, 0, 0)
+	}
+	// keep moving 1 year (billing cycle duration) forward if the given time is after the end of the current billing cycle
+	for givenTime.After(periodStart.AddDate(1, 0, 0)) {
+		periodStart = periodStart.AddDate(1, 0, 0)
+	}
+	return periodStart
+}
+
+func parseStartEndTimes(d *framework.FieldData, billingStartTime time.Time) (time.Time, time.Time, bool, error) {
 	startTime := d.Get("start_time").(time.Time)
 	endTime := d.Get("end_time").(time.Time)
 
@@ -271,18 +288,36 @@ func parseStartEndTimes(d *framework.FieldData, billingStartTime time.Time) (tim
 		endTime = endTime.UTC()
 	}
 
+	isAlignedTime := false
 	// If startTime is not specified, we would like to query
 	// from the beginning of the billing period
 	if startTime.IsZero() {
-		startTime = billingStartTime
+		// if start_time is not provided, determine it based on end_time
+		startTime = alignToBillingPeriod(endTime, billingStartTime)
 	} else {
 		startTime = startTime.UTC()
-	}
-	if startTime.After(endTime) {
-		return time.Time{}, time.Time{}, fmt.Errorf("start_time is later than end_time")
+		// check if the start time needs to be aligned
+		alignedStartTime := alignToBillingPeriod(startTime, billingStartTime)
+		// warn if endTime was adjusted to align with a billing period
+		if !startTime.Equal(alignedStartTime) {
+			isAlignedTime = true
+		}
 	}
 
-	return startTime, endTime, nil
+	// The end time should be the start of the next billing period unless it’s the current period
+	if startTime.AddDate(1, 0, 0).After(time.Now().UTC()) {
+		endTime = time.Now().UTC()
+	} else {
+		endTime = startTime.AddDate(1, 0, 0)
+		// warn as endTime was adjusted to align with a billing period
+		isAlignedTime = true
+	}
+
+	if startTime.After(endTime) {
+		return time.Time{}, time.Time{}, false, fmt.Errorf("start_time is later than end_time")
+	}
+
+	return startTime, endTime, isAlignedTime, nil
 }
 
 // This endpoint is not used by the UI. The UI's "export" feature is entirely client-side.
@@ -294,9 +329,14 @@ func (b *SystemBackend) handleClientExport(ctx context.Context, req *logical.Req
 		return logical.ErrorResponse("no activity log present"), nil
 	}
 
-	startTime, endTime, err := parseStartEndTimes(d, b.Core.BillingStart())
+	startTime, endTime, isAlignedTime, err := parseStartEndTimes(d, b.Core.BillingStart())
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	warnings := make([]string, 0)
+	if isAlignedTime {
+		warnings = append(warnings, WarningProvidedStartAndEndTimesIgnored)
 	}
 
 	// This is to avoid the default 90s context timeout.
@@ -328,11 +368,13 @@ func (b *SystemBackend) handleClientExport(ctx context.Context, req *logical.Req
 
 	// default status to 204, this will get rewritten to 200 later if the export writes data to req.ResponseWriter
 	respNoContent, err := logical.RespondWithStatusCode(&logical.Response{}, req, http.StatusNoContent)
+	respNoContent.Warnings = warnings
 	return respNoContent, err
 }
 
 func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	var startTime, endTime time.Time
+	var isAlignedTime bool
 	b.Core.activityLogLock.RLock()
 	a := b.Core.activityLog
 	b.Core.activityLogLock.RUnlock()
@@ -347,7 +389,7 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 	}
 
 	var err error
-	startTime, endTime, err = parseStartEndTimes(d, b.Core.BillingStart())
+	startTime, endTime, isAlignedTime, err = parseStartEndTimes(d, b.Core.BillingStart())
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -370,6 +412,9 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 
 	if queryContainsEstimates(startTime, endTime) {
 		warnings = append(warnings, WarningCurrentMonthIsAnEstimate)
+	}
+	if isAlignedTime {
+		warnings = append(warnings, WarningProvidedStartAndEndTimesIgnored)
 	}
 
 	return &logical.Response{
