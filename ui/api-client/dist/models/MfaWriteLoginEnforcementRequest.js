@@ -34,11 +34,11 @@ function MfaWriteLoginEnforcementRequestFromJSONTyped(json, ignoreDiscriminator)
         return json;
     }
     return {
-        authMethodAccessors: json['auth_method_accessors'] == null ? undefined : json['auth_method_accessors'],
-        authMethodTypes: json['auth_method_types'] == null ? undefined : json['auth_method_types'],
-        identityEntityIds: json['identity_entity_ids'] == null ? undefined : json['identity_entity_ids'],
-        identityGroupIds: json['identity_group_ids'] == null ? undefined : json['identity_group_ids'],
-        mfaMethodIds: json['mfa_method_ids'],
+        'authMethodAccessors': json['auth_method_accessors'] == null ? undefined : json['auth_method_accessors'],
+        'authMethodTypes': json['auth_method_types'] == null ? undefined : json['auth_method_types'],
+        'identityEntityIds': json['identity_entity_ids'] == null ? undefined : json['identity_entity_ids'],
+        'identityGroupIds': json['identity_group_ids'] == null ? undefined : json['identity_group_ids'],
+        'mfaMethodIds': json['mfa_method_ids'],
     };
 }
 function MfaWriteLoginEnforcementRequestToJSON(json) {
@@ -49,10 +49,10 @@ function MfaWriteLoginEnforcementRequestToJSONTyped(value, ignoreDiscriminator =
         return value;
     }
     return {
-        auth_method_accessors: value['authMethodAccessors'],
-        auth_method_types: value['authMethodTypes'],
-        identity_entity_ids: value['identityEntityIds'],
-        identity_group_ids: value['identityGroupIds'],
-        mfa_method_ids: value['mfaMethodIds'],
+        'auth_method_accessors': value['authMethodAccessors'],
+        'auth_method_types': value['authMethodTypes'],
+        'identity_entity_ids': value['identityEntityIds'],
+        'identity_group_ids': value['identityGroupIds'],
+        'mfa_method_ids': value['mfaMethodIds'],
     };
 }

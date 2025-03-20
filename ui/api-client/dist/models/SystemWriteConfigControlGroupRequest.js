@@ -32,7 +32,7 @@ function SystemWriteConfigControlGroupRequestFromJSONTyped(json, ignoreDiscrimin
         return json;
     }
     return {
-        maxTtl: json['max_ttl'] == null ? undefined : json['max_ttl'],
+        'maxTtl': json['max_ttl'] == null ? undefined : json['max_ttl'],
     };
 }
 function SystemWriteConfigControlGroupRequestToJSON(json) {
@@ -43,6 +43,6 @@ function SystemWriteConfigControlGroupRequestToJSONTyped(value, ignoreDiscrimina
         return value;
     }
     return {
-        max_ttl: value['maxTtl'],
+        'max_ttl': value['maxTtl'],
     };
 }

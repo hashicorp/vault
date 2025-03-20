@@ -32,7 +32,7 @@ function RemountResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        migrationId: json['migration_id'] == null ? undefined : json['migration_id'],
+        'migrationId': json['migration_id'] == null ? undefined : json['migration_id'],
     };
 }
 function RemountResponseToJSON(json) {
@@ -43,6 +43,6 @@ function RemountResponseToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        migration_id: value['migrationId'],
+        'migration_id': value['migrationId'],
     };
 }

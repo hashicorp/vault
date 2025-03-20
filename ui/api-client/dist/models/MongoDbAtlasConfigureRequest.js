@@ -36,8 +36,8 @@ function MongoDbAtlasConfigureRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        privateKey: json['private_key'],
-        publicKey: json['public_key'],
+        'privateKey': json['private_key'],
+        'publicKey': json['public_key'],
     };
 }
 function MongoDbAtlasConfigureRequestToJSON(json) {
@@ -48,7 +48,7 @@ function MongoDbAtlasConfigureRequestToJSONTyped(value, ignoreDiscriminator = fa
         return value;
     }
     return {
-        private_key: value['privateKey'],
-        public_key: value['publicKey'],
+        'private_key': value['privateKey'],
+        'public_key': value['publicKey'],
     };
 }

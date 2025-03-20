@@ -32,7 +32,7 @@ function SystemWriteReplicationDrSecondaryRecoverRequestFromJSONTyped(json, igno
         return json;
     }
     return {
-        drOperationToken: json['dr_operation_token'] == null ? undefined : json['dr_operation_token'],
+        'drOperationToken': json['dr_operation_token'] == null ? undefined : json['dr_operation_token'],
     };
 }
 function SystemWriteReplicationDrSecondaryRecoverRequestToJSON(json) {
@@ -43,6 +43,6 @@ function SystemWriteReplicationDrSecondaryRecoverRequestToJSONTyped(value, ignor
         return value;
     }
     return {
-        dr_operation_token: value['drOperationToken'],
+        'dr_operation_token': value['drOperationToken'],
     };
 }

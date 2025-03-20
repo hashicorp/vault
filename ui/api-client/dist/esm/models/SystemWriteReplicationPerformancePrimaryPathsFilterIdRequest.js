@@ -25,8 +25,8 @@ export function SystemWriteReplicationPerformancePrimaryPathsFilterIdRequestFrom
         return json;
     }
     return {
-        mode: json['mode'] == null ? undefined : json['mode'],
-        paths: json['paths'] == null ? undefined : json['paths'],
+        'mode': json['mode'] == null ? undefined : json['mode'],
+        'paths': json['paths'] == null ? undefined : json['paths'],
     };
 }
 export function SystemWriteReplicationPerformancePrimaryPathsFilterIdRequestToJSON(json) {
@@ -37,7 +37,7 @@ export function SystemWriteReplicationPerformancePrimaryPathsFilterIdRequestToJS
         return value;
     }
     return {
-        mode: value['mode'],
-        paths: value['paths'],
+        'mode': value['mode'],
+        'paths': value['paths'],
     };
 }

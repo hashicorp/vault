@@ -25,7 +25,7 @@ export function SubscriptionsListEventsSubscriptionsResponseFromJSONTyped(json, 
         return json;
     }
     return {
-        subscriptions: json['subscriptions'] == null ? undefined : json['subscriptions'],
+        'subscriptions': json['subscriptions'] == null ? undefined : json['subscriptions'],
     };
 }
 export function SubscriptionsListEventsSubscriptionsResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function SubscriptionsListEventsSubscriptionsResponseToJSONTyped(value, i
         return value;
     }
     return {
-        subscriptions: value['subscriptions'],
+        'subscriptions': value['subscriptions'],
     };
 }

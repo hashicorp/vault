@@ -25,7 +25,7 @@ export function AppRoleLookUpSecretIdByAccessorRequestFromJSONTyped(json, ignore
         return json;
     }
     return {
-        secretIdAccessor: json['secret_id_accessor'] == null ? undefined : json['secret_id_accessor'],
+        'secretIdAccessor': json['secret_id_accessor'] == null ? undefined : json['secret_id_accessor'],
     };
 }
 export function AppRoleLookUpSecretIdByAccessorRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function AppRoleLookUpSecretIdByAccessorRequestToJSONTyped(value, ignoreD
         return value;
     }
     return {
-        secret_id_accessor: value['secretIdAccessor'],
+        'secret_id_accessor': value['secretIdAccessor'],
     };
 }

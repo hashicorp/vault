@@ -32,19 +32,19 @@ function ConsulWriteRoleRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        consulNamespace: json['consul_namespace'] == null ? undefined : json['consul_namespace'],
-        consulPolicies: json['consul_policies'] == null ? undefined : json['consul_policies'],
-        consulRoles: json['consul_roles'] == null ? undefined : json['consul_roles'],
-        lease: json['lease'] == null ? undefined : json['lease'],
-        local: json['local'] == null ? undefined : json['local'],
-        maxTtl: json['max_ttl'] == null ? undefined : json['max_ttl'],
-        nodeIdentities: json['node_identities'] == null ? undefined : json['node_identities'],
-        partition: json['partition'] == null ? undefined : json['partition'],
-        policies: json['policies'] == null ? undefined : json['policies'],
-        policy: json['policy'] == null ? undefined : json['policy'],
-        serviceIdentities: json['service_identities'] == null ? undefined : json['service_identities'],
-        tokenType: json['token_type'] == null ? undefined : json['token_type'],
-        ttl: json['ttl'] == null ? undefined : json['ttl'],
+        'consulNamespace': json['consul_namespace'] == null ? undefined : json['consul_namespace'],
+        'consulPolicies': json['consul_policies'] == null ? undefined : json['consul_policies'],
+        'consulRoles': json['consul_roles'] == null ? undefined : json['consul_roles'],
+        'lease': json['lease'] == null ? undefined : json['lease'],
+        'local': json['local'] == null ? undefined : json['local'],
+        'maxTtl': json['max_ttl'] == null ? undefined : json['max_ttl'],
+        'nodeIdentities': json['node_identities'] == null ? undefined : json['node_identities'],
+        'partition': json['partition'] == null ? undefined : json['partition'],
+        'policies': json['policies'] == null ? undefined : json['policies'],
+        'policy': json['policy'] == null ? undefined : json['policy'],
+        'serviceIdentities': json['service_identities'] == null ? undefined : json['service_identities'],
+        'tokenType': json['token_type'] == null ? undefined : json['token_type'],
+        'ttl': json['ttl'] == null ? undefined : json['ttl'],
     };
 }
 function ConsulWriteRoleRequestToJSON(json) {
@@ -55,18 +55,18 @@ function ConsulWriteRoleRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        consul_namespace: value['consulNamespace'],
-        consul_policies: value['consulPolicies'],
-        consul_roles: value['consulRoles'],
-        lease: value['lease'],
-        local: value['local'],
-        max_ttl: value['maxTtl'],
-        node_identities: value['nodeIdentities'],
-        partition: value['partition'],
-        policies: value['policies'],
-        policy: value['policy'],
-        service_identities: value['serviceIdentities'],
-        token_type: value['tokenType'],
-        ttl: value['ttl'],
+        'consul_namespace': value['consulNamespace'],
+        'consul_policies': value['consulPolicies'],
+        'consul_roles': value['consulRoles'],
+        'lease': value['lease'],
+        'local': value['local'],
+        'max_ttl': value['maxTtl'],
+        'node_identities': value['nodeIdentities'],
+        'partition': value['partition'],
+        'policies': value['policies'],
+        'policy': value['policy'],
+        'service_identities': value['serviceIdentities'],
+        'token_type': value['tokenType'],
+        'ttl': value['ttl'],
     };
 }

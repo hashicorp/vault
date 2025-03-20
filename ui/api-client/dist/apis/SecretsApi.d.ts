@@ -2318,32 +2318,32 @@ export interface SecretsApiTransitVerifyWithAlgorithmOperationRequest {
 export declare class SecretsApi extends runtime.BaseAPI {
     /**
      */
-    aliCloudConfigureRaw(requestParameters: SecretsApiAliCloudConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    aliCloudConfigureRaw(requestParameters: SecretsApiAliCloudConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    aliCloudConfigure(alicloudMountPath: string, aliCloudConfigureRequest: AliCloudConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    aliCloudConfigure(alicloudMountPath: string, aliCloudConfigureRequest: AliCloudConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    aliCloudDeleteConfigurationRaw(requestParameters: SecretsApiAliCloudDeleteConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    aliCloudDeleteConfigurationRaw(requestParameters: SecretsApiAliCloudDeleteConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    aliCloudDeleteConfiguration(alicloudMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Read, write and reference policies and roles that API keys or STS credentials can be made for.
-     */
-    aliCloudDeleteRoleRaw(requestParameters: SecretsApiAliCloudDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    aliCloudDeleteConfiguration(alicloudMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read, write and reference policies and roles that API keys or STS credentials can be made for.
      */
-    aliCloudDeleteRole(name: string, alicloudMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    aliCloudDeleteRoleRaw(requestParameters: SecretsApiAliCloudDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Read, write and reference policies and roles that API keys or STS credentials can be made for.
+     */
+    aliCloudDeleteRole(name: string, alicloudMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Generate an API key or STS credential using the given role\'s configuration.\'
      */
-    aliCloudGenerateCredentialsRaw(requestParameters: SecretsApiAliCloudGenerateCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    aliCloudGenerateCredentialsRaw(requestParameters: SecretsApiAliCloudGenerateCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Generate an API key or STS credential using the given role\'s configuration.\'
      */
-    aliCloudGenerateCredentials(name: string, alicloudMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    aliCloudGenerateCredentials(name: string, alicloudMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * List the existing roles in this backend.
      */
@@ -2354,76 +2354,76 @@ export declare class SecretsApi extends runtime.BaseAPI {
     aliCloudListRoles(alicloudMountPath: string, list: AliCloudListRolesListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse>;
     /**
      */
-    aliCloudReadConfigurationRaw(requestParameters: SecretsApiAliCloudReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    aliCloudReadConfigurationRaw(requestParameters: SecretsApiAliCloudReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    aliCloudReadConfiguration(alicloudMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Read, write and reference policies and roles that API keys or STS credentials can be made for.
-     */
-    aliCloudReadRoleRaw(requestParameters: SecretsApiAliCloudReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    aliCloudReadConfiguration(alicloudMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read, write and reference policies and roles that API keys or STS credentials can be made for.
      */
-    aliCloudReadRole(name: string, alicloudMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    aliCloudReadRoleRaw(requestParameters: SecretsApiAliCloudReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Read, write and reference policies and roles that API keys or STS credentials can be made for.
      */
-    aliCloudWriteRoleRaw(requestParameters: SecretsApiAliCloudWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    aliCloudReadRole(name: string, alicloudMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read, write and reference policies and roles that API keys or STS credentials can be made for.
      */
-    aliCloudWriteRole(name: string, alicloudMountPath: string, aliCloudWriteRoleRequest: AliCloudWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    aliCloudWriteRoleRaw(requestParameters: SecretsApiAliCloudWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Read, write and reference policies and roles that API keys or STS credentials can be made for.
+     */
+    aliCloudWriteRole(name: string, alicloudMountPath: string, aliCloudWriteRoleRequest: AliCloudWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsConfigureLeaseRaw(requestParameters: SecretsApiAwsConfigureLeaseOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsConfigureLeaseRaw(requestParameters: SecretsApiAwsConfigureLeaseOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsConfigureLease(awsMountPath: string, awsConfigureLeaseRequest: AwsConfigureLeaseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsConfigureLease(awsMountPath: string, awsConfigureLeaseRequest: AwsConfigureLeaseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsConfigureRootIamCredentialsRaw(requestParameters: SecretsApiAwsConfigureRootIamCredentialsOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsConfigureRootIamCredentialsRaw(requestParameters: SecretsApiAwsConfigureRootIamCredentialsOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsConfigureRootIamCredentials(awsMountPath: string, awsConfigureRootIamCredentialsRequest: AwsConfigureRootIamCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsConfigureRootIamCredentials(awsMountPath: string, awsConfigureRootIamCredentialsRequest: AwsConfigureRootIamCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read, write and reference IAM policies that access keys can be made for.
      */
-    awsDeleteRoleRaw(requestParameters: SecretsApiAwsDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsDeleteRoleRaw(requestParameters: SecretsApiAwsDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Read, write and reference IAM policies that access keys can be made for.
      */
-    awsDeleteRole(name: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsDeleteRole(name: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsDeleteStaticRolesNameRaw(requestParameters: SecretsApiAwsDeleteStaticRolesNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsDeleteStaticRolesNameRaw(requestParameters: SecretsApiAwsDeleteStaticRolesNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsDeleteStaticRolesName(name: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsDeleteStaticRolesName(name: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsGenerateCredentialsRaw(requestParameters: SecretsApiAwsGenerateCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsGenerateCredentialsRaw(requestParameters: SecretsApiAwsGenerateCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsGenerateCredentials(name: string, awsMountPath: string, roleArn?: string, roleSessionName?: string, ttl?: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsGenerateCredentials(name: string, awsMountPath: string, roleArn?: string, roleSessionName?: string, ttl?: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsGenerateCredentialsWithParametersRaw(requestParameters: SecretsApiAwsGenerateCredentialsWithParametersOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsGenerateCredentialsWithParametersRaw(requestParameters: SecretsApiAwsGenerateCredentialsWithParametersOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsGenerateCredentialsWithParameters(name: string, awsMountPath: string, awsGenerateCredentialsWithParametersRequest: AwsGenerateCredentialsWithParametersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsGenerateCredentialsWithParameters(name: string, awsMountPath: string, awsGenerateCredentialsWithParametersRequest: AwsGenerateCredentialsWithParametersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsGenerateStsCredentialsRaw(requestParameters: SecretsApiAwsGenerateStsCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsGenerateStsCredentialsRaw(requestParameters: SecretsApiAwsGenerateStsCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsGenerateStsCredentials(name: string, awsMountPath: string, roleArn?: string, roleSessionName?: string, ttl?: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsGenerateStsCredentials(name: string, awsMountPath: string, roleArn?: string, roleSessionName?: string, ttl?: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsGenerateStsCredentialsWithParametersRaw(requestParameters: SecretsApiAwsGenerateStsCredentialsWithParametersOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsGenerateStsCredentialsWithParametersRaw(requestParameters: SecretsApiAwsGenerateStsCredentialsWithParametersOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsGenerateStsCredentialsWithParameters(name: string, awsMountPath: string, awsGenerateStsCredentialsWithParametersRequest: AwsGenerateStsCredentialsWithParametersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsGenerateStsCredentialsWithParameters(name: string, awsMountPath: string, awsGenerateStsCredentialsWithParametersRequest: AwsGenerateStsCredentialsWithParametersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * List the existing roles in this backend
      */
@@ -2434,24 +2434,24 @@ export declare class SecretsApi extends runtime.BaseAPI {
     awsListRoles(awsMountPath: string, list: AwsListRolesListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse>;
     /**
      */
-    awsReadLeaseConfigurationRaw(requestParameters: SecretsApiAwsReadLeaseConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsReadLeaseConfigurationRaw(requestParameters: SecretsApiAwsReadLeaseConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsReadLeaseConfiguration(awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Read, write and reference IAM policies that access keys can be made for.
-     */
-    awsReadRoleRaw(requestParameters: SecretsApiAwsReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsReadLeaseConfiguration(awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read, write and reference IAM policies that access keys can be made for.
      */
-    awsReadRole(name: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsReadRoleRaw(requestParameters: SecretsApiAwsReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Read, write and reference IAM policies that access keys can be made for.
+     */
+    awsReadRole(name: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsReadRootIamCredentialsConfigurationRaw(requestParameters: SecretsApiAwsReadRootIamCredentialsConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsReadRootIamCredentialsConfigurationRaw(requestParameters: SecretsApiAwsReadRootIamCredentialsConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsReadRootIamCredentialsConfiguration(awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsReadRootIamCredentialsConfiguration(awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     awsReadStaticCredsNameRaw(requestParameters: SecretsApiAwsReadStaticCredsNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AwsReadStaticCredsNameResponse>>;
@@ -2466,18 +2466,18 @@ export declare class SecretsApi extends runtime.BaseAPI {
     awsReadStaticRolesName(name: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AwsReadStaticRolesNameResponse>;
     /**
      */
-    awsRotateRootIamCredentialsRaw(requestParameters: SecretsApiAwsRotateRootIamCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsRotateRootIamCredentialsRaw(requestParameters: SecretsApiAwsRotateRootIamCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsRotateRootIamCredentials(awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Read, write and reference IAM policies that access keys can be made for.
-     */
-    awsWriteRoleRaw(requestParameters: SecretsApiAwsWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsRotateRootIamCredentials(awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read, write and reference IAM policies that access keys can be made for.
      */
-    awsWriteRole(name: string, awsMountPath: string, awsWriteRoleRequest: AwsWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsWriteRoleRaw(requestParameters: SecretsApiAwsWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Read, write and reference IAM policies that access keys can be made for.
+     */
+    awsWriteRole(name: string, awsMountPath: string, awsWriteRoleRequest: AwsWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     awsWriteStaticRolesNameRaw(requestParameters: SecretsApiAwsWriteStaticRolesNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AwsWriteStaticRolesNameResponse>>;
@@ -2486,24 +2486,24 @@ export declare class SecretsApi extends runtime.BaseAPI {
     awsWriteStaticRolesName(name: string, awsMountPath: string, awsWriteStaticRolesNameRequest: AwsWriteStaticRolesNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AwsWriteStaticRolesNameResponse>;
     /**
      */
-    azureConfigureRaw(requestParameters: SecretsApiAzureConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    azureConfigureRaw(requestParameters: SecretsApiAzureConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    azureConfigure(azureMountPath: string, azureConfigureRequest: AzureConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    azureConfigure(azureMountPath: string, azureConfigureRequest: AzureConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    azureDeleteConfigurationRaw(requestParameters: SecretsApiAzureDeleteConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    azureDeleteConfigurationRaw(requestParameters: SecretsApiAzureDeleteConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    azureDeleteConfiguration(azureMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Manage the Vault roles used to generate Azure credentials.
-     */
-    azureDeleteRoleRaw(requestParameters: SecretsApiAzureDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    azureDeleteConfiguration(azureMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage the Vault roles used to generate Azure credentials.
      */
-    azureDeleteRole(name: string, azureMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    azureDeleteRoleRaw(requestParameters: SecretsApiAzureDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Manage the Vault roles used to generate Azure credentials.
+     */
+    azureDeleteRole(name: string, azureMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * List existing roles.
      */
@@ -2514,56 +2514,56 @@ export declare class SecretsApi extends runtime.BaseAPI {
     azureListRoles(azureMountPath: string, list: AzureListRolesListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse>;
     /**
      */
-    azureReadConfigurationRaw(requestParameters: SecretsApiAzureReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    azureReadConfigurationRaw(requestParameters: SecretsApiAzureReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    azureReadConfiguration(azureMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Manage the Vault roles used to generate Azure credentials.
-     */
-    azureReadRoleRaw(requestParameters: SecretsApiAzureReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    azureReadConfiguration(azureMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage the Vault roles used to generate Azure credentials.
      */
-    azureReadRole(name: string, azureMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     */
-    azureRequestServicePrincipalCredentialsRaw(requestParameters: SecretsApiAzureRequestServicePrincipalCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
-    /**
-     */
-    azureRequestServicePrincipalCredentials(role: string, azureMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     */
-    azureRotateRootRaw(requestParameters: SecretsApiAzureRotateRootRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
-    /**
-     */
-    azureRotateRoot(azureMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    azureReadRoleRaw(requestParameters: SecretsApiAzureReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Manage the Vault roles used to generate Azure credentials.
      */
-    azureWriteRoleRaw(requestParameters: SecretsApiAzureWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    azureReadRole(name: string, azureMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
+    /**
+     */
+    azureRequestServicePrincipalCredentialsRaw(requestParameters: SecretsApiAzureRequestServicePrincipalCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     */
+    azureRequestServicePrincipalCredentials(role: string, azureMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
+    /**
+     */
+    azureRotateRootRaw(requestParameters: SecretsApiAzureRotateRootRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     */
+    azureRotateRoot(azureMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage the Vault roles used to generate Azure credentials.
      */
-    azureWriteRole(name: string, azureMountPath: string, azureWriteRoleRequest: AzureWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    azureWriteRoleRaw(requestParameters: SecretsApiAzureWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Manage the Vault roles used to generate Azure credentials.
+     */
+    azureWriteRole(name: string, azureMountPath: string, azureWriteRoleRequest: AzureWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    consulConfigureAccessRaw(requestParameters: SecretsApiConsulConfigureAccessOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    consulConfigureAccessRaw(requestParameters: SecretsApiConsulConfigureAccessOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    consulConfigureAccess(consulMountPath: string, consulConfigureAccessRequest: ConsulConfigureAccessRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    consulConfigureAccess(consulMountPath: string, consulConfigureAccessRequest: ConsulConfigureAccessRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    consulDeleteRoleRaw(requestParameters: SecretsApiConsulDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    consulDeleteRoleRaw(requestParameters: SecretsApiConsulDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    consulDeleteRole(name: string, consulMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    consulDeleteRole(name: string, consulMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    consulGenerateCredentialsRaw(requestParameters: SecretsApiConsulGenerateCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    consulGenerateCredentialsRaw(requestParameters: SecretsApiConsulGenerateCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    consulGenerateCredentials(role: string, consulMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    consulGenerateCredentials(role: string, consulMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     consulListRolesRaw(requestParameters: SecretsApiConsulListRolesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<StandardListResponse>>;
@@ -2572,30 +2572,30 @@ export declare class SecretsApi extends runtime.BaseAPI {
     consulListRoles(consulMountPath: string, list: ConsulListRolesListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse>;
     /**
      */
-    consulReadAccessConfigurationRaw(requestParameters: SecretsApiConsulReadAccessConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    consulReadAccessConfigurationRaw(requestParameters: SecretsApiConsulReadAccessConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    consulReadAccessConfiguration(consulMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    consulReadAccessConfiguration(consulMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    consulReadRoleRaw(requestParameters: SecretsApiConsulReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    consulReadRoleRaw(requestParameters: SecretsApiConsulReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    consulReadRole(name: string, consulMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    consulReadRole(name: string, consulMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    consulWriteRoleRaw(requestParameters: SecretsApiConsulWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    consulWriteRoleRaw(requestParameters: SecretsApiConsulWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    consulWriteRole(name: string, consulMountPath: string, consulWriteRoleRequest: ConsulWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Deletes the secret at the specified location.
-     */
-    cubbyholeDeleteRaw(requestParameters: SecretsApiCubbyholeDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    consulWriteRole(name: string, consulMountPath: string, consulWriteRoleRequest: ConsulWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Deletes the secret at the specified location.
      */
-    cubbyholeDelete(path: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    cubbyholeDeleteRaw(requestParameters: SecretsApiCubbyholeDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Deletes the secret at the specified location.
+     */
+    cubbyholeDelete(path: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Folders are suffixed with /. The input must be a folder; list on a file will not return a value. The values themselves are not accessible via this command.
      * List secret entries at the specified location.
@@ -2609,57 +2609,57 @@ export declare class SecretsApi extends runtime.BaseAPI {
     /**
      * Retrieve the secret at the specified location.
      */
-    cubbyholeReadRaw(requestParameters: SecretsApiCubbyholeReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    cubbyholeReadRaw(requestParameters: SecretsApiCubbyholeReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Retrieve the secret at the specified location.
      */
-    cubbyholeRead(path: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    cubbyholeRead(path: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Store a secret at the specified location.
      */
-    cubbyholeWriteRaw(requestParameters: SecretsApiCubbyholeWriteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    cubbyholeWriteRaw(requestParameters: SecretsApiCubbyholeWriteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Store a secret at the specified location.
      */
     cubbyholeWrite(path: string, requestBody: {
         [key: string]: any;
-    }, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    }, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    databaseConfigureConnectionRaw(requestParameters: SecretsApiDatabaseConfigureConnectionOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    databaseConfigureConnectionRaw(requestParameters: SecretsApiDatabaseConfigureConnectionOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    databaseConfigureConnection(name: string, databaseMountPath: string, databaseConfigureConnectionRequest: DatabaseConfigureConnectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    databaseConfigureConnection(name: string, databaseMountPath: string, databaseConfigureConnectionRequest: DatabaseConfigureConnectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    databaseDeleteConnectionConfigurationRaw(requestParameters: SecretsApiDatabaseDeleteConnectionConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    databaseDeleteConnectionConfigurationRaw(requestParameters: SecretsApiDatabaseDeleteConnectionConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    databaseDeleteConnectionConfiguration(name: string, databaseMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Manage the roles that can be created with this backend.
-     */
-    databaseDeleteRoleRaw(requestParameters: SecretsApiDatabaseDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    databaseDeleteConnectionConfiguration(name: string, databaseMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage the roles that can be created with this backend.
      */
-    databaseDeleteRole(name: string, databaseMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    databaseDeleteRoleRaw(requestParameters: SecretsApiDatabaseDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Manage the roles that can be created with this backend.
+     */
+    databaseDeleteRole(name: string, databaseMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage the static roles that can be created with this backend.
      */
-    databaseDeleteStaticRoleRaw(requestParameters: SecretsApiDatabaseDeleteStaticRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    databaseDeleteStaticRoleRaw(requestParameters: SecretsApiDatabaseDeleteStaticRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Manage the static roles that can be created with this backend.
      */
-    databaseDeleteStaticRole(name: string, databaseMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    databaseDeleteStaticRole(name: string, databaseMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Request database credentials for a certain role.
      */
-    databaseGenerateCredentialsRaw(requestParameters: SecretsApiDatabaseGenerateCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    databaseGenerateCredentialsRaw(requestParameters: SecretsApiDatabaseGenerateCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Request database credentials for a certain role.
      */
-    databaseGenerateCredentials(name: string, databaseMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    databaseGenerateCredentials(name: string, databaseMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Configure connection details to a database plugin.
      */
@@ -2686,240 +2686,240 @@ export declare class SecretsApi extends runtime.BaseAPI {
     databaseListStaticRoles(databaseMountPath: string, list: DatabaseListStaticRolesListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse>;
     /**
      */
-    databaseReadConnectionConfigurationRaw(requestParameters: SecretsApiDatabaseReadConnectionConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    databaseReadConnectionConfigurationRaw(requestParameters: SecretsApiDatabaseReadConnectionConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    databaseReadConnectionConfiguration(name: string, databaseMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Manage the roles that can be created with this backend.
-     */
-    databaseReadRoleRaw(requestParameters: SecretsApiDatabaseReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    databaseReadConnectionConfiguration(name: string, databaseMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage the roles that can be created with this backend.
      */
-    databaseReadRole(name: string, databaseMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    databaseReadRoleRaw(requestParameters: SecretsApiDatabaseReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Manage the roles that can be created with this backend.
+     */
+    databaseReadRole(name: string, databaseMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage the static roles that can be created with this backend.
      */
-    databaseReadStaticRoleRaw(requestParameters: SecretsApiDatabaseReadStaticRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    databaseReadStaticRoleRaw(requestParameters: SecretsApiDatabaseReadStaticRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Manage the static roles that can be created with this backend.
      */
-    databaseReadStaticRole(name: string, databaseMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    databaseReadStaticRole(name: string, databaseMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Request database credentials for a certain static role. These credentials are rotated periodically.
      */
-    databaseReadStaticRoleCredentialsRaw(requestParameters: SecretsApiDatabaseReadStaticRoleCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    databaseReadStaticRoleCredentialsRaw(requestParameters: SecretsApiDatabaseReadStaticRoleCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Request database credentials for a certain static role. These credentials are rotated periodically.
      */
-    databaseReadStaticRoleCredentials(name: string, databaseMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    databaseReadStaticRoleCredentials(name: string, databaseMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Reloads all connections using a named database plugin.
      */
-    databaseReloadPluginRaw(requestParameters: SecretsApiDatabaseReloadPluginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    databaseReloadPluginRaw(requestParameters: SecretsApiDatabaseReloadPluginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Reloads all connections using a named database plugin.
      */
-    databaseReloadPlugin(pluginName: string, databaseMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    databaseReloadPlugin(pluginName: string, databaseMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Resets a database plugin.
      */
-    databaseResetConnectionRaw(requestParameters: SecretsApiDatabaseResetConnectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    databaseResetConnectionRaw(requestParameters: SecretsApiDatabaseResetConnectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Resets a database plugin.
      */
-    databaseResetConnection(name: string, databaseMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    databaseResetConnection(name: string, databaseMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    databaseRotateRootCredentialsRaw(requestParameters: SecretsApiDatabaseRotateRootCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    databaseRotateRootCredentialsRaw(requestParameters: SecretsApiDatabaseRotateRootCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    databaseRotateRootCredentials(name: string, databaseMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    databaseRotateRootCredentials(name: string, databaseMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    databaseRotateStaticRoleCredentialsRaw(requestParameters: SecretsApiDatabaseRotateStaticRoleCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    databaseRotateStaticRoleCredentialsRaw(requestParameters: SecretsApiDatabaseRotateStaticRoleCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    databaseRotateStaticRoleCredentials(name: string, databaseMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Manage the roles that can be created with this backend.
-     */
-    databaseWriteRoleRaw(requestParameters: SecretsApiDatabaseWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    databaseRotateStaticRoleCredentials(name: string, databaseMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage the roles that can be created with this backend.
      */
-    databaseWriteRole(name: string, databaseMountPath: string, databaseWriteRoleRequest: DatabaseWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    databaseWriteRoleRaw(requestParameters: SecretsApiDatabaseWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Manage the roles that can be created with this backend.
+     */
+    databaseWriteRole(name: string, databaseMountPath: string, databaseWriteRoleRequest: DatabaseWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage the static roles that can be created with this backend.
      */
-    databaseWriteStaticRoleRaw(requestParameters: SecretsApiDatabaseWriteStaticRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    databaseWriteStaticRoleRaw(requestParameters: SecretsApiDatabaseWriteStaticRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Manage the static roles that can be created with this backend.
      */
-    databaseWriteStaticRole(name: string, databaseMountPath: string, databaseWriteStaticRoleRequest: DatabaseWriteStaticRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    databaseWriteStaticRole(name: string, databaseMountPath: string, databaseWriteStaticRoleRequest: DatabaseWriteStaticRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudConfigureRaw(requestParameters: SecretsApiGoogleCloudConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudConfigureRaw(requestParameters: SecretsApiGoogleCloudConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudConfigure(gcpMountPath: string, googleCloudConfigureRequest: GoogleCloudConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudConfigure(gcpMountPath: string, googleCloudConfigureRequest: GoogleCloudConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudDeleteImpersonatedAccountRaw(requestParameters: SecretsApiGoogleCloudDeleteImpersonatedAccountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudDeleteImpersonatedAccountRaw(requestParameters: SecretsApiGoogleCloudDeleteImpersonatedAccountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudDeleteImpersonatedAccount(name: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudDeleteImpersonatedAccount(name: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudDeleteRolesetRaw(requestParameters: SecretsApiGoogleCloudDeleteRolesetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudDeleteRolesetRaw(requestParameters: SecretsApiGoogleCloudDeleteRolesetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudDeleteRoleset(name: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudDeleteRoleset(name: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudDeleteStaticAccountRaw(requestParameters: SecretsApiGoogleCloudDeleteStaticAccountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudDeleteStaticAccountRaw(requestParameters: SecretsApiGoogleCloudDeleteStaticAccountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudDeleteStaticAccount(name: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudDeleteStaticAccount(name: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudGenerateImpersonatedAccountAccessTokenRaw(requestParameters: SecretsApiGoogleCloudGenerateImpersonatedAccountAccessTokenRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudGenerateImpersonatedAccountAccessTokenRaw(requestParameters: SecretsApiGoogleCloudGenerateImpersonatedAccountAccessTokenRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudGenerateImpersonatedAccountAccessToken(name: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudGenerateImpersonatedAccountAccessToken(name: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudGenerateImpersonatedAccountAccessToken2Raw(requestParameters: SecretsApiGoogleCloudGenerateImpersonatedAccountAccessToken2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudGenerateImpersonatedAccountAccessToken2Raw(requestParameters: SecretsApiGoogleCloudGenerateImpersonatedAccountAccessToken2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudGenerateImpersonatedAccountAccessToken2(name: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudGenerateImpersonatedAccountAccessToken2(name: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudGenerateRolesetAccessTokenRaw(requestParameters: SecretsApiGoogleCloudGenerateRolesetAccessTokenRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudGenerateRolesetAccessTokenRaw(requestParameters: SecretsApiGoogleCloudGenerateRolesetAccessTokenRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudGenerateRolesetAccessToken(roleset: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudGenerateRolesetAccessToken(roleset: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudGenerateRolesetAccessToken2Raw(requestParameters: SecretsApiGoogleCloudGenerateRolesetAccessToken2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudGenerateRolesetAccessToken2Raw(requestParameters: SecretsApiGoogleCloudGenerateRolesetAccessToken2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudGenerateRolesetAccessToken2(roleset: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudGenerateRolesetAccessToken2(roleset: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudGenerateRolesetAccessToken3Raw(requestParameters: SecretsApiGoogleCloudGenerateRolesetAccessToken3Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudGenerateRolesetAccessToken3Raw(requestParameters: SecretsApiGoogleCloudGenerateRolesetAccessToken3Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudGenerateRolesetAccessToken3(roleset: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudGenerateRolesetAccessToken3(roleset: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudGenerateRolesetAccessToken4Raw(requestParameters: SecretsApiGoogleCloudGenerateRolesetAccessToken4Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudGenerateRolesetAccessToken4Raw(requestParameters: SecretsApiGoogleCloudGenerateRolesetAccessToken4Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudGenerateRolesetAccessToken4(roleset: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudGenerateRolesetAccessToken4(roleset: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudGenerateRolesetKeyRaw(requestParameters: SecretsApiGoogleCloudGenerateRolesetKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudGenerateRolesetKeyRaw(requestParameters: SecretsApiGoogleCloudGenerateRolesetKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudGenerateRolesetKey(roleset: string, gcpMountPath: string, googleCloudGenerateRolesetKeyRequest: GoogleCloudGenerateRolesetKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudGenerateRolesetKey(roleset: string, gcpMountPath: string, googleCloudGenerateRolesetKeyRequest: GoogleCloudGenerateRolesetKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudGenerateRolesetKey2Raw(requestParameters: SecretsApiGoogleCloudGenerateRolesetKey2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudGenerateRolesetKey2Raw(requestParameters: SecretsApiGoogleCloudGenerateRolesetKey2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudGenerateRolesetKey2(roleset: string, gcpMountPath: string, keyAlgorithm?: string, keyType?: string, ttl?: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudGenerateRolesetKey2(roleset: string, gcpMountPath: string, keyAlgorithm?: string, keyType?: string, ttl?: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudGenerateRolesetKey3Raw(requestParameters: SecretsApiGoogleCloudGenerateRolesetKey3OperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudGenerateRolesetKey3Raw(requestParameters: SecretsApiGoogleCloudGenerateRolesetKey3OperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudGenerateRolesetKey3(roleset: string, gcpMountPath: string, googleCloudGenerateRolesetKey3Request: GoogleCloudGenerateRolesetKey3Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudGenerateRolesetKey3(roleset: string, gcpMountPath: string, googleCloudGenerateRolesetKey3Request: GoogleCloudGenerateRolesetKey3Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudGenerateRolesetKey4Raw(requestParameters: SecretsApiGoogleCloudGenerateRolesetKey4Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudGenerateRolesetKey4Raw(requestParameters: SecretsApiGoogleCloudGenerateRolesetKey4Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudGenerateRolesetKey4(roleset: string, gcpMountPath: string, keyAlgorithm?: string, keyType?: string, ttl?: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudGenerateRolesetKey4(roleset: string, gcpMountPath: string, keyAlgorithm?: string, keyType?: string, ttl?: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudGenerateStaticAccountAccessTokenRaw(requestParameters: SecretsApiGoogleCloudGenerateStaticAccountAccessTokenRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudGenerateStaticAccountAccessTokenRaw(requestParameters: SecretsApiGoogleCloudGenerateStaticAccountAccessTokenRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudGenerateStaticAccountAccessToken(name: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudGenerateStaticAccountAccessToken(name: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudGenerateStaticAccountAccessToken2Raw(requestParameters: SecretsApiGoogleCloudGenerateStaticAccountAccessToken2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudGenerateStaticAccountAccessToken2Raw(requestParameters: SecretsApiGoogleCloudGenerateStaticAccountAccessToken2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudGenerateStaticAccountAccessToken2(name: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudGenerateStaticAccountAccessToken2(name: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudGenerateStaticAccountKeyRaw(requestParameters: SecretsApiGoogleCloudGenerateStaticAccountKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudGenerateStaticAccountKeyRaw(requestParameters: SecretsApiGoogleCloudGenerateStaticAccountKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudGenerateStaticAccountKey(name: string, gcpMountPath: string, googleCloudGenerateStaticAccountKeyRequest: GoogleCloudGenerateStaticAccountKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudGenerateStaticAccountKey(name: string, gcpMountPath: string, googleCloudGenerateStaticAccountKeyRequest: GoogleCloudGenerateStaticAccountKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudGenerateStaticAccountKey2Raw(requestParameters: SecretsApiGoogleCloudGenerateStaticAccountKey2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudGenerateStaticAccountKey2Raw(requestParameters: SecretsApiGoogleCloudGenerateStaticAccountKey2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudGenerateStaticAccountKey2(name: string, gcpMountPath: string, keyAlgorithm?: string, keyType?: string, ttl?: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudGenerateStaticAccountKey2(name: string, gcpMountPath: string, keyAlgorithm?: string, keyType?: string, ttl?: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudKmsConfigureRaw(requestParameters: SecretsApiGoogleCloudKmsConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudKmsConfigureRaw(requestParameters: SecretsApiGoogleCloudKmsConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudKmsConfigure(gcpkmsMountPath: string, googleCloudKmsConfigureRequest: GoogleCloudKmsConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudKmsConfigure(gcpkmsMountPath: string, googleCloudKmsConfigureRequest: GoogleCloudKmsConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudKmsConfigureKeyRaw(requestParameters: SecretsApiGoogleCloudKmsConfigureKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudKmsConfigureKeyRaw(requestParameters: SecretsApiGoogleCloudKmsConfigureKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudKmsConfigureKey(key: string, gcpkmsMountPath: string, googleCloudKmsConfigureKeyRequest: GoogleCloudKmsConfigureKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Decrypt a ciphertext value using a named key
-     */
-    googleCloudKmsDecryptRaw(requestParameters: SecretsApiGoogleCloudKmsDecryptOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudKmsConfigureKey(key: string, gcpkmsMountPath: string, googleCloudKmsConfigureKeyRequest: GoogleCloudKmsConfigureKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Decrypt a ciphertext value using a named key
      */
-    googleCloudKmsDecrypt(key: string, gcpkmsMountPath: string, googleCloudKmsDecryptRequest: GoogleCloudKmsDecryptRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudKmsDecryptRaw(requestParameters: SecretsApiGoogleCloudKmsDecryptOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Decrypt a ciphertext value using a named key
+     */
+    googleCloudKmsDecrypt(key: string, gcpkmsMountPath: string, googleCloudKmsDecryptRequest: GoogleCloudKmsDecryptRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudKmsDeleteConfigurationRaw(requestParameters: SecretsApiGoogleCloudKmsDeleteConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudKmsDeleteConfigurationRaw(requestParameters: SecretsApiGoogleCloudKmsDeleteConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudKmsDeleteConfiguration(gcpkmsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudKmsDeleteConfiguration(gcpkmsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Interact with crypto keys in Vault and Google Cloud KMS
      */
-    googleCloudKmsDeleteKeyRaw(requestParameters: SecretsApiGoogleCloudKmsDeleteKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudKmsDeleteKeyRaw(requestParameters: SecretsApiGoogleCloudKmsDeleteKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Interact with crypto keys in Vault and Google Cloud KMS
      */
-    googleCloudKmsDeleteKey(key: string, gcpkmsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudKmsDeleteKey(key: string, gcpkmsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudKmsDeregisterKeyRaw(requestParameters: SecretsApiGoogleCloudKmsDeregisterKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudKmsDeregisterKeyRaw(requestParameters: SecretsApiGoogleCloudKmsDeregisterKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudKmsDeregisterKey(key: string, gcpkmsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudKmsDeregisterKey(key: string, gcpkmsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudKmsDeregisterKey2Raw(requestParameters: SecretsApiGoogleCloudKmsDeregisterKey2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudKmsDeregisterKey2Raw(requestParameters: SecretsApiGoogleCloudKmsDeregisterKey2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudKmsDeregisterKey2(key: string, gcpkmsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Encrypt a plaintext value using a named key
-     */
-    googleCloudKmsEncryptRaw(requestParameters: SecretsApiGoogleCloudKmsEncryptOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudKmsDeregisterKey2(key: string, gcpkmsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Encrypt a plaintext value using a named key
      */
-    googleCloudKmsEncrypt(key: string, gcpkmsMountPath: string, googleCloudKmsEncryptRequest: GoogleCloudKmsEncryptRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudKmsEncryptRaw(requestParameters: SecretsApiGoogleCloudKmsEncryptOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Encrypt a plaintext value using a named key
+     */
+    googleCloudKmsEncrypt(key: string, gcpkmsMountPath: string, googleCloudKmsEncryptRequest: GoogleCloudKmsEncryptRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * List named keys
      */
@@ -2930,92 +2930,92 @@ export declare class SecretsApi extends runtime.BaseAPI {
     googleCloudKmsListKeys(gcpkmsMountPath: string, list: GoogleCloudKmsListKeysListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse>;
     /**
      */
-    googleCloudKmsReadConfigurationRaw(requestParameters: SecretsApiGoogleCloudKmsReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudKmsReadConfigurationRaw(requestParameters: SecretsApiGoogleCloudKmsReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudKmsReadConfiguration(gcpkmsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Interact with crypto keys in Vault and Google Cloud KMS
-     */
-    googleCloudKmsReadKeyRaw(requestParameters: SecretsApiGoogleCloudKmsReadKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudKmsReadConfiguration(gcpkmsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Interact with crypto keys in Vault and Google Cloud KMS
      */
-    googleCloudKmsReadKey(key: string, gcpkmsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudKmsReadKeyRaw(requestParameters: SecretsApiGoogleCloudKmsReadKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Interact with crypto keys in Vault and Google Cloud KMS
+     */
+    googleCloudKmsReadKey(key: string, gcpkmsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudKmsReadKeyConfigurationRaw(requestParameters: SecretsApiGoogleCloudKmsReadKeyConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudKmsReadKeyConfigurationRaw(requestParameters: SecretsApiGoogleCloudKmsReadKeyConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudKmsReadKeyConfiguration(key: string, gcpkmsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudKmsReadKeyConfiguration(key: string, gcpkmsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Re-encrypt existing ciphertext data to a new version
      */
-    googleCloudKmsReencryptRaw(requestParameters: SecretsApiGoogleCloudKmsReencryptOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudKmsReencryptRaw(requestParameters: SecretsApiGoogleCloudKmsReencryptOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Re-encrypt existing ciphertext data to a new version
      */
-    googleCloudKmsReencrypt(key: string, gcpkmsMountPath: string, googleCloudKmsReencryptRequest: GoogleCloudKmsReencryptRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudKmsReencrypt(key: string, gcpkmsMountPath: string, googleCloudKmsReencryptRequest: GoogleCloudKmsReencryptRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Register an existing crypto key in Google Cloud KMS
      */
-    googleCloudKmsRegisterKeyRaw(requestParameters: SecretsApiGoogleCloudKmsRegisterKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudKmsRegisterKeyRaw(requestParameters: SecretsApiGoogleCloudKmsRegisterKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Register an existing crypto key in Google Cloud KMS
      */
-    googleCloudKmsRegisterKey(key: string, gcpkmsMountPath: string, googleCloudKmsRegisterKeyRequest: GoogleCloudKmsRegisterKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudKmsRegisterKey(key: string, gcpkmsMountPath: string, googleCloudKmsRegisterKeyRequest: GoogleCloudKmsRegisterKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Retrieve the public key associated with the named key
      */
-    googleCloudKmsRetrievePublicKeyRaw(requestParameters: SecretsApiGoogleCloudKmsRetrievePublicKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudKmsRetrievePublicKeyRaw(requestParameters: SecretsApiGoogleCloudKmsRetrievePublicKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Retrieve the public key associated with the named key
      */
-    googleCloudKmsRetrievePublicKey(key: string, gcpkmsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudKmsRetrievePublicKey(key: string, gcpkmsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Rotate a crypto key to a new primary version
      */
-    googleCloudKmsRotateKeyRaw(requestParameters: SecretsApiGoogleCloudKmsRotateKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudKmsRotateKeyRaw(requestParameters: SecretsApiGoogleCloudKmsRotateKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Rotate a crypto key to a new primary version
      */
-    googleCloudKmsRotateKey(key: string, gcpkmsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudKmsRotateKey(key: string, gcpkmsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Signs a message or digest using a named key
      */
-    googleCloudKmsSignRaw(requestParameters: SecretsApiGoogleCloudKmsSignOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudKmsSignRaw(requestParameters: SecretsApiGoogleCloudKmsSignOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Signs a message or digest using a named key
      */
-    googleCloudKmsSign(key: string, gcpkmsMountPath: string, googleCloudKmsSignRequest: GoogleCloudKmsSignRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudKmsSign(key: string, gcpkmsMountPath: string, googleCloudKmsSignRequest: GoogleCloudKmsSignRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudKmsTrimKeyVersionsRaw(requestParameters: SecretsApiGoogleCloudKmsTrimKeyVersionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudKmsTrimKeyVersionsRaw(requestParameters: SecretsApiGoogleCloudKmsTrimKeyVersionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudKmsTrimKeyVersions(key: string, gcpkmsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudKmsTrimKeyVersions(key: string, gcpkmsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudKmsTrimKeyVersions2Raw(requestParameters: SecretsApiGoogleCloudKmsTrimKeyVersions2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudKmsTrimKeyVersions2Raw(requestParameters: SecretsApiGoogleCloudKmsTrimKeyVersions2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudKmsTrimKeyVersions2(key: string, gcpkmsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Verify a signature using a named key
-     */
-    googleCloudKmsVerifyRaw(requestParameters: SecretsApiGoogleCloudKmsVerifyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudKmsTrimKeyVersions2(key: string, gcpkmsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Verify a signature using a named key
      */
-    googleCloudKmsVerify(key: string, gcpkmsMountPath: string, googleCloudKmsVerifyRequest: GoogleCloudKmsVerifyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudKmsVerifyRaw(requestParameters: SecretsApiGoogleCloudKmsVerifyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Verify a signature using a named key
+     */
+    googleCloudKmsVerify(key: string, gcpkmsMountPath: string, googleCloudKmsVerifyRequest: GoogleCloudKmsVerifyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Interact with crypto keys in Vault and Google Cloud KMS
      */
-    googleCloudKmsWriteKeyRaw(requestParameters: SecretsApiGoogleCloudKmsWriteKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudKmsWriteKeyRaw(requestParameters: SecretsApiGoogleCloudKmsWriteKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Interact with crypto keys in Vault and Google Cloud KMS
      */
-    googleCloudKmsWriteKey(key: string, gcpkmsMountPath: string, googleCloudKmsWriteKeyRequest: GoogleCloudKmsWriteKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudKmsWriteKey(key: string, gcpkmsMountPath: string, googleCloudKmsWriteKeyRequest: GoogleCloudKmsWriteKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     googleCloudListImpersonatedAccountsRaw(requestParameters: SecretsApiGoogleCloudListImpersonatedAccountsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<StandardListResponse>>;
@@ -3054,100 +3054,100 @@ export declare class SecretsApi extends runtime.BaseAPI {
     googleCloudListStaticAccounts2(gcpMountPath: string, list: GoogleCloudListStaticAccounts2ListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse>;
     /**
      */
-    googleCloudReadConfigurationRaw(requestParameters: SecretsApiGoogleCloudReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudReadConfigurationRaw(requestParameters: SecretsApiGoogleCloudReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudReadConfiguration(gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudReadConfiguration(gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudReadImpersonatedAccountRaw(requestParameters: SecretsApiGoogleCloudReadImpersonatedAccountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudReadImpersonatedAccountRaw(requestParameters: SecretsApiGoogleCloudReadImpersonatedAccountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudReadImpersonatedAccount(name: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudReadImpersonatedAccount(name: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudReadRolesetRaw(requestParameters: SecretsApiGoogleCloudReadRolesetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudReadRolesetRaw(requestParameters: SecretsApiGoogleCloudReadRolesetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudReadRoleset(name: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudReadRoleset(name: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudReadStaticAccountRaw(requestParameters: SecretsApiGoogleCloudReadStaticAccountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudReadStaticAccountRaw(requestParameters: SecretsApiGoogleCloudReadStaticAccountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudReadStaticAccount(name: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudReadStaticAccount(name: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudRotateRolesetRaw(requestParameters: SecretsApiGoogleCloudRotateRolesetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudRotateRolesetRaw(requestParameters: SecretsApiGoogleCloudRotateRolesetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudRotateRoleset(name: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudRotateRoleset(name: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudRotateRolesetKeyRaw(requestParameters: SecretsApiGoogleCloudRotateRolesetKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudRotateRolesetKeyRaw(requestParameters: SecretsApiGoogleCloudRotateRolesetKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudRotateRolesetKey(name: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudRotateRolesetKey(name: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudRotateRootCredentialsRaw(requestParameters: SecretsApiGoogleCloudRotateRootCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudRotateRootCredentialsRaw(requestParameters: SecretsApiGoogleCloudRotateRootCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudRotateRootCredentials(gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudRotateRootCredentials(gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudRotateStaticAccountKeyRaw(requestParameters: SecretsApiGoogleCloudRotateStaticAccountKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudRotateStaticAccountKeyRaw(requestParameters: SecretsApiGoogleCloudRotateStaticAccountKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudRotateStaticAccountKey(name: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudRotateStaticAccountKey(name: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudWriteImpersonatedAccountRaw(requestParameters: SecretsApiGoogleCloudWriteImpersonatedAccountOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudWriteImpersonatedAccountRaw(requestParameters: SecretsApiGoogleCloudWriteImpersonatedAccountOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudWriteImpersonatedAccount(name: string, gcpMountPath: string, googleCloudWriteImpersonatedAccountRequest: GoogleCloudWriteImpersonatedAccountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudWriteImpersonatedAccount(name: string, gcpMountPath: string, googleCloudWriteImpersonatedAccountRequest: GoogleCloudWriteImpersonatedAccountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudWriteRolesetRaw(requestParameters: SecretsApiGoogleCloudWriteRolesetOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudWriteRolesetRaw(requestParameters: SecretsApiGoogleCloudWriteRolesetOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudWriteRoleset(name: string, gcpMountPath: string, googleCloudWriteRolesetRequest: GoogleCloudWriteRolesetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudWriteRoleset(name: string, gcpMountPath: string, googleCloudWriteRolesetRequest: GoogleCloudWriteRolesetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudWriteStaticAccountRaw(requestParameters: SecretsApiGoogleCloudWriteStaticAccountOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudWriteStaticAccountRaw(requestParameters: SecretsApiGoogleCloudWriteStaticAccountOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudWriteStaticAccount(name: string, gcpMountPath: string, googleCloudWriteStaticAccountRequest: GoogleCloudWriteStaticAccountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudWriteStaticAccount(name: string, gcpMountPath: string, googleCloudWriteStaticAccountRequest: GoogleCloudWriteStaticAccountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    kubernetesCheckConfigurationRaw(requestParameters: SecretsApiKubernetesCheckConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kubernetesCheckConfigurationRaw(requestParameters: SecretsApiKubernetesCheckConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    kubernetesCheckConfiguration(kubernetesMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    kubernetesCheckConfiguration(kubernetesMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    kubernetesConfigureRaw(requestParameters: SecretsApiKubernetesConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kubernetesConfigureRaw(requestParameters: SecretsApiKubernetesConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    kubernetesConfigure(kubernetesMountPath: string, kubernetesConfigureRequest: KubernetesConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    kubernetesConfigure(kubernetesMountPath: string, kubernetesConfigureRequest: KubernetesConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    kubernetesDeleteConfigurationRaw(requestParameters: SecretsApiKubernetesDeleteConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kubernetesDeleteConfigurationRaw(requestParameters: SecretsApiKubernetesDeleteConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    kubernetesDeleteConfiguration(kubernetesMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    kubernetesDeleteConfiguration(kubernetesMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    kubernetesDeleteRoleRaw(requestParameters: SecretsApiKubernetesDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kubernetesDeleteRoleRaw(requestParameters: SecretsApiKubernetesDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    kubernetesDeleteRole(name: string, kubernetesMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    kubernetesDeleteRole(name: string, kubernetesMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    kubernetesGenerateCredentialsRaw(requestParameters: SecretsApiKubernetesGenerateCredentialsOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kubernetesGenerateCredentialsRaw(requestParameters: SecretsApiKubernetesGenerateCredentialsOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    kubernetesGenerateCredentials(name: string, kubernetesMountPath: string, kubernetesGenerateCredentialsRequest: KubernetesGenerateCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    kubernetesGenerateCredentials(name: string, kubernetesMountPath: string, kubernetesGenerateCredentialsRequest: KubernetesGenerateCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     kubernetesListRolesRaw(requestParameters: SecretsApiKubernetesListRolesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<StandardListResponse>>;
@@ -3156,28 +3156,28 @@ export declare class SecretsApi extends runtime.BaseAPI {
     kubernetesListRoles(kubernetesMountPath: string, list: KubernetesListRolesListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse>;
     /**
      */
-    kubernetesReadConfigurationRaw(requestParameters: SecretsApiKubernetesReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kubernetesReadConfigurationRaw(requestParameters: SecretsApiKubernetesReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    kubernetesReadConfiguration(kubernetesMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    kubernetesReadConfiguration(kubernetesMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    kubernetesReadRoleRaw(requestParameters: SecretsApiKubernetesReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kubernetesReadRoleRaw(requestParameters: SecretsApiKubernetesReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    kubernetesReadRole(name: string, kubernetesMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    kubernetesReadRole(name: string, kubernetesMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    kubernetesWriteRoleRaw(requestParameters: SecretsApiKubernetesWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kubernetesWriteRoleRaw(requestParameters: SecretsApiKubernetesWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    kubernetesWriteRole(name: string, kubernetesMountPath: string, kubernetesWriteRoleRequest: KubernetesWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    kubernetesWriteRole(name: string, kubernetesMountPath: string, kubernetesWriteRoleRequest: KubernetesWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    kvV1DeleteRaw(requestParameters: SecretsApiKvV1DeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kvV1DeleteRaw(requestParameters: SecretsApiKvV1DeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    kvV1Delete(path: string, kvV1MountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    kvV1Delete(path: string, kvV1MountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     kvV1ListRaw(requestParameters: SecretsApiKvV1ListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<StandardListResponse>>;
@@ -3186,50 +3186,50 @@ export declare class SecretsApi extends runtime.BaseAPI {
     kvV1List(path: string, kvV1MountPath: string, list: KvV1ListListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse>;
     /**
      */
-    kvV1ReadRaw(requestParameters: SecretsApiKvV1ReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kvV1ReadRaw(requestParameters: SecretsApiKvV1ReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    kvV1Read(path: string, kvV1MountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    kvV1Read(path: string, kvV1MountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    kvV1WriteRaw(requestParameters: SecretsApiKvV1WriteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kvV1WriteRaw(requestParameters: SecretsApiKvV1WriteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
     kvV1Write(path: string, kvV1MountPath: string, requestBody: {
         [key: string]: any;
-    }, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    }, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Configure backend level settings that are applied to every key in the key-value store.
      */
-    kvV2ConfigureRaw(requestParameters: SecretsApiKvV2ConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kvV2ConfigureRaw(requestParameters: SecretsApiKvV2ConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Configure backend level settings that are applied to every key in the key-value store.
      */
-    kvV2Configure(kvV2MountPath: string, kvV2ConfigureRequest: KvV2ConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    kvV2Configure(kvV2MountPath: string, kvV2ConfigureRequest: KvV2ConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    kvV2DeleteRaw(requestParameters: SecretsApiKvV2DeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kvV2DeleteRaw(requestParameters: SecretsApiKvV2DeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    kvV2Delete(path: string, kvV2MountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    kvV2Delete(path: string, kvV2MountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    kvV2DeleteMetadataAndAllVersionsRaw(requestParameters: SecretsApiKvV2DeleteMetadataAndAllVersionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kvV2DeleteMetadataAndAllVersionsRaw(requestParameters: SecretsApiKvV2DeleteMetadataAndAllVersionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    kvV2DeleteMetadataAndAllVersions(path: string, kvV2MountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    kvV2DeleteMetadataAndAllVersions(path: string, kvV2MountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    kvV2DeleteVersionsRaw(requestParameters: SecretsApiKvV2DeleteVersionsOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kvV2DeleteVersionsRaw(requestParameters: SecretsApiKvV2DeleteVersionsOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    kvV2DeleteVersions(path: string, kvV2MountPath: string, kvV2DeleteVersionsRequest: KvV2DeleteVersionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    kvV2DeleteVersions(path: string, kvV2MountPath: string, kvV2DeleteVersionsRequest: KvV2DeleteVersionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    kvV2DestroyVersionsRaw(requestParameters: SecretsApiKvV2DestroyVersionsOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kvV2DestroyVersionsRaw(requestParameters: SecretsApiKvV2DestroyVersionsOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    kvV2DestroyVersions(path: string, kvV2MountPath: string, kvV2DestroyVersionsRequest: KvV2DestroyVersionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    kvV2DestroyVersions(path: string, kvV2MountPath: string, kvV2DestroyVersionsRequest: KvV2DestroyVersionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     kvV2ListRaw(requestParameters: SecretsApiKvV2ListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<StandardListResponse>>;
@@ -3264,10 +3264,10 @@ export declare class SecretsApi extends runtime.BaseAPI {
     kvV2ReadSubkeys(path: string, kvV2MountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<KvV2ReadSubkeysResponse>;
     /**
      */
-    kvV2UndeleteVersionsRaw(requestParameters: SecretsApiKvV2UndeleteVersionsOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kvV2UndeleteVersionsRaw(requestParameters: SecretsApiKvV2UndeleteVersionsOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    kvV2UndeleteVersions(path: string, kvV2MountPath: string, kvV2UndeleteVersionsRequest: KvV2UndeleteVersionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    kvV2UndeleteVersions(path: string, kvV2MountPath: string, kvV2UndeleteVersionsRequest: KvV2UndeleteVersionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     kvV2WriteRaw(requestParameters: SecretsApiKvV2WriteOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<KvV2WriteResponse>>;
@@ -3276,82 +3276,82 @@ export declare class SecretsApi extends runtime.BaseAPI {
     kvV2Write(path: string, kvV2MountPath: string, kvV2WriteRequest: KvV2WriteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<KvV2WriteResponse>;
     /**
      */
-    kvV2WriteMetadataRaw(requestParameters: SecretsApiKvV2WriteMetadataOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kvV2WriteMetadataRaw(requestParameters: SecretsApiKvV2WriteMetadataOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    kvV2WriteMetadata(path: string, kvV2MountPath: string, kvV2WriteMetadataRequest: KvV2WriteMetadataRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    kvV2WriteMetadata(path: string, kvV2MountPath: string, kvV2WriteMetadataRequest: KvV2WriteMetadataRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    ldapConfigureRaw(requestParameters: SecretsApiLdapConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ldapConfigureRaw(requestParameters: SecretsApiLdapConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    ldapConfigure(ldapMountPath: string, ldapConfigureRequest: LdapConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ldapConfigure(ldapMountPath: string, ldapConfigureRequest: LdapConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    ldapDeleteConfigurationRaw(requestParameters: SecretsApiLdapDeleteConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ldapDeleteConfigurationRaw(requestParameters: SecretsApiLdapDeleteConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    ldapDeleteConfiguration(ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ldapDeleteConfiguration(ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    ldapDeleteDynamicRoleRaw(requestParameters: SecretsApiLdapDeleteDynamicRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ldapDeleteDynamicRoleRaw(requestParameters: SecretsApiLdapDeleteDynamicRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    ldapDeleteDynamicRole(name: string, ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ldapDeleteDynamicRole(name: string, ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    ldapDeleteStaticRoleRaw(requestParameters: SecretsApiLdapDeleteStaticRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ldapDeleteStaticRoleRaw(requestParameters: SecretsApiLdapDeleteStaticRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    ldapDeleteStaticRole(name: string, ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Check service accounts in to the library.
-     */
-    ldapLibraryCheckInRaw(requestParameters: SecretsApiLdapLibraryCheckInOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ldapDeleteStaticRole(name: string, ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Check service accounts in to the library.
      */
-    ldapLibraryCheckIn(name: string, ldapMountPath: string, ldapLibraryCheckInRequest: LdapLibraryCheckInRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ldapLibraryCheckInRaw(requestParameters: SecretsApiLdapLibraryCheckInOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Check service accounts in to the library.
+     */
+    ldapLibraryCheckIn(name: string, ldapMountPath: string, ldapLibraryCheckInRequest: LdapLibraryCheckInRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Check a service account out from the library.
      */
-    ldapLibraryCheckOutRaw(requestParameters: SecretsApiLdapLibraryCheckOutOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ldapLibraryCheckOutRaw(requestParameters: SecretsApiLdapLibraryCheckOutOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Check a service account out from the library.
      */
-    ldapLibraryCheckOut(name: string, ldapMountPath: string, ldapLibraryCheckOutRequest: LdapLibraryCheckOutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ldapLibraryCheckOut(name: string, ldapMountPath: string, ldapLibraryCheckOutRequest: LdapLibraryCheckOutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Check the status of the service accounts in a library set.
      */
-    ldapLibraryCheckStatusRaw(requestParameters: SecretsApiLdapLibraryCheckStatusRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ldapLibraryCheckStatusRaw(requestParameters: SecretsApiLdapLibraryCheckStatusRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Check the status of the service accounts in a library set.
      */
-    ldapLibraryCheckStatus(name: string, ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ldapLibraryCheckStatus(name: string, ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Update a library set.
      */
-    ldapLibraryConfigureRaw(requestParameters: SecretsApiLdapLibraryConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ldapLibraryConfigureRaw(requestParameters: SecretsApiLdapLibraryConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Update a library set.
      */
-    ldapLibraryConfigure(name: string, ldapMountPath: string, ldapLibraryConfigureRequest: LdapLibraryConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ldapLibraryConfigure(name: string, ldapMountPath: string, ldapLibraryConfigureRequest: LdapLibraryConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Delete a library set.
      */
-    ldapLibraryDeleteRaw(requestParameters: SecretsApiLdapLibraryDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ldapLibraryDeleteRaw(requestParameters: SecretsApiLdapLibraryDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Delete a library set.
      */
-    ldapLibraryDelete(name: string, ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ldapLibraryDelete(name: string, ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Check service accounts in to the library.
      */
-    ldapLibraryForceCheckInRaw(requestParameters: SecretsApiLdapLibraryForceCheckInOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ldapLibraryForceCheckInRaw(requestParameters: SecretsApiLdapLibraryForceCheckInOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Check service accounts in to the library.
      */
-    ldapLibraryForceCheckIn(name: string, ldapMountPath: string, ldapLibraryForceCheckInRequest: LdapLibraryForceCheckInRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ldapLibraryForceCheckIn(name: string, ldapMountPath: string, ldapLibraryForceCheckInRequest: LdapLibraryForceCheckInRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     ldapLibraryListRaw(requestParameters: SecretsApiLdapLibraryListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<StandardListResponse>>;
@@ -3373,11 +3373,11 @@ export declare class SecretsApi extends runtime.BaseAPI {
     /**
      * Read a library set.
      */
-    ldapLibraryReadRaw(requestParameters: SecretsApiLdapLibraryReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ldapLibraryReadRaw(requestParameters: SecretsApiLdapLibraryReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Read a library set.
      */
-    ldapLibraryRead(name: string, ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ldapLibraryRead(name: string, ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     ldapListDynamicRolesRaw(requestParameters: SecretsApiLdapListDynamicRolesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<StandardListResponse>>;
@@ -3416,84 +3416,84 @@ export declare class SecretsApi extends runtime.BaseAPI {
     ldapListStaticRoles(ldapMountPath: string, list: LdapListStaticRolesListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse>;
     /**
      */
-    ldapReadConfigurationRaw(requestParameters: SecretsApiLdapReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ldapReadConfigurationRaw(requestParameters: SecretsApiLdapReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    ldapReadConfiguration(ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ldapReadConfiguration(ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    ldapReadDynamicRoleRaw(requestParameters: SecretsApiLdapReadDynamicRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ldapReadDynamicRoleRaw(requestParameters: SecretsApiLdapReadDynamicRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    ldapReadDynamicRole(name: string, ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ldapReadDynamicRole(name: string, ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    ldapReadStaticRoleRaw(requestParameters: SecretsApiLdapReadStaticRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ldapReadStaticRoleRaw(requestParameters: SecretsApiLdapReadStaticRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    ldapReadStaticRole(name: string, ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ldapReadStaticRole(name: string, ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    ldapRequestDynamicRoleCredentialsRaw(requestParameters: SecretsApiLdapRequestDynamicRoleCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ldapRequestDynamicRoleCredentialsRaw(requestParameters: SecretsApiLdapRequestDynamicRoleCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    ldapRequestDynamicRoleCredentials(name: string, ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ldapRequestDynamicRoleCredentials(name: string, ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    ldapRequestStaticRoleCredentialsRaw(requestParameters: SecretsApiLdapRequestStaticRoleCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ldapRequestStaticRoleCredentialsRaw(requestParameters: SecretsApiLdapRequestStaticRoleCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    ldapRequestStaticRoleCredentials(name: string, ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ldapRequestStaticRoleCredentials(name: string, ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    ldapRotateRootCredentialsRaw(requestParameters: SecretsApiLdapRotateRootCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ldapRotateRootCredentialsRaw(requestParameters: SecretsApiLdapRotateRootCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    ldapRotateRootCredentials(ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ldapRotateRootCredentials(ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    ldapRotateStaticRoleRaw(requestParameters: SecretsApiLdapRotateStaticRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ldapRotateStaticRoleRaw(requestParameters: SecretsApiLdapRotateStaticRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    ldapRotateStaticRole(name: string, ldapMountPath: string, ldapRotateStaticRoleRequest: LdapRotateStaticRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ldapRotateStaticRole(name: string, ldapMountPath: string, ldapRotateStaticRoleRequest: LdapRotateStaticRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    ldapWriteDynamicRoleRaw(requestParameters: SecretsApiLdapWriteDynamicRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ldapWriteDynamicRoleRaw(requestParameters: SecretsApiLdapWriteDynamicRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    ldapWriteDynamicRole(name: string, ldapMountPath: string, ldapWriteDynamicRoleRequest: LdapWriteDynamicRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ldapWriteDynamicRole(name: string, ldapMountPath: string, ldapWriteDynamicRoleRequest: LdapWriteDynamicRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    ldapWriteStaticRoleRaw(requestParameters: SecretsApiLdapWriteStaticRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ldapWriteStaticRoleRaw(requestParameters: SecretsApiLdapWriteStaticRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    ldapWriteStaticRole(name: string, ldapMountPath: string, ldapWriteStaticRoleRequest: LdapWriteStaticRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ldapWriteStaticRole(name: string, ldapMountPath: string, ldapWriteStaticRoleRequest: LdapWriteStaticRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    mongoDbAtlasConfigureRaw(requestParameters: SecretsApiMongoDbAtlasConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mongoDbAtlasConfigureRaw(requestParameters: SecretsApiMongoDbAtlasConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    mongoDbAtlasConfigure(mongodbatlasMountPath: string, mongoDbAtlasConfigureRequest: MongoDbAtlasConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Manage the roles used to generate MongoDB Atlas Programmatic API Keys.
-     */
-    mongoDbAtlasDeleteRoleRaw(requestParameters: SecretsApiMongoDbAtlasDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mongoDbAtlasConfigure(mongodbatlasMountPath: string, mongoDbAtlasConfigureRequest: MongoDbAtlasConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage the roles used to generate MongoDB Atlas Programmatic API Keys.
      */
-    mongoDbAtlasDeleteRole(name: string, mongodbatlasMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mongoDbAtlasDeleteRoleRaw(requestParameters: SecretsApiMongoDbAtlasDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Manage the roles used to generate MongoDB Atlas Programmatic API Keys.
+     */
+    mongoDbAtlasDeleteRole(name: string, mongodbatlasMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    mongoDbAtlasGenerateCredentialsRaw(requestParameters: SecretsApiMongoDbAtlasGenerateCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mongoDbAtlasGenerateCredentialsRaw(requestParameters: SecretsApiMongoDbAtlasGenerateCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    mongoDbAtlasGenerateCredentials(name: string, mongodbatlasMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mongoDbAtlasGenerateCredentials(name: string, mongodbatlasMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    mongoDbAtlasGenerateCredentials2Raw(requestParameters: SecretsApiMongoDbAtlasGenerateCredentials2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mongoDbAtlasGenerateCredentials2Raw(requestParameters: SecretsApiMongoDbAtlasGenerateCredentials2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    mongoDbAtlasGenerateCredentials2(name: string, mongodbatlasMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mongoDbAtlasGenerateCredentials2(name: string, mongodbatlasMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * List the existing roles in this backend
      */
@@ -3504,62 +3504,62 @@ export declare class SecretsApi extends runtime.BaseAPI {
     mongoDbAtlasListRoles(mongodbatlasMountPath: string, list: MongoDbAtlasListRolesListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse>;
     /**
      */
-    mongoDbAtlasReadConfigurationRaw(requestParameters: SecretsApiMongoDbAtlasReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mongoDbAtlasReadConfigurationRaw(requestParameters: SecretsApiMongoDbAtlasReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    mongoDbAtlasReadConfiguration(mongodbatlasMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Manage the roles used to generate MongoDB Atlas Programmatic API Keys.
-     */
-    mongoDbAtlasReadRoleRaw(requestParameters: SecretsApiMongoDbAtlasReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mongoDbAtlasReadConfiguration(mongodbatlasMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage the roles used to generate MongoDB Atlas Programmatic API Keys.
      */
-    mongoDbAtlasReadRole(name: string, mongodbatlasMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mongoDbAtlasReadRoleRaw(requestParameters: SecretsApiMongoDbAtlasReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Manage the roles used to generate MongoDB Atlas Programmatic API Keys.
      */
-    mongoDbAtlasWriteRoleRaw(requestParameters: SecretsApiMongoDbAtlasWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mongoDbAtlasReadRole(name: string, mongodbatlasMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage the roles used to generate MongoDB Atlas Programmatic API Keys.
      */
-    mongoDbAtlasWriteRole(name: string, mongodbatlasMountPath: string, mongoDbAtlasWriteRoleRequest: MongoDbAtlasWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mongoDbAtlasWriteRoleRaw(requestParameters: SecretsApiMongoDbAtlasWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Manage the roles used to generate MongoDB Atlas Programmatic API Keys.
+     */
+    mongoDbAtlasWriteRole(name: string, mongodbatlasMountPath: string, mongoDbAtlasWriteRoleRequest: MongoDbAtlasWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    nomadConfigureAccessRaw(requestParameters: SecretsApiNomadConfigureAccessOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    nomadConfigureAccessRaw(requestParameters: SecretsApiNomadConfigureAccessOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    nomadConfigureAccess(nomadMountPath: string, nomadConfigureAccessRequest: NomadConfigureAccessRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    nomadConfigureAccess(nomadMountPath: string, nomadConfigureAccessRequest: NomadConfigureAccessRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    nomadConfigureLeaseRaw(requestParameters: SecretsApiNomadConfigureLeaseOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    nomadConfigureLeaseRaw(requestParameters: SecretsApiNomadConfigureLeaseOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    nomadConfigureLease(nomadMountPath: string, nomadConfigureLeaseRequest: NomadConfigureLeaseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    nomadConfigureLease(nomadMountPath: string, nomadConfigureLeaseRequest: NomadConfigureLeaseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    nomadDeleteAccessConfigurationRaw(requestParameters: SecretsApiNomadDeleteAccessConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    nomadDeleteAccessConfigurationRaw(requestParameters: SecretsApiNomadDeleteAccessConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    nomadDeleteAccessConfiguration(nomadMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    nomadDeleteAccessConfiguration(nomadMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    nomadDeleteLeaseConfigurationRaw(requestParameters: SecretsApiNomadDeleteLeaseConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    nomadDeleteLeaseConfigurationRaw(requestParameters: SecretsApiNomadDeleteLeaseConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    nomadDeleteLeaseConfiguration(nomadMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    nomadDeleteLeaseConfiguration(nomadMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    nomadDeleteRoleRaw(requestParameters: SecretsApiNomadDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    nomadDeleteRoleRaw(requestParameters: SecretsApiNomadDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    nomadDeleteRole(name: string, nomadMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    nomadDeleteRole(name: string, nomadMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    nomadGenerateCredentialsRaw(requestParameters: SecretsApiNomadGenerateCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    nomadGenerateCredentialsRaw(requestParameters: SecretsApiNomadGenerateCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    nomadGenerateCredentials(name: string, nomadMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    nomadGenerateCredentials(name: string, nomadMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     nomadListRolesRaw(requestParameters: SecretsApiNomadListRolesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<StandardListResponse>>;
@@ -3568,34 +3568,34 @@ export declare class SecretsApi extends runtime.BaseAPI {
     nomadListRoles(nomadMountPath: string, list: NomadListRolesListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse>;
     /**
      */
-    nomadReadAccessConfigurationRaw(requestParameters: SecretsApiNomadReadAccessConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    nomadReadAccessConfigurationRaw(requestParameters: SecretsApiNomadReadAccessConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    nomadReadAccessConfiguration(nomadMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    nomadReadAccessConfiguration(nomadMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    nomadReadLeaseConfigurationRaw(requestParameters: SecretsApiNomadReadLeaseConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    nomadReadLeaseConfigurationRaw(requestParameters: SecretsApiNomadReadLeaseConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    nomadReadLeaseConfiguration(nomadMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    nomadReadLeaseConfiguration(nomadMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    nomadReadRoleRaw(requestParameters: SecretsApiNomadReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    nomadReadRoleRaw(requestParameters: SecretsApiNomadReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    nomadReadRole(name: string, nomadMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    nomadReadRole(name: string, nomadMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    nomadWriteRoleRaw(requestParameters: SecretsApiNomadWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    nomadWriteRoleRaw(requestParameters: SecretsApiNomadWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    nomadWriteRole(name: string, nomadMountPath: string, nomadWriteRoleRequest: NomadWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    nomadWriteRole(name: string, nomadMountPath: string, nomadWriteRoleRequest: NomadWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiConfigureAcmeRaw(requestParameters: SecretsApiPkiConfigureAcmeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiConfigureAcmeRaw(requestParameters: SecretsApiPkiConfigureAcmeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiConfigureAcme(pkiMountPath: string, pkiConfigureAcmeRequest: PkiConfigureAcmeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiConfigureAcme(pkiMountPath: string, pkiConfigureAcmeRequest: PkiConfigureAcmeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     pkiConfigureAutoTidyRaw(requestParameters: SecretsApiPkiConfigureAutoTidyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PkiConfigureAutoTidyResponse>>;
@@ -3616,10 +3616,10 @@ export declare class SecretsApi extends runtime.BaseAPI {
     pkiConfigureCluster(pkiMountPath: string, pkiConfigureClusterRequest: PkiConfigureClusterRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PkiConfigureClusterResponse>;
     /**
      */
-    pkiConfigureCmpRaw(requestParameters: SecretsApiPkiConfigureCmpOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiConfigureCmpRaw(requestParameters: SecretsApiPkiConfigureCmpOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiConfigureCmp(pkiMountPath: string, pkiConfigureCmpRequest: PkiConfigureCmpRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiConfigureCmp(pkiMountPath: string, pkiConfigureCmpRequest: PkiConfigureCmpRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     pkiConfigureCrlRaw(requestParameters: SecretsApiPkiConfigureCrlOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PkiConfigureCrlResponse>>;
@@ -3628,10 +3628,10 @@ export declare class SecretsApi extends runtime.BaseAPI {
     pkiConfigureCrl(pkiMountPath: string, pkiConfigureCrlRequest: PkiConfigureCrlRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PkiConfigureCrlResponse>;
     /**
      */
-    pkiConfigureEstRaw(requestParameters: SecretsApiPkiConfigureEstOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiConfigureEstRaw(requestParameters: SecretsApiPkiConfigureEstOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiConfigureEst(pkiMountPath: string, pkiConfigureEstRequest: PkiConfigureEstRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiConfigureEst(pkiMountPath: string, pkiConfigureEstRequest: PkiConfigureEstRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     pkiConfigureExternalPolicyRaw(requestParameters: SecretsApiPkiConfigureExternalPolicyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PkiConfigureExternalPolicyResponse>>;
@@ -3640,10 +3640,10 @@ export declare class SecretsApi extends runtime.BaseAPI {
     pkiConfigureExternalPolicy(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PkiConfigureExternalPolicyResponse>;
     /**
      */
-    pkiConfigureExternalPolicy_4Raw(requestParameters: SecretsApiPkiConfigureExternalPolicy0Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiConfigureExternalPolicy_4Raw(requestParameters: SecretsApiPkiConfigureExternalPolicy0Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiConfigureExternalPolicy_4(pkiMountPath: string, pkiConfigureExternalPolicyRequest: PkiConfigureExternalPolicyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiConfigureExternalPolicy_4(pkiMountPath: string, pkiConfigureExternalPolicyRequest: PkiConfigureExternalPolicyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     pkiConfigureIssuersRaw(requestParameters: SecretsApiPkiConfigureIssuersOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PkiConfigureIssuersResponse>>;
@@ -3658,10 +3658,10 @@ export declare class SecretsApi extends runtime.BaseAPI {
     pkiConfigureKeys(pkiMountPath: string, pkiConfigureKeysRequest: PkiConfigureKeysRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PkiConfigureKeysResponse>;
     /**
      */
-    pkiConfigureScepRaw(requestParameters: SecretsApiPkiConfigureScepOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiConfigureScepRaw(requestParameters: SecretsApiPkiConfigureScepOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiConfigureScep(pkiMountPath: string, pkiConfigureScepRequest: PkiConfigureScepRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiConfigureScep(pkiMountPath: string, pkiConfigureScepRequest: PkiConfigureScepRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     pkiConfigureUrlsRaw(requestParameters: SecretsApiPkiConfigureUrlsOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PkiConfigureUrlsResponse>>;
@@ -3676,34 +3676,34 @@ export declare class SecretsApi extends runtime.BaseAPI {
     pkiCrossSignIntermediate(pkiMountPath: string, pkiCrossSignIntermediateRequest: PkiCrossSignIntermediateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PkiCrossSignIntermediateResponse>;
     /**
      */
-    pkiDeleteEabKeyRaw(requestParameters: SecretsApiPkiDeleteEabKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiDeleteEabKeyRaw(requestParameters: SecretsApiPkiDeleteEabKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiDeleteEabKey(keyId: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiDeleteEabKey(keyId: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiDeleteIssuerRaw(requestParameters: SecretsApiPkiDeleteIssuerRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiDeleteIssuerRaw(requestParameters: SecretsApiPkiDeleteIssuerRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiDeleteIssuer(issuerRef: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiDeleteIssuer(issuerRef: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiDeleteKeyRaw(requestParameters: SecretsApiPkiDeleteKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiDeleteKeyRaw(requestParameters: SecretsApiPkiDeleteKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiDeleteKey(keyRef: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiDeleteKey(keyRef: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiDeleteRoleRaw(requestParameters: SecretsApiPkiDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiDeleteRoleRaw(requestParameters: SecretsApiPkiDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiDeleteRole(name: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiDeleteRole(name: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiDeleteRootRaw(requestParameters: SecretsApiPkiDeleteRootRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiDeleteRootRaw(requestParameters: SecretsApiPkiDeleteRootRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiDeleteRoot(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiDeleteRoot(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     pkiGenerateEabKeyRaw(requestParameters: SecretsApiPkiGenerateEabKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PkiGenerateEabKeyResponse>>;
@@ -4000,52 +4000,52 @@ export declare class SecretsApi extends runtime.BaseAPI {
     pkiListUnifiedRevokedCerts(pkiMountPath: string, list: PkiListUnifiedRevokedCertsListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PkiListUnifiedRevokedCertsResponse>;
     /**
      */
-    pkiQueryOcspRaw(requestParameters: SecretsApiPkiQueryOcspRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiQueryOcspRaw(requestParameters: SecretsApiPkiQueryOcspRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiQueryOcsp(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiQueryOcsp(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiQueryOcspWithGetReqRaw(requestParameters: SecretsApiPkiQueryOcspWithGetReqRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiQueryOcspWithGetReqRaw(requestParameters: SecretsApiPkiQueryOcspWithGetReqRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiQueryOcspWithGetReq(req: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiQueryOcspWithGetReq(req: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiQueryUnifiedOcspRaw(requestParameters: SecretsApiPkiQueryUnifiedOcspRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiQueryUnifiedOcspRaw(requestParameters: SecretsApiPkiQueryUnifiedOcspRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiQueryUnifiedOcsp(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiQueryUnifiedOcsp(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiQueryUnifiedOcspWithGetReqRaw(requestParameters: SecretsApiPkiQueryUnifiedOcspWithGetReqRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiQueryUnifiedOcspWithGetReqRaw(requestParameters: SecretsApiPkiQueryUnifiedOcspWithGetReqRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiQueryUnifiedOcspWithGetReq(req: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiQueryUnifiedOcspWithGetReq(req: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiReadAcmeConfigurationRaw(requestParameters: SecretsApiPkiReadAcmeConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiReadAcmeConfigurationRaw(requestParameters: SecretsApiPkiReadAcmeConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiReadAcmeConfiguration(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiReadAcmeConfiguration(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiReadAcmeDirectoryRaw(requestParameters: SecretsApiPkiReadAcmeDirectoryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiReadAcmeDirectoryRaw(requestParameters: SecretsApiPkiReadAcmeDirectoryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiReadAcmeDirectory(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiReadAcmeDirectory(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiReadAcmeKeyIdRaw(requestParameters: SecretsApiPkiReadAcmeKeyIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiReadAcmeKeyIdRaw(requestParameters: SecretsApiPkiReadAcmeKeyIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiReadAcmeKeyId(keyid: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiReadAcmeKeyId(keyid: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiReadAcmeNewNonceRaw(requestParameters: SecretsApiPkiReadAcmeNewNonceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiReadAcmeNewNonceRaw(requestParameters: SecretsApiPkiReadAcmeNewNonceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiReadAcmeNewNonce(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiReadAcmeNewNonce(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     pkiReadAutoTidyConfigurationRaw(requestParameters: SecretsApiPkiReadAutoTidyConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PkiReadAutoTidyConfigurationResponse>>;
@@ -4132,10 +4132,10 @@ export declare class SecretsApi extends runtime.BaseAPI {
     pkiReadClusterConfiguration(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PkiReadClusterConfigurationResponse>;
     /**
      */
-    pkiReadCmpv2ConfigurationRaw(requestParameters: SecretsApiPkiReadCmpv2ConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiReadCmpv2ConfigurationRaw(requestParameters: SecretsApiPkiReadCmpv2ConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiReadCmpv2Configuration(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiReadCmpv2Configuration(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     pkiReadCrlConfigurationRaw(requestParameters: SecretsApiPkiReadCrlConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PkiReadCrlConfigurationResponse>>;
@@ -4168,40 +4168,40 @@ export declare class SecretsApi extends runtime.BaseAPI {
     pkiReadCrlPem(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PkiReadCrlPemResponse>;
     /**
      */
-    pkiReadEstCacertsRaw(requestParameters: SecretsApiPkiReadEstCacertsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiReadEstCacertsRaw(requestParameters: SecretsApiPkiReadEstCacertsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiReadEstCacerts(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiReadEstCacerts(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiReadEstConfigurationRaw(requestParameters: SecretsApiPkiReadEstConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiReadEstConfigurationRaw(requestParameters: SecretsApiPkiReadEstConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiReadEstConfiguration(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiReadEstConfiguration(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiReadExternalPolicyAcmeDirectoryRaw(requestParameters: SecretsApiPkiReadExternalPolicyAcmeDirectoryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiReadExternalPolicyAcmeDirectoryRaw(requestParameters: SecretsApiPkiReadExternalPolicyAcmeDirectoryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiReadExternalPolicyAcmeDirectory(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiReadExternalPolicyAcmeDirectory(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiReadExternalPolicyAcmeNewNonceRaw(requestParameters: SecretsApiPkiReadExternalPolicyAcmeNewNonceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiReadExternalPolicyAcmeNewNonceRaw(requestParameters: SecretsApiPkiReadExternalPolicyAcmeNewNonceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiReadExternalPolicyAcmeNewNonce(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiReadExternalPolicyAcmeNewNonce(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiReadExternalPolicyPolicyAcmeDirectoryRaw(requestParameters: SecretsApiPkiReadExternalPolicyPolicyAcmeDirectoryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiReadExternalPolicyPolicyAcmeDirectoryRaw(requestParameters: SecretsApiPkiReadExternalPolicyPolicyAcmeDirectoryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiReadExternalPolicyPolicyAcmeDirectory(policy: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiReadExternalPolicyPolicyAcmeDirectory(policy: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiReadExternalPolicyPolicyAcmeNewNonceRaw(requestParameters: SecretsApiPkiReadExternalPolicyPolicyAcmeNewNonceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiReadExternalPolicyPolicyAcmeNewNonceRaw(requestParameters: SecretsApiPkiReadExternalPolicyPolicyAcmeNewNonceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiReadExternalPolicyPolicyAcmeNewNonce(policy: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiReadExternalPolicyPolicyAcmeNewNonce(policy: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     pkiReadIssuerRaw(requestParameters: SecretsApiPkiReadIssuerRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PkiReadIssuerResponse>>;
@@ -4216,52 +4216,52 @@ export declare class SecretsApi extends runtime.BaseAPI {
     pkiReadIssuerDer(issuerRef: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PkiReadIssuerDerResponse>;
     /**
      */
-    pkiReadIssuerIssuerRefAcmeDirectoryRaw(requestParameters: SecretsApiPkiReadIssuerIssuerRefAcmeDirectoryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiReadIssuerIssuerRefAcmeDirectoryRaw(requestParameters: SecretsApiPkiReadIssuerIssuerRefAcmeDirectoryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiReadIssuerIssuerRefAcmeDirectory(issuerRef: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiReadIssuerIssuerRefAcmeDirectory(issuerRef: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiReadIssuerIssuerRefAcmeNewNonceRaw(requestParameters: SecretsApiPkiReadIssuerIssuerRefAcmeNewNonceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiReadIssuerIssuerRefAcmeNewNonceRaw(requestParameters: SecretsApiPkiReadIssuerIssuerRefAcmeNewNonceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiReadIssuerIssuerRefAcmeNewNonce(issuerRef: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiReadIssuerIssuerRefAcmeNewNonce(issuerRef: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiReadIssuerIssuerRefExternalPolicyAcmeDirectoryRaw(requestParameters: SecretsApiPkiReadIssuerIssuerRefExternalPolicyAcmeDirectoryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiReadIssuerIssuerRefExternalPolicyAcmeDirectoryRaw(requestParameters: SecretsApiPkiReadIssuerIssuerRefExternalPolicyAcmeDirectoryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiReadIssuerIssuerRefExternalPolicyAcmeDirectory(issuerRef: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiReadIssuerIssuerRefExternalPolicyAcmeDirectory(issuerRef: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiReadIssuerIssuerRefExternalPolicyAcmeNewNonceRaw(requestParameters: SecretsApiPkiReadIssuerIssuerRefExternalPolicyAcmeNewNonceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiReadIssuerIssuerRefExternalPolicyAcmeNewNonceRaw(requestParameters: SecretsApiPkiReadIssuerIssuerRefExternalPolicyAcmeNewNonceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiReadIssuerIssuerRefExternalPolicyAcmeNewNonce(issuerRef: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiReadIssuerIssuerRefExternalPolicyAcmeNewNonce(issuerRef: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiReadIssuerIssuerRefExternalPolicyPolicyAcmeDirectoryRaw(requestParameters: SecretsApiPkiReadIssuerIssuerRefExternalPolicyPolicyAcmeDirectoryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiReadIssuerIssuerRefExternalPolicyPolicyAcmeDirectoryRaw(requestParameters: SecretsApiPkiReadIssuerIssuerRefExternalPolicyPolicyAcmeDirectoryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiReadIssuerIssuerRefExternalPolicyPolicyAcmeDirectory(issuerRef: string, policy: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiReadIssuerIssuerRefExternalPolicyPolicyAcmeDirectory(issuerRef: string, policy: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiReadIssuerIssuerRefExternalPolicyPolicyAcmeNewNonceRaw(requestParameters: SecretsApiPkiReadIssuerIssuerRefExternalPolicyPolicyAcmeNewNonceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiReadIssuerIssuerRefExternalPolicyPolicyAcmeNewNonceRaw(requestParameters: SecretsApiPkiReadIssuerIssuerRefExternalPolicyPolicyAcmeNewNonceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiReadIssuerIssuerRefExternalPolicyPolicyAcmeNewNonce(issuerRef: string, policy: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiReadIssuerIssuerRefExternalPolicyPolicyAcmeNewNonce(issuerRef: string, policy: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiReadIssuerIssuerRefRolesRoleAcmeDirectoryRaw(requestParameters: SecretsApiPkiReadIssuerIssuerRefRolesRoleAcmeDirectoryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiReadIssuerIssuerRefRolesRoleAcmeDirectoryRaw(requestParameters: SecretsApiPkiReadIssuerIssuerRefRolesRoleAcmeDirectoryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiReadIssuerIssuerRefRolesRoleAcmeDirectory(issuerRef: string, role: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiReadIssuerIssuerRefRolesRoleAcmeDirectory(issuerRef: string, role: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiReadIssuerIssuerRefRolesRoleAcmeNewNonceRaw(requestParameters: SecretsApiPkiReadIssuerIssuerRefRolesRoleAcmeNewNonceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiReadIssuerIssuerRefRolesRoleAcmeNewNonceRaw(requestParameters: SecretsApiPkiReadIssuerIssuerRefRolesRoleAcmeNewNonceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiReadIssuerIssuerRefRolesRoleAcmeNewNonce(issuerRef: string, role: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiReadIssuerIssuerRefRolesRoleAcmeNewNonce(issuerRef: string, role: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     pkiReadIssuerJsonRaw(requestParameters: SecretsApiPkiReadIssuerJsonRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PkiReadIssuerJsonResponse>>;
@@ -4300,64 +4300,64 @@ export declare class SecretsApi extends runtime.BaseAPI {
     pkiReadRole(name: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PkiReadRoleResponse>;
     /**
      */
-    pkiReadRolesRoleAcmeDirectoryRaw(requestParameters: SecretsApiPkiReadRolesRoleAcmeDirectoryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiReadRolesRoleAcmeDirectoryRaw(requestParameters: SecretsApiPkiReadRolesRoleAcmeDirectoryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiReadRolesRoleAcmeDirectory(role: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiReadRolesRoleAcmeDirectory(role: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiReadRolesRoleAcmeNewNonceRaw(requestParameters: SecretsApiPkiReadRolesRoleAcmeNewNonceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiReadRolesRoleAcmeNewNonceRaw(requestParameters: SecretsApiPkiReadRolesRoleAcmeNewNonceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiReadRolesRoleAcmeNewNonce(role: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiReadRolesRoleAcmeNewNonce(role: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiReadRolesRoleEstCacertsRaw(requestParameters: SecretsApiPkiReadRolesRoleEstCacertsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiReadRolesRoleEstCacertsRaw(requestParameters: SecretsApiPkiReadRolesRoleEstCacertsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiReadRolesRoleEstCacerts(role: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiReadRolesRoleEstCacerts(role: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiReadRolesRoleScepRaw(requestParameters: SecretsApiPkiReadRolesRoleScepRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiReadRolesRoleScepRaw(requestParameters: SecretsApiPkiReadRolesRoleScepRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiReadRolesRoleScep(role: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiReadRolesRoleScep(role: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiReadScepRaw(requestParameters: SecretsApiPkiReadScepRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiReadScepRaw(requestParameters: SecretsApiPkiReadScepRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiReadScep(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiReadScep(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiReadScepConfigurationRaw(requestParameters: SecretsApiPkiReadScepConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiReadScepConfigurationRaw(requestParameters: SecretsApiPkiReadScepConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiReadScepConfiguration(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiReadScepConfiguration(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiReadUnifiedCrlDeltaRaw(requestParameters: SecretsApiPkiReadUnifiedCrlDeltaRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiReadUnifiedCrlDeltaRaw(requestParameters: SecretsApiPkiReadUnifiedCrlDeltaRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiReadUnifiedCrlDelta(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiReadUnifiedCrlDelta(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiReadUnifiedCrlDeltaPemRaw(requestParameters: SecretsApiPkiReadUnifiedCrlDeltaPemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiReadUnifiedCrlDeltaPemRaw(requestParameters: SecretsApiPkiReadUnifiedCrlDeltaPemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiReadUnifiedCrlDeltaPem(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiReadUnifiedCrlDeltaPem(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiReadUnifiedCrlDerRaw(requestParameters: SecretsApiPkiReadUnifiedCrlDerRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiReadUnifiedCrlDerRaw(requestParameters: SecretsApiPkiReadUnifiedCrlDerRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiReadUnifiedCrlDer(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiReadUnifiedCrlDer(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiReadUnifiedCrlPemRaw(requestParameters: SecretsApiPkiReadUnifiedCrlPemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiReadUnifiedCrlPemRaw(requestParameters: SecretsApiPkiReadUnifiedCrlPemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiReadUnifiedCrlPem(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiReadUnifiedCrlPem(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     pkiReadUrlsConfigurationRaw(requestParameters: SecretsApiPkiReadUrlsConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PkiReadUrlsConfigurationResponse>>;
@@ -4444,10 +4444,10 @@ export declare class SecretsApi extends runtime.BaseAPI {
     pkiSignWithRole(role: string, pkiMountPath: string, pkiSignWithRoleRequest: PkiSignWithRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PkiSignWithRoleResponse>;
     /**
      */
-    pkiTidyRaw(requestParameters: SecretsApiPkiTidyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiTidyRaw(requestParameters: SecretsApiPkiTidyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiTidy(pkiMountPath: string, pkiTidyRequest: PkiTidyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiTidy(pkiMountPath: string, pkiTidyRequest: PkiTidyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     pkiTidyCancelRaw(requestParameters: SecretsApiPkiTidyCancelRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PkiTidyCancelResponse>>;
@@ -4462,148 +4462,148 @@ export declare class SecretsApi extends runtime.BaseAPI {
     pkiTidyStatus(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PkiTidyStatusResponse>;
     /**
      */
-    pkiWriteAcmeAccountKidRaw(requestParameters: SecretsApiPkiWriteAcmeAccountKidOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteAcmeAccountKidRaw(requestParameters: SecretsApiPkiWriteAcmeAccountKidOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteAcmeAccountKid(kid: string, pkiMountPath: string, pkiWriteAcmeAccountKidRequest: PkiWriteAcmeAccountKidRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteAcmeAccountKid(kid: string, pkiMountPath: string, pkiWriteAcmeAccountKidRequest: PkiWriteAcmeAccountKidRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteAcmeAuthorizationAuthIdRaw(requestParameters: SecretsApiPkiWriteAcmeAuthorizationAuthIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteAcmeAuthorizationAuthIdRaw(requestParameters: SecretsApiPkiWriteAcmeAuthorizationAuthIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteAcmeAuthorizationAuthId(authId: string, pkiMountPath: string, pkiWriteAcmeAuthorizationAuthIdRequest: PkiWriteAcmeAuthorizationAuthIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteAcmeAuthorizationAuthId(authId: string, pkiMountPath: string, pkiWriteAcmeAuthorizationAuthIdRequest: PkiWriteAcmeAuthorizationAuthIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteAcmeChallengeAuthIdChallengeTypeRaw(requestParameters: SecretsApiPkiWriteAcmeChallengeAuthIdChallengeTypeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteAcmeChallengeAuthIdChallengeTypeRaw(requestParameters: SecretsApiPkiWriteAcmeChallengeAuthIdChallengeTypeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteAcmeChallengeAuthIdChallengeType(authId: string, challengeType: string, pkiMountPath: string, pkiWriteAcmeChallengeAuthIdChallengeTypeRequest: PkiWriteAcmeChallengeAuthIdChallengeTypeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteAcmeChallengeAuthIdChallengeType(authId: string, challengeType: string, pkiMountPath: string, pkiWriteAcmeChallengeAuthIdChallengeTypeRequest: PkiWriteAcmeChallengeAuthIdChallengeTypeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteAcmeKeyIdRaw(requestParameters: SecretsApiPkiWriteAcmeKeyIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteAcmeKeyIdRaw(requestParameters: SecretsApiPkiWriteAcmeKeyIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteAcmeKeyId(keyid: string, pkiMountPath: string, pkiWriteAcmeKeyIdRequest: PkiWriteAcmeKeyIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteAcmeKeyId(keyid: string, pkiMountPath: string, pkiWriteAcmeKeyIdRequest: PkiWriteAcmeKeyIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteAcmeNewAccountRaw(requestParameters: SecretsApiPkiWriteAcmeNewAccountOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteAcmeNewAccountRaw(requestParameters: SecretsApiPkiWriteAcmeNewAccountOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteAcmeNewAccount(pkiMountPath: string, pkiWriteAcmeNewAccountRequest: PkiWriteAcmeNewAccountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteAcmeNewAccount(pkiMountPath: string, pkiWriteAcmeNewAccountRequest: PkiWriteAcmeNewAccountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteAcmeNewOrderRaw(requestParameters: SecretsApiPkiWriteAcmeNewOrderOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteAcmeNewOrderRaw(requestParameters: SecretsApiPkiWriteAcmeNewOrderOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteAcmeNewOrder(pkiMountPath: string, pkiWriteAcmeNewOrderRequest: PkiWriteAcmeNewOrderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteAcmeNewOrder(pkiMountPath: string, pkiWriteAcmeNewOrderRequest: PkiWriteAcmeNewOrderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteAcmeOrderOrderIdRaw(requestParameters: SecretsApiPkiWriteAcmeOrderOrderIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteAcmeOrderOrderIdRaw(requestParameters: SecretsApiPkiWriteAcmeOrderOrderIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteAcmeOrderOrderId(orderId: string, pkiMountPath: string, pkiWriteAcmeOrderOrderIdRequest: PkiWriteAcmeOrderOrderIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteAcmeOrderOrderId(orderId: string, pkiMountPath: string, pkiWriteAcmeOrderOrderIdRequest: PkiWriteAcmeOrderOrderIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteAcmeOrderOrderIdCertRaw(requestParameters: SecretsApiPkiWriteAcmeOrderOrderIdCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteAcmeOrderOrderIdCertRaw(requestParameters: SecretsApiPkiWriteAcmeOrderOrderIdCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteAcmeOrderOrderIdCert(orderId: string, pkiMountPath: string, pkiWriteAcmeOrderOrderIdCertRequest: PkiWriteAcmeOrderOrderIdCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteAcmeOrderOrderIdCert(orderId: string, pkiMountPath: string, pkiWriteAcmeOrderOrderIdCertRequest: PkiWriteAcmeOrderOrderIdCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteAcmeOrderOrderIdFinalizeRaw(requestParameters: SecretsApiPkiWriteAcmeOrderOrderIdFinalizeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteAcmeOrderOrderIdFinalizeRaw(requestParameters: SecretsApiPkiWriteAcmeOrderOrderIdFinalizeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteAcmeOrderOrderIdFinalize(orderId: string, pkiMountPath: string, pkiWriteAcmeOrderOrderIdFinalizeRequest: PkiWriteAcmeOrderOrderIdFinalizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteAcmeOrderOrderIdFinalize(orderId: string, pkiMountPath: string, pkiWriteAcmeOrderOrderIdFinalizeRequest: PkiWriteAcmeOrderOrderIdFinalizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteAcmeOrdersRaw(requestParameters: SecretsApiPkiWriteAcmeOrdersOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteAcmeOrdersRaw(requestParameters: SecretsApiPkiWriteAcmeOrdersOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteAcmeOrders(pkiMountPath: string, pkiWriteAcmeOrdersRequest: PkiWriteAcmeOrdersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteAcmeOrders(pkiMountPath: string, pkiWriteAcmeOrdersRequest: PkiWriteAcmeOrdersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteAcmeRevokeCertRaw(requestParameters: SecretsApiPkiWriteAcmeRevokeCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteAcmeRevokeCertRaw(requestParameters: SecretsApiPkiWriteAcmeRevokeCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteAcmeRevokeCert(pkiMountPath: string, pkiWriteAcmeRevokeCertRequest: PkiWriteAcmeRevokeCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteAcmeRevokeCert(pkiMountPath: string, pkiWriteAcmeRevokeCertRequest: PkiWriteAcmeRevokeCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteCmpRaw(requestParameters: SecretsApiPkiWriteCmpRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteCmpRaw(requestParameters: SecretsApiPkiWriteCmpRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteCmp(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteCmp(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteEstSimpleenrollRaw(requestParameters: SecretsApiPkiWriteEstSimpleenrollRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteEstSimpleenrollRaw(requestParameters: SecretsApiPkiWriteEstSimpleenrollRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteEstSimpleenroll(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteEstSimpleenroll(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteEstSimplereenrollRaw(requestParameters: SecretsApiPkiWriteEstSimplereenrollRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteEstSimplereenrollRaw(requestParameters: SecretsApiPkiWriteEstSimplereenrollRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteEstSimplereenroll(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteEstSimplereenroll(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteExternalPolicyAcmeAccountKidRaw(requestParameters: SecretsApiPkiWriteExternalPolicyAcmeAccountKidOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteExternalPolicyAcmeAccountKidRaw(requestParameters: SecretsApiPkiWriteExternalPolicyAcmeAccountKidOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteExternalPolicyAcmeAccountKid(kid: string, pkiMountPath: string, pkiWriteExternalPolicyAcmeAccountKidRequest: PkiWriteExternalPolicyAcmeAccountKidRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteExternalPolicyAcmeAccountKid(kid: string, pkiMountPath: string, pkiWriteExternalPolicyAcmeAccountKidRequest: PkiWriteExternalPolicyAcmeAccountKidRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteExternalPolicyAcmeAuthorizationAuthIdRaw(requestParameters: SecretsApiPkiWriteExternalPolicyAcmeAuthorizationAuthIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteExternalPolicyAcmeAuthorizationAuthIdRaw(requestParameters: SecretsApiPkiWriteExternalPolicyAcmeAuthorizationAuthIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteExternalPolicyAcmeAuthorizationAuthId(authId: string, pkiMountPath: string, pkiWriteExternalPolicyAcmeAuthorizationAuthIdRequest: PkiWriteExternalPolicyAcmeAuthorizationAuthIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteExternalPolicyAcmeAuthorizationAuthId(authId: string, pkiMountPath: string, pkiWriteExternalPolicyAcmeAuthorizationAuthIdRequest: PkiWriteExternalPolicyAcmeAuthorizationAuthIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteExternalPolicyAcmeChallengeAuthIdChallengeTypeRaw(requestParameters: SecretsApiPkiWriteExternalPolicyAcmeChallengeAuthIdChallengeTypeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteExternalPolicyAcmeChallengeAuthIdChallengeTypeRaw(requestParameters: SecretsApiPkiWriteExternalPolicyAcmeChallengeAuthIdChallengeTypeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteExternalPolicyAcmeChallengeAuthIdChallengeType(authId: string, challengeType: string, pkiMountPath: string, pkiWriteExternalPolicyAcmeChallengeAuthIdChallengeTypeRequest: PkiWriteExternalPolicyAcmeChallengeAuthIdChallengeTypeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteExternalPolicyAcmeChallengeAuthIdChallengeType(authId: string, challengeType: string, pkiMountPath: string, pkiWriteExternalPolicyAcmeChallengeAuthIdChallengeTypeRequest: PkiWriteExternalPolicyAcmeChallengeAuthIdChallengeTypeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteExternalPolicyAcmeNewAccountRaw(requestParameters: SecretsApiPkiWriteExternalPolicyAcmeNewAccountOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteExternalPolicyAcmeNewAccountRaw(requestParameters: SecretsApiPkiWriteExternalPolicyAcmeNewAccountOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteExternalPolicyAcmeNewAccount(pkiMountPath: string, pkiWriteExternalPolicyAcmeNewAccountRequest: PkiWriteExternalPolicyAcmeNewAccountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteExternalPolicyAcmeNewAccount(pkiMountPath: string, pkiWriteExternalPolicyAcmeNewAccountRequest: PkiWriteExternalPolicyAcmeNewAccountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteExternalPolicyAcmeNewOrderRaw(requestParameters: SecretsApiPkiWriteExternalPolicyAcmeNewOrderOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteExternalPolicyAcmeNewOrderRaw(requestParameters: SecretsApiPkiWriteExternalPolicyAcmeNewOrderOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteExternalPolicyAcmeNewOrder(pkiMountPath: string, pkiWriteExternalPolicyAcmeNewOrderRequest: PkiWriteExternalPolicyAcmeNewOrderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteExternalPolicyAcmeNewOrder(pkiMountPath: string, pkiWriteExternalPolicyAcmeNewOrderRequest: PkiWriteExternalPolicyAcmeNewOrderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteExternalPolicyAcmeOrderOrderIdRaw(requestParameters: SecretsApiPkiWriteExternalPolicyAcmeOrderOrderIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteExternalPolicyAcmeOrderOrderIdRaw(requestParameters: SecretsApiPkiWriteExternalPolicyAcmeOrderOrderIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteExternalPolicyAcmeOrderOrderId(orderId: string, pkiMountPath: string, pkiWriteExternalPolicyAcmeOrderOrderIdRequest: PkiWriteExternalPolicyAcmeOrderOrderIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteExternalPolicyAcmeOrderOrderId(orderId: string, pkiMountPath: string, pkiWriteExternalPolicyAcmeOrderOrderIdRequest: PkiWriteExternalPolicyAcmeOrderOrderIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteExternalPolicyAcmeOrderOrderIdCertRaw(requestParameters: SecretsApiPkiWriteExternalPolicyAcmeOrderOrderIdCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteExternalPolicyAcmeOrderOrderIdCertRaw(requestParameters: SecretsApiPkiWriteExternalPolicyAcmeOrderOrderIdCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteExternalPolicyAcmeOrderOrderIdCert(orderId: string, pkiMountPath: string, pkiWriteExternalPolicyAcmeOrderOrderIdCertRequest: PkiWriteExternalPolicyAcmeOrderOrderIdCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteExternalPolicyAcmeOrderOrderIdCert(orderId: string, pkiMountPath: string, pkiWriteExternalPolicyAcmeOrderOrderIdCertRequest: PkiWriteExternalPolicyAcmeOrderOrderIdCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteExternalPolicyAcmeOrderOrderIdFinalizeRaw(requestParameters: SecretsApiPkiWriteExternalPolicyAcmeOrderOrderIdFinalizeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteExternalPolicyAcmeOrderOrderIdFinalizeRaw(requestParameters: SecretsApiPkiWriteExternalPolicyAcmeOrderOrderIdFinalizeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteExternalPolicyAcmeOrderOrderIdFinalize(orderId: string, pkiMountPath: string, pkiWriteExternalPolicyAcmeOrderOrderIdFinalizeRequest: PkiWriteExternalPolicyAcmeOrderOrderIdFinalizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteExternalPolicyAcmeOrderOrderIdFinalize(orderId: string, pkiMountPath: string, pkiWriteExternalPolicyAcmeOrderOrderIdFinalizeRequest: PkiWriteExternalPolicyAcmeOrderOrderIdFinalizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteExternalPolicyAcmeOrdersRaw(requestParameters: SecretsApiPkiWriteExternalPolicyAcmeOrdersOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteExternalPolicyAcmeOrdersRaw(requestParameters: SecretsApiPkiWriteExternalPolicyAcmeOrdersOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteExternalPolicyAcmeOrders(pkiMountPath: string, pkiWriteExternalPolicyAcmeOrdersRequest: PkiWriteExternalPolicyAcmeOrdersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteExternalPolicyAcmeOrders(pkiMountPath: string, pkiWriteExternalPolicyAcmeOrdersRequest: PkiWriteExternalPolicyAcmeOrdersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteExternalPolicyAcmeRevokeCertRaw(requestParameters: SecretsApiPkiWriteExternalPolicyAcmeRevokeCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteExternalPolicyAcmeRevokeCertRaw(requestParameters: SecretsApiPkiWriteExternalPolicyAcmeRevokeCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteExternalPolicyAcmeRevokeCert(pkiMountPath: string, pkiWriteExternalPolicyAcmeRevokeCertRequest: PkiWriteExternalPolicyAcmeRevokeCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteExternalPolicyAcmeRevokeCert(pkiMountPath: string, pkiWriteExternalPolicyAcmeRevokeCertRequest: PkiWriteExternalPolicyAcmeRevokeCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     pkiWriteExternalPolicyIssueRaw(requestParameters: SecretsApiPkiWriteExternalPolicyIssueOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PkiWriteExternalPolicyIssueResponse>>;
@@ -4618,64 +4618,64 @@ export declare class SecretsApi extends runtime.BaseAPI {
     pkiWriteExternalPolicyIssuePolicy(policy: string, pkiMountPath: string, pkiWriteExternalPolicyIssuePolicyRequest: PkiWriteExternalPolicyIssuePolicyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PkiWriteExternalPolicyIssuePolicyResponse>;
     /**
      */
-    pkiWriteExternalPolicyPolicyAcmeAccountKidRaw(requestParameters: SecretsApiPkiWriteExternalPolicyPolicyAcmeAccountKidOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteExternalPolicyPolicyAcmeAccountKidRaw(requestParameters: SecretsApiPkiWriteExternalPolicyPolicyAcmeAccountKidOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteExternalPolicyPolicyAcmeAccountKid(kid: string, policy: string, pkiMountPath: string, pkiWriteExternalPolicyPolicyAcmeAccountKidRequest: PkiWriteExternalPolicyPolicyAcmeAccountKidRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteExternalPolicyPolicyAcmeAccountKid(kid: string, policy: string, pkiMountPath: string, pkiWriteExternalPolicyPolicyAcmeAccountKidRequest: PkiWriteExternalPolicyPolicyAcmeAccountKidRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteExternalPolicyPolicyAcmeAuthorizationAuthIdRaw(requestParameters: SecretsApiPkiWriteExternalPolicyPolicyAcmeAuthorizationAuthIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteExternalPolicyPolicyAcmeAuthorizationAuthIdRaw(requestParameters: SecretsApiPkiWriteExternalPolicyPolicyAcmeAuthorizationAuthIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteExternalPolicyPolicyAcmeAuthorizationAuthId(authId: string, policy: string, pkiMountPath: string, pkiWriteExternalPolicyPolicyAcmeAuthorizationAuthIdRequest: PkiWriteExternalPolicyPolicyAcmeAuthorizationAuthIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteExternalPolicyPolicyAcmeAuthorizationAuthId(authId: string, policy: string, pkiMountPath: string, pkiWriteExternalPolicyPolicyAcmeAuthorizationAuthIdRequest: PkiWriteExternalPolicyPolicyAcmeAuthorizationAuthIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteExternalPolicyPolicyAcmeChallengeAuthIdChallengeTypeRaw(requestParameters: SecretsApiPkiWriteExternalPolicyPolicyAcmeChallengeAuthIdChallengeTypeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteExternalPolicyPolicyAcmeChallengeAuthIdChallengeTypeRaw(requestParameters: SecretsApiPkiWriteExternalPolicyPolicyAcmeChallengeAuthIdChallengeTypeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteExternalPolicyPolicyAcmeChallengeAuthIdChallengeType(authId: string, challengeType: string, policy: string, pkiMountPath: string, pkiWriteExternalPolicyPolicyAcmeChallengeAuthIdChallengeTypeRequest: PkiWriteExternalPolicyPolicyAcmeChallengeAuthIdChallengeTypeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteExternalPolicyPolicyAcmeChallengeAuthIdChallengeType(authId: string, challengeType: string, policy: string, pkiMountPath: string, pkiWriteExternalPolicyPolicyAcmeChallengeAuthIdChallengeTypeRequest: PkiWriteExternalPolicyPolicyAcmeChallengeAuthIdChallengeTypeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteExternalPolicyPolicyAcmeNewAccountRaw(requestParameters: SecretsApiPkiWriteExternalPolicyPolicyAcmeNewAccountOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteExternalPolicyPolicyAcmeNewAccountRaw(requestParameters: SecretsApiPkiWriteExternalPolicyPolicyAcmeNewAccountOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteExternalPolicyPolicyAcmeNewAccount(policy: string, pkiMountPath: string, pkiWriteExternalPolicyPolicyAcmeNewAccountRequest: PkiWriteExternalPolicyPolicyAcmeNewAccountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteExternalPolicyPolicyAcmeNewAccount(policy: string, pkiMountPath: string, pkiWriteExternalPolicyPolicyAcmeNewAccountRequest: PkiWriteExternalPolicyPolicyAcmeNewAccountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteExternalPolicyPolicyAcmeNewOrderRaw(requestParameters: SecretsApiPkiWriteExternalPolicyPolicyAcmeNewOrderOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteExternalPolicyPolicyAcmeNewOrderRaw(requestParameters: SecretsApiPkiWriteExternalPolicyPolicyAcmeNewOrderOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteExternalPolicyPolicyAcmeNewOrder(policy: string, pkiMountPath: string, pkiWriteExternalPolicyPolicyAcmeNewOrderRequest: PkiWriteExternalPolicyPolicyAcmeNewOrderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteExternalPolicyPolicyAcmeNewOrder(policy: string, pkiMountPath: string, pkiWriteExternalPolicyPolicyAcmeNewOrderRequest: PkiWriteExternalPolicyPolicyAcmeNewOrderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteExternalPolicyPolicyAcmeOrderOrderIdRaw(requestParameters: SecretsApiPkiWriteExternalPolicyPolicyAcmeOrderOrderIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteExternalPolicyPolicyAcmeOrderOrderIdRaw(requestParameters: SecretsApiPkiWriteExternalPolicyPolicyAcmeOrderOrderIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteExternalPolicyPolicyAcmeOrderOrderId(orderId: string, policy: string, pkiMountPath: string, pkiWriteExternalPolicyPolicyAcmeOrderOrderIdRequest: PkiWriteExternalPolicyPolicyAcmeOrderOrderIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteExternalPolicyPolicyAcmeOrderOrderId(orderId: string, policy: string, pkiMountPath: string, pkiWriteExternalPolicyPolicyAcmeOrderOrderIdRequest: PkiWriteExternalPolicyPolicyAcmeOrderOrderIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteExternalPolicyPolicyAcmeOrderOrderIdCertRaw(requestParameters: SecretsApiPkiWriteExternalPolicyPolicyAcmeOrderOrderIdCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteExternalPolicyPolicyAcmeOrderOrderIdCertRaw(requestParameters: SecretsApiPkiWriteExternalPolicyPolicyAcmeOrderOrderIdCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteExternalPolicyPolicyAcmeOrderOrderIdCert(orderId: string, policy: string, pkiMountPath: string, pkiWriteExternalPolicyPolicyAcmeOrderOrderIdCertRequest: PkiWriteExternalPolicyPolicyAcmeOrderOrderIdCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteExternalPolicyPolicyAcmeOrderOrderIdCert(orderId: string, policy: string, pkiMountPath: string, pkiWriteExternalPolicyPolicyAcmeOrderOrderIdCertRequest: PkiWriteExternalPolicyPolicyAcmeOrderOrderIdCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteExternalPolicyPolicyAcmeOrderOrderIdFinalizeRaw(requestParameters: SecretsApiPkiWriteExternalPolicyPolicyAcmeOrderOrderIdFinalizeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteExternalPolicyPolicyAcmeOrderOrderIdFinalizeRaw(requestParameters: SecretsApiPkiWriteExternalPolicyPolicyAcmeOrderOrderIdFinalizeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteExternalPolicyPolicyAcmeOrderOrderIdFinalize(orderId: string, policy: string, pkiMountPath: string, pkiWriteExternalPolicyPolicyAcmeOrderOrderIdFinalizeRequest: PkiWriteExternalPolicyPolicyAcmeOrderOrderIdFinalizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteExternalPolicyPolicyAcmeOrderOrderIdFinalize(orderId: string, policy: string, pkiMountPath: string, pkiWriteExternalPolicyPolicyAcmeOrderOrderIdFinalizeRequest: PkiWriteExternalPolicyPolicyAcmeOrderOrderIdFinalizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteExternalPolicyPolicyAcmeOrdersRaw(requestParameters: SecretsApiPkiWriteExternalPolicyPolicyAcmeOrdersOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteExternalPolicyPolicyAcmeOrdersRaw(requestParameters: SecretsApiPkiWriteExternalPolicyPolicyAcmeOrdersOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteExternalPolicyPolicyAcmeOrders(policy: string, pkiMountPath: string, pkiWriteExternalPolicyPolicyAcmeOrdersRequest: PkiWriteExternalPolicyPolicyAcmeOrdersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteExternalPolicyPolicyAcmeOrders(policy: string, pkiMountPath: string, pkiWriteExternalPolicyPolicyAcmeOrdersRequest: PkiWriteExternalPolicyPolicyAcmeOrdersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteExternalPolicyPolicyAcmeRevokeCertRaw(requestParameters: SecretsApiPkiWriteExternalPolicyPolicyAcmeRevokeCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteExternalPolicyPolicyAcmeRevokeCertRaw(requestParameters: SecretsApiPkiWriteExternalPolicyPolicyAcmeRevokeCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteExternalPolicyPolicyAcmeRevokeCert(policy: string, pkiMountPath: string, pkiWriteExternalPolicyPolicyAcmeRevokeCertRequest: PkiWriteExternalPolicyPolicyAcmeRevokeCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteExternalPolicyPolicyAcmeRevokeCert(policy: string, pkiMountPath: string, pkiWriteExternalPolicyPolicyAcmeRevokeCertRequest: PkiWriteExternalPolicyPolicyAcmeRevokeCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     pkiWriteExternalPolicySignRaw(requestParameters: SecretsApiPkiWriteExternalPolicySignOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PkiWriteExternalPolicySignResponse>>;
@@ -4708,124 +4708,124 @@ export declare class SecretsApi extends runtime.BaseAPI {
     pkiWriteIssuer(issuerRef: string, pkiMountPath: string, pkiWriteIssuerRequest: PkiWriteIssuerRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PkiWriteIssuerResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefAcmeAccountKidRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefAcmeAccountKidOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefAcmeAccountKidRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefAcmeAccountKidOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefAcmeAccountKid(issuerRef: string, kid: string, pkiMountPath: string, pkiWriteIssuerIssuerRefAcmeAccountKidRequest: PkiWriteIssuerIssuerRefAcmeAccountKidRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefAcmeAccountKid(issuerRef: string, kid: string, pkiMountPath: string, pkiWriteIssuerIssuerRefAcmeAccountKidRequest: PkiWriteIssuerIssuerRefAcmeAccountKidRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefAcmeAuthorizationAuthIdRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefAcmeAuthorizationAuthIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefAcmeAuthorizationAuthIdRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefAcmeAuthorizationAuthIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefAcmeAuthorizationAuthId(authId: string, issuerRef: string, pkiMountPath: string, pkiWriteIssuerIssuerRefAcmeAuthorizationAuthIdRequest: PkiWriteIssuerIssuerRefAcmeAuthorizationAuthIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefAcmeAuthorizationAuthId(authId: string, issuerRef: string, pkiMountPath: string, pkiWriteIssuerIssuerRefAcmeAuthorizationAuthIdRequest: PkiWriteIssuerIssuerRefAcmeAuthorizationAuthIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefAcmeChallengeAuthIdChallengeTypeRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefAcmeChallengeAuthIdChallengeTypeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefAcmeChallengeAuthIdChallengeTypeRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefAcmeChallengeAuthIdChallengeTypeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefAcmeChallengeAuthIdChallengeType(authId: string, challengeType: string, issuerRef: string, pkiMountPath: string, pkiWriteIssuerIssuerRefAcmeChallengeAuthIdChallengeTypeRequest: PkiWriteIssuerIssuerRefAcmeChallengeAuthIdChallengeTypeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefAcmeChallengeAuthIdChallengeType(authId: string, challengeType: string, issuerRef: string, pkiMountPath: string, pkiWriteIssuerIssuerRefAcmeChallengeAuthIdChallengeTypeRequest: PkiWriteIssuerIssuerRefAcmeChallengeAuthIdChallengeTypeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefAcmeNewAccountRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefAcmeNewAccountOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefAcmeNewAccountRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefAcmeNewAccountOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefAcmeNewAccount(issuerRef: string, pkiMountPath: string, pkiWriteIssuerIssuerRefAcmeNewAccountRequest: PkiWriteIssuerIssuerRefAcmeNewAccountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefAcmeNewAccount(issuerRef: string, pkiMountPath: string, pkiWriteIssuerIssuerRefAcmeNewAccountRequest: PkiWriteIssuerIssuerRefAcmeNewAccountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefAcmeNewOrderRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefAcmeNewOrderOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefAcmeNewOrderRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefAcmeNewOrderOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefAcmeNewOrder(issuerRef: string, pkiMountPath: string, pkiWriteIssuerIssuerRefAcmeNewOrderRequest: PkiWriteIssuerIssuerRefAcmeNewOrderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefAcmeNewOrder(issuerRef: string, pkiMountPath: string, pkiWriteIssuerIssuerRefAcmeNewOrderRequest: PkiWriteIssuerIssuerRefAcmeNewOrderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefAcmeOrderOrderIdRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefAcmeOrderOrderIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefAcmeOrderOrderIdRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefAcmeOrderOrderIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefAcmeOrderOrderId(issuerRef: string, orderId: string, pkiMountPath: string, pkiWriteIssuerIssuerRefAcmeOrderOrderIdRequest: PkiWriteIssuerIssuerRefAcmeOrderOrderIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefAcmeOrderOrderId(issuerRef: string, orderId: string, pkiMountPath: string, pkiWriteIssuerIssuerRefAcmeOrderOrderIdRequest: PkiWriteIssuerIssuerRefAcmeOrderOrderIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefAcmeOrderOrderIdCertRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefAcmeOrderOrderIdCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefAcmeOrderOrderIdCertRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefAcmeOrderOrderIdCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefAcmeOrderOrderIdCert(issuerRef: string, orderId: string, pkiMountPath: string, pkiWriteIssuerIssuerRefAcmeOrderOrderIdCertRequest: PkiWriteIssuerIssuerRefAcmeOrderOrderIdCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefAcmeOrderOrderIdCert(issuerRef: string, orderId: string, pkiMountPath: string, pkiWriteIssuerIssuerRefAcmeOrderOrderIdCertRequest: PkiWriteIssuerIssuerRefAcmeOrderOrderIdCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefAcmeOrderOrderIdFinalizeRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefAcmeOrderOrderIdFinalizeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefAcmeOrderOrderIdFinalizeRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefAcmeOrderOrderIdFinalizeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefAcmeOrderOrderIdFinalize(issuerRef: string, orderId: string, pkiMountPath: string, pkiWriteIssuerIssuerRefAcmeOrderOrderIdFinalizeRequest: PkiWriteIssuerIssuerRefAcmeOrderOrderIdFinalizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefAcmeOrderOrderIdFinalize(issuerRef: string, orderId: string, pkiMountPath: string, pkiWriteIssuerIssuerRefAcmeOrderOrderIdFinalizeRequest: PkiWriteIssuerIssuerRefAcmeOrderOrderIdFinalizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefAcmeOrdersRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefAcmeOrdersOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefAcmeOrdersRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefAcmeOrdersOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefAcmeOrders(issuerRef: string, pkiMountPath: string, pkiWriteIssuerIssuerRefAcmeOrdersRequest: PkiWriteIssuerIssuerRefAcmeOrdersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefAcmeOrders(issuerRef: string, pkiMountPath: string, pkiWriteIssuerIssuerRefAcmeOrdersRequest: PkiWriteIssuerIssuerRefAcmeOrdersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefAcmeRevokeCertRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefAcmeRevokeCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefAcmeRevokeCertRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefAcmeRevokeCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefAcmeRevokeCert(issuerRef: string, pkiMountPath: string, pkiWriteIssuerIssuerRefAcmeRevokeCertRequest: PkiWriteIssuerIssuerRefAcmeRevokeCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefAcmeRevokeCert(issuerRef: string, pkiMountPath: string, pkiWriteIssuerIssuerRefAcmeRevokeCertRequest: PkiWriteIssuerIssuerRefAcmeRevokeCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyAcmeAccountKidRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyAcmeAccountKidOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefExternalPolicyAcmeAccountKidRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyAcmeAccountKidOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyAcmeAccountKid(issuerRef: string, kid: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyAcmeAccountKidRequest: PkiWriteIssuerIssuerRefExternalPolicyAcmeAccountKidRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefExternalPolicyAcmeAccountKid(issuerRef: string, kid: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyAcmeAccountKidRequest: PkiWriteIssuerIssuerRefExternalPolicyAcmeAccountKidRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyAcmeAuthorizationAuthIdRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyAcmeAuthorizationAuthIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefExternalPolicyAcmeAuthorizationAuthIdRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyAcmeAuthorizationAuthIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyAcmeAuthorizationAuthId(authId: string, issuerRef: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyAcmeAuthorizationAuthIdRequest: PkiWriteIssuerIssuerRefExternalPolicyAcmeAuthorizationAuthIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefExternalPolicyAcmeAuthorizationAuthId(authId: string, issuerRef: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyAcmeAuthorizationAuthIdRequest: PkiWriteIssuerIssuerRefExternalPolicyAcmeAuthorizationAuthIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyAcmeChallengeAuthIdChallengeTypeRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyAcmeChallengeAuthIdChallengeTypeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefExternalPolicyAcmeChallengeAuthIdChallengeTypeRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyAcmeChallengeAuthIdChallengeTypeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyAcmeChallengeAuthIdChallengeType(authId: string, challengeType: string, issuerRef: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyAcmeChallengeAuthIdChallengeTypeRequest: PkiWriteIssuerIssuerRefExternalPolicyAcmeChallengeAuthIdChallengeTypeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefExternalPolicyAcmeChallengeAuthIdChallengeType(authId: string, challengeType: string, issuerRef: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyAcmeChallengeAuthIdChallengeTypeRequest: PkiWriteIssuerIssuerRefExternalPolicyAcmeChallengeAuthIdChallengeTypeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyAcmeNewAccountRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyAcmeNewAccountOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefExternalPolicyAcmeNewAccountRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyAcmeNewAccountOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyAcmeNewAccount(issuerRef: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyAcmeNewAccountRequest: PkiWriteIssuerIssuerRefExternalPolicyAcmeNewAccountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefExternalPolicyAcmeNewAccount(issuerRef: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyAcmeNewAccountRequest: PkiWriteIssuerIssuerRefExternalPolicyAcmeNewAccountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyAcmeNewOrderRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyAcmeNewOrderOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefExternalPolicyAcmeNewOrderRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyAcmeNewOrderOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyAcmeNewOrder(issuerRef: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyAcmeNewOrderRequest: PkiWriteIssuerIssuerRefExternalPolicyAcmeNewOrderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefExternalPolicyAcmeNewOrder(issuerRef: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyAcmeNewOrderRequest: PkiWriteIssuerIssuerRefExternalPolicyAcmeNewOrderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderId(issuerRef: string, orderId: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdRequest: PkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderId(issuerRef: string, orderId: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdRequest: PkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdCertRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdCertRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdCert(issuerRef: string, orderId: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdCertRequest: PkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdCert(issuerRef: string, orderId: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdCertRequest: PkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdFinalizeRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdFinalizeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdFinalizeRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdFinalizeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdFinalize(issuerRef: string, orderId: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdFinalizeRequest: PkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdFinalizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdFinalize(issuerRef: string, orderId: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdFinalizeRequest: PkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdFinalizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyAcmeOrdersRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyAcmeOrdersOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefExternalPolicyAcmeOrdersRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyAcmeOrdersOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyAcmeOrders(issuerRef: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyAcmeOrdersRequest: PkiWriteIssuerIssuerRefExternalPolicyAcmeOrdersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefExternalPolicyAcmeOrders(issuerRef: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyAcmeOrdersRequest: PkiWriteIssuerIssuerRefExternalPolicyAcmeOrdersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyAcmeRevokeCertRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyAcmeRevokeCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefExternalPolicyAcmeRevokeCertRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyAcmeRevokeCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyAcmeRevokeCert(issuerRef: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyAcmeRevokeCertRequest: PkiWriteIssuerIssuerRefExternalPolicyAcmeRevokeCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefExternalPolicyAcmeRevokeCert(issuerRef: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyAcmeRevokeCertRequest: PkiWriteIssuerIssuerRefExternalPolicyAcmeRevokeCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     pkiWriteIssuerIssuerRefExternalPolicyIssueRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyIssueOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PkiWriteIssuerIssuerRefExternalPolicyIssueResponse>>;
@@ -4840,64 +4840,64 @@ export declare class SecretsApi extends runtime.BaseAPI {
     pkiWriteIssuerIssuerRefExternalPolicyIssuePolicy(issuerRef: string, policy: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyIssuePolicyRequest: PkiWriteIssuerIssuerRefExternalPolicyIssuePolicyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PkiWriteIssuerIssuerRefExternalPolicyIssuePolicyResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeAccountKidRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeAccountKidOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeAccountKidRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeAccountKidOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeAccountKid(issuerRef: string, kid: string, policy: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeAccountKidRequest: PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeAccountKidRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeAccountKid(issuerRef: string, kid: string, policy: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeAccountKidRequest: PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeAccountKidRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeAuthorizationAuthIdRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeAuthorizationAuthIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeAuthorizationAuthIdRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeAuthorizationAuthIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeAuthorizationAuthId(authId: string, issuerRef: string, policy: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeAuthorizationAuthIdRequest: PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeAuthorizationAuthIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeAuthorizationAuthId(authId: string, issuerRef: string, policy: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeAuthorizationAuthIdRequest: PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeAuthorizationAuthIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeChallengeAuthIdChallengeTypeRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeChallengeAuthIdChallengeTypeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeChallengeAuthIdChallengeTypeRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeChallengeAuthIdChallengeTypeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeChallengeAuthIdChallengeType(authId: string, challengeType: string, issuerRef: string, policy: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeChallengeAuthIdChallengeTypeRequest: PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeChallengeAuthIdChallengeTypeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeChallengeAuthIdChallengeType(authId: string, challengeType: string, issuerRef: string, policy: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeChallengeAuthIdChallengeTypeRequest: PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeChallengeAuthIdChallengeTypeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeNewAccountRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeNewAccountOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeNewAccountRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeNewAccountOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeNewAccount(issuerRef: string, policy: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeNewAccountRequest: PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeNewAccountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeNewAccount(issuerRef: string, policy: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeNewAccountRequest: PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeNewAccountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeNewOrderRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeNewOrderOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeNewOrderRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeNewOrderOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeNewOrder(issuerRef: string, policy: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeNewOrderRequest: PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeNewOrderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeNewOrder(issuerRef: string, policy: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeNewOrderRequest: PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeNewOrderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderId(issuerRef: string, orderId: string, policy: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdRequest: PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderId(issuerRef: string, orderId: string, policy: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdRequest: PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdCertRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdCertRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdCert(issuerRef: string, orderId: string, policy: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdCertRequest: PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdCert(issuerRef: string, orderId: string, policy: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdCertRequest: PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdFinalizeRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdFinalizeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdFinalizeRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdFinalizeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdFinalize(issuerRef: string, orderId: string, policy: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdFinalizeRequest: PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdFinalizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdFinalize(issuerRef: string, orderId: string, policy: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdFinalizeRequest: PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdFinalizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrdersRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrdersOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrdersRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrdersOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrders(issuerRef: string, policy: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrdersRequest: PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrdersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrders(issuerRef: string, policy: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrdersRequest: PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrdersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeRevokeCertRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeRevokeCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeRevokeCertRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeRevokeCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeRevokeCert(issuerRef: string, policy: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeRevokeCertRequest: PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeRevokeCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeRevokeCert(issuerRef: string, policy: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeRevokeCertRequest: PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeRevokeCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     pkiWriteIssuerIssuerRefExternalPolicySignRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefExternalPolicySignOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PkiWriteIssuerIssuerRefExternalPolicySignResponse>>;
@@ -4924,64 +4924,64 @@ export declare class SecretsApi extends runtime.BaseAPI {
     pkiWriteIssuerIssuerRefExternalPolicySignPolicy(issuerRef: string, policy: string, pkiMountPath: string, pkiWriteIssuerIssuerRefExternalPolicySignPolicyRequest: PkiWriteIssuerIssuerRefExternalPolicySignPolicyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PkiWriteIssuerIssuerRefExternalPolicySignPolicyResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefRolesRoleAcmeAccountKidRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefRolesRoleAcmeAccountKidOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefRolesRoleAcmeAccountKidRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefRolesRoleAcmeAccountKidOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefRolesRoleAcmeAccountKid(issuerRef: string, kid: string, role: string, pkiMountPath: string, pkiWriteIssuerIssuerRefRolesRoleAcmeAccountKidRequest: PkiWriteIssuerIssuerRefRolesRoleAcmeAccountKidRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefRolesRoleAcmeAccountKid(issuerRef: string, kid: string, role: string, pkiMountPath: string, pkiWriteIssuerIssuerRefRolesRoleAcmeAccountKidRequest: PkiWriteIssuerIssuerRefRolesRoleAcmeAccountKidRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefRolesRoleAcmeAuthorizationAuthIdRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefRolesRoleAcmeAuthorizationAuthIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefRolesRoleAcmeAuthorizationAuthIdRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefRolesRoleAcmeAuthorizationAuthIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefRolesRoleAcmeAuthorizationAuthId(authId: string, issuerRef: string, role: string, pkiMountPath: string, pkiWriteIssuerIssuerRefRolesRoleAcmeAuthorizationAuthIdRequest: PkiWriteIssuerIssuerRefRolesRoleAcmeAuthorizationAuthIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefRolesRoleAcmeAuthorizationAuthId(authId: string, issuerRef: string, role: string, pkiMountPath: string, pkiWriteIssuerIssuerRefRolesRoleAcmeAuthorizationAuthIdRequest: PkiWriteIssuerIssuerRefRolesRoleAcmeAuthorizationAuthIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefRolesRoleAcmeChallengeAuthIdChallengeTypeRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefRolesRoleAcmeChallengeAuthIdChallengeTypeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefRolesRoleAcmeChallengeAuthIdChallengeTypeRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefRolesRoleAcmeChallengeAuthIdChallengeTypeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefRolesRoleAcmeChallengeAuthIdChallengeType(authId: string, challengeType: string, issuerRef: string, role: string, pkiMountPath: string, pkiWriteIssuerIssuerRefRolesRoleAcmeChallengeAuthIdChallengeTypeRequest: PkiWriteIssuerIssuerRefRolesRoleAcmeChallengeAuthIdChallengeTypeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefRolesRoleAcmeChallengeAuthIdChallengeType(authId: string, challengeType: string, issuerRef: string, role: string, pkiMountPath: string, pkiWriteIssuerIssuerRefRolesRoleAcmeChallengeAuthIdChallengeTypeRequest: PkiWriteIssuerIssuerRefRolesRoleAcmeChallengeAuthIdChallengeTypeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefRolesRoleAcmeNewAccountRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefRolesRoleAcmeNewAccountOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefRolesRoleAcmeNewAccountRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefRolesRoleAcmeNewAccountOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefRolesRoleAcmeNewAccount(issuerRef: string, role: string, pkiMountPath: string, pkiWriteIssuerIssuerRefRolesRoleAcmeNewAccountRequest: PkiWriteIssuerIssuerRefRolesRoleAcmeNewAccountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefRolesRoleAcmeNewAccount(issuerRef: string, role: string, pkiMountPath: string, pkiWriteIssuerIssuerRefRolesRoleAcmeNewAccountRequest: PkiWriteIssuerIssuerRefRolesRoleAcmeNewAccountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefRolesRoleAcmeNewOrderRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefRolesRoleAcmeNewOrderOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefRolesRoleAcmeNewOrderRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefRolesRoleAcmeNewOrderOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefRolesRoleAcmeNewOrder(issuerRef: string, role: string, pkiMountPath: string, pkiWriteIssuerIssuerRefRolesRoleAcmeNewOrderRequest: PkiWriteIssuerIssuerRefRolesRoleAcmeNewOrderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefRolesRoleAcmeNewOrder(issuerRef: string, role: string, pkiMountPath: string, pkiWriteIssuerIssuerRefRolesRoleAcmeNewOrderRequest: PkiWriteIssuerIssuerRefRolesRoleAcmeNewOrderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderId(issuerRef: string, orderId: string, role: string, pkiMountPath: string, pkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdRequest: PkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderId(issuerRef: string, orderId: string, role: string, pkiMountPath: string, pkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdRequest: PkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdCertRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdCertRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdCert(issuerRef: string, orderId: string, role: string, pkiMountPath: string, pkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdCertRequest: PkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdCert(issuerRef: string, orderId: string, role: string, pkiMountPath: string, pkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdCertRequest: PkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdFinalizeRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdFinalizeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdFinalizeRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdFinalizeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdFinalize(issuerRef: string, orderId: string, role: string, pkiMountPath: string, pkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdFinalizeRequest: PkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdFinalizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdFinalize(issuerRef: string, orderId: string, role: string, pkiMountPath: string, pkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdFinalizeRequest: PkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdFinalizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefRolesRoleAcmeOrdersRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefRolesRoleAcmeOrdersOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefRolesRoleAcmeOrdersRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefRolesRoleAcmeOrdersOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefRolesRoleAcmeOrders(issuerRef: string, role: string, pkiMountPath: string, pkiWriteIssuerIssuerRefRolesRoleAcmeOrdersRequest: PkiWriteIssuerIssuerRefRolesRoleAcmeOrdersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefRolesRoleAcmeOrders(issuerRef: string, role: string, pkiMountPath: string, pkiWriteIssuerIssuerRefRolesRoleAcmeOrdersRequest: PkiWriteIssuerIssuerRefRolesRoleAcmeOrdersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteIssuerIssuerRefRolesRoleAcmeRevokeCertRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefRolesRoleAcmeRevokeCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteIssuerIssuerRefRolesRoleAcmeRevokeCertRaw(requestParameters: SecretsApiPkiWriteIssuerIssuerRefRolesRoleAcmeRevokeCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteIssuerIssuerRefRolesRoleAcmeRevokeCert(issuerRef: string, role: string, pkiMountPath: string, pkiWriteIssuerIssuerRefRolesRoleAcmeRevokeCertRequest: PkiWriteIssuerIssuerRefRolesRoleAcmeRevokeCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteIssuerIssuerRefRolesRoleAcmeRevokeCert(issuerRef: string, role: string, pkiMountPath: string, pkiWriteIssuerIssuerRefRolesRoleAcmeRevokeCertRequest: PkiWriteIssuerIssuerRefRolesRoleAcmeRevokeCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     pkiWriteKeyRaw(requestParameters: SecretsApiPkiWriteKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PkiWriteKeyResponse>>;
@@ -4996,116 +4996,116 @@ export declare class SecretsApi extends runtime.BaseAPI {
     pkiWriteRole(name: string, pkiMountPath: string, pkiWriteRoleRequest: PkiWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PkiWriteRoleResponse>;
     /**
      */
-    pkiWriteRolesRoleAcmeAccountKidRaw(requestParameters: SecretsApiPkiWriteRolesRoleAcmeAccountKidOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteRolesRoleAcmeAccountKidRaw(requestParameters: SecretsApiPkiWriteRolesRoleAcmeAccountKidOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteRolesRoleAcmeAccountKid(kid: string, role: string, pkiMountPath: string, pkiWriteRolesRoleAcmeAccountKidRequest: PkiWriteRolesRoleAcmeAccountKidRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteRolesRoleAcmeAccountKid(kid: string, role: string, pkiMountPath: string, pkiWriteRolesRoleAcmeAccountKidRequest: PkiWriteRolesRoleAcmeAccountKidRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteRolesRoleAcmeAuthorizationAuthIdRaw(requestParameters: SecretsApiPkiWriteRolesRoleAcmeAuthorizationAuthIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteRolesRoleAcmeAuthorizationAuthIdRaw(requestParameters: SecretsApiPkiWriteRolesRoleAcmeAuthorizationAuthIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteRolesRoleAcmeAuthorizationAuthId(authId: string, role: string, pkiMountPath: string, pkiWriteRolesRoleAcmeAuthorizationAuthIdRequest: PkiWriteRolesRoleAcmeAuthorizationAuthIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteRolesRoleAcmeAuthorizationAuthId(authId: string, role: string, pkiMountPath: string, pkiWriteRolesRoleAcmeAuthorizationAuthIdRequest: PkiWriteRolesRoleAcmeAuthorizationAuthIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteRolesRoleAcmeChallengeAuthIdChallengeTypeRaw(requestParameters: SecretsApiPkiWriteRolesRoleAcmeChallengeAuthIdChallengeTypeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteRolesRoleAcmeChallengeAuthIdChallengeTypeRaw(requestParameters: SecretsApiPkiWriteRolesRoleAcmeChallengeAuthIdChallengeTypeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteRolesRoleAcmeChallengeAuthIdChallengeType(authId: string, challengeType: string, role: string, pkiMountPath: string, pkiWriteRolesRoleAcmeChallengeAuthIdChallengeTypeRequest: PkiWriteRolesRoleAcmeChallengeAuthIdChallengeTypeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteRolesRoleAcmeChallengeAuthIdChallengeType(authId: string, challengeType: string, role: string, pkiMountPath: string, pkiWriteRolesRoleAcmeChallengeAuthIdChallengeTypeRequest: PkiWriteRolesRoleAcmeChallengeAuthIdChallengeTypeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteRolesRoleAcmeNewAccountRaw(requestParameters: SecretsApiPkiWriteRolesRoleAcmeNewAccountOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteRolesRoleAcmeNewAccountRaw(requestParameters: SecretsApiPkiWriteRolesRoleAcmeNewAccountOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteRolesRoleAcmeNewAccount(role: string, pkiMountPath: string, pkiWriteRolesRoleAcmeNewAccountRequest: PkiWriteRolesRoleAcmeNewAccountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteRolesRoleAcmeNewAccount(role: string, pkiMountPath: string, pkiWriteRolesRoleAcmeNewAccountRequest: PkiWriteRolesRoleAcmeNewAccountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteRolesRoleAcmeNewOrderRaw(requestParameters: SecretsApiPkiWriteRolesRoleAcmeNewOrderOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteRolesRoleAcmeNewOrderRaw(requestParameters: SecretsApiPkiWriteRolesRoleAcmeNewOrderOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteRolesRoleAcmeNewOrder(role: string, pkiMountPath: string, pkiWriteRolesRoleAcmeNewOrderRequest: PkiWriteRolesRoleAcmeNewOrderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteRolesRoleAcmeNewOrder(role: string, pkiMountPath: string, pkiWriteRolesRoleAcmeNewOrderRequest: PkiWriteRolesRoleAcmeNewOrderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteRolesRoleAcmeOrderOrderIdRaw(requestParameters: SecretsApiPkiWriteRolesRoleAcmeOrderOrderIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteRolesRoleAcmeOrderOrderIdRaw(requestParameters: SecretsApiPkiWriteRolesRoleAcmeOrderOrderIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteRolesRoleAcmeOrderOrderId(orderId: string, role: string, pkiMountPath: string, pkiWriteRolesRoleAcmeOrderOrderIdRequest: PkiWriteRolesRoleAcmeOrderOrderIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteRolesRoleAcmeOrderOrderId(orderId: string, role: string, pkiMountPath: string, pkiWriteRolesRoleAcmeOrderOrderIdRequest: PkiWriteRolesRoleAcmeOrderOrderIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteRolesRoleAcmeOrderOrderIdCertRaw(requestParameters: SecretsApiPkiWriteRolesRoleAcmeOrderOrderIdCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteRolesRoleAcmeOrderOrderIdCertRaw(requestParameters: SecretsApiPkiWriteRolesRoleAcmeOrderOrderIdCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteRolesRoleAcmeOrderOrderIdCert(orderId: string, role: string, pkiMountPath: string, pkiWriteRolesRoleAcmeOrderOrderIdCertRequest: PkiWriteRolesRoleAcmeOrderOrderIdCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteRolesRoleAcmeOrderOrderIdCert(orderId: string, role: string, pkiMountPath: string, pkiWriteRolesRoleAcmeOrderOrderIdCertRequest: PkiWriteRolesRoleAcmeOrderOrderIdCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteRolesRoleAcmeOrderOrderIdFinalizeRaw(requestParameters: SecretsApiPkiWriteRolesRoleAcmeOrderOrderIdFinalizeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteRolesRoleAcmeOrderOrderIdFinalizeRaw(requestParameters: SecretsApiPkiWriteRolesRoleAcmeOrderOrderIdFinalizeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteRolesRoleAcmeOrderOrderIdFinalize(orderId: string, role: string, pkiMountPath: string, pkiWriteRolesRoleAcmeOrderOrderIdFinalizeRequest: PkiWriteRolesRoleAcmeOrderOrderIdFinalizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteRolesRoleAcmeOrderOrderIdFinalize(orderId: string, role: string, pkiMountPath: string, pkiWriteRolesRoleAcmeOrderOrderIdFinalizeRequest: PkiWriteRolesRoleAcmeOrderOrderIdFinalizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteRolesRoleAcmeOrdersRaw(requestParameters: SecretsApiPkiWriteRolesRoleAcmeOrdersOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteRolesRoleAcmeOrdersRaw(requestParameters: SecretsApiPkiWriteRolesRoleAcmeOrdersOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteRolesRoleAcmeOrders(role: string, pkiMountPath: string, pkiWriteRolesRoleAcmeOrdersRequest: PkiWriteRolesRoleAcmeOrdersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteRolesRoleAcmeOrders(role: string, pkiMountPath: string, pkiWriteRolesRoleAcmeOrdersRequest: PkiWriteRolesRoleAcmeOrdersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteRolesRoleAcmeRevokeCertRaw(requestParameters: SecretsApiPkiWriteRolesRoleAcmeRevokeCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteRolesRoleAcmeRevokeCertRaw(requestParameters: SecretsApiPkiWriteRolesRoleAcmeRevokeCertOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteRolesRoleAcmeRevokeCert(role: string, pkiMountPath: string, pkiWriteRolesRoleAcmeRevokeCertRequest: PkiWriteRolesRoleAcmeRevokeCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteRolesRoleAcmeRevokeCert(role: string, pkiMountPath: string, pkiWriteRolesRoleAcmeRevokeCertRequest: PkiWriteRolesRoleAcmeRevokeCertRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteRolesRoleCmpRaw(requestParameters: SecretsApiPkiWriteRolesRoleCmpRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteRolesRoleCmpRaw(requestParameters: SecretsApiPkiWriteRolesRoleCmpRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteRolesRoleCmp(role: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteRolesRoleCmp(role: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteRolesRoleEstSimpleenrollRaw(requestParameters: SecretsApiPkiWriteRolesRoleEstSimpleenrollRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteRolesRoleEstSimpleenrollRaw(requestParameters: SecretsApiPkiWriteRolesRoleEstSimpleenrollRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteRolesRoleEstSimpleenroll(role: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteRolesRoleEstSimpleenroll(role: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteRolesRoleEstSimplereenrollRaw(requestParameters: SecretsApiPkiWriteRolesRoleEstSimplereenrollRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteRolesRoleEstSimplereenrollRaw(requestParameters: SecretsApiPkiWriteRolesRoleEstSimplereenrollRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteRolesRoleEstSimplereenroll(role: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteRolesRoleEstSimplereenroll(role: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteRolesRoleScepRaw(requestParameters: SecretsApiPkiWriteRolesRoleScepRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteRolesRoleScepRaw(requestParameters: SecretsApiPkiWriteRolesRoleScepRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteRolesRoleScep(role: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pkiWriteRolesRoleScep(role: string, pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    pkiWriteScepRaw(requestParameters: SecretsApiPkiWriteScepRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteScepRaw(requestParameters: SecretsApiPkiWriteScepRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    pkiWriteScep(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Configure the connection URI, username, and password to talk to RabbitMQ management HTTP API.
-     */
-    rabbitMqConfigureConnectionRaw(requestParameters: SecretsApiRabbitMqConfigureConnectionOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pkiWriteScep(pkiMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Configure the connection URI, username, and password to talk to RabbitMQ management HTTP API.
      */
-    rabbitMqConfigureConnection(rabbitmqMountPath: string, rabbitMqConfigureConnectionRequest: RabbitMqConfigureConnectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    rabbitMqConfigureConnectionRaw(requestParameters: SecretsApiRabbitMqConfigureConnectionOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Configure the connection URI, username, and password to talk to RabbitMQ management HTTP API.
+     */
+    rabbitMqConfigureConnection(rabbitmqMountPath: string, rabbitMqConfigureConnectionRequest: RabbitMqConfigureConnectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    rabbitMqConfigureLeaseRaw(requestParameters: SecretsApiRabbitMqConfigureLeaseOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    rabbitMqConfigureLeaseRaw(requestParameters: SecretsApiRabbitMqConfigureLeaseOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    rabbitMqConfigureLease(rabbitmqMountPath: string, rabbitMqConfigureLeaseRequest: RabbitMqConfigureLeaseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    rabbitMqConfigureLease(rabbitmqMountPath: string, rabbitMqConfigureLeaseRequest: RabbitMqConfigureLeaseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage the roles that can be created with this backend.
      */
-    rabbitMqDeleteRoleRaw(requestParameters: SecretsApiRabbitMqDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    rabbitMqDeleteRoleRaw(requestParameters: SecretsApiRabbitMqDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Manage the roles that can be created with this backend.
      */
-    rabbitMqDeleteRole(name: string, rabbitmqMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    rabbitMqDeleteRole(name: string, rabbitmqMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage the roles that can be created with this backend.
      */
@@ -5116,80 +5116,80 @@ export declare class SecretsApi extends runtime.BaseAPI {
     rabbitMqListRoles(rabbitmqMountPath: string, list: RabbitMqListRolesListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse>;
     /**
      */
-    rabbitMqReadLeaseConfigurationRaw(requestParameters: SecretsApiRabbitMqReadLeaseConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    rabbitMqReadLeaseConfigurationRaw(requestParameters: SecretsApiRabbitMqReadLeaseConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    rabbitMqReadLeaseConfiguration(rabbitmqMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Manage the roles that can be created with this backend.
-     */
-    rabbitMqReadRoleRaw(requestParameters: SecretsApiRabbitMqReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    rabbitMqReadLeaseConfiguration(rabbitmqMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage the roles that can be created with this backend.
      */
-    rabbitMqReadRole(name: string, rabbitmqMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    rabbitMqReadRoleRaw(requestParameters: SecretsApiRabbitMqReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Manage the roles that can be created with this backend.
+     */
+    rabbitMqReadRole(name: string, rabbitmqMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Request RabbitMQ credentials for a certain role.
      */
-    rabbitMqRequestCredentialsRaw(requestParameters: SecretsApiRabbitMqRequestCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    rabbitMqRequestCredentialsRaw(requestParameters: SecretsApiRabbitMqRequestCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Request RabbitMQ credentials for a certain role.
      */
-    rabbitMqRequestCredentials(name: string, rabbitmqMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    rabbitMqRequestCredentials(name: string, rabbitmqMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage the roles that can be created with this backend.
      */
-    rabbitMqWriteRoleRaw(requestParameters: SecretsApiRabbitMqWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    rabbitMqWriteRoleRaw(requestParameters: SecretsApiRabbitMqWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Manage the roles that can be created with this backend.
      */
-    rabbitMqWriteRole(name: string, rabbitmqMountPath: string, rabbitMqWriteRoleRequest: RabbitMqWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    rabbitMqWriteRole(name: string, rabbitmqMountPath: string, rabbitMqWriteRoleRequest: RabbitMqWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    sshConfigureCaRaw(requestParameters: SecretsApiSshConfigureCaOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    sshConfigureCaRaw(requestParameters: SecretsApiSshConfigureCaOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    sshConfigureCa(sshMountPath: string, sshConfigureCaRequest: SshConfigureCaRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    sshConfigureCa(sshMountPath: string, sshConfigureCaRequest: SshConfigureCaRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    sshConfigureZeroAddressRaw(requestParameters: SecretsApiSshConfigureZeroAddressOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    sshConfigureZeroAddressRaw(requestParameters: SecretsApiSshConfigureZeroAddressOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    sshConfigureZeroAddress(sshMountPath: string, sshConfigureZeroAddressRequest: SshConfigureZeroAddressRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    sshConfigureZeroAddress(sshMountPath: string, sshConfigureZeroAddressRequest: SshConfigureZeroAddressRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    sshDeleteCaConfigurationRaw(requestParameters: SecretsApiSshDeleteCaConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    sshDeleteCaConfigurationRaw(requestParameters: SecretsApiSshDeleteCaConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    sshDeleteCaConfiguration(sshMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Manage the \'roles\' that can be created with this backend.
-     */
-    sshDeleteRoleRaw(requestParameters: SecretsApiSshDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    sshDeleteCaConfiguration(sshMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage the \'roles\' that can be created with this backend.
      */
-    sshDeleteRole(role: string, sshMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    sshDeleteRoleRaw(requestParameters: SecretsApiSshDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Manage the \'roles\' that can be created with this backend.
+     */
+    sshDeleteRole(role: string, sshMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    sshDeleteZeroAddressConfigurationRaw(requestParameters: SecretsApiSshDeleteZeroAddressConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    sshDeleteZeroAddressConfigurationRaw(requestParameters: SecretsApiSshDeleteZeroAddressConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    sshDeleteZeroAddressConfiguration(sshMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    sshDeleteZeroAddressConfiguration(sshMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Creates a credential for establishing SSH connection with the remote host.
      */
-    sshGenerateCredentialsRaw(requestParameters: SecretsApiSshGenerateCredentialsOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    sshGenerateCredentialsRaw(requestParameters: SecretsApiSshGenerateCredentialsOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Creates a credential for establishing SSH connection with the remote host.
      */
-    sshGenerateCredentials(role: string, sshMountPath: string, sshGenerateCredentialsRequest: SshGenerateCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    sshGenerateCredentials(role: string, sshMountPath: string, sshGenerateCredentialsRequest: SshGenerateCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    sshIssueCertificateRaw(requestParameters: SecretsApiSshIssueCertificateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    sshIssueCertificateRaw(requestParameters: SecretsApiSshIssueCertificateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    sshIssueCertificate(role: string, sshMountPath: string, sshIssueCertificateRequest: SshIssueCertificateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    sshIssueCertificate(role: string, sshMountPath: string, sshIssueCertificateRequest: SshIssueCertificateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage the \'roles\' that can be created with this backend.
      */
@@ -5201,101 +5201,101 @@ export declare class SecretsApi extends runtime.BaseAPI {
     /**
      * List all the roles associated with the given IP address.
      */
-    sshListRolesByIpRaw(requestParameters: SecretsApiSshListRolesByIpOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    sshListRolesByIpRaw(requestParameters: SecretsApiSshListRolesByIpOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * List all the roles associated with the given IP address.
      */
-    sshListRolesByIp(sshMountPath: string, sshListRolesByIpRequest: SshListRolesByIpRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    sshListRolesByIp(sshMountPath: string, sshListRolesByIpRequest: SshListRolesByIpRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    sshReadCaConfigurationRaw(requestParameters: SecretsApiSshReadCaConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    sshReadCaConfigurationRaw(requestParameters: SecretsApiSshReadCaConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    sshReadCaConfiguration(sshMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Retrieve the public key.
-     */
-    sshReadPublicKeyRaw(requestParameters: SecretsApiSshReadPublicKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    sshReadCaConfiguration(sshMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Retrieve the public key.
      */
-    sshReadPublicKey(sshMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    sshReadPublicKeyRaw(requestParameters: SecretsApiSshReadPublicKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Retrieve the public key.
+     */
+    sshReadPublicKey(sshMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage the \'roles\' that can be created with this backend.
      */
-    sshReadRoleRaw(requestParameters: SecretsApiSshReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    sshReadRoleRaw(requestParameters: SecretsApiSshReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Manage the \'roles\' that can be created with this backend.
      */
-    sshReadRole(role: string, sshMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    sshReadRole(role: string, sshMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    sshReadZeroAddressConfigurationRaw(requestParameters: SecretsApiSshReadZeroAddressConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    sshReadZeroAddressConfigurationRaw(requestParameters: SecretsApiSshReadZeroAddressConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    sshReadZeroAddressConfiguration(sshMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    sshReadZeroAddressConfiguration(sshMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Request signing an SSH key using a certain role with the provided details.
      */
-    sshSignCertificateRaw(requestParameters: SecretsApiSshSignCertificateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    sshSignCertificateRaw(requestParameters: SecretsApiSshSignCertificateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Request signing an SSH key using a certain role with the provided details.
      */
-    sshSignCertificate(role: string, sshMountPath: string, sshSignCertificateRequest: SshSignCertificateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    sshSignCertificate(role: string, sshMountPath: string, sshSignCertificateRequest: SshSignCertificateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * This endpoint removes the stored host keys used for the removed Dynamic Key feature, if present.
      */
-    sshTidyDynamicHostKeysRaw(requestParameters: SecretsApiSshTidyDynamicHostKeysRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    sshTidyDynamicHostKeysRaw(requestParameters: SecretsApiSshTidyDynamicHostKeysRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * This endpoint removes the stored host keys used for the removed Dynamic Key feature, if present.
      */
-    sshTidyDynamicHostKeys(sshMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    sshTidyDynamicHostKeys(sshMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Validate the OTP provided by Vault SSH Agent.
      */
-    sshVerifyOtpRaw(requestParameters: SecretsApiSshVerifyOtpOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    sshVerifyOtpRaw(requestParameters: SecretsApiSshVerifyOtpOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Validate the OTP provided by Vault SSH Agent.
      */
-    sshVerifyOtp(sshMountPath: string, sshVerifyOtpRequest: SshVerifyOtpRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    sshVerifyOtp(sshMountPath: string, sshVerifyOtpRequest: SshVerifyOtpRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage the \'roles\' that can be created with this backend.
      */
-    sshWriteRoleRaw(requestParameters: SecretsApiSshWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    sshWriteRoleRaw(requestParameters: SecretsApiSshWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Manage the \'roles\' that can be created with this backend.
      */
-    sshWriteRole(role: string, sshMountPath: string, sshWriteRoleRequest: SshWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    sshWriteRole(role: string, sshMountPath: string, sshWriteRoleRequest: SshWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    terraformCloudConfigureRaw(requestParameters: SecretsApiTerraformCloudConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    terraformCloudConfigureRaw(requestParameters: SecretsApiTerraformCloudConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    terraformCloudConfigure(terraformMountPath: string, terraformCloudConfigureRequest: TerraformCloudConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    terraformCloudConfigure(terraformMountPath: string, terraformCloudConfigureRequest: TerraformCloudConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    terraformCloudDeleteConfigurationRaw(requestParameters: SecretsApiTerraformCloudDeleteConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    terraformCloudDeleteConfigurationRaw(requestParameters: SecretsApiTerraformCloudDeleteConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    terraformCloudDeleteConfiguration(terraformMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    terraformCloudDeleteConfiguration(terraformMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    terraformCloudDeleteRoleRaw(requestParameters: SecretsApiTerraformCloudDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    terraformCloudDeleteRoleRaw(requestParameters: SecretsApiTerraformCloudDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    terraformCloudDeleteRole(name: string, terraformMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    terraformCloudDeleteRole(name: string, terraformMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    terraformCloudGenerateCredentialsRaw(requestParameters: SecretsApiTerraformCloudGenerateCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    terraformCloudGenerateCredentialsRaw(requestParameters: SecretsApiTerraformCloudGenerateCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    terraformCloudGenerateCredentials(name: string, terraformMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    terraformCloudGenerateCredentials(name: string, terraformMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    terraformCloudGenerateCredentials2Raw(requestParameters: SecretsApiTerraformCloudGenerateCredentials2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    terraformCloudGenerateCredentials2Raw(requestParameters: SecretsApiTerraformCloudGenerateCredentials2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    terraformCloudGenerateCredentials2(name: string, terraformMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    terraformCloudGenerateCredentials2(name: string, terraformMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     terraformCloudListRolesRaw(requestParameters: SecretsApiTerraformCloudListRolesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<StandardListResponse>>;
@@ -5304,46 +5304,46 @@ export declare class SecretsApi extends runtime.BaseAPI {
     terraformCloudListRoles(terraformMountPath: string, list: TerraformCloudListRolesListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse>;
     /**
      */
-    terraformCloudReadConfigurationRaw(requestParameters: SecretsApiTerraformCloudReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    terraformCloudReadConfigurationRaw(requestParameters: SecretsApiTerraformCloudReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    terraformCloudReadConfiguration(terraformMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    terraformCloudReadConfiguration(terraformMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    terraformCloudReadRoleRaw(requestParameters: SecretsApiTerraformCloudReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    terraformCloudReadRoleRaw(requestParameters: SecretsApiTerraformCloudReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    terraformCloudReadRole(name: string, terraformMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    terraformCloudReadRole(name: string, terraformMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    terraformCloudRotateRoleRaw(requestParameters: SecretsApiTerraformCloudRotateRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    terraformCloudRotateRoleRaw(requestParameters: SecretsApiTerraformCloudRotateRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    terraformCloudRotateRole(name: string, terraformMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    terraformCloudRotateRole(name: string, terraformMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    terraformCloudWriteRoleRaw(requestParameters: SecretsApiTerraformCloudWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    terraformCloudWriteRoleRaw(requestParameters: SecretsApiTerraformCloudWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    terraformCloudWriteRole(name: string, terraformMountPath: string, terraformCloudWriteRoleRequest: TerraformCloudWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    terraformCloudWriteRole(name: string, terraformMountPath: string, terraformCloudWriteRoleRequest: TerraformCloudWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    totpCreateKeyRaw(requestParameters: SecretsApiTotpCreateKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    totpCreateKeyRaw(requestParameters: SecretsApiTotpCreateKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    totpCreateKey(name: string, totpMountPath: string, totpCreateKeyRequest: TotpCreateKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    totpCreateKey(name: string, totpMountPath: string, totpCreateKeyRequest: TotpCreateKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    totpDeleteKeyRaw(requestParameters: SecretsApiTotpDeleteKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    totpDeleteKeyRaw(requestParameters: SecretsApiTotpDeleteKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    totpDeleteKey(name: string, totpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    totpDeleteKey(name: string, totpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    totpGenerateCodeRaw(requestParameters: SecretsApiTotpGenerateCodeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    totpGenerateCodeRaw(requestParameters: SecretsApiTotpGenerateCodeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    totpGenerateCode(name: string, totpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    totpGenerateCode(name: string, totpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage the keys that can be created with this backend.
      */
@@ -5354,212 +5354,212 @@ export declare class SecretsApi extends runtime.BaseAPI {
     totpListKeys(totpMountPath: string, list: TotpListKeysListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse>;
     /**
      */
-    totpReadKeyRaw(requestParameters: SecretsApiTotpReadKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    totpReadKeyRaw(requestParameters: SecretsApiTotpReadKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    totpReadKey(name: string, totpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    totpReadKey(name: string, totpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    totpValidateCodeRaw(requestParameters: SecretsApiTotpValidateCodeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    totpValidateCodeRaw(requestParameters: SecretsApiTotpValidateCodeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    totpValidateCode(name: string, totpMountPath: string, totpValidateCodeRequest: TotpValidateCodeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Backup the named key
-     */
-    transitBackUpKeyRaw(requestParameters: SecretsApiTransitBackUpKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    totpValidateCode(name: string, totpMountPath: string, totpValidateCodeRequest: TotpValidateCodeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Backup the named key
      */
-    transitBackUpKey(name: string, transitMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitBackUpKeyRaw(requestParameters: SecretsApiTransitBackUpKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Backup the named key
+     */
+    transitBackUpKey(name: string, transitMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Securely export named encryption or signing key
      */
-    transitByokKeyRaw(requestParameters: SecretsApiTransitByokKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitByokKeyRaw(requestParameters: SecretsApiTransitByokKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Securely export named encryption or signing key
      */
-    transitByokKey(destination: string, source: string, transitMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitByokKey(destination: string, source: string, transitMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Securely export named encryption or signing key
      */
-    transitByokKeyVersionRaw(requestParameters: SecretsApiTransitByokKeyVersionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitByokKeyVersionRaw(requestParameters: SecretsApiTransitByokKeyVersionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Securely export named encryption or signing key
      */
-    transitByokKeyVersion(destination: string, source: string, version: string, transitMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitByokKeyVersion(destination: string, source: string, version: string, transitMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Configures a new cache of the specified size
      */
-    transitConfigureCacheRaw(requestParameters: SecretsApiTransitConfigureCacheOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitConfigureCacheRaw(requestParameters: SecretsApiTransitConfigureCacheOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Configures a new cache of the specified size
      */
-    transitConfigureCache(transitMountPath: string, transitConfigureCacheRequest: TransitConfigureCacheRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitConfigureCache(transitMountPath: string, transitConfigureCacheRequest: TransitConfigureCacheRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Configure a named encryption key
      */
-    transitConfigureKeyRaw(requestParameters: SecretsApiTransitConfigureKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitConfigureKeyRaw(requestParameters: SecretsApiTransitConfigureKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Configure a named encryption key
      */
-    transitConfigureKey(name: string, transitMountPath: string, transitConfigureKeyRequest: TransitConfigureKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitConfigureKey(name: string, transitMountPath: string, transitConfigureKeyRequest: TransitConfigureKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    transitConfigureKeysRaw(requestParameters: SecretsApiTransitConfigureKeysOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitConfigureKeysRaw(requestParameters: SecretsApiTransitConfigureKeysOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    transitConfigureKeys(transitMountPath: string, transitConfigureKeysRequest: TransitConfigureKeysRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitConfigureKeys(transitMountPath: string, transitConfigureKeysRequest: TransitConfigureKeysRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    transitCreateKeyRaw(requestParameters: SecretsApiTransitCreateKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitCreateKeyRaw(requestParameters: SecretsApiTransitCreateKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    transitCreateKey(name: string, transitMountPath: string, transitCreateKeyRequest: TransitCreateKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Decrypt a ciphertext value using a named key
-     */
-    transitDecryptRaw(requestParameters: SecretsApiTransitDecryptOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitCreateKey(name: string, transitMountPath: string, transitCreateKeyRequest: TransitCreateKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Decrypt a ciphertext value using a named key
      */
-    transitDecrypt(name: string, transitMountPath: string, transitDecryptRequest: TransitDecryptRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitDecryptRaw(requestParameters: SecretsApiTransitDecryptOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Decrypt a ciphertext value using a named key
+     */
+    transitDecrypt(name: string, transitMountPath: string, transitDecryptRequest: TransitDecryptRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    transitDeleteKeyRaw(requestParameters: SecretsApiTransitDeleteKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitDeleteKeyRaw(requestParameters: SecretsApiTransitDeleteKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    transitDeleteKey(name: string, transitMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitDeleteKey(name: string, transitMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Encrypt a plaintext value or a batch of plaintext blocks using a named key
      */
-    transitEncryptRaw(requestParameters: SecretsApiTransitEncryptOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitEncryptRaw(requestParameters: SecretsApiTransitEncryptOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Encrypt a plaintext value or a batch of plaintext blocks using a named key
      */
-    transitEncrypt(name: string, transitMountPath: string, transitEncryptRequest: TransitEncryptRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitEncrypt(name: string, transitMountPath: string, transitEncryptRequest: TransitEncryptRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Export named encryption or signing key
      */
-    transitExportKeyRaw(requestParameters: SecretsApiTransitExportKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitExportKeyRaw(requestParameters: SecretsApiTransitExportKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Export named encryption or signing key
      */
-    transitExportKey(name: string, type: string, transitMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitExportKey(name: string, type: string, transitMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Export named encryption or signing key
      */
-    transitExportKeyVersionRaw(requestParameters: SecretsApiTransitExportKeyVersionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitExportKeyVersionRaw(requestParameters: SecretsApiTransitExportKeyVersionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Export named encryption or signing key
      */
-    transitExportKeyVersion(name: string, type: string, version: string, transitMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitExportKeyVersion(name: string, type: string, version: string, transitMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    transitGenerateCmacRaw(requestParameters: SecretsApiTransitGenerateCmacOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitGenerateCmacRaw(requestParameters: SecretsApiTransitGenerateCmacOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    transitGenerateCmac(name: string, transitMountPath: string, transitGenerateCmacRequest: TransitGenerateCmacRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitGenerateCmac(name: string, transitMountPath: string, transitGenerateCmacRequest: TransitGenerateCmacRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    transitGenerateCmacWithMacLengthRaw(requestParameters: SecretsApiTransitGenerateCmacWithMacLengthOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitGenerateCmacWithMacLengthRaw(requestParameters: SecretsApiTransitGenerateCmacWithMacLengthOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    transitGenerateCmacWithMacLength(name: string, urlMacLength: string, transitMountPath: string, transitGenerateCmacWithMacLengthRequest: TransitGenerateCmacWithMacLengthRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitGenerateCmacWithMacLength(name: string, urlMacLength: string, transitMountPath: string, transitGenerateCmacWithMacLengthRequest: TransitGenerateCmacWithMacLengthRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    transitGenerateCsrForKeyRaw(requestParameters: SecretsApiTransitGenerateCsrForKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitGenerateCsrForKeyRaw(requestParameters: SecretsApiTransitGenerateCsrForKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    transitGenerateCsrForKey(name: string, transitMountPath: string, transitGenerateCsrForKeyRequest: TransitGenerateCsrForKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitGenerateCsrForKey(name: string, transitMountPath: string, transitGenerateCsrForKeyRequest: TransitGenerateCsrForKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Generate a data key
      */
-    transitGenerateDataKeyRaw(requestParameters: SecretsApiTransitGenerateDataKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitGenerateDataKeyRaw(requestParameters: SecretsApiTransitGenerateDataKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Generate a data key
      */
-    transitGenerateDataKey(name: string, plaintext: string, transitMountPath: string, transitGenerateDataKeyRequest: TransitGenerateDataKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitGenerateDataKey(name: string, plaintext: string, transitMountPath: string, transitGenerateDataKeyRequest: TransitGenerateDataKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Generate an HMAC for input data using the named key
      */
-    transitGenerateHmacRaw(requestParameters: SecretsApiTransitGenerateHmacOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitGenerateHmacRaw(requestParameters: SecretsApiTransitGenerateHmacOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Generate an HMAC for input data using the named key
      */
-    transitGenerateHmac(name: string, transitMountPath: string, transitGenerateHmacRequest: TransitGenerateHmacRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitGenerateHmac(name: string, transitMountPath: string, transitGenerateHmacRequest: TransitGenerateHmacRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Generate an HMAC for input data using the named key
      */
-    transitGenerateHmacWithAlgorithmRaw(requestParameters: SecretsApiTransitGenerateHmacWithAlgorithmOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitGenerateHmacWithAlgorithmRaw(requestParameters: SecretsApiTransitGenerateHmacWithAlgorithmOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Generate an HMAC for input data using the named key
      */
-    transitGenerateHmacWithAlgorithm(name: string, urlalgorithm: string, transitMountPath: string, transitGenerateHmacWithAlgorithmRequest: TransitGenerateHmacWithAlgorithmRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitGenerateHmacWithAlgorithm(name: string, urlalgorithm: string, transitMountPath: string, transitGenerateHmacWithAlgorithmRequest: TransitGenerateHmacWithAlgorithmRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Generate random bytes
      */
-    transitGenerateRandomRaw(requestParameters: SecretsApiTransitGenerateRandomOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitGenerateRandomRaw(requestParameters: SecretsApiTransitGenerateRandomOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Generate random bytes
      */
-    transitGenerateRandom(transitMountPath: string, transitGenerateRandomRequest: TransitGenerateRandomRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitGenerateRandom(transitMountPath: string, transitGenerateRandomRequest: TransitGenerateRandomRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Generate random bytes
      */
-    transitGenerateRandomWithBytesRaw(requestParameters: SecretsApiTransitGenerateRandomWithBytesOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitGenerateRandomWithBytesRaw(requestParameters: SecretsApiTransitGenerateRandomWithBytesOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Generate random bytes
      */
-    transitGenerateRandomWithBytes(urlbytes: string, transitMountPath: string, transitGenerateRandomWithBytesRequest: TransitGenerateRandomWithBytesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitGenerateRandomWithBytes(urlbytes: string, transitMountPath: string, transitGenerateRandomWithBytesRequest: TransitGenerateRandomWithBytesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Generate random bytes
      */
-    transitGenerateRandomWithSourceRaw(requestParameters: SecretsApiTransitGenerateRandomWithSourceOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitGenerateRandomWithSourceRaw(requestParameters: SecretsApiTransitGenerateRandomWithSourceOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Generate random bytes
      */
-    transitGenerateRandomWithSource(source: string, transitMountPath: string, transitGenerateRandomWithSourceRequest: TransitGenerateRandomWithSourceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitGenerateRandomWithSource(source: string, transitMountPath: string, transitGenerateRandomWithSourceRequest: TransitGenerateRandomWithSourceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Generate random bytes
      */
-    transitGenerateRandomWithSourceAndBytesRaw(requestParameters: SecretsApiTransitGenerateRandomWithSourceAndBytesOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitGenerateRandomWithSourceAndBytesRaw(requestParameters: SecretsApiTransitGenerateRandomWithSourceAndBytesOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Generate random bytes
      */
-    transitGenerateRandomWithSourceAndBytes(source: string, urlbytes: string, transitMountPath: string, transitGenerateRandomWithSourceAndBytesRequest: TransitGenerateRandomWithSourceAndBytesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitGenerateRandomWithSourceAndBytes(source: string, urlbytes: string, transitMountPath: string, transitGenerateRandomWithSourceAndBytesRequest: TransitGenerateRandomWithSourceAndBytesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Generate a hash sum for input data
      */
-    transitHashRaw(requestParameters: SecretsApiTransitHashOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitHashRaw(requestParameters: SecretsApiTransitHashOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Generate a hash sum for input data
      */
-    transitHash(transitMountPath: string, transitHashRequest: TransitHashRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitHash(transitMountPath: string, transitHashRequest: TransitHashRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Generate a hash sum for input data
      */
-    transitHashWithAlgorithmRaw(requestParameters: SecretsApiTransitHashWithAlgorithmOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitHashWithAlgorithmRaw(requestParameters: SecretsApiTransitHashWithAlgorithmOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Generate a hash sum for input data
      */
-    transitHashWithAlgorithm(urlalgorithm: string, transitMountPath: string, transitHashWithAlgorithmRequest: TransitHashWithAlgorithmRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitHashWithAlgorithm(urlalgorithm: string, transitMountPath: string, transitHashWithAlgorithmRequest: TransitHashWithAlgorithmRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Imports an externally-generated key into a new transit key
      */
-    transitImportKeyRaw(requestParameters: SecretsApiTransitImportKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitImportKeyRaw(requestParameters: SecretsApiTransitImportKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Imports an externally-generated key into a new transit key
      */
-    transitImportKey(name: string, transitMountPath: string, transitImportKeyRequest: TransitImportKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitImportKey(name: string, transitMountPath: string, transitImportKeyRequest: TransitImportKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Imports an externally-generated key into an existing imported key
      */
-    transitImportKeyVersionRaw(requestParameters: SecretsApiTransitImportKeyVersionOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitImportKeyVersionRaw(requestParameters: SecretsApiTransitImportKeyVersionOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Imports an externally-generated key into an existing imported key
      */
-    transitImportKeyVersion(name: string, transitMountPath: string, transitImportKeyVersionRequest: TransitImportKeyVersionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitImportKeyVersion(name: string, transitMountPath: string, transitImportKeyVersionRequest: TransitImportKeyVersionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Managed named encryption keys
      */
@@ -5571,460 +5571,460 @@ export declare class SecretsApi extends runtime.BaseAPI {
     /**
      * Returns the size of the active cache
      */
-    transitReadCacheConfigurationRaw(requestParameters: SecretsApiTransitReadCacheConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitReadCacheConfigurationRaw(requestParameters: SecretsApiTransitReadCacheConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Returns the size of the active cache
      */
-    transitReadCacheConfiguration(transitMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitReadCacheConfiguration(transitMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    transitReadKeyRaw(requestParameters: SecretsApiTransitReadKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitReadKeyRaw(requestParameters: SecretsApiTransitReadKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    transitReadKey(name: string, transitMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitReadKey(name: string, transitMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    transitReadKeysConfigurationRaw(requestParameters: SecretsApiTransitReadKeysConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitReadKeysConfigurationRaw(requestParameters: SecretsApiTransitReadKeysConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    transitReadKeysConfiguration(transitMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Returns the public key to use for wrapping imported keys
-     */
-    transitReadWrappingKeyRaw(requestParameters: SecretsApiTransitReadWrappingKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitReadKeysConfiguration(transitMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Returns the public key to use for wrapping imported keys
      */
-    transitReadWrappingKey(transitMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitReadWrappingKeyRaw(requestParameters: SecretsApiTransitReadWrappingKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Returns the public key to use for wrapping imported keys
+     */
+    transitReadWrappingKey(transitMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Restore the named key
      */
-    transitRestoreAndRenameKeyRaw(requestParameters: SecretsApiTransitRestoreAndRenameKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitRestoreAndRenameKeyRaw(requestParameters: SecretsApiTransitRestoreAndRenameKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Restore the named key
      */
-    transitRestoreAndRenameKey(name: string, transitMountPath: string, transitRestoreAndRenameKeyRequest: TransitRestoreAndRenameKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitRestoreAndRenameKey(name: string, transitMountPath: string, transitRestoreAndRenameKeyRequest: TransitRestoreAndRenameKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Restore the named key
      */
-    transitRestoreKeyRaw(requestParameters: SecretsApiTransitRestoreKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitRestoreKeyRaw(requestParameters: SecretsApiTransitRestoreKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Restore the named key
      */
-    transitRestoreKey(transitMountPath: string, transitRestoreKeyRequest: TransitRestoreKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitRestoreKey(transitMountPath: string, transitRestoreKeyRequest: TransitRestoreKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Rewrap ciphertext
      */
-    transitRewrapRaw(requestParameters: SecretsApiTransitRewrapOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitRewrapRaw(requestParameters: SecretsApiTransitRewrapOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Rewrap ciphertext
      */
-    transitRewrap(name: string, transitMountPath: string, transitRewrapRequest: TransitRewrapRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitRewrap(name: string, transitMountPath: string, transitRewrapRequest: TransitRewrapRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Rotate named encryption key
      */
-    transitRotateKeyRaw(requestParameters: SecretsApiTransitRotateKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitRotateKeyRaw(requestParameters: SecretsApiTransitRotateKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Rotate named encryption key
      */
-    transitRotateKey(name: string, transitMountPath: string, transitRotateKeyRequest: TransitRotateKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitRotateKey(name: string, transitMountPath: string, transitRotateKeyRequest: TransitRotateKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    transitSetCertificateForKeyRaw(requestParameters: SecretsApiTransitSetCertificateForKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitSetCertificateForKeyRaw(requestParameters: SecretsApiTransitSetCertificateForKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    transitSetCertificateForKey(name: string, transitMountPath: string, transitSetCertificateForKeyRequest: TransitSetCertificateForKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Generate a signature for input data using the named key
-     */
-    transitSignRaw(requestParameters: SecretsApiTransitSignOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitSetCertificateForKey(name: string, transitMountPath: string, transitSetCertificateForKeyRequest: TransitSetCertificateForKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Generate a signature for input data using the named key
      */
-    transitSign(name: string, transitMountPath: string, transitSignRequest: TransitSignRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitSignRaw(requestParameters: SecretsApiTransitSignOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Generate a signature for input data using the named key
      */
-    transitSignWithAlgorithmRaw(requestParameters: SecretsApiTransitSignWithAlgorithmOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitSign(name: string, transitMountPath: string, transitSignRequest: TransitSignRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Generate a signature for input data using the named key
      */
-    transitSignWithAlgorithm(name: string, urlalgorithm: string, transitMountPath: string, transitSignWithAlgorithmRequest: TransitSignWithAlgorithmRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitSignWithAlgorithmRaw(requestParameters: SecretsApiTransitSignWithAlgorithmOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Generate a signature for input data using the named key
+     */
+    transitSignWithAlgorithm(name: string, urlalgorithm: string, transitMountPath: string, transitSignWithAlgorithmRequest: TransitSignWithAlgorithmRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Trim key versions of a named key
      */
-    transitTrimKeyRaw(requestParameters: SecretsApiTransitTrimKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitTrimKeyRaw(requestParameters: SecretsApiTransitTrimKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Trim key versions of a named key
      */
-    transitTrimKey(name: string, transitMountPath: string, transitTrimKeyRequest: TransitTrimKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitTrimKey(name: string, transitMountPath: string, transitTrimKeyRequest: TransitTrimKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Verify a signature or HMAC for input data created using the named key
      */
-    transitVerifyRaw(requestParameters: SecretsApiTransitVerifyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitVerifyRaw(requestParameters: SecretsApiTransitVerifyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Verify a signature or HMAC for input data created using the named key
      */
-    transitVerify(name: string, transitMountPath: string, transitVerifyRequest: TransitVerifyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitVerify(name: string, transitMountPath: string, transitVerifyRequest: TransitVerifyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Verify a signature or HMAC for input data created using the named key
      */
-    transitVerifyWithAlgorithmRaw(requestParameters: SecretsApiTransitVerifyWithAlgorithmOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    transitVerifyWithAlgorithmRaw(requestParameters: SecretsApiTransitVerifyWithAlgorithmOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Verify a signature or HMAC for input data created using the named key
      */
-    transitVerifyWithAlgorithm(name: string, urlalgorithm: string, transitMountPath: string, transitVerifyWithAlgorithmRequest: TransitVerifyWithAlgorithmRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    transitVerifyWithAlgorithm(name: string, urlalgorithm: string, transitMountPath: string, transitVerifyWithAlgorithmRequest: TransitVerifyWithAlgorithmRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum AliCloudListRolesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum AwsListRolesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum AzureListRolesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum ConsulListRolesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum CubbyholeListListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum DatabaseListConnectionsListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum DatabaseListRolesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum DatabaseListStaticRolesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum GoogleCloudKmsListKeysListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum GoogleCloudListImpersonatedAccountsListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum GoogleCloudListImpersonatedAccounts2ListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum GoogleCloudListRolesetsListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum GoogleCloudListRolesets2ListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum GoogleCloudListStaticAccountsListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum GoogleCloudListStaticAccounts2ListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum KubernetesListRolesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum KvV1ListListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum KvV2ListListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum LdapLibraryListListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum LdapLibraryListLibraryPathListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum LdapLibraryListLibraryPath0ListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum LdapListDynamicRolesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum LdapListRolePathListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum LdapListRolePath0ListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum LdapListStaticRolePathListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum LdapListStaticRolePath0ListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum LdapListStaticRolesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum MongoDbAtlasListRolesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum NomadListRolesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum PkiGenerateIntermediateExportedEnum {
     INTERNAL = "internal",
     EXTERNAL = "external",
     KMS = "kms"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum PkiGenerateRootExportedEnum {
     INTERNAL = "internal",
     EXTERNAL = "external",
     KMS = "kms"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum PkiIssuersGenerateIntermediateExportedEnum {
     INTERNAL = "internal",
     EXTERNAL = "external",
     KMS = "kms"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum PkiIssuersGenerateRootExportedEnum {
     INTERNAL = "internal",
     EXTERNAL = "external",
     KMS = "kms"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum PkiListAcmeAccountKeysListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum PkiListCertMetadataListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum PkiListCertsListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum PkiListCertsRevocationQueueListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum PkiListEabKeysListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum PkiListIssuersListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum PkiListKeysListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum PkiListRevokedCertsListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum PkiListRolesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum PkiListUnifiedRevokedCertsListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum PkiRotateRootExportedEnum {
     INTERNAL = "internal",
     EXTERNAL = "external",
     KMS = "kms"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum RabbitMqListRolesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum SshListRolesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum TerraformCloudListRolesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum TotpListKeysListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum TransitListKeysListEnum {
     TRUE = "true"
 }

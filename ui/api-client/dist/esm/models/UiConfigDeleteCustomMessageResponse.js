@@ -25,7 +25,7 @@ export function UiConfigDeleteCustomMessageResponseFromJSONTyped(json, ignoreDis
         return json;
     }
     return {
-        id: json['id'] == null ? undefined : json['id'],
+        'id': json['id'] == null ? undefined : json['id'],
     };
 }
 export function UiConfigDeleteCustomMessageResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function UiConfigDeleteCustomMessageResponseToJSONTyped(value, ignoreDisc
         return value;
     }
     return {
-        id: value['id'],
+        'id': value['id'],
     };
 }

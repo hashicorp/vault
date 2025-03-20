@@ -32,11 +32,11 @@ function AppRoleWriteSecretIdRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        cidrList: json['cidr_list'] == null ? undefined : json['cidr_list'],
-        metadata: json['metadata'] == null ? undefined : json['metadata'],
-        numUses: json['num_uses'] == null ? undefined : json['num_uses'],
-        tokenBoundCidrs: json['token_bound_cidrs'] == null ? undefined : json['token_bound_cidrs'],
-        ttl: json['ttl'] == null ? undefined : json['ttl'],
+        'cidrList': json['cidr_list'] == null ? undefined : json['cidr_list'],
+        'metadata': json['metadata'] == null ? undefined : json['metadata'],
+        'numUses': json['num_uses'] == null ? undefined : json['num_uses'],
+        'tokenBoundCidrs': json['token_bound_cidrs'] == null ? undefined : json['token_bound_cidrs'],
+        'ttl': json['ttl'] == null ? undefined : json['ttl'],
     };
 }
 function AppRoleWriteSecretIdRequestToJSON(json) {
@@ -47,10 +47,10 @@ function AppRoleWriteSecretIdRequestToJSONTyped(value, ignoreDiscriminator = fal
         return value;
     }
     return {
-        cidr_list: value['cidrList'],
-        metadata: value['metadata'],
-        num_uses: value['numUses'],
-        token_bound_cidrs: value['tokenBoundCidrs'],
-        ttl: value['ttl'],
+        'cidr_list': value['cidrList'],
+        'metadata': value['metadata'],
+        'num_uses': value['numUses'],
+        'token_bound_cidrs': value['tokenBoundCidrs'],
+        'ttl': value['ttl'],
     };
 }

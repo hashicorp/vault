@@ -179,9 +179,9 @@ export interface SshWriteRoleRequest {
     ttl?: string;
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum SshWriteRoleRequestAlgorithmSignerEnum {
     EMPTY = "",
     DEFAULT = "default",
@@ -190,9 +190,9 @@ export declare enum SshWriteRoleRequestAlgorithmSignerEnum {
     RSA_SHA2_512 = "rsa-sha2-512"
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum SshWriteRoleRequestKeyTypeEnum {
     OTP = "otp",
     CA = "ca"

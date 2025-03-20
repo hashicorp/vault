@@ -25,8 +25,8 @@ export function OidcIntrospectRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        clientId: json['client_id'] == null ? undefined : json['client_id'],
-        token: json['token'] == null ? undefined : json['token'],
+        'clientId': json['client_id'] == null ? undefined : json['client_id'],
+        'token': json['token'] == null ? undefined : json['token'],
     };
 }
 export function OidcIntrospectRequestToJSON(json) {
@@ -37,7 +37,7 @@ export function OidcIntrospectRequestToJSONTyped(value, ignoreDiscriminator = fa
         return value;
     }
     return {
-        client_id: value['clientId'],
-        token: value['token'],
+        'client_id': value['clientId'],
+        'token': value['token'],
     };
 }

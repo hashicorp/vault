@@ -25,7 +25,7 @@ export function AwsTidyRoleTagDenyListRequestFromJSONTyped(json, ignoreDiscrimin
         return json;
     }
     return {
-        safetyBuffer: json['safety_buffer'] == null ? undefined : json['safety_buffer'],
+        'safetyBuffer': json['safety_buffer'] == null ? undefined : json['safety_buffer'],
     };
 }
 export function AwsTidyRoleTagDenyListRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function AwsTidyRoleTagDenyListRequestToJSONTyped(value, ignoreDiscrimina
         return value;
     }
     return {
-        safety_buffer: value['safetyBuffer'],
+        'safety_buffer': value['safetyBuffer'],
     };
 }

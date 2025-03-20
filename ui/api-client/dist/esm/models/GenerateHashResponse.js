@@ -25,7 +25,7 @@ export function GenerateHashResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        sum: json['sum'] == null ? undefined : json['sum'],
+        'sum': json['sum'] == null ? undefined : json['sum'],
     };
 }
 export function GenerateHashResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function GenerateHashResponseToJSONTyped(value, ignoreDiscriminator = fal
         return value;
     }
     return {
-        sum: value['sum'],
+        'sum': value['sum'],
     };
 }

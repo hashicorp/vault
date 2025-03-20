@@ -32,8 +32,8 @@ function SubscriptionsCreateResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        id: json['id'] == null ? undefined : json['id'],
-        plugin: json['plugin'] == null ? undefined : json['plugin'],
+        'id': json['id'] == null ? undefined : json['id'],
+        'plugin': json['plugin'] == null ? undefined : json['plugin'],
     };
 }
 function SubscriptionsCreateResponseToJSON(json) {
@@ -44,7 +44,7 @@ function SubscriptionsCreateResponseToJSONTyped(value, ignoreDiscriminator = fal
         return value;
     }
     return {
-        id: value['id'],
-        plugin: value['plugin'],
+        'id': value['id'],
+        'plugin': value['plugin'],
     };
 }

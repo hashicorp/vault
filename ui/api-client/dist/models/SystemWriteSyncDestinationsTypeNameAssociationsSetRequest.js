@@ -32,8 +32,8 @@ function SystemWriteSyncDestinationsTypeNameAssociationsSetRequestFromJSONTyped(
         return json;
     }
     return {
-        mount: json['mount'] == null ? undefined : json['mount'],
-        secretName: json['secret_name'] == null ? undefined : json['secret_name'],
+        'mount': json['mount'] == null ? undefined : json['mount'],
+        'secretName': json['secret_name'] == null ? undefined : json['secret_name'],
     };
 }
 function SystemWriteSyncDestinationsTypeNameAssociationsSetRequestToJSON(json) {
@@ -44,7 +44,7 @@ function SystemWriteSyncDestinationsTypeNameAssociationsSetRequestToJSONTyped(va
         return value;
     }
     return {
-        mount: value['mount'],
-        secret_name: value['secretName'],
+        'mount': value['mount'],
+        'secret_name': value['secretName'],
     };
 }

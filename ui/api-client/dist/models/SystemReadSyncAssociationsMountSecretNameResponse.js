@@ -32,7 +32,7 @@ function SystemReadSyncAssociationsMountSecretNameResponseFromJSONTyped(json, ig
         return json;
     }
     return {
-        associatedDestinations: json['associated_destinations'] == null ? undefined : json['associated_destinations'],
+        'associatedDestinations': json['associated_destinations'] == null ? undefined : json['associated_destinations'],
     };
 }
 function SystemReadSyncAssociationsMountSecretNameResponseToJSON(json) {
@@ -43,6 +43,6 @@ function SystemReadSyncAssociationsMountSecretNameResponseToJSONTyped(value, ign
         return value;
     }
     return {
-        associated_destinations: value['associatedDestinations'],
+        'associated_destinations': value['associatedDestinations'],
     };
 }

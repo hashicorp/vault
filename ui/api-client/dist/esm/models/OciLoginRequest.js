@@ -25,7 +25,7 @@ export function OciLoginRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        requestHeaders: json['request_headers'] == null ? undefined : json['request_headers'],
+        'requestHeaders': json['request_headers'] == null ? undefined : json['request_headers'],
     };
 }
 export function OciLoginRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function OciLoginRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        request_headers: value['requestHeaders'],
+        'request_headers': value['requestHeaders'],
     };
 }

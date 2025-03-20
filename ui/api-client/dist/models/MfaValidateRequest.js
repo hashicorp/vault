@@ -36,8 +36,8 @@ function MfaValidateRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        mfaPayload: json['mfa_payload'],
-        mfaRequestId: json['mfa_request_id'],
+        'mfaPayload': json['mfa_payload'],
+        'mfaRequestId': json['mfa_request_id'],
     };
 }
 function MfaValidateRequestToJSON(json) {
@@ -48,7 +48,7 @@ function MfaValidateRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        mfa_payload: value['mfaPayload'],
-        mfa_request_id: value['mfaRequestId'],
+        'mfa_payload': value['mfaPayload'],
+        'mfa_request_id': value['mfaRequestId'],
     };
 }

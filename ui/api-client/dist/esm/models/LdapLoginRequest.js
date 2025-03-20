@@ -25,7 +25,7 @@ export function LdapLoginRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        password: json['password'] == null ? undefined : json['password'],
+        'password': json['password'] == null ? undefined : json['password'],
     };
 }
 export function LdapLoginRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function LdapLoginRequestToJSONTyped(value, ignoreDiscriminator = false) 
         return value;
     }
     return {
-        password: value['password'],
+        'password': value['password'],
     };
 }

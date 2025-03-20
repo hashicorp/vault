@@ -25,7 +25,7 @@ export function ReadWrappingPropertiesRequestFromJSONTyped(json, ignoreDiscrimin
         return json;
     }
     return {
-        token: json['token'] == null ? undefined : json['token'],
+        'token': json['token'] == null ? undefined : json['token'],
     };
 }
 export function ReadWrappingPropertiesRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function ReadWrappingPropertiesRequestToJSONTyped(value, ignoreDiscrimina
         return value;
     }
     return {
-        token: value['token'],
+        'token': value['token'],
     };
 }

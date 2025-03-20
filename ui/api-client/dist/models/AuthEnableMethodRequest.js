@@ -32,15 +32,15 @@ function AuthEnableMethodRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        config: json['config'] == null ? undefined : json['config'],
-        description: json['description'] == null ? undefined : json['description'],
-        externalEntropyAccess: json['external_entropy_access'] == null ? undefined : json['external_entropy_access'],
-        local: json['local'] == null ? undefined : json['local'],
-        options: json['options'] == null ? undefined : json['options'],
-        pluginName: json['plugin_name'] == null ? undefined : json['plugin_name'],
-        pluginVersion: json['plugin_version'] == null ? undefined : json['plugin_version'],
-        sealWrap: json['seal_wrap'] == null ? undefined : json['seal_wrap'],
-        type: json['type'] == null ? undefined : json['type'],
+        'config': json['config'] == null ? undefined : json['config'],
+        'description': json['description'] == null ? undefined : json['description'],
+        'externalEntropyAccess': json['external_entropy_access'] == null ? undefined : json['external_entropy_access'],
+        'local': json['local'] == null ? undefined : json['local'],
+        'options': json['options'] == null ? undefined : json['options'],
+        'pluginName': json['plugin_name'] == null ? undefined : json['plugin_name'],
+        'pluginVersion': json['plugin_version'] == null ? undefined : json['plugin_version'],
+        'sealWrap': json['seal_wrap'] == null ? undefined : json['seal_wrap'],
+        'type': json['type'] == null ? undefined : json['type'],
     };
 }
 function AuthEnableMethodRequestToJSON(json) {
@@ -51,14 +51,14 @@ function AuthEnableMethodRequestToJSONTyped(value, ignoreDiscriminator = false) 
         return value;
     }
     return {
-        config: value['config'],
-        description: value['description'],
-        external_entropy_access: value['externalEntropyAccess'],
-        local: value['local'],
-        options: value['options'],
-        plugin_name: value['pluginName'],
-        plugin_version: value['pluginVersion'],
-        seal_wrap: value['sealWrap'],
-        type: value['type'],
+        'config': value['config'],
+        'description': value['description'],
+        'external_entropy_access': value['externalEntropyAccess'],
+        'local': value['local'],
+        'options': value['options'],
+        'plugin_name': value['pluginName'],
+        'plugin_version': value['pluginVersion'],
+        'seal_wrap': value['sealWrap'],
+        'type': value['type'],
     };
 }

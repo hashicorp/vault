@@ -32,11 +32,11 @@ function EntityCreateRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        disabled: json['disabled'] == null ? undefined : json['disabled'],
-        id: json['id'] == null ? undefined : json['id'],
-        metadata: json['metadata'] == null ? undefined : json['metadata'],
-        name: json['name'] == null ? undefined : json['name'],
-        policies: json['policies'] == null ? undefined : json['policies'],
+        'disabled': json['disabled'] == null ? undefined : json['disabled'],
+        'id': json['id'] == null ? undefined : json['id'],
+        'metadata': json['metadata'] == null ? undefined : json['metadata'],
+        'name': json['name'] == null ? undefined : json['name'],
+        'policies': json['policies'] == null ? undefined : json['policies'],
     };
 }
 function EntityCreateRequestToJSON(json) {
@@ -47,10 +47,10 @@ function EntityCreateRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        disabled: value['disabled'],
-        id: value['id'],
-        metadata: value['metadata'],
-        name: value['name'],
-        policies: value['policies'],
+        'disabled': value['disabled'],
+        'id': value['id'],
+        'metadata': value['metadata'],
+        'name': value['name'],
+        'policies': value['policies'],
     };
 }

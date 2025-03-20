@@ -32,7 +32,7 @@ function SystemWriteInternalCountersActivityWriteRequestFromJSONTyped(json, igno
         return json;
     }
     return {
-        input: json['input'] == null ? undefined : json['input'],
+        'input': json['input'] == null ? undefined : json['input'],
     };
 }
 function SystemWriteInternalCountersActivityWriteRequestToJSON(json) {
@@ -43,6 +43,6 @@ function SystemWriteInternalCountersActivityWriteRequestToJSONTyped(value, ignor
         return value;
     }
     return {
-        input: value['input'],
+        'input': value['input'],
     };
 }

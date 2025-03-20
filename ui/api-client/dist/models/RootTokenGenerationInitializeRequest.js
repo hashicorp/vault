@@ -32,7 +32,7 @@ function RootTokenGenerationInitializeRequestFromJSONTyped(json, ignoreDiscrimin
         return json;
     }
     return {
-        pgpKey: json['pgp_key'] == null ? undefined : json['pgp_key'],
+        'pgpKey': json['pgp_key'] == null ? undefined : json['pgp_key'],
     };
 }
 function RootTokenGenerationInitializeRequestToJSON(json) {
@@ -43,6 +43,6 @@ function RootTokenGenerationInitializeRequestToJSONTyped(value, ignoreDiscrimina
         return value;
     }
     return {
-        pgp_key: value['pgpKey'],
+        'pgp_key': value['pgpKey'],
     };
 }

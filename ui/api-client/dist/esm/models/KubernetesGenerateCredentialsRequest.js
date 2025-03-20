@@ -27,10 +27,10 @@ export function KubernetesGenerateCredentialsRequestFromJSONTyped(json, ignoreDi
         return json;
     }
     return {
-        audiences: json['audiences'] == null ? undefined : json['audiences'],
-        clusterRoleBinding: json['cluster_role_binding'] == null ? undefined : json['cluster_role_binding'],
-        kubernetesNamespace: json['kubernetes_namespace'],
-        ttl: json['ttl'] == null ? undefined : json['ttl'],
+        'audiences': json['audiences'] == null ? undefined : json['audiences'],
+        'clusterRoleBinding': json['cluster_role_binding'] == null ? undefined : json['cluster_role_binding'],
+        'kubernetesNamespace': json['kubernetes_namespace'],
+        'ttl': json['ttl'] == null ? undefined : json['ttl'],
     };
 }
 export function KubernetesGenerateCredentialsRequestToJSON(json) {
@@ -41,9 +41,9 @@ export function KubernetesGenerateCredentialsRequestToJSONTyped(value, ignoreDis
         return value;
     }
     return {
-        audiences: value['audiences'],
-        cluster_role_binding: value['clusterRoleBinding'],
-        kubernetes_namespace: value['kubernetesNamespace'],
-        ttl: value['ttl'],
+        'audiences': value['audiences'],
+        'cluster_role_binding': value['clusterRoleBinding'],
+        'kubernetes_namespace': value['kubernetesNamespace'],
+        'ttl': value['ttl'],
     };
 }

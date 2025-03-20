@@ -32,16 +32,16 @@ function GroupsCreateDuplicatesRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        count: json['count'] == null ? undefined : json['count'],
-        differentCase: json['different_case'] == null ? undefined : json['different_case'],
-        id: json['id'] == null ? undefined : json['id'],
-        memberEntityIds: json['member_entity_ids'] == null ? undefined : json['member_entity_ids'],
-        memberGroupIds: json['member_group_ids'] == null ? undefined : json['member_group_ids'],
-        metadata: json['metadata'] == null ? undefined : json['metadata'],
-        name: json['name'] == null ? undefined : json['name'],
-        namespaceId: json['namespace_id'] == null ? undefined : json['namespace_id'],
-        policies: json['policies'] == null ? undefined : json['policies'],
-        type: json['type'] == null ? undefined : json['type'],
+        'count': json['count'] == null ? undefined : json['count'],
+        'differentCase': json['different_case'] == null ? undefined : json['different_case'],
+        'id': json['id'] == null ? undefined : json['id'],
+        'memberEntityIds': json['member_entity_ids'] == null ? undefined : json['member_entity_ids'],
+        'memberGroupIds': json['member_group_ids'] == null ? undefined : json['member_group_ids'],
+        'metadata': json['metadata'] == null ? undefined : json['metadata'],
+        'name': json['name'] == null ? undefined : json['name'],
+        'namespaceId': json['namespace_id'] == null ? undefined : json['namespace_id'],
+        'policies': json['policies'] == null ? undefined : json['policies'],
+        'type': json['type'] == null ? undefined : json['type'],
     };
 }
 function GroupsCreateDuplicatesRequestToJSON(json) {
@@ -52,15 +52,15 @@ function GroupsCreateDuplicatesRequestToJSONTyped(value, ignoreDiscriminator = f
         return value;
     }
     return {
-        count: value['count'],
-        different_case: value['differentCase'],
-        id: value['id'],
-        member_entity_ids: value['memberEntityIds'],
-        member_group_ids: value['memberGroupIds'],
-        metadata: value['metadata'],
-        name: value['name'],
-        namespace_id: value['namespaceId'],
-        policies: value['policies'],
-        type: value['type'],
+        'count': value['count'],
+        'different_case': value['differentCase'],
+        'id': value['id'],
+        'member_entity_ids': value['memberEntityIds'],
+        'member_group_ids': value['memberGroupIds'],
+        'metadata': value['metadata'],
+        'name': value['name'],
+        'namespace_id': value['namespaceId'],
+        'policies': value['policies'],
+        'type': value['type'],
     };
 }

@@ -32,7 +32,7 @@ function LdapLibraryCheckOutRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        ttl: json['ttl'] == null ? undefined : json['ttl'],
+        'ttl': json['ttl'] == null ? undefined : json['ttl'],
     };
 }
 function LdapLibraryCheckOutRequestToJSON(json) {
@@ -43,6 +43,6 @@ function LdapLibraryCheckOutRequestToJSONTyped(value, ignoreDiscriminator = fals
         return value;
     }
     return {
-        ttl: value['ttl'],
+        'ttl': value['ttl'],
     };
 }

@@ -25,8 +25,8 @@ export function PkiImportKeyRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        keyName: json['key_name'] == null ? undefined : json['key_name'],
-        pemBundle: json['pem_bundle'] == null ? undefined : json['pem_bundle'],
+        'keyName': json['key_name'] == null ? undefined : json['key_name'],
+        'pemBundle': json['pem_bundle'] == null ? undefined : json['pem_bundle'],
     };
 }
 export function PkiImportKeyRequestToJSON(json) {
@@ -37,7 +37,7 @@ export function PkiImportKeyRequestToJSONTyped(value, ignoreDiscriminator = fals
         return value;
     }
     return {
-        key_name: value['keyName'],
-        pem_bundle: value['pemBundle'],
+        'key_name': value['keyName'],
+        'pem_bundle': value['pemBundle'],
     };
 }

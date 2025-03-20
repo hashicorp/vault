@@ -25,11 +25,11 @@ export function AliasCreateRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        canonicalId: json['canonical_id'] == null ? undefined : json['canonical_id'],
-        entityId: json['entity_id'] == null ? undefined : json['entity_id'],
-        id: json['id'] == null ? undefined : json['id'],
-        mountAccessor: json['mount_accessor'] == null ? undefined : json['mount_accessor'],
-        name: json['name'] == null ? undefined : json['name'],
+        'canonicalId': json['canonical_id'] == null ? undefined : json['canonical_id'],
+        'entityId': json['entity_id'] == null ? undefined : json['entity_id'],
+        'id': json['id'] == null ? undefined : json['id'],
+        'mountAccessor': json['mount_accessor'] == null ? undefined : json['mount_accessor'],
+        'name': json['name'] == null ? undefined : json['name'],
     };
 }
 export function AliasCreateRequestToJSON(json) {
@@ -40,10 +40,10 @@ export function AliasCreateRequestToJSONTyped(value, ignoreDiscriminator = false
         return value;
     }
     return {
-        canonical_id: value['canonicalId'],
-        entity_id: value['entityId'],
-        id: value['id'],
-        mount_accessor: value['mountAccessor'],
-        name: value['name'],
+        'canonical_id': value['canonicalId'],
+        'entity_id': value['entityId'],
+        'id': value['id'],
+        'mount_accessor': value['mountAccessor'],
+        'name': value['name'],
     };
 }

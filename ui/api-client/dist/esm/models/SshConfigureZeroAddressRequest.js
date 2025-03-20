@@ -25,7 +25,7 @@ export function SshConfigureZeroAddressRequestFromJSONTyped(json, ignoreDiscrimi
         return json;
     }
     return {
-        roles: json['roles'] == null ? undefined : json['roles'],
+        'roles': json['roles'] == null ? undefined : json['roles'],
     };
 }
 export function SshConfigureZeroAddressRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function SshConfigureZeroAddressRequestToJSONTyped(value, ignoreDiscrimin
         return value;
     }
     return {
-        roles: value['roles'],
+        'roles': value['roles'],
     };
 }

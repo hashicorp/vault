@@ -25,7 +25,7 @@ export function GithubWriteTeamMappingRequestFromJSONTyped(json, ignoreDiscrimin
         return json;
     }
     return {
-        value: json['value'] == null ? undefined : json['value'],
+        'value': json['value'] == null ? undefined : json['value'],
     };
 }
 export function GithubWriteTeamMappingRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function GithubWriteTeamMappingRequestToJSONTyped(value, ignoreDiscrimina
         return value;
     }
     return {
-        value: value['value'],
+        'value': value['value'],
     };
 }

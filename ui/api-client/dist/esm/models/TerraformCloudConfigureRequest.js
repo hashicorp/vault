@@ -27,9 +27,9 @@ export function TerraformCloudConfigureRequestFromJSONTyped(json, ignoreDiscrimi
         return json;
     }
     return {
-        address: json['address'] == null ? undefined : json['address'],
-        basePath: json['base_path'] == null ? undefined : json['base_path'],
-        token: json['token'],
+        'address': json['address'] == null ? undefined : json['address'],
+        'basePath': json['base_path'] == null ? undefined : json['base_path'],
+        'token': json['token'],
     };
 }
 export function TerraformCloudConfigureRequestToJSON(json) {
@@ -40,8 +40,8 @@ export function TerraformCloudConfigureRequestToJSONTyped(value, ignoreDiscrimin
         return value;
     }
     return {
-        address: value['address'],
-        base_path: value['basePath'],
-        token: value['token'],
+        'address': value['address'],
+        'base_path': value['basePath'],
+        'token': value['token'],
     };
 }

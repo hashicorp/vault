@@ -25,9 +25,9 @@ export function TransitHashRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        algorithm: json['algorithm'] == null ? undefined : json['algorithm'],
-        format: json['format'] == null ? undefined : json['format'],
-        input: json['input'] == null ? undefined : json['input'],
+        'algorithm': json['algorithm'] == null ? undefined : json['algorithm'],
+        'format': json['format'] == null ? undefined : json['format'],
+        'input': json['input'] == null ? undefined : json['input'],
     };
 }
 export function TransitHashRequestToJSON(json) {
@@ -38,8 +38,8 @@ export function TransitHashRequestToJSONTyped(value, ignoreDiscriminator = false
         return value;
     }
     return {
-        algorithm: value['algorithm'],
-        format: value['format'],
-        input: value['input'],
+        'algorithm': value['algorithm'],
+        'format': value['format'],
+        'input': value['input'],
     };
 }

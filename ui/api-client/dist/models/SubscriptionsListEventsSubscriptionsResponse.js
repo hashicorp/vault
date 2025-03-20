@@ -32,7 +32,7 @@ function SubscriptionsListEventsSubscriptionsResponseFromJSONTyped(json, ignoreD
         return json;
     }
     return {
-        subscriptions: json['subscriptions'] == null ? undefined : json['subscriptions'],
+        'subscriptions': json['subscriptions'] == null ? undefined : json['subscriptions'],
     };
 }
 function SubscriptionsListEventsSubscriptionsResponseToJSON(json) {
@@ -43,6 +43,6 @@ function SubscriptionsListEventsSubscriptionsResponseToJSONTyped(value, ignoreDi
         return value;
     }
     return {
-        subscriptions: value['subscriptions'],
+        'subscriptions': value['subscriptions'],
     };
 }

@@ -25,8 +25,8 @@ export function UserpassResetPasswordRequestFromJSONTyped(json, ignoreDiscrimina
         return json;
     }
     return {
-        password: json['password'] == null ? undefined : json['password'],
-        passwordHash: json['password_hash'] == null ? undefined : json['password_hash'],
+        'password': json['password'] == null ? undefined : json['password'],
+        'passwordHash': json['password_hash'] == null ? undefined : json['password_hash'],
     };
 }
 export function UserpassResetPasswordRequestToJSON(json) {
@@ -37,7 +37,7 @@ export function UserpassResetPasswordRequestToJSONTyped(value, ignoreDiscriminat
         return value;
     }
     return {
-        password: value['password'],
-        password_hash: value['passwordHash'],
+        'password': value['password'],
+        'password_hash': value['passwordHash'],
     };
 }

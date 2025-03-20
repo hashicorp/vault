@@ -32,7 +32,7 @@ function EntityBatchDeleteRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        entityIds: json['entity_ids'] == null ? undefined : json['entity_ids'],
+        'entityIds': json['entity_ids'] == null ? undefined : json['entity_ids'],
     };
 }
 function EntityBatchDeleteRequestToJSON(json) {
@@ -43,6 +43,6 @@ function EntityBatchDeleteRequestToJSONTyped(value, ignoreDiscriminator = false)
         return value;
     }
     return {
-        entity_ids: value['entityIds'],
+        'entity_ids': value['entityIds'],
     };
 }

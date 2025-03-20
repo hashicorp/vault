@@ -32,20 +32,20 @@ function GoogleCloudConfigureAuthRequestFromJSONTyped(json, ignoreDiscriminator)
         return json;
     }
     return {
-        credentials: json['credentials'] == null ? undefined : json['credentials'],
-        customEndpoint: json['custom_endpoint'] == null ? undefined : json['custom_endpoint'],
-        disableAutomatedRotation: json['disable_automated_rotation'] == null ? undefined : json['disable_automated_rotation'],
-        gceAlias: json['gce_alias'] == null ? undefined : json['gce_alias'],
-        gceMetadata: json['gce_metadata'] == null ? undefined : json['gce_metadata'],
-        googleCertsEndpoint: json['google_certs_endpoint'] == null ? undefined : json['google_certs_endpoint'],
-        iamAlias: json['iam_alias'] == null ? undefined : json['iam_alias'],
-        iamMetadata: json['iam_metadata'] == null ? undefined : json['iam_metadata'],
-        identityTokenAudience: json['identity_token_audience'] == null ? undefined : json['identity_token_audience'],
-        identityTokenTtl: json['identity_token_ttl'] == null ? undefined : json['identity_token_ttl'],
-        rotationPeriod: json['rotation_period'] == null ? undefined : json['rotation_period'],
-        rotationSchedule: json['rotation_schedule'] == null ? undefined : json['rotation_schedule'],
-        rotationWindow: json['rotation_window'] == null ? undefined : json['rotation_window'],
-        serviceAccountEmail: json['service_account_email'] == null ? undefined : json['service_account_email'],
+        'credentials': json['credentials'] == null ? undefined : json['credentials'],
+        'customEndpoint': json['custom_endpoint'] == null ? undefined : json['custom_endpoint'],
+        'disableAutomatedRotation': json['disable_automated_rotation'] == null ? undefined : json['disable_automated_rotation'],
+        'gceAlias': json['gce_alias'] == null ? undefined : json['gce_alias'],
+        'gceMetadata': json['gce_metadata'] == null ? undefined : json['gce_metadata'],
+        'googleCertsEndpoint': json['google_certs_endpoint'] == null ? undefined : json['google_certs_endpoint'],
+        'iamAlias': json['iam_alias'] == null ? undefined : json['iam_alias'],
+        'iamMetadata': json['iam_metadata'] == null ? undefined : json['iam_metadata'],
+        'identityTokenAudience': json['identity_token_audience'] == null ? undefined : json['identity_token_audience'],
+        'identityTokenTtl': json['identity_token_ttl'] == null ? undefined : json['identity_token_ttl'],
+        'rotationPeriod': json['rotation_period'] == null ? undefined : json['rotation_period'],
+        'rotationSchedule': json['rotation_schedule'] == null ? undefined : json['rotation_schedule'],
+        'rotationWindow': json['rotation_window'] == null ? undefined : json['rotation_window'],
+        'serviceAccountEmail': json['service_account_email'] == null ? undefined : json['service_account_email'],
     };
 }
 function GoogleCloudConfigureAuthRequestToJSON(json) {
@@ -56,19 +56,19 @@ function GoogleCloudConfigureAuthRequestToJSONTyped(value, ignoreDiscriminator =
         return value;
     }
     return {
-        credentials: value['credentials'],
-        custom_endpoint: value['customEndpoint'],
-        disable_automated_rotation: value['disableAutomatedRotation'],
-        gce_alias: value['gceAlias'],
-        gce_metadata: value['gceMetadata'],
-        google_certs_endpoint: value['googleCertsEndpoint'],
-        iam_alias: value['iamAlias'],
-        iam_metadata: value['iamMetadata'],
-        identity_token_audience: value['identityTokenAudience'],
-        identity_token_ttl: value['identityTokenTtl'],
-        rotation_period: value['rotationPeriod'],
-        rotation_schedule: value['rotationSchedule'],
-        rotation_window: value['rotationWindow'],
-        service_account_email: value['serviceAccountEmail'],
+        'credentials': value['credentials'],
+        'custom_endpoint': value['customEndpoint'],
+        'disable_automated_rotation': value['disableAutomatedRotation'],
+        'gce_alias': value['gceAlias'],
+        'gce_metadata': value['gceMetadata'],
+        'google_certs_endpoint': value['googleCertsEndpoint'],
+        'iam_alias': value['iamAlias'],
+        'iam_metadata': value['iamMetadata'],
+        'identity_token_audience': value['identityTokenAudience'],
+        'identity_token_ttl': value['identityTokenTtl'],
+        'rotation_period': value['rotationPeriod'],
+        'rotation_schedule': value['rotationSchedule'],
+        'rotation_window': value['rotationWindow'],
+        'service_account_email': value['serviceAccountEmail'],
     };
 }

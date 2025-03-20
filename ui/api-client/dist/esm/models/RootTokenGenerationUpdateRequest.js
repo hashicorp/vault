@@ -25,8 +25,8 @@ export function RootTokenGenerationUpdateRequestFromJSONTyped(json, ignoreDiscri
         return json;
     }
     return {
-        key: json['key'] == null ? undefined : json['key'],
-        nonce: json['nonce'] == null ? undefined : json['nonce'],
+        'key': json['key'] == null ? undefined : json['key'],
+        'nonce': json['nonce'] == null ? undefined : json['nonce'],
     };
 }
 export function RootTokenGenerationUpdateRequestToJSON(json) {
@@ -37,7 +37,7 @@ export function RootTokenGenerationUpdateRequestToJSONTyped(value, ignoreDiscrim
         return value;
     }
     return {
-        key: value['key'],
-        nonce: value['nonce'],
+        'key': value['key'],
+        'nonce': value['nonce'],
     };
 }

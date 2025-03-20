@@ -32,7 +32,7 @@ function OidcConfigureRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        issuer: json['issuer'] == null ? undefined : json['issuer'],
+        'issuer': json['issuer'] == null ? undefined : json['issuer'],
     };
 }
 function OidcConfigureRequestToJSON(json) {
@@ -43,6 +43,6 @@ function OidcConfigureRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        issuer: value['issuer'],
+        'issuer': value['issuer'],
     };
 }

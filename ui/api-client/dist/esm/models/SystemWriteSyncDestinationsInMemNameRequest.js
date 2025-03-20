@@ -25,13 +25,13 @@ export function SystemWriteSyncDestinationsInMemNameRequestFromJSONTyped(json, i
         return json;
     }
     return {
-        allowedIpv4Addresses: json['allowed_ipv4_addresses'] == null ? undefined : json['allowed_ipv4_addresses'],
-        allowedIpv6Addresses: json['allowed_ipv6_addresses'] == null ? undefined : json['allowed_ipv6_addresses'],
-        allowedPorts: json['allowed_ports'] == null ? undefined : json['allowed_ports'],
-        disableStrictNetworking: json['disable_strict_networking'] == null ? undefined : json['disable_strict_networking'],
-        granularity: json['granularity'] == null ? undefined : json['granularity'],
-        purge: json['purge'] == null ? undefined : json['purge'],
-        secretNameTemplate: json['secret_name_template'] == null ? undefined : json['secret_name_template'],
+        'allowedIpv4Addresses': json['allowed_ipv4_addresses'] == null ? undefined : json['allowed_ipv4_addresses'],
+        'allowedIpv6Addresses': json['allowed_ipv6_addresses'] == null ? undefined : json['allowed_ipv6_addresses'],
+        'allowedPorts': json['allowed_ports'] == null ? undefined : json['allowed_ports'],
+        'disableStrictNetworking': json['disable_strict_networking'] == null ? undefined : json['disable_strict_networking'],
+        'granularity': json['granularity'] == null ? undefined : json['granularity'],
+        'purge': json['purge'] == null ? undefined : json['purge'],
+        'secretNameTemplate': json['secret_name_template'] == null ? undefined : json['secret_name_template'],
     };
 }
 export function SystemWriteSyncDestinationsInMemNameRequestToJSON(json) {
@@ -42,12 +42,12 @@ export function SystemWriteSyncDestinationsInMemNameRequestToJSONTyped(value, ig
         return value;
     }
     return {
-        allowed_ipv4_addresses: value['allowedIpv4Addresses'],
-        allowed_ipv6_addresses: value['allowedIpv6Addresses'],
-        allowed_ports: value['allowedPorts'],
-        disable_strict_networking: value['disableStrictNetworking'],
-        granularity: value['granularity'],
-        purge: value['purge'],
-        secret_name_template: value['secretNameTemplate'],
+        'allowed_ipv4_addresses': value['allowedIpv4Addresses'],
+        'allowed_ipv6_addresses': value['allowedIpv6Addresses'],
+        'allowed_ports': value['allowedPorts'],
+        'disable_strict_networking': value['disableStrictNetworking'],
+        'granularity': value['granularity'],
+        'purge': value['purge'],
+        'secret_name_template': value['secretNameTemplate'],
     };
 }

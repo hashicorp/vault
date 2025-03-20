@@ -32,7 +32,7 @@ function WellKnownListLabels2ResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        keys: json['keys'] == null ? undefined : json['keys'],
+        'keys': json['keys'] == null ? undefined : json['keys'],
     };
 }
 function WellKnownListLabels2ResponseToJSON(json) {
@@ -43,6 +43,6 @@ function WellKnownListLabels2ResponseToJSONTyped(value, ignoreDiscriminator = fa
         return value;
     }
     return {
-        keys: value['keys'],
+        'keys': value['keys'],
     };
 }

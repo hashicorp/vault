@@ -25,12 +25,12 @@ export function LeasesReadLeaseResponseFromJSONTyped(json, ignoreDiscriminator) 
         return json;
     }
     return {
-        expireTime: json['expire_time'] == null ? undefined : new Date(json['expire_time']),
-        id: json['id'] == null ? undefined : json['id'],
-        issueTime: json['issue_time'] == null ? undefined : new Date(json['issue_time']),
-        lastRenewal: json['last_renewal'] == null ? undefined : new Date(json['last_renewal']),
-        renewable: json['renewable'] == null ? undefined : json['renewable'],
-        ttl: json['ttl'] == null ? undefined : json['ttl'],
+        'expireTime': json['expire_time'] == null ? undefined : (new Date(json['expire_time'])),
+        'id': json['id'] == null ? undefined : json['id'],
+        'issueTime': json['issue_time'] == null ? undefined : (new Date(json['issue_time'])),
+        'lastRenewal': json['last_renewal'] == null ? undefined : (new Date(json['last_renewal'])),
+        'renewable': json['renewable'] == null ? undefined : json['renewable'],
+        'ttl': json['ttl'] == null ? undefined : json['ttl'],
     };
 }
 export function LeasesReadLeaseResponseToJSON(json) {
@@ -41,11 +41,11 @@ export function LeasesReadLeaseResponseToJSONTyped(value, ignoreDiscriminator = 
         return value;
     }
     return {
-        expire_time: value['expireTime'] == null ? undefined : value['expireTime'].toISOString(),
-        id: value['id'],
-        issue_time: value['issueTime'] == null ? undefined : value['issueTime'].toISOString(),
-        last_renewal: value['lastRenewal'] == null ? undefined : value['lastRenewal'].toISOString(),
-        renewable: value['renewable'],
-        ttl: value['ttl'],
+        'expire_time': value['expireTime'] == null ? undefined : ((value['expireTime']).toISOString()),
+        'id': value['id'],
+        'issue_time': value['issueTime'] == null ? undefined : ((value['issueTime']).toISOString()),
+        'last_renewal': value['lastRenewal'] == null ? undefined : ((value['lastRenewal']).toISOString()),
+        'renewable': value['renewable'],
+        'ttl': value['ttl'],
     };
 }

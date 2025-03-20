@@ -32,7 +32,7 @@ function PluginsCatalogPinsListPinnedVersionsResponseFromJSONTyped(json, ignoreD
         return json;
     }
     return {
-        pinnedVersions: json['pinned_versions'] == null ? undefined : json['pinned_versions'],
+        'pinnedVersions': json['pinned_versions'] == null ? undefined : json['pinned_versions'],
     };
 }
 function PluginsCatalogPinsListPinnedVersionsResponseToJSON(json) {
@@ -43,6 +43,6 @@ function PluginsCatalogPinsListPinnedVersionsResponseToJSONTyped(value, ignoreDi
         return value;
     }
     return {
-        pinned_versions: value['pinnedVersions'],
+        'pinned_versions': value['pinnedVersions'],
     };
 }

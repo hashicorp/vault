@@ -32,8 +32,8 @@ function InternalUiListEnabledVisibleMountsResponseFromJSONTyped(json, ignoreDis
         return json;
     }
     return {
-        auth: json['auth'] == null ? undefined : json['auth'],
-        secret: json['secret'] == null ? undefined : json['secret'],
+        'auth': json['auth'] == null ? undefined : json['auth'],
+        'secret': json['secret'] == null ? undefined : json['secret'],
     };
 }
 function InternalUiListEnabledVisibleMountsResponseToJSON(json) {
@@ -44,7 +44,7 @@ function InternalUiListEnabledVisibleMountsResponseToJSONTyped(value, ignoreDisc
         return value;
     }
     return {
-        auth: value['auth'],
-        secret: value['secret'],
+        'auth': value['auth'],
+        'secret': value['secret'],
     };
 }

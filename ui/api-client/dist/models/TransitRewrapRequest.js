@@ -32,13 +32,13 @@ function TransitRewrapRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        batchInput: json['batch_input'] == null ? undefined : json['batch_input'],
-        ciphertext: json['ciphertext'] == null ? undefined : json['ciphertext'],
-        context: json['context'] == null ? undefined : json['context'],
-        decryptPaddingScheme: json['decrypt_padding_scheme'] == null ? undefined : json['decrypt_padding_scheme'],
-        encryptPaddingScheme: json['encrypt_padding_scheme'] == null ? undefined : json['encrypt_padding_scheme'],
-        keyVersion: json['key_version'] == null ? undefined : json['key_version'],
-        nonce: json['nonce'] == null ? undefined : json['nonce'],
+        'batchInput': json['batch_input'] == null ? undefined : json['batch_input'],
+        'ciphertext': json['ciphertext'] == null ? undefined : json['ciphertext'],
+        'context': json['context'] == null ? undefined : json['context'],
+        'decryptPaddingScheme': json['decrypt_padding_scheme'] == null ? undefined : json['decrypt_padding_scheme'],
+        'encryptPaddingScheme': json['encrypt_padding_scheme'] == null ? undefined : json['encrypt_padding_scheme'],
+        'keyVersion': json['key_version'] == null ? undefined : json['key_version'],
+        'nonce': json['nonce'] == null ? undefined : json['nonce'],
     };
 }
 function TransitRewrapRequestToJSON(json) {
@@ -49,12 +49,12 @@ function TransitRewrapRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        batch_input: value['batchInput'],
-        ciphertext: value['ciphertext'],
-        context: value['context'],
-        decrypt_padding_scheme: value['decryptPaddingScheme'],
-        encrypt_padding_scheme: value['encryptPaddingScheme'],
-        key_version: value['keyVersion'],
-        nonce: value['nonce'],
+        'batch_input': value['batchInput'],
+        'ciphertext': value['ciphertext'],
+        'context': value['context'],
+        'decrypt_padding_scheme': value['decryptPaddingScheme'],
+        'encrypt_padding_scheme': value['encryptPaddingScheme'],
+        'key_version': value['keyVersion'],
+        'nonce': value['nonce'],
     };
 }

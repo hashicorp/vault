@@ -25,12 +25,12 @@ export function RabbitMqConfigureConnectionRequestFromJSONTyped(json, ignoreDisc
         return json;
     }
     return {
-        connectionUri: json['connection_uri'] == null ? undefined : json['connection_uri'],
-        password: json['password'] == null ? undefined : json['password'],
-        passwordPolicy: json['password_policy'] == null ? undefined : json['password_policy'],
-        username: json['username'] == null ? undefined : json['username'],
-        usernameTemplate: json['username_template'] == null ? undefined : json['username_template'],
-        verifyConnection: json['verify_connection'] == null ? undefined : json['verify_connection'],
+        'connectionUri': json['connection_uri'] == null ? undefined : json['connection_uri'],
+        'password': json['password'] == null ? undefined : json['password'],
+        'passwordPolicy': json['password_policy'] == null ? undefined : json['password_policy'],
+        'username': json['username'] == null ? undefined : json['username'],
+        'usernameTemplate': json['username_template'] == null ? undefined : json['username_template'],
+        'verifyConnection': json['verify_connection'] == null ? undefined : json['verify_connection'],
     };
 }
 export function RabbitMqConfigureConnectionRequestToJSON(json) {
@@ -41,11 +41,11 @@ export function RabbitMqConfigureConnectionRequestToJSONTyped(value, ignoreDiscr
         return value;
     }
     return {
-        connection_uri: value['connectionUri'],
-        password: value['password'],
-        password_policy: value['passwordPolicy'],
-        username: value['username'],
-        username_template: value['usernameTemplate'],
-        verify_connection: value['verifyConnection'],
+        'connection_uri': value['connectionUri'],
+        'password': value['password'],
+        'password_policy': value['passwordPolicy'],
+        'username': value['username'],
+        'username_template': value['usernameTemplate'],
+        'verify_connection': value['verifyConnection'],
     };
 }

@@ -32,13 +32,13 @@ function PluginsCatalogRegisterPluginWithTypeRequestFromJSONTyped(json, ignoreDi
         return json;
     }
     return {
-        args: json['args'] == null ? undefined : json['args'],
-        command: json['command'] == null ? undefined : json['command'],
-        env: json['env'] == null ? undefined : json['env'],
-        ociImage: json['oci_image'] == null ? undefined : json['oci_image'],
-        runtime: json['runtime'] == null ? undefined : json['runtime'],
-        sha256: json['sha256'] == null ? undefined : json['sha256'],
-        version: json['version'] == null ? undefined : json['version'],
+        'args': json['args'] == null ? undefined : json['args'],
+        'command': json['command'] == null ? undefined : json['command'],
+        'env': json['env'] == null ? undefined : json['env'],
+        'ociImage': json['oci_image'] == null ? undefined : json['oci_image'],
+        'runtime': json['runtime'] == null ? undefined : json['runtime'],
+        'sha256': json['sha256'] == null ? undefined : json['sha256'],
+        'version': json['version'] == null ? undefined : json['version'],
     };
 }
 function PluginsCatalogRegisterPluginWithTypeRequestToJSON(json) {
@@ -49,12 +49,12 @@ function PluginsCatalogRegisterPluginWithTypeRequestToJSONTyped(value, ignoreDis
         return value;
     }
     return {
-        args: value['args'],
-        command: value['command'],
-        env: value['env'],
-        oci_image: value['ociImage'],
-        runtime: value['runtime'],
-        sha256: value['sha256'],
-        version: value['version'],
+        'args': value['args'],
+        'command': value['command'],
+        'env': value['env'],
+        'oci_image': value['ociImage'],
+        'runtime': value['runtime'],
+        'sha256': value['sha256'],
+        'version': value['version'],
     };
 }

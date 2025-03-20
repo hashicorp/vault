@@ -32,7 +32,7 @@ function LeasesRevokeLeaseWithPrefixRequestFromJSONTyped(json, ignoreDiscriminat
         return json;
     }
     return {
-        sync: json['sync'] == null ? undefined : json['sync'],
+        'sync': json['sync'] == null ? undefined : json['sync'],
     };
 }
 function LeasesRevokeLeaseWithPrefixRequestToJSON(json) {
@@ -43,6 +43,6 @@ function LeasesRevokeLeaseWithPrefixRequestToJSONTyped(value, ignoreDiscriminato
         return value;
     }
     return {
-        sync: value['sync'],
+        'sync': value['sync'],
     };
 }

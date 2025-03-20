@@ -25,11 +25,11 @@ export function PkiIssuerResignCrlsRequestFromJSONTyped(json, ignoreDiscriminato
         return json;
     }
     return {
-        crlNumber: json['crl_number'] == null ? undefined : json['crl_number'],
-        crls: json['crls'] == null ? undefined : json['crls'],
-        deltaCrlBaseNumber: json['delta_crl_base_number'] == null ? undefined : json['delta_crl_base_number'],
-        format: json['format'] == null ? undefined : json['format'],
-        nextUpdate: json['next_update'] == null ? undefined : json['next_update'],
+        'crlNumber': json['crl_number'] == null ? undefined : json['crl_number'],
+        'crls': json['crls'] == null ? undefined : json['crls'],
+        'deltaCrlBaseNumber': json['delta_crl_base_number'] == null ? undefined : json['delta_crl_base_number'],
+        'format': json['format'] == null ? undefined : json['format'],
+        'nextUpdate': json['next_update'] == null ? undefined : json['next_update'],
     };
 }
 export function PkiIssuerResignCrlsRequestToJSON(json) {
@@ -40,10 +40,10 @@ export function PkiIssuerResignCrlsRequestToJSONTyped(value, ignoreDiscriminator
         return value;
     }
     return {
-        crl_number: value['crlNumber'],
-        crls: value['crls'],
-        delta_crl_base_number: value['deltaCrlBaseNumber'],
-        format: value['format'],
-        next_update: value['nextUpdate'],
+        'crl_number': value['crlNumber'],
+        'crls': value['crls'],
+        'delta_crl_base_number': value['deltaCrlBaseNumber'],
+        'format': value['format'],
+        'next_update': value['nextUpdate'],
     };
 }

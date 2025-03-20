@@ -20,9 +20,9 @@ exports.PkiIssuersGenerateIntermediateRequestFromJSONTyped = PkiIssuersGenerateI
 exports.PkiIssuersGenerateIntermediateRequestToJSON = PkiIssuersGenerateIntermediateRequestToJSON;
 exports.PkiIssuersGenerateIntermediateRequestToJSONTyped = PkiIssuersGenerateIntermediateRequestToJSONTyped;
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 var PkiIssuersGenerateIntermediateRequestFormatEnum;
 (function (PkiIssuersGenerateIntermediateRequestFormatEnum) {
     PkiIssuersGenerateIntermediateRequestFormatEnum["PEM"] = "pem";
@@ -30,9 +30,9 @@ var PkiIssuersGenerateIntermediateRequestFormatEnum;
     PkiIssuersGenerateIntermediateRequestFormatEnum["PEM_BUNDLE"] = "pem_bundle";
 })(PkiIssuersGenerateIntermediateRequestFormatEnum || (exports.PkiIssuersGenerateIntermediateRequestFormatEnum = PkiIssuersGenerateIntermediateRequestFormatEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 var PkiIssuersGenerateIntermediateRequestKeyTypeEnum;
 (function (PkiIssuersGenerateIntermediateRequestKeyTypeEnum) {
     PkiIssuersGenerateIntermediateRequestKeyTypeEnum["RSA"] = "rsa";
@@ -40,9 +40,9 @@ var PkiIssuersGenerateIntermediateRequestKeyTypeEnum;
     PkiIssuersGenerateIntermediateRequestKeyTypeEnum["ED25519"] = "ed25519";
 })(PkiIssuersGenerateIntermediateRequestKeyTypeEnum || (exports.PkiIssuersGenerateIntermediateRequestKeyTypeEnum = PkiIssuersGenerateIntermediateRequestKeyTypeEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 var PkiIssuersGenerateIntermediateRequestPrivateKeyFormatEnum;
 (function (PkiIssuersGenerateIntermediateRequestPrivateKeyFormatEnum) {
     PkiIssuersGenerateIntermediateRequestPrivateKeyFormatEnum["EMPTY"] = "";
@@ -64,34 +64,34 @@ function PkiIssuersGenerateIntermediateRequestFromJSONTyped(json, ignoreDiscrimi
         return json;
     }
     return {
-        addBasicConstraints: json['add_basic_constraints'] == null ? undefined : json['add_basic_constraints'],
-        altNames: json['alt_names'] == null ? undefined : json['alt_names'],
-        commonName: json['common_name'] == null ? undefined : json['common_name'],
-        country: json['country'] == null ? undefined : json['country'],
-        excludeCnFromSans: json['exclude_cn_from_sans'] == null ? undefined : json['exclude_cn_from_sans'],
-        format: json['format'] == null ? undefined : json['format'],
-        ipSans: json['ip_sans'] == null ? undefined : json['ip_sans'],
-        keyBits: json['key_bits'] == null ? undefined : json['key_bits'],
-        keyName: json['key_name'] == null ? undefined : json['key_name'],
-        keyRef: json['key_ref'] == null ? undefined : json['key_ref'],
-        keyType: json['key_type'] == null ? undefined : json['key_type'],
-        keyUsage: json['key_usage'] == null ? undefined : json['key_usage'],
-        locality: json['locality'] == null ? undefined : json['locality'],
-        managedKeyId: json['managed_key_id'] == null ? undefined : json['managed_key_id'],
-        managedKeyName: json['managed_key_name'] == null ? undefined : json['managed_key_name'],
-        notAfter: json['not_after'] == null ? undefined : json['not_after'],
-        notBeforeDuration: json['not_before_duration'] == null ? undefined : json['not_before_duration'],
-        organization: json['organization'] == null ? undefined : json['organization'],
-        otherSans: json['other_sans'] == null ? undefined : json['other_sans'],
-        ou: json['ou'] == null ? undefined : json['ou'],
-        postalCode: json['postal_code'] == null ? undefined : json['postal_code'],
-        privateKeyFormat: json['private_key_format'] == null ? undefined : json['private_key_format'],
-        province: json['province'] == null ? undefined : json['province'],
-        serialNumber: json['serial_number'] == null ? undefined : json['serial_number'],
-        signatureBits: json['signature_bits'] == null ? undefined : json['signature_bits'],
-        streetAddress: json['street_address'] == null ? undefined : json['street_address'],
-        ttl: json['ttl'] == null ? undefined : json['ttl'],
-        uriSans: json['uri_sans'] == null ? undefined : json['uri_sans'],
+        'addBasicConstraints': json['add_basic_constraints'] == null ? undefined : json['add_basic_constraints'],
+        'altNames': json['alt_names'] == null ? undefined : json['alt_names'],
+        'commonName': json['common_name'] == null ? undefined : json['common_name'],
+        'country': json['country'] == null ? undefined : json['country'],
+        'excludeCnFromSans': json['exclude_cn_from_sans'] == null ? undefined : json['exclude_cn_from_sans'],
+        'format': json['format'] == null ? undefined : json['format'],
+        'ipSans': json['ip_sans'] == null ? undefined : json['ip_sans'],
+        'keyBits': json['key_bits'] == null ? undefined : json['key_bits'],
+        'keyName': json['key_name'] == null ? undefined : json['key_name'],
+        'keyRef': json['key_ref'] == null ? undefined : json['key_ref'],
+        'keyType': json['key_type'] == null ? undefined : json['key_type'],
+        'keyUsage': json['key_usage'] == null ? undefined : json['key_usage'],
+        'locality': json['locality'] == null ? undefined : json['locality'],
+        'managedKeyId': json['managed_key_id'] == null ? undefined : json['managed_key_id'],
+        'managedKeyName': json['managed_key_name'] == null ? undefined : json['managed_key_name'],
+        'notAfter': json['not_after'] == null ? undefined : json['not_after'],
+        'notBeforeDuration': json['not_before_duration'] == null ? undefined : json['not_before_duration'],
+        'organization': json['organization'] == null ? undefined : json['organization'],
+        'otherSans': json['other_sans'] == null ? undefined : json['other_sans'],
+        'ou': json['ou'] == null ? undefined : json['ou'],
+        'postalCode': json['postal_code'] == null ? undefined : json['postal_code'],
+        'privateKeyFormat': json['private_key_format'] == null ? undefined : json['private_key_format'],
+        'province': json['province'] == null ? undefined : json['province'],
+        'serialNumber': json['serial_number'] == null ? undefined : json['serial_number'],
+        'signatureBits': json['signature_bits'] == null ? undefined : json['signature_bits'],
+        'streetAddress': json['street_address'] == null ? undefined : json['street_address'],
+        'ttl': json['ttl'] == null ? undefined : json['ttl'],
+        'uriSans': json['uri_sans'] == null ? undefined : json['uri_sans'],
     };
 }
 function PkiIssuersGenerateIntermediateRequestToJSON(json) {
@@ -102,33 +102,33 @@ function PkiIssuersGenerateIntermediateRequestToJSONTyped(value, ignoreDiscrimin
         return value;
     }
     return {
-        add_basic_constraints: value['addBasicConstraints'],
-        alt_names: value['altNames'],
-        common_name: value['commonName'],
-        country: value['country'],
-        exclude_cn_from_sans: value['excludeCnFromSans'],
-        format: value['format'],
-        ip_sans: value['ipSans'],
-        key_bits: value['keyBits'],
-        key_name: value['keyName'],
-        key_ref: value['keyRef'],
-        key_type: value['keyType'],
-        key_usage: value['keyUsage'],
-        locality: value['locality'],
-        managed_key_id: value['managedKeyId'],
-        managed_key_name: value['managedKeyName'],
-        not_after: value['notAfter'],
-        not_before_duration: value['notBeforeDuration'],
-        organization: value['organization'],
-        other_sans: value['otherSans'],
-        ou: value['ou'],
-        postal_code: value['postalCode'],
-        private_key_format: value['privateKeyFormat'],
-        province: value['province'],
-        serial_number: value['serialNumber'],
-        signature_bits: value['signatureBits'],
-        street_address: value['streetAddress'],
-        ttl: value['ttl'],
-        uri_sans: value['uriSans'],
+        'add_basic_constraints': value['addBasicConstraints'],
+        'alt_names': value['altNames'],
+        'common_name': value['commonName'],
+        'country': value['country'],
+        'exclude_cn_from_sans': value['excludeCnFromSans'],
+        'format': value['format'],
+        'ip_sans': value['ipSans'],
+        'key_bits': value['keyBits'],
+        'key_name': value['keyName'],
+        'key_ref': value['keyRef'],
+        'key_type': value['keyType'],
+        'key_usage': value['keyUsage'],
+        'locality': value['locality'],
+        'managed_key_id': value['managedKeyId'],
+        'managed_key_name': value['managedKeyName'],
+        'not_after': value['notAfter'],
+        'not_before_duration': value['notBeforeDuration'],
+        'organization': value['organization'],
+        'other_sans': value['otherSans'],
+        'ou': value['ou'],
+        'postal_code': value['postalCode'],
+        'private_key_format': value['privateKeyFormat'],
+        'province': value['province'],
+        'serial_number': value['serialNumber'],
+        'signature_bits': value['signatureBits'],
+        'street_address': value['streetAddress'],
+        'ttl': value['ttl'],
+        'uri_sans': value['uriSans'],
     };
 }

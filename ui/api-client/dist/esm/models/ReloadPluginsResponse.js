@@ -25,7 +25,7 @@ export function ReloadPluginsResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        reloadId: json['reload_id'] == null ? undefined : json['reload_id'],
+        'reloadId': json['reload_id'] == null ? undefined : json['reload_id'],
     };
 }
 export function ReloadPluginsResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function ReloadPluginsResponseToJSONTyped(value, ignoreDiscriminator = fa
         return value;
     }
     return {
-        reload_id: value['reloadId'],
+        'reload_id': value['reloadId'],
     };
 }

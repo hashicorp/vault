@@ -32,10 +32,10 @@ function AwsConfigureIdentityIntegrationRequestFromJSONTyped(json, ignoreDiscrim
         return json;
     }
     return {
-        ec2Alias: json['ec2_alias'] == null ? undefined : json['ec2_alias'],
-        ec2Metadata: json['ec2_metadata'] == null ? undefined : json['ec2_metadata'],
-        iamAlias: json['iam_alias'] == null ? undefined : json['iam_alias'],
-        iamMetadata: json['iam_metadata'] == null ? undefined : json['iam_metadata'],
+        'ec2Alias': json['ec2_alias'] == null ? undefined : json['ec2_alias'],
+        'ec2Metadata': json['ec2_metadata'] == null ? undefined : json['ec2_metadata'],
+        'iamAlias': json['iam_alias'] == null ? undefined : json['iam_alias'],
+        'iamMetadata': json['iam_metadata'] == null ? undefined : json['iam_metadata'],
     };
 }
 function AwsConfigureIdentityIntegrationRequestToJSON(json) {
@@ -46,9 +46,9 @@ function AwsConfigureIdentityIntegrationRequestToJSONTyped(value, ignoreDiscrimi
         return value;
     }
     return {
-        ec2_alias: value['ec2Alias'],
-        ec2_metadata: value['ec2Metadata'],
-        iam_alias: value['iamAlias'],
-        iam_metadata: value['iamMetadata'],
+        'ec2_alias': value['ec2Alias'],
+        'ec2_metadata': value['ec2Metadata'],
+        'iam_alias': value['iamAlias'],
+        'iam_metadata': value['iamMetadata'],
     };
 }

@@ -25,10 +25,10 @@ export function EntityUpdateByIdRequestFromJSONTyped(json, ignoreDiscriminator) 
         return json;
     }
     return {
-        disabled: json['disabled'] == null ? undefined : json['disabled'],
-        metadata: json['metadata'] == null ? undefined : json['metadata'],
-        name: json['name'] == null ? undefined : json['name'],
-        policies: json['policies'] == null ? undefined : json['policies'],
+        'disabled': json['disabled'] == null ? undefined : json['disabled'],
+        'metadata': json['metadata'] == null ? undefined : json['metadata'],
+        'name': json['name'] == null ? undefined : json['name'],
+        'policies': json['policies'] == null ? undefined : json['policies'],
     };
 }
 export function EntityUpdateByIdRequestToJSON(json) {
@@ -39,9 +39,9 @@ export function EntityUpdateByIdRequestToJSONTyped(value, ignoreDiscriminator = 
         return value;
     }
     return {
-        disabled: value['disabled'],
-        metadata: value['metadata'],
-        name: value['name'],
-        policies: value['policies'],
+        'disabled': value['disabled'],
+        'metadata': value['metadata'],
+        'name': value['name'],
+        'policies': value['policies'],
     };
 }

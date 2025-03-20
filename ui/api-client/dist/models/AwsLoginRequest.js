@@ -32,15 +32,15 @@ function AwsLoginRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        iamHttpRequestMethod: json['iam_http_request_method'] == null ? undefined : json['iam_http_request_method'],
-        iamRequestBody: json['iam_request_body'] == null ? undefined : json['iam_request_body'],
-        iamRequestHeaders: json['iam_request_headers'] == null ? undefined : json['iam_request_headers'],
-        iamRequestUrl: json['iam_request_url'] == null ? undefined : json['iam_request_url'],
-        identity: json['identity'] == null ? undefined : json['identity'],
-        nonce: json['nonce'] == null ? undefined : json['nonce'],
-        pkcs7: json['pkcs7'] == null ? undefined : json['pkcs7'],
-        role: json['role'] == null ? undefined : json['role'],
-        signature: json['signature'] == null ? undefined : json['signature'],
+        'iamHttpRequestMethod': json['iam_http_request_method'] == null ? undefined : json['iam_http_request_method'],
+        'iamRequestBody': json['iam_request_body'] == null ? undefined : json['iam_request_body'],
+        'iamRequestHeaders': json['iam_request_headers'] == null ? undefined : json['iam_request_headers'],
+        'iamRequestUrl': json['iam_request_url'] == null ? undefined : json['iam_request_url'],
+        'identity': json['identity'] == null ? undefined : json['identity'],
+        'nonce': json['nonce'] == null ? undefined : json['nonce'],
+        'pkcs7': json['pkcs7'] == null ? undefined : json['pkcs7'],
+        'role': json['role'] == null ? undefined : json['role'],
+        'signature': json['signature'] == null ? undefined : json['signature'],
     };
 }
 function AwsLoginRequestToJSON(json) {
@@ -51,14 +51,14 @@ function AwsLoginRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        iam_http_request_method: value['iamHttpRequestMethod'],
-        iam_request_body: value['iamRequestBody'],
-        iam_request_headers: value['iamRequestHeaders'],
-        iam_request_url: value['iamRequestUrl'],
-        identity: value['identity'],
-        nonce: value['nonce'],
-        pkcs7: value['pkcs7'],
-        role: value['role'],
-        signature: value['signature'],
+        'iam_http_request_method': value['iamHttpRequestMethod'],
+        'iam_request_body': value['iamRequestBody'],
+        'iam_request_headers': value['iamRequestHeaders'],
+        'iam_request_url': value['iamRequestUrl'],
+        'identity': value['identity'],
+        'nonce': value['nonce'],
+        'pkcs7': value['pkcs7'],
+        'role': value['role'],
+        'signature': value['signature'],
     };
 }

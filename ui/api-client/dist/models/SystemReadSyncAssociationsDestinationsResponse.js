@@ -32,7 +32,7 @@ function SystemReadSyncAssociationsDestinationsResponseFromJSONTyped(json, ignor
         return json;
     }
     return {
-        associatedDestinations: json['associated_destinations'] == null ? undefined : json['associated_destinations'],
+        'associatedDestinations': json['associated_destinations'] == null ? undefined : json['associated_destinations'],
     };
 }
 function SystemReadSyncAssociationsDestinationsResponseToJSON(json) {
@@ -43,6 +43,6 @@ function SystemReadSyncAssociationsDestinationsResponseToJSONTyped(value, ignore
         return value;
     }
     return {
-        associated_destinations: value['associatedDestinations'],
+        'associated_destinations': value['associatedDestinations'],
     };
 }

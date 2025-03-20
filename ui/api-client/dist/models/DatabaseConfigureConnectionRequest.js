@@ -32,17 +32,17 @@ function DatabaseConfigureConnectionRequestFromJSONTyped(json, ignoreDiscriminat
         return json;
     }
     return {
-        allowedRoles: json['allowed_roles'] == null ? undefined : json['allowed_roles'],
-        disableAutomatedRotation: json['disable_automated_rotation'] == null ? undefined : json['disable_automated_rotation'],
-        passwordPolicy: json['password_policy'] == null ? undefined : json['password_policy'],
-        pluginName: json['plugin_name'] == null ? undefined : json['plugin_name'],
-        pluginVersion: json['plugin_version'] == null ? undefined : json['plugin_version'],
-        rootRotationStatements: json['root_rotation_statements'] == null ? undefined : json['root_rotation_statements'],
-        rotationPeriod: json['rotation_period'] == null ? undefined : json['rotation_period'],
-        rotationSchedule: json['rotation_schedule'] == null ? undefined : json['rotation_schedule'],
-        rotationWindow: json['rotation_window'] == null ? undefined : json['rotation_window'],
-        skipStaticRoleImportRotation: json['skip_static_role_import_rotation'] == null ? undefined : json['skip_static_role_import_rotation'],
-        verifyConnection: json['verify_connection'] == null ? undefined : json['verify_connection'],
+        'allowedRoles': json['allowed_roles'] == null ? undefined : json['allowed_roles'],
+        'disableAutomatedRotation': json['disable_automated_rotation'] == null ? undefined : json['disable_automated_rotation'],
+        'passwordPolicy': json['password_policy'] == null ? undefined : json['password_policy'],
+        'pluginName': json['plugin_name'] == null ? undefined : json['plugin_name'],
+        'pluginVersion': json['plugin_version'] == null ? undefined : json['plugin_version'],
+        'rootRotationStatements': json['root_rotation_statements'] == null ? undefined : json['root_rotation_statements'],
+        'rotationPeriod': json['rotation_period'] == null ? undefined : json['rotation_period'],
+        'rotationSchedule': json['rotation_schedule'] == null ? undefined : json['rotation_schedule'],
+        'rotationWindow': json['rotation_window'] == null ? undefined : json['rotation_window'],
+        'skipStaticRoleImportRotation': json['skip_static_role_import_rotation'] == null ? undefined : json['skip_static_role_import_rotation'],
+        'verifyConnection': json['verify_connection'] == null ? undefined : json['verify_connection'],
     };
 }
 function DatabaseConfigureConnectionRequestToJSON(json) {
@@ -53,16 +53,16 @@ function DatabaseConfigureConnectionRequestToJSONTyped(value, ignoreDiscriminato
         return value;
     }
     return {
-        allowed_roles: value['allowedRoles'],
-        disable_automated_rotation: value['disableAutomatedRotation'],
-        password_policy: value['passwordPolicy'],
-        plugin_name: value['pluginName'],
-        plugin_version: value['pluginVersion'],
-        root_rotation_statements: value['rootRotationStatements'],
-        rotation_period: value['rotationPeriod'],
-        rotation_schedule: value['rotationSchedule'],
-        rotation_window: value['rotationWindow'],
-        skip_static_role_import_rotation: value['skipStaticRoleImportRotation'],
-        verify_connection: value['verifyConnection'],
+        'allowed_roles': value['allowedRoles'],
+        'disable_automated_rotation': value['disableAutomatedRotation'],
+        'password_policy': value['passwordPolicy'],
+        'plugin_name': value['pluginName'],
+        'plugin_version': value['pluginVersion'],
+        'root_rotation_statements': value['rootRotationStatements'],
+        'rotation_period': value['rotationPeriod'],
+        'rotation_schedule': value['rotationSchedule'],
+        'rotation_window': value['rotationWindow'],
+        'skip_static_role_import_rotation': value['skipStaticRoleImportRotation'],
+        'verify_connection': value['verifyConnection'],
     };
 }

@@ -392,17 +392,17 @@ export declare class IdentityApi extends runtime.BaseAPI {
     /**
      * Create a new alias.
      */
-    aliasCreateRaw(requestParameters: IdentityApiAliasCreateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    aliasCreateRaw(requestParameters: IdentityApiAliasCreateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Create a new alias.
      */
-    aliasCreate(aliasCreateRequest: AliasCreateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    aliasCreate(aliasCreateRequest: AliasCreateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    aliasDeleteByIdRaw(requestParameters: IdentityApiAliasDeleteByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    aliasDeleteByIdRaw(requestParameters: IdentityApiAliasDeleteByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    aliasDeleteById(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    aliasDeleteById(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * List all the alias IDs.
      */
@@ -413,72 +413,72 @@ export declare class IdentityApi extends runtime.BaseAPI {
     aliasListById(list: AliasListByIdListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse>;
     /**
      */
-    aliasReadByIdRaw(requestParameters: IdentityApiAliasReadByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    aliasReadByIdRaw(requestParameters: IdentityApiAliasReadByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    aliasReadById(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    aliasReadById(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    aliasUpdateByIdRaw(requestParameters: IdentityApiAliasUpdateByIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    aliasUpdateByIdRaw(requestParameters: IdentityApiAliasUpdateByIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    aliasUpdateById(id: string, aliasUpdateByIdRequest: AliasUpdateByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    aliasUpdateById(id: string, aliasUpdateByIdRequest: AliasUpdateByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    entitiesCreateDuplicatesRaw(requestParameters: IdentityApiEntitiesCreateDuplicatesOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    entitiesCreateDuplicatesRaw(requestParameters: IdentityApiEntitiesCreateDuplicatesOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    entitiesCreateDuplicates(entitiesCreateDuplicatesRequest: EntitiesCreateDuplicatesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    entitiesCreateDuplicates(entitiesCreateDuplicatesRequest: EntitiesCreateDuplicatesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    entityAliasCreateDuplicatesRaw(requestParameters: IdentityApiEntityAliasCreateDuplicatesOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    entityAliasCreateDuplicatesRaw(requestParameters: IdentityApiEntityAliasCreateDuplicatesOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    entityAliasCreateDuplicates(entityAliasCreateDuplicatesRequest: EntityAliasCreateDuplicatesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    entityAliasCreateDuplicates(entityAliasCreateDuplicatesRequest: EntityAliasCreateDuplicatesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    entityAliasesCreateDuplicatesRaw(requestParameters: IdentityApiEntityAliasesCreateDuplicatesOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    entityAliasesCreateDuplicatesRaw(requestParameters: IdentityApiEntityAliasesCreateDuplicatesOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    entityAliasesCreateDuplicates(entityAliasesCreateDuplicatesRequest: EntityAliasesCreateDuplicatesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    entityAliasesCreateDuplicates(entityAliasesCreateDuplicatesRequest: EntityAliasesCreateDuplicatesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    entityBatchDeleteRaw(requestParameters: IdentityApiEntityBatchDeleteOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    entityBatchDeleteRaw(requestParameters: IdentityApiEntityBatchDeleteOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    entityBatchDelete(entityBatchDeleteRequest: EntityBatchDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    entityBatchDelete(entityBatchDeleteRequest: EntityBatchDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    entityCreateRaw(requestParameters: IdentityApiEntityCreateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    entityCreateRaw(requestParameters: IdentityApiEntityCreateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    entityCreate(entityCreateRequest: EntityCreateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Create a new alias.
-     */
-    entityCreateAliasRaw(requestParameters: IdentityApiEntityCreateAliasOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    entityCreate(entityCreateRequest: EntityCreateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Create a new alias.
      */
-    entityCreateAlias(entityCreateAliasRequest: EntityCreateAliasRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    entityCreateAliasRaw(requestParameters: IdentityApiEntityCreateAliasOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Create a new alias.
+     */
+    entityCreateAlias(entityCreateAliasRequest: EntityCreateAliasRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    entityDeleteAliasByIdRaw(requestParameters: IdentityApiEntityDeleteAliasByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    entityDeleteAliasByIdRaw(requestParameters: IdentityApiEntityDeleteAliasByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    entityDeleteAliasById(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    entityDeleteAliasById(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    entityDeleteByIdRaw(requestParameters: IdentityApiEntityDeleteByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    entityDeleteByIdRaw(requestParameters: IdentityApiEntityDeleteByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    entityDeleteById(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    entityDeleteById(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    entityDeleteByNameRaw(requestParameters: IdentityApiEntityDeleteByNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    entityDeleteByNameRaw(requestParameters: IdentityApiEntityDeleteByNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    entityDeleteByName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    entityDeleteByName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * List all the alias IDs.
      */
@@ -508,83 +508,83 @@ export declare class IdentityApi extends runtime.BaseAPI {
     /**
      * Query entities based on various properties.
      */
-    entityLookUpRaw(requestParameters: IdentityApiEntityLookUpOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    entityLookUpRaw(requestParameters: IdentityApiEntityLookUpOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Query entities based on various properties.
      */
-    entityLookUp(entityLookUpRequest: EntityLookUpRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    entityLookUp(entityLookUpRequest: EntityLookUpRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    entityMergeRaw(requestParameters: IdentityApiEntityMergeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    entityMergeRaw(requestParameters: IdentityApiEntityMergeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    entityMerge(entityMergeRequest: EntityMergeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    entityMerge(entityMergeRequest: EntityMergeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    entityReadAliasByIdRaw(requestParameters: IdentityApiEntityReadAliasByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    entityReadAliasByIdRaw(requestParameters: IdentityApiEntityReadAliasByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    entityReadAliasById(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    entityReadAliasById(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    entityReadByIdRaw(requestParameters: IdentityApiEntityReadByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    entityReadByIdRaw(requestParameters: IdentityApiEntityReadByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    entityReadById(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    entityReadById(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    entityReadByNameRaw(requestParameters: IdentityApiEntityReadByNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    entityReadByNameRaw(requestParameters: IdentityApiEntityReadByNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    entityReadByName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    entityReadByName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    entityUpdateAliasByIdRaw(requestParameters: IdentityApiEntityUpdateAliasByIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    entityUpdateAliasByIdRaw(requestParameters: IdentityApiEntityUpdateAliasByIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    entityUpdateAliasById(id: string, entityUpdateAliasByIdRequest: EntityUpdateAliasByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    entityUpdateAliasById(id: string, entityUpdateAliasByIdRequest: EntityUpdateAliasByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    entityUpdateByIdRaw(requestParameters: IdentityApiEntityUpdateByIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    entityUpdateByIdRaw(requestParameters: IdentityApiEntityUpdateByIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    entityUpdateById(id: string, entityUpdateByIdRequest: EntityUpdateByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    entityUpdateById(id: string, entityUpdateByIdRequest: EntityUpdateByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    entityUpdateByNameRaw(requestParameters: IdentityApiEntityUpdateByNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    entityUpdateByNameRaw(requestParameters: IdentityApiEntityUpdateByNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    entityUpdateByName(name: string, entityUpdateByNameRequest: EntityUpdateByNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    entityUpdateByName(name: string, entityUpdateByNameRequest: EntityUpdateByNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    groupCreateRaw(requestParameters: IdentityApiGroupCreateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    groupCreateRaw(requestParameters: IdentityApiGroupCreateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    groupCreate(groupCreateRequest: GroupCreateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    groupCreate(groupCreateRequest: GroupCreateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    groupCreateAliasRaw(requestParameters: IdentityApiGroupCreateAliasOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    groupCreateAliasRaw(requestParameters: IdentityApiGroupCreateAliasOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    groupCreateAlias(groupCreateAliasRequest: GroupCreateAliasRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    groupCreateAlias(groupCreateAliasRequest: GroupCreateAliasRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    groupDeleteAliasByIdRaw(requestParameters: IdentityApiGroupDeleteAliasByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    groupDeleteAliasByIdRaw(requestParameters: IdentityApiGroupDeleteAliasByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    groupDeleteAliasById(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    groupDeleteAliasById(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    groupDeleteByIdRaw(requestParameters: IdentityApiGroupDeleteByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    groupDeleteByIdRaw(requestParameters: IdentityApiGroupDeleteByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    groupDeleteById(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    groupDeleteById(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    groupDeleteByNameRaw(requestParameters: IdentityApiGroupDeleteByNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    groupDeleteByNameRaw(requestParameters: IdentityApiGroupDeleteByNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    groupDeleteByName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    groupDeleteByName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * List all the group alias IDs.
      */
@@ -616,149 +616,149 @@ export declare class IdentityApi extends runtime.BaseAPI {
     /**
      * Query groups based on various properties.
      */
-    groupLookUpRaw(requestParameters: IdentityApiGroupLookUpOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    groupLookUpRaw(requestParameters: IdentityApiGroupLookUpOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Query groups based on various properties.
      */
-    groupLookUp(groupLookUpRequest: GroupLookUpRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    groupLookUp(groupLookUpRequest: GroupLookUpRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    groupReadAliasByIdRaw(requestParameters: IdentityApiGroupReadAliasByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    groupReadAliasByIdRaw(requestParameters: IdentityApiGroupReadAliasByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    groupReadAliasById(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    groupReadAliasById(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    groupReadByIdRaw(requestParameters: IdentityApiGroupReadByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    groupReadByIdRaw(requestParameters: IdentityApiGroupReadByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    groupReadById(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    groupReadById(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    groupReadByNameRaw(requestParameters: IdentityApiGroupReadByNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    groupReadByNameRaw(requestParameters: IdentityApiGroupReadByNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    groupReadByName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    groupReadByName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    groupUpdateAliasByIdRaw(requestParameters: IdentityApiGroupUpdateAliasByIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    groupUpdateAliasByIdRaw(requestParameters: IdentityApiGroupUpdateAliasByIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    groupUpdateAliasById(id: string, groupUpdateAliasByIdRequest: GroupUpdateAliasByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    groupUpdateAliasById(id: string, groupUpdateAliasByIdRequest: GroupUpdateAliasByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    groupUpdateByIdRaw(requestParameters: IdentityApiGroupUpdateByIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    groupUpdateByIdRaw(requestParameters: IdentityApiGroupUpdateByIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    groupUpdateById(id: string, groupUpdateByIdRequest: GroupUpdateByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    groupUpdateById(id: string, groupUpdateByIdRequest: GroupUpdateByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    groupUpdateByNameRaw(requestParameters: IdentityApiGroupUpdateByNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    groupUpdateByNameRaw(requestParameters: IdentityApiGroupUpdateByNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    groupUpdateByName(name: string, groupUpdateByNameRequest: GroupUpdateByNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    groupUpdateByName(name: string, groupUpdateByNameRequest: GroupUpdateByNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    groupsCreateDuplicatesRaw(requestParameters: IdentityApiGroupsCreateDuplicatesOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    groupsCreateDuplicatesRaw(requestParameters: IdentityApiGroupsCreateDuplicatesOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    groupsCreateDuplicates(groupsCreateDuplicatesRequest: GroupsCreateDuplicatesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Destroys a TOTP secret for the given MFA method ID on the given entity
-     */
-    mfaAdminDestroyTotpSecretRaw(requestParameters: IdentityApiMfaAdminDestroyTotpSecretOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    groupsCreateDuplicates(groupsCreateDuplicatesRequest: GroupsCreateDuplicatesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Destroys a TOTP secret for the given MFA method ID on the given entity
      */
-    mfaAdminDestroyTotpSecret(mfaAdminDestroyTotpSecretRequest: MfaAdminDestroyTotpSecretRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mfaAdminDestroyTotpSecretRaw(requestParameters: IdentityApiMfaAdminDestroyTotpSecretOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Destroys a TOTP secret for the given MFA method ID on the given entity
+     */
+    mfaAdminDestroyTotpSecret(mfaAdminDestroyTotpSecretRequest: MfaAdminDestroyTotpSecretRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Update or create TOTP secret for the given method ID on the given entity.
      */
-    mfaAdminGenerateTotpSecretRaw(requestParameters: IdentityApiMfaAdminGenerateTotpSecretOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mfaAdminGenerateTotpSecretRaw(requestParameters: IdentityApiMfaAdminGenerateTotpSecretOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Update or create TOTP secret for the given method ID on the given entity.
      */
-    mfaAdminGenerateTotpSecret(mfaAdminGenerateTotpSecretRequest: MfaAdminGenerateTotpSecretRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mfaAdminGenerateTotpSecret(mfaAdminGenerateTotpSecretRequest: MfaAdminGenerateTotpSecretRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Create the given MFA method
      */
-    mfaCreateDuoMethodRaw(requestParameters: IdentityApiMfaCreateDuoMethodOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mfaCreateDuoMethodRaw(requestParameters: IdentityApiMfaCreateDuoMethodOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Create the given MFA method
      */
-    mfaCreateDuoMethod(mfaCreateDuoMethodRequest: MfaCreateDuoMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mfaCreateDuoMethod(mfaCreateDuoMethodRequest: MfaCreateDuoMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Create the given MFA method
      */
-    mfaCreateOktaMethodRaw(requestParameters: IdentityApiMfaCreateOktaMethodOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mfaCreateOktaMethodRaw(requestParameters: IdentityApiMfaCreateOktaMethodOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Create the given MFA method
      */
-    mfaCreateOktaMethod(mfaCreateOktaMethodRequest: MfaCreateOktaMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mfaCreateOktaMethod(mfaCreateOktaMethodRequest: MfaCreateOktaMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Create the given MFA method
      */
-    mfaCreatePingIdMethodRaw(requestParameters: IdentityApiMfaCreatePingIdMethodOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mfaCreatePingIdMethodRaw(requestParameters: IdentityApiMfaCreatePingIdMethodOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Create the given MFA method
      */
-    mfaCreatePingIdMethod(mfaCreatePingIdMethodRequest: MfaCreatePingIdMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mfaCreatePingIdMethod(mfaCreatePingIdMethodRequest: MfaCreatePingIdMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Create the given MFA method
      */
-    mfaCreateTotpMethodRaw(requestParameters: IdentityApiMfaCreateTotpMethodOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mfaCreateTotpMethodRaw(requestParameters: IdentityApiMfaCreateTotpMethodOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Create the given MFA method
      */
-    mfaCreateTotpMethod(mfaCreateTotpMethodRequest: MfaCreateTotpMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mfaCreateTotpMethod(mfaCreateTotpMethodRequest: MfaCreateTotpMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Delete the given MFA method
      */
-    mfaDeleteDuoMethodRaw(requestParameters: IdentityApiMfaDeleteDuoMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mfaDeleteDuoMethodRaw(requestParameters: IdentityApiMfaDeleteDuoMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Delete the given MFA method
      */
-    mfaDeleteDuoMethod(methodId: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mfaDeleteDuoMethod(methodId: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Delete a login enforcement
      */
-    mfaDeleteLoginEnforcementRaw(requestParameters: IdentityApiMfaDeleteLoginEnforcementRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mfaDeleteLoginEnforcementRaw(requestParameters: IdentityApiMfaDeleteLoginEnforcementRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Delete a login enforcement
      */
-    mfaDeleteLoginEnforcement(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mfaDeleteLoginEnforcement(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Delete the given MFA method
      */
-    mfaDeleteOktaMethodRaw(requestParameters: IdentityApiMfaDeleteOktaMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mfaDeleteOktaMethodRaw(requestParameters: IdentityApiMfaDeleteOktaMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Delete the given MFA method
      */
-    mfaDeleteOktaMethod(methodId: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mfaDeleteOktaMethod(methodId: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Delete the given MFA method
      */
-    mfaDeletePingIdMethodRaw(requestParameters: IdentityApiMfaDeletePingIdMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mfaDeletePingIdMethodRaw(requestParameters: IdentityApiMfaDeletePingIdMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Delete the given MFA method
      */
-    mfaDeletePingIdMethod(methodId: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mfaDeletePingIdMethod(methodId: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Delete the given MFA method
      */
-    mfaDeleteTotpMethodRaw(requestParameters: IdentityApiMfaDeleteTotpMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mfaDeleteTotpMethodRaw(requestParameters: IdentityApiMfaDeleteTotpMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Delete the given MFA method
      */
-    mfaDeleteTotpMethod(methodId: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mfaDeleteTotpMethod(methodId: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Update or create TOTP secret for the given method ID on the given entity.
      */
-    mfaGenerateTotpSecretRaw(requestParameters: IdentityApiMfaGenerateTotpSecretOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mfaGenerateTotpSecretRaw(requestParameters: IdentityApiMfaGenerateTotpSecretOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Update or create TOTP secret for the given method ID on the given entity.
      */
-    mfaGenerateTotpSecret(mfaGenerateTotpSecretRequest: MfaGenerateTotpSecretRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mfaGenerateTotpSecret(mfaGenerateTotpSecretRequest: MfaGenerateTotpSecretRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * List MFA method configurations for the given MFA method
      */
@@ -810,153 +810,153 @@ export declare class IdentityApi extends runtime.BaseAPI {
     /**
      * Read the current configuration for the given MFA method
      */
-    mfaReadDuoMethodRaw(requestParameters: IdentityApiMfaReadDuoMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mfaReadDuoMethodRaw(requestParameters: IdentityApiMfaReadDuoMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Read the current configuration for the given MFA method
      */
-    mfaReadDuoMethod(methodId: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mfaReadDuoMethod(methodId: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read the current login enforcement
      */
-    mfaReadLoginEnforcementRaw(requestParameters: IdentityApiMfaReadLoginEnforcementRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mfaReadLoginEnforcementRaw(requestParameters: IdentityApiMfaReadLoginEnforcementRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Read the current login enforcement
      */
-    mfaReadLoginEnforcement(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mfaReadLoginEnforcement(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read the current configuration for the given ID regardless of the MFA method type
      */
-    mfaReadMethodRaw(requestParameters: IdentityApiMfaReadMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mfaReadMethodRaw(requestParameters: IdentityApiMfaReadMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Read the current configuration for the given ID regardless of the MFA method type
      */
-    mfaReadMethod(methodId: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mfaReadMethod(methodId: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read the current configuration for the given MFA method
      */
-    mfaReadOktaMethodRaw(requestParameters: IdentityApiMfaReadOktaMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mfaReadOktaMethodRaw(requestParameters: IdentityApiMfaReadOktaMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Read the current configuration for the given MFA method
      */
-    mfaReadOktaMethod(methodId: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mfaReadOktaMethod(methodId: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read the current configuration for the given MFA method
      */
-    mfaReadPingIdMethodRaw(requestParameters: IdentityApiMfaReadPingIdMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mfaReadPingIdMethodRaw(requestParameters: IdentityApiMfaReadPingIdMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Read the current configuration for the given MFA method
      */
-    mfaReadPingIdMethod(methodId: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mfaReadPingIdMethod(methodId: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read the current configuration for the given MFA method
      */
-    mfaReadTotpMethodRaw(requestParameters: IdentityApiMfaReadTotpMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mfaReadTotpMethodRaw(requestParameters: IdentityApiMfaReadTotpMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Read the current configuration for the given MFA method
      */
-    mfaReadTotpMethod(methodId: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mfaReadTotpMethod(methodId: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Update the configuration for the given MFA method
      */
-    mfaUpdateDuoMethodRaw(requestParameters: IdentityApiMfaUpdateDuoMethodOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mfaUpdateDuoMethodRaw(requestParameters: IdentityApiMfaUpdateDuoMethodOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Update the configuration for the given MFA method
      */
-    mfaUpdateDuoMethod(methodId: string, mfaUpdateDuoMethodRequest: MfaUpdateDuoMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mfaUpdateDuoMethod(methodId: string, mfaUpdateDuoMethodRequest: MfaUpdateDuoMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Update the configuration for the given MFA method
      */
-    mfaUpdateOktaMethodRaw(requestParameters: IdentityApiMfaUpdateOktaMethodOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mfaUpdateOktaMethodRaw(requestParameters: IdentityApiMfaUpdateOktaMethodOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Update the configuration for the given MFA method
      */
-    mfaUpdateOktaMethod(methodId: string, mfaUpdateOktaMethodRequest: MfaUpdateOktaMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mfaUpdateOktaMethod(methodId: string, mfaUpdateOktaMethodRequest: MfaUpdateOktaMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Update the configuration for the given MFA method
      */
-    mfaUpdatePingIdMethodRaw(requestParameters: IdentityApiMfaUpdatePingIdMethodOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mfaUpdatePingIdMethodRaw(requestParameters: IdentityApiMfaUpdatePingIdMethodOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Update the configuration for the given MFA method
      */
-    mfaUpdatePingIdMethod(methodId: string, mfaUpdatePingIdMethodRequest: MfaUpdatePingIdMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mfaUpdatePingIdMethod(methodId: string, mfaUpdatePingIdMethodRequest: MfaUpdatePingIdMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Update the configuration for the given MFA method
      */
-    mfaUpdateTotpMethodRaw(requestParameters: IdentityApiMfaUpdateTotpMethodOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mfaUpdateTotpMethodRaw(requestParameters: IdentityApiMfaUpdateTotpMethodOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Update the configuration for the given MFA method
      */
-    mfaUpdateTotpMethod(methodId: string, mfaUpdateTotpMethodRequest: MfaUpdateTotpMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mfaUpdateTotpMethod(methodId: string, mfaUpdateTotpMethodRequest: MfaUpdateTotpMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Create or update a login enforcement
      */
-    mfaWriteLoginEnforcementRaw(requestParameters: IdentityApiMfaWriteLoginEnforcementOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mfaWriteLoginEnforcementRaw(requestParameters: IdentityApiMfaWriteLoginEnforcementOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Create or update a login enforcement
      */
-    mfaWriteLoginEnforcement(name: string, mfaWriteLoginEnforcementRequest: MfaWriteLoginEnforcementRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mfaWriteLoginEnforcement(name: string, mfaWriteLoginEnforcementRequest: MfaWriteLoginEnforcementRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    oidcConfigureRaw(requestParameters: IdentityApiOidcConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcConfigureRaw(requestParameters: IdentityApiOidcConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    oidcConfigure(oidcConfigureRequest: OidcConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oidcConfigure(oidcConfigureRequest: OidcConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    oidcDeleteAssignmentRaw(requestParameters: IdentityApiOidcDeleteAssignmentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcDeleteAssignmentRaw(requestParameters: IdentityApiOidcDeleteAssignmentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    oidcDeleteAssignment(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oidcDeleteAssignment(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    oidcDeleteClientRaw(requestParameters: IdentityApiOidcDeleteClientRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcDeleteClientRaw(requestParameters: IdentityApiOidcDeleteClientRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    oidcDeleteClient(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * CRUD operations for OIDC keys.
-     */
-    oidcDeleteKeyRaw(requestParameters: IdentityApiOidcDeleteKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcDeleteClient(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * CRUD operations for OIDC keys.
      */
-    oidcDeleteKey(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oidcDeleteKeyRaw(requestParameters: IdentityApiOidcDeleteKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * CRUD operations for OIDC keys.
+     */
+    oidcDeleteKey(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    oidcDeleteProviderRaw(requestParameters: IdentityApiOidcDeleteProviderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcDeleteProviderRaw(requestParameters: IdentityApiOidcDeleteProviderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    oidcDeleteProvider(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oidcDeleteProvider(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * CRUD operations on OIDC Roles
      */
-    oidcDeleteRoleRaw(requestParameters: IdentityApiOidcDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcDeleteRoleRaw(requestParameters: IdentityApiOidcDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * CRUD operations on OIDC Roles
      */
-    oidcDeleteRole(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oidcDeleteRole(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    oidcDeleteScopeRaw(requestParameters: IdentityApiOidcDeleteScopeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcDeleteScopeRaw(requestParameters: IdentityApiOidcDeleteScopeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    oidcDeleteScope(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Generate an OIDC token
-     */
-    oidcGenerateTokenRaw(requestParameters: IdentityApiOidcGenerateTokenRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcDeleteScope(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Generate an OIDC token
      */
-    oidcGenerateToken(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oidcGenerateTokenRaw(requestParameters: IdentityApiOidcGenerateTokenRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Generate an OIDC token
+     */
+    oidcGenerateToken(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Verify the authenticity of an OIDC token
      */
-    oidcIntrospectRaw(requestParameters: IdentityApiOidcIntrospectOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcIntrospectRaw(requestParameters: IdentityApiOidcIntrospectOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Verify the authenticity of an OIDC token
      */
-    oidcIntrospect(oidcIntrospectRequest: OidcIntrospectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oidcIntrospect(oidcIntrospectRequest: OidcIntrospectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     oidcListAssignmentsRaw(requestParameters: IdentityApiOidcListAssignmentsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<StandardListResponse>>;
@@ -999,186 +999,186 @@ export declare class IdentityApi extends runtime.BaseAPI {
     oidcListScopes(list: OidcListScopesListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse>;
     /**
      */
-    oidcProviderAuthorizeRaw(requestParameters: IdentityApiOidcProviderAuthorizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcProviderAuthorizeRaw(requestParameters: IdentityApiOidcProviderAuthorizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    oidcProviderAuthorize(name: string, clientId?: string, codeChallenge?: string, codeChallengeMethod?: string, maxAge?: number, nonce?: string, redirectUri?: string, responseType?: string, scope?: string, state?: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oidcProviderAuthorize(name: string, clientId?: string, codeChallenge?: string, codeChallengeMethod?: string, maxAge?: number, nonce?: string, redirectUri?: string, responseType?: string, scope?: string, state?: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    oidcProviderAuthorizeWithParametersRaw(requestParameters: IdentityApiOidcProviderAuthorizeWithParametersOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcProviderAuthorizeWithParametersRaw(requestParameters: IdentityApiOidcProviderAuthorizeWithParametersOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    oidcProviderAuthorizeWithParameters(name: string, oidcProviderAuthorizeWithParametersRequest: OidcProviderAuthorizeWithParametersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oidcProviderAuthorizeWithParameters(name: string, oidcProviderAuthorizeWithParametersRequest: OidcProviderAuthorizeWithParametersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    oidcProviderTokenRaw(requestParameters: IdentityApiOidcProviderTokenOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcProviderTokenRaw(requestParameters: IdentityApiOidcProviderTokenOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    oidcProviderToken(name: string, oidcProviderTokenRequest: OidcProviderTokenRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oidcProviderToken(name: string, oidcProviderTokenRequest: OidcProviderTokenRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    oidcProviderUserInfoRaw(requestParameters: IdentityApiOidcProviderUserInfoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcProviderUserInfoRaw(requestParameters: IdentityApiOidcProviderUserInfoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    oidcProviderUserInfo(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oidcProviderUserInfo(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    oidcProviderUserInfo2Raw(requestParameters: IdentityApiOidcProviderUserInfo2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcProviderUserInfo2Raw(requestParameters: IdentityApiOidcProviderUserInfo2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    oidcProviderUserInfo2(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oidcProviderUserInfo2(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    oidcReadAssignmentRaw(requestParameters: IdentityApiOidcReadAssignmentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcReadAssignmentRaw(requestParameters: IdentityApiOidcReadAssignmentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    oidcReadAssignment(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oidcReadAssignment(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    oidcReadClientRaw(requestParameters: IdentityApiOidcReadClientRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcReadClientRaw(requestParameters: IdentityApiOidcReadClientRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    oidcReadClient(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oidcReadClient(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    oidcReadConfigurationRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcReadConfigurationRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    oidcReadConfiguration(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * CRUD operations for OIDC keys.
-     */
-    oidcReadKeyRaw(requestParameters: IdentityApiOidcReadKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcReadConfiguration(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * CRUD operations for OIDC keys.
      */
-    oidcReadKey(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oidcReadKeyRaw(requestParameters: IdentityApiOidcReadKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * CRUD operations for OIDC keys.
+     */
+    oidcReadKey(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Retrieve public keys
      */
-    oidcReadOidcChildWellKnownKeysRaw(requestParameters: IdentityApiOidcReadOidcChildWellKnownKeysRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcReadOidcChildWellKnownKeysRaw(requestParameters: IdentityApiOidcReadOidcChildWellKnownKeysRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Retrieve public keys
      */
-    oidcReadOidcChildWellKnownKeys(child: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oidcReadOidcChildWellKnownKeys(child: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Query OIDC configurations
      */
-    oidcReadOidcChildWellKnownOpenidConfigurationRaw(requestParameters: IdentityApiOidcReadOidcChildWellKnownOpenidConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcReadOidcChildWellKnownOpenidConfigurationRaw(requestParameters: IdentityApiOidcReadOidcChildWellKnownOpenidConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Query OIDC configurations
      */
-    oidcReadOidcChildWellKnownOpenidConfiguration(child: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oidcReadOidcChildWellKnownOpenidConfiguration(child: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Query OIDC configurations
      */
-    oidcReadOpenIdConfigurationRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcReadOpenIdConfigurationRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Query OIDC configurations
      */
-    oidcReadOpenIdConfiguration(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oidcReadOpenIdConfiguration(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    oidcReadProviderRaw(requestParameters: IdentityApiOidcReadProviderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcReadProviderRaw(requestParameters: IdentityApiOidcReadProviderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    oidcReadProvider(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oidcReadProvider(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    oidcReadProviderOpenIdConfigurationRaw(requestParameters: IdentityApiOidcReadProviderOpenIdConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcReadProviderOpenIdConfigurationRaw(requestParameters: IdentityApiOidcReadProviderOpenIdConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    oidcReadProviderOpenIdConfiguration(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oidcReadProviderOpenIdConfiguration(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    oidcReadProviderPublicKeysRaw(requestParameters: IdentityApiOidcReadProviderPublicKeysRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcReadProviderPublicKeysRaw(requestParameters: IdentityApiOidcReadProviderPublicKeysRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    oidcReadProviderPublicKeys(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oidcReadProviderPublicKeys(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Retrieve public keys
      */
-    oidcReadPublicKeysRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcReadPublicKeysRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Retrieve public keys
      */
-    oidcReadPublicKeys(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oidcReadPublicKeys(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * CRUD operations on OIDC Roles
      */
-    oidcReadRoleRaw(requestParameters: IdentityApiOidcReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcReadRoleRaw(requestParameters: IdentityApiOidcReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * CRUD operations on OIDC Roles
      */
-    oidcReadRole(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oidcReadRole(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    oidcReadScopeRaw(requestParameters: IdentityApiOidcReadScopeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcReadScopeRaw(requestParameters: IdentityApiOidcReadScopeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    oidcReadScope(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oidcReadScope(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Rotate a named OIDC key.
      */
-    oidcRotateKeyRaw(requestParameters: IdentityApiOidcRotateKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcRotateKeyRaw(requestParameters: IdentityApiOidcRotateKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Rotate a named OIDC key.
      */
-    oidcRotateKey(name: string, oidcRotateKeyRequest: OidcRotateKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oidcRotateKey(name: string, oidcRotateKeyRequest: OidcRotateKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    oidcWriteAssignmentRaw(requestParameters: IdentityApiOidcWriteAssignmentOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcWriteAssignmentRaw(requestParameters: IdentityApiOidcWriteAssignmentOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    oidcWriteAssignment(name: string, oidcWriteAssignmentRequest: OidcWriteAssignmentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oidcWriteAssignment(name: string, oidcWriteAssignmentRequest: OidcWriteAssignmentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    oidcWriteClientRaw(requestParameters: IdentityApiOidcWriteClientOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcWriteClientRaw(requestParameters: IdentityApiOidcWriteClientOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    oidcWriteClient(name: string, oidcWriteClientRequest: OidcWriteClientRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * CRUD operations for OIDC keys.
-     */
-    oidcWriteKeyRaw(requestParameters: IdentityApiOidcWriteKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcWriteClient(name: string, oidcWriteClientRequest: OidcWriteClientRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * CRUD operations for OIDC keys.
      */
-    oidcWriteKey(name: string, oidcWriteKeyRequest: OidcWriteKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oidcWriteKeyRaw(requestParameters: IdentityApiOidcWriteKeyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * CRUD operations for OIDC keys.
+     */
+    oidcWriteKey(name: string, oidcWriteKeyRequest: OidcWriteKeyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    oidcWriteProviderRaw(requestParameters: IdentityApiOidcWriteProviderOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcWriteProviderRaw(requestParameters: IdentityApiOidcWriteProviderOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    oidcWriteProvider(name: string, oidcWriteProviderRequest: OidcWriteProviderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oidcWriteProvider(name: string, oidcWriteProviderRequest: OidcWriteProviderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * CRUD operations on OIDC Roles
      */
-    oidcWriteRoleRaw(requestParameters: IdentityApiOidcWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcWriteRoleRaw(requestParameters: IdentityApiOidcWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * CRUD operations on OIDC Roles
      */
-    oidcWriteRole(name: string, oidcWriteRoleRequest: OidcWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oidcWriteRole(name: string, oidcWriteRoleRequest: OidcWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    oidcWriteScopeRaw(requestParameters: IdentityApiOidcWriteScopeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcWriteScopeRaw(requestParameters: IdentityApiOidcWriteScopeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    oidcWriteScope(name: string, oidcWriteScopeRequest: OidcWriteScopeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Create a new alias.
-     */
-    personaCreateRaw(requestParameters: IdentityApiPersonaCreateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oidcWriteScope(name: string, oidcWriteScopeRequest: OidcWriteScopeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Create a new alias.
      */
-    personaCreate(personaCreateRequest: PersonaCreateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    personaCreateRaw(requestParameters: IdentityApiPersonaCreateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Create a new alias.
+     */
+    personaCreate(personaCreateRequest: PersonaCreateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    personaDeleteByIdRaw(requestParameters: IdentityApiPersonaDeleteByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    personaDeleteByIdRaw(requestParameters: IdentityApiPersonaDeleteByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    personaDeleteById(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    personaDeleteById(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * List all the alias IDs.
      */
@@ -1189,168 +1189,168 @@ export declare class IdentityApi extends runtime.BaseAPI {
     personaListById(list: PersonaListByIdListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse>;
     /**
      */
-    personaReadByIdRaw(requestParameters: IdentityApiPersonaReadByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    personaReadByIdRaw(requestParameters: IdentityApiPersonaReadByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    personaReadById(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    personaReadById(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    personaUpdateByIdRaw(requestParameters: IdentityApiPersonaUpdateByIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    personaUpdateByIdRaw(requestParameters: IdentityApiPersonaUpdateByIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    personaUpdateById(id: string, personaUpdateByIdRequest: PersonaUpdateByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    personaUpdateById(id: string, personaUpdateByIdRequest: PersonaUpdateByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum AliasListByIdListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum EntityListAliasesByIdListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum EntityListByIdListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum EntityListByNameListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum EntityListFromStorageListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum GroupListAliasesByIdListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum GroupListByIdListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum GroupListByNameListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum GroupListFromStorageListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum MfaListDuoMethodsListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum MfaListLoginEnforcementsListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum MfaListMethodsListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum MfaListOktaMethodsListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum MfaListPingIdMethodsListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum MfaListTotpMethodsListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum OidcListAssignmentsListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum OidcListClientsListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum OidcListKeysListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum OidcListProvidersListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum OidcListRolesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum OidcListScopesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum PersonaListByIdListEnum {
     TRUE = "true"
 }

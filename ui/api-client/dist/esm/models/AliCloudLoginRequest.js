@@ -27,9 +27,9 @@ export function AliCloudLoginRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        identityRequestHeaders: json['identity_request_headers'] == null ? undefined : json['identity_request_headers'],
-        identityRequestUrl: json['identity_request_url'] == null ? undefined : json['identity_request_url'],
-        role: json['role'],
+        'identityRequestHeaders': json['identity_request_headers'] == null ? undefined : json['identity_request_headers'],
+        'identityRequestUrl': json['identity_request_url'] == null ? undefined : json['identity_request_url'],
+        'role': json['role'],
     };
 }
 export function AliCloudLoginRequestToJSON(json) {
@@ -40,8 +40,8 @@ export function AliCloudLoginRequestToJSONTyped(value, ignoreDiscriminator = fal
         return value;
     }
     return {
-        identity_request_headers: value['identityRequestHeaders'],
-        identity_request_url: value['identityRequestUrl'],
-        role: value['role'],
+        'identity_request_headers': value['identityRequestHeaders'],
+        'identity_request_url': value['identityRequestUrl'],
+        'role': value['role'],
     };
 }

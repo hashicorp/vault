@@ -25,7 +25,7 @@ export function LeasesRevokeLeaseWithPrefixRequestFromJSONTyped(json, ignoreDisc
         return json;
     }
     return {
-        sync: json['sync'] == null ? undefined : json['sync'],
+        'sync': json['sync'] == null ? undefined : json['sync'],
     };
 }
 export function LeasesRevokeLeaseWithPrefixRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function LeasesRevokeLeaseWithPrefixRequestToJSONTyped(value, ignoreDiscr
         return value;
     }
     return {
-        sync: value['sync'],
+        'sync': value['sync'],
     };
 }

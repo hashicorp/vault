@@ -25,8 +25,8 @@ export function GoogleCloudEditServiceAccountsForRoleRequestFromJSONTyped(json, 
         return json;
     }
     return {
-        add: json['add'] == null ? undefined : json['add'],
-        remove: json['remove'] == null ? undefined : json['remove'],
+        'add': json['add'] == null ? undefined : json['add'],
+        'remove': json['remove'] == null ? undefined : json['remove'],
     };
 }
 export function GoogleCloudEditServiceAccountsForRoleRequestToJSON(json) {
@@ -37,7 +37,7 @@ export function GoogleCloudEditServiceAccountsForRoleRequestToJSONTyped(value, i
         return value;
     }
     return {
-        add: value['add'],
-        remove: value['remove'],
+        'add': value['add'],
+        'remove': value['remove'],
     };
 }

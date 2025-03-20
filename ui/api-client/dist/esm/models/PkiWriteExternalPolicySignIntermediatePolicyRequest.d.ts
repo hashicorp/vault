@@ -30,9 +30,9 @@ export interface PkiWriteExternalPolicySignIntermediatePolicyRequest {
     format?: PkiWriteExternalPolicySignIntermediatePolicyRequestFormatEnum;
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum PkiWriteExternalPolicySignIntermediatePolicyRequestFormatEnum {
     PEM = "pem",
     DER = "der",

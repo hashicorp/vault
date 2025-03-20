@@ -20,9 +20,9 @@ exports.PkiIssuerIssueWithRoleRequestFromJSONTyped = PkiIssuerIssueWithRoleReque
 exports.PkiIssuerIssueWithRoleRequestToJSON = PkiIssuerIssueWithRoleRequestToJSON;
 exports.PkiIssuerIssueWithRoleRequestToJSONTyped = PkiIssuerIssueWithRoleRequestToJSONTyped;
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 var PkiIssuerIssueWithRoleRequestFormatEnum;
 (function (PkiIssuerIssueWithRoleRequestFormatEnum) {
     PkiIssuerIssueWithRoleRequestFormatEnum["PEM"] = "pem";
@@ -30,9 +30,9 @@ var PkiIssuerIssueWithRoleRequestFormatEnum;
     PkiIssuerIssueWithRoleRequestFormatEnum["PEM_BUNDLE"] = "pem_bundle";
 })(PkiIssuerIssueWithRoleRequestFormatEnum || (exports.PkiIssuerIssueWithRoleRequestFormatEnum = PkiIssuerIssueWithRoleRequestFormatEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 var PkiIssuerIssueWithRoleRequestPrivateKeyFormatEnum;
 (function (PkiIssuerIssueWithRoleRequestPrivateKeyFormatEnum) {
     PkiIssuerIssueWithRoleRequestPrivateKeyFormatEnum["EMPTY"] = "";
@@ -54,20 +54,20 @@ function PkiIssuerIssueWithRoleRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        altNames: json['alt_names'] == null ? undefined : json['alt_names'],
-        certMetadata: json['cert_metadata'] == null ? undefined : json['cert_metadata'],
-        commonName: json['common_name'] == null ? undefined : json['common_name'],
-        excludeCnFromSans: json['exclude_cn_from_sans'] == null ? undefined : json['exclude_cn_from_sans'],
-        format: json['format'] == null ? undefined : json['format'],
-        ipSans: json['ip_sans'] == null ? undefined : json['ip_sans'],
-        notAfter: json['not_after'] == null ? undefined : json['not_after'],
-        otherSans: json['other_sans'] == null ? undefined : json['other_sans'],
-        privateKeyFormat: json['private_key_format'] == null ? undefined : json['private_key_format'],
-        removeRootsFromChain: json['remove_roots_from_chain'] == null ? undefined : json['remove_roots_from_chain'],
-        serialNumber: json['serial_number'] == null ? undefined : json['serial_number'],
-        ttl: json['ttl'] == null ? undefined : json['ttl'],
-        uriSans: json['uri_sans'] == null ? undefined : json['uri_sans'],
-        userIds: json['user_ids'] == null ? undefined : json['user_ids'],
+        'altNames': json['alt_names'] == null ? undefined : json['alt_names'],
+        'certMetadata': json['cert_metadata'] == null ? undefined : json['cert_metadata'],
+        'commonName': json['common_name'] == null ? undefined : json['common_name'],
+        'excludeCnFromSans': json['exclude_cn_from_sans'] == null ? undefined : json['exclude_cn_from_sans'],
+        'format': json['format'] == null ? undefined : json['format'],
+        'ipSans': json['ip_sans'] == null ? undefined : json['ip_sans'],
+        'notAfter': json['not_after'] == null ? undefined : json['not_after'],
+        'otherSans': json['other_sans'] == null ? undefined : json['other_sans'],
+        'privateKeyFormat': json['private_key_format'] == null ? undefined : json['private_key_format'],
+        'removeRootsFromChain': json['remove_roots_from_chain'] == null ? undefined : json['remove_roots_from_chain'],
+        'serialNumber': json['serial_number'] == null ? undefined : json['serial_number'],
+        'ttl': json['ttl'] == null ? undefined : json['ttl'],
+        'uriSans': json['uri_sans'] == null ? undefined : json['uri_sans'],
+        'userIds': json['user_ids'] == null ? undefined : json['user_ids'],
     };
 }
 function PkiIssuerIssueWithRoleRequestToJSON(json) {
@@ -78,19 +78,19 @@ function PkiIssuerIssueWithRoleRequestToJSONTyped(value, ignoreDiscriminator = f
         return value;
     }
     return {
-        alt_names: value['altNames'],
-        cert_metadata: value['certMetadata'],
-        common_name: value['commonName'],
-        exclude_cn_from_sans: value['excludeCnFromSans'],
-        format: value['format'],
-        ip_sans: value['ipSans'],
-        not_after: value['notAfter'],
-        other_sans: value['otherSans'],
-        private_key_format: value['privateKeyFormat'],
-        remove_roots_from_chain: value['removeRootsFromChain'],
-        serial_number: value['serialNumber'],
-        ttl: value['ttl'],
-        uri_sans: value['uriSans'],
-        user_ids: value['userIds'],
+        'alt_names': value['altNames'],
+        'cert_metadata': value['certMetadata'],
+        'common_name': value['commonName'],
+        'exclude_cn_from_sans': value['excludeCnFromSans'],
+        'format': value['format'],
+        'ip_sans': value['ipSans'],
+        'not_after': value['notAfter'],
+        'other_sans': value['otherSans'],
+        'private_key_format': value['privateKeyFormat'],
+        'remove_roots_from_chain': value['removeRootsFromChain'],
+        'serial_number': value['serialNumber'],
+        'ttl': value['ttl'],
+        'uri_sans': value['uriSans'],
+        'user_ids': value['userIds'],
     };
 }

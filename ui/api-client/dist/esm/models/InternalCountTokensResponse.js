@@ -25,7 +25,7 @@ export function InternalCountTokensResponseFromJSONTyped(json, ignoreDiscriminat
         return json;
     }
     return {
-        counters: json['counters'] == null ? undefined : json['counters'],
+        'counters': json['counters'] == null ? undefined : json['counters'],
     };
 }
 export function InternalCountTokensResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function InternalCountTokensResponseToJSONTyped(value, ignoreDiscriminato
         return value;
     }
     return {
-        counters: value['counters'],
+        'counters': value['counters'],
     };
 }

@@ -25,8 +25,8 @@ export function LdapRotateStaticRoleRequestFromJSONTyped(json, ignoreDiscriminat
         return json;
     }
     return {
-        dn: json['dn'] == null ? undefined : json['dn'],
-        username: json['username'] == null ? undefined : json['username'],
+        'dn': json['dn'] == null ? undefined : json['dn'],
+        'username': json['username'] == null ? undefined : json['username'],
     };
 }
 export function LdapRotateStaticRoleRequestToJSON(json) {
@@ -37,7 +37,7 @@ export function LdapRotateStaticRoleRequestToJSONTyped(value, ignoreDiscriminato
         return value;
     }
     return {
-        dn: value['dn'],
-        username: value['username'],
+        'dn': value['dn'],
+        'username': value['username'],
     };
 }

@@ -25,7 +25,7 @@ export function AuditingEnableRequestHeaderRequestFromJSONTyped(json, ignoreDisc
         return json;
     }
     return {
-        hmac: json['hmac'] == null ? undefined : json['hmac'],
+        'hmac': json['hmac'] == null ? undefined : json['hmac'],
     };
 }
 export function AuditingEnableRequestHeaderRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function AuditingEnableRequestHeaderRequestToJSONTyped(value, ignoreDiscr
         return value;
     }
     return {
-        hmac: value['hmac'],
+        'hmac': value['hmac'],
     };
 }

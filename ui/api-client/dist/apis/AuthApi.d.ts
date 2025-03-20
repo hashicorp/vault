@@ -1030,11 +1030,11 @@ export declare class AuthApi extends runtime.BaseAPI {
     /**
      * Create a role and associate policies to it.
      */
-    aliCloudDeleteAuthRoleRaw(requestParameters: AuthApiAliCloudDeleteAuthRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    aliCloudDeleteAuthRoleRaw(requestParameters: AuthApiAliCloudDeleteAuthRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Create a role and associate policies to it.
      */
-    aliCloudDeleteAuthRole(role: string, alicloudMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    aliCloudDeleteAuthRole(role: string, alicloudMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Lists all the roles that are registered with Vault.
      */
@@ -1054,123 +1054,123 @@ export declare class AuthApi extends runtime.BaseAPI {
     /**
      * Authenticates an RAM entity with Vault.
      */
-    aliCloudLoginRaw(requestParameters: AuthApiAliCloudLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    aliCloudLoginRaw(requestParameters: AuthApiAliCloudLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Authenticates an RAM entity with Vault.
      */
-    aliCloudLogin(alicloudMountPath: string, aliCloudLoginRequest: AliCloudLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    aliCloudLogin(alicloudMountPath: string, aliCloudLoginRequest: AliCloudLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Create a role and associate policies to it.
      */
-    aliCloudReadAuthRoleRaw(requestParameters: AuthApiAliCloudReadAuthRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    aliCloudReadAuthRoleRaw(requestParameters: AuthApiAliCloudReadAuthRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Create a role and associate policies to it.
      */
-    aliCloudReadAuthRole(role: string, alicloudMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    aliCloudReadAuthRole(role: string, alicloudMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Create a role and associate policies to it.
      */
-    aliCloudWriteAuthRoleRaw(requestParameters: AuthApiAliCloudWriteAuthRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    aliCloudWriteAuthRoleRaw(requestParameters: AuthApiAliCloudWriteAuthRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Create a role and associate policies to it.
      */
-    aliCloudWriteAuthRole(role: string, alicloudMountPath: string, aliCloudWriteAuthRoleRequest: AliCloudWriteAuthRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    aliCloudWriteAuthRole(role: string, alicloudMountPath: string, aliCloudWriteAuthRoleRequest: AliCloudWriteAuthRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    appRoleDeleteBindSecretIdRaw(requestParameters: AuthApiAppRoleDeleteBindSecretIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleDeleteBindSecretIdRaw(requestParameters: AuthApiAppRoleDeleteBindSecretIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleDeleteBindSecretId(roleName: string, approleMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleDeleteBindSecretId(roleName: string, approleMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    appRoleDeleteBoundCidrListRaw(requestParameters: AuthApiAppRoleDeleteBoundCidrListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleDeleteBoundCidrListRaw(requestParameters: AuthApiAppRoleDeleteBoundCidrListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleDeleteBoundCidrList(roleName: string, approleMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleDeleteBoundCidrList(roleName: string, approleMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    appRoleDeletePeriodRaw(requestParameters: AuthApiAppRoleDeletePeriodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleDeletePeriodRaw(requestParameters: AuthApiAppRoleDeletePeriodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleDeletePeriod(roleName: string, approleMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleDeletePeriod(roleName: string, approleMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    appRoleDeletePoliciesRaw(requestParameters: AuthApiAppRoleDeletePoliciesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleDeletePoliciesRaw(requestParameters: AuthApiAppRoleDeletePoliciesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleDeletePolicies(roleName: string, approleMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleDeletePolicies(roleName: string, approleMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    appRoleDeleteRoleRaw(requestParameters: AuthApiAppRoleDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleDeleteRoleRaw(requestParameters: AuthApiAppRoleDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleDeleteRole(roleName: string, approleMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleDeleteRole(roleName: string, approleMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    appRoleDeleteSecretIdBoundCidrsRaw(requestParameters: AuthApiAppRoleDeleteSecretIdBoundCidrsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleDeleteSecretIdBoundCidrsRaw(requestParameters: AuthApiAppRoleDeleteSecretIdBoundCidrsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleDeleteSecretIdBoundCidrs(roleName: string, approleMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleDeleteSecretIdBoundCidrs(roleName: string, approleMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    appRoleDeleteSecretIdNumUsesRaw(requestParameters: AuthApiAppRoleDeleteSecretIdNumUsesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleDeleteSecretIdNumUsesRaw(requestParameters: AuthApiAppRoleDeleteSecretIdNumUsesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleDeleteSecretIdNumUses(roleName: string, approleMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleDeleteSecretIdNumUses(roleName: string, approleMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    appRoleDeleteSecretIdTtlRaw(requestParameters: AuthApiAppRoleDeleteSecretIdTtlRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleDeleteSecretIdTtlRaw(requestParameters: AuthApiAppRoleDeleteSecretIdTtlRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleDeleteSecretIdTtl(roleName: string, approleMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleDeleteSecretIdTtl(roleName: string, approleMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    appRoleDeleteTokenBoundCidrsRaw(requestParameters: AuthApiAppRoleDeleteTokenBoundCidrsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleDeleteTokenBoundCidrsRaw(requestParameters: AuthApiAppRoleDeleteTokenBoundCidrsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleDeleteTokenBoundCidrs(roleName: string, approleMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleDeleteTokenBoundCidrs(roleName: string, approleMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    appRoleDeleteTokenMaxTtlRaw(requestParameters: AuthApiAppRoleDeleteTokenMaxTtlRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleDeleteTokenMaxTtlRaw(requestParameters: AuthApiAppRoleDeleteTokenMaxTtlRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleDeleteTokenMaxTtl(roleName: string, approleMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleDeleteTokenMaxTtl(roleName: string, approleMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    appRoleDeleteTokenNumUsesRaw(requestParameters: AuthApiAppRoleDeleteTokenNumUsesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleDeleteTokenNumUsesRaw(requestParameters: AuthApiAppRoleDeleteTokenNumUsesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleDeleteTokenNumUses(roleName: string, approleMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleDeleteTokenNumUses(roleName: string, approleMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    appRoleDeleteTokenTtlRaw(requestParameters: AuthApiAppRoleDeleteTokenTtlRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleDeleteTokenTtlRaw(requestParameters: AuthApiAppRoleDeleteTokenTtlRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleDeleteTokenTtl(roleName: string, approleMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleDeleteTokenTtl(roleName: string, approleMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    appRoleDestroySecretIdRaw(requestParameters: AuthApiAppRoleDestroySecretIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleDestroySecretIdRaw(requestParameters: AuthApiAppRoleDestroySecretIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleDestroySecretId(roleName: string, approleMountPath: string, appRoleDestroySecretIdRequest: AppRoleDestroySecretIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleDestroySecretId(roleName: string, approleMountPath: string, appRoleDestroySecretIdRequest: AppRoleDestroySecretIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    appRoleDestroySecretId2Raw(requestParameters: AuthApiAppRoleDestroySecretId2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleDestroySecretId2Raw(requestParameters: AuthApiAppRoleDestroySecretId2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleDestroySecretId2(roleName: string, approleMountPath: string, secretId?: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleDestroySecretId2(roleName: string, approleMountPath: string, secretId?: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    appRoleDestroySecretIdByAccessorRaw(requestParameters: AuthApiAppRoleDestroySecretIdByAccessorOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleDestroySecretIdByAccessorRaw(requestParameters: AuthApiAppRoleDestroySecretIdByAccessorOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleDestroySecretIdByAccessor(roleName: string, approleMountPath: string, appRoleDestroySecretIdByAccessorRequest: AppRoleDestroySecretIdByAccessorRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleDestroySecretIdByAccessor(roleName: string, approleMountPath: string, appRoleDestroySecretIdByAccessorRequest: AppRoleDestroySecretIdByAccessorRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    appRoleDestroySecretIdByAccessor2Raw(requestParameters: AuthApiAppRoleDestroySecretIdByAccessor2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleDestroySecretIdByAccessor2Raw(requestParameters: AuthApiAppRoleDestroySecretIdByAccessor2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleDestroySecretIdByAccessor2(roleName: string, approleMountPath: string, secretIdAccessor?: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleDestroySecretIdByAccessor2(roleName: string, approleMountPath: string, secretIdAccessor?: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     appRoleListRolesRaw(requestParameters: AuthApiAppRoleListRolesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<StandardListResponse>>;
@@ -1185,10 +1185,10 @@ export declare class AuthApi extends runtime.BaseAPI {
     appRoleListSecretIds(roleName: string, approleMountPath: string, list: AppRoleListSecretIdsListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse>;
     /**
      */
-    appRoleLoginRaw(requestParameters: AuthApiAppRoleLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleLoginRaw(requestParameters: AuthApiAppRoleLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleLogin(approleMountPath: string, appRoleLoginRequest: AppRoleLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleLogin(approleMountPath: string, appRoleLoginRequest: AppRoleLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     appRoleLookUpSecretIdRaw(requestParameters: AuthApiAppRoleLookUpSecretIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AppRoleLookUpSecretIdResponse>>;
@@ -1287,22 +1287,22 @@ export declare class AuthApi extends runtime.BaseAPI {
     appRoleReadTokenTtl(roleName: string, approleMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AppRoleReadTokenTtlResponse>;
     /**
      */
-    appRoleTidySecretIdRaw(requestParameters: AuthApiAppRoleTidySecretIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleTidySecretIdRaw(requestParameters: AuthApiAppRoleTidySecretIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleTidySecretId(approleMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleTidySecretId(approleMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    appRoleWriteBindSecretIdRaw(requestParameters: AuthApiAppRoleWriteBindSecretIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleWriteBindSecretIdRaw(requestParameters: AuthApiAppRoleWriteBindSecretIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleWriteBindSecretId(roleName: string, approleMountPath: string, appRoleWriteBindSecretIdRequest: AppRoleWriteBindSecretIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleWriteBindSecretId(roleName: string, approleMountPath: string, appRoleWriteBindSecretIdRequest: AppRoleWriteBindSecretIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    appRoleWriteBoundCidrListRaw(requestParameters: AuthApiAppRoleWriteBoundCidrListOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleWriteBoundCidrListRaw(requestParameters: AuthApiAppRoleWriteBoundCidrListOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleWriteBoundCidrList(roleName: string, approleMountPath: string, appRoleWriteBoundCidrListRequest: AppRoleWriteBoundCidrListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleWriteBoundCidrList(roleName: string, approleMountPath: string, appRoleWriteBoundCidrListRequest: AppRoleWriteBoundCidrListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     appRoleWriteCustomSecretIdRaw(requestParameters: AuthApiAppRoleWriteCustomSecretIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AppRoleWriteCustomSecretIdResponse>>;
@@ -1311,28 +1311,28 @@ export declare class AuthApi extends runtime.BaseAPI {
     appRoleWriteCustomSecretId(roleName: string, approleMountPath: string, appRoleWriteCustomSecretIdRequest: AppRoleWriteCustomSecretIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AppRoleWriteCustomSecretIdResponse>;
     /**
      */
-    appRoleWritePeriodRaw(requestParameters: AuthApiAppRoleWritePeriodOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleWritePeriodRaw(requestParameters: AuthApiAppRoleWritePeriodOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleWritePeriod(roleName: string, approleMountPath: string, appRoleWritePeriodRequest: AppRoleWritePeriodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleWritePeriod(roleName: string, approleMountPath: string, appRoleWritePeriodRequest: AppRoleWritePeriodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    appRoleWritePoliciesRaw(requestParameters: AuthApiAppRoleWritePoliciesOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleWritePoliciesRaw(requestParameters: AuthApiAppRoleWritePoliciesOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleWritePolicies(roleName: string, approleMountPath: string, appRoleWritePoliciesRequest: AppRoleWritePoliciesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleWritePolicies(roleName: string, approleMountPath: string, appRoleWritePoliciesRequest: AppRoleWritePoliciesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    appRoleWriteRoleRaw(requestParameters: AuthApiAppRoleWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleWriteRoleRaw(requestParameters: AuthApiAppRoleWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleWriteRole(roleName: string, approleMountPath: string, appRoleWriteRoleRequest: AppRoleWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleWriteRole(roleName: string, approleMountPath: string, appRoleWriteRoleRequest: AppRoleWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    appRoleWriteRoleIdRaw(requestParameters: AuthApiAppRoleWriteRoleIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleWriteRoleIdRaw(requestParameters: AuthApiAppRoleWriteRoleIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleWriteRoleId(roleName: string, approleMountPath: string, appRoleWriteRoleIdRequest: AppRoleWriteRoleIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleWriteRoleId(roleName: string, approleMountPath: string, appRoleWriteRoleIdRequest: AppRoleWriteRoleIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     appRoleWriteSecretIdRaw(requestParameters: AuthApiAppRoleWriteSecretIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AppRoleWriteSecretIdResponse>>;
@@ -1341,160 +1341,160 @@ export declare class AuthApi extends runtime.BaseAPI {
     appRoleWriteSecretId(roleName: string, approleMountPath: string, appRoleWriteSecretIdRequest: AppRoleWriteSecretIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AppRoleWriteSecretIdResponse>;
     /**
      */
-    appRoleWriteSecretIdBoundCidrsRaw(requestParameters: AuthApiAppRoleWriteSecretIdBoundCidrsOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleWriteSecretIdBoundCidrsRaw(requestParameters: AuthApiAppRoleWriteSecretIdBoundCidrsOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleWriteSecretIdBoundCidrs(roleName: string, approleMountPath: string, appRoleWriteSecretIdBoundCidrsRequest: AppRoleWriteSecretIdBoundCidrsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleWriteSecretIdBoundCidrs(roleName: string, approleMountPath: string, appRoleWriteSecretIdBoundCidrsRequest: AppRoleWriteSecretIdBoundCidrsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    appRoleWriteSecretIdNumUsesRaw(requestParameters: AuthApiAppRoleWriteSecretIdNumUsesOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleWriteSecretIdNumUsesRaw(requestParameters: AuthApiAppRoleWriteSecretIdNumUsesOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleWriteSecretIdNumUses(roleName: string, approleMountPath: string, appRoleWriteSecretIdNumUsesRequest: AppRoleWriteSecretIdNumUsesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleWriteSecretIdNumUses(roleName: string, approleMountPath: string, appRoleWriteSecretIdNumUsesRequest: AppRoleWriteSecretIdNumUsesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    appRoleWriteSecretIdTtlRaw(requestParameters: AuthApiAppRoleWriteSecretIdTtlOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleWriteSecretIdTtlRaw(requestParameters: AuthApiAppRoleWriteSecretIdTtlOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleWriteSecretIdTtl(roleName: string, approleMountPath: string, appRoleWriteSecretIdTtlRequest: AppRoleWriteSecretIdTtlRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleWriteSecretIdTtl(roleName: string, approleMountPath: string, appRoleWriteSecretIdTtlRequest: AppRoleWriteSecretIdTtlRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    appRoleWriteTokenBoundCidrsRaw(requestParameters: AuthApiAppRoleWriteTokenBoundCidrsOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleWriteTokenBoundCidrsRaw(requestParameters: AuthApiAppRoleWriteTokenBoundCidrsOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleWriteTokenBoundCidrs(roleName: string, approleMountPath: string, appRoleWriteTokenBoundCidrsRequest: AppRoleWriteTokenBoundCidrsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleWriteTokenBoundCidrs(roleName: string, approleMountPath: string, appRoleWriteTokenBoundCidrsRequest: AppRoleWriteTokenBoundCidrsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    appRoleWriteTokenMaxTtlRaw(requestParameters: AuthApiAppRoleWriteTokenMaxTtlOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleWriteTokenMaxTtlRaw(requestParameters: AuthApiAppRoleWriteTokenMaxTtlOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleWriteTokenMaxTtl(roleName: string, approleMountPath: string, appRoleWriteTokenMaxTtlRequest: AppRoleWriteTokenMaxTtlRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleWriteTokenMaxTtl(roleName: string, approleMountPath: string, appRoleWriteTokenMaxTtlRequest: AppRoleWriteTokenMaxTtlRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    appRoleWriteTokenNumUsesRaw(requestParameters: AuthApiAppRoleWriteTokenNumUsesOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleWriteTokenNumUsesRaw(requestParameters: AuthApiAppRoleWriteTokenNumUsesOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleWriteTokenNumUses(roleName: string, approleMountPath: string, appRoleWriteTokenNumUsesRequest: AppRoleWriteTokenNumUsesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleWriteTokenNumUses(roleName: string, approleMountPath: string, appRoleWriteTokenNumUsesRequest: AppRoleWriteTokenNumUsesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    appRoleWriteTokenTtlRaw(requestParameters: AuthApiAppRoleWriteTokenTtlOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    appRoleWriteTokenTtlRaw(requestParameters: AuthApiAppRoleWriteTokenTtlOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    appRoleWriteTokenTtl(roleName: string, approleMountPath: string, appRoleWriteTokenTtlRequest: AppRoleWriteTokenTtlRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    appRoleWriteTokenTtl(roleName: string, approleMountPath: string, appRoleWriteTokenTtlRequest: AppRoleWriteTokenTtlRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsConfigureCertificateRaw(requestParameters: AuthApiAwsConfigureCertificateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsConfigureCertificateRaw(requestParameters: AuthApiAwsConfigureCertificateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsConfigureCertificate(certName: string, awsMountPath: string, awsConfigureCertificateRequest: AwsConfigureCertificateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsConfigureCertificate(certName: string, awsMountPath: string, awsConfigureCertificateRequest: AwsConfigureCertificateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsConfigureClientRaw(requestParameters: AuthApiAwsConfigureClientOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsConfigureClientRaw(requestParameters: AuthApiAwsConfigureClientOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsConfigureClient(awsMountPath: string, awsConfigureClientRequest: AwsConfigureClientRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsConfigureClient(awsMountPath: string, awsConfigureClientRequest: AwsConfigureClientRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsConfigureIdentityAccessListTidyOperationRaw(requestParameters: AuthApiAwsConfigureIdentityAccessListTidyOperationOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsConfigureIdentityAccessListTidyOperationRaw(requestParameters: AuthApiAwsConfigureIdentityAccessListTidyOperationOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsConfigureIdentityAccessListTidyOperation(awsMountPath: string, awsConfigureIdentityAccessListTidyOperationRequest: AwsConfigureIdentityAccessListTidyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsConfigureIdentityAccessListTidyOperation(awsMountPath: string, awsConfigureIdentityAccessListTidyOperationRequest: AwsConfigureIdentityAccessListTidyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsConfigureIdentityIntegrationRaw(requestParameters: AuthApiAwsConfigureIdentityIntegrationOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsConfigureIdentityIntegrationRaw(requestParameters: AuthApiAwsConfigureIdentityIntegrationOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsConfigureIdentityIntegration(awsMountPath: string, awsConfigureIdentityIntegrationRequest: AwsConfigureIdentityIntegrationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsConfigureIdentityIntegration(awsMountPath: string, awsConfigureIdentityIntegrationRequest: AwsConfigureIdentityIntegrationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsConfigureIdentityWhitelistTidyOperationRaw(requestParameters: AuthApiAwsConfigureIdentityWhitelistTidyOperationOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsConfigureIdentityWhitelistTidyOperationRaw(requestParameters: AuthApiAwsConfigureIdentityWhitelistTidyOperationOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsConfigureIdentityWhitelistTidyOperation(awsMountPath: string, awsConfigureIdentityWhitelistTidyOperationRequest: AwsConfigureIdentityWhitelistTidyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsConfigureIdentityWhitelistTidyOperation(awsMountPath: string, awsConfigureIdentityWhitelistTidyOperationRequest: AwsConfigureIdentityWhitelistTidyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsConfigureRoleTagBlacklistTidyOperationRaw(requestParameters: AuthApiAwsConfigureRoleTagBlacklistTidyOperationOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsConfigureRoleTagBlacklistTidyOperationRaw(requestParameters: AuthApiAwsConfigureRoleTagBlacklistTidyOperationOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsConfigureRoleTagBlacklistTidyOperation(awsMountPath: string, awsConfigureRoleTagBlacklistTidyOperationRequest: AwsConfigureRoleTagBlacklistTidyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsConfigureRoleTagBlacklistTidyOperation(awsMountPath: string, awsConfigureRoleTagBlacklistTidyOperationRequest: AwsConfigureRoleTagBlacklistTidyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsConfigureRoleTagDenyListTidyOperationRaw(requestParameters: AuthApiAwsConfigureRoleTagDenyListTidyOperationOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsConfigureRoleTagDenyListTidyOperationRaw(requestParameters: AuthApiAwsConfigureRoleTagDenyListTidyOperationOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsConfigureRoleTagDenyListTidyOperation(awsMountPath: string, awsConfigureRoleTagDenyListTidyOperationRequest: AwsConfigureRoleTagDenyListTidyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsConfigureRoleTagDenyListTidyOperation(awsMountPath: string, awsConfigureRoleTagDenyListTidyOperationRequest: AwsConfigureRoleTagDenyListTidyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsDeleteAuthRoleRaw(requestParameters: AuthApiAwsDeleteAuthRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsDeleteAuthRoleRaw(requestParameters: AuthApiAwsDeleteAuthRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsDeleteAuthRole(role: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsDeleteAuthRole(role: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsDeleteCertificateConfigurationRaw(requestParameters: AuthApiAwsDeleteCertificateConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsDeleteCertificateConfigurationRaw(requestParameters: AuthApiAwsDeleteCertificateConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsDeleteCertificateConfiguration(certName: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsDeleteCertificateConfiguration(certName: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsDeleteClientConfigurationRaw(requestParameters: AuthApiAwsDeleteClientConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsDeleteClientConfigurationRaw(requestParameters: AuthApiAwsDeleteClientConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsDeleteClientConfiguration(awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsDeleteClientConfiguration(awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsDeleteIdentityAccessListRaw(requestParameters: AuthApiAwsDeleteIdentityAccessListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsDeleteIdentityAccessListRaw(requestParameters: AuthApiAwsDeleteIdentityAccessListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsDeleteIdentityAccessList(instanceId: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsDeleteIdentityAccessList(instanceId: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsDeleteIdentityAccessListTidySettingsRaw(requestParameters: AuthApiAwsDeleteIdentityAccessListTidySettingsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsDeleteIdentityAccessListTidySettingsRaw(requestParameters: AuthApiAwsDeleteIdentityAccessListTidySettingsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsDeleteIdentityAccessListTidySettings(awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsDeleteIdentityAccessListTidySettings(awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsDeleteIdentityWhitelistRaw(requestParameters: AuthApiAwsDeleteIdentityWhitelistRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsDeleteIdentityWhitelistRaw(requestParameters: AuthApiAwsDeleteIdentityWhitelistRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsDeleteIdentityWhitelist(instanceId: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsDeleteIdentityWhitelist(instanceId: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsDeleteIdentityWhitelistTidySettingsRaw(requestParameters: AuthApiAwsDeleteIdentityWhitelistTidySettingsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsDeleteIdentityWhitelistTidySettingsRaw(requestParameters: AuthApiAwsDeleteIdentityWhitelistTidySettingsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsDeleteIdentityWhitelistTidySettings(awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsDeleteIdentityWhitelistTidySettings(awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsDeleteRoleTagBlacklistRaw(requestParameters: AuthApiAwsDeleteRoleTagBlacklistRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsDeleteRoleTagBlacklistRaw(requestParameters: AuthApiAwsDeleteRoleTagBlacklistRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsDeleteRoleTagBlacklist(roleTag: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsDeleteRoleTagBlacklist(roleTag: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsDeleteRoleTagBlacklistTidySettingsRaw(requestParameters: AuthApiAwsDeleteRoleTagBlacklistTidySettingsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsDeleteRoleTagBlacklistTidySettingsRaw(requestParameters: AuthApiAwsDeleteRoleTagBlacklistTidySettingsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsDeleteRoleTagBlacklistTidySettings(awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsDeleteRoleTagBlacklistTidySettings(awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsDeleteRoleTagDenyListRaw(requestParameters: AuthApiAwsDeleteRoleTagDenyListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsDeleteRoleTagDenyListRaw(requestParameters: AuthApiAwsDeleteRoleTagDenyListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsDeleteRoleTagDenyList(roleTag: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsDeleteRoleTagDenyList(roleTag: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsDeleteRoleTagDenyListTidySettingsRaw(requestParameters: AuthApiAwsDeleteRoleTagDenyListTidySettingsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsDeleteRoleTagDenyListTidySettingsRaw(requestParameters: AuthApiAwsDeleteRoleTagDenyListTidySettingsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsDeleteRoleTagDenyListTidySettings(awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsDeleteRoleTagDenyListTidySettings(awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsDeleteStsRoleRaw(requestParameters: AuthApiAwsDeleteStsRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsDeleteStsRoleRaw(requestParameters: AuthApiAwsDeleteStsRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsDeleteStsRole(accountId: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsDeleteStsRole(accountId: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     awsListAuthRolesRaw(requestParameters: AuthApiAwsListAuthRolesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<StandardListResponse>>;
@@ -1545,166 +1545,166 @@ export declare class AuthApi extends runtime.BaseAPI {
     awsListStsRoleRelationships(awsMountPath: string, list: AwsListStsRoleRelationshipsListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse>;
     /**
      */
-    awsLoginRaw(requestParameters: AuthApiAwsLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsLoginRaw(requestParameters: AuthApiAwsLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsLogin(awsMountPath: string, awsLoginRequest: AwsLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsLogin(awsMountPath: string, awsLoginRequest: AwsLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsReadAuthRoleRaw(requestParameters: AuthApiAwsReadAuthRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsReadAuthRoleRaw(requestParameters: AuthApiAwsReadAuthRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsReadAuthRole(role: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsReadAuthRole(role: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsReadCertificateConfigurationRaw(requestParameters: AuthApiAwsReadCertificateConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsReadCertificateConfigurationRaw(requestParameters: AuthApiAwsReadCertificateConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsReadCertificateConfiguration(certName: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsReadCertificateConfiguration(certName: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsReadClientConfigurationRaw(requestParameters: AuthApiAwsReadClientConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsReadClientConfigurationRaw(requestParameters: AuthApiAwsReadClientConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsReadClientConfiguration(awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsReadClientConfiguration(awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsReadIdentityAccessListRaw(requestParameters: AuthApiAwsReadIdentityAccessListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsReadIdentityAccessListRaw(requestParameters: AuthApiAwsReadIdentityAccessListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsReadIdentityAccessList(instanceId: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsReadIdentityAccessList(instanceId: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsReadIdentityAccessListTidySettingsRaw(requestParameters: AuthApiAwsReadIdentityAccessListTidySettingsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsReadIdentityAccessListTidySettingsRaw(requestParameters: AuthApiAwsReadIdentityAccessListTidySettingsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsReadIdentityAccessListTidySettings(awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsReadIdentityAccessListTidySettings(awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsReadIdentityIntegrationConfigurationRaw(requestParameters: AuthApiAwsReadIdentityIntegrationConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsReadIdentityIntegrationConfigurationRaw(requestParameters: AuthApiAwsReadIdentityIntegrationConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsReadIdentityIntegrationConfiguration(awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsReadIdentityIntegrationConfiguration(awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsReadIdentityWhitelistRaw(requestParameters: AuthApiAwsReadIdentityWhitelistRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsReadIdentityWhitelistRaw(requestParameters: AuthApiAwsReadIdentityWhitelistRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsReadIdentityWhitelist(instanceId: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsReadIdentityWhitelist(instanceId: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsReadIdentityWhitelistTidySettingsRaw(requestParameters: AuthApiAwsReadIdentityWhitelistTidySettingsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsReadIdentityWhitelistTidySettingsRaw(requestParameters: AuthApiAwsReadIdentityWhitelistTidySettingsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsReadIdentityWhitelistTidySettings(awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsReadIdentityWhitelistTidySettings(awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsReadRoleTagBlacklistRaw(requestParameters: AuthApiAwsReadRoleTagBlacklistRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsReadRoleTagBlacklistRaw(requestParameters: AuthApiAwsReadRoleTagBlacklistRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsReadRoleTagBlacklist(roleTag: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsReadRoleTagBlacklist(roleTag: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsReadRoleTagBlacklistTidySettingsRaw(requestParameters: AuthApiAwsReadRoleTagBlacklistTidySettingsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsReadRoleTagBlacklistTidySettingsRaw(requestParameters: AuthApiAwsReadRoleTagBlacklistTidySettingsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsReadRoleTagBlacklistTidySettings(awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsReadRoleTagBlacklistTidySettings(awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsReadRoleTagDenyListRaw(requestParameters: AuthApiAwsReadRoleTagDenyListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsReadRoleTagDenyListRaw(requestParameters: AuthApiAwsReadRoleTagDenyListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsReadRoleTagDenyList(roleTag: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsReadRoleTagDenyList(roleTag: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsReadRoleTagDenyListTidySettingsRaw(requestParameters: AuthApiAwsReadRoleTagDenyListTidySettingsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsReadRoleTagDenyListTidySettingsRaw(requestParameters: AuthApiAwsReadRoleTagDenyListTidySettingsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsReadRoleTagDenyListTidySettings(awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsReadRoleTagDenyListTidySettings(awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsReadStsRoleRaw(requestParameters: AuthApiAwsReadStsRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsReadStsRoleRaw(requestParameters: AuthApiAwsReadStsRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsReadStsRole(accountId: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsReadStsRole(accountId: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsRotateRootCredentialsRaw(requestParameters: AuthApiAwsRotateRootCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsRotateRootCredentialsRaw(requestParameters: AuthApiAwsRotateRootCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsRotateRootCredentials(awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsRotateRootCredentials(awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsTidyIdentityAccessListRaw(requestParameters: AuthApiAwsTidyIdentityAccessListOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsTidyIdentityAccessListRaw(requestParameters: AuthApiAwsTidyIdentityAccessListOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsTidyIdentityAccessList(awsMountPath: string, awsTidyIdentityAccessListRequest: AwsTidyIdentityAccessListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsTidyIdentityAccessList(awsMountPath: string, awsTidyIdentityAccessListRequest: AwsTidyIdentityAccessListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsTidyIdentityWhitelistRaw(requestParameters: AuthApiAwsTidyIdentityWhitelistOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsTidyIdentityWhitelistRaw(requestParameters: AuthApiAwsTidyIdentityWhitelistOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsTidyIdentityWhitelist(awsMountPath: string, awsTidyIdentityWhitelistRequest: AwsTidyIdentityWhitelistRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsTidyIdentityWhitelist(awsMountPath: string, awsTidyIdentityWhitelistRequest: AwsTidyIdentityWhitelistRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsTidyRoleTagBlacklistRaw(requestParameters: AuthApiAwsTidyRoleTagBlacklistOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsTidyRoleTagBlacklistRaw(requestParameters: AuthApiAwsTidyRoleTagBlacklistOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsTidyRoleTagBlacklist(awsMountPath: string, awsTidyRoleTagBlacklistRequest: AwsTidyRoleTagBlacklistRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsTidyRoleTagBlacklist(awsMountPath: string, awsTidyRoleTagBlacklistRequest: AwsTidyRoleTagBlacklistRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsTidyRoleTagDenyListRaw(requestParameters: AuthApiAwsTidyRoleTagDenyListOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsTidyRoleTagDenyListRaw(requestParameters: AuthApiAwsTidyRoleTagDenyListOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsTidyRoleTagDenyList(awsMountPath: string, awsTidyRoleTagDenyListRequest: AwsTidyRoleTagDenyListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsTidyRoleTagDenyList(awsMountPath: string, awsTidyRoleTagDenyListRequest: AwsTidyRoleTagDenyListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsWriteAuthRoleRaw(requestParameters: AuthApiAwsWriteAuthRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsWriteAuthRoleRaw(requestParameters: AuthApiAwsWriteAuthRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsWriteAuthRole(role: string, awsMountPath: string, awsWriteAuthRoleRequest: AwsWriteAuthRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsWriteAuthRole(role: string, awsMountPath: string, awsWriteAuthRoleRequest: AwsWriteAuthRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsWriteRoleTagRaw(requestParameters: AuthApiAwsWriteRoleTagOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsWriteRoleTagRaw(requestParameters: AuthApiAwsWriteRoleTagOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsWriteRoleTag(role: string, awsMountPath: string, awsWriteRoleTagRequest: AwsWriteRoleTagRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsWriteRoleTag(role: string, awsMountPath: string, awsWriteRoleTagRequest: AwsWriteRoleTagRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsWriteRoleTagBlacklistRaw(requestParameters: AuthApiAwsWriteRoleTagBlacklistRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsWriteRoleTagBlacklistRaw(requestParameters: AuthApiAwsWriteRoleTagBlacklistRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsWriteRoleTagBlacklist(roleTag: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsWriteRoleTagBlacklist(roleTag: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsWriteRoleTagDenyListRaw(requestParameters: AuthApiAwsWriteRoleTagDenyListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsWriteRoleTagDenyListRaw(requestParameters: AuthApiAwsWriteRoleTagDenyListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsWriteRoleTagDenyList(roleTag: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsWriteRoleTagDenyList(roleTag: string, awsMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    awsWriteStsRoleRaw(requestParameters: AuthApiAwsWriteStsRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    awsWriteStsRoleRaw(requestParameters: AuthApiAwsWriteStsRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    awsWriteStsRole(accountId: string, awsMountPath: string, awsWriteStsRoleRequest: AwsWriteStsRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    awsWriteStsRole(accountId: string, awsMountPath: string, awsWriteStsRoleRequest: AwsWriteStsRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    azureConfigureAuthRaw(requestParameters: AuthApiAzureConfigureAuthOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    azureConfigureAuthRaw(requestParameters: AuthApiAzureConfigureAuthOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    azureConfigureAuth(azureMountPath: string, azureConfigureAuthRequest: AzureConfigureAuthRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    azureConfigureAuth(azureMountPath: string, azureConfigureAuthRequest: AzureConfigureAuthRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    azureDeleteAuthConfigurationRaw(requestParameters: AuthApiAzureDeleteAuthConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    azureDeleteAuthConfigurationRaw(requestParameters: AuthApiAzureDeleteAuthConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    azureDeleteAuthConfiguration(azureMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    azureDeleteAuthConfiguration(azureMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    azureDeleteAuthRoleRaw(requestParameters: AuthApiAzureDeleteAuthRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    azureDeleteAuthRoleRaw(requestParameters: AuthApiAzureDeleteAuthRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    azureDeleteAuthRole(name: string, azureMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    azureDeleteAuthRole(name: string, azureMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     azureListAuthRolesRaw(requestParameters: AuthApiAzureListAuthRolesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<StandardListResponse>>;
@@ -1713,56 +1713,56 @@ export declare class AuthApi extends runtime.BaseAPI {
     azureListAuthRoles(azureMountPath: string, list: AzureListAuthRolesListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse>;
     /**
      */
-    azureLoginRaw(requestParameters: AuthApiAzureLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    azureLoginRaw(requestParameters: AuthApiAzureLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    azureLogin(azureMountPath: string, azureLoginRequest: AzureLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    azureLogin(azureMountPath: string, azureLoginRequest: AzureLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    azureReadAuthConfigurationRaw(requestParameters: AuthApiAzureReadAuthConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    azureReadAuthConfigurationRaw(requestParameters: AuthApiAzureReadAuthConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    azureReadAuthConfiguration(azureMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    azureReadAuthConfiguration(azureMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    azureReadAuthRoleRaw(requestParameters: AuthApiAzureReadAuthRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    azureReadAuthRoleRaw(requestParameters: AuthApiAzureReadAuthRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    azureReadAuthRole(name: string, azureMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    azureReadAuthRole(name: string, azureMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    azureRotateRootCredentialsRaw(requestParameters: AuthApiAzureRotateRootCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    azureRotateRootCredentialsRaw(requestParameters: AuthApiAzureRotateRootCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    azureRotateRootCredentials(azureMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    azureRotateRootCredentials(azureMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    azureWriteAuthRoleRaw(requestParameters: AuthApiAzureWriteAuthRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    azureWriteAuthRoleRaw(requestParameters: AuthApiAzureWriteAuthRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    azureWriteAuthRole(name: string, azureMountPath: string, azureWriteAuthRoleRequest: AzureWriteAuthRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    azureWriteAuthRole(name: string, azureMountPath: string, azureWriteAuthRoleRequest: AzureWriteAuthRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    certConfigureRaw(requestParameters: AuthApiCertConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    certConfigureRaw(requestParameters: AuthApiCertConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    certConfigure(certMountPath: string, certConfigureRequest: CertConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Manage trusted certificates used for authentication.
-     */
-    certDeleteCertificateRaw(requestParameters: AuthApiCertDeleteCertificateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    certConfigure(certMountPath: string, certConfigureRequest: CertConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage trusted certificates used for authentication.
      */
-    certDeleteCertificate(name: string, certMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    certDeleteCertificateRaw(requestParameters: AuthApiCertDeleteCertificateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Manage trusted certificates used for authentication.
+     */
+    certDeleteCertificate(name: string, certMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage Certificate Revocation Lists checked during authentication.
      */
-    certDeleteCrlRaw(requestParameters: AuthApiCertDeleteCrlRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    certDeleteCrlRaw(requestParameters: AuthApiCertDeleteCrlRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Manage Certificate Revocation Lists checked during authentication.
      */
-    certDeleteCrl(name: string, certMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    certDeleteCrl(name: string, certMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage trusted certificates used for authentication.
      */
@@ -1779,66 +1779,66 @@ export declare class AuthApi extends runtime.BaseAPI {
     certListCrls(certMountPath: string, list: CertListCrlsListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse>;
     /**
      */
-    certLoginRaw(requestParameters: AuthApiCertLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    certLoginRaw(requestParameters: AuthApiCertLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    certLogin(certMountPath: string, certLoginRequest: CertLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Manage trusted certificates used for authentication.
-     */
-    certReadCertificateRaw(requestParameters: AuthApiCertReadCertificateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    certLogin(certMountPath: string, certLoginRequest: CertLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage trusted certificates used for authentication.
      */
-    certReadCertificate(name: string, certMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     */
-    certReadConfigurationRaw(requestParameters: AuthApiCertReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
-    /**
-     */
-    certReadConfiguration(certMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Manage Certificate Revocation Lists checked during authentication.
-     */
-    certReadCrlRaw(requestParameters: AuthApiCertReadCrlRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
-    /**
-     * Manage Certificate Revocation Lists checked during authentication.
-     */
-    certReadCrl(name: string, certMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    certReadCertificateRaw(requestParameters: AuthApiCertReadCertificateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Manage trusted certificates used for authentication.
      */
-    certWriteCertificateRaw(requestParameters: AuthApiCertWriteCertificateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    certReadCertificate(name: string, certMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
+    /**
+     */
+    certReadConfigurationRaw(requestParameters: AuthApiCertReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     */
+    certReadConfiguration(certMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
+    /**
+     * Manage Certificate Revocation Lists checked during authentication.
+     */
+    certReadCrlRaw(requestParameters: AuthApiCertReadCrlRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Manage Certificate Revocation Lists checked during authentication.
+     */
+    certReadCrl(name: string, certMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage trusted certificates used for authentication.
      */
-    certWriteCertificate(name: string, certMountPath: string, certWriteCertificateRequest: CertWriteCertificateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    certWriteCertificateRaw(requestParameters: AuthApiCertWriteCertificateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Manage trusted certificates used for authentication.
+     */
+    certWriteCertificate(name: string, certMountPath: string, certWriteCertificateRequest: CertWriteCertificateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage Certificate Revocation Lists checked during authentication.
      */
-    certWriteCrlRaw(requestParameters: AuthApiCertWriteCrlOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    certWriteCrlRaw(requestParameters: AuthApiCertWriteCrlOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Manage Certificate Revocation Lists checked during authentication.
      */
-    certWriteCrl(name: string, certMountPath: string, certWriteCrlRequest: CertWriteCrlRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    certWriteCrl(name: string, certMountPath: string, certWriteCrlRequest: CertWriteCrlRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    cloudFoundryConfigureRaw(requestParameters: AuthApiCloudFoundryConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    cloudFoundryConfigureRaw(requestParameters: AuthApiCloudFoundryConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    cloudFoundryConfigure(cfMountPath: string, cloudFoundryConfigureRequest: CloudFoundryConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    cloudFoundryConfigure(cfMountPath: string, cloudFoundryConfigureRequest: CloudFoundryConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    cloudFoundryDeleteConfigurationRaw(requestParameters: AuthApiCloudFoundryDeleteConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    cloudFoundryDeleteConfigurationRaw(requestParameters: AuthApiCloudFoundryDeleteConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    cloudFoundryDeleteConfiguration(cfMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    cloudFoundryDeleteConfiguration(cfMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    cloudFoundryDeleteRoleRaw(requestParameters: AuthApiCloudFoundryDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    cloudFoundryDeleteRoleRaw(requestParameters: AuthApiCloudFoundryDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    cloudFoundryDeleteRole(role: string, cfMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    cloudFoundryDeleteRole(role: string, cfMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     cloudFoundryListRolesRaw(requestParameters: AuthApiCloudFoundryListRolesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<StandardListResponse>>;
@@ -1847,50 +1847,50 @@ export declare class AuthApi extends runtime.BaseAPI {
     cloudFoundryListRoles(cfMountPath: string, list: CloudFoundryListRolesListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse>;
     /**
      */
-    cloudFoundryLoginRaw(requestParameters: AuthApiCloudFoundryLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    cloudFoundryLoginRaw(requestParameters: AuthApiCloudFoundryLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    cloudFoundryLogin(cfMountPath: string, cloudFoundryLoginRequest: CloudFoundryLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    cloudFoundryLogin(cfMountPath: string, cloudFoundryLoginRequest: CloudFoundryLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    cloudFoundryReadConfigurationRaw(requestParameters: AuthApiCloudFoundryReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    cloudFoundryReadConfigurationRaw(requestParameters: AuthApiCloudFoundryReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    cloudFoundryReadConfiguration(cfMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    cloudFoundryReadConfiguration(cfMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    cloudFoundryReadRoleRaw(requestParameters: AuthApiCloudFoundryReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    cloudFoundryReadRoleRaw(requestParameters: AuthApiCloudFoundryReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    cloudFoundryReadRole(role: string, cfMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    cloudFoundryReadRole(role: string, cfMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    cloudFoundryWriteRoleRaw(requestParameters: AuthApiCloudFoundryWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    cloudFoundryWriteRoleRaw(requestParameters: AuthApiCloudFoundryWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    cloudFoundryWriteRole(role: string, cfMountPath: string, cloudFoundryWriteRoleRequest: CloudFoundryWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    cloudFoundryWriteRole(role: string, cfMountPath: string, cloudFoundryWriteRoleRequest: CloudFoundryWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    githubConfigureRaw(requestParameters: AuthApiGithubConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    githubConfigureRaw(requestParameters: AuthApiGithubConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    githubConfigure(githubMountPath: string, githubConfigureRequest: GithubConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Read/write/delete a single teams mapping
-     */
-    githubDeleteTeamMappingRaw(requestParameters: AuthApiGithubDeleteTeamMappingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    githubConfigure(githubMountPath: string, githubConfigureRequest: GithubConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read/write/delete a single teams mapping
      */
-    githubDeleteTeamMapping(key: string, githubMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    githubDeleteTeamMappingRaw(requestParameters: AuthApiGithubDeleteTeamMappingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Read/write/delete a single teams mapping
+     */
+    githubDeleteTeamMapping(key: string, githubMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read/write/delete a single users mapping
      */
-    githubDeleteUserMappingRaw(requestParameters: AuthApiGithubDeleteUserMappingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    githubDeleteUserMappingRaw(requestParameters: AuthApiGithubDeleteUserMappingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Read/write/delete a single users mapping
      */
-    githubDeleteUserMapping(key: string, githubMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    githubDeleteUserMapping(key: string, githubMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read mappings for teams
      */
@@ -1902,11 +1902,11 @@ export declare class AuthApi extends runtime.BaseAPI {
     /**
      * Read mappings for teams
      */
-    githubListTeams2Raw(requestParameters: AuthApiGithubListTeams2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    githubListTeams2Raw(requestParameters: AuthApiGithubListTeams2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Read mappings for teams
      */
-    githubListTeams2(githubMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    githubListTeams2(githubMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read mappings for users
      */
@@ -1918,85 +1918,85 @@ export declare class AuthApi extends runtime.BaseAPI {
     /**
      * Read mappings for users
      */
-    githubListUsers2Raw(requestParameters: AuthApiGithubListUsers2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    githubListUsers2Raw(requestParameters: AuthApiGithubListUsers2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Read mappings for users
      */
-    githubListUsers2(githubMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    githubListUsers2(githubMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    githubLoginRaw(requestParameters: AuthApiGithubLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    githubLoginRaw(requestParameters: AuthApiGithubLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    githubLogin(githubMountPath: string, githubLoginRequest: GithubLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    githubLogin(githubMountPath: string, githubLoginRequest: GithubLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    githubReadConfigurationRaw(requestParameters: AuthApiGithubReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    githubReadConfigurationRaw(requestParameters: AuthApiGithubReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    githubReadConfiguration(githubMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Read/write/delete a single teams mapping
-     */
-    githubReadTeamMappingRaw(requestParameters: AuthApiGithubReadTeamMappingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    githubReadConfiguration(githubMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read/write/delete a single teams mapping
      */
-    githubReadTeamMapping(key: string, githubMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Read/write/delete a single users mapping
-     */
-    githubReadUserMappingRaw(requestParameters: AuthApiGithubReadUserMappingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
-    /**
-     * Read/write/delete a single users mapping
-     */
-    githubReadUserMapping(key: string, githubMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    githubReadTeamMappingRaw(requestParameters: AuthApiGithubReadTeamMappingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Read/write/delete a single teams mapping
      */
-    githubWriteTeamMappingRaw(requestParameters: AuthApiGithubWriteTeamMappingOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    githubReadTeamMapping(key: string, githubMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
+    /**
+     * Read/write/delete a single users mapping
+     */
+    githubReadUserMappingRaw(requestParameters: AuthApiGithubReadUserMappingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Read/write/delete a single users mapping
+     */
+    githubReadUserMapping(key: string, githubMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read/write/delete a single teams mapping
      */
-    githubWriteTeamMapping(key: string, githubMountPath: string, githubWriteTeamMappingRequest: GithubWriteTeamMappingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    githubWriteTeamMappingRaw(requestParameters: AuthApiGithubWriteTeamMappingOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Read/write/delete a single teams mapping
+     */
+    githubWriteTeamMapping(key: string, githubMountPath: string, githubWriteTeamMappingRequest: GithubWriteTeamMappingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read/write/delete a single users mapping
      */
-    githubWriteUserMappingRaw(requestParameters: AuthApiGithubWriteUserMappingOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    githubWriteUserMappingRaw(requestParameters: AuthApiGithubWriteUserMappingOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Read/write/delete a single users mapping
      */
-    githubWriteUserMapping(key: string, githubMountPath: string, githubWriteUserMappingRequest: GithubWriteUserMappingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    githubWriteUserMapping(key: string, githubMountPath: string, githubWriteUserMappingRequest: GithubWriteUserMappingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudConfigureAuthRaw(requestParameters: AuthApiGoogleCloudConfigureAuthOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudConfigureAuthRaw(requestParameters: AuthApiGoogleCloudConfigureAuthOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudConfigureAuth(gcpMountPath: string, googleCloudConfigureAuthRequest: GoogleCloudConfigureAuthRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudConfigureAuth(gcpMountPath: string, googleCloudConfigureAuthRequest: GoogleCloudConfigureAuthRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Create a GCP role with associated policies and required attributes.
      */
-    googleCloudDeleteRoleRaw(requestParameters: AuthApiGoogleCloudDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudDeleteRoleRaw(requestParameters: AuthApiGoogleCloudDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Create a GCP role with associated policies and required attributes.
      */
-    googleCloudDeleteRole(name: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudDeleteRole(name: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Add or remove labels for an existing \'gce\' role
      */
-    googleCloudEditLabelsForRoleRaw(requestParameters: AuthApiGoogleCloudEditLabelsForRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudEditLabelsForRoleRaw(requestParameters: AuthApiGoogleCloudEditLabelsForRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Add or remove labels for an existing \'gce\' role
      */
-    googleCloudEditLabelsForRole(name: string, gcpMountPath: string, googleCloudEditLabelsForRoleRequest: GoogleCloudEditLabelsForRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudEditLabelsForRole(name: string, gcpMountPath: string, googleCloudEditLabelsForRoleRequest: GoogleCloudEditLabelsForRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Add or remove service accounts for an existing `iam` role
      */
-    googleCloudEditServiceAccountsForRoleRaw(requestParameters: AuthApiGoogleCloudEditServiceAccountsForRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudEditServiceAccountsForRoleRaw(requestParameters: AuthApiGoogleCloudEditServiceAccountsForRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Add or remove service accounts for an existing `iam` role
      */
-    googleCloudEditServiceAccountsForRole(name: string, gcpMountPath: string, googleCloudEditServiceAccountsForRoleRequest: GoogleCloudEditServiceAccountsForRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudEditServiceAccountsForRole(name: string, gcpMountPath: string, googleCloudEditServiceAccountsForRoleRequest: GoogleCloudEditServiceAccountsForRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Lists all the roles that are registered with Vault.
      */
@@ -2015,56 +2015,56 @@ export declare class AuthApi extends runtime.BaseAPI {
     googleCloudListRoles2(gcpMountPath: string, list: GoogleCloudListRoles2ListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse>;
     /**
      */
-    googleCloudLoginRaw(requestParameters: AuthApiGoogleCloudLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudLoginRaw(requestParameters: AuthApiGoogleCloudLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudLogin(gcpMountPath: string, googleCloudLoginRequest: GoogleCloudLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudLogin(gcpMountPath: string, googleCloudLoginRequest: GoogleCloudLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    googleCloudReadAuthConfigurationRaw(requestParameters: AuthApiGoogleCloudReadAuthConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudReadAuthConfigurationRaw(requestParameters: AuthApiGoogleCloudReadAuthConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    googleCloudReadAuthConfiguration(gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Create a GCP role with associated policies and required attributes.
-     */
-    googleCloudReadRoleRaw(requestParameters: AuthApiGoogleCloudReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudReadAuthConfiguration(gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Create a GCP role with associated policies and required attributes.
      */
-    googleCloudReadRole(name: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     */
-    googleCloudRotateRootCredentialsRaw(requestParameters: AuthApiGoogleCloudRotateRootCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
-    /**
-     */
-    googleCloudRotateRootCredentials(gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudReadRoleRaw(requestParameters: AuthApiGoogleCloudReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Create a GCP role with associated policies and required attributes.
      */
-    googleCloudWriteRoleRaw(requestParameters: AuthApiGoogleCloudWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    googleCloudReadRole(name: string, gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
+    /**
+     */
+    googleCloudRotateRootCredentialsRaw(requestParameters: AuthApiGoogleCloudRotateRootCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     */
+    googleCloudRotateRootCredentials(gcpMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Create a GCP role with associated policies and required attributes.
      */
-    googleCloudWriteRole(name: string, gcpMountPath: string, googleCloudWriteRoleRequest: GoogleCloudWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    googleCloudWriteRoleRaw(requestParameters: AuthApiGoogleCloudWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Create a GCP role with associated policies and required attributes.
+     */
+    googleCloudWriteRole(name: string, gcpMountPath: string, googleCloudWriteRoleRequest: GoogleCloudWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * The JWT authentication backend validates JWTs (or OIDC) using the configured credentials. If using OIDC Discovery, the URL must be provided, along with (optionally) the CA cert to use for the connection. If performing JWT validation locally, a set of public keys must be provided.
      * Configure the JWT authentication backend.
      */
-    jwtConfigureRaw(requestParameters: AuthApiJwtConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    jwtConfigureRaw(requestParameters: AuthApiJwtConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * The JWT authentication backend validates JWTs (or OIDC) using the configured credentials. If using OIDC Discovery, the URL must be provided, along with (optionally) the CA cert to use for the connection. If performing JWT validation locally, a set of public keys must be provided.
      * Configure the JWT authentication backend.
      */
-    jwtConfigure(jwtMountPath: string, jwtConfigureRequest: JwtConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    jwtConfigure(jwtMountPath: string, jwtConfigureRequest: JwtConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Delete an existing role.
      */
-    jwtDeleteRoleRaw(requestParameters: AuthApiJwtDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    jwtDeleteRoleRaw(requestParameters: AuthApiJwtDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Delete an existing role.
      */
-    jwtDeleteRole(name: string, jwtMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    jwtDeleteRole(name: string, jwtMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * The list will contain the names of the roles.
      * Lists all the roles registered with the backend.
@@ -2078,79 +2078,79 @@ export declare class AuthApi extends runtime.BaseAPI {
     /**
      * Authenticates to Vault using a JWT (or OIDC) token.
      */
-    jwtLoginRaw(requestParameters: AuthApiJwtLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    jwtLoginRaw(requestParameters: AuthApiJwtLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Authenticates to Vault using a JWT (or OIDC) token.
      */
-    jwtLogin(jwtMountPath: string, jwtLoginRequest: JwtLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    jwtLogin(jwtMountPath: string, jwtLoginRequest: JwtLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Callback endpoint to complete an OIDC login.
      */
-    jwtOidcCallbackRaw(requestParameters: AuthApiJwtOidcCallbackRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    jwtOidcCallbackRaw(requestParameters: AuthApiJwtOidcCallbackRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Callback endpoint to complete an OIDC login.
      */
-    jwtOidcCallback(jwtMountPath: string, clientNonce?: string, code?: string, state?: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    jwtOidcCallback(jwtMountPath: string, clientNonce?: string, code?: string, state?: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Callback endpoint to handle form_posts.
      */
-    jwtOidcCallbackFormPostRaw(requestParameters: AuthApiJwtOidcCallbackFormPostOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    jwtOidcCallbackFormPostRaw(requestParameters: AuthApiJwtOidcCallbackFormPostOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Callback endpoint to handle form_posts.
      */
-    jwtOidcCallbackFormPost(jwtMountPath: string, jwtOidcCallbackFormPostRequest: JwtOidcCallbackFormPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    jwtOidcCallbackFormPost(jwtMountPath: string, jwtOidcCallbackFormPostRequest: JwtOidcCallbackFormPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Request an authorization URL to start an OIDC login flow.
      */
-    jwtOidcRequestAuthorizationUrlRaw(requestParameters: AuthApiJwtOidcRequestAuthorizationUrlOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    jwtOidcRequestAuthorizationUrlRaw(requestParameters: AuthApiJwtOidcRequestAuthorizationUrlOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Request an authorization URL to start an OIDC login flow.
      */
-    jwtOidcRequestAuthorizationUrl(jwtMountPath: string, jwtOidcRequestAuthorizationUrlRequest: JwtOidcRequestAuthorizationUrlRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    jwtOidcRequestAuthorizationUrl(jwtMountPath: string, jwtOidcRequestAuthorizationUrlRequest: JwtOidcRequestAuthorizationUrlRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read the current JWT authentication backend configuration.
      */
-    jwtReadConfigurationRaw(requestParameters: AuthApiJwtReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    jwtReadConfigurationRaw(requestParameters: AuthApiJwtReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Read the current JWT authentication backend configuration.
      */
-    jwtReadConfiguration(jwtMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    jwtReadConfiguration(jwtMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read an existing role.
      */
-    jwtReadRoleRaw(requestParameters: AuthApiJwtReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    jwtReadRoleRaw(requestParameters: AuthApiJwtReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Read an existing role.
      */
-    jwtReadRole(name: string, jwtMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    jwtReadRole(name: string, jwtMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * A role is required to authenticate with this backend. The role binds   JWT token information with token policies and settings.   The bindings, token polices and token settings can all be configured   using this endpoint
      * Register an role with the backend.
      */
-    jwtWriteRoleRaw(requestParameters: AuthApiJwtWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    jwtWriteRoleRaw(requestParameters: AuthApiJwtWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * A role is required to authenticate with this backend. The role binds   JWT token information with token policies and settings.   The bindings, token polices and token settings can all be configured   using this endpoint
      * Register an role with the backend.
      */
-    jwtWriteRole(name: string, jwtMountPath: string, jwtWriteRoleRequest: JwtWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    jwtWriteRole(name: string, jwtMountPath: string, jwtWriteRoleRequest: JwtWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    kerberosConfigureRaw(requestParameters: AuthApiKerberosConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kerberosConfigureRaw(requestParameters: AuthApiKerberosConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    kerberosConfigure(kerberosMountPath: string, kerberosConfigureRequest: KerberosConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    kerberosConfigure(kerberosMountPath: string, kerberosConfigureRequest: KerberosConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    kerberosConfigureLdapRaw(requestParameters: AuthApiKerberosConfigureLdapOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kerberosConfigureLdapRaw(requestParameters: AuthApiKerberosConfigureLdapOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    kerberosConfigureLdap(kerberosMountPath: string, kerberosConfigureLdapRequest: KerberosConfigureLdapRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    kerberosConfigureLdap(kerberosMountPath: string, kerberosConfigureLdapRequest: KerberosConfigureLdapRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    kerberosDeleteGroupRaw(requestParameters: AuthApiKerberosDeleteGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kerberosDeleteGroupRaw(requestParameters: AuthApiKerberosDeleteGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    kerberosDeleteGroup(name: string, kerberosMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    kerberosDeleteGroup(name: string, kerberosMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     kerberosListGroupsRaw(requestParameters: AuthApiKerberosListGroupsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<StandardListResponse>>;
@@ -2159,54 +2159,54 @@ export declare class AuthApi extends runtime.BaseAPI {
     kerberosListGroups(kerberosMountPath: string, list: KerberosListGroupsListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse>;
     /**
      */
-    kerberosLoginRaw(requestParameters: AuthApiKerberosLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kerberosLoginRaw(requestParameters: AuthApiKerberosLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    kerberosLogin(kerberosMountPath: string, kerberosLoginRequest: KerberosLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    kerberosLogin(kerberosMountPath: string, kerberosLoginRequest: KerberosLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    kerberosLogin2Raw(requestParameters: AuthApiKerberosLogin2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kerberosLogin2Raw(requestParameters: AuthApiKerberosLogin2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    kerberosLogin2(kerberosMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    kerberosLogin2(kerberosMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    kerberosReadConfigurationRaw(requestParameters: AuthApiKerberosReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kerberosReadConfigurationRaw(requestParameters: AuthApiKerberosReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    kerberosReadConfiguration(kerberosMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    kerberosReadConfiguration(kerberosMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    kerberosReadGroupRaw(requestParameters: AuthApiKerberosReadGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kerberosReadGroupRaw(requestParameters: AuthApiKerberosReadGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    kerberosReadGroup(name: string, kerberosMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    kerberosReadGroup(name: string, kerberosMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    kerberosReadLdapConfigurationRaw(requestParameters: AuthApiKerberosReadLdapConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kerberosReadLdapConfigurationRaw(requestParameters: AuthApiKerberosReadLdapConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    kerberosReadLdapConfiguration(kerberosMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    kerberosReadLdapConfiguration(kerberosMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    kerberosWriteGroupRaw(requestParameters: AuthApiKerberosWriteGroupOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kerberosWriteGroupRaw(requestParameters: AuthApiKerberosWriteGroupOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    kerberosWriteGroup(name: string, kerberosMountPath: string, kerberosWriteGroupRequest: KerberosWriteGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    kerberosWriteGroup(name: string, kerberosMountPath: string, kerberosWriteGroupRequest: KerberosWriteGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    kubernetesConfigureAuthRaw(requestParameters: AuthApiKubernetesConfigureAuthOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kubernetesConfigureAuthRaw(requestParameters: AuthApiKubernetesConfigureAuthOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    kubernetesConfigureAuth(kubernetesMountPath: string, kubernetesConfigureAuthRequest: KubernetesConfigureAuthRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Register an role with the backend.
-     */
-    kubernetesDeleteAuthRoleRaw(requestParameters: AuthApiKubernetesDeleteAuthRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kubernetesConfigureAuth(kubernetesMountPath: string, kubernetesConfigureAuthRequest: KubernetesConfigureAuthRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Register an role with the backend.
      */
-    kubernetesDeleteAuthRole(name: string, kubernetesMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    kubernetesDeleteAuthRoleRaw(requestParameters: AuthApiKubernetesDeleteAuthRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Register an role with the backend.
+     */
+    kubernetesDeleteAuthRole(name: string, kubernetesMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Lists all the roles registered with the backend.
      */
@@ -2218,55 +2218,55 @@ export declare class AuthApi extends runtime.BaseAPI {
     /**
      * Authenticates Kubernetes service accounts with Vault.
      */
-    kubernetesLoginRaw(requestParameters: AuthApiKubernetesLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kubernetesLoginRaw(requestParameters: AuthApiKubernetesLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Authenticates Kubernetes service accounts with Vault.
      */
-    kubernetesLogin(kubernetesMountPath: string, kubernetesLoginRequest: KubernetesLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    kubernetesLogin(kubernetesMountPath: string, kubernetesLoginRequest: KubernetesLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    kubernetesReadAuthConfigurationRaw(requestParameters: AuthApiKubernetesReadAuthConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kubernetesReadAuthConfigurationRaw(requestParameters: AuthApiKubernetesReadAuthConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    kubernetesReadAuthConfiguration(kubernetesMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Register an role with the backend.
-     */
-    kubernetesReadAuthRoleRaw(requestParameters: AuthApiKubernetesReadAuthRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kubernetesReadAuthConfiguration(kubernetesMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Register an role with the backend.
      */
-    kubernetesReadAuthRole(name: string, kubernetesMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    kubernetesReadAuthRoleRaw(requestParameters: AuthApiKubernetesReadAuthRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Register an role with the backend.
      */
-    kubernetesWriteAuthRoleRaw(requestParameters: AuthApiKubernetesWriteAuthRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    kubernetesReadAuthRole(name: string, kubernetesMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Register an role with the backend.
      */
-    kubernetesWriteAuthRole(name: string, kubernetesMountPath: string, kubernetesWriteAuthRoleRequest: KubernetesWriteAuthRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    kubernetesWriteAuthRoleRaw(requestParameters: AuthApiKubernetesWriteAuthRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Register an role with the backend.
+     */
+    kubernetesWriteAuthRole(name: string, kubernetesMountPath: string, kubernetesWriteAuthRoleRequest: KubernetesWriteAuthRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    ldapConfigureAuthRaw(requestParameters: AuthApiLdapConfigureAuthOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ldapConfigureAuthRaw(requestParameters: AuthApiLdapConfigureAuthOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    ldapConfigureAuth(ldapMountPath: string, ldapConfigureAuthRequest: LdapConfigureAuthRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ldapConfigureAuth(ldapMountPath: string, ldapConfigureAuthRequest: LdapConfigureAuthRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage additional groups for users allowed to authenticate.
      */
-    ldapDeleteGroupRaw(requestParameters: AuthApiLdapDeleteGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ldapDeleteGroupRaw(requestParameters: AuthApiLdapDeleteGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Manage additional groups for users allowed to authenticate.
      */
-    ldapDeleteGroup(name: string, ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ldapDeleteGroup(name: string, ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage users allowed to authenticate.
      */
-    ldapDeleteUserRaw(requestParameters: AuthApiLdapDeleteUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ldapDeleteUserRaw(requestParameters: AuthApiLdapDeleteUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Manage users allowed to authenticate.
      */
-    ldapDeleteUser(name: string, ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ldapDeleteUser(name: string, ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage additional groups for users allowed to authenticate.
      */
@@ -2286,75 +2286,75 @@ export declare class AuthApi extends runtime.BaseAPI {
     /**
      * Log in with a username and password.
      */
-    ldapLoginRaw(requestParameters: AuthApiLdapLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ldapLoginRaw(requestParameters: AuthApiLdapLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Log in with a username and password.
      */
-    ldapLogin(username: string, ldapMountPath: string, ldapLoginRequest: LdapLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ldapLogin(username: string, ldapMountPath: string, ldapLoginRequest: LdapLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    ldapReadAuthConfigurationRaw(requestParameters: AuthApiLdapReadAuthConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ldapReadAuthConfigurationRaw(requestParameters: AuthApiLdapReadAuthConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    ldapReadAuthConfiguration(ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Manage additional groups for users allowed to authenticate.
-     */
-    ldapReadGroupRaw(requestParameters: AuthApiLdapReadGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ldapReadAuthConfiguration(ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage additional groups for users allowed to authenticate.
      */
-    ldapReadGroup(name: string, ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Manage users allowed to authenticate.
-     */
-    ldapReadUserRaw(requestParameters: AuthApiLdapReadUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
-    /**
-     * Manage users allowed to authenticate.
-     */
-    ldapReadUser(name: string, ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     */
-    ldapRotateRootCredentialsRaw(requestParameters: AuthApiLdapRotateRootCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
-    /**
-     */
-    ldapRotateRootCredentials(ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ldapReadGroupRaw(requestParameters: AuthApiLdapReadGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Manage additional groups for users allowed to authenticate.
      */
-    ldapWriteGroupRaw(requestParameters: AuthApiLdapWriteGroupOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ldapReadGroup(name: string, ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
+    /**
+     * Manage users allowed to authenticate.
+     */
+    ldapReadUserRaw(requestParameters: AuthApiLdapReadUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Manage users allowed to authenticate.
+     */
+    ldapReadUser(name: string, ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
+    /**
+     */
+    ldapRotateRootCredentialsRaw(requestParameters: AuthApiLdapRotateRootCredentialsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     */
+    ldapRotateRootCredentials(ldapMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage additional groups for users allowed to authenticate.
      */
-    ldapWriteGroup(name: string, ldapMountPath: string, ldapWriteGroupRequest: LdapWriteGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ldapWriteGroupRaw(requestParameters: AuthApiLdapWriteGroupOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Manage additional groups for users allowed to authenticate.
+     */
+    ldapWriteGroup(name: string, ldapMountPath: string, ldapWriteGroupRequest: LdapWriteGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage users allowed to authenticate.
      */
-    ldapWriteUserRaw(requestParameters: AuthApiLdapWriteUserOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ldapWriteUserRaw(requestParameters: AuthApiLdapWriteUserOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Manage users allowed to authenticate.
      */
-    ldapWriteUser(name: string, ldapMountPath: string, ldapWriteUserRequest: LdapWriteUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ldapWriteUser(name: string, ldapMountPath: string, ldapWriteUserRequest: LdapWriteUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    ociConfigureRaw(requestParameters: AuthApiOciConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ociConfigureRaw(requestParameters: AuthApiOciConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    ociConfigure(ociMountPath: string, ociConfigureRequest: OciConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ociConfigure(ociMountPath: string, ociConfigureRequest: OciConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    ociDeleteConfigurationRaw(requestParameters: AuthApiOciDeleteConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ociDeleteConfigurationRaw(requestParameters: AuthApiOciDeleteConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    ociDeleteConfiguration(ociMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ociDeleteConfiguration(ociMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Create a role and associate policies to it.
      */
-    ociDeleteRoleRaw(requestParameters: AuthApiOciDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ociDeleteRoleRaw(requestParameters: AuthApiOciDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Create a role and associate policies to it.
      */
-    ociDeleteRole(role: string, ociMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ociDeleteRole(role: string, ociMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Lists all the roles that are registered with Vault.
      */
@@ -2366,55 +2366,55 @@ export declare class AuthApi extends runtime.BaseAPI {
     /**
      * Authenticates to Vault using OCI credentials
      */
-    ociLoginRaw(requestParameters: AuthApiOciLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ociLoginRaw(requestParameters: AuthApiOciLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Authenticates to Vault using OCI credentials
      */
-    ociLogin(role: string, ociMountPath: string, ociLoginRequest: OciLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ociLogin(role: string, ociMountPath: string, ociLoginRequest: OciLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    ociReadConfigurationRaw(requestParameters: AuthApiOciReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ociReadConfigurationRaw(requestParameters: AuthApiOciReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    ociReadConfiguration(ociMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Create a role and associate policies to it.
-     */
-    ociReadRoleRaw(requestParameters: AuthApiOciReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ociReadConfiguration(ociMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Create a role and associate policies to it.
      */
-    ociReadRole(role: string, ociMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ociReadRoleRaw(requestParameters: AuthApiOciReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Create a role and associate policies to it.
      */
-    ociWriteRoleRaw(requestParameters: AuthApiOciWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    ociReadRole(role: string, ociMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Create a role and associate policies to it.
      */
-    ociWriteRole(role: string, ociMountPath: string, ociWriteRoleRequest: OciWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    ociWriteRoleRaw(requestParameters: AuthApiOciWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Create a role and associate policies to it.
+     */
+    ociWriteRole(role: string, ociMountPath: string, ociWriteRoleRequest: OciWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    oktaConfigureRaw(requestParameters: AuthApiOktaConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oktaConfigureRaw(requestParameters: AuthApiOktaConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    oktaConfigure(oktaMountPath: string, oktaConfigureRequest: OktaConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oktaConfigure(oktaMountPath: string, oktaConfigureRequest: OktaConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage users allowed to authenticate.
      */
-    oktaDeleteGroupRaw(requestParameters: AuthApiOktaDeleteGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oktaDeleteGroupRaw(requestParameters: AuthApiOktaDeleteGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Manage users allowed to authenticate.
      */
-    oktaDeleteGroup(name: string, oktaMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oktaDeleteGroup(name: string, oktaMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage additional groups for users allowed to authenticate.
      */
-    oktaDeleteUserRaw(requestParameters: AuthApiOktaDeleteUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oktaDeleteUserRaw(requestParameters: AuthApiOktaDeleteUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Manage additional groups for users allowed to authenticate.
      */
-    oktaDeleteUser(name: string, oktaMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oktaDeleteUser(name: string, oktaMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage users allowed to authenticate.
      */
@@ -2434,69 +2434,69 @@ export declare class AuthApi extends runtime.BaseAPI {
     /**
      * Log in with a username and password.
      */
-    oktaLoginRaw(requestParameters: AuthApiOktaLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oktaLoginRaw(requestParameters: AuthApiOktaLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Log in with a username and password.
      */
-    oktaLogin(username: string, oktaMountPath: string, oktaLoginRequest: OktaLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oktaLogin(username: string, oktaMountPath: string, oktaLoginRequest: OktaLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    oktaReadConfigurationRaw(requestParameters: AuthApiOktaReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oktaReadConfigurationRaw(requestParameters: AuthApiOktaReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    oktaReadConfiguration(oktaMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Manage users allowed to authenticate.
-     */
-    oktaReadGroupRaw(requestParameters: AuthApiOktaReadGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oktaReadConfiguration(oktaMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage users allowed to authenticate.
      */
-    oktaReadGroup(name: string, oktaMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oktaReadGroupRaw(requestParameters: AuthApiOktaReadGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Manage users allowed to authenticate.
+     */
+    oktaReadGroup(name: string, oktaMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage additional groups for users allowed to authenticate.
      */
-    oktaReadUserRaw(requestParameters: AuthApiOktaReadUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oktaReadUserRaw(requestParameters: AuthApiOktaReadUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Manage additional groups for users allowed to authenticate.
      */
-    oktaReadUser(name: string, oktaMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oktaReadUser(name: string, oktaMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    oktaVerifyRaw(requestParameters: AuthApiOktaVerifyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oktaVerifyRaw(requestParameters: AuthApiOktaVerifyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    oktaVerify(nonce: string, oktaMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Manage users allowed to authenticate.
-     */
-    oktaWriteGroupRaw(requestParameters: AuthApiOktaWriteGroupOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oktaVerify(nonce: string, oktaMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage users allowed to authenticate.
      */
-    oktaWriteGroup(name: string, oktaMountPath: string, oktaWriteGroupRequest: OktaWriteGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oktaWriteGroupRaw(requestParameters: AuthApiOktaWriteGroupOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Manage users allowed to authenticate.
+     */
+    oktaWriteGroup(name: string, oktaMountPath: string, oktaWriteGroupRequest: OktaWriteGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage additional groups for users allowed to authenticate.
      */
-    oktaWriteUserRaw(requestParameters: AuthApiOktaWriteUserOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    oktaWriteUserRaw(requestParameters: AuthApiOktaWriteUserOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Manage additional groups for users allowed to authenticate.
      */
-    oktaWriteUser(name: string, oktaMountPath: string, oktaWriteUserRequest: OktaWriteUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    oktaWriteUser(name: string, oktaMountPath: string, oktaWriteUserRequest: OktaWriteUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    radiusConfigureRaw(requestParameters: AuthApiRadiusConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    radiusConfigureRaw(requestParameters: AuthApiRadiusConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    radiusConfigure(radiusMountPath: string, radiusConfigureRequest: RadiusConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Manage users allowed to authenticate.
-     */
-    radiusDeleteUserRaw(requestParameters: AuthApiRadiusDeleteUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    radiusConfigure(radiusMountPath: string, radiusConfigureRequest: RadiusConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage users allowed to authenticate.
      */
-    radiusDeleteUser(name: string, radiusMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    radiusDeleteUserRaw(requestParameters: AuthApiRadiusDeleteUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Manage users allowed to authenticate.
+     */
+    radiusDeleteUser(name: string, radiusMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage users allowed to authenticate.
      */
@@ -2508,71 +2508,71 @@ export declare class AuthApi extends runtime.BaseAPI {
     /**
      * Log in with a username and password.
      */
-    radiusLoginRaw(requestParameters: AuthApiRadiusLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    radiusLoginRaw(requestParameters: AuthApiRadiusLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Log in with a username and password.
      */
-    radiusLogin(radiusMountPath: string, radiusLoginRequest: RadiusLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    radiusLogin(radiusMountPath: string, radiusLoginRequest: RadiusLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Log in with a username and password.
      */
-    radiusLoginWithUsernameRaw(requestParameters: AuthApiRadiusLoginWithUsernameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    radiusLoginWithUsernameRaw(requestParameters: AuthApiRadiusLoginWithUsernameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Log in with a username and password.
      */
-    radiusLoginWithUsername(urlusername: string, radiusMountPath: string, radiusLoginWithUsernameRequest: RadiusLoginWithUsernameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    radiusLoginWithUsername(urlusername: string, radiusMountPath: string, radiusLoginWithUsernameRequest: RadiusLoginWithUsernameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    radiusReadConfigurationRaw(requestParameters: AuthApiRadiusReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    radiusReadConfigurationRaw(requestParameters: AuthApiRadiusReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    radiusReadConfiguration(radiusMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Manage users allowed to authenticate.
-     */
-    radiusReadUserRaw(requestParameters: AuthApiRadiusReadUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    radiusReadConfiguration(radiusMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage users allowed to authenticate.
      */
-    radiusReadUser(name: string, radiusMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    radiusReadUserRaw(requestParameters: AuthApiRadiusReadUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Manage users allowed to authenticate.
      */
-    radiusWriteUserRaw(requestParameters: AuthApiRadiusWriteUserOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    radiusReadUser(name: string, radiusMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage users allowed to authenticate.
      */
-    radiusWriteUser(name: string, radiusMountPath: string, radiusWriteUserRequest: RadiusWriteUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    radiusWriteUserRaw(requestParameters: AuthApiRadiusWriteUserOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Manage users allowed to authenticate.
+     */
+    radiusWriteUser(name: string, radiusMountPath: string, radiusWriteUserRequest: RadiusWriteUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * The token create path is used to create new tokens.
      */
-    tokenCreateRaw(requestParameters: AuthApiTokenCreateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    tokenCreateRaw(requestParameters: AuthApiTokenCreateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * The token create path is used to create new tokens.
      */
-    tokenCreate(tokenCreateRequest: TokenCreateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    tokenCreate(tokenCreateRequest: TokenCreateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * This token create path is used to create new tokens adhering to the given role.
      */
-    tokenCreateAgainstRoleRaw(requestParameters: AuthApiTokenCreateAgainstRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    tokenCreateAgainstRoleRaw(requestParameters: AuthApiTokenCreateAgainstRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * This token create path is used to create new tokens adhering to the given role.
      */
-    tokenCreateAgainstRole(roleName: string, tokenCreateAgainstRoleRequest: TokenCreateAgainstRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    tokenCreateAgainstRole(roleName: string, tokenCreateAgainstRoleRequest: TokenCreateAgainstRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * The token create path is used to create new orphan tokens.
      */
-    tokenCreateOrphanRaw(requestParameters: AuthApiTokenCreateOrphanOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    tokenCreateOrphanRaw(requestParameters: AuthApiTokenCreateOrphanOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * The token create path is used to create new orphan tokens.
      */
-    tokenCreateOrphan(tokenCreateOrphanRequest: TokenCreateOrphanRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    tokenCreateOrphan(tokenCreateOrphanRequest: TokenCreateOrphanRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    tokenDeleteRoleRaw(requestParameters: AuthApiTokenDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    tokenDeleteRoleRaw(requestParameters: AuthApiTokenDeleteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    tokenDeleteRole(roleName: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    tokenDeleteRole(roleName: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * List token accessors, which can then be be used to iterate and discover their properties or revoke them. Because this can be used to cause a denial of service, this endpoint requires \'sudo\' capability in addition to \'list\'.
      */
@@ -2591,120 +2591,120 @@ export declare class AuthApi extends runtime.BaseAPI {
     tokenListRoles(list: TokenListRolesListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse>;
     /**
      */
-    tokenLookUpRaw(requestParameters: AuthApiTokenLookUpOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    tokenLookUpRaw(requestParameters: AuthApiTokenLookUpOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    tokenLookUp(tokenLookUpRequest: TokenLookUpRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    tokenLookUp(tokenLookUpRequest: TokenLookUpRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    tokenLookUp2Raw(requestParameters: AuthApiTokenLookUp2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    tokenLookUp2Raw(requestParameters: AuthApiTokenLookUp2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    tokenLookUp2(token?: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * This endpoint will lookup a token associated with the given accessor and its properties. Response will not contain the token ID.
-     */
-    tokenLookUpAccessorRaw(requestParameters: AuthApiTokenLookUpAccessorOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    tokenLookUp2(token?: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * This endpoint will lookup a token associated with the given accessor and its properties. Response will not contain the token ID.
      */
-    tokenLookUpAccessor(tokenLookUpAccessorRequest: TokenLookUpAccessorRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    tokenLookUpAccessorRaw(requestParameters: AuthApiTokenLookUpAccessorOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * This endpoint will lookup a token associated with the given accessor and its properties. Response will not contain the token ID.
+     */
+    tokenLookUpAccessor(tokenLookUpAccessorRequest: TokenLookUpAccessorRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    tokenLookUpSelfRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    tokenLookUpSelfRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    tokenLookUpSelf(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    tokenLookUpSelf(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    tokenLookUpSelf2Raw(requestParameters: AuthApiTokenLookUpSelf2OperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    tokenLookUpSelf2Raw(requestParameters: AuthApiTokenLookUpSelf2OperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    tokenLookUpSelf2(tokenLookUpSelf2Request: TokenLookUpSelf2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    tokenLookUpSelf2(tokenLookUpSelf2Request: TokenLookUpSelf2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    tokenReadRoleRaw(requestParameters: AuthApiTokenReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    tokenReadRoleRaw(requestParameters: AuthApiTokenReadRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    tokenReadRole(roleName: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    tokenReadRole(roleName: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * This endpoint will renew the given token and prevent expiration.
      */
-    tokenRenewRaw(requestParameters: AuthApiTokenRenewOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    tokenRenewRaw(requestParameters: AuthApiTokenRenewOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * This endpoint will renew the given token and prevent expiration.
      */
-    tokenRenew(tokenRenewRequest: TokenRenewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    tokenRenew(tokenRenewRequest: TokenRenewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * This endpoint will renew a token associated with the given accessor and its properties. Response will not contain the token ID.
      */
-    tokenRenewAccessorRaw(requestParameters: AuthApiTokenRenewAccessorOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    tokenRenewAccessorRaw(requestParameters: AuthApiTokenRenewAccessorOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * This endpoint will renew a token associated with the given accessor and its properties. Response will not contain the token ID.
      */
-    tokenRenewAccessor(tokenRenewAccessorRequest: TokenRenewAccessorRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    tokenRenewAccessor(tokenRenewAccessorRequest: TokenRenewAccessorRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * This endpoint will renew the token used to call it and prevent expiration.
      */
-    tokenRenewSelfRaw(requestParameters: AuthApiTokenRenewSelfOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    tokenRenewSelfRaw(requestParameters: AuthApiTokenRenewSelfOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * This endpoint will renew the token used to call it and prevent expiration.
      */
-    tokenRenewSelf(tokenRenewSelfRequest: TokenRenewSelfRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    tokenRenewSelf(tokenRenewSelfRequest: TokenRenewSelfRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * This endpoint will delete the given token and all of its child tokens.
      */
-    tokenRevokeRaw(requestParameters: AuthApiTokenRevokeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    tokenRevokeRaw(requestParameters: AuthApiTokenRevokeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * This endpoint will delete the given token and all of its child tokens.
      */
-    tokenRevoke(tokenRevokeRequest: TokenRevokeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    tokenRevoke(tokenRevokeRequest: TokenRevokeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * This endpoint will delete the token associated with the accessor and all of its child tokens.
      */
-    tokenRevokeAccessorRaw(requestParameters: AuthApiTokenRevokeAccessorOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    tokenRevokeAccessorRaw(requestParameters: AuthApiTokenRevokeAccessorOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * This endpoint will delete the token associated with the accessor and all of its child tokens.
      */
-    tokenRevokeAccessor(tokenRevokeAccessorRequest: TokenRevokeAccessorRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    tokenRevokeAccessor(tokenRevokeAccessorRequest: TokenRevokeAccessorRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * This endpoint will delete the token and orphan its child tokens.
      */
-    tokenRevokeOrphanRaw(requestParameters: AuthApiTokenRevokeOrphanOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    tokenRevokeOrphanRaw(requestParameters: AuthApiTokenRevokeOrphanOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * This endpoint will delete the token and orphan its child tokens.
      */
-    tokenRevokeOrphan(tokenRevokeOrphanRequest: TokenRevokeOrphanRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    tokenRevokeOrphan(tokenRevokeOrphanRequest: TokenRevokeOrphanRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * This endpoint will delete the token used to call it and all of its child tokens.
      */
-    tokenRevokeSelfRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    tokenRevokeSelfRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * This endpoint will delete the token used to call it and all of its child tokens.
      */
-    tokenRevokeSelf(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    tokenRevokeSelf(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * This endpoint performs cleanup tasks that can be run if certain error conditions have occurred.
      */
-    tokenTidyRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    tokenTidyRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * This endpoint performs cleanup tasks that can be run if certain error conditions have occurred.
      */
-    tokenTidy(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    tokenTidy(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    tokenWriteRoleRaw(requestParameters: AuthApiTokenWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    tokenWriteRoleRaw(requestParameters: AuthApiTokenWriteRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    tokenWriteRole(roleName: string, tokenWriteRoleRequest: TokenWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Manage users allowed to authenticate.
-     */
-    userpassDeleteUserRaw(requestParameters: AuthApiUserpassDeleteUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    tokenWriteRole(roleName: string, tokenWriteRoleRequest: TokenWriteRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage users allowed to authenticate.
      */
-    userpassDeleteUser(username: string, userpassMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    userpassDeleteUserRaw(requestParameters: AuthApiUserpassDeleteUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Manage users allowed to authenticate.
+     */
+    userpassDeleteUser(username: string, userpassMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage users allowed to authenticate.
      */
@@ -2716,265 +2716,265 @@ export declare class AuthApi extends runtime.BaseAPI {
     /**
      * Log in with a username and password.
      */
-    userpassLoginRaw(requestParameters: AuthApiUserpassLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    userpassLoginRaw(requestParameters: AuthApiUserpassLoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Log in with a username and password.
      */
-    userpassLogin(username: string, userpassMountPath: string, userpassLoginRequest: UserpassLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    userpassLogin(username: string, userpassMountPath: string, userpassLoginRequest: UserpassLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage users allowed to authenticate.
      */
-    userpassReadUserRaw(requestParameters: AuthApiUserpassReadUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    userpassReadUserRaw(requestParameters: AuthApiUserpassReadUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Manage users allowed to authenticate.
      */
-    userpassReadUser(username: string, userpassMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    userpassReadUser(username: string, userpassMountPath: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Reset user\'s password.
      */
-    userpassResetPasswordRaw(requestParameters: AuthApiUserpassResetPasswordOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    userpassResetPasswordRaw(requestParameters: AuthApiUserpassResetPasswordOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Reset user\'s password.
      */
-    userpassResetPassword(username: string, userpassMountPath: string, userpassResetPasswordRequest: UserpassResetPasswordRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    userpassResetPassword(username: string, userpassMountPath: string, userpassResetPasswordRequest: UserpassResetPasswordRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Update the policies associated with the username.
      */
-    userpassUpdatePoliciesRaw(requestParameters: AuthApiUserpassUpdatePoliciesOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    userpassUpdatePoliciesRaw(requestParameters: AuthApiUserpassUpdatePoliciesOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Update the policies associated with the username.
      */
-    userpassUpdatePolicies(username: string, userpassMountPath: string, userpassUpdatePoliciesRequest: UserpassUpdatePoliciesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    userpassUpdatePolicies(username: string, userpassMountPath: string, userpassUpdatePoliciesRequest: UserpassUpdatePoliciesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Manage users allowed to authenticate.
      */
-    userpassWriteUserRaw(requestParameters: AuthApiUserpassWriteUserOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    userpassWriteUserRaw(requestParameters: AuthApiUserpassWriteUserOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Manage users allowed to authenticate.
      */
-    userpassWriteUser(username: string, userpassMountPath: string, userpassWriteUserRequest: UserpassWriteUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    userpassWriteUser(username: string, userpassMountPath: string, userpassWriteUserRequest: UserpassWriteUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum AliCloudListAuthRolesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum AliCloudListAuthRoles2ListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum AppRoleListRolesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum AppRoleListSecretIdsListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum AwsListAuthRolesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum AwsListAuthRoles2ListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum AwsListCertificateConfigurationsListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum AwsListIdentityAccessListListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum AwsListIdentityWhitelistListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum AwsListRoleTagBlacklistsListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum AwsListRoleTagDenyListsListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum AwsListStsRoleRelationshipsListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum AzureListAuthRolesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum CertListCertificatesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum CertListCrlsListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum CloudFoundryListRolesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum GithubListTeamsListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum GithubListUsersListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum GoogleCloudListRolesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum GoogleCloudListRoles2ListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum JwtListRolesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum KerberosListGroupsListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum KubernetesListAuthRolesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum LdapListGroupsListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum LdapListUsersListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum OciListRolesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum OktaListGroupsListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum OktaListUsersListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum RadiusListUsersListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum TokenListAccessorsListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum TokenListRolesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum UserpassListUsersListEnum {
     TRUE = "true"
 }

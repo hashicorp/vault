@@ -32,7 +32,7 @@ function SystemListSyncDestinationsTypeResponseFromJSONTyped(json, ignoreDiscrim
         return json;
     }
     return {
-        keys: json['keys'] == null ? undefined : json['keys'],
+        'keys': json['keys'] == null ? undefined : json['keys'],
     };
 }
 function SystemListSyncDestinationsTypeResponseToJSON(json) {
@@ -43,6 +43,6 @@ function SystemListSyncDestinationsTypeResponseToJSONTyped(value, ignoreDiscrimi
         return value;
     }
     return {
-        keys: value['keys'],
+        'keys': value['keys'],
     };
 }

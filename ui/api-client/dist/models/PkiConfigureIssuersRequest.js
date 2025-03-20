@@ -32,8 +32,8 @@ function PkiConfigureIssuersRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        _default: json['default'] == null ? undefined : json['default'],
-        defaultFollowsLatestIssuer: json['default_follows_latest_issuer'] == null ? undefined : json['default_follows_latest_issuer'],
+        '_default': json['default'] == null ? undefined : json['default'],
+        'defaultFollowsLatestIssuer': json['default_follows_latest_issuer'] == null ? undefined : json['default_follows_latest_issuer'],
     };
 }
 function PkiConfigureIssuersRequestToJSON(json) {
@@ -44,7 +44,7 @@ function PkiConfigureIssuersRequestToJSONTyped(value, ignoreDiscriminator = fals
         return value;
     }
     return {
-        default: value['_default'],
-        default_follows_latest_issuer: value['defaultFollowsLatestIssuer'],
+        'default': value['_default'],
+        'default_follows_latest_issuer': value['defaultFollowsLatestIssuer'],
     };
 }

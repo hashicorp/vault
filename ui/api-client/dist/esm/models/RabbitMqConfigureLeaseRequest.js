@@ -25,8 +25,8 @@ export function RabbitMqConfigureLeaseRequestFromJSONTyped(json, ignoreDiscrimin
         return json;
     }
     return {
-        maxTtl: json['max_ttl'] == null ? undefined : json['max_ttl'],
-        ttl: json['ttl'] == null ? undefined : json['ttl'],
+        'maxTtl': json['max_ttl'] == null ? undefined : json['max_ttl'],
+        'ttl': json['ttl'] == null ? undefined : json['ttl'],
     };
 }
 export function RabbitMqConfigureLeaseRequestToJSON(json) {
@@ -37,7 +37,7 @@ export function RabbitMqConfigureLeaseRequestToJSONTyped(value, ignoreDiscrimina
         return value;
     }
     return {
-        max_ttl: value['maxTtl'],
-        ttl: value['ttl'],
+        'max_ttl': value['maxTtl'],
+        'ttl': value['ttl'],
     };
 }

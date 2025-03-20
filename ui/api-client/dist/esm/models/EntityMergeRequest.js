@@ -25,10 +25,10 @@ export function EntityMergeRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        conflictingAliasIdsToKeep: json['conflicting_alias_ids_to_keep'] == null ? undefined : json['conflicting_alias_ids_to_keep'],
-        force: json['force'] == null ? undefined : json['force'],
-        fromEntityIds: json['from_entity_ids'] == null ? undefined : json['from_entity_ids'],
-        toEntityId: json['to_entity_id'] == null ? undefined : json['to_entity_id'],
+        'conflictingAliasIdsToKeep': json['conflicting_alias_ids_to_keep'] == null ? undefined : json['conflicting_alias_ids_to_keep'],
+        'force': json['force'] == null ? undefined : json['force'],
+        'fromEntityIds': json['from_entity_ids'] == null ? undefined : json['from_entity_ids'],
+        'toEntityId': json['to_entity_id'] == null ? undefined : json['to_entity_id'],
     };
 }
 export function EntityMergeRequestToJSON(json) {
@@ -39,9 +39,9 @@ export function EntityMergeRequestToJSONTyped(value, ignoreDiscriminator = false
         return value;
     }
     return {
-        conflicting_alias_ids_to_keep: value['conflictingAliasIdsToKeep'],
-        force: value['force'],
-        from_entity_ids: value['fromEntityIds'],
-        to_entity_id: value['toEntityId'],
+        'conflicting_alias_ids_to_keep': value['conflictingAliasIdsToKeep'],
+        'force': value['force'],
+        'from_entity_ids': value['fromEntityIds'],
+        'to_entity_id': value['toEntityId'],
     };
 }

@@ -25,11 +25,11 @@ export function AwsWriteStaticRolesNameRequestFromJSONTyped(json, ignoreDiscrimi
         return json;
     }
     return {
-        assumeRoleArn: json['assume_role_arn'] == null ? undefined : json['assume_role_arn'],
-        assumeRoleSessionName: json['assume_role_session_name'] == null ? undefined : json['assume_role_session_name'],
-        externalId: json['external_id'] == null ? undefined : json['external_id'],
-        rotationPeriod: json['rotation_period'] == null ? undefined : json['rotation_period'],
-        username: json['username'] == null ? undefined : json['username'],
+        'assumeRoleArn': json['assume_role_arn'] == null ? undefined : json['assume_role_arn'],
+        'assumeRoleSessionName': json['assume_role_session_name'] == null ? undefined : json['assume_role_session_name'],
+        'externalId': json['external_id'] == null ? undefined : json['external_id'],
+        'rotationPeriod': json['rotation_period'] == null ? undefined : json['rotation_period'],
+        'username': json['username'] == null ? undefined : json['username'],
     };
 }
 export function AwsWriteStaticRolesNameRequestToJSON(json) {
@@ -40,10 +40,10 @@ export function AwsWriteStaticRolesNameRequestToJSONTyped(value, ignoreDiscrimin
         return value;
     }
     return {
-        assume_role_arn: value['assumeRoleArn'],
-        assume_role_session_name: value['assumeRoleSessionName'],
-        external_id: value['externalId'],
-        rotation_period: value['rotationPeriod'],
-        username: value['username'],
+        'assume_role_arn': value['assumeRoleArn'],
+        'assume_role_session_name': value['assumeRoleSessionName'],
+        'external_id': value['externalId'],
+        'rotation_period': value['rotationPeriod'],
+        'username': value['username'],
     };
 }

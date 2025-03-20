@@ -12,9 +12,9 @@
  * Do not edit the class manually.
  */
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export var PkiWriteAcmeKeyIdRequestStatusEnum;
 (function (PkiWriteAcmeKeyIdRequestStatusEnum) {
     PkiWriteAcmeKeyIdRequestStatusEnum["VALID"] = "valid";
@@ -36,7 +36,7 @@ export function PkiWriteAcmeKeyIdRequestFromJSONTyped(json, ignoreDiscriminator)
         return json;
     }
     return {
-        status: json['status'],
+        'status': json['status'],
     };
 }
 export function PkiWriteAcmeKeyIdRequestToJSON(json) {
@@ -47,6 +47,6 @@ export function PkiWriteAcmeKeyIdRequestToJSONTyped(value, ignoreDiscriminator =
         return value;
     }
     return {
-        status: value['status'],
+        'status': value['status'],
     };
 }

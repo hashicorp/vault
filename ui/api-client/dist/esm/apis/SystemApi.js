@@ -47,7 +47,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     activationFlagsActivate(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.activationFlagsActivateRaw(initOverrides);
+            const response = yield this.activationFlagsActivateRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -71,7 +72,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     activationFlagsActivate_1(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.activationFlagsActivate_1Raw(initOverrides);
+            const response = yield this.activationFlagsActivate_1Raw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -95,7 +97,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     activationFlagsActivate_2(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.activationFlagsActivate_2Raw(initOverrides);
+            const response = yield this.activationFlagsActivate_2Raw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -112,7 +115,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/audit-hash/{path}`.replace(`{${'path'}}`, encodeURIComponent(String(requestParameters['path']))),
+                path: `/sys/audit-hash/{path}`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -140,7 +143,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/audit/{path}`.replace(`{${'path'}}`, encodeURIComponent(String(requestParameters['path']))),
+                path: `/sys/audit/{path}`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -153,7 +156,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     auditingDisableDevice(path, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.auditingDisableDeviceRaw({ path: path }, initOverrides);
+            const response = yield this.auditingDisableDeviceRaw({ path: path }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -167,7 +171,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/config/auditing/request-headers/{header}`.replace(`{${'header'}}`, encodeURIComponent(String(requestParameters['header']))),
+                path: `/sys/config/auditing/request-headers/{header}`.replace(`{${"header"}}`, encodeURIComponent(String(requestParameters['header']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -180,7 +184,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     auditingDisableRequestHeader(header, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.auditingDisableRequestHeaderRaw({ header: header }, initOverrides);
+            const response = yield this.auditingDisableRequestHeaderRaw({ header: header }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -198,7 +203,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/audit/{path}`.replace(`{${'path'}}`, encodeURIComponent(String(requestParameters['path']))),
+                path: `/sys/audit/{path}`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -212,7 +217,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     auditingEnableDevice(path, auditingEnableDeviceRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.auditingEnableDeviceRaw({ path: path, auditingEnableDeviceRequest: auditingEnableDeviceRequest }, initOverrides);
+            const response = yield this.auditingEnableDeviceRaw({ path: path, auditingEnableDeviceRequest: auditingEnableDeviceRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -230,7 +236,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/config/auditing/request-headers/{header}`.replace(`{${'header'}}`, encodeURIComponent(String(requestParameters['header']))),
+                path: `/sys/config/auditing/request-headers/{header}`.replace(`{${"header"}}`, encodeURIComponent(String(requestParameters['header']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -244,7 +250,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     auditingEnableRequestHeader(header, auditingEnableRequestHeaderRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.auditingEnableRequestHeaderRaw({ header: header, auditingEnableRequestHeaderRequest: auditingEnableRequestHeaderRequest }, initOverrides);
+            const response = yield this.auditingEnableRequestHeaderRaw({ header: header, auditingEnableRequestHeaderRequest: auditingEnableRequestHeaderRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -268,7 +275,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     auditingListEnabledDevices(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.auditingListEnabledDevicesRaw(initOverrides);
+            const response = yield this.auditingListEnabledDevicesRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -307,7 +315,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/config/auditing/request-headers/{header}`.replace(`{${'header'}}`, encodeURIComponent(String(requestParameters['header']))),
+                path: `/sys/config/auditing/request-headers/{header}`.replace(`{${"header"}}`, encodeURIComponent(String(requestParameters['header']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -320,7 +328,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     auditingReadRequestHeaderInformation(header, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.auditingReadRequestHeaderInformationRaw({ header: header }, initOverrides);
+            const response = yield this.auditingReadRequestHeaderInformationRaw({ header: header }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -334,7 +343,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/auth/{path}`.replace(`{${'path'}}`, encodeURIComponent(String(requestParameters['path']))),
+                path: `/sys/auth/{path}`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -347,7 +356,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     authDisableMethod(path, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.authDisableMethodRaw({ path: path }, initOverrides);
+            const response = yield this.authDisableMethodRaw({ path: path }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -366,7 +376,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/auth/{path}`.replace(`{${'path'}}`, encodeURIComponent(String(requestParameters['path']))),
+                path: `/sys/auth/{path}`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -381,7 +391,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     authEnableMethod(path, authEnableMethodRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.authEnableMethodRaw({ path: path, authEnableMethodRequest: authEnableMethodRequest }, initOverrides);
+            const response = yield this.authEnableMethodRaw({ path: path, authEnableMethodRequest: authEnableMethodRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -403,7 +414,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     authListEnabledMethods(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.authListEnabledMethodsRaw(initOverrides);
+            const response = yield this.authListEnabledMethodsRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -417,7 +429,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/auth/{path}`.replace(`{${'path'}}`, encodeURIComponent(String(requestParameters['path']))),
+                path: `/sys/auth/{path}`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -446,7 +458,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/auth/{path}/tune`.replace(`{${'path'}}`, encodeURIComponent(String(requestParameters['path']))),
+                path: `/sys/auth/{path}/tune`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -480,7 +492,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/auth/{path}/tune`.replace(`{${'path'}}`, encodeURIComponent(String(requestParameters['path']))),
+                path: `/sys/auth/{path}/tune`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -495,7 +507,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     authTuneConfigurationParameters(path, authTuneConfigurationParametersRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.authTuneConfigurationParametersRaw({ path: path, authTuneConfigurationParametersRequest: authTuneConfigurationParametersRequest }, initOverrides);
+            const response = yield this.authTuneConfigurationParametersRaw({ path: path, authTuneConfigurationParametersRequest: authTuneConfigurationParametersRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -548,7 +561,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     collectInFlightRequestInformation(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.collectInFlightRequestInformationRaw(initOverrides);
+            const response = yield this.collectInFlightRequestInformationRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -577,7 +591,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     corsConfigure(corsConfigureRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.corsConfigureRaw({ corsConfigureRequest: corsConfigureRequest }, initOverrides);
+            const response = yield this.corsConfigureRaw({ corsConfigureRequest: corsConfigureRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -601,7 +616,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     corsDeleteConfiguration(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.corsDeleteConfigurationRaw(initOverrides);
+            const response = yield this.corsDeleteConfigurationRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -655,7 +671,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     createCustomMessage(createCustomMessageRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.createCustomMessageRaw({ createCustomMessageRequest: createCustomMessageRequest }, initOverrides);
+            const response = yield this.createCustomMessageRaw({ createCustomMessageRequest: createCustomMessageRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -684,7 +701,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     decodeToken(decodeTokenRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.decodeTokenRaw({ decodeTokenRequest: decodeTokenRequest }, initOverrides);
+            const response = yield this.decodeTokenRaw({ decodeTokenRequest: decodeTokenRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -711,7 +729,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     encryptionKeyConfigureRotation(encryptionKeyConfigureRotationRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.encryptionKeyConfigureRotationRaw({ encryptionKeyConfigureRotationRequest: encryptionKeyConfigureRotationRequest }, initOverrides);
+            const response = yield this.encryptionKeyConfigureRotationRaw({ encryptionKeyConfigureRotationRequest: encryptionKeyConfigureRotationRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -756,7 +775,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     encryptionKeyRotate(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.encryptionKeyRotateRaw(initOverrides);
+            const response = yield this.encryptionKeyRotateRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -780,7 +800,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     encryptionKeyStatus(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.encryptionKeyStatusRaw(initOverrides);
+            const response = yield this.encryptionKeyStatusRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -825,7 +846,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/tools/hash/{urlalgorithm}`.replace(`{${'urlalgorithm'}}`, encodeURIComponent(String(requestParameters['urlalgorithm']))),
+                path: `/sys/tools/hash/{urlalgorithm}`.replace(`{${"urlalgorithm"}}`, encodeURIComponent(String(requestParameters['urlalgorithm']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -884,7 +905,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/tools/random/{urlbytes}`.replace(`{${'urlbytes'}}`, encodeURIComponent(String(requestParameters['urlbytes']))),
+                path: `/sys/tools/random/{urlbytes}`.replace(`{${"urlbytes"}}`, encodeURIComponent(String(requestParameters['urlbytes']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -915,7 +936,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/tools/random/{source}`.replace(`{${'source'}}`, encodeURIComponent(String(requestParameters['source']))),
+                path: `/sys/tools/random/{source}`.replace(`{${"source"}}`, encodeURIComponent(String(requestParameters['source']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -949,9 +970,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/tools/random/{source}/{urlbytes}`
-                    .replace(`{${'source'}}`, encodeURIComponent(String(requestParameters['source'])))
-                    .replace(`{${'urlbytes'}}`, encodeURIComponent(String(requestParameters['urlbytes']))),
+                path: `/sys/tools/random/{source}/{urlbytes}`.replace(`{${"source"}}`, encodeURIComponent(String(requestParameters['source']))).replace(`{${"urlbytes"}}`, encodeURIComponent(String(requestParameters['urlbytes']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -964,11 +983,7 @@ export class SystemApi extends runtime.BaseAPI {
      */
     generateRandomWithSourceAndBytes(source, urlbytes, generateRandomWithSourceAndBytesRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            const response = yield this.generateRandomWithSourceAndBytesRaw({
-                source: source,
-                urlbytes: urlbytes,
-                generateRandomWithSourceAndBytesRequest: generateRandomWithSourceAndBytesRequest,
-            }, initOverrides);
+            const response = yield this.generateRandomWithSourceAndBytesRaw({ source: source, urlbytes: urlbytes, generateRandomWithSourceAndBytesRequest: generateRandomWithSourceAndBytesRequest }, initOverrides);
             return yield response.value();
         });
     }
@@ -1025,7 +1040,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     initialize(initializeRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.initializeRaw({ initializeRequest: initializeRequest }, initOverrides);
+            const response = yield this.initializeRaw({ initializeRequest: initializeRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1054,7 +1070,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     internalClientActivityConfigure(internalClientActivityConfigureRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.internalClientActivityConfigureRaw({ internalClientActivityConfigureRequest: internalClientActivityConfigureRequest }, initOverrides);
+            const response = yield this.internalClientActivityConfigureRaw({ internalClientActivityConfigureRequest: internalClientActivityConfigureRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1078,7 +1095,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     internalClientActivityExport(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.internalClientActivityExportRaw(initOverrides);
+            const response = yield this.internalClientActivityExportRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1102,7 +1120,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     internalClientActivityReadConfiguration(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.internalClientActivityReadConfigurationRaw(initOverrides);
+            const response = yield this.internalClientActivityReadConfigurationRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1126,7 +1145,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     internalClientActivityReportCounts(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.internalClientActivityReportCountsRaw(initOverrides);
+            const response = yield this.internalClientActivityReportCountsRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1150,7 +1170,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     internalClientActivityReportCountsThisMonth(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.internalClientActivityReportCountsThisMonthRaw(initOverrides);
+            const response = yield this.internalClientActivityReportCountsThisMonthRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1201,7 +1222,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     internalCountRequests(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.internalCountRequestsRaw(initOverrides);
+            const response = yield this.internalCountRequestsRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1254,7 +1276,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     internalGenerateOpenApiDocument(context, genericMountPaths, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.internalGenerateOpenApiDocumentRaw({ context: context, genericMountPaths: genericMountPaths }, initOverrides);
+            const response = yield this.internalGenerateOpenApiDocumentRaw({ context: context, genericMountPaths: genericMountPaths }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1281,9 +1304,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     internalGenerateOpenApiDocumentWithParameters(internalGenerateOpenApiDocumentWithParametersRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.internalGenerateOpenApiDocumentWithParametersRaw({
-                internalGenerateOpenApiDocumentWithParametersRequest: internalGenerateOpenApiDocumentWithParametersRequest,
-            }, initOverrides);
+            const response = yield this.internalGenerateOpenApiDocumentWithParametersRaw({ internalGenerateOpenApiDocumentWithParametersRequest: internalGenerateOpenApiDocumentWithParametersRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1297,7 +1319,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/internal/inspect/router/{tag}`.replace(`{${'tag'}}`, encodeURIComponent(String(requestParameters['tag']))),
+                path: `/sys/internal/inspect/router/{tag}`.replace(`{${"tag"}}`, encodeURIComponent(String(requestParameters['tag']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1310,7 +1332,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     internalInspectRouter(tag, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.internalInspectRouterRaw({ tag: tag }, initOverrides);
+            const response = yield this.internalInspectRouterRaw({ tag: tag }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1424,7 +1447,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/internal/ui/mounts/{path}`.replace(`{${'path'}}`, encodeURIComponent(String(requestParameters['path']))),
+                path: `/sys/internal/ui/mounts/{path}`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1558,7 +1581,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/leases/revoke-force/{prefix}`.replace(`{${'prefix'}}`, encodeURIComponent(String(requestParameters['prefix']))),
+                path: `/sys/leases/revoke-force/{prefix}`.replace(`{${"prefix"}}`, encodeURIComponent(String(requestParameters['prefix']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1572,7 +1595,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     leasesForceRevokeLeaseWithPrefix(prefix, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.leasesForceRevokeLeaseWithPrefixRaw({ prefix: prefix }, initOverrides);
+            const response = yield this.leasesForceRevokeLeaseWithPrefixRaw({ prefix: prefix }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1587,7 +1611,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/revoke-force/{prefix}`.replace(`{${'prefix'}}`, encodeURIComponent(String(requestParameters['prefix']))),
+                path: `/sys/revoke-force/{prefix}`.replace(`{${"prefix"}}`, encodeURIComponent(String(requestParameters['prefix']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1601,7 +1625,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     leasesForceRevokeLeaseWithPrefix2(prefix, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.leasesForceRevokeLeaseWithPrefix2Raw({ prefix: prefix }, initOverrides);
+            const response = yield this.leasesForceRevokeLeaseWithPrefix2Raw({ prefix: prefix }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1643,7 +1668,7 @@ export class SystemApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/leases/lookup/{prefix}/`.replace(`{${'prefix'}}`, encodeURIComponent(String(requestParameters['prefix']))),
+                path: `/sys/leases/lookup/{prefix}/`.replace(`{${"prefix"}}`, encodeURIComponent(String(requestParameters['prefix']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1713,7 +1738,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     leasesRenewLease(leasesRenewLeaseRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.leasesRenewLeaseRaw({ leasesRenewLeaseRequest: leasesRenewLeaseRequest }, initOverrides);
+            const response = yield this.leasesRenewLeaseRaw({ leasesRenewLeaseRequest: leasesRenewLeaseRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1742,7 +1768,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     leasesRenewLease2(leasesRenewLease2Request, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.leasesRenewLease2Raw({ leasesRenewLease2Request: leasesRenewLease2Request }, initOverrides);
+            const response = yield this.leasesRenewLease2Raw({ leasesRenewLease2Request: leasesRenewLease2Request }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1760,7 +1787,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/leases/renew/{url_lease_id}`.replace(`{${'url_lease_id'}}`, encodeURIComponent(String(requestParameters['urlLeaseId']))),
+                path: `/sys/leases/renew/{url_lease_id}`.replace(`{${"url_lease_id"}}`, encodeURIComponent(String(requestParameters['urlLeaseId']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1774,7 +1801,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     leasesRenewLeaseWithId(urlLeaseId, leasesRenewLeaseWithIdRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.leasesRenewLeaseWithIdRaw({ urlLeaseId: urlLeaseId, leasesRenewLeaseWithIdRequest: leasesRenewLeaseWithIdRequest }, initOverrides);
+            const response = yield this.leasesRenewLeaseWithIdRaw({ urlLeaseId: urlLeaseId, leasesRenewLeaseWithIdRequest: leasesRenewLeaseWithIdRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1792,7 +1820,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/renew/{url_lease_id}`.replace(`{${'url_lease_id'}}`, encodeURIComponent(String(requestParameters['urlLeaseId']))),
+                path: `/sys/renew/{url_lease_id}`.replace(`{${"url_lease_id"}}`, encodeURIComponent(String(requestParameters['urlLeaseId']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1806,7 +1834,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     leasesRenewLeaseWithId2(urlLeaseId, leasesRenewLeaseWithId2Request, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.leasesRenewLeaseWithId2Raw({ urlLeaseId: urlLeaseId, leasesRenewLeaseWithId2Request: leasesRenewLeaseWithId2Request }, initOverrides);
+            const response = yield this.leasesRenewLeaseWithId2Raw({ urlLeaseId: urlLeaseId, leasesRenewLeaseWithId2Request: leasesRenewLeaseWithId2Request }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1835,7 +1864,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     leasesRevokeLease(leasesRevokeLeaseRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.leasesRevokeLeaseRaw({ leasesRevokeLeaseRequest: leasesRevokeLeaseRequest }, initOverrides);
+            const response = yield this.leasesRevokeLeaseRaw({ leasesRevokeLeaseRequest: leasesRevokeLeaseRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1864,7 +1894,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     leasesRevokeLease2(leasesRevokeLease2Request, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.leasesRevokeLease2Raw({ leasesRevokeLease2Request: leasesRevokeLease2Request }, initOverrides);
+            const response = yield this.leasesRevokeLease2Raw({ leasesRevokeLease2Request: leasesRevokeLease2Request }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1882,7 +1913,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/leases/revoke/{url_lease_id}`.replace(`{${'url_lease_id'}}`, encodeURIComponent(String(requestParameters['urlLeaseId']))),
+                path: `/sys/leases/revoke/{url_lease_id}`.replace(`{${"url_lease_id"}}`, encodeURIComponent(String(requestParameters['urlLeaseId']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1896,7 +1927,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     leasesRevokeLeaseWithId(urlLeaseId, leasesRevokeLeaseWithIdRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.leasesRevokeLeaseWithIdRaw({ urlLeaseId: urlLeaseId, leasesRevokeLeaseWithIdRequest: leasesRevokeLeaseWithIdRequest }, initOverrides);
+            const response = yield this.leasesRevokeLeaseWithIdRaw({ urlLeaseId: urlLeaseId, leasesRevokeLeaseWithIdRequest: leasesRevokeLeaseWithIdRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1914,7 +1946,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/revoke/{url_lease_id}`.replace(`{${'url_lease_id'}}`, encodeURIComponent(String(requestParameters['urlLeaseId']))),
+                path: `/sys/revoke/{url_lease_id}`.replace(`{${"url_lease_id"}}`, encodeURIComponent(String(requestParameters['urlLeaseId']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1928,7 +1960,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     leasesRevokeLeaseWithId2(urlLeaseId, leasesRevokeLeaseWithId2Request, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.leasesRevokeLeaseWithId2Raw({ urlLeaseId: urlLeaseId, leasesRevokeLeaseWithId2Request: leasesRevokeLeaseWithId2Request }, initOverrides);
+            const response = yield this.leasesRevokeLeaseWithId2Raw({ urlLeaseId: urlLeaseId, leasesRevokeLeaseWithId2Request: leasesRevokeLeaseWithId2Request }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1946,7 +1979,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/leases/revoke-prefix/{prefix}`.replace(`{${'prefix'}}`, encodeURIComponent(String(requestParameters['prefix']))),
+                path: `/sys/leases/revoke-prefix/{prefix}`.replace(`{${"prefix"}}`, encodeURIComponent(String(requestParameters['prefix']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1960,7 +1993,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     leasesRevokeLeaseWithPrefix(prefix, leasesRevokeLeaseWithPrefixRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.leasesRevokeLeaseWithPrefixRaw({ prefix: prefix, leasesRevokeLeaseWithPrefixRequest: leasesRevokeLeaseWithPrefixRequest }, initOverrides);
+            const response = yield this.leasesRevokeLeaseWithPrefixRaw({ prefix: prefix, leasesRevokeLeaseWithPrefixRequest: leasesRevokeLeaseWithPrefixRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1978,7 +2012,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/revoke-prefix/{prefix}`.replace(`{${'prefix'}}`, encodeURIComponent(String(requestParameters['prefix']))),
+                path: `/sys/revoke-prefix/{prefix}`.replace(`{${"prefix"}}`, encodeURIComponent(String(requestParameters['prefix']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1992,7 +2026,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     leasesRevokeLeaseWithPrefix2(prefix, leasesRevokeLeaseWithPrefix2Request, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.leasesRevokeLeaseWithPrefix2Raw({ prefix: prefix, leasesRevokeLeaseWithPrefix2Request: leasesRevokeLeaseWithPrefix2Request }, initOverrides);
+            const response = yield this.leasesRevokeLeaseWithPrefix2Raw({ prefix: prefix, leasesRevokeLeaseWithPrefix2Request: leasesRevokeLeaseWithPrefix2Request }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2014,7 +2049,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     leasesTidy(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.leasesTidyRaw(initOverrides);
+            const response = yield this.leasesTidyRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2038,7 +2074,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     listExperimentalFeatures(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.listExperimentalFeaturesRaw(initOverrides);
+            const response = yield this.listExperimentalFeaturesRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2062,7 +2099,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     lockedUsersList(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.lockedUsersListRaw(initOverrides);
+            const response = yield this.lockedUsersListRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2079,9 +2117,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/locked-users/{mount_accessor}/unlock/{alias_identifier}`
-                    .replace(`{${'alias_identifier'}}`, encodeURIComponent(String(requestParameters['aliasIdentifier'])))
-                    .replace(`{${'mount_accessor'}}`, encodeURIComponent(String(requestParameters['mountAccessor']))),
+                path: `/sys/locked-users/{mount_accessor}/unlock/{alias_identifier}`.replace(`{${"alias_identifier"}}`, encodeURIComponent(String(requestParameters['aliasIdentifier']))).replace(`{${"mount_accessor"}}`, encodeURIComponent(String(requestParameters['mountAccessor']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2094,7 +2130,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     lockedUsersUnlock(aliasIdentifier, mountAccessor, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.lockedUsersUnlockRaw({ aliasIdentifier: aliasIdentifier, mountAccessor: mountAccessor }, initOverrides);
+            const response = yield this.lockedUsersUnlockRaw({ aliasIdentifier: aliasIdentifier, mountAccessor: mountAccessor }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2118,7 +2155,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     loggersReadVerbosityLevel(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.loggersReadVerbosityLevelRaw(initOverrides);
+            const response = yield this.loggersReadVerbosityLevelRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2132,7 +2170,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/loggers/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/loggers/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2145,7 +2183,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     loggersReadVerbosityLevelFor(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.loggersReadVerbosityLevelForRaw({ name: name }, initOverrides);
+            const response = yield this.loggersReadVerbosityLevelForRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2169,7 +2208,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     loggersRevertVerbosityLevel(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.loggersRevertVerbosityLevelRaw(initOverrides);
+            const response = yield this.loggersRevertVerbosityLevelRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2183,7 +2223,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/loggers/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/loggers/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2196,7 +2236,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     loggersRevertVerbosityLevelFor(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.loggersRevertVerbosityLevelForRaw({ name: name }, initOverrides);
+            const response = yield this.loggersRevertVerbosityLevelForRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2225,7 +2266,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     loggersUpdateVerbosityLevel(loggersUpdateVerbosityLevelRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.loggersUpdateVerbosityLevelRaw({ loggersUpdateVerbosityLevelRequest: loggersUpdateVerbosityLevelRequest }, initOverrides);
+            const response = yield this.loggersUpdateVerbosityLevelRaw({ loggersUpdateVerbosityLevelRequest: loggersUpdateVerbosityLevelRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2243,7 +2285,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/loggers/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/loggers/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2257,7 +2299,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     loggersUpdateVerbosityLevelFor(name, loggersUpdateVerbosityLevelForRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.loggersUpdateVerbosityLevelForRaw({ name: name, loggersUpdateVerbosityLevelForRequest: loggersUpdateVerbosityLevelForRequest }, initOverrides);
+            const response = yield this.loggersUpdateVerbosityLevelForRaw({ name: name, loggersUpdateVerbosityLevelForRequest: loggersUpdateVerbosityLevelForRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2282,7 +2325,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     metrics(format, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.metricsRaw({ format: format }, initOverrides);
+            const response = yield this.metricsRaw({ format: format }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2311,7 +2355,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     mfaValidate(mfaValidateRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.mfaValidateRaw({ mfaValidateRequest: mfaValidateRequest }, initOverrides);
+            const response = yield this.mfaValidateRaw({ mfaValidateRequest: mfaValidateRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2339,7 +2384,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     monitor(logFormat, logLevel, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.monitorRaw({ logFormat: logFormat, logLevel: logLevel }, initOverrides);
+            const response = yield this.monitorRaw({ logFormat: logFormat, logLevel: logLevel }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2353,7 +2399,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/mounts/{path}`.replace(`{${'path'}}`, encodeURIComponent(String(requestParameters['path']))),
+                path: `/sys/mounts/{path}`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2366,7 +2412,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     mountsDisableSecretsEngine(path, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.mountsDisableSecretsEngineRaw({ path: path }, initOverrides);
+            const response = yield this.mountsDisableSecretsEngineRaw({ path: path }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2384,7 +2431,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/mounts/{path}`.replace(`{${'path'}}`, encodeURIComponent(String(requestParameters['path']))),
+                path: `/sys/mounts/{path}`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2398,7 +2445,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     mountsEnableSecretsEngine(path, mountsEnableSecretsEngineRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.mountsEnableSecretsEngineRaw({ path: path, mountsEnableSecretsEngineRequest: mountsEnableSecretsEngineRequest }, initOverrides);
+            const response = yield this.mountsEnableSecretsEngineRaw({ path: path, mountsEnableSecretsEngineRequest: mountsEnableSecretsEngineRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2420,7 +2468,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     mountsListSecretsEngines(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.mountsListSecretsEnginesRaw(initOverrides);
+            const response = yield this.mountsListSecretsEnginesRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2434,7 +2483,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/mounts/{path}`.replace(`{${'path'}}`, encodeURIComponent(String(requestParameters['path']))),
+                path: `/sys/mounts/{path}`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2461,7 +2510,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/mounts/{path}/tune`.replace(`{${'path'}}`, encodeURIComponent(String(requestParameters['path']))),
+                path: `/sys/mounts/{path}/tune`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2491,7 +2540,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/mounts/{path}/tune`.replace(`{${'path'}}`, encodeURIComponent(String(requestParameters['path']))),
+                path: `/sys/mounts/{path}/tune`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2504,7 +2553,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     mountsTuneConfigurationParameters(path, mountsTuneConfigurationParametersRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.mountsTuneConfigurationParametersRaw({ path: path, mountsTuneConfigurationParametersRequest: mountsTuneConfigurationParametersRequest }, initOverrides);
+            const response = yield this.mountsTuneConfigurationParametersRaw({ path: path, mountsTuneConfigurationParametersRequest: mountsTuneConfigurationParametersRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2547,7 +2597,7 @@ export class SystemApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/plugins/catalog/{type}/`.replace(`{${'type'}}`, encodeURIComponent(String(requestParameters['type']))),
+                path: `/sys/plugins/catalog/{type}/`.replace(`{${"type"}}`, encodeURIComponent(String(requestParameters['type']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2582,9 +2632,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/plugins/pins/{type}/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'type'}}`, encodeURIComponent(String(requestParameters['type']))),
+                path: `/sys/plugins/pins/{type}/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"type"}}`, encodeURIComponent(String(requestParameters['type']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2598,11 +2646,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     pluginsCatalogPinsCreatePinnedVersion(name, type, pluginsCatalogPinsCreatePinnedVersionRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.pluginsCatalogPinsCreatePinnedVersionRaw({
-                name: name,
-                type: type,
-                pluginsCatalogPinsCreatePinnedVersionRequest: pluginsCatalogPinsCreatePinnedVersionRequest,
-            }, initOverrides);
+            const response = yield this.pluginsCatalogPinsCreatePinnedVersionRaw({ name: name, type: type, pluginsCatalogPinsCreatePinnedVersionRequest: pluginsCatalogPinsCreatePinnedVersionRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2642,9 +2687,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/plugins/pins/{type}/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'type'}}`, encodeURIComponent(String(requestParameters['type']))),
+                path: `/sys/plugins/pins/{type}/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"type"}}`, encodeURIComponent(String(requestParameters['type']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2675,9 +2718,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/plugins/pins/{type}/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'type'}}`, encodeURIComponent(String(requestParameters['type']))),
+                path: `/sys/plugins/pins/{type}/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"type"}}`, encodeURIComponent(String(requestParameters['type']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2690,7 +2731,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     pluginsCatalogPinsRemovePinnedVersion(name, type, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.pluginsCatalogPinsRemovePinnedVersionRaw({ name: name, type: type }, initOverrides);
+            const response = yield this.pluginsCatalogPinsRemovePinnedVersionRaw({ name: name, type: type }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2704,7 +2746,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/plugins/catalog/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/plugins/catalog/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2735,9 +2777,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/plugins/catalog/{type}/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'type'}}`, encodeURIComponent(String(requestParameters['type']))),
+                path: `/sys/plugins/catalog/{type}/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"type"}}`, encodeURIComponent(String(requestParameters['type']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2769,7 +2809,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/plugins/catalog/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/plugins/catalog/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2783,7 +2823,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     pluginsCatalogRegisterPlugin(name, pluginsCatalogRegisterPluginRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.pluginsCatalogRegisterPluginRaw({ name: name, pluginsCatalogRegisterPluginRequest: pluginsCatalogRegisterPluginRequest }, initOverrides);
+            const response = yield this.pluginsCatalogRegisterPluginRaw({ name: name, pluginsCatalogRegisterPluginRequest: pluginsCatalogRegisterPluginRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2804,9 +2845,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/plugins/catalog/{type}/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'type'}}`, encodeURIComponent(String(requestParameters['type']))),
+                path: `/sys/plugins/catalog/{type}/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"type"}}`, encodeURIComponent(String(requestParameters['type']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2820,11 +2859,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     pluginsCatalogRegisterPluginWithType(name, type, pluginsCatalogRegisterPluginWithTypeRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.pluginsCatalogRegisterPluginWithTypeRaw({
-                name: name,
-                type: type,
-                pluginsCatalogRegisterPluginWithTypeRequest: pluginsCatalogRegisterPluginWithTypeRequest,
-            }, initOverrides);
+            const response = yield this.pluginsCatalogRegisterPluginWithTypeRaw({ name: name, type: type, pluginsCatalogRegisterPluginWithTypeRequest: pluginsCatalogRegisterPluginWithTypeRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2838,7 +2874,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/plugins/catalog/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/plugins/catalog/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2851,7 +2887,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     pluginsCatalogRemovePlugin(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.pluginsCatalogRemovePluginRaw({ name: name }, initOverrides);
+            const response = yield this.pluginsCatalogRemovePluginRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2868,9 +2905,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/plugins/catalog/{type}/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'type'}}`, encodeURIComponent(String(requestParameters['type']))),
+                path: `/sys/plugins/catalog/{type}/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"type"}}`, encodeURIComponent(String(requestParameters['type']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2883,7 +2918,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     pluginsCatalogRemovePluginWithType(name, type, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.pluginsCatalogRemovePluginWithTypeRaw({ name: name, type: type }, initOverrides);
+            const response = yield this.pluginsCatalogRemovePluginWithTypeRaw({ name: name, type: type }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2984,9 +3020,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/plugins/runtimes/catalog/{type}/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'type'}}`, encodeURIComponent(String(requestParameters['type']))),
+                path: `/sys/plugins/runtimes/catalog/{type}/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"type"}}`, encodeURIComponent(String(requestParameters['type']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3021,9 +3055,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/plugins/runtimes/catalog/{type}/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'type'}}`, encodeURIComponent(String(requestParameters['type']))),
+                path: `/sys/plugins/runtimes/catalog/{type}/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"type"}}`, encodeURIComponent(String(requestParameters['type']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3037,11 +3069,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     pluginsRuntimesCatalogRegisterPluginRuntime(name, type, pluginsRuntimesCatalogRegisterPluginRuntimeRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.pluginsRuntimesCatalogRegisterPluginRuntimeRaw({
-                name: name,
-                type: type,
-                pluginsRuntimesCatalogRegisterPluginRuntimeRequest: pluginsRuntimesCatalogRegisterPluginRuntimeRequest,
-            }, initOverrides);
+            const response = yield this.pluginsRuntimesCatalogRegisterPluginRuntimeRaw({ name: name, type: type, pluginsRuntimesCatalogRegisterPluginRuntimeRequest: pluginsRuntimesCatalogRegisterPluginRuntimeRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3058,9 +3087,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/plugins/runtimes/catalog/{type}/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'type'}}`, encodeURIComponent(String(requestParameters['type']))),
+                path: `/sys/plugins/runtimes/catalog/{type}/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"type"}}`, encodeURIComponent(String(requestParameters['type']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3073,7 +3100,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     pluginsRuntimesCatalogRemovePluginRuntime(name, type, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.pluginsRuntimesCatalogRemovePluginRuntimeRaw({ name: name, type: type }, initOverrides);
+            const response = yield this.pluginsRuntimesCatalogRemovePluginRuntimeRaw({ name: name, type: type }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3087,7 +3115,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/policies/acl/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/policies/acl/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3100,7 +3128,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     policiesDeleteAclPolicy(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.policiesDeleteAclPolicyRaw({ name: name }, initOverrides);
+            const response = yield this.policiesDeleteAclPolicyRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3114,7 +3143,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/policy/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/policy/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3127,7 +3156,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     policiesDeleteAclPolicy2(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.policiesDeleteAclPolicy2Raw({ name: name }, initOverrides);
+            const response = yield this.policiesDeleteAclPolicy2Raw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3141,7 +3171,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/policies/password/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/policies/password/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3154,7 +3184,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     policiesDeletePasswordPolicy(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.policiesDeletePasswordPolicyRaw({ name: name }, initOverrides);
+            const response = yield this.policiesDeletePasswordPolicyRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3168,7 +3199,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/policies/password/{name}/generate`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/policies/password/{name}/generate`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3308,7 +3339,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/policies/acl/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/policies/acl/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3336,7 +3367,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/policy/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/policy/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3364,7 +3395,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/policies/password/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/policies/password/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3396,7 +3427,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/policies/acl/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/policies/acl/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3410,7 +3441,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     policiesWriteAclPolicy(name, policiesWriteAclPolicyRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.policiesWriteAclPolicyRaw({ name: name, policiesWriteAclPolicyRequest: policiesWriteAclPolicyRequest }, initOverrides);
+            const response = yield this.policiesWriteAclPolicyRaw({ name: name, policiesWriteAclPolicyRequest: policiesWriteAclPolicyRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3428,7 +3460,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/policy/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/policy/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3442,7 +3474,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     policiesWriteAclPolicy2(name, policiesWriteAclPolicy2Request, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.policiesWriteAclPolicy2Raw({ name: name, policiesWriteAclPolicy2Request: policiesWriteAclPolicy2Request }, initOverrides);
+            const response = yield this.policiesWriteAclPolicy2Raw({ name: name, policiesWriteAclPolicy2Request: policiesWriteAclPolicy2Request }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3460,7 +3493,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/policies/password/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/policies/password/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3474,7 +3507,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     policiesWritePasswordPolicy(name, policiesWritePasswordPolicyRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.policiesWritePasswordPolicyRaw({ name: name, policiesWritePasswordPolicyRequest: policiesWritePasswordPolicyRequest }, initOverrides);
+            const response = yield this.policiesWritePasswordPolicyRaw({ name: name, policiesWritePasswordPolicyRequest: policiesWritePasswordPolicyRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3500,7 +3534,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     pprofBlocking(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.pprofBlockingRaw(initOverrides);
+            const response = yield this.pprofBlockingRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3526,7 +3561,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     pprofCommandLine(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.pprofCommandLineRaw(initOverrides);
+            const response = yield this.pprofCommandLineRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3552,7 +3588,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     pprofCpuProfile(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.pprofCpuProfileRaw(initOverrides);
+            const response = yield this.pprofCpuProfileRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3578,7 +3615,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     pprofExecutionTrace(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.pprofExecutionTraceRaw(initOverrides);
+            const response = yield this.pprofExecutionTraceRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3604,7 +3642,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     pprofGoroutines(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.pprofGoroutinesRaw(initOverrides);
+            const response = yield this.pprofGoroutinesRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3630,7 +3669,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     pprofIndex(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.pprofIndexRaw(initOverrides);
+            const response = yield this.pprofIndexRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3656,7 +3696,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     pprofMemoryAllocations(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.pprofMemoryAllocationsRaw(initOverrides);
+            const response = yield this.pprofMemoryAllocationsRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3682,7 +3723,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     pprofMemoryAllocationsLive(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.pprofMemoryAllocationsLiveRaw(initOverrides);
+            const response = yield this.pprofMemoryAllocationsLiveRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3708,7 +3750,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     pprofMutexes(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.pprofMutexesRaw(initOverrides);
+            const response = yield this.pprofMutexesRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3734,7 +3777,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     pprofSymbols(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.pprofSymbolsRaw(initOverrides);
+            const response = yield this.pprofSymbolsRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3760,7 +3804,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     pprofThreadCreations(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.pprofThreadCreationsRaw(initOverrides);
+            const response = yield this.pprofThreadCreationsRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3787,7 +3832,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     queryTokenAccessorCapabilities(queryTokenAccessorCapabilitiesRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.queryTokenAccessorCapabilitiesRaw({ queryTokenAccessorCapabilitiesRequest: queryTokenAccessorCapabilitiesRequest }, initOverrides);
+            const response = yield this.queryTokenAccessorCapabilitiesRaw({ queryTokenAccessorCapabilitiesRequest: queryTokenAccessorCapabilitiesRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3814,7 +3860,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     queryTokenCapabilities(queryTokenCapabilitiesRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.queryTokenCapabilitiesRaw({ queryTokenCapabilitiesRequest: queryTokenCapabilitiesRequest }, initOverrides);
+            const response = yield this.queryTokenCapabilitiesRaw({ queryTokenCapabilitiesRequest: queryTokenCapabilitiesRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3841,7 +3888,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     queryTokenSelfCapabilities(queryTokenSelfCapabilitiesRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.queryTokenSelfCapabilitiesRaw({ queryTokenSelfCapabilitiesRequest: queryTokenSelfCapabilitiesRequest }, initOverrides);
+            const response = yield this.queryTokenSelfCapabilitiesRaw({ queryTokenSelfCapabilitiesRequest: queryTokenSelfCapabilitiesRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3868,7 +3916,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     rateLimitQuotasConfigure(rateLimitQuotasConfigureRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.rateLimitQuotasConfigureRaw({ rateLimitQuotasConfigureRequest: rateLimitQuotasConfigureRequest }, initOverrides);
+            const response = yield this.rateLimitQuotasConfigureRaw({ rateLimitQuotasConfigureRequest: rateLimitQuotasConfigureRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3881,7 +3930,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/quotas/rate-limit/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/quotas/rate-limit/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3893,7 +3942,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     rateLimitQuotasDelete(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.rateLimitQuotasDeleteRaw({ name: name }, initOverrides);
+            const response = yield this.rateLimitQuotasDeleteRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3935,7 +3985,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/quotas/rate-limit/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/quotas/rate-limit/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3988,7 +4038,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/quotas/rate-limit/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/quotas/rate-limit/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4001,7 +4051,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     rateLimitQuotasWrite(name, rateLimitQuotasWriteRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.rateLimitQuotasWriteRaw({ name: name, rateLimitQuotasWriteRequest: rateLimitQuotasWriteRequest }, initOverrides);
+            const response = yield this.rateLimitQuotasWriteRaw({ name: name, rateLimitQuotasWriteRequest: rateLimitQuotasWriteRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4015,7 +4066,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/raw/{path}`.replace(`{${'path'}}`, encodeURIComponent(String(requestParameters['path']))),
+                path: `/sys/raw/{path}`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4028,7 +4079,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     rawDelete(path, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.rawDeleteRaw({ path: path }, initOverrides);
+            const response = yield this.rawDeleteRaw({ path: path }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4048,7 +4100,7 @@ export class SystemApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/raw/{path}/`.replace(`{${'path'}}`, encodeURIComponent(String(requestParameters['path']))),
+                path: `/sys/raw/{path}/`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4076,7 +4128,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/raw/{path}`.replace(`{${'path'}}`, encodeURIComponent(String(requestParameters['path']))),
+                path: `/sys/raw/{path}`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4108,7 +4160,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/raw/{path}`.replace(`{${'path'}}`, encodeURIComponent(String(requestParameters['path']))),
+                path: `/sys/raw/{path}`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4122,7 +4174,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     rawWrite(path, rawWriteRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.rawWriteRaw({ path: path, rawWriteRequest: rawWriteRequest }, initOverrides);
+            const response = yield this.rawWriteRaw({ path: path, rawWriteRequest: rawWriteRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4146,7 +4199,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     readActivationFlags(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.readActivationFlagsRaw(initOverrides);
+            const response = yield this.readActivationFlagsRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4170,7 +4224,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     readHealthStatus(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.readHealthStatusRaw(initOverrides);
+            const response = yield this.readHealthStatusRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4194,7 +4249,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     readInitializationStatus(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.readInitializationStatusRaw(initOverrides);
+            const response = yield this.readInitializationStatusRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4220,7 +4276,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     readSanitizedConfigurationState(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.readSanitizedConfigurationStateRaw(initOverrides);
+            const response = yield this.readSanitizedConfigurationStateRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4244,7 +4301,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     readVerbosityLevelFor(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.readVerbosityLevelForRaw(initOverrides);
+            const response = yield this.readVerbosityLevelForRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4268,7 +4326,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     readVerbosityLevelFor_4(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.readVerbosityLevelFor_4Raw(initOverrides);
+            const response = yield this.readVerbosityLevelFor_4Raw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4352,7 +4411,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     rekeyAttemptCancel(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.rekeyAttemptCancelRaw(initOverrides);
+            const response = yield this.rekeyAttemptCancelRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4463,7 +4523,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     rekeyDeleteBackupKey(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.rekeyDeleteBackupKeyRaw(initOverrides);
+            const response = yield this.rekeyDeleteBackupKeyRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4485,7 +4546,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     rekeyDeleteBackupRecoveryKey(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.rekeyDeleteBackupRecoveryKeyRaw(initOverrides);
+            const response = yield this.rekeyDeleteBackupRecoveryKeyRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4637,9 +4699,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/plugins/reload/{type}/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'type'}}`, encodeURIComponent(String(requestParameters['type']))),
+                path: `/sys/plugins/reload/{type}/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"type"}}`, encodeURIComponent(String(requestParameters['type']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4669,7 +4729,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/config/reload/{subsystem}`.replace(`{${'subsystem'}}`, encodeURIComponent(String(requestParameters['subsystem']))),
+                path: `/sys/config/reload/{subsystem}`.replace(`{${"subsystem"}}`, encodeURIComponent(String(requestParameters['subsystem']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4682,7 +4742,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     reloadSubsystem(subsystem, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.reloadSubsystemRaw({ subsystem: subsystem }, initOverrides);
+            const response = yield this.reloadSubsystemRaw({ subsystem: subsystem }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4726,7 +4787,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/remount/status/{migration_id}`.replace(`{${'migration_id'}}`, encodeURIComponent(String(requestParameters['migrationId']))),
+                path: `/sys/remount/status/{migration_id}`.replace(`{${"migration_id"}}`, encodeURIComponent(String(requestParameters['migrationId']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4767,7 +4828,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     rewrap(rewrapRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.rewrapRaw({ rewrapRequest: rewrapRequest }, initOverrides);
+            const response = yield this.rewrapRaw({ rewrapRequest: rewrapRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4791,7 +4853,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     rootTokenGenerationCancel(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.rootTokenGenerationCancelRaw(initOverrides);
+            const response = yield this.rootTokenGenerationCancelRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4815,7 +4878,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     rootTokenGenerationCancel2(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.rootTokenGenerationCancel2Raw(initOverrides);
+            const response = yield this.rootTokenGenerationCancel2Raw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4985,7 +5049,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     seal(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.sealRaw(initOverrides);
+            const response = yield this.sealRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5036,7 +5101,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     stepDownLeader(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.stepDownLeaderRaw(initOverrides);
+            const response = yield this.stepDownLeaderRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5053,9 +5119,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/events/subscriptions/{plugin}/{id}`
-                    .replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id'])))
-                    .replace(`{${'plugin'}}`, encodeURIComponent(String(requestParameters['plugin']))),
+                path: `/sys/events/subscriptions/{plugin}/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))).replace(`{${"plugin"}}`, encodeURIComponent(String(requestParameters['plugin']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5086,9 +5150,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/events/subscriptions/{plugin}/{id}`
-                    .replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id'])))
-                    .replace(`{${'plugin'}}`, encodeURIComponent(String(requestParameters['plugin']))),
+                path: `/sys/events/subscriptions/{plugin}/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))).replace(`{${"plugin"}}`, encodeURIComponent(String(requestParameters['plugin']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5101,7 +5163,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     subscriptionsCreate_5(id, plugin, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.subscriptionsCreate_5Raw({ id: id, plugin: plugin }, initOverrides);
+            const response = yield this.subscriptionsCreate_5Raw({ id: id, plugin: plugin }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5211,7 +5274,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemDeleteConfigControlGroup(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemDeleteConfigControlGroupRaw(initOverrides);
+            const response = yield this.systemDeleteConfigControlGroupRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5227,9 +5291,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/managed-keys/{type}/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'type'}}`, encodeURIComponent(String(requestParameters['type']))),
+                path: `/sys/managed-keys/{type}/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"type"}}`, encodeURIComponent(String(requestParameters['type']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5241,7 +5303,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemDeleteManagedKeysTypeName(name, type, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemDeleteManagedKeysTypeNameRaw({ name: name, type: type }, initOverrides);
+            const response = yield this.systemDeleteManagedKeysTypeNameRaw({ name: name, type: type }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5255,7 +5318,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/mfa/method/duo/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/mfa/method/duo/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5268,7 +5331,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemDeleteMfaMethodDuoName(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemDeleteMfaMethodDuoNameRaw({ name: name }, initOverrides);
+            const response = yield this.systemDeleteMfaMethodDuoNameRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5282,7 +5346,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/mfa/method/okta/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/mfa/method/okta/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5295,7 +5359,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemDeleteMfaMethodOktaName(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemDeleteMfaMethodOktaNameRaw({ name: name }, initOverrides);
+            const response = yield this.systemDeleteMfaMethodOktaNameRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5309,7 +5374,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/mfa/method/pingid/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/mfa/method/pingid/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5322,7 +5387,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemDeleteMfaMethodPingidName(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemDeleteMfaMethodPingidNameRaw({ name: name }, initOverrides);
+            const response = yield this.systemDeleteMfaMethodPingidNameRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5336,7 +5402,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/mfa/method/totp/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/mfa/method/totp/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5349,7 +5415,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemDeleteMfaMethodTotpName(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemDeleteMfaMethodTotpNameRaw({ name: name }, initOverrides);
+            const response = yield this.systemDeleteMfaMethodTotpNameRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5362,7 +5429,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/namespaces/{path}`.replace(`{${'path'}}`, encodeURIComponent(String(requestParameters['path']))),
+                path: `/sys/namespaces/{path}`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5374,7 +5441,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemDeleteNamespacesPath(path, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemDeleteNamespacesPathRaw({ path: path }, initOverrides);
+            const response = yield this.systemDeleteNamespacesPathRaw({ path: path }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5388,7 +5456,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/policies/egp/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/policies/egp/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5401,7 +5469,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemDeletePoliciesEgpName(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemDeletePoliciesEgpNameRaw({ name: name }, initOverrides);
+            const response = yield this.systemDeletePoliciesEgpNameRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5415,7 +5484,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/policies/rgp/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/policies/rgp/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5428,7 +5497,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemDeletePoliciesRgpName(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemDeletePoliciesRgpNameRaw({ name: name }, initOverrides);
+            const response = yield this.systemDeletePoliciesRgpNameRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5441,7 +5511,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/quotas/lease-count/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/quotas/lease-count/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5453,7 +5523,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemDeleteQuotasLeaseCountName(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemDeleteQuotasLeaseCountNameRaw({ name: name }, initOverrides);
+            const response = yield this.systemDeleteQuotasLeaseCountNameRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5466,7 +5537,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/replication/performance/primary/paths-filter/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id']))),
+                path: `/sys/replication/performance/primary/paths-filter/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5478,7 +5549,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemDeleteReplicationPerformancePrimaryPathsFilterId(id, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemDeleteReplicationPerformancePrimaryPathsFilterIdRaw({ id: id }, initOverrides);
+            const response = yield this.systemDeleteReplicationPerformancePrimaryPathsFilterIdRaw({ id: id }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5492,7 +5564,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/storage/raft/snapshot-auto/config/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/storage/raft/snapshot-auto/config/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5505,7 +5577,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemDeleteStorageRaftSnapshotAutoConfigName(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemDeleteStorageRaftSnapshotAutoConfigNameRaw({ name: name }, initOverrides);
+            const response = yield this.systemDeleteStorageRaftSnapshotAutoConfigNameRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5541,7 +5614,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/sync/destinations/aws-sm/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/sync/destinations/aws-sm/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5553,7 +5626,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemDeleteSyncDestinationsAwsSmName(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemDeleteSyncDestinationsAwsSmNameRaw({ name: name }, initOverrides);
+            const response = yield this.systemDeleteSyncDestinationsAwsSmNameRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5566,7 +5640,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/sync/destinations/azure-kv/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/sync/destinations/azure-kv/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5578,7 +5652,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemDeleteSyncDestinationsAzureKvName(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemDeleteSyncDestinationsAzureKvNameRaw({ name: name }, initOverrides);
+            const response = yield this.systemDeleteSyncDestinationsAzureKvNameRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5591,7 +5666,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/sync/destinations/gcp-sm/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/sync/destinations/gcp-sm/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5603,7 +5678,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemDeleteSyncDestinationsGcpSmName(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemDeleteSyncDestinationsGcpSmNameRaw({ name: name }, initOverrides);
+            const response = yield this.systemDeleteSyncDestinationsGcpSmNameRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5616,7 +5692,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/sync/destinations/gh/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/sync/destinations/gh/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5628,7 +5704,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemDeleteSyncDestinationsGhName(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemDeleteSyncDestinationsGhNameRaw({ name: name }, initOverrides);
+            const response = yield this.systemDeleteSyncDestinationsGhNameRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5641,7 +5718,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/sync/destinations/in-mem/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/sync/destinations/in-mem/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5653,7 +5730,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemDeleteSyncDestinationsInMemName(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemDeleteSyncDestinationsInMemNameRaw({ name: name }, initOverrides);
+            const response = yield this.systemDeleteSyncDestinationsInMemNameRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5666,7 +5744,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/sync/destinations/vercel-project/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/sync/destinations/vercel-project/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5678,7 +5756,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemDeleteSyncDestinationsVercelProjectName(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemDeleteSyncDestinationsVercelProjectNameRaw({ name: name }, initOverrides);
+            const response = yield this.systemDeleteSyncDestinationsVercelProjectNameRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5691,7 +5770,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/sync/github-apps/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/sync/github-apps/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5723,7 +5802,7 @@ export class SystemApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/managed-keys/{type}/`.replace(`{${'type'}}`, encodeURIComponent(String(requestParameters['type']))),
+                path: `/sys/managed-keys/{type}/`.replace(`{${"type"}}`, encodeURIComponent(String(requestParameters['type']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5995,7 +6074,7 @@ export class SystemApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/sync/destinations/{type}/`.replace(`{${'type'}}`, encodeURIComponent(String(requestParameters['type']))),
+                path: `/sys/sync/destinations/{type}/`.replace(`{${"type"}}`, encodeURIComponent(String(requestParameters['type']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6061,7 +6140,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemReadConfigControlGroup(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemReadConfigControlGroupRaw(initOverrides);
+            const response = yield this.systemReadConfigControlGroupRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6112,7 +6192,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemReadLicenseStatus(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemReadLicenseStatusRaw(initOverrides);
+            const response = yield this.systemReadLicenseStatusRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6128,9 +6209,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/managed-keys/{type}/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'type'}}`, encodeURIComponent(String(requestParameters['type']))),
+                path: `/sys/managed-keys/{type}/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"type"}}`, encodeURIComponent(String(requestParameters['type']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6142,7 +6221,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemReadManagedKeysTypeName(name, type, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemReadManagedKeysTypeNameRaw({ name: name, type: type }, initOverrides);
+            const response = yield this.systemReadManagedKeysTypeNameRaw({ name: name, type: type }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6156,7 +6236,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/mfa/method/duo/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/mfa/method/duo/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6169,7 +6249,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemReadMfaMethodDuoName(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemReadMfaMethodDuoNameRaw({ name: name }, initOverrides);
+            const response = yield this.systemReadMfaMethodDuoNameRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6183,7 +6264,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/mfa/method/okta/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/mfa/method/okta/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6196,7 +6277,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemReadMfaMethodOktaName(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemReadMfaMethodOktaNameRaw({ name: name }, initOverrides);
+            const response = yield this.systemReadMfaMethodOktaNameRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6210,7 +6292,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/mfa/method/pingid/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/mfa/method/pingid/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6223,7 +6305,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemReadMfaMethodPingidName(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemReadMfaMethodPingidNameRaw({ name: name }, initOverrides);
+            const response = yield this.systemReadMfaMethodPingidNameRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6237,7 +6320,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/mfa/method/totp/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/mfa/method/totp/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6250,7 +6333,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemReadMfaMethodTotpName(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemReadMfaMethodTotpNameRaw({ name: name }, initOverrides);
+            const response = yield this.systemReadMfaMethodTotpNameRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6264,7 +6348,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/mfa/method/totp/{name}/generate`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/mfa/method/totp/{name}/generate`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6277,7 +6361,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemReadMfaMethodTotpNameGenerate(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemReadMfaMethodTotpNameGenerateRaw({ name: name }, initOverrides);
+            const response = yield this.systemReadMfaMethodTotpNameGenerateRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6290,7 +6375,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/namespaces/{path}`.replace(`{${'path'}}`, encodeURIComponent(String(requestParameters['path']))),
+                path: `/sys/namespaces/{path}`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6302,7 +6387,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemReadNamespacesPath(path, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemReadNamespacesPathRaw({ path: path }, initOverrides);
+            const response = yield this.systemReadNamespacesPathRaw({ path: path }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6328,7 +6414,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemReadPluginsReloadBackendStatus(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemReadPluginsReloadBackendStatusRaw(initOverrides);
+            const response = yield this.systemReadPluginsReloadBackendStatusRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6342,7 +6429,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/policies/egp/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/policies/egp/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6355,7 +6442,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemReadPoliciesEgpName(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemReadPoliciesEgpNameRaw({ name: name }, initOverrides);
+            const response = yield this.systemReadPoliciesEgpNameRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6369,7 +6457,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/policies/rgp/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/policies/rgp/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6382,7 +6470,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemReadPoliciesRgpName(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemReadPoliciesRgpNameRaw({ name: name }, initOverrides);
+            const response = yield this.systemReadPoliciesRgpNameRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6395,7 +6484,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/quotas/lease-count/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/quotas/lease-count/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6407,7 +6496,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemReadQuotasLeaseCountName(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemReadQuotasLeaseCountNameRaw({ name: name }, initOverrides);
+            const response = yield this.systemReadQuotasLeaseCountNameRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6429,7 +6519,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemReadReplicationDrSecondaryLicenseStatus(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemReadReplicationDrSecondaryLicenseStatusRaw(initOverrides);
+            const response = yield this.systemReadReplicationDrSecondaryLicenseStatusRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6451,7 +6542,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemReadReplicationDrStatus(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemReadReplicationDrStatusRaw(initOverrides);
+            const response = yield this.systemReadReplicationDrStatusRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6464,7 +6556,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/replication/performance/primary/dynamic-filter/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id']))),
+                path: `/sys/replication/performance/primary/dynamic-filter/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6476,7 +6568,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemReadReplicationPerformancePrimaryDynamicFilterId(id, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemReadReplicationPerformancePrimaryDynamicFilterIdRaw({ id: id }, initOverrides);
+            const response = yield this.systemReadReplicationPerformancePrimaryDynamicFilterIdRaw({ id: id }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6489,7 +6582,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/replication/performance/primary/paths-filter/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id']))),
+                path: `/sys/replication/performance/primary/paths-filter/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6501,7 +6594,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemReadReplicationPerformancePrimaryPathsFilterId(id, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemReadReplicationPerformancePrimaryPathsFilterIdRaw({ id: id }, initOverrides);
+            const response = yield this.systemReadReplicationPerformancePrimaryPathsFilterIdRaw({ id: id }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6514,7 +6608,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/replication/performance/secondary/dynamic-filter/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id']))),
+                path: `/sys/replication/performance/secondary/dynamic-filter/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6526,7 +6620,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemReadReplicationPerformanceSecondaryDynamicFilterId(id, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemReadReplicationPerformanceSecondaryDynamicFilterIdRaw({ id: id }, initOverrides);
+            const response = yield this.systemReadReplicationPerformanceSecondaryDynamicFilterIdRaw({ id: id }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6548,7 +6643,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemReadReplicationPerformanceStatus(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemReadReplicationPerformanceStatusRaw(initOverrides);
+            const response = yield this.systemReadReplicationPerformanceStatusRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6570,7 +6666,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemReadReplicationStatus(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemReadReplicationStatusRaw(initOverrides);
+            const response = yield this.systemReadReplicationStatusRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6594,7 +6691,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemReadSealwrapRewrap(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemReadSealwrapRewrapRaw(initOverrides);
+            const response = yield this.systemReadSealwrapRewrapRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6608,7 +6706,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/storage/raft/snapshot-auto/config/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/storage/raft/snapshot-auto/config/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6621,7 +6719,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemReadStorageRaftSnapshotAutoConfigName(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemReadStorageRaftSnapshotAutoConfigNameRaw({ name: name }, initOverrides);
+            const response = yield this.systemReadStorageRaftSnapshotAutoConfigNameRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6635,7 +6734,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/storage/raft/snapshot-auto/status/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/storage/raft/snapshot-auto/status/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6648,7 +6747,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemReadStorageRaftSnapshotAutoStatusName(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemReadStorageRaftSnapshotAutoStatusNameRaw({ name: name }, initOverrides);
+            const response = yield this.systemReadStorageRaftSnapshotAutoStatusNameRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6687,9 +6787,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/sync/associations/{mount}/{secret_name}`
-                    .replace(`{${'mount'}}`, encodeURIComponent(String(requestParameters['mount'])))
-                    .replace(`{${'secret_name'}}`, encodeURIComponent(String(requestParameters['secretName']))),
+                path: `/sys/sync/associations/{mount}/{secret_name}`.replace(`{${"mount"}}`, encodeURIComponent(String(requestParameters['mount']))).replace(`{${"secret_name"}}`, encodeURIComponent(String(requestParameters['secretName']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6738,7 +6836,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/sync/destinations/aws-sm/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/sync/destinations/aws-sm/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6764,7 +6862,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/sync/destinations/azure-kv/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/sync/destinations/azure-kv/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6790,7 +6888,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/sync/destinations/gcp-sm/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/sync/destinations/gcp-sm/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6816,7 +6914,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/sync/destinations/gh/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/sync/destinations/gh/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6842,7 +6940,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/sync/destinations/in-mem/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/sync/destinations/in-mem/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6871,9 +6969,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/sync/destinations/{type}/{name}/associations`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'type'}}`, encodeURIComponent(String(requestParameters['type']))),
+                path: `/sys/sync/destinations/{type}/{name}/associations`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"type"}}`, encodeURIComponent(String(requestParameters['type']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6899,7 +6995,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/sync/destinations/vercel-project/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/sync/destinations/vercel-project/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6925,7 +7021,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/sync/github-apps/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/sync/github-apps/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6967,7 +7063,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteConfigControlGroup(systemWriteConfigControlGroupRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteConfigControlGroupRaw({ systemWriteConfigControlGroupRequest: systemWriteConfigControlGroupRequest }, initOverrides);
+            const response = yield this.systemWriteConfigControlGroupRaw({ systemWriteConfigControlGroupRequest: systemWriteConfigControlGroupRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6998,7 +7095,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteConfigGroupPolicyApplication(systemWriteConfigGroupPolicyApplicationRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteConfigGroupPolicyApplicationRaw({ systemWriteConfigGroupPolicyApplicationRequest: systemWriteConfigGroupPolicyApplicationRequest }, initOverrides);
+            const response = yield this.systemWriteConfigGroupPolicyApplicationRaw({ systemWriteConfigGroupPolicyApplicationRequest: systemWriteConfigGroupPolicyApplicationRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7027,7 +7125,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteControlGroupAuthorize(systemWriteControlGroupAuthorizeRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteControlGroupAuthorizeRaw({ systemWriteControlGroupAuthorizeRequest: systemWriteControlGroupAuthorizeRequest }, initOverrides);
+            const response = yield this.systemWriteControlGroupAuthorizeRaw({ systemWriteControlGroupAuthorizeRequest: systemWriteControlGroupAuthorizeRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7056,7 +7155,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteControlGroupRequest(systemWriteControlGroupRequestRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteControlGroupRequestRaw({ systemWriteControlGroupRequestRequest: systemWriteControlGroupRequestRequest }, initOverrides);
+            const response = yield this.systemWriteControlGroupRequestRaw({ systemWriteControlGroupRequestRequest: systemWriteControlGroupRequestRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7085,7 +7185,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteInternalCountersActivityWrite(systemWriteInternalCountersActivityWriteRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteInternalCountersActivityWriteRaw({ systemWriteInternalCountersActivityWriteRequest: systemWriteInternalCountersActivityWriteRequest }, initOverrides);
+            const response = yield this.systemWriteInternalCountersActivityWriteRaw({ systemWriteInternalCountersActivityWriteRequest: systemWriteInternalCountersActivityWriteRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7105,9 +7206,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/managed-keys/{type}/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'type'}}`, encodeURIComponent(String(requestParameters['type']))),
+                path: `/sys/managed-keys/{type}/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"type"}}`, encodeURIComponent(String(requestParameters['type']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7120,11 +7219,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteManagedKeysTypeName(name, type, systemWriteManagedKeysTypeNameRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteManagedKeysTypeNameRaw({
-                name: name,
-                type: type,
-                systemWriteManagedKeysTypeNameRequest: systemWriteManagedKeysTypeNameRequest,
-            }, initOverrides);
+            const response = yield this.systemWriteManagedKeysTypeNameRaw({ name: name, type: type, systemWriteManagedKeysTypeNameRequest: systemWriteManagedKeysTypeNameRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7144,9 +7240,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/managed-keys/{type}/{name}/test/sign`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'type'}}`, encodeURIComponent(String(requestParameters['type']))),
+                path: `/sys/managed-keys/{type}/{name}/test/sign`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"type"}}`, encodeURIComponent(String(requestParameters['type']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7159,11 +7253,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteManagedKeysTypeNameTestSign(name, type, systemWriteManagedKeysTypeNameTestSignRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteManagedKeysTypeNameTestSignRaw({
-                name: name,
-                type: type,
-                systemWriteManagedKeysTypeNameTestSignRequest: systemWriteManagedKeysTypeNameTestSignRequest,
-            }, initOverrides);
+            const response = yield this.systemWriteManagedKeysTypeNameTestSignRaw({ name: name, type: type, systemWriteManagedKeysTypeNameTestSignRequest: systemWriteManagedKeysTypeNameTestSignRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7181,7 +7272,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/mfa/method/duo/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/mfa/method/duo/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7195,7 +7286,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteMfaMethodDuoName(name, systemWriteMfaMethodDuoNameRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteMfaMethodDuoNameRaw({ name: name, systemWriteMfaMethodDuoNameRequest: systemWriteMfaMethodDuoNameRequest }, initOverrides);
+            const response = yield this.systemWriteMfaMethodDuoNameRaw({ name: name, systemWriteMfaMethodDuoNameRequest: systemWriteMfaMethodDuoNameRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7213,7 +7305,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/mfa/method/okta/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/mfa/method/okta/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7227,7 +7319,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteMfaMethodOktaName(name, systemWriteMfaMethodOktaNameRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteMfaMethodOktaNameRaw({ name: name, systemWriteMfaMethodOktaNameRequest: systemWriteMfaMethodOktaNameRequest }, initOverrides);
+            const response = yield this.systemWriteMfaMethodOktaNameRaw({ name: name, systemWriteMfaMethodOktaNameRequest: systemWriteMfaMethodOktaNameRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7245,7 +7338,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/mfa/method/pingid/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/mfa/method/pingid/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7259,7 +7352,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteMfaMethodPingidName(name, systemWriteMfaMethodPingidNameRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteMfaMethodPingidNameRaw({ name: name, systemWriteMfaMethodPingidNameRequest: systemWriteMfaMethodPingidNameRequest }, initOverrides);
+            const response = yield this.systemWriteMfaMethodPingidNameRaw({ name: name, systemWriteMfaMethodPingidNameRequest: systemWriteMfaMethodPingidNameRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7277,7 +7371,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/mfa/method/totp/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/mfa/method/totp/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7291,7 +7385,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteMfaMethodTotpName(name, systemWriteMfaMethodTotpNameRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteMfaMethodTotpNameRaw({ name: name, systemWriteMfaMethodTotpNameRequest: systemWriteMfaMethodTotpNameRequest }, initOverrides);
+            const response = yield this.systemWriteMfaMethodTotpNameRaw({ name: name, systemWriteMfaMethodTotpNameRequest: systemWriteMfaMethodTotpNameRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7309,7 +7404,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/mfa/method/totp/{name}/admin-destroy`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/mfa/method/totp/{name}/admin-destroy`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7323,10 +7418,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteMfaMethodTotpNameAdminDestroy(name, systemWriteMfaMethodTotpNameAdminDestroyRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteMfaMethodTotpNameAdminDestroyRaw({
-                name: name,
-                systemWriteMfaMethodTotpNameAdminDestroyRequest: systemWriteMfaMethodTotpNameAdminDestroyRequest,
-            }, initOverrides);
+            const response = yield this.systemWriteMfaMethodTotpNameAdminDestroyRaw({ name: name, systemWriteMfaMethodTotpNameAdminDestroyRequest: systemWriteMfaMethodTotpNameAdminDestroyRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7344,7 +7437,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/mfa/method/totp/{name}/admin-generate`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/mfa/method/totp/{name}/admin-generate`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7358,10 +7451,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteMfaMethodTotpNameAdminGenerate(name, systemWriteMfaMethodTotpNameAdminGenerateRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteMfaMethodTotpNameAdminGenerateRaw({
-                name: name,
-                systemWriteMfaMethodTotpNameAdminGenerateRequest: systemWriteMfaMethodTotpNameAdminGenerateRequest,
-            }, initOverrides);
+            const response = yield this.systemWriteMfaMethodTotpNameAdminGenerateRaw({ name: name, systemWriteMfaMethodTotpNameAdminGenerateRequest: systemWriteMfaMethodTotpNameAdminGenerateRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7385,7 +7476,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteNamespacesApiLockLock(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteNamespacesApiLockLockRaw(initOverrides);
+            const response = yield this.systemWriteNamespacesApiLockLockRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7399,7 +7491,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/namespaces/api-lock/lock/{path}`.replace(`{${'path'}}`, encodeURIComponent(String(requestParameters['path']))),
+                path: `/sys/namespaces/api-lock/lock/{path}`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7412,7 +7504,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteNamespacesApiLockLockPath(path, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteNamespacesApiLockLockPathRaw({ path: path }, initOverrides);
+            const response = yield this.systemWriteNamespacesApiLockLockPathRaw({ path: path }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7441,7 +7534,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteNamespacesApiLockUnlock(systemWriteNamespacesApiLockUnlockRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteNamespacesApiLockUnlockRaw({ systemWriteNamespacesApiLockUnlockRequest: systemWriteNamespacesApiLockUnlockRequest }, initOverrides);
+            const response = yield this.systemWriteNamespacesApiLockUnlockRaw({ systemWriteNamespacesApiLockUnlockRequest: systemWriteNamespacesApiLockUnlockRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7459,7 +7553,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/namespaces/api-lock/unlock/{path}`.replace(`{${'path'}}`, encodeURIComponent(String(requestParameters['path']))),
+                path: `/sys/namespaces/api-lock/unlock/{path}`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7473,10 +7567,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteNamespacesApiLockUnlockPath(path, systemWriteNamespacesApiLockUnlockPathRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteNamespacesApiLockUnlockPathRaw({
-                path: path,
-                systemWriteNamespacesApiLockUnlockPathRequest: systemWriteNamespacesApiLockUnlockPathRequest,
-            }, initOverrides);
+            const response = yield this.systemWriteNamespacesApiLockUnlockPathRaw({ path: path, systemWriteNamespacesApiLockUnlockPathRequest: systemWriteNamespacesApiLockUnlockPathRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7493,7 +7585,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/namespaces/{path}`.replace(`{${'path'}}`, encodeURIComponent(String(requestParameters['path']))),
+                path: `/sys/namespaces/{path}`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7506,7 +7598,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteNamespacesPath(path, systemWriteNamespacesPathRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteNamespacesPathRaw({ path: path, systemWriteNamespacesPathRequest: systemWriteNamespacesPathRequest }, initOverrides);
+            const response = yield this.systemWriteNamespacesPathRaw({ path: path, systemWriteNamespacesPathRequest: systemWriteNamespacesPathRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7524,7 +7617,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/policies/egp/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/policies/egp/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7538,7 +7631,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWritePoliciesEgpName(name, systemWritePoliciesEgpNameRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWritePoliciesEgpNameRaw({ name: name, systemWritePoliciesEgpNameRequest: systemWritePoliciesEgpNameRequest }, initOverrides);
+            const response = yield this.systemWritePoliciesEgpNameRaw({ name: name, systemWritePoliciesEgpNameRequest: systemWritePoliciesEgpNameRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7556,7 +7650,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/policies/rgp/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/policies/rgp/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7570,7 +7664,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWritePoliciesRgpName(name, systemWritePoliciesRgpNameRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWritePoliciesRgpNameRaw({ name: name, systemWritePoliciesRgpNameRequest: systemWritePoliciesRgpNameRequest }, initOverrides);
+            const response = yield this.systemWritePoliciesRgpNameRaw({ name: name, systemWritePoliciesRgpNameRequest: systemWritePoliciesRgpNameRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7587,7 +7682,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/quotas/lease-count/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/quotas/lease-count/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7600,7 +7695,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteQuotasLeaseCountName(name, systemWriteQuotasLeaseCountNameRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteQuotasLeaseCountNameRaw({ name: name, systemWriteQuotasLeaseCountNameRequest: systemWriteQuotasLeaseCountNameRequest }, initOverrides);
+            const response = yield this.systemWriteQuotasLeaseCountNameRaw({ name: name, systemWriteQuotasLeaseCountNameRequest: systemWriteQuotasLeaseCountNameRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7622,7 +7718,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationDrPrimaryDemote(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationDrPrimaryDemoteRaw(initOverrides);
+            const response = yield this.systemWriteReplicationDrPrimaryDemoteRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7644,7 +7741,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationDrPrimaryDisable(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationDrPrimaryDisableRaw(initOverrides);
+            const response = yield this.systemWriteReplicationDrPrimaryDisableRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7671,7 +7769,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationDrPrimaryEnable(systemWriteReplicationDrPrimaryEnableRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationDrPrimaryEnableRaw({ systemWriteReplicationDrPrimaryEnableRequest: systemWriteReplicationDrPrimaryEnableRequest }, initOverrides);
+            const response = yield this.systemWriteReplicationDrPrimaryEnableRaw({ systemWriteReplicationDrPrimaryEnableRequest: systemWriteReplicationDrPrimaryEnableRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7698,9 +7797,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationDrPrimaryRevokeSecondary(systemWriteReplicationDrPrimaryRevokeSecondaryRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationDrPrimaryRevokeSecondaryRaw({
-                systemWriteReplicationDrPrimaryRevokeSecondaryRequest: systemWriteReplicationDrPrimaryRevokeSecondaryRequest,
-            }, initOverrides);
+            const response = yield this.systemWriteReplicationDrPrimaryRevokeSecondaryRaw({ systemWriteReplicationDrPrimaryRevokeSecondaryRequest: systemWriteReplicationDrPrimaryRevokeSecondaryRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7727,9 +7825,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationDrPrimarySecondaryToken(systemWriteReplicationDrPrimarySecondaryTokenRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationDrPrimarySecondaryTokenRaw({
-                systemWriteReplicationDrPrimarySecondaryTokenRequest: systemWriteReplicationDrPrimarySecondaryTokenRequest,
-            }, initOverrides);
+            const response = yield this.systemWriteReplicationDrPrimarySecondaryTokenRaw({ systemWriteReplicationDrPrimarySecondaryTokenRequest: systemWriteReplicationDrPrimarySecondaryTokenRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7743,7 +7840,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/replication/dr/secondary/config/reload/{subsystem}`.replace(`{${'subsystem'}}`, encodeURIComponent(String(requestParameters['subsystem']))),
+                path: `/sys/replication/dr/secondary/config/reload/{subsystem}`.replace(`{${"subsystem"}}`, encodeURIComponent(String(requestParameters['subsystem']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7756,7 +7853,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationDrSecondaryConfigReloadSubsystem(subsystem, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationDrSecondaryConfigReloadSubsystemRaw({ subsystem: subsystem }, initOverrides);
+            const response = yield this.systemWriteReplicationDrSecondaryConfigReloadSubsystemRaw({ subsystem: subsystem }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7783,7 +7881,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationDrSecondaryDisable(systemWriteReplicationDrSecondaryDisableRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationDrSecondaryDisableRaw({ systemWriteReplicationDrSecondaryDisableRequest: systemWriteReplicationDrSecondaryDisableRequest }, initOverrides);
+            const response = yield this.systemWriteReplicationDrSecondaryDisableRaw({ systemWriteReplicationDrSecondaryDisableRequest: systemWriteReplicationDrSecondaryDisableRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7810,7 +7909,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationDrSecondaryEnable(systemWriteReplicationDrSecondaryEnableRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationDrSecondaryEnableRaw({ systemWriteReplicationDrSecondaryEnableRequest: systemWriteReplicationDrSecondaryEnableRequest }, initOverrides);
+            const response = yield this.systemWriteReplicationDrSecondaryEnableRaw({ systemWriteReplicationDrSecondaryEnableRequest: systemWriteReplicationDrSecondaryEnableRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7832,7 +7932,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationDrSecondaryGeneratePublicKey(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationDrSecondaryGeneratePublicKeyRaw(initOverrides);
+            const response = yield this.systemWriteReplicationDrSecondaryGeneratePublicKeyRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7859,9 +7960,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationDrSecondaryMerkleCheck(systemWriteReplicationDrSecondaryMerkleCheckRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationDrSecondaryMerkleCheckRaw({
-                systemWriteReplicationDrSecondaryMerkleCheckRequest: systemWriteReplicationDrSecondaryMerkleCheckRequest,
-            }, initOverrides);
+            const response = yield this.systemWriteReplicationDrSecondaryMerkleCheckRaw({ systemWriteReplicationDrSecondaryMerkleCheckRequest: systemWriteReplicationDrSecondaryMerkleCheckRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7888,9 +7988,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationDrSecondaryOperationTokenDelete(systemWriteReplicationDrSecondaryOperationTokenDeleteRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationDrSecondaryOperationTokenDeleteRaw({
-                systemWriteReplicationDrSecondaryOperationTokenDeleteRequest: systemWriteReplicationDrSecondaryOperationTokenDeleteRequest,
-            }, initOverrides);
+            const response = yield this.systemWriteReplicationDrSecondaryOperationTokenDeleteRaw({ systemWriteReplicationDrSecondaryOperationTokenDeleteRequest: systemWriteReplicationDrSecondaryOperationTokenDeleteRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7917,7 +8016,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationDrSecondaryPromote(systemWriteReplicationDrSecondaryPromoteRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationDrSecondaryPromoteRaw({ systemWriteReplicationDrSecondaryPromoteRequest: systemWriteReplicationDrSecondaryPromoteRequest }, initOverrides);
+            const response = yield this.systemWriteReplicationDrSecondaryPromoteRaw({ systemWriteReplicationDrSecondaryPromoteRequest: systemWriteReplicationDrSecondaryPromoteRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7944,7 +8044,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationDrSecondaryRecover(systemWriteReplicationDrSecondaryRecoverRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationDrSecondaryRecoverRaw({ systemWriteReplicationDrSecondaryRecoverRequest: systemWriteReplicationDrSecondaryRecoverRequest }, initOverrides);
+            const response = yield this.systemWriteReplicationDrSecondaryRecoverRaw({ systemWriteReplicationDrSecondaryRecoverRequest: systemWriteReplicationDrSecondaryRecoverRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7971,7 +8072,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationDrSecondaryReindex(systemWriteReplicationDrSecondaryReindexRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationDrSecondaryReindexRaw({ systemWriteReplicationDrSecondaryReindexRequest: systemWriteReplicationDrSecondaryReindexRequest }, initOverrides);
+            const response = yield this.systemWriteReplicationDrSecondaryReindexRaw({ systemWriteReplicationDrSecondaryReindexRequest: systemWriteReplicationDrSecondaryReindexRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7998,9 +8100,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationDrSecondaryUpdatePrimary(systemWriteReplicationDrSecondaryUpdatePrimaryRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationDrSecondaryUpdatePrimaryRaw({
-                systemWriteReplicationDrSecondaryUpdatePrimaryRequest: systemWriteReplicationDrSecondaryUpdatePrimaryRequest,
-            }, initOverrides);
+            const response = yield this.systemWriteReplicationDrSecondaryUpdatePrimaryRaw({ systemWriteReplicationDrSecondaryUpdatePrimaryRequest: systemWriteReplicationDrSecondaryUpdatePrimaryRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -8029,7 +8130,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationForceCorruption(systemWriteReplicationForceCorruptionRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationForceCorruptionRaw({ systemWriteReplicationForceCorruptionRequest: systemWriteReplicationForceCorruptionRequest }, initOverrides);
+            const response = yield this.systemWriteReplicationForceCorruptionRaw({ systemWriteReplicationForceCorruptionRequest: systemWriteReplicationForceCorruptionRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -8051,7 +8153,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationMerkleCheck(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationMerkleCheckRaw(initOverrides);
+            const response = yield this.systemWriteReplicationMerkleCheckRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -8073,7 +8176,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationPerformancePrimaryDemote(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationPerformancePrimaryDemoteRaw(initOverrides);
+            const response = yield this.systemWriteReplicationPerformancePrimaryDemoteRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -8095,7 +8199,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationPerformancePrimaryDisable(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationPerformancePrimaryDisableRaw(initOverrides);
+            const response = yield this.systemWriteReplicationPerformancePrimaryDisableRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -8122,9 +8227,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationPerformancePrimaryEnable(systemWriteReplicationPerformancePrimaryEnableRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationPerformancePrimaryEnableRaw({
-                systemWriteReplicationPerformancePrimaryEnableRequest: systemWriteReplicationPerformancePrimaryEnableRequest,
-            }, initOverrides);
+            const response = yield this.systemWriteReplicationPerformancePrimaryEnableRaw({ systemWriteReplicationPerformancePrimaryEnableRequest: systemWriteReplicationPerformancePrimaryEnableRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -8141,7 +8245,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/replication/performance/primary/paths-filter/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id']))),
+                path: `/sys/replication/performance/primary/paths-filter/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -8154,10 +8258,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationPerformancePrimaryPathsFilterId(id, systemWriteReplicationPerformancePrimaryPathsFilterIdRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationPerformancePrimaryPathsFilterIdRaw({
-                id: id,
-                systemWriteReplicationPerformancePrimaryPathsFilterIdRequest: systemWriteReplicationPerformancePrimaryPathsFilterIdRequest,
-            }, initOverrides);
+            const response = yield this.systemWriteReplicationPerformancePrimaryPathsFilterIdRaw({ id: id, systemWriteReplicationPerformancePrimaryPathsFilterIdRequest: systemWriteReplicationPerformancePrimaryPathsFilterIdRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -8184,9 +8286,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationPerformancePrimaryRevokeSecondary(systemWriteReplicationPerformancePrimaryRevokeSecondaryRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationPerformancePrimaryRevokeSecondaryRaw({
-                systemWriteReplicationPerformancePrimaryRevokeSecondaryRequest: systemWriteReplicationPerformancePrimaryRevokeSecondaryRequest,
-            }, initOverrides);
+            const response = yield this.systemWriteReplicationPerformancePrimaryRevokeSecondaryRaw({ systemWriteReplicationPerformancePrimaryRevokeSecondaryRequest: systemWriteReplicationPerformancePrimaryRevokeSecondaryRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -8213,9 +8314,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationPerformancePrimarySecondaryToken(systemWriteReplicationPerformancePrimarySecondaryTokenRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationPerformancePrimarySecondaryTokenRaw({
-                systemWriteReplicationPerformancePrimarySecondaryTokenRequest: systemWriteReplicationPerformancePrimarySecondaryTokenRequest,
-            }, initOverrides);
+            const response = yield this.systemWriteReplicationPerformancePrimarySecondaryTokenRaw({ systemWriteReplicationPerformancePrimarySecondaryTokenRequest: systemWriteReplicationPerformancePrimarySecondaryTokenRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -8237,7 +8337,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationPerformanceSecondaryDisable(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationPerformanceSecondaryDisableRaw(initOverrides);
+            const response = yield this.systemWriteReplicationPerformanceSecondaryDisableRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -8264,9 +8365,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationPerformanceSecondaryEnable(systemWriteReplicationPerformanceSecondaryEnableRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationPerformanceSecondaryEnableRaw({
-                systemWriteReplicationPerformanceSecondaryEnableRequest: systemWriteReplicationPerformanceSecondaryEnableRequest,
-            }, initOverrides);
+            const response = yield this.systemWriteReplicationPerformanceSecondaryEnableRaw({ systemWriteReplicationPerformanceSecondaryEnableRequest: systemWriteReplicationPerformanceSecondaryEnableRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -8288,7 +8388,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationPerformanceSecondaryGeneratePublicKey(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationPerformanceSecondaryGeneratePublicKeyRaw(initOverrides);
+            const response = yield this.systemWriteReplicationPerformanceSecondaryGeneratePublicKeyRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -8315,9 +8416,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationPerformanceSecondaryPromote(systemWriteReplicationPerformanceSecondaryPromoteRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationPerformanceSecondaryPromoteRaw({
-                systemWriteReplicationPerformanceSecondaryPromoteRequest: systemWriteReplicationPerformanceSecondaryPromoteRequest,
-            }, initOverrides);
+            const response = yield this.systemWriteReplicationPerformanceSecondaryPromoteRaw({ systemWriteReplicationPerformanceSecondaryPromoteRequest: systemWriteReplicationPerformanceSecondaryPromoteRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -8344,9 +8444,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationPerformanceSecondaryUpdatePrimary(systemWriteReplicationPerformanceSecondaryUpdatePrimaryRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationPerformanceSecondaryUpdatePrimaryRaw({
-                systemWriteReplicationPerformanceSecondaryUpdatePrimaryRequest: systemWriteReplicationPerformanceSecondaryUpdatePrimaryRequest,
-            }, initOverrides);
+            const response = yield this.systemWriteReplicationPerformanceSecondaryUpdatePrimaryRaw({ systemWriteReplicationPerformanceSecondaryUpdatePrimaryRequest: systemWriteReplicationPerformanceSecondaryUpdatePrimaryRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -8368,7 +8467,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationPrimaryDemote(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationPrimaryDemoteRaw(initOverrides);
+            const response = yield this.systemWriteReplicationPrimaryDemoteRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -8390,7 +8490,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationPrimaryDisable(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationPrimaryDisableRaw(initOverrides);
+            const response = yield this.systemWriteReplicationPrimaryDisableRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -8417,7 +8518,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationPrimaryEnable(systemWriteReplicationPrimaryEnableRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationPrimaryEnableRaw({ systemWriteReplicationPrimaryEnableRequest: systemWriteReplicationPrimaryEnableRequest }, initOverrides);
+            const response = yield this.systemWriteReplicationPrimaryEnableRaw({ systemWriteReplicationPrimaryEnableRequest: systemWriteReplicationPrimaryEnableRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -8444,9 +8546,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationPrimaryRevokeSecondary(systemWriteReplicationPrimaryRevokeSecondaryRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationPrimaryRevokeSecondaryRaw({
-                systemWriteReplicationPrimaryRevokeSecondaryRequest: systemWriteReplicationPrimaryRevokeSecondaryRequest,
-            }, initOverrides);
+            const response = yield this.systemWriteReplicationPrimaryRevokeSecondaryRaw({ systemWriteReplicationPrimaryRevokeSecondaryRequest: systemWriteReplicationPrimaryRevokeSecondaryRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -8473,9 +8574,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationPrimarySecondaryToken(systemWriteReplicationPrimarySecondaryTokenRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationPrimarySecondaryTokenRaw({
-                systemWriteReplicationPrimarySecondaryTokenRequest: systemWriteReplicationPrimarySecondaryTokenRequest,
-            }, initOverrides);
+            const response = yield this.systemWriteReplicationPrimarySecondaryTokenRaw({ systemWriteReplicationPrimarySecondaryTokenRequest: systemWriteReplicationPrimarySecondaryTokenRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -8497,7 +8597,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationRecover(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationRecoverRaw(initOverrides);
+            const response = yield this.systemWriteReplicationRecoverRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -8524,7 +8625,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationReindex(systemWriteReplicationReindexRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationReindexRaw({ systemWriteReplicationReindexRequest: systemWriteReplicationReindexRequest }, initOverrides);
+            const response = yield this.systemWriteReplicationReindexRaw({ systemWriteReplicationReindexRequest: systemWriteReplicationReindexRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -8546,7 +8648,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationSecondaryDisable(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationSecondaryDisableRaw(initOverrides);
+            const response = yield this.systemWriteReplicationSecondaryDisableRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -8573,7 +8676,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationSecondaryEnable(systemWriteReplicationSecondaryEnableRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationSecondaryEnableRaw({ systemWriteReplicationSecondaryEnableRequest: systemWriteReplicationSecondaryEnableRequest }, initOverrides);
+            const response = yield this.systemWriteReplicationSecondaryEnableRaw({ systemWriteReplicationSecondaryEnableRequest: systemWriteReplicationSecondaryEnableRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -8600,7 +8704,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationSecondaryPromote(systemWriteReplicationSecondaryPromoteRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationSecondaryPromoteRaw({ systemWriteReplicationSecondaryPromoteRequest: systemWriteReplicationSecondaryPromoteRequest }, initOverrides);
+            const response = yield this.systemWriteReplicationSecondaryPromoteRaw({ systemWriteReplicationSecondaryPromoteRequest: systemWriteReplicationSecondaryPromoteRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -8627,9 +8732,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteReplicationSecondaryUpdatePrimary(systemWriteReplicationSecondaryUpdatePrimaryRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteReplicationSecondaryUpdatePrimaryRaw({
-                systemWriteReplicationSecondaryUpdatePrimaryRequest: systemWriteReplicationSecondaryUpdatePrimaryRequest,
-            }, initOverrides);
+            const response = yield this.systemWriteReplicationSecondaryUpdatePrimaryRaw({ systemWriteReplicationSecondaryUpdatePrimaryRequest: systemWriteReplicationSecondaryUpdatePrimaryRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -8653,7 +8757,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteSealwrapRewrap(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteSealwrapRewrapRaw(initOverrides);
+            const response = yield this.systemWriteSealwrapRewrapRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -8671,7 +8776,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/storage/raft/snapshot-auto/config/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/storage/raft/snapshot-auto/config/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -8685,10 +8790,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteStorageRaftSnapshotAutoConfigName(name, systemWriteStorageRaftSnapshotAutoConfigNameRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.systemWriteStorageRaftSnapshotAutoConfigNameRaw({
-                name: name,
-                systemWriteStorageRaftSnapshotAutoConfigNameRequest: systemWriteStorageRaftSnapshotAutoConfigNameRequest,
-            }, initOverrides);
+            const response = yield this.systemWriteStorageRaftSnapshotAutoConfigNameRaw({ name: name, systemWriteStorageRaftSnapshotAutoConfigNameRequest: systemWriteStorageRaftSnapshotAutoConfigNameRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -8705,7 +8808,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/sync/destinations/aws-sm/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/sync/destinations/aws-sm/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -8718,10 +8821,7 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteSyncDestinationsAwsSmName(name, systemWriteSyncDestinationsAwsSmNameRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            const response = yield this.systemWriteSyncDestinationsAwsSmNameRaw({
-                name: name,
-                systemWriteSyncDestinationsAwsSmNameRequest: systemWriteSyncDestinationsAwsSmNameRequest,
-            }, initOverrides);
+            const response = yield this.systemWriteSyncDestinationsAwsSmNameRaw({ name: name, systemWriteSyncDestinationsAwsSmNameRequest: systemWriteSyncDestinationsAwsSmNameRequest }, initOverrides);
             return yield response.value();
         });
     }
@@ -8739,7 +8839,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/sync/destinations/azure-kv/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/sync/destinations/azure-kv/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -8752,10 +8852,7 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteSyncDestinationsAzureKvName(name, systemWriteSyncDestinationsAzureKvNameRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            const response = yield this.systemWriteSyncDestinationsAzureKvNameRaw({
-                name: name,
-                systemWriteSyncDestinationsAzureKvNameRequest: systemWriteSyncDestinationsAzureKvNameRequest,
-            }, initOverrides);
+            const response = yield this.systemWriteSyncDestinationsAzureKvNameRaw({ name: name, systemWriteSyncDestinationsAzureKvNameRequest: systemWriteSyncDestinationsAzureKvNameRequest }, initOverrides);
             return yield response.value();
         });
     }
@@ -8773,7 +8870,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/sync/destinations/gcp-sm/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/sync/destinations/gcp-sm/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -8786,10 +8883,7 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteSyncDestinationsGcpSmName(name, systemWriteSyncDestinationsGcpSmNameRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            const response = yield this.systemWriteSyncDestinationsGcpSmNameRaw({
-                name: name,
-                systemWriteSyncDestinationsGcpSmNameRequest: systemWriteSyncDestinationsGcpSmNameRequest,
-            }, initOverrides);
+            const response = yield this.systemWriteSyncDestinationsGcpSmNameRaw({ name: name, systemWriteSyncDestinationsGcpSmNameRequest: systemWriteSyncDestinationsGcpSmNameRequest }, initOverrides);
             return yield response.value();
         });
     }
@@ -8807,7 +8901,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/sync/destinations/gh/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/sync/destinations/gh/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -8838,7 +8932,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/sync/destinations/in-mem/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/sync/destinations/in-mem/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -8851,10 +8945,7 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteSyncDestinationsInMemName(name, systemWriteSyncDestinationsInMemNameRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            const response = yield this.systemWriteSyncDestinationsInMemNameRaw({
-                name: name,
-                systemWriteSyncDestinationsInMemNameRequest: systemWriteSyncDestinationsInMemNameRequest,
-            }, initOverrides);
+            const response = yield this.systemWriteSyncDestinationsInMemNameRaw({ name: name, systemWriteSyncDestinationsInMemNameRequest: systemWriteSyncDestinationsInMemNameRequest }, initOverrides);
             return yield response.value();
         });
     }
@@ -8875,9 +8966,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/sync/destinations/{type}/{name}/associations/remove`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'type'}}`, encodeURIComponent(String(requestParameters['type']))),
+                path: `/sys/sync/destinations/{type}/{name}/associations/remove`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"type"}}`, encodeURIComponent(String(requestParameters['type']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -8890,11 +8979,7 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteSyncDestinationsTypeNameAssociationsRemove(name, type, systemWriteSyncDestinationsTypeNameAssociationsRemoveRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            const response = yield this.systemWriteSyncDestinationsTypeNameAssociationsRemoveRaw({
-                name: name,
-                type: type,
-                systemWriteSyncDestinationsTypeNameAssociationsRemoveRequest: systemWriteSyncDestinationsTypeNameAssociationsRemoveRequest,
-            }, initOverrides);
+            const response = yield this.systemWriteSyncDestinationsTypeNameAssociationsRemoveRaw({ name: name, type: type, systemWriteSyncDestinationsTypeNameAssociationsRemoveRequest: systemWriteSyncDestinationsTypeNameAssociationsRemoveRequest }, initOverrides);
             return yield response.value();
         });
     }
@@ -8915,9 +9000,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/sync/destinations/{type}/{name}/associations/set`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'type'}}`, encodeURIComponent(String(requestParameters['type']))),
+                path: `/sys/sync/destinations/{type}/{name}/associations/set`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"type"}}`, encodeURIComponent(String(requestParameters['type']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -8930,11 +9013,7 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteSyncDestinationsTypeNameAssociationsSet(name, type, systemWriteSyncDestinationsTypeNameAssociationsSetRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            const response = yield this.systemWriteSyncDestinationsTypeNameAssociationsSetRaw({
-                name: name,
-                type: type,
-                systemWriteSyncDestinationsTypeNameAssociationsSetRequest: systemWriteSyncDestinationsTypeNameAssociationsSetRequest,
-            }, initOverrides);
+            const response = yield this.systemWriteSyncDestinationsTypeNameAssociationsSetRaw({ name: name, type: type, systemWriteSyncDestinationsTypeNameAssociationsSetRequest: systemWriteSyncDestinationsTypeNameAssociationsSetRequest }, initOverrides);
             return yield response.value();
         });
     }
@@ -8952,7 +9031,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/sync/destinations/vercel-project/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/sync/destinations/vercel-project/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -8965,10 +9044,7 @@ export class SystemApi extends runtime.BaseAPI {
      */
     systemWriteSyncDestinationsVercelProjectName(name, systemWriteSyncDestinationsVercelProjectNameRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            const response = yield this.systemWriteSyncDestinationsVercelProjectNameRaw({
-                name: name,
-                systemWriteSyncDestinationsVercelProjectNameRequest: systemWriteSyncDestinationsVercelProjectNameRequest,
-            }, initOverrides);
+            const response = yield this.systemWriteSyncDestinationsVercelProjectNameRaw({ name: name, systemWriteSyncDestinationsVercelProjectNameRequest: systemWriteSyncDestinationsVercelProjectNameRequest }, initOverrides);
             return yield response.value();
         });
     }
@@ -8986,7 +9062,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/sync/github-apps/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/sys/sync/github-apps/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -9046,7 +9122,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/config/ui/custom-messages/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id']))),
+                path: `/sys/config/ui/custom-messages/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -9090,7 +9166,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     uiConfigListCustomMessages(list, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.uiConfigListCustomMessagesRaw({ list: list }, initOverrides);
+            const response = yield this.uiConfigListCustomMessagesRaw({ list: list }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -9104,7 +9181,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/config/ui/custom-messages/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id']))),
+                path: `/sys/config/ui/custom-messages/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -9136,7 +9213,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/config/ui/custom-messages/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id']))),
+                path: `/sys/config/ui/custom-messages/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -9169,7 +9246,7 @@ export class SystemApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/sys/config/ui/headers/{header}`.replace(`{${'header'}}`, encodeURIComponent(String(requestParameters['header']))),
+                path: `/sys/config/ui/headers/{header}`.replace(`{${"header"}}`, encodeURIComponent(String(requestParameters['header']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -9183,7 +9260,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     uiHeadersConfigure(header, uiHeadersConfigureRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.uiHeadersConfigureRaw({ header: header, uiHeadersConfigureRequest: uiHeadersConfigureRequest }, initOverrides);
+            const response = yield this.uiHeadersConfigureRaw({ header: header, uiHeadersConfigureRequest: uiHeadersConfigureRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -9197,7 +9275,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/config/ui/headers/{header}`.replace(`{${'header'}}`, encodeURIComponent(String(requestParameters['header']))),
+                path: `/sys/config/ui/headers/{header}`.replace(`{${"header"}}`, encodeURIComponent(String(requestParameters['header']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -9210,7 +9288,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     uiHeadersDeleteConfiguration(header, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.uiHeadersDeleteConfigurationRaw({ header: header }, initOverrides);
+            const response = yield this.uiHeadersDeleteConfigurationRaw({ header: header }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -9255,7 +9334,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/config/ui/headers/{header}`.replace(`{${'header'}}`, encodeURIComponent(String(requestParameters['header']))),
+                path: `/sys/config/ui/headers/{header}`.replace(`{${"header"}}`, encodeURIComponent(String(requestParameters['header']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -9326,7 +9405,8 @@ export class SystemApi extends runtime.BaseAPI {
      */
     unwrap(unwrapRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.unwrapRaw({ unwrapRequest: unwrapRequest }, initOverrides);
+            const response = yield this.unwrapRaw({ unwrapRequest: unwrapRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -9423,7 +9503,7 @@ export class SystemApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/sys/well-known/{label}`.replace(`{${'label'}}`, encodeURIComponent(String(requestParameters['label']))),
+                path: `/sys/well-known/{label}`.replace(`{${"label"}}`, encodeURIComponent(String(requestParameters['label']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -9464,198 +9544,199 @@ export class SystemApi extends runtime.BaseAPI {
      */
     wrap(requestBody, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.wrapRaw({ requestBody: requestBody }, initOverrides);
+            const response = yield this.wrapRaw({ requestBody: requestBody }, initOverrides);
+            return yield response.value();
         });
     }
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var LeasesLookUpListEnum;
 (function (LeasesLookUpListEnum) {
     LeasesLookUpListEnum["TRUE"] = "true";
 })(LeasesLookUpListEnum || (LeasesLookUpListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var PluginsCatalogListPluginsWithTypeListEnum;
 (function (PluginsCatalogListPluginsWithTypeListEnum) {
     PluginsCatalogListPluginsWithTypeListEnum["TRUE"] = "true";
 })(PluginsCatalogListPluginsWithTypeListEnum || (PluginsCatalogListPluginsWithTypeListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var PluginsRuntimesCatalogListPluginsRuntimes0ListEnum;
 (function (PluginsRuntimesCatalogListPluginsRuntimes0ListEnum) {
     PluginsRuntimesCatalogListPluginsRuntimes0ListEnum["TRUE"] = "true";
 })(PluginsRuntimesCatalogListPluginsRuntimes0ListEnum || (PluginsRuntimesCatalogListPluginsRuntimes0ListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var PoliciesListAclPoliciesListEnum;
 (function (PoliciesListAclPoliciesListEnum) {
     PoliciesListAclPoliciesListEnum["TRUE"] = "true";
 })(PoliciesListAclPoliciesListEnum || (PoliciesListAclPoliciesListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var PoliciesListAclPolicies3ListEnum;
 (function (PoliciesListAclPolicies3ListEnum) {
     PoliciesListAclPolicies3ListEnum["TRUE"] = "true";
 })(PoliciesListAclPolicies3ListEnum || (PoliciesListAclPolicies3ListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var PoliciesListPasswordPoliciesListEnum;
 (function (PoliciesListPasswordPoliciesListEnum) {
     PoliciesListPasswordPoliciesListEnum["TRUE"] = "true";
 })(PoliciesListPasswordPoliciesListEnum || (PoliciesListPasswordPoliciesListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var RateLimitQuotasListListEnum;
 (function (RateLimitQuotasListListEnum) {
     RateLimitQuotasListListEnum["TRUE"] = "true";
 })(RateLimitQuotasListListEnum || (RateLimitQuotasListListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var RawListListEnum;
 (function (RawListListEnum) {
     RawListListEnum["TRUE"] = "true";
 })(RawListListEnum || (RawListListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var SubscriptionsListEventsSubscriptionsListEnum;
 (function (SubscriptionsListEventsSubscriptionsListEnum) {
     SubscriptionsListEventsSubscriptionsListEnum["TRUE"] = "true";
 })(SubscriptionsListEventsSubscriptionsListEnum || (SubscriptionsListEventsSubscriptionsListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var SystemListManagedKeysTypeListEnum;
 (function (SystemListManagedKeysTypeListEnum) {
     SystemListManagedKeysTypeListEnum["TRUE"] = "true";
 })(SystemListManagedKeysTypeListEnum || (SystemListManagedKeysTypeListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var SystemListMfaMethodListEnum;
 (function (SystemListMfaMethodListEnum) {
     SystemListMfaMethodListEnum["TRUE"] = "true";
 })(SystemListMfaMethodListEnum || (SystemListMfaMethodListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var SystemListNamespacesListEnum;
 (function (SystemListNamespacesListEnum) {
     SystemListNamespacesListEnum["TRUE"] = "true";
 })(SystemListNamespacesListEnum || (SystemListNamespacesListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var SystemListPoliciesEgpListEnum;
 (function (SystemListPoliciesEgpListEnum) {
     SystemListPoliciesEgpListEnum["TRUE"] = "true";
 })(SystemListPoliciesEgpListEnum || (SystemListPoliciesEgpListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var SystemListPoliciesRgpListEnum;
 (function (SystemListPoliciesRgpListEnum) {
     SystemListPoliciesRgpListEnum["TRUE"] = "true";
 })(SystemListPoliciesRgpListEnum || (SystemListPoliciesRgpListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var SystemListQuotasLeaseCountListEnum;
 (function (SystemListQuotasLeaseCountListEnum) {
     SystemListQuotasLeaseCountListEnum["TRUE"] = "true";
 })(SystemListQuotasLeaseCountListEnum || (SystemListQuotasLeaseCountListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var SystemListStorageRaftSnapshotAutoConfigListEnum;
 (function (SystemListStorageRaftSnapshotAutoConfigListEnum) {
     SystemListStorageRaftSnapshotAutoConfigListEnum["TRUE"] = "true";
 })(SystemListStorageRaftSnapshotAutoConfigListEnum || (SystemListStorageRaftSnapshotAutoConfigListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var SystemListSyncAssociationsListEnum;
 (function (SystemListSyncAssociationsListEnum) {
     SystemListSyncAssociationsListEnum["TRUE"] = "true";
 })(SystemListSyncAssociationsListEnum || (SystemListSyncAssociationsListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var SystemListSyncDestinationsListEnum;
 (function (SystemListSyncDestinationsListEnum) {
     SystemListSyncDestinationsListEnum["TRUE"] = "true";
 })(SystemListSyncDestinationsListEnum || (SystemListSyncDestinationsListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var SystemListSyncDestinationsTypeListEnum;
 (function (SystemListSyncDestinationsTypeListEnum) {
     SystemListSyncDestinationsTypeListEnum["TRUE"] = "true";
 })(SystemListSyncDestinationsTypeListEnum || (SystemListSyncDestinationsTypeListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var SystemListSyncGithubAppsListEnum;
 (function (SystemListSyncGithubAppsListEnum) {
     SystemListSyncGithubAppsListEnum["TRUE"] = "true";
 })(SystemListSyncGithubAppsListEnum || (SystemListSyncGithubAppsListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var UiConfigListCustomMessagesListEnum;
 (function (UiConfigListCustomMessagesListEnum) {
     UiConfigListCustomMessagesListEnum["TRUE"] = "true";
 })(UiConfigListCustomMessagesListEnum || (UiConfigListCustomMessagesListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var UiHeadersListListEnum;
 (function (UiHeadersListListEnum) {
     UiHeadersListListEnum["TRUE"] = "true";
 })(UiHeadersListListEnum || (UiHeadersListListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var VersionHistoryListEnum;
 (function (VersionHistoryListEnum) {
     VersionHistoryListEnum["TRUE"] = "true";
 })(VersionHistoryListEnum || (VersionHistoryListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var WellKnownListLabelsListEnum;
 (function (WellKnownListLabelsListEnum) {
     WellKnownListLabelsListEnum["TRUE"] = "true";

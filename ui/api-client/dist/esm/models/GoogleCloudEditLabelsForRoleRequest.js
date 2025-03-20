@@ -25,8 +25,8 @@ export function GoogleCloudEditLabelsForRoleRequestFromJSONTyped(json, ignoreDis
         return json;
     }
     return {
-        add: json['add'] == null ? undefined : json['add'],
-        remove: json['remove'] == null ? undefined : json['remove'],
+        'add': json['add'] == null ? undefined : json['add'],
+        'remove': json['remove'] == null ? undefined : json['remove'],
     };
 }
 export function GoogleCloudEditLabelsForRoleRequestToJSON(json) {
@@ -37,7 +37,7 @@ export function GoogleCloudEditLabelsForRoleRequestToJSONTyped(value, ignoreDisc
         return value;
     }
     return {
-        add: value['add'],
-        remove: value['remove'],
+        'add': value['add'],
+        'remove': value['remove'],
     };
 }

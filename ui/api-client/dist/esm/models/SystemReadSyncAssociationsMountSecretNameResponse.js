@@ -25,7 +25,7 @@ export function SystemReadSyncAssociationsMountSecretNameResponseFromJSONTyped(j
         return json;
     }
     return {
-        associatedDestinations: json['associated_destinations'] == null ? undefined : json['associated_destinations'],
+        'associatedDestinations': json['associated_destinations'] == null ? undefined : json['associated_destinations'],
     };
 }
 export function SystemReadSyncAssociationsMountSecretNameResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function SystemReadSyncAssociationsMountSecretNameResponseToJSONTyped(val
         return value;
     }
     return {
-        associated_destinations: value['associatedDestinations'],
+        'associated_destinations': value['associatedDestinations'],
     };
 }

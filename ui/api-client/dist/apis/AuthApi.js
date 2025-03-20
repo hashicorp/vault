@@ -43,9 +43,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{alicloud_mount_path}/role/{role}`
-                    .replace(`{${'role'}}`, encodeURIComponent(String(requestParameters['role'])))
-                    .replace(`{${'alicloud_mount_path'}}`, encodeURIComponent(String(requestParameters['alicloudMountPath']))),
+                path: `/auth/{alicloud_mount_path}/role/{role}`.replace(`{${"role"}}`, encodeURIComponent(String(requestParameters['role']))).replace(`{${"alicloud_mount_path"}}`, encodeURIComponent(String(requestParameters['alicloudMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -58,7 +56,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     aliCloudDeleteAuthRole(role, alicloudMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.aliCloudDeleteAuthRoleRaw({ role: role, alicloudMountPath: alicloudMountPath }, initOverrides);
+            const response = yield this.aliCloudDeleteAuthRoleRaw({ role: role, alicloudMountPath: alicloudMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -78,7 +77,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{alicloud_mount_path}/role/`.replace(`{${'alicloud_mount_path'}}`, encodeURIComponent(String(requestParameters['alicloudMountPath']))),
+                path: `/auth/{alicloud_mount_path}/role/`.replace(`{${"alicloud_mount_path"}}`, encodeURIComponent(String(requestParameters['alicloudMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -112,7 +111,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{alicloud_mount_path}/roles/`.replace(`{${'alicloud_mount_path'}}`, encodeURIComponent(String(requestParameters['alicloudMountPath']))),
+                path: `/auth/{alicloud_mount_path}/roles/`.replace(`{${"alicloud_mount_path"}}`, encodeURIComponent(String(requestParameters['alicloudMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -144,7 +143,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{alicloud_mount_path}/login`.replace(`{${'alicloud_mount_path'}}`, encodeURIComponent(String(requestParameters['alicloudMountPath']))),
+                path: `/auth/{alicloud_mount_path}/login`.replace(`{${"alicloud_mount_path"}}`, encodeURIComponent(String(requestParameters['alicloudMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -158,7 +157,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     aliCloudLogin(alicloudMountPath, aliCloudLoginRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.aliCloudLoginRaw({ alicloudMountPath: alicloudMountPath, aliCloudLoginRequest: aliCloudLoginRequest }, initOverrides);
+            const response = yield this.aliCloudLoginRaw({ alicloudMountPath: alicloudMountPath, aliCloudLoginRequest: aliCloudLoginRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -175,9 +175,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{alicloud_mount_path}/role/{role}`
-                    .replace(`{${'role'}}`, encodeURIComponent(String(requestParameters['role'])))
-                    .replace(`{${'alicloud_mount_path'}}`, encodeURIComponent(String(requestParameters['alicloudMountPath']))),
+                path: `/auth/{alicloud_mount_path}/role/{role}`.replace(`{${"role"}}`, encodeURIComponent(String(requestParameters['role']))).replace(`{${"alicloud_mount_path"}}`, encodeURIComponent(String(requestParameters['alicloudMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -190,7 +188,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     aliCloudReadAuthRole(role, alicloudMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.aliCloudReadAuthRoleRaw({ role: role, alicloudMountPath: alicloudMountPath }, initOverrides);
+            const response = yield this.aliCloudReadAuthRoleRaw({ role: role, alicloudMountPath: alicloudMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -211,9 +210,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{alicloud_mount_path}/role/{role}`
-                    .replace(`{${'role'}}`, encodeURIComponent(String(requestParameters['role'])))
-                    .replace(`{${'alicloud_mount_path'}}`, encodeURIComponent(String(requestParameters['alicloudMountPath']))),
+                path: `/auth/{alicloud_mount_path}/role/{role}`.replace(`{${"role"}}`, encodeURIComponent(String(requestParameters['role']))).replace(`{${"alicloud_mount_path"}}`, encodeURIComponent(String(requestParameters['alicloudMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -227,11 +224,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     aliCloudWriteAuthRole(role, alicloudMountPath, aliCloudWriteAuthRoleRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.aliCloudWriteAuthRoleRaw({
-                role: role,
-                alicloudMountPath: alicloudMountPath,
-                aliCloudWriteAuthRoleRequest: aliCloudWriteAuthRoleRequest,
-            }, initOverrides);
+            const response = yield this.aliCloudWriteAuthRoleRaw({ role: role, alicloudMountPath: alicloudMountPath, aliCloudWriteAuthRoleRequest: aliCloudWriteAuthRoleRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -247,9 +241,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/bind-secret-id`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/bind-secret-id`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -261,7 +253,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleDeleteBindSecretId(roleName, approleMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleDeleteBindSecretIdRaw({ roleName: roleName, approleMountPath: approleMountPath }, initOverrides);
+            const response = yield this.appRoleDeleteBindSecretIdRaw({ roleName: roleName, approleMountPath: approleMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -277,9 +270,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/bound-cidr-list`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/bound-cidr-list`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -291,7 +282,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleDeleteBoundCidrList(roleName, approleMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleDeleteBoundCidrListRaw({ roleName: roleName, approleMountPath: approleMountPath }, initOverrides);
+            const response = yield this.appRoleDeleteBoundCidrListRaw({ roleName: roleName, approleMountPath: approleMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -307,9 +299,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/period`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/period`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -321,7 +311,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleDeletePeriod(roleName, approleMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleDeletePeriodRaw({ roleName: roleName, approleMountPath: approleMountPath }, initOverrides);
+            const response = yield this.appRoleDeletePeriodRaw({ roleName: roleName, approleMountPath: approleMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -337,9 +328,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/policies`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/policies`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -351,7 +340,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleDeletePolicies(roleName, approleMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleDeletePoliciesRaw({ roleName: roleName, approleMountPath: approleMountPath }, initOverrides);
+            const response = yield this.appRoleDeletePoliciesRaw({ roleName: roleName, approleMountPath: approleMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -367,9 +357,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -381,7 +369,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleDeleteRole(roleName, approleMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleDeleteRoleRaw({ roleName: roleName, approleMountPath: approleMountPath }, initOverrides);
+            const response = yield this.appRoleDeleteRoleRaw({ roleName: roleName, approleMountPath: approleMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -397,9 +386,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id-bound-cidrs`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id-bound-cidrs`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -411,7 +398,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleDeleteSecretIdBoundCidrs(roleName, approleMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleDeleteSecretIdBoundCidrsRaw({ roleName: roleName, approleMountPath: approleMountPath }, initOverrides);
+            const response = yield this.appRoleDeleteSecretIdBoundCidrsRaw({ roleName: roleName, approleMountPath: approleMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -427,9 +415,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id-num-uses`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id-num-uses`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -441,7 +427,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleDeleteSecretIdNumUses(roleName, approleMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleDeleteSecretIdNumUsesRaw({ roleName: roleName, approleMountPath: approleMountPath }, initOverrides);
+            const response = yield this.appRoleDeleteSecretIdNumUsesRaw({ roleName: roleName, approleMountPath: approleMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -457,9 +444,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id-ttl`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id-ttl`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -471,7 +456,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleDeleteSecretIdTtl(roleName, approleMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleDeleteSecretIdTtlRaw({ roleName: roleName, approleMountPath: approleMountPath }, initOverrides);
+            const response = yield this.appRoleDeleteSecretIdTtlRaw({ roleName: roleName, approleMountPath: approleMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -487,9 +473,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/token-bound-cidrs`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/token-bound-cidrs`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -501,7 +485,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleDeleteTokenBoundCidrs(roleName, approleMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleDeleteTokenBoundCidrsRaw({ roleName: roleName, approleMountPath: approleMountPath }, initOverrides);
+            const response = yield this.appRoleDeleteTokenBoundCidrsRaw({ roleName: roleName, approleMountPath: approleMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -517,9 +502,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/token-max-ttl`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/token-max-ttl`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -531,7 +514,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleDeleteTokenMaxTtl(roleName, approleMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleDeleteTokenMaxTtlRaw({ roleName: roleName, approleMountPath: approleMountPath }, initOverrides);
+            const response = yield this.appRoleDeleteTokenMaxTtlRaw({ roleName: roleName, approleMountPath: approleMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -547,9 +531,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/token-num-uses`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/token-num-uses`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -561,7 +543,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleDeleteTokenNumUses(roleName, approleMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleDeleteTokenNumUsesRaw({ roleName: roleName, approleMountPath: approleMountPath }, initOverrides);
+            const response = yield this.appRoleDeleteTokenNumUsesRaw({ roleName: roleName, approleMountPath: approleMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -577,9 +560,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/token-ttl`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/token-ttl`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -591,7 +572,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleDeleteTokenTtl(roleName, approleMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleDeleteTokenTtlRaw({ roleName: roleName, approleMountPath: approleMountPath }, initOverrides);
+            const response = yield this.appRoleDeleteTokenTtlRaw({ roleName: roleName, approleMountPath: approleMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -611,9 +593,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id/destroy`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id/destroy`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -626,11 +606,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleDestroySecretId(roleName, approleMountPath, appRoleDestroySecretIdRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleDestroySecretIdRaw({
-                roleName: roleName,
-                approleMountPath: approleMountPath,
-                appRoleDestroySecretIdRequest: appRoleDestroySecretIdRequest,
-            }, initOverrides);
+            const response = yield this.appRoleDestroySecretIdRaw({ roleName: roleName, approleMountPath: approleMountPath, appRoleDestroySecretIdRequest: appRoleDestroySecretIdRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -649,9 +626,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id/destroy`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id/destroy`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -663,7 +638,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleDestroySecretId2(roleName, approleMountPath, secretId, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleDestroySecretId2Raw({ roleName: roleName, approleMountPath: approleMountPath, secretId: secretId }, initOverrides);
+            const response = yield this.appRoleDestroySecretId2Raw({ roleName: roleName, approleMountPath: approleMountPath, secretId: secretId }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -683,9 +659,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id-accessor/destroy`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id-accessor/destroy`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -698,11 +672,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleDestroySecretIdByAccessor(roleName, approleMountPath, appRoleDestroySecretIdByAccessorRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleDestroySecretIdByAccessorRaw({
-                roleName: roleName,
-                approleMountPath: approleMountPath,
-                appRoleDestroySecretIdByAccessorRequest: appRoleDestroySecretIdByAccessorRequest,
-            }, initOverrides);
+            const response = yield this.appRoleDestroySecretIdByAccessorRaw({ roleName: roleName, approleMountPath: approleMountPath, appRoleDestroySecretIdByAccessorRequest: appRoleDestroySecretIdByAccessorRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -721,9 +692,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id-accessor/destroy`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id-accessor/destroy`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -735,7 +704,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleDestroySecretIdByAccessor2(roleName, approleMountPath, secretIdAccessor, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleDestroySecretIdByAccessor2Raw({ roleName: roleName, approleMountPath: approleMountPath, secretIdAccessor: secretIdAccessor }, initOverrides);
+            const response = yield this.appRoleDestroySecretIdByAccessor2Raw({ roleName: roleName, approleMountPath: approleMountPath, secretIdAccessor: secretIdAccessor }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -754,7 +724,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/`.replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/`.replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -789,9 +759,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id/`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id/`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -821,7 +789,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/login`.replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/login`.replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -834,7 +802,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleLogin(approleMountPath, appRoleLoginRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleLoginRaw({ approleMountPath: approleMountPath, appRoleLoginRequest: appRoleLoginRequest }, initOverrides);
+            const response = yield this.appRoleLoginRaw({ approleMountPath: approleMountPath, appRoleLoginRequest: appRoleLoginRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -854,9 +823,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id/lookup`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id/lookup`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -869,11 +836,7 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleLookUpSecretId(roleName, approleMountPath, appRoleLookUpSecretIdRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            const response = yield this.appRoleLookUpSecretIdRaw({
-                roleName: roleName,
-                approleMountPath: approleMountPath,
-                appRoleLookUpSecretIdRequest: appRoleLookUpSecretIdRequest,
-            }, initOverrides);
+            const response = yield this.appRoleLookUpSecretIdRaw({ roleName: roleName, approleMountPath: approleMountPath, appRoleLookUpSecretIdRequest: appRoleLookUpSecretIdRequest }, initOverrides);
             return yield response.value();
         });
     }
@@ -894,9 +857,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id-accessor/lookup`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id-accessor/lookup`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -909,11 +870,7 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleLookUpSecretIdByAccessor(roleName, approleMountPath, appRoleLookUpSecretIdByAccessorRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            const response = yield this.appRoleLookUpSecretIdByAccessorRaw({
-                roleName: roleName,
-                approleMountPath: approleMountPath,
-                appRoleLookUpSecretIdByAccessorRequest: appRoleLookUpSecretIdByAccessorRequest,
-            }, initOverrides);
+            const response = yield this.appRoleLookUpSecretIdByAccessorRaw({ roleName: roleName, approleMountPath: approleMountPath, appRoleLookUpSecretIdByAccessorRequest: appRoleLookUpSecretIdByAccessorRequest }, initOverrides);
             return yield response.value();
         });
     }
@@ -930,9 +887,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/bind-secret-id`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/bind-secret-id`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -961,9 +916,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/bound-cidr-list`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/bound-cidr-list`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -992,9 +945,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/local-secret-ids`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/local-secret-ids`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1023,9 +974,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/period`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/period`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1054,9 +1003,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/policies`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/policies`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1085,9 +1032,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1116,9 +1061,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/role-id`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/role-id`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1147,9 +1090,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id-bound-cidrs`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id-bound-cidrs`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1178,9 +1119,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id-num-uses`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id-num-uses`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1209,9 +1148,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id-ttl`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id-ttl`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1240,9 +1177,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/token-bound-cidrs`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/token-bound-cidrs`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1271,9 +1206,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/token-max-ttl`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/token-max-ttl`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1302,9 +1235,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/token-num-uses`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/token-num-uses`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1333,9 +1264,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/token-ttl`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/token-ttl`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1361,7 +1290,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/tidy/secret-id`.replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/tidy/secret-id`.replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1373,7 +1302,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleTidySecretId(approleMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleTidySecretIdRaw({ approleMountPath: approleMountPath }, initOverrides);
+            const response = yield this.appRoleTidySecretIdRaw({ approleMountPath: approleMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1393,9 +1323,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/bind-secret-id`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/bind-secret-id`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1408,11 +1336,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleWriteBindSecretId(roleName, approleMountPath, appRoleWriteBindSecretIdRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleWriteBindSecretIdRaw({
-                roleName: roleName,
-                approleMountPath: approleMountPath,
-                appRoleWriteBindSecretIdRequest: appRoleWriteBindSecretIdRequest,
-            }, initOverrides);
+            const response = yield this.appRoleWriteBindSecretIdRaw({ roleName: roleName, approleMountPath: approleMountPath, appRoleWriteBindSecretIdRequest: appRoleWriteBindSecretIdRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1432,9 +1357,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/bound-cidr-list`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/bound-cidr-list`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1447,11 +1370,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleWriteBoundCidrList(roleName, approleMountPath, appRoleWriteBoundCidrListRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleWriteBoundCidrListRaw({
-                roleName: roleName,
-                approleMountPath: approleMountPath,
-                appRoleWriteBoundCidrListRequest: appRoleWriteBoundCidrListRequest,
-            }, initOverrides);
+            const response = yield this.appRoleWriteBoundCidrListRaw({ roleName: roleName, approleMountPath: approleMountPath, appRoleWriteBoundCidrListRequest: appRoleWriteBoundCidrListRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1471,9 +1391,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/custom-secret-id`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/custom-secret-id`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1486,11 +1404,7 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleWriteCustomSecretId(roleName, approleMountPath, appRoleWriteCustomSecretIdRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            const response = yield this.appRoleWriteCustomSecretIdRaw({
-                roleName: roleName,
-                approleMountPath: approleMountPath,
-                appRoleWriteCustomSecretIdRequest: appRoleWriteCustomSecretIdRequest,
-            }, initOverrides);
+            const response = yield this.appRoleWriteCustomSecretIdRaw({ roleName: roleName, approleMountPath: approleMountPath, appRoleWriteCustomSecretIdRequest: appRoleWriteCustomSecretIdRequest }, initOverrides);
             return yield response.value();
         });
     }
@@ -1511,9 +1425,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/period`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/period`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1526,11 +1438,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleWritePeriod(roleName, approleMountPath, appRoleWritePeriodRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleWritePeriodRaw({
-                roleName: roleName,
-                approleMountPath: approleMountPath,
-                appRoleWritePeriodRequest: appRoleWritePeriodRequest,
-            }, initOverrides);
+            const response = yield this.appRoleWritePeriodRaw({ roleName: roleName, approleMountPath: approleMountPath, appRoleWritePeriodRequest: appRoleWritePeriodRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1550,9 +1459,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/policies`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/policies`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1565,11 +1472,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleWritePolicies(roleName, approleMountPath, appRoleWritePoliciesRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleWritePoliciesRaw({
-                roleName: roleName,
-                approleMountPath: approleMountPath,
-                appRoleWritePoliciesRequest: appRoleWritePoliciesRequest,
-            }, initOverrides);
+            const response = yield this.appRoleWritePoliciesRaw({ roleName: roleName, approleMountPath: approleMountPath, appRoleWritePoliciesRequest: appRoleWritePoliciesRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1589,9 +1493,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1604,11 +1506,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleWriteRole(roleName, approleMountPath, appRoleWriteRoleRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleWriteRoleRaw({
-                roleName: roleName,
-                approleMountPath: approleMountPath,
-                appRoleWriteRoleRequest: appRoleWriteRoleRequest,
-            }, initOverrides);
+            const response = yield this.appRoleWriteRoleRaw({ roleName: roleName, approleMountPath: approleMountPath, appRoleWriteRoleRequest: appRoleWriteRoleRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1628,9 +1527,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/role-id`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/role-id`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1643,11 +1540,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleWriteRoleId(roleName, approleMountPath, appRoleWriteRoleIdRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleWriteRoleIdRaw({
-                roleName: roleName,
-                approleMountPath: approleMountPath,
-                appRoleWriteRoleIdRequest: appRoleWriteRoleIdRequest,
-            }, initOverrides);
+            const response = yield this.appRoleWriteRoleIdRaw({ roleName: roleName, approleMountPath: approleMountPath, appRoleWriteRoleIdRequest: appRoleWriteRoleIdRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1667,9 +1561,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1682,11 +1574,7 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleWriteSecretId(roleName, approleMountPath, appRoleWriteSecretIdRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            const response = yield this.appRoleWriteSecretIdRaw({
-                roleName: roleName,
-                approleMountPath: approleMountPath,
-                appRoleWriteSecretIdRequest: appRoleWriteSecretIdRequest,
-            }, initOverrides);
+            const response = yield this.appRoleWriteSecretIdRaw({ roleName: roleName, approleMountPath: approleMountPath, appRoleWriteSecretIdRequest: appRoleWriteSecretIdRequest }, initOverrides);
             return yield response.value();
         });
     }
@@ -1707,9 +1595,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id-bound-cidrs`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id-bound-cidrs`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1722,11 +1608,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleWriteSecretIdBoundCidrs(roleName, approleMountPath, appRoleWriteSecretIdBoundCidrsRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleWriteSecretIdBoundCidrsRaw({
-                roleName: roleName,
-                approleMountPath: approleMountPath,
-                appRoleWriteSecretIdBoundCidrsRequest: appRoleWriteSecretIdBoundCidrsRequest,
-            }, initOverrides);
+            const response = yield this.appRoleWriteSecretIdBoundCidrsRaw({ roleName: roleName, approleMountPath: approleMountPath, appRoleWriteSecretIdBoundCidrsRequest: appRoleWriteSecretIdBoundCidrsRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1746,9 +1629,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id-num-uses`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id-num-uses`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1761,11 +1642,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleWriteSecretIdNumUses(roleName, approleMountPath, appRoleWriteSecretIdNumUsesRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleWriteSecretIdNumUsesRaw({
-                roleName: roleName,
-                approleMountPath: approleMountPath,
-                appRoleWriteSecretIdNumUsesRequest: appRoleWriteSecretIdNumUsesRequest,
-            }, initOverrides);
+            const response = yield this.appRoleWriteSecretIdNumUsesRaw({ roleName: roleName, approleMountPath: approleMountPath, appRoleWriteSecretIdNumUsesRequest: appRoleWriteSecretIdNumUsesRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1785,9 +1663,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id-ttl`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/secret-id-ttl`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1800,11 +1676,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleWriteSecretIdTtl(roleName, approleMountPath, appRoleWriteSecretIdTtlRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleWriteSecretIdTtlRaw({
-                roleName: roleName,
-                approleMountPath: approleMountPath,
-                appRoleWriteSecretIdTtlRequest: appRoleWriteSecretIdTtlRequest,
-            }, initOverrides);
+            const response = yield this.appRoleWriteSecretIdTtlRaw({ roleName: roleName, approleMountPath: approleMountPath, appRoleWriteSecretIdTtlRequest: appRoleWriteSecretIdTtlRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1824,9 +1697,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/token-bound-cidrs`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/token-bound-cidrs`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1839,11 +1710,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleWriteTokenBoundCidrs(roleName, approleMountPath, appRoleWriteTokenBoundCidrsRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleWriteTokenBoundCidrsRaw({
-                roleName: roleName,
-                approleMountPath: approleMountPath,
-                appRoleWriteTokenBoundCidrsRequest: appRoleWriteTokenBoundCidrsRequest,
-            }, initOverrides);
+            const response = yield this.appRoleWriteTokenBoundCidrsRaw({ roleName: roleName, approleMountPath: approleMountPath, appRoleWriteTokenBoundCidrsRequest: appRoleWriteTokenBoundCidrsRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1863,9 +1731,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/token-max-ttl`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/token-max-ttl`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1878,11 +1744,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleWriteTokenMaxTtl(roleName, approleMountPath, appRoleWriteTokenMaxTtlRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleWriteTokenMaxTtlRaw({
-                roleName: roleName,
-                approleMountPath: approleMountPath,
-                appRoleWriteTokenMaxTtlRequest: appRoleWriteTokenMaxTtlRequest,
-            }, initOverrides);
+            const response = yield this.appRoleWriteTokenMaxTtlRaw({ roleName: roleName, approleMountPath: approleMountPath, appRoleWriteTokenMaxTtlRequest: appRoleWriteTokenMaxTtlRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1902,9 +1765,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/token-num-uses`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/token-num-uses`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1917,11 +1778,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleWriteTokenNumUses(roleName, approleMountPath, appRoleWriteTokenNumUsesRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleWriteTokenNumUsesRaw({
-                roleName: roleName,
-                approleMountPath: approleMountPath,
-                appRoleWriteTokenNumUsesRequest: appRoleWriteTokenNumUsesRequest,
-            }, initOverrides);
+            const response = yield this.appRoleWriteTokenNumUsesRaw({ roleName: roleName, approleMountPath: approleMountPath, appRoleWriteTokenNumUsesRequest: appRoleWriteTokenNumUsesRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1941,9 +1799,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{approle_mount_path}/role/{role_name}/token-ttl`
-                    .replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName'])))
-                    .replace(`{${'approle_mount_path'}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
+                path: `/auth/{approle_mount_path}/role/{role_name}/token-ttl`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))).replace(`{${"approle_mount_path"}}`, encodeURIComponent(String(requestParameters['approleMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1956,11 +1812,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     appRoleWriteTokenTtl(roleName, approleMountPath, appRoleWriteTokenTtlRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.appRoleWriteTokenTtlRaw({
-                roleName: roleName,
-                approleMountPath: approleMountPath,
-                appRoleWriteTokenTtlRequest: appRoleWriteTokenTtlRequest,
-            }, initOverrides);
+            const response = yield this.appRoleWriteTokenTtlRaw({ roleName: roleName, approleMountPath: approleMountPath, appRoleWriteTokenTtlRequest: appRoleWriteTokenTtlRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1980,9 +1833,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/config/certificate/{cert_name}`
-                    .replace(`{${'cert_name'}}`, encodeURIComponent(String(requestParameters['certName'])))
-                    .replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/config/certificate/{cert_name}`.replace(`{${"cert_name"}}`, encodeURIComponent(String(requestParameters['certName']))).replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1995,11 +1846,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsConfigureCertificate(certName, awsMountPath, awsConfigureCertificateRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsConfigureCertificateRaw({
-                certName: certName,
-                awsMountPath: awsMountPath,
-                awsConfigureCertificateRequest: awsConfigureCertificateRequest,
-            }, initOverrides);
+            const response = yield this.awsConfigureCertificateRaw({ certName: certName, awsMountPath: awsMountPath, awsConfigureCertificateRequest: awsConfigureCertificateRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2016,7 +1864,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/config/client`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/config/client`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2029,7 +1877,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsConfigureClient(awsMountPath, awsConfigureClientRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsConfigureClientRaw({ awsMountPath: awsMountPath, awsConfigureClientRequest: awsConfigureClientRequest }, initOverrides);
+            const response = yield this.awsConfigureClientRaw({ awsMountPath: awsMountPath, awsConfigureClientRequest: awsConfigureClientRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2046,7 +1895,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/config/tidy/identity-accesslist`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/config/tidy/identity-accesslist`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2059,10 +1908,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsConfigureIdentityAccessListTidyOperation(awsMountPath, awsConfigureIdentityAccessListTidyOperationRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsConfigureIdentityAccessListTidyOperationRaw({
-                awsMountPath: awsMountPath,
-                awsConfigureIdentityAccessListTidyOperationRequest: awsConfigureIdentityAccessListTidyOperationRequest,
-            }, initOverrides);
+            const response = yield this.awsConfigureIdentityAccessListTidyOperationRaw({ awsMountPath: awsMountPath, awsConfigureIdentityAccessListTidyOperationRequest: awsConfigureIdentityAccessListTidyOperationRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2079,7 +1926,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/config/identity`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/config/identity`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2092,10 +1939,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsConfigureIdentityIntegration(awsMountPath, awsConfigureIdentityIntegrationRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsConfigureIdentityIntegrationRaw({
-                awsMountPath: awsMountPath,
-                awsConfigureIdentityIntegrationRequest: awsConfigureIdentityIntegrationRequest,
-            }, initOverrides);
+            const response = yield this.awsConfigureIdentityIntegrationRaw({ awsMountPath: awsMountPath, awsConfigureIdentityIntegrationRequest: awsConfigureIdentityIntegrationRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2112,7 +1957,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/config/tidy/identity-whitelist`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/config/tidy/identity-whitelist`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2125,10 +1970,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsConfigureIdentityWhitelistTidyOperation(awsMountPath, awsConfigureIdentityWhitelistTidyOperationRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsConfigureIdentityWhitelistTidyOperationRaw({
-                awsMountPath: awsMountPath,
-                awsConfigureIdentityWhitelistTidyOperationRequest: awsConfigureIdentityWhitelistTidyOperationRequest,
-            }, initOverrides);
+            const response = yield this.awsConfigureIdentityWhitelistTidyOperationRaw({ awsMountPath: awsMountPath, awsConfigureIdentityWhitelistTidyOperationRequest: awsConfigureIdentityWhitelistTidyOperationRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2145,7 +1988,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/config/tidy/roletag-blacklist`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/config/tidy/roletag-blacklist`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2158,10 +2001,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsConfigureRoleTagBlacklistTidyOperation(awsMountPath, awsConfigureRoleTagBlacklistTidyOperationRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsConfigureRoleTagBlacklistTidyOperationRaw({
-                awsMountPath: awsMountPath,
-                awsConfigureRoleTagBlacklistTidyOperationRequest: awsConfigureRoleTagBlacklistTidyOperationRequest,
-            }, initOverrides);
+            const response = yield this.awsConfigureRoleTagBlacklistTidyOperationRaw({ awsMountPath: awsMountPath, awsConfigureRoleTagBlacklistTidyOperationRequest: awsConfigureRoleTagBlacklistTidyOperationRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2178,7 +2019,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/config/tidy/roletag-denylist`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/config/tidy/roletag-denylist`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2191,10 +2032,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsConfigureRoleTagDenyListTidyOperation(awsMountPath, awsConfigureRoleTagDenyListTidyOperationRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsConfigureRoleTagDenyListTidyOperationRaw({
-                awsMountPath: awsMountPath,
-                awsConfigureRoleTagDenyListTidyOperationRequest: awsConfigureRoleTagDenyListTidyOperationRequest,
-            }, initOverrides);
+            const response = yield this.awsConfigureRoleTagDenyListTidyOperationRaw({ awsMountPath: awsMountPath, awsConfigureRoleTagDenyListTidyOperationRequest: awsConfigureRoleTagDenyListTidyOperationRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2210,9 +2049,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/role/{role}`
-                    .replace(`{${'role'}}`, encodeURIComponent(String(requestParameters['role'])))
-                    .replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/role/{role}`.replace(`{${"role"}}`, encodeURIComponent(String(requestParameters['role']))).replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2224,7 +2061,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsDeleteAuthRole(role, awsMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsDeleteAuthRoleRaw({ role: role, awsMountPath: awsMountPath }, initOverrides);
+            const response = yield this.awsDeleteAuthRoleRaw({ role: role, awsMountPath: awsMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2240,9 +2078,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/config/certificate/{cert_name}`
-                    .replace(`{${'cert_name'}}`, encodeURIComponent(String(requestParameters['certName'])))
-                    .replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/config/certificate/{cert_name}`.replace(`{${"cert_name"}}`, encodeURIComponent(String(requestParameters['certName']))).replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2254,7 +2090,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsDeleteCertificateConfiguration(certName, awsMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsDeleteCertificateConfigurationRaw({ certName: certName, awsMountPath: awsMountPath }, initOverrides);
+            const response = yield this.awsDeleteCertificateConfigurationRaw({ certName: certName, awsMountPath: awsMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2267,7 +2104,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/config/client`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/config/client`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2279,7 +2116,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsDeleteClientConfiguration(awsMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsDeleteClientConfigurationRaw({ awsMountPath: awsMountPath }, initOverrides);
+            const response = yield this.awsDeleteClientConfigurationRaw({ awsMountPath: awsMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2295,9 +2133,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/identity-accesslist/{instance_id}`
-                    .replace(`{${'instance_id'}}`, encodeURIComponent(String(requestParameters['instanceId'])))
-                    .replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/identity-accesslist/{instance_id}`.replace(`{${"instance_id"}}`, encodeURIComponent(String(requestParameters['instanceId']))).replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2309,7 +2145,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsDeleteIdentityAccessList(instanceId, awsMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsDeleteIdentityAccessListRaw({ instanceId: instanceId, awsMountPath: awsMountPath }, initOverrides);
+            const response = yield this.awsDeleteIdentityAccessListRaw({ instanceId: instanceId, awsMountPath: awsMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2322,7 +2159,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/config/tidy/identity-accesslist`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/config/tidy/identity-accesslist`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2334,7 +2171,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsDeleteIdentityAccessListTidySettings(awsMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsDeleteIdentityAccessListTidySettingsRaw({ awsMountPath: awsMountPath }, initOverrides);
+            const response = yield this.awsDeleteIdentityAccessListTidySettingsRaw({ awsMountPath: awsMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2350,9 +2188,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/identity-whitelist/{instance_id}`
-                    .replace(`{${'instance_id'}}`, encodeURIComponent(String(requestParameters['instanceId'])))
-                    .replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/identity-whitelist/{instance_id}`.replace(`{${"instance_id"}}`, encodeURIComponent(String(requestParameters['instanceId']))).replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2364,7 +2200,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsDeleteIdentityWhitelist(instanceId, awsMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsDeleteIdentityWhitelistRaw({ instanceId: instanceId, awsMountPath: awsMountPath }, initOverrides);
+            const response = yield this.awsDeleteIdentityWhitelistRaw({ instanceId: instanceId, awsMountPath: awsMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2377,7 +2214,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/config/tidy/identity-whitelist`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/config/tidy/identity-whitelist`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2389,7 +2226,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsDeleteIdentityWhitelistTidySettings(awsMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsDeleteIdentityWhitelistTidySettingsRaw({ awsMountPath: awsMountPath }, initOverrides);
+            const response = yield this.awsDeleteIdentityWhitelistTidySettingsRaw({ awsMountPath: awsMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2405,9 +2243,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/roletag-blacklist/{role_tag}`
-                    .replace(`{${'role_tag'}}`, encodeURIComponent(String(requestParameters['roleTag'])))
-                    .replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/roletag-blacklist/{role_tag}`.replace(`{${"role_tag"}}`, encodeURIComponent(String(requestParameters['roleTag']))).replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2419,7 +2255,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsDeleteRoleTagBlacklist(roleTag, awsMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsDeleteRoleTagBlacklistRaw({ roleTag: roleTag, awsMountPath: awsMountPath }, initOverrides);
+            const response = yield this.awsDeleteRoleTagBlacklistRaw({ roleTag: roleTag, awsMountPath: awsMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2432,7 +2269,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/config/tidy/roletag-blacklist`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/config/tidy/roletag-blacklist`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2444,7 +2281,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsDeleteRoleTagBlacklistTidySettings(awsMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsDeleteRoleTagBlacklistTidySettingsRaw({ awsMountPath: awsMountPath }, initOverrides);
+            const response = yield this.awsDeleteRoleTagBlacklistTidySettingsRaw({ awsMountPath: awsMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2460,9 +2298,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/roletag-denylist/{role_tag}`
-                    .replace(`{${'role_tag'}}`, encodeURIComponent(String(requestParameters['roleTag'])))
-                    .replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/roletag-denylist/{role_tag}`.replace(`{${"role_tag"}}`, encodeURIComponent(String(requestParameters['roleTag']))).replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2474,7 +2310,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsDeleteRoleTagDenyList(roleTag, awsMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsDeleteRoleTagDenyListRaw({ roleTag: roleTag, awsMountPath: awsMountPath }, initOverrides);
+            const response = yield this.awsDeleteRoleTagDenyListRaw({ roleTag: roleTag, awsMountPath: awsMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2487,7 +2324,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/config/tidy/roletag-denylist`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/config/tidy/roletag-denylist`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2499,7 +2336,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsDeleteRoleTagDenyListTidySettings(awsMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsDeleteRoleTagDenyListTidySettingsRaw({ awsMountPath: awsMountPath }, initOverrides);
+            const response = yield this.awsDeleteRoleTagDenyListTidySettingsRaw({ awsMountPath: awsMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2515,9 +2353,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/config/sts/{account_id}`
-                    .replace(`{${'account_id'}}`, encodeURIComponent(String(requestParameters['accountId'])))
-                    .replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/config/sts/{account_id}`.replace(`{${"account_id"}}`, encodeURIComponent(String(requestParameters['accountId']))).replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2529,7 +2365,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsDeleteStsRole(accountId, awsMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsDeleteStsRoleRaw({ accountId: accountId, awsMountPath: awsMountPath }, initOverrides);
+            const response = yield this.awsDeleteStsRoleRaw({ accountId: accountId, awsMountPath: awsMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2548,7 +2385,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/role/`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/role/`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2580,7 +2417,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/roles/`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/roles/`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2612,7 +2449,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/config/certificates/`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/config/certificates/`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2644,7 +2481,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/identity-accesslist/`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/identity-accesslist/`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2676,7 +2513,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/identity-whitelist/`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/identity-whitelist/`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2708,7 +2545,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/roletag-blacklist/`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/roletag-blacklist/`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2740,7 +2577,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/roletag-denylist/`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/roletag-denylist/`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2772,7 +2609,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/config/sts/`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/config/sts/`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2802,7 +2639,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/login`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/login`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2815,7 +2652,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsLogin(awsMountPath, awsLoginRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsLoginRaw({ awsMountPath: awsMountPath, awsLoginRequest: awsLoginRequest }, initOverrides);
+            const response = yield this.awsLoginRaw({ awsMountPath: awsMountPath, awsLoginRequest: awsLoginRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2831,9 +2669,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/role/{role}`
-                    .replace(`{${'role'}}`, encodeURIComponent(String(requestParameters['role'])))
-                    .replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/role/{role}`.replace(`{${"role"}}`, encodeURIComponent(String(requestParameters['role']))).replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2845,7 +2681,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsReadAuthRole(role, awsMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsReadAuthRoleRaw({ role: role, awsMountPath: awsMountPath }, initOverrides);
+            const response = yield this.awsReadAuthRoleRaw({ role: role, awsMountPath: awsMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2861,9 +2698,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/config/certificate/{cert_name}`
-                    .replace(`{${'cert_name'}}`, encodeURIComponent(String(requestParameters['certName'])))
-                    .replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/config/certificate/{cert_name}`.replace(`{${"cert_name"}}`, encodeURIComponent(String(requestParameters['certName']))).replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2875,7 +2710,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsReadCertificateConfiguration(certName, awsMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsReadCertificateConfigurationRaw({ certName: certName, awsMountPath: awsMountPath }, initOverrides);
+            const response = yield this.awsReadCertificateConfigurationRaw({ certName: certName, awsMountPath: awsMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2888,7 +2724,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/config/client`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/config/client`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2900,7 +2736,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsReadClientConfiguration(awsMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsReadClientConfigurationRaw({ awsMountPath: awsMountPath }, initOverrides);
+            const response = yield this.awsReadClientConfigurationRaw({ awsMountPath: awsMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2916,9 +2753,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/identity-accesslist/{instance_id}`
-                    .replace(`{${'instance_id'}}`, encodeURIComponent(String(requestParameters['instanceId'])))
-                    .replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/identity-accesslist/{instance_id}`.replace(`{${"instance_id"}}`, encodeURIComponent(String(requestParameters['instanceId']))).replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2930,7 +2765,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsReadIdentityAccessList(instanceId, awsMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsReadIdentityAccessListRaw({ instanceId: instanceId, awsMountPath: awsMountPath }, initOverrides);
+            const response = yield this.awsReadIdentityAccessListRaw({ instanceId: instanceId, awsMountPath: awsMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2943,7 +2779,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/config/tidy/identity-accesslist`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/config/tidy/identity-accesslist`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2955,7 +2791,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsReadIdentityAccessListTidySettings(awsMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsReadIdentityAccessListTidySettingsRaw({ awsMountPath: awsMountPath }, initOverrides);
+            const response = yield this.awsReadIdentityAccessListTidySettingsRaw({ awsMountPath: awsMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2968,7 +2805,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/config/identity`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/config/identity`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2980,7 +2817,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsReadIdentityIntegrationConfiguration(awsMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsReadIdentityIntegrationConfigurationRaw({ awsMountPath: awsMountPath }, initOverrides);
+            const response = yield this.awsReadIdentityIntegrationConfigurationRaw({ awsMountPath: awsMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2996,9 +2834,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/identity-whitelist/{instance_id}`
-                    .replace(`{${'instance_id'}}`, encodeURIComponent(String(requestParameters['instanceId'])))
-                    .replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/identity-whitelist/{instance_id}`.replace(`{${"instance_id"}}`, encodeURIComponent(String(requestParameters['instanceId']))).replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3010,7 +2846,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsReadIdentityWhitelist(instanceId, awsMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsReadIdentityWhitelistRaw({ instanceId: instanceId, awsMountPath: awsMountPath }, initOverrides);
+            const response = yield this.awsReadIdentityWhitelistRaw({ instanceId: instanceId, awsMountPath: awsMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3023,7 +2860,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/config/tidy/identity-whitelist`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/config/tidy/identity-whitelist`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3035,7 +2872,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsReadIdentityWhitelistTidySettings(awsMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsReadIdentityWhitelistTidySettingsRaw({ awsMountPath: awsMountPath }, initOverrides);
+            const response = yield this.awsReadIdentityWhitelistTidySettingsRaw({ awsMountPath: awsMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3051,9 +2889,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/roletag-blacklist/{role_tag}`
-                    .replace(`{${'role_tag'}}`, encodeURIComponent(String(requestParameters['roleTag'])))
-                    .replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/roletag-blacklist/{role_tag}`.replace(`{${"role_tag"}}`, encodeURIComponent(String(requestParameters['roleTag']))).replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3065,7 +2901,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsReadRoleTagBlacklist(roleTag, awsMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsReadRoleTagBlacklistRaw({ roleTag: roleTag, awsMountPath: awsMountPath }, initOverrides);
+            const response = yield this.awsReadRoleTagBlacklistRaw({ roleTag: roleTag, awsMountPath: awsMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3078,7 +2915,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/config/tidy/roletag-blacklist`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/config/tidy/roletag-blacklist`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3090,7 +2927,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsReadRoleTagBlacklistTidySettings(awsMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsReadRoleTagBlacklistTidySettingsRaw({ awsMountPath: awsMountPath }, initOverrides);
+            const response = yield this.awsReadRoleTagBlacklistTidySettingsRaw({ awsMountPath: awsMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3106,9 +2944,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/roletag-denylist/{role_tag}`
-                    .replace(`{${'role_tag'}}`, encodeURIComponent(String(requestParameters['roleTag'])))
-                    .replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/roletag-denylist/{role_tag}`.replace(`{${"role_tag"}}`, encodeURIComponent(String(requestParameters['roleTag']))).replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3120,7 +2956,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsReadRoleTagDenyList(roleTag, awsMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsReadRoleTagDenyListRaw({ roleTag: roleTag, awsMountPath: awsMountPath }, initOverrides);
+            const response = yield this.awsReadRoleTagDenyListRaw({ roleTag: roleTag, awsMountPath: awsMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3133,7 +2970,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/config/tidy/roletag-denylist`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/config/tidy/roletag-denylist`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3145,7 +2982,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsReadRoleTagDenyListTidySettings(awsMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsReadRoleTagDenyListTidySettingsRaw({ awsMountPath: awsMountPath }, initOverrides);
+            const response = yield this.awsReadRoleTagDenyListTidySettingsRaw({ awsMountPath: awsMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3161,9 +2999,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/config/sts/{account_id}`
-                    .replace(`{${'account_id'}}`, encodeURIComponent(String(requestParameters['accountId'])))
-                    .replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/config/sts/{account_id}`.replace(`{${"account_id"}}`, encodeURIComponent(String(requestParameters['accountId']))).replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3175,7 +3011,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsReadStsRole(accountId, awsMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsReadStsRoleRaw({ accountId: accountId, awsMountPath: awsMountPath }, initOverrides);
+            const response = yield this.awsReadStsRoleRaw({ accountId: accountId, awsMountPath: awsMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3188,7 +3025,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/config/rotate-root`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/config/rotate-root`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3200,7 +3037,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsRotateRootCredentials(awsMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsRotateRootCredentialsRaw({ awsMountPath: awsMountPath }, initOverrides);
+            const response = yield this.awsRotateRootCredentialsRaw({ awsMountPath: awsMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3217,7 +3055,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/tidy/identity-accesslist`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/tidy/identity-accesslist`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3230,7 +3068,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsTidyIdentityAccessList(awsMountPath, awsTidyIdentityAccessListRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsTidyIdentityAccessListRaw({ awsMountPath: awsMountPath, awsTidyIdentityAccessListRequest: awsTidyIdentityAccessListRequest }, initOverrides);
+            const response = yield this.awsTidyIdentityAccessListRaw({ awsMountPath: awsMountPath, awsTidyIdentityAccessListRequest: awsTidyIdentityAccessListRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3247,7 +3086,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/tidy/identity-whitelist`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/tidy/identity-whitelist`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3260,7 +3099,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsTidyIdentityWhitelist(awsMountPath, awsTidyIdentityWhitelistRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsTidyIdentityWhitelistRaw({ awsMountPath: awsMountPath, awsTidyIdentityWhitelistRequest: awsTidyIdentityWhitelistRequest }, initOverrides);
+            const response = yield this.awsTidyIdentityWhitelistRaw({ awsMountPath: awsMountPath, awsTidyIdentityWhitelistRequest: awsTidyIdentityWhitelistRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3277,7 +3117,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/tidy/roletag-blacklist`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/tidy/roletag-blacklist`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3290,7 +3130,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsTidyRoleTagBlacklist(awsMountPath, awsTidyRoleTagBlacklistRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsTidyRoleTagBlacklistRaw({ awsMountPath: awsMountPath, awsTidyRoleTagBlacklistRequest: awsTidyRoleTagBlacklistRequest }, initOverrides);
+            const response = yield this.awsTidyRoleTagBlacklistRaw({ awsMountPath: awsMountPath, awsTidyRoleTagBlacklistRequest: awsTidyRoleTagBlacklistRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3307,7 +3148,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/tidy/roletag-denylist`.replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/tidy/roletag-denylist`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3320,7 +3161,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsTidyRoleTagDenyList(awsMountPath, awsTidyRoleTagDenyListRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsTidyRoleTagDenyListRaw({ awsMountPath: awsMountPath, awsTidyRoleTagDenyListRequest: awsTidyRoleTagDenyListRequest }, initOverrides);
+            const response = yield this.awsTidyRoleTagDenyListRaw({ awsMountPath: awsMountPath, awsTidyRoleTagDenyListRequest: awsTidyRoleTagDenyListRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3340,9 +3182,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/role/{role}`
-                    .replace(`{${'role'}}`, encodeURIComponent(String(requestParameters['role'])))
-                    .replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/role/{role}`.replace(`{${"role"}}`, encodeURIComponent(String(requestParameters['role']))).replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3355,7 +3195,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsWriteAuthRole(role, awsMountPath, awsWriteAuthRoleRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsWriteAuthRoleRaw({ role: role, awsMountPath: awsMountPath, awsWriteAuthRoleRequest: awsWriteAuthRoleRequest }, initOverrides);
+            const response = yield this.awsWriteAuthRoleRaw({ role: role, awsMountPath: awsMountPath, awsWriteAuthRoleRequest: awsWriteAuthRoleRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3375,9 +3216,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/role/{role}/tag`
-                    .replace(`{${'role'}}`, encodeURIComponent(String(requestParameters['role'])))
-                    .replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/role/{role}/tag`.replace(`{${"role"}}`, encodeURIComponent(String(requestParameters['role']))).replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3390,7 +3229,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsWriteRoleTag(role, awsMountPath, awsWriteRoleTagRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsWriteRoleTagRaw({ role: role, awsMountPath: awsMountPath, awsWriteRoleTagRequest: awsWriteRoleTagRequest }, initOverrides);
+            const response = yield this.awsWriteRoleTagRaw({ role: role, awsMountPath: awsMountPath, awsWriteRoleTagRequest: awsWriteRoleTagRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3406,9 +3246,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/roletag-blacklist/{role_tag}`
-                    .replace(`{${'role_tag'}}`, encodeURIComponent(String(requestParameters['roleTag'])))
-                    .replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/roletag-blacklist/{role_tag}`.replace(`{${"role_tag"}}`, encodeURIComponent(String(requestParameters['roleTag']))).replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3420,7 +3258,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsWriteRoleTagBlacklist(roleTag, awsMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsWriteRoleTagBlacklistRaw({ roleTag: roleTag, awsMountPath: awsMountPath }, initOverrides);
+            const response = yield this.awsWriteRoleTagBlacklistRaw({ roleTag: roleTag, awsMountPath: awsMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3436,9 +3275,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/roletag-denylist/{role_tag}`
-                    .replace(`{${'role_tag'}}`, encodeURIComponent(String(requestParameters['roleTag'])))
-                    .replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/roletag-denylist/{role_tag}`.replace(`{${"role_tag"}}`, encodeURIComponent(String(requestParameters['roleTag']))).replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3450,7 +3287,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsWriteRoleTagDenyList(roleTag, awsMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsWriteRoleTagDenyListRaw({ roleTag: roleTag, awsMountPath: awsMountPath }, initOverrides);
+            const response = yield this.awsWriteRoleTagDenyListRaw({ roleTag: roleTag, awsMountPath: awsMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3470,9 +3308,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{aws_mount_path}/config/sts/{account_id}`
-                    .replace(`{${'account_id'}}`, encodeURIComponent(String(requestParameters['accountId'])))
-                    .replace(`{${'aws_mount_path'}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                path: `/auth/{aws_mount_path}/config/sts/{account_id}`.replace(`{${"account_id"}}`, encodeURIComponent(String(requestParameters['accountId']))).replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3485,7 +3321,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     awsWriteStsRole(accountId, awsMountPath, awsWriteStsRoleRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.awsWriteStsRoleRaw({ accountId: accountId, awsMountPath: awsMountPath, awsWriteStsRoleRequest: awsWriteStsRoleRequest }, initOverrides);
+            const response = yield this.awsWriteStsRoleRaw({ accountId: accountId, awsMountPath: awsMountPath, awsWriteStsRoleRequest: awsWriteStsRoleRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3502,7 +3339,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{azure_mount_path}/config`.replace(`{${'azure_mount_path'}}`, encodeURIComponent(String(requestParameters['azureMountPath']))),
+                path: `/auth/{azure_mount_path}/config`.replace(`{${"azure_mount_path"}}`, encodeURIComponent(String(requestParameters['azureMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3515,7 +3352,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     azureConfigureAuth(azureMountPath, azureConfigureAuthRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.azureConfigureAuthRaw({ azureMountPath: azureMountPath, azureConfigureAuthRequest: azureConfigureAuthRequest }, initOverrides);
+            const response = yield this.azureConfigureAuthRaw({ azureMountPath: azureMountPath, azureConfigureAuthRequest: azureConfigureAuthRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3528,7 +3366,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{azure_mount_path}/config`.replace(`{${'azure_mount_path'}}`, encodeURIComponent(String(requestParameters['azureMountPath']))),
+                path: `/auth/{azure_mount_path}/config`.replace(`{${"azure_mount_path"}}`, encodeURIComponent(String(requestParameters['azureMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3540,7 +3378,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     azureDeleteAuthConfiguration(azureMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.azureDeleteAuthConfigurationRaw({ azureMountPath: azureMountPath }, initOverrides);
+            const response = yield this.azureDeleteAuthConfigurationRaw({ azureMountPath: azureMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3556,9 +3395,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{azure_mount_path}/role/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'azure_mount_path'}}`, encodeURIComponent(String(requestParameters['azureMountPath']))),
+                path: `/auth/{azure_mount_path}/role/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"azure_mount_path"}}`, encodeURIComponent(String(requestParameters['azureMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3570,7 +3407,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     azureDeleteAuthRole(name, azureMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.azureDeleteAuthRoleRaw({ name: name, azureMountPath: azureMountPath }, initOverrides);
+            const response = yield this.azureDeleteAuthRoleRaw({ name: name, azureMountPath: azureMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3589,7 +3427,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{azure_mount_path}/role/`.replace(`{${'azure_mount_path'}}`, encodeURIComponent(String(requestParameters['azureMountPath']))),
+                path: `/auth/{azure_mount_path}/role/`.replace(`{${"azure_mount_path"}}`, encodeURIComponent(String(requestParameters['azureMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3619,7 +3457,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{azure_mount_path}/login`.replace(`{${'azure_mount_path'}}`, encodeURIComponent(String(requestParameters['azureMountPath']))),
+                path: `/auth/{azure_mount_path}/login`.replace(`{${"azure_mount_path"}}`, encodeURIComponent(String(requestParameters['azureMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3632,7 +3470,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     azureLogin(azureMountPath, azureLoginRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.azureLoginRaw({ azureMountPath: azureMountPath, azureLoginRequest: azureLoginRequest }, initOverrides);
+            const response = yield this.azureLoginRaw({ azureMountPath: azureMountPath, azureLoginRequest: azureLoginRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3645,7 +3484,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{azure_mount_path}/config`.replace(`{${'azure_mount_path'}}`, encodeURIComponent(String(requestParameters['azureMountPath']))),
+                path: `/auth/{azure_mount_path}/config`.replace(`{${"azure_mount_path"}}`, encodeURIComponent(String(requestParameters['azureMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3657,7 +3496,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     azureReadAuthConfiguration(azureMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.azureReadAuthConfigurationRaw({ azureMountPath: azureMountPath }, initOverrides);
+            const response = yield this.azureReadAuthConfigurationRaw({ azureMountPath: azureMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3673,9 +3513,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{azure_mount_path}/role/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'azure_mount_path'}}`, encodeURIComponent(String(requestParameters['azureMountPath']))),
+                path: `/auth/{azure_mount_path}/role/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"azure_mount_path"}}`, encodeURIComponent(String(requestParameters['azureMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3687,7 +3525,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     azureReadAuthRole(name, azureMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.azureReadAuthRoleRaw({ name: name, azureMountPath: azureMountPath }, initOverrides);
+            const response = yield this.azureReadAuthRoleRaw({ name: name, azureMountPath: azureMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3700,7 +3539,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{azure_mount_path}/rotate-root`.replace(`{${'azure_mount_path'}}`, encodeURIComponent(String(requestParameters['azureMountPath']))),
+                path: `/auth/{azure_mount_path}/rotate-root`.replace(`{${"azure_mount_path"}}`, encodeURIComponent(String(requestParameters['azureMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3712,7 +3551,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     azureRotateRootCredentials(azureMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.azureRotateRootCredentialsRaw({ azureMountPath: azureMountPath }, initOverrides);
+            const response = yield this.azureRotateRootCredentialsRaw({ azureMountPath: azureMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3732,9 +3572,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{azure_mount_path}/role/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'azure_mount_path'}}`, encodeURIComponent(String(requestParameters['azureMountPath']))),
+                path: `/auth/{azure_mount_path}/role/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"azure_mount_path"}}`, encodeURIComponent(String(requestParameters['azureMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3747,7 +3585,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     azureWriteAuthRole(name, azureMountPath, azureWriteAuthRoleRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.azureWriteAuthRoleRaw({ name: name, azureMountPath: azureMountPath, azureWriteAuthRoleRequest: azureWriteAuthRoleRequest }, initOverrides);
+            const response = yield this.azureWriteAuthRoleRaw({ name: name, azureMountPath: azureMountPath, azureWriteAuthRoleRequest: azureWriteAuthRoleRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3764,7 +3603,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{cert_mount_path}/config`.replace(`{${'cert_mount_path'}}`, encodeURIComponent(String(requestParameters['certMountPath']))),
+                path: `/auth/{cert_mount_path}/config`.replace(`{${"cert_mount_path"}}`, encodeURIComponent(String(requestParameters['certMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3777,7 +3616,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     certConfigure(certMountPath, certConfigureRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.certConfigureRaw({ certMountPath: certMountPath, certConfigureRequest: certConfigureRequest }, initOverrides);
+            const response = yield this.certConfigureRaw({ certMountPath: certMountPath, certConfigureRequest: certConfigureRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3794,9 +3634,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{cert_mount_path}/certs/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'cert_mount_path'}}`, encodeURIComponent(String(requestParameters['certMountPath']))),
+                path: `/auth/{cert_mount_path}/certs/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"cert_mount_path"}}`, encodeURIComponent(String(requestParameters['certMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3809,7 +3647,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     certDeleteCertificate(name, certMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.certDeleteCertificateRaw({ name: name, certMountPath: certMountPath }, initOverrides);
+            const response = yield this.certDeleteCertificateRaw({ name: name, certMountPath: certMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3826,9 +3665,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{cert_mount_path}/crls/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'cert_mount_path'}}`, encodeURIComponent(String(requestParameters['certMountPath']))),
+                path: `/auth/{cert_mount_path}/crls/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"cert_mount_path"}}`, encodeURIComponent(String(requestParameters['certMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3841,7 +3678,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     certDeleteCrl(name, certMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.certDeleteCrlRaw({ name: name, certMountPath: certMountPath }, initOverrides);
+            const response = yield this.certDeleteCrlRaw({ name: name, certMountPath: certMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3861,7 +3699,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{cert_mount_path}/certs/`.replace(`{${'cert_mount_path'}}`, encodeURIComponent(String(requestParameters['certMountPath']))),
+                path: `/auth/{cert_mount_path}/certs/`.replace(`{${"cert_mount_path"}}`, encodeURIComponent(String(requestParameters['certMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3894,7 +3732,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{cert_mount_path}/crls/`.replace(`{${'cert_mount_path'}}`, encodeURIComponent(String(requestParameters['certMountPath']))),
+                path: `/auth/{cert_mount_path}/crls/`.replace(`{${"cert_mount_path"}}`, encodeURIComponent(String(requestParameters['certMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3924,7 +3762,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{cert_mount_path}/login`.replace(`{${'cert_mount_path'}}`, encodeURIComponent(String(requestParameters['certMountPath']))),
+                path: `/auth/{cert_mount_path}/login`.replace(`{${"cert_mount_path"}}`, encodeURIComponent(String(requestParameters['certMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3937,7 +3775,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     certLogin(certMountPath, certLoginRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.certLoginRaw({ certMountPath: certMountPath, certLoginRequest: certLoginRequest }, initOverrides);
+            const response = yield this.certLoginRaw({ certMountPath: certMountPath, certLoginRequest: certLoginRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3954,9 +3793,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{cert_mount_path}/certs/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'cert_mount_path'}}`, encodeURIComponent(String(requestParameters['certMountPath']))),
+                path: `/auth/{cert_mount_path}/certs/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"cert_mount_path"}}`, encodeURIComponent(String(requestParameters['certMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3969,7 +3806,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     certReadCertificate(name, certMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.certReadCertificateRaw({ name: name, certMountPath: certMountPath }, initOverrides);
+            const response = yield this.certReadCertificateRaw({ name: name, certMountPath: certMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3982,7 +3820,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{cert_mount_path}/config`.replace(`{${'cert_mount_path'}}`, encodeURIComponent(String(requestParameters['certMountPath']))),
+                path: `/auth/{cert_mount_path}/config`.replace(`{${"cert_mount_path"}}`, encodeURIComponent(String(requestParameters['certMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3994,7 +3832,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     certReadConfiguration(certMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.certReadConfigurationRaw({ certMountPath: certMountPath }, initOverrides);
+            const response = yield this.certReadConfigurationRaw({ certMountPath: certMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4011,9 +3850,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{cert_mount_path}/crls/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'cert_mount_path'}}`, encodeURIComponent(String(requestParameters['certMountPath']))),
+                path: `/auth/{cert_mount_path}/crls/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"cert_mount_path"}}`, encodeURIComponent(String(requestParameters['certMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4026,7 +3863,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     certReadCrl(name, certMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.certReadCrlRaw({ name: name, certMountPath: certMountPath }, initOverrides);
+            const response = yield this.certReadCrlRaw({ name: name, certMountPath: certMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4047,9 +3885,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{cert_mount_path}/certs/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'cert_mount_path'}}`, encodeURIComponent(String(requestParameters['certMountPath']))),
+                path: `/auth/{cert_mount_path}/certs/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"cert_mount_path"}}`, encodeURIComponent(String(requestParameters['certMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4063,7 +3899,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     certWriteCertificate(name, certMountPath, certWriteCertificateRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.certWriteCertificateRaw({ name: name, certMountPath: certMountPath, certWriteCertificateRequest: certWriteCertificateRequest }, initOverrides);
+            const response = yield this.certWriteCertificateRaw({ name: name, certMountPath: certMountPath, certWriteCertificateRequest: certWriteCertificateRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4084,9 +3921,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{cert_mount_path}/crls/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'cert_mount_path'}}`, encodeURIComponent(String(requestParameters['certMountPath']))),
+                path: `/auth/{cert_mount_path}/crls/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"cert_mount_path"}}`, encodeURIComponent(String(requestParameters['certMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4100,7 +3935,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     certWriteCrl(name, certMountPath, certWriteCrlRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.certWriteCrlRaw({ name: name, certMountPath: certMountPath, certWriteCrlRequest: certWriteCrlRequest }, initOverrides);
+            const response = yield this.certWriteCrlRaw({ name: name, certMountPath: certMountPath, certWriteCrlRequest: certWriteCrlRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4117,7 +3953,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{cf_mount_path}/config`.replace(`{${'cf_mount_path'}}`, encodeURIComponent(String(requestParameters['cfMountPath']))),
+                path: `/auth/{cf_mount_path}/config`.replace(`{${"cf_mount_path"}}`, encodeURIComponent(String(requestParameters['cfMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4130,7 +3966,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     cloudFoundryConfigure(cfMountPath, cloudFoundryConfigureRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.cloudFoundryConfigureRaw({ cfMountPath: cfMountPath, cloudFoundryConfigureRequest: cloudFoundryConfigureRequest }, initOverrides);
+            const response = yield this.cloudFoundryConfigureRaw({ cfMountPath: cfMountPath, cloudFoundryConfigureRequest: cloudFoundryConfigureRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4143,7 +3980,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{cf_mount_path}/config`.replace(`{${'cf_mount_path'}}`, encodeURIComponent(String(requestParameters['cfMountPath']))),
+                path: `/auth/{cf_mount_path}/config`.replace(`{${"cf_mount_path"}}`, encodeURIComponent(String(requestParameters['cfMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4155,7 +3992,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     cloudFoundryDeleteConfiguration(cfMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.cloudFoundryDeleteConfigurationRaw({ cfMountPath: cfMountPath }, initOverrides);
+            const response = yield this.cloudFoundryDeleteConfigurationRaw({ cfMountPath: cfMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4171,9 +4009,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{cf_mount_path}/roles/{role}`
-                    .replace(`{${'role'}}`, encodeURIComponent(String(requestParameters['role'])))
-                    .replace(`{${'cf_mount_path'}}`, encodeURIComponent(String(requestParameters['cfMountPath']))),
+                path: `/auth/{cf_mount_path}/roles/{role}`.replace(`{${"role"}}`, encodeURIComponent(String(requestParameters['role']))).replace(`{${"cf_mount_path"}}`, encodeURIComponent(String(requestParameters['cfMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4185,7 +4021,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     cloudFoundryDeleteRole(role, cfMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.cloudFoundryDeleteRoleRaw({ role: role, cfMountPath: cfMountPath }, initOverrides);
+            const response = yield this.cloudFoundryDeleteRoleRaw({ role: role, cfMountPath: cfMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4204,7 +4041,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{cf_mount_path}/roles/`.replace(`{${'cf_mount_path'}}`, encodeURIComponent(String(requestParameters['cfMountPath']))),
+                path: `/auth/{cf_mount_path}/roles/`.replace(`{${"cf_mount_path"}}`, encodeURIComponent(String(requestParameters['cfMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4234,7 +4071,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{cf_mount_path}/login`.replace(`{${'cf_mount_path'}}`, encodeURIComponent(String(requestParameters['cfMountPath']))),
+                path: `/auth/{cf_mount_path}/login`.replace(`{${"cf_mount_path"}}`, encodeURIComponent(String(requestParameters['cfMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4247,7 +4084,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     cloudFoundryLogin(cfMountPath, cloudFoundryLoginRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.cloudFoundryLoginRaw({ cfMountPath: cfMountPath, cloudFoundryLoginRequest: cloudFoundryLoginRequest }, initOverrides);
+            const response = yield this.cloudFoundryLoginRaw({ cfMountPath: cfMountPath, cloudFoundryLoginRequest: cloudFoundryLoginRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4260,7 +4098,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{cf_mount_path}/config`.replace(`{${'cf_mount_path'}}`, encodeURIComponent(String(requestParameters['cfMountPath']))),
+                path: `/auth/{cf_mount_path}/config`.replace(`{${"cf_mount_path"}}`, encodeURIComponent(String(requestParameters['cfMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4272,7 +4110,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     cloudFoundryReadConfiguration(cfMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.cloudFoundryReadConfigurationRaw({ cfMountPath: cfMountPath }, initOverrides);
+            const response = yield this.cloudFoundryReadConfigurationRaw({ cfMountPath: cfMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4288,9 +4127,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{cf_mount_path}/roles/{role}`
-                    .replace(`{${'role'}}`, encodeURIComponent(String(requestParameters['role'])))
-                    .replace(`{${'cf_mount_path'}}`, encodeURIComponent(String(requestParameters['cfMountPath']))),
+                path: `/auth/{cf_mount_path}/roles/{role}`.replace(`{${"role"}}`, encodeURIComponent(String(requestParameters['role']))).replace(`{${"cf_mount_path"}}`, encodeURIComponent(String(requestParameters['cfMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4302,7 +4139,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     cloudFoundryReadRole(role, cfMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.cloudFoundryReadRoleRaw({ role: role, cfMountPath: cfMountPath }, initOverrides);
+            const response = yield this.cloudFoundryReadRoleRaw({ role: role, cfMountPath: cfMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4322,9 +4160,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{cf_mount_path}/roles/{role}`
-                    .replace(`{${'role'}}`, encodeURIComponent(String(requestParameters['role'])))
-                    .replace(`{${'cf_mount_path'}}`, encodeURIComponent(String(requestParameters['cfMountPath']))),
+                path: `/auth/{cf_mount_path}/roles/{role}`.replace(`{${"role"}}`, encodeURIComponent(String(requestParameters['role']))).replace(`{${"cf_mount_path"}}`, encodeURIComponent(String(requestParameters['cfMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4337,7 +4173,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     cloudFoundryWriteRole(role, cfMountPath, cloudFoundryWriteRoleRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.cloudFoundryWriteRoleRaw({ role: role, cfMountPath: cfMountPath, cloudFoundryWriteRoleRequest: cloudFoundryWriteRoleRequest }, initOverrides);
+            const response = yield this.cloudFoundryWriteRoleRaw({ role: role, cfMountPath: cfMountPath, cloudFoundryWriteRoleRequest: cloudFoundryWriteRoleRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4354,7 +4191,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{github_mount_path}/config`.replace(`{${'github_mount_path'}}`, encodeURIComponent(String(requestParameters['githubMountPath']))),
+                path: `/auth/{github_mount_path}/config`.replace(`{${"github_mount_path"}}`, encodeURIComponent(String(requestParameters['githubMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4367,7 +4204,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     githubConfigure(githubMountPath, githubConfigureRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.githubConfigureRaw({ githubMountPath: githubMountPath, githubConfigureRequest: githubConfigureRequest }, initOverrides);
+            const response = yield this.githubConfigureRaw({ githubMountPath: githubMountPath, githubConfigureRequest: githubConfigureRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4384,9 +4222,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{github_mount_path}/map/teams/{key}`
-                    .replace(`{${'key'}}`, encodeURIComponent(String(requestParameters['key'])))
-                    .replace(`{${'github_mount_path'}}`, encodeURIComponent(String(requestParameters['githubMountPath']))),
+                path: `/auth/{github_mount_path}/map/teams/{key}`.replace(`{${"key"}}`, encodeURIComponent(String(requestParameters['key']))).replace(`{${"github_mount_path"}}`, encodeURIComponent(String(requestParameters['githubMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4399,7 +4235,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     githubDeleteTeamMapping(key, githubMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.githubDeleteTeamMappingRaw({ key: key, githubMountPath: githubMountPath }, initOverrides);
+            const response = yield this.githubDeleteTeamMappingRaw({ key: key, githubMountPath: githubMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4416,9 +4253,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{github_mount_path}/map/users/{key}`
-                    .replace(`{${'key'}}`, encodeURIComponent(String(requestParameters['key'])))
-                    .replace(`{${'github_mount_path'}}`, encodeURIComponent(String(requestParameters['githubMountPath']))),
+                path: `/auth/{github_mount_path}/map/users/{key}`.replace(`{${"key"}}`, encodeURIComponent(String(requestParameters['key']))).replace(`{${"github_mount_path"}}`, encodeURIComponent(String(requestParameters['githubMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4431,7 +4266,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     githubDeleteUserMapping(key, githubMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.githubDeleteUserMappingRaw({ key: key, githubMountPath: githubMountPath }, initOverrides);
+            const response = yield this.githubDeleteUserMappingRaw({ key: key, githubMountPath: githubMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4451,7 +4287,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{github_mount_path}/map/teams/`.replace(`{${'github_mount_path'}}`, encodeURIComponent(String(requestParameters['githubMountPath']))),
+                path: `/auth/{github_mount_path}/map/teams/`.replace(`{${"github_mount_path"}}`, encodeURIComponent(String(requestParameters['githubMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4479,7 +4315,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{github_mount_path}/map/teams`.replace(`{${'github_mount_path'}}`, encodeURIComponent(String(requestParameters['githubMountPath']))),
+                path: `/auth/{github_mount_path}/map/teams`.replace(`{${"github_mount_path"}}`, encodeURIComponent(String(requestParameters['githubMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4492,7 +4328,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     githubListTeams2(githubMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.githubListTeams2Raw({ githubMountPath: githubMountPath }, initOverrides);
+            const response = yield this.githubListTeams2Raw({ githubMountPath: githubMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4512,7 +4349,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{github_mount_path}/map/users/`.replace(`{${'github_mount_path'}}`, encodeURIComponent(String(requestParameters['githubMountPath']))),
+                path: `/auth/{github_mount_path}/map/users/`.replace(`{${"github_mount_path"}}`, encodeURIComponent(String(requestParameters['githubMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4540,7 +4377,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{github_mount_path}/map/users`.replace(`{${'github_mount_path'}}`, encodeURIComponent(String(requestParameters['githubMountPath']))),
+                path: `/auth/{github_mount_path}/map/users`.replace(`{${"github_mount_path"}}`, encodeURIComponent(String(requestParameters['githubMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4553,7 +4390,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     githubListUsers2(githubMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.githubListUsers2Raw({ githubMountPath: githubMountPath }, initOverrides);
+            const response = yield this.githubListUsers2Raw({ githubMountPath: githubMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4570,7 +4408,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{github_mount_path}/login`.replace(`{${'github_mount_path'}}`, encodeURIComponent(String(requestParameters['githubMountPath']))),
+                path: `/auth/{github_mount_path}/login`.replace(`{${"github_mount_path"}}`, encodeURIComponent(String(requestParameters['githubMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4583,7 +4421,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     githubLogin(githubMountPath, githubLoginRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.githubLoginRaw({ githubMountPath: githubMountPath, githubLoginRequest: githubLoginRequest }, initOverrides);
+            const response = yield this.githubLoginRaw({ githubMountPath: githubMountPath, githubLoginRequest: githubLoginRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4596,7 +4435,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{github_mount_path}/config`.replace(`{${'github_mount_path'}}`, encodeURIComponent(String(requestParameters['githubMountPath']))),
+                path: `/auth/{github_mount_path}/config`.replace(`{${"github_mount_path"}}`, encodeURIComponent(String(requestParameters['githubMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4608,7 +4447,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     githubReadConfiguration(githubMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.githubReadConfigurationRaw({ githubMountPath: githubMountPath }, initOverrides);
+            const response = yield this.githubReadConfigurationRaw({ githubMountPath: githubMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4625,9 +4465,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{github_mount_path}/map/teams/{key}`
-                    .replace(`{${'key'}}`, encodeURIComponent(String(requestParameters['key'])))
-                    .replace(`{${'github_mount_path'}}`, encodeURIComponent(String(requestParameters['githubMountPath']))),
+                path: `/auth/{github_mount_path}/map/teams/{key}`.replace(`{${"key"}}`, encodeURIComponent(String(requestParameters['key']))).replace(`{${"github_mount_path"}}`, encodeURIComponent(String(requestParameters['githubMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4640,7 +4478,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     githubReadTeamMapping(key, githubMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.githubReadTeamMappingRaw({ key: key, githubMountPath: githubMountPath }, initOverrides);
+            const response = yield this.githubReadTeamMappingRaw({ key: key, githubMountPath: githubMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4657,9 +4496,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{github_mount_path}/map/users/{key}`
-                    .replace(`{${'key'}}`, encodeURIComponent(String(requestParameters['key'])))
-                    .replace(`{${'github_mount_path'}}`, encodeURIComponent(String(requestParameters['githubMountPath']))),
+                path: `/auth/{github_mount_path}/map/users/{key}`.replace(`{${"key"}}`, encodeURIComponent(String(requestParameters['key']))).replace(`{${"github_mount_path"}}`, encodeURIComponent(String(requestParameters['githubMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4672,7 +4509,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     githubReadUserMapping(key, githubMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.githubReadUserMappingRaw({ key: key, githubMountPath: githubMountPath }, initOverrides);
+            const response = yield this.githubReadUserMappingRaw({ key: key, githubMountPath: githubMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4693,9 +4531,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{github_mount_path}/map/teams/{key}`
-                    .replace(`{${'key'}}`, encodeURIComponent(String(requestParameters['key'])))
-                    .replace(`{${'github_mount_path'}}`, encodeURIComponent(String(requestParameters['githubMountPath']))),
+                path: `/auth/{github_mount_path}/map/teams/{key}`.replace(`{${"key"}}`, encodeURIComponent(String(requestParameters['key']))).replace(`{${"github_mount_path"}}`, encodeURIComponent(String(requestParameters['githubMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4709,11 +4545,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     githubWriteTeamMapping(key, githubMountPath, githubWriteTeamMappingRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.githubWriteTeamMappingRaw({
-                key: key,
-                githubMountPath: githubMountPath,
-                githubWriteTeamMappingRequest: githubWriteTeamMappingRequest,
-            }, initOverrides);
+            const response = yield this.githubWriteTeamMappingRaw({ key: key, githubMountPath: githubMountPath, githubWriteTeamMappingRequest: githubWriteTeamMappingRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4734,9 +4567,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{github_mount_path}/map/users/{key}`
-                    .replace(`{${'key'}}`, encodeURIComponent(String(requestParameters['key'])))
-                    .replace(`{${'github_mount_path'}}`, encodeURIComponent(String(requestParameters['githubMountPath']))),
+                path: `/auth/{github_mount_path}/map/users/{key}`.replace(`{${"key"}}`, encodeURIComponent(String(requestParameters['key']))).replace(`{${"github_mount_path"}}`, encodeURIComponent(String(requestParameters['githubMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4750,11 +4581,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     githubWriteUserMapping(key, githubMountPath, githubWriteUserMappingRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.githubWriteUserMappingRaw({
-                key: key,
-                githubMountPath: githubMountPath,
-                githubWriteUserMappingRequest: githubWriteUserMappingRequest,
-            }, initOverrides);
+            const response = yield this.githubWriteUserMappingRaw({ key: key, githubMountPath: githubMountPath, githubWriteUserMappingRequest: githubWriteUserMappingRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4771,7 +4599,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{gcp_mount_path}/config`.replace(`{${'gcp_mount_path'}}`, encodeURIComponent(String(requestParameters['gcpMountPath']))),
+                path: `/auth/{gcp_mount_path}/config`.replace(`{${"gcp_mount_path"}}`, encodeURIComponent(String(requestParameters['gcpMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4784,7 +4612,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     googleCloudConfigureAuth(gcpMountPath, googleCloudConfigureAuthRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.googleCloudConfigureAuthRaw({ gcpMountPath: gcpMountPath, googleCloudConfigureAuthRequest: googleCloudConfigureAuthRequest }, initOverrides);
+            const response = yield this.googleCloudConfigureAuthRaw({ gcpMountPath: gcpMountPath, googleCloudConfigureAuthRequest: googleCloudConfigureAuthRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4801,9 +4630,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{gcp_mount_path}/role/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'gcp_mount_path'}}`, encodeURIComponent(String(requestParameters['gcpMountPath']))),
+                path: `/auth/{gcp_mount_path}/role/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"gcp_mount_path"}}`, encodeURIComponent(String(requestParameters['gcpMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4816,7 +4643,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     googleCloudDeleteRole(name, gcpMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.googleCloudDeleteRoleRaw({ name: name, gcpMountPath: gcpMountPath }, initOverrides);
+            const response = yield this.googleCloudDeleteRoleRaw({ name: name, gcpMountPath: gcpMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4837,9 +4665,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{gcp_mount_path}/role/{name}/labels`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'gcp_mount_path'}}`, encodeURIComponent(String(requestParameters['gcpMountPath']))),
+                path: `/auth/{gcp_mount_path}/role/{name}/labels`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"gcp_mount_path"}}`, encodeURIComponent(String(requestParameters['gcpMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4853,11 +4679,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     googleCloudEditLabelsForRole(name, gcpMountPath, googleCloudEditLabelsForRoleRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.googleCloudEditLabelsForRoleRaw({
-                name: name,
-                gcpMountPath: gcpMountPath,
-                googleCloudEditLabelsForRoleRequest: googleCloudEditLabelsForRoleRequest,
-            }, initOverrides);
+            const response = yield this.googleCloudEditLabelsForRoleRaw({ name: name, gcpMountPath: gcpMountPath, googleCloudEditLabelsForRoleRequest: googleCloudEditLabelsForRoleRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4878,9 +4701,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{gcp_mount_path}/role/{name}/service-accounts`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'gcp_mount_path'}}`, encodeURIComponent(String(requestParameters['gcpMountPath']))),
+                path: `/auth/{gcp_mount_path}/role/{name}/service-accounts`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"gcp_mount_path"}}`, encodeURIComponent(String(requestParameters['gcpMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4894,11 +4715,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     googleCloudEditServiceAccountsForRole(name, gcpMountPath, googleCloudEditServiceAccountsForRoleRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.googleCloudEditServiceAccountsForRoleRaw({
-                name: name,
-                gcpMountPath: gcpMountPath,
-                googleCloudEditServiceAccountsForRoleRequest: googleCloudEditServiceAccountsForRoleRequest,
-            }, initOverrides);
+            const response = yield this.googleCloudEditServiceAccountsForRoleRaw({ name: name, gcpMountPath: gcpMountPath, googleCloudEditServiceAccountsForRoleRequest: googleCloudEditServiceAccountsForRoleRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -4918,7 +4736,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{gcp_mount_path}/role/`.replace(`{${'gcp_mount_path'}}`, encodeURIComponent(String(requestParameters['gcpMountPath']))),
+                path: `/auth/{gcp_mount_path}/role/`.replace(`{${"gcp_mount_path"}}`, encodeURIComponent(String(requestParameters['gcpMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4952,7 +4770,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{gcp_mount_path}/roles/`.replace(`{${'gcp_mount_path'}}`, encodeURIComponent(String(requestParameters['gcpMountPath']))),
+                path: `/auth/{gcp_mount_path}/roles/`.replace(`{${"gcp_mount_path"}}`, encodeURIComponent(String(requestParameters['gcpMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4983,7 +4801,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{gcp_mount_path}/login`.replace(`{${'gcp_mount_path'}}`, encodeURIComponent(String(requestParameters['gcpMountPath']))),
+                path: `/auth/{gcp_mount_path}/login`.replace(`{${"gcp_mount_path"}}`, encodeURIComponent(String(requestParameters['gcpMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -4996,7 +4814,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     googleCloudLogin(gcpMountPath, googleCloudLoginRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.googleCloudLoginRaw({ gcpMountPath: gcpMountPath, googleCloudLoginRequest: googleCloudLoginRequest }, initOverrides);
+            const response = yield this.googleCloudLoginRaw({ gcpMountPath: gcpMountPath, googleCloudLoginRequest: googleCloudLoginRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5009,7 +4828,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{gcp_mount_path}/config`.replace(`{${'gcp_mount_path'}}`, encodeURIComponent(String(requestParameters['gcpMountPath']))),
+                path: `/auth/{gcp_mount_path}/config`.replace(`{${"gcp_mount_path"}}`, encodeURIComponent(String(requestParameters['gcpMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5021,7 +4840,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     googleCloudReadAuthConfiguration(gcpMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.googleCloudReadAuthConfigurationRaw({ gcpMountPath: gcpMountPath }, initOverrides);
+            const response = yield this.googleCloudReadAuthConfigurationRaw({ gcpMountPath: gcpMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5038,9 +4858,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{gcp_mount_path}/role/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'gcp_mount_path'}}`, encodeURIComponent(String(requestParameters['gcpMountPath']))),
+                path: `/auth/{gcp_mount_path}/role/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"gcp_mount_path"}}`, encodeURIComponent(String(requestParameters['gcpMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5053,7 +4871,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     googleCloudReadRole(name, gcpMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.googleCloudReadRoleRaw({ name: name, gcpMountPath: gcpMountPath }, initOverrides);
+            const response = yield this.googleCloudReadRoleRaw({ name: name, gcpMountPath: gcpMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5066,7 +4885,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{gcp_mount_path}/config/rotate-root`.replace(`{${'gcp_mount_path'}}`, encodeURIComponent(String(requestParameters['gcpMountPath']))),
+                path: `/auth/{gcp_mount_path}/config/rotate-root`.replace(`{${"gcp_mount_path"}}`, encodeURIComponent(String(requestParameters['gcpMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5078,7 +4897,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     googleCloudRotateRootCredentials(gcpMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.googleCloudRotateRootCredentialsRaw({ gcpMountPath: gcpMountPath }, initOverrides);
+            const response = yield this.googleCloudRotateRootCredentialsRaw({ gcpMountPath: gcpMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5099,9 +4919,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{gcp_mount_path}/role/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'gcp_mount_path'}}`, encodeURIComponent(String(requestParameters['gcpMountPath']))),
+                path: `/auth/{gcp_mount_path}/role/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"gcp_mount_path"}}`, encodeURIComponent(String(requestParameters['gcpMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5115,7 +4933,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     googleCloudWriteRole(name, gcpMountPath, googleCloudWriteRoleRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.googleCloudWriteRoleRaw({ name: name, gcpMountPath: gcpMountPath, googleCloudWriteRoleRequest: googleCloudWriteRoleRequest }, initOverrides);
+            const response = yield this.googleCloudWriteRoleRaw({ name: name, gcpMountPath: gcpMountPath, googleCloudWriteRoleRequest: googleCloudWriteRoleRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5134,7 +4953,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{jwt_mount_path}/config`.replace(`{${'jwt_mount_path'}}`, encodeURIComponent(String(requestParameters['jwtMountPath']))),
+                path: `/auth/{jwt_mount_path}/config`.replace(`{${"jwt_mount_path"}}`, encodeURIComponent(String(requestParameters['jwtMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5149,7 +4968,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     jwtConfigure(jwtMountPath, jwtConfigureRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.jwtConfigureRaw({ jwtMountPath: jwtMountPath, jwtConfigureRequest: jwtConfigureRequest }, initOverrides);
+            const response = yield this.jwtConfigureRaw({ jwtMountPath: jwtMountPath, jwtConfigureRequest: jwtConfigureRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5166,9 +4986,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{jwt_mount_path}/role/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'jwt_mount_path'}}`, encodeURIComponent(String(requestParameters['jwtMountPath']))),
+                path: `/auth/{jwt_mount_path}/role/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"jwt_mount_path"}}`, encodeURIComponent(String(requestParameters['jwtMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5181,7 +4999,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     jwtDeleteRole(name, jwtMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.jwtDeleteRoleRaw({ name: name, jwtMountPath: jwtMountPath }, initOverrides);
+            const response = yield this.jwtDeleteRoleRaw({ name: name, jwtMountPath: jwtMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5202,7 +5021,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{jwt_mount_path}/role/`.replace(`{${'jwt_mount_path'}}`, encodeURIComponent(String(requestParameters['jwtMountPath']))),
+                path: `/auth/{jwt_mount_path}/role/`.replace(`{${"jwt_mount_path"}}`, encodeURIComponent(String(requestParameters['jwtMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5235,7 +5054,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{jwt_mount_path}/login`.replace(`{${'jwt_mount_path'}}`, encodeURIComponent(String(requestParameters['jwtMountPath']))),
+                path: `/auth/{jwt_mount_path}/login`.replace(`{${"jwt_mount_path"}}`, encodeURIComponent(String(requestParameters['jwtMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5249,7 +5068,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     jwtLogin(jwtMountPath, jwtLoginRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.jwtLoginRaw({ jwtMountPath: jwtMountPath, jwtLoginRequest: jwtLoginRequest }, initOverrides);
+            const response = yield this.jwtLoginRaw({ jwtMountPath: jwtMountPath, jwtLoginRequest: jwtLoginRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5272,7 +5092,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{jwt_mount_path}/oidc/callback`.replace(`{${'jwt_mount_path'}}`, encodeURIComponent(String(requestParameters['jwtMountPath']))),
+                path: `/auth/{jwt_mount_path}/oidc/callback`.replace(`{${"jwt_mount_path"}}`, encodeURIComponent(String(requestParameters['jwtMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5285,7 +5105,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     jwtOidcCallback(jwtMountPath, clientNonce, code, state, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.jwtOidcCallbackRaw({ jwtMountPath: jwtMountPath, clientNonce: clientNonce, code: code, state: state }, initOverrides);
+            const response = yield this.jwtOidcCallbackRaw({ jwtMountPath: jwtMountPath, clientNonce: clientNonce, code: code, state: state }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5303,7 +5124,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{jwt_mount_path}/oidc/callback`.replace(`{${'jwt_mount_path'}}`, encodeURIComponent(String(requestParameters['jwtMountPath']))),
+                path: `/auth/{jwt_mount_path}/oidc/callback`.replace(`{${"jwt_mount_path"}}`, encodeURIComponent(String(requestParameters['jwtMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5317,7 +5138,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     jwtOidcCallbackFormPost(jwtMountPath, jwtOidcCallbackFormPostRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.jwtOidcCallbackFormPostRaw({ jwtMountPath: jwtMountPath, jwtOidcCallbackFormPostRequest: jwtOidcCallbackFormPostRequest }, initOverrides);
+            const response = yield this.jwtOidcCallbackFormPostRaw({ jwtMountPath: jwtMountPath, jwtOidcCallbackFormPostRequest: jwtOidcCallbackFormPostRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5335,7 +5157,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{jwt_mount_path}/oidc/auth_url`.replace(`{${'jwt_mount_path'}}`, encodeURIComponent(String(requestParameters['jwtMountPath']))),
+                path: `/auth/{jwt_mount_path}/oidc/auth_url`.replace(`{${"jwt_mount_path"}}`, encodeURIComponent(String(requestParameters['jwtMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5349,10 +5171,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     jwtOidcRequestAuthorizationUrl(jwtMountPath, jwtOidcRequestAuthorizationUrlRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.jwtOidcRequestAuthorizationUrlRaw({
-                jwtMountPath: jwtMountPath,
-                jwtOidcRequestAuthorizationUrlRequest: jwtOidcRequestAuthorizationUrlRequest,
-            }, initOverrides);
+            const response = yield this.jwtOidcRequestAuthorizationUrlRaw({ jwtMountPath: jwtMountPath, jwtOidcRequestAuthorizationUrlRequest: jwtOidcRequestAuthorizationUrlRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5366,7 +5186,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{jwt_mount_path}/config`.replace(`{${'jwt_mount_path'}}`, encodeURIComponent(String(requestParameters['jwtMountPath']))),
+                path: `/auth/{jwt_mount_path}/config`.replace(`{${"jwt_mount_path"}}`, encodeURIComponent(String(requestParameters['jwtMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5379,7 +5199,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     jwtReadConfiguration(jwtMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.jwtReadConfigurationRaw({ jwtMountPath: jwtMountPath }, initOverrides);
+            const response = yield this.jwtReadConfigurationRaw({ jwtMountPath: jwtMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5396,9 +5217,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{jwt_mount_path}/role/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'jwt_mount_path'}}`, encodeURIComponent(String(requestParameters['jwtMountPath']))),
+                path: `/auth/{jwt_mount_path}/role/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"jwt_mount_path"}}`, encodeURIComponent(String(requestParameters['jwtMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5411,7 +5230,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     jwtReadRole(name, jwtMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.jwtReadRoleRaw({ name: name, jwtMountPath: jwtMountPath }, initOverrides);
+            const response = yield this.jwtReadRoleRaw({ name: name, jwtMountPath: jwtMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5433,9 +5253,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{jwt_mount_path}/role/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'jwt_mount_path'}}`, encodeURIComponent(String(requestParameters['jwtMountPath']))),
+                path: `/auth/{jwt_mount_path}/role/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"jwt_mount_path"}}`, encodeURIComponent(String(requestParameters['jwtMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5450,7 +5268,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     jwtWriteRole(name, jwtMountPath, jwtWriteRoleRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.jwtWriteRoleRaw({ name: name, jwtMountPath: jwtMountPath, jwtWriteRoleRequest: jwtWriteRoleRequest }, initOverrides);
+            const response = yield this.jwtWriteRoleRaw({ name: name, jwtMountPath: jwtMountPath, jwtWriteRoleRequest: jwtWriteRoleRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5467,7 +5286,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{kerberos_mount_path}/config`.replace(`{${'kerberos_mount_path'}}`, encodeURIComponent(String(requestParameters['kerberosMountPath']))),
+                path: `/auth/{kerberos_mount_path}/config`.replace(`{${"kerberos_mount_path"}}`, encodeURIComponent(String(requestParameters['kerberosMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5480,7 +5299,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     kerberosConfigure(kerberosMountPath, kerberosConfigureRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.kerberosConfigureRaw({ kerberosMountPath: kerberosMountPath, kerberosConfigureRequest: kerberosConfigureRequest }, initOverrides);
+            const response = yield this.kerberosConfigureRaw({ kerberosMountPath: kerberosMountPath, kerberosConfigureRequest: kerberosConfigureRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5497,7 +5317,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{kerberos_mount_path}/config/ldap`.replace(`{${'kerberos_mount_path'}}`, encodeURIComponent(String(requestParameters['kerberosMountPath']))),
+                path: `/auth/{kerberos_mount_path}/config/ldap`.replace(`{${"kerberos_mount_path"}}`, encodeURIComponent(String(requestParameters['kerberosMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5510,7 +5330,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     kerberosConfigureLdap(kerberosMountPath, kerberosConfigureLdapRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.kerberosConfigureLdapRaw({ kerberosMountPath: kerberosMountPath, kerberosConfigureLdapRequest: kerberosConfigureLdapRequest }, initOverrides);
+            const response = yield this.kerberosConfigureLdapRaw({ kerberosMountPath: kerberosMountPath, kerberosConfigureLdapRequest: kerberosConfigureLdapRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5526,9 +5347,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{kerberos_mount_path}/groups/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'kerberos_mount_path'}}`, encodeURIComponent(String(requestParameters['kerberosMountPath']))),
+                path: `/auth/{kerberos_mount_path}/groups/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"kerberos_mount_path"}}`, encodeURIComponent(String(requestParameters['kerberosMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5540,7 +5359,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     kerberosDeleteGroup(name, kerberosMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.kerberosDeleteGroupRaw({ name: name, kerberosMountPath: kerberosMountPath }, initOverrides);
+            const response = yield this.kerberosDeleteGroupRaw({ name: name, kerberosMountPath: kerberosMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5559,7 +5379,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{kerberos_mount_path}/groups/`.replace(`{${'kerberos_mount_path'}}`, encodeURIComponent(String(requestParameters['kerberosMountPath']))),
+                path: `/auth/{kerberos_mount_path}/groups/`.replace(`{${"kerberos_mount_path"}}`, encodeURIComponent(String(requestParameters['kerberosMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5589,7 +5409,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{kerberos_mount_path}/login`.replace(`{${'kerberos_mount_path'}}`, encodeURIComponent(String(requestParameters['kerberosMountPath']))),
+                path: `/auth/{kerberos_mount_path}/login`.replace(`{${"kerberos_mount_path"}}`, encodeURIComponent(String(requestParameters['kerberosMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5602,7 +5422,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     kerberosLogin(kerberosMountPath, kerberosLoginRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.kerberosLoginRaw({ kerberosMountPath: kerberosMountPath, kerberosLoginRequest: kerberosLoginRequest }, initOverrides);
+            const response = yield this.kerberosLoginRaw({ kerberosMountPath: kerberosMountPath, kerberosLoginRequest: kerberosLoginRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5615,7 +5436,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{kerberos_mount_path}/login`.replace(`{${'kerberos_mount_path'}}`, encodeURIComponent(String(requestParameters['kerberosMountPath']))),
+                path: `/auth/{kerberos_mount_path}/login`.replace(`{${"kerberos_mount_path"}}`, encodeURIComponent(String(requestParameters['kerberosMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5627,7 +5448,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     kerberosLogin2(kerberosMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.kerberosLogin2Raw({ kerberosMountPath: kerberosMountPath }, initOverrides);
+            const response = yield this.kerberosLogin2Raw({ kerberosMountPath: kerberosMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5640,7 +5462,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{kerberos_mount_path}/config`.replace(`{${'kerberos_mount_path'}}`, encodeURIComponent(String(requestParameters['kerberosMountPath']))),
+                path: `/auth/{kerberos_mount_path}/config`.replace(`{${"kerberos_mount_path"}}`, encodeURIComponent(String(requestParameters['kerberosMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5652,7 +5474,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     kerberosReadConfiguration(kerberosMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.kerberosReadConfigurationRaw({ kerberosMountPath: kerberosMountPath }, initOverrides);
+            const response = yield this.kerberosReadConfigurationRaw({ kerberosMountPath: kerberosMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5668,9 +5491,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{kerberos_mount_path}/groups/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'kerberos_mount_path'}}`, encodeURIComponent(String(requestParameters['kerberosMountPath']))),
+                path: `/auth/{kerberos_mount_path}/groups/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"kerberos_mount_path"}}`, encodeURIComponent(String(requestParameters['kerberosMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5682,7 +5503,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     kerberosReadGroup(name, kerberosMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.kerberosReadGroupRaw({ name: name, kerberosMountPath: kerberosMountPath }, initOverrides);
+            const response = yield this.kerberosReadGroupRaw({ name: name, kerberosMountPath: kerberosMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5695,7 +5517,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{kerberos_mount_path}/config/ldap`.replace(`{${'kerberos_mount_path'}}`, encodeURIComponent(String(requestParameters['kerberosMountPath']))),
+                path: `/auth/{kerberos_mount_path}/config/ldap`.replace(`{${"kerberos_mount_path"}}`, encodeURIComponent(String(requestParameters['kerberosMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5707,7 +5529,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     kerberosReadLdapConfiguration(kerberosMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.kerberosReadLdapConfigurationRaw({ kerberosMountPath: kerberosMountPath }, initOverrides);
+            const response = yield this.kerberosReadLdapConfigurationRaw({ kerberosMountPath: kerberosMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5727,9 +5550,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{kerberos_mount_path}/groups/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'kerberos_mount_path'}}`, encodeURIComponent(String(requestParameters['kerberosMountPath']))),
+                path: `/auth/{kerberos_mount_path}/groups/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"kerberos_mount_path"}}`, encodeURIComponent(String(requestParameters['kerberosMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5742,11 +5563,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     kerberosWriteGroup(name, kerberosMountPath, kerberosWriteGroupRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.kerberosWriteGroupRaw({
-                name: name,
-                kerberosMountPath: kerberosMountPath,
-                kerberosWriteGroupRequest: kerberosWriteGroupRequest,
-            }, initOverrides);
+            const response = yield this.kerberosWriteGroupRaw({ name: name, kerberosMountPath: kerberosMountPath, kerberosWriteGroupRequest: kerberosWriteGroupRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5763,7 +5581,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{kubernetes_mount_path}/config`.replace(`{${'kubernetes_mount_path'}}`, encodeURIComponent(String(requestParameters['kubernetesMountPath']))),
+                path: `/auth/{kubernetes_mount_path}/config`.replace(`{${"kubernetes_mount_path"}}`, encodeURIComponent(String(requestParameters['kubernetesMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5776,10 +5594,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     kubernetesConfigureAuth(kubernetesMountPath, kubernetesConfigureAuthRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.kubernetesConfigureAuthRaw({
-                kubernetesMountPath: kubernetesMountPath,
-                kubernetesConfigureAuthRequest: kubernetesConfigureAuthRequest,
-            }, initOverrides);
+            const response = yield this.kubernetesConfigureAuthRaw({ kubernetesMountPath: kubernetesMountPath, kubernetesConfigureAuthRequest: kubernetesConfigureAuthRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5796,9 +5612,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{kubernetes_mount_path}/role/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'kubernetes_mount_path'}}`, encodeURIComponent(String(requestParameters['kubernetesMountPath']))),
+                path: `/auth/{kubernetes_mount_path}/role/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"kubernetes_mount_path"}}`, encodeURIComponent(String(requestParameters['kubernetesMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5811,7 +5625,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     kubernetesDeleteAuthRole(name, kubernetesMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.kubernetesDeleteAuthRoleRaw({ name: name, kubernetesMountPath: kubernetesMountPath }, initOverrides);
+            const response = yield this.kubernetesDeleteAuthRoleRaw({ name: name, kubernetesMountPath: kubernetesMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5831,7 +5646,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{kubernetes_mount_path}/role/`.replace(`{${'kubernetes_mount_path'}}`, encodeURIComponent(String(requestParameters['kubernetesMountPath']))),
+                path: `/auth/{kubernetes_mount_path}/role/`.replace(`{${"kubernetes_mount_path"}}`, encodeURIComponent(String(requestParameters['kubernetesMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5863,7 +5678,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{kubernetes_mount_path}/login`.replace(`{${'kubernetes_mount_path'}}`, encodeURIComponent(String(requestParameters['kubernetesMountPath']))),
+                path: `/auth/{kubernetes_mount_path}/login`.replace(`{${"kubernetes_mount_path"}}`, encodeURIComponent(String(requestParameters['kubernetesMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5877,7 +5692,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     kubernetesLogin(kubernetesMountPath, kubernetesLoginRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.kubernetesLoginRaw({ kubernetesMountPath: kubernetesMountPath, kubernetesLoginRequest: kubernetesLoginRequest }, initOverrides);
+            const response = yield this.kubernetesLoginRaw({ kubernetesMountPath: kubernetesMountPath, kubernetesLoginRequest: kubernetesLoginRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5890,7 +5706,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{kubernetes_mount_path}/config`.replace(`{${'kubernetes_mount_path'}}`, encodeURIComponent(String(requestParameters['kubernetesMountPath']))),
+                path: `/auth/{kubernetes_mount_path}/config`.replace(`{${"kubernetes_mount_path"}}`, encodeURIComponent(String(requestParameters['kubernetesMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5902,7 +5718,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     kubernetesReadAuthConfiguration(kubernetesMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.kubernetesReadAuthConfigurationRaw({ kubernetesMountPath: kubernetesMountPath }, initOverrides);
+            const response = yield this.kubernetesReadAuthConfigurationRaw({ kubernetesMountPath: kubernetesMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5919,9 +5736,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{kubernetes_mount_path}/role/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'kubernetes_mount_path'}}`, encodeURIComponent(String(requestParameters['kubernetesMountPath']))),
+                path: `/auth/{kubernetes_mount_path}/role/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"kubernetes_mount_path"}}`, encodeURIComponent(String(requestParameters['kubernetesMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5934,7 +5749,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     kubernetesReadAuthRole(name, kubernetesMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.kubernetesReadAuthRoleRaw({ name: name, kubernetesMountPath: kubernetesMountPath }, initOverrides);
+            const response = yield this.kubernetesReadAuthRoleRaw({ name: name, kubernetesMountPath: kubernetesMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5955,9 +5771,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{kubernetes_mount_path}/role/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'kubernetes_mount_path'}}`, encodeURIComponent(String(requestParameters['kubernetesMountPath']))),
+                path: `/auth/{kubernetes_mount_path}/role/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"kubernetes_mount_path"}}`, encodeURIComponent(String(requestParameters['kubernetesMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -5971,11 +5785,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     kubernetesWriteAuthRole(name, kubernetesMountPath, kubernetesWriteAuthRoleRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.kubernetesWriteAuthRoleRaw({
-                name: name,
-                kubernetesMountPath: kubernetesMountPath,
-                kubernetesWriteAuthRoleRequest: kubernetesWriteAuthRoleRequest,
-            }, initOverrides);
+            const response = yield this.kubernetesWriteAuthRoleRaw({ name: name, kubernetesMountPath: kubernetesMountPath, kubernetesWriteAuthRoleRequest: kubernetesWriteAuthRoleRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -5992,7 +5803,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{ldap_mount_path}/config`.replace(`{${'ldap_mount_path'}}`, encodeURIComponent(String(requestParameters['ldapMountPath']))),
+                path: `/auth/{ldap_mount_path}/config`.replace(`{${"ldap_mount_path"}}`, encodeURIComponent(String(requestParameters['ldapMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6005,7 +5816,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     ldapConfigureAuth(ldapMountPath, ldapConfigureAuthRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.ldapConfigureAuthRaw({ ldapMountPath: ldapMountPath, ldapConfigureAuthRequest: ldapConfigureAuthRequest }, initOverrides);
+            const response = yield this.ldapConfigureAuthRaw({ ldapMountPath: ldapMountPath, ldapConfigureAuthRequest: ldapConfigureAuthRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6022,9 +5834,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{ldap_mount_path}/groups/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'ldap_mount_path'}}`, encodeURIComponent(String(requestParameters['ldapMountPath']))),
+                path: `/auth/{ldap_mount_path}/groups/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"ldap_mount_path"}}`, encodeURIComponent(String(requestParameters['ldapMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6037,7 +5847,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     ldapDeleteGroup(name, ldapMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.ldapDeleteGroupRaw({ name: name, ldapMountPath: ldapMountPath }, initOverrides);
+            const response = yield this.ldapDeleteGroupRaw({ name: name, ldapMountPath: ldapMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6054,9 +5865,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{ldap_mount_path}/users/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'ldap_mount_path'}}`, encodeURIComponent(String(requestParameters['ldapMountPath']))),
+                path: `/auth/{ldap_mount_path}/users/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"ldap_mount_path"}}`, encodeURIComponent(String(requestParameters['ldapMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6069,7 +5878,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     ldapDeleteUser(name, ldapMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.ldapDeleteUserRaw({ name: name, ldapMountPath: ldapMountPath }, initOverrides);
+            const response = yield this.ldapDeleteUserRaw({ name: name, ldapMountPath: ldapMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6089,7 +5899,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{ldap_mount_path}/groups/`.replace(`{${'ldap_mount_path'}}`, encodeURIComponent(String(requestParameters['ldapMountPath']))),
+                path: `/auth/{ldap_mount_path}/groups/`.replace(`{${"ldap_mount_path"}}`, encodeURIComponent(String(requestParameters['ldapMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6123,7 +5933,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{ldap_mount_path}/users/`.replace(`{${'ldap_mount_path'}}`, encodeURIComponent(String(requestParameters['ldapMountPath']))),
+                path: `/auth/{ldap_mount_path}/users/`.replace(`{${"ldap_mount_path"}}`, encodeURIComponent(String(requestParameters['ldapMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6158,9 +5968,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{ldap_mount_path}/login/{username}`
-                    .replace(`{${'username'}}`, encodeURIComponent(String(requestParameters['username'])))
-                    .replace(`{${'ldap_mount_path'}}`, encodeURIComponent(String(requestParameters['ldapMountPath']))),
+                path: `/auth/{ldap_mount_path}/login/{username}`.replace(`{${"username"}}`, encodeURIComponent(String(requestParameters['username']))).replace(`{${"ldap_mount_path"}}`, encodeURIComponent(String(requestParameters['ldapMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6174,7 +5982,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     ldapLogin(username, ldapMountPath, ldapLoginRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.ldapLoginRaw({ username: username, ldapMountPath: ldapMountPath, ldapLoginRequest: ldapLoginRequest }, initOverrides);
+            const response = yield this.ldapLoginRaw({ username: username, ldapMountPath: ldapMountPath, ldapLoginRequest: ldapLoginRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6187,7 +5996,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{ldap_mount_path}/config`.replace(`{${'ldap_mount_path'}}`, encodeURIComponent(String(requestParameters['ldapMountPath']))),
+                path: `/auth/{ldap_mount_path}/config`.replace(`{${"ldap_mount_path"}}`, encodeURIComponent(String(requestParameters['ldapMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6199,7 +6008,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     ldapReadAuthConfiguration(ldapMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.ldapReadAuthConfigurationRaw({ ldapMountPath: ldapMountPath }, initOverrides);
+            const response = yield this.ldapReadAuthConfigurationRaw({ ldapMountPath: ldapMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6216,9 +6026,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{ldap_mount_path}/groups/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'ldap_mount_path'}}`, encodeURIComponent(String(requestParameters['ldapMountPath']))),
+                path: `/auth/{ldap_mount_path}/groups/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"ldap_mount_path"}}`, encodeURIComponent(String(requestParameters['ldapMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6231,7 +6039,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     ldapReadGroup(name, ldapMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.ldapReadGroupRaw({ name: name, ldapMountPath: ldapMountPath }, initOverrides);
+            const response = yield this.ldapReadGroupRaw({ name: name, ldapMountPath: ldapMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6248,9 +6057,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{ldap_mount_path}/users/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'ldap_mount_path'}}`, encodeURIComponent(String(requestParameters['ldapMountPath']))),
+                path: `/auth/{ldap_mount_path}/users/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"ldap_mount_path"}}`, encodeURIComponent(String(requestParameters['ldapMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6263,7 +6070,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     ldapReadUser(name, ldapMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.ldapReadUserRaw({ name: name, ldapMountPath: ldapMountPath }, initOverrides);
+            const response = yield this.ldapReadUserRaw({ name: name, ldapMountPath: ldapMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6276,7 +6084,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{ldap_mount_path}/config/rotate-root`.replace(`{${'ldap_mount_path'}}`, encodeURIComponent(String(requestParameters['ldapMountPath']))),
+                path: `/auth/{ldap_mount_path}/config/rotate-root`.replace(`{${"ldap_mount_path"}}`, encodeURIComponent(String(requestParameters['ldapMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6288,7 +6096,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     ldapRotateRootCredentials(ldapMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.ldapRotateRootCredentialsRaw({ ldapMountPath: ldapMountPath }, initOverrides);
+            const response = yield this.ldapRotateRootCredentialsRaw({ ldapMountPath: ldapMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6309,9 +6118,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{ldap_mount_path}/groups/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'ldap_mount_path'}}`, encodeURIComponent(String(requestParameters['ldapMountPath']))),
+                path: `/auth/{ldap_mount_path}/groups/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"ldap_mount_path"}}`, encodeURIComponent(String(requestParameters['ldapMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6325,7 +6132,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     ldapWriteGroup(name, ldapMountPath, ldapWriteGroupRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.ldapWriteGroupRaw({ name: name, ldapMountPath: ldapMountPath, ldapWriteGroupRequest: ldapWriteGroupRequest }, initOverrides);
+            const response = yield this.ldapWriteGroupRaw({ name: name, ldapMountPath: ldapMountPath, ldapWriteGroupRequest: ldapWriteGroupRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6346,9 +6154,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{ldap_mount_path}/users/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'ldap_mount_path'}}`, encodeURIComponent(String(requestParameters['ldapMountPath']))),
+                path: `/auth/{ldap_mount_path}/users/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"ldap_mount_path"}}`, encodeURIComponent(String(requestParameters['ldapMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6362,7 +6168,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     ldapWriteUser(name, ldapMountPath, ldapWriteUserRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.ldapWriteUserRaw({ name: name, ldapMountPath: ldapMountPath, ldapWriteUserRequest: ldapWriteUserRequest }, initOverrides);
+            const response = yield this.ldapWriteUserRaw({ name: name, ldapMountPath: ldapMountPath, ldapWriteUserRequest: ldapWriteUserRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6379,7 +6186,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{oci_mount_path}/config`.replace(`{${'oci_mount_path'}}`, encodeURIComponent(String(requestParameters['ociMountPath']))),
+                path: `/auth/{oci_mount_path}/config`.replace(`{${"oci_mount_path"}}`, encodeURIComponent(String(requestParameters['ociMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6392,7 +6199,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     ociConfigure(ociMountPath, ociConfigureRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.ociConfigureRaw({ ociMountPath: ociMountPath, ociConfigureRequest: ociConfigureRequest }, initOverrides);
+            const response = yield this.ociConfigureRaw({ ociMountPath: ociMountPath, ociConfigureRequest: ociConfigureRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6405,7 +6213,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{oci_mount_path}/config`.replace(`{${'oci_mount_path'}}`, encodeURIComponent(String(requestParameters['ociMountPath']))),
+                path: `/auth/{oci_mount_path}/config`.replace(`{${"oci_mount_path"}}`, encodeURIComponent(String(requestParameters['ociMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6417,7 +6225,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     ociDeleteConfiguration(ociMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.ociDeleteConfigurationRaw({ ociMountPath: ociMountPath }, initOverrides);
+            const response = yield this.ociDeleteConfigurationRaw({ ociMountPath: ociMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6434,9 +6243,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{oci_mount_path}/role/{role}`
-                    .replace(`{${'role'}}`, encodeURIComponent(String(requestParameters['role'])))
-                    .replace(`{${'oci_mount_path'}}`, encodeURIComponent(String(requestParameters['ociMountPath']))),
+                path: `/auth/{oci_mount_path}/role/{role}`.replace(`{${"role"}}`, encodeURIComponent(String(requestParameters['role']))).replace(`{${"oci_mount_path"}}`, encodeURIComponent(String(requestParameters['ociMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6449,7 +6256,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     ociDeleteRole(role, ociMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.ociDeleteRoleRaw({ role: role, ociMountPath: ociMountPath }, initOverrides);
+            const response = yield this.ociDeleteRoleRaw({ role: role, ociMountPath: ociMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6469,7 +6277,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{oci_mount_path}/role/`.replace(`{${'oci_mount_path'}}`, encodeURIComponent(String(requestParameters['ociMountPath']))),
+                path: `/auth/{oci_mount_path}/role/`.replace(`{${"oci_mount_path"}}`, encodeURIComponent(String(requestParameters['ociMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6504,9 +6312,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{oci_mount_path}/login/{role}`
-                    .replace(`{${'role'}}`, encodeURIComponent(String(requestParameters['role'])))
-                    .replace(`{${'oci_mount_path'}}`, encodeURIComponent(String(requestParameters['ociMountPath']))),
+                path: `/auth/{oci_mount_path}/login/{role}`.replace(`{${"role"}}`, encodeURIComponent(String(requestParameters['role']))).replace(`{${"oci_mount_path"}}`, encodeURIComponent(String(requestParameters['ociMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6520,7 +6326,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     ociLogin(role, ociMountPath, ociLoginRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.ociLoginRaw({ role: role, ociMountPath: ociMountPath, ociLoginRequest: ociLoginRequest }, initOverrides);
+            const response = yield this.ociLoginRaw({ role: role, ociMountPath: ociMountPath, ociLoginRequest: ociLoginRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6533,7 +6340,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{oci_mount_path}/config`.replace(`{${'oci_mount_path'}}`, encodeURIComponent(String(requestParameters['ociMountPath']))),
+                path: `/auth/{oci_mount_path}/config`.replace(`{${"oci_mount_path"}}`, encodeURIComponent(String(requestParameters['ociMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6545,7 +6352,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     ociReadConfiguration(ociMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.ociReadConfigurationRaw({ ociMountPath: ociMountPath }, initOverrides);
+            const response = yield this.ociReadConfigurationRaw({ ociMountPath: ociMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6562,9 +6370,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{oci_mount_path}/role/{role}`
-                    .replace(`{${'role'}}`, encodeURIComponent(String(requestParameters['role'])))
-                    .replace(`{${'oci_mount_path'}}`, encodeURIComponent(String(requestParameters['ociMountPath']))),
+                path: `/auth/{oci_mount_path}/role/{role}`.replace(`{${"role"}}`, encodeURIComponent(String(requestParameters['role']))).replace(`{${"oci_mount_path"}}`, encodeURIComponent(String(requestParameters['ociMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6577,7 +6383,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     ociReadRole(role, ociMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.ociReadRoleRaw({ role: role, ociMountPath: ociMountPath }, initOverrides);
+            const response = yield this.ociReadRoleRaw({ role: role, ociMountPath: ociMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6598,9 +6405,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{oci_mount_path}/role/{role}`
-                    .replace(`{${'role'}}`, encodeURIComponent(String(requestParameters['role'])))
-                    .replace(`{${'oci_mount_path'}}`, encodeURIComponent(String(requestParameters['ociMountPath']))),
+                path: `/auth/{oci_mount_path}/role/{role}`.replace(`{${"role"}}`, encodeURIComponent(String(requestParameters['role']))).replace(`{${"oci_mount_path"}}`, encodeURIComponent(String(requestParameters['ociMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6614,7 +6419,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     ociWriteRole(role, ociMountPath, ociWriteRoleRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.ociWriteRoleRaw({ role: role, ociMountPath: ociMountPath, ociWriteRoleRequest: ociWriteRoleRequest }, initOverrides);
+            const response = yield this.ociWriteRoleRaw({ role: role, ociMountPath: ociMountPath, ociWriteRoleRequest: ociWriteRoleRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6631,7 +6437,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{okta_mount_path}/config`.replace(`{${'okta_mount_path'}}`, encodeURIComponent(String(requestParameters['oktaMountPath']))),
+                path: `/auth/{okta_mount_path}/config`.replace(`{${"okta_mount_path"}}`, encodeURIComponent(String(requestParameters['oktaMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6644,7 +6450,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     oktaConfigure(oktaMountPath, oktaConfigureRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oktaConfigureRaw({ oktaMountPath: oktaMountPath, oktaConfigureRequest: oktaConfigureRequest }, initOverrides);
+            const response = yield this.oktaConfigureRaw({ oktaMountPath: oktaMountPath, oktaConfigureRequest: oktaConfigureRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6661,9 +6468,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{okta_mount_path}/groups/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'okta_mount_path'}}`, encodeURIComponent(String(requestParameters['oktaMountPath']))),
+                path: `/auth/{okta_mount_path}/groups/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"okta_mount_path"}}`, encodeURIComponent(String(requestParameters['oktaMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6676,7 +6481,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     oktaDeleteGroup(name, oktaMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oktaDeleteGroupRaw({ name: name, oktaMountPath: oktaMountPath }, initOverrides);
+            const response = yield this.oktaDeleteGroupRaw({ name: name, oktaMountPath: oktaMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6693,9 +6499,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{okta_mount_path}/users/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'okta_mount_path'}}`, encodeURIComponent(String(requestParameters['oktaMountPath']))),
+                path: `/auth/{okta_mount_path}/users/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"okta_mount_path"}}`, encodeURIComponent(String(requestParameters['oktaMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6708,7 +6512,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     oktaDeleteUser(name, oktaMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oktaDeleteUserRaw({ name: name, oktaMountPath: oktaMountPath }, initOverrides);
+            const response = yield this.oktaDeleteUserRaw({ name: name, oktaMountPath: oktaMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6728,7 +6533,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{okta_mount_path}/groups/`.replace(`{${'okta_mount_path'}}`, encodeURIComponent(String(requestParameters['oktaMountPath']))),
+                path: `/auth/{okta_mount_path}/groups/`.replace(`{${"okta_mount_path"}}`, encodeURIComponent(String(requestParameters['oktaMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6762,7 +6567,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{okta_mount_path}/users/`.replace(`{${'okta_mount_path'}}`, encodeURIComponent(String(requestParameters['oktaMountPath']))),
+                path: `/auth/{okta_mount_path}/users/`.replace(`{${"okta_mount_path"}}`, encodeURIComponent(String(requestParameters['oktaMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6797,9 +6602,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{okta_mount_path}/login/{username}`
-                    .replace(`{${'username'}}`, encodeURIComponent(String(requestParameters['username'])))
-                    .replace(`{${'okta_mount_path'}}`, encodeURIComponent(String(requestParameters['oktaMountPath']))),
+                path: `/auth/{okta_mount_path}/login/{username}`.replace(`{${"username"}}`, encodeURIComponent(String(requestParameters['username']))).replace(`{${"okta_mount_path"}}`, encodeURIComponent(String(requestParameters['oktaMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6813,7 +6616,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     oktaLogin(username, oktaMountPath, oktaLoginRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oktaLoginRaw({ username: username, oktaMountPath: oktaMountPath, oktaLoginRequest: oktaLoginRequest }, initOverrides);
+            const response = yield this.oktaLoginRaw({ username: username, oktaMountPath: oktaMountPath, oktaLoginRequest: oktaLoginRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6826,7 +6630,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{okta_mount_path}/config`.replace(`{${'okta_mount_path'}}`, encodeURIComponent(String(requestParameters['oktaMountPath']))),
+                path: `/auth/{okta_mount_path}/config`.replace(`{${"okta_mount_path"}}`, encodeURIComponent(String(requestParameters['oktaMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6838,7 +6642,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     oktaReadConfiguration(oktaMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oktaReadConfigurationRaw({ oktaMountPath: oktaMountPath }, initOverrides);
+            const response = yield this.oktaReadConfigurationRaw({ oktaMountPath: oktaMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6855,9 +6660,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{okta_mount_path}/groups/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'okta_mount_path'}}`, encodeURIComponent(String(requestParameters['oktaMountPath']))),
+                path: `/auth/{okta_mount_path}/groups/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"okta_mount_path"}}`, encodeURIComponent(String(requestParameters['oktaMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6870,7 +6673,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     oktaReadGroup(name, oktaMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oktaReadGroupRaw({ name: name, oktaMountPath: oktaMountPath }, initOverrides);
+            const response = yield this.oktaReadGroupRaw({ name: name, oktaMountPath: oktaMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6887,9 +6691,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{okta_mount_path}/users/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'okta_mount_path'}}`, encodeURIComponent(String(requestParameters['oktaMountPath']))),
+                path: `/auth/{okta_mount_path}/users/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"okta_mount_path"}}`, encodeURIComponent(String(requestParameters['oktaMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6902,7 +6704,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     oktaReadUser(name, oktaMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oktaReadUserRaw({ name: name, oktaMountPath: oktaMountPath }, initOverrides);
+            const response = yield this.oktaReadUserRaw({ name: name, oktaMountPath: oktaMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6918,9 +6721,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{okta_mount_path}/verify/{nonce}`
-                    .replace(`{${'nonce'}}`, encodeURIComponent(String(requestParameters['nonce'])))
-                    .replace(`{${'okta_mount_path'}}`, encodeURIComponent(String(requestParameters['oktaMountPath']))),
+                path: `/auth/{okta_mount_path}/verify/{nonce}`.replace(`{${"nonce"}}`, encodeURIComponent(String(requestParameters['nonce']))).replace(`{${"okta_mount_path"}}`, encodeURIComponent(String(requestParameters['oktaMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6932,7 +6733,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     oktaVerify(nonce, oktaMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oktaVerifyRaw({ nonce: nonce, oktaMountPath: oktaMountPath }, initOverrides);
+            const response = yield this.oktaVerifyRaw({ nonce: nonce, oktaMountPath: oktaMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6953,9 +6755,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{okta_mount_path}/groups/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'okta_mount_path'}}`, encodeURIComponent(String(requestParameters['oktaMountPath']))),
+                path: `/auth/{okta_mount_path}/groups/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"okta_mount_path"}}`, encodeURIComponent(String(requestParameters['oktaMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -6969,7 +6769,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     oktaWriteGroup(name, oktaMountPath, oktaWriteGroupRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oktaWriteGroupRaw({ name: name, oktaMountPath: oktaMountPath, oktaWriteGroupRequest: oktaWriteGroupRequest }, initOverrides);
+            const response = yield this.oktaWriteGroupRaw({ name: name, oktaMountPath: oktaMountPath, oktaWriteGroupRequest: oktaWriteGroupRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -6990,9 +6791,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{okta_mount_path}/users/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'okta_mount_path'}}`, encodeURIComponent(String(requestParameters['oktaMountPath']))),
+                path: `/auth/{okta_mount_path}/users/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"okta_mount_path"}}`, encodeURIComponent(String(requestParameters['oktaMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7006,7 +6805,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     oktaWriteUser(name, oktaMountPath, oktaWriteUserRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oktaWriteUserRaw({ name: name, oktaMountPath: oktaMountPath, oktaWriteUserRequest: oktaWriteUserRequest }, initOverrides);
+            const response = yield this.oktaWriteUserRaw({ name: name, oktaMountPath: oktaMountPath, oktaWriteUserRequest: oktaWriteUserRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7023,7 +6823,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{radius_mount_path}/config`.replace(`{${'radius_mount_path'}}`, encodeURIComponent(String(requestParameters['radiusMountPath']))),
+                path: `/auth/{radius_mount_path}/config`.replace(`{${"radius_mount_path"}}`, encodeURIComponent(String(requestParameters['radiusMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7036,7 +6836,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     radiusConfigure(radiusMountPath, radiusConfigureRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.radiusConfigureRaw({ radiusMountPath: radiusMountPath, radiusConfigureRequest: radiusConfigureRequest }, initOverrides);
+            const response = yield this.radiusConfigureRaw({ radiusMountPath: radiusMountPath, radiusConfigureRequest: radiusConfigureRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7053,9 +6854,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{radius_mount_path}/users/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'radius_mount_path'}}`, encodeURIComponent(String(requestParameters['radiusMountPath']))),
+                path: `/auth/{radius_mount_path}/users/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"radius_mount_path"}}`, encodeURIComponent(String(requestParameters['radiusMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7068,7 +6867,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     radiusDeleteUser(name, radiusMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.radiusDeleteUserRaw({ name: name, radiusMountPath: radiusMountPath }, initOverrides);
+            const response = yield this.radiusDeleteUserRaw({ name: name, radiusMountPath: radiusMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7088,7 +6888,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{radius_mount_path}/users/`.replace(`{${'radius_mount_path'}}`, encodeURIComponent(String(requestParameters['radiusMountPath']))),
+                path: `/auth/{radius_mount_path}/users/`.replace(`{${"radius_mount_path"}}`, encodeURIComponent(String(requestParameters['radiusMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7120,7 +6920,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{radius_mount_path}/login`.replace(`{${'radius_mount_path'}}`, encodeURIComponent(String(requestParameters['radiusMountPath']))),
+                path: `/auth/{radius_mount_path}/login`.replace(`{${"radius_mount_path"}}`, encodeURIComponent(String(requestParameters['radiusMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7134,7 +6934,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     radiusLogin(radiusMountPath, radiusLoginRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.radiusLoginRaw({ radiusMountPath: radiusMountPath, radiusLoginRequest: radiusLoginRequest }, initOverrides);
+            const response = yield this.radiusLoginRaw({ radiusMountPath: radiusMountPath, radiusLoginRequest: radiusLoginRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7155,9 +6956,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{radius_mount_path}/login/{urlusername}`
-                    .replace(`{${'urlusername'}}`, encodeURIComponent(String(requestParameters['urlusername'])))
-                    .replace(`{${'radius_mount_path'}}`, encodeURIComponent(String(requestParameters['radiusMountPath']))),
+                path: `/auth/{radius_mount_path}/login/{urlusername}`.replace(`{${"urlusername"}}`, encodeURIComponent(String(requestParameters['urlusername']))).replace(`{${"radius_mount_path"}}`, encodeURIComponent(String(requestParameters['radiusMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7171,11 +6970,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     radiusLoginWithUsername(urlusername, radiusMountPath, radiusLoginWithUsernameRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.radiusLoginWithUsernameRaw({
-                urlusername: urlusername,
-                radiusMountPath: radiusMountPath,
-                radiusLoginWithUsernameRequest: radiusLoginWithUsernameRequest,
-            }, initOverrides);
+            const response = yield this.radiusLoginWithUsernameRaw({ urlusername: urlusername, radiusMountPath: radiusMountPath, radiusLoginWithUsernameRequest: radiusLoginWithUsernameRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7188,7 +6984,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{radius_mount_path}/config`.replace(`{${'radius_mount_path'}}`, encodeURIComponent(String(requestParameters['radiusMountPath']))),
+                path: `/auth/{radius_mount_path}/config`.replace(`{${"radius_mount_path"}}`, encodeURIComponent(String(requestParameters['radiusMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7200,7 +6996,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     radiusReadConfiguration(radiusMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.radiusReadConfigurationRaw({ radiusMountPath: radiusMountPath }, initOverrides);
+            const response = yield this.radiusReadConfigurationRaw({ radiusMountPath: radiusMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7217,9 +7014,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{radius_mount_path}/users/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'radius_mount_path'}}`, encodeURIComponent(String(requestParameters['radiusMountPath']))),
+                path: `/auth/{radius_mount_path}/users/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"radius_mount_path"}}`, encodeURIComponent(String(requestParameters['radiusMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7232,7 +7027,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     radiusReadUser(name, radiusMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.radiusReadUserRaw({ name: name, radiusMountPath: radiusMountPath }, initOverrides);
+            const response = yield this.radiusReadUserRaw({ name: name, radiusMountPath: radiusMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7253,9 +7049,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{radius_mount_path}/users/{name}`
-                    .replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name'])))
-                    .replace(`{${'radius_mount_path'}}`, encodeURIComponent(String(requestParameters['radiusMountPath']))),
+                path: `/auth/{radius_mount_path}/users/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"radius_mount_path"}}`, encodeURIComponent(String(requestParameters['radiusMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7269,7 +7063,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     radiusWriteUser(name, radiusMountPath, radiusWriteUserRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.radiusWriteUserRaw({ name: name, radiusMountPath: radiusMountPath, radiusWriteUserRequest: radiusWriteUserRequest }, initOverrides);
+            const response = yield this.radiusWriteUserRaw({ name: name, radiusMountPath: radiusMountPath, radiusWriteUserRequest: radiusWriteUserRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7298,7 +7093,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     tokenCreate(tokenCreateRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.tokenCreateRaw({ tokenCreateRequest: tokenCreateRequest }, initOverrides);
+            const response = yield this.tokenCreateRaw({ tokenCreateRequest: tokenCreateRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7316,7 +7112,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/token/create/{role_name}`.replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName']))),
+                path: `/auth/token/create/{role_name}`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7330,7 +7126,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     tokenCreateAgainstRole(roleName, tokenCreateAgainstRoleRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.tokenCreateAgainstRoleRaw({ roleName: roleName, tokenCreateAgainstRoleRequest: tokenCreateAgainstRoleRequest }, initOverrides);
+            const response = yield this.tokenCreateAgainstRoleRaw({ roleName: roleName, tokenCreateAgainstRoleRequest: tokenCreateAgainstRoleRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7359,7 +7156,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     tokenCreateOrphan(tokenCreateOrphanRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.tokenCreateOrphanRaw({ tokenCreateOrphanRequest: tokenCreateOrphanRequest }, initOverrides);
+            const response = yield this.tokenCreateOrphanRaw({ tokenCreateOrphanRequest: tokenCreateOrphanRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7372,7 +7170,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/token/roles/{role_name}`.replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName']))),
+                path: `/auth/token/roles/{role_name}`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7384,7 +7182,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     tokenDeleteRole(roleName, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.tokenDeleteRoleRaw({ roleName: roleName }, initOverrides);
+            const response = yield this.tokenDeleteRoleRaw({ roleName: roleName }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7473,7 +7272,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     tokenLookUp(tokenLookUpRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.tokenLookUpRaw({ tokenLookUpRequest: tokenLookUpRequest }, initOverrides);
+            const response = yield this.tokenLookUpRaw({ tokenLookUpRequest: tokenLookUpRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7498,7 +7298,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     tokenLookUp2(token, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.tokenLookUp2Raw({ token: token }, initOverrides);
+            const response = yield this.tokenLookUp2Raw({ token: token }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7527,7 +7328,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     tokenLookUpAccessor(tokenLookUpAccessorRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.tokenLookUpAccessorRaw({ tokenLookUpAccessorRequest: tokenLookUpAccessorRequest }, initOverrides);
+            const response = yield this.tokenLookUpAccessorRaw({ tokenLookUpAccessorRequest: tokenLookUpAccessorRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7549,7 +7351,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     tokenLookUpSelf(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.tokenLookUpSelfRaw(initOverrides);
+            const response = yield this.tokenLookUpSelfRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7576,7 +7379,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     tokenLookUpSelf2(tokenLookUpSelf2Request, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.tokenLookUpSelf2Raw({ tokenLookUpSelf2Request: tokenLookUpSelf2Request }, initOverrides);
+            const response = yield this.tokenLookUpSelf2Raw({ tokenLookUpSelf2Request: tokenLookUpSelf2Request }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7589,7 +7393,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/token/roles/{role_name}`.replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName']))),
+                path: `/auth/token/roles/{role_name}`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7601,7 +7405,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     tokenReadRole(roleName, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.tokenReadRoleRaw({ roleName: roleName }, initOverrides);
+            const response = yield this.tokenReadRoleRaw({ roleName: roleName }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7630,7 +7435,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     tokenRenew(tokenRenewRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.tokenRenewRaw({ tokenRenewRequest: tokenRenewRequest }, initOverrides);
+            const response = yield this.tokenRenewRaw({ tokenRenewRequest: tokenRenewRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7659,7 +7465,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     tokenRenewAccessor(tokenRenewAccessorRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.tokenRenewAccessorRaw({ tokenRenewAccessorRequest: tokenRenewAccessorRequest }, initOverrides);
+            const response = yield this.tokenRenewAccessorRaw({ tokenRenewAccessorRequest: tokenRenewAccessorRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7688,7 +7495,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     tokenRenewSelf(tokenRenewSelfRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.tokenRenewSelfRaw({ tokenRenewSelfRequest: tokenRenewSelfRequest }, initOverrides);
+            const response = yield this.tokenRenewSelfRaw({ tokenRenewSelfRequest: tokenRenewSelfRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7717,7 +7525,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     tokenRevoke(tokenRevokeRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.tokenRevokeRaw({ tokenRevokeRequest: tokenRevokeRequest }, initOverrides);
+            const response = yield this.tokenRevokeRaw({ tokenRevokeRequest: tokenRevokeRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7746,7 +7555,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     tokenRevokeAccessor(tokenRevokeAccessorRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.tokenRevokeAccessorRaw({ tokenRevokeAccessorRequest: tokenRevokeAccessorRequest }, initOverrides);
+            const response = yield this.tokenRevokeAccessorRaw({ tokenRevokeAccessorRequest: tokenRevokeAccessorRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7775,7 +7585,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     tokenRevokeOrphan(tokenRevokeOrphanRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.tokenRevokeOrphanRaw({ tokenRevokeOrphanRequest: tokenRevokeOrphanRequest }, initOverrides);
+            const response = yield this.tokenRevokeOrphanRaw({ tokenRevokeOrphanRequest: tokenRevokeOrphanRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7799,7 +7610,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     tokenRevokeSelf(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.tokenRevokeSelfRaw(initOverrides);
+            const response = yield this.tokenRevokeSelfRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7823,7 +7635,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     tokenTidy(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.tokenTidyRaw(initOverrides);
+            const response = yield this.tokenTidyRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7840,7 +7653,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/token/roles/{role_name}`.replace(`{${'role_name'}}`, encodeURIComponent(String(requestParameters['roleName']))),
+                path: `/auth/token/roles/{role_name}`.replace(`{${"role_name"}}`, encodeURIComponent(String(requestParameters['roleName']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7853,7 +7666,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     tokenWriteRole(roleName, tokenWriteRoleRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.tokenWriteRoleRaw({ roleName: roleName, tokenWriteRoleRequest: tokenWriteRoleRequest }, initOverrides);
+            const response = yield this.tokenWriteRoleRaw({ roleName: roleName, tokenWriteRoleRequest: tokenWriteRoleRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7870,9 +7684,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{userpass_mount_path}/users/{username}`
-                    .replace(`{${'username'}}`, encodeURIComponent(String(requestParameters['username'])))
-                    .replace(`{${'userpass_mount_path'}}`, encodeURIComponent(String(requestParameters['userpassMountPath']))),
+                path: `/auth/{userpass_mount_path}/users/{username}`.replace(`{${"username"}}`, encodeURIComponent(String(requestParameters['username']))).replace(`{${"userpass_mount_path"}}`, encodeURIComponent(String(requestParameters['userpassMountPath']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7885,7 +7697,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     userpassDeleteUser(username, userpassMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.userpassDeleteUserRaw({ username: username, userpassMountPath: userpassMountPath }, initOverrides);
+            const response = yield this.userpassDeleteUserRaw({ username: username, userpassMountPath: userpassMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7905,7 +7718,7 @@ class AuthApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{userpass_mount_path}/users/`.replace(`{${'userpass_mount_path'}}`, encodeURIComponent(String(requestParameters['userpassMountPath']))),
+                path: `/auth/{userpass_mount_path}/users/`.replace(`{${"userpass_mount_path"}}`, encodeURIComponent(String(requestParameters['userpassMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7940,9 +7753,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{userpass_mount_path}/login/{username}`
-                    .replace(`{${'username'}}`, encodeURIComponent(String(requestParameters['username'])))
-                    .replace(`{${'userpass_mount_path'}}`, encodeURIComponent(String(requestParameters['userpassMountPath']))),
+                path: `/auth/{userpass_mount_path}/login/{username}`.replace(`{${"username"}}`, encodeURIComponent(String(requestParameters['username']))).replace(`{${"userpass_mount_path"}}`, encodeURIComponent(String(requestParameters['userpassMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7956,11 +7767,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     userpassLogin(username, userpassMountPath, userpassLoginRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.userpassLoginRaw({
-                username: username,
-                userpassMountPath: userpassMountPath,
-                userpassLoginRequest: userpassLoginRequest,
-            }, initOverrides);
+            const response = yield this.userpassLoginRaw({ username: username, userpassMountPath: userpassMountPath, userpassLoginRequest: userpassLoginRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -7977,9 +7785,7 @@ class AuthApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/auth/{userpass_mount_path}/users/{username}`
-                    .replace(`{${'username'}}`, encodeURIComponent(String(requestParameters['username'])))
-                    .replace(`{${'userpass_mount_path'}}`, encodeURIComponent(String(requestParameters['userpassMountPath']))),
+                path: `/auth/{userpass_mount_path}/users/{username}`.replace(`{${"username"}}`, encodeURIComponent(String(requestParameters['username']))).replace(`{${"userpass_mount_path"}}`, encodeURIComponent(String(requestParameters['userpassMountPath']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -7992,7 +7798,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     userpassReadUser(username, userpassMountPath, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.userpassReadUserRaw({ username: username, userpassMountPath: userpassMountPath }, initOverrides);
+            const response = yield this.userpassReadUserRaw({ username: username, userpassMountPath: userpassMountPath }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -8013,9 +7820,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{userpass_mount_path}/users/{username}/password`
-                    .replace(`{${'username'}}`, encodeURIComponent(String(requestParameters['username'])))
-                    .replace(`{${'userpass_mount_path'}}`, encodeURIComponent(String(requestParameters['userpassMountPath']))),
+                path: `/auth/{userpass_mount_path}/users/{username}/password`.replace(`{${"username"}}`, encodeURIComponent(String(requestParameters['username']))).replace(`{${"userpass_mount_path"}}`, encodeURIComponent(String(requestParameters['userpassMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -8029,11 +7834,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     userpassResetPassword(username, userpassMountPath, userpassResetPasswordRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.userpassResetPasswordRaw({
-                username: username,
-                userpassMountPath: userpassMountPath,
-                userpassResetPasswordRequest: userpassResetPasswordRequest,
-            }, initOverrides);
+            const response = yield this.userpassResetPasswordRaw({ username: username, userpassMountPath: userpassMountPath, userpassResetPasswordRequest: userpassResetPasswordRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -8054,9 +7856,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{userpass_mount_path}/users/{username}/policies`
-                    .replace(`{${'username'}}`, encodeURIComponent(String(requestParameters['username'])))
-                    .replace(`{${'userpass_mount_path'}}`, encodeURIComponent(String(requestParameters['userpassMountPath']))),
+                path: `/auth/{userpass_mount_path}/users/{username}/policies`.replace(`{${"username"}}`, encodeURIComponent(String(requestParameters['username']))).replace(`{${"userpass_mount_path"}}`, encodeURIComponent(String(requestParameters['userpassMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -8070,11 +7870,8 @@ class AuthApi extends runtime.BaseAPI {
      */
     userpassUpdatePolicies(username, userpassMountPath, userpassUpdatePoliciesRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.userpassUpdatePoliciesRaw({
-                username: username,
-                userpassMountPath: userpassMountPath,
-                userpassUpdatePoliciesRequest: userpassUpdatePoliciesRequest,
-            }, initOverrides);
+            const response = yield this.userpassUpdatePoliciesRaw({ username: username, userpassMountPath: userpassMountPath, userpassUpdatePoliciesRequest: userpassUpdatePoliciesRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -8095,9 +7892,7 @@ class AuthApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/auth/{userpass_mount_path}/users/{username}`
-                    .replace(`{${'username'}}`, encodeURIComponent(String(requestParameters['username'])))
-                    .replace(`{${'userpass_mount_path'}}`, encodeURIComponent(String(requestParameters['userpassMountPath']))),
+                path: `/auth/{userpass_mount_path}/users/{username}`.replace(`{${"username"}}`, encodeURIComponent(String(requestParameters['username']))).replace(`{${"userpass_mount_path"}}`, encodeURIComponent(String(requestParameters['userpassMountPath']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -8111,267 +7906,264 @@ class AuthApi extends runtime.BaseAPI {
      */
     userpassWriteUser(username, userpassMountPath, userpassWriteUserRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.userpassWriteUserRaw({
-                username: username,
-                userpassMountPath: userpassMountPath,
-                userpassWriteUserRequest: userpassWriteUserRequest,
-            }, initOverrides);
+            const response = yield this.userpassWriteUserRaw({ username: username, userpassMountPath: userpassMountPath, userpassWriteUserRequest: userpassWriteUserRequest }, initOverrides);
+            return yield response.value();
         });
     }
 }
 exports.AuthApi = AuthApi;
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var AliCloudListAuthRolesListEnum;
 (function (AliCloudListAuthRolesListEnum) {
     AliCloudListAuthRolesListEnum["TRUE"] = "true";
 })(AliCloudListAuthRolesListEnum || (exports.AliCloudListAuthRolesListEnum = AliCloudListAuthRolesListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var AliCloudListAuthRoles2ListEnum;
 (function (AliCloudListAuthRoles2ListEnum) {
     AliCloudListAuthRoles2ListEnum["TRUE"] = "true";
 })(AliCloudListAuthRoles2ListEnum || (exports.AliCloudListAuthRoles2ListEnum = AliCloudListAuthRoles2ListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var AppRoleListRolesListEnum;
 (function (AppRoleListRolesListEnum) {
     AppRoleListRolesListEnum["TRUE"] = "true";
 })(AppRoleListRolesListEnum || (exports.AppRoleListRolesListEnum = AppRoleListRolesListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var AppRoleListSecretIdsListEnum;
 (function (AppRoleListSecretIdsListEnum) {
     AppRoleListSecretIdsListEnum["TRUE"] = "true";
 })(AppRoleListSecretIdsListEnum || (exports.AppRoleListSecretIdsListEnum = AppRoleListSecretIdsListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var AwsListAuthRolesListEnum;
 (function (AwsListAuthRolesListEnum) {
     AwsListAuthRolesListEnum["TRUE"] = "true";
 })(AwsListAuthRolesListEnum || (exports.AwsListAuthRolesListEnum = AwsListAuthRolesListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var AwsListAuthRoles2ListEnum;
 (function (AwsListAuthRoles2ListEnum) {
     AwsListAuthRoles2ListEnum["TRUE"] = "true";
 })(AwsListAuthRoles2ListEnum || (exports.AwsListAuthRoles2ListEnum = AwsListAuthRoles2ListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var AwsListCertificateConfigurationsListEnum;
 (function (AwsListCertificateConfigurationsListEnum) {
     AwsListCertificateConfigurationsListEnum["TRUE"] = "true";
 })(AwsListCertificateConfigurationsListEnum || (exports.AwsListCertificateConfigurationsListEnum = AwsListCertificateConfigurationsListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var AwsListIdentityAccessListListEnum;
 (function (AwsListIdentityAccessListListEnum) {
     AwsListIdentityAccessListListEnum["TRUE"] = "true";
 })(AwsListIdentityAccessListListEnum || (exports.AwsListIdentityAccessListListEnum = AwsListIdentityAccessListListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var AwsListIdentityWhitelistListEnum;
 (function (AwsListIdentityWhitelistListEnum) {
     AwsListIdentityWhitelistListEnum["TRUE"] = "true";
 })(AwsListIdentityWhitelistListEnum || (exports.AwsListIdentityWhitelistListEnum = AwsListIdentityWhitelistListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var AwsListRoleTagBlacklistsListEnum;
 (function (AwsListRoleTagBlacklistsListEnum) {
     AwsListRoleTagBlacklistsListEnum["TRUE"] = "true";
 })(AwsListRoleTagBlacklistsListEnum || (exports.AwsListRoleTagBlacklistsListEnum = AwsListRoleTagBlacklistsListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var AwsListRoleTagDenyListsListEnum;
 (function (AwsListRoleTagDenyListsListEnum) {
     AwsListRoleTagDenyListsListEnum["TRUE"] = "true";
 })(AwsListRoleTagDenyListsListEnum || (exports.AwsListRoleTagDenyListsListEnum = AwsListRoleTagDenyListsListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var AwsListStsRoleRelationshipsListEnum;
 (function (AwsListStsRoleRelationshipsListEnum) {
     AwsListStsRoleRelationshipsListEnum["TRUE"] = "true";
 })(AwsListStsRoleRelationshipsListEnum || (exports.AwsListStsRoleRelationshipsListEnum = AwsListStsRoleRelationshipsListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var AzureListAuthRolesListEnum;
 (function (AzureListAuthRolesListEnum) {
     AzureListAuthRolesListEnum["TRUE"] = "true";
 })(AzureListAuthRolesListEnum || (exports.AzureListAuthRolesListEnum = AzureListAuthRolesListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var CertListCertificatesListEnum;
 (function (CertListCertificatesListEnum) {
     CertListCertificatesListEnum["TRUE"] = "true";
 })(CertListCertificatesListEnum || (exports.CertListCertificatesListEnum = CertListCertificatesListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var CertListCrlsListEnum;
 (function (CertListCrlsListEnum) {
     CertListCrlsListEnum["TRUE"] = "true";
 })(CertListCrlsListEnum || (exports.CertListCrlsListEnum = CertListCrlsListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var CloudFoundryListRolesListEnum;
 (function (CloudFoundryListRolesListEnum) {
     CloudFoundryListRolesListEnum["TRUE"] = "true";
 })(CloudFoundryListRolesListEnum || (exports.CloudFoundryListRolesListEnum = CloudFoundryListRolesListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var GithubListTeamsListEnum;
 (function (GithubListTeamsListEnum) {
     GithubListTeamsListEnum["TRUE"] = "true";
 })(GithubListTeamsListEnum || (exports.GithubListTeamsListEnum = GithubListTeamsListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var GithubListUsersListEnum;
 (function (GithubListUsersListEnum) {
     GithubListUsersListEnum["TRUE"] = "true";
 })(GithubListUsersListEnum || (exports.GithubListUsersListEnum = GithubListUsersListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var GoogleCloudListRolesListEnum;
 (function (GoogleCloudListRolesListEnum) {
     GoogleCloudListRolesListEnum["TRUE"] = "true";
 })(GoogleCloudListRolesListEnum || (exports.GoogleCloudListRolesListEnum = GoogleCloudListRolesListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var GoogleCloudListRoles2ListEnum;
 (function (GoogleCloudListRoles2ListEnum) {
     GoogleCloudListRoles2ListEnum["TRUE"] = "true";
 })(GoogleCloudListRoles2ListEnum || (exports.GoogleCloudListRoles2ListEnum = GoogleCloudListRoles2ListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var JwtListRolesListEnum;
 (function (JwtListRolesListEnum) {
     JwtListRolesListEnum["TRUE"] = "true";
 })(JwtListRolesListEnum || (exports.JwtListRolesListEnum = JwtListRolesListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var KerberosListGroupsListEnum;
 (function (KerberosListGroupsListEnum) {
     KerberosListGroupsListEnum["TRUE"] = "true";
 })(KerberosListGroupsListEnum || (exports.KerberosListGroupsListEnum = KerberosListGroupsListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var KubernetesListAuthRolesListEnum;
 (function (KubernetesListAuthRolesListEnum) {
     KubernetesListAuthRolesListEnum["TRUE"] = "true";
 })(KubernetesListAuthRolesListEnum || (exports.KubernetesListAuthRolesListEnum = KubernetesListAuthRolesListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var LdapListGroupsListEnum;
 (function (LdapListGroupsListEnum) {
     LdapListGroupsListEnum["TRUE"] = "true";
 })(LdapListGroupsListEnum || (exports.LdapListGroupsListEnum = LdapListGroupsListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var LdapListUsersListEnum;
 (function (LdapListUsersListEnum) {
     LdapListUsersListEnum["TRUE"] = "true";
 })(LdapListUsersListEnum || (exports.LdapListUsersListEnum = LdapListUsersListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var OciListRolesListEnum;
 (function (OciListRolesListEnum) {
     OciListRolesListEnum["TRUE"] = "true";
 })(OciListRolesListEnum || (exports.OciListRolesListEnum = OciListRolesListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var OktaListGroupsListEnum;
 (function (OktaListGroupsListEnum) {
     OktaListGroupsListEnum["TRUE"] = "true";
 })(OktaListGroupsListEnum || (exports.OktaListGroupsListEnum = OktaListGroupsListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var OktaListUsersListEnum;
 (function (OktaListUsersListEnum) {
     OktaListUsersListEnum["TRUE"] = "true";
 })(OktaListUsersListEnum || (exports.OktaListUsersListEnum = OktaListUsersListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var RadiusListUsersListEnum;
 (function (RadiusListUsersListEnum) {
     RadiusListUsersListEnum["TRUE"] = "true";
 })(RadiusListUsersListEnum || (exports.RadiusListUsersListEnum = RadiusListUsersListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var TokenListAccessorsListEnum;
 (function (TokenListAccessorsListEnum) {
     TokenListAccessorsListEnum["TRUE"] = "true";
 })(TokenListAccessorsListEnum || (exports.TokenListAccessorsListEnum = TokenListAccessorsListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var TokenListRolesListEnum;
 (function (TokenListRolesListEnum) {
     TokenListRolesListEnum["TRUE"] = "true";
 })(TokenListRolesListEnum || (exports.TokenListRolesListEnum = TokenListRolesListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 var UserpassListUsersListEnum;
 (function (UserpassListUsersListEnum) {
     UserpassListUsersListEnum["TRUE"] = "true";
