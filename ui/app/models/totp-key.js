@@ -142,7 +142,6 @@ export default class TotpKeyModel extends Model {
   })
   exported;
 
-  // Doesn't really make sense as we can generate our own QR code from the url
   @attr('number', {
     label: 'QR size',
     defaultValue: 0,
