@@ -60,8 +60,9 @@ export default class TotpEdit extends Component {
 
   @action
   reset() {
+    const { name } = this.args.model;
     this.args.model.unloadRecord();
-    this.transitionToRoute(SHOW_ROUTE, this.args.model.name);
+    this.transitionToRoute(SHOW_ROUTE, name);
   }
 
   @action

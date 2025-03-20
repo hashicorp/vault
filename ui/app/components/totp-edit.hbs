@@ -29,7 +29,7 @@
   <Totp::KeyDetails @model={{@model}} @onDelete={{this.deleteKey}} />
 {{else if (eq @mode "create")}}
   {{#if this.hasGenerated}}
-    <Totp::KeyQrCode @model={{@model}} @reset={{this.reset}} />
+    <Totp::KeyQrCode @model={{@model}} @onReset={{this.reset}} />
   {{else}}
     <Totp::KeyCreate
       @onSubmit={{this.createKey}}
