@@ -12,8 +12,8 @@ import { waitFor } from '@ember/test-waiters';
 
 /**
  * @module TotpEdit
- * `TotpEdit` is a component that allows you to create, view or delete a TOTP key or view the QR code of the key.
- *
+ * `TotpEdit` is a component that allows you to create, view or delete a TOTP key.
+ * When creating a key if `generate` and `exported` are true then after a successful save the UI renders a QR code for the generated key.
  * @example
  *   <TotpEdit @model={{this.model}} @mode={{this.mode}} />
  *
@@ -54,10 +54,6 @@ export default class TotpEdit extends Component {
     return groups;
   }
 
-  get mode() {
-    return this.args.mode || 'show';
-  }
-
   transitionToRoute() {
     this.router.transitionTo(...arguments);
   }
@@ -77,7 +73,7 @@ export default class TotpEdit extends Component {
       // err will display via model state
       return;
     }
-    this.flashMessages.success('Successfully deleted key');
+    this.flashMessages.success(`${this.args.model.id} was successfully deleted.`);
   }
 
   createKey = task(

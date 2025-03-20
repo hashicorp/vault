@@ -26,7 +26,7 @@
 </PageHeader>
 
 {{#if (eq @mode "show")}}
-  <Totp::KeyDetails @model={{@model}} @delete={{this.deleteKey}} />
+  <Totp::KeyDetails @model={{@model}} @onDelete={{this.deleteKey}} />
 {{else if (eq @mode "create")}}
   {{#if this.hasGenerated}}
     <Totp::KeyQrCode @model={{@model}} @reset={{this.reset}} />
