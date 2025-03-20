@@ -4,8 +4,6 @@
  */
 
 import Model, { attr } from '@ember-data/model';
-// eslint-disable-next-line ember/no-computed-properties-in-native-classes
-import { alias } from '@ember/object/computed';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
@@ -182,7 +180,12 @@ export default class TotpKeyModel extends Model {
   }
 
   @lazyCapabilities(apiPath`${'backend'}/keys/${'id'}`, 'backend', 'id') keyPath;
-  @alias('keyPath.canRead') canRead;
-  @alias('keyPath.canDelete') canDelete;
-  //TODO remove these aliases
+
+  get canDelete() {
+    return this.keyPath.get('canDelete');
+  }
+
+  get canRead() {
+    return this.keyPath.get('canRead');
+  }
 }
