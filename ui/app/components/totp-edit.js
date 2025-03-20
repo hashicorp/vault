@@ -33,7 +33,7 @@ export default class TotpEdit extends Component {
 
   successCallback;
 
-  get keyFormFields() {
+  get defaultKeyFormFields() {
     const shared = ['name', 'generate', 'issuer', 'accountName'];
     const generated = [...shared, 'exported'];
     const nonGenerated = [...shared, 'url', 'key'];
@@ -86,15 +86,21 @@ export default class TotpEdit extends Component {
 
       if (!isValid) return;
       try {
-        const allFields = [...this.keyFormFields, ...Object.values(this.groups).flat()];
+        const allFields = [...this.defaultKeyFormFields, ...Object.values(this.groups).flat()];
         await this.args.model.save({
           adapterOptions: {
             keyFormFields: allFields,
           },
         });
         const { generate, exported } = this.args.model;
-        if (generate && exported) this.hasGenerated = true;
-        else this.reset();
+
+        if (generate && exported) {
+          // stay in this template and show QR code returned from response
+          this.hasGenerated = true;
+        } else {
+          // nothing is returned from response, transition to key details route
+          this.transitionToRoute(SHOW_ROUTE, this.args.model.name);
+        }
       } catch (err) {
         // err will display via model state
         return;

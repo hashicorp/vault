@@ -6,7 +6,8 @@
 <form {{on "submit" (perform @onSubmit)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @model={{@model}} />
-    {{#each @keyFormFields as |field|}}
+    <NamespaceReminder @mode={{"create"}} @noun="TOTP key" />
+    {{#each @defaultKeyFormFields as |field|}}
       {{#let (find-by "name" field @model.allFields) as |attr|}}
         <FormField @attr={{attr}} @model={{@model}} @modelValidations={{@modelValidations}} />
       {{/let}}
