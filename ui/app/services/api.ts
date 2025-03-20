@@ -81,11 +81,8 @@ export default class ApiService extends Service {
   showWarnings = async (context: ResponseContext) => {
     const response = context.response.clone();
     const json = await response?.json();
-    // currently there is only 1 endpoint that intentionally hides warnings
-    // handle that here for now, but if more endpoints are added, look for a more scalable pattern
-    const hideWarnings = context.url === '/v1/sys/internal/counters/activity';
 
-    if (json?.warnings && !hideWarnings) {
+    if (json?.warnings) {
       json.warnings.forEach((message: string) => {
         this.flashMessages.info(message);
       });

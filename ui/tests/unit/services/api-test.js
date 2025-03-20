@@ -125,11 +125,6 @@ module('Unit | Service | api', function (hooks) {
 
     assert.true(this.info.firstCall.calledWith(warnings[0]), 'First warning message is shown');
     assert.true(this.info.secondCall.calledWith(warnings[1]), 'Second warning message is shown');
-
-    this.info.resetHistory();
-    await this.apiService.showWarnings({ response, url: '/v1/sys/internal/counters/activity' });
-
-    assert.true(this.info.notCalled, 'Warnings are suppressed for activity endpoint');
   });
 
   test('it should delete control group token', async function (assert) {
