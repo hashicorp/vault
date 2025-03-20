@@ -92,11 +92,11 @@ export default class FormFieldComponent extends Component {
 
     // here we replicate the logic in the template, to make sure we don't change the order in which the "ifs" are evaluated
     if (options?.possibleValues?.length > 0) {
-      if (options?.editType === 'checkboxList') {
-        return true;
-      } else {
-        // we still have to migrate the `radio` and `select` use cases
+      // we still have to migrate the `radio` use case
+      if (options?.editType === 'radio') {
         return false;
+      } else {
+        return true;
       }
     } else {
       if (type === 'number' || type === 'string') {
