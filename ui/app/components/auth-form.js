@@ -56,7 +56,8 @@ export default Component.extend(DEFAULTS, {
   oldNamespace: null,
 
   authMethods: computed('version.isEnterprise', function () {
-    return supportedLoginMethods(this.version.isEnterprise);
+    const isEnterprise = this.version.isEnterprise;
+    return supportedLoginMethods(isEnterprise);
   }),
 
   didReceiveAttrs() {
