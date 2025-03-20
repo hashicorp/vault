@@ -273,7 +273,7 @@ func alignToBillingPeriod(billingStartTime, givenTime time.Time) time.Time {
 	return periodStart
 }
 
-func parseStartEndTimes(d *framework.FieldData, billingStartTime time.Time) (time.Time, time.Time, bool, error) {
+func parseStartEndTimes(d *framework.FieldData, billingStartTime time.Time) (time.Time, time.Time, error) {
 	startTime := d.Get("start_time").(time.Time)
 	endTime := d.Get("end_time").(time.Time)
 
@@ -288,36 +288,18 @@ func parseStartEndTimes(d *framework.FieldData, billingStartTime time.Time) (tim
 		endTime = endTime.UTC()
 	}
 
-	isAlignedTime := false
 	// If startTime is not specified, we would like to query
 	// from the beginning of the billing period
 	if startTime.IsZero() {
-		// if start_time is not provided, determine it based on end_time
-		startTime = alignToBillingPeriod(endTime, billingStartTime)
+		startTime = billingStartTime
 	} else {
 		startTime = startTime.UTC()
-		// check if the start time needs to be aligned
-		alignedStartTime := alignToBillingPeriod(startTime, billingStartTime)
-		// warn if endTime was adjusted to align with a billing period
-		if !startTime.Equal(alignedStartTime) {
-			isAlignedTime = true
-		}
 	}
-
-	// The end time should be the start of the next billing period unless it’s the current period
-	if startTime.AddDate(1, 0, 0).After(time.Now().UTC()) {
-		endTime = time.Now().UTC()
-	} else {
-		endTime = startTime.AddDate(1, 0, 0)
-		// warn as endTime was adjusted to align with a billing period
-		isAlignedTime = true
-	}
-
 	if startTime.After(endTime) {
-		return time.Time{}, time.Time{}, false, fmt.Errorf("start_time is later than end_time")
+		return time.Time{}, time.Time{}, fmt.Errorf("start_time is later than end_time")
 	}
 
-	return startTime, endTime, isAlignedTime, nil
+	return startTime, endTime, nil
 }
 
 // This endpoint is not used by the UI. The UI's "export" feature is entirely client-side.
@@ -329,14 +311,9 @@ func (b *SystemBackend) handleClientExport(ctx context.Context, req *logical.Req
 		return logical.ErrorResponse("no activity log present"), nil
 	}
 
-	startTime, endTime, isAlignedTime, err := parseStartEndTimes(d, b.Core.BillingStart())
+	startTime, endTime, err := parseStartEndTimes(d, b.Core.BillingStart())
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
-	}
-
-	warnings := make([]string, 0)
-	if isAlignedTime {
-		warnings = append(warnings, WarningProvidedStartAndEndTimesIgnored)
 	}
 
 	// This is to avoid the default 90s context timeout.
@@ -368,7 +345,6 @@ func (b *SystemBackend) handleClientExport(ctx context.Context, req *logical.Req
 
 	// default status to 204, this will get rewritten to 200 later if the export writes data to req.ResponseWriter
 	respNoContent, err := logical.RespondWithStatusCode(&logical.Response{}, req, http.StatusNoContent)
-	respNoContent.Warnings = warnings
 	return respNoContent, err
 }
 
@@ -389,7 +365,7 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 	}
 
 	var err error
-	startTime, endTime, isAlignedTime, err = parseStartEndTimes(d, b.Core.BillingStart())
+	startTime, endTime, err = parseStartEndTimes(d, b.Core.BillingStart())
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
