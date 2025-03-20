@@ -32,9 +32,8 @@
     <Totp::KeyQrCode @model={{@model}} @reset={{this.reset}} />
   {{else}}
     <Totp::KeyCreate
-      @create={{this.createKey}}
+      @onSubmit={{this.createKey}}
       @model={{@model}}
-      @mode={{@mode}}
       @keyFormFields={{this.keyFormFields}}
       @groups={{this.groups}}
       @modelValidations={{this.modelValidations}}
