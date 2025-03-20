@@ -68,7 +68,6 @@
 @use 'components/empty-state-component';
 @use 'components/env-banner';
 @use 'components/form-section';
-@use './components/generate-credentials-totp';
 @use 'components/global-flash';
 @use 'components/icon';
 @use 'components/init-illustration';
@@ -113,4 +112,3 @@
 @use 'components/ttl-picker';
 @use 'components/unseal-warning';
 @use 'components/vault-loading';
-
