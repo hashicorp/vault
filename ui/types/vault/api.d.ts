@@ -31,8 +31,8 @@ export interface ApiResponse {
   mount_type: string;
   renewable: boolean;
   request_id: string;
-  warnings: unknown;
-  wrap_info: WrapInfo;
+  warnings: Array<string> | null;
+  wrap_info: WrapInfo | null;
 }
 
 export type HeaderMap =

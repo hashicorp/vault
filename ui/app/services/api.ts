@@ -19,15 +19,13 @@ import type AuthService from 'vault/services/auth';
 import type NamespaceService from 'vault/services/namespace';
 import type ControlGroupService from 'vault/services/control-group';
 import type FlashMessageService from 'vault/services/flash-messages';
-import type { ApiError, ApiResponse, HeaderMap, XVaultHeaders } from 'vault/api';
+import type { ApiError, HeaderMap, XVaultHeaders } from 'vault/api';
 
 export default class ApiService extends Service {
   @service('auth') declare readonly authService: AuthService;
   @service('namespace') declare readonly namespaceService: NamespaceService;
   @service declare readonly controlGroup: ControlGroupService;
   @service declare readonly flashMessages: FlashMessageService;
-
-  #responseCache = new Map<string, ApiResponse>();
 
   // -- Pre Request Middleware --
   setLastFetch = async (context: RequestContext) => {
@@ -125,21 +123,16 @@ export default class ApiService extends Service {
 
   // the responses in the OpenAPI spec don't account for the return values to be under the 'data' key
   // return the data rather than the entire response
-  // furthermore, some requests require the full response to access things like wrap_info for example
-  // if the response type in the OpenAPI spec is void then undefined is returned regardless of what is returned here
-  // cache the response to be accessed in overridden handlers
+  // if there is no data then return the full response
   extractData = async (context: ResponseContext) => {
     const response = context.response.clone();
-    const { headers, status, statusText } = response;
+    const { headers, ok, status, statusText } = response;
 
-    if (status >= 200 && status < 300) {
+    if (ok) {
       const json = await response?.json();
-      // roughing this in for now more as a placeholder
-      // thinking about how to make the outer level response data like wrap_info accessible
-      if (!json.data) {
-        this.#responseCache.set(context.url, json);
+      if (json.data) {
+        return new Response(JSON.stringify(json.data), { headers, status, statusText });
       }
-      return new Response(JSON.stringify(json.data), { headers, status, statusText });
     }
 
     return;
