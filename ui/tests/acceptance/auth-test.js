@@ -28,12 +28,8 @@ module('Acceptance | auth', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.beforeEach(function () {
-    this.version = this.owner.lookup('service:version');
-  });
-
   test('auth query params', async function (assert) {
-    const backends = supportedLoginMethods(this.version);
+    const backends = supportedLoginMethods(this.owner.lookup('service:version'));
     assert.expect(backends.length + 1);
     await visit('/vault/auth');
     // TODO this functionality will change and url will no longer populate with auth type
