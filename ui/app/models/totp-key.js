@@ -137,8 +137,8 @@ export default class TotpKeyModel extends Model {
   @attr('boolean', {
     editType: 'toggleButton',
     defaultValue: true,
-    // subText: 'Vault will not return QR code and url upon key creation.',
-    // TODO check with design
+    helperTextDisabled: 'Vault will not return QR code and url upon key creation.',
+    helperTextEnabled: 'QR code and URL will be returned upon generating a key.',
   })
   exported;
 

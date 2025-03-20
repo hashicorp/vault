@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-{{#each-in this.groups as |group fields|}}
+{{#each-in @groups as |group fields|}}
   <ToggleButton
     @isOpen={{eq this.showGroup group}}
     @openLabel={{concat "Hide " group}}

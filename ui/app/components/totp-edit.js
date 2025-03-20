@@ -40,6 +40,20 @@ export default class TotpEdit extends Component {
     return this.args.model.generate ? generated : nonGenerated;
   }
 
+  get groups() {
+    const { generate } = this.args.model;
+
+    const groups = {
+      'TOTP Code Options': ['algorithm', 'digits', 'period'],
+    };
+
+    if (generate) {
+      groups['Provider Options'] = ['keySize', 'skew', 'qrSize'];
+    }
+
+    return groups;
+  }
+
   get mode() {
     return this.args.mode || 'show';
   }
@@ -75,12 +89,15 @@ export default class TotpEdit extends Component {
 
       if (!isValid) return;
       try {
+        const allFields = [...this.keyFormFields, ...Object.values(this.groups).flat()];
         await this.args.model.save({
           adapterOptions: {
-            keyFormFields: this.keyFormFields,
+            keyFormFields: allFields,
           },
         });
-        this.hasGenerated = true;
+        const { generate, exported } = this.args.model;
+        if (generate && exported) this.hasGenerated = true;
+        else this.reset();
       } catch (err) {
         // err will display via model state
         return;

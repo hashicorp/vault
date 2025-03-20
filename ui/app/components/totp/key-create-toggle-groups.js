@@ -10,20 +10,6 @@ import { action } from '@ember/object';
 export default class KeyCreateToggleGroupsComponent extends Component {
   @tracked showGroup = null;
 
-  get groups() {
-    const { generate } = this.args.model;
-
-    const groups = {
-      'TOTP Code Options': ['algorithm', 'digits', 'period'],
-    };
-
-    if (generate) {
-      groups['Provider Options'] = ['keySize', 'skew', 'qrSize'];
-    }
-
-    return groups;
-  }
-
   @action
   toggleGroup(group, isOpen) {
     this.showGroup = isOpen ? group : null;
