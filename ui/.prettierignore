@@ -3,6 +3,7 @@
 
 # compiled output
 /dist/
+/api-client/dist
 
 # misc
 /coverage/

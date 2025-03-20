@@ -53,6 +53,8 @@ type UtilizationReportOutput struct {
 	AuthMethods   map[string]int `json:"auth_methods,omitempty" structs:"auth_methods" mapstructure:"auth_methods"`
 	SecretEngines map[string]int `json:"secret_engines,omitempty" structs:"secret_engines" mapstructure:"secret_engines"`
 
+	LeasesByAuthMethod map[string]int `json:"leases_by_auth_method,omitempty" structs:"leases_by_auth_method" mapstructure:"leases_by_auth_method"`
+
 	ReplicationStatus *UtilizationReportReplicationStatusInformation `json:"replication_status,omitempty" structs:"replication_status" mapstructure:"replication_status"`
 
 	PKI *UtilizationReportPKIInformation `json:"pki,omitempty" structs:"pki" mapstructure:"pki"`

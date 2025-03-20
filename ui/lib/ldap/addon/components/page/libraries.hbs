@@ -9,7 +9,7 @@
       <FilterInput
         aria-label="Filter libraries"
         placeholder="Filter libraries"
-        value={{this.filterValue}}
+        @value={{this.filterValue}}
         @wait={{200}}
         @onInput={{fn (mut this.filterValue)}}
       />
