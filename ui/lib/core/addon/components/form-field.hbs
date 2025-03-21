@@ -96,6 +96,7 @@
             {{! Prevents browsers from auto-filling }}
             autocomplete="new-password"
             spellcheck="false"
+            {{on "input" this.onChangeWithEvent}}
             data-test-input={{@attr.name}}
             as |F|
           >
@@ -369,17 +370,6 @@
             oninput={{this.onChangeWithEvent}}
             class="textarea {{if this.validationError 'has-error-border'}}"
           ></textarea>
-        {{else if (eq @attr.options.editType "password")}}
-          <Input
-            data-test-input={{@attr.name}}
-            @type="password"
-            @value={{get @model this.valuePath}}
-            name={{@attr.name}}
-            class="input"
-            {{! Prevents browsers from auto-filling }}
-            autocomplete="new-password"
-            spellcheck="false"
-          />
         {{else if (eq @attr.options.editType "json")}}
           {{! JSON Editor }}
           {{#let (get @model this.valuePath) as |value|}}
