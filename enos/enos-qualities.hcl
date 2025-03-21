@@ -552,6 +552,22 @@ quality "vault_raft_voters" {
   description = global.description.verify_raft_cluster_all_nodes_are_voters
 }
 
+quality "vault_raft_removed_after_restart" {
+  description = "A removed raft node will continue reporting as removed after the process is restarted"
+}
+
+quality "vault_raft_removed_statuses" {
+  description = "A removed raft node reports itself as removed in the status endpoints"
+}
+
+quality "vault_raft_removed_cant_rejoin" {
+  description = "A removed raft node cannot rejoin a cluster while it still has old vault/raft data"
+}
+
+quality "vault_raft_removed_rejoin_after_deletion" {
+  description = "A removed raft node can rejoin a cluster if it has deleted its old vault/raft data"
+}
+
 quality "vault_replication_ce_disabled" {
   description = "Replication is not enabled for CE editions"
 }
