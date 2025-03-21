@@ -32,7 +32,7 @@ function LeasesReadLeaseRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        leaseId: json['lease_id'] == null ? undefined : json['lease_id'],
+        'leaseId': json['lease_id'] == null ? undefined : json['lease_id'],
     };
 }
 function LeasesReadLeaseRequestToJSON(json) {
@@ -43,6 +43,6 @@ function LeasesReadLeaseRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        lease_id: value['leaseId'],
+        'lease_id': value['leaseId'],
     };
 }

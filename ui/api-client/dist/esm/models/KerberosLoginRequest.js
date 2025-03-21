@@ -25,7 +25,7 @@ export function KerberosLoginRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        authorization: json['authorization'] == null ? undefined : json['authorization'],
+        'authorization': json['authorization'] == null ? undefined : json['authorization'],
     };
 }
 export function KerberosLoginRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function KerberosLoginRequestToJSONTyped(value, ignoreDiscriminator = fal
         return value;
     }
     return {
-        authorization: value['authorization'],
+        'authorization': value['authorization'],
     };
 }

@@ -32,20 +32,20 @@ function SystemWriteSyncDestinationsAzureKvNameRequestFromJSONTyped(json, ignore
         return json;
     }
     return {
-        allowedIpv4Addresses: json['allowed_ipv4_addresses'] == null ? undefined : json['allowed_ipv4_addresses'],
-        allowedIpv6Addresses: json['allowed_ipv6_addresses'] == null ? undefined : json['allowed_ipv6_addresses'],
-        allowedPorts: json['allowed_ports'] == null ? undefined : json['allowed_ports'],
-        clientId: json['client_id'] == null ? undefined : json['client_id'],
-        clientSecret: json['client_secret'] == null ? undefined : json['client_secret'],
-        cloud: json['cloud'] == null ? undefined : json['cloud'],
-        customTags: json['custom_tags'] == null ? undefined : json['custom_tags'],
-        disableStrictNetworking: json['disable_strict_networking'] == null ? undefined : json['disable_strict_networking'],
-        granularity: json['granularity'] == null ? undefined : json['granularity'],
-        keyVaultUri: json['key_vault_uri'] == null ? undefined : json['key_vault_uri'],
-        purge: json['purge'] == null ? undefined : json['purge'],
-        secretNameTemplate: json['secret_name_template'] == null ? undefined : json['secret_name_template'],
-        tagsToRemove: json['tags_to_remove'] == null ? undefined : json['tags_to_remove'],
-        tenantId: json['tenant_id'] == null ? undefined : json['tenant_id'],
+        'allowedIpv4Addresses': json['allowed_ipv4_addresses'] == null ? undefined : json['allowed_ipv4_addresses'],
+        'allowedIpv6Addresses': json['allowed_ipv6_addresses'] == null ? undefined : json['allowed_ipv6_addresses'],
+        'allowedPorts': json['allowed_ports'] == null ? undefined : json['allowed_ports'],
+        'clientId': json['client_id'] == null ? undefined : json['client_id'],
+        'clientSecret': json['client_secret'] == null ? undefined : json['client_secret'],
+        'cloud': json['cloud'] == null ? undefined : json['cloud'],
+        'customTags': json['custom_tags'] == null ? undefined : json['custom_tags'],
+        'disableStrictNetworking': json['disable_strict_networking'] == null ? undefined : json['disable_strict_networking'],
+        'granularity': json['granularity'] == null ? undefined : json['granularity'],
+        'keyVaultUri': json['key_vault_uri'] == null ? undefined : json['key_vault_uri'],
+        'purge': json['purge'] == null ? undefined : json['purge'],
+        'secretNameTemplate': json['secret_name_template'] == null ? undefined : json['secret_name_template'],
+        'tagsToRemove': json['tags_to_remove'] == null ? undefined : json['tags_to_remove'],
+        'tenantId': json['tenant_id'] == null ? undefined : json['tenant_id'],
     };
 }
 function SystemWriteSyncDestinationsAzureKvNameRequestToJSON(json) {
@@ -56,19 +56,19 @@ function SystemWriteSyncDestinationsAzureKvNameRequestToJSONTyped(value, ignoreD
         return value;
     }
     return {
-        allowed_ipv4_addresses: value['allowedIpv4Addresses'],
-        allowed_ipv6_addresses: value['allowedIpv6Addresses'],
-        allowed_ports: value['allowedPorts'],
-        client_id: value['clientId'],
-        client_secret: value['clientSecret'],
-        cloud: value['cloud'],
-        custom_tags: value['customTags'],
-        disable_strict_networking: value['disableStrictNetworking'],
-        granularity: value['granularity'],
-        key_vault_uri: value['keyVaultUri'],
-        purge: value['purge'],
-        secret_name_template: value['secretNameTemplate'],
-        tags_to_remove: value['tagsToRemove'],
-        tenant_id: value['tenantId'],
+        'allowed_ipv4_addresses': value['allowedIpv4Addresses'],
+        'allowed_ipv6_addresses': value['allowedIpv6Addresses'],
+        'allowed_ports': value['allowedPorts'],
+        'client_id': value['clientId'],
+        'client_secret': value['clientSecret'],
+        'cloud': value['cloud'],
+        'custom_tags': value['customTags'],
+        'disable_strict_networking': value['disableStrictNetworking'],
+        'granularity': value['granularity'],
+        'key_vault_uri': value['keyVaultUri'],
+        'purge': value['purge'],
+        'secret_name_template': value['secretNameTemplate'],
+        'tags_to_remove': value['tagsToRemove'],
+        'tenant_id': value['tenantId'],
     };
 }

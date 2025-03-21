@@ -25,7 +25,7 @@ export function GithubWriteUserMappingRequestFromJSONTyped(json, ignoreDiscrimin
         return json;
     }
     return {
-        value: json['value'] == null ? undefined : json['value'],
+        'value': json['value'] == null ? undefined : json['value'],
     };
 }
 export function GithubWriteUserMappingRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function GithubWriteUserMappingRequestToJSONTyped(value, ignoreDiscrimina
         return value;
     }
     return {
-        value: value['value'],
+        'value': value['value'],
     };
 }

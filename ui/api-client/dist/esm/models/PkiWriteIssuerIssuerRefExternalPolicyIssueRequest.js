@@ -12,9 +12,9 @@
  * Do not edit the class manually.
  */
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export var PkiWriteIssuerIssuerRefExternalPolicyIssueRequestFormatEnum;
 (function (PkiWriteIssuerIssuerRefExternalPolicyIssueRequestFormatEnum) {
     PkiWriteIssuerIssuerRefExternalPolicyIssueRequestFormatEnum["PEM"] = "pem";
@@ -22,9 +22,9 @@ export var PkiWriteIssuerIssuerRefExternalPolicyIssueRequestFormatEnum;
     PkiWriteIssuerIssuerRefExternalPolicyIssueRequestFormatEnum["PEM_BUNDLE"] = "pem_bundle";
 })(PkiWriteIssuerIssuerRefExternalPolicyIssueRequestFormatEnum || (PkiWriteIssuerIssuerRefExternalPolicyIssueRequestFormatEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export var PkiWriteIssuerIssuerRefExternalPolicyIssueRequestKeyTypeEnum;
 (function (PkiWriteIssuerIssuerRefExternalPolicyIssueRequestKeyTypeEnum) {
     PkiWriteIssuerIssuerRefExternalPolicyIssueRequestKeyTypeEnum["RSA"] = "rsa";
@@ -32,9 +32,9 @@ export var PkiWriteIssuerIssuerRefExternalPolicyIssueRequestKeyTypeEnum;
     PkiWriteIssuerIssuerRefExternalPolicyIssueRequestKeyTypeEnum["ED25519"] = "ed25519";
 })(PkiWriteIssuerIssuerRefExternalPolicyIssueRequestKeyTypeEnum || (PkiWriteIssuerIssuerRefExternalPolicyIssueRequestKeyTypeEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export var PkiWriteIssuerIssuerRefExternalPolicyIssueRequestPrivateKeyFormatEnum;
 (function (PkiWriteIssuerIssuerRefExternalPolicyIssueRequestPrivateKeyFormatEnum) {
     PkiWriteIssuerIssuerRefExternalPolicyIssueRequestPrivateKeyFormatEnum["DER"] = "der";
@@ -54,7 +54,7 @@ export function PkiWriteIssuerIssuerRefExternalPolicyIssueRequestFromJSONTyped(j
     if (json == null) {
         return json;
     }
-    return Object.assign(Object.assign({}, json), { format: json['format'] == null ? undefined : json['format'], keyBits: json['key_bits'] == null ? undefined : json['key_bits'], keyType: json['key_type'] == null ? undefined : json['key_type'], privateKeyFormat: json['private_key_format'] == null ? undefined : json['private_key_format'], removeRootsFromChain: json['remove_roots_from_chain'] == null ? undefined : json['remove_roots_from_chain'] });
+    return Object.assign(Object.assign({}, json), { 'format': json['format'] == null ? undefined : json['format'], 'keyBits': json['key_bits'] == null ? undefined : json['key_bits'], 'keyType': json['key_type'] == null ? undefined : json['key_type'], 'privateKeyFormat': json['private_key_format'] == null ? undefined : json['private_key_format'], 'removeRootsFromChain': json['remove_roots_from_chain'] == null ? undefined : json['remove_roots_from_chain'] });
 }
 export function PkiWriteIssuerIssuerRefExternalPolicyIssueRequestToJSON(json) {
     return PkiWriteIssuerIssuerRefExternalPolicyIssueRequestToJSONTyped(json, false);
@@ -63,5 +63,5 @@ export function PkiWriteIssuerIssuerRefExternalPolicyIssueRequestToJSONTyped(val
     if (value == null) {
         return value;
     }
-    return Object.assign(Object.assign({}, value), { format: value['format'], key_bits: value['keyBits'], key_type: value['keyType'], private_key_format: value['privateKeyFormat'], remove_roots_from_chain: value['removeRootsFromChain'] });
+    return Object.assign(Object.assign({}, value), { 'format': value['format'], 'key_bits': value['keyBits'], 'key_type': value['keyType'], 'private_key_format': value['privateKeyFormat'], 'remove_roots_from_chain': value['removeRootsFromChain'] });
 }

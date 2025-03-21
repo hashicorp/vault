@@ -32,8 +32,8 @@ function SystemWritePoliciesRgpNameRequestFromJSONTyped(json, ignoreDiscriminato
         return json;
     }
     return {
-        enforcementLevel: json['enforcement_level'] == null ? undefined : json['enforcement_level'],
-        policy: json['policy'] == null ? undefined : json['policy'],
+        'enforcementLevel': json['enforcement_level'] == null ? undefined : json['enforcement_level'],
+        'policy': json['policy'] == null ? undefined : json['policy'],
     };
 }
 function SystemWritePoliciesRgpNameRequestToJSON(json) {
@@ -44,7 +44,7 @@ function SystemWritePoliciesRgpNameRequestToJSONTyped(value, ignoreDiscriminator
         return value;
     }
     return {
-        enforcement_level: value['enforcementLevel'],
-        policy: value['policy'],
+        'enforcement_level': value['enforcementLevel'],
+        'policy': value['policy'],
     };
 }

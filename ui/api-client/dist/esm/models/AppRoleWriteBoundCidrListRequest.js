@@ -25,7 +25,7 @@ export function AppRoleWriteBoundCidrListRequestFromJSONTyped(json, ignoreDiscri
         return json;
     }
     return {
-        boundCidrList: json['bound_cidr_list'] == null ? undefined : json['bound_cidr_list'],
+        'boundCidrList': json['bound_cidr_list'] == null ? undefined : json['bound_cidr_list'],
     };
 }
 export function AppRoleWriteBoundCidrListRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function AppRoleWriteBoundCidrListRequestToJSONTyped(value, ignoreDiscrim
         return value;
     }
     return {
-        bound_cidr_list: value['boundCidrList'],
+        'bound_cidr_list': value['boundCidrList'],
     };
 }

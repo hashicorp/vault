@@ -32,9 +32,9 @@ function GroupUpdateAliasByIdRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        canonicalId: json['canonical_id'] == null ? undefined : json['canonical_id'],
-        mountAccessor: json['mount_accessor'] == null ? undefined : json['mount_accessor'],
-        name: json['name'] == null ? undefined : json['name'],
+        'canonicalId': json['canonical_id'] == null ? undefined : json['canonical_id'],
+        'mountAccessor': json['mount_accessor'] == null ? undefined : json['mount_accessor'],
+        'name': json['name'] == null ? undefined : json['name'],
     };
 }
 function GroupUpdateAliasByIdRequestToJSON(json) {
@@ -45,8 +45,8 @@ function GroupUpdateAliasByIdRequestToJSONTyped(value, ignoreDiscriminator = fal
         return value;
     }
     return {
-        canonical_id: value['canonicalId'],
-        mount_accessor: value['mountAccessor'],
-        name: value['name'],
+        'canonical_id': value['canonicalId'],
+        'mount_accessor': value['mountAccessor'],
+        'name': value['name'],
     };
 }

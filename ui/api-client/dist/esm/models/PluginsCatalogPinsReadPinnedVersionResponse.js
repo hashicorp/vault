@@ -25,9 +25,9 @@ export function PluginsCatalogPinsReadPinnedVersionResponseFromJSONTyped(json, i
         return json;
     }
     return {
-        name: json['name'] == null ? undefined : json['name'],
-        type: json['type'] == null ? undefined : json['type'],
-        version: json['version'] == null ? undefined : json['version'],
+        'name': json['name'] == null ? undefined : json['name'],
+        'type': json['type'] == null ? undefined : json['type'],
+        'version': json['version'] == null ? undefined : json['version'],
     };
 }
 export function PluginsCatalogPinsReadPinnedVersionResponseToJSON(json) {
@@ -38,8 +38,8 @@ export function PluginsCatalogPinsReadPinnedVersionResponseToJSONTyped(value, ig
         return value;
     }
     return {
-        name: value['name'],
-        type: value['type'],
-        version: value['version'],
+        'name': value['name'],
+        'type': value['type'],
+        'version': value['version'],
     };
 }

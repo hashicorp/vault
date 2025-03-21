@@ -25,12 +25,12 @@ export function AppRoleWriteCustomSecretIdRequestFromJSONTyped(json, ignoreDiscr
         return json;
     }
     return {
-        cidrList: json['cidr_list'] == null ? undefined : json['cidr_list'],
-        metadata: json['metadata'] == null ? undefined : json['metadata'],
-        numUses: json['num_uses'] == null ? undefined : json['num_uses'],
-        secretId: json['secret_id'] == null ? undefined : json['secret_id'],
-        tokenBoundCidrs: json['token_bound_cidrs'] == null ? undefined : json['token_bound_cidrs'],
-        ttl: json['ttl'] == null ? undefined : json['ttl'],
+        'cidrList': json['cidr_list'] == null ? undefined : json['cidr_list'],
+        'metadata': json['metadata'] == null ? undefined : json['metadata'],
+        'numUses': json['num_uses'] == null ? undefined : json['num_uses'],
+        'secretId': json['secret_id'] == null ? undefined : json['secret_id'],
+        'tokenBoundCidrs': json['token_bound_cidrs'] == null ? undefined : json['token_bound_cidrs'],
+        'ttl': json['ttl'] == null ? undefined : json['ttl'],
     };
 }
 export function AppRoleWriteCustomSecretIdRequestToJSON(json) {
@@ -41,11 +41,11 @@ export function AppRoleWriteCustomSecretIdRequestToJSONTyped(value, ignoreDiscri
         return value;
     }
     return {
-        cidr_list: value['cidrList'],
-        metadata: value['metadata'],
-        num_uses: value['numUses'],
-        secret_id: value['secretId'],
-        token_bound_cidrs: value['tokenBoundCidrs'],
-        ttl: value['ttl'],
+        'cidr_list': value['cidrList'],
+        'metadata': value['metadata'],
+        'num_uses': value['numUses'],
+        'secret_id': value['secretId'],
+        'token_bound_cidrs': value['tokenBoundCidrs'],
+        'ttl': value['ttl'],
     };
 }

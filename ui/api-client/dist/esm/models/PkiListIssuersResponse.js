@@ -25,8 +25,8 @@ export function PkiListIssuersResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        keyInfo: json['key_info'] == null ? undefined : json['key_info'],
-        keys: json['keys'] == null ? undefined : json['keys'],
+        'keyInfo': json['key_info'] == null ? undefined : json['key_info'],
+        'keys': json['keys'] == null ? undefined : json['keys'],
     };
 }
 export function PkiListIssuersResponseToJSON(json) {
@@ -37,7 +37,7 @@ export function PkiListIssuersResponseToJSONTyped(value, ignoreDiscriminator = f
         return value;
     }
     return {
-        key_info: value['keyInfo'],
-        keys: value['keys'],
+        'key_info': value['keyInfo'],
+        'keys': value['keys'],
     };
 }

@@ -25,16 +25,16 @@ export function TransitImportKeyRequestFromJSONTyped(json, ignoreDiscriminator) 
         return json;
     }
     return {
-        allowPlaintextBackup: json['allow_plaintext_backup'] == null ? undefined : json['allow_plaintext_backup'],
-        allowRotation: json['allow_rotation'] == null ? undefined : json['allow_rotation'],
-        autoRotatePeriod: json['auto_rotate_period'] == null ? undefined : json['auto_rotate_period'],
-        ciphertext: json['ciphertext'] == null ? undefined : json['ciphertext'],
-        context: json['context'] == null ? undefined : json['context'],
-        derived: json['derived'] == null ? undefined : json['derived'],
-        exportable: json['exportable'] == null ? undefined : json['exportable'],
-        hashFunction: json['hash_function'] == null ? undefined : json['hash_function'],
-        publicKey: json['public_key'] == null ? undefined : json['public_key'],
-        type: json['type'] == null ? undefined : json['type'],
+        'allowPlaintextBackup': json['allow_plaintext_backup'] == null ? undefined : json['allow_plaintext_backup'],
+        'allowRotation': json['allow_rotation'] == null ? undefined : json['allow_rotation'],
+        'autoRotatePeriod': json['auto_rotate_period'] == null ? undefined : json['auto_rotate_period'],
+        'ciphertext': json['ciphertext'] == null ? undefined : json['ciphertext'],
+        'context': json['context'] == null ? undefined : json['context'],
+        'derived': json['derived'] == null ? undefined : json['derived'],
+        'exportable': json['exportable'] == null ? undefined : json['exportable'],
+        'hashFunction': json['hash_function'] == null ? undefined : json['hash_function'],
+        'publicKey': json['public_key'] == null ? undefined : json['public_key'],
+        'type': json['type'] == null ? undefined : json['type'],
     };
 }
 export function TransitImportKeyRequestToJSON(json) {
@@ -45,15 +45,15 @@ export function TransitImportKeyRequestToJSONTyped(value, ignoreDiscriminator = 
         return value;
     }
     return {
-        allow_plaintext_backup: value['allowPlaintextBackup'],
-        allow_rotation: value['allowRotation'],
-        auto_rotate_period: value['autoRotatePeriod'],
-        ciphertext: value['ciphertext'],
-        context: value['context'],
-        derived: value['derived'],
-        exportable: value['exportable'],
-        hash_function: value['hashFunction'],
-        public_key: value['publicKey'],
-        type: value['type'],
+        'allow_plaintext_backup': value['allowPlaintextBackup'],
+        'allow_rotation': value['allowRotation'],
+        'auto_rotate_period': value['autoRotatePeriod'],
+        'ciphertext': value['ciphertext'],
+        'context': value['context'],
+        'derived': value['derived'],
+        'exportable': value['exportable'],
+        'hash_function': value['hashFunction'],
+        'public_key': value['publicKey'],
+        'type': value['type'],
     };
 }

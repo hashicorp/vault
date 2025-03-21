@@ -25,10 +25,10 @@ export function RawWriteRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        compressed: json['compressed'] == null ? undefined : json['compressed'],
-        compressionType: json['compression_type'] == null ? undefined : json['compression_type'],
-        encoding: json['encoding'] == null ? undefined : json['encoding'],
-        value: json['value'] == null ? undefined : json['value'],
+        'compressed': json['compressed'] == null ? undefined : json['compressed'],
+        'compressionType': json['compression_type'] == null ? undefined : json['compression_type'],
+        'encoding': json['encoding'] == null ? undefined : json['encoding'],
+        'value': json['value'] == null ? undefined : json['value'],
     };
 }
 export function RawWriteRequestToJSON(json) {
@@ -39,9 +39,9 @@ export function RawWriteRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        compressed: value['compressed'],
-        compression_type: value['compressionType'],
-        encoding: value['encoding'],
-        value: value['value'],
+        'compressed': value['compressed'],
+        'compression_type': value['compressionType'],
+        'encoding': value['encoding'],
+        'value': value['value'],
     };
 }

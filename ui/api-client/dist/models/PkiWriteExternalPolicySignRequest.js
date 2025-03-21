@@ -20,9 +20,9 @@ exports.PkiWriteExternalPolicySignRequestFromJSONTyped = PkiWriteExternalPolicyS
 exports.PkiWriteExternalPolicySignRequestToJSON = PkiWriteExternalPolicySignRequestToJSON;
 exports.PkiWriteExternalPolicySignRequestToJSONTyped = PkiWriteExternalPolicySignRequestToJSONTyped;
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 var PkiWriteExternalPolicySignRequestFormatEnum;
 (function (PkiWriteExternalPolicySignRequestFormatEnum) {
     PkiWriteExternalPolicySignRequestFormatEnum["PEM"] = "pem";
@@ -44,7 +44,7 @@ function PkiWriteExternalPolicySignRequestFromJSONTyped(json, ignoreDiscriminato
     if (json == null) {
         return json;
     }
-    return Object.assign(Object.assign({}, json), { csr: json['csr'], format: json['format'] == null ? undefined : json['format'], removeRootsFromChain: json['remove_roots_from_chain'] == null ? undefined : json['remove_roots_from_chain'] });
+    return Object.assign(Object.assign({}, json), { 'csr': json['csr'], 'format': json['format'] == null ? undefined : json['format'], 'removeRootsFromChain': json['remove_roots_from_chain'] == null ? undefined : json['remove_roots_from_chain'] });
 }
 function PkiWriteExternalPolicySignRequestToJSON(json) {
     return PkiWriteExternalPolicySignRequestToJSONTyped(json, false);
@@ -53,5 +53,5 @@ function PkiWriteExternalPolicySignRequestToJSONTyped(value, ignoreDiscriminator
     if (value == null) {
         return value;
     }
-    return Object.assign(Object.assign({}, value), { csr: value['csr'], format: value['format'], remove_roots_from_chain: value['removeRootsFromChain'] });
+    return Object.assign(Object.assign({}, value), { 'csr': value['csr'], 'format': value['format'], 'remove_roots_from_chain': value['removeRootsFromChain'] });
 }

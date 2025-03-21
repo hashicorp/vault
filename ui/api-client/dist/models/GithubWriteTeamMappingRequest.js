@@ -32,7 +32,7 @@ function GithubWriteTeamMappingRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        value: json['value'] == null ? undefined : json['value'],
+        'value': json['value'] == null ? undefined : json['value'],
     };
 }
 function GithubWriteTeamMappingRequestToJSON(json) {
@@ -43,6 +43,6 @@ function GithubWriteTeamMappingRequestToJSONTyped(value, ignoreDiscriminator = f
         return value;
     }
     return {
-        value: value['value'],
+        'value': value['value'],
     };
 }

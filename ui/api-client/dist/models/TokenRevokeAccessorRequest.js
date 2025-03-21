@@ -32,7 +32,7 @@ function TokenRevokeAccessorRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        accessor: json['accessor'] == null ? undefined : json['accessor'],
+        'accessor': json['accessor'] == null ? undefined : json['accessor'],
     };
 }
 function TokenRevokeAccessorRequestToJSON(json) {
@@ -43,6 +43,6 @@ function TokenRevokeAccessorRequestToJSONTyped(value, ignoreDiscriminator = fals
         return value;
     }
     return {
-        accessor: value['accessor'],
+        'accessor': value['accessor'],
     };
 }

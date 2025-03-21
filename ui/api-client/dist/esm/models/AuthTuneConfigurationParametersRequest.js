@@ -25,20 +25,20 @@ export function AuthTuneConfigurationParametersRequestFromJSONTyped(json, ignore
         return json;
     }
     return {
-        allowedResponseHeaders: json['allowed_response_headers'] == null ? undefined : json['allowed_response_headers'],
-        auditNonHmacRequestKeys: json['audit_non_hmac_request_keys'] == null ? undefined : json['audit_non_hmac_request_keys'],
-        auditNonHmacResponseKeys: json['audit_non_hmac_response_keys'] == null ? undefined : json['audit_non_hmac_response_keys'],
-        defaultLeaseTtl: json['default_lease_ttl'] == null ? undefined : json['default_lease_ttl'],
-        description: json['description'] == null ? undefined : json['description'],
-        identityTokenKey: json['identity_token_key'] == null ? undefined : json['identity_token_key'],
-        listingVisibility: json['listing_visibility'] == null ? undefined : json['listing_visibility'],
-        maxLeaseTtl: json['max_lease_ttl'] == null ? undefined : json['max_lease_ttl'],
-        options: json['options'] == null ? undefined : json['options'],
-        passthroughRequestHeaders: json['passthrough_request_headers'] == null ? undefined : json['passthrough_request_headers'],
-        pluginVersion: json['plugin_version'] == null ? undefined : json['plugin_version'],
-        tokenType: json['token_type'] == null ? undefined : json['token_type'],
-        trimRequestTrailingSlashes: json['trim_request_trailing_slashes'] == null ? undefined : json['trim_request_trailing_slashes'],
-        userLockoutConfig: json['user_lockout_config'] == null ? undefined : json['user_lockout_config'],
+        'allowedResponseHeaders': json['allowed_response_headers'] == null ? undefined : json['allowed_response_headers'],
+        'auditNonHmacRequestKeys': json['audit_non_hmac_request_keys'] == null ? undefined : json['audit_non_hmac_request_keys'],
+        'auditNonHmacResponseKeys': json['audit_non_hmac_response_keys'] == null ? undefined : json['audit_non_hmac_response_keys'],
+        'defaultLeaseTtl': json['default_lease_ttl'] == null ? undefined : json['default_lease_ttl'],
+        'description': json['description'] == null ? undefined : json['description'],
+        'identityTokenKey': json['identity_token_key'] == null ? undefined : json['identity_token_key'],
+        'listingVisibility': json['listing_visibility'] == null ? undefined : json['listing_visibility'],
+        'maxLeaseTtl': json['max_lease_ttl'] == null ? undefined : json['max_lease_ttl'],
+        'options': json['options'] == null ? undefined : json['options'],
+        'passthroughRequestHeaders': json['passthrough_request_headers'] == null ? undefined : json['passthrough_request_headers'],
+        'pluginVersion': json['plugin_version'] == null ? undefined : json['plugin_version'],
+        'tokenType': json['token_type'] == null ? undefined : json['token_type'],
+        'trimRequestTrailingSlashes': json['trim_request_trailing_slashes'] == null ? undefined : json['trim_request_trailing_slashes'],
+        'userLockoutConfig': json['user_lockout_config'] == null ? undefined : json['user_lockout_config'],
     };
 }
 export function AuthTuneConfigurationParametersRequestToJSON(json) {
@@ -49,19 +49,19 @@ export function AuthTuneConfigurationParametersRequestToJSONTyped(value, ignoreD
         return value;
     }
     return {
-        allowed_response_headers: value['allowedResponseHeaders'],
-        audit_non_hmac_request_keys: value['auditNonHmacRequestKeys'],
-        audit_non_hmac_response_keys: value['auditNonHmacResponseKeys'],
-        default_lease_ttl: value['defaultLeaseTtl'],
-        description: value['description'],
-        identity_token_key: value['identityTokenKey'],
-        listing_visibility: value['listingVisibility'],
-        max_lease_ttl: value['maxLeaseTtl'],
-        options: value['options'],
-        passthrough_request_headers: value['passthroughRequestHeaders'],
-        plugin_version: value['pluginVersion'],
-        token_type: value['tokenType'],
-        trim_request_trailing_slashes: value['trimRequestTrailingSlashes'],
-        user_lockout_config: value['userLockoutConfig'],
+        'allowed_response_headers': value['allowedResponseHeaders'],
+        'audit_non_hmac_request_keys': value['auditNonHmacRequestKeys'],
+        'audit_non_hmac_response_keys': value['auditNonHmacResponseKeys'],
+        'default_lease_ttl': value['defaultLeaseTtl'],
+        'description': value['description'],
+        'identity_token_key': value['identityTokenKey'],
+        'listing_visibility': value['listingVisibility'],
+        'max_lease_ttl': value['maxLeaseTtl'],
+        'options': value['options'],
+        'passthrough_request_headers': value['passthroughRequestHeaders'],
+        'plugin_version': value['pluginVersion'],
+        'token_type': value['tokenType'],
+        'trim_request_trailing_slashes': value['trimRequestTrailingSlashes'],
+        'user_lockout_config': value['userLockoutConfig'],
     };
 }

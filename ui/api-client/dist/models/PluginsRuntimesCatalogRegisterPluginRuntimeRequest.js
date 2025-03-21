@@ -32,11 +32,11 @@ function PluginsRuntimesCatalogRegisterPluginRuntimeRequestFromJSONTyped(json, i
         return json;
     }
     return {
-        cgroupParent: json['cgroup_parent'] == null ? undefined : json['cgroup_parent'],
-        cpuNanos: json['cpu_nanos'] == null ? undefined : json['cpu_nanos'],
-        memoryBytes: json['memory_bytes'] == null ? undefined : json['memory_bytes'],
-        ociRuntime: json['oci_runtime'] == null ? undefined : json['oci_runtime'],
-        rootless: json['rootless'] == null ? undefined : json['rootless'],
+        'cgroupParent': json['cgroup_parent'] == null ? undefined : json['cgroup_parent'],
+        'cpuNanos': json['cpu_nanos'] == null ? undefined : json['cpu_nanos'],
+        'memoryBytes': json['memory_bytes'] == null ? undefined : json['memory_bytes'],
+        'ociRuntime': json['oci_runtime'] == null ? undefined : json['oci_runtime'],
+        'rootless': json['rootless'] == null ? undefined : json['rootless'],
     };
 }
 function PluginsRuntimesCatalogRegisterPluginRuntimeRequestToJSON(json) {
@@ -47,10 +47,10 @@ function PluginsRuntimesCatalogRegisterPluginRuntimeRequestToJSONTyped(value, ig
         return value;
     }
     return {
-        cgroup_parent: value['cgroupParent'],
-        cpu_nanos: value['cpuNanos'],
-        memory_bytes: value['memoryBytes'],
-        oci_runtime: value['ociRuntime'],
-        rootless: value['rootless'],
+        'cgroup_parent': value['cgroupParent'],
+        'cpu_nanos': value['cpuNanos'],
+        'memory_bytes': value['memoryBytes'],
+        'oci_runtime': value['ociRuntime'],
+        'rootless': value['rootless'],
     };
 }

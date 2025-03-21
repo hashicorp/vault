@@ -25,10 +25,10 @@ export function TransitGenerateCmacWithMacLengthRequestFromJSONTyped(json, ignor
         return json;
     }
     return {
-        batchInput: json['batch_input'] == null ? undefined : json['batch_input'],
-        input: json['input'] == null ? undefined : json['input'],
-        keyVersion: json['key_version'] == null ? undefined : json['key_version'],
-        macLength: json['mac_length'] == null ? undefined : json['mac_length'],
+        'batchInput': json['batch_input'] == null ? undefined : json['batch_input'],
+        'input': json['input'] == null ? undefined : json['input'],
+        'keyVersion': json['key_version'] == null ? undefined : json['key_version'],
+        'macLength': json['mac_length'] == null ? undefined : json['mac_length'],
     };
 }
 export function TransitGenerateCmacWithMacLengthRequestToJSON(json) {
@@ -39,9 +39,9 @@ export function TransitGenerateCmacWithMacLengthRequestToJSONTyped(value, ignore
         return value;
     }
     return {
-        batch_input: value['batchInput'],
-        input: value['input'],
-        key_version: value['keyVersion'],
-        mac_length: value['macLength'],
+        'batch_input': value['batchInput'],
+        'input': value['input'],
+        'key_version': value['keyVersion'],
+        'mac_length': value['macLength'],
     };
 }

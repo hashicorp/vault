@@ -25,7 +25,7 @@ export function KvV2DestroyVersionsRequestFromJSONTyped(json, ignoreDiscriminato
         return json;
     }
     return {
-        versions: json['versions'] == null ? undefined : json['versions'],
+        'versions': json['versions'] == null ? undefined : json['versions'],
     };
 }
 export function KvV2DestroyVersionsRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function KvV2DestroyVersionsRequestToJSONTyped(value, ignoreDiscriminator
         return value;
     }
     return {
-        versions: value['versions'],
+        'versions': value['versions'],
     };
 }

@@ -25,14 +25,14 @@ export function PkiConfigureAcmeRequestFromJSONTyped(json, ignoreDiscriminator) 
         return json;
     }
     return {
-        allowRoleExtKeyUsage: json['allow_role_ext_key_usage'] == null ? undefined : json['allow_role_ext_key_usage'],
-        allowedIssuers: json['allowed_issuers'] == null ? undefined : json['allowed_issuers'],
-        allowedRoles: json['allowed_roles'] == null ? undefined : json['allowed_roles'],
-        defaultDirectoryPolicy: json['default_directory_policy'] == null ? undefined : json['default_directory_policy'],
-        dnsResolver: json['dns_resolver'] == null ? undefined : json['dns_resolver'],
-        eabPolicy: json['eab_policy'] == null ? undefined : json['eab_policy'],
-        enabled: json['enabled'] == null ? undefined : json['enabled'],
-        maxTtl: json['max_ttl'] == null ? undefined : json['max_ttl'],
+        'allowRoleExtKeyUsage': json['allow_role_ext_key_usage'] == null ? undefined : json['allow_role_ext_key_usage'],
+        'allowedIssuers': json['allowed_issuers'] == null ? undefined : json['allowed_issuers'],
+        'allowedRoles': json['allowed_roles'] == null ? undefined : json['allowed_roles'],
+        'defaultDirectoryPolicy': json['default_directory_policy'] == null ? undefined : json['default_directory_policy'],
+        'dnsResolver': json['dns_resolver'] == null ? undefined : json['dns_resolver'],
+        'eabPolicy': json['eab_policy'] == null ? undefined : json['eab_policy'],
+        'enabled': json['enabled'] == null ? undefined : json['enabled'],
+        'maxTtl': json['max_ttl'] == null ? undefined : json['max_ttl'],
     };
 }
 export function PkiConfigureAcmeRequestToJSON(json) {
@@ -43,13 +43,13 @@ export function PkiConfigureAcmeRequestToJSONTyped(value, ignoreDiscriminator = 
         return value;
     }
     return {
-        allow_role_ext_key_usage: value['allowRoleExtKeyUsage'],
-        allowed_issuers: value['allowedIssuers'],
-        allowed_roles: value['allowedRoles'],
-        default_directory_policy: value['defaultDirectoryPolicy'],
-        dns_resolver: value['dnsResolver'],
-        eab_policy: value['eabPolicy'],
-        enabled: value['enabled'],
-        max_ttl: value['maxTtl'],
+        'allow_role_ext_key_usage': value['allowRoleExtKeyUsage'],
+        'allowed_issuers': value['allowedIssuers'],
+        'allowed_roles': value['allowedRoles'],
+        'default_directory_policy': value['defaultDirectoryPolicy'],
+        'dns_resolver': value['dnsResolver'],
+        'eab_policy': value['eabPolicy'],
+        'enabled': value['enabled'],
+        'max_ttl': value['maxTtl'],
     };
 }

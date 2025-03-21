@@ -32,9 +32,9 @@ function PkiWriteExternalPolicyPolicyAcmeOrderOrderIdRequestFromJSONTyped(json, 
         return json;
     }
     return {
-        payload: json['payload'] == null ? undefined : json['payload'],
-        _protected: json['protected'] == null ? undefined : json['protected'],
-        signature: json['signature'] == null ? undefined : json['signature'],
+        'payload': json['payload'] == null ? undefined : json['payload'],
+        '_protected': json['protected'] == null ? undefined : json['protected'],
+        'signature': json['signature'] == null ? undefined : json['signature'],
     };
 }
 function PkiWriteExternalPolicyPolicyAcmeOrderOrderIdRequestToJSON(json) {
@@ -45,8 +45,8 @@ function PkiWriteExternalPolicyPolicyAcmeOrderOrderIdRequestToJSONTyped(value, i
         return value;
     }
     return {
-        payload: value['payload'],
-        protected: value['_protected'],
-        signature: value['signature'],
+        'payload': value['payload'],
+        'protected': value['_protected'],
+        'signature': value['signature'],
     };
 }

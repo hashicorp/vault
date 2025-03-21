@@ -32,7 +32,7 @@ function TokenRevokeRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        token: json['token'] == null ? undefined : json['token'],
+        'token': json['token'] == null ? undefined : json['token'],
     };
 }
 function TokenRevokeRequestToJSON(json) {
@@ -43,6 +43,6 @@ function TokenRevokeRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        token: value['token'],
+        'token': value['token'],
     };
 }

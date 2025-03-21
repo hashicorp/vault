@@ -185,9 +185,9 @@ export interface SystemWriteStorageRaftSnapshotAutoConfigNameRequest {
     storageType?: SystemWriteStorageRaftSnapshotAutoConfigNameRequestStorageTypeEnum;
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum SystemWriteStorageRaftSnapshotAutoConfigNameRequestStorageTypeEnum {
     LOCAL = "local",
     AZURE_BLOB = "azure-blob",

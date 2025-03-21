@@ -32,10 +32,10 @@ function PkiGenerateExportedKeyResponseFromJSONTyped(json, ignoreDiscriminator) 
         return json;
     }
     return {
-        keyId: json['key_id'] == null ? undefined : json['key_id'],
-        keyName: json['key_name'] == null ? undefined : json['key_name'],
-        keyType: json['key_type'] == null ? undefined : json['key_type'],
-        privateKey: json['private_key'] == null ? undefined : json['private_key'],
+        'keyId': json['key_id'] == null ? undefined : json['key_id'],
+        'keyName': json['key_name'] == null ? undefined : json['key_name'],
+        'keyType': json['key_type'] == null ? undefined : json['key_type'],
+        'privateKey': json['private_key'] == null ? undefined : json['private_key'],
     };
 }
 function PkiGenerateExportedKeyResponseToJSON(json) {
@@ -46,9 +46,9 @@ function PkiGenerateExportedKeyResponseToJSONTyped(value, ignoreDiscriminator = 
         return value;
     }
     return {
-        key_id: value['keyId'],
-        key_name: value['keyName'],
-        key_type: value['keyType'],
-        private_key: value['privateKey'],
+        'key_id': value['keyId'],
+        'key_name': value['keyName'],
+        'key_type': value['keyType'],
+        'private_key': value['privateKey'],
     };
 }

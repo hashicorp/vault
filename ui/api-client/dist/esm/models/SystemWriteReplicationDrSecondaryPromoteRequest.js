@@ -25,9 +25,9 @@ export function SystemWriteReplicationDrSecondaryPromoteRequestFromJSONTyped(jso
         return json;
     }
     return {
-        drOperationToken: json['dr_operation_token'] == null ? undefined : json['dr_operation_token'],
-        force: json['force'] == null ? undefined : json['force'],
-        primaryClusterAddr: json['primary_cluster_addr'] == null ? undefined : json['primary_cluster_addr'],
+        'drOperationToken': json['dr_operation_token'] == null ? undefined : json['dr_operation_token'],
+        'force': json['force'] == null ? undefined : json['force'],
+        'primaryClusterAddr': json['primary_cluster_addr'] == null ? undefined : json['primary_cluster_addr'],
     };
 }
 export function SystemWriteReplicationDrSecondaryPromoteRequestToJSON(json) {
@@ -38,8 +38,8 @@ export function SystemWriteReplicationDrSecondaryPromoteRequestToJSONTyped(value
         return value;
     }
     return {
-        dr_operation_token: value['drOperationToken'],
-        force: value['force'],
-        primary_cluster_addr: value['primaryClusterAddr'],
+        'dr_operation_token': value['drOperationToken'],
+        'force': value['force'],
+        'primary_cluster_addr': value['primaryClusterAddr'],
     };
 }

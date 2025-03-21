@@ -32,8 +32,8 @@ function GoogleCloudKmsRegisterKeyRequestFromJSONTyped(json, ignoreDiscriminator
         return json;
     }
     return {
-        cryptoKey: json['crypto_key'] == null ? undefined : json['crypto_key'],
-        verify: json['verify'] == null ? undefined : json['verify'],
+        'cryptoKey': json['crypto_key'] == null ? undefined : json['crypto_key'],
+        'verify': json['verify'] == null ? undefined : json['verify'],
     };
 }
 function GoogleCloudKmsRegisterKeyRequestToJSON(json) {
@@ -44,7 +44,7 @@ function GoogleCloudKmsRegisterKeyRequestToJSONTyped(value, ignoreDiscriminator 
         return value;
     }
     return {
-        crypto_key: value['cryptoKey'],
-        verify: value['verify'],
+        'crypto_key': value['cryptoKey'],
+        'verify': value['verify'],
     };
 }

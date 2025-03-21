@@ -32,9 +32,9 @@ function GoogleCloudKmsEncryptRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        additionalAuthenticatedData: json['additional_authenticated_data'] == null ? undefined : json['additional_authenticated_data'],
-        keyVersion: json['key_version'] == null ? undefined : json['key_version'],
-        plaintext: json['plaintext'] == null ? undefined : json['plaintext'],
+        'additionalAuthenticatedData': json['additional_authenticated_data'] == null ? undefined : json['additional_authenticated_data'],
+        'keyVersion': json['key_version'] == null ? undefined : json['key_version'],
+        'plaintext': json['plaintext'] == null ? undefined : json['plaintext'],
     };
 }
 function GoogleCloudKmsEncryptRequestToJSON(json) {
@@ -45,8 +45,8 @@ function GoogleCloudKmsEncryptRequestToJSONTyped(value, ignoreDiscriminator = fa
         return value;
     }
     return {
-        additional_authenticated_data: value['additionalAuthenticatedData'],
-        key_version: value['keyVersion'],
-        plaintext: value['plaintext'],
+        'additional_authenticated_data': value['additionalAuthenticatedData'],
+        'key_version': value['keyVersion'],
+        'plaintext': value['plaintext'],
     };
 }

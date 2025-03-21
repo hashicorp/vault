@@ -32,12 +32,12 @@ function SystemWriteReplicationSecondaryUpdatePrimaryRequestFromJSONTyped(json, 
         return json;
     }
     return {
-        caFile: json['ca_file'] == null ? undefined : json['ca_file'],
-        caPath: json['ca_path'] == null ? undefined : json['ca_path'],
-        clientCertPem: json['client_cert_pem'] == null ? undefined : json['client_cert_pem'],
-        clientKeyPem: json['client_key_pem'] == null ? undefined : json['client_key_pem'],
-        primaryApiAddr: json['primary_api_addr'] == null ? undefined : json['primary_api_addr'],
-        token: json['token'] == null ? undefined : json['token'],
+        'caFile': json['ca_file'] == null ? undefined : json['ca_file'],
+        'caPath': json['ca_path'] == null ? undefined : json['ca_path'],
+        'clientCertPem': json['client_cert_pem'] == null ? undefined : json['client_cert_pem'],
+        'clientKeyPem': json['client_key_pem'] == null ? undefined : json['client_key_pem'],
+        'primaryApiAddr': json['primary_api_addr'] == null ? undefined : json['primary_api_addr'],
+        'token': json['token'] == null ? undefined : json['token'],
     };
 }
 function SystemWriteReplicationSecondaryUpdatePrimaryRequestToJSON(json) {
@@ -48,11 +48,11 @@ function SystemWriteReplicationSecondaryUpdatePrimaryRequestToJSONTyped(value, i
         return value;
     }
     return {
-        ca_file: value['caFile'],
-        ca_path: value['caPath'],
-        client_cert_pem: value['clientCertPem'],
-        client_key_pem: value['clientKeyPem'],
-        primary_api_addr: value['primaryApiAddr'],
-        token: value['token'],
+        'ca_file': value['caFile'],
+        'ca_path': value['caPath'],
+        'client_cert_pem': value['clientCertPem'],
+        'client_key_pem': value['clientKeyPem'],
+        'primary_api_addr': value['primaryApiAddr'],
+        'token': value['token'],
     };
 }

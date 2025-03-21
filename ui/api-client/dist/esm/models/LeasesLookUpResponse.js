@@ -25,7 +25,7 @@ export function LeasesLookUpResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        keys: json['keys'] == null ? undefined : json['keys'],
+        'keys': json['keys'] == null ? undefined : json['keys'],
     };
 }
 export function LeasesLookUpResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function LeasesLookUpResponseToJSONTyped(value, ignoreDiscriminator = fal
         return value;
     }
     return {
-        keys: value['keys'],
+        'keys': value['keys'],
     };
 }

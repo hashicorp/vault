@@ -32,12 +32,12 @@ function TransitConfigureKeyRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        allowPlaintextBackup: json['allow_plaintext_backup'] == null ? undefined : json['allow_plaintext_backup'],
-        autoRotatePeriod: json['auto_rotate_period'] == null ? undefined : json['auto_rotate_period'],
-        deletionAllowed: json['deletion_allowed'] == null ? undefined : json['deletion_allowed'],
-        exportable: json['exportable'] == null ? undefined : json['exportable'],
-        minDecryptionVersion: json['min_decryption_version'] == null ? undefined : json['min_decryption_version'],
-        minEncryptionVersion: json['min_encryption_version'] == null ? undefined : json['min_encryption_version'],
+        'allowPlaintextBackup': json['allow_plaintext_backup'] == null ? undefined : json['allow_plaintext_backup'],
+        'autoRotatePeriod': json['auto_rotate_period'] == null ? undefined : json['auto_rotate_period'],
+        'deletionAllowed': json['deletion_allowed'] == null ? undefined : json['deletion_allowed'],
+        'exportable': json['exportable'] == null ? undefined : json['exportable'],
+        'minDecryptionVersion': json['min_decryption_version'] == null ? undefined : json['min_decryption_version'],
+        'minEncryptionVersion': json['min_encryption_version'] == null ? undefined : json['min_encryption_version'],
     };
 }
 function TransitConfigureKeyRequestToJSON(json) {
@@ -48,11 +48,11 @@ function TransitConfigureKeyRequestToJSONTyped(value, ignoreDiscriminator = fals
         return value;
     }
     return {
-        allow_plaintext_backup: value['allowPlaintextBackup'],
-        auto_rotate_period: value['autoRotatePeriod'],
-        deletion_allowed: value['deletionAllowed'],
-        exportable: value['exportable'],
-        min_decryption_version: value['minDecryptionVersion'],
-        min_encryption_version: value['minEncryptionVersion'],
+        'allow_plaintext_backup': value['allowPlaintextBackup'],
+        'auto_rotate_period': value['autoRotatePeriod'],
+        'deletion_allowed': value['deletionAllowed'],
+        'exportable': value['exportable'],
+        'min_decryption_version': value['minDecryptionVersion'],
+        'min_encryption_version': value['minEncryptionVersion'],
     };
 }

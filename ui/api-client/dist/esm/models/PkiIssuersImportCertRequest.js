@@ -25,7 +25,7 @@ export function PkiIssuersImportCertRequestFromJSONTyped(json, ignoreDiscriminat
         return json;
     }
     return {
-        pemBundle: json['pem_bundle'] == null ? undefined : json['pem_bundle'],
+        'pemBundle': json['pem_bundle'] == null ? undefined : json['pem_bundle'],
     };
 }
 export function PkiIssuersImportCertRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function PkiIssuersImportCertRequestToJSONTyped(value, ignoreDiscriminato
         return value;
     }
     return {
-        pem_bundle: value['pemBundle'],
+        'pem_bundle': value['pemBundle'],
     };
 }

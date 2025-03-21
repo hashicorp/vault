@@ -32,16 +32,16 @@ function RekeyAttemptInitializeResponseFromJSONTyped(json, ignoreDiscriminator) 
         return json;
     }
     return {
-        backup: json['backup'] == null ? undefined : json['backup'],
-        n: json['n'] == null ? undefined : json['n'],
-        nonce: json['nonce'] == null ? undefined : json['nonce'],
-        pgpFingerprints: json['pgp_fingerprints'] == null ? undefined : json['pgp_fingerprints'],
-        progress: json['progress'] == null ? undefined : json['progress'],
-        required: json['required'] == null ? undefined : json['required'],
-        started: json['started'] == null ? undefined : json['started'],
-        t: json['t'] == null ? undefined : json['t'],
-        verificationNonce: json['verification_nonce'] == null ? undefined : json['verification_nonce'],
-        verificationRequired: json['verification_required'] == null ? undefined : json['verification_required'],
+        'backup': json['backup'] == null ? undefined : json['backup'],
+        'n': json['n'] == null ? undefined : json['n'],
+        'nonce': json['nonce'] == null ? undefined : json['nonce'],
+        'pgpFingerprints': json['pgp_fingerprints'] == null ? undefined : json['pgp_fingerprints'],
+        'progress': json['progress'] == null ? undefined : json['progress'],
+        'required': json['required'] == null ? undefined : json['required'],
+        'started': json['started'] == null ? undefined : json['started'],
+        't': json['t'] == null ? undefined : json['t'],
+        'verificationNonce': json['verification_nonce'] == null ? undefined : json['verification_nonce'],
+        'verificationRequired': json['verification_required'] == null ? undefined : json['verification_required'],
     };
 }
 function RekeyAttemptInitializeResponseToJSON(json) {
@@ -52,15 +52,15 @@ function RekeyAttemptInitializeResponseToJSONTyped(value, ignoreDiscriminator = 
         return value;
     }
     return {
-        backup: value['backup'],
-        n: value['n'],
-        nonce: value['nonce'],
-        pgp_fingerprints: value['pgpFingerprints'],
-        progress: value['progress'],
-        required: value['required'],
-        started: value['started'],
-        t: value['t'],
-        verification_nonce: value['verificationNonce'],
-        verification_required: value['verificationRequired'],
+        'backup': value['backup'],
+        'n': value['n'],
+        'nonce': value['nonce'],
+        'pgp_fingerprints': value['pgpFingerprints'],
+        'progress': value['progress'],
+        'required': value['required'],
+        'started': value['started'],
+        't': value['t'],
+        'verification_nonce': value['verificationNonce'],
+        'verification_required': value['verificationRequired'],
     };
 }

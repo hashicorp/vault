@@ -25,7 +25,7 @@ export function WellKnownListLabelsResponseFromJSONTyped(json, ignoreDiscriminat
         return json;
     }
     return {
-        keys: json['keys'] == null ? undefined : json['keys'],
+        'keys': json['keys'] == null ? undefined : json['keys'],
     };
 }
 export function WellKnownListLabelsResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function WellKnownListLabelsResponseToJSONTyped(value, ignoreDiscriminato
         return value;
     }
     return {
-        keys: value['keys'],
+        'keys': value['keys'],
     };
 }

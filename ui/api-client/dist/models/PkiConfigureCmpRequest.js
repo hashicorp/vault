@@ -32,11 +32,11 @@ function PkiConfigureCmpRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        auditFields: json['audit_fields'] == null ? undefined : json['audit_fields'],
-        authenticators: json['authenticators'] == null ? undefined : json['authenticators'],
-        defaultPathPolicy: json['default_path_policy'] == null ? undefined : json['default_path_policy'],
-        enableSentinelParsing: json['enable_sentinel_parsing'] == null ? undefined : json['enable_sentinel_parsing'],
-        enabled: json['enabled'] == null ? undefined : json['enabled'],
+        'auditFields': json['audit_fields'] == null ? undefined : json['audit_fields'],
+        'authenticators': json['authenticators'] == null ? undefined : json['authenticators'],
+        'defaultPathPolicy': json['default_path_policy'] == null ? undefined : json['default_path_policy'],
+        'enableSentinelParsing': json['enable_sentinel_parsing'] == null ? undefined : json['enable_sentinel_parsing'],
+        'enabled': json['enabled'] == null ? undefined : json['enabled'],
     };
 }
 function PkiConfigureCmpRequestToJSON(json) {
@@ -47,10 +47,10 @@ function PkiConfigureCmpRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        audit_fields: value['auditFields'],
-        authenticators: value['authenticators'],
-        default_path_policy: value['defaultPathPolicy'],
-        enable_sentinel_parsing: value['enableSentinelParsing'],
-        enabled: value['enabled'],
+        'audit_fields': value['auditFields'],
+        'authenticators': value['authenticators'],
+        'default_path_policy': value['defaultPathPolicy'],
+        'enable_sentinel_parsing': value['enableSentinelParsing'],
+        'enabled': value['enabled'],
     };
 }

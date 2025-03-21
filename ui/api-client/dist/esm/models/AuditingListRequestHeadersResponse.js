@@ -25,7 +25,7 @@ export function AuditingListRequestHeadersResponseFromJSONTyped(json, ignoreDisc
         return json;
     }
     return {
-        headers: json['headers'] == null ? undefined : json['headers'],
+        'headers': json['headers'] == null ? undefined : json['headers'],
     };
 }
 export function AuditingListRequestHeadersResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function AuditingListRequestHeadersResponseToJSONTyped(value, ignoreDiscr
         return value;
     }
     return {
-        headers: value['headers'],
+        'headers': value['headers'],
     };
 }

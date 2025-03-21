@@ -25,8 +25,8 @@ export function TokenRenewSelfRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        increment: json['increment'] == null ? undefined : json['increment'],
-        token: json['token'] == null ? undefined : json['token'],
+        'increment': json['increment'] == null ? undefined : json['increment'],
+        'token': json['token'] == null ? undefined : json['token'],
     };
 }
 export function TokenRenewSelfRequestToJSON(json) {
@@ -37,7 +37,7 @@ export function TokenRenewSelfRequestToJSONTyped(value, ignoreDiscriminator = fa
         return value;
     }
     return {
-        increment: value['increment'],
-        token: value['token'],
+        'increment': value['increment'],
+        'token': value['token'],
     };
 }

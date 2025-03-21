@@ -25,13 +25,13 @@ export function PkiConfigureEstRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        auditFields: json['audit_fields'] == null ? undefined : json['audit_fields'],
-        authenticators: json['authenticators'] == null ? undefined : json['authenticators'],
-        defaultMount: json['default_mount'] == null ? undefined : json['default_mount'],
-        defaultPathPolicy: json['default_path_policy'] == null ? undefined : json['default_path_policy'],
-        enableSentinelParsing: json['enable_sentinel_parsing'] == null ? undefined : json['enable_sentinel_parsing'],
-        enabled: json['enabled'] == null ? undefined : json['enabled'],
-        labelToPathPolicy: json['label_to_path_policy'] == null ? undefined : json['label_to_path_policy'],
+        'auditFields': json['audit_fields'] == null ? undefined : json['audit_fields'],
+        'authenticators': json['authenticators'] == null ? undefined : json['authenticators'],
+        'defaultMount': json['default_mount'] == null ? undefined : json['default_mount'],
+        'defaultPathPolicy': json['default_path_policy'] == null ? undefined : json['default_path_policy'],
+        'enableSentinelParsing': json['enable_sentinel_parsing'] == null ? undefined : json['enable_sentinel_parsing'],
+        'enabled': json['enabled'] == null ? undefined : json['enabled'],
+        'labelToPathPolicy': json['label_to_path_policy'] == null ? undefined : json['label_to_path_policy'],
     };
 }
 export function PkiConfigureEstRequestToJSON(json) {
@@ -42,12 +42,12 @@ export function PkiConfigureEstRequestToJSONTyped(value, ignoreDiscriminator = f
         return value;
     }
     return {
-        audit_fields: value['auditFields'],
-        authenticators: value['authenticators'],
-        default_mount: value['defaultMount'],
-        default_path_policy: value['defaultPathPolicy'],
-        enable_sentinel_parsing: value['enableSentinelParsing'],
-        enabled: value['enabled'],
-        label_to_path_policy: value['labelToPathPolicy'],
+        'audit_fields': value['auditFields'],
+        'authenticators': value['authenticators'],
+        'default_mount': value['defaultMount'],
+        'default_path_policy': value['defaultPathPolicy'],
+        'enable_sentinel_parsing': value['enableSentinelParsing'],
+        'enabled': value['enabled'],
+        'label_to_path_policy': value['labelToPathPolicy'],
     };
 }

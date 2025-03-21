@@ -25,9 +25,9 @@ export function PoliciesReadAclPolicy2ResponseFromJSONTyped(json, ignoreDiscrimi
         return json;
     }
     return {
-        name: json['name'] == null ? undefined : json['name'],
-        policy: json['policy'] == null ? undefined : json['policy'],
-        rules: json['rules'] == null ? undefined : json['rules'],
+        'name': json['name'] == null ? undefined : json['name'],
+        'policy': json['policy'] == null ? undefined : json['policy'],
+        'rules': json['rules'] == null ? undefined : json['rules'],
     };
 }
 export function PoliciesReadAclPolicy2ResponseToJSON(json) {
@@ -38,8 +38,8 @@ export function PoliciesReadAclPolicy2ResponseToJSONTyped(value, ignoreDiscrimin
         return value;
     }
     return {
-        name: value['name'],
-        policy: value['policy'],
-        rules: value['rules'],
+        'name': value['name'],
+        'policy': value['policy'],
+        'rules': value['rules'],
     };
 }

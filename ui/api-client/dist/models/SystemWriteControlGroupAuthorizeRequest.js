@@ -32,7 +32,7 @@ function SystemWriteControlGroupAuthorizeRequestFromJSONTyped(json, ignoreDiscri
         return json;
     }
     return {
-        accessor: json['accessor'] == null ? undefined : json['accessor'],
+        'accessor': json['accessor'] == null ? undefined : json['accessor'],
     };
 }
 function SystemWriteControlGroupAuthorizeRequestToJSON(json) {
@@ -43,6 +43,6 @@ function SystemWriteControlGroupAuthorizeRequestToJSONTyped(value, ignoreDiscrim
         return value;
     }
     return {
-        accessor: value['accessor'],
+        'accessor': value['accessor'],
     };
 }

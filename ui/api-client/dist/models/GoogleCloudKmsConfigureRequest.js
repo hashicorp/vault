@@ -32,8 +32,8 @@ function GoogleCloudKmsConfigureRequestFromJSONTyped(json, ignoreDiscriminator) 
         return json;
     }
     return {
-        credentials: json['credentials'] == null ? undefined : json['credentials'],
-        scopes: json['scopes'] == null ? undefined : json['scopes'],
+        'credentials': json['credentials'] == null ? undefined : json['credentials'],
+        'scopes': json['scopes'] == null ? undefined : json['scopes'],
     };
 }
 function GoogleCloudKmsConfigureRequestToJSON(json) {
@@ -44,7 +44,7 @@ function GoogleCloudKmsConfigureRequestToJSONTyped(value, ignoreDiscriminator = 
         return value;
     }
     return {
-        credentials: value['credentials'],
-        scopes: value['scopes'],
+        'credentials': value['credentials'],
+        'scopes': value['scopes'],
     };
 }

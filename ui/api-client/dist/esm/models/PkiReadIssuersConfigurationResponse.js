@@ -25,8 +25,8 @@ export function PkiReadIssuersConfigurationResponseFromJSONTyped(json, ignoreDis
         return json;
     }
     return {
-        _default: json['default'] == null ? undefined : json['default'],
-        defaultFollowsLatestIssuer: json['default_follows_latest_issuer'] == null ? undefined : json['default_follows_latest_issuer'],
+        '_default': json['default'] == null ? undefined : json['default'],
+        'defaultFollowsLatestIssuer': json['default_follows_latest_issuer'] == null ? undefined : json['default_follows_latest_issuer'],
     };
 }
 export function PkiReadIssuersConfigurationResponseToJSON(json) {
@@ -37,7 +37,7 @@ export function PkiReadIssuersConfigurationResponseToJSONTyped(value, ignoreDisc
         return value;
     }
     return {
-        default: value['_default'],
-        default_follows_latest_issuer: value['defaultFollowsLatestIssuer'],
+        'default': value['_default'],
+        'default_follows_latest_issuer': value['defaultFollowsLatestIssuer'],
     };
 }

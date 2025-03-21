@@ -25,7 +25,7 @@ export function PkiConfigureKeysRequestFromJSONTyped(json, ignoreDiscriminator) 
         return json;
     }
     return {
-        _default: json['default'] == null ? undefined : json['default'],
+        '_default': json['default'] == null ? undefined : json['default'],
     };
 }
 export function PkiConfigureKeysRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function PkiConfigureKeysRequestToJSONTyped(value, ignoreDiscriminator = 
         return value;
     }
     return {
-        default: value['_default'],
+        'default': value['_default'],
     };
 }

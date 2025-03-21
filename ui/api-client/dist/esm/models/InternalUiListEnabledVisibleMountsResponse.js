@@ -25,8 +25,8 @@ export function InternalUiListEnabledVisibleMountsResponseFromJSONTyped(json, ig
         return json;
     }
     return {
-        auth: json['auth'] == null ? undefined : json['auth'],
-        secret: json['secret'] == null ? undefined : json['secret'],
+        'auth': json['auth'] == null ? undefined : json['auth'],
+        'secret': json['secret'] == null ? undefined : json['secret'],
     };
 }
 export function InternalUiListEnabledVisibleMountsResponseToJSON(json) {
@@ -37,7 +37,7 @@ export function InternalUiListEnabledVisibleMountsResponseToJSONTyped(value, ign
         return value;
     }
     return {
-        auth: value['auth'],
-        secret: value['secret'],
+        'auth': value['auth'],
+        'secret': value['secret'],
     };
 }

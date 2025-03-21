@@ -25,7 +25,7 @@ export function OidcConfigureRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        issuer: json['issuer'] == null ? undefined : json['issuer'],
+        'issuer': json['issuer'] == null ? undefined : json['issuer'],
     };
 }
 export function OidcConfigureRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function OidcConfigureRequestToJSONTyped(value, ignoreDiscriminator = fal
         return value;
     }
     return {
-        issuer: value['issuer'],
+        'issuer': value['issuer'],
     };
 }

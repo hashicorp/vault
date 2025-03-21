@@ -32,12 +32,12 @@ function CollectHostInformationResponseFromJSONTyped(json, ignoreDiscriminator) 
         return json;
     }
     return {
-        cpu: json['cpu'] == null ? undefined : json['cpu'],
-        cpuTimes: json['cpu_times'] == null ? undefined : json['cpu_times'],
-        disk: json['disk'] == null ? undefined : json['disk'],
-        host: json['host'] == null ? undefined : json['host'],
-        memory: json['memory'] == null ? undefined : json['memory'],
-        timestamp: json['timestamp'] == null ? undefined : new Date(json['timestamp']),
+        'cpu': json['cpu'] == null ? undefined : json['cpu'],
+        'cpuTimes': json['cpu_times'] == null ? undefined : json['cpu_times'],
+        'disk': json['disk'] == null ? undefined : json['disk'],
+        'host': json['host'] == null ? undefined : json['host'],
+        'memory': json['memory'] == null ? undefined : json['memory'],
+        'timestamp': json['timestamp'] == null ? undefined : (new Date(json['timestamp'])),
     };
 }
 function CollectHostInformationResponseToJSON(json) {
@@ -48,11 +48,11 @@ function CollectHostInformationResponseToJSONTyped(value, ignoreDiscriminator = 
         return value;
     }
     return {
-        cpu: value['cpu'],
-        cpu_times: value['cpuTimes'],
-        disk: value['disk'],
-        host: value['host'],
-        memory: value['memory'],
-        timestamp: value['timestamp'] == null ? undefined : value['timestamp'].toISOString(),
+        'cpu': value['cpu'],
+        'cpu_times': value['cpuTimes'],
+        'disk': value['disk'],
+        'host': value['host'],
+        'memory': value['memory'],
+        'timestamp': value['timestamp'] == null ? undefined : ((value['timestamp']).toISOString()),
     };
 }

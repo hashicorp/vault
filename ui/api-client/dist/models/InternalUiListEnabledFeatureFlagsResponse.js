@@ -32,7 +32,7 @@ function InternalUiListEnabledFeatureFlagsResponseFromJSONTyped(json, ignoreDisc
         return json;
     }
     return {
-        featureFlags: json['feature_flags'] == null ? undefined : json['feature_flags'],
+        'featureFlags': json['feature_flags'] == null ? undefined : json['feature_flags'],
     };
 }
 function InternalUiListEnabledFeatureFlagsResponseToJSON(json) {
@@ -43,6 +43,6 @@ function InternalUiListEnabledFeatureFlagsResponseToJSONTyped(value, ignoreDiscr
         return value;
     }
     return {
-        feature_flags: value['featureFlags'],
+        'feature_flags': value['featureFlags'],
     };
 }

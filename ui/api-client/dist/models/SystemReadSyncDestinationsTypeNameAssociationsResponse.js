@@ -32,9 +32,9 @@ function SystemReadSyncDestinationsTypeNameAssociationsResponseFromJSONTyped(jso
         return json;
     }
     return {
-        associatedSecrets: json['associated_secrets'] == null ? undefined : json['associated_secrets'],
-        name: json['name'] == null ? undefined : json['name'],
-        type: json['type'] == null ? undefined : json['type'],
+        'associatedSecrets': json['associated_secrets'] == null ? undefined : json['associated_secrets'],
+        'name': json['name'] == null ? undefined : json['name'],
+        'type': json['type'] == null ? undefined : json['type'],
     };
 }
 function SystemReadSyncDestinationsTypeNameAssociationsResponseToJSON(json) {
@@ -45,8 +45,8 @@ function SystemReadSyncDestinationsTypeNameAssociationsResponseToJSONTyped(value
         return value;
     }
     return {
-        associated_secrets: value['associatedSecrets'],
-        name: value['name'],
-        type: value['type'],
+        'associated_secrets': value['associatedSecrets'],
+        'name': value['name'],
+        'type': value['type'],
     };
 }

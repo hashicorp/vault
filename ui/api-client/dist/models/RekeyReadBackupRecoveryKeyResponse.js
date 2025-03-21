@@ -32,9 +32,9 @@ function RekeyReadBackupRecoveryKeyResponseFromJSONTyped(json, ignoreDiscriminat
         return json;
     }
     return {
-        keys: json['keys'] == null ? undefined : json['keys'],
-        keysBase64: json['keys_base64'] == null ? undefined : json['keys_base64'],
-        nonce: json['nonce'] == null ? undefined : json['nonce'],
+        'keys': json['keys'] == null ? undefined : json['keys'],
+        'keysBase64': json['keys_base64'] == null ? undefined : json['keys_base64'],
+        'nonce': json['nonce'] == null ? undefined : json['nonce'],
     };
 }
 function RekeyReadBackupRecoveryKeyResponseToJSON(json) {
@@ -45,8 +45,8 @@ function RekeyReadBackupRecoveryKeyResponseToJSONTyped(value, ignoreDiscriminato
         return value;
     }
     return {
-        keys: value['keys'],
-        keys_base64: value['keysBase64'],
-        nonce: value['nonce'],
+        'keys': value['keys'],
+        'keys_base64': value['keysBase64'],
+        'nonce': value['nonce'],
     };
 }

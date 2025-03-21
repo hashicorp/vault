@@ -32,9 +32,9 @@ function EncryptionKeyConfigureRotationRequestFromJSONTyped(json, ignoreDiscrimi
         return json;
     }
     return {
-        enabled: json['enabled'] == null ? undefined : json['enabled'],
-        interval: json['interval'] == null ? undefined : json['interval'],
-        maxOperations: json['max_operations'] == null ? undefined : json['max_operations'],
+        'enabled': json['enabled'] == null ? undefined : json['enabled'],
+        'interval': json['interval'] == null ? undefined : json['interval'],
+        'maxOperations': json['max_operations'] == null ? undefined : json['max_operations'],
     };
 }
 function EncryptionKeyConfigureRotationRequestToJSON(json) {
@@ -45,8 +45,8 @@ function EncryptionKeyConfigureRotationRequestToJSONTyped(value, ignoreDiscrimin
         return value;
     }
     return {
-        enabled: value['enabled'],
-        interval: value['interval'],
-        max_operations: value['maxOperations'],
+        'enabled': value['enabled'],
+        'interval': value['interval'],
+        'max_operations': value['maxOperations'],
     };
 }

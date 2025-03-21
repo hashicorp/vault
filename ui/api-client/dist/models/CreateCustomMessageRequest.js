@@ -38,14 +38,14 @@ function CreateCustomMessageRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        authenticated: json['authenticated'] == null ? undefined : json['authenticated'],
-        endTime: json['end_time'] == null ? undefined : new Date(json['end_time']),
-        link: json['link'] == null ? undefined : json['link'],
-        message: json['message'],
-        options: json['options'] == null ? undefined : json['options'],
-        startTime: new Date(json['start_time']),
-        title: json['title'],
-        type: json['type'] == null ? undefined : json['type'],
+        'authenticated': json['authenticated'] == null ? undefined : json['authenticated'],
+        'endTime': json['end_time'] == null ? undefined : (new Date(json['end_time'])),
+        'link': json['link'] == null ? undefined : json['link'],
+        'message': json['message'],
+        'options': json['options'] == null ? undefined : json['options'],
+        'startTime': (new Date(json['start_time'])),
+        'title': json['title'],
+        'type': json['type'] == null ? undefined : json['type'],
     };
 }
 function CreateCustomMessageRequestToJSON(json) {
@@ -56,13 +56,13 @@ function CreateCustomMessageRequestToJSONTyped(value, ignoreDiscriminator = fals
         return value;
     }
     return {
-        authenticated: value['authenticated'],
-        end_time: value['endTime'] == null ? undefined : value['endTime'].toISOString(),
-        link: value['link'],
-        message: value['message'],
-        options: value['options'],
-        start_time: value['startTime'].toISOString(),
-        title: value['title'],
-        type: value['type'],
+        'authenticated': value['authenticated'],
+        'end_time': value['endTime'] == null ? undefined : ((value['endTime']).toISOString()),
+        'link': value['link'],
+        'message': value['message'],
+        'options': value['options'],
+        'start_time': ((value['startTime']).toISOString()),
+        'title': value['title'],
+        'type': value['type'],
     };
 }

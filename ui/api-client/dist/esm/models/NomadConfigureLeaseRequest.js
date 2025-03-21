@@ -25,8 +25,8 @@ export function NomadConfigureLeaseRequestFromJSONTyped(json, ignoreDiscriminato
         return json;
     }
     return {
-        maxTtl: json['max_ttl'] == null ? undefined : json['max_ttl'],
-        ttl: json['ttl'] == null ? undefined : json['ttl'],
+        'maxTtl': json['max_ttl'] == null ? undefined : json['max_ttl'],
+        'ttl': json['ttl'] == null ? undefined : json['ttl'],
     };
 }
 export function NomadConfigureLeaseRequestToJSON(json) {
@@ -37,7 +37,7 @@ export function NomadConfigureLeaseRequestToJSONTyped(value, ignoreDiscriminator
         return value;
     }
     return {
-        max_ttl: value['maxTtl'],
-        ttl: value['ttl'],
+        'max_ttl': value['maxTtl'],
+        'ttl': value['ttl'],
     };
 }

@@ -25,10 +25,10 @@ export function JwtOidcCallbackFormPostRequestFromJSONTyped(json, ignoreDiscrimi
         return json;
     }
     return {
-        clientNonce: json['client_nonce'] == null ? undefined : json['client_nonce'],
-        code: json['code'] == null ? undefined : json['code'],
-        idToken: json['id_token'] == null ? undefined : json['id_token'],
-        state: json['state'] == null ? undefined : json['state'],
+        'clientNonce': json['client_nonce'] == null ? undefined : json['client_nonce'],
+        'code': json['code'] == null ? undefined : json['code'],
+        'idToken': json['id_token'] == null ? undefined : json['id_token'],
+        'state': json['state'] == null ? undefined : json['state'],
     };
 }
 export function JwtOidcCallbackFormPostRequestToJSON(json) {
@@ -39,9 +39,9 @@ export function JwtOidcCallbackFormPostRequestToJSONTyped(value, ignoreDiscrimin
         return value;
     }
     return {
-        client_nonce: value['clientNonce'],
-        code: value['code'],
-        id_token: value['idToken'],
-        state: value['state'],
+        'client_nonce': value['clientNonce'],
+        'code': value['code'],
+        'id_token': value['idToken'],
+        'state': value['state'],
     };
 }

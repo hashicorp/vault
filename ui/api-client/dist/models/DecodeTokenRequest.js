@@ -32,8 +32,8 @@ function DecodeTokenRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        encodedToken: json['encoded_token'] == null ? undefined : json['encoded_token'],
-        otp: json['otp'] == null ? undefined : json['otp'],
+        'encodedToken': json['encoded_token'] == null ? undefined : json['encoded_token'],
+        'otp': json['otp'] == null ? undefined : json['otp'],
     };
 }
 function DecodeTokenRequestToJSON(json) {
@@ -44,7 +44,7 @@ function DecodeTokenRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        encoded_token: value['encodedToken'],
-        otp: value['otp'],
+        'encoded_token': value['encodedToken'],
+        'otp': value['otp'],
     };
 }

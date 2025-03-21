@@ -25,7 +25,7 @@ export function AppRoleWriteSecretIdTtlRequestFromJSONTyped(json, ignoreDiscrimi
         return json;
     }
     return {
-        secretIdTtl: json['secret_id_ttl'] == null ? undefined : json['secret_id_ttl'],
+        'secretIdTtl': json['secret_id_ttl'] == null ? undefined : json['secret_id_ttl'],
     };
 }
 export function AppRoleWriteSecretIdTtlRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function AppRoleWriteSecretIdTtlRequestToJSONTyped(value, ignoreDiscrimin
         return value;
     }
     return {
-        secret_id_ttl: value['secretIdTtl'],
+        'secret_id_ttl': value['secretIdTtl'],
     };
 }

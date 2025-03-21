@@ -25,8 +25,8 @@ export function RekeyAttemptUpdateRequestFromJSONTyped(json, ignoreDiscriminator
         return json;
     }
     return {
-        key: json['key'] == null ? undefined : json['key'],
-        nonce: json['nonce'] == null ? undefined : json['nonce'],
+        'key': json['key'] == null ? undefined : json['key'],
+        'nonce': json['nonce'] == null ? undefined : json['nonce'],
     };
 }
 export function RekeyAttemptUpdateRequestToJSON(json) {
@@ -37,7 +37,7 @@ export function RekeyAttemptUpdateRequestToJSONTyped(value, ignoreDiscriminator 
         return value;
     }
     return {
-        key: value['key'],
-        nonce: value['nonce'],
+        'key': value['key'],
+        'nonce': value['nonce'],
     };
 }

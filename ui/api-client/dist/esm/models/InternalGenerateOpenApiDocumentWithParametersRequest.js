@@ -25,8 +25,8 @@ export function InternalGenerateOpenApiDocumentWithParametersRequestFromJSONType
         return json;
     }
     return {
-        context: json['context'] == null ? undefined : json['context'],
-        genericMountPaths: json['generic_mount_paths'] == null ? undefined : json['generic_mount_paths'],
+        'context': json['context'] == null ? undefined : json['context'],
+        'genericMountPaths': json['generic_mount_paths'] == null ? undefined : json['generic_mount_paths'],
     };
 }
 export function InternalGenerateOpenApiDocumentWithParametersRequestToJSON(json) {
@@ -37,7 +37,7 @@ export function InternalGenerateOpenApiDocumentWithParametersRequestToJSONTyped(
         return value;
     }
     return {
-        context: value['context'],
-        generic_mount_paths: value['genericMountPaths'],
+        'context': value['context'],
+        'generic_mount_paths': value['genericMountPaths'],
     };
 }

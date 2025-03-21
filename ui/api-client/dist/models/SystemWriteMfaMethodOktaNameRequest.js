@@ -32,13 +32,13 @@ function SystemWriteMfaMethodOktaNameRequestFromJSONTyped(json, ignoreDiscrimina
         return json;
     }
     return {
-        apiToken: json['api_token'] == null ? undefined : json['api_token'],
-        baseUrl: json['base_url'] == null ? undefined : json['base_url'],
-        mountAccessor: json['mount_accessor'] == null ? undefined : json['mount_accessor'],
-        orgName: json['org_name'] == null ? undefined : json['org_name'],
-        primaryEmail: json['primary_email'] == null ? undefined : json['primary_email'],
-        production: json['production'] == null ? undefined : json['production'],
-        usernameFormat: json['username_format'] == null ? undefined : json['username_format'],
+        'apiToken': json['api_token'] == null ? undefined : json['api_token'],
+        'baseUrl': json['base_url'] == null ? undefined : json['base_url'],
+        'mountAccessor': json['mount_accessor'] == null ? undefined : json['mount_accessor'],
+        'orgName': json['org_name'] == null ? undefined : json['org_name'],
+        'primaryEmail': json['primary_email'] == null ? undefined : json['primary_email'],
+        'production': json['production'] == null ? undefined : json['production'],
+        'usernameFormat': json['username_format'] == null ? undefined : json['username_format'],
     };
 }
 function SystemWriteMfaMethodOktaNameRequestToJSON(json) {
@@ -49,12 +49,12 @@ function SystemWriteMfaMethodOktaNameRequestToJSONTyped(value, ignoreDiscriminat
         return value;
     }
     return {
-        api_token: value['apiToken'],
-        base_url: value['baseUrl'],
-        mount_accessor: value['mountAccessor'],
-        org_name: value['orgName'],
-        primary_email: value['primaryEmail'],
-        production: value['production'],
-        username_format: value['usernameFormat'],
+        'api_token': value['apiToken'],
+        'base_url': value['baseUrl'],
+        'mount_accessor': value['mountAccessor'],
+        'org_name': value['orgName'],
+        'primary_email': value['primaryEmail'],
+        'production': value['production'],
+        'username_format': value['usernameFormat'],
     };
 }

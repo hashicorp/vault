@@ -25,7 +25,7 @@ export function PkiRotateDeltaCrlResponseFromJSONTyped(json, ignoreDiscriminator
         return json;
     }
     return {
-        success: json['success'] == null ? undefined : json['success'],
+        'success': json['success'] == null ? undefined : json['success'],
     };
 }
 export function PkiRotateDeltaCrlResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function PkiRotateDeltaCrlResponseToJSONTyped(value, ignoreDiscriminator 
         return value;
     }
     return {
-        success: value['success'],
+        'success': value['success'],
     };
 }

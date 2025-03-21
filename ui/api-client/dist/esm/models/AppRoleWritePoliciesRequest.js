@@ -25,8 +25,8 @@ export function AppRoleWritePoliciesRequestFromJSONTyped(json, ignoreDiscriminat
         return json;
     }
     return {
-        policies: json['policies'] == null ? undefined : json['policies'],
-        tokenPolicies: json['token_policies'] == null ? undefined : json['token_policies'],
+        'policies': json['policies'] == null ? undefined : json['policies'],
+        'tokenPolicies': json['token_policies'] == null ? undefined : json['token_policies'],
     };
 }
 export function AppRoleWritePoliciesRequestToJSON(json) {
@@ -37,7 +37,7 @@ export function AppRoleWritePoliciesRequestToJSONTyped(value, ignoreDiscriminato
         return value;
     }
     return {
-        policies: value['policies'],
-        token_policies: value['tokenPolicies'],
+        'policies': value['policies'],
+        'token_policies': value['tokenPolicies'],
     };
 }

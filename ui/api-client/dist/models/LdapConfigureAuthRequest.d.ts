@@ -275,9 +275,9 @@ export interface LdapConfigureAuthRequest {
     usernameAsAlias?: boolean;
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum LdapConfigureAuthRequestDereferenceAliasesEnum {
     NEVER = "never",
     FINDING = "finding",
@@ -285,9 +285,9 @@ export declare enum LdapConfigureAuthRequestDereferenceAliasesEnum {
     ALWAYS = "always"
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum LdapConfigureAuthRequestTlsMaxVersionEnum {
     TLS10 = "tls10",
     TLS11 = "tls11",
@@ -295,9 +295,9 @@ export declare enum LdapConfigureAuthRequestTlsMaxVersionEnum {
     TLS13 = "tls13"
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum LdapConfigureAuthRequestTlsMinVersionEnum {
     TLS10 = "tls10",
     TLS11 = "tls11",

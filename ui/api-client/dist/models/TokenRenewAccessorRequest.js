@@ -32,8 +32,8 @@ function TokenRenewAccessorRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        accessor: json['accessor'] == null ? undefined : json['accessor'],
-        increment: json['increment'] == null ? undefined : json['increment'],
+        'accessor': json['accessor'] == null ? undefined : json['accessor'],
+        'increment': json['increment'] == null ? undefined : json['increment'],
     };
 }
 function TokenRenewAccessorRequestToJSON(json) {
@@ -44,7 +44,7 @@ function TokenRenewAccessorRequestToJSONTyped(value, ignoreDiscriminator = false
         return value;
     }
     return {
-        accessor: value['accessor'],
-        increment: value['increment'],
+        'accessor': value['accessor'],
+        'increment': value['increment'],
     };
 }

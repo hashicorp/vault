@@ -25,8 +25,8 @@ export function LeasesRenewLeaseRequestFromJSONTyped(json, ignoreDiscriminator) 
         return json;
     }
     return {
-        increment: json['increment'] == null ? undefined : json['increment'],
-        leaseId: json['lease_id'] == null ? undefined : json['lease_id'],
+        'increment': json['increment'] == null ? undefined : json['increment'],
+        'leaseId': json['lease_id'] == null ? undefined : json['lease_id'],
     };
 }
 export function LeasesRenewLeaseRequestToJSON(json) {
@@ -37,7 +37,7 @@ export function LeasesRenewLeaseRequestToJSONTyped(value, ignoreDiscriminator = 
         return value;
     }
     return {
-        increment: value['increment'],
-        lease_id: value['leaseId'],
+        'increment': value['increment'],
+        'lease_id': value['leaseId'],
     };
 }

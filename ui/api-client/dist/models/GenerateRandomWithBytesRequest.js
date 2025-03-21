@@ -32,8 +32,8 @@ function GenerateRandomWithBytesRequestFromJSONTyped(json, ignoreDiscriminator) 
         return json;
     }
     return {
-        bytes: json['bytes'] == null ? undefined : json['bytes'],
-        format: json['format'] == null ? undefined : json['format'],
+        'bytes': json['bytes'] == null ? undefined : json['bytes'],
+        'format': json['format'] == null ? undefined : json['format'],
     };
 }
 function GenerateRandomWithBytesRequestToJSON(json) {
@@ -44,7 +44,7 @@ function GenerateRandomWithBytesRequestToJSONTyped(value, ignoreDiscriminator = 
         return value;
     }
     return {
-        bytes: value['bytes'],
-        format: value['format'],
+        'bytes': value['bytes'],
+        'format': value['format'],
     };
 }

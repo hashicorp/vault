@@ -23,9 +23,9 @@ export interface PkiWriteAcmeKeyIdRequest {
     status: PkiWriteAcmeKeyIdRequestStatusEnum;
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum PkiWriteAcmeKeyIdRequestStatusEnum {
     VALID = "valid",
     REVOKED = "revoked"

@@ -32,7 +32,7 @@ function SystemWriteNamespacesApiLockUnlockPathRequestFromJSONTyped(json, ignore
         return json;
     }
     return {
-        unlockKey: json['unlock_key'] == null ? undefined : json['unlock_key'],
+        'unlockKey': json['unlock_key'] == null ? undefined : json['unlock_key'],
     };
 }
 function SystemWriteNamespacesApiLockUnlockPathRequestToJSON(json) {
@@ -43,6 +43,6 @@ function SystemWriteNamespacesApiLockUnlockPathRequestToJSONTyped(value, ignoreD
         return value;
     }
     return {
-        unlock_key: value['unlockKey'],
+        'unlock_key': value['unlockKey'],
     };
 }

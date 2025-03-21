@@ -32,10 +32,10 @@ function OktaLoginRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        nonce: json['nonce'] == null ? undefined : json['nonce'],
-        password: json['password'] == null ? undefined : json['password'],
-        provider: json['provider'] == null ? undefined : json['provider'],
-        totp: json['totp'] == null ? undefined : json['totp'],
+        'nonce': json['nonce'] == null ? undefined : json['nonce'],
+        'password': json['password'] == null ? undefined : json['password'],
+        'provider': json['provider'] == null ? undefined : json['provider'],
+        'totp': json['totp'] == null ? undefined : json['totp'],
     };
 }
 function OktaLoginRequestToJSON(json) {
@@ -46,9 +46,9 @@ function OktaLoginRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        nonce: value['nonce'],
-        password: value['password'],
-        provider: value['provider'],
-        totp: value['totp'],
+        'nonce': value['nonce'],
+        'password': value['password'],
+        'provider': value['provider'],
+        'totp': value['totp'],
     };
 }

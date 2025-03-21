@@ -25,8 +25,8 @@ export function SubscriptionsWriteEventsSubscriptionsResponseFromJSONTyped(json,
         return json;
     }
     return {
-        id: json['id'] == null ? undefined : json['id'],
-        plugin: json['plugin'] == null ? undefined : json['plugin'],
+        'id': json['id'] == null ? undefined : json['id'],
+        'plugin': json['plugin'] == null ? undefined : json['plugin'],
     };
 }
 export function SubscriptionsWriteEventsSubscriptionsResponseToJSON(json) {
@@ -37,7 +37,7 @@ export function SubscriptionsWriteEventsSubscriptionsResponseToJSONTyped(value, 
         return value;
     }
     return {
-        id: value['id'],
-        plugin: value['plugin'],
+        'id': value['id'],
+        'plugin': value['plugin'],
     };
 }

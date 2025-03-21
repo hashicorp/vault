@@ -25,7 +25,7 @@ export function LdapWriteGroupRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        policies: json['policies'] == null ? undefined : json['policies'],
+        'policies': json['policies'] == null ? undefined : json['policies'],
     };
 }
 export function LdapWriteGroupRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function LdapWriteGroupRequestToJSONTyped(value, ignoreDiscriminator = fa
         return value;
     }
     return {
-        policies: value['policies'],
+        'policies': value['policies'],
     };
 }

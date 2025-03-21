@@ -32,12 +32,12 @@ function ConsulConfigureAccessRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        address: json['address'] == null ? undefined : json['address'],
-        caCert: json['ca_cert'] == null ? undefined : json['ca_cert'],
-        clientCert: json['client_cert'] == null ? undefined : json['client_cert'],
-        clientKey: json['client_key'] == null ? undefined : json['client_key'],
-        scheme: json['scheme'] == null ? undefined : json['scheme'],
-        token: json['token'] == null ? undefined : json['token'],
+        'address': json['address'] == null ? undefined : json['address'],
+        'caCert': json['ca_cert'] == null ? undefined : json['ca_cert'],
+        'clientCert': json['client_cert'] == null ? undefined : json['client_cert'],
+        'clientKey': json['client_key'] == null ? undefined : json['client_key'],
+        'scheme': json['scheme'] == null ? undefined : json['scheme'],
+        'token': json['token'] == null ? undefined : json['token'],
     };
 }
 function ConsulConfigureAccessRequestToJSON(json) {
@@ -48,11 +48,11 @@ function ConsulConfigureAccessRequestToJSONTyped(value, ignoreDiscriminator = fa
         return value;
     }
     return {
-        address: value['address'],
-        ca_cert: value['caCert'],
-        client_cert: value['clientCert'],
-        client_key: value['clientKey'],
-        scheme: value['scheme'],
-        token: value['token'],
+        'address': value['address'],
+        'ca_cert': value['caCert'],
+        'client_cert': value['clientCert'],
+        'client_key': value['clientKey'],
+        'scheme': value['scheme'],
+        'token': value['token'],
     };
 }

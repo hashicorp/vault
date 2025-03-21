@@ -25,7 +25,7 @@ export function LeasesReadLeaseRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        leaseId: json['lease_id'] == null ? undefined : json['lease_id'],
+        'leaseId': json['lease_id'] == null ? undefined : json['lease_id'],
     };
 }
 export function LeasesReadLeaseRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function LeasesReadLeaseRequestToJSONTyped(value, ignoreDiscriminator = f
         return value;
     }
     return {
-        lease_id: value['leaseId'],
+        'lease_id': value['leaseId'],
     };
 }

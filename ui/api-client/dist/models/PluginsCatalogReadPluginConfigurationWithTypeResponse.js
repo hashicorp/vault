@@ -32,15 +32,15 @@ function PluginsCatalogReadPluginConfigurationWithTypeResponseFromJSONTyped(json
         return json;
     }
     return {
-        args: json['args'] == null ? undefined : json['args'],
-        builtin: json['builtin'] == null ? undefined : json['builtin'],
-        command: json['command'] == null ? undefined : json['command'],
-        deprecationStatus: json['deprecation_status'] == null ? undefined : json['deprecation_status'],
-        name: json['name'] == null ? undefined : json['name'],
-        ociImage: json['oci_image'] == null ? undefined : json['oci_image'],
-        runtime: json['runtime'] == null ? undefined : json['runtime'],
-        sha256: json['sha256'] == null ? undefined : json['sha256'],
-        version: json['version'] == null ? undefined : json['version'],
+        'args': json['args'] == null ? undefined : json['args'],
+        'builtin': json['builtin'] == null ? undefined : json['builtin'],
+        'command': json['command'] == null ? undefined : json['command'],
+        'deprecationStatus': json['deprecation_status'] == null ? undefined : json['deprecation_status'],
+        'name': json['name'] == null ? undefined : json['name'],
+        'ociImage': json['oci_image'] == null ? undefined : json['oci_image'],
+        'runtime': json['runtime'] == null ? undefined : json['runtime'],
+        'sha256': json['sha256'] == null ? undefined : json['sha256'],
+        'version': json['version'] == null ? undefined : json['version'],
     };
 }
 function PluginsCatalogReadPluginConfigurationWithTypeResponseToJSON(json) {
@@ -51,14 +51,14 @@ function PluginsCatalogReadPluginConfigurationWithTypeResponseToJSONTyped(value,
         return value;
     }
     return {
-        args: value['args'],
-        builtin: value['builtin'],
-        command: value['command'],
-        deprecation_status: value['deprecationStatus'],
-        name: value['name'],
-        oci_image: value['ociImage'],
-        runtime: value['runtime'],
-        sha256: value['sha256'],
-        version: value['version'],
+        'args': value['args'],
+        'builtin': value['builtin'],
+        'command': value['command'],
+        'deprecation_status': value['deprecationStatus'],
+        'name': value['name'],
+        'oci_image': value['ociImage'],
+        'runtime': value['runtime'],
+        'sha256': value['sha256'],
+        'version': value['version'],
     };
 }

@@ -32,11 +32,11 @@ function TerraformCloudWriteRoleRequestFromJSONTyped(json, ignoreDiscriminator) 
         return json;
     }
     return {
-        maxTtl: json['max_ttl'] == null ? undefined : json['max_ttl'],
-        organization: json['organization'] == null ? undefined : json['organization'],
-        teamId: json['team_id'] == null ? undefined : json['team_id'],
-        ttl: json['ttl'] == null ? undefined : json['ttl'],
-        userId: json['user_id'] == null ? undefined : json['user_id'],
+        'maxTtl': json['max_ttl'] == null ? undefined : json['max_ttl'],
+        'organization': json['organization'] == null ? undefined : json['organization'],
+        'teamId': json['team_id'] == null ? undefined : json['team_id'],
+        'ttl': json['ttl'] == null ? undefined : json['ttl'],
+        'userId': json['user_id'] == null ? undefined : json['user_id'],
     };
 }
 function TerraformCloudWriteRoleRequestToJSON(json) {
@@ -47,10 +47,10 @@ function TerraformCloudWriteRoleRequestToJSONTyped(value, ignoreDiscriminator = 
         return value;
     }
     return {
-        max_ttl: value['maxTtl'],
-        organization: value['organization'],
-        team_id: value['teamId'],
-        ttl: value['ttl'],
-        user_id: value['userId'],
+        'max_ttl': value['maxTtl'],
+        'organization': value['organization'],
+        'team_id': value['teamId'],
+        'ttl': value['ttl'],
+        'user_id': value['userId'],
     };
 }

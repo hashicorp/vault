@@ -25,12 +25,10 @@ export function RateLimitQuotasConfigureRequestFromJSONTyped(json, ignoreDiscrim
         return json;
     }
     return {
-        absoluteRateLimitExemptPaths: json['absolute_rate_limit_exempt_paths'] == null ? undefined : json['absolute_rate_limit_exempt_paths'],
-        enableRateLimitAuditLogging: json['enable_rate_limit_audit_logging'] == null ? undefined : json['enable_rate_limit_audit_logging'],
-        enableRateLimitResponseHeaders: json['enable_rate_limit_response_headers'] == null
-            ? undefined
-            : json['enable_rate_limit_response_headers'],
-        rateLimitExemptPaths: json['rate_limit_exempt_paths'] == null ? undefined : json['rate_limit_exempt_paths'],
+        'absoluteRateLimitExemptPaths': json['absolute_rate_limit_exempt_paths'] == null ? undefined : json['absolute_rate_limit_exempt_paths'],
+        'enableRateLimitAuditLogging': json['enable_rate_limit_audit_logging'] == null ? undefined : json['enable_rate_limit_audit_logging'],
+        'enableRateLimitResponseHeaders': json['enable_rate_limit_response_headers'] == null ? undefined : json['enable_rate_limit_response_headers'],
+        'rateLimitExemptPaths': json['rate_limit_exempt_paths'] == null ? undefined : json['rate_limit_exempt_paths'],
     };
 }
 export function RateLimitQuotasConfigureRequestToJSON(json) {
@@ -41,9 +39,9 @@ export function RateLimitQuotasConfigureRequestToJSONTyped(value, ignoreDiscrimi
         return value;
     }
     return {
-        absolute_rate_limit_exempt_paths: value['absoluteRateLimitExemptPaths'],
-        enable_rate_limit_audit_logging: value['enableRateLimitAuditLogging'],
-        enable_rate_limit_response_headers: value['enableRateLimitResponseHeaders'],
-        rate_limit_exempt_paths: value['rateLimitExemptPaths'],
+        'absolute_rate_limit_exempt_paths': value['absoluteRateLimitExemptPaths'],
+        'enable_rate_limit_audit_logging': value['enableRateLimitAuditLogging'],
+        'enable_rate_limit_response_headers': value['enableRateLimitResponseHeaders'],
+        'rate_limit_exempt_paths': value['rateLimitExemptPaths'],
     };
 }

@@ -25,7 +25,7 @@ export function TokenLookUpAccessorRequestFromJSONTyped(json, ignoreDiscriminato
         return json;
     }
     return {
-        accessor: json['accessor'] == null ? undefined : json['accessor'],
+        'accessor': json['accessor'] == null ? undefined : json['accessor'],
     };
 }
 export function TokenLookUpAccessorRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function TokenLookUpAccessorRequestToJSONTyped(value, ignoreDiscriminator
         return value;
     }
     return {
-        accessor: value['accessor'],
+        'accessor': value['accessor'],
     };
 }

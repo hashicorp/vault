@@ -25,8 +25,8 @@ export function SystemWriteSyncGithubAppsNameRequestFromJSONTyped(json, ignoreDi
         return json;
     }
     return {
-        appId: json['app_id'] == null ? undefined : json['app_id'],
-        privateKey: json['private_key'] == null ? undefined : json['private_key'],
+        'appId': json['app_id'] == null ? undefined : json['app_id'],
+        'privateKey': json['private_key'] == null ? undefined : json['private_key'],
     };
 }
 export function SystemWriteSyncGithubAppsNameRequestToJSON(json) {
@@ -37,7 +37,7 @@ export function SystemWriteSyncGithubAppsNameRequestToJSONTyped(value, ignoreDis
         return value;
     }
     return {
-        app_id: value['appId'],
-        private_key: value['privateKey'],
+        'app_id': value['appId'],
+        'private_key': value['privateKey'],
     };
 }

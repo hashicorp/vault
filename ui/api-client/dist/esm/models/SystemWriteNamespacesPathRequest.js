@@ -25,7 +25,7 @@ export function SystemWriteNamespacesPathRequestFromJSONTyped(json, ignoreDiscri
         return json;
     }
     return {
-        customMetadata: json['custom_metadata'] == null ? undefined : json['custom_metadata'],
+        'customMetadata': json['custom_metadata'] == null ? undefined : json['custom_metadata'],
     };
 }
 export function SystemWriteNamespacesPathRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function SystemWriteNamespacesPathRequestToJSONTyped(value, ignoreDiscrim
         return value;
     }
     return {
-        custom_metadata: value['customMetadata'],
+        'custom_metadata': value['customMetadata'],
     };
 }

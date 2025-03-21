@@ -31,12 +31,12 @@ export function OidcProviderTokenRequestFromJSONTyped(json, ignoreDiscriminator)
         return json;
     }
     return {
-        clientId: json['client_id'] == null ? undefined : json['client_id'],
-        clientSecret: json['client_secret'] == null ? undefined : json['client_secret'],
-        code: json['code'],
-        codeVerifier: json['code_verifier'] == null ? undefined : json['code_verifier'],
-        grantType: json['grant_type'],
-        redirectUri: json['redirect_uri'],
+        'clientId': json['client_id'] == null ? undefined : json['client_id'],
+        'clientSecret': json['client_secret'] == null ? undefined : json['client_secret'],
+        'code': json['code'],
+        'codeVerifier': json['code_verifier'] == null ? undefined : json['code_verifier'],
+        'grantType': json['grant_type'],
+        'redirectUri': json['redirect_uri'],
     };
 }
 export function OidcProviderTokenRequestToJSON(json) {
@@ -47,11 +47,11 @@ export function OidcProviderTokenRequestToJSONTyped(value, ignoreDiscriminator =
         return value;
     }
     return {
-        client_id: value['clientId'],
-        client_secret: value['clientSecret'],
-        code: value['code'],
-        code_verifier: value['codeVerifier'],
-        grant_type: value['grantType'],
-        redirect_uri: value['redirectUri'],
+        'client_id': value['clientId'],
+        'client_secret': value['clientSecret'],
+        'code': value['code'],
+        'code_verifier': value['codeVerifier'],
+        'grant_type': value['grantType'],
+        'redirect_uri': value['redirectUri'],
     };
 }

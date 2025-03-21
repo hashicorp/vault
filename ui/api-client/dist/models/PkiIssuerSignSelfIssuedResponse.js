@@ -32,8 +32,8 @@ function PkiIssuerSignSelfIssuedResponseFromJSONTyped(json, ignoreDiscriminator)
         return json;
     }
     return {
-        certificate: json['certificate'] == null ? undefined : json['certificate'],
-        issuingCa: json['issuing_ca'] == null ? undefined : json['issuing_ca'],
+        'certificate': json['certificate'] == null ? undefined : json['certificate'],
+        'issuingCa': json['issuing_ca'] == null ? undefined : json['issuing_ca'],
     };
 }
 function PkiIssuerSignSelfIssuedResponseToJSON(json) {
@@ -44,7 +44,7 @@ function PkiIssuerSignSelfIssuedResponseToJSONTyped(value, ignoreDiscriminator =
         return value;
     }
     return {
-        certificate: value['certificate'],
-        issuing_ca: value['issuingCa'],
+        'certificate': value['certificate'],
+        'issuing_ca': value['issuingCa'],
     };
 }

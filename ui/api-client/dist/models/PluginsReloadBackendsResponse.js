@@ -32,7 +32,7 @@ function PluginsReloadBackendsResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        reloadId: json['reload_id'] == null ? undefined : json['reload_id'],
+        'reloadId': json['reload_id'] == null ? undefined : json['reload_id'],
     };
 }
 function PluginsReloadBackendsResponseToJSON(json) {
@@ -43,6 +43,6 @@ function PluginsReloadBackendsResponseToJSONTyped(value, ignoreDiscriminator = f
         return value;
     }
     return {
-        reload_id: value['reloadId'],
+        'reload_id': value['reloadId'],
     };
 }

@@ -32,9 +32,9 @@ function SystemWriteSyncDestinationsVercelProjectNameResponseFromJSONTyped(json,
         return json;
     }
     return {
-        connectionDetails: json['connection_details'] == null ? undefined : json['connection_details'],
-        name: json['name'] == null ? undefined : json['name'],
-        type: json['type'] == null ? undefined : json['type'],
+        'connectionDetails': json['connection_details'] == null ? undefined : json['connection_details'],
+        'name': json['name'] == null ? undefined : json['name'],
+        'type': json['type'] == null ? undefined : json['type'],
     };
 }
 function SystemWriteSyncDestinationsVercelProjectNameResponseToJSON(json) {
@@ -45,8 +45,8 @@ function SystemWriteSyncDestinationsVercelProjectNameResponseToJSONTyped(value, 
         return value;
     }
     return {
-        connection_details: value['connectionDetails'],
-        name: value['name'],
-        type: value['type'],
+        'connection_details': value['connectionDetails'],
+        'name': value['name'],
+        'type': value['type'],
     };
 }

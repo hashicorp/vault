@@ -25,11 +25,11 @@ export function AliCloudWriteRoleRequestFromJSONTyped(json, ignoreDiscriminator)
         return json;
     }
     return {
-        inlinePolicies: json['inline_policies'] == null ? undefined : json['inline_policies'],
-        maxTtl: json['max_ttl'] == null ? undefined : json['max_ttl'],
-        remotePolicies: json['remote_policies'] == null ? undefined : json['remote_policies'],
-        roleArn: json['role_arn'] == null ? undefined : json['role_arn'],
-        ttl: json['ttl'] == null ? undefined : json['ttl'],
+        'inlinePolicies': json['inline_policies'] == null ? undefined : json['inline_policies'],
+        'maxTtl': json['max_ttl'] == null ? undefined : json['max_ttl'],
+        'remotePolicies': json['remote_policies'] == null ? undefined : json['remote_policies'],
+        'roleArn': json['role_arn'] == null ? undefined : json['role_arn'],
+        'ttl': json['ttl'] == null ? undefined : json['ttl'],
     };
 }
 export function AliCloudWriteRoleRequestToJSON(json) {
@@ -40,10 +40,10 @@ export function AliCloudWriteRoleRequestToJSONTyped(value, ignoreDiscriminator =
         return value;
     }
     return {
-        inline_policies: value['inlinePolicies'],
-        max_ttl: value['maxTtl'],
-        remote_policies: value['remotePolicies'],
-        role_arn: value['roleArn'],
-        ttl: value['ttl'],
+        'inline_policies': value['inlinePolicies'],
+        'max_ttl': value['maxTtl'],
+        'remote_policies': value['remotePolicies'],
+        'role_arn': value['roleArn'],
+        'ttl': value['ttl'],
     };
 }

@@ -25,9 +25,9 @@ export function OidcWriteProviderRequestFromJSONTyped(json, ignoreDiscriminator)
         return json;
     }
     return {
-        allowedClientIds: json['allowed_client_ids'] == null ? undefined : json['allowed_client_ids'],
-        issuer: json['issuer'] == null ? undefined : json['issuer'],
-        scopesSupported: json['scopes_supported'] == null ? undefined : json['scopes_supported'],
+        'allowedClientIds': json['allowed_client_ids'] == null ? undefined : json['allowed_client_ids'],
+        'issuer': json['issuer'] == null ? undefined : json['issuer'],
+        'scopesSupported': json['scopes_supported'] == null ? undefined : json['scopes_supported'],
     };
 }
 export function OidcWriteProviderRequestToJSON(json) {
@@ -38,8 +38,8 @@ export function OidcWriteProviderRequestToJSONTyped(value, ignoreDiscriminator =
         return value;
     }
     return {
-        allowed_client_ids: value['allowedClientIds'],
-        issuer: value['issuer'],
-        scopes_supported: value['scopesSupported'],
+        'allowed_client_ids': value['allowedClientIds'],
+        'issuer': value['issuer'],
+        'scopes_supported': value['scopesSupported'],
     };
 }

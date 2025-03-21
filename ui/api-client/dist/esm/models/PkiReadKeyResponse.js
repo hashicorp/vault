@@ -25,12 +25,12 @@ export function PkiReadKeyResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        keyId: json['key_id'] == null ? undefined : json['key_id'],
-        keyName: json['key_name'] == null ? undefined : json['key_name'],
-        keyType: json['key_type'] == null ? undefined : json['key_type'],
-        managedKeyId: json['managed_key_id'] == null ? undefined : json['managed_key_id'],
-        managedKeyName: json['managed_key_name'] == null ? undefined : json['managed_key_name'],
-        subjectKeyId: json['subject_key_id'] == null ? undefined : json['subject_key_id'],
+        'keyId': json['key_id'] == null ? undefined : json['key_id'],
+        'keyName': json['key_name'] == null ? undefined : json['key_name'],
+        'keyType': json['key_type'] == null ? undefined : json['key_type'],
+        'managedKeyId': json['managed_key_id'] == null ? undefined : json['managed_key_id'],
+        'managedKeyName': json['managed_key_name'] == null ? undefined : json['managed_key_name'],
+        'subjectKeyId': json['subject_key_id'] == null ? undefined : json['subject_key_id'],
     };
 }
 export function PkiReadKeyResponseToJSON(json) {
@@ -41,11 +41,11 @@ export function PkiReadKeyResponseToJSONTyped(value, ignoreDiscriminator = false
         return value;
     }
     return {
-        key_id: value['keyId'],
-        key_name: value['keyName'],
-        key_type: value['keyType'],
-        managed_key_id: value['managedKeyId'],
-        managed_key_name: value['managedKeyName'],
-        subject_key_id: value['subjectKeyId'],
+        'key_id': value['keyId'],
+        'key_name': value['keyName'],
+        'key_type': value['keyType'],
+        'managed_key_id': value['managedKeyId'],
+        'managed_key_name': value['managedKeyName'],
+        'subject_key_id': value['subjectKeyId'],
     };
 }

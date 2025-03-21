@@ -32,10 +32,10 @@ function EntityUpdateByNameRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        disabled: json['disabled'] == null ? undefined : json['disabled'],
-        id: json['id'] == null ? undefined : json['id'],
-        metadata: json['metadata'] == null ? undefined : json['metadata'],
-        policies: json['policies'] == null ? undefined : json['policies'],
+        'disabled': json['disabled'] == null ? undefined : json['disabled'],
+        'id': json['id'] == null ? undefined : json['id'],
+        'metadata': json['metadata'] == null ? undefined : json['metadata'],
+        'policies': json['policies'] == null ? undefined : json['policies'],
     };
 }
 function EntityUpdateByNameRequestToJSON(json) {
@@ -46,9 +46,9 @@ function EntityUpdateByNameRequestToJSONTyped(value, ignoreDiscriminator = false
         return value;
     }
     return {
-        disabled: value['disabled'],
-        id: value['id'],
-        metadata: value['metadata'],
-        policies: value['policies'],
+        'disabled': value['disabled'],
+        'id': value['id'],
+        'metadata': value['metadata'],
+        'policies': value['policies'],
     };
 }

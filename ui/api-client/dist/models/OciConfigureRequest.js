@@ -32,7 +32,7 @@ function OciConfigureRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        homeTenancyId: json['home_tenancy_id'] == null ? undefined : json['home_tenancy_id'],
+        'homeTenancyId': json['home_tenancy_id'] == null ? undefined : json['home_tenancy_id'],
     };
 }
 function OciConfigureRequestToJSON(json) {
@@ -43,6 +43,6 @@ function OciConfigureRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        home_tenancy_id: value['homeTenancyId'],
+        'home_tenancy_id': value['homeTenancyId'],
     };
 }

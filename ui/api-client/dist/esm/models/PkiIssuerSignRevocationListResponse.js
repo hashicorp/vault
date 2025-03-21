@@ -25,7 +25,7 @@ export function PkiIssuerSignRevocationListResponseFromJSONTyped(json, ignoreDis
         return json;
     }
     return {
-        crl: json['crl'] == null ? undefined : json['crl'],
+        'crl': json['crl'] == null ? undefined : json['crl'],
     };
 }
 export function PkiIssuerSignRevocationListResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function PkiIssuerSignRevocationListResponseToJSONTyped(value, ignoreDisc
         return value;
     }
     return {
-        crl: value['crl'],
+        'crl': value['crl'],
     };
 }

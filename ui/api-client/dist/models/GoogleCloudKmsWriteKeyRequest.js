@@ -32,13 +32,13 @@ function GoogleCloudKmsWriteKeyRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        algorithm: json['algorithm'] == null ? undefined : json['algorithm'],
-        cryptoKey: json['crypto_key'] == null ? undefined : json['crypto_key'],
-        keyRing: json['key_ring'] == null ? undefined : json['key_ring'],
-        labels: json['labels'] == null ? undefined : json['labels'],
-        protectionLevel: json['protection_level'] == null ? undefined : json['protection_level'],
-        purpose: json['purpose'] == null ? undefined : json['purpose'],
-        rotationPeriod: json['rotation_period'] == null ? undefined : json['rotation_period'],
+        'algorithm': json['algorithm'] == null ? undefined : json['algorithm'],
+        'cryptoKey': json['crypto_key'] == null ? undefined : json['crypto_key'],
+        'keyRing': json['key_ring'] == null ? undefined : json['key_ring'],
+        'labels': json['labels'] == null ? undefined : json['labels'],
+        'protectionLevel': json['protection_level'] == null ? undefined : json['protection_level'],
+        'purpose': json['purpose'] == null ? undefined : json['purpose'],
+        'rotationPeriod': json['rotation_period'] == null ? undefined : json['rotation_period'],
     };
 }
 function GoogleCloudKmsWriteKeyRequestToJSON(json) {
@@ -49,12 +49,12 @@ function GoogleCloudKmsWriteKeyRequestToJSONTyped(value, ignoreDiscriminator = f
         return value;
     }
     return {
-        algorithm: value['algorithm'],
-        crypto_key: value['cryptoKey'],
-        key_ring: value['keyRing'],
-        labels: value['labels'],
-        protection_level: value['protectionLevel'],
-        purpose: value['purpose'],
-        rotation_period: value['rotationPeriod'],
+        'algorithm': value['algorithm'],
+        'crypto_key': value['cryptoKey'],
+        'key_ring': value['keyRing'],
+        'labels': value['labels'],
+        'protection_level': value['protectionLevel'],
+        'purpose': value['purpose'],
+        'rotation_period': value['rotationPeriod'],
     };
 }

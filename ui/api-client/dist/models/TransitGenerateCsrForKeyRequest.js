@@ -32,8 +32,8 @@ function TransitGenerateCsrForKeyRequestFromJSONTyped(json, ignoreDiscriminator)
         return json;
     }
     return {
-        csr: json['csr'] == null ? undefined : json['csr'],
-        version: json['version'] == null ? undefined : json['version'],
+        'csr': json['csr'] == null ? undefined : json['csr'],
+        'version': json['version'] == null ? undefined : json['version'],
     };
 }
 function TransitGenerateCsrForKeyRequestToJSON(json) {
@@ -44,7 +44,7 @@ function TransitGenerateCsrForKeyRequestToJSONTyped(value, ignoreDiscriminator =
         return value;
     }
     return {
-        csr: value['csr'],
-        version: value['version'],
+        'csr': value['csr'],
+        'version': value['version'],
     };
 }

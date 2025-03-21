@@ -25,7 +25,7 @@ export function InternalCountEntitiesResponseFromJSONTyped(json, ignoreDiscrimin
         return json;
     }
     return {
-        counters: json['counters'] == null ? undefined : json['counters'],
+        'counters': json['counters'] == null ? undefined : json['counters'],
     };
 }
 export function InternalCountEntitiesResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function InternalCountEntitiesResponseToJSONTyped(value, ignoreDiscrimina
         return value;
     }
     return {
-        counters: value['counters'],
+        'counters': value['counters'],
     };
 }

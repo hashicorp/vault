@@ -25,7 +25,7 @@ export function ReloadPluginsRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        scope: json['scope'] == null ? undefined : json['scope'],
+        'scope': json['scope'] == null ? undefined : json['scope'],
     };
 }
 export function ReloadPluginsRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function ReloadPluginsRequestToJSONTyped(value, ignoreDiscriminator = fal
         return value;
     }
     return {
-        scope: value['scope'],
+        'scope': value['scope'],
     };
 }

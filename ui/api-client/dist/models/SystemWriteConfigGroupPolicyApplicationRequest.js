@@ -32,7 +32,7 @@ function SystemWriteConfigGroupPolicyApplicationRequestFromJSONTyped(json, ignor
         return json;
     }
     return {
-        groupPolicyApplicationMode: json['group_policy_application_mode'] == null ? undefined : json['group_policy_application_mode'],
+        'groupPolicyApplicationMode': json['group_policy_application_mode'] == null ? undefined : json['group_policy_application_mode'],
     };
 }
 function SystemWriteConfigGroupPolicyApplicationRequestToJSON(json) {
@@ -43,6 +43,6 @@ function SystemWriteConfigGroupPolicyApplicationRequestToJSONTyped(value, ignore
         return value;
     }
     return {
-        group_policy_application_mode: value['groupPolicyApplicationMode'],
+        'group_policy_application_mode': value['groupPolicyApplicationMode'],
     };
 }

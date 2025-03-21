@@ -25,7 +25,7 @@ export function TokenLookUpRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        token: json['token'] == null ? undefined : json['token'],
+        'token': json['token'] == null ? undefined : json['token'],
     };
 }
 export function TokenLookUpRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function TokenLookUpRequestToJSONTyped(value, ignoreDiscriminator = false
         return value;
     }
     return {
-        token: value['token'],
+        'token': value['token'],
     };
 }

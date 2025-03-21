@@ -32,12 +32,12 @@ function GroupUpdateByNameRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        id: json['id'] == null ? undefined : json['id'],
-        memberEntityIds: json['member_entity_ids'] == null ? undefined : json['member_entity_ids'],
-        memberGroupIds: json['member_group_ids'] == null ? undefined : json['member_group_ids'],
-        metadata: json['metadata'] == null ? undefined : json['metadata'],
-        policies: json['policies'] == null ? undefined : json['policies'],
-        type: json['type'] == null ? undefined : json['type'],
+        'id': json['id'] == null ? undefined : json['id'],
+        'memberEntityIds': json['member_entity_ids'] == null ? undefined : json['member_entity_ids'],
+        'memberGroupIds': json['member_group_ids'] == null ? undefined : json['member_group_ids'],
+        'metadata': json['metadata'] == null ? undefined : json['metadata'],
+        'policies': json['policies'] == null ? undefined : json['policies'],
+        'type': json['type'] == null ? undefined : json['type'],
     };
 }
 function GroupUpdateByNameRequestToJSON(json) {
@@ -48,11 +48,11 @@ function GroupUpdateByNameRequestToJSONTyped(value, ignoreDiscriminator = false)
         return value;
     }
     return {
-        id: value['id'],
-        member_entity_ids: value['memberEntityIds'],
-        member_group_ids: value['memberGroupIds'],
-        metadata: value['metadata'],
-        policies: value['policies'],
-        type: value['type'],
+        'id': value['id'],
+        'member_entity_ids': value['memberEntityIds'],
+        'member_group_ids': value['memberGroupIds'],
+        'metadata': value['metadata'],
+        'policies': value['policies'],
+        'type': value['type'],
     };
 }

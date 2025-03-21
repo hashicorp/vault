@@ -32,7 +32,7 @@ function AppRoleWriteTokenBoundCidrsRequestFromJSONTyped(json, ignoreDiscriminat
         return json;
     }
     return {
-        tokenBoundCidrs: json['token_bound_cidrs'] == null ? undefined : json['token_bound_cidrs'],
+        'tokenBoundCidrs': json['token_bound_cidrs'] == null ? undefined : json['token_bound_cidrs'],
     };
 }
 function AppRoleWriteTokenBoundCidrsRequestToJSON(json) {
@@ -43,6 +43,6 @@ function AppRoleWriteTokenBoundCidrsRequestToJSONTyped(value, ignoreDiscriminato
         return value;
     }
     return {
-        token_bound_cidrs: value['tokenBoundCidrs'],
+        'token_bound_cidrs': value['tokenBoundCidrs'],
     };
 }

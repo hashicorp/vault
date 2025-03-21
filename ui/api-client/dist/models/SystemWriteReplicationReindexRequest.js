@@ -32,9 +32,9 @@ function SystemWriteReplicationReindexRequestFromJSONTyped(json, ignoreDiscrimin
         return json;
     }
     return {
-        diff: json['diff'] == null ? undefined : json['diff'],
-        force: json['force'] == null ? undefined : json['force'],
-        skipFlush: json['skip_flush'] == null ? undefined : json['skip_flush'],
+        'diff': json['diff'] == null ? undefined : json['diff'],
+        'force': json['force'] == null ? undefined : json['force'],
+        'skipFlush': json['skip_flush'] == null ? undefined : json['skip_flush'],
     };
 }
 function SystemWriteReplicationReindexRequestToJSON(json) {
@@ -45,8 +45,8 @@ function SystemWriteReplicationReindexRequestToJSONTyped(value, ignoreDiscrimina
         return value;
     }
     return {
-        diff: value['diff'],
-        force: value['force'],
-        skip_flush: value['skipFlush'],
+        'diff': value['diff'],
+        'force': value['force'],
+        'skip_flush': value['skipFlush'],
     };
 }

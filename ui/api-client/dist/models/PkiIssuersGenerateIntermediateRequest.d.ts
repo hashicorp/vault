@@ -185,27 +185,27 @@ export interface PkiIssuersGenerateIntermediateRequest {
     uriSans?: Array<string>;
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum PkiIssuersGenerateIntermediateRequestFormatEnum {
     PEM = "pem",
     DER = "der",
     PEM_BUNDLE = "pem_bundle"
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum PkiIssuersGenerateIntermediateRequestKeyTypeEnum {
     RSA = "rsa",
     EC = "ec",
     ED25519 = "ed25519"
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum PkiIssuersGenerateIntermediateRequestPrivateKeyFormatEnum {
     EMPTY = "",
     DER = "der",

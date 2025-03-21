@@ -245,9 +245,9 @@ export interface KerberosConfigureLdapRequest {
     usernameAsAlias?: boolean;
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum KerberosConfigureLdapRequestDereferenceAliasesEnum {
     NEVER = "never",
     FINDING = "finding",
@@ -255,9 +255,9 @@ export declare enum KerberosConfigureLdapRequestDereferenceAliasesEnum {
     ALWAYS = "always"
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum KerberosConfigureLdapRequestTlsMaxVersionEnum {
     TLS10 = "tls10",
     TLS11 = "tls11",
@@ -265,9 +265,9 @@ export declare enum KerberosConfigureLdapRequestTlsMaxVersionEnum {
     TLS13 = "tls13"
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum KerberosConfigureLdapRequestTlsMinVersionEnum {
     TLS10 = "tls10",
     TLS11 = "tls11",

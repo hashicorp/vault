@@ -32,7 +32,7 @@ function AuditingListRequestHeadersResponseFromJSONTyped(json, ignoreDiscriminat
         return json;
     }
     return {
-        headers: json['headers'] == null ? undefined : json['headers'],
+        'headers': json['headers'] == null ? undefined : json['headers'],
     };
 }
 function AuditingListRequestHeadersResponseToJSON(json) {
@@ -43,6 +43,6 @@ function AuditingListRequestHeadersResponseToJSONTyped(value, ignoreDiscriminato
         return value;
     }
     return {
-        headers: value['headers'],
+        'headers': value['headers'],
     };
 }

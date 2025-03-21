@@ -32,16 +32,14 @@ function KubernetesConfigureAuthRequestFromJSONTyped(json, ignoreDiscriminator) 
         return json;
     }
     return {
-        disableIssValidation: json['disable_iss_validation'] == null ? undefined : json['disable_iss_validation'],
-        disableLocalCaJwt: json['disable_local_ca_jwt'] == null ? undefined : json['disable_local_ca_jwt'],
-        issuer: json['issuer'] == null ? undefined : json['issuer'],
-        kubernetesCaCert: json['kubernetes_ca_cert'] == null ? undefined : json['kubernetes_ca_cert'],
-        kubernetesHost: json['kubernetes_host'] == null ? undefined : json['kubernetes_host'],
-        pemKeys: json['pem_keys'] == null ? undefined : json['pem_keys'],
-        tokenReviewerJwt: json['token_reviewer_jwt'] == null ? undefined : json['token_reviewer_jwt'],
-        useAnnotationsAsAliasMetadata: json['use_annotations_as_alias_metadata'] == null
-            ? undefined
-            : json['use_annotations_as_alias_metadata'],
+        'disableIssValidation': json['disable_iss_validation'] == null ? undefined : json['disable_iss_validation'],
+        'disableLocalCaJwt': json['disable_local_ca_jwt'] == null ? undefined : json['disable_local_ca_jwt'],
+        'issuer': json['issuer'] == null ? undefined : json['issuer'],
+        'kubernetesCaCert': json['kubernetes_ca_cert'] == null ? undefined : json['kubernetes_ca_cert'],
+        'kubernetesHost': json['kubernetes_host'] == null ? undefined : json['kubernetes_host'],
+        'pemKeys': json['pem_keys'] == null ? undefined : json['pem_keys'],
+        'tokenReviewerJwt': json['token_reviewer_jwt'] == null ? undefined : json['token_reviewer_jwt'],
+        'useAnnotationsAsAliasMetadata': json['use_annotations_as_alias_metadata'] == null ? undefined : json['use_annotations_as_alias_metadata'],
     };
 }
 function KubernetesConfigureAuthRequestToJSON(json) {
@@ -52,13 +50,13 @@ function KubernetesConfigureAuthRequestToJSONTyped(value, ignoreDiscriminator = 
         return value;
     }
     return {
-        disable_iss_validation: value['disableIssValidation'],
-        disable_local_ca_jwt: value['disableLocalCaJwt'],
-        issuer: value['issuer'],
-        kubernetes_ca_cert: value['kubernetesCaCert'],
-        kubernetes_host: value['kubernetesHost'],
-        pem_keys: value['pemKeys'],
-        token_reviewer_jwt: value['tokenReviewerJwt'],
-        use_annotations_as_alias_metadata: value['useAnnotationsAsAliasMetadata'],
+        'disable_iss_validation': value['disableIssValidation'],
+        'disable_local_ca_jwt': value['disableLocalCaJwt'],
+        'issuer': value['issuer'],
+        'kubernetes_ca_cert': value['kubernetesCaCert'],
+        'kubernetes_host': value['kubernetesHost'],
+        'pem_keys': value['pemKeys'],
+        'token_reviewer_jwt': value['tokenReviewerJwt'],
+        'use_annotations_as_alias_metadata': value['useAnnotationsAsAliasMetadata'],
     };
 }
