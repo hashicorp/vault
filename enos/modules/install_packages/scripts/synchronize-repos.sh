@@ -110,7 +110,7 @@ wait_for_cloud_init() {
   fi
   res=$?
   case $res in
-    2)
+    2|0)
       {
         echo "WARNING: cloud-init did not complete successfully but recovered."
         echo "Exit code: $res"
