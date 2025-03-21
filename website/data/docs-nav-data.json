@@ -2369,28 +2369,11 @@
       },
       {
         "title": "Upgrade plugins",
-        "routes": [
-          {
-            "title": "Overview",
-            "path" : "plugins/upgrade"
-          },
-          {
-            "title": "AuthN plugins",
-            "path" : "plugins/upgrade/authn"
-          },
-          {
-            "title": "Secrets plugins",
-            "path" : "plugins/upgrade/secrets"
-          },
-          {
-            "title": "Database plugins",
-            "path" : "plugins/upgrade/database"
-          },
-          {
-            "title": "Rollback upgrades",
-            "path" : "plugins/upgrade/rollback"
-          }
-        ]
+        "path": "plugins/upgrade"
+      },
+      {
+        "title": "Rollback upgrades",
+        "path" : "plugins/rollback"
       },
       {
         "title": "Plugin Development",

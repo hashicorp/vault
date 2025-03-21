@@ -121,6 +121,11 @@ to specify where the configuration is.
   disabled to prevent Vault's other in-memory sensitive data from being dumped
   into disk.
 
+  If you enable `mlock`, the Vault executable and each plugin executable in your
+  [plugins directory](/vault/docs/plugins/plugin-architecture#plugin-directory)
+  must have the ability to use the `mlock` syscall.
+
+
   On Linux, to give the Vault executable the ability to use the `mlock`
   syscall without running the process as root, run:
 
