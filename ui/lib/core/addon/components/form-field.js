@@ -100,9 +100,11 @@ export default class FormFieldComponent extends Component {
       }
     } else {
       if (type === 'number' || type === 'string') {
-        // here we will add the logic for `FormField` inputs (textarea, password, regular text input) that are "converted" to HDS fields
-        // for example: if (options?.editType === 'textarea' || options?.editType === 'password') { return true; }
-        return false;
+        if (options?.editType === 'password') {
+          return true;
+        } else {
+          return false;
+        }
       } else {
         // we leave these fields as they are (for now)
         return false;
