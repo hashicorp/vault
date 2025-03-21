@@ -40,6 +40,10 @@ func NewVaultPkiCluster(t *testing.T) *VaultPkiCluster {
 			},
 			NumCores: 3,
 		},
+
+		//// disable_mlock is required for working in the Docker environment with
+		//// custom plugins
+		DisableMlock: true,
 	}
 
 	cluster := docker.NewTestDockerCluster(t, opts)

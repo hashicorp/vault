@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -274,6 +275,13 @@ func TestServer(t *testing.T) {
 			"",
 			0,
 			[]string{"-test-verify-only", "-recovery"},
+		},
+		{
+			"missing_disable_mlock_value",
+			regexp.MustCompile(`\s*disable_mlock\s*=\s*.+`).ReplaceAllString(testBaseHCL(t, goodListenerTimeouts)+inmemHCL, ""),
+			"disable_mlock must be configured",
+			1,
+			[]string{"-test-server-config"},
 		},
 	}
 

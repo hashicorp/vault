@@ -646,6 +646,9 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 		}
 	}
 	vaultCfg := map[string]interface{}{}
+
+	vaultCfg["disable_mlock"] = opts.DisableMlock
+
 	var listenerConfig []map[string]interface{}
 
 	var defaultListenerConfig map[string]interface{}
@@ -703,10 +706,6 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 	vaultCfg["storage"] = map[string]interface{}{
 		storageType: storageOpts,
 	}
-
-	//// disable_mlock is required for working in the Docker environment with
-	//// custom plugins
-	vaultCfg["disable_mlock"] = true
 
 	protocol := "https"
 	if opts.DisableTLS {
@@ -1085,17 +1084,18 @@ func (l LogConsumerWriter) Write(p []byte) (n int, err error) {
 // DockerClusterOptions has options for setting up the docker cluster
 type DockerClusterOptions struct {
 	testcluster.ClusterOptions
-	CAKey       *ecdsa.PrivateKey
-	NetworkName string
-	ImageRepo   string
-	ImageTag    string
-	CA          *testcluster.CA
-	VaultBinary string
-	Args        []string
-	Envs        []string
-	StartProbe  func(*api.Client) error
-	Storage     testcluster.ClusterStorage
-	DisableTLS  bool
+	CAKey        *ecdsa.PrivateKey
+	NetworkName  string
+	ImageRepo    string
+	ImageTag     string
+	CA           *testcluster.CA
+	VaultBinary  string
+	Args         []string
+	Envs         []string
+	StartProbe   func(*api.Client) error
+	Storage      testcluster.ClusterStorage
+	DisableTLS   bool
+	DisableMlock bool
 }
 
 func ensureLeaderMatches(ctx context.Context, client *api.Client, ready func(response *api.LeaderResponse) error) error {
