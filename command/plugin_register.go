@@ -20,13 +20,14 @@ var (
 type PluginRegisterCommand struct {
 	*BaseCommand
 
-	flagArgs     []string
-	flagCommand  string
-	flagSHA256   string
-	flagVersion  string
-	flagOCIImage string
-	flagRuntime  string
-	flagEnv      []string
+	flagArgs         []string
+	flagCommand      string
+	flagSHA256       string
+	flagVersion      string
+	flagOCIImage     string
+	flagRuntime      string
+	flagEnv          []string
+	flagAutoDownload bool
 }
 
 func (c *PluginRegisterCommand) Synopsis() string {
@@ -116,6 +117,13 @@ func (c *PluginRegisterCommand) Flags() *FlagSets {
 			"flag can be specified multiple times to specify multiple environment variables.",
 	})
 
+	f.BoolVar(&BoolVar{
+		Name:    "auto-download",
+		Target:  &c.flagAutoDownload,
+		Default: false,
+		Usage:   "Automatically download the plugin if it is not found in the plugin directory.",
+	})
+
 	return set
 }
 
@@ -176,15 +184,16 @@ func (c *PluginRegisterCommand) Run(args []string) int {
 	}
 
 	if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
-		Name:     pluginName,
-		Type:     pluginType,
-		Args:     c.flagArgs,
-		Command:  command,
-		SHA256:   c.flagSHA256,
-		Version:  c.flagVersion,
-		OCIImage: c.flagOCIImage,
-		Runtime:  c.flagRuntime,
-		Env:      c.flagEnv,
+		Name:         pluginName,
+		Type:         pluginType,
+		Args:         c.flagArgs,
+		Command:      command,
+		SHA256:       c.flagSHA256,
+		Version:      c.flagVersion,
+		OCIImage:     c.flagOCIImage,
+		Runtime:      c.flagRuntime,
+		Env:          c.flagEnv,
+		AutoDownload: c.flagAutoDownload,
 	}); err != nil {
 		c.UI.Error(fmt.Sprintf("Error registering plugin %s: %s", pluginName, err))
 		return 2

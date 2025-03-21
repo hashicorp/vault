@@ -10,33 +10,104 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"path"
 	"path/filepath"
 
+	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/image"
+	"github.com/docker/docker/client"
 	semver "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+func pluginBinaryExists(command string) (bool, error) {
+	_, err := filepath.EvalSymlinks(command)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return false, nil
+		}
+		return false, fmt.Errorf("error while verifying if the plugin binary exists: %w", err)
+	}
+
+	return true, nil
+}
+
+func (c *PluginCatalog) pluginImageExists(ociImage string, version string) (bool, error) {
+	// TODO check for version
+
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		return false, fmt.Errorf("error creating Docker client: %w", err)
+	}
+	defer cli.Close()
+
+	args := filters.NewArgs()
+	args.Add("reference", ociImage)
+
+	images, err := cli.ImageList(context.Background(), image.ListOptions{
+		Filters: args,
+	})
+	if err != nil {
+		return false, fmt.Errorf("failed to list images: %w", err)
+	}
+
+	return len(images) > 0, nil
+}
+
+func validateIsWithinPluginDirectory(pluginDirectory, command string) (bool, error) {
+	sym, err := filepath.EvalSymlinks(command)
+	if err != nil {
+		return false, fmt.Errorf("error while validating the command path: %w", err)
+	}
+
+	symAbs, err := filepath.Abs(filepath.Dir(sym))
+	if err != nil {
+		return false, fmt.Errorf("error while validating the command path: %w", err)
+	}
+
+	return symAbs == pluginDirectory, nil
+}
+
 // setInternal creates a new plugin entry in the catalog and persists it to storage
 func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPluginInput) (*pluginutil.PluginRunner, error) {
 	command := plugin.Command
 	if plugin.OCIImage == "" {
-		// Best effort check to make sure the command isn't breaking out of the
-		// configured plugin directory.
-		command = filepath.Join(c.directory, plugin.Command)
-		sym, err := filepath.EvalSymlinks(command)
+		command = filepath.Join(c.directory, plugin.Command+"_"+plugin.Version)
+		isWithinPluginDirectory, err := validateIsWithinPluginDirectory(c.directory, command)
 		if err != nil {
-			return nil, fmt.Errorf("error while validating the command path: %w", err)
+			return nil, fmt.Errorf("failed to validate if plugin binary is within plugin directory: %w", err)
 		}
-		symAbs, err := filepath.Abs(filepath.Dir(sym))
+		if !isWithinPluginDirectory {
+			return nil, errors.New("cannot execute files outside of configured plugin directory")
+		}
+	}
+
+	if plugin.OCIImage == "" && plugin.AutoDownload {
+		exists, err := pluginBinaryExists(command)
 		if err != nil {
-			return nil, fmt.Errorf("error while validating the command path: %w", err)
+			return nil, fmt.Errorf("failed to check if plugin binary exists: %w", err)
 		}
 
-		if symAbs != c.directory {
-			return nil, errors.New("cannot execute files outside of configured plugin directory")
+		if !exists {
+			if err := downloadPluginBinary(c.directory, plugin); err != nil { // TODO cycle through the plugin repositories
+				return nil, fmt.Errorf("failed to download plugin binary: %w", err)
+			}
+		}
+	}
+
+	if plugin.OCIImage != "" && plugin.AutoDownload {
+		exists, err := c.pluginImageExists(plugin.OCIImage, plugin.Version)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check if plugin image exists: %w", err)
+		}
+
+		if !exists {
+			if err := c.downloadPluginImage(plugin.OCIImage); err != nil { // TODO cycle through the plugin repositories
+				return nil, fmt.Errorf("failed to download plugin image: %w", err)
+			}
 		}
 	}
 

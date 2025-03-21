@@ -210,6 +210,8 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsRootReloadPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsRuntimesCatalogCRUDPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsRuntimesCatalogListPaths()...)
+	b.Backend.Paths = append(b.Backend.Paths, b.pluginsRepositoriesCatalogCRUDPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.pluginsRepositoryCatalogListPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.auditPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.mountPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.authPaths()...)
@@ -593,16 +595,19 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 		return logical.ErrorResponse("Could not decode SHA256 value from Hex %s: %s", sha256, err), err
 	}
 
+	autoDownload := d.Get("auto_download").(bool)
+
 	err = b.Core.pluginCatalog.Set(ctx, pluginutil.SetPluginInput{
-		Name:     pluginName,
-		Type:     pluginType,
-		Version:  pluginVersion,
-		OCIImage: ociImage,
-		Runtime:  pluginRuntime,
-		Command:  command,
-		Args:     args,
-		Env:      env,
-		Sha256:   sha256Bytes,
+		Name:         pluginName,
+		Type:         pluginType,
+		Version:      pluginVersion,
+		OCIImage:     ociImage,
+		Runtime:      pluginRuntime,
+		Command:      command,
+		Args:         args,
+		Env:          env,
+		Sha256:       sha256Bytes,
+		AutoDownload: autoDownload,
 	})
 	if err != nil {
 		if errors.Is(err, plugincatalog.ErrPluginNotFound) ||
@@ -1138,6 +1143,91 @@ func (b *SystemBackend) handlePluginRuntimeCatalogList(ctx context.Context, _ *l
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"runtimes": runtimes,
+		},
+	}, nil
+}
+
+func (b *SystemBackend) handlePluginRepositoryCatalogUpdate(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	repositoryName := d.Get("name").(string)
+	if repositoryName == "" {
+		return logical.ErrorResponse("missing plugin repository name"), nil
+	}
+
+	repositoryURL := d.Get("url").(string)
+	if repositoryURL == "" {
+		return logical.ErrorResponse("missing plugin repository url"), nil
+	}
+
+	err := b.Core.pluginRepositoryCatalog.Set(ctx,
+		&plugincatalog.PluginRepositoryConfig{
+			Name: repositoryName,
+			URL:  repositoryURL,
+		},
+	)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	return nil, nil
+}
+
+func (b *SystemBackend) handlePluginRepositoryCatalogDelete(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	repositoryName := d.Get("name").(string)
+	if repositoryName == "" {
+		return logical.ErrorResponse("missing plugin repository name"), nil
+	}
+
+	err := b.Core.pluginRepositoryCatalog.Delete(ctx, repositoryName)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (b *SystemBackend) handlePluginRepositoryCatalogRead(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	repositoryName := d.Get("name").(string)
+	if repositoryName == "" {
+		return logical.ErrorResponse("missing plugin runtime name"), nil
+	}
+
+	conf, err := b.Core.pluginRepositoryCatalog.Get(ctx, repositoryName)
+	if err != nil && !errors.Is(err, plugincatalog.ErrPluginRuntimeNotFound) {
+		return nil, err
+	}
+	if conf == nil {
+		return nil, nil
+	}
+
+	return &logical.Response{Data: map[string]interface{}{
+		"name": conf.Name,
+		"url":  conf.URL,
+	}}, nil
+}
+
+func (b *SystemBackend) handlePluginRepositoriesList(ctx context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	var repositories []map[string]any
+
+	configs, err := b.Core.pluginRepositoryCatalog.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(configs) > 0 {
+		sort.Slice(configs, func(i, j int) bool {
+			return strings.Compare(configs[i].Name, configs[j].Name) == -1
+		})
+		for _, conf := range configs {
+			repositories = append(repositories, map[string]any{
+				"name": conf.Name,
+				"url":  conf.URL,
+			})
+		}
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"repositories": repositories,
 		},
 	}, nil
 }
@@ -6899,6 +6989,10 @@ Each entry is of the form "key=value".`,
 	},
 	"plugin-catalog_version": {
 		"The semantic version of the plugin to use, or image tag if oci_image is provided.",
+		"",
+	},
+	"plugin-catalog_auto-download": {
+		"Enable automatic download of missing plugin artifacts from available repositories.",
 		"",
 	},
 	"plugin-catalog_oci_image": {

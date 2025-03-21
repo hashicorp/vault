@@ -1891,6 +1891,10 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 				Type:        framework.TypeString,
 				Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
 			},
+			"auto_download": {
+				Type:        framework.TypeBool,
+				Description: strings.TrimSpace(sysHelp["plugin-catalog_auto-download"][0]),
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -2457,6 +2461,81 @@ func (b *SystemBackend) pluginsRuntimesCatalogListPaths() []*framework.Path {
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-runtime-catalog-list-all"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["plugin-runtime-catalog-list-all"][1]),
+		},
+	}
+}
+
+func (b *SystemBackend) pluginsRepositoriesCatalogCRUDPath() *framework.Path {
+	return &framework.Path{
+		Pattern: "plugins/repositories/" + framework.GenericNameRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: "plugins-repositories-catalog",
+		},
+
+		Fields: map[string]*framework.FieldSchema{
+			"name": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-repositories-catalog_name"][0]),
+			},
+			"url": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-repositories-catalog_url"][0]),
+			},
+		},
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.handlePluginRepositoryCatalogUpdate,
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.handlePluginRepositoryCatalogDelete,
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.handlePluginRepositoryCatalogRead,
+			},
+		},
+
+		HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-runtime-catalog"][0]),
+		HelpDescription: strings.TrimSpace(sysHelp["plugin-runtime-catalog"][1]),
+	}
+}
+
+func (b *SystemBackend) pluginsRepositoryCatalogListPaths() []*framework.Path {
+	handler := &framework.PathOperation{
+		Callback: b.handlePluginRepositoriesList,
+		Responses: map[int][]framework.Response{
+			http.StatusOK: {{
+				Description: "OK",
+				Fields: map[string]*framework.FieldSchema{
+					"sources": {
+						Type:        framework.TypeSlice,
+						Description: "List of all repositories plugins can be downloaded from",
+						Required:    true,
+					},
+				},
+			}},
+		},
+	}
+	return []*framework.Path{
+		{
+			Pattern: "plugins/repositories",
+
+			Fields: map[string]*framework.FieldSchema{},
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "plugins-repositories",
+				OperationVerb:   "list",
+				OperationSuffix: "plugins-repositories",
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: handler,
+				logical.ListOperation: handler,
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-repositories-list-all"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["plugin-repositories-list-all"][1]),
 		},
 	}
 }

@@ -100,6 +100,8 @@ const (
 	pluginCatalogPath = "core/plugin-catalog/"
 	// Path in storage for the plugin runtime catalog.
 	pluginRuntimeCatalogPath = "core/plugin-runtime-catalog/"
+	// Path in storage for the plugin repository catalog.
+	pluginRepositoryCatalogPath = "core/plugin-repository-catalog/"
 
 	// groupPolicyApplicationModeWithinNamespaceHierarchy is a configuration option for group
 	// policy application modes, which allows only in-namespace-hierarchy policy application
@@ -575,6 +577,9 @@ type Core struct {
 
 	// pluginRuntimeCatalog is used to manage plugin runtime configurations
 	pluginRuntimeCatalog *plugincatalog.PluginRuntimeCatalog
+
+	// pluginRepositoryCatalog is used to manage plugin repository configurations
+	pluginRepositoryCatalog *plugincatalog.PluginRepositoryCatalog
 
 	// The userFailedLoginInfo map has user failed login information.
 	// It has user information (alias-name and mount accessor) as a key
@@ -2558,18 +2563,30 @@ func (c *Core) setupPluginRuntimeCatalog(ctx context.Context) error {
 	return nil
 }
 
+func (c *Core) setupPluginRepositoryCatalog(ctx context.Context) error {
+	pluginRepositoryCatalog, err := plugincatalog.SetupPluginRepositoryCatalog(ctx, c.logger, NewBarrierView(c.barrier, pluginRepositoryCatalogPath))
+	if err != nil {
+		return err
+	}
+
+	c.pluginRepositoryCatalog = pluginRepositoryCatalog
+
+	return nil
+}
+
 // setupPluginCatalog wraps the plugincatalog.SetupPluginCatalog in way where
 // this method can be included in the slice of functions returned by the
 // buildUnsealSetupFunctionsSlice function.
 func (c *Core) setupPluginCatalog(ctx context.Context) error {
 	pluginCatalog, err := plugincatalog.SetupPluginCatalog(ctx, &plugincatalog.PluginCatalogInput{
-		Logger:               c.logger,
-		BuiltinRegistry:      c.builtinRegistry,
-		CatalogView:          NewBarrierView(c.barrier, pluginCatalogPath),
-		PluginDirectory:      c.pluginDirectory,
-		Tmpdir:               c.pluginTmpdir,
-		EnableMlock:          c.enableMlock,
-		PluginRuntimeCatalog: c.pluginRuntimeCatalog,
+		Logger:                  c.logger,
+		BuiltinRegistry:         c.builtinRegistry,
+		CatalogView:             NewBarrierView(c.barrier, pluginCatalogPath),
+		PluginDirectory:         c.pluginDirectory,
+		Tmpdir:                  c.pluginTmpdir,
+		EnableMlock:             c.enableMlock,
+		PluginRuntimeCatalog:    c.pluginRuntimeCatalog,
+		PluginRepositoryCatalog: c.pluginRepositoryCatalog,
 	})
 	if err != nil {
 		return err
@@ -2588,6 +2605,7 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 	// that if any return an error, processing should immediately cease.
 	setupFunctions := []func(context.Context) error{
 		c.setupPluginRuntimeCatalog,
+		c.setupPluginRepositoryCatalog,
 		c.setupPluginCatalog,
 		c.loadMounts,
 		func(_ context.Context) error {

@@ -41,6 +41,7 @@ type PluginDetails struct {
 	Version           string `json:"version,omitempty"`
 	Builtin           bool   `json:"builtin"`
 	DeprecationStatus string `json:"deprecation_status,omitempty" mapstructure:"deprecation_status"`
+	AutoDownload      bool   `json:"auto_download,omitempty" mapstructure:"auto_download"`
 }
 
 // ListPlugins wraps ListPluginsWithContext using context.Background.
@@ -215,6 +216,9 @@ type RegisterPluginInput struct {
 	// Env specifies a list of key=value pairs to add to the plugin's environment
 	// variables.
 	Env []string `json:"env,omitempty"`
+
+	// AutoDownload specifies whether to automatically download the plugin binary if it is not found in the plugin directory.
+	AutoDownload bool `json:"auto_download,omitempty"`
 }
 
 // RegisterPlugin wraps RegisterPluginWithContext using context.Background.

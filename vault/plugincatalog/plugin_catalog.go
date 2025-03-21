@@ -68,7 +68,8 @@ type PluginCatalog struct {
 	lock    sync.RWMutex
 	wrapper pluginutil.RunnerUtil
 
-	runtimeCatalog *PluginRuntimeCatalog
+	repositoryCatalog *PluginRepositoryCatalog
+	runtimeCatalog    *PluginRuntimeCatalog
 }
 
 // Only plugins running with identical PluginRunner config can be multiplexed,
@@ -144,26 +145,28 @@ type pluginClient struct {
 }
 
 type PluginCatalogInput struct {
-	Logger               log.Logger
-	BuiltinRegistry      BuiltinRegistry
-	CatalogView          logical.Storage
-	PluginDirectory      string
-	Tmpdir               string
-	EnableMlock          bool
-	PluginRuntimeCatalog *PluginRuntimeCatalog
+	Logger                  log.Logger
+	BuiltinRegistry         BuiltinRegistry
+	CatalogView             logical.Storage
+	PluginDirectory         string
+	Tmpdir                  string
+	EnableMlock             bool
+	PluginRuntimeCatalog    *PluginRuntimeCatalog
+	PluginRepositoryCatalog *PluginRepositoryCatalog
 }
 
 func SetupPluginCatalog(ctx context.Context, in *PluginCatalogInput) (*PluginCatalog, error) {
 	logger := in.Logger
 	catalog := &PluginCatalog{
-		builtinRegistry: in.BuiltinRegistry,
-		catalogView:     in.CatalogView,
-		directory:       in.PluginDirectory,
-		tmpdir:          in.Tmpdir,
-		logger:          logger,
-		mlockPlugins:    in.EnableMlock,
-		wrapper:         logical.StaticSystemView{VersionString: version.GetVersion().Version},
-		runtimeCatalog:  in.PluginRuntimeCatalog,
+		builtinRegistry:   in.BuiltinRegistry,
+		catalogView:       in.CatalogView,
+		directory:         in.PluginDirectory,
+		tmpdir:            in.Tmpdir,
+		logger:            logger,
+		mlockPlugins:      in.EnableMlock,
+		wrapper:           logical.StaticSystemView{VersionString: version.GetVersion().Version},
+		runtimeCatalog:    in.PluginRuntimeCatalog,
+		repositoryCatalog: in.PluginRepositoryCatalog,
 	}
 
 	// Run upgrade if untyped plugins exist

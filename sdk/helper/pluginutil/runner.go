@@ -96,15 +96,16 @@ func (p *PluginRunner) BinaryReference() string {
 // We don't use the very similar PluginRunner struct to avoid confusion about
 // what's settable, which does not include the builtin fields.
 type SetPluginInput struct {
-	Name     string
-	Type     consts.PluginType
-	Version  string
-	Command  string
-	OCIImage string
-	Runtime  string
-	Args     []string
-	Env      []string
-	Sha256   []byte
+	Name         string
+	Type         consts.PluginType
+	Version      string
+	Command      string
+	OCIImage     string
+	Runtime      string
+	Args         []string
+	Env          []string
+	Sha256       []byte
+	AutoDownload bool
 }
 
 // Run takes a wrapper RunnerUtil instance along with the go-plugin parameters and
