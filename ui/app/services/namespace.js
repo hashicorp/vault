@@ -85,4 +85,8 @@ export default class NamespaceService extends Service {
       waiter.endAsync(waiterToken);
     }
   }
+
+  reset() {
+    this.accessibleNamespaces = null;
+  }
 }
