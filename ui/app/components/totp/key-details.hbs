@@ -5,11 +5,16 @@
 <Toolbar>
   <ToolbarActions>
     {{#if @model.canDelete}}
-      <ConfirmAction @buttonText="Delete key" class="toolbar-button" @buttonColor="secondary" @onConfirmAction={{@delete}} />
+      <ConfirmAction
+        @buttonText="Delete key"
+        class="toolbar-button"
+        @buttonColor="secondary"
+        @onConfirmAction={{@onDelete}}
+      />
     {{/if}}
   </ToolbarActions>
 </Toolbar>
-<div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+<div class="box is-fullwidth is-sideless is-paddingless is-marginless" data-test-totp-key-details>
   {{#each @model.attrs as |attr|}}
     <InfoTableRow
       @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}

@@ -7,48 +7,51 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
-import { isBlank } from '@ember/utils';
+import { task } from 'ember-concurrency';
+import { waitFor } from '@ember/test-waiters';
 
-// TODO add jsdoc documentation
+/**
+ * @module TotpEdit
+ * `TotpEdit` is a component that allows you to create, view or delete a TOTP key.
+ * When creating a key if `generate` and `exported` are true then after a successful save the UI renders a QR code for the generated key.
+ * @example
+ *   <TotpEdit @model={{this.model}} @mode={{this.mode}} />
+ *
+ * @param {object} model - The totp key ember data model.
+ * @param {string} mode - The mode to render. Either 'create' or 'show'.
+ */
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
 export default class TotpEdit extends Component {
   @service router;
+  @service flashMessages;
 
   @tracked hasGenerated = false;
+  @tracked invalidFormAlert = '';
+  @tracked modelValidations;
+
   successCallback;
-  generatedDefaultFields = ['name', 'generate', 'issuer', 'accountName'];
-  nonGeneratedDefaultFields = [...this.generatedDefaultFields, 'url', 'key'];
 
-  get generatedFields() {
-    return this.generatedDefaultFields;
+  get defaultKeyFormFields() {
+    const shared = ['name', 'generate', 'issuer', 'accountName'];
+    const generated = [...shared, 'exported'];
+    const nonGenerated = [...shared, 'url', 'key'];
+    return this.args.model.generate ? generated : nonGenerated;
   }
 
-  get nonGeneratedFields() {
-    return this.nonGeneratedDefaultFields;
-  }
+  get groups() {
+    const { generate } = this.args.model;
 
-  get mode() {
-    return this.args.mode || 'show';
-  }
+    const groups = {
+      'TOTP Code Options': ['algorithm', 'digits', 'period'],
+    };
 
-  get model() {
-    return this.args.model;
-  }
+    if (generate) {
+      groups['Provider Options'] = ['keySize', 'skew', 'qrSize'];
+    }
 
-  persist(method, successCallback) {
-    // TODO refactor this further
-    return this.model[method]().then(() => {
-      if (!this.model.isError) {
-        if (this.model.backend === 'totp' && this.model.generate) {
-          this.hasGenerated = true;
-          this.successCallback = successCallback;
-        } else {
-          successCallback(this.model);
-        }
-      }
-    });
+    return groups;
   }
 
   transitionToRoute() {
@@ -57,29 +60,52 @@ export default class TotpEdit extends Component {
 
   @action
   reset() {
-    this.model.unloadRecord();
-    this.successCallback(null);
+    const { name } = this.args.model;
+    this.args.model.unloadRecord();
+    this.transitionToRoute(SHOW_ROUTE, name);
   }
 
   @action
-  delete() {
-    this.persist('destroyRecord', () => {
+  async deleteKey() {
+    try {
+      await this.args.model.destroyRecord();
       this.transitionToRoute(LIST_ROOT_ROUTE);
-    });
-  }
-
-  @action
-  create(event) {
-    event.preventDefault();
-    const modelId = this.model.name;
-    // prevent from submitting if there's no key
-    // maybe do something fancier later
-    if (isBlank(modelId)) {
+    } catch (err) {
+      // err will display via model state
       return;
     }
-
-    this.persist('save', () => {
-      this.transitionToRoute(SHOW_ROUTE, modelId);
-    });
+    this.flashMessages.success(`${this.args.model.id} was successfully deleted.`);
   }
+
+  createKey = task(
+    waitFor(async (event) => {
+      event.preventDefault();
+      const { isValid, state, invalidFormMessage } = this.args.model.validate();
+      this.modelValidations = isValid ? null : state;
+      this.invalidFormAlert = invalidFormMessage;
+
+      if (!isValid) return;
+      try {
+        const allFields = [...this.defaultKeyFormFields, ...Object.values(this.groups).flat()];
+        await this.args.model.save({
+          adapterOptions: {
+            keyFormFields: allFields,
+          },
+        });
+        const { generate, exported } = this.args.model;
+
+        if (generate && exported) {
+          // stay in this template and show QR code returned from response
+          this.hasGenerated = true;
+        } else {
+          // nothing is returned from response, transition to key details route
+          this.transitionToRoute(SHOW_ROUTE, this.args.model.name);
+        }
+      } catch (err) {
+        // err will display via model state
+        return;
+      }
+      this.flashMessages.success('Successfully created key.');
+    })
+  );
 }

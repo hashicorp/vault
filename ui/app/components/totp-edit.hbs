@@ -26,17 +26,18 @@
 </PageHeader>
 
 {{#if (eq @mode "show")}}
-  <Totp::KeyDetails @model={{@model}} @delete={{this.delete}} />
+  <Totp::KeyDetails @model={{@model}} @onDelete={{this.deleteKey}} />
 {{else if (eq @mode "create")}}
   {{#if this.hasGenerated}}
-    <Totp::KeyQrCode @model={{@model}} @reset={{this.reset}} />
+    <Totp::KeyQrCode @model={{@model}} @onReset={{this.reset}} />
   {{else}}
     <Totp::KeyCreate
-      @create={{this.create}}
+      @onSubmit={{this.createKey}}
       @model={{@model}}
-      @mode={{@mode}}
-      @generatedFields={{this.generatedFields}}
-      @nonGeneratedFields={{this.nonGeneratedFields}}
+      @defaultKeyFormFields={{this.defaultKeyFormFields}}
+      @groups={{this.groups}}
+      @modelValidations={{this.modelValidations}}
+      @invalidFormAlert={{this.invalidFormAlert}}
     />
   {{/if}}
 {{/if}}
