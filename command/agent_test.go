@@ -3107,6 +3107,16 @@ func TestAgent_Config_ReloadTls(t *testing.T) {
 	}
 }
 
+func TestAgent_Config_HclDuplicateKeyInvalid(t *testing.T) {
+	configFile := populateTempFile(t, "agent-config.hcl", `
+log_level = "trace"
+log_level = "debug"
+`)
+	_, err := agentConfig.LoadConfigFile(configFile.Name())
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "Each argument can only be defined once")
+}
+
 // TestAgent_NonTLSListener_SIGHUP tests giving a SIGHUP signal to a listener
 // without a TLS configuration. Prior to fixing GitHub issue #19480, this
 // would cause a panic.
