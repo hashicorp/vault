@@ -9,7 +9,7 @@ import { match, or } from '@ember/object/computed';
 import { dasherize } from '@ember/string';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
-import { supportedLoginMethods } from 'vault/utils/supported-login-methods';
+import { ALL_LOGIN_METHODS, BASE_LOGIN_METHODS } from 'vault/utils/supported-login-methods';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { v4 as uuidv4 } from 'uuid';
@@ -56,8 +56,7 @@ export default Component.extend(DEFAULTS, {
   oldNamespace: null,
 
   authMethods: computed('version.isEnterprise', function () {
-    const isEnterprise = this.version.isEnterprise;
-    return supportedLoginMethods(isEnterprise);
+    return this.version.isEnterprise ? ALL_LOGIN_METHODS : BASE_LOGIN_METHODS;
   }),
 
   didReceiveAttrs() {

@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, currentURL, visit, waitUntil, find, fillIn } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { supportedLoginMethods } from 'vault/utils/supported-login-methods';
+import { ALL_LOGIN_METHODS, BASE_LOGIN_METHODS } from 'vault/utils/supported-login-methods';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 import {
   createNS,
@@ -29,7 +29,7 @@ module('Acceptance | auth', function (hooks) {
   setupMirage(hooks);
 
   test('auth query params', async function (assert) {
-    const backends = supportedLoginMethods(false);
+    const backends = BASE_LOGIN_METHODS;
     assert.expect(backends.length + 1);
     await visit('/vault/auth');
     // TODO this functionality will change and url will no longer populate with auth type
@@ -138,9 +138,9 @@ module('Acceptance | auth', function (hooks) {
       };
     });
 
-    // even though "true" includes enterprise methods, we add "enterprise" to the
-    // test title below so it skips on CE runs
-    for (const backend of supportedLoginMethods(true)) {
+    // even though ALL_LOGIN_METHODS includes enterprise methods,
+    // "enterprise" is added to the test title for ent only methods to skips on CE runs
+    for (const backend of ALL_LOGIN_METHODS) {
       test(`for ${backend.type} ${
         ENT_AUTH_METHODS.includes(backend.type) ? '(enterprise)' : ''
       }`, async function (assert) {

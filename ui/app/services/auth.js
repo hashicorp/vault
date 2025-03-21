@@ -15,12 +15,13 @@ import { resolve, reject } from 'rsvp';
 
 import getStorage from 'vault/lib/token-storage';
 import ENV from 'vault/config/environment';
-import { findLoginMethod } from 'vault/utils/supported-login-methods';
+import { ALL_LOGIN_METHODS } from 'vault/utils/supported-login-methods';
 import { addToArray } from 'vault/helpers/add-to-array';
 
 const TOKEN_SEPARATOR = '☃';
 const TOKEN_PREFIX = 'vault-';
 const ROOT_PREFIX = '_root_';
+const BACKENDS = ALL_LOGIN_METHODS;
 
 export { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX };
 
@@ -119,12 +120,11 @@ export default Service.extend({
     }
     const backend = this.backendFromTokenName(token);
     const stored = this.getTokenData(token);
-    const methodData = findLoginMethod(backend);
     return Object.assign(stored, {
       backend: {
         // add mount path for password reset
         mountPath: stored.backend.mountPath,
-        ...methodData,
+        ...BACKENDS.find((b) => b.type === backend),
       },
     });
   }),
@@ -277,8 +277,10 @@ export default Service.extend({
       backend = options.backend;
     }
 
-    const methodData = findLoginMethod(backend);
-    const currentBackend = { mountPath, ...methodData };
+    const currentBackend = {
+      mountPath,
+      ...BACKENDS.find((b) => b.type === backend),
+    };
 
     const { entity_id, policies, renewable, namespace_path } = resp;
     const userRootNamespace = this.calculateRootNamespace(currentNamespace, namespace_path, backend);

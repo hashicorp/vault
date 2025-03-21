@@ -97,7 +97,7 @@ const ENTERPRISE_LOGIN_METHODS = [
   },
 ];
 
-const ALL_LOGIN_METHODS = [...BASE_LOGIN_METHODS, ...ENTERPRISE_LOGIN_METHODS];
+export const ALL_LOGIN_METHODS = [...BASE_LOGIN_METHODS, ...ENTERPRISE_LOGIN_METHODS];
 
 export const supportedLoginMethods = (isEnterprise: boolean) => {
   return isEnterprise ? ALL_LOGIN_METHODS : BASE_LOGIN_METHODS;
