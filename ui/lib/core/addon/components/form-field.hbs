@@ -88,7 +88,7 @@
         {{#if (eq @attr.options.editType "password")}}
           <Hds::Form::TextInput::Field
             @type="password"
-            {{! about this visibility toggle, see: https://hashicorp.atlassian.net/browse/VAULT-34870 }}
+            {{! TODO: about this visibility toggle, see: https://hashicorp.atlassian.net/browse/VAULT-34870 }}
             @hasVisibilityToggle={{false}}
             @value={{get @model this.valuePath}}
             name={{@attr.name}}
