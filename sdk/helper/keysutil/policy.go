@@ -33,6 +33,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Yawning/kyber"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
@@ -74,6 +75,8 @@ const (
 	KeyType_AES256_CMAC
 	KeyType_ML_DSA
 	KeyType_HYBRID
+	// TODO create bytesize specific types (e.g KYBER_521, KYBER_768, KYBER_1024)
+	KeyType_KYBER
 	// If adding to this list please update allTestKeyTypes in policy_test.go
 )
 
@@ -300,6 +303,8 @@ func (kt KeyType) String() string {
 		return "ml-dsa"
 	case KeyType_HYBRID:
 		return "hybrid"
+	case KeyType_KYBER:
+		return "kyber"
 	}
 
 	return "[unknown]"
@@ -329,6 +334,9 @@ type KeyEntry struct {
 
 	RSAKey       *rsa.PrivateKey `json:"rsa_key,omitempty"`
 	RSAPublicKey *rsa.PublicKey  `json:"rsa_public_key,omitempty"`
+
+	KyberKey       *kyber.PrivateKey `json:"kyber_key,omitempty"`
+	KyberPublicKey *kyber.PublicKey  `json:"kyber_public_key,omitempty"`
 
 	// The public key in an appropriate format for the type of key
 	FormattedPublicKey string `json:"public_key,omitempty"`
@@ -1137,6 +1145,13 @@ func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, factori
 		if err != nil {
 			return "", errutil.InternalError{Err: fmt.Sprintf("failed to RSA decrypt the ciphertext: %v", err)}
 		}
+	case KeyType_KYBER:
+		keyEntry, err := p.safeGetKeyEntry(ver)
+		if err != nil {
+			return "", err
+		}
+		plain = keyEntry.KyberKey.KEMDecrpyt(decoded)
+
 	case KeyType_MANAGED_KEY:
 		keyEntry, err := p.safeGetKeyEntry(ver)
 		if err != nil {
@@ -1831,6 +1846,14 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 
 		entry.RSAPublicKey = entry.RSAKey.Public().(*rsa.PublicKey)
 
+	case KeyType_KYBER:
+		pk, skA, err := kyber.Kyber1024.GenerateKeyPair(randReader)
+		if err != nil {
+			return err
+		}
+		entry.KyberKey = skA
+		entry.KyberPublicKey = pk
+
 	default:
 		if err := entRotateInMemory(p, &entry, randReader); err != nil {
 			return err
@@ -2252,6 +2275,13 @@ func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value
 		if err != nil {
 			return "", errutil.InternalError{Err: fmt.Sprintf("failed to RSA encrypt the plaintext: %v", err)}
 		}
+	case KeyType_KYBER:
+		keyEntry, err := p.safeGetKeyEntry(ver)
+		if err != nil {
+			return "", err
+		}
+		ciphertext, _, err := keyEntry.KyberPublicKey.KEMEncrypt(bytes.NewReader(plaintext))
+		return ciphertext, err
 	case KeyType_MANAGED_KEY:
 		keyEntry, err := p.safeGetKeyEntry(ver)
 		if err != nil {

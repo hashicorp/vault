@@ -466,6 +466,8 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			polReq.KeyType = keysutil.KeyType_RSA4096
 		case "ecdsa-p256", "ecdsa-p384", "ecdsa-p521":
 			return logical.ErrorResponse(fmt.Sprintf("key type %v not supported for this operation", keyType)), logical.ErrInvalidRequest
+		case "kyber":
+			polReq.KeyType = keysutil.KeyType_KYBER
 		case "managed_key":
 			polReq.KeyType = keysutil.KeyType_MANAGED_KEY
 		default:

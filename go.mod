@@ -241,6 +241,7 @@ require (
 	cloud.google.com/go/longrunning v0.6.2 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.25.0 // indirect
+	github.com/Yawning/kyber v0.0.0-20180530164001-a270899bd22c // indirect
 	github.com/apache/arrow/go/v16 v16.0.0 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
