@@ -1,0 +1,6 @@
+```release-note:improvement
+api: Remove dependency on module go-rootcerts. That module
+provided a workaround to load system root certificates on MacOS, but that
+workaround is not needed anymore since Go 1.15. Also that module is unmaintained
+and this removal reduces the dependency chain of downstream projects.
+```
