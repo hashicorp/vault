@@ -29,7 +29,7 @@ module('Acceptance | auth', function (hooks) {
   setupMirage(hooks);
 
   test('auth query params', async function (assert) {
-    const backends = BASE_LOGIN_METHODS;
+    const backends = BASE_LOGIN_METHODS.slice();
     assert.expect(backends.length + 1);
     await visit('/vault/auth');
     // TODO this functionality will change and url will no longer populate with auth type
@@ -140,7 +140,7 @@ module('Acceptance | auth', function (hooks) {
 
     // even though ALL_LOGIN_METHODS includes enterprise methods,
     // "enterprise" is added to the test title for ent only methods to skips on CE runs
-    for (const backend of ALL_LOGIN_METHODS) {
+    for (const backend of ALL_LOGIN_METHODS.slice()) {
       test(`for ${backend.type} ${
         ENT_AUTH_METHODS.includes(backend.type) ? '(enterprise)' : ''
       }`, async function (assert) {

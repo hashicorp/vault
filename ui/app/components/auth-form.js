@@ -56,7 +56,7 @@ export default Component.extend(DEFAULTS, {
   oldNamespace: null,
 
   authMethods: computed('version.isEnterprise', function () {
-    return this.version.isEnterprise ? ALL_LOGIN_METHODS : BASE_LOGIN_METHODS;
+    return this.version.isEnterprise ? ALL_LOGIN_METHODS.slice() : BASE_LOGIN_METHODS.slice();
   }),
 
   didReceiveAttrs() {

@@ -21,7 +21,7 @@ import { addToArray } from 'vault/helpers/add-to-array';
 const TOKEN_SEPARATOR = '☃';
 const TOKEN_PREFIX = 'vault-';
 const ROOT_PREFIX = '_root_';
-const BACKENDS = ALL_LOGIN_METHODS;
+const BACKENDS = ALL_LOGIN_METHODS.slice();
 
 export { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX };
 
