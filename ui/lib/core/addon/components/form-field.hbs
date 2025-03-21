@@ -54,8 +54,8 @@
           {{#if this.labelString}}
             <F.Label data-test-form-field-label>{{this.labelString}}</F.Label>
           {{/if}}
-          {{#if this.showHelpText}}
-            <F.HelperText data-test-help-text>{{@attr.options.helpText}}</F.HelperText>
+          {{#if this.helpTextString}}
+            <F.HelperText data-test-help-text>{{this.helpTextString}}</F.HelperText>
           {{/if}}
           {{#if @attr.options.subText}}
             <F.HelperText data-test-label-subtext>
@@ -104,8 +104,8 @@
               {{#if this.labelString}}
                 <F.Label data-test-form-field-label>{{this.labelString}}</F.Label>
               {{/if}}
-              {{#if this.showHelpText}}
-                <F.HelperText data-test-help-text>{{@attr.options.helpText}}</F.HelperText>
+              {{#if this.helpTextString}}
+                <F.HelperText data-test-help-text>{{this.helpTextString}}</F.HelperText>
               {{/if}}
               {{#if @attr.options.subText}}
                 <F.HelperText data-test-label-subtext>
