@@ -13,7 +13,7 @@ import apiErrorMessage from 'vault/utils/api-error-message';
 import type ApiService from 'vault/services/api';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type { TtlEvent } from 'vault/app-types';
-import { HTMLElementEvent } from 'vault/forms';
+import type { HTMLElementEvent } from 'vault/forms';
 import type { Editor } from 'codemirror';
 
 /**
