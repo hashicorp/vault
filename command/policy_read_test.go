@@ -129,3 +129,58 @@ func TestPolicyReadCommand_Run(t *testing.T) {
 		assertNoTabs(t, cmd)
 	})
 }
+
+func TestPolicyReadCommand_Format(t *testing.T) {
+	t.Parallel()
+
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	// Write a test policy with unformatted HCL
+	unformattedPolicy := `
+path "secret/*" {capabilities=["read"]}
+path "secret/foo" {
+capabilities=["read"]
+}
+`
+	if err := client.Sys().PutPolicy("test-policy", unformattedPolicy); err != nil {
+		t.Fatal(err)
+	}
+
+	// Test default behavior (formatted)
+	t.Run("formatted", func(t *testing.T) {
+		ui, cmd := testPolicyReadCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			"test-policy",
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		output := ui.OutputWriter.String()
+		if !strings.Contains(output, "capabilities = [\"read\"]") {
+			t.Errorf("expected formatted output, got: %s", output)
+		}
+	})
+
+	// Test raw output
+	t.Run("raw", func(t *testing.T) {
+		ui, cmd := testPolicyReadCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			"-raw",
+			"test-policy",
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		output := ui.OutputWriter.String()
+		if !strings.Contains(output, "capabilities=[\"read\"]") {
+			t.Errorf("expected unformatted output, got: %s", output)
+		}
+	})
+}
