@@ -15,8 +15,8 @@
           {{#if this.labelString}}
             <G.Legend data-test-form-field-label>{{this.labelString}}</G.Legend>
           {{/if}}
-          {{#if this.showHelpText}}
-            <G.HelperText data-test-help-text>{{@attr.options.helpText}}</G.HelperText>
+          {{#if this.helpTextString}}
+            <G.HelperText data-test-help-text>{{this.helpTextString}}</G.HelperText>
           {{/if}}
           {{#if @attr.options.subText}}
             <G.HelperText data-test-label-subtext>
@@ -54,8 +54,8 @@
           {{#if this.labelString}}
             <F.Label data-test-form-field-label>{{this.labelString}}</F.Label>
           {{/if}}
-          {{#if this.showHelpText}}
-            <F.HelperText data-test-help-text>{{@attr.options.helpText}}</F.HelperText>
+          {{#if this.helpTextString}}
+            <F.HelperText data-test-help-text>{{this.helpTextString}}</F.HelperText>
           {{/if}}
           {{#if @attr.options.subText}}
             <F.HelperText data-test-label-subtext>
@@ -104,8 +104,8 @@
               {{#if this.labelString}}
                 <F.Label data-test-form-field-label>{{this.labelString}}</F.Label>
               {{/if}}
-              {{#if this.showHelpText}}
-                <F.HelperText data-test-help-text>{{@attr.options.helpText}}</F.HelperText>
+              {{#if this.helpTextString}}
+                <F.HelperText data-test-help-text>{{this.helpTextString}}</F.HelperText>
               {{/if}}
               {{#if @attr.options.subText}}
                 <F.HelperText data-test-label-subtext>
@@ -135,7 +135,7 @@
       <FormFieldLabel
         for={{@attr.name}}
         @label={{this.labelString}}
-        @helpText={{(if this.showHelpText @attr.options.helpText)}}
+        @helpText={{this.helpTextString}}
         @subText={{@attr.options.subText}}
         @docLink={{@attr.options.docLink}}
       />
@@ -205,7 +205,7 @@
           @label={{this.labelString}}
           @labelClass={{if @attr.options.isSectionHeader "title is-4" "is-label"}}
           @subText={{@attr.options.subText}}
-          @helpText={{@attr.options.helpText}}
+          @helpText={{this.helpTextString}}
           @fallbackComponent={{@attr.options.fallbackComponent}}
           @selectLimit={{@attr.options.selectLimit}}
           @backend={{@model.backend}}
@@ -217,7 +217,7 @@
       <MountAccessorSelect
         @name={{@attr.name}}
         @label={{this.labelString}}
-        @helpText={{@attr.options.helpText}}
+        @helpText={{this.helpTextString}}
         @value={{get @model this.valuePath}}
         @onChange={{this.setAndBroadcast}}
       />
@@ -228,7 +228,7 @@
         @onChange={{this.setAndBroadcast}}
         @label={{this.labelString}}
         @labelClass={{if @attr.options.isSectionHeader "title is-4" "is-label"}}
-        @helpText={{@attr.options.helpText}}
+        @helpText={{this.helpTextString}}
         @subText={{@attr.options.subText}}
         @onKeyUp={{this.handleKeyUp}}
         @keyPlaceholder={{@attr.options.keyPlaceholder}}
@@ -243,7 +243,7 @@
         <TextFile
           @label={{this.labelString}}
           @subText={{@attr.options.subText}}
-          @helpText={{@attr.options.helpText}}
+          @helpText={{this.helpTextString}}
           @docLink={{@attr.options.docLink}}
           @onChange={{this.setFile}}
           @validationError={{this.validationError}}
@@ -345,7 +345,7 @@
         class={{if this.validationError "string-list-form-field-error"}}
         data-test-input={{@attr.name}}
         @label={{this.labelString}}
-        @helpText={{if this.showHelpText @attr.options.helpText}}
+        @helpText={{this.helpTextString}}
         @inputValue={{get @model this.valuePath}}
         @onChange={{this.setAndBroadcast}}
         @attrName={{@attr.name}}
@@ -383,7 +383,7 @@
               }}
               @valueUpdated={{fn this.codemirrorUpdated true}}
               @theme={{or @attr.options.theme "hashi"}}
-              @helpText={{@attr.options.helpText}}
+              @helpText={{this.helpTextString}}
               @mode={{@attr.options.mode}}
               @example={{@attr.options.example}}
             >
@@ -442,8 +442,8 @@
         />
         <label for={{@attr.name}} class="is-label" data-test-form-field-label>
           {{this.labelString}}
-          {{#if (and this.showHelpText @attr.options.helpText)}}
-            <InfoTooltip>{{@attr.options.helpText}}</InfoTooltip>
+          {{#if this.helpTextString}}
+            <InfoTooltip>{{this.helpTextString}}</InfoTooltip>
           {{/if}}
         </label>
         {{#if @attr.options.subText}}
@@ -462,7 +462,7 @@
         @title={{this.labelString}}
         @value={{if (get @model this.valuePath) (stringify (get @model this.valuePath)) this.emptyData}}
         @valueUpdated={{fn this.codemirrorUpdated false}}
-        @helpText={{@attr.options.helpText}}
+        @helpText={{this.helpTextString}}
         @example={{@attr.options.example}}
       />
     {{else if (eq @attr.options.editType "yield")}}
