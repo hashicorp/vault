@@ -105,7 +105,7 @@ export default class TotpEdit extends Component {
         // err will display via model state
         return;
       }
-      this.flashMessages.success('Successfully created key');
+      this.flashMessages.success('Successfully created key.');
     })
   );
 }
