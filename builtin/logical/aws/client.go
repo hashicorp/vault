@@ -24,6 +24,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+const fallbackEndpoint = "https://sts.amazonaws.com" // this is not regionally distributed; all requests go to us-east-1
+
 // Return a slice of *aws.Config, based on descending configuration priority. STS endpoints are the only place this is used.
 // NOTE: The caller is required to ensure that b.clientMutex is at least read locked
 func (b *backend) getRootConfigs(ctx context.Context, s logical.Storage, clientType string, logger hclog.Logger) ([]*aws.Config, error) {
@@ -117,12 +119,26 @@ func (b *backend) getRootConfigs(ctx context.Context, s logical.Storage, clientT
 		credsConfig.RoleARN = config.RoleARN
 	}
 
+	// case in which nothing was supplied
 	if len(regions) == 0 {
 		regions = append(regions, fallbackRegion)
+
+		// we also need to set the endpoint
+		if len(endpoints) == 0 {
+			endpoints = append(endpoints, matchingSTSEndpoint(fallbackRegion))
+		} else {
+			// TODO: do something else
+		}
 	}
 
+	b.Logger().Debug("client config", "regions", fmt.Sprintf("%+v", regions), "endpoints", fmt.Sprintf("%+v", endpoints))
+
+	// our input validation (on root/config write) checks to make sure there are the same number of fallback regions and
+	// fallback endpoints.
+	//
+	// It does not check to see if both sts_region and sts_endpoint are supplied, but it is specified in the docs that
+	// they 'should' be.
 	if len(regions) != len(endpoints) {
-		// this probably can't happen, if the input was checked correctly
 		return nil, errors.New("number of regions does not match number of endpoints")
 	}
 
@@ -202,11 +218,15 @@ func (b *backend) nonCachedClientSTS(ctx context.Context, s logical.Storage, log
 		if err == nil {
 			return client, nil
 		} else {
-			b.Logger().Debug("couldn't connect with config trying next", "failed endpoint", cfg.Endpoint, "failed region", cfg.Region)
+			b.Logger().Debug("couldn't connect with config trying next", "failed endpoint", *cfg.Endpoint, "failed region", *cfg.Region)
 		}
 	}
 
 	return nil, fmt.Errorf("could not obtain sts client")
+}
+
+func matchingSTSEndpoint(stsRegion string) string {
+	return fmt.Sprintf("https://sts.%s.amazonaws.com", stsRegion)
 }
 
 // PluginIdentityTokenFetcher fetches plugin identity tokens from Vault. It is provided
