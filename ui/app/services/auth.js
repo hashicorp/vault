@@ -15,7 +15,7 @@ import { resolve, reject } from 'rsvp';
 
 import getStorage from 'vault/lib/token-storage';
 import ENV from 'vault/config/environment';
-import { allSupportedAuthBackends } from 'vault/helpers/supported-auth-backends';
+import { allSupportedAuthBackends } from 'vault/utils/supported-auth-backends';
 import { addToArray } from 'vault/helpers/add-to-array';
 
 const TOKEN_SEPARATOR = '☃';

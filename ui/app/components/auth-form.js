@@ -9,7 +9,7 @@ import { match, or } from '@ember/object/computed';
 import { dasherize } from '@ember/string';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
-import { allSupportedAuthBackends, supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
+import { allSupportedAuthBackends, supportedAuthBackends } from 'vault/utils/supported-auth-backends';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { v4 as uuidv4 } from 'uuid';
