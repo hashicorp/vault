@@ -1546,8 +1546,8 @@ github.com/hashicorp/nomad/api v0.0.0-20240213164230-c364cb57298d h1:nvfutImOr3G
 github.com/hashicorp/nomad/api v0.0.0-20240213164230-c364cb57298d/go.mod h1:ijDwa6o1uG1jFSq6kERiX2PamKGpZzTmo0XOFNeFZgw=
 github.com/hashicorp/raft v1.0.1/go.mod h1:DVSAWItjLjTOkVbSpWQ0j0kUADIvDaCtBxIcbNAQLkI=
 github.com/hashicorp/raft v1.1.2-0.20191002163536-9c6bd3e3eb17/go.mod h1:vPAJM8Asw6u8LxC3eJCUZmRP/E4QmUGE1R7g7k8sG/8=
-github.com/hashicorp/raft v1.7.1 h1:ytxsNx4baHsRZrhUcbt3+79zc4ly8qm7pi0393pSchY=
-github.com/hashicorp/raft v1.7.1/go.mod h1:hUeiEwQQR/Nk2iKDD0dkEhklSsu3jcAcqvPzPoZSAEM=
+github.com/hashicorp/raft v1.7.3 h1:DxpEqZJysHN0wK+fviai5mFcSYsCkNpFUl1xpAW8Rbo=
+github.com/hashicorp/raft v1.7.3/go.mod h1:DfvCGFxpAUPE0L4Uc8JLlTPtc3GzSbdH0MTJCLgnmJQ=
 github.com/hashicorp/raft-autopilot v0.3.0 h1:KhXCecBFqAMpC0i77qVfuYd937cl2dNatSA/sSNs+2s=
 github.com/hashicorp/raft-autopilot v0.3.0/go.mod h1:pUBzcE8bXIm/NcFZ/xKz7O3aNOU/4T4Zkv11YqdxpUc=
 github.com/hashicorp/raft-boltdb v0.0.0-20171010151810-6e5ba93211ea/go.mod h1:pNv7Wc3ycL6F5oOWn+tPGo2gWD4a5X+yp/ntwdKLjRk=
