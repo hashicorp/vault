@@ -9,7 +9,7 @@
  * which lists all the methods that can be mounted.
  */
 
-const SUPPORTED_AUTH_BACKENDS = [
+export const SUPPORTED_AUTH_BACKENDS = [
   {
     type: 'token',
     typeDisplay: 'Token',
@@ -87,10 +87,8 @@ const ENTERPRISE_AUTH_METHODS = [
   },
 ];
 
+export const ALL_SUPPORTED_AUTH_BACKENDS = [...SUPPORTED_AUTH_BACKENDS, ...ENTERPRISE_AUTH_METHODS];
+
 export function supportedAuthBackends() {
   return [...SUPPORTED_AUTH_BACKENDS];
-}
-
-export function allSupportedAuthBackends() {
-  return [...SUPPORTED_AUTH_BACKENDS, ...ENTERPRISE_AUTH_METHODS];
 }

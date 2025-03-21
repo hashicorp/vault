@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, currentURL, visit, waitUntil, find, fillIn } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { allSupportedAuthBackends, supportedAuthBackends } from 'vault/utils/supported-auth-backends';
+import { ALL_SUPPORTED_AUTH_BACKENDS, supportedAuthBackends } from 'vault/utils/supported-auth-backends';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 import {
   createNS,
@@ -137,7 +137,7 @@ module('Acceptance | auth', function (hooks) {
       };
     });
 
-    for (const backend of allSupportedAuthBackends().reverse()) {
+    for (const backend of ALL_SUPPORTED_AUTH_BACKENDS.reverse()) {
       test(`for ${backend.type} ${
         ENT_AUTH_METHODS.includes(backend.type) ? '(enterprise)' : ''
       }`, async function (assert) {
