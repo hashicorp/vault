@@ -130,7 +130,7 @@ export default class FormFieldComponent extends Component {
     return this.args.disabled || false;
   }
 
-  get hasHelpText() {
+  get helpTextString() {
     const helpText = this.args.attr?.options?.helpText;
     if (this.args.showHelpText === false || !helpText) return '';
     return helpText;
