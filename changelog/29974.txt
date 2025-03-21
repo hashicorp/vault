@@ -1,0 +1,3 @@
+```release-note:change
+server: disable_mlock configuration option is now required and no longer has a default. If you are using the default value, you must now explicitly set disable_mlock to true or false.
+```

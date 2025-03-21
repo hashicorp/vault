@@ -446,8 +446,26 @@ func (c *ServerCommand) parseConfig() (*server.Config, []configutil.ConfigError,
 		c.UI.Warn("WARNING: Entropy Augmentation is not supported in FIPS 140-2 Inside mode; disabling from server configuration!\n")
 		config.Entropy = nil
 	}
-
 	entCheckRequestLimiter(c, config)
+
+	// ensure that the DisableMlock key is explicitly set
+	if config != nil && config.SharedConfig != nil &&
+		// DisableMlock key has been found and thus explicitly set
+		!(strutil.StrListContainsCaseInsensitive(config.SharedConfig.FoundKeys, "DisableMlock") ||
+			// mlock is disabled and hence has been explicitly set
+			config.SharedConfig.DisableMlock) {
+
+		c.UI.Error(wrapAtLength(
+			"ERROR: disable_mlock must be configured 'true' or 'false': Mlock " +
+				"prevents memory from being swapped to disk for security reasons, " +
+				"but can cause Vault on Integrated Storage to run out of memory " +
+				"if the machine was not provisioned with enough RAM. Disabling " +
+				"mlock can prevent this issue, but can result in the reveal of " +
+				"plaintext secrets when memory is swapped to disk, so it is only " +
+				"recommended on systems with encrypted swap.",
+		))
+		return nil, configErrors, fmt.Errorf("disable_mlock must be configured")
+	}
 
 	return config, configErrors, nil
 }
