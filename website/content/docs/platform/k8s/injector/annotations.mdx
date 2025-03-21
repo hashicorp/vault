@@ -273,14 +273,14 @@ etc.
   This annotation can be reused multiple times to configure multiple settings for the authentication
   method. Some authentication methods may require additional secrets and should be mounted via the
   `vault.hashicorp.com/agent-extra-secret` annotation. For a list of valid authentication configurations,
-  see the Vault Agent [auto-auth documentation](/vault/docs/agent-and-proxy/autoauth/methods).
+  see the Vault Agent [auto-auth documentation](/vault/docs/agent-and-proxy/autoauth).
 
 - `vault.hashicorp.com/auth-path` - configures the authentication path for the Kubernetes
   auth method. Defaults to `auth/kubernetes`.
 
 - `vault.hashicorp.com/auth-type` - configures the authentication type for Vault Agent.
   Defaults to `kubernetes`. For a list of valid authentication methods, see the Vault Agent
-  [auto-auth documentation](/vault/docs/agent-and-proxy/autoauth/methods).
+  [auto-auth documentation](/vault/docs/agent-and-proxy/autoauth).
 
 - `vault.hashicorp.com/auth-min-backoff` - set the [min_backoff](/vault/docs/agent-and-proxy/autoauth#min_backoff) option in the auto-auth config. Requires Vault 1.11+.
 
