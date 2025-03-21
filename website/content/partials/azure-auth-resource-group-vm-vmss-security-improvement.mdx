@@ -1,0 +1,33 @@
+On versions of Vault prior to 1.19.2, 1.18.8, 1.17.15, and 1.16.19, when login was attempted with Azure auth,
+`resource_group_name`, `vm_name`, and `vmss_name` parameters were not strictly validated against the token claims.
+These parameters are now validated against the token claims.
+The token claims are required to have "xms_mirid" or/and "xms_az_rid" claims depending on the
+identities that are attached to the standalone or Virtual Machine Scale Set stemmed virtual machine
+which generates the MSI token.
+
+If system assigned managed identity is enabled and no identity is specified in the Instance
+Metadata Service request, "xms_mirid" claim will be in the format of
+"/subscriptions/{subscription-id}/resourcegroups/{resource-group-name}/providers/Microsoft.Compute/virtualMachines/{virtual-machine-name}"
+, and "xms_az_rid" claim doesn't exist.
+
+If system assigned managed identity is not enabled, and only one user-assigned identity exists,
+"xms_mirid" claim will be in the format of
+/subscriptions/{subscription-id}/resourcegroups/{resource-group-name}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/{user-assigned-managed-identity}
+"xms_az_rid" claim will be in the format of
+"/subscriptions/{subscription-id}/resourcegroups/{resource-group-name}/providers/Microsoft.Compute/virtualMachines/{virtual-machine-name}"
+
+If system assigned managed identity is not enabled, and multiple user-assigned identities exist,
+users are required to specify a managed identity in the Instance Metadata Service request.
+See [Azure managed identity REST endpoint reference](https://learn.microsoft.com/en-us/azure/app-service/overview-managed-identity?tabs=portal%2Chttp#rest-endpoint-reference)
+for more details on how to specify the identity in the request.
+In this case, "xms_mirid" claim will be in the format of
+/subscriptions/{subscription-id}/resourcegroups/{resource-group-name}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/{user-assigned-managed-identity},
+"xms_az_rid" claim will be in the format of
+"/subscriptions/{subscription-id}/resourcegroups/{resource-group-name}/providers/Microsoft.Compute/virtualMachines/{virtual-machine-name}".
+
+See [Managed identities for Azure resources frequently asked questions](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/managed-identities-faq#what-identity-will-imds-default-to-if-i-dont-specify-the-identity-in-the-request)
+for more details on what identity Azure Instance Metadata Service defaults to if no identity is specified in the request.
+
+{resource-group-name} in those claims must match `resource_group_name`. If `vm_name` is provided, {virtual-machine-name}
+must match. If `vmss_name` is provided, {virtual-machine-name} must be in the format of {vmss-name}_{instance-id}.
+If any requirement is not met, the login will fail.
