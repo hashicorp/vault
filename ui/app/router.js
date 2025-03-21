@@ -36,6 +36,7 @@ Router.map(function () {
         this.route('config');
         this.route('edit');
       });
+      this.route('vault-usage');
       this.route('storage', { path: '/storage/raft' });
       this.route('storage-restore', { path: '/storage/raft/restore' });
       this.route('settings', function () {
