@@ -190,7 +190,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
 
       await this.renderComponent();
 
-      assert.dom(DASHBOARD.cardName('client-count')).exists();
+      assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
     });
 
     test('it should hide client count on enterprise in any other namespace when running a managed mode', async function (assert) {
