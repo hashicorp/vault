@@ -22,7 +22,6 @@ module('Integration | Component | auth | page ', function (hooks) {
   hooks.beforeEach(function () {
     this.router = this.owner.lookup('service:router');
     this.auth = this.owner.lookup('service:auth');
-    this.version = this.owner.lookup('service:version');
     this.cluster = { id: '1' };
     this.selectedAuth = 'token';
     this.onSuccess = sinon.spy();

@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click } from '@ember/test-helpers';
+import { render, click, findAll } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
@@ -43,6 +43,16 @@ module('Integration | Component | sidebar-user-menu', function (hooks) {
     await click('[data-test-user-menu-trigger]');
 
     assert.dom('.menu-label').hasText('Token', 'Auth data display name renders');
+    const menuItems = findAll('[data-test-user-menu-content] li');
+    menuItems.forEach((item, idx) => {
+      if (idx === 0) {
+        assert.dom(item).hasText('Copy token');
+      } else if (idx === 1) {
+        assert.dom(item).hasText('Log out');
+      } else {
+        assert.dom(item).hasText('', 'nothing should render here');
+      }
+    });
     assert.dom('li').exists({ count: 2 }, 'Correct number of menu items render');
     assert.dom('[data-test-copy-button="root"]').exists('Copy token action renders');
     assert.dom('#logout').hasText('Log out', 'Log out action renders');
