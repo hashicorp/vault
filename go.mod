@@ -73,7 +73,7 @@ require (
 	github.com/go-test/deep v1.1.1
 	github.com/go-zookeeper/zk v1.0.3
 	github.com/gocql/gocql v1.0.0
-	github.com/golang-jwt/jwt/v4 v4.5.1
+	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/golang/protobuf v1.5.4
 	github.com/google/certificate-transparency-go v1.3.1
 	github.com/google/go-cmp v0.7.0
