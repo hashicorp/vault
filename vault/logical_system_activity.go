@@ -258,11 +258,12 @@ func queryContainsEstimates(startTime time.Time, endTime time.Time) bool {
 	return false
 }
 
-// alignToBillingPeriod identifies the start of a billing period to which the given time
-// belongs based on the start of the current billing period
-func alignToBillingPeriod(billingStartTime, givenTime time.Time) time.Time {
+// alignToBillingPeriodStart finds the start of the billing period that contains the given time.
+// It assumes a yearly billing cycle starting at billingStartTime and moves backward in one-year
+// increments if givenTime is before the current period's start.
+func alignToBillingPeriodStart(billingStartTime, givenTime time.Time) time.Time {
 	periodStart := billingStartTime
-	// keep moving 1 year (billing cycle duration) back if the given time
+	// keep moving 1 year back if the given time
 	// is before the start of the current billing cycle
 	for givenTime.Before(periodStart) {
 		periodStart = periodStart.AddDate(-1, 0, 0)
@@ -286,7 +287,7 @@ func getBillingPeriodTimes(d *framework.FieldData, billingStartTime time.Time) (
 		alignedEndTime = time.Now().UTC()
 	} else if !startTime.IsZero() {
 		// if the start time is specified, align it to the beginning of a billing period
-		alignedStartTime = alignToBillingPeriod(billingStartTime, startTime)
+		alignedStartTime = alignToBillingPeriodStart(billingStartTime, startTime)
 		alignedEndTime = alignedStartTime.AddDate(1, 0, 0).UTC()
 
 		// If the next billing period is after today, set end time to today
@@ -295,7 +296,7 @@ func getBillingPeriodTimes(d *framework.FieldData, billingStartTime time.Time) (
 		}
 	} else {
 		// If only endTime is provided, determine the corresponding billing period based on the end time
-		alignedStartTime = alignToBillingPeriod(billingStartTime, endTime)
+		alignedStartTime = alignToBillingPeriodStart(billingStartTime, endTime)
 		alignedEndTime = alignedStartTime.AddDate(1, 0, 0).UTC()
 
 		// If the end time is in the current period, cap it at today
