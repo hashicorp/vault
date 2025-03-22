@@ -29,6 +29,8 @@ const (
 
 	// WarningCurrentMonthIsAnEstimate is a warning string that is used to let the customer know that for this query, the current month's data is estimated.
 	WarningCurrentMonthIsAnEstimate = "Since this usage period includes both the current month and at least one historical month, counts returned in this usage period are an estimate. Client counts for this period will no longer be estimated at the start of the next month."
+
+	WarningProvidedStartAndEndTimesIgnored = "start_time and end_time parameters can only be used to specify the beginning or end of the same billing period. The values provided for these parameters are not supported and are ignored. Showing the data for the entire billing period corresponding to start_time. If start_time is not provided, the billing period is determined based on the end_time"
 )
 
 // activityQueryPath is available in every namespace
@@ -256,6 +258,66 @@ func queryContainsEstimates(startTime time.Time, endTime time.Time) bool {
 	return false
 }
 
+// alignToBillingPeriodStart finds the start of the billing period that contains the given time.
+// It assumes a yearly billing cycle starting at billingStartTime and moves backward in one-year
+// increments if givenTime is before the current period's start.
+func alignToBillingPeriodStart(billingStartTime, givenTime time.Time) time.Time {
+	periodStart := billingStartTime
+	// keep moving 1 year back if the given time
+	// is before the start of the current billing cycle
+	for givenTime.Before(periodStart) {
+		periodStart = periodStart.AddDate(-1, 0, 0)
+	}
+	return periodStart.UTC()
+}
+
+// getBillingPeriodTime aligns the provided startTime and endTime with the billing period.
+// It ensures that only full billing periods are considered.
+func getBillingPeriodTimes(d *framework.FieldData, billingStartTime time.Time) (time.Time, time.Time, bool, error) {
+	// first get the start and end times from user if supplied
+	startTime := d.Get("start_time").(time.Time)
+	endTime := d.Get("end_time").(time.Time)
+
+	var alignedStartTime, alignedEndTime time.Time
+	var timesAligned bool
+
+	if startTime.IsZero() && endTime.IsZero() {
+		// if both start time and end time are not specified, return current billing period
+		alignedStartTime = billingStartTime.UTC()
+		alignedEndTime = time.Now().UTC()
+	} else if !startTime.IsZero() {
+		// if the start time is specified, align it to the beginning of a billing period
+		alignedStartTime = alignToBillingPeriodStart(billingStartTime, startTime)
+		alignedEndTime = alignedStartTime.AddDate(1, 0, 0).UTC()
+
+		// If the next billing period is after today, set end time to today
+		if alignedEndTime.After(time.Now().UTC()) {
+			alignedEndTime = time.Now().UTC()
+		}
+	} else {
+		// If only endTime is provided, determine the corresponding billing period based on the end time
+		alignedStartTime = alignToBillingPeriodStart(billingStartTime, endTime)
+		alignedEndTime = alignedStartTime.AddDate(1, 0, 0).UTC()
+
+		// If the end time is in the current period, cap it at today
+		if alignedEndTime.After(time.Now().UTC()) {
+			alignedEndTime = time.Now().UTC()
+		}
+	}
+
+	// ensure the end time is always later than the start time
+	if alignedStartTime.After(alignedEndTime) {
+		return time.Time{}, time.Time{}, false, fmt.Errorf("start_time is later than end_time")
+	}
+
+	// Determine if any alignment occurred
+	if (!startTime.IsZero() && startTime != alignedStartTime) || (!endTime.IsZero() && endTime != alignedEndTime) {
+		timesAligned = true
+	}
+
+	return alignedStartTime, alignedEndTime, timesAligned, nil
+}
+
 func parseStartEndTimes(d *framework.FieldData, billingStartTime time.Time) (time.Time, time.Time, error) {
 	startTime := d.Get("start_time").(time.Time)
 	endTime := d.Get("end_time").(time.Time)
@@ -333,6 +395,7 @@ func (b *SystemBackend) handleClientExport(ctx context.Context, req *logical.Req
 
 func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	var startTime, endTime time.Time
+	var timesAligned bool
 	b.Core.activityLogLock.RLock()
 	a := b.Core.activityLog
 	b.Core.activityLogLock.RUnlock()
@@ -347,7 +410,7 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 	}
 
 	var err error
-	startTime, endTime, err = parseStartEndTimes(d, b.Core.BillingStart())
+	startTime, endTime, timesAligned, err = getBillingPeriodTimes(d, b.Core.BillingStart())
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -370,6 +433,9 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 
 	if queryContainsEstimates(startTime, endTime) {
 		warnings = append(warnings, WarningCurrentMonthIsAnEstimate)
+	}
+	if timesAligned {
+		warnings = append(warnings, WarningProvidedStartAndEndTimesIgnored)
 	}
 
 	return &logical.Response{
