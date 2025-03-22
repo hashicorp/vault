@@ -7,12 +7,9 @@ import Service, { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { keepLatestTask } from 'ember-concurrency';
 import { DEBUG } from '@glimmer/env';
-import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 import type Store from '@ember-data/store';
 import type VersionService from 'vault/services/version';
-import type PermissionsService from 'vault/services/permissions';
-import type CapabilitiesModel from 'vault/models/capabilities';
 
 const FLAGS = {
   vaultCloudNamespace: 'VAULT_CLOUD_ADMIN_NAMESPACE',
@@ -24,10 +21,9 @@ const FLAGS = {
  * The activation-flags endpoint returns which features are enabled.
  */
 
-export default class flagsService extends Service {
+export default class FlagsService extends Service {
   @service declare readonly version: VersionService;
   @service declare readonly store: Store;
-  @service declare readonly permissions: PermissionsService;
 
   @tracked activatedFlags: string[] = [];
   @tracked featureFlags: string[] = [];
@@ -36,6 +32,7 @@ export default class flagsService extends Service {
     return this.featureFlags?.includes(FLAGS.vaultCloudNamespace);
   }
 
+  // for non-managed clusters the root namespace path is technically an empty string so we return null
   get hvdManagedNamespaceRoot(): string | null {
     return this.isHvdManaged ? 'admin' : null;
   }
@@ -80,32 +77,5 @@ export default class flagsService extends Service {
 
   fetchActivatedFlags() {
     return this.getActivatedFlags.perform();
-  }
-
-  @lazyCapabilities(apiPath`sys/activation-flags/secrets-sync/activate`)
-  declare secretsSyncActivatePath: CapabilitiesModel;
-
-  get canActivateSecretsSync() {
-    return (
-      this.secretsSyncActivatePath.get('canCreate') !== false ||
-      this.secretsSyncActivatePath.get('canUpdate') !== false
-    );
-  }
-
-  get showSecretsSync() {
-    const isHvdManaged = this.isHvdManaged;
-    const onLicense = this.version.hasSecretsSync;
-    const isEnterprise = this.version.isEnterprise;
-    const isActivated = this.secretsSyncIsActivated;
-
-    if (!isEnterprise) return false;
-    if (isHvdManaged) return true;
-    if (isEnterprise && !onLicense) return false;
-    if (isActivated) {
-      // if the feature is activated but the user does not have permissions on the `sys/sync` endpoint, hide navigation link.
-      return this.permissions.hasNavPermission('sync');
-    }
-    // only remaining option is Enterprise with Secrets Sync on the license but the feature is not activated. In this case, we want to show the upsell page and message about either activating or having an admin activate.
-    return true;
   }
 }

@@ -6,11 +6,13 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { hash } from 'rsvp';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 import type FlagsService from 'vault/services/flags';
 import type RouterService from '@ember/routing/router-service';
 import type Store from '@ember-data/store';
 import type VersionService from 'vault/services/version';
+import type CapabilitiesModel from 'vault/models/capabilities';
 
 export default class SyncSecretsOverviewRoute extends Route {
   @service('app-router') declare readonly router: RouterService;
@@ -18,15 +20,16 @@ export default class SyncSecretsOverviewRoute extends Route {
   @service declare readonly flags: FlagsService;
   @service declare readonly version: VersionService;
 
+  @lazyCapabilities(apiPath`sys/activation-flags/secrets-sync/activate`)
+  declare secretsSyncActivatePath: CapabilitiesModel;
+
   async model() {
     const isActivated = this.flags.secretsSyncIsActivated;
-    const licenseHasSecretsSync = this.version.hasSecretsSync;
-    const isHvdManaged = this.flags.isHvdManaged;
 
     return hash({
-      licenseHasSecretsSync,
-      isActivated,
-      isHvdManaged,
+      canActivateSecretsSync:
+        this.secretsSyncActivatePath.get('canCreate') !== false ||
+        this.secretsSyncActivatePath.get('canUpdate') !== false,
       destinations: isActivated ? this.store.query('sync/destination', {}).catch(() => []) : [],
       associations: isActivated
         ? this.store
@@ -38,7 +41,7 @@ export default class SyncSecretsOverviewRoute extends Route {
   }
 
   redirect() {
-    if (!this.flags.showSecretsSync) {
+    if (!this.version.hasSecretsSync) {
       this.router.replaceWith('vault.cluster.dashboard');
     }
   }

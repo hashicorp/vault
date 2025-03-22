@@ -13,7 +13,7 @@
     @text="Secrets Engines"
     data-test-sidebar-nav-link="Secrets Engines"
   />
-  {{#if this.flags.showSecretsSync}}
+  {{#if (and (has-permission "sync") this.version.hasSecretsSync)}}
     <Nav.Link
       @route="vault.cluster.sync"
       @text="Secrets Sync"
