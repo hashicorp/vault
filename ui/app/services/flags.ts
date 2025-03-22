@@ -10,7 +10,7 @@ import { DEBUG } from '@glimmer/env';
 
 import type Store from '@ember-data/store';
 import type VersionService from 'vault/services/version';
-import type PermissionsService from 'vault/services/permissions';
+
 const FLAGS = {
   vaultCloudNamespace: 'VAULT_CLOUD_ADMIN_NAMESPACE',
 };
@@ -24,7 +24,6 @@ const FLAGS = {
 export default class FlagsService extends Service {
   @service declare readonly version: VersionService;
   @service declare readonly store: Store;
-  @service declare readonly permissions: PermissionsService;
 
   @tracked activatedFlags: string[] = [];
   @tracked featureFlags: string[] = [];
