@@ -97,6 +97,7 @@ func (b *backend) getRootConfigs(ctx context.Context, s logical.Storage, clientT
 		}
 	}
 
+	opts := make([]awsutil.Option, 0)
 	if config.IdentityTokenAudience != "" {
 		ns, err := namespace.FromContext(ctx)
 		if err != nil {
@@ -115,6 +116,10 @@ func (b *backend) getRootConfigs(ctx context.Context, s logical.Storage, clientT
 		credsConfig.RoleSessionName = fmt.Sprintf("vault-aws-secrets-%s", sessionSuffix)
 		credsConfig.WebIdentityTokenFetcher = fetcher
 		credsConfig.RoleARN = config.RoleARN
+
+		// explicitly disable environment and shared credential providers when using Web Identity Token Fetcher
+		// enables WIF usage in environments that may use AWS Profiles or environment variables for other use-cases
+		opts = append(opts, awsutil.WithEnvironmentCredentials(false), awsutil.WithSharedCredentials(false))
 	}
 
 	if len(regions) == 0 {
@@ -132,7 +137,7 @@ func (b *backend) getRootConfigs(ctx context.Context, s logical.Storage, clientT
 		} else {
 			credsConfig.Region = fallbackRegion
 		}
-		creds, err := credsConfig.GenerateCredentialChain()
+		creds, err := credsConfig.GenerateCredentialChain(opts...)
 		if err != nil {
 			return nil, err
 		}
