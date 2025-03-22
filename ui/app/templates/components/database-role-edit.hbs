@@ -86,7 +86,7 @@
           @value={{format-duration (get @model attr.name)}}
           @isLink={{eq attr.name "database"}}
         />
-      {{else}}
+      {{else if (not (eq attr.name "password"))}}
         <InfoTableRow
           @alwaysRender={{true}}
           @defaultShown={{defaultDisplay}}

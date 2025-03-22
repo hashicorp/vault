@@ -7,6 +7,8 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { getRoleFields } from 'vault/utils/model-helpers/database-helpers';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { withModelValidations } from 'vault/decorators/model-validations';
+import { service } from '@ember/service';
+
 const validations = {
   name: [{ type: 'presence', message: 'Role name is required.' }],
   database: [{ type: 'presence', message: 'Database is required.' }],
@@ -21,12 +23,31 @@ const validations = {
       message: 'Username is required.',
     },
   ],
+  password: [
+    {
+      validator(model) {
+        const { type, skip_import_rotation, password } = model;
+        if (!type || type === 'dynamic') return true;
+        if (!skip_import_rotation) {
+          // password is required if using skip_import_rotation
+          if (password === undefined || password.trim().length === 0) return true;
+        }
+        if (skip_import_rotation && password) return true;
+      },
+      message: 'Password is required.',
+    },
+  ],
 };
 @withModelValidations(validations)
 export default class RoleModel extends Model {
+  @service version;
+
   idPrefix = 'role/';
+
   @attr('string', { readOnly: true }) backend;
+
   @attr('string', { label: 'Role name' }) name;
+
   @attr('array', {
     label: 'Connection name',
     editType: 'searchSelect',
@@ -37,12 +58,14 @@ export default class RoleModel extends Model {
     subText: 'The database connection for which credentials will be generated.',
   })
   database;
+
   @attr('string', {
     label: 'Type of role',
     noDefault: true,
     possibleValues: ['static', 'dynamic'],
   })
   type;
+
   @attr({
     editType: 'ttl',
     defaultValue: '1h',
@@ -51,6 +74,7 @@ export default class RoleModel extends Model {
     defaultShown: 'Engine default',
   })
   default_ttl;
+
   @attr({
     editType: 'ttl',
     defaultValue: '24h',
@@ -59,7 +83,9 @@ export default class RoleModel extends Model {
     defaultShown: 'Engine default',
   })
   max_ttl;
+
   @attr('string', { subText: 'The database username that this Vault role corresponds to.' }) username;
+
   @attr({
     editType: 'ttl',
     defaultValue: '24h',
@@ -68,6 +94,58 @@ export default class RoleModel extends Model {
     helperTextEnabled: 'Vault will rotate password after.',
   })
   rotation_period;
+
+  @attr('array', {
+    editType: 'stringArray',
+  })
+  creation_statements;
+
+  @attr('array', {
+    editType: 'stringArray',
+    defaultShown: 'Default',
+  })
+  revocation_statements;
+
+  @attr('array', {
+    editType: 'stringArray',
+    defaultShown: 'Default',
+  })
+  rotation_statements;
+
+  @attr('array', {
+    editType: 'stringArray',
+    defaultShown: 'Default',
+  })
+  rollback_statements;
+
+  @attr('array', {
+    editType: 'stringArray',
+    defaultShown: 'Default',
+  })
+  renew_statements;
+
+  @attr('string', {
+    editType: 'json',
+    allowReset: true,
+    theme: 'hashi short',
+    defaultShown: 'Default',
+  })
+  creation_statement;
+
+  @attr('string', {
+    editType: 'json',
+    allowReset: true,
+    theme: 'hashi short',
+    defaultShown: 'Default',
+  })
+  revocation_statement;
+
+  // ENTERPRISE ONLY
+  @attr('string', {
+    subText: 'The database password that this Vault role corresponds to.',
+  })
+  password;
+
   @attr({
     label: 'Skip initial rotation',
     editType: 'toggleButton',
@@ -76,44 +154,7 @@ export default class RoleModel extends Model {
     helperTextEnabled: "Vault will not rotate this role's password on creation.",
   })
   skip_import_rotation;
-  @attr('array', {
-    editType: 'stringArray',
-  })
-  creation_statements;
-  @attr('array', {
-    editType: 'stringArray',
-    defaultShown: 'Default',
-  })
-  revocation_statements;
-  @attr('array', {
-    editType: 'stringArray',
-    defaultShown: 'Default',
-  })
-  rotation_statements;
-  @attr('array', {
-    editType: 'stringArray',
-    defaultShown: 'Default',
-  })
-  rollback_statements;
-  @attr('array', {
-    editType: 'stringArray',
-    defaultShown: 'Default',
-  })
-  renew_statements;
-  @attr('string', {
-    editType: 'json',
-    allowReset: true,
-    theme: 'hashi short',
-    defaultShown: 'Default',
-  })
-  creation_statement;
-  @attr('string', {
-    editType: 'json',
-    allowReset: true,
-    theme: 'hashi short',
-    defaultShown: 'Default',
-  })
-  revocation_statement;
+
   /* FIELD ATTRIBUTES */
   get fieldAttrs() {
     // Main fields on edit/create form
@@ -131,10 +172,11 @@ export default class RoleModel extends Model {
   }
   get roleSettingAttrs() {
     // logic for which get displayed is on DatabaseRoleSettingForm
-    const allRoleSettingFields = [
+    let allRoleSettingFields = [
       'default_ttl',
       'max_ttl',
       'username',
+      'password',
       'rotation_period',
       'skip_import_rotation',
       'creation_statements',
@@ -145,8 +187,17 @@ export default class RoleModel extends Model {
       'rollback_statements',
       'renew_statements',
     ];
+
+    // remove enterprise-only attrs if on community
+    if (!this.version.isEnterprise) {
+      allRoleSettingFields = allRoleSettingFields.filter(
+        (role) => !['skip_import_rotation', 'password'].includes(role)
+      );
+    }
+
     return expandAttributeMeta(this, allRoleSettingFields);
   }
+
   /* CAPABILITIES */
   // only used for secretPath
   @attr('string', { readOnly: true }) path;
