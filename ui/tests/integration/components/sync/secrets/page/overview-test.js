@@ -123,7 +123,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
     this.server.post(
       '/sys/activation-flags/secrets-sync/activate',
-      () => new Response(500, {}, { errors: ['Something bad happened'] })
+      () => new Response(403, {}, { errors: ['Something bad happened'] })
     );
 
     await click(overview.optInBanner.enable);
