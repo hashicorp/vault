@@ -1,0 +1,3 @@
+```release-note:improvement
+ui/database: Adding 'password' input field for static role creation, adding warning modals when rotating a static role immediately 
+```
