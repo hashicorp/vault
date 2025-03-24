@@ -6,14 +6,17 @@
 {{! template-lint-configure simple-unless "warn" }}
 <div class="field" data-test-field={{or @attr.name true}}>
   {{#if this.isHdsFormField}}
+    {{! •••••••••••••••••••••••••••••••••••••••••••••••••••••••• }}
+    {{!                  HDS COMPONENTS - START                  }}
+    {{! •••••••••••••••••••••••••••••••••••••••••••••••••••••••• }}
     {{#if @attr.options.possibleValues}}
       {{#if (eq @attr.options.editType "checkboxList")}}
         <Hds::Form::Checkbox::Group @name={{@attr.name}} data-test-input={{@attr.name}} as |G|>
           {{#if this.labelString}}
             <G.Legend data-test-form-field-label>{{this.labelString}}</G.Legend>
           {{/if}}
-          {{#if this.showHelpText}}
-            <G.HelperText data-test-help-text>{{@attr.options.helpText}}</G.HelperText>
+          {{#if this.helpTextString}}
+            <G.HelperText data-test-help-text>{{this.helpTextString}}</G.HelperText>
           {{/if}}
           {{#if @attr.options.subText}}
             <G.HelperText data-test-label-subtext>
@@ -51,8 +54,8 @@
           {{#if this.labelString}}
             <F.Label data-test-form-field-label>{{this.labelString}}</F.Label>
           {{/if}}
-          {{#if this.showHelpText}}
-            <F.HelperText data-test-help-text>{{@attr.options.helpText}}</F.HelperText>
+          {{#if this.helpTextString}}
+            <F.HelperText data-test-help-text>{{this.helpTextString}}</F.HelperText>
           {{/if}}
           {{#if @attr.options.subText}}
             <F.HelperText data-test-label-subtext>
@@ -80,13 +83,59 @@
           {{/if}}
         </Hds::Form::Select::Field>
       {{/if}}
+    {{else}}
+      {{#if (or (eq @attr.type "number") (eq @attr.type "string"))}}
+        {{#if (eq @attr.options.editType "password")}}
+          <Hds::Form::TextInput::Field
+            @type="password"
+            {{! TODO: about this visibility toggle, see: https://hashicorp.atlassian.net/browse/VAULT-34870 }}
+            @hasVisibilityToggle={{false}}
+            @value={{get @model this.valuePath}}
+            name={{@attr.name}}
+            @isInvalid={{this.validationError}}
+            {{! Prevents browsers from auto-filling }}
+            autocomplete="new-password"
+            spellcheck="false"
+            {{on "input" this.onChangeWithEvent}}
+            data-test-input={{@attr.name}}
+            as |F|
+          >
+            {{#unless this.hideLabel}}
+              {{#if this.labelString}}
+                <F.Label data-test-form-field-label>{{this.labelString}}</F.Label>
+              {{/if}}
+              {{#if this.helpTextString}}
+                <F.HelperText data-test-help-text>{{this.helpTextString}}</F.HelperText>
+              {{/if}}
+              {{#if @attr.options.subText}}
+                <F.HelperText data-test-label-subtext>
+                  {{@attr.options.subText}}
+                  {{#if @attr.options.docLink}}
+                    <DocLink @path={{@attr.options.docLink}}>See our documentation</DocLink>
+                    for help.
+                  {{/if}}
+                </F.HelperText>
+              {{/if}}
+            {{/unless}}
+            {{#if this.validationError}}
+              <F.Error data-test-field-validation={{this.valuePath}}>{{this.validationError}}</F.Error>
+            {{/if}}
+          </Hds::Form::TextInput::Field>
+        {{/if}}
+      {{/if}}
     {{/if}}
+    {{! •••••••••••••••••••••••••••••••••••••••••••••••••••••••• }}
+    {{!                  HDS COMPONENTS - END                  }}
+    {{! •••••••••••••••••••••••••••••••••••••••••••••••••••••••• }}
   {{else}}
+    {{! ≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠ }}
+    {{!                NON-HDS COMPONENTS - START                }}
+    {{! ≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠ }}
     {{#unless this.hideLabel}}
       <FormFieldLabel
         for={{@attr.name}}
         @label={{this.labelString}}
-        @helpText={{(if this.showHelpText @attr.options.helpText)}}
+        @helpText={{this.helpTextString}}
         @subText={{@attr.options.subText}}
         @docLink={{@attr.options.docLink}}
       />
@@ -156,7 +205,7 @@
           @label={{this.labelString}}
           @labelClass={{if @attr.options.isSectionHeader "title is-4" "is-label"}}
           @subText={{@attr.options.subText}}
-          @helpText={{@attr.options.helpText}}
+          @helpText={{this.helpTextString}}
           @fallbackComponent={{@attr.options.fallbackComponent}}
           @selectLimit={{@attr.options.selectLimit}}
           @backend={{@model.backend}}
@@ -168,7 +217,7 @@
       <MountAccessorSelect
         @name={{@attr.name}}
         @label={{this.labelString}}
-        @helpText={{@attr.options.helpText}}
+        @helpText={{this.helpTextString}}
         @value={{get @model this.valuePath}}
         @onChange={{this.setAndBroadcast}}
       />
@@ -179,7 +228,7 @@
         @onChange={{this.setAndBroadcast}}
         @label={{this.labelString}}
         @labelClass={{if @attr.options.isSectionHeader "title is-4" "is-label"}}
-        @helpText={{@attr.options.helpText}}
+        @helpText={{this.helpTextString}}
         @subText={{@attr.options.subText}}
         @onKeyUp={{this.handleKeyUp}}
         @keyPlaceholder={{@attr.options.keyPlaceholder}}
@@ -194,7 +243,7 @@
         <TextFile
           @label={{this.labelString}}
           @subText={{@attr.options.subText}}
-          @helpText={{@attr.options.helpText}}
+          @helpText={{this.helpTextString}}
           @docLink={{@attr.options.docLink}}
           @onChange={{this.setFile}}
           @validationError={{this.validationError}}
@@ -296,7 +345,7 @@
         class={{if this.validationError "string-list-form-field-error"}}
         data-test-input={{@attr.name}}
         @label={{this.labelString}}
-        @helpText={{if this.showHelpText @attr.options.helpText}}
+        @helpText={{this.helpTextString}}
         @inputValue={{get @model this.valuePath}}
         @onChange={{this.setAndBroadcast}}
         @attrName={{@attr.name}}
@@ -321,17 +370,6 @@
             oninput={{this.onChangeWithEvent}}
             class="textarea {{if this.validationError 'has-error-border'}}"
           ></textarea>
-        {{else if (eq @attr.options.editType "password")}}
-          <Input
-            data-test-input={{@attr.name}}
-            @type="password"
-            @value={{get @model this.valuePath}}
-            name={{@attr.name}}
-            class="input"
-            {{! Prevents browsers from auto-filling }}
-            autocomplete="new-password"
-            spellcheck="false"
-          />
         {{else if (eq @attr.options.editType "json")}}
           {{! JSON Editor }}
           {{#let (get @model this.valuePath) as |value|}}
@@ -345,7 +383,7 @@
               }}
               @valueUpdated={{fn this.codemirrorUpdated true}}
               @theme={{or @attr.options.theme "hashi"}}
-              @helpText={{@attr.options.helpText}}
+              @helpText={{this.helpTextString}}
               @mode={{@attr.options.mode}}
               @example={{@attr.options.example}}
             >
@@ -404,8 +442,8 @@
         />
         <label for={{@attr.name}} class="is-label" data-test-form-field-label>
           {{this.labelString}}
-          {{#if (and this.showHelpText @attr.options.helpText)}}
-            <InfoTooltip>{{@attr.options.helpText}}</InfoTooltip>
+          {{#if this.helpTextString}}
+            <InfoTooltip>{{this.helpTextString}}</InfoTooltip>
           {{/if}}
         </label>
         {{#if @attr.options.subText}}
@@ -424,7 +462,7 @@
         @title={{this.labelString}}
         @value={{if (get @model this.valuePath) (stringify (get @model this.valuePath)) this.emptyData}}
         @valueUpdated={{fn this.codemirrorUpdated false}}
-        @helpText={{@attr.options.helpText}}
+        @helpText={{this.helpTextString}}
         @example={{@attr.options.example}}
       />
     {{else if (eq @attr.options.editType "yield")}}
@@ -439,7 +477,11 @@
         class={{if (eq @attr.options.editType "stringArray") "has-top-margin-negative-xxl"}}
       />
     {{/if}}
+    {{! ≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠ }}
+    {{!                NON-HDS COMPONENTS - END                  }}
+    {{! ≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠ }}
   {{/if}}
+  {{! ~~~~~~~~~~~~~~ COMMON PART - START ~~~~~~~~~~~~~~ }}
   {{#if this.validationWarning}}
     <AlertInline
       @type="warning"
@@ -449,4 +491,5 @@
       class={{if (and (not this.validationError) (eq @attr.options.editType "stringArray")) "has-top-margin-negative-xxl"}}
     />
   {{/if}}
+  {{! ~~~~~~~~~~~~~~ COMMON PART - END ~~~~~~~~~~~~~~ }}
 </div>
