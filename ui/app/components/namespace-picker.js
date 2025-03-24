@@ -10,7 +10,9 @@ import { service } from '@ember/service';
 
 export default class ApplicationComponent extends Component {
   @service namespace;
+  @service store;
 
+  @tracked showAfterOptions = false;
   @tracked selected = this.namespace?.currentNamespace;
   @tracked options = [];
   // @tracked groupedOptions = {groupName: '', options: []} // SHANNONTODO: All Namespaces Label
@@ -21,9 +23,22 @@ export default class ApplicationComponent extends Component {
   }
 
   @action
+  async fetchListCapability() {
+    try {
+      await this.store.findRecord('capabilities', 'sys/namespaces/');
+      this.showAfterOptions = true;
+    } catch (e) {
+      // If error out on findRecord call it's because you don't have permissions
+      // and therefore don't have permission to manage namespaces
+      this.showAfterOptions = false;
+    }
+  }
+
+  @action
   async loadOptions() {
     await this.namespace?.findNamespacesForUser.perform();
     this.options = ['root', ...(this.namespace?.accessibleNamespaces || [])];
+    this.fetchListCapability();
     // this.groupedOptions.options = this.options; // SHANNONTODO: All Namespaces Label
     // this.groupedOptions.groupName = `All namespaces (${this.options.length})`; // SHANNONTODO: All Namespaces Label
   }
