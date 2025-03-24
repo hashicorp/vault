@@ -76,9 +76,10 @@ export default class DatabaseRoleEdit extends Component {
     }
     return this.store
       .queryRecord('database/connection', { id: dbs[0], backend })
-      .then(({ plugin_name, skip_static_role_rotation_import }) => ({
+      .then(({ plugin_name, skip_static_role_rotation_import, self_managed }) => ({
         plugin_name,
         skip_static_role_rotation_import,
+        self_managed,
       }))
       .catch(() => null);
   }

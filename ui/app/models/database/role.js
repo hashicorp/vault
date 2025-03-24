@@ -26,13 +26,10 @@ const validations = {
   password: [
     {
       validator(model) {
-        const { type, skip_import_rotation, password } = model;
+        const { type, skip_import_rotation, password, selfManaged } = model;
         if (!type || type === 'dynamic') return true;
-        if (!skip_import_rotation) {
-          // password is required if using skip_import_rotation
-          if (password === undefined || password.trim().length === 0) return true;
-        }
-        if (skip_import_rotation && password) return true;
+        if (skip_import_rotation) return true;
+        if (!skip_import_rotation && selfManaged && password) return true;
       },
       message: 'Password is required.',
     },
@@ -47,6 +44,8 @@ export default class RoleModel extends Model {
   @attr('string', { readOnly: true }) backend;
 
   @attr('string', { label: 'Role name' }) name;
+
+  @attr('boolean') selfManaged;
 
   @attr('array', {
     label: 'Connection name',
