@@ -21,8 +21,8 @@ module('Acceptance | sync | overview', function (hooks) {
 
   hooks.beforeEach(async function () {
     this.version = this.owner.lookup('service:version');
-    this.permissions = this.owner.lookup('service:permissions');
     this.version.type = 'enterprise';
+    this.server.get('/sys/license/features', () => ({ features: ['Secrets Sync'] }));
   });
 
   test('it hides sync overview on community', async function (assert) {
@@ -49,9 +49,7 @@ module('Acceptance | sync | overview', function (hooks) {
   });
 
   test('it hides sync overview if not on ent license', async function (assert) {
-    this.server.get('/sys/license/features', () => {
-      return { features: [] };
-    });
+    this.server.get('/sys/license/features', () => ({ features: [] }));
     await authPage.login();
     assert.dom('[data-test-sidebar-nav-panel="Cluster"]').exists();
     assert.dom(GENERAL.navLink('Secrets Sync')).doesNotExist('Secrets sync nav link does not exist');
@@ -68,14 +66,6 @@ module('Acceptance | sync | overview', function (hooks) {
         },
       };
     });
-    await authPage.login();
-    assert.dom('[data-test-sidebar-nav-panel="Cluster"]').exists();
-    await click(GENERAL.navLink('Secrets Sync'));
-    assert.strictEqual(currentURL(), '/vault/sync/secrets/overview', 'it navigates to overview');
-  });
-
-  test('it navigates to sync overview for hvd managed clusters', async function (assert) {
-    this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
     await authPage.login();
     assert.dom('[data-test-sidebar-nav-panel="Cluster"]').exists();
     await click(GENERAL.navLink('Secrets Sync'));
@@ -263,5 +253,14 @@ module('Acceptance | sync | overview', function (hooks) {
         await click(ts.overview.activationModal.confirm);
       });
     });
+  });
+
+  // this test only runs on enterprise since HVD managed is harder to stub on CE
+  test('enterprise: it navigates to sync overview for hvd managed clusters', async function (assert) {
+    this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+    await authPage.login();
+    assert.dom('[data-test-sidebar-nav-panel="Cluster"]').exists();
+    await click(GENERAL.navLink('Secrets Sync'));
+    assert.strictEqual(currentURL(), '/vault/sync/secrets/overview', 'it navigates to overview');
   });
 });
