@@ -108,6 +108,7 @@ wait_for_cloud_init() {
   if output=$(sudo cloud-init status --wait); then
     return 0
   fi
+  echo "----------------$?"
   res=$?
   case $res in
     2 | 0)
