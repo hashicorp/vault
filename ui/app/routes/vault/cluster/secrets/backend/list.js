@@ -190,6 +190,7 @@ export default Route.extend({
       controller.setProperties({
         filter: filter || '',
         page: model.meta?.currentPage || 1,
+        pathToSecret: secret,
       });
     }
   },
