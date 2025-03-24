@@ -1,3 +1,3 @@
 ```release-note:bug
-secrets/aws: explicitly disable environment and shared credential providers when using WIF
+secrets/aws: fix a bug where environment and shared credential providers were overriding the WIF configuration
 ```
