@@ -448,8 +448,12 @@ func (c *ServerCommand) parseConfig() (*server.Config, []configutil.ConfigError,
 	}
 	entCheckRequestLimiter(c, config)
 
-	// ensure that the DisableMlock key is explicitly set
-	if config != nil && config.SharedConfig != nil &&
+	configsPresent := config != nil && config.SharedConfig != nil && config.Storage != nil
+
+	// ensure that the DisableMlock key is explicitly set if using integrated storage
+	if configsPresent &&
+		// using integrated storage
+		config.Storage.Type == storageTypeRaft &&
 		// DisableMlock key has been found and thus explicitly set
 		!(strutil.StrListContainsCaseInsensitive(config.SharedConfig.FoundKeys, "DisableMlock") ||
 			// mlock is disabled and hence has been explicitly set

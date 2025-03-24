@@ -97,11 +97,14 @@ to specify where the configuration is.
   the read cache used by the physical storage subsystem. This will very
   significantly impact performance.
 
-- `disable_mlock` `(bool: false)` – Disables the server from executing the
-  `mlock` syscall. `mlock` prevents memory from being swapped to disk. Disabling
-  `mlock` is not recommended unless using [integrated storage](/vault/docs/internals/integrated-storage).
+- `disable_mlock` `(bool: false)` – Required to be explicitly set
+  if using integrated storage. Disables the server from executing the `mlock`
+  syscall. `mlock` prevents memory from  being swapped to disk.
+  Disabling `mlock` is not recommended unless using
+  [integrated storage](/vault/docs/internals/integrated-storage).
   Follow the additional security precautions outlined below when disabling `mlock`.
   This can also be provided via the environment variable `VAULT_DISABLE_MLOCK`.
+  Versions of Vault prior to 1.20 defaulted to `false`.
 
   Disabling `mlock` is not recommended unless the systems running Vault only
   use encrypted swap or do not use swap at all. Vault only supports memory
@@ -264,7 +267,7 @@ can have a negative effect on performance due to the tracking of each lock attem
 - `enable_post_unseal_trace` `(bool: false)` - Enables the server to generate a Go trace during the execution of the
   `core.postUnseal` function for debug purposes. The resulting trace can be viewed with the `go tool trace` command. The output
   directory can be specified with the `post_unseal_trace_directory` parameter. This should only be enabled temporarily for
-  debugging purposes as it can have a significant performance impact. This can be updated on a running Vault process with a 
+  debugging purposes as it can have a significant performance impact. This can be updated on a running Vault process with a
   SIGHUP signal.
 
 - `post_unseal_trace_directory` `(string: "")` - Specifies the directory where the trace file will be written, which must exist
