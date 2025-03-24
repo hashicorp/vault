@@ -284,25 +284,19 @@ func getBillingPeriodTimes(d *framework.FieldData, billingStartTime time.Time) (
 	if startTime.IsZero() && endTime.IsZero() {
 		// if both start time and end time are not specified, return current billing period
 		alignedStartTime = billingStartTime.UTC()
-		alignedEndTime = time.Now().UTC()
 	} else if !startTime.IsZero() {
 		// if the start time is specified, align it to the beginning of a billing period
 		alignedStartTime = alignToBillingPeriodStart(billingStartTime, startTime)
-		alignedEndTime = alignedStartTime.AddDate(1, 0, 0).UTC()
-
-		// If the next billing period is after today, set end time to today
-		if alignedEndTime.After(time.Now().UTC()) {
-			alignedEndTime = time.Now().UTC()
-		}
 	} else {
 		// If only endTime is provided, determine the corresponding billing period based on the end time
 		alignedStartTime = alignToBillingPeriodStart(billingStartTime, endTime)
-		alignedEndTime = alignedStartTime.AddDate(1, 0, 0).UTC()
+	}
 
-		// If the end time is in the current period, cap it at today
-		if alignedEndTime.After(time.Now().UTC()) {
-			alignedEndTime = time.Now().UTC()
-		}
+	// align end time
+	alignedEndTime = alignedStartTime.AddDate(1, 0, 0).UTC()
+	// if the end time is in the current period, cap it at today
+	if alignedEndTime.After(time.Now().UTC()) {
+		alignedEndTime = time.Now().UTC()
 	}
 
 	// ensure the end time is always later than the start time
