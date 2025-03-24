@@ -140,7 +140,7 @@ If you don't set these options, Vault does not initialize; therefore, it will no
 
 #### Unseal key
 
-You can rekey Vault's unseal keys using a `vault operator rekey` operation from the CLI or the matching API calls. Vault authorizes the rekey operation when you meet the threshold of recovery keys. After rekeying, Vault encrypts the new barrier key with the configured HSM or KMS, and stores it in its storage backend. The operator will never receive the new barrier key.
+You can rekey Vault's unseal keys using a `vault operator rekey` operation from the CLI or the matching API calls. Vault authorizes the rekey operation when you meet the threshold of recovery keys. After rekeying, Vault encrypts the new barrier key with the configured HSM or KMS, and stores it in its storage backend. 
 
 <EnterpriseAlert product="vault">
   Seal wrapping requires Vault Enterprise
