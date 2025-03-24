@@ -25,7 +25,7 @@ export function RawReadResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        value: json['value'] == null ? undefined : json['value'],
+        'value': json['value'] == null ? undefined : json['value'],
     };
 }
 export function RawReadResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function RawReadResponseToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        value: value['value'],
+        'value': value['value'],
     };
 }

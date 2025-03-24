@@ -25,10 +25,10 @@ export function KvV2WriteMetadataRequestFromJSONTyped(json, ignoreDiscriminator)
         return json;
     }
     return {
-        casRequired: json['cas_required'] == null ? undefined : json['cas_required'],
-        customMetadata: json['custom_metadata'] == null ? undefined : json['custom_metadata'],
-        deleteVersionAfter: json['delete_version_after'] == null ? undefined : json['delete_version_after'],
-        maxVersions: json['max_versions'] == null ? undefined : json['max_versions'],
+        'casRequired': json['cas_required'] == null ? undefined : json['cas_required'],
+        'customMetadata': json['custom_metadata'] == null ? undefined : json['custom_metadata'],
+        'deleteVersionAfter': json['delete_version_after'] == null ? undefined : json['delete_version_after'],
+        'maxVersions': json['max_versions'] == null ? undefined : json['max_versions'],
     };
 }
 export function KvV2WriteMetadataRequestToJSON(json) {
@@ -39,9 +39,9 @@ export function KvV2WriteMetadataRequestToJSONTyped(value, ignoreDiscriminator =
         return value;
     }
     return {
-        cas_required: value['casRequired'],
-        custom_metadata: value['customMetadata'],
-        delete_version_after: value['deleteVersionAfter'],
-        max_versions: value['maxVersions'],
+        'cas_required': value['casRequired'],
+        'custom_metadata': value['customMetadata'],
+        'delete_version_after': value['deleteVersionAfter'],
+        'max_versions': value['maxVersions'],
     };
 }

@@ -32,8 +32,8 @@ function SystemListSyncAssociationsResponseFromJSONTyped(json, ignoreDiscriminat
         return json;
     }
     return {
-        keyInfo: json['key_info'] == null ? undefined : json['key_info'],
-        keys: json['keys'] == null ? undefined : json['keys'],
+        'keyInfo': json['key_info'] == null ? undefined : json['key_info'],
+        'keys': json['keys'] == null ? undefined : json['keys'],
     };
 }
 function SystemListSyncAssociationsResponseToJSON(json) {
@@ -44,7 +44,7 @@ function SystemListSyncAssociationsResponseToJSONTyped(value, ignoreDiscriminato
         return value;
     }
     return {
-        key_info: value['keyInfo'],
-        keys: value['keys'],
+        'key_info': value['keyInfo'],
+        'keys': value['keys'],
     };
 }

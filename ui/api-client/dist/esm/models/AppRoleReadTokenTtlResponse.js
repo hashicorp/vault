@@ -25,7 +25,7 @@ export function AppRoleReadTokenTtlResponseFromJSONTyped(json, ignoreDiscriminat
         return json;
     }
     return {
-        tokenTtl: json['token_ttl'] == null ? undefined : json['token_ttl'],
+        'tokenTtl': json['token_ttl'] == null ? undefined : json['token_ttl'],
     };
 }
 export function AppRoleReadTokenTtlResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function AppRoleReadTokenTtlResponseToJSONTyped(value, ignoreDiscriminato
         return value;
     }
     return {
-        token_ttl: value['tokenTtl'],
+        'token_ttl': value['tokenTtl'],
     };
 }

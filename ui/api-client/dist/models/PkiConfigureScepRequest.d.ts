@@ -47,15 +47,15 @@ export interface PkiConfigureScepRequest {
     enabled?: boolean;
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum PkiConfigureScepRequestAllowedDigestAlgorithmsEnum {
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum PkiConfigureScepRequestAllowedEncryptionAlgorithmsEnum {
 }
 /**

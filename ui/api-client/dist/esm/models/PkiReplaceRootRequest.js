@@ -25,7 +25,7 @@ export function PkiReplaceRootRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        _default: json['default'] == null ? undefined : json['default'],
+        '_default': json['default'] == null ? undefined : json['default'],
     };
 }
 export function PkiReplaceRootRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function PkiReplaceRootRequestToJSONTyped(value, ignoreDiscriminator = fa
         return value;
     }
     return {
-        default: value['_default'],
+        'default': value['_default'],
     };
 }

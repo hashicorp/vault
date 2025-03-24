@@ -25,7 +25,7 @@ export function SystemWriteMfaMethodTotpNameAdminGenerateRequestFromJSONTyped(js
         return json;
     }
     return {
-        entityId: json['entity_id'] == null ? undefined : json['entity_id'],
+        'entityId': json['entity_id'] == null ? undefined : json['entity_id'],
     };
 }
 export function SystemWriteMfaMethodTotpNameAdminGenerateRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function SystemWriteMfaMethodTotpNameAdminGenerateRequestToJSONTyped(valu
         return value;
     }
     return {
-        entity_id: value['entityId'],
+        'entity_id': value['entityId'],
     };
 }

@@ -25,8 +25,8 @@ export function RadiusLoginWithUsernameRequestFromJSONTyped(json, ignoreDiscrimi
         return json;
     }
     return {
-        password: json['password'] == null ? undefined : json['password'],
-        username: json['username'] == null ? undefined : json['username'],
+        'password': json['password'] == null ? undefined : json['password'],
+        'username': json['username'] == null ? undefined : json['username'],
     };
 }
 export function RadiusLoginWithUsernameRequestToJSON(json) {
@@ -37,7 +37,7 @@ export function RadiusLoginWithUsernameRequestToJSONTyped(value, ignoreDiscrimin
         return value;
     }
     return {
-        password: value['password'],
-        username: value['username'],
+        'password': value['password'],
+        'username': value['username'],
     };
 }

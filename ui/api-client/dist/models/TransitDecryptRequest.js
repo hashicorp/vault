@@ -32,13 +32,13 @@ function TransitDecryptRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        associatedData: json['associated_data'] == null ? undefined : json['associated_data'],
-        batchInput: json['batch_input'] == null ? undefined : json['batch_input'],
-        ciphertext: json['ciphertext'] == null ? undefined : json['ciphertext'],
-        context: json['context'] == null ? undefined : json['context'],
-        nonce: json['nonce'] == null ? undefined : json['nonce'],
-        paddingScheme: json['padding_scheme'] == null ? undefined : json['padding_scheme'],
-        partialFailureResponseCode: json['partial_failure_response_code'] == null ? undefined : json['partial_failure_response_code'],
+        'associatedData': json['associated_data'] == null ? undefined : json['associated_data'],
+        'batchInput': json['batch_input'] == null ? undefined : json['batch_input'],
+        'ciphertext': json['ciphertext'] == null ? undefined : json['ciphertext'],
+        'context': json['context'] == null ? undefined : json['context'],
+        'nonce': json['nonce'] == null ? undefined : json['nonce'],
+        'paddingScheme': json['padding_scheme'] == null ? undefined : json['padding_scheme'],
+        'partialFailureResponseCode': json['partial_failure_response_code'] == null ? undefined : json['partial_failure_response_code'],
     };
 }
 function TransitDecryptRequestToJSON(json) {
@@ -49,12 +49,12 @@ function TransitDecryptRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        associated_data: value['associatedData'],
-        batch_input: value['batchInput'],
-        ciphertext: value['ciphertext'],
-        context: value['context'],
-        nonce: value['nonce'],
-        padding_scheme: value['paddingScheme'],
-        partial_failure_response_code: value['partialFailureResponseCode'],
+        'associated_data': value['associatedData'],
+        'batch_input': value['batchInput'],
+        'ciphertext': value['ciphertext'],
+        'context': value['context'],
+        'nonce': value['nonce'],
+        'padding_scheme': value['paddingScheme'],
+        'partial_failure_response_code': value['partialFailureResponseCode'],
     };
 }

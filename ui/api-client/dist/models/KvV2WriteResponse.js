@@ -32,11 +32,11 @@ function KvV2WriteResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        createdTime: json['created_time'] == null ? undefined : new Date(json['created_time']),
-        customMetadata: json['custom_metadata'] == null ? undefined : json['custom_metadata'],
-        deletionTime: json['deletion_time'] == null ? undefined : json['deletion_time'],
-        destroyed: json['destroyed'] == null ? undefined : json['destroyed'],
-        version: json['version'] == null ? undefined : json['version'],
+        'createdTime': json['created_time'] == null ? undefined : (new Date(json['created_time'])),
+        'customMetadata': json['custom_metadata'] == null ? undefined : json['custom_metadata'],
+        'deletionTime': json['deletion_time'] == null ? undefined : json['deletion_time'],
+        'destroyed': json['destroyed'] == null ? undefined : json['destroyed'],
+        'version': json['version'] == null ? undefined : json['version'],
     };
 }
 function KvV2WriteResponseToJSON(json) {
@@ -47,10 +47,10 @@ function KvV2WriteResponseToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        created_time: value['createdTime'] == null ? undefined : value['createdTime'].toISOString(),
-        custom_metadata: value['customMetadata'],
-        deletion_time: value['deletionTime'],
-        destroyed: value['destroyed'],
-        version: value['version'],
+        'created_time': value['createdTime'] == null ? undefined : ((value['createdTime']).toISOString()),
+        'custom_metadata': value['customMetadata'],
+        'deletion_time': value['deletionTime'],
+        'destroyed': value['destroyed'],
+        'version': value['version'],
     };
 }

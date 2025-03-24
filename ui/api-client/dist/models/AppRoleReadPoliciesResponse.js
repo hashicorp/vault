@@ -32,8 +32,8 @@ function AppRoleReadPoliciesResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        policies: json['policies'] == null ? undefined : json['policies'],
-        tokenPolicies: json['token_policies'] == null ? undefined : json['token_policies'],
+        'policies': json['policies'] == null ? undefined : json['policies'],
+        'tokenPolicies': json['token_policies'] == null ? undefined : json['token_policies'],
     };
 }
 function AppRoleReadPoliciesResponseToJSON(json) {
@@ -44,7 +44,7 @@ function AppRoleReadPoliciesResponseToJSONTyped(value, ignoreDiscriminator = fal
         return value;
     }
     return {
-        policies: value['policies'],
-        token_policies: value['tokenPolicies'],
+        'policies': value['policies'],
+        'token_policies': value['tokenPolicies'],
     };
 }

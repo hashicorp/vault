@@ -32,7 +32,7 @@ function UiConfigReadCustomMessageResponseFromJSONTyped(json, ignoreDiscriminato
         return json;
     }
     return {
-        id: json['id'] == null ? undefined : json['id'],
+        'id': json['id'] == null ? undefined : json['id'],
     };
 }
 function UiConfigReadCustomMessageResponseToJSON(json) {
@@ -43,6 +43,6 @@ function UiConfigReadCustomMessageResponseToJSONTyped(value, ignoreDiscriminator
         return value;
     }
     return {
-        id: value['id'],
+        'id': value['id'],
     };
 }

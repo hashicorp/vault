@@ -25,7 +25,7 @@ export function TransitTrimKeyRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        minAvailableVersion: json['min_available_version'] == null ? undefined : json['min_available_version'],
+        'minAvailableVersion': json['min_available_version'] == null ? undefined : json['min_available_version'],
     };
 }
 export function TransitTrimKeyRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function TransitTrimKeyRequestToJSONTyped(value, ignoreDiscriminator = fa
         return value;
     }
     return {
-        min_available_version: value['minAvailableVersion'],
+        'min_available_version': value['minAvailableVersion'],
     };
 }

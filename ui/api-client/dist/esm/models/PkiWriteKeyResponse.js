@@ -25,9 +25,9 @@ export function PkiWriteKeyResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        keyId: json['key_id'] == null ? undefined : json['key_id'],
-        keyName: json['key_name'] == null ? undefined : json['key_name'],
-        keyType: json['key_type'] == null ? undefined : json['key_type'],
+        'keyId': json['key_id'] == null ? undefined : json['key_id'],
+        'keyName': json['key_name'] == null ? undefined : json['key_name'],
+        'keyType': json['key_type'] == null ? undefined : json['key_type'],
     };
 }
 export function PkiWriteKeyResponseToJSON(json) {
@@ -38,8 +38,8 @@ export function PkiWriteKeyResponseToJSONTyped(value, ignoreDiscriminator = fals
         return value;
     }
     return {
-        key_id: value['keyId'],
-        key_name: value['keyName'],
-        key_type: value['keyType'],
+        'key_id': value['keyId'],
+        'key_name': value['keyName'],
+        'key_type': value['keyType'],
     };
 }

@@ -25,9 +25,9 @@ export function GenerateHashRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        algorithm: json['algorithm'] == null ? undefined : json['algorithm'],
-        format: json['format'] == null ? undefined : json['format'],
-        input: json['input'] == null ? undefined : json['input'],
+        'algorithm': json['algorithm'] == null ? undefined : json['algorithm'],
+        'format': json['format'] == null ? undefined : json['format'],
+        'input': json['input'] == null ? undefined : json['input'],
     };
 }
 export function GenerateHashRequestToJSON(json) {
@@ -38,8 +38,8 @@ export function GenerateHashRequestToJSONTyped(value, ignoreDiscriminator = fals
         return value;
     }
     return {
-        algorithm: value['algorithm'],
-        format: value['format'],
-        input: value['input'],
+        'algorithm': value['algorithm'],
+        'format': value['format'],
+        'input': value['input'],
     };
 }

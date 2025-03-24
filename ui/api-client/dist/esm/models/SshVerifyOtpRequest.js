@@ -25,7 +25,7 @@ export function SshVerifyOtpRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        otp: json['otp'] == null ? undefined : json['otp'],
+        'otp': json['otp'] == null ? undefined : json['otp'],
     };
 }
 export function SshVerifyOtpRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function SshVerifyOtpRequestToJSONTyped(value, ignoreDiscriminator = fals
         return value;
     }
     return {
-        otp: value['otp'],
+        'otp': value['otp'],
     };
 }

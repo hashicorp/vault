@@ -25,7 +25,7 @@ export function SystemWriteControlGroupAuthorizeRequestFromJSONTyped(json, ignor
         return json;
     }
     return {
-        accessor: json['accessor'] == null ? undefined : json['accessor'],
+        'accessor': json['accessor'] == null ? undefined : json['accessor'],
     };
 }
 export function SystemWriteControlGroupAuthorizeRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function SystemWriteControlGroupAuthorizeRequestToJSONTyped(value, ignore
         return value;
     }
     return {
-        accessor: value['accessor'],
+        'accessor': value['accessor'],
     };
 }

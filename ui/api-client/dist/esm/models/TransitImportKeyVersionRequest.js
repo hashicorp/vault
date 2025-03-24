@@ -25,10 +25,10 @@ export function TransitImportKeyVersionRequestFromJSONTyped(json, ignoreDiscrimi
         return json;
     }
     return {
-        ciphertext: json['ciphertext'] == null ? undefined : json['ciphertext'],
-        hashFunction: json['hash_function'] == null ? undefined : json['hash_function'],
-        publicKey: json['public_key'] == null ? undefined : json['public_key'],
-        version: json['version'] == null ? undefined : json['version'],
+        'ciphertext': json['ciphertext'] == null ? undefined : json['ciphertext'],
+        'hashFunction': json['hash_function'] == null ? undefined : json['hash_function'],
+        'publicKey': json['public_key'] == null ? undefined : json['public_key'],
+        'version': json['version'] == null ? undefined : json['version'],
     };
 }
 export function TransitImportKeyVersionRequestToJSON(json) {
@@ -39,9 +39,9 @@ export function TransitImportKeyVersionRequestToJSONTyped(value, ignoreDiscrimin
         return value;
     }
     return {
-        ciphertext: value['ciphertext'],
-        hash_function: value['hashFunction'],
-        public_key: value['publicKey'],
-        version: value['version'],
+        'ciphertext': value['ciphertext'],
+        'hash_function': value['hashFunction'],
+        'public_key': value['publicKey'],
+        'version': value['version'],
     };
 }

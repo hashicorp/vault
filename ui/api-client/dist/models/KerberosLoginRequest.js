@@ -32,7 +32,7 @@ function KerberosLoginRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        authorization: json['authorization'] == null ? undefined : json['authorization'],
+        'authorization': json['authorization'] == null ? undefined : json['authorization'],
     };
 }
 function KerberosLoginRequestToJSON(json) {
@@ -43,6 +43,6 @@ function KerberosLoginRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        authorization: value['authorization'],
+        'authorization': value['authorization'],
     };
 }

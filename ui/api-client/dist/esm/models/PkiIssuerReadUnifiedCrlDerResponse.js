@@ -25,7 +25,7 @@ export function PkiIssuerReadUnifiedCrlDerResponseFromJSONTyped(json, ignoreDisc
         return json;
     }
     return {
-        crl: json['crl'] == null ? undefined : json['crl'],
+        'crl': json['crl'] == null ? undefined : json['crl'],
     };
 }
 export function PkiIssuerReadUnifiedCrlDerResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function PkiIssuerReadUnifiedCrlDerResponseToJSONTyped(value, ignoreDiscr
         return value;
     }
     return {
-        crl: value['crl'],
+        'crl': value['crl'],
     };
 }

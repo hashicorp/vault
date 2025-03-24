@@ -32,7 +32,7 @@ function SystemWriteMfaMethodTotpNameAdminDestroyRequestFromJSONTyped(json, igno
         return json;
     }
     return {
-        entityId: json['entity_id'] == null ? undefined : json['entity_id'],
+        'entityId': json['entity_id'] == null ? undefined : json['entity_id'],
     };
 }
 function SystemWriteMfaMethodTotpNameAdminDestroyRequestToJSON(json) {
@@ -43,6 +43,6 @@ function SystemWriteMfaMethodTotpNameAdminDestroyRequestToJSONTyped(value, ignor
         return value;
     }
     return {
-        entity_id: value['entityId'],
+        'entity_id': value['entityId'],
     };
 }

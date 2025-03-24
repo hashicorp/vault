@@ -25,8 +25,8 @@ export function OidcWriteAssignmentRequestFromJSONTyped(json, ignoreDiscriminato
         return json;
     }
     return {
-        entityIds: json['entity_ids'] == null ? undefined : json['entity_ids'],
-        groupIds: json['group_ids'] == null ? undefined : json['group_ids'],
+        'entityIds': json['entity_ids'] == null ? undefined : json['entity_ids'],
+        'groupIds': json['group_ids'] == null ? undefined : json['group_ids'],
     };
 }
 export function OidcWriteAssignmentRequestToJSON(json) {
@@ -37,7 +37,7 @@ export function OidcWriteAssignmentRequestToJSONTyped(value, ignoreDiscriminator
         return value;
     }
     return {
-        entity_ids: value['entityIds'],
-        group_ids: value['groupIds'],
+        'entity_ids': value['entityIds'],
+        'group_ids': value['groupIds'],
     };
 }

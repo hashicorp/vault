@@ -32,7 +32,7 @@ function AuditingEnableRequestHeaderRequestFromJSONTyped(json, ignoreDiscriminat
         return json;
     }
     return {
-        hmac: json['hmac'] == null ? undefined : json['hmac'],
+        'hmac': json['hmac'] == null ? undefined : json['hmac'],
     };
 }
 function AuditingEnableRequestHeaderRequestToJSON(json) {
@@ -43,6 +43,6 @@ function AuditingEnableRequestHeaderRequestToJSONTyped(value, ignoreDiscriminato
         return value;
     }
     return {
-        hmac: value['hmac'],
+        'hmac': value['hmac'],
     };
 }

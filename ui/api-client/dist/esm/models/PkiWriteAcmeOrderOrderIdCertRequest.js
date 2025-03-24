@@ -25,9 +25,9 @@ export function PkiWriteAcmeOrderOrderIdCertRequestFromJSONTyped(json, ignoreDis
         return json;
     }
     return {
-        payload: json['payload'] == null ? undefined : json['payload'],
-        _protected: json['protected'] == null ? undefined : json['protected'],
-        signature: json['signature'] == null ? undefined : json['signature'],
+        'payload': json['payload'] == null ? undefined : json['payload'],
+        '_protected': json['protected'] == null ? undefined : json['protected'],
+        'signature': json['signature'] == null ? undefined : json['signature'],
     };
 }
 export function PkiWriteAcmeOrderOrderIdCertRequestToJSON(json) {
@@ -38,8 +38,8 @@ export function PkiWriteAcmeOrderOrderIdCertRequestToJSONTyped(value, ignoreDisc
         return value;
     }
     return {
-        payload: value['payload'],
-        protected: value['_protected'],
-        signature: value['signature'],
+        'payload': value['payload'],
+        'protected': value['_protected'],
+        'signature': value['signature'],
     };
 }

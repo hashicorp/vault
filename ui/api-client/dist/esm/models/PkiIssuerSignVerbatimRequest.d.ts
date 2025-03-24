@@ -137,18 +137,18 @@ export interface PkiIssuerSignVerbatimRequest {
     userIds?: Array<string>;
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum PkiIssuerSignVerbatimRequestFormatEnum {
     PEM = "pem",
     DER = "der",
     PEM_BUNDLE = "pem_bundle"
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum PkiIssuerSignVerbatimRequestPrivateKeyFormatEnum {
     EMPTY = "",
     DER = "der",

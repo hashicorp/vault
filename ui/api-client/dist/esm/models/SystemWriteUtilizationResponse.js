@@ -25,7 +25,7 @@ export function SystemWriteUtilizationResponseFromJSONTyped(json, ignoreDiscrimi
         return json;
     }
     return {
-        utilizationBundle: json['utilization_bundle'] == null ? undefined : json['utilization_bundle'],
+        'utilizationBundle': json['utilization_bundle'] == null ? undefined : json['utilization_bundle'],
     };
 }
 export function SystemWriteUtilizationResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function SystemWriteUtilizationResponseToJSONTyped(value, ignoreDiscrimin
         return value;
     }
     return {
-        utilization_bundle: value['utilizationBundle'],
+        'utilization_bundle': value['utilizationBundle'],
     };
 }

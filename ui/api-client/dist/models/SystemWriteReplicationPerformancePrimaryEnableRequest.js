@@ -32,7 +32,7 @@ function SystemWriteReplicationPerformancePrimaryEnableRequestFromJSONTyped(json
         return json;
     }
     return {
-        primaryClusterAddr: json['primary_cluster_addr'] == null ? undefined : json['primary_cluster_addr'],
+        'primaryClusterAddr': json['primary_cluster_addr'] == null ? undefined : json['primary_cluster_addr'],
     };
 }
 function SystemWriteReplicationPerformancePrimaryEnableRequestToJSON(json) {
@@ -43,6 +43,6 @@ function SystemWriteReplicationPerformancePrimaryEnableRequestToJSONTyped(value,
         return value;
     }
     return {
-        primary_cluster_addr: value['primaryClusterAddr'],
+        'primary_cluster_addr': value['primaryClusterAddr'],
     };
 }

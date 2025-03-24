@@ -25,7 +25,7 @@ export function RemountResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        migrationId: json['migration_id'] == null ? undefined : json['migration_id'],
+        'migrationId': json['migration_id'] == null ? undefined : json['migration_id'],
     };
 }
 export function RemountResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function RemountResponseToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        migration_id: value['migrationId'],
+        'migration_id': value['migrationId'],
     };
 }

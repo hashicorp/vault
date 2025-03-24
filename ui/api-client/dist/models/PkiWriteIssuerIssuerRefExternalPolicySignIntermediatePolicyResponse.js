@@ -32,11 +32,11 @@ function PkiWriteIssuerIssuerRefExternalPolicySignIntermediatePolicyResponseFrom
         return json;
     }
     return {
-        caChain: json['ca_chain'] == null ? undefined : json['ca_chain'],
-        certificate: json['certificate'] == null ? undefined : json['certificate'],
-        expiration: json['expiration'] == null ? undefined : json['expiration'],
-        issuingCa: json['issuing_ca'] == null ? undefined : json['issuing_ca'],
-        serialNumber: json['serial_number'] == null ? undefined : json['serial_number'],
+        'caChain': json['ca_chain'] == null ? undefined : json['ca_chain'],
+        'certificate': json['certificate'] == null ? undefined : json['certificate'],
+        'expiration': json['expiration'] == null ? undefined : json['expiration'],
+        'issuingCa': json['issuing_ca'] == null ? undefined : json['issuing_ca'],
+        'serialNumber': json['serial_number'] == null ? undefined : json['serial_number'],
     };
 }
 function PkiWriteIssuerIssuerRefExternalPolicySignIntermediatePolicyResponseToJSON(json) {
@@ -47,10 +47,10 @@ function PkiWriteIssuerIssuerRefExternalPolicySignIntermediatePolicyResponseToJS
         return value;
     }
     return {
-        ca_chain: value['caChain'],
-        certificate: value['certificate'],
-        expiration: value['expiration'],
-        issuing_ca: value['issuingCa'],
-        serial_number: value['serialNumber'],
+        'ca_chain': value['caChain'],
+        'certificate': value['certificate'],
+        'expiration': value['expiration'],
+        'issuing_ca': value['issuingCa'],
+        'serial_number': value['serialNumber'],
     };
 }

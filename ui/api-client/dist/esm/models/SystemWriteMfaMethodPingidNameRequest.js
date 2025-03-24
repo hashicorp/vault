@@ -25,9 +25,9 @@ export function SystemWriteMfaMethodPingidNameRequestFromJSONTyped(json, ignoreD
         return json;
     }
     return {
-        mountAccessor: json['mount_accessor'] == null ? undefined : json['mount_accessor'],
-        settingsFileBase64: json['settings_file_base64'] == null ? undefined : json['settings_file_base64'],
-        usernameFormat: json['username_format'] == null ? undefined : json['username_format'],
+        'mountAccessor': json['mount_accessor'] == null ? undefined : json['mount_accessor'],
+        'settingsFileBase64': json['settings_file_base64'] == null ? undefined : json['settings_file_base64'],
+        'usernameFormat': json['username_format'] == null ? undefined : json['username_format'],
     };
 }
 export function SystemWriteMfaMethodPingidNameRequestToJSON(json) {
@@ -38,8 +38,8 @@ export function SystemWriteMfaMethodPingidNameRequestToJSONTyped(value, ignoreDi
         return value;
     }
     return {
-        mount_accessor: value['mountAccessor'],
-        settings_file_base64: value['settingsFileBase64'],
-        username_format: value['usernameFormat'],
+        'mount_accessor': value['mountAccessor'],
+        'settings_file_base64': value['settingsFileBase64'],
+        'username_format': value['usernameFormat'],
     };
 }

@@ -25,7 +25,7 @@ export function KvV2UndeleteVersionsRequestFromJSONTyped(json, ignoreDiscriminat
         return json;
     }
     return {
-        versions: json['versions'] == null ? undefined : json['versions'],
+        'versions': json['versions'] == null ? undefined : json['versions'],
     };
 }
 export function KvV2UndeleteVersionsRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function KvV2UndeleteVersionsRequestToJSONTyped(value, ignoreDiscriminato
         return value;
     }
     return {
-        versions: value['versions'],
+        'versions': value['versions'],
     };
 }

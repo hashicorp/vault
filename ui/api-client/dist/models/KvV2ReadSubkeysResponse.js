@@ -32,8 +32,8 @@ function KvV2ReadSubkeysResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        metadata: json['metadata'] == null ? undefined : json['metadata'],
-        subkeys: json['subkeys'] == null ? undefined : json['subkeys'],
+        'metadata': json['metadata'] == null ? undefined : json['metadata'],
+        'subkeys': json['subkeys'] == null ? undefined : json['subkeys'],
     };
 }
 function KvV2ReadSubkeysResponseToJSON(json) {
@@ -44,7 +44,7 @@ function KvV2ReadSubkeysResponseToJSONTyped(value, ignoreDiscriminator = false) 
         return value;
     }
     return {
-        metadata: value['metadata'],
-        subkeys: value['subkeys'],
+        'metadata': value['metadata'],
+        'subkeys': value['subkeys'],
     };
 }

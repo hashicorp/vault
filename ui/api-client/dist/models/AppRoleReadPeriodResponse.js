@@ -32,8 +32,8 @@ function AppRoleReadPeriodResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        period: json['period'] == null ? undefined : json['period'],
-        tokenPeriod: json['token_period'] == null ? undefined : json['token_period'],
+        'period': json['period'] == null ? undefined : json['period'],
+        'tokenPeriod': json['token_period'] == null ? undefined : json['token_period'],
     };
 }
 function AppRoleReadPeriodResponseToJSON(json) {
@@ -44,7 +44,7 @@ function AppRoleReadPeriodResponseToJSONTyped(value, ignoreDiscriminator = false
         return value;
     }
     return {
-        period: value['period'],
-        token_period: value['tokenPeriod'],
+        'period': value['period'],
+        'token_period': value['tokenPeriod'],
     };
 }

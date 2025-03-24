@@ -20,9 +20,9 @@ exports.PkiWriteAcmeKeyIdRequestFromJSONTyped = PkiWriteAcmeKeyIdRequestFromJSON
 exports.PkiWriteAcmeKeyIdRequestToJSON = PkiWriteAcmeKeyIdRequestToJSON;
 exports.PkiWriteAcmeKeyIdRequestToJSONTyped = PkiWriteAcmeKeyIdRequestToJSONTyped;
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 var PkiWriteAcmeKeyIdRequestStatusEnum;
 (function (PkiWriteAcmeKeyIdRequestStatusEnum) {
     PkiWriteAcmeKeyIdRequestStatusEnum["VALID"] = "valid";
@@ -44,7 +44,7 @@ function PkiWriteAcmeKeyIdRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        status: json['status'],
+        'status': json['status'],
     };
 }
 function PkiWriteAcmeKeyIdRequestToJSON(json) {
@@ -55,6 +55,6 @@ function PkiWriteAcmeKeyIdRequestToJSONTyped(value, ignoreDiscriminator = false)
         return value;
     }
     return {
-        status: value['status'],
+        'status': value['status'],
     };
 }

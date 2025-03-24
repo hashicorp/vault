@@ -32,7 +32,7 @@ function AppRoleReadLocalSecretIdsResponseFromJSONTyped(json, ignoreDiscriminato
         return json;
     }
     return {
-        localSecretIds: json['local_secret_ids'] == null ? undefined : json['local_secret_ids'],
+        'localSecretIds': json['local_secret_ids'] == null ? undefined : json['local_secret_ids'],
     };
 }
 function AppRoleReadLocalSecretIdsResponseToJSON(json) {
@@ -43,6 +43,6 @@ function AppRoleReadLocalSecretIdsResponseToJSONTyped(value, ignoreDiscriminator
         return value;
     }
     return {
-        local_secret_ids: value['localSecretIds'],
+        'local_secret_ids': value['localSecretIds'],
     };
 }

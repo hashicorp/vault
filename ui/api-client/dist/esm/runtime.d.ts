@@ -71,17 +71,17 @@ export declare class BaseAPI {
 }
 export declare class ResponseError extends Error {
     response: Response;
-    name: 'ResponseError';
+    name: "ResponseError";
     constructor(response: Response, msg?: string);
 }
 export declare class FetchError extends Error {
     cause: Error;
-    name: 'FetchError';
+    name: "FetchError";
     constructor(cause: Error, msg?: string);
 }
 export declare class RequiredError extends Error {
     field: string;
-    name: 'RequiredError';
+    name: "RequiredError";
     constructor(field: string, msg?: string);
 }
 export declare const COLLECTION_FORMATS: {
@@ -156,6 +156,24 @@ export interface ApiResponse<T> {
     raw: Response;
     value(): Promise<T>;
 }
+export interface VoidResponse {
+    auth: null;
+    data: null;
+    lease_duration: number;
+    lease_id: string;
+    mount_type: string;
+    renewable: boolean;
+    request_id: string;
+    warnings: Array<string> | null;
+    wrap_info: {
+        accessor: string;
+        creation_path: string;
+        creation_time: string;
+        wrapped_accessor: string;
+        token: string;
+        ttl: number;
+    } | null;
+}
 export interface ResponseTransformer<T> {
     (json: any): T;
 }
@@ -168,7 +186,7 @@ export declare class JSONApiResponse<T> {
 export declare class VoidApiResponse {
     raw: Response;
     constructor(raw: Response);
-    value(): Promise<void>;
+    value(): Promise<VoidResponse>;
 }
 export declare class BlobApiResponse {
     raw: Response;

@@ -12,9 +12,9 @@
  * Do not edit the class manually.
  */
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export var PkiGenerateKmsKeyRequestKeyTypeEnum;
 (function (PkiGenerateKmsKeyRequestKeyTypeEnum) {
     PkiGenerateKmsKeyRequestKeyTypeEnum["RSA"] = "rsa";
@@ -35,11 +35,11 @@ export function PkiGenerateKmsKeyRequestFromJSONTyped(json, ignoreDiscriminator)
         return json;
     }
     return {
-        keyBits: json['key_bits'] == null ? undefined : json['key_bits'],
-        keyName: json['key_name'] == null ? undefined : json['key_name'],
-        keyType: json['key_type'] == null ? undefined : json['key_type'],
-        managedKeyId: json['managed_key_id'] == null ? undefined : json['managed_key_id'],
-        managedKeyName: json['managed_key_name'] == null ? undefined : json['managed_key_name'],
+        'keyBits': json['key_bits'] == null ? undefined : json['key_bits'],
+        'keyName': json['key_name'] == null ? undefined : json['key_name'],
+        'keyType': json['key_type'] == null ? undefined : json['key_type'],
+        'managedKeyId': json['managed_key_id'] == null ? undefined : json['managed_key_id'],
+        'managedKeyName': json['managed_key_name'] == null ? undefined : json['managed_key_name'],
     };
 }
 export function PkiGenerateKmsKeyRequestToJSON(json) {
@@ -50,10 +50,10 @@ export function PkiGenerateKmsKeyRequestToJSONTyped(value, ignoreDiscriminator =
         return value;
     }
     return {
-        key_bits: value['keyBits'],
-        key_name: value['keyName'],
-        key_type: value['keyType'],
-        managed_key_id: value['managedKeyId'],
-        managed_key_name: value['managedKeyName'],
+        'key_bits': value['keyBits'],
+        'key_name': value['keyName'],
+        'key_type': value['keyType'],
+        'managed_key_id': value['managedKeyId'],
+        'managed_key_name': value['managedKeyName'],
     };
 }

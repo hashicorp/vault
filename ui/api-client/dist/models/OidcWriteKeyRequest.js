@@ -32,10 +32,10 @@ function OidcWriteKeyRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        algorithm: json['algorithm'] == null ? undefined : json['algorithm'],
-        allowedClientIds: json['allowed_client_ids'] == null ? undefined : json['allowed_client_ids'],
-        rotationPeriod: json['rotation_period'] == null ? undefined : json['rotation_period'],
-        verificationTtl: json['verification_ttl'] == null ? undefined : json['verification_ttl'],
+        'algorithm': json['algorithm'] == null ? undefined : json['algorithm'],
+        'allowedClientIds': json['allowed_client_ids'] == null ? undefined : json['allowed_client_ids'],
+        'rotationPeriod': json['rotation_period'] == null ? undefined : json['rotation_period'],
+        'verificationTtl': json['verification_ttl'] == null ? undefined : json['verification_ttl'],
     };
 }
 function OidcWriteKeyRequestToJSON(json) {
@@ -46,9 +46,9 @@ function OidcWriteKeyRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        algorithm: value['algorithm'],
-        allowed_client_ids: value['allowedClientIds'],
-        rotation_period: value['rotationPeriod'],
-        verification_ttl: value['verificationTtl'],
+        'algorithm': value['algorithm'],
+        'allowed_client_ids': value['allowedClientIds'],
+        'rotation_period': value['rotationPeriod'],
+        'verification_ttl': value['verificationTtl'],
     };
 }

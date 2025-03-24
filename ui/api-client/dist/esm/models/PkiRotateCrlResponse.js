@@ -25,7 +25,7 @@ export function PkiRotateCrlResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        success: json['success'] == null ? undefined : json['success'],
+        'success': json['success'] == null ? undefined : json['success'],
     };
 }
 export function PkiRotateCrlResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function PkiRotateCrlResponseToJSONTyped(value, ignoreDiscriminator = fal
         return value;
     }
     return {
-        success: value['success'],
+        'success': value['success'],
     };
 }

@@ -48,27 +48,27 @@ export interface PkiWriteExternalPolicyIssueRequest {
     removeRootsFromChain?: boolean;
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum PkiWriteExternalPolicyIssueRequestFormatEnum {
     PEM = "pem",
     DER = "der",
     PEM_BUNDLE = "pem_bundle"
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum PkiWriteExternalPolicyIssueRequestKeyTypeEnum {
     RSA = "rsa",
     EC = "ec",
     ED25519 = "ed25519"
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum PkiWriteExternalPolicyIssueRequestPrivateKeyFormatEnum {
     DER = "der",
     PEM = "pem",

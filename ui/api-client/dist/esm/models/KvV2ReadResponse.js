@@ -25,8 +25,8 @@ export function KvV2ReadResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        data: json['data'] == null ? undefined : json['data'],
-        metadata: json['metadata'] == null ? undefined : json['metadata'],
+        'data': json['data'] == null ? undefined : json['data'],
+        'metadata': json['metadata'] == null ? undefined : json['metadata'],
     };
 }
 export function KvV2ReadResponseToJSON(json) {
@@ -37,7 +37,7 @@ export function KvV2ReadResponseToJSONTyped(value, ignoreDiscriminator = false) 
         return value;
     }
     return {
-        data: value['data'],
-        metadata: value['metadata'],
+        'data': value['data'],
+        'metadata': value['metadata'],
     };
 }

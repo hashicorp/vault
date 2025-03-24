@@ -32,14 +32,14 @@ function RateLimitQuotasReadResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        blockInterval: json['block_interval'] == null ? undefined : json['block_interval'],
-        inheritable: json['inheritable'] == null ? undefined : json['inheritable'],
-        interval: json['interval'] == null ? undefined : json['interval'],
-        name: json['name'] == null ? undefined : json['name'],
-        path: json['path'] == null ? undefined : json['path'],
-        rate: json['rate'] == null ? undefined : json['rate'],
-        role: json['role'] == null ? undefined : json['role'],
-        type: json['type'] == null ? undefined : json['type'],
+        'blockInterval': json['block_interval'] == null ? undefined : json['block_interval'],
+        'inheritable': json['inheritable'] == null ? undefined : json['inheritable'],
+        'interval': json['interval'] == null ? undefined : json['interval'],
+        'name': json['name'] == null ? undefined : json['name'],
+        'path': json['path'] == null ? undefined : json['path'],
+        'rate': json['rate'] == null ? undefined : json['rate'],
+        'role': json['role'] == null ? undefined : json['role'],
+        'type': json['type'] == null ? undefined : json['type'],
     };
 }
 function RateLimitQuotasReadResponseToJSON(json) {
@@ -50,13 +50,13 @@ function RateLimitQuotasReadResponseToJSONTyped(value, ignoreDiscriminator = fal
         return value;
     }
     return {
-        block_interval: value['blockInterval'],
-        inheritable: value['inheritable'],
-        interval: value['interval'],
-        name: value['name'],
-        path: value['path'],
-        rate: value['rate'],
-        role: value['role'],
-        type: value['type'],
+        'block_interval': value['blockInterval'],
+        'inheritable': value['inheritable'],
+        'interval': value['interval'],
+        'name': value['name'],
+        'path': value['path'],
+        'rate': value['rate'],
+        'role': value['role'],
+        'type': value['type'],
     };
 }

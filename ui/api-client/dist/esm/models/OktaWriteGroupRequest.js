@@ -25,7 +25,7 @@ export function OktaWriteGroupRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        policies: json['policies'] == null ? undefined : json['policies'],
+        'policies': json['policies'] == null ? undefined : json['policies'],
     };
 }
 export function OktaWriteGroupRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function OktaWriteGroupRequestToJSONTyped(value, ignoreDiscriminator = fa
         return value;
     }
     return {
-        policies: value['policies'],
+        'policies': value['policies'],
     };
 }

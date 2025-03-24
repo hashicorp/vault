@@ -25,7 +25,7 @@ export function RewrapRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        token: json['token'] == null ? undefined : json['token'],
+        'token': json['token'] == null ? undefined : json['token'],
     };
 }
 export function RewrapRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function RewrapRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        token: value['token'],
+        'token': value['token'],
     };
 }

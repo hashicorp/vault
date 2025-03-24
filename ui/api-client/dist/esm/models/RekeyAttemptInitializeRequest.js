@@ -25,11 +25,11 @@ export function RekeyAttemptInitializeRequestFromJSONTyped(json, ignoreDiscrimin
         return json;
     }
     return {
-        backup: json['backup'] == null ? undefined : json['backup'],
-        pgpKeys: json['pgp_keys'] == null ? undefined : json['pgp_keys'],
-        requireVerification: json['require_verification'] == null ? undefined : json['require_verification'],
-        secretShares: json['secret_shares'] == null ? undefined : json['secret_shares'],
-        secretThreshold: json['secret_threshold'] == null ? undefined : json['secret_threshold'],
+        'backup': json['backup'] == null ? undefined : json['backup'],
+        'pgpKeys': json['pgp_keys'] == null ? undefined : json['pgp_keys'],
+        'requireVerification': json['require_verification'] == null ? undefined : json['require_verification'],
+        'secretShares': json['secret_shares'] == null ? undefined : json['secret_shares'],
+        'secretThreshold': json['secret_threshold'] == null ? undefined : json['secret_threshold'],
     };
 }
 export function RekeyAttemptInitializeRequestToJSON(json) {
@@ -40,10 +40,10 @@ export function RekeyAttemptInitializeRequestToJSONTyped(value, ignoreDiscrimina
         return value;
     }
     return {
-        backup: value['backup'],
-        pgp_keys: value['pgpKeys'],
-        require_verification: value['requireVerification'],
-        secret_shares: value['secretShares'],
-        secret_threshold: value['secretThreshold'],
+        'backup': value['backup'],
+        'pgp_keys': value['pgpKeys'],
+        'require_verification': value['requireVerification'],
+        'secret_shares': value['secretShares'],
+        'secret_threshold': value['secretThreshold'],
     };
 }

@@ -32,7 +32,7 @@ function RawReadResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        value: json['value'] == null ? undefined : json['value'],
+        'value': json['value'] == null ? undefined : json['value'],
     };
 }
 function RawReadResponseToJSON(json) {
@@ -43,6 +43,6 @@ function RawReadResponseToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        value: value['value'],
+        'value': value['value'],
     };
 }

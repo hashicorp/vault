@@ -32,8 +32,8 @@ function PoliciesListAclPolicies3ResponseFromJSONTyped(json, ignoreDiscriminator
         return json;
     }
     return {
-        keys: json['keys'] == null ? undefined : json['keys'],
-        policies: json['policies'] == null ? undefined : json['policies'],
+        'keys': json['keys'] == null ? undefined : json['keys'],
+        'policies': json['policies'] == null ? undefined : json['policies'],
     };
 }
 function PoliciesListAclPolicies3ResponseToJSON(json) {
@@ -44,7 +44,7 @@ function PoliciesListAclPolicies3ResponseToJSONTyped(value, ignoreDiscriminator 
         return value;
     }
     return {
-        keys: value['keys'],
-        policies: value['policies'],
+        'keys': value['keys'],
+        'policies': value['policies'],
     };
 }

@@ -25,7 +25,7 @@ export function RootTokenGenerationInitializeRequestFromJSONTyped(json, ignoreDi
         return json;
     }
     return {
-        pgpKey: json['pgp_key'] == null ? undefined : json['pgp_key'],
+        'pgpKey': json['pgp_key'] == null ? undefined : json['pgp_key'],
     };
 }
 export function RootTokenGenerationInitializeRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function RootTokenGenerationInitializeRequestToJSONTyped(value, ignoreDis
         return value;
     }
     return {
-        pgp_key: value['pgpKey'],
+        'pgp_key': value['pgpKey'],
     };
 }

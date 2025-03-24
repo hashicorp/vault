@@ -32,8 +32,8 @@ function AwsConfigureLeaseRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        lease: json['lease'] == null ? undefined : json['lease'],
-        leaseMax: json['lease_max'] == null ? undefined : json['lease_max'],
+        'lease': json['lease'] == null ? undefined : json['lease'],
+        'leaseMax': json['lease_max'] == null ? undefined : json['lease_max'],
     };
 }
 function AwsConfigureLeaseRequestToJSON(json) {
@@ -44,7 +44,7 @@ function AwsConfigureLeaseRequestToJSONTyped(value, ignoreDiscriminator = false)
         return value;
     }
     return {
-        lease: value['lease'],
-        lease_max: value['leaseMax'],
+        'lease': value['lease'],
+        'lease_max': value['leaseMax'],
     };
 }

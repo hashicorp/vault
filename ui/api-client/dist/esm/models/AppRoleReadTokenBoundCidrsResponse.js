@@ -25,7 +25,7 @@ export function AppRoleReadTokenBoundCidrsResponseFromJSONTyped(json, ignoreDisc
         return json;
     }
     return {
-        tokenBoundCidrs: json['token_bound_cidrs'] == null ? undefined : json['token_bound_cidrs'],
+        'tokenBoundCidrs': json['token_bound_cidrs'] == null ? undefined : json['token_bound_cidrs'],
     };
 }
 export function AppRoleReadTokenBoundCidrsResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function AppRoleReadTokenBoundCidrsResponseToJSONTyped(value, ignoreDiscr
         return value;
     }
     return {
-        token_bound_cidrs: value['tokenBoundCidrs'],
+        'token_bound_cidrs': value['tokenBoundCidrs'],
     };
 }

@@ -32,7 +32,7 @@ function AppRoleDestroySecretIdRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        secretId: json['secret_id'] == null ? undefined : json['secret_id'],
+        'secretId': json['secret_id'] == null ? undefined : json['secret_id'],
     };
 }
 function AppRoleDestroySecretIdRequestToJSON(json) {
@@ -43,6 +43,6 @@ function AppRoleDestroySecretIdRequestToJSONTyped(value, ignoreDiscriminator = f
         return value;
     }
     return {
-        secret_id: value['secretId'],
+        'secret_id': value['secretId'],
     };
 }

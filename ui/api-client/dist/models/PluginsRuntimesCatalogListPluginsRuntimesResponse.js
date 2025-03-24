@@ -32,7 +32,7 @@ function PluginsRuntimesCatalogListPluginsRuntimesResponseFromJSONTyped(json, ig
         return json;
     }
     return {
-        runtimes: json['runtimes'] == null ? undefined : json['runtimes'],
+        'runtimes': json['runtimes'] == null ? undefined : json['runtimes'],
     };
 }
 function PluginsRuntimesCatalogListPluginsRuntimesResponseToJSON(json) {
@@ -43,6 +43,6 @@ function PluginsRuntimesCatalogListPluginsRuntimesResponseToJSONTyped(value, ign
         return value;
     }
     return {
-        runtimes: value['runtimes'],
+        'runtimes': value['runtimes'],
     };
 }

@@ -32,7 +32,7 @@ function SshListRolesByIpRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        ip: json['ip'] == null ? undefined : json['ip'],
+        'ip': json['ip'] == null ? undefined : json['ip'],
     };
 }
 function SshListRolesByIpRequestToJSON(json) {
@@ -43,6 +43,6 @@ function SshListRolesByIpRequestToJSONTyped(value, ignoreDiscriminator = false) 
         return value;
     }
     return {
-        ip: value['ip'],
+        'ip': value['ip'],
     };
 }

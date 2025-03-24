@@ -32,7 +32,7 @@ function AppRoleWriteTokenNumUsesRequestFromJSONTyped(json, ignoreDiscriminator)
         return json;
     }
     return {
-        tokenNumUses: json['token_num_uses'] == null ? undefined : json['token_num_uses'],
+        'tokenNumUses': json['token_num_uses'] == null ? undefined : json['token_num_uses'],
     };
 }
 function AppRoleWriteTokenNumUsesRequestToJSON(json) {
@@ -43,6 +43,6 @@ function AppRoleWriteTokenNumUsesRequestToJSONTyped(value, ignoreDiscriminator =
         return value;
     }
     return {
-        token_num_uses: value['tokenNumUses'],
+        'token_num_uses': value['tokenNumUses'],
     };
 }

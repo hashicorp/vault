@@ -25,8 +25,8 @@ export function RekeyVerificationUpdateResponseFromJSONTyped(json, ignoreDiscrim
         return json;
     }
     return {
-        complete: json['complete'] == null ? undefined : json['complete'],
-        nonce: json['nonce'] == null ? undefined : json['nonce'],
+        'complete': json['complete'] == null ? undefined : json['complete'],
+        'nonce': json['nonce'] == null ? undefined : json['nonce'],
     };
 }
 export function RekeyVerificationUpdateResponseToJSON(json) {
@@ -37,7 +37,7 @@ export function RekeyVerificationUpdateResponseToJSONTyped(value, ignoreDiscrimi
         return value;
     }
     return {
-        complete: value['complete'],
-        nonce: value['nonce'],
+        'complete': value['complete'],
+        'nonce': value['nonce'],
     };
 }

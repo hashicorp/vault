@@ -25,8 +25,8 @@ export function PkiReplaceRootResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        _default: json['default'] == null ? undefined : json['default'],
-        defaultFollowsLatestIssuer: json['default_follows_latest_issuer'] == null ? undefined : json['default_follows_latest_issuer'],
+        '_default': json['default'] == null ? undefined : json['default'],
+        'defaultFollowsLatestIssuer': json['default_follows_latest_issuer'] == null ? undefined : json['default_follows_latest_issuer'],
     };
 }
 export function PkiReplaceRootResponseToJSON(json) {
@@ -37,7 +37,7 @@ export function PkiReplaceRootResponseToJSONTyped(value, ignoreDiscriminator = f
         return value;
     }
     return {
-        default: value['_default'],
-        default_follows_latest_issuer: value['defaultFollowsLatestIssuer'],
+        'default': value['_default'],
+        'default_follows_latest_issuer': value['defaultFollowsLatestIssuer'],
     };
 }

@@ -101,18 +101,18 @@ export interface PkiIssuerIssueWithRoleRequest {
     userIds?: Array<string>;
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum PkiIssuerIssueWithRoleRequestFormatEnum {
     PEM = "pem",
     DER = "der",
     PEM_BUNDLE = "pem_bundle"
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum PkiIssuerIssueWithRoleRequestPrivateKeyFormatEnum {
     EMPTY = "",
     DER = "der",

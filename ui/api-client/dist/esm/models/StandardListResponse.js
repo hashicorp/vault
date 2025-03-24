@@ -25,7 +25,7 @@ export function StandardListResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        keys: json['keys'] == null ? undefined : json['keys'],
+        'keys': json['keys'] == null ? undefined : json['keys'],
     };
 }
 export function StandardListResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function StandardListResponseToJSONTyped(value, ignoreDiscriminator = fal
         return value;
     }
     return {
-        keys: value['keys'],
+        'keys': value['keys'],
     };
 }

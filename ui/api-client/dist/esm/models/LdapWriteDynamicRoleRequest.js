@@ -29,12 +29,12 @@ export function LdapWriteDynamicRoleRequestFromJSONTyped(json, ignoreDiscriminat
         return json;
     }
     return {
-        creationLdif: json['creation_ldif'],
-        defaultTtl: json['default_ttl'] == null ? undefined : json['default_ttl'],
-        deletionLdif: json['deletion_ldif'],
-        maxTtl: json['max_ttl'] == null ? undefined : json['max_ttl'],
-        rollbackLdif: json['rollback_ldif'] == null ? undefined : json['rollback_ldif'],
-        usernameTemplate: json['username_template'] == null ? undefined : json['username_template'],
+        'creationLdif': json['creation_ldif'],
+        'defaultTtl': json['default_ttl'] == null ? undefined : json['default_ttl'],
+        'deletionLdif': json['deletion_ldif'],
+        'maxTtl': json['max_ttl'] == null ? undefined : json['max_ttl'],
+        'rollbackLdif': json['rollback_ldif'] == null ? undefined : json['rollback_ldif'],
+        'usernameTemplate': json['username_template'] == null ? undefined : json['username_template'],
     };
 }
 export function LdapWriteDynamicRoleRequestToJSON(json) {
@@ -45,11 +45,11 @@ export function LdapWriteDynamicRoleRequestToJSONTyped(value, ignoreDiscriminato
         return value;
     }
     return {
-        creation_ldif: value['creationLdif'],
-        default_ttl: value['defaultTtl'],
-        deletion_ldif: value['deletionLdif'],
-        max_ttl: value['maxTtl'],
-        rollback_ldif: value['rollbackLdif'],
-        username_template: value['usernameTemplate'],
+        'creation_ldif': value['creationLdif'],
+        'default_ttl': value['defaultTtl'],
+        'deletion_ldif': value['deletionLdif'],
+        'max_ttl': value['maxTtl'],
+        'rollback_ldif': value['rollbackLdif'],
+        'username_template': value['usernameTemplate'],
     };
 }

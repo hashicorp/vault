@@ -25,11 +25,11 @@ export function SshConfigureCaRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        generateSigningKey: json['generate_signing_key'] == null ? undefined : json['generate_signing_key'],
-        keyBits: json['key_bits'] == null ? undefined : json['key_bits'],
-        keyType: json['key_type'] == null ? undefined : json['key_type'],
-        privateKey: json['private_key'] == null ? undefined : json['private_key'],
-        publicKey: json['public_key'] == null ? undefined : json['public_key'],
+        'generateSigningKey': json['generate_signing_key'] == null ? undefined : json['generate_signing_key'],
+        'keyBits': json['key_bits'] == null ? undefined : json['key_bits'],
+        'keyType': json['key_type'] == null ? undefined : json['key_type'],
+        'privateKey': json['private_key'] == null ? undefined : json['private_key'],
+        'publicKey': json['public_key'] == null ? undefined : json['public_key'],
     };
 }
 export function SshConfigureCaRequestToJSON(json) {
@@ -40,10 +40,10 @@ export function SshConfigureCaRequestToJSONTyped(value, ignoreDiscriminator = fa
         return value;
     }
     return {
-        generate_signing_key: value['generateSigningKey'],
-        key_bits: value['keyBits'],
-        key_type: value['keyType'],
-        private_key: value['privateKey'],
-        public_key: value['publicKey'],
+        'generate_signing_key': value['generateSigningKey'],
+        'key_bits': value['keyBits'],
+        'key_type': value['keyType'],
+        'private_key': value['privateKey'],
+        'public_key': value['publicKey'],
     };
 }

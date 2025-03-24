@@ -32,7 +32,7 @@ function AppRoleReadBindSecretIdResponseFromJSONTyped(json, ignoreDiscriminator)
         return json;
     }
     return {
-        bindSecretId: json['bind_secret_id'] == null ? undefined : json['bind_secret_id'],
+        'bindSecretId': json['bind_secret_id'] == null ? undefined : json['bind_secret_id'],
     };
 }
 function AppRoleReadBindSecretIdResponseToJSON(json) {
@@ -43,6 +43,6 @@ function AppRoleReadBindSecretIdResponseToJSONTyped(value, ignoreDiscriminator =
         return value;
     }
     return {
-        bind_secret_id: value['bindSecretId'],
+        'bind_secret_id': value['bindSecretId'],
     };
 }

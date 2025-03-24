@@ -25,8 +25,8 @@ export function SystemPatchSyncConfigResponseFromJSONTyped(json, ignoreDiscrimin
         return json;
     }
     return {
-        disabled: json['disabled'] == null ? undefined : json['disabled'],
-        queueCapacity: json['queue_capacity'] == null ? undefined : json['queue_capacity'],
+        'disabled': json['disabled'] == null ? undefined : json['disabled'],
+        'queueCapacity': json['queue_capacity'] == null ? undefined : json['queue_capacity'],
     };
 }
 export function SystemPatchSyncConfigResponseToJSON(json) {
@@ -37,7 +37,7 @@ export function SystemPatchSyncConfigResponseToJSONTyped(value, ignoreDiscrimina
         return value;
     }
     return {
-        disabled: value['disabled'],
-        queue_capacity: value['queueCapacity'],
+        'disabled': value['disabled'],
+        'queue_capacity': value['queueCapacity'],
     };
 }

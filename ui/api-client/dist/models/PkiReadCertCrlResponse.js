@@ -32,11 +32,11 @@ function PkiReadCertCrlResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        caChain: json['ca_chain'] == null ? undefined : json['ca_chain'],
-        certificate: json['certificate'] == null ? undefined : json['certificate'],
-        issuerId: json['issuer_id'] == null ? undefined : json['issuer_id'],
-        revocationTime: json['revocation_time'] == null ? undefined : json['revocation_time'],
-        revocationTimeRfc3339: json['revocation_time_rfc3339'] == null ? undefined : json['revocation_time_rfc3339'],
+        'caChain': json['ca_chain'] == null ? undefined : json['ca_chain'],
+        'certificate': json['certificate'] == null ? undefined : json['certificate'],
+        'issuerId': json['issuer_id'] == null ? undefined : json['issuer_id'],
+        'revocationTime': json['revocation_time'] == null ? undefined : json['revocation_time'],
+        'revocationTimeRfc3339': json['revocation_time_rfc3339'] == null ? undefined : json['revocation_time_rfc3339'],
     };
 }
 function PkiReadCertCrlResponseToJSON(json) {
@@ -47,10 +47,10 @@ function PkiReadCertCrlResponseToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        ca_chain: value['caChain'],
-        certificate: value['certificate'],
-        issuer_id: value['issuerId'],
-        revocation_time: value['revocationTime'],
-        revocation_time_rfc3339: value['revocationTimeRfc3339'],
+        'ca_chain': value['caChain'],
+        'certificate': value['certificate'],
+        'issuer_id': value['issuerId'],
+        'revocation_time': value['revocationTime'],
+        'revocation_time_rfc3339': value['revocationTimeRfc3339'],
     };
 }

@@ -25,7 +25,7 @@ export function SystemListSyncDestinationsTypeResponseFromJSONTyped(json, ignore
         return json;
     }
     return {
-        keys: json['keys'] == null ? undefined : json['keys'],
+        'keys': json['keys'] == null ? undefined : json['keys'],
     };
 }
 export function SystemListSyncDestinationsTypeResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function SystemListSyncDestinationsTypeResponseToJSONTyped(value, ignoreD
         return value;
     }
     return {
-        keys: value['keys'],
+        'keys': value['keys'],
     };
 }

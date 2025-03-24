@@ -32,10 +32,10 @@ function PkiReadIssuerPemResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        caChain: json['ca_chain'] == null ? undefined : json['ca_chain'],
-        certificate: json['certificate'] == null ? undefined : json['certificate'],
-        issuerId: json['issuer_id'] == null ? undefined : json['issuer_id'],
-        issuerName: json['issuer_name'] == null ? undefined : json['issuer_name'],
+        'caChain': json['ca_chain'] == null ? undefined : json['ca_chain'],
+        'certificate': json['certificate'] == null ? undefined : json['certificate'],
+        'issuerId': json['issuer_id'] == null ? undefined : json['issuer_id'],
+        'issuerName': json['issuer_name'] == null ? undefined : json['issuer_name'],
     };
 }
 function PkiReadIssuerPemResponseToJSON(json) {
@@ -46,9 +46,9 @@ function PkiReadIssuerPemResponseToJSONTyped(value, ignoreDiscriminator = false)
         return value;
     }
     return {
-        ca_chain: value['caChain'],
-        certificate: value['certificate'],
-        issuer_id: value['issuerId'],
-        issuer_name: value['issuerName'],
+        'ca_chain': value['caChain'],
+        'certificate': value['certificate'],
+        'issuer_id': value['issuerId'],
+        'issuer_name': value['issuerName'],
     };
 }

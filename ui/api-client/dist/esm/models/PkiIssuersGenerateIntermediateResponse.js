@@ -25,10 +25,10 @@ export function PkiIssuersGenerateIntermediateResponseFromJSONTyped(json, ignore
         return json;
     }
     return {
-        csr: json['csr'] == null ? undefined : json['csr'],
-        keyId: json['key_id'] == null ? undefined : json['key_id'],
-        privateKey: json['private_key'] == null ? undefined : json['private_key'],
-        privateKeyType: json['private_key_type'] == null ? undefined : json['private_key_type'],
+        'csr': json['csr'] == null ? undefined : json['csr'],
+        'keyId': json['key_id'] == null ? undefined : json['key_id'],
+        'privateKey': json['private_key'] == null ? undefined : json['private_key'],
+        'privateKeyType': json['private_key_type'] == null ? undefined : json['private_key_type'],
     };
 }
 export function PkiIssuersGenerateIntermediateResponseToJSON(json) {
@@ -39,9 +39,9 @@ export function PkiIssuersGenerateIntermediateResponseToJSONTyped(value, ignoreD
         return value;
     }
     return {
-        csr: value['csr'],
-        key_id: value['keyId'],
-        private_key: value['privateKey'],
-        private_key_type: value['privateKeyType'],
+        'csr': value['csr'],
+        'key_id': value['keyId'],
+        'private_key': value['privateKey'],
+        'private_key_type': value['privateKeyType'],
     };
 }

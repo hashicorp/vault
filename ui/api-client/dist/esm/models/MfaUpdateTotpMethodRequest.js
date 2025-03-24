@@ -25,15 +25,15 @@ export function MfaUpdateTotpMethodRequestFromJSONTyped(json, ignoreDiscriminato
         return json;
     }
     return {
-        algorithm: json['algorithm'] == null ? undefined : json['algorithm'],
-        digits: json['digits'] == null ? undefined : json['digits'],
-        issuer: json['issuer'] == null ? undefined : json['issuer'],
-        keySize: json['key_size'] == null ? undefined : json['key_size'],
-        maxValidationAttempts: json['max_validation_attempts'] == null ? undefined : json['max_validation_attempts'],
-        methodName: json['method_name'] == null ? undefined : json['method_name'],
-        period: json['period'] == null ? undefined : json['period'],
-        qrSize: json['qr_size'] == null ? undefined : json['qr_size'],
-        skew: json['skew'] == null ? undefined : json['skew'],
+        'algorithm': json['algorithm'] == null ? undefined : json['algorithm'],
+        'digits': json['digits'] == null ? undefined : json['digits'],
+        'issuer': json['issuer'] == null ? undefined : json['issuer'],
+        'keySize': json['key_size'] == null ? undefined : json['key_size'],
+        'maxValidationAttempts': json['max_validation_attempts'] == null ? undefined : json['max_validation_attempts'],
+        'methodName': json['method_name'] == null ? undefined : json['method_name'],
+        'period': json['period'] == null ? undefined : json['period'],
+        'qrSize': json['qr_size'] == null ? undefined : json['qr_size'],
+        'skew': json['skew'] == null ? undefined : json['skew'],
     };
 }
 export function MfaUpdateTotpMethodRequestToJSON(json) {
@@ -44,14 +44,14 @@ export function MfaUpdateTotpMethodRequestToJSONTyped(value, ignoreDiscriminator
         return value;
     }
     return {
-        algorithm: value['algorithm'],
-        digits: value['digits'],
-        issuer: value['issuer'],
-        key_size: value['keySize'],
-        max_validation_attempts: value['maxValidationAttempts'],
-        method_name: value['methodName'],
-        period: value['period'],
-        qr_size: value['qrSize'],
-        skew: value['skew'],
+        'algorithm': value['algorithm'],
+        'digits': value['digits'],
+        'issuer': value['issuer'],
+        'key_size': value['keySize'],
+        'max_validation_attempts': value['maxValidationAttempts'],
+        'method_name': value['methodName'],
+        'period': value['period'],
+        'qr_size': value['qrSize'],
+        'skew': value['skew'],
     };
 }

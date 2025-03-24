@@ -32,8 +32,8 @@ function SystemWriteSyncGithubAppsNameResponseFromJSONTyped(json, ignoreDiscrimi
         return json;
     }
     return {
-        appId: json['app_id'] == null ? undefined : json['app_id'],
-        name: json['name'] == null ? undefined : json['name'],
+        'appId': json['app_id'] == null ? undefined : json['app_id'],
+        'name': json['name'] == null ? undefined : json['name'],
     };
 }
 function SystemWriteSyncGithubAppsNameResponseToJSON(json) {
@@ -44,7 +44,7 @@ function SystemWriteSyncGithubAppsNameResponseToJSONTyped(value, ignoreDiscrimin
         return value;
     }
     return {
-        app_id: value['appId'],
-        name: value['name'],
+        'app_id': value['appId'],
+        'name': value['name'],
     };
 }

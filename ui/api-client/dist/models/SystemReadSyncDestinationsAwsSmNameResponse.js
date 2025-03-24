@@ -32,9 +32,9 @@ function SystemReadSyncDestinationsAwsSmNameResponseFromJSONTyped(json, ignoreDi
         return json;
     }
     return {
-        connectionDetails: json['connection_details'] == null ? undefined : json['connection_details'],
-        name: json['name'] == null ? undefined : json['name'],
-        type: json['type'] == null ? undefined : json['type'],
+        'connectionDetails': json['connection_details'] == null ? undefined : json['connection_details'],
+        'name': json['name'] == null ? undefined : json['name'],
+        'type': json['type'] == null ? undefined : json['type'],
     };
 }
 function SystemReadSyncDestinationsAwsSmNameResponseToJSON(json) {
@@ -45,8 +45,8 @@ function SystemReadSyncDestinationsAwsSmNameResponseToJSONTyped(value, ignoreDis
         return value;
     }
     return {
-        connection_details: value['connectionDetails'],
-        name: value['name'],
-        type: value['type'],
+        'connection_details': value['connectionDetails'],
+        'name': value['name'],
+        'type': value['type'],
     };
 }

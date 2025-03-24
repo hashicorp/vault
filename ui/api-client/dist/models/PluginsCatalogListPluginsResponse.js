@@ -32,7 +32,7 @@ function PluginsCatalogListPluginsResponseFromJSONTyped(json, ignoreDiscriminato
         return json;
     }
     return {
-        detailed: json['detailed'] == null ? undefined : json['detailed'],
+        'detailed': json['detailed'] == null ? undefined : json['detailed'],
     };
 }
 function PluginsCatalogListPluginsResponseToJSON(json) {
@@ -43,6 +43,6 @@ function PluginsCatalogListPluginsResponseToJSONTyped(value, ignoreDiscriminator
         return value;
     }
     return {
-        detailed: value['detailed'],
+        'detailed': value['detailed'],
     };
 }

@@ -32,8 +32,8 @@ function TokenRenewSelfRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        increment: json['increment'] == null ? undefined : json['increment'],
-        token: json['token'] == null ? undefined : json['token'],
+        'increment': json['increment'] == null ? undefined : json['increment'],
+        'token': json['token'] == null ? undefined : json['token'],
     };
 }
 function TokenRenewSelfRequestToJSON(json) {
@@ -44,7 +44,7 @@ function TokenRenewSelfRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        increment: value['increment'],
-        token: value['token'],
+        'increment': value['increment'],
+        'token': value['token'],
     };
 }

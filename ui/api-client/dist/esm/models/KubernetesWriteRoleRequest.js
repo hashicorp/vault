@@ -25,20 +25,18 @@ export function KubernetesWriteRoleRequestFromJSONTyped(json, ignoreDiscriminato
         return json;
     }
     return {
-        allowedKubernetesNamespaceSelector: json['allowed_kubernetes_namespace_selector'] == null
-            ? undefined
-            : json['allowed_kubernetes_namespace_selector'],
-        allowedKubernetesNamespaces: json['allowed_kubernetes_namespaces'] == null ? undefined : json['allowed_kubernetes_namespaces'],
-        extraAnnotations: json['extra_annotations'] == null ? undefined : json['extra_annotations'],
-        extraLabels: json['extra_labels'] == null ? undefined : json['extra_labels'],
-        generatedRoleRules: json['generated_role_rules'] == null ? undefined : json['generated_role_rules'],
-        kubernetesRoleName: json['kubernetes_role_name'] == null ? undefined : json['kubernetes_role_name'],
-        kubernetesRoleType: json['kubernetes_role_type'] == null ? undefined : json['kubernetes_role_type'],
-        nameTemplate: json['name_template'] == null ? undefined : json['name_template'],
-        serviceAccountName: json['service_account_name'] == null ? undefined : json['service_account_name'],
-        tokenDefaultAudiences: json['token_default_audiences'] == null ? undefined : json['token_default_audiences'],
-        tokenDefaultTtl: json['token_default_ttl'] == null ? undefined : json['token_default_ttl'],
-        tokenMaxTtl: json['token_max_ttl'] == null ? undefined : json['token_max_ttl'],
+        'allowedKubernetesNamespaceSelector': json['allowed_kubernetes_namespace_selector'] == null ? undefined : json['allowed_kubernetes_namespace_selector'],
+        'allowedKubernetesNamespaces': json['allowed_kubernetes_namespaces'] == null ? undefined : json['allowed_kubernetes_namespaces'],
+        'extraAnnotations': json['extra_annotations'] == null ? undefined : json['extra_annotations'],
+        'extraLabels': json['extra_labels'] == null ? undefined : json['extra_labels'],
+        'generatedRoleRules': json['generated_role_rules'] == null ? undefined : json['generated_role_rules'],
+        'kubernetesRoleName': json['kubernetes_role_name'] == null ? undefined : json['kubernetes_role_name'],
+        'kubernetesRoleType': json['kubernetes_role_type'] == null ? undefined : json['kubernetes_role_type'],
+        'nameTemplate': json['name_template'] == null ? undefined : json['name_template'],
+        'serviceAccountName': json['service_account_name'] == null ? undefined : json['service_account_name'],
+        'tokenDefaultAudiences': json['token_default_audiences'] == null ? undefined : json['token_default_audiences'],
+        'tokenDefaultTtl': json['token_default_ttl'] == null ? undefined : json['token_default_ttl'],
+        'tokenMaxTtl': json['token_max_ttl'] == null ? undefined : json['token_max_ttl'],
     };
 }
 export function KubernetesWriteRoleRequestToJSON(json) {
@@ -49,17 +47,17 @@ export function KubernetesWriteRoleRequestToJSONTyped(value, ignoreDiscriminator
         return value;
     }
     return {
-        allowed_kubernetes_namespace_selector: value['allowedKubernetesNamespaceSelector'],
-        allowed_kubernetes_namespaces: value['allowedKubernetesNamespaces'],
-        extra_annotations: value['extraAnnotations'],
-        extra_labels: value['extraLabels'],
-        generated_role_rules: value['generatedRoleRules'],
-        kubernetes_role_name: value['kubernetesRoleName'],
-        kubernetes_role_type: value['kubernetesRoleType'],
-        name_template: value['nameTemplate'],
-        service_account_name: value['serviceAccountName'],
-        token_default_audiences: value['tokenDefaultAudiences'],
-        token_default_ttl: value['tokenDefaultTtl'],
-        token_max_ttl: value['tokenMaxTtl'],
+        'allowed_kubernetes_namespace_selector': value['allowedKubernetesNamespaceSelector'],
+        'allowed_kubernetes_namespaces': value['allowedKubernetesNamespaces'],
+        'extra_annotations': value['extraAnnotations'],
+        'extra_labels': value['extraLabels'],
+        'generated_role_rules': value['generatedRoleRules'],
+        'kubernetes_role_name': value['kubernetesRoleName'],
+        'kubernetes_role_type': value['kubernetesRoleType'],
+        'name_template': value['nameTemplate'],
+        'service_account_name': value['serviceAccountName'],
+        'token_default_audiences': value['tokenDefaultAudiences'],
+        'token_default_ttl': value['tokenDefaultTtl'],
+        'token_max_ttl': value['tokenMaxTtl'],
     };
 }

@@ -25,9 +25,9 @@ export function JwtOidcRequestAuthorizationUrlRequestFromJSONTyped(json, ignoreD
         return json;
     }
     return {
-        clientNonce: json['client_nonce'] == null ? undefined : json['client_nonce'],
-        redirectUri: json['redirect_uri'] == null ? undefined : json['redirect_uri'],
-        role: json['role'] == null ? undefined : json['role'],
+        'clientNonce': json['client_nonce'] == null ? undefined : json['client_nonce'],
+        'redirectUri': json['redirect_uri'] == null ? undefined : json['redirect_uri'],
+        'role': json['role'] == null ? undefined : json['role'],
     };
 }
 export function JwtOidcRequestAuthorizationUrlRequestToJSON(json) {
@@ -38,8 +38,8 @@ export function JwtOidcRequestAuthorizationUrlRequestToJSONTyped(value, ignoreDi
         return value;
     }
     return {
-        client_nonce: value['clientNonce'],
-        redirect_uri: value['redirectUri'],
-        role: value['role'],
+        'client_nonce': value['clientNonce'],
+        'redirect_uri': value['redirectUri'],
+        'role': value['role'],
     };
 }

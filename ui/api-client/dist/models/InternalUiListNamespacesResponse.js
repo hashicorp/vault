@@ -32,7 +32,7 @@ function InternalUiListNamespacesResponseFromJSONTyped(json, ignoreDiscriminator
         return json;
     }
     return {
-        keys: json['keys'] == null ? undefined : json['keys'],
+        'keys': json['keys'] == null ? undefined : json['keys'],
     };
 }
 function InternalUiListNamespacesResponseToJSON(json) {
@@ -43,6 +43,6 @@ function InternalUiListNamespacesResponseToJSONTyped(value, ignoreDiscriminator 
         return value;
     }
     return {
-        keys: value['keys'],
+        'keys': value['keys'],
     };
 }

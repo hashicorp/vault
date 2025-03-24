@@ -32,24 +32,22 @@ function JwtConfigureRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        boundIssuer: json['bound_issuer'] == null ? undefined : json['bound_issuer'],
-        defaultRole: json['default_role'] == null ? undefined : json['default_role'],
-        jwksCaPem: json['jwks_ca_pem'] == null ? undefined : json['jwks_ca_pem'],
-        jwksPairs: json['jwks_pairs'] == null ? undefined : json['jwks_pairs'],
-        jwksUrl: json['jwks_url'] == null ? undefined : json['jwks_url'],
-        jwtSupportedAlgs: json['jwt_supported_algs'] == null ? undefined : json['jwt_supported_algs'],
-        jwtValidationPubkeys: json['jwt_validation_pubkeys'] == null ? undefined : json['jwt_validation_pubkeys'],
-        namespaceInState: json['namespace_in_state'] == null ? undefined : json['namespace_in_state'],
-        oidcClientId: json['oidc_client_id'] == null ? undefined : json['oidc_client_id'],
-        oidcClientSecret: json['oidc_client_secret'] == null ? undefined : json['oidc_client_secret'],
-        oidcDiscoveryCaPem: json['oidc_discovery_ca_pem'] == null ? undefined : json['oidc_discovery_ca_pem'],
-        oidcDiscoveryUrl: json['oidc_discovery_url'] == null ? undefined : json['oidc_discovery_url'],
-        oidcResponseMode: json['oidc_response_mode'] == null ? undefined : json['oidc_response_mode'],
-        oidcResponseTypes: json['oidc_response_types'] == null ? undefined : json['oidc_response_types'],
-        providerConfig: json['provider_config'] == null ? undefined : json['provider_config'],
-        unsupportedCriticalCertExtensions: json['unsupported_critical_cert_extensions'] == null
-            ? undefined
-            : json['unsupported_critical_cert_extensions'],
+        'boundIssuer': json['bound_issuer'] == null ? undefined : json['bound_issuer'],
+        'defaultRole': json['default_role'] == null ? undefined : json['default_role'],
+        'jwksCaPem': json['jwks_ca_pem'] == null ? undefined : json['jwks_ca_pem'],
+        'jwksPairs': json['jwks_pairs'] == null ? undefined : json['jwks_pairs'],
+        'jwksUrl': json['jwks_url'] == null ? undefined : json['jwks_url'],
+        'jwtSupportedAlgs': json['jwt_supported_algs'] == null ? undefined : json['jwt_supported_algs'],
+        'jwtValidationPubkeys': json['jwt_validation_pubkeys'] == null ? undefined : json['jwt_validation_pubkeys'],
+        'namespaceInState': json['namespace_in_state'] == null ? undefined : json['namespace_in_state'],
+        'oidcClientId': json['oidc_client_id'] == null ? undefined : json['oidc_client_id'],
+        'oidcClientSecret': json['oidc_client_secret'] == null ? undefined : json['oidc_client_secret'],
+        'oidcDiscoveryCaPem': json['oidc_discovery_ca_pem'] == null ? undefined : json['oidc_discovery_ca_pem'],
+        'oidcDiscoveryUrl': json['oidc_discovery_url'] == null ? undefined : json['oidc_discovery_url'],
+        'oidcResponseMode': json['oidc_response_mode'] == null ? undefined : json['oidc_response_mode'],
+        'oidcResponseTypes': json['oidc_response_types'] == null ? undefined : json['oidc_response_types'],
+        'providerConfig': json['provider_config'] == null ? undefined : json['provider_config'],
+        'unsupportedCriticalCertExtensions': json['unsupported_critical_cert_extensions'] == null ? undefined : json['unsupported_critical_cert_extensions'],
     };
 }
 function JwtConfigureRequestToJSON(json) {
@@ -60,21 +58,21 @@ function JwtConfigureRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        bound_issuer: value['boundIssuer'],
-        default_role: value['defaultRole'],
-        jwks_ca_pem: value['jwksCaPem'],
-        jwks_pairs: value['jwksPairs'],
-        jwks_url: value['jwksUrl'],
-        jwt_supported_algs: value['jwtSupportedAlgs'],
-        jwt_validation_pubkeys: value['jwtValidationPubkeys'],
-        namespace_in_state: value['namespaceInState'],
-        oidc_client_id: value['oidcClientId'],
-        oidc_client_secret: value['oidcClientSecret'],
-        oidc_discovery_ca_pem: value['oidcDiscoveryCaPem'],
-        oidc_discovery_url: value['oidcDiscoveryUrl'],
-        oidc_response_mode: value['oidcResponseMode'],
-        oidc_response_types: value['oidcResponseTypes'],
-        provider_config: value['providerConfig'],
-        unsupported_critical_cert_extensions: value['unsupportedCriticalCertExtensions'],
+        'bound_issuer': value['boundIssuer'],
+        'default_role': value['defaultRole'],
+        'jwks_ca_pem': value['jwksCaPem'],
+        'jwks_pairs': value['jwksPairs'],
+        'jwks_url': value['jwksUrl'],
+        'jwt_supported_algs': value['jwtSupportedAlgs'],
+        'jwt_validation_pubkeys': value['jwtValidationPubkeys'],
+        'namespace_in_state': value['namespaceInState'],
+        'oidc_client_id': value['oidcClientId'],
+        'oidc_client_secret': value['oidcClientSecret'],
+        'oidc_discovery_ca_pem': value['oidcDiscoveryCaPem'],
+        'oidc_discovery_url': value['oidcDiscoveryUrl'],
+        'oidc_response_mode': value['oidcResponseMode'],
+        'oidc_response_types': value['oidcResponseTypes'],
+        'provider_config': value['providerConfig'],
+        'unsupported_critical_cert_extensions': value['unsupportedCriticalCertExtensions'],
     };
 }

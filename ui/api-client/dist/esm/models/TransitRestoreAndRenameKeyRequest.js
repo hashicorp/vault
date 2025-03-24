@@ -25,8 +25,8 @@ export function TransitRestoreAndRenameKeyRequestFromJSONTyped(json, ignoreDiscr
         return json;
     }
     return {
-        backup: json['backup'] == null ? undefined : json['backup'],
-        force: json['force'] == null ? undefined : json['force'],
+        'backup': json['backup'] == null ? undefined : json['backup'],
+        'force': json['force'] == null ? undefined : json['force'],
     };
 }
 export function TransitRestoreAndRenameKeyRequestToJSON(json) {
@@ -37,7 +37,7 @@ export function TransitRestoreAndRenameKeyRequestToJSONTyped(value, ignoreDiscri
         return value;
     }
     return {
-        backup: value['backup'],
-        force: value['force'],
+        'backup': value['backup'],
+        'force': value['force'],
     };
 }

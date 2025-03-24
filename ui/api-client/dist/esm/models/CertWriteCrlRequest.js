@@ -25,8 +25,8 @@ export function CertWriteCrlRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        crl: json['crl'] == null ? undefined : json['crl'],
-        url: json['url'] == null ? undefined : json['url'],
+        'crl': json['crl'] == null ? undefined : json['crl'],
+        'url': json['url'] == null ? undefined : json['url'],
     };
 }
 export function CertWriteCrlRequestToJSON(json) {
@@ -37,7 +37,7 @@ export function CertWriteCrlRequestToJSONTyped(value, ignoreDiscriminator = fals
         return value;
     }
     return {
-        crl: value['crl'],
-        url: value['url'],
+        'crl': value['crl'],
+        'url': value['url'],
     };
 }

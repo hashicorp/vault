@@ -32,8 +32,8 @@ function SystemWriteReplicationPerformanceSecondaryPromoteRequestFromJSONTyped(j
         return json;
     }
     return {
-        force: json['force'] == null ? undefined : json['force'],
-        primaryClusterAddr: json['primary_cluster_addr'] == null ? undefined : json['primary_cluster_addr'],
+        'force': json['force'] == null ? undefined : json['force'],
+        'primaryClusterAddr': json['primary_cluster_addr'] == null ? undefined : json['primary_cluster_addr'],
     };
 }
 function SystemWriteReplicationPerformanceSecondaryPromoteRequestToJSON(json) {
@@ -44,7 +44,7 @@ function SystemWriteReplicationPerformanceSecondaryPromoteRequestToJSONTyped(val
         return value;
     }
     return {
-        force: value['force'],
-        primary_cluster_addr: value['primaryClusterAddr'],
+        'force': value['force'],
+        'primary_cluster_addr': value['primaryClusterAddr'],
     };
 }

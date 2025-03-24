@@ -25,9 +25,9 @@ export function MfaCreatePingIdMethodRequestFromJSONTyped(json, ignoreDiscrimina
         return json;
     }
     return {
-        methodName: json['method_name'] == null ? undefined : json['method_name'],
-        settingsFileBase64: json['settings_file_base64'] == null ? undefined : json['settings_file_base64'],
-        usernameFormat: json['username_format'] == null ? undefined : json['username_format'],
+        'methodName': json['method_name'] == null ? undefined : json['method_name'],
+        'settingsFileBase64': json['settings_file_base64'] == null ? undefined : json['settings_file_base64'],
+        'usernameFormat': json['username_format'] == null ? undefined : json['username_format'],
     };
 }
 export function MfaCreatePingIdMethodRequestToJSON(json) {
@@ -38,8 +38,8 @@ export function MfaCreatePingIdMethodRequestToJSONTyped(value, ignoreDiscriminat
         return value;
     }
     return {
-        method_name: value['methodName'],
-        settings_file_base64: value['settingsFileBase64'],
-        username_format: value['usernameFormat'],
+        'method_name': value['methodName'],
+        'settings_file_base64': value['settingsFileBase64'],
+        'username_format': value['usernameFormat'],
     };
 }

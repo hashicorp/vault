@@ -32,8 +32,8 @@ function UiHeadersReadConfigurationResponseFromJSONTyped(json, ignoreDiscriminat
         return json;
     }
     return {
-        value: json['value'] == null ? undefined : json['value'],
-        values: json['values'] == null ? undefined : json['values'],
+        'value': json['value'] == null ? undefined : json['value'],
+        'values': json['values'] == null ? undefined : json['values'],
     };
 }
 function UiHeadersReadConfigurationResponseToJSON(json) {
@@ -44,7 +44,7 @@ function UiHeadersReadConfigurationResponseToJSONTyped(value, ignoreDiscriminato
         return value;
     }
     return {
-        value: value['value'],
-        values: value['values'],
+        'value': value['value'],
+        'values': value['values'],
     };
 }

@@ -32,7 +32,7 @@ function AppRoleLookUpSecretIdRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        secretId: json['secret_id'] == null ? undefined : json['secret_id'],
+        'secretId': json['secret_id'] == null ? undefined : json['secret_id'],
     };
 }
 function AppRoleLookUpSecretIdRequestToJSON(json) {
@@ -43,6 +43,6 @@ function AppRoleLookUpSecretIdRequestToJSONTyped(value, ignoreDiscriminator = fa
         return value;
     }
     return {
-        secret_id: value['secretId'],
+        'secret_id': value['secretId'],
     };
 }

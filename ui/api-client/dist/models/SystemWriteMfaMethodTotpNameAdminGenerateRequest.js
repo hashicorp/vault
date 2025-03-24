@@ -32,7 +32,7 @@ function SystemWriteMfaMethodTotpNameAdminGenerateRequestFromJSONTyped(json, ign
         return json;
     }
     return {
-        entityId: json['entity_id'] == null ? undefined : json['entity_id'],
+        'entityId': json['entity_id'] == null ? undefined : json['entity_id'],
     };
 }
 function SystemWriteMfaMethodTotpNameAdminGenerateRequestToJSON(json) {
@@ -43,6 +43,6 @@ function SystemWriteMfaMethodTotpNameAdminGenerateRequestToJSONTyped(value, igno
         return value;
     }
     return {
-        entity_id: value['entityId'],
+        'entity_id': value['entityId'],
     };
 }

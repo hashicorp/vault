@@ -32,7 +32,7 @@ function SystemWriteSyncDestinationsTypeNameAssociationsSetResponseFromJSONTyped
         return json;
     }
     return {
-        associatedSecrets: json['associated_secrets'] == null ? undefined : json['associated_secrets'],
+        'associatedSecrets': json['associated_secrets'] == null ? undefined : json['associated_secrets'],
     };
 }
 function SystemWriteSyncDestinationsTypeNameAssociationsSetResponseToJSON(json) {
@@ -43,6 +43,6 @@ function SystemWriteSyncDestinationsTypeNameAssociationsSetResponseToJSONTyped(v
         return value;
     }
     return {
-        associated_secrets: value['associatedSecrets'],
+        'associated_secrets': value['associatedSecrets'],
     };
 }
