@@ -14,13 +14,16 @@ Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-1) for arguments common 
 
 ## Additional arguments
 
-- `address` `(string: required)` - API address of source vault cluster.
-- `namespace` `(string: "")` - Optional namespace to read from.
+- `address` `(string: "")` - API address of source vault cluster. If absent, the CLI uses the
+environment variable VAULT_ADDR for destination and IMPORT_SOURCE_VAULT_ADDR for source.
+- `namespace` `(string: "")` - Optional namespace to read from. If absent, the CLI uses the
+environment variable VAULT_NAMESPACE for destination and IMPORT_SOURCE_VAULT_NAMESPACE for source.
 - `mount` `(string: required)` - KV-v2 mount to read from.
 - `credentials_file` `(string: "")` - Path to a file containing a vault token.  If absent, the CLI uses the
-environment variable VAULT_TOKEN.  However, VAULT_TOKEN will be used for the Vault destination as well, so
-unless you're using the same cluster as both source and destination (e.g. from one mount to another), the source
-`credentials_file` should be populated with the source-specific token.
+environment variable VAULT_TOKEN for destination and IMPORT_SOURCE_VAULT_TOKEN for source.
+- `is_hcp_vault_cluster` `(boolean: false)` - Set to true if destination vault belongs to HCP Vault Dedicated. 
+If true `namespace` field will be relative to `admin` namespace of HCP Vault Dedicated.
+
 
 ## Example
 
@@ -31,6 +34,16 @@ source_vault {
   name = "my-vault-source-1"
   address = "https://source-vault-address:8200"
   namespace = "ns1"
+  mount = "my-kvv2"
+  credentials_file = "/path/to/vault/token"
+}
+```
+```hcl
+destination_vault {
+  name = "my-vault-source-1"
+  address = "https://destination-vault-address:8200"
+  namespace = "ns2"   # this corresponds to admin/ns2 since is_hcp_vault_cluster = true
+  is_hcp_vault_cluster = true
   mount = "my-kvv2"
   credentials_file = "/path/to/vault/token"
 }
