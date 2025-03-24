@@ -82,12 +82,6 @@ storage "raft" {
   node_id = "raft_node_1"
 }
 	`
-	consulBackendHCL = `
-	storage "consul" {
-  address = "127.0.0.1:8500"
-  path    = "vault/"
-}
-`
 	inmemHCL = `
 backend "inmem_ha" {
   advertise_addr       = "http://127.0.0.1:8200"
@@ -98,7 +92,11 @@ ha_backend "inmem_ha" {
   redirect_addr        = "http://127.0.0.1:8200"
 }
 `
-
+	fileHCL = `
+storage "file" {
+  path = "/mnt/vault/data"
+}
+`
 	badHAInmemHCL = `
 ha_backend "inmem" {}
 `
@@ -302,15 +300,8 @@ func TestServer(t *testing.T) {
 			[]string{"-test-verify-only", "-recovery"},
 		},
 		{
-			"missing_disable_mlock_value_with_inmem_storage",
+			"default_disable_mlock_value_with_inmem_storage",
 			testBaseHCL(t, goodListenerTimeouts, regexModifier(`\s*disable_mlock\s*=\s*.+`, "")) + inmemHCL,
-			"",
-			0,
-			[]string{"-test-server-config"},
-		},
-		{
-			"missing_disable_mlock_value_with_consul_storage",
-			testBaseHCL(t, goodListenerTimeouts, regexModifier(`\s*disable_mlock\s*=\s*.+`, "")) + consulBackendHCL,
 			"",
 			0,
 			[]string{"-test-server-config"},
