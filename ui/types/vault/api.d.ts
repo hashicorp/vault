@@ -3,6 +3,10 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import { ErrorContext } from '@hashicorp/vault-client-typescript';
+
+// re-exporting for convenience since it is associated to ApiError
+export { ErrorContext };
 export interface ApiError {
   httpStatus: number;
   path: string;
