@@ -25,7 +25,7 @@ export function TransitConfigureCacheRequestFromJSONTyped(json, ignoreDiscrimina
         return json;
     }
     return {
-        size: json['size'] == null ? undefined : json['size'],
+        'size': json['size'] == null ? undefined : json['size'],
     };
 }
 export function TransitConfigureCacheRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function TransitConfigureCacheRequestToJSONTyped(value, ignoreDiscriminat
         return value;
     }
     return {
-        size: value['size'],
+        'size': value['size'],
     };
 }

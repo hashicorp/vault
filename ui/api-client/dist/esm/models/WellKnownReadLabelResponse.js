@@ -25,10 +25,10 @@ export function WellKnownReadLabelResponseFromJSONTyped(json, ignoreDiscriminato
         return json;
     }
     return {
-        label: json['label'] == null ? undefined : json['label'],
-        mountPath: json['mount_path'] == null ? undefined : json['mount_path'],
-        mountUuid: json['mount_uuid'] == null ? undefined : json['mount_uuid'],
-        prefix: json['prefix'] == null ? undefined : json['prefix'],
+        'label': json['label'] == null ? undefined : json['label'],
+        'mountPath': json['mount_path'] == null ? undefined : json['mount_path'],
+        'mountUuid': json['mount_uuid'] == null ? undefined : json['mount_uuid'],
+        'prefix': json['prefix'] == null ? undefined : json['prefix'],
     };
 }
 export function WellKnownReadLabelResponseToJSON(json) {
@@ -39,9 +39,9 @@ export function WellKnownReadLabelResponseToJSONTyped(value, ignoreDiscriminator
         return value;
     }
     return {
-        label: value['label'],
-        mount_path: value['mountPath'],
-        mount_uuid: value['mountUuid'],
-        prefix: value['prefix'],
+        'label': value['label'],
+        'mount_path': value['mountPath'],
+        'mount_uuid': value['mountUuid'],
+        'prefix': value['prefix'],
     };
 }

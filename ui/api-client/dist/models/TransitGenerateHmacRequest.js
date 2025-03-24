@@ -32,10 +32,10 @@ function TransitGenerateHmacRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        algorithm: json['algorithm'] == null ? undefined : json['algorithm'],
-        batchInput: json['batch_input'] == null ? undefined : json['batch_input'],
-        input: json['input'] == null ? undefined : json['input'],
-        keyVersion: json['key_version'] == null ? undefined : json['key_version'],
+        'algorithm': json['algorithm'] == null ? undefined : json['algorithm'],
+        'batchInput': json['batch_input'] == null ? undefined : json['batch_input'],
+        'input': json['input'] == null ? undefined : json['input'],
+        'keyVersion': json['key_version'] == null ? undefined : json['key_version'],
     };
 }
 function TransitGenerateHmacRequestToJSON(json) {
@@ -46,9 +46,9 @@ function TransitGenerateHmacRequestToJSONTyped(value, ignoreDiscriminator = fals
         return value;
     }
     return {
-        algorithm: value['algorithm'],
-        batch_input: value['batchInput'],
-        input: value['input'],
-        key_version: value['keyVersion'],
+        'algorithm': value['algorithm'],
+        'batch_input': value['batchInput'],
+        'input': value['input'],
+        'key_version': value['keyVersion'],
     };
 }

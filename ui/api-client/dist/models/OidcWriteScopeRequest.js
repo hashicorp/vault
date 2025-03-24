@@ -32,8 +32,8 @@ function OidcWriteScopeRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        description: json['description'] == null ? undefined : json['description'],
-        template: json['template'] == null ? undefined : json['template'],
+        'description': json['description'] == null ? undefined : json['description'],
+        'template': json['template'] == null ? undefined : json['template'],
     };
 }
 function OidcWriteScopeRequestToJSON(json) {
@@ -44,7 +44,7 @@ function OidcWriteScopeRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        description: value['description'],
-        template: value['template'],
+        'description': value['description'],
+        'template': value['template'],
     };
 }

@@ -32,18 +32,16 @@ function LeaderStatusResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        activeTime: json['active_time'] == null ? undefined : new Date(json['active_time']),
-        haEnabled: json['ha_enabled'] == null ? undefined : json['ha_enabled'],
-        isSelf: json['is_self'] == null ? undefined : json['is_self'],
-        lastWal: json['last_wal'] == null ? undefined : json['last_wal'],
-        leaderAddress: json['leader_address'] == null ? undefined : json['leader_address'],
-        leaderClusterAddress: json['leader_cluster_address'] == null ? undefined : json['leader_cluster_address'],
-        performanceStandby: json['performance_standby'] == null ? undefined : json['performance_standby'],
-        performanceStandbyLastRemoteWal: json['performance_standby_last_remote_wal'] == null
-            ? undefined
-            : json['performance_standby_last_remote_wal'],
-        raftAppliedIndex: json['raft_applied_index'] == null ? undefined : json['raft_applied_index'],
-        raftCommittedIndex: json['raft_committed_index'] == null ? undefined : json['raft_committed_index'],
+        'activeTime': json['active_time'] == null ? undefined : (new Date(json['active_time'])),
+        'haEnabled': json['ha_enabled'] == null ? undefined : json['ha_enabled'],
+        'isSelf': json['is_self'] == null ? undefined : json['is_self'],
+        'lastWal': json['last_wal'] == null ? undefined : json['last_wal'],
+        'leaderAddress': json['leader_address'] == null ? undefined : json['leader_address'],
+        'leaderClusterAddress': json['leader_cluster_address'] == null ? undefined : json['leader_cluster_address'],
+        'performanceStandby': json['performance_standby'] == null ? undefined : json['performance_standby'],
+        'performanceStandbyLastRemoteWal': json['performance_standby_last_remote_wal'] == null ? undefined : json['performance_standby_last_remote_wal'],
+        'raftAppliedIndex': json['raft_applied_index'] == null ? undefined : json['raft_applied_index'],
+        'raftCommittedIndex': json['raft_committed_index'] == null ? undefined : json['raft_committed_index'],
     };
 }
 function LeaderStatusResponseToJSON(json) {
@@ -54,15 +52,15 @@ function LeaderStatusResponseToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        active_time: value['activeTime'] == null ? undefined : value['activeTime'].toISOString(),
-        ha_enabled: value['haEnabled'],
-        is_self: value['isSelf'],
-        last_wal: value['lastWal'],
-        leader_address: value['leaderAddress'],
-        leader_cluster_address: value['leaderClusterAddress'],
-        performance_standby: value['performanceStandby'],
-        performance_standby_last_remote_wal: value['performanceStandbyLastRemoteWal'],
-        raft_applied_index: value['raftAppliedIndex'],
-        raft_committed_index: value['raftCommittedIndex'],
+        'active_time': value['activeTime'] == null ? undefined : ((value['activeTime']).toISOString()),
+        'ha_enabled': value['haEnabled'],
+        'is_self': value['isSelf'],
+        'last_wal': value['lastWal'],
+        'leader_address': value['leaderAddress'],
+        'leader_cluster_address': value['leaderClusterAddress'],
+        'performance_standby': value['performanceStandby'],
+        'performance_standby_last_remote_wal': value['performanceStandbyLastRemoteWal'],
+        'raft_applied_index': value['raftAppliedIndex'],
+        'raft_committed_index': value['raftCommittedIndex'],
     };
 }

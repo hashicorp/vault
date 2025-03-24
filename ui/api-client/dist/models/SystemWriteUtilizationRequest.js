@@ -32,8 +32,8 @@ function SystemWriteUtilizationRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        message: json['message'] == null ? undefined : json['message'],
-        todayOnly: json['today_only'] == null ? undefined : json['today_only'],
+        'message': json['message'] == null ? undefined : json['message'],
+        'todayOnly': json['today_only'] == null ? undefined : json['today_only'],
     };
 }
 function SystemWriteUtilizationRequestToJSON(json) {
@@ -44,7 +44,7 @@ function SystemWriteUtilizationRequestToJSONTyped(value, ignoreDiscriminator = f
         return value;
     }
     return {
-        message: value['message'],
-        today_only: value['todayOnly'],
+        'message': value['message'],
+        'today_only': value['todayOnly'],
     };
 }

@@ -32,7 +32,7 @@ function LeasesLookUpResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        keys: json['keys'] == null ? undefined : json['keys'],
+        'keys': json['keys'] == null ? undefined : json['keys'],
     };
 }
 function LeasesLookUpResponseToJSON(json) {
@@ -43,6 +43,6 @@ function LeasesLookUpResponseToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        keys: value['keys'],
+        'keys': value['keys'],
     };
 }

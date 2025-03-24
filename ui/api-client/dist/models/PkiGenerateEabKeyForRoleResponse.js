@@ -32,11 +32,11 @@ function PkiGenerateEabKeyForRoleResponseFromJSONTyped(json, ignoreDiscriminator
         return json;
     }
     return {
-        acmeDirectory: json['acme_directory'] == null ? undefined : json['acme_directory'],
-        createdOn: json['created_on'] == null ? undefined : new Date(json['created_on']),
-        id: json['id'] == null ? undefined : json['id'],
-        key: json['key'] == null ? undefined : json['key'],
-        keyType: json['key_type'] == null ? undefined : json['key_type'],
+        'acmeDirectory': json['acme_directory'] == null ? undefined : json['acme_directory'],
+        'createdOn': json['created_on'] == null ? undefined : (new Date(json['created_on'])),
+        'id': json['id'] == null ? undefined : json['id'],
+        'key': json['key'] == null ? undefined : json['key'],
+        'keyType': json['key_type'] == null ? undefined : json['key_type'],
     };
 }
 function PkiGenerateEabKeyForRoleResponseToJSON(json) {
@@ -47,10 +47,10 @@ function PkiGenerateEabKeyForRoleResponseToJSONTyped(value, ignoreDiscriminator 
         return value;
     }
     return {
-        acme_directory: value['acmeDirectory'],
-        created_on: value['createdOn'] == null ? undefined : value['createdOn'].toISOString(),
-        id: value['id'],
-        key: value['key'],
-        key_type: value['keyType'],
+        'acme_directory': value['acmeDirectory'],
+        'created_on': value['createdOn'] == null ? undefined : ((value['createdOn']).toISOString()),
+        'id': value['id'],
+        'key': value['key'],
+        'key_type': value['keyType'],
     };
 }

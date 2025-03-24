@@ -25,17 +25,17 @@ export function SystemWriteSyncDestinationsVercelProjectNameRequestFromJSONTyped
         return json;
     }
     return {
-        accessToken: json['access_token'] == null ? undefined : json['access_token'],
-        allowedIpv4Addresses: json['allowed_ipv4_addresses'] == null ? undefined : json['allowed_ipv4_addresses'],
-        allowedIpv6Addresses: json['allowed_ipv6_addresses'] == null ? undefined : json['allowed_ipv6_addresses'],
-        allowedPorts: json['allowed_ports'] == null ? undefined : json['allowed_ports'],
-        deploymentEnvironments: json['deployment_environments'] == null ? undefined : json['deployment_environments'],
-        disableStrictNetworking: json['disable_strict_networking'] == null ? undefined : json['disable_strict_networking'],
-        granularity: json['granularity'] == null ? undefined : json['granularity'],
-        projectId: json['project_id'] == null ? undefined : json['project_id'],
-        purge: json['purge'] == null ? undefined : json['purge'],
-        secretNameTemplate: json['secret_name_template'] == null ? undefined : json['secret_name_template'],
-        teamId: json['team_id'] == null ? undefined : json['team_id'],
+        'accessToken': json['access_token'] == null ? undefined : json['access_token'],
+        'allowedIpv4Addresses': json['allowed_ipv4_addresses'] == null ? undefined : json['allowed_ipv4_addresses'],
+        'allowedIpv6Addresses': json['allowed_ipv6_addresses'] == null ? undefined : json['allowed_ipv6_addresses'],
+        'allowedPorts': json['allowed_ports'] == null ? undefined : json['allowed_ports'],
+        'deploymentEnvironments': json['deployment_environments'] == null ? undefined : json['deployment_environments'],
+        'disableStrictNetworking': json['disable_strict_networking'] == null ? undefined : json['disable_strict_networking'],
+        'granularity': json['granularity'] == null ? undefined : json['granularity'],
+        'projectId': json['project_id'] == null ? undefined : json['project_id'],
+        'purge': json['purge'] == null ? undefined : json['purge'],
+        'secretNameTemplate': json['secret_name_template'] == null ? undefined : json['secret_name_template'],
+        'teamId': json['team_id'] == null ? undefined : json['team_id'],
     };
 }
 export function SystemWriteSyncDestinationsVercelProjectNameRequestToJSON(json) {
@@ -46,16 +46,16 @@ export function SystemWriteSyncDestinationsVercelProjectNameRequestToJSONTyped(v
         return value;
     }
     return {
-        access_token: value['accessToken'],
-        allowed_ipv4_addresses: value['allowedIpv4Addresses'],
-        allowed_ipv6_addresses: value['allowedIpv6Addresses'],
-        allowed_ports: value['allowedPorts'],
-        deployment_environments: value['deploymentEnvironments'],
-        disable_strict_networking: value['disableStrictNetworking'],
-        granularity: value['granularity'],
-        project_id: value['projectId'],
-        purge: value['purge'],
-        secret_name_template: value['secretNameTemplate'],
-        team_id: value['teamId'],
+        'access_token': value['accessToken'],
+        'allowed_ipv4_addresses': value['allowedIpv4Addresses'],
+        'allowed_ipv6_addresses': value['allowedIpv6Addresses'],
+        'allowed_ports': value['allowedPorts'],
+        'deployment_environments': value['deploymentEnvironments'],
+        'disable_strict_networking': value['disableStrictNetworking'],
+        'granularity': value['granularity'],
+        'project_id': value['projectId'],
+        'purge': value['purge'],
+        'secret_name_template': value['secretNameTemplate'],
+        'team_id': value['teamId'],
     };
 }

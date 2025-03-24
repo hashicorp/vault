@@ -32,9 +32,9 @@ function CorsReadConfigurationResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        allowedHeaders: json['allowed_headers'] == null ? undefined : json['allowed_headers'],
-        allowedOrigins: json['allowed_origins'] == null ? undefined : json['allowed_origins'],
-        enabled: json['enabled'] == null ? undefined : json['enabled'],
+        'allowedHeaders': json['allowed_headers'] == null ? undefined : json['allowed_headers'],
+        'allowedOrigins': json['allowed_origins'] == null ? undefined : json['allowed_origins'],
+        'enabled': json['enabled'] == null ? undefined : json['enabled'],
     };
 }
 function CorsReadConfigurationResponseToJSON(json) {
@@ -45,8 +45,8 @@ function CorsReadConfigurationResponseToJSONTyped(value, ignoreDiscriminator = f
         return value;
     }
     return {
-        allowed_headers: value['allowedHeaders'],
-        allowed_origins: value['allowedOrigins'],
-        enabled: value['enabled'],
+        'allowed_headers': value['allowedHeaders'],
+        'allowed_origins': value['allowedOrigins'],
+        'enabled': value['enabled'],
     };
 }

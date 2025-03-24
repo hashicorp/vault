@@ -27,10 +27,10 @@ export function OidcWriteRoleRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        clientId: json['client_id'] == null ? undefined : json['client_id'],
-        key: json['key'],
-        template: json['template'] == null ? undefined : json['template'],
-        ttl: json['ttl'] == null ? undefined : json['ttl'],
+        'clientId': json['client_id'] == null ? undefined : json['client_id'],
+        'key': json['key'],
+        'template': json['template'] == null ? undefined : json['template'],
+        'ttl': json['ttl'] == null ? undefined : json['ttl'],
     };
 }
 export function OidcWriteRoleRequestToJSON(json) {
@@ -41,9 +41,9 @@ export function OidcWriteRoleRequestToJSONTyped(value, ignoreDiscriminator = fal
         return value;
     }
     return {
-        client_id: value['clientId'],
-        key: value['key'],
-        template: value['template'],
-        ttl: value['ttl'],
+        'client_id': value['clientId'],
+        'key': value['key'],
+        'template': value['template'],
+        'ttl': value['ttl'],
     };
 }

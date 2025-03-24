@@ -32,10 +32,10 @@ function LdapWriteStaticRoleRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        dn: json['dn'] == null ? undefined : json['dn'],
-        rotationPeriod: json['rotation_period'] == null ? undefined : json['rotation_period'],
-        skipImportRotation: json['skip_import_rotation'] == null ? undefined : json['skip_import_rotation'],
-        username: json['username'] == null ? undefined : json['username'],
+        'dn': json['dn'] == null ? undefined : json['dn'],
+        'rotationPeriod': json['rotation_period'] == null ? undefined : json['rotation_period'],
+        'skipImportRotation': json['skip_import_rotation'] == null ? undefined : json['skip_import_rotation'],
+        'username': json['username'] == null ? undefined : json['username'],
     };
 }
 function LdapWriteStaticRoleRequestToJSON(json) {
@@ -46,9 +46,9 @@ function LdapWriteStaticRoleRequestToJSONTyped(value, ignoreDiscriminator = fals
         return value;
     }
     return {
-        dn: value['dn'],
-        rotation_period: value['rotationPeriod'],
-        skip_import_rotation: value['skipImportRotation'],
-        username: value['username'],
+        'dn': value['dn'],
+        'rotation_period': value['rotationPeriod'],
+        'skip_import_rotation': value['skipImportRotation'],
+        'username': value['username'],
     };
 }

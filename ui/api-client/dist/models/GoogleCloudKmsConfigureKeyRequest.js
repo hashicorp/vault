@@ -32,8 +32,8 @@ function GoogleCloudKmsConfigureKeyRequestFromJSONTyped(json, ignoreDiscriminato
         return json;
     }
     return {
-        maxVersion: json['max_version'] == null ? undefined : json['max_version'],
-        minVersion: json['min_version'] == null ? undefined : json['min_version'],
+        'maxVersion': json['max_version'] == null ? undefined : json['max_version'],
+        'minVersion': json['min_version'] == null ? undefined : json['min_version'],
     };
 }
 function GoogleCloudKmsConfigureKeyRequestToJSON(json) {
@@ -44,7 +44,7 @@ function GoogleCloudKmsConfigureKeyRequestToJSONTyped(value, ignoreDiscriminator
         return value;
     }
     return {
-        max_version: value['maxVersion'],
-        min_version: value['minVersion'],
+        'max_version': value['maxVersion'],
+        'min_version': value['minVersion'],
     };
 }

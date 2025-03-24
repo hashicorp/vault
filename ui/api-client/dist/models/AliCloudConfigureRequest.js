@@ -32,8 +32,8 @@ function AliCloudConfigureRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        accessKey: json['access_key'] == null ? undefined : json['access_key'],
-        secretKey: json['secret_key'] == null ? undefined : json['secret_key'],
+        'accessKey': json['access_key'] == null ? undefined : json['access_key'],
+        'secretKey': json['secret_key'] == null ? undefined : json['secret_key'],
     };
 }
 function AliCloudConfigureRequestToJSON(json) {
@@ -44,7 +44,7 @@ function AliCloudConfigureRequestToJSONTyped(value, ignoreDiscriminator = false)
         return value;
     }
     return {
-        access_key: value['accessKey'],
-        secret_key: value['secretKey'],
+        'access_key': value['accessKey'],
+        'secret_key': value['secretKey'],
     };
 }

@@ -25,11 +25,11 @@ export function RekeyVerificationReadProgressResponseFromJSONTyped(json, ignoreD
         return json;
     }
     return {
-        n: json['n'] == null ? undefined : json['n'],
-        nonce: json['nonce'] == null ? undefined : json['nonce'],
-        progress: json['progress'] == null ? undefined : json['progress'],
-        started: json['started'] == null ? undefined : json['started'],
-        t: json['t'] == null ? undefined : json['t'],
+        'n': json['n'] == null ? undefined : json['n'],
+        'nonce': json['nonce'] == null ? undefined : json['nonce'],
+        'progress': json['progress'] == null ? undefined : json['progress'],
+        'started': json['started'] == null ? undefined : json['started'],
+        't': json['t'] == null ? undefined : json['t'],
     };
 }
 export function RekeyVerificationReadProgressResponseToJSON(json) {
@@ -40,10 +40,10 @@ export function RekeyVerificationReadProgressResponseToJSONTyped(value, ignoreDi
         return value;
     }
     return {
-        n: value['n'],
-        nonce: value['nonce'],
-        progress: value['progress'],
-        started: value['started'],
-        t: value['t'],
+        'n': value['n'],
+        'nonce': value['nonce'],
+        'progress': value['progress'],
+        'started': value['started'],
+        't': value['t'],
     };
 }

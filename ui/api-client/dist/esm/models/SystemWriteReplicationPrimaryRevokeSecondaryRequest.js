@@ -25,7 +25,7 @@ export function SystemWriteReplicationPrimaryRevokeSecondaryRequestFromJSONTyped
         return json;
     }
     return {
-        id: json['id'] == null ? undefined : json['id'],
+        'id': json['id'] == null ? undefined : json['id'],
     };
 }
 export function SystemWriteReplicationPrimaryRevokeSecondaryRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function SystemWriteReplicationPrimaryRevokeSecondaryRequestToJSONTyped(v
         return value;
     }
     return {
-        id: value['id'],
+        'id': value['id'],
     };
 }

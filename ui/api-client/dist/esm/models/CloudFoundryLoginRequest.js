@@ -33,10 +33,10 @@ export function CloudFoundryLoginRequestFromJSONTyped(json, ignoreDiscriminator)
         return json;
     }
     return {
-        cfInstanceCert: json['cf_instance_cert'],
-        role: json['role'],
-        signature: json['signature'],
-        signingTime: json['signing_time'],
+        'cfInstanceCert': json['cf_instance_cert'],
+        'role': json['role'],
+        'signature': json['signature'],
+        'signingTime': json['signing_time'],
     };
 }
 export function CloudFoundryLoginRequestToJSON(json) {
@@ -47,9 +47,9 @@ export function CloudFoundryLoginRequestToJSONTyped(value, ignoreDiscriminator =
         return value;
     }
     return {
-        cf_instance_cert: value['cfInstanceCert'],
-        role: value['role'],
-        signature: value['signature'],
-        signing_time: value['signingTime'],
+        'cf_instance_cert': value['cfInstanceCert'],
+        'role': value['role'],
+        'signature': value['signature'],
+        'signing_time': value['signingTime'],
     };
 }

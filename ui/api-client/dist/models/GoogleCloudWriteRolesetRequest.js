@@ -32,10 +32,10 @@ function GoogleCloudWriteRolesetRequestFromJSONTyped(json, ignoreDiscriminator) 
         return json;
     }
     return {
-        bindings: json['bindings'] == null ? undefined : json['bindings'],
-        project: json['project'] == null ? undefined : json['project'],
-        secretType: json['secret_type'] == null ? undefined : json['secret_type'],
-        tokenScopes: json['token_scopes'] == null ? undefined : json['token_scopes'],
+        'bindings': json['bindings'] == null ? undefined : json['bindings'],
+        'project': json['project'] == null ? undefined : json['project'],
+        'secretType': json['secret_type'] == null ? undefined : json['secret_type'],
+        'tokenScopes': json['token_scopes'] == null ? undefined : json['token_scopes'],
     };
 }
 function GoogleCloudWriteRolesetRequestToJSON(json) {
@@ -46,9 +46,9 @@ function GoogleCloudWriteRolesetRequestToJSONTyped(value, ignoreDiscriminator = 
         return value;
     }
     return {
-        bindings: value['bindings'],
-        project: value['project'],
-        secret_type: value['secretType'],
-        token_scopes: value['tokenScopes'],
+        'bindings': value['bindings'],
+        'project': value['project'],
+        'secret_type': value['secretType'],
+        'token_scopes': value['tokenScopes'],
     };
 }

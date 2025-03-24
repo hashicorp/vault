@@ -52,7 +52,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     aliasCreate(aliasCreateRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.aliasCreateRaw({ aliasCreateRequest: aliasCreateRequest }, initOverrides);
+            const response = yield this.aliasCreateRaw({ aliasCreateRequest: aliasCreateRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -65,7 +66,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/alias/id/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id']))),
+                path: `/identity/alias/id/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -77,7 +78,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     aliasDeleteById(id, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.aliasDeleteByIdRaw({ id: id }, initOverrides);
+            const response = yield this.aliasDeleteByIdRaw({ id: id }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -121,7 +123,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/alias/id/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id']))),
+                path: `/identity/alias/id/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -133,7 +135,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     aliasReadById(id, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.aliasReadByIdRaw({ id: id }, initOverrides);
+            const response = yield this.aliasReadByIdRaw({ id: id }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -150,7 +153,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/identity/alias/id/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id']))),
+                path: `/identity/alias/id/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -163,7 +166,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     aliasUpdateById(id, aliasUpdateByIdRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.aliasUpdateByIdRaw({ id: id, aliasUpdateByIdRequest: aliasUpdateByIdRequest }, initOverrides);
+            const response = yield this.aliasUpdateByIdRaw({ id: id, aliasUpdateByIdRequest: aliasUpdateByIdRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -190,7 +194,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     entitiesCreateDuplicates(entitiesCreateDuplicatesRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.entitiesCreateDuplicatesRaw({ entitiesCreateDuplicatesRequest: entitiesCreateDuplicatesRequest }, initOverrides);
+            const response = yield this.entitiesCreateDuplicatesRaw({ entitiesCreateDuplicatesRequest: entitiesCreateDuplicatesRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -217,7 +222,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     entityAliasCreateDuplicates(entityAliasCreateDuplicatesRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.entityAliasCreateDuplicatesRaw({ entityAliasCreateDuplicatesRequest: entityAliasCreateDuplicatesRequest }, initOverrides);
+            const response = yield this.entityAliasCreateDuplicatesRaw({ entityAliasCreateDuplicatesRequest: entityAliasCreateDuplicatesRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -244,7 +250,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     entityAliasesCreateDuplicates(entityAliasesCreateDuplicatesRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.entityAliasesCreateDuplicatesRaw({ entityAliasesCreateDuplicatesRequest: entityAliasesCreateDuplicatesRequest }, initOverrides);
+            const response = yield this.entityAliasesCreateDuplicatesRaw({ entityAliasesCreateDuplicatesRequest: entityAliasesCreateDuplicatesRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -271,7 +278,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     entityBatchDelete(entityBatchDeleteRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.entityBatchDeleteRaw({ entityBatchDeleteRequest: entityBatchDeleteRequest }, initOverrides);
+            const response = yield this.entityBatchDeleteRaw({ entityBatchDeleteRequest: entityBatchDeleteRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -298,7 +306,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     entityCreate(entityCreateRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.entityCreateRaw({ entityCreateRequest: entityCreateRequest }, initOverrides);
+            const response = yield this.entityCreateRaw({ entityCreateRequest: entityCreateRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -327,7 +336,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     entityCreateAlias(entityCreateAliasRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.entityCreateAliasRaw({ entityCreateAliasRequest: entityCreateAliasRequest }, initOverrides);
+            const response = yield this.entityCreateAliasRaw({ entityCreateAliasRequest: entityCreateAliasRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -340,7 +350,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/entity-alias/id/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id']))),
+                path: `/identity/entity-alias/id/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -352,7 +362,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     entityDeleteAliasById(id, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.entityDeleteAliasByIdRaw({ id: id }, initOverrides);
+            const response = yield this.entityDeleteAliasByIdRaw({ id: id }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -365,7 +376,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/entity/id/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id']))),
+                path: `/identity/entity/id/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -377,7 +388,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     entityDeleteById(id, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.entityDeleteByIdRaw({ id: id }, initOverrides);
+            const response = yield this.entityDeleteByIdRaw({ id: id }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -390,7 +402,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/entity/name/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/entity/name/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -402,7 +414,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     entityDeleteByName(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.entityDeleteByNameRaw({ name: name }, initOverrides);
+            const response = yield this.entityDeleteByNameRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -549,7 +562,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     entityLookUp(entityLookUpRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.entityLookUpRaw({ entityLookUpRequest: entityLookUpRequest }, initOverrides);
+            const response = yield this.entityLookUpRaw({ entityLookUpRequest: entityLookUpRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -576,7 +590,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     entityMerge(entityMergeRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.entityMergeRaw({ entityMergeRequest: entityMergeRequest }, initOverrides);
+            const response = yield this.entityMergeRaw({ entityMergeRequest: entityMergeRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -589,7 +604,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/entity-alias/id/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id']))),
+                path: `/identity/entity-alias/id/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -601,7 +616,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     entityReadAliasById(id, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.entityReadAliasByIdRaw({ id: id }, initOverrides);
+            const response = yield this.entityReadAliasByIdRaw({ id: id }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -614,7 +630,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/entity/id/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id']))),
+                path: `/identity/entity/id/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -626,7 +642,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     entityReadById(id, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.entityReadByIdRaw({ id: id }, initOverrides);
+            const response = yield this.entityReadByIdRaw({ id: id }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -639,7 +656,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/entity/name/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/entity/name/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -651,7 +668,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     entityReadByName(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.entityReadByNameRaw({ name: name }, initOverrides);
+            const response = yield this.entityReadByNameRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -668,7 +686,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/identity/entity-alias/id/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id']))),
+                path: `/identity/entity-alias/id/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -681,7 +699,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     entityUpdateAliasById(id, entityUpdateAliasByIdRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.entityUpdateAliasByIdRaw({ id: id, entityUpdateAliasByIdRequest: entityUpdateAliasByIdRequest }, initOverrides);
+            const response = yield this.entityUpdateAliasByIdRaw({ id: id, entityUpdateAliasByIdRequest: entityUpdateAliasByIdRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -698,7 +717,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/identity/entity/id/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id']))),
+                path: `/identity/entity/id/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -711,7 +730,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     entityUpdateById(id, entityUpdateByIdRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.entityUpdateByIdRaw({ id: id, entityUpdateByIdRequest: entityUpdateByIdRequest }, initOverrides);
+            const response = yield this.entityUpdateByIdRaw({ id: id, entityUpdateByIdRequest: entityUpdateByIdRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -728,7 +748,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/identity/entity/name/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/entity/name/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -741,7 +761,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     entityUpdateByName(name, entityUpdateByNameRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.entityUpdateByNameRaw({ name: name, entityUpdateByNameRequest: entityUpdateByNameRequest }, initOverrides);
+            const response = yield this.entityUpdateByNameRaw({ name: name, entityUpdateByNameRequest: entityUpdateByNameRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -768,7 +789,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     groupCreate(groupCreateRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.groupCreateRaw({ groupCreateRequest: groupCreateRequest }, initOverrides);
+            const response = yield this.groupCreateRaw({ groupCreateRequest: groupCreateRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -795,7 +817,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     groupCreateAlias(groupCreateAliasRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.groupCreateAliasRaw({ groupCreateAliasRequest: groupCreateAliasRequest }, initOverrides);
+            const response = yield this.groupCreateAliasRaw({ groupCreateAliasRequest: groupCreateAliasRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -808,7 +831,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/group-alias/id/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id']))),
+                path: `/identity/group-alias/id/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -820,7 +843,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     groupDeleteAliasById(id, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.groupDeleteAliasByIdRaw({ id: id }, initOverrides);
+            const response = yield this.groupDeleteAliasByIdRaw({ id: id }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -833,7 +857,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/group/id/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id']))),
+                path: `/identity/group/id/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -845,7 +869,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     groupDeleteById(id, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.groupDeleteByIdRaw({ id: id }, initOverrides);
+            const response = yield this.groupDeleteByIdRaw({ id: id }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -858,7 +883,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/group/name/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/group/name/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -870,7 +895,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     groupDeleteByName(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.groupDeleteByNameRaw({ name: name }, initOverrides);
+            const response = yield this.groupDeleteByNameRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1019,7 +1045,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     groupLookUp(groupLookUpRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.groupLookUpRaw({ groupLookUpRequest: groupLookUpRequest }, initOverrides);
+            const response = yield this.groupLookUpRaw({ groupLookUpRequest: groupLookUpRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1032,7 +1059,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/group-alias/id/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id']))),
+                path: `/identity/group-alias/id/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1044,7 +1071,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     groupReadAliasById(id, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.groupReadAliasByIdRaw({ id: id }, initOverrides);
+            const response = yield this.groupReadAliasByIdRaw({ id: id }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1057,7 +1085,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/group/id/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id']))),
+                path: `/identity/group/id/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1069,7 +1097,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     groupReadById(id, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.groupReadByIdRaw({ id: id }, initOverrides);
+            const response = yield this.groupReadByIdRaw({ id: id }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1082,7 +1111,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/group/name/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/group/name/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1094,7 +1123,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     groupReadByName(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.groupReadByNameRaw({ name: name }, initOverrides);
+            const response = yield this.groupReadByNameRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1111,7 +1141,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/identity/group-alias/id/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id']))),
+                path: `/identity/group-alias/id/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1124,7 +1154,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     groupUpdateAliasById(id, groupUpdateAliasByIdRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.groupUpdateAliasByIdRaw({ id: id, groupUpdateAliasByIdRequest: groupUpdateAliasByIdRequest }, initOverrides);
+            const response = yield this.groupUpdateAliasByIdRaw({ id: id, groupUpdateAliasByIdRequest: groupUpdateAliasByIdRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1141,7 +1172,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/identity/group/id/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id']))),
+                path: `/identity/group/id/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1154,7 +1185,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     groupUpdateById(id, groupUpdateByIdRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.groupUpdateByIdRaw({ id: id, groupUpdateByIdRequest: groupUpdateByIdRequest }, initOverrides);
+            const response = yield this.groupUpdateByIdRaw({ id: id, groupUpdateByIdRequest: groupUpdateByIdRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1171,7 +1203,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/identity/group/name/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/group/name/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1184,7 +1216,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     groupUpdateByName(name, groupUpdateByNameRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.groupUpdateByNameRaw({ name: name, groupUpdateByNameRequest: groupUpdateByNameRequest }, initOverrides);
+            const response = yield this.groupUpdateByNameRaw({ name: name, groupUpdateByNameRequest: groupUpdateByNameRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1211,7 +1244,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     groupsCreateDuplicates(groupsCreateDuplicatesRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.groupsCreateDuplicatesRaw({ groupsCreateDuplicatesRequest: groupsCreateDuplicatesRequest }, initOverrides);
+            const response = yield this.groupsCreateDuplicatesRaw({ groupsCreateDuplicatesRequest: groupsCreateDuplicatesRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1240,7 +1274,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     mfaAdminDestroyTotpSecret(mfaAdminDestroyTotpSecretRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.mfaAdminDestroyTotpSecretRaw({ mfaAdminDestroyTotpSecretRequest: mfaAdminDestroyTotpSecretRequest }, initOverrides);
+            const response = yield this.mfaAdminDestroyTotpSecretRaw({ mfaAdminDestroyTotpSecretRequest: mfaAdminDestroyTotpSecretRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1269,7 +1304,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     mfaAdminGenerateTotpSecret(mfaAdminGenerateTotpSecretRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.mfaAdminGenerateTotpSecretRaw({ mfaAdminGenerateTotpSecretRequest: mfaAdminGenerateTotpSecretRequest }, initOverrides);
+            const response = yield this.mfaAdminGenerateTotpSecretRaw({ mfaAdminGenerateTotpSecretRequest: mfaAdminGenerateTotpSecretRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1298,7 +1334,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     mfaCreateDuoMethod(mfaCreateDuoMethodRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.mfaCreateDuoMethodRaw({ mfaCreateDuoMethodRequest: mfaCreateDuoMethodRequest }, initOverrides);
+            const response = yield this.mfaCreateDuoMethodRaw({ mfaCreateDuoMethodRequest: mfaCreateDuoMethodRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1327,7 +1364,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     mfaCreateOktaMethod(mfaCreateOktaMethodRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.mfaCreateOktaMethodRaw({ mfaCreateOktaMethodRequest: mfaCreateOktaMethodRequest }, initOverrides);
+            const response = yield this.mfaCreateOktaMethodRaw({ mfaCreateOktaMethodRequest: mfaCreateOktaMethodRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1356,7 +1394,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     mfaCreatePingIdMethod(mfaCreatePingIdMethodRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.mfaCreatePingIdMethodRaw({ mfaCreatePingIdMethodRequest: mfaCreatePingIdMethodRequest }, initOverrides);
+            const response = yield this.mfaCreatePingIdMethodRaw({ mfaCreatePingIdMethodRequest: mfaCreatePingIdMethodRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1385,7 +1424,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     mfaCreateTotpMethod(mfaCreateTotpMethodRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.mfaCreateTotpMethodRaw({ mfaCreateTotpMethodRequest: mfaCreateTotpMethodRequest }, initOverrides);
+            const response = yield this.mfaCreateTotpMethodRaw({ mfaCreateTotpMethodRequest: mfaCreateTotpMethodRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1399,7 +1439,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/mfa/method/duo/{method_id}`.replace(`{${'method_id'}}`, encodeURIComponent(String(requestParameters['methodId']))),
+                path: `/identity/mfa/method/duo/{method_id}`.replace(`{${"method_id"}}`, encodeURIComponent(String(requestParameters['methodId']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1412,7 +1452,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     mfaDeleteDuoMethod(methodId, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.mfaDeleteDuoMethodRaw({ methodId: methodId }, initOverrides);
+            const response = yield this.mfaDeleteDuoMethodRaw({ methodId: methodId }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1426,7 +1467,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/mfa/login-enforcement/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/mfa/login-enforcement/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1439,7 +1480,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     mfaDeleteLoginEnforcement(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.mfaDeleteLoginEnforcementRaw({ name: name }, initOverrides);
+            const response = yield this.mfaDeleteLoginEnforcementRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1453,7 +1495,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/mfa/method/okta/{method_id}`.replace(`{${'method_id'}}`, encodeURIComponent(String(requestParameters['methodId']))),
+                path: `/identity/mfa/method/okta/{method_id}`.replace(`{${"method_id"}}`, encodeURIComponent(String(requestParameters['methodId']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1466,7 +1508,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     mfaDeleteOktaMethod(methodId, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.mfaDeleteOktaMethodRaw({ methodId: methodId }, initOverrides);
+            const response = yield this.mfaDeleteOktaMethodRaw({ methodId: methodId }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1480,7 +1523,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/mfa/method/pingid/{method_id}`.replace(`{${'method_id'}}`, encodeURIComponent(String(requestParameters['methodId']))),
+                path: `/identity/mfa/method/pingid/{method_id}`.replace(`{${"method_id"}}`, encodeURIComponent(String(requestParameters['methodId']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1493,7 +1536,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     mfaDeletePingIdMethod(methodId, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.mfaDeletePingIdMethodRaw({ methodId: methodId }, initOverrides);
+            const response = yield this.mfaDeletePingIdMethodRaw({ methodId: methodId }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1507,7 +1551,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/mfa/method/totp/{method_id}`.replace(`{${'method_id'}}`, encodeURIComponent(String(requestParameters['methodId']))),
+                path: `/identity/mfa/method/totp/{method_id}`.replace(`{${"method_id"}}`, encodeURIComponent(String(requestParameters['methodId']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1520,7 +1564,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     mfaDeleteTotpMethod(methodId, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.mfaDeleteTotpMethodRaw({ methodId: methodId }, initOverrides);
+            const response = yield this.mfaDeleteTotpMethodRaw({ methodId: methodId }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1549,7 +1594,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     mfaGenerateTotpSecret(mfaGenerateTotpSecretRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.mfaGenerateTotpSecretRaw({ mfaGenerateTotpSecretRequest: mfaGenerateTotpSecretRequest }, initOverrides);
+            const response = yield this.mfaGenerateTotpSecretRaw({ mfaGenerateTotpSecretRequest: mfaGenerateTotpSecretRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1749,7 +1795,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/mfa/method/duo/{method_id}`.replace(`{${'method_id'}}`, encodeURIComponent(String(requestParameters['methodId']))),
+                path: `/identity/mfa/method/duo/{method_id}`.replace(`{${"method_id"}}`, encodeURIComponent(String(requestParameters['methodId']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1762,7 +1808,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     mfaReadDuoMethod(methodId, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.mfaReadDuoMethodRaw({ methodId: methodId }, initOverrides);
+            const response = yield this.mfaReadDuoMethodRaw({ methodId: methodId }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1776,7 +1823,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/mfa/login-enforcement/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/mfa/login-enforcement/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1789,7 +1836,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     mfaReadLoginEnforcement(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.mfaReadLoginEnforcementRaw({ name: name }, initOverrides);
+            const response = yield this.mfaReadLoginEnforcementRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1803,7 +1851,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/mfa/method/{method_id}`.replace(`{${'method_id'}}`, encodeURIComponent(String(requestParameters['methodId']))),
+                path: `/identity/mfa/method/{method_id}`.replace(`{${"method_id"}}`, encodeURIComponent(String(requestParameters['methodId']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1816,7 +1864,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     mfaReadMethod(methodId, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.mfaReadMethodRaw({ methodId: methodId }, initOverrides);
+            const response = yield this.mfaReadMethodRaw({ methodId: methodId }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1830,7 +1879,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/mfa/method/okta/{method_id}`.replace(`{${'method_id'}}`, encodeURIComponent(String(requestParameters['methodId']))),
+                path: `/identity/mfa/method/okta/{method_id}`.replace(`{${"method_id"}}`, encodeURIComponent(String(requestParameters['methodId']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1843,7 +1892,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     mfaReadOktaMethod(methodId, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.mfaReadOktaMethodRaw({ methodId: methodId }, initOverrides);
+            const response = yield this.mfaReadOktaMethodRaw({ methodId: methodId }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1857,7 +1907,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/mfa/method/pingid/{method_id}`.replace(`{${'method_id'}}`, encodeURIComponent(String(requestParameters['methodId']))),
+                path: `/identity/mfa/method/pingid/{method_id}`.replace(`{${"method_id"}}`, encodeURIComponent(String(requestParameters['methodId']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1870,7 +1920,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     mfaReadPingIdMethod(methodId, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.mfaReadPingIdMethodRaw({ methodId: methodId }, initOverrides);
+            const response = yield this.mfaReadPingIdMethodRaw({ methodId: methodId }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1884,7 +1935,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/mfa/method/totp/{method_id}`.replace(`{${'method_id'}}`, encodeURIComponent(String(requestParameters['methodId']))),
+                path: `/identity/mfa/method/totp/{method_id}`.replace(`{${"method_id"}}`, encodeURIComponent(String(requestParameters['methodId']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1897,7 +1948,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     mfaReadTotpMethod(methodId, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.mfaReadTotpMethodRaw({ methodId: methodId }, initOverrides);
+            const response = yield this.mfaReadTotpMethodRaw({ methodId: methodId }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1915,7 +1967,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/identity/mfa/method/duo/{method_id}`.replace(`{${'method_id'}}`, encodeURIComponent(String(requestParameters['methodId']))),
+                path: `/identity/mfa/method/duo/{method_id}`.replace(`{${"method_id"}}`, encodeURIComponent(String(requestParameters['methodId']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1929,7 +1981,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     mfaUpdateDuoMethod(methodId, mfaUpdateDuoMethodRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.mfaUpdateDuoMethodRaw({ methodId: methodId, mfaUpdateDuoMethodRequest: mfaUpdateDuoMethodRequest }, initOverrides);
+            const response = yield this.mfaUpdateDuoMethodRaw({ methodId: methodId, mfaUpdateDuoMethodRequest: mfaUpdateDuoMethodRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1947,7 +2000,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/identity/mfa/method/okta/{method_id}`.replace(`{${'method_id'}}`, encodeURIComponent(String(requestParameters['methodId']))),
+                path: `/identity/mfa/method/okta/{method_id}`.replace(`{${"method_id"}}`, encodeURIComponent(String(requestParameters['methodId']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1961,7 +2014,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     mfaUpdateOktaMethod(methodId, mfaUpdateOktaMethodRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.mfaUpdateOktaMethodRaw({ methodId: methodId, mfaUpdateOktaMethodRequest: mfaUpdateOktaMethodRequest }, initOverrides);
+            const response = yield this.mfaUpdateOktaMethodRaw({ methodId: methodId, mfaUpdateOktaMethodRequest: mfaUpdateOktaMethodRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -1979,7 +2033,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/identity/mfa/method/pingid/{method_id}`.replace(`{${'method_id'}}`, encodeURIComponent(String(requestParameters['methodId']))),
+                path: `/identity/mfa/method/pingid/{method_id}`.replace(`{${"method_id"}}`, encodeURIComponent(String(requestParameters['methodId']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -1993,7 +2047,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     mfaUpdatePingIdMethod(methodId, mfaUpdatePingIdMethodRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.mfaUpdatePingIdMethodRaw({ methodId: methodId, mfaUpdatePingIdMethodRequest: mfaUpdatePingIdMethodRequest }, initOverrides);
+            const response = yield this.mfaUpdatePingIdMethodRaw({ methodId: methodId, mfaUpdatePingIdMethodRequest: mfaUpdatePingIdMethodRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2011,7 +2066,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/identity/mfa/method/totp/{method_id}`.replace(`{${'method_id'}}`, encodeURIComponent(String(requestParameters['methodId']))),
+                path: `/identity/mfa/method/totp/{method_id}`.replace(`{${"method_id"}}`, encodeURIComponent(String(requestParameters['methodId']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2025,7 +2080,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     mfaUpdateTotpMethod(methodId, mfaUpdateTotpMethodRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.mfaUpdateTotpMethodRaw({ methodId: methodId, mfaUpdateTotpMethodRequest: mfaUpdateTotpMethodRequest }, initOverrides);
+            const response = yield this.mfaUpdateTotpMethodRaw({ methodId: methodId, mfaUpdateTotpMethodRequest: mfaUpdateTotpMethodRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2043,7 +2099,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/identity/mfa/login-enforcement/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/mfa/login-enforcement/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2057,7 +2113,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     mfaWriteLoginEnforcement(name, mfaWriteLoginEnforcementRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.mfaWriteLoginEnforcementRaw({ name: name, mfaWriteLoginEnforcementRequest: mfaWriteLoginEnforcementRequest }, initOverrides);
+            const response = yield this.mfaWriteLoginEnforcementRaw({ name: name, mfaWriteLoginEnforcementRequest: mfaWriteLoginEnforcementRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2084,7 +2141,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcConfigure(oidcConfigureRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcConfigureRaw({ oidcConfigureRequest: oidcConfigureRequest }, initOverrides);
+            const response = yield this.oidcConfigureRaw({ oidcConfigureRequest: oidcConfigureRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2097,7 +2155,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/oidc/assignment/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/oidc/assignment/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2109,7 +2167,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcDeleteAssignment(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcDeleteAssignmentRaw({ name: name }, initOverrides);
+            const response = yield this.oidcDeleteAssignmentRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2122,7 +2181,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/oidc/client/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/oidc/client/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2134,7 +2193,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcDeleteClient(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcDeleteClientRaw({ name: name }, initOverrides);
+            const response = yield this.oidcDeleteClientRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2148,7 +2208,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/oidc/key/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/oidc/key/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2161,7 +2221,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcDeleteKey(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcDeleteKeyRaw({ name: name }, initOverrides);
+            const response = yield this.oidcDeleteKeyRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2174,7 +2235,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/oidc/provider/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/oidc/provider/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2186,7 +2247,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcDeleteProvider(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcDeleteProviderRaw({ name: name }, initOverrides);
+            const response = yield this.oidcDeleteProviderRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2200,7 +2262,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/oidc/role/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/oidc/role/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2213,7 +2275,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcDeleteRole(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcDeleteRoleRaw({ name: name }, initOverrides);
+            const response = yield this.oidcDeleteRoleRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2226,7 +2289,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/oidc/scope/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/oidc/scope/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2238,7 +2301,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcDeleteScope(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcDeleteScopeRaw({ name: name }, initOverrides);
+            const response = yield this.oidcDeleteScopeRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2252,7 +2316,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/oidc/token/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/oidc/token/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2265,7 +2329,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcGenerateToken(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcGenerateTokenRaw({ name: name }, initOverrides);
+            const response = yield this.oidcGenerateTokenRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2294,7 +2359,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcIntrospect(oidcIntrospectRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcIntrospectRaw({ oidcIntrospectRequest: oidcIntrospectRequest }, initOverrides);
+            const response = yield this.oidcIntrospectRaw({ oidcIntrospectRequest: oidcIntrospectRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2515,7 +2581,7 @@ export class IdentityApi extends runtime.BaseAPI {
             }
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/oidc/provider/{name}/authorize`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/oidc/provider/{name}/authorize`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2527,18 +2593,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcProviderAuthorize(name, clientId, codeChallenge, codeChallengeMethod, maxAge, nonce, redirectUri, responseType, scope, state, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcProviderAuthorizeRaw({
-                name: name,
-                clientId: clientId,
-                codeChallenge: codeChallenge,
-                codeChallengeMethod: codeChallengeMethod,
-                maxAge: maxAge,
-                nonce: nonce,
-                redirectUri: redirectUri,
-                responseType: responseType,
-                scope: scope,
-                state: state,
-            }, initOverrides);
+            const response = yield this.oidcProviderAuthorizeRaw({ name: name, clientId: clientId, codeChallenge: codeChallenge, codeChallengeMethod: codeChallengeMethod, maxAge: maxAge, nonce: nonce, redirectUri: redirectUri, responseType: responseType, scope: scope, state: state }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2555,7 +2611,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/identity/oidc/provider/{name}/authorize`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/oidc/provider/{name}/authorize`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2568,7 +2624,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcProviderAuthorizeWithParameters(name, oidcProviderAuthorizeWithParametersRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcProviderAuthorizeWithParametersRaw({ name: name, oidcProviderAuthorizeWithParametersRequest: oidcProviderAuthorizeWithParametersRequest }, initOverrides);
+            const response = yield this.oidcProviderAuthorizeWithParametersRaw({ name: name, oidcProviderAuthorizeWithParametersRequest: oidcProviderAuthorizeWithParametersRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2585,7 +2642,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/identity/oidc/provider/{name}/token`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/oidc/provider/{name}/token`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2598,7 +2655,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcProviderToken(name, oidcProviderTokenRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcProviderTokenRaw({ name: name, oidcProviderTokenRequest: oidcProviderTokenRequest }, initOverrides);
+            const response = yield this.oidcProviderTokenRaw({ name: name, oidcProviderTokenRequest: oidcProviderTokenRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2611,7 +2669,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/oidc/provider/{name}/userinfo`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/oidc/provider/{name}/userinfo`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2623,7 +2681,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcProviderUserInfo(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcProviderUserInfoRaw({ name: name }, initOverrides);
+            const response = yield this.oidcProviderUserInfoRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2636,7 +2695,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/oidc/provider/{name}/userinfo`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/oidc/provider/{name}/userinfo`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2648,7 +2707,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcProviderUserInfo2(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcProviderUserInfo2Raw({ name: name }, initOverrides);
+            const response = yield this.oidcProviderUserInfo2Raw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2661,7 +2721,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/oidc/assignment/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/oidc/assignment/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2673,7 +2733,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcReadAssignment(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcReadAssignmentRaw({ name: name }, initOverrides);
+            const response = yield this.oidcReadAssignmentRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2686,7 +2747,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/oidc/client/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/oidc/client/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2698,7 +2759,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcReadClient(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcReadClientRaw({ name: name }, initOverrides);
+            const response = yield this.oidcReadClientRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2720,7 +2782,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcReadConfiguration(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcReadConfigurationRaw(initOverrides);
+            const response = yield this.oidcReadConfigurationRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2734,7 +2797,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/oidc/key/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/oidc/key/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2747,7 +2810,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcReadKey(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcReadKeyRaw({ name: name }, initOverrides);
+            const response = yield this.oidcReadKeyRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2761,7 +2825,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/oidc/{child}/.well-known/keys`.replace(`{${'child'}}`, encodeURIComponent(String(requestParameters['child']))),
+                path: `/identity/oidc/{child}/.well-known/keys`.replace(`{${"child"}}`, encodeURIComponent(String(requestParameters['child']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2774,7 +2838,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcReadOidcChildWellKnownKeys(child, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcReadOidcChildWellKnownKeysRaw({ child: child }, initOverrides);
+            const response = yield this.oidcReadOidcChildWellKnownKeysRaw({ child: child }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2788,7 +2853,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/oidc/{child}/.well-known/openid-configuration`.replace(`{${'child'}}`, encodeURIComponent(String(requestParameters['child']))),
+                path: `/identity/oidc/{child}/.well-known/openid-configuration`.replace(`{${"child"}}`, encodeURIComponent(String(requestParameters['child']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2801,7 +2866,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcReadOidcChildWellKnownOpenidConfiguration(child, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcReadOidcChildWellKnownOpenidConfigurationRaw({ child: child }, initOverrides);
+            const response = yield this.oidcReadOidcChildWellKnownOpenidConfigurationRaw({ child: child }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2825,7 +2891,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcReadOpenIdConfiguration(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcReadOpenIdConfigurationRaw(initOverrides);
+            const response = yield this.oidcReadOpenIdConfigurationRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2838,7 +2905,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/oidc/provider/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/oidc/provider/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2850,7 +2917,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcReadProvider(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcReadProviderRaw({ name: name }, initOverrides);
+            const response = yield this.oidcReadProviderRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2863,7 +2931,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/oidc/provider/{name}/.well-known/openid-configuration`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/oidc/provider/{name}/.well-known/openid-configuration`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2875,7 +2943,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcReadProviderOpenIdConfiguration(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcReadProviderOpenIdConfigurationRaw({ name: name }, initOverrides);
+            const response = yield this.oidcReadProviderOpenIdConfigurationRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2888,7 +2957,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/oidc/provider/{name}/.well-known/keys`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/oidc/provider/{name}/.well-known/keys`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2900,7 +2969,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcReadProviderPublicKeys(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcReadProviderPublicKeysRaw({ name: name }, initOverrides);
+            const response = yield this.oidcReadProviderPublicKeysRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2924,7 +2994,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcReadPublicKeys(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcReadPublicKeysRaw(initOverrides);
+            const response = yield this.oidcReadPublicKeysRaw(initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2938,7 +3009,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/oidc/role/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/oidc/role/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2951,7 +3022,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcReadRole(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcReadRoleRaw({ name: name }, initOverrides);
+            const response = yield this.oidcReadRoleRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2964,7 +3036,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/oidc/scope/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/oidc/scope/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -2976,7 +3048,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcReadScope(name, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcReadScopeRaw({ name: name }, initOverrides);
+            const response = yield this.oidcReadScopeRaw({ name: name }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -2994,7 +3067,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/identity/oidc/key/{name}/rotate`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/oidc/key/{name}/rotate`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3008,7 +3081,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcRotateKey(name, oidcRotateKeyRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcRotateKeyRaw({ name: name, oidcRotateKeyRequest: oidcRotateKeyRequest }, initOverrides);
+            const response = yield this.oidcRotateKeyRaw({ name: name, oidcRotateKeyRequest: oidcRotateKeyRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3025,7 +3099,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/identity/oidc/assignment/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/oidc/assignment/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3038,7 +3112,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcWriteAssignment(name, oidcWriteAssignmentRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcWriteAssignmentRaw({ name: name, oidcWriteAssignmentRequest: oidcWriteAssignmentRequest }, initOverrides);
+            const response = yield this.oidcWriteAssignmentRaw({ name: name, oidcWriteAssignmentRequest: oidcWriteAssignmentRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3055,7 +3130,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/identity/oidc/client/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/oidc/client/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3068,7 +3143,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcWriteClient(name, oidcWriteClientRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcWriteClientRaw({ name: name, oidcWriteClientRequest: oidcWriteClientRequest }, initOverrides);
+            const response = yield this.oidcWriteClientRaw({ name: name, oidcWriteClientRequest: oidcWriteClientRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3086,7 +3162,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/identity/oidc/key/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/oidc/key/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3100,7 +3176,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcWriteKey(name, oidcWriteKeyRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcWriteKeyRaw({ name: name, oidcWriteKeyRequest: oidcWriteKeyRequest }, initOverrides);
+            const response = yield this.oidcWriteKeyRaw({ name: name, oidcWriteKeyRequest: oidcWriteKeyRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3117,7 +3194,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/identity/oidc/provider/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/oidc/provider/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3130,7 +3207,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcWriteProvider(name, oidcWriteProviderRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcWriteProviderRaw({ name: name, oidcWriteProviderRequest: oidcWriteProviderRequest }, initOverrides);
+            const response = yield this.oidcWriteProviderRaw({ name: name, oidcWriteProviderRequest: oidcWriteProviderRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3148,7 +3226,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/identity/oidc/role/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/oidc/role/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3162,7 +3240,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcWriteRole(name, oidcWriteRoleRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcWriteRoleRaw({ name: name, oidcWriteRoleRequest: oidcWriteRoleRequest }, initOverrides);
+            const response = yield this.oidcWriteRoleRaw({ name: name, oidcWriteRoleRequest: oidcWriteRoleRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3179,7 +3258,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/identity/oidc/scope/{name}`.replace(`{${'name'}}`, encodeURIComponent(String(requestParameters['name']))),
+                path: `/identity/oidc/scope/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3192,7 +3271,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     oidcWriteScope(name, oidcWriteScopeRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.oidcWriteScopeRaw({ name: name, oidcWriteScopeRequest: oidcWriteScopeRequest }, initOverrides);
+            const response = yield this.oidcWriteScopeRaw({ name: name, oidcWriteScopeRequest: oidcWriteScopeRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3221,7 +3301,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     personaCreate(personaCreateRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.personaCreateRaw({ personaCreateRequest: personaCreateRequest }, initOverrides);
+            const response = yield this.personaCreateRaw({ personaCreateRequest: personaCreateRequest }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3234,7 +3315,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/persona/id/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id']))),
+                path: `/identity/persona/id/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
                 method: 'DELETE',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3246,7 +3327,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     personaDeleteById(id, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.personaDeleteByIdRaw({ id: id }, initOverrides);
+            const response = yield this.personaDeleteByIdRaw({ id: id }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3290,7 +3372,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const queryParameters = {};
             const headerParameters = {};
             const response = yield this.request({
-                path: `/identity/persona/id/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id']))),
+                path: `/identity/persona/id/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
                 method: 'GET',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3302,7 +3384,8 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     personaReadById(id, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.personaReadByIdRaw({ id: id }, initOverrides);
+            const response = yield this.personaReadByIdRaw({ id: id }, initOverrides);
+            return yield response.value();
         });
     }
     /**
@@ -3319,7 +3402,7 @@ export class IdentityApi extends runtime.BaseAPI {
             const headerParameters = {};
             headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
-                path: `/identity/persona/id/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(requestParameters['id']))),
+                path: `/identity/persona/id/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
@@ -3332,182 +3415,183 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     personaUpdateById(id, personaUpdateByIdRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.personaUpdateByIdRaw({ id: id, personaUpdateByIdRequest: personaUpdateByIdRequest }, initOverrides);
+            const response = yield this.personaUpdateByIdRaw({ id: id, personaUpdateByIdRequest: personaUpdateByIdRequest }, initOverrides);
+            return yield response.value();
         });
     }
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var AliasListByIdListEnum;
 (function (AliasListByIdListEnum) {
     AliasListByIdListEnum["TRUE"] = "true";
 })(AliasListByIdListEnum || (AliasListByIdListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var EntityListAliasesByIdListEnum;
 (function (EntityListAliasesByIdListEnum) {
     EntityListAliasesByIdListEnum["TRUE"] = "true";
 })(EntityListAliasesByIdListEnum || (EntityListAliasesByIdListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var EntityListByIdListEnum;
 (function (EntityListByIdListEnum) {
     EntityListByIdListEnum["TRUE"] = "true";
 })(EntityListByIdListEnum || (EntityListByIdListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var EntityListByNameListEnum;
 (function (EntityListByNameListEnum) {
     EntityListByNameListEnum["TRUE"] = "true";
 })(EntityListByNameListEnum || (EntityListByNameListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var EntityListFromStorageListEnum;
 (function (EntityListFromStorageListEnum) {
     EntityListFromStorageListEnum["TRUE"] = "true";
 })(EntityListFromStorageListEnum || (EntityListFromStorageListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var GroupListAliasesByIdListEnum;
 (function (GroupListAliasesByIdListEnum) {
     GroupListAliasesByIdListEnum["TRUE"] = "true";
 })(GroupListAliasesByIdListEnum || (GroupListAliasesByIdListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var GroupListByIdListEnum;
 (function (GroupListByIdListEnum) {
     GroupListByIdListEnum["TRUE"] = "true";
 })(GroupListByIdListEnum || (GroupListByIdListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var GroupListByNameListEnum;
 (function (GroupListByNameListEnum) {
     GroupListByNameListEnum["TRUE"] = "true";
 })(GroupListByNameListEnum || (GroupListByNameListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var GroupListFromStorageListEnum;
 (function (GroupListFromStorageListEnum) {
     GroupListFromStorageListEnum["TRUE"] = "true";
 })(GroupListFromStorageListEnum || (GroupListFromStorageListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var MfaListDuoMethodsListEnum;
 (function (MfaListDuoMethodsListEnum) {
     MfaListDuoMethodsListEnum["TRUE"] = "true";
 })(MfaListDuoMethodsListEnum || (MfaListDuoMethodsListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var MfaListLoginEnforcementsListEnum;
 (function (MfaListLoginEnforcementsListEnum) {
     MfaListLoginEnforcementsListEnum["TRUE"] = "true";
 })(MfaListLoginEnforcementsListEnum || (MfaListLoginEnforcementsListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var MfaListMethodsListEnum;
 (function (MfaListMethodsListEnum) {
     MfaListMethodsListEnum["TRUE"] = "true";
 })(MfaListMethodsListEnum || (MfaListMethodsListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var MfaListOktaMethodsListEnum;
 (function (MfaListOktaMethodsListEnum) {
     MfaListOktaMethodsListEnum["TRUE"] = "true";
 })(MfaListOktaMethodsListEnum || (MfaListOktaMethodsListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var MfaListPingIdMethodsListEnum;
 (function (MfaListPingIdMethodsListEnum) {
     MfaListPingIdMethodsListEnum["TRUE"] = "true";
 })(MfaListPingIdMethodsListEnum || (MfaListPingIdMethodsListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var MfaListTotpMethodsListEnum;
 (function (MfaListTotpMethodsListEnum) {
     MfaListTotpMethodsListEnum["TRUE"] = "true";
 })(MfaListTotpMethodsListEnum || (MfaListTotpMethodsListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var OidcListAssignmentsListEnum;
 (function (OidcListAssignmentsListEnum) {
     OidcListAssignmentsListEnum["TRUE"] = "true";
 })(OidcListAssignmentsListEnum || (OidcListAssignmentsListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var OidcListClientsListEnum;
 (function (OidcListClientsListEnum) {
     OidcListClientsListEnum["TRUE"] = "true";
 })(OidcListClientsListEnum || (OidcListClientsListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var OidcListKeysListEnum;
 (function (OidcListKeysListEnum) {
     OidcListKeysListEnum["TRUE"] = "true";
 })(OidcListKeysListEnum || (OidcListKeysListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var OidcListProvidersListEnum;
 (function (OidcListProvidersListEnum) {
     OidcListProvidersListEnum["TRUE"] = "true";
 })(OidcListProvidersListEnum || (OidcListProvidersListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var OidcListRolesListEnum;
 (function (OidcListRolesListEnum) {
     OidcListRolesListEnum["TRUE"] = "true";
 })(OidcListRolesListEnum || (OidcListRolesListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var OidcListScopesListEnum;
 (function (OidcListScopesListEnum) {
     OidcListScopesListEnum["TRUE"] = "true";
 })(OidcListScopesListEnum || (OidcListScopesListEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export var PersonaListByIdListEnum;
 (function (PersonaListByIdListEnum) {
     PersonaListByIdListEnum["TRUE"] = "true";

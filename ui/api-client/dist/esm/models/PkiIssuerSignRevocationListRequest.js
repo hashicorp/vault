@@ -25,12 +25,12 @@ export function PkiIssuerSignRevocationListRequestFromJSONTyped(json, ignoreDisc
         return json;
     }
     return {
-        crlNumber: json['crl_number'] == null ? undefined : json['crl_number'],
-        deltaCrlBaseNumber: json['delta_crl_base_number'] == null ? undefined : json['delta_crl_base_number'],
-        extensions: json['extensions'] == null ? undefined : json['extensions'],
-        format: json['format'] == null ? undefined : json['format'],
-        nextUpdate: json['next_update'] == null ? undefined : json['next_update'],
-        revokedCerts: json['revoked_certs'] == null ? undefined : json['revoked_certs'],
+        'crlNumber': json['crl_number'] == null ? undefined : json['crl_number'],
+        'deltaCrlBaseNumber': json['delta_crl_base_number'] == null ? undefined : json['delta_crl_base_number'],
+        'extensions': json['extensions'] == null ? undefined : json['extensions'],
+        'format': json['format'] == null ? undefined : json['format'],
+        'nextUpdate': json['next_update'] == null ? undefined : json['next_update'],
+        'revokedCerts': json['revoked_certs'] == null ? undefined : json['revoked_certs'],
     };
 }
 export function PkiIssuerSignRevocationListRequestToJSON(json) {
@@ -41,11 +41,11 @@ export function PkiIssuerSignRevocationListRequestToJSONTyped(value, ignoreDiscr
         return value;
     }
     return {
-        crl_number: value['crlNumber'],
-        delta_crl_base_number: value['deltaCrlBaseNumber'],
-        extensions: value['extensions'],
-        format: value['format'],
-        next_update: value['nextUpdate'],
-        revoked_certs: value['revokedCerts'],
+        'crl_number': value['crlNumber'],
+        'delta_crl_base_number': value['deltaCrlBaseNumber'],
+        'extensions': value['extensions'],
+        'format': value['format'],
+        'next_update': value['nextUpdate'],
+        'revoked_certs': value['revokedCerts'],
     };
 }

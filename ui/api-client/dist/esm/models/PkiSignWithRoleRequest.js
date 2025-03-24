@@ -12,9 +12,9 @@
  * Do not edit the class manually.
  */
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export var PkiSignWithRoleRequestFormatEnum;
 (function (PkiSignWithRoleRequestFormatEnum) {
     PkiSignWithRoleRequestFormatEnum["PEM"] = "pem";
@@ -22,9 +22,9 @@ export var PkiSignWithRoleRequestFormatEnum;
     PkiSignWithRoleRequestFormatEnum["PEM_BUNDLE"] = "pem_bundle";
 })(PkiSignWithRoleRequestFormatEnum || (PkiSignWithRoleRequestFormatEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export var PkiSignWithRoleRequestPrivateKeyFormatEnum;
 (function (PkiSignWithRoleRequestPrivateKeyFormatEnum) {
     PkiSignWithRoleRequestPrivateKeyFormatEnum["EMPTY"] = "";
@@ -46,22 +46,22 @@ export function PkiSignWithRoleRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        altNames: json['alt_names'] == null ? undefined : json['alt_names'],
-        certMetadata: json['cert_metadata'] == null ? undefined : json['cert_metadata'],
-        commonName: json['common_name'] == null ? undefined : json['common_name'],
-        csr: json['csr'] == null ? undefined : json['csr'],
-        excludeCnFromSans: json['exclude_cn_from_sans'] == null ? undefined : json['exclude_cn_from_sans'],
-        format: json['format'] == null ? undefined : json['format'],
-        ipSans: json['ip_sans'] == null ? undefined : json['ip_sans'],
-        issuerRef: json['issuer_ref'] == null ? undefined : json['issuer_ref'],
-        notAfter: json['not_after'] == null ? undefined : json['not_after'],
-        otherSans: json['other_sans'] == null ? undefined : json['other_sans'],
-        privateKeyFormat: json['private_key_format'] == null ? undefined : json['private_key_format'],
-        removeRootsFromChain: json['remove_roots_from_chain'] == null ? undefined : json['remove_roots_from_chain'],
-        serialNumber: json['serial_number'] == null ? undefined : json['serial_number'],
-        ttl: json['ttl'] == null ? undefined : json['ttl'],
-        uriSans: json['uri_sans'] == null ? undefined : json['uri_sans'],
-        userIds: json['user_ids'] == null ? undefined : json['user_ids'],
+        'altNames': json['alt_names'] == null ? undefined : json['alt_names'],
+        'certMetadata': json['cert_metadata'] == null ? undefined : json['cert_metadata'],
+        'commonName': json['common_name'] == null ? undefined : json['common_name'],
+        'csr': json['csr'] == null ? undefined : json['csr'],
+        'excludeCnFromSans': json['exclude_cn_from_sans'] == null ? undefined : json['exclude_cn_from_sans'],
+        'format': json['format'] == null ? undefined : json['format'],
+        'ipSans': json['ip_sans'] == null ? undefined : json['ip_sans'],
+        'issuerRef': json['issuer_ref'] == null ? undefined : json['issuer_ref'],
+        'notAfter': json['not_after'] == null ? undefined : json['not_after'],
+        'otherSans': json['other_sans'] == null ? undefined : json['other_sans'],
+        'privateKeyFormat': json['private_key_format'] == null ? undefined : json['private_key_format'],
+        'removeRootsFromChain': json['remove_roots_from_chain'] == null ? undefined : json['remove_roots_from_chain'],
+        'serialNumber': json['serial_number'] == null ? undefined : json['serial_number'],
+        'ttl': json['ttl'] == null ? undefined : json['ttl'],
+        'uriSans': json['uri_sans'] == null ? undefined : json['uri_sans'],
+        'userIds': json['user_ids'] == null ? undefined : json['user_ids'],
     };
 }
 export function PkiSignWithRoleRequestToJSON(json) {
@@ -72,21 +72,21 @@ export function PkiSignWithRoleRequestToJSONTyped(value, ignoreDiscriminator = f
         return value;
     }
     return {
-        alt_names: value['altNames'],
-        cert_metadata: value['certMetadata'],
-        common_name: value['commonName'],
-        csr: value['csr'],
-        exclude_cn_from_sans: value['excludeCnFromSans'],
-        format: value['format'],
-        ip_sans: value['ipSans'],
-        issuer_ref: value['issuerRef'],
-        not_after: value['notAfter'],
-        other_sans: value['otherSans'],
-        private_key_format: value['privateKeyFormat'],
-        remove_roots_from_chain: value['removeRootsFromChain'],
-        serial_number: value['serialNumber'],
-        ttl: value['ttl'],
-        uri_sans: value['uriSans'],
-        user_ids: value['userIds'],
+        'alt_names': value['altNames'],
+        'cert_metadata': value['certMetadata'],
+        'common_name': value['commonName'],
+        'csr': value['csr'],
+        'exclude_cn_from_sans': value['excludeCnFromSans'],
+        'format': value['format'],
+        'ip_sans': value['ipSans'],
+        'issuer_ref': value['issuerRef'],
+        'not_after': value['notAfter'],
+        'other_sans': value['otherSans'],
+        'private_key_format': value['privateKeyFormat'],
+        'remove_roots_from_chain': value['removeRootsFromChain'],
+        'serial_number': value['serialNumber'],
+        'ttl': value['ttl'],
+        'uri_sans': value['uriSans'],
+        'user_ids': value['userIds'],
     };
 }

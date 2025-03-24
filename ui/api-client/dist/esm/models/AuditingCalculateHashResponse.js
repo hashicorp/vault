@@ -25,7 +25,7 @@ export function AuditingCalculateHashResponseFromJSONTyped(json, ignoreDiscrimin
         return json;
     }
     return {
-        hash: json['hash'] == null ? undefined : json['hash'],
+        'hash': json['hash'] == null ? undefined : json['hash'],
     };
 }
 export function AuditingCalculateHashResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function AuditingCalculateHashResponseToJSONTyped(value, ignoreDiscrimina
         return value;
     }
     return {
-        hash: value['hash'],
+        'hash': value['hash'],
     };
 }

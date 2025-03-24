@@ -32,8 +32,8 @@ function AppRoleLoginRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        roleId: json['role_id'] == null ? undefined : json['role_id'],
-        secretId: json['secret_id'] == null ? undefined : json['secret_id'],
+        'roleId': json['role_id'] == null ? undefined : json['role_id'],
+        'secretId': json['secret_id'] == null ? undefined : json['secret_id'],
     };
 }
 function AppRoleLoginRequestToJSON(json) {
@@ -44,7 +44,7 @@ function AppRoleLoginRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        role_id: value['roleId'],
-        secret_id: value['secretId'],
+        'role_id': value['roleId'],
+        'secret_id': value['secretId'],
     };
 }

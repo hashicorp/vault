@@ -25,7 +25,7 @@ export function PoliciesReadPasswordPolicyResponseFromJSONTyped(json, ignoreDisc
         return json;
     }
     return {
-        policy: json['policy'] == null ? undefined : json['policy'],
+        'policy': json['policy'] == null ? undefined : json['policy'],
     };
 }
 export function PoliciesReadPasswordPolicyResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function PoliciesReadPasswordPolicyResponseToJSONTyped(value, ignoreDiscr
         return value;
     }
     return {
-        policy: value['policy'],
+        'policy': value['policy'],
     };
 }

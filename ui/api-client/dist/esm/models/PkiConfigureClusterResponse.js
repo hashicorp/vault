@@ -25,8 +25,8 @@ export function PkiConfigureClusterResponseFromJSONTyped(json, ignoreDiscriminat
         return json;
     }
     return {
-        aiaPath: json['aia_path'] == null ? undefined : json['aia_path'],
-        path: json['path'] == null ? undefined : json['path'],
+        'aiaPath': json['aia_path'] == null ? undefined : json['aia_path'],
+        'path': json['path'] == null ? undefined : json['path'],
     };
 }
 export function PkiConfigureClusterResponseToJSON(json) {
@@ -37,7 +37,7 @@ export function PkiConfigureClusterResponseToJSONTyped(value, ignoreDiscriminato
         return value;
     }
     return {
-        aia_path: value['aiaPath'],
-        path: value['path'],
+        'aia_path': value['aiaPath'],
+        'path': value['path'],
     };
 }

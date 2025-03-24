@@ -32,7 +32,7 @@ function SystemListSyncGithubAppsResponseFromJSONTyped(json, ignoreDiscriminator
         return json;
     }
     return {
-        keys: json['keys'] == null ? undefined : json['keys'],
+        'keys': json['keys'] == null ? undefined : json['keys'],
     };
 }
 function SystemListSyncGithubAppsResponseToJSON(json) {
@@ -43,6 +43,6 @@ function SystemListSyncGithubAppsResponseToJSONTyped(value, ignoreDiscriminator 
         return value;
     }
     return {
-        keys: value['keys'],
+        'keys': value['keys'],
     };
 }

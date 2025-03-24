@@ -32,8 +32,8 @@ function VersionHistoryResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        keyInfo: json['key_info'] == null ? undefined : json['key_info'],
-        keys: json['keys'] == null ? undefined : json['keys'],
+        'keyInfo': json['key_info'] == null ? undefined : json['key_info'],
+        'keys': json['keys'] == null ? undefined : json['keys'],
     };
 }
 function VersionHistoryResponseToJSON(json) {
@@ -44,7 +44,7 @@ function VersionHistoryResponseToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        key_info: value['keyInfo'],
-        keys: value['keys'],
+        'key_info': value['keyInfo'],
+        'keys': value['keys'],
     };
 }

@@ -32,7 +32,7 @@ function PoliciesWritePasswordPolicyRequestFromJSONTyped(json, ignoreDiscriminat
         return json;
     }
     return {
-        policy: json['policy'] == null ? undefined : json['policy'],
+        'policy': json['policy'] == null ? undefined : json['policy'],
     };
 }
 function PoliciesWritePasswordPolicyRequestToJSON(json) {
@@ -43,6 +43,6 @@ function PoliciesWritePasswordPolicyRequestToJSONTyped(value, ignoreDiscriminato
         return value;
     }
     return {
-        policy: value['policy'],
+        'policy': value['policy'],
     };
 }

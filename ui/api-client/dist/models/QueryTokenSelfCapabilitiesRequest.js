@@ -32,9 +32,9 @@ function QueryTokenSelfCapabilitiesRequestFromJSONTyped(json, ignoreDiscriminato
         return json;
     }
     return {
-        path: json['path'] == null ? undefined : json['path'],
-        paths: json['paths'] == null ? undefined : json['paths'],
-        token: json['token'] == null ? undefined : json['token'],
+        'path': json['path'] == null ? undefined : json['path'],
+        'paths': json['paths'] == null ? undefined : json['paths'],
+        'token': json['token'] == null ? undefined : json['token'],
     };
 }
 function QueryTokenSelfCapabilitiesRequestToJSON(json) {
@@ -45,8 +45,8 @@ function QueryTokenSelfCapabilitiesRequestToJSONTyped(value, ignoreDiscriminator
         return value;
     }
     return {
-        path: value['path'],
-        paths: value['paths'],
-        token: value['token'],
+        'path': value['path'],
+        'paths': value['paths'],
+        'token': value['token'],
     };
 }

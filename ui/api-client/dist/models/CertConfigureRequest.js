@@ -32,11 +32,11 @@ function CertConfigureRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        disableBinding: json['disable_binding'] == null ? undefined : json['disable_binding'],
-        enableIdentityAliasMetadata: json['enable_identity_alias_metadata'] == null ? undefined : json['enable_identity_alias_metadata'],
-        enableMetadataOnFailures: json['enable_metadata_on_failures'] == null ? undefined : json['enable_metadata_on_failures'],
-        ocspCacheSize: json['ocsp_cache_size'] == null ? undefined : json['ocsp_cache_size'],
-        roleCacheSize: json['role_cache_size'] == null ? undefined : json['role_cache_size'],
+        'disableBinding': json['disable_binding'] == null ? undefined : json['disable_binding'],
+        'enableIdentityAliasMetadata': json['enable_identity_alias_metadata'] == null ? undefined : json['enable_identity_alias_metadata'],
+        'enableMetadataOnFailures': json['enable_metadata_on_failures'] == null ? undefined : json['enable_metadata_on_failures'],
+        'ocspCacheSize': json['ocsp_cache_size'] == null ? undefined : json['ocsp_cache_size'],
+        'roleCacheSize': json['role_cache_size'] == null ? undefined : json['role_cache_size'],
     };
 }
 function CertConfigureRequestToJSON(json) {
@@ -47,10 +47,10 @@ function CertConfigureRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        disable_binding: value['disableBinding'],
-        enable_identity_alias_metadata: value['enableIdentityAliasMetadata'],
-        enable_metadata_on_failures: value['enableMetadataOnFailures'],
-        ocsp_cache_size: value['ocspCacheSize'],
-        role_cache_size: value['roleCacheSize'],
+        'disable_binding': value['disableBinding'],
+        'enable_identity_alias_metadata': value['enableIdentityAliasMetadata'],
+        'enable_metadata_on_failures': value['enableMetadataOnFailures'],
+        'ocsp_cache_size': value['ocspCacheSize'],
+        'role_cache_size': value['roleCacheSize'],
     };
 }

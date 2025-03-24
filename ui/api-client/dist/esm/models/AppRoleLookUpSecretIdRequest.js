@@ -25,7 +25,7 @@ export function AppRoleLookUpSecretIdRequestFromJSONTyped(json, ignoreDiscrimina
         return json;
     }
     return {
-        secretId: json['secret_id'] == null ? undefined : json['secret_id'],
+        'secretId': json['secret_id'] == null ? undefined : json['secret_id'],
     };
 }
 export function AppRoleLookUpSecretIdRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function AppRoleLookUpSecretIdRequestToJSONTyped(value, ignoreDiscriminat
         return value;
     }
     return {
-        secret_id: value['secretId'],
+        'secret_id': value['secretId'],
     };
 }

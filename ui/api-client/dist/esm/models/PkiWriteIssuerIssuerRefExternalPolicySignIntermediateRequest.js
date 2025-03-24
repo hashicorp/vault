@@ -12,9 +12,9 @@
  * Do not edit the class manually.
  */
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export var PkiWriteIssuerIssuerRefExternalPolicySignIntermediateRequestFormatEnum;
 (function (PkiWriteIssuerIssuerRefExternalPolicySignIntermediateRequestFormatEnum) {
     PkiWriteIssuerIssuerRefExternalPolicySignIntermediateRequestFormatEnum["PEM"] = "pem";
@@ -36,7 +36,7 @@ export function PkiWriteIssuerIssuerRefExternalPolicySignIntermediateRequestFrom
     if (json == null) {
         return json;
     }
-    return Object.assign(Object.assign({}, json), { csr: json['csr'], format: json['format'] == null ? undefined : json['format'] });
+    return Object.assign(Object.assign({}, json), { 'csr': json['csr'], 'format': json['format'] == null ? undefined : json['format'] });
 }
 export function PkiWriteIssuerIssuerRefExternalPolicySignIntermediateRequestToJSON(json) {
     return PkiWriteIssuerIssuerRefExternalPolicySignIntermediateRequestToJSONTyped(json, false);
@@ -45,5 +45,5 @@ export function PkiWriteIssuerIssuerRefExternalPolicySignIntermediateRequestToJS
     if (value == null) {
         return value;
     }
-    return Object.assign(Object.assign({}, value), { csr: value['csr'], format: value['format'] });
+    return Object.assign(Object.assign({}, value), { 'csr': value['csr'], 'format': value['format'] });
 }

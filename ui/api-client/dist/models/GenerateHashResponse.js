@@ -32,7 +32,7 @@ function GenerateHashResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        sum: json['sum'] == null ? undefined : json['sum'],
+        'sum': json['sum'] == null ? undefined : json['sum'],
     };
 }
 function GenerateHashResponseToJSON(json) {
@@ -43,6 +43,6 @@ function GenerateHashResponseToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        sum: value['sum'],
+        'sum': value['sum'],
     };
 }

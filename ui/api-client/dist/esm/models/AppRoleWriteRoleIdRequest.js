@@ -25,7 +25,7 @@ export function AppRoleWriteRoleIdRequestFromJSONTyped(json, ignoreDiscriminator
         return json;
     }
     return {
-        roleId: json['role_id'] == null ? undefined : json['role_id'],
+        'roleId': json['role_id'] == null ? undefined : json['role_id'],
     };
 }
 export function AppRoleWriteRoleIdRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function AppRoleWriteRoleIdRequestToJSONTyped(value, ignoreDiscriminator 
         return value;
     }
     return {
-        role_id: value['roleId'],
+        'role_id': value['roleId'],
     };
 }

@@ -32,13 +32,13 @@ function SystemWriteMfaMethodDuoNameRequestFromJSONTyped(json, ignoreDiscriminat
         return json;
     }
     return {
-        apiHostname: json['api_hostname'] == null ? undefined : json['api_hostname'],
-        integrationKey: json['integration_key'] == null ? undefined : json['integration_key'],
-        mountAccessor: json['mount_accessor'] == null ? undefined : json['mount_accessor'],
-        pushInfo: json['push_info'] == null ? undefined : json['push_info'],
-        secretKey: json['secret_key'] == null ? undefined : json['secret_key'],
-        usePasscode: json['use_passcode'] == null ? undefined : json['use_passcode'],
-        usernameFormat: json['username_format'] == null ? undefined : json['username_format'],
+        'apiHostname': json['api_hostname'] == null ? undefined : json['api_hostname'],
+        'integrationKey': json['integration_key'] == null ? undefined : json['integration_key'],
+        'mountAccessor': json['mount_accessor'] == null ? undefined : json['mount_accessor'],
+        'pushInfo': json['push_info'] == null ? undefined : json['push_info'],
+        'secretKey': json['secret_key'] == null ? undefined : json['secret_key'],
+        'usePasscode': json['use_passcode'] == null ? undefined : json['use_passcode'],
+        'usernameFormat': json['username_format'] == null ? undefined : json['username_format'],
     };
 }
 function SystemWriteMfaMethodDuoNameRequestToJSON(json) {
@@ -49,12 +49,12 @@ function SystemWriteMfaMethodDuoNameRequestToJSONTyped(value, ignoreDiscriminato
         return value;
     }
     return {
-        api_hostname: value['apiHostname'],
-        integration_key: value['integrationKey'],
-        mount_accessor: value['mountAccessor'],
-        push_info: value['pushInfo'],
-        secret_key: value['secretKey'],
-        use_passcode: value['usePasscode'],
-        username_format: value['usernameFormat'],
+        'api_hostname': value['apiHostname'],
+        'integration_key': value['integrationKey'],
+        'mount_accessor': value['mountAccessor'],
+        'push_info': value['pushInfo'],
+        'secret_key': value['secretKey'],
+        'use_passcode': value['usePasscode'],
+        'username_format': value['usernameFormat'],
     };
 }

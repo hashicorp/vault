@@ -25,9 +25,9 @@ export function PluginsReloadBackendsRequestFromJSONTyped(json, ignoreDiscrimina
         return json;
     }
     return {
-        mounts: json['mounts'] == null ? undefined : json['mounts'],
-        plugin: json['plugin'] == null ? undefined : json['plugin'],
-        scope: json['scope'] == null ? undefined : json['scope'],
+        'mounts': json['mounts'] == null ? undefined : json['mounts'],
+        'plugin': json['plugin'] == null ? undefined : json['plugin'],
+        'scope': json['scope'] == null ? undefined : json['scope'],
     };
 }
 export function PluginsReloadBackendsRequestToJSON(json) {
@@ -38,8 +38,8 @@ export function PluginsReloadBackendsRequestToJSONTyped(value, ignoreDiscriminat
         return value;
     }
     return {
-        mounts: value['mounts'],
-        plugin: value['plugin'],
-        scope: value['scope'],
+        'mounts': value['mounts'],
+        'plugin': value['plugin'],
+        'scope': value['scope'],
     };
 }

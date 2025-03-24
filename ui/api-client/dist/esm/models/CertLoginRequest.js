@@ -25,7 +25,7 @@ export function CertLoginRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        name: json['name'] == null ? undefined : json['name'],
+        'name': json['name'] == null ? undefined : json['name'],
     };
 }
 export function CertLoginRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function CertLoginRequestToJSONTyped(value, ignoreDiscriminator = false) 
         return value;
     }
     return {
-        name: value['name'],
+        'name': value['name'],
     };
 }

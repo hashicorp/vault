@@ -32,7 +32,7 @@ function PoliciesGeneratePasswordFromPasswordPolicyResponseFromJSONTyped(json, i
         return json;
     }
     return {
-        password: json['password'] == null ? undefined : json['password'],
+        'password': json['password'] == null ? undefined : json['password'],
     };
 }
 function PoliciesGeneratePasswordFromPasswordPolicyResponseToJSON(json) {
@@ -43,6 +43,6 @@ function PoliciesGeneratePasswordFromPasswordPolicyResponseToJSONTyped(value, ig
         return value;
     }
     return {
-        password: value['password'],
+        'password': value['password'],
     };
 }

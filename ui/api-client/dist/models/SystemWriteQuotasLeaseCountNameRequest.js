@@ -32,11 +32,11 @@ function SystemWriteQuotasLeaseCountNameRequestFromJSONTyped(json, ignoreDiscrim
         return json;
     }
     return {
-        inheritable: json['inheritable'] == null ? undefined : json['inheritable'],
-        maxLeases: json['max_leases'] == null ? undefined : json['max_leases'],
-        path: json['path'] == null ? undefined : json['path'],
-        role: json['role'] == null ? undefined : json['role'],
-        type: json['type'] == null ? undefined : json['type'],
+        'inheritable': json['inheritable'] == null ? undefined : json['inheritable'],
+        'maxLeases': json['max_leases'] == null ? undefined : json['max_leases'],
+        'path': json['path'] == null ? undefined : json['path'],
+        'role': json['role'] == null ? undefined : json['role'],
+        'type': json['type'] == null ? undefined : json['type'],
     };
 }
 function SystemWriteQuotasLeaseCountNameRequestToJSON(json) {
@@ -47,10 +47,10 @@ function SystemWriteQuotasLeaseCountNameRequestToJSONTyped(value, ignoreDiscrimi
         return value;
     }
     return {
-        inheritable: value['inheritable'],
-        max_leases: value['maxLeases'],
-        path: value['path'],
-        role: value['role'],
-        type: value['type'],
+        'inheritable': value['inheritable'],
+        'max_leases': value['maxLeases'],
+        'path': value['path'],
+        'role': value['role'],
+        'type': value['type'],
     };
 }

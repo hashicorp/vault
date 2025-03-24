@@ -25,7 +25,7 @@ export function PluginsCatalogListPluginsWithTypeResponseFromJSONTyped(json, ign
         return json;
     }
     return {
-        keys: json['keys'] == null ? undefined : json['keys'],
+        'keys': json['keys'] == null ? undefined : json['keys'],
     };
 }
 export function PluginsCatalogListPluginsWithTypeResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function PluginsCatalogListPluginsWithTypeResponseToJSONTyped(value, igno
         return value;
     }
     return {
-        keys: value['keys'],
+        'keys': value['keys'],
     };
 }

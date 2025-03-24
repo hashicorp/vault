@@ -32,7 +32,7 @@ function UserpassLoginRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        password: json['password'] == null ? undefined : json['password'],
+        'password': json['password'] == null ? undefined : json['password'],
     };
 }
 function UserpassLoginRequestToJSON(json) {
@@ -43,6 +43,6 @@ function UserpassLoginRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        password: value['password'],
+        'password': value['password'],
     };
 }

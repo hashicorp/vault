@@ -32,9 +32,9 @@ function KvV2WriteRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        data: json['data'] == null ? undefined : json['data'],
-        options: json['options'] == null ? undefined : json['options'],
-        version: json['version'] == null ? undefined : json['version'],
+        'data': json['data'] == null ? undefined : json['data'],
+        'options': json['options'] == null ? undefined : json['options'],
+        'version': json['version'] == null ? undefined : json['version'],
     };
 }
 function KvV2WriteRequestToJSON(json) {
@@ -45,8 +45,8 @@ function KvV2WriteRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        data: value['data'],
-        options: value['options'],
-        version: value['version'],
+        'data': value['data'],
+        'options': value['options'],
+        'version': value['version'],
     };
 }

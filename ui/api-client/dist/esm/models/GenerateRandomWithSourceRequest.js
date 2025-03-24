@@ -25,8 +25,8 @@ export function GenerateRandomWithSourceRequestFromJSONTyped(json, ignoreDiscrim
         return json;
     }
     return {
-        bytes: json['bytes'] == null ? undefined : json['bytes'],
-        format: json['format'] == null ? undefined : json['format'],
+        'bytes': json['bytes'] == null ? undefined : json['bytes'],
+        'format': json['format'] == null ? undefined : json['format'],
     };
 }
 export function GenerateRandomWithSourceRequestToJSON(json) {
@@ -37,7 +37,7 @@ export function GenerateRandomWithSourceRequestToJSONTyped(value, ignoreDiscrimi
         return value;
     }
     return {
-        bytes: value['bytes'],
-        format: value['format'],
+        'bytes': value['bytes'],
+        'format': value['format'],
     };
 }

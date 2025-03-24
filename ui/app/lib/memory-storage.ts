@@ -3,19 +3,19 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-const cache = {};
+const cache: { [key: string]: string } = {};
 
 export default {
-  getItem(key) {
-    var item = cache[key];
+  getItem(key: string) {
+    const item = cache[key];
     return item && JSON.parse(item);
   },
 
-  setItem(key, val) {
+  setItem(key: string, val: unknown) {
     cache[key] = JSON.stringify(val);
   },
 
-  removeItem(key) {
+  removeItem(key: string) {
     delete cache[key];
   },
 

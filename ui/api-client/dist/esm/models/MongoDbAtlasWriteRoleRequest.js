@@ -27,14 +27,14 @@ export function MongoDbAtlasWriteRoleRequestFromJSONTyped(json, ignoreDiscrimina
         return json;
     }
     return {
-        cidrBlocks: json['cidr_blocks'] == null ? undefined : json['cidr_blocks'],
-        ipAddresses: json['ip_addresses'] == null ? undefined : json['ip_addresses'],
-        maxTtl: json['max_ttl'] == null ? undefined : json['max_ttl'],
-        organizationId: json['organization_id'] == null ? undefined : json['organization_id'],
-        projectId: json['project_id'] == null ? undefined : json['project_id'],
-        projectRoles: json['project_roles'] == null ? undefined : json['project_roles'],
-        roles: json['roles'],
-        ttl: json['ttl'] == null ? undefined : json['ttl'],
+        'cidrBlocks': json['cidr_blocks'] == null ? undefined : json['cidr_blocks'],
+        'ipAddresses': json['ip_addresses'] == null ? undefined : json['ip_addresses'],
+        'maxTtl': json['max_ttl'] == null ? undefined : json['max_ttl'],
+        'organizationId': json['organization_id'] == null ? undefined : json['organization_id'],
+        'projectId': json['project_id'] == null ? undefined : json['project_id'],
+        'projectRoles': json['project_roles'] == null ? undefined : json['project_roles'],
+        'roles': json['roles'],
+        'ttl': json['ttl'] == null ? undefined : json['ttl'],
     };
 }
 export function MongoDbAtlasWriteRoleRequestToJSON(json) {
@@ -45,13 +45,13 @@ export function MongoDbAtlasWriteRoleRequestToJSONTyped(value, ignoreDiscriminat
         return value;
     }
     return {
-        cidr_blocks: value['cidrBlocks'],
-        ip_addresses: value['ipAddresses'],
-        max_ttl: value['maxTtl'],
-        organization_id: value['organizationId'],
-        project_id: value['projectId'],
-        project_roles: value['projectRoles'],
-        roles: value['roles'],
-        ttl: value['ttl'],
+        'cidr_blocks': value['cidrBlocks'],
+        'ip_addresses': value['ipAddresses'],
+        'max_ttl': value['maxTtl'],
+        'organization_id': value['organizationId'],
+        'project_id': value['projectId'],
+        'project_roles': value['projectRoles'],
+        'roles': value['roles'],
+        'ttl': value['ttl'],
     };
 }

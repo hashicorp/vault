@@ -32,12 +32,12 @@ function NomadConfigureAccessRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        address: json['address'] == null ? undefined : json['address'],
-        caCert: json['ca_cert'] == null ? undefined : json['ca_cert'],
-        clientCert: json['client_cert'] == null ? undefined : json['client_cert'],
-        clientKey: json['client_key'] == null ? undefined : json['client_key'],
-        maxTokenNameLength: json['max_token_name_length'] == null ? undefined : json['max_token_name_length'],
-        token: json['token'] == null ? undefined : json['token'],
+        'address': json['address'] == null ? undefined : json['address'],
+        'caCert': json['ca_cert'] == null ? undefined : json['ca_cert'],
+        'clientCert': json['client_cert'] == null ? undefined : json['client_cert'],
+        'clientKey': json['client_key'] == null ? undefined : json['client_key'],
+        'maxTokenNameLength': json['max_token_name_length'] == null ? undefined : json['max_token_name_length'],
+        'token': json['token'] == null ? undefined : json['token'],
     };
 }
 function NomadConfigureAccessRequestToJSON(json) {
@@ -48,11 +48,11 @@ function NomadConfigureAccessRequestToJSONTyped(value, ignoreDiscriminator = fal
         return value;
     }
     return {
-        address: value['address'],
-        ca_cert: value['caCert'],
-        client_cert: value['clientCert'],
-        client_key: value['clientKey'],
-        max_token_name_length: value['maxTokenNameLength'],
-        token: value['token'],
+        'address': value['address'],
+        'ca_cert': value['caCert'],
+        'client_cert': value['clientCert'],
+        'client_key': value['clientKey'],
+        'max_token_name_length': value['maxTokenNameLength'],
+        'token': value['token'],
     };
 }

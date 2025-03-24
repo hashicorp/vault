@@ -32,7 +32,7 @@ function AppRoleWriteSecretIdBoundCidrsRequestFromJSONTyped(json, ignoreDiscrimi
         return json;
     }
     return {
-        secretIdBoundCidrs: json['secret_id_bound_cidrs'] == null ? undefined : json['secret_id_bound_cidrs'],
+        'secretIdBoundCidrs': json['secret_id_bound_cidrs'] == null ? undefined : json['secret_id_bound_cidrs'],
     };
 }
 function AppRoleWriteSecretIdBoundCidrsRequestToJSON(json) {
@@ -43,6 +43,6 @@ function AppRoleWriteSecretIdBoundCidrsRequestToJSONTyped(value, ignoreDiscrimin
         return value;
     }
     return {
-        secret_id_bound_cidrs: value['secretIdBoundCidrs'],
+        'secret_id_bound_cidrs': value['secretIdBoundCidrs'],
     };
 }

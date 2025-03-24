@@ -32,7 +32,7 @@ function AuditingCalculateHashResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        hash: json['hash'] == null ? undefined : json['hash'],
+        'hash': json['hash'] == null ? undefined : json['hash'],
     };
 }
 function AuditingCalculateHashResponseToJSON(json) {
@@ -43,6 +43,6 @@ function AuditingCalculateHashResponseToJSONTyped(value, ignoreDiscriminator = f
         return value;
     }
     return {
-        hash: value['hash'],
+        'hash': value['hash'],
     };
 }

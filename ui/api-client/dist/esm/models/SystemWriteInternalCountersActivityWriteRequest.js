@@ -25,7 +25,7 @@ export function SystemWriteInternalCountersActivityWriteRequestFromJSONTyped(jso
         return json;
     }
     return {
-        input: json['input'] == null ? undefined : json['input'],
+        'input': json['input'] == null ? undefined : json['input'],
     };
 }
 export function SystemWriteInternalCountersActivityWriteRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function SystemWriteInternalCountersActivityWriteRequestToJSONTyped(value
         return value;
     }
     return {
-        input: value['input'],
+        'input': value['input'],
     };
 }

@@ -32,9 +32,9 @@ function GoogleCloudWriteImpersonatedAccountRequestFromJSONTyped(json, ignoreDis
         return json;
     }
     return {
-        serviceAccountEmail: json['service_account_email'] == null ? undefined : json['service_account_email'],
-        tokenScopes: json['token_scopes'] == null ? undefined : json['token_scopes'],
-        ttl: json['ttl'] == null ? undefined : json['ttl'],
+        'serviceAccountEmail': json['service_account_email'] == null ? undefined : json['service_account_email'],
+        'tokenScopes': json['token_scopes'] == null ? undefined : json['token_scopes'],
+        'ttl': json['ttl'] == null ? undefined : json['ttl'],
     };
 }
 function GoogleCloudWriteImpersonatedAccountRequestToJSON(json) {
@@ -45,8 +45,8 @@ function GoogleCloudWriteImpersonatedAccountRequestToJSONTyped(value, ignoreDisc
         return value;
     }
     return {
-        service_account_email: value['serviceAccountEmail'],
-        token_scopes: value['tokenScopes'],
-        ttl: value['ttl'],
+        'service_account_email': value['serviceAccountEmail'],
+        'token_scopes': value['tokenScopes'],
+        'ttl': value['ttl'],
     };
 }

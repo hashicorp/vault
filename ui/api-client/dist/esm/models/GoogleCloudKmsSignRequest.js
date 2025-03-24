@@ -25,8 +25,8 @@ export function GoogleCloudKmsSignRequestFromJSONTyped(json, ignoreDiscriminator
         return json;
     }
     return {
-        digest: json['digest'] == null ? undefined : json['digest'],
-        keyVersion: json['key_version'] == null ? undefined : json['key_version'],
+        'digest': json['digest'] == null ? undefined : json['digest'],
+        'keyVersion': json['key_version'] == null ? undefined : json['key_version'],
     };
 }
 export function GoogleCloudKmsSignRequestToJSON(json) {
@@ -37,7 +37,7 @@ export function GoogleCloudKmsSignRequestToJSONTyped(value, ignoreDiscriminator 
         return value;
     }
     return {
-        digest: value['digest'],
-        key_version: value['keyVersion'],
+        'digest': value['digest'],
+        'key_version': value['keyVersion'],
     };
 }

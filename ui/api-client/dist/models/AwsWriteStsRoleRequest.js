@@ -32,8 +32,8 @@ function AwsWriteStsRoleRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        externalId: json['external_id'] == null ? undefined : json['external_id'],
-        stsRole: json['sts_role'] == null ? undefined : json['sts_role'],
+        'externalId': json['external_id'] == null ? undefined : json['external_id'],
+        'stsRole': json['sts_role'] == null ? undefined : json['sts_role'],
     };
 }
 function AwsWriteStsRoleRequestToJSON(json) {
@@ -44,7 +44,7 @@ function AwsWriteStsRoleRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        external_id: value['externalId'],
-        sts_role: value['stsRole'],
+        'external_id': value['externalId'],
+        'sts_role': value['stsRole'],
     };
 }

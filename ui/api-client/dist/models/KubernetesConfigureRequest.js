@@ -32,10 +32,10 @@ function KubernetesConfigureRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        disableLocalCaJwt: json['disable_local_ca_jwt'] == null ? undefined : json['disable_local_ca_jwt'],
-        kubernetesCaCert: json['kubernetes_ca_cert'] == null ? undefined : json['kubernetes_ca_cert'],
-        kubernetesHost: json['kubernetes_host'] == null ? undefined : json['kubernetes_host'],
-        serviceAccountJwt: json['service_account_jwt'] == null ? undefined : json['service_account_jwt'],
+        'disableLocalCaJwt': json['disable_local_ca_jwt'] == null ? undefined : json['disable_local_ca_jwt'],
+        'kubernetesCaCert': json['kubernetes_ca_cert'] == null ? undefined : json['kubernetes_ca_cert'],
+        'kubernetesHost': json['kubernetes_host'] == null ? undefined : json['kubernetes_host'],
+        'serviceAccountJwt': json['service_account_jwt'] == null ? undefined : json['service_account_jwt'],
     };
 }
 function KubernetesConfigureRequestToJSON(json) {
@@ -46,9 +46,9 @@ function KubernetesConfigureRequestToJSONTyped(value, ignoreDiscriminator = fals
         return value;
     }
     return {
-        disable_local_ca_jwt: value['disableLocalCaJwt'],
-        kubernetes_ca_cert: value['kubernetesCaCert'],
-        kubernetes_host: value['kubernetesHost'],
-        service_account_jwt: value['serviceAccountJwt'],
+        'disable_local_ca_jwt': value['disableLocalCaJwt'],
+        'kubernetes_ca_cert': value['kubernetesCaCert'],
+        'kubernetes_host': value['kubernetesHost'],
+        'service_account_jwt': value['serviceAccountJwt'],
     };
 }

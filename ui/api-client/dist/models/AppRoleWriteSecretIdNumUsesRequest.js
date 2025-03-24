@@ -32,7 +32,7 @@ function AppRoleWriteSecretIdNumUsesRequestFromJSONTyped(json, ignoreDiscriminat
         return json;
     }
     return {
-        secretIdNumUses: json['secret_id_num_uses'] == null ? undefined : json['secret_id_num_uses'],
+        'secretIdNumUses': json['secret_id_num_uses'] == null ? undefined : json['secret_id_num_uses'],
     };
 }
 function AppRoleWriteSecretIdNumUsesRequestToJSON(json) {
@@ -43,6 +43,6 @@ function AppRoleWriteSecretIdNumUsesRequestToJSONTyped(value, ignoreDiscriminato
         return value;
     }
     return {
-        secret_id_num_uses: value['secretIdNumUses'],
+        'secret_id_num_uses': value['secretIdNumUses'],
     };
 }

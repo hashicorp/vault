@@ -25,7 +25,7 @@ export function AppRoleReadSecretIdBoundCidrsResponseFromJSONTyped(json, ignoreD
         return json;
     }
     return {
-        secretIdBoundCidrs: json['secret_id_bound_cidrs'] == null ? undefined : json['secret_id_bound_cidrs'],
+        'secretIdBoundCidrs': json['secret_id_bound_cidrs'] == null ? undefined : json['secret_id_bound_cidrs'],
     };
 }
 export function AppRoleReadSecretIdBoundCidrsResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function AppRoleReadSecretIdBoundCidrsResponseToJSONTyped(value, ignoreDi
         return value;
     }
     return {
-        secret_id_bound_cidrs: value['secretIdBoundCidrs'],
+        'secret_id_bound_cidrs': value['secretIdBoundCidrs'],
     };
 }

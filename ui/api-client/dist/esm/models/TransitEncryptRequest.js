@@ -25,16 +25,16 @@ export function TransitEncryptRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        associatedData: json['associated_data'] == null ? undefined : json['associated_data'],
-        batchInput: json['batch_input'] == null ? undefined : json['batch_input'],
-        context: json['context'] == null ? undefined : json['context'],
-        convergentEncryption: json['convergent_encryption'] == null ? undefined : json['convergent_encryption'],
-        keyVersion: json['key_version'] == null ? undefined : json['key_version'],
-        nonce: json['nonce'] == null ? undefined : json['nonce'],
-        paddingScheme: json['padding_scheme'] == null ? undefined : json['padding_scheme'],
-        partialFailureResponseCode: json['partial_failure_response_code'] == null ? undefined : json['partial_failure_response_code'],
-        plaintext: json['plaintext'] == null ? undefined : json['plaintext'],
-        type: json['type'] == null ? undefined : json['type'],
+        'associatedData': json['associated_data'] == null ? undefined : json['associated_data'],
+        'batchInput': json['batch_input'] == null ? undefined : json['batch_input'],
+        'context': json['context'] == null ? undefined : json['context'],
+        'convergentEncryption': json['convergent_encryption'] == null ? undefined : json['convergent_encryption'],
+        'keyVersion': json['key_version'] == null ? undefined : json['key_version'],
+        'nonce': json['nonce'] == null ? undefined : json['nonce'],
+        'paddingScheme': json['padding_scheme'] == null ? undefined : json['padding_scheme'],
+        'partialFailureResponseCode': json['partial_failure_response_code'] == null ? undefined : json['partial_failure_response_code'],
+        'plaintext': json['plaintext'] == null ? undefined : json['plaintext'],
+        'type': json['type'] == null ? undefined : json['type'],
     };
 }
 export function TransitEncryptRequestToJSON(json) {
@@ -45,15 +45,15 @@ export function TransitEncryptRequestToJSONTyped(value, ignoreDiscriminator = fa
         return value;
     }
     return {
-        associated_data: value['associatedData'],
-        batch_input: value['batchInput'],
-        context: value['context'],
-        convergent_encryption: value['convergentEncryption'],
-        key_version: value['keyVersion'],
-        nonce: value['nonce'],
-        padding_scheme: value['paddingScheme'],
-        partial_failure_response_code: value['partialFailureResponseCode'],
-        plaintext: value['plaintext'],
-        type: value['type'],
+        'associated_data': value['associatedData'],
+        'batch_input': value['batchInput'],
+        'context': value['context'],
+        'convergent_encryption': value['convergentEncryption'],
+        'key_version': value['keyVersion'],
+        'nonce': value['nonce'],
+        'padding_scheme': value['paddingScheme'],
+        'partial_failure_response_code': value['partialFailureResponseCode'],
+        'plaintext': value['plaintext'],
+        'type': value['type'],
     };
 }

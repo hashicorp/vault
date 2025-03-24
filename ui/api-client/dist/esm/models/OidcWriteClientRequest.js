@@ -25,12 +25,12 @@ export function OidcWriteClientRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        accessTokenTtl: json['access_token_ttl'] == null ? undefined : json['access_token_ttl'],
-        assignments: json['assignments'] == null ? undefined : json['assignments'],
-        clientType: json['client_type'] == null ? undefined : json['client_type'],
-        idTokenTtl: json['id_token_ttl'] == null ? undefined : json['id_token_ttl'],
-        key: json['key'] == null ? undefined : json['key'],
-        redirectUris: json['redirect_uris'] == null ? undefined : json['redirect_uris'],
+        'accessTokenTtl': json['access_token_ttl'] == null ? undefined : json['access_token_ttl'],
+        'assignments': json['assignments'] == null ? undefined : json['assignments'],
+        'clientType': json['client_type'] == null ? undefined : json['client_type'],
+        'idTokenTtl': json['id_token_ttl'] == null ? undefined : json['id_token_ttl'],
+        'key': json['key'] == null ? undefined : json['key'],
+        'redirectUris': json['redirect_uris'] == null ? undefined : json['redirect_uris'],
     };
 }
 export function OidcWriteClientRequestToJSON(json) {
@@ -41,11 +41,11 @@ export function OidcWriteClientRequestToJSONTyped(value, ignoreDiscriminator = f
         return value;
     }
     return {
-        access_token_ttl: value['accessTokenTtl'],
-        assignments: value['assignments'],
-        client_type: value['clientType'],
-        id_token_ttl: value['idTokenTtl'],
-        key: value['key'],
-        redirect_uris: value['redirectUris'],
+        'access_token_ttl': value['accessTokenTtl'],
+        'assignments': value['assignments'],
+        'client_type': value['clientType'],
+        'id_token_ttl': value['idTokenTtl'],
+        'key': value['key'],
+        'redirect_uris': value['redirectUris'],
     };
 }

@@ -32,9 +32,9 @@ function PluginsReloadBackendsRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        mounts: json['mounts'] == null ? undefined : json['mounts'],
-        plugin: json['plugin'] == null ? undefined : json['plugin'],
-        scope: json['scope'] == null ? undefined : json['scope'],
+        'mounts': json['mounts'] == null ? undefined : json['mounts'],
+        'plugin': json['plugin'] == null ? undefined : json['plugin'],
+        'scope': json['scope'] == null ? undefined : json['scope'],
     };
 }
 function PluginsReloadBackendsRequestToJSON(json) {
@@ -45,8 +45,8 @@ function PluginsReloadBackendsRequestToJSONTyped(value, ignoreDiscriminator = fa
         return value;
     }
     return {
-        mounts: value['mounts'],
-        plugin: value['plugin'],
-        scope: value['scope'],
+        'mounts': value['mounts'],
+        'plugin': value['plugin'],
+        'scope': value['scope'],
     };
 }

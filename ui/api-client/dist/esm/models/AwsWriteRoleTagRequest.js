@@ -25,11 +25,11 @@ export function AwsWriteRoleTagRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        allowInstanceMigration: json['allow_instance_migration'] == null ? undefined : json['allow_instance_migration'],
-        disallowReauthentication: json['disallow_reauthentication'] == null ? undefined : json['disallow_reauthentication'],
-        instanceId: json['instance_id'] == null ? undefined : json['instance_id'],
-        maxTtl: json['max_ttl'] == null ? undefined : json['max_ttl'],
-        policies: json['policies'] == null ? undefined : json['policies'],
+        'allowInstanceMigration': json['allow_instance_migration'] == null ? undefined : json['allow_instance_migration'],
+        'disallowReauthentication': json['disallow_reauthentication'] == null ? undefined : json['disallow_reauthentication'],
+        'instanceId': json['instance_id'] == null ? undefined : json['instance_id'],
+        'maxTtl': json['max_ttl'] == null ? undefined : json['max_ttl'],
+        'policies': json['policies'] == null ? undefined : json['policies'],
     };
 }
 export function AwsWriteRoleTagRequestToJSON(json) {
@@ -40,10 +40,10 @@ export function AwsWriteRoleTagRequestToJSONTyped(value, ignoreDiscriminator = f
         return value;
     }
     return {
-        allow_instance_migration: value['allowInstanceMigration'],
-        disallow_reauthentication: value['disallowReauthentication'],
-        instance_id: value['instanceId'],
-        max_ttl: value['maxTtl'],
-        policies: value['policies'],
+        'allow_instance_migration': value['allowInstanceMigration'],
+        'disallow_reauthentication': value['disallowReauthentication'],
+        'instance_id': value['instanceId'],
+        'max_ttl': value['maxTtl'],
+        'policies': value['policies'],
     };
 }

@@ -32,16 +32,16 @@ function AzureWriteRoleRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        applicationObjectId: json['application_object_id'] == null ? undefined : json['application_object_id'],
-        azureGroups: json['azure_groups'] == null ? undefined : json['azure_groups'],
-        azureRoles: json['azure_roles'] == null ? undefined : json['azure_roles'],
-        explicitMaxTtl: json['explicit_max_ttl'] == null ? undefined : json['explicit_max_ttl'],
-        maxTtl: json['max_ttl'] == null ? undefined : json['max_ttl'],
-        permanentlyDelete: json['permanently_delete'] == null ? undefined : json['permanently_delete'],
-        persistApp: json['persist_app'] == null ? undefined : json['persist_app'],
-        signInAudience: json['sign_in_audience'] == null ? undefined : json['sign_in_audience'],
-        tags: json['tags'] == null ? undefined : json['tags'],
-        ttl: json['ttl'] == null ? undefined : json['ttl'],
+        'applicationObjectId': json['application_object_id'] == null ? undefined : json['application_object_id'],
+        'azureGroups': json['azure_groups'] == null ? undefined : json['azure_groups'],
+        'azureRoles': json['azure_roles'] == null ? undefined : json['azure_roles'],
+        'explicitMaxTtl': json['explicit_max_ttl'] == null ? undefined : json['explicit_max_ttl'],
+        'maxTtl': json['max_ttl'] == null ? undefined : json['max_ttl'],
+        'permanentlyDelete': json['permanently_delete'] == null ? undefined : json['permanently_delete'],
+        'persistApp': json['persist_app'] == null ? undefined : json['persist_app'],
+        'signInAudience': json['sign_in_audience'] == null ? undefined : json['sign_in_audience'],
+        'tags': json['tags'] == null ? undefined : json['tags'],
+        'ttl': json['ttl'] == null ? undefined : json['ttl'],
     };
 }
 function AzureWriteRoleRequestToJSON(json) {
@@ -52,15 +52,15 @@ function AzureWriteRoleRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        application_object_id: value['applicationObjectId'],
-        azure_groups: value['azureGroups'],
-        azure_roles: value['azureRoles'],
-        explicit_max_ttl: value['explicitMaxTtl'],
-        max_ttl: value['maxTtl'],
-        permanently_delete: value['permanentlyDelete'],
-        persist_app: value['persistApp'],
-        sign_in_audience: value['signInAudience'],
-        tags: value['tags'],
-        ttl: value['ttl'],
+        'application_object_id': value['applicationObjectId'],
+        'azure_groups': value['azureGroups'],
+        'azure_roles': value['azureRoles'],
+        'explicit_max_ttl': value['explicitMaxTtl'],
+        'max_ttl': value['maxTtl'],
+        'permanently_delete': value['permanentlyDelete'],
+        'persist_app': value['persistApp'],
+        'sign_in_audience': value['signInAudience'],
+        'tags': value['tags'],
+        'ttl': value['ttl'],
     };
 }

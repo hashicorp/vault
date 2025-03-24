@@ -32,8 +32,8 @@ function KubernetesLoginRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        jwt: json['jwt'] == null ? undefined : json['jwt'],
-        role: json['role'] == null ? undefined : json['role'],
+        'jwt': json['jwt'] == null ? undefined : json['jwt'],
+        'role': json['role'] == null ? undefined : json['role'],
     };
 }
 function KubernetesLoginRequestToJSON(json) {
@@ -44,7 +44,7 @@ function KubernetesLoginRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        jwt: value['jwt'],
-        role: value['role'],
+        'jwt': value['jwt'],
+        'role': value['role'],
     };
 }

@@ -25,7 +25,7 @@ export function TokenRevokeOrphanRequestFromJSONTyped(json, ignoreDiscriminator)
         return json;
     }
     return {
-        token: json['token'] == null ? undefined : json['token'],
+        'token': json['token'] == null ? undefined : json['token'],
     };
 }
 export function TokenRevokeOrphanRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function TokenRevokeOrphanRequestToJSONTyped(value, ignoreDiscriminator =
         return value;
     }
     return {
-        token: value['token'],
+        'token': value['token'],
     };
 }

@@ -25,13 +25,13 @@ export function MfaCreateDuoMethodRequestFromJSONTyped(json, ignoreDiscriminator
         return json;
     }
     return {
-        apiHostname: json['api_hostname'] == null ? undefined : json['api_hostname'],
-        integrationKey: json['integration_key'] == null ? undefined : json['integration_key'],
-        methodName: json['method_name'] == null ? undefined : json['method_name'],
-        pushInfo: json['push_info'] == null ? undefined : json['push_info'],
-        secretKey: json['secret_key'] == null ? undefined : json['secret_key'],
-        usePasscode: json['use_passcode'] == null ? undefined : json['use_passcode'],
-        usernameFormat: json['username_format'] == null ? undefined : json['username_format'],
+        'apiHostname': json['api_hostname'] == null ? undefined : json['api_hostname'],
+        'integrationKey': json['integration_key'] == null ? undefined : json['integration_key'],
+        'methodName': json['method_name'] == null ? undefined : json['method_name'],
+        'pushInfo': json['push_info'] == null ? undefined : json['push_info'],
+        'secretKey': json['secret_key'] == null ? undefined : json['secret_key'],
+        'usePasscode': json['use_passcode'] == null ? undefined : json['use_passcode'],
+        'usernameFormat': json['username_format'] == null ? undefined : json['username_format'],
     };
 }
 export function MfaCreateDuoMethodRequestToJSON(json) {
@@ -42,12 +42,12 @@ export function MfaCreateDuoMethodRequestToJSONTyped(value, ignoreDiscriminator 
         return value;
     }
     return {
-        api_hostname: value['apiHostname'],
-        integration_key: value['integrationKey'],
-        method_name: value['methodName'],
-        push_info: value['pushInfo'],
-        secret_key: value['secretKey'],
-        use_passcode: value['usePasscode'],
-        username_format: value['usernameFormat'],
+        'api_hostname': value['apiHostname'],
+        'integration_key': value['integrationKey'],
+        'method_name': value['methodName'],
+        'push_info': value['pushInfo'],
+        'secret_key': value['secretKey'],
+        'use_passcode': value['usePasscode'],
+        'username_format': value['usernameFormat'],
     };
 }

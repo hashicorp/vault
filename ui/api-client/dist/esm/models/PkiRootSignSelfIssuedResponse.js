@@ -25,8 +25,8 @@ export function PkiRootSignSelfIssuedResponseFromJSONTyped(json, ignoreDiscrimin
         return json;
     }
     return {
-        certificate: json['certificate'] == null ? undefined : json['certificate'],
-        issuingCa: json['issuing_ca'] == null ? undefined : json['issuing_ca'],
+        'certificate': json['certificate'] == null ? undefined : json['certificate'],
+        'issuingCa': json['issuing_ca'] == null ? undefined : json['issuing_ca'],
     };
 }
 export function PkiRootSignSelfIssuedResponseToJSON(json) {
@@ -37,7 +37,7 @@ export function PkiRootSignSelfIssuedResponseToJSONTyped(value, ignoreDiscrimina
         return value;
     }
     return {
-        certificate: value['certificate'],
-        issuing_ca: value['issuingCa'],
+        'certificate': value['certificate'],
+        'issuing_ca': value['issuingCa'],
     };
 }

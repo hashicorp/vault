@@ -25,7 +25,7 @@ export function AppRoleLoginResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        role: json['role'] == null ? undefined : json['role'],
+        'role': json['role'] == null ? undefined : json['role'],
     };
 }
 export function AppRoleLoginResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function AppRoleLoginResponseToJSONTyped(value, ignoreDiscriminator = fal
         return value;
     }
     return {
-        role: value['role'],
+        'role': value['role'],
     };
 }

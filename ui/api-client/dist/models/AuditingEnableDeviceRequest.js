@@ -32,10 +32,10 @@ function AuditingEnableDeviceRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        description: json['description'] == null ? undefined : json['description'],
-        local: json['local'] == null ? undefined : json['local'],
-        options: json['options'] == null ? undefined : json['options'],
-        type: json['type'] == null ? undefined : json['type'],
+        'description': json['description'] == null ? undefined : json['description'],
+        'local': json['local'] == null ? undefined : json['local'],
+        'options': json['options'] == null ? undefined : json['options'],
+        'type': json['type'] == null ? undefined : json['type'],
     };
 }
 function AuditingEnableDeviceRequestToJSON(json) {
@@ -46,9 +46,9 @@ function AuditingEnableDeviceRequestToJSONTyped(value, ignoreDiscriminator = fal
         return value;
     }
     return {
-        description: value['description'],
-        local: value['local'],
-        options: value['options'],
-        type: value['type'],
+        'description': value['description'],
+        'local': value['local'],
+        'options': value['options'],
+        'type': value['type'],
     };
 }

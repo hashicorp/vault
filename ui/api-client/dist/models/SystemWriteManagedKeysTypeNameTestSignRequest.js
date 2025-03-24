@@ -32,8 +32,8 @@ function SystemWriteManagedKeysTypeNameTestSignRequestFromJSONTyped(json, ignore
         return json;
     }
     return {
-        hashAlgorithm: json['hash_algorithm'] == null ? undefined : json['hash_algorithm'],
-        usePss: json['use_pss'] == null ? undefined : json['use_pss'],
+        'hashAlgorithm': json['hash_algorithm'] == null ? undefined : json['hash_algorithm'],
+        'usePss': json['use_pss'] == null ? undefined : json['use_pss'],
     };
 }
 function SystemWriteManagedKeysTypeNameTestSignRequestToJSON(json) {
@@ -44,7 +44,7 @@ function SystemWriteManagedKeysTypeNameTestSignRequestToJSONTyped(value, ignoreD
         return value;
     }
     return {
-        hash_algorithm: value['hashAlgorithm'],
-        use_pss: value['usePss'],
+        'hash_algorithm': value['hashAlgorithm'],
+        'use_pss': value['usePss'],
     };
 }

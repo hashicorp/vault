@@ -27,7 +27,7 @@ export function MfaGenerateTotpSecretRequestFromJSONTyped(json, ignoreDiscrimina
         return json;
     }
     return {
-        methodId: json['method_id'],
+        'methodId': json['method_id'],
     };
 }
 export function MfaGenerateTotpSecretRequestToJSON(json) {
@@ -38,6 +38,6 @@ export function MfaGenerateTotpSecretRequestToJSONTyped(value, ignoreDiscriminat
         return value;
     }
     return {
-        method_id: value['methodId'],
+        'method_id': value['methodId'],
     };
 }

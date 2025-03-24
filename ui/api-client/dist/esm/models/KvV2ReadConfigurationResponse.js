@@ -25,9 +25,9 @@ export function KvV2ReadConfigurationResponseFromJSONTyped(json, ignoreDiscrimin
         return json;
     }
     return {
-        casRequired: json['cas_required'] == null ? undefined : json['cas_required'],
-        deleteVersionAfter: json['delete_version_after'] == null ? undefined : json['delete_version_after'],
-        maxVersions: json['max_versions'] == null ? undefined : json['max_versions'],
+        'casRequired': json['cas_required'] == null ? undefined : json['cas_required'],
+        'deleteVersionAfter': json['delete_version_after'] == null ? undefined : json['delete_version_after'],
+        'maxVersions': json['max_versions'] == null ? undefined : json['max_versions'],
     };
 }
 export function KvV2ReadConfigurationResponseToJSON(json) {
@@ -38,8 +38,8 @@ export function KvV2ReadConfigurationResponseToJSONTyped(value, ignoreDiscrimina
         return value;
     }
     return {
-        cas_required: value['casRequired'],
-        delete_version_after: value['deleteVersionAfter'],
-        max_versions: value['maxVersions'],
+        'cas_required': value['casRequired'],
+        'delete_version_after': value['deleteVersionAfter'],
+        'max_versions': value['maxVersions'],
     };
 }

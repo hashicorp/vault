@@ -25,10 +25,10 @@ export function PersonaUpdateByIdRequestFromJSONTyped(json, ignoreDiscriminator)
         return json;
     }
     return {
-        entityId: json['entity_id'] == null ? undefined : json['entity_id'],
-        metadata: json['metadata'] == null ? undefined : json['metadata'],
-        mountAccessor: json['mount_accessor'] == null ? undefined : json['mount_accessor'],
-        name: json['name'] == null ? undefined : json['name'],
+        'entityId': json['entity_id'] == null ? undefined : json['entity_id'],
+        'metadata': json['metadata'] == null ? undefined : json['metadata'],
+        'mountAccessor': json['mount_accessor'] == null ? undefined : json['mount_accessor'],
+        'name': json['name'] == null ? undefined : json['name'],
     };
 }
 export function PersonaUpdateByIdRequestToJSON(json) {
@@ -39,9 +39,9 @@ export function PersonaUpdateByIdRequestToJSONTyped(value, ignoreDiscriminator =
         return value;
     }
     return {
-        entity_id: value['entityId'],
-        metadata: value['metadata'],
-        mount_accessor: value['mountAccessor'],
-        name: value['name'],
+        'entity_id': value['entityId'],
+        'metadata': value['metadata'],
+        'mount_accessor': value['mountAccessor'],
+        'name': value['name'],
     };
 }

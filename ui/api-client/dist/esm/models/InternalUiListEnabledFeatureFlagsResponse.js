@@ -25,7 +25,7 @@ export function InternalUiListEnabledFeatureFlagsResponseFromJSONTyped(json, ign
         return json;
     }
     return {
-        featureFlags: json['feature_flags'] == null ? undefined : json['feature_flags'],
+        'featureFlags': json['feature_flags'] == null ? undefined : json['feature_flags'],
     };
 }
 export function InternalUiListEnabledFeatureFlagsResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function InternalUiListEnabledFeatureFlagsResponseToJSONTyped(value, igno
         return value;
     }
     return {
-        feature_flags: value['featureFlags'],
+        'feature_flags': value['featureFlags'],
     };
 }

@@ -25,11 +25,11 @@ export function EntityLookUpRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        aliasId: json['alias_id'] == null ? undefined : json['alias_id'],
-        aliasMountAccessor: json['alias_mount_accessor'] == null ? undefined : json['alias_mount_accessor'],
-        aliasName: json['alias_name'] == null ? undefined : json['alias_name'],
-        id: json['id'] == null ? undefined : json['id'],
-        name: json['name'] == null ? undefined : json['name'],
+        'aliasId': json['alias_id'] == null ? undefined : json['alias_id'],
+        'aliasMountAccessor': json['alias_mount_accessor'] == null ? undefined : json['alias_mount_accessor'],
+        'aliasName': json['alias_name'] == null ? undefined : json['alias_name'],
+        'id': json['id'] == null ? undefined : json['id'],
+        'name': json['name'] == null ? undefined : json['name'],
     };
 }
 export function EntityLookUpRequestToJSON(json) {
@@ -40,10 +40,10 @@ export function EntityLookUpRequestToJSONTyped(value, ignoreDiscriminator = fals
         return value;
     }
     return {
-        alias_id: value['aliasId'],
-        alias_mount_accessor: value['aliasMountAccessor'],
-        alias_name: value['aliasName'],
-        id: value['id'],
-        name: value['name'],
+        'alias_id': value['aliasId'],
+        'alias_mount_accessor': value['aliasMountAccessor'],
+        'alias_name': value['aliasName'],
+        'id': value['id'],
+        'name': value['name'],
     };
 }

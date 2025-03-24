@@ -25,8 +25,8 @@ export function SystemDeleteSyncGithubAppsNameResponseFromJSONTyped(json, ignore
         return json;
     }
     return {
-        appId: json['app_id'] == null ? undefined : json['app_id'],
-        name: json['name'] == null ? undefined : json['name'],
+        'appId': json['app_id'] == null ? undefined : json['app_id'],
+        'name': json['name'] == null ? undefined : json['name'],
     };
 }
 export function SystemDeleteSyncGithubAppsNameResponseToJSON(json) {
@@ -37,7 +37,7 @@ export function SystemDeleteSyncGithubAppsNameResponseToJSONTyped(value, ignoreD
         return value;
     }
     return {
-        app_id: value['appId'],
-        name: value['name'],
+        'app_id': value['appId'],
+        'name': value['name'],
     };
 }

@@ -25,8 +25,8 @@ export function UiHeadersReadConfigurationResponseFromJSONTyped(json, ignoreDisc
         return json;
     }
     return {
-        value: json['value'] == null ? undefined : json['value'],
-        values: json['values'] == null ? undefined : json['values'],
+        'value': json['value'] == null ? undefined : json['value'],
+        'values': json['values'] == null ? undefined : json['values'],
     };
 }
 export function UiHeadersReadConfigurationResponseToJSON(json) {
@@ -37,7 +37,7 @@ export function UiHeadersReadConfigurationResponseToJSONTyped(value, ignoreDiscr
         return value;
     }
     return {
-        value: value['value'],
-        values: value['values'],
+        'value': value['value'],
+        'values': value['values'],
     };
 }

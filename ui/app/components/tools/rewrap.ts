@@ -7,7 +7,11 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import errorMessage from 'vault/utils/error-message';
+import apiErrorMessage from 'vault/utils/api-error-message';
+
+import type ApiService from 'vault/services/api';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type { HTMLElementEvent } from 'vault/forms';
 
 /**
  * @module ToolsRewrap
@@ -18,8 +22,8 @@ import errorMessage from 'vault/utils/error-message';
  */
 
 export default class ToolsRewrap extends Component {
-  @service store;
-  @service flashMessages;
+  @service declare readonly api: ApiService;
+  @service declare readonly flashMessages: FlashMessageService;
 
   @tracked originalToken = '';
   @tracked rewrappedToken = '';
@@ -33,16 +37,16 @@ export default class ToolsRewrap extends Component {
   }
 
   @action
-  async handleSubmit(evt) {
+  async handleSubmit(evt: HTMLElementEvent<HTMLFormElement>) {
     evt.preventDefault();
     const data = { token: this.originalToken.trim() };
 
     try {
-      const response = await this.store.adapterFor('tools').toolAction('rewrap', data);
-      this.rewrappedToken = response.wrap_info.token;
+      const { wrap_info } = await this.api.sys.rewrap(data);
+      this.rewrappedToken = wrap_info?.token || '';
       this.flashMessages.success('Rewrap was successful.');
     } catch (error) {
-      this.errorMessage = errorMessage(error);
+      this.errorMessage = await apiErrorMessage(error);
     }
   }
 }

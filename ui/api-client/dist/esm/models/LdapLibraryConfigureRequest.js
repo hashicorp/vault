@@ -25,10 +25,10 @@ export function LdapLibraryConfigureRequestFromJSONTyped(json, ignoreDiscriminat
         return json;
     }
     return {
-        disableCheckInEnforcement: json['disable_check_in_enforcement'] == null ? undefined : json['disable_check_in_enforcement'],
-        maxTtl: json['max_ttl'] == null ? undefined : json['max_ttl'],
-        serviceAccountNames: json['service_account_names'] == null ? undefined : json['service_account_names'],
-        ttl: json['ttl'] == null ? undefined : json['ttl'],
+        'disableCheckInEnforcement': json['disable_check_in_enforcement'] == null ? undefined : json['disable_check_in_enforcement'],
+        'maxTtl': json['max_ttl'] == null ? undefined : json['max_ttl'],
+        'serviceAccountNames': json['service_account_names'] == null ? undefined : json['service_account_names'],
+        'ttl': json['ttl'] == null ? undefined : json['ttl'],
     };
 }
 export function LdapLibraryConfigureRequestToJSON(json) {
@@ -39,9 +39,9 @@ export function LdapLibraryConfigureRequestToJSONTyped(value, ignoreDiscriminato
         return value;
     }
     return {
-        disable_check_in_enforcement: value['disableCheckInEnforcement'],
-        max_ttl: value['maxTtl'],
-        service_account_names: value['serviceAccountNames'],
-        ttl: value['ttl'],
+        'disable_check_in_enforcement': value['disableCheckInEnforcement'],
+        'max_ttl': value['maxTtl'],
+        'service_account_names': value['serviceAccountNames'],
+        'ttl': value['ttl'],
     };
 }

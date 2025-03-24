@@ -25,20 +25,20 @@ export function TransitVerifyWithAlgorithmRequestFromJSONTyped(json, ignoreDiscr
         return json;
     }
     return {
-        algorithm: json['algorithm'] == null ? undefined : json['algorithm'],
-        batchInput: json['batch_input'] == null ? undefined : json['batch_input'],
-        cmac: json['cmac'] == null ? undefined : json['cmac'],
-        context: json['context'] == null ? undefined : json['context'],
-        hashAlgorithm: json['hash_algorithm'] == null ? undefined : json['hash_algorithm'],
-        hmac: json['hmac'] == null ? undefined : json['hmac'],
-        input: json['input'] == null ? undefined : json['input'],
-        macLength: json['mac_length'] == null ? undefined : json['mac_length'],
-        marshalingAlgorithm: json['marshaling_algorithm'] == null ? undefined : json['marshaling_algorithm'],
-        prehashed: json['prehashed'] == null ? undefined : json['prehashed'],
-        saltLength: json['salt_length'] == null ? undefined : json['salt_length'],
-        signature: json['signature'] == null ? undefined : json['signature'],
-        signatureAlgorithm: json['signature_algorithm'] == null ? undefined : json['signature_algorithm'],
-        signatureContext: json['signature_context'] == null ? undefined : json['signature_context'],
+        'algorithm': json['algorithm'] == null ? undefined : json['algorithm'],
+        'batchInput': json['batch_input'] == null ? undefined : json['batch_input'],
+        'cmac': json['cmac'] == null ? undefined : json['cmac'],
+        'context': json['context'] == null ? undefined : json['context'],
+        'hashAlgorithm': json['hash_algorithm'] == null ? undefined : json['hash_algorithm'],
+        'hmac': json['hmac'] == null ? undefined : json['hmac'],
+        'input': json['input'] == null ? undefined : json['input'],
+        'macLength': json['mac_length'] == null ? undefined : json['mac_length'],
+        'marshalingAlgorithm': json['marshaling_algorithm'] == null ? undefined : json['marshaling_algorithm'],
+        'prehashed': json['prehashed'] == null ? undefined : json['prehashed'],
+        'saltLength': json['salt_length'] == null ? undefined : json['salt_length'],
+        'signature': json['signature'] == null ? undefined : json['signature'],
+        'signatureAlgorithm': json['signature_algorithm'] == null ? undefined : json['signature_algorithm'],
+        'signatureContext': json['signature_context'] == null ? undefined : json['signature_context'],
     };
 }
 export function TransitVerifyWithAlgorithmRequestToJSON(json) {
@@ -49,19 +49,19 @@ export function TransitVerifyWithAlgorithmRequestToJSONTyped(value, ignoreDiscri
         return value;
     }
     return {
-        algorithm: value['algorithm'],
-        batch_input: value['batchInput'],
-        cmac: value['cmac'],
-        context: value['context'],
-        hash_algorithm: value['hashAlgorithm'],
-        hmac: value['hmac'],
-        input: value['input'],
-        mac_length: value['macLength'],
-        marshaling_algorithm: value['marshalingAlgorithm'],
-        prehashed: value['prehashed'],
-        salt_length: value['saltLength'],
-        signature: value['signature'],
-        signature_algorithm: value['signatureAlgorithm'],
-        signature_context: value['signatureContext'],
+        'algorithm': value['algorithm'],
+        'batch_input': value['batchInput'],
+        'cmac': value['cmac'],
+        'context': value['context'],
+        'hash_algorithm': value['hashAlgorithm'],
+        'hmac': value['hmac'],
+        'input': value['input'],
+        'mac_length': value['macLength'],
+        'marshaling_algorithm': value['marshalingAlgorithm'],
+        'prehashed': value['prehashed'],
+        'salt_length': value['saltLength'],
+        'signature': value['signature'],
+        'signature_algorithm': value['signatureAlgorithm'],
+        'signature_context': value['signatureContext'],
     };
 }

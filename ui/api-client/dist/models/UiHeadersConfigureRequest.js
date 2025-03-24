@@ -32,8 +32,8 @@ function UiHeadersConfigureRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        multivalue: json['multivalue'] == null ? undefined : json['multivalue'],
-        values: json['values'] == null ? undefined : json['values'],
+        'multivalue': json['multivalue'] == null ? undefined : json['multivalue'],
+        'values': json['values'] == null ? undefined : json['values'],
     };
 }
 function UiHeadersConfigureRequestToJSON(json) {
@@ -44,7 +44,7 @@ function UiHeadersConfigureRequestToJSONTyped(value, ignoreDiscriminator = false
         return value;
     }
     return {
-        multivalue: value['multivalue'],
-        values: value['values'],
+        'multivalue': value['multivalue'],
+        'values': value['values'],
     };
 }

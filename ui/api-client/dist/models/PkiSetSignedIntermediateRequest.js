@@ -32,7 +32,7 @@ function PkiSetSignedIntermediateRequestFromJSONTyped(json, ignoreDiscriminator)
         return json;
     }
     return {
-        certificate: json['certificate'] == null ? undefined : json['certificate'],
+        'certificate': json['certificate'] == null ? undefined : json['certificate'],
     };
 }
 function PkiSetSignedIntermediateRequestToJSON(json) {
@@ -43,6 +43,6 @@ function PkiSetSignedIntermediateRequestToJSONTyped(value, ignoreDiscriminator =
         return value;
     }
     return {
-        certificate: value['certificate'],
+        'certificate': value['certificate'],
     };
 }

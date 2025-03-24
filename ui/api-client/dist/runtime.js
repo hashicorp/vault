@@ -27,7 +27,7 @@ exports.querystring = querystring;
 exports.exists = exists;
 exports.mapValues = mapValues;
 exports.canConsumeForm = canConsumeForm;
-exports.BASE_PATH = 'http://localhost'.replace(/\/+$/, '');
+exports.BASE_PATH = "http://localhost".replace(/\/+$/, "");
 class Configuration {
     constructor(configuration = {}) {
         this.configuration = configuration;
@@ -86,8 +86,7 @@ class BaseAPI {
             let fetchParams = { url, init };
             for (const middleware of this.middleware) {
                 if (middleware.pre) {
-                    fetchParams =
-                        (yield middleware.pre(Object.assign({ fetch: this.fetchApi }, fetchParams))) || fetchParams;
+                    fetchParams = (yield middleware.pre(Object.assign({ fetch: this.fetchApi }, fetchParams))) || fetchParams;
                 }
             }
             let response = undefined;
@@ -97,14 +96,13 @@ class BaseAPI {
             catch (e) {
                 for (const middleware of this.middleware) {
                     if (middleware.onError) {
-                        response =
-                            (yield middleware.onError({
-                                fetch: this.fetchApi,
-                                url: fetchParams.url,
-                                init: fetchParams.init,
-                                error: e,
-                                response: response ? response.clone() : undefined,
-                            })) || response;
+                        response = (yield middleware.onError({
+                            fetch: this.fetchApi,
+                            url: fetchParams.url,
+                            init: fetchParams.init,
+                            error: e,
+                            response: response ? response.clone() : undefined,
+                        })) || response;
                     }
                 }
                 if (response === undefined) {
@@ -118,13 +116,12 @@ class BaseAPI {
             }
             for (const middleware of this.middleware) {
                 if (middleware.post) {
-                    response =
-                        (yield middleware.post({
-                            fetch: this.fetchApi,
-                            url: fetchParams.url,
-                            init: fetchParams.init,
-                            response: response.clone(),
-                        })) || response;
+                    response = (yield middleware.post({
+                        fetch: this.fetchApi,
+                        url: fetchParams.url,
+                        init: fetchParams.init,
+                        response: response.clone(),
+                    })) || response;
                 }
             }
             return response;
@@ -164,7 +161,7 @@ class BaseAPI {
         return __awaiter(this, void 0, void 0, function* () {
             const { url, init } = yield this.createFetchParams(context, initOverrides);
             const response = yield this.fetchApi(url, init);
-            if (response && response.status >= 200 && response.status < 300) {
+            if (response && (response.status >= 200 && response.status < 300)) {
                 return response;
             }
             throw new ResponseError(response, 'Response returned an error code');
@@ -180,8 +177,10 @@ class BaseAPI {
                 url += '?' + this.configuration.queryParamsStringify(context.query);
             }
             const headers = Object.assign({}, this.configuration.headers, context.headers);
-            Object.keys(headers).forEach((key) => (headers[key] === undefined ? delete headers[key] : {}));
-            const initOverrideFn = typeof initOverrides === 'function' ? initOverrides : () => __awaiter(this, void 0, void 0, function* () { return initOverrides; });
+            Object.keys(headers).forEach(key => headers[key] === undefined ? delete headers[key] : {});
+            const initOverrideFn = typeof initOverrides === "function"
+                ? initOverrides
+                : () => __awaiter(this, void 0, void 0, function* () { return initOverrides; });
             const initParams = {
                 method: context.method,
                 headers,
@@ -193,9 +192,9 @@ class BaseAPI {
                 context,
             })));
             let body;
-            if (isFormData(overriddenInit.body) ||
-                overriddenInit.body instanceof URLSearchParams ||
-                isBlob(overriddenInit.body)) {
+            if (isFormData(overriddenInit.body)
+                || (overriddenInit.body instanceof URLSearchParams)
+                || isBlob(overriddenInit.body)) {
                 body = overriddenInit.body;
             }
             else if (this.isJsonMime(headers['Content-Type'])) {
@@ -220,18 +219,19 @@ class BaseAPI {
     }
 }
 exports.BaseAPI = BaseAPI;
-BaseAPI.jsonRegex = new RegExp('^(:?application/json|[^;/ \t]+/[^;/ \t]+[+]json)[ \t]*(:?;.*)?$', 'i');
+BaseAPI.jsonRegex = new RegExp('^(:?application\/json|[^;/ \t]+\/[^;/ \t]+[+]json)[ \t]*(:?;.*)?$', 'i');
+;
 function isBlob(value) {
     return typeof Blob !== 'undefined' && value instanceof Blob;
 }
 function isFormData(value) {
-    return typeof FormData !== 'undefined' && value instanceof FormData;
+    return typeof FormData !== "undefined" && value instanceof FormData;
 }
 class ResponseError extends Error {
     constructor(response, msg) {
         super(msg);
         this.response = response;
-        this.name = 'ResponseError';
+        this.name = "ResponseError";
     }
 }
 exports.ResponseError = ResponseError;
@@ -239,7 +239,7 @@ class FetchError extends Error {
     constructor(cause, msg) {
         super(msg);
         this.cause = cause;
-        this.name = 'FetchError';
+        this.name = "FetchError";
     }
 }
 exports.FetchError = FetchError;
@@ -247,27 +247,26 @@ class RequiredError extends Error {
     constructor(field, msg) {
         super(msg);
         this.field = field;
-        this.name = 'RequiredError';
+        this.name = "RequiredError";
     }
 }
 exports.RequiredError = RequiredError;
 exports.COLLECTION_FORMATS = {
-    csv: ',',
-    ssv: ' ',
-    tsv: '\t',
-    pipes: '|',
+    csv: ",",
+    ssv: " ",
+    tsv: "\t",
+    pipes: "|",
 };
 function querystring(params, prefix = '') {
     return Object.keys(params)
-        .map((key) => querystringSingleKey(key, params[key], prefix))
-        .filter((part) => part.length > 0)
+        .map(key => querystringSingleKey(key, params[key], prefix))
+        .filter(part => part.length > 0)
         .join('&');
 }
 function querystringSingleKey(key, value, keyPrefix = '') {
     const fullKey = keyPrefix + (keyPrefix.length ? `[${key}]` : key);
     if (value instanceof Array) {
-        const multiValue = value
-            .map((singleValue) => encodeURIComponent(String(singleValue)))
+        const multiValue = value.map(singleValue => encodeURIComponent(String(singleValue)))
             .join(`&${encodeURIComponent(fullKey)}=`);
         return `${encodeURIComponent(fullKey)}=${multiValue}`;
     }
@@ -316,7 +315,7 @@ class VoidApiResponse {
     }
     value() {
         return __awaiter(this, void 0, void 0, function* () {
-            return undefined;
+            return yield this.raw.json();
         });
     }
 }
@@ -330,6 +329,7 @@ class BlobApiResponse {
             return yield this.raw.blob();
         });
     }
+    ;
 }
 exports.BlobApiResponse = BlobApiResponse;
 class TextApiResponse {
@@ -341,5 +341,6 @@ class TextApiResponse {
             return yield this.raw.text();
         });
     }
+    ;
 }
 exports.TextApiResponse = TextApiResponse;

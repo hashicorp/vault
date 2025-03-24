@@ -32,11 +32,11 @@ function SystemWriteReplicationForceCorruptionRequestFromJSONTyped(json, ignoreD
         return json;
     }
     return {
-        compositeRootHash: json['composite_root_hash'] == null ? undefined : json['composite_root_hash'],
-        page: json['page'] == null ? undefined : json['page'],
-        subpage: json['subpage'] == null ? undefined : json['subpage'],
-        subtree: json['subtree'] == null ? undefined : json['subtree'],
-        subtreeRootHash: json['subtree_root_hash'] == null ? undefined : json['subtree_root_hash'],
+        'compositeRootHash': json['composite_root_hash'] == null ? undefined : json['composite_root_hash'],
+        'page': json['page'] == null ? undefined : json['page'],
+        'subpage': json['subpage'] == null ? undefined : json['subpage'],
+        'subtree': json['subtree'] == null ? undefined : json['subtree'],
+        'subtreeRootHash': json['subtree_root_hash'] == null ? undefined : json['subtree_root_hash'],
     };
 }
 function SystemWriteReplicationForceCorruptionRequestToJSON(json) {
@@ -47,10 +47,10 @@ function SystemWriteReplicationForceCorruptionRequestToJSONTyped(value, ignoreDi
         return value;
     }
     return {
-        composite_root_hash: value['compositeRootHash'],
-        page: value['page'],
-        subpage: value['subpage'],
-        subtree: value['subtree'],
-        subtree_root_hash: value['subtreeRootHash'],
+        'composite_root_hash': value['compositeRootHash'],
+        'page': value['page'],
+        'subpage': value['subpage'],
+        'subtree': value['subtree'],
+        'subtree_root_hash': value['subtreeRootHash'],
     };
 }

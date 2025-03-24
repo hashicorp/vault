@@ -25,8 +25,8 @@ export function PkiRevokeRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        certificate: json['certificate'] == null ? undefined : json['certificate'],
-        serialNumber: json['serial_number'] == null ? undefined : json['serial_number'],
+        'certificate': json['certificate'] == null ? undefined : json['certificate'],
+        'serialNumber': json['serial_number'] == null ? undefined : json['serial_number'],
     };
 }
 export function PkiRevokeRequestToJSON(json) {
@@ -37,7 +37,7 @@ export function PkiRevokeRequestToJSONTyped(value, ignoreDiscriminator = false) 
         return value;
     }
     return {
-        certificate: value['certificate'],
-        serial_number: value['serialNumber'],
+        'certificate': value['certificate'],
+        'serial_number': value['serialNumber'],
     };
 }

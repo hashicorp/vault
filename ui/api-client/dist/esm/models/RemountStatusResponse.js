@@ -25,8 +25,8 @@ export function RemountStatusResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        migrationId: json['migration_id'] == null ? undefined : json['migration_id'],
-        migrationInfo: json['migration_info'] == null ? undefined : json['migration_info'],
+        'migrationId': json['migration_id'] == null ? undefined : json['migration_id'],
+        'migrationInfo': json['migration_info'] == null ? undefined : json['migration_info'],
     };
 }
 export function RemountStatusResponseToJSON(json) {
@@ -37,7 +37,7 @@ export function RemountStatusResponseToJSONTyped(value, ignoreDiscriminator = fa
         return value;
     }
     return {
-        migration_id: value['migrationId'],
-        migration_info: value['migrationInfo'],
+        'migration_id': value['migrationId'],
+        'migration_info': value['migrationInfo'],
     };
 }

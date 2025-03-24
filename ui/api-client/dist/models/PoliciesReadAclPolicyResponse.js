@@ -32,9 +32,9 @@ function PoliciesReadAclPolicyResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        name: json['name'] == null ? undefined : json['name'],
-        policy: json['policy'] == null ? undefined : json['policy'],
-        rules: json['rules'] == null ? undefined : json['rules'],
+        'name': json['name'] == null ? undefined : json['name'],
+        'policy': json['policy'] == null ? undefined : json['policy'],
+        'rules': json['rules'] == null ? undefined : json['rules'],
     };
 }
 function PoliciesReadAclPolicyResponseToJSON(json) {
@@ -45,8 +45,8 @@ function PoliciesReadAclPolicyResponseToJSONTyped(value, ignoreDiscriminator = f
         return value;
     }
     return {
-        name: value['name'],
-        policy: value['policy'],
-        rules: value['rules'],
+        'name': value['name'],
+        'policy': value['policy'],
+        'rules': value['rules'],
     };
 }

@@ -25,17 +25,17 @@ export function PkiConfigureExternalPolicyResponseFromJSONTyped(json, ignoreDisc
         return json;
     }
     return {
-        enabled: json['enabled'] == null ? undefined : json['enabled'],
-        entityJmespath: json['entity_jmespath'] == null ? undefined : json['entity_jmespath'],
-        externalServiceLastUpdated: json['external_service_last_updated'] == null ? undefined : json['external_service_last_updated'],
-        externalServiceUrl: json['external_service_url'] == null ? undefined : json['external_service_url'],
-        externalServiceValidated: json['external_service_validated'] == null ? undefined : json['external_service_validated'],
-        groupJmespath: json['group_jmespath'] == null ? undefined : json['group_jmespath'],
-        lastSuccessfulRequest: json['last_successful_request'] == null ? undefined : json['last_successful_request'],
-        timeout: json['timeout'] == null ? undefined : json['timeout'],
-        trustedCa: json['trusted_ca'] == null ? undefined : json['trusted_ca'],
-        trustedLeafCertificateBundle: json['trusted_leaf_certificate_bundle'] == null ? undefined : json['trusted_leaf_certificate_bundle'],
-        vaultClientCertBundleNoKeys: json['vault_client_cert_bundle_no_keys'] == null ? undefined : json['vault_client_cert_bundle_no_keys'],
+        'enabled': json['enabled'] == null ? undefined : json['enabled'],
+        'entityJmespath': json['entity_jmespath'] == null ? undefined : json['entity_jmespath'],
+        'externalServiceLastUpdated': json['external_service_last_updated'] == null ? undefined : json['external_service_last_updated'],
+        'externalServiceUrl': json['external_service_url'] == null ? undefined : json['external_service_url'],
+        'externalServiceValidated': json['external_service_validated'] == null ? undefined : json['external_service_validated'],
+        'groupJmespath': json['group_jmespath'] == null ? undefined : json['group_jmespath'],
+        'lastSuccessfulRequest': json['last_successful_request'] == null ? undefined : json['last_successful_request'],
+        'timeout': json['timeout'] == null ? undefined : json['timeout'],
+        'trustedCa': json['trusted_ca'] == null ? undefined : json['trusted_ca'],
+        'trustedLeafCertificateBundle': json['trusted_leaf_certificate_bundle'] == null ? undefined : json['trusted_leaf_certificate_bundle'],
+        'vaultClientCertBundleNoKeys': json['vault_client_cert_bundle_no_keys'] == null ? undefined : json['vault_client_cert_bundle_no_keys'],
     };
 }
 export function PkiConfigureExternalPolicyResponseToJSON(json) {
@@ -46,16 +46,16 @@ export function PkiConfigureExternalPolicyResponseToJSONTyped(value, ignoreDiscr
         return value;
     }
     return {
-        enabled: value['enabled'],
-        entity_jmespath: value['entityJmespath'],
-        external_service_last_updated: value['externalServiceLastUpdated'],
-        external_service_url: value['externalServiceUrl'],
-        external_service_validated: value['externalServiceValidated'],
-        group_jmespath: value['groupJmespath'],
-        last_successful_request: value['lastSuccessfulRequest'],
-        timeout: value['timeout'],
-        trusted_ca: value['trustedCa'],
-        trusted_leaf_certificate_bundle: value['trustedLeafCertificateBundle'],
-        vault_client_cert_bundle_no_keys: value['vaultClientCertBundleNoKeys'],
+        'enabled': value['enabled'],
+        'entity_jmespath': value['entityJmespath'],
+        'external_service_last_updated': value['externalServiceLastUpdated'],
+        'external_service_url': value['externalServiceUrl'],
+        'external_service_validated': value['externalServiceValidated'],
+        'group_jmespath': value['groupJmespath'],
+        'last_successful_request': value['lastSuccessfulRequest'],
+        'timeout': value['timeout'],
+        'trusted_ca': value['trustedCa'],
+        'trusted_leaf_certificate_bundle': value['trustedLeafCertificateBundle'],
+        'vault_client_cert_bundle_no_keys': value['vaultClientCertBundleNoKeys'],
     };
 }

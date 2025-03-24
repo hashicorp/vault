@@ -25,13 +25,13 @@ export function PluginsRuntimesCatalogReadPluginRuntimeConfigurationResponseFrom
         return json;
     }
     return {
-        cgroupParent: json['cgroup_parent'] == null ? undefined : json['cgroup_parent'],
-        cpuNanos: json['cpu_nanos'] == null ? undefined : json['cpu_nanos'],
-        memoryBytes: json['memory_bytes'] == null ? undefined : json['memory_bytes'],
-        name: json['name'] == null ? undefined : json['name'],
-        ociRuntime: json['oci_runtime'] == null ? undefined : json['oci_runtime'],
-        rootless: json['rootless'] == null ? undefined : json['rootless'],
-        type: json['type'] == null ? undefined : json['type'],
+        'cgroupParent': json['cgroup_parent'] == null ? undefined : json['cgroup_parent'],
+        'cpuNanos': json['cpu_nanos'] == null ? undefined : json['cpu_nanos'],
+        'memoryBytes': json['memory_bytes'] == null ? undefined : json['memory_bytes'],
+        'name': json['name'] == null ? undefined : json['name'],
+        'ociRuntime': json['oci_runtime'] == null ? undefined : json['oci_runtime'],
+        'rootless': json['rootless'] == null ? undefined : json['rootless'],
+        'type': json['type'] == null ? undefined : json['type'],
     };
 }
 export function PluginsRuntimesCatalogReadPluginRuntimeConfigurationResponseToJSON(json) {
@@ -42,12 +42,12 @@ export function PluginsRuntimesCatalogReadPluginRuntimeConfigurationResponseToJS
         return value;
     }
     return {
-        cgroup_parent: value['cgroupParent'],
-        cpu_nanos: value['cpuNanos'],
-        memory_bytes: value['memoryBytes'],
-        name: value['name'],
-        oci_runtime: value['ociRuntime'],
-        rootless: value['rootless'],
-        type: value['type'],
+        'cgroup_parent': value['cgroupParent'],
+        'cpu_nanos': value['cpuNanos'],
+        'memory_bytes': value['memoryBytes'],
+        'name': value['name'],
+        'oci_runtime': value['ociRuntime'],
+        'rootless': value['rootless'],
+        'type': value['type'],
     };
 }

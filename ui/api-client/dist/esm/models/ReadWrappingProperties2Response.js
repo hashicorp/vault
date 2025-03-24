@@ -25,9 +25,9 @@ export function ReadWrappingProperties2ResponseFromJSONTyped(json, ignoreDiscrim
         return json;
     }
     return {
-        creationPath: json['creation_path'] == null ? undefined : json['creation_path'],
-        creationTime: json['creation_time'] == null ? undefined : new Date(json['creation_time']),
-        creationTtl: json['creation_ttl'] == null ? undefined : json['creation_ttl'],
+        'creationPath': json['creation_path'] == null ? undefined : json['creation_path'],
+        'creationTime': json['creation_time'] == null ? undefined : (new Date(json['creation_time'])),
+        'creationTtl': json['creation_ttl'] == null ? undefined : json['creation_ttl'],
     };
 }
 export function ReadWrappingProperties2ResponseToJSON(json) {
@@ -38,8 +38,8 @@ export function ReadWrappingProperties2ResponseToJSONTyped(value, ignoreDiscrimi
         return value;
     }
     return {
-        creation_path: value['creationPath'],
-        creation_time: value['creationTime'] == null ? undefined : value['creationTime'].toISOString(),
-        creation_ttl: value['creationTtl'],
+        'creation_path': value['creationPath'],
+        'creation_time': value['creationTime'] == null ? undefined : ((value['creationTime']).toISOString()),
+        'creation_ttl': value['creationTtl'],
     };
 }

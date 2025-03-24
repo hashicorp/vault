@@ -32,8 +32,8 @@ function LeasesRevokeLeaseRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        leaseId: json['lease_id'] == null ? undefined : json['lease_id'],
-        sync: json['sync'] == null ? undefined : json['sync'],
+        'leaseId': json['lease_id'] == null ? undefined : json['lease_id'],
+        'sync': json['sync'] == null ? undefined : json['sync'],
     };
 }
 function LeasesRevokeLeaseRequestToJSON(json) {
@@ -44,7 +44,7 @@ function LeasesRevokeLeaseRequestToJSONTyped(value, ignoreDiscriminator = false)
         return value;
     }
     return {
-        lease_id: value['leaseId'],
-        sync: value['sync'],
+        'lease_id': value['leaseId'],
+        'sync': value['sync'],
     };
 }

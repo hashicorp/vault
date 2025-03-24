@@ -32,7 +32,7 @@ function PoliciesReadPasswordPolicyResponseFromJSONTyped(json, ignoreDiscriminat
         return json;
     }
     return {
-        policy: json['policy'] == null ? undefined : json['policy'],
+        'policy': json['policy'] == null ? undefined : json['policy'],
     };
 }
 function PoliciesReadPasswordPolicyResponseToJSON(json) {
@@ -43,6 +43,6 @@ function PoliciesReadPasswordPolicyResponseToJSONTyped(value, ignoreDiscriminato
         return value;
     }
     return {
-        policy: value['policy'],
+        'policy': value['policy'],
     };
 }
