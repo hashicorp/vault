@@ -28,8 +28,15 @@ const validations = {
       validator(model) {
         const { type, skip_import_rotation, password, selfManaged } = model;
         if (!type || type === 'dynamic') return true;
+        if (password) return true;
         if (skip_import_rotation) return true;
-        if (!skip_import_rotation && selfManaged && password) return true;
+        // if rotating immediately
+        if (!skip_import_rotation) {
+          //if self managed is true
+          if (selfManaged) {
+            if (password) return true; // require password
+          }
+        }
       },
       message: 'Password is required.',
     },

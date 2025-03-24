@@ -187,3 +187,21 @@
     </form>
   </div>
 {{/if}}
+{{#if this.saveIssuerWarning}}
+  <Hds::Modal @color="warning" @onClose={{action (mut this.saveIssuerWarning) ""}} data-test-issuer-warning as |M|>
+    <M.Header @icon="alert-circle">
+      Are you sure?
+    </M.Header>
+    <M.Body>
+      <p class="has-bottom-margin-s" data-test-issuer-warning-message>
+        {{this.saveIssuerWarning}}
+      </p>
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::ButtonSet>
+        <Hds::Button @text="Continue" {{on "click" this.continueSubmitForm}} data-test-issuer-save />
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} data-test-issuer-cancel />
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

@@ -35,6 +35,7 @@ export default class DatabaseRoleEdit extends Component {
   @tracked modelValidations;
   @tracked invalidFormAlert;
   @tracked errorMessage = '';
+  @tracked saveIssuerWarning = '';
 
   constructor() {
     super(...arguments);
@@ -84,6 +85,11 @@ export default class DatabaseRoleEdit extends Component {
       .catch(() => null);
   }
 
+  @action continueSubmitForm() {
+    this.saveIssuerWarning = '';
+    this.saveRole.perform();
+  }
+
   @action
   generateCreds(roleId, roleType = '') {
     this.router.transitionTo('vault.cluster.secrets.backend.credentials', roleId, {
@@ -113,8 +119,20 @@ export default class DatabaseRoleEdit extends Component {
     waitFor(async (evt) => {
       evt.preventDefault();
       this.resetErrors();
-      const { mode, model } = this.args;
       if (!this.isValid()) return;
+
+      if (!this.args.model.skip_import_rotation) {
+        this.saveIssuerWarning =
+          "You have set the param 'Skip initial rotation' for this role to false. \n Vault will rotate the password the password immediately once saved. \n NOTE: This will disrupt any active use of this role outside of Vault.";
+        return;
+      }
+      await this.saveRole.perform();
+    })
+  );
+
+  saveRole = task(
+    waitFor(async (evt) => {
+      const { mode, model } = this.args;
 
       if (mode === 'create') {
         model.id = model.name;
