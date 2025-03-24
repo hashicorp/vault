@@ -181,9 +181,11 @@ func (i *IdentityStore) activateDeduplication(ctx context.Context, req *logical.
 
 		i.logger.Info("activating identity deduplication, reloading identity store")
 
+		oldDisableLowerCased := i.disableLowerCasedNames
 		i.disableLowerCasedNames = false
 		if err := i.resetDB(); err != nil {
 			i.logger.Error("failed to reset existing identity state: %w", err)
+			i.disableLowerCasedNames = oldDisableLowerCased
 			return
 		}
 
