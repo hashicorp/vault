@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import type { IUsageDashboardService, UsageDashboardData } from '@hashicorp/vault-reporting/types/index';
 import Service from '@ember/service';
 import { service } from '@ember/service';
