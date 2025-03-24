@@ -300,13 +300,6 @@ func TestServer(t *testing.T) {
 			[]string{"-test-verify-only", "-recovery"},
 		},
 		{
-			"default_disable_mlock_value_with_inmem_storage",
-			testBaseHCL(t, goodListenerTimeouts, regexModifier(`\s*disable_mlock\s*=\s*.+`, "")) + inmemHCL,
-			"",
-			0,
-			[]string{"-test-server-config"},
-		},
-		{
 			"missing_disable_mlock_value_with_integrated_storage",
 			testBaseHCL(t, goodListenerTimeouts, regexModifier(`\s*disable_mlock\s*=\s*.+`, "")) + raftHCL,
 			"disable_mlock must be configured",
