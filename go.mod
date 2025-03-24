@@ -73,7 +73,7 @@ require (
 	github.com/go-test/deep v1.1.1
 	github.com/go-zookeeper/zk v1.0.3
 	github.com/gocql/gocql v1.0.0
-	github.com/golang-jwt/jwt/v4 v4.5.1
+	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/golang/protobuf v1.5.4
 	github.com/google/certificate-transparency-go v1.3.1
 	github.com/google/go-cmp v0.7.0
@@ -400,7 +400,7 @@ require (
 	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
+	github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
 	github.com/golang-sql/civil v0.0.0-20220223132316-b832511892a9 // indirect
 	github.com/golang-sql/sqlexp v0.1.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
