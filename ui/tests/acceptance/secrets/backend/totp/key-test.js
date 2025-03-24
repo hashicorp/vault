@@ -20,12 +20,12 @@ const SELECTORS = {
 module('Acceptance | totp key backend', function (hooks) {
   setupApplicationTest(hooks);
 
-  const createVaultKey = async (keyName, issuer, accountName) => {
+  const createVaultKey = async (keyName, issuer, accountName, exported = true) => {
     await fillIn(GENERAL.inputByAttr('name'), keyName);
     await fillIn(GENERAL.inputByAttr('issuer'), issuer);
     await fillIn(GENERAL.inputByAttr('accountName'), accountName);
+    if (!exported) await click(GENERAL.ttl.toggle('toggle-exported'));
     await click(GENERAL.saveButton);
-    await click(GENERAL.backButton);
   };
 
   const createNonVaultKey = async (keyName, issuer, accountName, url, key) => {
@@ -67,6 +67,7 @@ module('Acceptance | totp key backend', function (hooks) {
 
     await click(SES.createSecret);
     await createVaultKey(this.keyName, this.issuer, this.accountName);
+    await click(GENERAL.backButton);
     await visit(`/vault/secrets/${this.path}`);
     await click(GENERAL.menuTrigger);
     await click(`${SELECTORS.menuItem('details')}`);
@@ -84,6 +85,7 @@ module('Acceptance | totp key backend', function (hooks) {
   test('it deletes a key via menu option', async function (assert) {
     await click(SES.createSecret);
     await createVaultKey(this.keyName, this.issuer, this.accountName);
+    await click(GENERAL.backButton);
     await waitUntil(() => currentURL() === `/vault/secrets/${this.path}/show/${this.keyName}`);
     await visit(`/vault/secrets/${this.path}`);
     await click(GENERAL.menuTrigger);
@@ -100,6 +102,10 @@ module('Acceptance | totp key backend', function (hooks) {
     assert.dom(SES.secretHeader).hasText('Create a TOTP key', 'It renders the create key page');
 
     await createVaultKey(this.keyName, this.issuer, this.accountName);
+    assert.dom('[data-test-qrcode]').exists('QR code exists');
+    assert.dom(GENERAL.infoRowLabel('URL')).exists('URL exists');
+
+    await click(GENERAL.backButton);
     await waitUntil(() => currentURL() === `/vault/secrets/${this.path}/show/${this.keyName}`);
     assert.strictEqual(
       currentURL(),
@@ -139,5 +145,13 @@ module('Acceptance | totp key backend', function (hooks) {
 
     const [flashMessage] = this.flashSuccessSpy.lastCall.args;
     assert.strictEqual(flashMessage, 'Successfully created key.');
+  });
+
+  test('it does not render QR code when exported is false', async function (assert) {
+    await click(SES.createSecret);
+    await createVaultKey(this.keyName, this.issuer, this.accountName, false);
+    await waitUntil(() => currentURL() === `/vault/secrets/${this.path}/show/${this.keyName}`);
+    assert.dom('[data-test-qr-code]').doesNotExist('QR code is not displayed');
+    assert.dom(GENERAL.infoRowLabel('URL')).doesNotExist('URl is not displayed');
   });
 });
