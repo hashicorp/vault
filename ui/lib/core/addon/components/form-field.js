@@ -100,9 +100,11 @@ export default class FormFieldComponent extends Component {
       }
     } else {
       if (type === 'number' || type === 'string') {
-        // here we will add the logic for `FormField` inputs (textarea, password, regular text input) that are "converted" to HDS fields
-        // for example: if (options?.editType === 'textarea' || options?.editType === 'password') { return true; }
-        return false;
+        if (options?.editType === 'password') {
+          return true;
+        } else {
+          return false;
+        }
       } else {
         // we leave these fields as they are (for now)
         return false;
@@ -128,8 +130,12 @@ export default class FormFieldComponent extends Component {
     return this.args.disabled || false;
   }
 
-  get showHelpText() {
-    return this.args.showHelpText === false ? false : true;
+  get helpTextString() {
+    const helpText = this.args.attr?.options?.helpText;
+    if (this.args.showHelpText !== false && helpText) {
+      return helpText;
+    }
+    return '';
   }
 
   // used in the label element next to the form element
