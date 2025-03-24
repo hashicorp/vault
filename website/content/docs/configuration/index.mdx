@@ -102,6 +102,7 @@ to specify where the configuration is.
   syscall. `mlock` prevents memory from  being swapped to disk.
   Disabling `mlock` is not recommended unless using
   [integrated storage](/vault/docs/internals/integrated-storage).
+
   Follow the additional security precautions outlined below when disabling `mlock`.
   This can also be provided via the environment variable `VAULT_DISABLE_MLOCK`.
   Versions of Vault prior to 1.20 defaulted to `false`.

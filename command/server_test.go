@@ -310,7 +310,7 @@ func TestServer(t *testing.T) {
 		},
 		{
 			"missing_disable_mlock_value_with_consul_storage",
-			testBaseHCL(t, goodListenerTimeouts, regexModifier(`\s*disable_mlock\s*=\s*.+`, "")) + inmemHCL,
+			testBaseHCL(t, goodListenerTimeouts, regexModifier(`\s*disable_mlock\s*=\s*.+`, "")) + consulBackendHCL,
 			"",
 			0,
 			[]string{"-test-server-config"},
