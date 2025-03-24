@@ -316,7 +316,10 @@ func (d dynamicSystemView) GeneratePasswordFromPolicy(ctx context.Context, polic
 		return "", fmt.Errorf("no password policy found")
 	}
 
-	passPolicy, err := random.ParsePolicy(policyCfg.HCLPolicy)
+	// HCL used to allow duplicate attributes, so for backwards compatibility we still allow HCL policies
+	// already in storage to have duplicate attributes, only preventing the creation of new ones
+	const errorOnDuplicateAttributes = false
+	passPolicy, err := random.ParsePolicy(policyCfg.HCLPolicy, errorOnDuplicateAttributes)
 	if err != nil {
 		return "", fmt.Errorf("stored password policy is invalid: %w", err)
 	}

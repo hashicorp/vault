@@ -5053,6 +5053,23 @@ func TestHandlePoliciesPasswordSet(t *testing.T) {
 					"	charset=\"abcdefghij\"\n"+
 					"}")),
 		},
+		"policy with duplicate attributes rejected": {
+			inputData: passwordPoliciesFieldData(map[string]interface{}{
+				"name": "testpolicy",
+				"policy": base64Encode(
+					"length = 20\n" +
+						"rule \"charset\" {\n" +
+						"	charset=\"abcdefghij\"\n" +
+						"	charset=\"abc\"\n" +
+						"}"),
+			}),
+
+			storage: new(logical.InmemStorage),
+
+			expectedResp:  nil,
+			expectErr:     true,
+			expectedStore: map[string]*logical.StorageEntry{},
+		},
 	}
 
 	for name, test := range tests {
@@ -5547,7 +5564,8 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 		policyEntry := storageEntry(t, "testpolicy",
 			"length = 20\n"+
 				"rule \"charset\" {\n"+
-				"	charset=\"abcdefghij\"\n"+
+				"	charset=\"overridden\"\n"+
+				"	charset=\"abcdefghij\"\n"+ // use a policy with a duplicate attribute to ensure backwards compatibility
 				"}")
 		storage := makeStorage(t, policyEntry)
 

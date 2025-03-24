@@ -541,7 +541,7 @@ func TestStringGenerator_JSON(t *testing.T) {
 			},
 		},
 	}
-	actual, err := parser.ParsePolicy(string(b))
+	actual, err := parser.ParsePolicy(string(b), true)
 	if err != nil {
 		t.Fatalf("Failed to parse JSON: %s", err)
 	}

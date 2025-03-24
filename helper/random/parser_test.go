@@ -51,7 +51,7 @@ func TestParsePolicy(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			actual, err := ParsePolicy(test.rawConfig)
+			actual, err := ParsePolicy(test.rawConfig, true)
 			if test.expectErr && err == nil {
 				t.Fatalf("err expected, got nil")
 			}
@@ -70,9 +70,10 @@ func TestParser_ParsePolicy(t *testing.T) {
 	type testCase struct {
 		registry map[string]ruleConstructor
 
-		rawConfig string
-		expected  StringGenerator
-		expectErr bool
+		errorOnDuplicateAttributes bool
+		rawConfig                  string
+		expected                   StringGenerator
+		expectErr                  bool
 	}
 
 	tests := map[string]testCase{
@@ -199,6 +200,45 @@ func TestParser_ParsePolicy(t *testing.T) {
 			expected:  StringGenerator{},
 			expectErr: true,
 		},
+		"config value with duplicate field allowed": {
+			registry: map[string]ruleConstructor{
+				"testrule": newTestRule,
+			},
+			errorOnDuplicateAttributes: false,
+			rawConfig: `
+				length = 20
+				rule "testrule" {
+					string = "overridden"
+					string = "teststring"
+					int = 123
+				}`,
+			expected: StringGenerator{
+				Length:  20,
+				charset: deduplicateRunes([]rune("teststring")),
+				Rules: []Rule{
+					testCharsetRule{
+						String:  "teststring",
+						Integer: 123,
+					},
+				},
+			},
+			expectErr: false,
+		},
+		"config value with duplicate field forbidden": {
+			registry: map[string]ruleConstructor{
+				"testrule": newTestRule,
+			},
+			errorOnDuplicateAttributes: true,
+			rawConfig: `
+				length = 20
+				rule "testrule" {
+					string = "overridden"
+					string = "teststring"
+					int = 123
+				}`,
+			expected:  StringGenerator{},
+			expectErr: true,
+		},
 
 		// /////////////////////////////////////////////////
 		// JSON data
@@ -319,7 +359,7 @@ func TestParser_ParsePolicy(t *testing.T) {
 				},
 			}
 
-			actual, err := parser.ParsePolicy(test.rawConfig)
+			actual, err := parser.ParsePolicy(test.rawConfig, test.errorOnDuplicateAttributes)
 			if test.expectErr && err == nil {
 				t.Fatalf("err expected, got nil")
 			}
@@ -573,7 +613,7 @@ func BenchmarkParser_Parse(b *testing.B) {
 				Rules: defaultRuleNameMapping,
 			},
 		}
-		_, err := parser.ParsePolicy(config)
+		_, err := parser.ParsePolicy(config, true)
 		if err != nil {
 			b.Fatalf("Failed to parse: %s", err)
 		}

@@ -14,19 +14,13 @@ import (
 
 // ParsePolicy is a convenience function for parsing HCL into a StringGenerator.
 // See PolicyParser.ParsePolicy for details.
-func ParsePolicy(raw string) (gen StringGenerator, err error) {
+func ParsePolicy(raw string, errorOnDuplicateAttributes bool) (gen StringGenerator, err error) {
 	parser := PolicyParser{
 		RuleRegistry: Registry{
 			Rules: defaultRuleNameMapping,
 		},
 	}
-	return parser.ParsePolicy(raw)
-}
-
-// ParsePolicyBytes is a convenience function for parsing HCL into a StringGenerator.
-// See PolicyParser.ParsePolicy for details.
-func ParsePolicyBytes(raw []byte) (gen StringGenerator, err error) {
-	return ParsePolicy(string(raw))
+	return parser.ParsePolicy(raw, errorOnDuplicateAttributes)
 }
 
 // PolicyParser parses string generator configuration from HCL.
@@ -36,9 +30,13 @@ type PolicyParser struct {
 }
 
 // ParsePolicy parses the provided HCL into a StringGenerator.
-func (p PolicyParser) ParsePolicy(raw string) (sg StringGenerator, err error) {
+func (p PolicyParser) ParsePolicy(raw string, errorOnDuplicateAttributes bool) (sg StringGenerator, err error) {
 	rawData := map[string]interface{}{}
-	err = hcl.Decode(&rawData, raw)
+	if errorOnDuplicateAttributes {
+		err = hcl.DecodeErrorOnDuplicates(&rawData, raw)
+	} else {
+		err = hcl.Decode(&rawData, raw)
+	}
 	if err != nil {
 		return sg, fmt.Errorf("unable to decode: %w", err)
 	}

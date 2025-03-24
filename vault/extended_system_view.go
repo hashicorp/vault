@@ -84,6 +84,7 @@ func (e extendedSystemViewImpl) SudoPrivilege(ctx context.Context, path string, 
 	// Add the inline policy if it's set
 	policies := make([]*Policy, 0)
 	if te.InlinePolicy != "" {
+		// TODO: is it possible to have an inline policy with duplicated fields in a token already stored
 		inlinePolicy, err := ParseACLPolicy(tokenNS, te.InlinePolicy)
 		if err != nil {
 			e.core.logger.Error("failed to parse the token's inline policy", "error", err)

@@ -3731,8 +3731,10 @@ func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logica
 		rawPolicy = string(decodedPolicy)
 	}
 
+	// prevent new policies from defining policies with duplicate attributes
+	const errorOnDuplicateAttributes = true
 	// Parse the policy to ensure that it's valid
-	policy, err := random.ParsePolicy(rawPolicy)
+	policy, err := random.ParsePolicy(rawPolicy, errorOnDuplicateAttributes)
 	if err != nil {
 		return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("invalid password policy: %s", err))
 	}
@@ -3873,7 +3875,10 @@ func (*SystemBackend) handlePoliciesPasswordGenerate(ctx context.Context, req *l
 		return nil, logical.CodedError(http.StatusNotFound, "policy does not exist")
 	}
 
-	policy, err := random.ParsePolicy(cfg.HCLPolicy)
+	// HCL used to allow duplicate attributes, so for backwards compatibility we still allow HCL policies
+	// already in storage to have duplicate attributes, only preventing the creation of new ones
+	const errorOnDuplicateAttributes = false
+	policy, err := random.ParsePolicy(cfg.HCLPolicy, errorOnDuplicateAttributes)
 	if err != nil {
 		return nil, logical.CodedError(http.StatusInternalServerError,
 			"stored password policy configuration failed to parse")

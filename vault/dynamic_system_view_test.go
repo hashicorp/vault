@@ -5,8 +5,9 @@ package vault
 
 import (
 	"context"
-	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"reflect"
 	"sort"
 	"testing"
@@ -34,6 +35,8 @@ rule "charset" {
 }
 rule "charset" {
 	charset = "0123456789"
+	min_chars = 0
+    # duplicate attribute should be accepted, ensuring backwards compatibility for already-stored policies
 	min_chars = 1
 }`
 )
@@ -175,35 +178,25 @@ func TestIdentity_BackendTemplating(t *testing.T) {
 }
 
 func TestDynamicSystemView_GeneratePasswordFromPolicy_successful(t *testing.T) {
-	coreConfig := &CoreConfig{
-		CredentialBackends: map[string]logical.Factory{},
+	storageValue, err := json.Marshal(map[string]string{
+		"policy": rawTestPasswordPolicy,
+	})
+	require.NoError(t, err)
+	testStorage := fakeBarrier{
+		getEntry: &logical.StorageEntry{
+			Key:   getPasswordPolicyKey("testpolicy"),
+			Value: storageValue,
+		},
 	}
-
-	cluster := NewTestCluster(t, coreConfig, &TestClusterOptions{})
-
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
-	TestWaitActive(t, core)
-
-	b64Policy := base64.StdEncoding.EncodeToString([]byte(rawTestPasswordPolicy))
-
-	path := fmt.Sprintf("sys/policies/password/%s", testPolicyName)
-	req := logical.TestRequest(t, logical.CreateOperation, path)
-	req.ClientToken = cluster.RootToken
-	req.Data["policy"] = b64Policy
-
-	_, err := core.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil {
-		t.Fatalf("err: %v", err)
+	core := &Core{
+		systemBarrierView: NewBarrierView(testStorage, "sys/"),
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
 	ctx = namespace.RootContext(ctx)
-	dsv := TestDynamicSystemView(cluster.Cores[0].Core, nil)
+	dsv := TestDynamicSystemView(core, nil)
 
 	runeset := map[rune]bool{}
 	runesFound := []rune{}
