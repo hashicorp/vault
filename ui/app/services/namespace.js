@@ -30,7 +30,7 @@ export default class NamespaceService extends Service {
     return this.path === ROOT_NAMESPACE;
   }
 
-  // the top-level namespace is "admin/" for HVD managed clusters accessing the UI 
+  // the top-level namespace is "admin/" for HVD managed clusters accessing the UI
   // (similar to "root" for self-managed clusters)
   // this getter checks if the user is specifically at the administrative namespace level
   get inHvdAdminNamespace() {
