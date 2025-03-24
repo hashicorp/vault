@@ -21,15 +21,14 @@ export default class SyncSecretsOverviewRoute extends Route {
   @service declare readonly version: VersionService;
 
   @lazyCapabilities(apiPath`sys/activation-flags/secrets-sync/activate`)
-  declare secretsSyncActivatePath: CapabilitiesModel;
+  declare syncPath: CapabilitiesModel;
 
   async model() {
     const isActivated = this.flags.secretsSyncIsActivated;
 
     return hash({
       canActivateSecretsSync:
-        this.secretsSyncActivatePath.get('canCreate') !== false ||
-        this.secretsSyncActivatePath.get('canUpdate') !== false,
+        this.syncPath.get('canCreate') !== false || this.syncPath.get('canUpdate') !== false,
       destinations: isActivated ? this.store.query('sync/destination', {}).catch(() => []) : [],
       associations: isActivated
         ? this.store

@@ -54,8 +54,8 @@ export default class VersionService extends Service {
 
     if (!isEnterprise) return false;
     if (isHvdManaged) return true;
-    if (isEnterprise && !onLicense) return false;
-    return true;
+    if (isEnterprise && onLicense) return true;
+    return false;
   }
 
   get versionDisplay() {
