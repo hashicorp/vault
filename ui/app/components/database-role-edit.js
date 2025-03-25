@@ -131,7 +131,7 @@ export default class DatabaseRoleEdit extends Component {
   );
 
   saveRole = task(
-    waitFor(async (evt) => {
+    waitFor(async () => {
       const { mode, model } = this.args;
 
       if (mode === 'create') {
