@@ -298,13 +298,14 @@ function canConsumeForm(consumes) {
     return false;
 }
 class JSONApiResponse {
-    constructor(raw, transformer = (jsonValue) => jsonValue === null || jsonValue === void 0 ? void 0 : jsonValue.data) {
+    constructor(raw, transformer = (jsonValue) => jsonValue) {
         this.raw = raw;
         this.transformer = transformer;
     }
     value() {
         return __awaiter(this, void 0, void 0, function* () {
-            return this.transformer(yield this.raw.json());
+            const response = yield this.raw.json();
+            return this.transformer(response.data);
         });
     }
 }
