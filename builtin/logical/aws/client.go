@@ -129,8 +129,6 @@ func (b *backend) getRootConfigs(ctx context.Context, s logical.Storage, clientT
 		}
 	}
 
-	b.Logger().Debug("client config", "regions", fmt.Sprintf("%+v", regions), "endpoints", fmt.Sprintf("%+v", endpoints))
-
 	// our input validation (on root/config write) checks to make sure there are the same number of fallback regions and
 	// fallback endpoints.
 	//
