@@ -20,9 +20,9 @@ backend "consul" {
 seal "transit" {
 
   // TLS Configuration
-  tls_ca_cert        = "./../vault/diagnose/test-fixtures/chain.crt.pem"
-  tls_client_cert    = "./../vault/diagnose/test-fixtures/goodcertwithroot.pem"
-  tls_client_key     = "./../vault/diagnose//test-fixtures/goodkey.pem"
+  tls_ca_cert        = "{REPLACE_COMBINED_CA_CHAIN_FILE}"
+  tls_client_cert    = "{REPLACE_LEAF_CERT_FILE}"
+  tls_client_key     = "{REPLACE_LEAF_KEY_FILE}"
   tls_server_name    = "vault"
   tls_skip_verify    = "false"
 }
