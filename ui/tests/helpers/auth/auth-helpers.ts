@@ -28,26 +28,39 @@ export const loginNs = async (ns: string, token = rootToken) => {
 };
 
 // LOGIN WITH NON-TOKEN methods
-/*
-inputValues are for filling in the form values
-the key completes to the input's test selector and fills it in with the corresponding value
-for example: { username: 'bob', password: 'my-password', 'auth-form-mount-path': 'userpasss1' };
-*/
-export const loginMethod = async (
-  methodType: string,
-  inputValues: object,
-  { toggleOptions = false, ns = '' }
-) => {
-  // make sure we're always logged out and logged back in
-  await logout();
-  await visit(`/vault/auth?with=${methodType}`);
 
-  if (ns) await fillIn(AUTH_FORM.namespaceInput, ns);
+// LoginFields completes the input's test selector and fills it in with the corresponding value
+interface LoginFields {
+  username?: string;
+  password?: string;
+  token?: string;
+  role?: string;
+  'auth-form-mount-path': string; // todo update selectors
+  'auth-form-ns-input': string; // todo update selectors
+}
+interface LoginOptions {
+  authType?: string; // TODO not used right now
+  toggleOptions?: boolean;
+}
+
+export const fillInLoginFields = async (loginFields: LoginFields, options: LoginOptions) => {
+  const { toggleOptions = false, authType = 'token' } = options;
+
+  await fillIn(AUTH_FORM.method, authType);
+
   if (toggleOptions) await click(AUTH_FORM.moreOptions);
 
-  for (const [input, value] of Object.entries(inputValues)) {
+  for (const [input, value] of Object.entries(loginFields)) {
     await fillIn(AUTH_FORM.input(input), value);
   }
+};
+
+export const loginMethod = async (loginFields: LoginFields, options: LoginOptions) => {
+  // make sure we're always logged out and logged back in
+  await logout();
+  await visit(`/vault/auth?with=${options.authType}`);
+
+  await fillInLoginFields(loginFields, options);
   return click(AUTH_FORM.login);
 };
 
@@ -57,4 +70,50 @@ export const logout = async () => {
   // clear session storage to ensure we have a clean state
   window.localStorage.clear();
   return;
+};
+
+interface ResponseData {
+  authType?: string;
+  authMountPath?: string;
+  username?: string;
+  isMfa?: boolean;
+}
+export const authRequest = (context: any, options: ResponseData) => {
+  const { isMfa = false, authMountPath = '', username } = options;
+  let warnings = null;
+  let mfa_requirement = null;
+  if (isMfa) {
+    warnings = [
+      'A login request was issued that is subject to MFA validation. Please make sure to validate the login by sending another request to mfa/validate endpoint.',
+    ];
+
+    // in the real world more info is returned by this request, only including pertinent data for testing
+    mfa_requirement = {
+      mfa_request_id: '4c85205e-a946-bb01-be91-b2420e8c0822',
+      mfa_constraints: {
+        [authMountPath]: {
+          any: [
+            {
+              type: 'totp',
+              id: '6a55fcb1-efa9-eb89-ad92-5db8d0fd9c02',
+              uses_passcode: true,
+            },
+          ],
+        },
+      },
+    };
+  }
+  // in the real world more info is returned by this request, only including pertinent data for testing
+  const authResponse = {
+    policies: ['default'],
+    mfa_requirement,
+  };
+
+  return context.server.post(`/auth/${authMountPath}/login/${username}`, () => {
+    return {
+      request_id: '51b49e25-e980-55a2-76ba-4c690adcc0c3',
+      warnings,
+      auth: authResponse,
+    };
+  });
 };
