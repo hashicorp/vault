@@ -36,7 +36,7 @@ import (
 // Modifier is a function that modifies a string
 type Modifier func(string) string
 
-// regexModifier returns a Modifier that replaces all occurrences of re with repl
+// regexReplacer returns a Modifier that replaces all occurrences of re with repl
 func regexReplacer(re, repl string) Modifier {
 	return func(s string) string {
 		return regexp.MustCompile(re).ReplaceAllString(s, repl)
@@ -298,7 +298,7 @@ func TestServer(t *testing.T) {
 		},
 		{
 			"missing_disable_mlock_value_with_integrated_storage",
-			testBaseHCL(t, goodListenerTimeouts, regexModifier(`\s*disable_mlock\s*=\s*.+`, "")) + raftHCL,
+			testBaseHCL(t, goodListenerTimeouts, regexReplacer(`\s*disable_mlock\s*=\s*.+`, "")) + raftHCL,
 			"disable_mlock must be configured",
 			1,
 			[]string{"-test-server-config"},
