@@ -43,23 +43,46 @@ module('Integration | Component | auth | page', function (hooks) {
   });
 
   // TODO build out for all auth types
-  const USERNAME_PASSWORD_METHODS = ['userpass', 'ldap', 'okta', 'radius'];
-  // const TOKEN_METHODS = ['token', 'github'];
-  // BASE_LOGIN_METHODS.filter(
-  //   (m) => m.formAttributes.includes('username') && m.formAttributes.includes('password')
-  // ).map((m) => m.type);
+  const REQUEST_DATA = {
+    token: {
+      loginData: { token: 'mysupersecuretoken' },
+      url: () => 'auth/token/lookup-self',
+    },
+    username: {
+      loginData: { username: 'matilda', password: 'password' },
+      url: ({ path, username }) => `/auth/${path}/login/${username}`,
+    },
+    github: {
+      loginData: { token: 'mysupersecuretoken' },
+      url: ({ path }) => `auth/${path}/login`,
+    },
+    oidc: {
+      loginData: {},
+      url: ({ path }) => `auth/${path}/oidc/auth_url`,
+    },
+    saml: {
+      loginData: {},
+      url: ({ path }) => `auth/${path}/sso_service_url`,
+    },
+  };
+  const AUTH_METHOD_TEST_CASES = [
+    { authType: 'userpass', options: REQUEST_DATA.username },
+    { authType: 'ldap', options: REQUEST_DATA.username },
+    { authType: 'okta', options: REQUEST_DATA.username },
+    { authType: 'radius', options: REQUEST_DATA.username },
+    { authType: 'github', options: REQUEST_DATA.github },
+  ];
 
-  for (const authType of USERNAME_PASSWORD_METHODS) {
-    test(`${authType} it calls onAuthSuccess on login for default path`, async function (assert) {
+  for (const { authType, options } of AUTH_METHOD_TEST_CASES) {
+    test(`${authType}: it calls onAuthSuccess on submit for default path`, async function (assert) {
       assert.expect(1);
-      const loginData = { username: 'matilda', password: 'password' };
-      const methodData = { authType, authMountPath: authType };
-
-      authRequest(this, { ...methodData, username: loginData.username });
+      const { loginData, url } = options;
+      const requestUrl = url({ path: authType, username: loginData?.username });
+      authRequest(this, { url: requestUrl });
 
       await this.renderComponent();
       await fillIn(AUTH_FORM.method, authType);
-      await fillInLoginFields(loginData, { authType });
+      await fillInLoginFields(loginData);
       await click(AUTH_FORM.login);
 
       const [actual] = this.onAuthSuccess.lastCall.args;
@@ -71,17 +94,19 @@ module('Integration | Component | auth | page', function (hooks) {
       assert.propEqual(actual, expected, `onAuthSuccess called with: ${JSON.stringify(actual)}`);
     });
 
-    test(`${authType}: it calls onAuthSuccess on login for custom path`, async function (assert) {
+    test(`${authType}: it calls onAuthSuccess on submit for custom path`, async function (assert) {
       assert.expect(1);
       const customPath = `${authType}-custom`;
-      const loginData = { username: 'matilda', password: 'password', 'auth-form-mount-path': customPath };
-      const methodData = { authType, authMountPath: customPath };
-
-      authRequest(this, { ...methodData, username: loginData.username });
+      const { loginData, url } = options;
+      const loginDataWithPath = { ...loginData, 'auth-form-mount-path': customPath };
+      // pass custom path to request URL
+      const requestUrl = url({ path: customPath, username: loginData?.username });
+      authRequest(this, { url: requestUrl });
 
       await this.renderComponent();
       await fillIn(AUTH_FORM.method, authType);
-      await fillInLoginFields(loginData, { authType, toggleOptions: true });
+      // toggle mount path input to specify custom path
+      await fillInLoginFields(loginDataWithPath, { toggleOptions: true });
       await click(AUTH_FORM.login);
 
       const [actual] = this.onAuthSuccess.lastCall.args;
@@ -94,15 +119,16 @@ module('Integration | Component | auth | page', function (hooks) {
     });
 
     test(`${authType}: it should display mfa requirement for default path`, async function (assert) {
-      assert.expect(5);
-      const loginData = { username: 'matilda', password: 'password' };
-      const methodData = { authType, authMountPath: authType, isMfa: true };
+      const { loginData, url } = options;
+      assert.expect(3 + Object.keys(loginData).length);
 
-      authRequest(this, { ...methodData, username: loginData.username });
+      const requestUrl = url({ path: authType, username: loginData?.username });
+      // authMountPath necessary to return mfa_constraints
+      authRequest(this, { isMfa: true, authMountPath: authType, url: requestUrl });
 
       await this.renderComponent();
       await fillIn(AUTH_FORM.method, authType);
-      await fillInLoginFields(loginData, { authType });
+      await fillInLoginFields(loginData);
       await click(AUTH_FORM.login);
 
       assert
@@ -114,21 +140,25 @@ module('Integration | Component | auth | page', function (hooks) {
       assert.dom(AUTH_FORM.form).exists('clicking back returns to auth form');
       assert.dom(GENERAL.selectByAttr('auth-method')).hasValue(authType, 'preserves method type on back');
 
-      assert.dom(AUTH_FORM.input('username')).hasValue('', 'clears username on back');
-      assert.dom(AUTH_FORM.input('password')).hasValue('', 'clears password on back');
+      for (const field of Object.keys(loginData)) {
+        assert.dom(AUTH_FORM.input(field)).hasValue('', `${field} input clears on back`);
+      }
     });
 
     test(`${authType}: it should display mfa requirement for custom path`, async function (assert) {
-      assert.expect(5);
       const customPath = `${authType}-custom`;
-      const loginData = { username: 'matilda', password: 'password', 'auth-form-mount-path': customPath };
-      const methodData = { authType, authMountPath: customPath, isMfa: true };
+      const { loginData, url } = options;
+      assert.expect(3 + Object.keys(loginData).length);
 
-      authRequest(this, { ...methodData, username: loginData.username });
+      const loginDataWithPath = { ...loginData, 'auth-form-mount-path': customPath };
+      // pass custom path to request URL
+      const requestUrl = url({ path: customPath, username: loginData?.username });
+      // authMountPath necessary to return mfa_constraints
+      authRequest(this, { isMfa: true, authMountPath: customPath, url: requestUrl });
 
       await this.renderComponent();
       await fillIn(AUTH_FORM.method, authType);
-      await fillInLoginFields(loginData, { authType, toggleOptions: true });
+      await fillInLoginFields(loginDataWithPath, { toggleOptions: true });
       await click(AUTH_FORM.login);
 
       assert
@@ -140,8 +170,9 @@ module('Integration | Component | auth | page', function (hooks) {
       assert.dom(AUTH_FORM.form).exists('clicking back returns to auth form');
       assert.dom(GENERAL.selectByAttr('auth-method')).hasValue(authType, 'preserves method type on back');
 
-      assert.dom(AUTH_FORM.input('username')).hasValue('', 'clears username on back');
-      assert.dom(AUTH_FORM.input('password')).hasValue('', 'clears password on back');
+      for (const field of Object.keys(loginData)) {
+        assert.dom(AUTH_FORM.input(field)).hasValue('', `${field} input clears on back`);
+      }
     });
   }
 });
