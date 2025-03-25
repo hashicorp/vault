@@ -71,6 +71,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
       'Replication',
       'Raft Storage',
       'Client Count',
+      'Vault Usage',
       'License',
       'Seal Vault',
       'Custom Messages',
