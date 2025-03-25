@@ -48,7 +48,14 @@ export default class VersionService extends Service {
   }
 
   get hasSecretsSync() {
-    return this.features.includes('Secrets Sync');
+    const isEnterprise = this.isEnterprise;
+    const isHvdManaged = this.flags.isHvdManaged;
+    const onLicense = this.features.includes('Secrets Sync');
+
+    if (!isEnterprise) return false;
+    if (isHvdManaged) return true;
+    if (isEnterprise && onLicense) return true;
+    return false;
   }
 
   get versionDisplay() {
