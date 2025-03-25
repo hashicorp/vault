@@ -25,50 +25,25 @@ module('Acceptance | sync | overview', function (hooks) {
     this.server.get('/sys/license/features', () => ({ features: ['Secrets Sync'] }));
   });
 
-  test('it hides sync overview on community', async function (assert) {
+  test('it redirects on community', async function (assert) {
     this.version.type = 'community';
     await authPage.login();
-    assert.dom('[data-test-sidebar-nav-panel="Cluster"]').exists();
-    assert.dom(GENERAL.navLink('Secrets Sync')).doesNotExist('Secrets sync nav link does not exist');
+    await visit('/vault/sync/secrets/overview');
+    assert.strictEqual(currentURL(), '/vault/dashboard', 'redirects to cluster dashboard route');
   });
 
-  test('it hides sync overview for users without policy access', async function (assert) {
-    this.server.get('/sys/internal/ui/resultant-acl', () => {
-      return {
-        data: {
-          exact_paths: {},
-          glob_paths: {
-            'sys/sync/': { capabilities: ['deny'] },
-          },
-        },
-      };
-    });
-    await authPage.login();
-    assert.dom('[data-test-sidebar-nav-panel="Cluster"]').exists();
-    assert.dom(GENERAL.navLink('Secrets Sync')).doesNotExist();
-  });
-
-  test('it hides sync overview if not on ent license', async function (assert) {
+  test('it redirects if enterprise but not on license', async function (assert) {
     this.server.get('/sys/license/features', () => ({ features: [] }));
     await authPage.login();
-    assert.dom('[data-test-sidebar-nav-panel="Cluster"]').exists();
-    assert.dom(GENERAL.navLink('Secrets Sync')).doesNotExist('Secrets sync nav link does not exist');
+    await visit('/vault/sync/secrets/overview');
+    assert.strictEqual(currentURL(), '/vault/dashboard', 'redirects to cluster dashboard route');
   });
 
-  test('it navigates to sync overview for users with policy access', async function (assert) {
-    this.server.get('/sys/internal/ui/resultant-acl', () => {
-      return {
-        data: {
-          exact_paths: {},
-          glob_paths: {
-            'sys/sync/': { capabilities: ['create', 'read', 'update'] },
-          },
-        },
-      };
-    });
+  // this test only runs on enterprise since HVD managed is harder to stub on CE
+  test('enterprise: it does not redirect if HVD managed', async function (assert) {
+    this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
     await authPage.login();
-    assert.dom('[data-test-sidebar-nav-panel="Cluster"]').exists();
-    await click(GENERAL.navLink('Secrets Sync'));
+    await visit('/vault/sync/secrets/overview');
     assert.strictEqual(currentURL(), '/vault/sync/secrets/overview', 'it navigates to overview');
   });
 
@@ -253,14 +228,5 @@ module('Acceptance | sync | overview', function (hooks) {
         await click(ts.overview.activationModal.confirm);
       });
     });
-  });
-
-  // this test only runs on enterprise since HVD managed is harder to stub on CE
-  test('enterprise: it navigates to sync overview for hvd managed clusters', async function (assert) {
-    this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
-    await authPage.login();
-    assert.dom('[data-test-sidebar-nav-panel="Cluster"]').exists();
-    await click(GENERAL.navLink('Secrets Sync'));
-    assert.strictEqual(currentURL(), '/vault/sync/secrets/overview', 'it navigates to overview');
   });
 });
