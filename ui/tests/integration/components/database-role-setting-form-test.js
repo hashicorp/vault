@@ -13,43 +13,43 @@ import { setRunOptions } from 'ember-a11y-testing/test-support';
 const testCases = [
   {
     pluginType: 'elasticsearch-database-plugin',
-    staticRoleFields: ['username', 'rotation_period', 'skip_import_rotation'],
+    staticRoleFields: ['username', 'rotation_period', 'skip_import_rotation', 'password'],
     dynamicRoleFields: ['creation_statement', 'default_ttl', 'max_ttl'],
   },
   {
     pluginType: 'mongodb-database-plugin',
-    staticRoleFields: ['username', 'rotation_period', 'skip_import_rotation'],
+    staticRoleFields: ['username', 'rotation_period', 'skip_import_rotation', 'password'],
     dynamicRoleFields: ['creation_statement', 'revocation_statement', 'default_ttl', 'max_ttl'],
     statementsHidden: true,
   },
   {
     pluginType: 'mssql-database-plugin',
-    staticRoleFields: ['username', 'rotation_period', 'skip_import_rotation'],
+    staticRoleFields: ['username', 'rotation_period', 'skip_import_rotation', 'password'],
     dynamicRoleFields: ['creation_statements', 'revocation_statements', 'default_ttl', 'max_ttl'],
   },
   {
     pluginType: 'mysql-database-plugin',
-    staticRoleFields: ['username', 'rotation_period', 'skip_import_rotation'],
+    staticRoleFields: ['username', 'rotation_period', 'skip_import_rotation', 'password'],
     dynamicRoleFields: ['creation_statements', 'revocation_statements', 'default_ttl', 'max_ttl'],
   },
   {
     pluginType: 'mysql-aurora-database-plugin',
-    staticRoleFields: ['username', 'rotation_period', 'skip_import_rotation'],
+    staticRoleFields: ['username', 'rotation_period', 'skip_import_rotation', 'password'],
     dynamicRoleFields: ['creation_statements', 'revocation_statements', 'default_ttl', 'max_ttl'],
   },
   {
     pluginType: 'mysql-rds-database-plugin',
-    staticRoleFields: ['username', 'rotation_period', 'skip_import_rotation'],
+    staticRoleFields: ['username', 'rotation_period', 'skip_import_rotation', 'password'],
     dynamicRoleFields: ['creation_statements', 'revocation_statements', 'default_ttl', 'max_ttl'],
   },
   {
     pluginType: 'mysql-legacy-database-plugin',
-    staticRoleFields: ['username', 'rotation_period', 'skip_import_rotation'],
+    staticRoleFields: ['username', 'rotation_period', 'skip_import_rotation', 'password'],
     dynamicRoleFields: ['creation_statements', 'revocation_statements', 'default_ttl', 'max_ttl'],
   },
   {
     pluginType: 'vault-plugin-database-oracle',
-    staticRoleFields: ['username', 'rotation_period', 'skip_import_rotation'],
+    staticRoleFields: ['username', 'rotation_period', 'skip_import_rotation', 'password'],
     dynamicRoleFields: ['creation_statements', 'revocation_statements', 'default_ttl', 'max_ttl'],
   },
 ];
@@ -60,6 +60,7 @@ const ALL_ATTRS = [
   { name: 'max_ttl', type: 'string', options: {} },
   { name: 'username', type: 'string', options: {} },
   { name: 'skip_import_rotation', type: 'boolean', options: {} },
+  { name: 'password', type: 'string', options: {} },
   { name: 'rotation_period', type: 'string', options: {} },
   { name: 'creation_statements', type: 'string', options: {} },
   { name: 'creation_statement', type: 'string', options: {} },

@@ -57,7 +57,12 @@ module('Integration | Component | database-role-edit', function (hooks) {
   });
 
   test('it should let user edit a static role when given update capability', async function (assert) {
-    this.server.post('/sys/capabilities-self', capabilitiesStub('database/static-creds/my-role', ['update']));
+    this.server.post(
+      '/sys/capabilities-self',
+      capabilitiesStub('database/static-creds/my-role', ['edit', 'update'])
+    );
+
+    const version = this.owner.lookup('service:version');
 
     this.server.post(`/database/static-roles/my-static-role`, (schema, req) => {
       assert.true(true, 'request made to update static role');
@@ -100,6 +105,18 @@ module('Integration | Component | database-role-edit', function (hooks) {
 
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="show"/>`);
     assert.dom('[data-test-value-div="Skip initial rotation"]').containsText('Yes');
+  });
+
+  test('it should show a modal when skip_import_rotation is false on save', async function (assert) {
+    this.server.post('/sys/capabilities-self', capabilitiesStub('database/static-creds/my-role', ['create']));
+
+    await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="create"/>`);
+
+    await fillIn('[data-test-input="password"]', 'test');
+
+    await click('[data-test-secret-save]');
+
+    assert.dom('[data-test-issuer-warning]').exists();
   });
 
   test('it should show Get credentials button when a user has the correct policy', async function (assert) {

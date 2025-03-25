@@ -133,9 +133,11 @@ export default class DatabaseRoleEdit extends Component {
     waitFor(async (evt) => {
       evt.preventDefault();
       this.resetErrors();
+      const { mode, model } = this.args;
       if (!this.isValid()) return;
 
-      if (!this.args.model.skip_import_rotation) {
+      // if we're creating and rotating a static role immediately, warn user
+      if (!model.skip_import_rotation && model.type === 'static' && mode === 'create') {
         this.saveIssuerWarning =
           "You have set the param 'Skip initial rotation' for this role to false. \n Vault will rotate the password the password immediately once saved. \n NOTE: This will disrupt any active use of this role outside of Vault.";
         return;

@@ -255,6 +255,14 @@
                         </Toggle>
                       </div>
                     </div>
+                  {{else if (eq attr.name "skip_static_role_rotation_import")}}
+                    {{! how to flip this }}
+                    <FormField
+                      data-test-field={{true}}
+                      @attr={{attr}}
+                      @model={{@model}}
+                      @value={{not (get @model attr.name)}}
+                    />
                   {{else}}
                     <div class="column is-full">
                       <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
@@ -347,6 +355,13 @@
           @isLink={{true}}
           @queryParam="role"
           @type={{attr.type}}
+        />
+      {{else if (eq attr.name "skip_static_role_rotation_import")}}
+        <InfoTableRow
+          @alwaysRender={{not (is-empty-value (get @model attr.name) hasDefault=defaultDisplay)}}
+          @defaultShown={{defaultDisplay}}
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{not (get @model attr.name)}}
         />
       {{else}}
         <InfoTableRow
