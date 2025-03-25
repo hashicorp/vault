@@ -45,6 +45,7 @@ export default class DatabaseRoleEdit extends Component {
   }
 
   isValid() {
+    this.args.model.selfManaged = this.isSelfManaged; // set db value for form validation
     const { isValid, state } = this.args.model.validate();
     this.modelValidations = isValid ? null : state;
     this.invalidFormAlert = isValid ? '' : 'There was an error submitting this form.';
@@ -77,9 +78,22 @@ export default class DatabaseRoleEdit extends Component {
     }
     return this.store
       .queryRecord('database/connection', { id: dbs[0], backend })
-      .then(({ plugin_name, skip_static_role_rotation_import, self_managed }) => ({
+      .then(({ plugin_name, skip_static_role_rotation_import }) => ({
         plugin_name,
         skip_static_role_rotation_import,
+      }))
+      .catch(() => null);
+  }
+
+  get isSelfManaged() {
+    const backend = this.args.model?.backend;
+    const dbs = this.args.model?.database || [];
+    if (!backend || dbs.length === 0) {
+      return null;
+    }
+    return this.store
+      .queryRecord('database/connection', { id: dbs[0], backend })
+      .then(({ self_managed }) => ({
         self_managed,
       }))
       .catch(() => null);

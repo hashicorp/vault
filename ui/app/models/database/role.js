@@ -30,9 +30,10 @@ const validations = {
         if (!type || type === 'dynamic') return true;
         if (password) return true;
         if (skip_import_rotation) return true;
+
         // if rotating immediately
         if (!skip_import_rotation) {
-          //if self managed is true
+          // and if role is self managed
           if (selfManaged) {
             if (password) return true; // require password
           }
@@ -52,7 +53,7 @@ export default class RoleModel extends Model {
 
   @attr('string', { label: 'Role name' }) name;
 
-  @attr('boolean') selfManaged;
+  @attr('boolean') selfManaged; // Added to model to be able to validate form on save  - is there a better way to do this?
 
   @attr('array', {
     label: 'Connection name',

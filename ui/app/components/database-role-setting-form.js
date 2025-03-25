@@ -29,7 +29,6 @@ export default class DatabaseRoleSettingForm extends Component {
   get settingFields() {
     const dbValues = this.args.dbParams;
     if (!this.args.roleType) return null;
-    if (this.args.mode === 'create') this.args.model.selfManaged = dbValues.self_managed; // setting self managed flag from parent db in role model for validation
     const dbValidFields = getRoleFields(this.args.roleType);
     return this.args.attrs.filter((a) => {
       // Sets default value for skip_import_rotation based on parent db config value
