@@ -2,27 +2,27 @@
 # SPDX-License-Identifier: BUSL-1.1
 
 regions:
-  - eu-north-1
-  - ap-south-1
-  - eu-west-3
-  - eu-west-2
-  - eu-west-1
-  - ap-northeast-3
-  - ap-northeast-2
-  - ap-northeast-1
-  - sa-east-1
-  - ca-central-1
-  - ap-southeast-1
-  - ap-southeast-2
-  - eu-central-1
-  - us-east-1
-  - us-east-2
-  - us-west-1
-  - us-west-2
-  - global
+- eu-north-1
+- ap-south-1
+- eu-west-3
+- eu-west-2
+- eu-west-1
+- ap-northeast-3
+- ap-northeast-2
+- ap-northeast-1
+- sa-east-1
+- ca-central-1
+- ap-southeast-1
+- ap-southeast-2
+- eu-central-1
+- us-east-1
+- us-east-2
+- us-west-1
+- us-west-2
+- global
 
 account-blocklist:
-  - 1234567890
+ - 1234567890
 
 accounts:
   # replaced in CI
@@ -92,16 +92,29 @@ presets:
       IAMRole:
         - property: tag:hc-config-as-code
           value: "honeybee"
+        - property: Name
+          type: glob
+          value: "vault-assumed-role-credentials-demo"
       IAMRolePolicy:
         - property: tag:role:hc-config-as-code
           value: "honeybee"
+        - property: role:RoleName
+          type: glob
+          value: "vault-assumed-role-credentials-demo"
       IAMRolePolicyAttachment:
         - property: tag:role:hc-config-as-code
           value: "honeybee"
+        - property: Name
+          type: glob
+          value: "vault-assumed-role-credentials-demo"
 
   enos:
     # Existing CI to be cleaned up later
     filters:
+      EC2Instance:
+        - property: Tags.Name
+          type: glob
+          value: "enos-integration*"
       LambdaFunction:
         - property: Name
           value: "enos_cleanup"
@@ -111,9 +124,6 @@ presets:
           value: "github_actions-*"
         - property: Name
           value: "rds-monitoring-role"
-        - property: Name
-          type: glob
-          value: "vault-assumed-role-credentials-demo"
       IAMRolePolicy:
         - property: role:RoleName
           type: glob
@@ -126,9 +136,6 @@ presets:
       IAMUserPolicy:
         - "github_actions-vault_ci -> AssumeServiceUserRole"
         - "github_actions-vault_enterprise_ci -> AssumeServiceUserRole"
-      IAMPolicy:
-        - property: PolicyName
-          value: "DemoUser"
 
 resource-types:
   # Run against everything, excluding these:
