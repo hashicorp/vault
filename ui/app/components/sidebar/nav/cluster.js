@@ -25,4 +25,9 @@ export default class SidebarNavClusterComponent extends Component {
     // should only return true if we're in the true root namespace
     return this.namespace.inRootNamespace && !this.hasChrootNamespace;
   }
+
+  get canAccessVaultUsageDashboard() {
+    // A user can access Vault Usage if they are enterprise and in root namespace
+    return this.version.isEnterprise && !this.hasChrootNamespace;
+  }
 }
