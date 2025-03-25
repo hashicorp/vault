@@ -41,6 +41,8 @@ export default class SidebarNavClusterComponent extends Component {
       this.version.isEnterprise &&
       (this.isRootNamespace || this.namespace.inHvdAdminNamespace)
     );
+
+    // test
   }
 
   get showSecretsSync() {
