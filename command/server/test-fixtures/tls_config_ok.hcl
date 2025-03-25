@@ -8,8 +8,8 @@ ui = true
 
 listener "tcp" {
     address = "127.0.0.1:1025"
-    tls_cert_file = "./../api/test-fixtures/keys/cert.pem"
-    tls_key_file = "./../api/test-fixtures/keys/key.pem"
+    tls_cert_file = "{REPLACE_LEAF_CERT_FILE}"
+    tls_key_file = "{REPLACE_LEAF_KEY_FILE}"
 }
 
 backend "consul" {

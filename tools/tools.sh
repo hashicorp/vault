@@ -36,12 +36,12 @@ install_external() {
   # If you update this please update check_external below as well as our external tools
   # install action ./github/actions/install-external-tools.yml
   tools=(
-    github.com/bufbuild/buf/cmd/buf@v1.25.0
+    github.com/bufbuild/buf/cmd/buf@v1.45.0
     github.com/favadi/protoc-go-inject-tag@latest
     github.com/golangci/misspell/cmd/misspell@latest
     github.com/golangci/revgrep/cmd/revgrep@latest
     golang.org/x/tools/cmd/goimports@latest
-    google.golang.org/protobuf/cmd/protoc-gen-go@latest
+    google.golang.org/protobuf/cmd/protoc-gen-go@v1.34.1
     google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
     gotest.tools/gotestsum@latest
     honnef.co/go/tools/cmd/staticcheck@latest

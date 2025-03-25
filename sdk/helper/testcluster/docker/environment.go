@@ -1008,6 +1008,7 @@ func (n *DockerClusterNode) PartitionFromCluster(ctx context.Context) error {
 		"-xec", strings.Join([]string{
 			fmt.Sprintf("echo partitioning container from network"),
 			"apk add iproute2",
+			"apk add iptables",
 			// Get the gateway address for the bridge so we can allow host to
 			// container traffic still.
 			"GW=$(ip r | grep default | grep eth0 | cut -f 3 -d' ')",
