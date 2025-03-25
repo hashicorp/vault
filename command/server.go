@@ -466,7 +466,7 @@ func (c *ServerCommand) parseConfig() (*server.Config, []configutil.ConfigError,
 				"if the machine was not provisioned with enough RAM. Disabling " +
 				"mlock can prevent this issue, but can result in the reveal of " +
 				"plaintext secrets when memory is swapped to disk, so it is only " +
-				"recommended on systems with encrypted swap.",
+				"recommended on systems with encrypted swap or where swap is disabled.",
 		))
 		return nil, configErrors, fmt.Errorf("disable_mlock must be configured")
 	}

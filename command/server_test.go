@@ -33,9 +33,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Modifier is a function that modifies a string
 type Modifier func(string) string
 
-func regexModifier(re, repl string) Modifier {
+// regexModifier returns a Modifier that replaces all occurrences of re with repl
+func regexReplacer(re, repl string) Modifier {
 	return func(s string) string {
 		return regexp.MustCompile(re).ReplaceAllString(s, repl)
 	}
