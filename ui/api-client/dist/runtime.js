@@ -298,7 +298,7 @@ function canConsumeForm(consumes) {
     return false;
 }
 class JSONApiResponse {
-    constructor(raw, transformer = (jsonValue) => jsonValue) {
+    constructor(raw, transformer = (jsonValue) => jsonValue === null || jsonValue === void 0 ? void 0 : jsonValue.data) {
         this.raw = raw;
         this.transformer = transformer;
     }
