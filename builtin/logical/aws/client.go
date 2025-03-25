@@ -126,8 +126,6 @@ func (b *backend) getRootConfigs(ctx context.Context, s logical.Storage, clientT
 		// we also need to set the endpoint
 		if len(endpoints) == 0 {
 			endpoints = append(endpoints, matchingSTSEndpoint(fallbackRegion))
-		} else {
-			// TODO: do something else
 		}
 	}
 
