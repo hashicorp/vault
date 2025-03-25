@@ -38,8 +38,7 @@ export default class SidebarNavClusterComponent extends Component {
 
     return (
       this.permissions.hasNavPermission('dashboard') &&
-      this.version.isEnterprise &&
-      (this.isRootNamespace || this.namespace.inHvdAdminNamespace)
+      ((this.version.isEnterprise && this.isRootNamespace) || this.namespace.inHvdAdminNamespace)
     );
   }
 
