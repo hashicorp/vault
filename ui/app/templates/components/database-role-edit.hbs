@@ -86,9 +86,9 @@
           @value={{format-duration (get @model attr.name)}}
           @isLink={{eq attr.name "database"}}
         />
-      {{else if (not (eq attr.name "password"))}}
+      {{else}}
         <InfoTableRow
-          @alwaysRender={{true}}
+          @alwaysRender={{(not (eq attr.name "password"))}}
           @defaultShown={{defaultDisplay}}
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
           @value={{get @model attr.name}}
