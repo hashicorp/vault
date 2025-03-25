@@ -7,7 +7,11 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import errorMessage from 'vault/utils/error-message';
+import apiErrorMessage from 'vault/utils/api-error-message';
+
+import type ApiService from 'vault/services/api';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type { HTMLElementEvent } from 'vault/forms';
 
 /**
  * @module ToolsUnwrap
@@ -18,11 +22,11 @@ import errorMessage from 'vault/utils/error-message';
  */
 
 export default class ToolsUnwrap extends Component {
-  @service store;
-  @service flashMessages;
+  @service declare readonly api: ApiService;
+  @service declare readonly flashMessages: FlashMessageService;
 
   @tracked token = '';
-  @tracked unwrapData = '';
+  @tracked unwrapData: unknown = '';
   @tracked unwrapDetails = {};
   @tracked errorMessage = '';
 
@@ -35,12 +39,12 @@ export default class ToolsUnwrap extends Component {
   }
 
   @action
-  async handleSubmit(evt) {
+  async handleSubmit(evt: HTMLElementEvent<HTMLFormElement>) {
     evt.preventDefault();
     const data = { token: this.token.trim() };
 
     try {
-      const resp = await this.store.adapterFor('tools').toolAction('unwrap', data);
+      const resp = await this.api.sys.unwrap(data);
       this.unwrapData = (resp && resp.data) || resp.auth;
       this.unwrapDetails = {
         'Request ID': resp.request_id,
@@ -50,7 +54,7 @@ export default class ToolsUnwrap extends Component {
       };
       this.flashMessages.success('Unwrap was successful.');
     } catch (error) {
-      this.errorMessage = errorMessage(error);
+      this.errorMessage = await apiErrorMessage(error);
     }
   }
 }
