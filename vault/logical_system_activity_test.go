@@ -99,6 +99,7 @@ func TestGetBillingPeriodTimes(t *testing.T) {
 		expectedStartTime  time.Time
 		expectedEndTime    time.Time
 		expectAlignedTimes bool
+		errorMsg           string
 	}{
 		"No start or end time provided, should return times from current billing period start time to now": {
 			givenStartTime:     time.Time{},
@@ -107,44 +108,44 @@ func TestGetBillingPeriodTimes(t *testing.T) {
 			expectedEndTime:    currentTime,
 			expectAlignedTimes: false,
 		},
-		"Start time provided to be 2 months after the current billing period start time within the current billing cycle": {
+		"Start time provided to be 5 months after the current billing period start time within the current billing cycle": {
 			givenStartTime: func() time.Time {
-				twoMonthsForward := currentBillingStartDate.AddDate(0, 2, 0)
-				return time.Date(twoMonthsForward.Year(), twoMonthsForward.Month(), 10, 0, 0, 0, 0, time.UTC)
+				fiveMonthsForward := currentBillingStartDate.AddDate(0, 5, 0)
+				return time.Date(fiveMonthsForward.Year(), fiveMonthsForward.Month(), 23, 5, 0, 0, 0, time.UTC)
 			}(),
 			givenEndTime:       time.Time{},
 			expectedStartTime:  currentBillingStartDate,
 			expectedEndTime:    currentTime,
 			expectAlignedTimes: true,
 		},
-		"Start time provided to be 5 months after the current time outside the current billing cycle": {
+		"Start time provided to be 7 months after the current time outside the current billing cycle": {
 			givenStartTime: func() time.Time {
-				fiveMonthsForward := currentTime.AddDate(0, 5, 0)
-				return time.Date(fiveMonthsForward.Year(), fiveMonthsForward.Month(), 2, 2, 0, 0, 0, time.UTC)
+				sevenMonthsForward := currentTime.AddDate(0, 7, 0)
+				return time.Date(sevenMonthsForward.Year(), sevenMonthsForward.Month(), 1, 2, 0, 0, 0, time.UTC)
 			}(),
 			givenEndTime:       time.Time{},
 			expectedStartTime:  currentBillingStartDate,
 			expectedEndTime:    currentTime,
 			expectAlignedTimes: true,
 		},
-		"Start time provided to be 3 months after the current billing cycle end time outside the current billing cycle": {
+		"Start time provided to be 4 months after the current billing cycle end time outside the current billing cycle": {
 			givenStartTime: func() time.Time {
-				threeMonthsForward := currentBillingEndDate.AddDate(0, 3, 0)
-				return time.Date(threeMonthsForward.Year(), threeMonthsForward.Month(), 1, 23, 0, 0, 0, time.UTC)
+				fourMonthsForward := currentBillingEndDate.AddDate(0, 4, 0)
+				return time.Date(fourMonthsForward.Year(), fourMonthsForward.Month(), 3, 13, 0, 0, 0, time.UTC)
 			}(),
 			givenEndTime:       time.Time{},
 			expectedStartTime:  currentBillingStartDate,
 			expectedEndTime:    currentTime,
 			expectAlignedTimes: true,
 		},
-		"Start time provided to be 1 year before the current time outside the current billing cycle": {
+		"Start time provided to be 2 years before the current time outside the current billing cycle": {
 			givenStartTime: func() time.Time {
-				oneYearAgo := currentTime.AddDate(-1, 0, 0)
-				return time.Date(oneYearAgo.Year(), oneYearAgo.Month(), 1, 0, 0, 0, 0, time.UTC)
+				twoYearsAgo := currentTime.AddDate(-2, 0, 0)
+				return time.Date(twoYearsAgo.Year(), twoYearsAgo.Month(), 13, 21, 0, 0, 0, time.UTC)
 			}(),
 			givenEndTime:       time.Time{},
-			expectedStartTime:  currentBillingStartDate.AddDate(-1, 0, 0),
-			expectedEndTime:    currentBillingEndDate.AddDate(-1, 0, 0),
+			expectedStartTime:  currentBillingStartDate.AddDate(-2, 0, 0),
+			expectedEndTime:    currentBillingEndDate.AddDate(-2, 0, 0),
 			expectAlignedTimes: true,
 		},
 		"Start time provided to be at exact current billing period start": {
@@ -153,6 +154,27 @@ func TestGetBillingPeriodTimes(t *testing.T) {
 			expectedStartTime:  currentBillingStartDate,
 			expectedEndTime:    currentTime,
 			expectAlignedTimes: false,
+		},
+		"Start time provided to be 2 years and 2 months before current billing period start": {
+			givenStartTime:     currentBillingStartDate.AddDate(-2, -2, 0),
+			givenEndTime:       time.Time{},
+			expectedStartTime:  currentBillingStartDate.AddDate(-3, 0, 0),
+			expectedEndTime:    currentBillingStartDate.AddDate(-2, 0, 0),
+			expectAlignedTimes: true,
+		},
+		"Start time provided to be 2 years before current billing period start": {
+			givenStartTime:     currentBillingStartDate.AddDate(-2, 0, 0),
+			givenEndTime:       time.Time{},
+			expectedStartTime:  currentBillingStartDate.AddDate(-2, 0, 0),
+			expectedEndTime:    currentBillingStartDate.AddDate(-1, 0, 0),
+			expectAlignedTimes: false,
+		},
+		"Start time provided to be 2 years and 2 months after the current billing period start": {
+			givenStartTime:     currentBillingStartDate.AddDate(2, 2, 20),
+			givenEndTime:       time.Time{},
+			expectedStartTime:  currentBillingStartDate,
+			expectedEndTime:    currentTime,
+			expectAlignedTimes: true,
 		},
 		"End time provided to be 5 months after the current billing period start time within the current billing cycle": {
 			givenStartTime: time.Time{},
@@ -282,6 +304,11 @@ func TestGetBillingPeriodTimes(t *testing.T) {
 			expectedEndTime:    currentTime,
 			expectAlignedTimes: true,
 		},
+		"Start time after end time, expect error": {
+			givenStartTime: currentBillingStartDate.AddDate(0, 2, 0),
+			givenEndTime:   currentBillingStartDate.AddDate(0, 1, 0),
+			errorMsg:       "start_time is later than end_time",
+		},
 	}
 
 	for name, tt := range tests {
@@ -302,14 +329,19 @@ func TestGetBillingPeriodTimes(t *testing.T) {
 			}
 
 			actualStart, actualEnd, actualAligned, err := getBillingPeriodTimes(d, currentBillingStartDate)
-			require.NoError(t, err)
-			currentTime = time.Now().UTC()
+			if tt.errorMsg != "" {
+				require.Error(t, err)
+				require.Equal(t, tt.errorMsg, err.Error())
+			} else {
+				require.NoError(t, err)
+				currentTime = time.Now().UTC()
 
-			require.Equal(t, tt.expectedStartTime, actualStart, "Expected start time did not match")
-			// since end time might have the current value, we need to truncate the end times up to minutes when comparing
-			// time.Now().UTC() is called at slightly different moments, resulting in tiny differences in the timestamp
-			require.Equal(t, tt.expectedEndTime.Truncate(time.Minute), actualEnd.Truncate(time.Minute), "Expected end time did not match")
-			require.Equal(t, tt.expectAlignedTimes, actualAligned, "Expected alignment flag did not match")
+				require.Equal(t, tt.expectedStartTime, actualStart, "Expected start time did not match")
+				// since end time might have the current value, we need to truncate the end times up to minutes when comparing
+				// time.Now().UTC() is called at slightly different moments, resulting in tiny differences in the timestamp
+				require.Equal(t, tt.expectedEndTime.Truncate(time.Minute), actualEnd.Truncate(time.Minute), "Expected end time did not match")
+				require.Equal(t, tt.expectAlignedTimes, actualAligned, "Expected alignment flag did not match")
+			}
 		})
 	}
 }

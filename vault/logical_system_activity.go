@@ -282,6 +282,11 @@ func getBillingPeriodTimes(d *framework.FieldData, billingStartTime time.Time) (
 	startTime := d.Get("start_time").(time.Time)
 	endTime := d.Get("end_time").(time.Time)
 
+	// ensure the end time is always later than the start time
+	if !startTime.IsZero() && !endTime.IsZero() && startTime.After(endTime) {
+		return time.Time{}, time.Time{}, false, fmt.Errorf("start_time is later than end_time")
+	}
+
 	var alignedStartTime, alignedEndTime time.Time
 	var timesAligned bool
 
@@ -301,11 +306,6 @@ func getBillingPeriodTimes(d *framework.FieldData, billingStartTime time.Time) (
 	// if the end time is in the current period, cap it at today
 	if alignedEndTime.After(time.Now().UTC()) {
 		alignedEndTime = time.Now().UTC()
-	}
-
-	// ensure the end time is always later than the start time
-	if alignedStartTime.After(alignedEndTime) {
-		return time.Time{}, time.Time{}, false, fmt.Errorf("start_time is later than end_time")
 	}
 
 	// Determine if any alignment occurred
