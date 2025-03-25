@@ -21,11 +21,50 @@ This documentation assumes the Azure method is mounted at the `/auth/azure`
 path in Vault. Since it is possible to enable auth methods at any location,
 please update your API calls accordingly.
 
-<Note title="Security improvements">
+## Token validation ((#token-validation))
 
-  @include 'azure-auth-resource-group-vm-vmss-security-improvement.mdx'
+Vault validates the resource group (`resource_group_name`), VM name (`vm_name`)
+and VM scale set name (`vmss_name`) parameters against token claims. Depending
+on the identities attached to the machine generating the MSI token, the
+associated claim must include at least one of the following claims
+to pass validation: `xms_mirid` or `xms_az_rid`.
 
-</Note>
+Vault also expects specific metadata and identity information depending on your
+system configuration.
+
+System assigned managed identity | User-assigned identity| Identity specified in Azure managed identity REST endpoint
+-------------------------------- | ----------------------| ----------------------------------------------------------
+Enabled                          | Any                   | Not required
+Not enabled                      | 1                     | Not required
+Not enabled                      | Multiple              | Required
+
+See [Azure managed identity REST endpoint reference](https://learn.microsoft.com/en-us/azure/app-service/overview-managed-identity?tabs=portal%2Chttp#rest-endpoint-reference)
+for more details on how to specify the identity in the request.
+
+#### When System-assigned managed identity is enabled
+
+Claim        | Required format
+------------ | ---------------
+`xms_mirid`  | `/subscriptions/{subscription-id}/resourcegroups/{resource-group-name}/providers/Microsoft.Compute/virtualMachines/{virtual-machine-name}`
+`xms_az_rid` | Does not exist
+
+#### When System-assigned managed identity is not enabled
+
+Claim        | Required format
+------------ | ---------------
+`xms_mirid`  | `/subscriptions/{subscription-id}/resourcegroups/{resource-group-name}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/{user-assigned-managed-identity}`
+`xms_az_rid` | `/subscriptions/{subscription-id}/resourcegroups/{resource-group-name}/providers/Microsoft.Compute/virtualMachines/{virtual-machine-name}`
+
+See [Managed identities for Azure resources frequently asked questions](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/managed-identities-faq#what-identity-will-imds-default-to-if-i-dont-specify-the-identity-in-the-request)
+for more details on what identity Azure Instance Metadata Service defaults to if no identity is specified in the request.
+
+When Vault evaluates the claim, it checks the validation parameter values
+against the claim parameters:
+
+- `{resource-group-name}` must match `resource_group_name`.
+- `{virtual-machine-name}` must match `vm_name` or `{vmss_name}_{instance-id}` if `vmss_name` is provided.
+
+If either check fails, the login also fails.
 
 ## Prerequisites:
 
