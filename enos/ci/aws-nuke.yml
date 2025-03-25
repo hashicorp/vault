@@ -58,7 +58,7 @@ presets:
 
   olderthan:
     # Filters resources by age (when available)
-    # 1m replaced in CI
+    # TIME_LIMIT replaced in CI
     filters:
       EC2Instance:
         - property: LaunchTime
@@ -102,10 +102,6 @@ presets:
   enos:
     # Existing CI to be cleaned up later
     filters:
-      EC2Instance:
-        - property: Tags.Name
-          type: glob
-          value: "enos-integration*"
       LambdaFunction:
         - property: Name
           value: "enos_cleanup"
