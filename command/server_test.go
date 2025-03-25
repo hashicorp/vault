@@ -92,11 +92,6 @@ ha_backend "inmem_ha" {
   redirect_addr        = "http://127.0.0.1:8200"
 }
 `
-	fileHCL = `
-storage "file" {
-  path = "/mnt/vault/data"
-}
-`
 	badHAInmemHCL = `
 ha_backend "inmem" {}
 `
