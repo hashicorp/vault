@@ -25,12 +25,12 @@ export function EntityAliasesCreateDuplicatesRequestFromJSONTyped(json, ignoreDi
         return json;
     }
     return {
-        count: json['count'] == null ? undefined : json['count'],
-        differentCase: json['different_case'] == null ? undefined : json['different_case'],
-        metadata: json['metadata'] == null ? undefined : json['metadata'],
-        mountAccessor: json['mount_accessor'] == null ? undefined : json['mount_accessor'],
-        name: json['name'] == null ? undefined : json['name'],
-        namespaceId: json['namespace_id'] == null ? undefined : json['namespace_id'],
+        'count': json['count'] == null ? undefined : json['count'],
+        'differentCase': json['different_case'] == null ? undefined : json['different_case'],
+        'metadata': json['metadata'] == null ? undefined : json['metadata'],
+        'mountAccessor': json['mount_accessor'] == null ? undefined : json['mount_accessor'],
+        'name': json['name'] == null ? undefined : json['name'],
+        'namespaceId': json['namespace_id'] == null ? undefined : json['namespace_id'],
     };
 }
 export function EntityAliasesCreateDuplicatesRequestToJSON(json) {
@@ -41,11 +41,11 @@ export function EntityAliasesCreateDuplicatesRequestToJSONTyped(value, ignoreDis
         return value;
     }
     return {
-        count: value['count'],
-        different_case: value['differentCase'],
-        metadata: value['metadata'],
-        mount_accessor: value['mountAccessor'],
-        name: value['name'],
-        namespace_id: value['namespaceId'],
+        'count': value['count'],
+        'different_case': value['differentCase'],
+        'metadata': value['metadata'],
+        'mount_accessor': value['mountAccessor'],
+        'name': value['name'],
+        'namespace_id': value['namespaceId'],
     };
 }

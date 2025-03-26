@@ -32,7 +32,7 @@ function SshVerifyOtpRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        otp: json['otp'] == null ? undefined : json['otp'],
+        'otp': json['otp'] == null ? undefined : json['otp'],
     };
 }
 function SshVerifyOtpRequestToJSON(json) {
@@ -43,6 +43,6 @@ function SshVerifyOtpRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        otp: value['otp'],
+        'otp': value['otp'],
     };
 }

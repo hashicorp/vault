@@ -25,15 +25,15 @@ export function KvV2ReadMetadataResponseFromJSONTyped(json, ignoreDiscriminator)
         return json;
     }
     return {
-        casRequired: json['cas_required'] == null ? undefined : json['cas_required'],
-        createdTime: json['created_time'] == null ? undefined : new Date(json['created_time']),
-        currentVersion: json['current_version'] == null ? undefined : json['current_version'],
-        customMetadata: json['custom_metadata'] == null ? undefined : json['custom_metadata'],
-        deleteVersionAfter: json['delete_version_after'] == null ? undefined : json['delete_version_after'],
-        maxVersions: json['max_versions'] == null ? undefined : json['max_versions'],
-        oldestVersion: json['oldest_version'] == null ? undefined : json['oldest_version'],
-        updatedTime: json['updated_time'] == null ? undefined : new Date(json['updated_time']),
-        versions: json['versions'] == null ? undefined : json['versions'],
+        'casRequired': json['cas_required'] == null ? undefined : json['cas_required'],
+        'createdTime': json['created_time'] == null ? undefined : (new Date(json['created_time'])),
+        'currentVersion': json['current_version'] == null ? undefined : json['current_version'],
+        'customMetadata': json['custom_metadata'] == null ? undefined : json['custom_metadata'],
+        'deleteVersionAfter': json['delete_version_after'] == null ? undefined : json['delete_version_after'],
+        'maxVersions': json['max_versions'] == null ? undefined : json['max_versions'],
+        'oldestVersion': json['oldest_version'] == null ? undefined : json['oldest_version'],
+        'updatedTime': json['updated_time'] == null ? undefined : (new Date(json['updated_time'])),
+        'versions': json['versions'] == null ? undefined : json['versions'],
     };
 }
 export function KvV2ReadMetadataResponseToJSON(json) {
@@ -44,14 +44,14 @@ export function KvV2ReadMetadataResponseToJSONTyped(value, ignoreDiscriminator =
         return value;
     }
     return {
-        cas_required: value['casRequired'],
-        created_time: value['createdTime'] == null ? undefined : value['createdTime'].toISOString(),
-        current_version: value['currentVersion'],
-        custom_metadata: value['customMetadata'],
-        delete_version_after: value['deleteVersionAfter'],
-        max_versions: value['maxVersions'],
-        oldest_version: value['oldestVersion'],
-        updated_time: value['updatedTime'] == null ? undefined : value['updatedTime'].toISOString(),
-        versions: value['versions'],
+        'cas_required': value['casRequired'],
+        'created_time': value['createdTime'] == null ? undefined : ((value['createdTime']).toISOString()),
+        'current_version': value['currentVersion'],
+        'custom_metadata': value['customMetadata'],
+        'delete_version_after': value['deleteVersionAfter'],
+        'max_versions': value['maxVersions'],
+        'oldest_version': value['oldestVersion'],
+        'updated_time': value['updatedTime'] == null ? undefined : ((value['updatedTime']).toISOString()),
+        'versions': value['versions'],
     };
 }

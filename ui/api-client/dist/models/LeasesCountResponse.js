@@ -32,8 +32,8 @@ function LeasesCountResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        counts: json['counts'] == null ? undefined : json['counts'],
-        leaseCount: json['lease_count'] == null ? undefined : json['lease_count'],
+        'counts': json['counts'] == null ? undefined : json['counts'],
+        'leaseCount': json['lease_count'] == null ? undefined : json['lease_count'],
     };
 }
 function LeasesCountResponseToJSON(json) {
@@ -44,7 +44,7 @@ function LeasesCountResponseToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        counts: value['counts'],
-        lease_count: value['leaseCount'],
+        'counts': value['counts'],
+        'lease_count': value['leaseCount'],
     };
 }

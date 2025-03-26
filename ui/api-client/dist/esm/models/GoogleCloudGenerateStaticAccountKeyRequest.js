@@ -25,9 +25,9 @@ export function GoogleCloudGenerateStaticAccountKeyRequestFromJSONTyped(json, ig
         return json;
     }
     return {
-        keyAlgorithm: json['key_algorithm'] == null ? undefined : json['key_algorithm'],
-        keyType: json['key_type'] == null ? undefined : json['key_type'],
-        ttl: json['ttl'] == null ? undefined : json['ttl'],
+        'keyAlgorithm': json['key_algorithm'] == null ? undefined : json['key_algorithm'],
+        'keyType': json['key_type'] == null ? undefined : json['key_type'],
+        'ttl': json['ttl'] == null ? undefined : json['ttl'],
     };
 }
 export function GoogleCloudGenerateStaticAccountKeyRequestToJSON(json) {
@@ -38,8 +38,8 @@ export function GoogleCloudGenerateStaticAccountKeyRequestToJSONTyped(value, ign
         return value;
     }
     return {
-        key_algorithm: value['keyAlgorithm'],
-        key_type: value['keyType'],
-        ttl: value['ttl'],
+        'key_algorithm': value['keyAlgorithm'],
+        'key_type': value['keyType'],
+        'ttl': value['ttl'],
     };
 }

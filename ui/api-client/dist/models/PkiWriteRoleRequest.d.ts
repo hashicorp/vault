@@ -311,9 +311,9 @@ export interface PkiWriteRoleRequest {
     usePss?: boolean;
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum PkiWriteRoleRequestKeyTypeEnum {
     RSA = "rsa",
     EC = "ec",

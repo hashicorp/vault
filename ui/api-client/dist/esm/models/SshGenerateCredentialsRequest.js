@@ -25,8 +25,8 @@ export function SshGenerateCredentialsRequestFromJSONTyped(json, ignoreDiscrimin
         return json;
     }
     return {
-        ip: json['ip'] == null ? undefined : json['ip'],
-        username: json['username'] == null ? undefined : json['username'],
+        'ip': json['ip'] == null ? undefined : json['ip'],
+        'username': json['username'] == null ? undefined : json['username'],
     };
 }
 export function SshGenerateCredentialsRequestToJSON(json) {
@@ -37,7 +37,7 @@ export function SshGenerateCredentialsRequestToJSONTyped(value, ignoreDiscrimina
         return value;
     }
     return {
-        ip: value['ip'],
-        username: value['username'],
+        'ip': value['ip'],
+        'username': value['username'],
     };
 }

@@ -32,8 +32,8 @@ function TransitRotateKeyRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        managedKeyId: json['managed_key_id'] == null ? undefined : json['managed_key_id'],
-        managedKeyName: json['managed_key_name'] == null ? undefined : json['managed_key_name'],
+        'managedKeyId': json['managed_key_id'] == null ? undefined : json['managed_key_id'],
+        'managedKeyName': json['managed_key_name'] == null ? undefined : json['managed_key_name'],
     };
 }
 function TransitRotateKeyRequestToJSON(json) {
@@ -44,7 +44,7 @@ function TransitRotateKeyRequestToJSONTyped(value, ignoreDiscriminator = false) 
         return value;
     }
     return {
-        managed_key_id: value['managedKeyId'],
-        managed_key_name: value['managedKeyName'],
+        'managed_key_id': value['managedKeyId'],
+        'managed_key_name': value['managedKeyName'],
     };
 }

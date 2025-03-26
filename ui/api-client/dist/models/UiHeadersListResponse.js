@@ -32,7 +32,7 @@ function UiHeadersListResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        keys: json['keys'] == null ? undefined : json['keys'],
+        'keys': json['keys'] == null ? undefined : json['keys'],
     };
 }
 function UiHeadersListResponseToJSON(json) {
@@ -43,6 +43,6 @@ function UiHeadersListResponseToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        keys: value['keys'],
+        'keys': value['keys'],
     };
 }

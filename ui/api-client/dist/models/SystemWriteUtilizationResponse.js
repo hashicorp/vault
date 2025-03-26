@@ -32,7 +32,7 @@ function SystemWriteUtilizationResponseFromJSONTyped(json, ignoreDiscriminator) 
         return json;
     }
     return {
-        utilizationBundle: json['utilization_bundle'] == null ? undefined : json['utilization_bundle'],
+        'utilizationBundle': json['utilization_bundle'] == null ? undefined : json['utilization_bundle'],
     };
 }
 function SystemWriteUtilizationResponseToJSON(json) {
@@ -43,6 +43,6 @@ function SystemWriteUtilizationResponseToJSONTyped(value, ignoreDiscriminator = 
         return value;
     }
     return {
-        utilization_bundle: value['utilizationBundle'],
+        'utilization_bundle': value['utilizationBundle'],
     };
 }

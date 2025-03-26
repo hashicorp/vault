@@ -32,8 +32,8 @@ function TransitGenerateRandomWithSourceRequestFromJSONTyped(json, ignoreDiscrim
         return json;
     }
     return {
-        bytes: json['bytes'] == null ? undefined : json['bytes'],
-        format: json['format'] == null ? undefined : json['format'],
+        'bytes': json['bytes'] == null ? undefined : json['bytes'],
+        'format': json['format'] == null ? undefined : json['format'],
     };
 }
 function TransitGenerateRandomWithSourceRequestToJSON(json) {
@@ -44,7 +44,7 @@ function TransitGenerateRandomWithSourceRequestToJSONTyped(value, ignoreDiscrimi
         return value;
     }
     return {
-        bytes: value['bytes'],
-        format: value['format'],
+        'bytes': value['bytes'],
+        'format': value['format'],
     };
 }

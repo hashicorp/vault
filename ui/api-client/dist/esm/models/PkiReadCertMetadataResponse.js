@@ -25,11 +25,11 @@ export function PkiReadCertMetadataResponseFromJSONTyped(json, ignoreDiscriminat
         return json;
     }
     return {
-        certMetadata: json['cert_metadata'] == null ? undefined : json['cert_metadata'],
-        expiration: json['expiration'] == null ? undefined : json['expiration'],
-        issuerId: json['issuer_id'] == null ? undefined : json['issuer_id'],
-        role: json['role'] == null ? undefined : json['role'],
-        serialNumber: json['serial_number'] == null ? undefined : json['serial_number'],
+        'certMetadata': json['cert_metadata'] == null ? undefined : json['cert_metadata'],
+        'expiration': json['expiration'] == null ? undefined : json['expiration'],
+        'issuerId': json['issuer_id'] == null ? undefined : json['issuer_id'],
+        'role': json['role'] == null ? undefined : json['role'],
+        'serialNumber': json['serial_number'] == null ? undefined : json['serial_number'],
     };
 }
 export function PkiReadCertMetadataResponseToJSON(json) {
@@ -40,10 +40,10 @@ export function PkiReadCertMetadataResponseToJSONTyped(value, ignoreDiscriminato
         return value;
     }
     return {
-        cert_metadata: value['certMetadata'],
-        expiration: value['expiration'],
-        issuer_id: value['issuerId'],
-        role: value['role'],
-        serial_number: value['serialNumber'],
+        'cert_metadata': value['certMetadata'],
+        'expiration': value['expiration'],
+        'issuer_id': value['issuerId'],
+        'role': value['role'],
+        'serial_number': value['serialNumber'],
     };
 }

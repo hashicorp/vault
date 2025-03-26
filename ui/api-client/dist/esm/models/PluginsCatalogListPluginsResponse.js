@@ -25,7 +25,7 @@ export function PluginsCatalogListPluginsResponseFromJSONTyped(json, ignoreDiscr
         return json;
     }
     return {
-        detailed: json['detailed'] == null ? undefined : json['detailed'],
+        'detailed': json['detailed'] == null ? undefined : json['detailed'],
     };
 }
 export function PluginsCatalogListPluginsResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function PluginsCatalogListPluginsResponseToJSONTyped(value, ignoreDiscri
         return value;
     }
     return {
-        detailed: value['detailed'],
+        'detailed': value['detailed'],
     };
 }

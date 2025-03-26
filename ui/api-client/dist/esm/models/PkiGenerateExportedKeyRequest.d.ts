@@ -47,9 +47,9 @@ export interface PkiGenerateExportedKeyRequest {
     managedKeyName?: string;
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum PkiGenerateExportedKeyRequestKeyTypeEnum {
     RSA = "rsa",
     EC = "ec",

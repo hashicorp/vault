@@ -32,9 +32,9 @@ function UnsealRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        key: json['key'] == null ? undefined : json['key'],
-        migrate: json['migrate'] == null ? undefined : json['migrate'],
-        reset: json['reset'] == null ? undefined : json['reset'],
+        'key': json['key'] == null ? undefined : json['key'],
+        'migrate': json['migrate'] == null ? undefined : json['migrate'],
+        'reset': json['reset'] == null ? undefined : json['reset'],
     };
 }
 function UnsealRequestToJSON(json) {
@@ -45,8 +45,8 @@ function UnsealRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        key: value['key'],
-        migrate: value['migrate'],
-        reset: value['reset'],
+        'key': value['key'],
+        'migrate': value['migrate'],
+        'reset': value['reset'],
     };
 }

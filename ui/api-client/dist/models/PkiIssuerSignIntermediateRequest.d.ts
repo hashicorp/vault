@@ -233,18 +233,18 @@ export interface PkiIssuerSignIntermediateRequest {
     usePss?: boolean;
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum PkiIssuerSignIntermediateRequestFormatEnum {
     PEM = "pem",
     DER = "der",
     PEM_BUNDLE = "pem_bundle"
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum PkiIssuerSignIntermediateRequestPrivateKeyFormatEnum {
     EMPTY = "",
     DER = "der",

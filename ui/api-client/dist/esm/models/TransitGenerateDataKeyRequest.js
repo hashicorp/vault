@@ -25,11 +25,11 @@ export function TransitGenerateDataKeyRequestFromJSONTyped(json, ignoreDiscrimin
         return json;
     }
     return {
-        bits: json['bits'] == null ? undefined : json['bits'],
-        context: json['context'] == null ? undefined : json['context'],
-        keyVersion: json['key_version'] == null ? undefined : json['key_version'],
-        nonce: json['nonce'] == null ? undefined : json['nonce'],
-        paddingScheme: json['padding_scheme'] == null ? undefined : json['padding_scheme'],
+        'bits': json['bits'] == null ? undefined : json['bits'],
+        'context': json['context'] == null ? undefined : json['context'],
+        'keyVersion': json['key_version'] == null ? undefined : json['key_version'],
+        'nonce': json['nonce'] == null ? undefined : json['nonce'],
+        'paddingScheme': json['padding_scheme'] == null ? undefined : json['padding_scheme'],
     };
 }
 export function TransitGenerateDataKeyRequestToJSON(json) {
@@ -40,10 +40,10 @@ export function TransitGenerateDataKeyRequestToJSONTyped(value, ignoreDiscrimina
         return value;
     }
     return {
-        bits: value['bits'],
-        context: value['context'],
-        key_version: value['keyVersion'],
-        nonce: value['nonce'],
-        padding_scheme: value['paddingScheme'],
+        'bits': value['bits'],
+        'context': value['context'],
+        'key_version': value['keyVersion'],
+        'nonce': value['nonce'],
+        'padding_scheme': value['paddingScheme'],
     };
 }

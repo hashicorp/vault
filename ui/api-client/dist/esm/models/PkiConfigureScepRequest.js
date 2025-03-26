@@ -12,16 +12,16 @@
  * Do not edit the class manually.
  */
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export var PkiConfigureScepRequestAllowedDigestAlgorithmsEnum;
 (function (PkiConfigureScepRequestAllowedDigestAlgorithmsEnum) {
 })(PkiConfigureScepRequestAllowedDigestAlgorithmsEnum || (PkiConfigureScepRequestAllowedDigestAlgorithmsEnum = {}));
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export var PkiConfigureScepRequestAllowedEncryptionAlgorithmsEnum;
 (function (PkiConfigureScepRequestAllowedEncryptionAlgorithmsEnum) {
 })(PkiConfigureScepRequestAllowedEncryptionAlgorithmsEnum || (PkiConfigureScepRequestAllowedEncryptionAlgorithmsEnum = {}));
@@ -39,11 +39,11 @@ export function PkiConfigureScepRequestFromJSONTyped(json, ignoreDiscriminator) 
         return json;
     }
     return {
-        allowedDigestAlgorithms: json['allowed_digest_algorithms'] == null ? undefined : json['allowed_digest_algorithms'],
-        allowedEncryptionAlgorithms: json['allowed_encryption_algorithms'] == null ? undefined : json['allowed_encryption_algorithms'],
-        authenticators: json['authenticators'] == null ? undefined : json['authenticators'],
-        defaultPathPolicy: json['default_path_policy'] == null ? undefined : json['default_path_policy'],
-        enabled: json['enabled'] == null ? undefined : json['enabled'],
+        'allowedDigestAlgorithms': json['allowed_digest_algorithms'] == null ? undefined : json['allowed_digest_algorithms'],
+        'allowedEncryptionAlgorithms': json['allowed_encryption_algorithms'] == null ? undefined : json['allowed_encryption_algorithms'],
+        'authenticators': json['authenticators'] == null ? undefined : json['authenticators'],
+        'defaultPathPolicy': json['default_path_policy'] == null ? undefined : json['default_path_policy'],
+        'enabled': json['enabled'] == null ? undefined : json['enabled'],
     };
 }
 export function PkiConfigureScepRequestToJSON(json) {
@@ -54,10 +54,10 @@ export function PkiConfigureScepRequestToJSONTyped(value, ignoreDiscriminator = 
         return value;
     }
     return {
-        allowed_digest_algorithms: value['allowedDigestAlgorithms'],
-        allowed_encryption_algorithms: value['allowedEncryptionAlgorithms'],
-        authenticators: value['authenticators'],
-        default_path_policy: value['defaultPathPolicy'],
-        enabled: value['enabled'],
+        'allowed_digest_algorithms': value['allowedDigestAlgorithms'],
+        'allowed_encryption_algorithms': value['allowedEncryptionAlgorithms'],
+        'authenticators': value['authenticators'],
+        'default_path_policy': value['defaultPathPolicy'],
+        'enabled': value['enabled'],
     };
 }

@@ -36,9 +36,9 @@ export interface PkiWriteIssuerIssuerRefExternalPolicySignPolicyRequest {
     removeRootsFromChain?: boolean;
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum PkiWriteIssuerIssuerRefExternalPolicySignPolicyRequestFormatEnum {
     PEM = "pem",
     DER = "der",

@@ -32,7 +32,7 @@ function PkiWriteKeyRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        keyName: json['key_name'] == null ? undefined : json['key_name'],
+        'keyName': json['key_name'] == null ? undefined : json['key_name'],
     };
 }
 function PkiWriteKeyRequestToJSON(json) {
@@ -43,6 +43,6 @@ function PkiWriteKeyRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        key_name: value['keyName'],
+        'key_name': value['keyName'],
     };
 }

@@ -25,10 +25,8 @@ export function PkiIssuerSignSelfIssuedRequestFromJSONTyped(json, ignoreDiscrimi
         return json;
     }
     return {
-        certificate: json['certificate'] == null ? undefined : json['certificate'],
-        requireMatchingCertificateAlgorithms: json['require_matching_certificate_algorithms'] == null
-            ? undefined
-            : json['require_matching_certificate_algorithms'],
+        'certificate': json['certificate'] == null ? undefined : json['certificate'],
+        'requireMatchingCertificateAlgorithms': json['require_matching_certificate_algorithms'] == null ? undefined : json['require_matching_certificate_algorithms'],
     };
 }
 export function PkiIssuerSignSelfIssuedRequestToJSON(json) {
@@ -39,7 +37,7 @@ export function PkiIssuerSignSelfIssuedRequestToJSONTyped(value, ignoreDiscrimin
         return value;
     }
     return {
-        certificate: value['certificate'],
-        require_matching_certificate_algorithms: value['requireMatchingCertificateAlgorithms'],
+        'certificate': value['certificate'],
+        'require_matching_certificate_algorithms': value['requireMatchingCertificateAlgorithms'],
     };
 }

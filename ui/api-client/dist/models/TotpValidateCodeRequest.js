@@ -32,7 +32,7 @@ function TotpValidateCodeRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        code: json['code'] == null ? undefined : json['code'],
+        'code': json['code'] == null ? undefined : json['code'],
     };
 }
 function TotpValidateCodeRequestToJSON(json) {
@@ -43,6 +43,6 @@ function TotpValidateCodeRequestToJSONTyped(value, ignoreDiscriminator = false) 
         return value;
     }
     return {
-        code: value['code'],
+        'code': value['code'],
     };
 }

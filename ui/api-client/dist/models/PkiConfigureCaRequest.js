@@ -32,7 +32,7 @@ function PkiConfigureCaRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        pemBundle: json['pem_bundle'] == null ? undefined : json['pem_bundle'],
+        'pemBundle': json['pem_bundle'] == null ? undefined : json['pem_bundle'],
     };
 }
 function PkiConfigureCaRequestToJSON(json) {
@@ -43,6 +43,6 @@ function PkiConfigureCaRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        pem_bundle: value['pemBundle'],
+        'pem_bundle': value['pemBundle'],
     };
 }

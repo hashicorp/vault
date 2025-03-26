@@ -32,7 +32,7 @@ function PkiIssuerReadCrlPemResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        crl: json['crl'] == null ? undefined : json['crl'],
+        'crl': json['crl'] == null ? undefined : json['crl'],
     };
 }
 function PkiIssuerReadCrlPemResponseToJSON(json) {
@@ -43,6 +43,6 @@ function PkiIssuerReadCrlPemResponseToJSONTyped(value, ignoreDiscriminator = fal
         return value;
     }
     return {
-        crl: value['crl'],
+        'crl': value['crl'],
     };
 }

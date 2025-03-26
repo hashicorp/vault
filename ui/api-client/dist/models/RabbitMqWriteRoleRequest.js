@@ -32,9 +32,9 @@ function RabbitMqWriteRoleRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        tags: json['tags'] == null ? undefined : json['tags'],
-        vhostTopics: json['vhost_topics'] == null ? undefined : json['vhost_topics'],
-        vhosts: json['vhosts'] == null ? undefined : json['vhosts'],
+        'tags': json['tags'] == null ? undefined : json['tags'],
+        'vhostTopics': json['vhost_topics'] == null ? undefined : json['vhost_topics'],
+        'vhosts': json['vhosts'] == null ? undefined : json['vhosts'],
     };
 }
 function RabbitMqWriteRoleRequestToJSON(json) {
@@ -45,8 +45,8 @@ function RabbitMqWriteRoleRequestToJSONTyped(value, ignoreDiscriminator = false)
         return value;
     }
     return {
-        tags: value['tags'],
-        vhost_topics: value['vhostTopics'],
-        vhosts: value['vhosts'],
+        'tags': value['tags'],
+        'vhost_topics': value['vhostTopics'],
+        'vhosts': value['vhosts'],
     };
 }

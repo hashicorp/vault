@@ -32,13 +32,13 @@ function MfaUpdateOktaMethodRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        apiToken: json['api_token'] == null ? undefined : json['api_token'],
-        baseUrl: json['base_url'] == null ? undefined : json['base_url'],
-        methodName: json['method_name'] == null ? undefined : json['method_name'],
-        orgName: json['org_name'] == null ? undefined : json['org_name'],
-        primaryEmail: json['primary_email'] == null ? undefined : json['primary_email'],
-        production: json['production'] == null ? undefined : json['production'],
-        usernameFormat: json['username_format'] == null ? undefined : json['username_format'],
+        'apiToken': json['api_token'] == null ? undefined : json['api_token'],
+        'baseUrl': json['base_url'] == null ? undefined : json['base_url'],
+        'methodName': json['method_name'] == null ? undefined : json['method_name'],
+        'orgName': json['org_name'] == null ? undefined : json['org_name'],
+        'primaryEmail': json['primary_email'] == null ? undefined : json['primary_email'],
+        'production': json['production'] == null ? undefined : json['production'],
+        'usernameFormat': json['username_format'] == null ? undefined : json['username_format'],
     };
 }
 function MfaUpdateOktaMethodRequestToJSON(json) {
@@ -49,12 +49,12 @@ function MfaUpdateOktaMethodRequestToJSONTyped(value, ignoreDiscriminator = fals
         return value;
     }
     return {
-        api_token: value['apiToken'],
-        base_url: value['baseUrl'],
-        method_name: value['methodName'],
-        org_name: value['orgName'],
-        primary_email: value['primaryEmail'],
-        production: value['production'],
-        username_format: value['usernameFormat'],
+        'api_token': value['apiToken'],
+        'base_url': value['baseUrl'],
+        'method_name': value['methodName'],
+        'org_name': value['orgName'],
+        'primary_email': value['primaryEmail'],
+        'production': value['production'],
+        'username_format': value['usernameFormat'],
     };
 }

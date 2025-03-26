@@ -25,13 +25,13 @@ export function GroupCreateRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        id: json['id'] == null ? undefined : json['id'],
-        memberEntityIds: json['member_entity_ids'] == null ? undefined : json['member_entity_ids'],
-        memberGroupIds: json['member_group_ids'] == null ? undefined : json['member_group_ids'],
-        metadata: json['metadata'] == null ? undefined : json['metadata'],
-        name: json['name'] == null ? undefined : json['name'],
-        policies: json['policies'] == null ? undefined : json['policies'],
-        type: json['type'] == null ? undefined : json['type'],
+        'id': json['id'] == null ? undefined : json['id'],
+        'memberEntityIds': json['member_entity_ids'] == null ? undefined : json['member_entity_ids'],
+        'memberGroupIds': json['member_group_ids'] == null ? undefined : json['member_group_ids'],
+        'metadata': json['metadata'] == null ? undefined : json['metadata'],
+        'name': json['name'] == null ? undefined : json['name'],
+        'policies': json['policies'] == null ? undefined : json['policies'],
+        'type': json['type'] == null ? undefined : json['type'],
     };
 }
 export function GroupCreateRequestToJSON(json) {
@@ -42,12 +42,12 @@ export function GroupCreateRequestToJSONTyped(value, ignoreDiscriminator = false
         return value;
     }
     return {
-        id: value['id'],
-        member_entity_ids: value['memberEntityIds'],
-        member_group_ids: value['memberGroupIds'],
-        metadata: value['metadata'],
-        name: value['name'],
-        policies: value['policies'],
-        type: value['type'],
+        'id': value['id'],
+        'member_entity_ids': value['memberEntityIds'],
+        'member_group_ids': value['memberGroupIds'],
+        'metadata': value['metadata'],
+        'name': value['name'],
+        'policies': value['policies'],
+        'type': value['type'],
     };
 }

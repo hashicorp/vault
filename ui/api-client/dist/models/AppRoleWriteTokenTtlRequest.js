@@ -32,7 +32,7 @@ function AppRoleWriteTokenTtlRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        tokenTtl: json['token_ttl'] == null ? undefined : json['token_ttl'],
+        'tokenTtl': json['token_ttl'] == null ? undefined : json['token_ttl'],
     };
 }
 function AppRoleWriteTokenTtlRequestToJSON(json) {
@@ -43,6 +43,6 @@ function AppRoleWriteTokenTtlRequestToJSONTyped(value, ignoreDiscriminator = fal
         return value;
     }
     return {
-        token_ttl: value['tokenTtl'],
+        'token_ttl': value['tokenTtl'],
     };
 }

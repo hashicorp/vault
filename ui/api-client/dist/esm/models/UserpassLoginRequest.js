@@ -25,7 +25,7 @@ export function UserpassLoginRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        password: json['password'] == null ? undefined : json['password'],
+        'password': json['password'] == null ? undefined : json['password'],
     };
 }
 export function UserpassLoginRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function UserpassLoginRequestToJSONTyped(value, ignoreDiscriminator = fal
         return value;
     }
     return {
-        password: value['password'],
+        'password': value['password'],
     };
 }

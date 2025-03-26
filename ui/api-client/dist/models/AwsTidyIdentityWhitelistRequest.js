@@ -32,7 +32,7 @@ function AwsTidyIdentityWhitelistRequestFromJSONTyped(json, ignoreDiscriminator)
         return json;
     }
     return {
-        safetyBuffer: json['safety_buffer'] == null ? undefined : json['safety_buffer'],
+        'safetyBuffer': json['safety_buffer'] == null ? undefined : json['safety_buffer'],
     };
 }
 function AwsTidyIdentityWhitelistRequestToJSON(json) {
@@ -43,6 +43,6 @@ function AwsTidyIdentityWhitelistRequestToJSONTyped(value, ignoreDiscriminator =
         return value;
     }
     return {
-        safety_buffer: value['safetyBuffer'],
+        'safety_buffer': value['safetyBuffer'],
     };
 }

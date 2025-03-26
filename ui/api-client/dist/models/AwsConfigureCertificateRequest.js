@@ -32,8 +32,8 @@ function AwsConfigureCertificateRequestFromJSONTyped(json, ignoreDiscriminator) 
         return json;
     }
     return {
-        awsPublicCert: json['aws_public_cert'] == null ? undefined : json['aws_public_cert'],
-        type: json['type'] == null ? undefined : json['type'],
+        'awsPublicCert': json['aws_public_cert'] == null ? undefined : json['aws_public_cert'],
+        'type': json['type'] == null ? undefined : json['type'],
     };
 }
 function AwsConfigureCertificateRequestToJSON(json) {
@@ -44,7 +44,7 @@ function AwsConfigureCertificateRequestToJSONTyped(value, ignoreDiscriminator = 
         return value;
     }
     return {
-        aws_public_cert: value['awsPublicCert'],
-        type: value['type'],
+        'aws_public_cert': value['awsPublicCert'],
+        'type': value['type'],
     };
 }

@@ -1,0 +1,3 @@
+```release-note:improvement
+storage/raft: Upgrade hashicorp/raft library to v1.7.3 which includes additional logging on the leader when opening and sending a snapshot to a follower.
+```

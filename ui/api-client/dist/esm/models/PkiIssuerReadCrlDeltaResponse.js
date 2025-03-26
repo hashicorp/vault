@@ -25,7 +25,7 @@ export function PkiIssuerReadCrlDeltaResponseFromJSONTyped(json, ignoreDiscrimin
         return json;
     }
     return {
-        crl: json['crl'] == null ? undefined : json['crl'],
+        'crl': json['crl'] == null ? undefined : json['crl'],
     };
 }
 export function PkiIssuerReadCrlDeltaResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function PkiIssuerReadCrlDeltaResponseToJSONTyped(value, ignoreDiscrimina
         return value;
     }
     return {
-        crl: value['crl'],
+        'crl': value['crl'],
     };
 }

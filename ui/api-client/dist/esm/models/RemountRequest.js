@@ -25,8 +25,8 @@ export function RemountRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        from: json['from'] == null ? undefined : json['from'],
-        to: json['to'] == null ? undefined : json['to'],
+        'from': json['from'] == null ? undefined : json['from'],
+        'to': json['to'] == null ? undefined : json['to'],
     };
 }
 export function RemountRequestToJSON(json) {
@@ -37,7 +37,7 @@ export function RemountRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        from: value['from'],
-        to: value['to'],
+        'from': value['from'],
+        'to': value['to'],
     };
 }

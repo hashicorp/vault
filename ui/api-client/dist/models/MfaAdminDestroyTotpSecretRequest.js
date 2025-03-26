@@ -36,8 +36,8 @@ function MfaAdminDestroyTotpSecretRequestFromJSONTyped(json, ignoreDiscriminator
         return json;
     }
     return {
-        entityId: json['entity_id'],
-        methodId: json['method_id'],
+        'entityId': json['entity_id'],
+        'methodId': json['method_id'],
     };
 }
 function MfaAdminDestroyTotpSecretRequestToJSON(json) {
@@ -48,7 +48,7 @@ function MfaAdminDestroyTotpSecretRequestToJSONTyped(value, ignoreDiscriminator 
         return value;
     }
     return {
-        entity_id: value['entityId'],
-        method_id: value['methodId'],
+        'entity_id': value['entityId'],
+        'method_id': value['methodId'],
     };
 }

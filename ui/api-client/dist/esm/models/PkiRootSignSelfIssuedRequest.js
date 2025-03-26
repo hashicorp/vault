@@ -25,11 +25,9 @@ export function PkiRootSignSelfIssuedRequestFromJSONTyped(json, ignoreDiscrimina
         return json;
     }
     return {
-        certificate: json['certificate'] == null ? undefined : json['certificate'],
-        issuerRef: json['issuer_ref'] == null ? undefined : json['issuer_ref'],
-        requireMatchingCertificateAlgorithms: json['require_matching_certificate_algorithms'] == null
-            ? undefined
-            : json['require_matching_certificate_algorithms'],
+        'certificate': json['certificate'] == null ? undefined : json['certificate'],
+        'issuerRef': json['issuer_ref'] == null ? undefined : json['issuer_ref'],
+        'requireMatchingCertificateAlgorithms': json['require_matching_certificate_algorithms'] == null ? undefined : json['require_matching_certificate_algorithms'],
     };
 }
 export function PkiRootSignSelfIssuedRequestToJSON(json) {
@@ -40,8 +38,8 @@ export function PkiRootSignSelfIssuedRequestToJSONTyped(value, ignoreDiscriminat
         return value;
     }
     return {
-        certificate: value['certificate'],
-        issuer_ref: value['issuerRef'],
-        require_matching_certificate_algorithms: value['requireMatchingCertificateAlgorithms'],
+        'certificate': value['certificate'],
+        'issuer_ref': value['issuerRef'],
+        'require_matching_certificate_algorithms': value['requireMatchingCertificateAlgorithms'],
     };
 }

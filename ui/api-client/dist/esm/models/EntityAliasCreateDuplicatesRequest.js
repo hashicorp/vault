@@ -25,11 +25,11 @@ export function EntityAliasCreateDuplicatesRequestFromJSONTyped(json, ignoreDisc
         return json;
     }
     return {
-        canonicalId: json['canonical_id'] == null ? undefined : json['canonical_id'],
-        metadata: json['metadata'] == null ? undefined : json['metadata'],
-        mountAccessor: json['mount_accessor'] == null ? undefined : json['mount_accessor'],
-        name: json['name'] == null ? undefined : json['name'],
-        namespaceId: json['namespace_id'] == null ? undefined : json['namespace_id'],
+        'canonicalId': json['canonical_id'] == null ? undefined : json['canonical_id'],
+        'metadata': json['metadata'] == null ? undefined : json['metadata'],
+        'mountAccessor': json['mount_accessor'] == null ? undefined : json['mount_accessor'],
+        'name': json['name'] == null ? undefined : json['name'],
+        'namespaceId': json['namespace_id'] == null ? undefined : json['namespace_id'],
     };
 }
 export function EntityAliasCreateDuplicatesRequestToJSON(json) {
@@ -40,10 +40,10 @@ export function EntityAliasCreateDuplicatesRequestToJSONTyped(value, ignoreDiscr
         return value;
     }
     return {
-        canonical_id: value['canonicalId'],
-        metadata: value['metadata'],
-        mount_accessor: value['mountAccessor'],
-        name: value['name'],
-        namespace_id: value['namespaceId'],
+        'canonical_id': value['canonicalId'],
+        'metadata': value['metadata'],
+        'mount_accessor': value['mountAccessor'],
+        'name': value['name'],
+        'namespace_id': value['namespaceId'],
     };
 }

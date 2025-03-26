@@ -40,15 +40,15 @@ function OidcProviderAuthorizeWithParametersRequestFromJSONTyped(json, ignoreDis
         return json;
     }
     return {
-        clientId: json['client_id'],
-        codeChallenge: json['code_challenge'] == null ? undefined : json['code_challenge'],
-        codeChallengeMethod: json['code_challenge_method'] == null ? undefined : json['code_challenge_method'],
-        maxAge: json['max_age'] == null ? undefined : json['max_age'],
-        nonce: json['nonce'] == null ? undefined : json['nonce'],
-        redirectUri: json['redirect_uri'],
-        responseType: json['response_type'],
-        scope: json['scope'],
-        state: json['state'] == null ? undefined : json['state'],
+        'clientId': json['client_id'],
+        'codeChallenge': json['code_challenge'] == null ? undefined : json['code_challenge'],
+        'codeChallengeMethod': json['code_challenge_method'] == null ? undefined : json['code_challenge_method'],
+        'maxAge': json['max_age'] == null ? undefined : json['max_age'],
+        'nonce': json['nonce'] == null ? undefined : json['nonce'],
+        'redirectUri': json['redirect_uri'],
+        'responseType': json['response_type'],
+        'scope': json['scope'],
+        'state': json['state'] == null ? undefined : json['state'],
     };
 }
 function OidcProviderAuthorizeWithParametersRequestToJSON(json) {
@@ -59,14 +59,14 @@ function OidcProviderAuthorizeWithParametersRequestToJSONTyped(value, ignoreDisc
         return value;
     }
     return {
-        client_id: value['clientId'],
-        code_challenge: value['codeChallenge'],
-        code_challenge_method: value['codeChallengeMethod'],
-        max_age: value['maxAge'],
-        nonce: value['nonce'],
-        redirect_uri: value['redirectUri'],
-        response_type: value['responseType'],
-        scope: value['scope'],
-        state: value['state'],
+        'client_id': value['clientId'],
+        'code_challenge': value['codeChallenge'],
+        'code_challenge_method': value['codeChallengeMethod'],
+        'max_age': value['maxAge'],
+        'nonce': value['nonce'],
+        'redirect_uri': value['redirectUri'],
+        'response_type': value['responseType'],
+        'scope': value['scope'],
+        'state': value['state'],
     };
 }

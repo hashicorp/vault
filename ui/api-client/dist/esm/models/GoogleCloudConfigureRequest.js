@@ -25,16 +25,16 @@ export function GoogleCloudConfigureRequestFromJSONTyped(json, ignoreDiscriminat
         return json;
     }
     return {
-        credentials: json['credentials'] == null ? undefined : json['credentials'],
-        disableAutomatedRotation: json['disable_automated_rotation'] == null ? undefined : json['disable_automated_rotation'],
-        identityTokenAudience: json['identity_token_audience'] == null ? undefined : json['identity_token_audience'],
-        identityTokenTtl: json['identity_token_ttl'] == null ? undefined : json['identity_token_ttl'],
-        maxTtl: json['max_ttl'] == null ? undefined : json['max_ttl'],
-        rotationPeriod: json['rotation_period'] == null ? undefined : json['rotation_period'],
-        rotationSchedule: json['rotation_schedule'] == null ? undefined : json['rotation_schedule'],
-        rotationWindow: json['rotation_window'] == null ? undefined : json['rotation_window'],
-        serviceAccountEmail: json['service_account_email'] == null ? undefined : json['service_account_email'],
-        ttl: json['ttl'] == null ? undefined : json['ttl'],
+        'credentials': json['credentials'] == null ? undefined : json['credentials'],
+        'disableAutomatedRotation': json['disable_automated_rotation'] == null ? undefined : json['disable_automated_rotation'],
+        'identityTokenAudience': json['identity_token_audience'] == null ? undefined : json['identity_token_audience'],
+        'identityTokenTtl': json['identity_token_ttl'] == null ? undefined : json['identity_token_ttl'],
+        'maxTtl': json['max_ttl'] == null ? undefined : json['max_ttl'],
+        'rotationPeriod': json['rotation_period'] == null ? undefined : json['rotation_period'],
+        'rotationSchedule': json['rotation_schedule'] == null ? undefined : json['rotation_schedule'],
+        'rotationWindow': json['rotation_window'] == null ? undefined : json['rotation_window'],
+        'serviceAccountEmail': json['service_account_email'] == null ? undefined : json['service_account_email'],
+        'ttl': json['ttl'] == null ? undefined : json['ttl'],
     };
 }
 export function GoogleCloudConfigureRequestToJSON(json) {
@@ -45,15 +45,15 @@ export function GoogleCloudConfigureRequestToJSONTyped(value, ignoreDiscriminato
         return value;
     }
     return {
-        credentials: value['credentials'],
-        disable_automated_rotation: value['disableAutomatedRotation'],
-        identity_token_audience: value['identityTokenAudience'],
-        identity_token_ttl: value['identityTokenTtl'],
-        max_ttl: value['maxTtl'],
-        rotation_period: value['rotationPeriod'],
-        rotation_schedule: value['rotationSchedule'],
-        rotation_window: value['rotationWindow'],
-        service_account_email: value['serviceAccountEmail'],
-        ttl: value['ttl'],
+        'credentials': value['credentials'],
+        'disable_automated_rotation': value['disableAutomatedRotation'],
+        'identity_token_audience': value['identityTokenAudience'],
+        'identity_token_ttl': value['identityTokenTtl'],
+        'max_ttl': value['maxTtl'],
+        'rotation_period': value['rotationPeriod'],
+        'rotation_schedule': value['rotationSchedule'],
+        'rotation_window': value['rotationWindow'],
+        'service_account_email': value['serviceAccountEmail'],
+        'ttl': value['ttl'],
     };
 }

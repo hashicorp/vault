@@ -25,11 +25,11 @@ export function EntityUpdateAliasByIdRequestFromJSONTyped(json, ignoreDiscrimina
         return json;
     }
     return {
-        canonicalId: json['canonical_id'] == null ? undefined : json['canonical_id'],
-        customMetadata: json['custom_metadata'] == null ? undefined : json['custom_metadata'],
-        entityId: json['entity_id'] == null ? undefined : json['entity_id'],
-        mountAccessor: json['mount_accessor'] == null ? undefined : json['mount_accessor'],
-        name: json['name'] == null ? undefined : json['name'],
+        'canonicalId': json['canonical_id'] == null ? undefined : json['canonical_id'],
+        'customMetadata': json['custom_metadata'] == null ? undefined : json['custom_metadata'],
+        'entityId': json['entity_id'] == null ? undefined : json['entity_id'],
+        'mountAccessor': json['mount_accessor'] == null ? undefined : json['mount_accessor'],
+        'name': json['name'] == null ? undefined : json['name'],
     };
 }
 export function EntityUpdateAliasByIdRequestToJSON(json) {
@@ -40,10 +40,10 @@ export function EntityUpdateAliasByIdRequestToJSONTyped(value, ignoreDiscriminat
         return value;
     }
     return {
-        canonical_id: value['canonicalId'],
-        custom_metadata: value['customMetadata'],
-        entity_id: value['entityId'],
-        mount_accessor: value['mountAccessor'],
-        name: value['name'],
+        'canonical_id': value['canonicalId'],
+        'custom_metadata': value['customMetadata'],
+        'entity_id': value['entityId'],
+        'mount_accessor': value['mountAccessor'],
+        'name': value['name'],
     };
 }

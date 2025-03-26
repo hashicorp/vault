@@ -32,11 +32,11 @@ function SubscriptionsWriteEventsSubscriptionsRequestFromJSONTyped(json, ignoreD
         return json;
     }
     return {
-        config: json['config'] == null ? undefined : json['config'],
-        eventType: json['event_type'] == null ? undefined : json['event_type'],
-        filter: json['filter'] == null ? undefined : json['filter'],
-        list: json['list'] == null ? undefined : json['list'],
-        plugin: json['plugin'] == null ? undefined : json['plugin'],
+        'config': json['config'] == null ? undefined : json['config'],
+        'eventType': json['event_type'] == null ? undefined : json['event_type'],
+        'filter': json['filter'] == null ? undefined : json['filter'],
+        'list': json['list'] == null ? undefined : json['list'],
+        'plugin': json['plugin'] == null ? undefined : json['plugin'],
     };
 }
 function SubscriptionsWriteEventsSubscriptionsRequestToJSON(json) {
@@ -47,10 +47,10 @@ function SubscriptionsWriteEventsSubscriptionsRequestToJSONTyped(value, ignoreDi
         return value;
     }
     return {
-        config: value['config'],
-        event_type: value['eventType'],
-        filter: value['filter'],
-        list: value['list'],
-        plugin: value['plugin'],
+        'config': value['config'],
+        'event_type': value['eventType'],
+        'filter': value['filter'],
+        'list': value['list'],
+        'plugin': value['plugin'],
     };
 }

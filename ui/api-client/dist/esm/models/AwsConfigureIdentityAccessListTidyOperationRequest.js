@@ -25,8 +25,8 @@ export function AwsConfigureIdentityAccessListTidyOperationRequestFromJSONTyped(
         return json;
     }
     return {
-        disablePeriodicTidy: json['disable_periodic_tidy'] == null ? undefined : json['disable_periodic_tidy'],
-        safetyBuffer: json['safety_buffer'] == null ? undefined : json['safety_buffer'],
+        'disablePeriodicTidy': json['disable_periodic_tidy'] == null ? undefined : json['disable_periodic_tidy'],
+        'safetyBuffer': json['safety_buffer'] == null ? undefined : json['safety_buffer'],
     };
 }
 export function AwsConfigureIdentityAccessListTidyOperationRequestToJSON(json) {
@@ -37,7 +37,7 @@ export function AwsConfigureIdentityAccessListTidyOperationRequestToJSONTyped(va
         return value;
     }
     return {
-        disable_periodic_tidy: value['disablePeriodicTidy'],
-        safety_buffer: value['safetyBuffer'],
+        'disable_periodic_tidy': value['disablePeriodicTidy'],
+        'safety_buffer': value['safetyBuffer'],
     };
 }

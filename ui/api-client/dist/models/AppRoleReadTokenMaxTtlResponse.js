@@ -32,7 +32,7 @@ function AppRoleReadTokenMaxTtlResponseFromJSONTyped(json, ignoreDiscriminator) 
         return json;
     }
     return {
-        tokenMaxTtl: json['token_max_ttl'] == null ? undefined : json['token_max_ttl'],
+        'tokenMaxTtl': json['token_max_ttl'] == null ? undefined : json['token_max_ttl'],
     };
 }
 function AppRoleReadTokenMaxTtlResponseToJSON(json) {
@@ -43,6 +43,6 @@ function AppRoleReadTokenMaxTtlResponseToJSONTyped(value, ignoreDiscriminator = 
         return value;
     }
     return {
-        token_max_ttl: value['tokenMaxTtl'],
+        'token_max_ttl': value['tokenMaxTtl'],
     };
 }

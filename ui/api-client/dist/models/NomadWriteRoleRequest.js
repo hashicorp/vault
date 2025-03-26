@@ -32,9 +32,9 @@ function NomadWriteRoleRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        global: json['global'] == null ? undefined : json['global'],
-        policies: json['policies'] == null ? undefined : json['policies'],
-        type: json['type'] == null ? undefined : json['type'],
+        'global': json['global'] == null ? undefined : json['global'],
+        'policies': json['policies'] == null ? undefined : json['policies'],
+        'type': json['type'] == null ? undefined : json['type'],
     };
 }
 function NomadWriteRoleRequestToJSON(json) {
@@ -45,8 +45,8 @@ function NomadWriteRoleRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        global: value['global'],
-        policies: value['policies'],
-        type: value['type'],
+        'global': value['global'],
+        'policies': value['policies'],
+        'type': value['type'],
     };
 }

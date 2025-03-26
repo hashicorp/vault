@@ -25,9 +25,9 @@ export function GoogleCloudKmsVerifyRequestFromJSONTyped(json, ignoreDiscriminat
         return json;
     }
     return {
-        digest: json['digest'] == null ? undefined : json['digest'],
-        keyVersion: json['key_version'] == null ? undefined : json['key_version'],
-        signature: json['signature'] == null ? undefined : json['signature'],
+        'digest': json['digest'] == null ? undefined : json['digest'],
+        'keyVersion': json['key_version'] == null ? undefined : json['key_version'],
+        'signature': json['signature'] == null ? undefined : json['signature'],
     };
 }
 export function GoogleCloudKmsVerifyRequestToJSON(json) {
@@ -38,8 +38,8 @@ export function GoogleCloudKmsVerifyRequestToJSONTyped(value, ignoreDiscriminato
         return value;
     }
     return {
-        digest: value['digest'],
-        key_version: value['keyVersion'],
-        signature: value['signature'],
+        'digest': value['digest'],
+        'key_version': value['keyVersion'],
+        'signature': value['signature'],
     };
 }

@@ -25,9 +25,9 @@ export function QueryTokenCapabilitiesRequestFromJSONTyped(json, ignoreDiscrimin
         return json;
     }
     return {
-        path: json['path'] == null ? undefined : json['path'],
-        paths: json['paths'] == null ? undefined : json['paths'],
-        token: json['token'] == null ? undefined : json['token'],
+        'path': json['path'] == null ? undefined : json['path'],
+        'paths': json['paths'] == null ? undefined : json['paths'],
+        'token': json['token'] == null ? undefined : json['token'],
     };
 }
 export function QueryTokenCapabilitiesRequestToJSON(json) {
@@ -38,8 +38,8 @@ export function QueryTokenCapabilitiesRequestToJSONTyped(value, ignoreDiscrimina
         return value;
     }
     return {
-        path: value['path'],
-        paths: value['paths'],
-        token: value['token'],
+        'path': value['path'],
+        'paths': value['paths'],
+        'token': value['token'],
     };
 }

@@ -32,7 +32,7 @@ function PkiReadKeysConfigurationResponseFromJSONTyped(json, ignoreDiscriminator
         return json;
     }
     return {
-        _default: json['default'] == null ? undefined : json['default'],
+        '_default': json['default'] == null ? undefined : json['default'],
     };
 }
 function PkiReadKeysConfigurationResponseToJSON(json) {
@@ -43,6 +43,6 @@ function PkiReadKeysConfigurationResponseToJSONTyped(value, ignoreDiscriminator 
         return value;
     }
     return {
-        default: value['_default'],
+        'default': value['_default'],
     };
 }

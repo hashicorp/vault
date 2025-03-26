@@ -32,9 +32,9 @@ function SystemWriteReplicationDrPrimarySecondaryTokenRequestFromJSONTyped(json,
         return json;
     }
     return {
-        id: json['id'] == null ? undefined : json['id'],
-        secondaryPublicKey: json['secondary_public_key'] == null ? undefined : json['secondary_public_key'],
-        ttl: json['ttl'] == null ? undefined : json['ttl'],
+        'id': json['id'] == null ? undefined : json['id'],
+        'secondaryPublicKey': json['secondary_public_key'] == null ? undefined : json['secondary_public_key'],
+        'ttl': json['ttl'] == null ? undefined : json['ttl'],
     };
 }
 function SystemWriteReplicationDrPrimarySecondaryTokenRequestToJSON(json) {
@@ -45,8 +45,8 @@ function SystemWriteReplicationDrPrimarySecondaryTokenRequestToJSONTyped(value, 
         return value;
     }
     return {
-        id: value['id'],
-        secondary_public_key: value['secondaryPublicKey'],
-        ttl: value['ttl'],
+        'id': value['id'],
+        'secondary_public_key': value['secondaryPublicKey'],
+        'ttl': value['ttl'],
     };
 }

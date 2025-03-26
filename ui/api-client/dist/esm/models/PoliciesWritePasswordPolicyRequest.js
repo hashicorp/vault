@@ -25,7 +25,7 @@ export function PoliciesWritePasswordPolicyRequestFromJSONTyped(json, ignoreDisc
         return json;
     }
     return {
-        policy: json['policy'] == null ? undefined : json['policy'],
+        'policy': json['policy'] == null ? undefined : json['policy'],
     };
 }
 export function PoliciesWritePasswordPolicyRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function PoliciesWritePasswordPolicyRequestToJSONTyped(value, ignoreDiscr
         return value;
     }
     return {
-        policy: value['policy'],
+        'policy': value['policy'],
     };
 }

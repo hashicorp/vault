@@ -25,7 +25,7 @@ export function RadiusWriteUserRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        policies: json['policies'] == null ? undefined : json['policies'],
+        'policies': json['policies'] == null ? undefined : json['policies'],
     };
 }
 export function RadiusWriteUserRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function RadiusWriteUserRequestToJSONTyped(value, ignoreDiscriminator = f
         return value;
     }
     return {
-        policies: value['policies'],
+        'policies': value['policies'],
     };
 }

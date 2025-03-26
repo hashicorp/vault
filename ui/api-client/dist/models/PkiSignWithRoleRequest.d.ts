@@ -113,18 +113,18 @@ export interface PkiSignWithRoleRequest {
     userIds?: Array<string>;
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum PkiSignWithRoleRequestFormatEnum {
     PEM = "pem",
     DER = "der",
     PEM_BUNDLE = "pem_bundle"
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum PkiSignWithRoleRequestPrivateKeyFormatEnum {
     EMPTY = "",
     DER = "der",

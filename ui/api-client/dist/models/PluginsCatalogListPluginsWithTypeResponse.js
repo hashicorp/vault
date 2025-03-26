@@ -32,7 +32,7 @@ function PluginsCatalogListPluginsWithTypeResponseFromJSONTyped(json, ignoreDisc
         return json;
     }
     return {
-        keys: json['keys'] == null ? undefined : json['keys'],
+        'keys': json['keys'] == null ? undefined : json['keys'],
     };
 }
 function PluginsCatalogListPluginsWithTypeResponseToJSON(json) {
@@ -43,6 +43,6 @@ function PluginsCatalogListPluginsWithTypeResponseToJSONTyped(value, ignoreDiscr
         return value;
     }
     return {
-        keys: value['keys'],
+        'keys': value['keys'],
     };
 }

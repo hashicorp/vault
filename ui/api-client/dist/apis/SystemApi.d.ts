@@ -811,27 +811,27 @@ export declare class SystemApi extends runtime.BaseAPI {
     /**
      * Activate a flagged feature.
      */
-    activationFlagsActivateRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    activationFlagsActivateRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Activate a flagged feature.
      */
-    activationFlagsActivate(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    activationFlagsActivate(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Activate a flagged feature.
      */
-    activationFlagsActivate_1Raw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    activationFlagsActivate_1Raw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Activate a flagged feature.
      */
-    activationFlagsActivate_1(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    activationFlagsActivate_1(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Activate a flagged feature.
      */
-    activationFlagsActivate_2Raw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    activationFlagsActivate_2Raw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Activate a flagged feature.
      */
-    activationFlagsActivate_2(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    activationFlagsActivate_2(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     auditingCalculateHashRaw(requestParameters: SystemApiAuditingCalculateHashOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AuditingCalculateHashResponse>>;
@@ -841,43 +841,43 @@ export declare class SystemApi extends runtime.BaseAPI {
     /**
      * Disable the audit device at the given path.
      */
-    auditingDisableDeviceRaw(requestParameters: SystemApiAuditingDisableDeviceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    auditingDisableDeviceRaw(requestParameters: SystemApiAuditingDisableDeviceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Disable the audit device at the given path.
      */
-    auditingDisableDevice(path: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    auditingDisableDevice(path: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Disable auditing of the given request header.
      */
-    auditingDisableRequestHeaderRaw(requestParameters: SystemApiAuditingDisableRequestHeaderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    auditingDisableRequestHeaderRaw(requestParameters: SystemApiAuditingDisableRequestHeaderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Disable auditing of the given request header.
      */
-    auditingDisableRequestHeader(header: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    auditingDisableRequestHeader(header: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Enable a new audit device at the supplied path.
      */
-    auditingEnableDeviceRaw(requestParameters: SystemApiAuditingEnableDeviceOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    auditingEnableDeviceRaw(requestParameters: SystemApiAuditingEnableDeviceOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Enable a new audit device at the supplied path.
      */
-    auditingEnableDevice(path: string, auditingEnableDeviceRequest: AuditingEnableDeviceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    auditingEnableDevice(path: string, auditingEnableDeviceRequest: AuditingEnableDeviceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Enable auditing of a header.
      */
-    auditingEnableRequestHeaderRaw(requestParameters: SystemApiAuditingEnableRequestHeaderOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    auditingEnableRequestHeaderRaw(requestParameters: SystemApiAuditingEnableRequestHeaderOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Enable auditing of a header.
      */
-    auditingEnableRequestHeader(header: string, auditingEnableRequestHeaderRequest: AuditingEnableRequestHeaderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    auditingEnableRequestHeader(header: string, auditingEnableRequestHeaderRequest: AuditingEnableRequestHeaderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * List the enabled audit devices.
      */
-    auditingListEnabledDevicesRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    auditingListEnabledDevicesRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * List the enabled audit devices.
      */
-    auditingListEnabledDevices(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    auditingListEnabledDevices(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * List the request headers that are configured to be audited.
      */
@@ -889,35 +889,35 @@ export declare class SystemApi extends runtime.BaseAPI {
     /**
      * List the information for the given request header.
      */
-    auditingReadRequestHeaderInformationRaw(requestParameters: SystemApiAuditingReadRequestHeaderInformationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    auditingReadRequestHeaderInformationRaw(requestParameters: SystemApiAuditingReadRequestHeaderInformationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * List the information for the given request header.
      */
-    auditingReadRequestHeaderInformation(header: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    auditingReadRequestHeaderInformation(header: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Disable the auth method at the given auth path
      */
-    authDisableMethodRaw(requestParameters: SystemApiAuthDisableMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    authDisableMethodRaw(requestParameters: SystemApiAuthDisableMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Disable the auth method at the given auth path
      */
-    authDisableMethod(path: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    authDisableMethod(path: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * After enabling, the auth method can be accessed and configured via the auth path specified as part of the URL. This auth path will be nested under the auth prefix.  For example, enable the \"foo\" auth method will make it accessible at /auth/foo.
      * Enables a new auth method.
      */
-    authEnableMethodRaw(requestParameters: SystemApiAuthEnableMethodOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    authEnableMethodRaw(requestParameters: SystemApiAuthEnableMethodOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * After enabling, the auth method can be accessed and configured via the auth path specified as part of the URL. This auth path will be nested under the auth prefix.  For example, enable the \"foo\" auth method will make it accessible at /auth/foo.
      * Enables a new auth method.
      */
-    authEnableMethod(path: string, authEnableMethodRequest: AuthEnableMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    authEnableMethod(path: string, authEnableMethodRequest: AuthEnableMethodRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    authListEnabledMethodsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    authListEnabledMethodsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    authListEnabledMethods(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    authListEnabledMethods(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read the configuration of the auth engine at the given path.
      */
@@ -940,12 +940,12 @@ export declare class SystemApi extends runtime.BaseAPI {
      * This endpoint requires sudo capability on the final path, but the same functionality can be achieved without sudo via `sys/mounts/auth/[auth-path]/tune`.
      * Tune configuration parameters for a given auth path.
      */
-    authTuneConfigurationParametersRaw(requestParameters: SystemApiAuthTuneConfigurationParametersOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    authTuneConfigurationParametersRaw(requestParameters: SystemApiAuthTuneConfigurationParametersOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * This endpoint requires sudo capability on the final path, but the same functionality can be achieved without sudo via `sys/mounts/auth/[auth-path]/tune`.
      * Tune configuration parameters for a given auth path.
      */
-    authTuneConfigurationParameters(path: string, authTuneConfigurationParametersRequest: AuthTuneConfigurationParametersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    authTuneConfigurationParameters(path: string, authTuneConfigurationParametersRequest: AuthTuneConfigurationParametersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Information about the host instance that this Vault server is running on.   The information that gets collected includes host hardware information, and CPU,   disk, and memory utilization
      * Information about the host instance that this Vault server is running on.
@@ -960,28 +960,28 @@ export declare class SystemApi extends runtime.BaseAPI {
      * This path responds to the following HTTP methods.   GET /    Returns a map of in-flight requests.
      * reports in-flight requests
      */
-    collectInFlightRequestInformationRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    collectInFlightRequestInformationRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * This path responds to the following HTTP methods.   GET /    Returns a map of in-flight requests.
      * reports in-flight requests
      */
-    collectInFlightRequestInformation(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    collectInFlightRequestInformation(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Configure the CORS settings.
      */
-    corsConfigureRaw(requestParameters: SystemApiCorsConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    corsConfigureRaw(requestParameters: SystemApiCorsConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Configure the CORS settings.
      */
-    corsConfigure(corsConfigureRequest: CorsConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    corsConfigure(corsConfigureRequest: CorsConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Remove any CORS settings.
      */
-    corsDeleteConfigurationRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    corsDeleteConfigurationRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Remove any CORS settings.
      */
-    corsDeleteConfiguration(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    corsDeleteConfiguration(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Return the current CORS settings.
      */
@@ -993,25 +993,25 @@ export declare class SystemApi extends runtime.BaseAPI {
     /**
      * Create custom message
      */
-    createCustomMessageRaw(requestParameters: SystemApiCreateCustomMessageOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    createCustomMessageRaw(requestParameters: SystemApiCreateCustomMessageOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Create custom message
      */
-    createCustomMessage(createCustomMessageRequest: CreateCustomMessageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    createCustomMessage(createCustomMessageRequest: CreateCustomMessageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Decodes the encoded token with the otp.
      */
-    decodeTokenRaw(requestParameters: SystemApiDecodeTokenOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    decodeTokenRaw(requestParameters: SystemApiDecodeTokenOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Decodes the encoded token with the otp.
      */
-    decodeToken(decodeTokenRequest: DecodeTokenRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    decodeToken(decodeTokenRequest: DecodeTokenRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    encryptionKeyConfigureRotationRaw(requestParameters: SystemApiEncryptionKeyConfigureRotationOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    encryptionKeyConfigureRotationRaw(requestParameters: SystemApiEncryptionKeyConfigureRotationOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    encryptionKeyConfigureRotation(encryptionKeyConfigureRotationRequest: EncryptionKeyConfigureRotationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    encryptionKeyConfigureRotation(encryptionKeyConfigureRotationRequest: EncryptionKeyConfigureRotationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     encryptionKeyReadRotationConfigurationRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<EncryptionKeyReadRotationConfigurationResponse>>;
@@ -1020,18 +1020,18 @@ export declare class SystemApi extends runtime.BaseAPI {
     encryptionKeyReadRotationConfiguration(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<EncryptionKeyReadRotationConfigurationResponse>;
     /**
      */
-    encryptionKeyRotateRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    encryptionKeyRotateRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    encryptionKeyRotate(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Provides information about the backend encryption key.
-     */
-    encryptionKeyStatusRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    encryptionKeyRotate(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Provides information about the backend encryption key.
      */
-    encryptionKeyStatus(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    encryptionKeyStatusRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Provides information about the backend encryption key.
+     */
+    encryptionKeyStatus(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     generateHashRaw(requestParameters: SystemApiGenerateHashOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GenerateHashResponse>>;
@@ -1080,52 +1080,52 @@ export declare class SystemApi extends runtime.BaseAPI {
      * The Vault must not have been previously initialized. The recovery options, as well as the stored shares option, are only available when using Vault HSM.
      * Initialize a new Vault.
      */
-    initializeRaw(requestParameters: SystemApiInitializeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    initializeRaw(requestParameters: SystemApiInitializeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * The Vault must not have been previously initialized. The recovery options, as well as the stored shares option, are only available when using Vault HSM.
      * Initialize a new Vault.
      */
-    initialize(initializeRequest: InitializeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    initialize(initializeRequest: InitializeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Enable or disable collection of client count, set retention period, or set default reporting period.
      */
-    internalClientActivityConfigureRaw(requestParameters: SystemApiInternalClientActivityConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    internalClientActivityConfigureRaw(requestParameters: SystemApiInternalClientActivityConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Enable or disable collection of client count, set retention period, or set default reporting period.
      */
-    internalClientActivityConfigure(internalClientActivityConfigureRequest: InternalClientActivityConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    internalClientActivityConfigure(internalClientActivityConfigureRequest: InternalClientActivityConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Report the client count metrics, for this namespace and all child namespaces.
      */
-    internalClientActivityExportRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    internalClientActivityExportRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Report the client count metrics, for this namespace and all child namespaces.
      */
-    internalClientActivityExport(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    internalClientActivityExport(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read the client count tracking configuration.
      */
-    internalClientActivityReadConfigurationRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    internalClientActivityReadConfigurationRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Read the client count tracking configuration.
      */
-    internalClientActivityReadConfiguration(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    internalClientActivityReadConfiguration(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Report the client count metrics, for this namespace and all child namespaces.
      */
-    internalClientActivityReportCountsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    internalClientActivityReportCountsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Report the client count metrics, for this namespace and all child namespaces.
      */
-    internalClientActivityReportCounts(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    internalClientActivityReportCounts(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Report the number of clients for this month, for this namespace and all child namespaces.
      */
-    internalClientActivityReportCountsThisMonthRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    internalClientActivityReportCountsThisMonthRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Report the number of clients for this month, for this namespace and all child namespaces.
      */
-    internalClientActivityReportCountsThisMonth(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    internalClientActivityReportCountsThisMonth(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Backwards compatibility is not guaranteed for this API
      */
@@ -1138,12 +1138,12 @@ export declare class SystemApi extends runtime.BaseAPI {
      * Backwards compatibility is not guaranteed for this API
      * @deprecated
      */
-    internalCountRequestsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    internalCountRequestsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Backwards compatibility is not guaranteed for this API
      * @deprecated
      */
-    internalCountRequests(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    internalCountRequests(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Backwards compatibility is not guaranteed for this API
      */
@@ -1154,24 +1154,24 @@ export declare class SystemApi extends runtime.BaseAPI {
     internalCountTokens(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<InternalCountTokensResponse>;
     /**
      */
-    internalGenerateOpenApiDocumentRaw(requestParameters: SystemApiInternalGenerateOpenApiDocumentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    internalGenerateOpenApiDocumentRaw(requestParameters: SystemApiInternalGenerateOpenApiDocumentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    internalGenerateOpenApiDocument(context?: string, genericMountPaths?: boolean, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    internalGenerateOpenApiDocument(context?: string, genericMountPaths?: boolean, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    internalGenerateOpenApiDocumentWithParametersRaw(requestParameters: SystemApiInternalGenerateOpenApiDocumentWithParametersOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    internalGenerateOpenApiDocumentWithParametersRaw(requestParameters: SystemApiInternalGenerateOpenApiDocumentWithParametersOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    internalGenerateOpenApiDocumentWithParameters(internalGenerateOpenApiDocumentWithParametersRequest: InternalGenerateOpenApiDocumentWithParametersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Expose the route entry and mount entry tables present in the router
-     */
-    internalInspectRouterRaw(requestParameters: SystemApiInternalInspectRouterRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    internalGenerateOpenApiDocumentWithParameters(internalGenerateOpenApiDocumentWithParametersRequest: InternalGenerateOpenApiDocumentWithParametersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Expose the route entry and mount entry tables present in the router
      */
-    internalInspectRouter(tag: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    internalInspectRouterRaw(requestParameters: SystemApiInternalInspectRouterRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Expose the route entry and mount entry tables present in the router
+     */
+    internalInspectRouter(tag: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Lists enabled feature flags.
      */
@@ -1246,22 +1246,22 @@ export declare class SystemApi extends runtime.BaseAPI {
      * Unlike `/sys/leases/revoke-prefix`, this path ignores backend errors encountered during revocation. This is potentially very dangerous and should only be used in specific emergency situations where errors in the backend or the connected backend service prevent normal revocation.  By ignoring these errors, Vault abdicates responsibility for ensuring that the issued credentials or secrets are properly revoked and/or cleaned up. Access to this endpoint should be tightly controlled.
      * Revokes all secrets or tokens generated under a given prefix immediately
      */
-    leasesForceRevokeLeaseWithPrefixRaw(requestParameters: SystemApiLeasesForceRevokeLeaseWithPrefixRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    leasesForceRevokeLeaseWithPrefixRaw(requestParameters: SystemApiLeasesForceRevokeLeaseWithPrefixRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Unlike `/sys/leases/revoke-prefix`, this path ignores backend errors encountered during revocation. This is potentially very dangerous and should only be used in specific emergency situations where errors in the backend or the connected backend service prevent normal revocation.  By ignoring these errors, Vault abdicates responsibility for ensuring that the issued credentials or secrets are properly revoked and/or cleaned up. Access to this endpoint should be tightly controlled.
      * Revokes all secrets or tokens generated under a given prefix immediately
      */
-    leasesForceRevokeLeaseWithPrefix(prefix: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    leasesForceRevokeLeaseWithPrefix(prefix: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Unlike `/sys/leases/revoke-prefix`, this path ignores backend errors encountered during revocation. This is potentially very dangerous and should only be used in specific emergency situations where errors in the backend or the connected backend service prevent normal revocation.  By ignoring these errors, Vault abdicates responsibility for ensuring that the issued credentials or secrets are properly revoked and/or cleaned up. Access to this endpoint should be tightly controlled.
      * Revokes all secrets or tokens generated under a given prefix immediately
      */
-    leasesForceRevokeLeaseWithPrefix2Raw(requestParameters: SystemApiLeasesForceRevokeLeaseWithPrefix2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    leasesForceRevokeLeaseWithPrefix2Raw(requestParameters: SystemApiLeasesForceRevokeLeaseWithPrefix2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Unlike `/sys/leases/revoke-prefix`, this path ignores backend errors encountered during revocation. This is potentially very dangerous and should only be used in specific emergency situations where errors in the backend or the connected backend service prevent normal revocation.  By ignoring these errors, Vault abdicates responsibility for ensuring that the issued credentials or secrets are properly revoked and/or cleaned up. Access to this endpoint should be tightly controlled.
      * Revokes all secrets or tokens generated under a given prefix immediately
      */
-    leasesForceRevokeLeaseWithPrefix2(prefix: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    leasesForceRevokeLeaseWithPrefix2(prefix: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     leasesListRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<LeasesListResponse>>;
@@ -1283,203 +1283,203 @@ export declare class SystemApi extends runtime.BaseAPI {
     /**
      * Renews a lease, requesting to extend the lease.
      */
-    leasesRenewLeaseRaw(requestParameters: SystemApiLeasesRenewLeaseOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    leasesRenewLeaseRaw(requestParameters: SystemApiLeasesRenewLeaseOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Renews a lease, requesting to extend the lease.
      */
-    leasesRenewLease(leasesRenewLeaseRequest: LeasesRenewLeaseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    leasesRenewLease(leasesRenewLeaseRequest: LeasesRenewLeaseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Renews a lease, requesting to extend the lease.
      */
-    leasesRenewLease2Raw(requestParameters: SystemApiLeasesRenewLease2OperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    leasesRenewLease2Raw(requestParameters: SystemApiLeasesRenewLease2OperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Renews a lease, requesting to extend the lease.
      */
-    leasesRenewLease2(leasesRenewLease2Request: LeasesRenewLease2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    leasesRenewLease2(leasesRenewLease2Request: LeasesRenewLease2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Renews a lease, requesting to extend the lease.
      */
-    leasesRenewLeaseWithIdRaw(requestParameters: SystemApiLeasesRenewLeaseWithIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    leasesRenewLeaseWithIdRaw(requestParameters: SystemApiLeasesRenewLeaseWithIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Renews a lease, requesting to extend the lease.
      */
-    leasesRenewLeaseWithId(urlLeaseId: string, leasesRenewLeaseWithIdRequest: LeasesRenewLeaseWithIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    leasesRenewLeaseWithId(urlLeaseId: string, leasesRenewLeaseWithIdRequest: LeasesRenewLeaseWithIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Renews a lease, requesting to extend the lease.
      */
-    leasesRenewLeaseWithId2Raw(requestParameters: SystemApiLeasesRenewLeaseWithId2OperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    leasesRenewLeaseWithId2Raw(requestParameters: SystemApiLeasesRenewLeaseWithId2OperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Renews a lease, requesting to extend the lease.
      */
-    leasesRenewLeaseWithId2(urlLeaseId: string, leasesRenewLeaseWithId2Request: LeasesRenewLeaseWithId2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    leasesRenewLeaseWithId2(urlLeaseId: string, leasesRenewLeaseWithId2Request: LeasesRenewLeaseWithId2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Revokes a lease immediately.
      */
-    leasesRevokeLeaseRaw(requestParameters: SystemApiLeasesRevokeLeaseOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    leasesRevokeLeaseRaw(requestParameters: SystemApiLeasesRevokeLeaseOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Revokes a lease immediately.
      */
-    leasesRevokeLease(leasesRevokeLeaseRequest: LeasesRevokeLeaseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    leasesRevokeLease(leasesRevokeLeaseRequest: LeasesRevokeLeaseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Revokes a lease immediately.
      */
-    leasesRevokeLease2Raw(requestParameters: SystemApiLeasesRevokeLease2OperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    leasesRevokeLease2Raw(requestParameters: SystemApiLeasesRevokeLease2OperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Revokes a lease immediately.
      */
-    leasesRevokeLease2(leasesRevokeLease2Request: LeasesRevokeLease2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    leasesRevokeLease2(leasesRevokeLease2Request: LeasesRevokeLease2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Revokes a lease immediately.
      */
-    leasesRevokeLeaseWithIdRaw(requestParameters: SystemApiLeasesRevokeLeaseWithIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    leasesRevokeLeaseWithIdRaw(requestParameters: SystemApiLeasesRevokeLeaseWithIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Revokes a lease immediately.
      */
-    leasesRevokeLeaseWithId(urlLeaseId: string, leasesRevokeLeaseWithIdRequest: LeasesRevokeLeaseWithIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    leasesRevokeLeaseWithId(urlLeaseId: string, leasesRevokeLeaseWithIdRequest: LeasesRevokeLeaseWithIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Revokes a lease immediately.
      */
-    leasesRevokeLeaseWithId2Raw(requestParameters: SystemApiLeasesRevokeLeaseWithId2OperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    leasesRevokeLeaseWithId2Raw(requestParameters: SystemApiLeasesRevokeLeaseWithId2OperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Revokes a lease immediately.
      */
-    leasesRevokeLeaseWithId2(urlLeaseId: string, leasesRevokeLeaseWithId2Request: LeasesRevokeLeaseWithId2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    leasesRevokeLeaseWithId2(urlLeaseId: string, leasesRevokeLeaseWithId2Request: LeasesRevokeLeaseWithId2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Revokes all secrets (via a lease ID prefix) or tokens (via the tokens\' path property) generated under a given prefix immediately.
      */
-    leasesRevokeLeaseWithPrefixRaw(requestParameters: SystemApiLeasesRevokeLeaseWithPrefixOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    leasesRevokeLeaseWithPrefixRaw(requestParameters: SystemApiLeasesRevokeLeaseWithPrefixOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Revokes all secrets (via a lease ID prefix) or tokens (via the tokens\' path property) generated under a given prefix immediately.
      */
-    leasesRevokeLeaseWithPrefix(prefix: string, leasesRevokeLeaseWithPrefixRequest: LeasesRevokeLeaseWithPrefixRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    leasesRevokeLeaseWithPrefix(prefix: string, leasesRevokeLeaseWithPrefixRequest: LeasesRevokeLeaseWithPrefixRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Revokes all secrets (via a lease ID prefix) or tokens (via the tokens\' path property) generated under a given prefix immediately.
      */
-    leasesRevokeLeaseWithPrefix2Raw(requestParameters: SystemApiLeasesRevokeLeaseWithPrefix2OperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    leasesRevokeLeaseWithPrefix2Raw(requestParameters: SystemApiLeasesRevokeLeaseWithPrefix2OperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Revokes all secrets (via a lease ID prefix) or tokens (via the tokens\' path property) generated under a given prefix immediately.
      */
-    leasesRevokeLeaseWithPrefix2(prefix: string, leasesRevokeLeaseWithPrefix2Request: LeasesRevokeLeaseWithPrefix2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    leasesRevokeLeaseWithPrefix2(prefix: string, leasesRevokeLeaseWithPrefix2Request: LeasesRevokeLeaseWithPrefix2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    leasesTidyRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    leasesTidyRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    leasesTidy(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    leasesTidy(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Returns the available and enabled experiments
      */
-    listExperimentalFeaturesRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    listExperimentalFeaturesRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Returns the available and enabled experiments
      */
-    listExperimentalFeatures(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    listExperimentalFeatures(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Report the locked user count metrics, for this namespace and all child namespaces.
      */
-    lockedUsersListRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    lockedUsersListRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Report the locked user count metrics, for this namespace and all child namespaces.
      */
-    lockedUsersList(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    lockedUsersList(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Unlocks the user with given mount_accessor and alias_identifier
      */
-    lockedUsersUnlockRaw(requestParameters: SystemApiLockedUsersUnlockRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    lockedUsersUnlockRaw(requestParameters: SystemApiLockedUsersUnlockRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Unlocks the user with given mount_accessor and alias_identifier
      */
-    lockedUsersUnlock(aliasIdentifier: string, mountAccessor: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    lockedUsersUnlock(aliasIdentifier: string, mountAccessor: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read the log level for all existing loggers.
      */
-    loggersReadVerbosityLevelRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    loggersReadVerbosityLevelRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Read the log level for all existing loggers.
      */
-    loggersReadVerbosityLevel(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    loggersReadVerbosityLevel(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read the log level for a single logger.
      */
-    loggersReadVerbosityLevelForRaw(requestParameters: SystemApiLoggersReadVerbosityLevelForRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    loggersReadVerbosityLevelForRaw(requestParameters: SystemApiLoggersReadVerbosityLevelForRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Read the log level for a single logger.
      */
-    loggersReadVerbosityLevelFor(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    loggersReadVerbosityLevelFor(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Revert the all loggers to use log level provided in config.
      */
-    loggersRevertVerbosityLevelRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    loggersRevertVerbosityLevelRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Revert the all loggers to use log level provided in config.
      */
-    loggersRevertVerbosityLevel(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    loggersRevertVerbosityLevel(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Revert a single logger to use log level provided in config.
      */
-    loggersRevertVerbosityLevelForRaw(requestParameters: SystemApiLoggersRevertVerbosityLevelForRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    loggersRevertVerbosityLevelForRaw(requestParameters: SystemApiLoggersRevertVerbosityLevelForRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Revert a single logger to use log level provided in config.
      */
-    loggersRevertVerbosityLevelFor(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    loggersRevertVerbosityLevelFor(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Modify the log level for all existing loggers.
      */
-    loggersUpdateVerbosityLevelRaw(requestParameters: SystemApiLoggersUpdateVerbosityLevelOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    loggersUpdateVerbosityLevelRaw(requestParameters: SystemApiLoggersUpdateVerbosityLevelOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Modify the log level for all existing loggers.
      */
-    loggersUpdateVerbosityLevel(loggersUpdateVerbosityLevelRequest: LoggersUpdateVerbosityLevelRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    loggersUpdateVerbosityLevel(loggersUpdateVerbosityLevelRequest: LoggersUpdateVerbosityLevelRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Modify the log level of a single logger.
      */
-    loggersUpdateVerbosityLevelForRaw(requestParameters: SystemApiLoggersUpdateVerbosityLevelForOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    loggersUpdateVerbosityLevelForRaw(requestParameters: SystemApiLoggersUpdateVerbosityLevelForOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Modify the log level of a single logger.
      */
-    loggersUpdateVerbosityLevelFor(name: string, loggersUpdateVerbosityLevelForRequest: LoggersUpdateVerbosityLevelForRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    loggersUpdateVerbosityLevelFor(name: string, loggersUpdateVerbosityLevelForRequest: LoggersUpdateVerbosityLevelForRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    metricsRaw(requestParameters: SystemApiMetricsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    metricsRaw(requestParameters: SystemApiMetricsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    metrics(format?: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Validates the login for the given MFA methods. Upon successful validation, it returns an auth response containing the client token
-     */
-    mfaValidateRaw(requestParameters: SystemApiMfaValidateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    metrics(format?: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Validates the login for the given MFA methods. Upon successful validation, it returns an auth response containing the client token
      */
-    mfaValidate(mfaValidateRequest: MfaValidateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mfaValidateRaw(requestParameters: SystemApiMfaValidateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Validates the login for the given MFA methods. Upon successful validation, it returns an auth response containing the client token
+     */
+    mfaValidate(mfaValidateRequest: MfaValidateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    monitorRaw(requestParameters: SystemApiMonitorRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    monitorRaw(requestParameters: SystemApiMonitorRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    monitor(logFormat?: string, logLevel?: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    monitor(logFormat?: string, logLevel?: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Disable the mount point specified at the given path.
      */
-    mountsDisableSecretsEngineRaw(requestParameters: SystemApiMountsDisableSecretsEngineRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mountsDisableSecretsEngineRaw(requestParameters: SystemApiMountsDisableSecretsEngineRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Disable the mount point specified at the given path.
      */
-    mountsDisableSecretsEngine(path: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mountsDisableSecretsEngine(path: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Enable a new secrets engine at the given path.
      */
-    mountsEnableSecretsEngineRaw(requestParameters: SystemApiMountsEnableSecretsEngineOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mountsEnableSecretsEngineRaw(requestParameters: SystemApiMountsEnableSecretsEngineOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Enable a new secrets engine at the given path.
      */
-    mountsEnableSecretsEngine(path: string, mountsEnableSecretsEngineRequest: MountsEnableSecretsEngineRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mountsEnableSecretsEngine(path: string, mountsEnableSecretsEngineRequest: MountsEnableSecretsEngineRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    mountsListSecretsEnginesRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mountsListSecretsEnginesRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    mountsListSecretsEngines(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mountsListSecretsEngines(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read the configuration of the secret engine at the given path.
      */
@@ -1496,10 +1496,10 @@ export declare class SystemApi extends runtime.BaseAPI {
     mountsReadTuningInformation(path: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<MountsReadTuningInformationResponse>;
     /**
      */
-    mountsTuneConfigurationParametersRaw(requestParameters: SystemApiMountsTuneConfigurationParametersOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    mountsTuneConfigurationParametersRaw(requestParameters: SystemApiMountsTuneConfigurationParametersOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    mountsTuneConfigurationParameters(path: string, mountsTuneConfigurationParametersRequest: MountsTuneConfigurationParametersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    mountsTuneConfigurationParameters(path: string, mountsTuneConfigurationParametersRequest: MountsTuneConfigurationParametersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     pluginsCatalogListPluginsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PluginsCatalogListPluginsResponse>>;
@@ -1517,11 +1517,11 @@ export declare class SystemApi extends runtime.BaseAPI {
     /**
      * Create or update the pinned version for a plugin with a given type and name.
      */
-    pluginsCatalogPinsCreatePinnedVersionRaw(requestParameters: SystemApiPluginsCatalogPinsCreatePinnedVersionOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pluginsCatalogPinsCreatePinnedVersionRaw(requestParameters: SystemApiPluginsCatalogPinsCreatePinnedVersionOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Create or update the pinned version for a plugin with a given type and name.
      */
-    pluginsCatalogPinsCreatePinnedVersion(name: string, type: string, pluginsCatalogPinsCreatePinnedVersionRequest: PluginsCatalogPinsCreatePinnedVersionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pluginsCatalogPinsCreatePinnedVersion(name: string, type: string, pluginsCatalogPinsCreatePinnedVersionRequest: PluginsCatalogPinsCreatePinnedVersionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     pluginsCatalogPinsListPinnedVersionsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PluginsCatalogPinsListPinnedVersionsResponse>>;
@@ -1539,11 +1539,11 @@ export declare class SystemApi extends runtime.BaseAPI {
     /**
      * Remove any pinned version for the plugin with the given type and name.
      */
-    pluginsCatalogPinsRemovePinnedVersionRaw(requestParameters: SystemApiPluginsCatalogPinsRemovePinnedVersionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pluginsCatalogPinsRemovePinnedVersionRaw(requestParameters: SystemApiPluginsCatalogPinsRemovePinnedVersionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Remove any pinned version for the plugin with the given type and name.
      */
-    pluginsCatalogPinsRemovePinnedVersion(name: string, type: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pluginsCatalogPinsRemovePinnedVersion(name: string, type: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Return the configuration data for the plugin with the given name.
      */
@@ -1563,35 +1563,35 @@ export declare class SystemApi extends runtime.BaseAPI {
     /**
      * Register a new plugin, or updates an existing one with the supplied name.
      */
-    pluginsCatalogRegisterPluginRaw(requestParameters: SystemApiPluginsCatalogRegisterPluginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pluginsCatalogRegisterPluginRaw(requestParameters: SystemApiPluginsCatalogRegisterPluginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Register a new plugin, or updates an existing one with the supplied name.
      */
-    pluginsCatalogRegisterPlugin(name: string, pluginsCatalogRegisterPluginRequest: PluginsCatalogRegisterPluginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pluginsCatalogRegisterPlugin(name: string, pluginsCatalogRegisterPluginRequest: PluginsCatalogRegisterPluginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Register a new plugin, or updates an existing one with the supplied name.
      */
-    pluginsCatalogRegisterPluginWithTypeRaw(requestParameters: SystemApiPluginsCatalogRegisterPluginWithTypeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pluginsCatalogRegisterPluginWithTypeRaw(requestParameters: SystemApiPluginsCatalogRegisterPluginWithTypeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Register a new plugin, or updates an existing one with the supplied name.
      */
-    pluginsCatalogRegisterPluginWithType(name: string, type: string, pluginsCatalogRegisterPluginWithTypeRequest: PluginsCatalogRegisterPluginWithTypeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pluginsCatalogRegisterPluginWithType(name: string, type: string, pluginsCatalogRegisterPluginWithTypeRequest: PluginsCatalogRegisterPluginWithTypeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Remove the plugin with the given name.
      */
-    pluginsCatalogRemovePluginRaw(requestParameters: SystemApiPluginsCatalogRemovePluginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pluginsCatalogRemovePluginRaw(requestParameters: SystemApiPluginsCatalogRemovePluginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Remove the plugin with the given name.
      */
-    pluginsCatalogRemovePlugin(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pluginsCatalogRemovePlugin(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Remove the plugin with the given name.
      */
-    pluginsCatalogRemovePluginWithTypeRaw(requestParameters: SystemApiPluginsCatalogRemovePluginWithTypeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pluginsCatalogRemovePluginWithTypeRaw(requestParameters: SystemApiPluginsCatalogRemovePluginWithTypeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Remove the plugin with the given name.
      */
-    pluginsCatalogRemovePluginWithType(name: string, type: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pluginsCatalogRemovePluginWithType(name: string, type: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Either the plugin name (`plugin`) or the desired plugin backend mounts (`mounts`) must be provided, but not both. In the case that the plugin name is provided, all mounted paths that use that plugin backend will be reloaded.  If (`scope`) is provided and is (`global`), the plugin(s) are reloaded globally.
      * Reload mounted plugin backends.
@@ -1625,43 +1625,43 @@ export declare class SystemApi extends runtime.BaseAPI {
     /**
      * Register a new plugin runtime, or updates an existing one with the supplied name.
      */
-    pluginsRuntimesCatalogRegisterPluginRuntimeRaw(requestParameters: SystemApiPluginsRuntimesCatalogRegisterPluginRuntimeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pluginsRuntimesCatalogRegisterPluginRuntimeRaw(requestParameters: SystemApiPluginsRuntimesCatalogRegisterPluginRuntimeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Register a new plugin runtime, or updates an existing one with the supplied name.
      */
-    pluginsRuntimesCatalogRegisterPluginRuntime(name: string, type: string, pluginsRuntimesCatalogRegisterPluginRuntimeRequest: PluginsRuntimesCatalogRegisterPluginRuntimeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pluginsRuntimesCatalogRegisterPluginRuntime(name: string, type: string, pluginsRuntimesCatalogRegisterPluginRuntimeRequest: PluginsRuntimesCatalogRegisterPluginRuntimeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Remove the plugin runtime with the given name.
      */
-    pluginsRuntimesCatalogRemovePluginRuntimeRaw(requestParameters: SystemApiPluginsRuntimesCatalogRemovePluginRuntimeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pluginsRuntimesCatalogRemovePluginRuntimeRaw(requestParameters: SystemApiPluginsRuntimesCatalogRemovePluginRuntimeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Remove the plugin runtime with the given name.
      */
-    pluginsRuntimesCatalogRemovePluginRuntime(name: string, type: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pluginsRuntimesCatalogRemovePluginRuntime(name: string, type: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Delete the ACL policy with the given name.
      */
-    policiesDeleteAclPolicyRaw(requestParameters: SystemApiPoliciesDeleteAclPolicyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    policiesDeleteAclPolicyRaw(requestParameters: SystemApiPoliciesDeleteAclPolicyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Delete the ACL policy with the given name.
      */
-    policiesDeleteAclPolicy(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    policiesDeleteAclPolicy(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Delete the policy with the given name.
      */
-    policiesDeleteAclPolicy2Raw(requestParameters: SystemApiPoliciesDeleteAclPolicy2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    policiesDeleteAclPolicy2Raw(requestParameters: SystemApiPoliciesDeleteAclPolicy2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Delete the policy with the given name.
      */
-    policiesDeleteAclPolicy2(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    policiesDeleteAclPolicy2(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Delete a password policy.
      */
-    policiesDeletePasswordPolicyRaw(requestParameters: SystemApiPoliciesDeletePasswordPolicyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    policiesDeletePasswordPolicyRaw(requestParameters: SystemApiPoliciesDeletePasswordPolicyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Delete a password policy.
      */
-    policiesDeletePasswordPolicy(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    policiesDeletePasswordPolicy(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Generate a password from an existing password policy.
      */
@@ -1723,167 +1723,167 @@ export declare class SystemApi extends runtime.BaseAPI {
     /**
      * Add a new or update an existing ACL policy.
      */
-    policiesWriteAclPolicyRaw(requestParameters: SystemApiPoliciesWriteAclPolicyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    policiesWriteAclPolicyRaw(requestParameters: SystemApiPoliciesWriteAclPolicyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Add a new or update an existing ACL policy.
      */
-    policiesWriteAclPolicy(name: string, policiesWriteAclPolicyRequest: PoliciesWriteAclPolicyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    policiesWriteAclPolicy(name: string, policiesWriteAclPolicyRequest: PoliciesWriteAclPolicyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Add a new or update an existing policy.
      */
-    policiesWriteAclPolicy2Raw(requestParameters: SystemApiPoliciesWriteAclPolicy2OperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    policiesWriteAclPolicy2Raw(requestParameters: SystemApiPoliciesWriteAclPolicy2OperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Add a new or update an existing policy.
      */
-    policiesWriteAclPolicy2(name: string, policiesWriteAclPolicy2Request: PoliciesWriteAclPolicy2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    policiesWriteAclPolicy2(name: string, policiesWriteAclPolicy2Request: PoliciesWriteAclPolicy2Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Add a new or update an existing password policy.
      */
-    policiesWritePasswordPolicyRaw(requestParameters: SystemApiPoliciesWritePasswordPolicyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    policiesWritePasswordPolicyRaw(requestParameters: SystemApiPoliciesWritePasswordPolicyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Add a new or update an existing password policy.
      */
-    policiesWritePasswordPolicy(name: string, policiesWritePasswordPolicyRequest: PoliciesWritePasswordPolicyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    policiesWritePasswordPolicy(name: string, policiesWritePasswordPolicyRequest: PoliciesWritePasswordPolicyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Returns stack traces that led to blocking on synchronization primitives
      * Returns stack traces that led to blocking on synchronization primitives
      */
-    pprofBlockingRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pprofBlockingRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Returns stack traces that led to blocking on synchronization primitives
      * Returns stack traces that led to blocking on synchronization primitives
      */
-    pprofBlocking(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pprofBlocking(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Returns the running program\'s command line, with arguments separated by NUL bytes.
      * Returns the running program\'s command line.
      */
-    pprofCommandLineRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pprofCommandLineRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Returns the running program\'s command line, with arguments separated by NUL bytes.
      * Returns the running program\'s command line.
      */
-    pprofCommandLine(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pprofCommandLine(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Returns a pprof-formatted cpu profile payload. Profiling lasts for duration specified in seconds GET parameter, or for 30 seconds if not specified.
      * Returns a pprof-formatted cpu profile payload.
      */
-    pprofCpuProfileRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pprofCpuProfileRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Returns a pprof-formatted cpu profile payload. Profiling lasts for duration specified in seconds GET parameter, or for 30 seconds if not specified.
      * Returns a pprof-formatted cpu profile payload.
      */
-    pprofCpuProfile(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pprofCpuProfile(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Returns  the execution trace in binary form. Tracing lasts for duration specified in seconds GET parameter, or for 1 second if not specified.
      * Returns the execution trace in binary form.
      */
-    pprofExecutionTraceRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pprofExecutionTraceRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Returns  the execution trace in binary form. Tracing lasts for duration specified in seconds GET parameter, or for 1 second if not specified.
      * Returns the execution trace in binary form.
      */
-    pprofExecutionTrace(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pprofExecutionTrace(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Returns stack traces of all current goroutines.
      * Returns stack traces of all current goroutines.
      */
-    pprofGoroutinesRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pprofGoroutinesRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Returns stack traces of all current goroutines.
      * Returns stack traces of all current goroutines.
      */
-    pprofGoroutines(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pprofGoroutines(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Returns an HTML page listing the available  profiles. This should be mainly accessed via browsers or applications that can  render pages.
      * Returns an HTML page listing the available profiles.
      */
-    pprofIndexRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pprofIndexRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Returns an HTML page listing the available  profiles. This should be mainly accessed via browsers or applications that can  render pages.
      * Returns an HTML page listing the available profiles.
      */
-    pprofIndex(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pprofIndex(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Returns a sampling of all past memory allocations.
      * Returns a sampling of all past memory allocations.
      */
-    pprofMemoryAllocationsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pprofMemoryAllocationsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Returns a sampling of all past memory allocations.
      * Returns a sampling of all past memory allocations.
      */
-    pprofMemoryAllocations(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pprofMemoryAllocations(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Returns a sampling of memory allocations of live object.
      * Returns a sampling of memory allocations of live object.
      */
-    pprofMemoryAllocationsLiveRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pprofMemoryAllocationsLiveRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Returns a sampling of memory allocations of live object.
      * Returns a sampling of memory allocations of live object.
      */
-    pprofMemoryAllocationsLive(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pprofMemoryAllocationsLive(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Returns stack traces of holders of contended mutexes
      * Returns stack traces of holders of contended mutexes
      */
-    pprofMutexesRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pprofMutexesRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Returns stack traces of holders of contended mutexes
      * Returns stack traces of holders of contended mutexes
      */
-    pprofMutexes(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pprofMutexes(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Returns the program counters listed in the request.
      * Returns the program counters listed in the request.
      */
-    pprofSymbolsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pprofSymbolsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Returns the program counters listed in the request.
      * Returns the program counters listed in the request.
      */
-    pprofSymbols(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pprofSymbols(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Returns stack traces that led to the creation of new OS threads
      * Returns stack traces that led to the creation of new OS threads
      */
-    pprofThreadCreationsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    pprofThreadCreationsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Returns stack traces that led to the creation of new OS threads
      * Returns stack traces that led to the creation of new OS threads
      */
-    pprofThreadCreations(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    pprofThreadCreations(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    queryTokenAccessorCapabilitiesRaw(requestParameters: SystemApiQueryTokenAccessorCapabilitiesOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    queryTokenAccessorCapabilitiesRaw(requestParameters: SystemApiQueryTokenAccessorCapabilitiesOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    queryTokenAccessorCapabilities(queryTokenAccessorCapabilitiesRequest: QueryTokenAccessorCapabilitiesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    queryTokenAccessorCapabilities(queryTokenAccessorCapabilitiesRequest: QueryTokenAccessorCapabilitiesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    queryTokenCapabilitiesRaw(requestParameters: SystemApiQueryTokenCapabilitiesOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    queryTokenCapabilitiesRaw(requestParameters: SystemApiQueryTokenCapabilitiesOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    queryTokenCapabilities(queryTokenCapabilitiesRequest: QueryTokenCapabilitiesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    queryTokenCapabilities(queryTokenCapabilitiesRequest: QueryTokenCapabilitiesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    queryTokenSelfCapabilitiesRaw(requestParameters: SystemApiQueryTokenSelfCapabilitiesOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    queryTokenSelfCapabilitiesRaw(requestParameters: SystemApiQueryTokenSelfCapabilitiesOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    queryTokenSelfCapabilities(queryTokenSelfCapabilitiesRequest: QueryTokenSelfCapabilitiesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    queryTokenSelfCapabilities(queryTokenSelfCapabilitiesRequest: QueryTokenSelfCapabilitiesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    rateLimitQuotasConfigureRaw(requestParameters: SystemApiRateLimitQuotasConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    rateLimitQuotasConfigureRaw(requestParameters: SystemApiRateLimitQuotasConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    rateLimitQuotasConfigure(rateLimitQuotasConfigureRequest: RateLimitQuotasConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    rateLimitQuotasConfigure(rateLimitQuotasConfigureRequest: RateLimitQuotasConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    rateLimitQuotasDeleteRaw(requestParameters: SystemApiRateLimitQuotasDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    rateLimitQuotasDeleteRaw(requestParameters: SystemApiRateLimitQuotasDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    rateLimitQuotasDelete(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    rateLimitQuotasDelete(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     rateLimitQuotasListRaw(requestParameters: SystemApiRateLimitQuotasListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<StandardListResponse>>;
@@ -1904,18 +1904,18 @@ export declare class SystemApi extends runtime.BaseAPI {
     rateLimitQuotasReadConfiguration(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RateLimitQuotasReadConfigurationResponse>;
     /**
      */
-    rateLimitQuotasWriteRaw(requestParameters: SystemApiRateLimitQuotasWriteOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    rateLimitQuotasWriteRaw(requestParameters: SystemApiRateLimitQuotasWriteOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    rateLimitQuotasWrite(name: string, rateLimitQuotasWriteRequest: RateLimitQuotasWriteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Delete the key with given path.
-     */
-    rawDeleteRaw(requestParameters: SystemApiRawDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    rateLimitQuotasWrite(name: string, rateLimitQuotasWriteRequest: RateLimitQuotasWriteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Delete the key with given path.
      */
-    rawDelete(path: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    rawDeleteRaw(requestParameters: SystemApiRawDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Delete the key with given path.
+     */
+    rawDelete(path: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Return a list keys for a given path prefix.
      */
@@ -1935,61 +1935,61 @@ export declare class SystemApi extends runtime.BaseAPI {
     /**
      * Update the value of the key at the given path.
      */
-    rawWriteRaw(requestParameters: SystemApiRawWriteOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    rawWriteRaw(requestParameters: SystemApiRawWriteOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Update the value of the key at the given path.
      */
-    rawWrite(path: string, rawWriteRequest: RawWriteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    rawWrite(path: string, rawWriteRequest: RawWriteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Returns the available and activated activation-flagged features.
      */
-    readActivationFlagsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    readActivationFlagsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Returns the available and activated activation-flagged features.
      */
-    readActivationFlags(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    readActivationFlags(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Returns the health status of Vault.
      */
-    readHealthStatusRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    readHealthStatusRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Returns the health status of Vault.
      */
-    readHealthStatus(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    readHealthStatus(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Returns the initialization status of Vault.
      */
-    readInitializationStatusRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    readInitializationStatusRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Returns the initialization status of Vault.
      */
-    readInitializationStatus(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    readInitializationStatus(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * The sanitized output strips configuration values in the storage, HA storage, and seals stanzas, which may contain sensitive values such as API tokens. It also removes any token or secret fields in other stanzas, such as the circonus_api_token from telemetry.
      * Return a sanitized version of the Vault server configuration.
      */
-    readSanitizedConfigurationStateRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    readSanitizedConfigurationStateRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * The sanitized output strips configuration values in the storage, HA storage, and seals stanzas, which may contain sensitive values such as API tokens. It also removes any token or secret fields in other stanzas, such as the circonus_api_token from telemetry.
      * Return a sanitized version of the Vault server configuration.
      */
-    readSanitizedConfigurationState(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    readSanitizedConfigurationState(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read the current Census agent\'s snapshot fields.
      */
-    readVerbosityLevelForRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    readVerbosityLevelForRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Read the current Census agent\'s snapshot fields.
      */
-    readVerbosityLevelFor(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    readVerbosityLevelFor(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read the current status of the request limiter.
      */
-    readVerbosityLevelFor_4Raw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    readVerbosityLevelFor_4Raw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Read the current status of the request limiter.
      */
-    readVerbosityLevelFor_4(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    readVerbosityLevelFor_4(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Look up wrapping properties for the given token.
      */
@@ -2010,12 +2010,12 @@ export declare class SystemApi extends runtime.BaseAPI {
      * This clears the rekey settings as well as any progress made. This must be called to change the parameters of the rekey. Note: verification is still a part of a rekey. If rekeying is canceled during the verification flow, the current unseal keys remain valid.
      * Cancels any in-progress rekey.
      */
-    rekeyAttemptCancelRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    rekeyAttemptCancelRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * This clears the rekey settings as well as any progress made. This must be called to change the parameters of the rekey. Note: verification is still a part of a rekey. If rekeying is canceled during the verification flow, the current unseal keys remain valid.
      * Cancels any in-progress rekey.
      */
-    rekeyAttemptCancel(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    rekeyAttemptCancel(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Only a single rekey attempt can take place at a time, and changing the parameters of a rekey requires canceling and starting a new rekey, which will also provide a new nonce.
      * Initializes a new rekey attempt.
@@ -2045,17 +2045,17 @@ export declare class SystemApi extends runtime.BaseAPI {
     /**
      * Delete the backup copy of PGP-encrypted unseal keys.
      */
-    rekeyDeleteBackupKeyRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    rekeyDeleteBackupKeyRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Delete the backup copy of PGP-encrypted unseal keys.
      */
-    rekeyDeleteBackupKey(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    rekeyDeleteBackupKey(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    rekeyDeleteBackupRecoveryKeyRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    rekeyDeleteBackupRecoveryKeyRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    rekeyDeleteBackupRecoveryKey(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    rekeyDeleteBackupRecoveryKey(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Return the backup copy of PGP-encrypted unseal keys.
      */
@@ -2109,11 +2109,11 @@ export declare class SystemApi extends runtime.BaseAPI {
     /**
      * Reload the given subsystem
      */
-    reloadSubsystemRaw(requestParameters: SystemApiReloadSubsystemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    reloadSubsystemRaw(requestParameters: SystemApiReloadSubsystemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Reload the given subsystem
      */
-    reloadSubsystem(subsystem: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    reloadSubsystem(subsystem: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Initiate a mount migration
      */
@@ -2132,26 +2132,26 @@ export declare class SystemApi extends runtime.BaseAPI {
     remountStatus(migrationId: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RemountStatusResponse>;
     /**
      */
-    rewrapRaw(requestParameters: SystemApiRewrapOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    rewrapRaw(requestParameters: SystemApiRewrapOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    rewrap(rewrapRequest: RewrapRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Cancels any in-progress root generation attempt.
-     */
-    rootTokenGenerationCancelRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    rewrap(rewrapRequest: RewrapRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Cancels any in-progress root generation attempt.
      */
-    rootTokenGenerationCancel(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    rootTokenGenerationCancelRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Cancels any in-progress root generation attempt.
      */
-    rootTokenGenerationCancel2Raw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    rootTokenGenerationCancel(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Cancels any in-progress root generation attempt.
      */
-    rootTokenGenerationCancel2(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    rootTokenGenerationCancel2Raw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Cancels any in-progress root generation attempt.
+     */
+    rootTokenGenerationCancel2(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Only a single root generation attempt can take place at a time. One (and only one) of otp or pgp_key are required.
      * Initializes a new root generation attempt.
@@ -2201,11 +2201,11 @@ export declare class SystemApi extends runtime.BaseAPI {
     /**
      * Seal the Vault.
      */
-    sealRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    sealRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Seal the Vault.
      */
-    seal(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    seal(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Check the seal status of a Vault.
      */
@@ -2218,12 +2218,12 @@ export declare class SystemApi extends runtime.BaseAPI {
      * This endpoint forces the node to give up active status. If the node does not have active status, this endpoint does nothing. Note that the node will sleep for ten seconds before attempting to grab the active lock again, but if no standby nodes grab the active lock in the interim, the same node may become the active node again.
      * Cause the node to give up active status.
      */
-    stepDownLeaderRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    stepDownLeaderRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * This endpoint forces the node to give up active status. If the node does not have active status, this endpoint does nothing. Note that the node will sleep for ten seconds before attempting to grab the active lock again, but if no standby nodes grab the active lock in the interim, the same node may become the active node again.
      * Cause the node to give up active status.
      */
-    stepDownLeader(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    stepDownLeader(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Returns the specified event notification subscription.
      */
@@ -2235,11 +2235,11 @@ export declare class SystemApi extends runtime.BaseAPI {
     /**
      * Deletes the specified event notification subscription and stops sending event notifications to it.
      */
-    subscriptionsCreate_5Raw(requestParameters: SystemApiSubscriptionsCreate0Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    subscriptionsCreate_5Raw(requestParameters: SystemApiSubscriptionsCreate0Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Deletes the specified event notification subscription and stops sending event notifications to it.
      */
-    subscriptionsCreate_5(id: string, plugin: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    subscriptionsCreate_5(id: string, plugin: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Listing event notifications subscriptions
      */
@@ -2267,91 +2267,91 @@ export declare class SystemApi extends runtime.BaseAPI {
     /**
      * Configure control group global settings.
      */
-    systemDeleteConfigControlGroupRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemDeleteConfigControlGroupRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Configure control group global settings.
      */
-    systemDeleteConfigControlGroup(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemDeleteConfigControlGroup(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemDeleteManagedKeysTypeNameRaw(requestParameters: SystemApiSystemDeleteManagedKeysTypeNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemDeleteManagedKeysTypeNameRaw(requestParameters: SystemApiSystemDeleteManagedKeysTypeNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemDeleteManagedKeysTypeName(name: string, type: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Defines or updates a Duo MFA method.
-     */
-    systemDeleteMfaMethodDuoNameRaw(requestParameters: SystemApiSystemDeleteMfaMethodDuoNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemDeleteManagedKeysTypeName(name: string, type: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Defines or updates a Duo MFA method.
      */
-    systemDeleteMfaMethodDuoName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemDeleteMfaMethodDuoNameRaw(requestParameters: SystemApiSystemDeleteMfaMethodDuoNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Defines or updates a Duo MFA method.
+     */
+    systemDeleteMfaMethodDuoName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Defines or updates an Okta MFA method.
      */
-    systemDeleteMfaMethodOktaNameRaw(requestParameters: SystemApiSystemDeleteMfaMethodOktaNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemDeleteMfaMethodOktaNameRaw(requestParameters: SystemApiSystemDeleteMfaMethodOktaNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Defines or updates an Okta MFA method.
      */
-    systemDeleteMfaMethodOktaName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemDeleteMfaMethodOktaName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Defines or updates a PingID MFA method.
      */
-    systemDeleteMfaMethodPingidNameRaw(requestParameters: SystemApiSystemDeleteMfaMethodPingidNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemDeleteMfaMethodPingidNameRaw(requestParameters: SystemApiSystemDeleteMfaMethodPingidNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Defines or updates a PingID MFA method.
      */
-    systemDeleteMfaMethodPingidName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemDeleteMfaMethodPingidName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Defines or updates a TOTP MFA method.
      */
-    systemDeleteMfaMethodTotpNameRaw(requestParameters: SystemApiSystemDeleteMfaMethodTotpNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemDeleteMfaMethodTotpNameRaw(requestParameters: SystemApiSystemDeleteMfaMethodTotpNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Defines or updates a TOTP MFA method.
      */
-    systemDeleteMfaMethodTotpName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemDeleteMfaMethodTotpName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemDeleteNamespacesPathRaw(requestParameters: SystemApiSystemDeleteNamespacesPathRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemDeleteNamespacesPathRaw(requestParameters: SystemApiSystemDeleteNamespacesPathRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemDeleteNamespacesPath(path: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Read, Modify, or Delete an access control policy.
-     */
-    systemDeletePoliciesEgpNameRaw(requestParameters: SystemApiSystemDeletePoliciesEgpNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemDeleteNamespacesPath(path: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read, Modify, or Delete an access control policy.
      */
-    systemDeletePoliciesEgpName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemDeletePoliciesEgpNameRaw(requestParameters: SystemApiSystemDeletePoliciesEgpNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Read, Modify, or Delete an access control policy.
      */
-    systemDeletePoliciesRgpNameRaw(requestParameters: SystemApiSystemDeletePoliciesRgpNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemDeletePoliciesEgpName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read, Modify, or Delete an access control policy.
      */
-    systemDeletePoliciesRgpName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemDeletePoliciesRgpNameRaw(requestParameters: SystemApiSystemDeletePoliciesRgpNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Read, Modify, or Delete an access control policy.
+     */
+    systemDeletePoliciesRgpName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemDeleteQuotasLeaseCountNameRaw(requestParameters: SystemApiSystemDeleteQuotasLeaseCountNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemDeleteQuotasLeaseCountNameRaw(requestParameters: SystemApiSystemDeleteQuotasLeaseCountNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemDeleteQuotasLeaseCountName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemDeleteQuotasLeaseCountName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemDeleteReplicationPerformancePrimaryPathsFilterIdRaw(requestParameters: SystemApiSystemDeleteReplicationPerformancePrimaryPathsFilterIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemDeleteReplicationPerformancePrimaryPathsFilterIdRaw(requestParameters: SystemApiSystemDeleteReplicationPerformancePrimaryPathsFilterIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemDeleteReplicationPerformancePrimaryPathsFilterId(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemDeleteReplicationPerformancePrimaryPathsFilterId(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Delete automated raft snapshot configuration
      */
-    systemDeleteStorageRaftSnapshotAutoConfigNameRaw(requestParameters: SystemApiSystemDeleteStorageRaftSnapshotAutoConfigNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemDeleteStorageRaftSnapshotAutoConfigNameRaw(requestParameters: SystemApiSystemDeleteStorageRaftSnapshotAutoConfigNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Delete automated raft snapshot configuration
      */
-    systemDeleteStorageRaftSnapshotAutoConfigName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemDeleteStorageRaftSnapshotAutoConfigName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     systemDeleteSyncConfigRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SystemDeleteSyncConfigResponse>>;
@@ -2360,40 +2360,40 @@ export declare class SystemApi extends runtime.BaseAPI {
     systemDeleteSyncConfig(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SystemDeleteSyncConfigResponse>;
     /**
      */
-    systemDeleteSyncDestinationsAwsSmNameRaw(requestParameters: SystemApiSystemDeleteSyncDestinationsAwsSmNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemDeleteSyncDestinationsAwsSmNameRaw(requestParameters: SystemApiSystemDeleteSyncDestinationsAwsSmNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemDeleteSyncDestinationsAwsSmName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemDeleteSyncDestinationsAwsSmName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemDeleteSyncDestinationsAzureKvNameRaw(requestParameters: SystemApiSystemDeleteSyncDestinationsAzureKvNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemDeleteSyncDestinationsAzureKvNameRaw(requestParameters: SystemApiSystemDeleteSyncDestinationsAzureKvNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemDeleteSyncDestinationsAzureKvName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemDeleteSyncDestinationsAzureKvName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemDeleteSyncDestinationsGcpSmNameRaw(requestParameters: SystemApiSystemDeleteSyncDestinationsGcpSmNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemDeleteSyncDestinationsGcpSmNameRaw(requestParameters: SystemApiSystemDeleteSyncDestinationsGcpSmNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemDeleteSyncDestinationsGcpSmName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemDeleteSyncDestinationsGcpSmName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemDeleteSyncDestinationsGhNameRaw(requestParameters: SystemApiSystemDeleteSyncDestinationsGhNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemDeleteSyncDestinationsGhNameRaw(requestParameters: SystemApiSystemDeleteSyncDestinationsGhNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemDeleteSyncDestinationsGhName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemDeleteSyncDestinationsGhName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemDeleteSyncDestinationsInMemNameRaw(requestParameters: SystemApiSystemDeleteSyncDestinationsInMemNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemDeleteSyncDestinationsInMemNameRaw(requestParameters: SystemApiSystemDeleteSyncDestinationsInMemNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemDeleteSyncDestinationsInMemName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemDeleteSyncDestinationsInMemName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemDeleteSyncDestinationsVercelProjectNameRaw(requestParameters: SystemApiSystemDeleteSyncDestinationsVercelProjectNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemDeleteSyncDestinationsVercelProjectNameRaw(requestParameters: SystemApiSystemDeleteSyncDestinationsVercelProjectNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemDeleteSyncDestinationsVercelProjectName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemDeleteSyncDestinationsVercelProjectName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     systemDeleteSyncGithubAppsNameRaw(requestParameters: SystemApiSystemDeleteSyncGithubAppsNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SystemDeleteSyncGithubAppsNameResponse>>;
@@ -2477,11 +2477,11 @@ export declare class SystemApi extends runtime.BaseAPI {
     /**
      * Configure control group global settings.
      */
-    systemReadConfigControlGroupRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemReadConfigControlGroupRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Configure control group global settings.
      */
-    systemReadConfigControlGroup(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemReadConfigControlGroup(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Gets the current status of the policy application mode for Vault.
      * Gets the current status of the policy application mode for Vault.
@@ -2495,161 +2495,161 @@ export declare class SystemApi extends runtime.BaseAPI {
     /**
      * The path responds to the following HTTP methods.      GET /         Returns information on the installed license      POST         Sets the license for the server
      */
-    systemReadLicenseStatusRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemReadLicenseStatusRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * The path responds to the following HTTP methods.      GET /         Returns information on the installed license      POST         Sets the license for the server
      */
-    systemReadLicenseStatus(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemReadLicenseStatus(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemReadManagedKeysTypeNameRaw(requestParameters: SystemApiSystemReadManagedKeysTypeNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemReadManagedKeysTypeNameRaw(requestParameters: SystemApiSystemReadManagedKeysTypeNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemReadManagedKeysTypeName(name: string, type: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Defines or updates a Duo MFA method.
-     */
-    systemReadMfaMethodDuoNameRaw(requestParameters: SystemApiSystemReadMfaMethodDuoNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemReadManagedKeysTypeName(name: string, type: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Defines or updates a Duo MFA method.
      */
-    systemReadMfaMethodDuoName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemReadMfaMethodDuoNameRaw(requestParameters: SystemApiSystemReadMfaMethodDuoNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Defines or updates a Duo MFA method.
+     */
+    systemReadMfaMethodDuoName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Defines or updates an Okta MFA method.
      */
-    systemReadMfaMethodOktaNameRaw(requestParameters: SystemApiSystemReadMfaMethodOktaNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemReadMfaMethodOktaNameRaw(requestParameters: SystemApiSystemReadMfaMethodOktaNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Defines or updates an Okta MFA method.
      */
-    systemReadMfaMethodOktaName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemReadMfaMethodOktaName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Defines or updates a PingID MFA method.
      */
-    systemReadMfaMethodPingidNameRaw(requestParameters: SystemApiSystemReadMfaMethodPingidNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemReadMfaMethodPingidNameRaw(requestParameters: SystemApiSystemReadMfaMethodPingidNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Defines or updates a PingID MFA method.
      */
-    systemReadMfaMethodPingidName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemReadMfaMethodPingidName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Defines or updates a TOTP MFA method.
      */
-    systemReadMfaMethodTotpNameRaw(requestParameters: SystemApiSystemReadMfaMethodTotpNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemReadMfaMethodTotpNameRaw(requestParameters: SystemApiSystemReadMfaMethodTotpNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Defines or updates a TOTP MFA method.
      */
-    systemReadMfaMethodTotpName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemReadMfaMethodTotpName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Generates a TOTP secret for the given method name on the entity of the   calling token.
      */
-    systemReadMfaMethodTotpNameGenerateRaw(requestParameters: SystemApiSystemReadMfaMethodTotpNameGenerateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemReadMfaMethodTotpNameGenerateRaw(requestParameters: SystemApiSystemReadMfaMethodTotpNameGenerateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Generates a TOTP secret for the given method name on the entity of the   calling token.
      */
-    systemReadMfaMethodTotpNameGenerate(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemReadMfaMethodTotpNameGenerate(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemReadNamespacesPathRaw(requestParameters: SystemApiSystemReadNamespacesPathRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemReadNamespacesPathRaw(requestParameters: SystemApiSystemReadNamespacesPathRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemReadNamespacesPath(path: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemReadNamespacesPath(path: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * The reload_id returned by a cluster scoped reload must be provided.
      * Get the status of a cluster-scoped reload.
      */
-    systemReadPluginsReloadBackendStatusRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemReadPluginsReloadBackendStatusRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * The reload_id returned by a cluster scoped reload must be provided.
      * Get the status of a cluster-scoped reload.
      */
-    systemReadPluginsReloadBackendStatus(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemReadPluginsReloadBackendStatus(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read, Modify, or Delete an access control policy.
      */
-    systemReadPoliciesEgpNameRaw(requestParameters: SystemApiSystemReadPoliciesEgpNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemReadPoliciesEgpNameRaw(requestParameters: SystemApiSystemReadPoliciesEgpNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Read, Modify, or Delete an access control policy.
      */
-    systemReadPoliciesEgpName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemReadPoliciesEgpName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read, Modify, or Delete an access control policy.
      */
-    systemReadPoliciesRgpNameRaw(requestParameters: SystemApiSystemReadPoliciesRgpNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemReadPoliciesRgpNameRaw(requestParameters: SystemApiSystemReadPoliciesRgpNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Read, Modify, or Delete an access control policy.
      */
-    systemReadPoliciesRgpName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemReadPoliciesRgpName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemReadQuotasLeaseCountNameRaw(requestParameters: SystemApiSystemReadQuotasLeaseCountNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemReadQuotasLeaseCountNameRaw(requestParameters: SystemApiSystemReadQuotasLeaseCountNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemReadQuotasLeaseCountName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemReadQuotasLeaseCountName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemReadReplicationDrSecondaryLicenseStatusRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemReadReplicationDrSecondaryLicenseStatusRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemReadReplicationDrSecondaryLicenseStatus(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemReadReplicationDrSecondaryLicenseStatus(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemReadReplicationDrStatusRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemReadReplicationDrStatusRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemReadReplicationDrStatus(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemReadReplicationDrStatus(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemReadReplicationPerformancePrimaryDynamicFilterIdRaw(requestParameters: SystemApiSystemReadReplicationPerformancePrimaryDynamicFilterIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemReadReplicationPerformancePrimaryDynamicFilterIdRaw(requestParameters: SystemApiSystemReadReplicationPerformancePrimaryDynamicFilterIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemReadReplicationPerformancePrimaryDynamicFilterId(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemReadReplicationPerformancePrimaryDynamicFilterId(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemReadReplicationPerformancePrimaryPathsFilterIdRaw(requestParameters: SystemApiSystemReadReplicationPerformancePrimaryPathsFilterIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemReadReplicationPerformancePrimaryPathsFilterIdRaw(requestParameters: SystemApiSystemReadReplicationPerformancePrimaryPathsFilterIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemReadReplicationPerformancePrimaryPathsFilterId(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemReadReplicationPerformancePrimaryPathsFilterId(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemReadReplicationPerformanceSecondaryDynamicFilterIdRaw(requestParameters: SystemApiSystemReadReplicationPerformanceSecondaryDynamicFilterIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemReadReplicationPerformanceSecondaryDynamicFilterIdRaw(requestParameters: SystemApiSystemReadReplicationPerformanceSecondaryDynamicFilterIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemReadReplicationPerformanceSecondaryDynamicFilterId(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemReadReplicationPerformanceSecondaryDynamicFilterId(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemReadReplicationPerformanceStatusRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemReadReplicationPerformanceStatusRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemReadReplicationPerformanceStatus(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemReadReplicationPerformanceStatus(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemReadReplicationStatusRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemReadReplicationStatusRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemReadReplicationStatus(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemReadReplicationStatus(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Retrieve the state of any ongoing seal rewrap process
      */
-    systemReadSealwrapRewrapRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemReadSealwrapRewrapRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Retrieve the state of any ongoing seal rewrap process
      */
-    systemReadSealwrapRewrap(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemReadSealwrapRewrap(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read automated raft snapshot configuration
      */
-    systemReadStorageRaftSnapshotAutoConfigNameRaw(requestParameters: SystemApiSystemReadStorageRaftSnapshotAutoConfigNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemReadStorageRaftSnapshotAutoConfigNameRaw(requestParameters: SystemApiSystemReadStorageRaftSnapshotAutoConfigNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Read automated raft snapshot configuration
      */
-    systemReadStorageRaftSnapshotAutoConfigName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemReadStorageRaftSnapshotAutoConfigName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read status of automated raft snapshots
      */
-    systemReadStorageRaftSnapshotAutoStatusNameRaw(requestParameters: SystemApiSystemReadStorageRaftSnapshotAutoStatusNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemReadStorageRaftSnapshotAutoStatusNameRaw(requestParameters: SystemApiSystemReadStorageRaftSnapshotAutoStatusNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Read status of automated raft snapshots
      */
-    systemReadStorageRaftSnapshotAutoStatusName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemReadStorageRaftSnapshotAutoStatusName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     systemReadSyncAssociationsDestinationsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SystemReadSyncAssociationsDestinationsResponse>>;
@@ -2719,419 +2719,419 @@ export declare class SystemApi extends runtime.BaseAPI {
     /**
      * Configure control group global settings.
      */
-    systemWriteConfigControlGroupRaw(requestParameters: SystemApiSystemWriteConfigControlGroupOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteConfigControlGroupRaw(requestParameters: SystemApiSystemWriteConfigControlGroupOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Configure control group global settings.
      */
-    systemWriteConfigControlGroup(systemWriteConfigControlGroupRequest: SystemWriteConfigControlGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteConfigControlGroup(systemWriteConfigControlGroupRequest: SystemWriteConfigControlGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * The group_policy_application_mode must be provided, as within_namespace_hierarchy or any.
      * Updates the policy application mode for Vault.
      */
-    systemWriteConfigGroupPolicyApplicationRaw(requestParameters: SystemApiSystemWriteConfigGroupPolicyApplicationOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteConfigGroupPolicyApplicationRaw(requestParameters: SystemApiSystemWriteConfigGroupPolicyApplicationOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * The group_policy_application_mode must be provided, as within_namespace_hierarchy or any.
      * Updates the policy application mode for Vault.
      */
-    systemWriteConfigGroupPolicyApplication(systemWriteConfigGroupPolicyApplicationRequest: SystemWriteConfigGroupPolicyApplicationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteConfigGroupPolicyApplication(systemWriteConfigGroupPolicyApplicationRequest: SystemWriteConfigGroupPolicyApplicationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Authorize a control group request
      */
-    systemWriteControlGroupAuthorizeRaw(requestParameters: SystemApiSystemWriteControlGroupAuthorizeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteControlGroupAuthorizeRaw(requestParameters: SystemApiSystemWriteControlGroupAuthorizeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Authorize a control group request
      */
-    systemWriteControlGroupAuthorize(systemWriteControlGroupAuthorizeRequest: SystemWriteControlGroupAuthorizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteControlGroupAuthorize(systemWriteControlGroupAuthorizeRequest: SystemWriteControlGroupAuthorizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Check the status of a control group request
      */
-    systemWriteControlGroupRequestRaw(requestParameters: SystemApiSystemWriteControlGroupRequestOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteControlGroupRequestRaw(requestParameters: SystemApiSystemWriteControlGroupRequestOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Check the status of a control group request
      */
-    systemWriteControlGroupRequest(systemWriteControlGroupRequestRequest: SystemWriteControlGroupRequestRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteControlGroupRequest(systemWriteControlGroupRequestRequest: SystemWriteControlGroupRequestRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Write activity log data
      */
-    systemWriteInternalCountersActivityWriteRaw(requestParameters: SystemApiSystemWriteInternalCountersActivityWriteOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteInternalCountersActivityWriteRaw(requestParameters: SystemApiSystemWriteInternalCountersActivityWriteOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Write activity log data
      */
-    systemWriteInternalCountersActivityWrite(systemWriteInternalCountersActivityWriteRequest: SystemWriteInternalCountersActivityWriteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteInternalCountersActivityWrite(systemWriteInternalCountersActivityWriteRequest: SystemWriteInternalCountersActivityWriteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteManagedKeysTypeNameRaw(requestParameters: SystemApiSystemWriteManagedKeysTypeNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteManagedKeysTypeNameRaw(requestParameters: SystemApiSystemWriteManagedKeysTypeNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteManagedKeysTypeName(name: string, type: string, systemWriteManagedKeysTypeNameRequest: SystemWriteManagedKeysTypeNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteManagedKeysTypeName(name: string, type: string, systemWriteManagedKeysTypeNameRequest: SystemWriteManagedKeysTypeNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteManagedKeysTypeNameTestSignRaw(requestParameters: SystemApiSystemWriteManagedKeysTypeNameTestSignOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteManagedKeysTypeNameTestSignRaw(requestParameters: SystemApiSystemWriteManagedKeysTypeNameTestSignOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteManagedKeysTypeNameTestSign(name: string, type: string, systemWriteManagedKeysTypeNameTestSignRequest: SystemWriteManagedKeysTypeNameTestSignRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Defines or updates a Duo MFA method.
-     */
-    systemWriteMfaMethodDuoNameRaw(requestParameters: SystemApiSystemWriteMfaMethodDuoNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteManagedKeysTypeNameTestSign(name: string, type: string, systemWriteManagedKeysTypeNameTestSignRequest: SystemWriteManagedKeysTypeNameTestSignRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Defines or updates a Duo MFA method.
      */
-    systemWriteMfaMethodDuoName(name: string, systemWriteMfaMethodDuoNameRequest: SystemWriteMfaMethodDuoNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteMfaMethodDuoNameRaw(requestParameters: SystemApiSystemWriteMfaMethodDuoNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Defines or updates a Duo MFA method.
+     */
+    systemWriteMfaMethodDuoName(name: string, systemWriteMfaMethodDuoNameRequest: SystemWriteMfaMethodDuoNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Defines or updates an Okta MFA method.
      */
-    systemWriteMfaMethodOktaNameRaw(requestParameters: SystemApiSystemWriteMfaMethodOktaNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteMfaMethodOktaNameRaw(requestParameters: SystemApiSystemWriteMfaMethodOktaNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Defines or updates an Okta MFA method.
      */
-    systemWriteMfaMethodOktaName(name: string, systemWriteMfaMethodOktaNameRequest: SystemWriteMfaMethodOktaNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteMfaMethodOktaName(name: string, systemWriteMfaMethodOktaNameRequest: SystemWriteMfaMethodOktaNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Defines or updates a PingID MFA method.
      */
-    systemWriteMfaMethodPingidNameRaw(requestParameters: SystemApiSystemWriteMfaMethodPingidNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteMfaMethodPingidNameRaw(requestParameters: SystemApiSystemWriteMfaMethodPingidNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Defines or updates a PingID MFA method.
      */
-    systemWriteMfaMethodPingidName(name: string, systemWriteMfaMethodPingidNameRequest: SystemWriteMfaMethodPingidNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteMfaMethodPingidName(name: string, systemWriteMfaMethodPingidNameRequest: SystemWriteMfaMethodPingidNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Defines or updates a TOTP MFA method.
      */
-    systemWriteMfaMethodTotpNameRaw(requestParameters: SystemApiSystemWriteMfaMethodTotpNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteMfaMethodTotpNameRaw(requestParameters: SystemApiSystemWriteMfaMethodTotpNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Defines or updates a TOTP MFA method.
      */
-    systemWriteMfaMethodTotpName(name: string, systemWriteMfaMethodTotpNameRequest: SystemWriteMfaMethodTotpNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteMfaMethodTotpName(name: string, systemWriteMfaMethodTotpNameRequest: SystemWriteMfaMethodTotpNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Deletes the TOTP secret for the given method name on the given entity.
      */
-    systemWriteMfaMethodTotpNameAdminDestroyRaw(requestParameters: SystemApiSystemWriteMfaMethodTotpNameAdminDestroyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteMfaMethodTotpNameAdminDestroyRaw(requestParameters: SystemApiSystemWriteMfaMethodTotpNameAdminDestroyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Deletes the TOTP secret for the given method name on the given entity.
      */
-    systemWriteMfaMethodTotpNameAdminDestroy(name: string, systemWriteMfaMethodTotpNameAdminDestroyRequest: SystemWriteMfaMethodTotpNameAdminDestroyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteMfaMethodTotpNameAdminDestroy(name: string, systemWriteMfaMethodTotpNameAdminDestroyRequest: SystemWriteMfaMethodTotpNameAdminDestroyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Generates a TOTP secret for the given method name on the given entity.
      */
-    systemWriteMfaMethodTotpNameAdminGenerateRaw(requestParameters: SystemApiSystemWriteMfaMethodTotpNameAdminGenerateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteMfaMethodTotpNameAdminGenerateRaw(requestParameters: SystemApiSystemWriteMfaMethodTotpNameAdminGenerateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Generates a TOTP secret for the given method name on the given entity.
      */
-    systemWriteMfaMethodTotpNameAdminGenerate(name: string, systemWriteMfaMethodTotpNameAdminGenerateRequest: SystemWriteMfaMethodTotpNameAdminGenerateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteMfaMethodTotpNameAdminGenerate(name: string, systemWriteMfaMethodTotpNameAdminGenerateRequest: SystemWriteMfaMethodTotpNameAdminGenerateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Lock the API for a namespace and its descendants
      */
-    systemWriteNamespacesApiLockLockRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteNamespacesApiLockLockRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Lock the API for a namespace and its descendants
      */
-    systemWriteNamespacesApiLockLock(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteNamespacesApiLockLock(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Lock the API for a namespace and its descendants
      */
-    systemWriteNamespacesApiLockLockPathRaw(requestParameters: SystemApiSystemWriteNamespacesApiLockLockPathRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteNamespacesApiLockLockPathRaw(requestParameters: SystemApiSystemWriteNamespacesApiLockLockPathRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Lock the API for a namespace and its descendants
      */
-    systemWriteNamespacesApiLockLockPath(path: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteNamespacesApiLockLockPath(path: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Unlock the API for a namespace and its descendants
      */
-    systemWriteNamespacesApiLockUnlockRaw(requestParameters: SystemApiSystemWriteNamespacesApiLockUnlockOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteNamespacesApiLockUnlockRaw(requestParameters: SystemApiSystemWriteNamespacesApiLockUnlockOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Unlock the API for a namespace and its descendants
      */
-    systemWriteNamespacesApiLockUnlock(systemWriteNamespacesApiLockUnlockRequest: SystemWriteNamespacesApiLockUnlockRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteNamespacesApiLockUnlock(systemWriteNamespacesApiLockUnlockRequest: SystemWriteNamespacesApiLockUnlockRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Unlock the API for a namespace and its descendants
      */
-    systemWriteNamespacesApiLockUnlockPathRaw(requestParameters: SystemApiSystemWriteNamespacesApiLockUnlockPathOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteNamespacesApiLockUnlockPathRaw(requestParameters: SystemApiSystemWriteNamespacesApiLockUnlockPathOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Unlock the API for a namespace and its descendants
      */
-    systemWriteNamespacesApiLockUnlockPath(path: string, systemWriteNamespacesApiLockUnlockPathRequest: SystemWriteNamespacesApiLockUnlockPathRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteNamespacesApiLockUnlockPath(path: string, systemWriteNamespacesApiLockUnlockPathRequest: SystemWriteNamespacesApiLockUnlockPathRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteNamespacesPathRaw(requestParameters: SystemApiSystemWriteNamespacesPathOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteNamespacesPathRaw(requestParameters: SystemApiSystemWriteNamespacesPathOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteNamespacesPath(path: string, systemWriteNamespacesPathRequest: SystemWriteNamespacesPathRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * Read, Modify, or Delete an access control policy.
-     */
-    systemWritePoliciesEgpNameRaw(requestParameters: SystemApiSystemWritePoliciesEgpNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteNamespacesPath(path: string, systemWriteNamespacesPathRequest: SystemWriteNamespacesPathRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read, Modify, or Delete an access control policy.
      */
-    systemWritePoliciesEgpName(name: string, systemWritePoliciesEgpNameRequest: SystemWritePoliciesEgpNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWritePoliciesEgpNameRaw(requestParameters: SystemApiSystemWritePoliciesEgpNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Read, Modify, or Delete an access control policy.
      */
-    systemWritePoliciesRgpNameRaw(requestParameters: SystemApiSystemWritePoliciesRgpNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWritePoliciesEgpName(name: string, systemWritePoliciesEgpNameRequest: SystemWritePoliciesEgpNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read, Modify, or Delete an access control policy.
      */
-    systemWritePoliciesRgpName(name: string, systemWritePoliciesRgpNameRequest: SystemWritePoliciesRgpNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWritePoliciesRgpNameRaw(requestParameters: SystemApiSystemWritePoliciesRgpNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Read, Modify, or Delete an access control policy.
+     */
+    systemWritePoliciesRgpName(name: string, systemWritePoliciesRgpNameRequest: SystemWritePoliciesRgpNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteQuotasLeaseCountNameRaw(requestParameters: SystemApiSystemWriteQuotasLeaseCountNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteQuotasLeaseCountNameRaw(requestParameters: SystemApiSystemWriteQuotasLeaseCountNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteQuotasLeaseCountName(name: string, systemWriteQuotasLeaseCountNameRequest: SystemWriteQuotasLeaseCountNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteQuotasLeaseCountName(name: string, systemWriteQuotasLeaseCountNameRequest: SystemWriteQuotasLeaseCountNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationDrPrimaryDemoteRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationDrPrimaryDemoteRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationDrPrimaryDemote(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationDrPrimaryDemote(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationDrPrimaryDisableRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationDrPrimaryDisableRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationDrPrimaryDisable(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationDrPrimaryDisable(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationDrPrimaryEnableRaw(requestParameters: SystemApiSystemWriteReplicationDrPrimaryEnableOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationDrPrimaryEnableRaw(requestParameters: SystemApiSystemWriteReplicationDrPrimaryEnableOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationDrPrimaryEnable(systemWriteReplicationDrPrimaryEnableRequest: SystemWriteReplicationDrPrimaryEnableRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationDrPrimaryEnable(systemWriteReplicationDrPrimaryEnableRequest: SystemWriteReplicationDrPrimaryEnableRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationDrPrimaryRevokeSecondaryRaw(requestParameters: SystemApiSystemWriteReplicationDrPrimaryRevokeSecondaryOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationDrPrimaryRevokeSecondaryRaw(requestParameters: SystemApiSystemWriteReplicationDrPrimaryRevokeSecondaryOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationDrPrimaryRevokeSecondary(systemWriteReplicationDrPrimaryRevokeSecondaryRequest: SystemWriteReplicationDrPrimaryRevokeSecondaryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationDrPrimaryRevokeSecondary(systemWriteReplicationDrPrimaryRevokeSecondaryRequest: SystemWriteReplicationDrPrimaryRevokeSecondaryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationDrPrimarySecondaryTokenRaw(requestParameters: SystemApiSystemWriteReplicationDrPrimarySecondaryTokenOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationDrPrimarySecondaryTokenRaw(requestParameters: SystemApiSystemWriteReplicationDrPrimarySecondaryTokenOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationDrPrimarySecondaryToken(systemWriteReplicationDrPrimarySecondaryTokenRequest: SystemWriteReplicationDrPrimarySecondaryTokenRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationDrPrimarySecondaryToken(systemWriteReplicationDrPrimarySecondaryTokenRequest: SystemWriteReplicationDrPrimarySecondaryTokenRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Reload the given subsystem
      */
-    systemWriteReplicationDrSecondaryConfigReloadSubsystemRaw(requestParameters: SystemApiSystemWriteReplicationDrSecondaryConfigReloadSubsystemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationDrSecondaryConfigReloadSubsystemRaw(requestParameters: SystemApiSystemWriteReplicationDrSecondaryConfigReloadSubsystemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Reload the given subsystem
      */
-    systemWriteReplicationDrSecondaryConfigReloadSubsystem(subsystem: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationDrSecondaryConfigReloadSubsystem(subsystem: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationDrSecondaryDisableRaw(requestParameters: SystemApiSystemWriteReplicationDrSecondaryDisableOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationDrSecondaryDisableRaw(requestParameters: SystemApiSystemWriteReplicationDrSecondaryDisableOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationDrSecondaryDisable(systemWriteReplicationDrSecondaryDisableRequest: SystemWriteReplicationDrSecondaryDisableRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationDrSecondaryDisable(systemWriteReplicationDrSecondaryDisableRequest: SystemWriteReplicationDrSecondaryDisableRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationDrSecondaryEnableRaw(requestParameters: SystemApiSystemWriteReplicationDrSecondaryEnableOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationDrSecondaryEnableRaw(requestParameters: SystemApiSystemWriteReplicationDrSecondaryEnableOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationDrSecondaryEnable(systemWriteReplicationDrSecondaryEnableRequest: SystemWriteReplicationDrSecondaryEnableRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationDrSecondaryEnable(systemWriteReplicationDrSecondaryEnableRequest: SystemWriteReplicationDrSecondaryEnableRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationDrSecondaryGeneratePublicKeyRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationDrSecondaryGeneratePublicKeyRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationDrSecondaryGeneratePublicKey(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationDrSecondaryGeneratePublicKey(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationDrSecondaryMerkleCheckRaw(requestParameters: SystemApiSystemWriteReplicationDrSecondaryMerkleCheckOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationDrSecondaryMerkleCheckRaw(requestParameters: SystemApiSystemWriteReplicationDrSecondaryMerkleCheckOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationDrSecondaryMerkleCheck(systemWriteReplicationDrSecondaryMerkleCheckRequest: SystemWriteReplicationDrSecondaryMerkleCheckRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationDrSecondaryMerkleCheck(systemWriteReplicationDrSecondaryMerkleCheckRequest: SystemWriteReplicationDrSecondaryMerkleCheckRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationDrSecondaryOperationTokenDeleteRaw(requestParameters: SystemApiSystemWriteReplicationDrSecondaryOperationTokenDeleteOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationDrSecondaryOperationTokenDeleteRaw(requestParameters: SystemApiSystemWriteReplicationDrSecondaryOperationTokenDeleteOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationDrSecondaryOperationTokenDelete(systemWriteReplicationDrSecondaryOperationTokenDeleteRequest: SystemWriteReplicationDrSecondaryOperationTokenDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationDrSecondaryOperationTokenDelete(systemWriteReplicationDrSecondaryOperationTokenDeleteRequest: SystemWriteReplicationDrSecondaryOperationTokenDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationDrSecondaryPromoteRaw(requestParameters: SystemApiSystemWriteReplicationDrSecondaryPromoteOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationDrSecondaryPromoteRaw(requestParameters: SystemApiSystemWriteReplicationDrSecondaryPromoteOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationDrSecondaryPromote(systemWriteReplicationDrSecondaryPromoteRequest: SystemWriteReplicationDrSecondaryPromoteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationDrSecondaryPromote(systemWriteReplicationDrSecondaryPromoteRequest: SystemWriteReplicationDrSecondaryPromoteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationDrSecondaryRecoverRaw(requestParameters: SystemApiSystemWriteReplicationDrSecondaryRecoverOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationDrSecondaryRecoverRaw(requestParameters: SystemApiSystemWriteReplicationDrSecondaryRecoverOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationDrSecondaryRecover(systemWriteReplicationDrSecondaryRecoverRequest: SystemWriteReplicationDrSecondaryRecoverRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationDrSecondaryRecover(systemWriteReplicationDrSecondaryRecoverRequest: SystemWriteReplicationDrSecondaryRecoverRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationDrSecondaryReindexRaw(requestParameters: SystemApiSystemWriteReplicationDrSecondaryReindexOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationDrSecondaryReindexRaw(requestParameters: SystemApiSystemWriteReplicationDrSecondaryReindexOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationDrSecondaryReindex(systemWriteReplicationDrSecondaryReindexRequest: SystemWriteReplicationDrSecondaryReindexRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationDrSecondaryReindex(systemWriteReplicationDrSecondaryReindexRequest: SystemWriteReplicationDrSecondaryReindexRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationDrSecondaryUpdatePrimaryRaw(requestParameters: SystemApiSystemWriteReplicationDrSecondaryUpdatePrimaryOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationDrSecondaryUpdatePrimaryRaw(requestParameters: SystemApiSystemWriteReplicationDrSecondaryUpdatePrimaryOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationDrSecondaryUpdatePrimary(systemWriteReplicationDrSecondaryUpdatePrimaryRequest: SystemWriteReplicationDrSecondaryUpdatePrimaryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
-    /**
-     * force corrupting stuff
-     */
-    systemWriteReplicationForceCorruptionRaw(requestParameters: SystemApiSystemWriteReplicationForceCorruptionOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationDrSecondaryUpdatePrimary(systemWriteReplicationDrSecondaryUpdatePrimaryRequest: SystemWriteReplicationDrSecondaryUpdatePrimaryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * force corrupting stuff
      */
-    systemWriteReplicationForceCorruption(systemWriteReplicationForceCorruptionRequest: SystemWriteReplicationForceCorruptionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationForceCorruptionRaw(requestParameters: SystemApiSystemWriteReplicationForceCorruptionOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * force corrupting stuff
+     */
+    systemWriteReplicationForceCorruption(systemWriteReplicationForceCorruptionRequest: SystemWriteReplicationForceCorruptionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationMerkleCheckRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationMerkleCheckRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationMerkleCheck(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationMerkleCheck(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationPerformancePrimaryDemoteRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationPerformancePrimaryDemoteRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationPerformancePrimaryDemote(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationPerformancePrimaryDemote(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationPerformancePrimaryDisableRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationPerformancePrimaryDisableRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationPerformancePrimaryDisable(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationPerformancePrimaryDisable(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationPerformancePrimaryEnableRaw(requestParameters: SystemApiSystemWriteReplicationPerformancePrimaryEnableOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationPerformancePrimaryEnableRaw(requestParameters: SystemApiSystemWriteReplicationPerformancePrimaryEnableOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationPerformancePrimaryEnable(systemWriteReplicationPerformancePrimaryEnableRequest: SystemWriteReplicationPerformancePrimaryEnableRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationPerformancePrimaryEnable(systemWriteReplicationPerformancePrimaryEnableRequest: SystemWriteReplicationPerformancePrimaryEnableRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationPerformancePrimaryPathsFilterIdRaw(requestParameters: SystemApiSystemWriteReplicationPerformancePrimaryPathsFilterIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationPerformancePrimaryPathsFilterIdRaw(requestParameters: SystemApiSystemWriteReplicationPerformancePrimaryPathsFilterIdOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationPerformancePrimaryPathsFilterId(id: string, systemWriteReplicationPerformancePrimaryPathsFilterIdRequest: SystemWriteReplicationPerformancePrimaryPathsFilterIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationPerformancePrimaryPathsFilterId(id: string, systemWriteReplicationPerformancePrimaryPathsFilterIdRequest: SystemWriteReplicationPerformancePrimaryPathsFilterIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationPerformancePrimaryRevokeSecondaryRaw(requestParameters: SystemApiSystemWriteReplicationPerformancePrimaryRevokeSecondaryOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationPerformancePrimaryRevokeSecondaryRaw(requestParameters: SystemApiSystemWriteReplicationPerformancePrimaryRevokeSecondaryOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationPerformancePrimaryRevokeSecondary(systemWriteReplicationPerformancePrimaryRevokeSecondaryRequest: SystemWriteReplicationPerformancePrimaryRevokeSecondaryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationPerformancePrimaryRevokeSecondary(systemWriteReplicationPerformancePrimaryRevokeSecondaryRequest: SystemWriteReplicationPerformancePrimaryRevokeSecondaryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationPerformancePrimarySecondaryTokenRaw(requestParameters: SystemApiSystemWriteReplicationPerformancePrimarySecondaryTokenOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationPerformancePrimarySecondaryTokenRaw(requestParameters: SystemApiSystemWriteReplicationPerformancePrimarySecondaryTokenOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationPerformancePrimarySecondaryToken(systemWriteReplicationPerformancePrimarySecondaryTokenRequest: SystemWriteReplicationPerformancePrimarySecondaryTokenRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationPerformancePrimarySecondaryToken(systemWriteReplicationPerformancePrimarySecondaryTokenRequest: SystemWriteReplicationPerformancePrimarySecondaryTokenRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationPerformanceSecondaryDisableRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationPerformanceSecondaryDisableRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationPerformanceSecondaryDisable(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationPerformanceSecondaryDisable(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationPerformanceSecondaryEnableRaw(requestParameters: SystemApiSystemWriteReplicationPerformanceSecondaryEnableOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationPerformanceSecondaryEnableRaw(requestParameters: SystemApiSystemWriteReplicationPerformanceSecondaryEnableOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationPerformanceSecondaryEnable(systemWriteReplicationPerformanceSecondaryEnableRequest: SystemWriteReplicationPerformanceSecondaryEnableRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationPerformanceSecondaryEnable(systemWriteReplicationPerformanceSecondaryEnableRequest: SystemWriteReplicationPerformanceSecondaryEnableRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationPerformanceSecondaryGeneratePublicKeyRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationPerformanceSecondaryGeneratePublicKeyRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationPerformanceSecondaryGeneratePublicKey(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationPerformanceSecondaryGeneratePublicKey(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationPerformanceSecondaryPromoteRaw(requestParameters: SystemApiSystemWriteReplicationPerformanceSecondaryPromoteOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationPerformanceSecondaryPromoteRaw(requestParameters: SystemApiSystemWriteReplicationPerformanceSecondaryPromoteOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationPerformanceSecondaryPromote(systemWriteReplicationPerformanceSecondaryPromoteRequest: SystemWriteReplicationPerformanceSecondaryPromoteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationPerformanceSecondaryPromote(systemWriteReplicationPerformanceSecondaryPromoteRequest: SystemWriteReplicationPerformanceSecondaryPromoteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationPerformanceSecondaryUpdatePrimaryRaw(requestParameters: SystemApiSystemWriteReplicationPerformanceSecondaryUpdatePrimaryOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationPerformanceSecondaryUpdatePrimaryRaw(requestParameters: SystemApiSystemWriteReplicationPerformanceSecondaryUpdatePrimaryOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationPerformanceSecondaryUpdatePrimary(systemWriteReplicationPerformanceSecondaryUpdatePrimaryRequest: SystemWriteReplicationPerformanceSecondaryUpdatePrimaryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationPerformanceSecondaryUpdatePrimary(systemWriteReplicationPerformanceSecondaryUpdatePrimaryRequest: SystemWriteReplicationPerformanceSecondaryUpdatePrimaryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationPrimaryDemoteRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationPrimaryDemoteRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationPrimaryDemote(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationPrimaryDemote(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationPrimaryDisableRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationPrimaryDisableRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationPrimaryDisable(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationPrimaryDisable(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationPrimaryEnableRaw(requestParameters: SystemApiSystemWriteReplicationPrimaryEnableOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationPrimaryEnableRaw(requestParameters: SystemApiSystemWriteReplicationPrimaryEnableOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationPrimaryEnable(systemWriteReplicationPrimaryEnableRequest: SystemWriteReplicationPrimaryEnableRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationPrimaryEnable(systemWriteReplicationPrimaryEnableRequest: SystemWriteReplicationPrimaryEnableRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationPrimaryRevokeSecondaryRaw(requestParameters: SystemApiSystemWriteReplicationPrimaryRevokeSecondaryOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationPrimaryRevokeSecondaryRaw(requestParameters: SystemApiSystemWriteReplicationPrimaryRevokeSecondaryOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationPrimaryRevokeSecondary(systemWriteReplicationPrimaryRevokeSecondaryRequest: SystemWriteReplicationPrimaryRevokeSecondaryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationPrimaryRevokeSecondary(systemWriteReplicationPrimaryRevokeSecondaryRequest: SystemWriteReplicationPrimaryRevokeSecondaryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationPrimarySecondaryTokenRaw(requestParameters: SystemApiSystemWriteReplicationPrimarySecondaryTokenOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationPrimarySecondaryTokenRaw(requestParameters: SystemApiSystemWriteReplicationPrimarySecondaryTokenOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationPrimarySecondaryToken(systemWriteReplicationPrimarySecondaryTokenRequest: SystemWriteReplicationPrimarySecondaryTokenRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationPrimarySecondaryToken(systemWriteReplicationPrimarySecondaryTokenRequest: SystemWriteReplicationPrimarySecondaryTokenRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationRecoverRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationRecoverRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationRecover(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationRecover(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationReindexRaw(requestParameters: SystemApiSystemWriteReplicationReindexOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationReindexRaw(requestParameters: SystemApiSystemWriteReplicationReindexOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationReindex(systemWriteReplicationReindexRequest: SystemWriteReplicationReindexRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationReindex(systemWriteReplicationReindexRequest: SystemWriteReplicationReindexRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationSecondaryDisableRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationSecondaryDisableRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationSecondaryDisable(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationSecondaryDisable(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationSecondaryEnableRaw(requestParameters: SystemApiSystemWriteReplicationSecondaryEnableOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationSecondaryEnableRaw(requestParameters: SystemApiSystemWriteReplicationSecondaryEnableOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationSecondaryEnable(systemWriteReplicationSecondaryEnableRequest: SystemWriteReplicationSecondaryEnableRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationSecondaryEnable(systemWriteReplicationSecondaryEnableRequest: SystemWriteReplicationSecondaryEnableRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationSecondaryPromoteRaw(requestParameters: SystemApiSystemWriteReplicationSecondaryPromoteOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationSecondaryPromoteRaw(requestParameters: SystemApiSystemWriteReplicationSecondaryPromoteOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationSecondaryPromote(systemWriteReplicationSecondaryPromoteRequest: SystemWriteReplicationSecondaryPromoteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationSecondaryPromote(systemWriteReplicationSecondaryPromoteRequest: SystemWriteReplicationSecondaryPromoteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
-    systemWriteReplicationSecondaryUpdatePrimaryRaw(requestParameters: SystemApiSystemWriteReplicationSecondaryUpdatePrimaryOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteReplicationSecondaryUpdatePrimaryRaw(requestParameters: SystemApiSystemWriteReplicationSecondaryUpdatePrimaryOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    systemWriteReplicationSecondaryUpdatePrimary(systemWriteReplicationSecondaryUpdatePrimaryRequest: SystemWriteReplicationSecondaryUpdatePrimaryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteReplicationSecondaryUpdatePrimary(systemWriteReplicationSecondaryUpdatePrimaryRequest: SystemWriteReplicationSecondaryUpdatePrimaryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Start a seal rewrap process
      */
-    systemWriteSealwrapRewrapRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteSealwrapRewrapRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Start a seal rewrap process
      */
-    systemWriteSealwrapRewrap(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteSealwrapRewrap(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Update automated raft snapshot configuration
      */
-    systemWriteStorageRaftSnapshotAutoConfigNameRaw(requestParameters: SystemApiSystemWriteStorageRaftSnapshotAutoConfigNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    systemWriteStorageRaftSnapshotAutoConfigNameRaw(requestParameters: SystemApiSystemWriteStorageRaftSnapshotAutoConfigNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Update automated raft snapshot configuration
      */
-    systemWriteStorageRaftSnapshotAutoConfigName(name: string, systemWriteStorageRaftSnapshotAutoConfigNameRequest: SystemWriteStorageRaftSnapshotAutoConfigNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    systemWriteStorageRaftSnapshotAutoConfigName(name: string, systemWriteStorageRaftSnapshotAutoConfigNameRequest: SystemWriteStorageRaftSnapshotAutoConfigNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      */
     systemWriteSyncDestinationsAwsSmNameRaw(requestParameters: SystemApiSystemWriteSyncDestinationsAwsSmNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SystemWriteSyncDestinationsAwsSmNameResponse>>;
@@ -3207,11 +3207,11 @@ export declare class SystemApi extends runtime.BaseAPI {
     /**
      * Lists custom messages
      */
-    uiConfigListCustomMessagesRaw(requestParameters: SystemApiUiConfigListCustomMessagesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    uiConfigListCustomMessagesRaw(requestParameters: SystemApiUiConfigListCustomMessagesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Lists custom messages
      */
-    uiConfigListCustomMessages(list: UiConfigListCustomMessagesListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    uiConfigListCustomMessages(list: UiConfigListCustomMessagesListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Read custom message
      */
@@ -3231,19 +3231,19 @@ export declare class SystemApi extends runtime.BaseAPI {
     /**
      * Configure the values to be returned for the UI header.
      */
-    uiHeadersConfigureRaw(requestParameters: SystemApiUiHeadersConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    uiHeadersConfigureRaw(requestParameters: SystemApiUiHeadersConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Configure the values to be returned for the UI header.
      */
-    uiHeadersConfigure(header: string, uiHeadersConfigureRequest: UiHeadersConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    uiHeadersConfigure(header: string, uiHeadersConfigureRequest: UiHeadersConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Remove a UI header.
      */
-    uiHeadersDeleteConfigurationRaw(requestParameters: SystemApiUiHeadersDeleteConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    uiHeadersDeleteConfigurationRaw(requestParameters: SystemApiUiHeadersDeleteConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      * Remove a UI header.
      */
-    uiHeadersDeleteConfiguration(header: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    uiHeadersDeleteConfiguration(header: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Return a list of configured UI headers.
      */
@@ -3270,10 +3270,10 @@ export declare class SystemApi extends runtime.BaseAPI {
     unseal(unsealRequest: UnsealRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<UnsealResponse>;
     /**
      */
-    unwrapRaw(requestParameters: SystemApiUnwrapOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    unwrapRaw(requestParameters: SystemApiUnwrapOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
-    unwrap(unwrapRequest: UnwrapRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    unwrap(unwrapRequest: UnwrapRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
     /**
      * Returns map of historical version change entries
      */
@@ -3304,178 +3304,178 @@ export declare class SystemApi extends runtime.BaseAPI {
     wellKnownReadLabel(label: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WellKnownReadLabelResponse>;
     /**
      */
-    wrapRaw(requestParameters: SystemApiWrapRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    wrapRaw(requestParameters: SystemApiWrapRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
     /**
      */
     wrap(requestBody: {
         [key: string]: any;
-    }, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    }, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum LeasesLookUpListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum PluginsCatalogListPluginsWithTypeListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum PluginsRuntimesCatalogListPluginsRuntimes0ListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum PoliciesListAclPoliciesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum PoliciesListAclPolicies3ListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum PoliciesListPasswordPoliciesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum RateLimitQuotasListListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum RawListListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum SubscriptionsListEventsSubscriptionsListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum SystemListManagedKeysTypeListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum SystemListMfaMethodListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum SystemListNamespacesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum SystemListPoliciesEgpListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum SystemListPoliciesRgpListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum SystemListQuotasLeaseCountListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum SystemListStorageRaftSnapshotAutoConfigListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum SystemListSyncAssociationsListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum SystemListSyncDestinationsListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum SystemListSyncDestinationsTypeListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum SystemListSyncGithubAppsListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum UiConfigListCustomMessagesListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum UiHeadersListListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum VersionHistoryListEnum {
     TRUE = "true"
 }
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export declare enum WellKnownListLabelsListEnum {
     TRUE = "true"
 }

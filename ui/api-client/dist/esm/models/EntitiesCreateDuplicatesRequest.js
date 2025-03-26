@@ -25,12 +25,12 @@ export function EntitiesCreateDuplicatesRequestFromJSONTyped(json, ignoreDiscrim
         return json;
     }
     return {
-        count: json['count'] == null ? undefined : json['count'],
-        differentCase: json['different_case'] == null ? undefined : json['different_case'],
-        metadata: json['metadata'] == null ? undefined : json['metadata'],
-        name: json['name'] == null ? undefined : json['name'],
-        namespaceId: json['namespace_id'] == null ? undefined : json['namespace_id'],
-        policies: json['policies'] == null ? undefined : json['policies'],
+        'count': json['count'] == null ? undefined : json['count'],
+        'differentCase': json['different_case'] == null ? undefined : json['different_case'],
+        'metadata': json['metadata'] == null ? undefined : json['metadata'],
+        'name': json['name'] == null ? undefined : json['name'],
+        'namespaceId': json['namespace_id'] == null ? undefined : json['namespace_id'],
+        'policies': json['policies'] == null ? undefined : json['policies'],
     };
 }
 export function EntitiesCreateDuplicatesRequestToJSON(json) {
@@ -41,11 +41,11 @@ export function EntitiesCreateDuplicatesRequestToJSONTyped(value, ignoreDiscrimi
         return value;
     }
     return {
-        count: value['count'],
-        different_case: value['differentCase'],
-        metadata: value['metadata'],
-        name: value['name'],
-        namespace_id: value['namespaceId'],
-        policies: value['policies'],
+        'count': value['count'],
+        'different_case': value['differentCase'],
+        'metadata': value['metadata'],
+        'name': value['name'],
+        'namespace_id': value['namespaceId'],
+        'policies': value['policies'],
     };
 }

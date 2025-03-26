@@ -32,7 +32,7 @@ function PluginsCatalogPinsCreatePinnedVersionRequestFromJSONTyped(json, ignoreD
         return json;
     }
     return {
-        version: json['version'] == null ? undefined : json['version'],
+        'version': json['version'] == null ? undefined : json['version'],
     };
 }
 function PluginsCatalogPinsCreatePinnedVersionRequestToJSON(json) {
@@ -43,6 +43,6 @@ function PluginsCatalogPinsCreatePinnedVersionRequestToJSONTyped(value, ignoreDi
         return value;
     }
     return {
-        version: value['version'],
+        'version': value['version'],
     };
 }

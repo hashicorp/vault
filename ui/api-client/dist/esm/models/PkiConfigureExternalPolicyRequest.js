@@ -25,14 +25,14 @@ export function PkiConfigureExternalPolicyRequestFromJSONTyped(json, ignoreDiscr
         return json;
     }
     return {
-        enabled: json['enabled'] == null ? undefined : json['enabled'],
-        entityJmespath: json['entity_jmespath'] == null ? undefined : json['entity_jmespath'],
-        externalServiceUrl: json['external_service_url'] == null ? undefined : json['external_service_url'],
-        groupJmespath: json['group_jmespath'] == null ? undefined : json['group_jmespath'],
-        timeout: json['timeout'] == null ? undefined : json['timeout'],
-        trustedCa: json['trusted_ca'] == null ? undefined : json['trusted_ca'],
-        trustedLeafCertificateBundle: json['trusted_leaf_certificate_bundle'] == null ? undefined : json['trusted_leaf_certificate_bundle'],
-        vaultClientCertBundle: json['vault_client_cert_bundle'] == null ? undefined : json['vault_client_cert_bundle'],
+        'enabled': json['enabled'] == null ? undefined : json['enabled'],
+        'entityJmespath': json['entity_jmespath'] == null ? undefined : json['entity_jmespath'],
+        'externalServiceUrl': json['external_service_url'] == null ? undefined : json['external_service_url'],
+        'groupJmespath': json['group_jmespath'] == null ? undefined : json['group_jmespath'],
+        'timeout': json['timeout'] == null ? undefined : json['timeout'],
+        'trustedCa': json['trusted_ca'] == null ? undefined : json['trusted_ca'],
+        'trustedLeafCertificateBundle': json['trusted_leaf_certificate_bundle'] == null ? undefined : json['trusted_leaf_certificate_bundle'],
+        'vaultClientCertBundle': json['vault_client_cert_bundle'] == null ? undefined : json['vault_client_cert_bundle'],
     };
 }
 export function PkiConfigureExternalPolicyRequestToJSON(json) {
@@ -43,13 +43,13 @@ export function PkiConfigureExternalPolicyRequestToJSONTyped(value, ignoreDiscri
         return value;
     }
     return {
-        enabled: value['enabled'],
-        entity_jmespath: value['entityJmespath'],
-        external_service_url: value['externalServiceUrl'],
-        group_jmespath: value['groupJmespath'],
-        timeout: value['timeout'],
-        trusted_ca: value['trustedCa'],
-        trusted_leaf_certificate_bundle: value['trustedLeafCertificateBundle'],
-        vault_client_cert_bundle: value['vaultClientCertBundle'],
+        'enabled': value['enabled'],
+        'entity_jmespath': value['entityJmespath'],
+        'external_service_url': value['externalServiceUrl'],
+        'group_jmespath': value['groupJmespath'],
+        'timeout': value['timeout'],
+        'trusted_ca': value['trustedCa'],
+        'trusted_leaf_certificate_bundle': value['trustedLeafCertificateBundle'],
+        'vault_client_cert_bundle': value['vaultClientCertBundle'],
     };
 }

@@ -32,8 +32,8 @@ function AwsReadStaticCredsNameResponseFromJSONTyped(json, ignoreDiscriminator) 
         return json;
     }
     return {
-        accessKey: json['access_key'] == null ? undefined : json['access_key'],
-        secretKey: json['secret_key'] == null ? undefined : json['secret_key'],
+        'accessKey': json['access_key'] == null ? undefined : json['access_key'],
+        'secretKey': json['secret_key'] == null ? undefined : json['secret_key'],
     };
 }
 function AwsReadStaticCredsNameResponseToJSON(json) {
@@ -44,7 +44,7 @@ function AwsReadStaticCredsNameResponseToJSONTyped(value, ignoreDiscriminator = 
         return value;
     }
     return {
-        access_key: value['accessKey'],
-        secret_key: value['secretKey'],
+        'access_key': value['accessKey'],
+        'secret_key': value['secretKey'],
     };
 }

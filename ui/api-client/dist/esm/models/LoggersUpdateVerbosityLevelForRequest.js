@@ -25,7 +25,7 @@ export function LoggersUpdateVerbosityLevelForRequestFromJSONTyped(json, ignoreD
         return json;
     }
     return {
-        level: json['level'] == null ? undefined : json['level'],
+        'level': json['level'] == null ? undefined : json['level'],
     };
 }
 export function LoggersUpdateVerbosityLevelForRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function LoggersUpdateVerbosityLevelForRequestToJSONTyped(value, ignoreDi
         return value;
     }
     return {
-        level: value['level'],
+        'level': value['level'],
     };
 }

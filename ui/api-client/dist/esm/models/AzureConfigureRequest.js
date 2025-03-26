@@ -25,18 +25,18 @@ export function AzureConfigureRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        clientId: json['client_id'] == null ? undefined : json['client_id'],
-        clientSecret: json['client_secret'] == null ? undefined : json['client_secret'],
-        disableAutomatedRotation: json['disable_automated_rotation'] == null ? undefined : json['disable_automated_rotation'],
-        environment: json['environment'] == null ? undefined : json['environment'],
-        identityTokenAudience: json['identity_token_audience'] == null ? undefined : json['identity_token_audience'],
-        identityTokenTtl: json['identity_token_ttl'] == null ? undefined : json['identity_token_ttl'],
-        rootPasswordTtl: json['root_password_ttl'] == null ? undefined : json['root_password_ttl'],
-        rotationPeriod: json['rotation_period'] == null ? undefined : json['rotation_period'],
-        rotationSchedule: json['rotation_schedule'] == null ? undefined : json['rotation_schedule'],
-        rotationWindow: json['rotation_window'] == null ? undefined : json['rotation_window'],
-        subscriptionId: json['subscription_id'] == null ? undefined : json['subscription_id'],
-        tenantId: json['tenant_id'] == null ? undefined : json['tenant_id'],
+        'clientId': json['client_id'] == null ? undefined : json['client_id'],
+        'clientSecret': json['client_secret'] == null ? undefined : json['client_secret'],
+        'disableAutomatedRotation': json['disable_automated_rotation'] == null ? undefined : json['disable_automated_rotation'],
+        'environment': json['environment'] == null ? undefined : json['environment'],
+        'identityTokenAudience': json['identity_token_audience'] == null ? undefined : json['identity_token_audience'],
+        'identityTokenTtl': json['identity_token_ttl'] == null ? undefined : json['identity_token_ttl'],
+        'rootPasswordTtl': json['root_password_ttl'] == null ? undefined : json['root_password_ttl'],
+        'rotationPeriod': json['rotation_period'] == null ? undefined : json['rotation_period'],
+        'rotationSchedule': json['rotation_schedule'] == null ? undefined : json['rotation_schedule'],
+        'rotationWindow': json['rotation_window'] == null ? undefined : json['rotation_window'],
+        'subscriptionId': json['subscription_id'] == null ? undefined : json['subscription_id'],
+        'tenantId': json['tenant_id'] == null ? undefined : json['tenant_id'],
     };
 }
 export function AzureConfigureRequestToJSON(json) {
@@ -47,17 +47,17 @@ export function AzureConfigureRequestToJSONTyped(value, ignoreDiscriminator = fa
         return value;
     }
     return {
-        client_id: value['clientId'],
-        client_secret: value['clientSecret'],
-        disable_automated_rotation: value['disableAutomatedRotation'],
-        environment: value['environment'],
-        identity_token_audience: value['identityTokenAudience'],
-        identity_token_ttl: value['identityTokenTtl'],
-        root_password_ttl: value['rootPasswordTtl'],
-        rotation_period: value['rotationPeriod'],
-        rotation_schedule: value['rotationSchedule'],
-        rotation_window: value['rotationWindow'],
-        subscription_id: value['subscriptionId'],
-        tenant_id: value['tenantId'],
+        'client_id': value['clientId'],
+        'client_secret': value['clientSecret'],
+        'disable_automated_rotation': value['disableAutomatedRotation'],
+        'environment': value['environment'],
+        'identity_token_audience': value['identityTokenAudience'],
+        'identity_token_ttl': value['identityTokenTtl'],
+        'root_password_ttl': value['rootPasswordTtl'],
+        'rotation_period': value['rotationPeriod'],
+        'rotation_schedule': value['rotationSchedule'],
+        'rotation_window': value['rotationWindow'],
+        'subscription_id': value['subscriptionId'],
+        'tenant_id': value['tenantId'],
     };
 }

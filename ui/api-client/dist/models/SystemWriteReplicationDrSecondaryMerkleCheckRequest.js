@@ -32,7 +32,7 @@ function SystemWriteReplicationDrSecondaryMerkleCheckRequestFromJSONTyped(json, 
         return json;
     }
     return {
-        drOperationToken: json['dr_operation_token'] == null ? undefined : json['dr_operation_token'],
+        'drOperationToken': json['dr_operation_token'] == null ? undefined : json['dr_operation_token'],
     };
 }
 function SystemWriteReplicationDrSecondaryMerkleCheckRequestToJSON(json) {
@@ -43,6 +43,6 @@ function SystemWriteReplicationDrSecondaryMerkleCheckRequestToJSONTyped(value, i
         return value;
     }
     return {
-        dr_operation_token: value['drOperationToken'],
+        'dr_operation_token': value['drOperationToken'],
     };
 }

@@ -32,13 +32,13 @@ function SshSignCertificateRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        certType: json['cert_type'] == null ? undefined : json['cert_type'],
-        criticalOptions: json['critical_options'] == null ? undefined : json['critical_options'],
-        extensions: json['extensions'] == null ? undefined : json['extensions'],
-        keyId: json['key_id'] == null ? undefined : json['key_id'],
-        publicKey: json['public_key'] == null ? undefined : json['public_key'],
-        ttl: json['ttl'] == null ? undefined : json['ttl'],
-        validPrincipals: json['valid_principals'] == null ? undefined : json['valid_principals'],
+        'certType': json['cert_type'] == null ? undefined : json['cert_type'],
+        'criticalOptions': json['critical_options'] == null ? undefined : json['critical_options'],
+        'extensions': json['extensions'] == null ? undefined : json['extensions'],
+        'keyId': json['key_id'] == null ? undefined : json['key_id'],
+        'publicKey': json['public_key'] == null ? undefined : json['public_key'],
+        'ttl': json['ttl'] == null ? undefined : json['ttl'],
+        'validPrincipals': json['valid_principals'] == null ? undefined : json['valid_principals'],
     };
 }
 function SshSignCertificateRequestToJSON(json) {
@@ -49,12 +49,12 @@ function SshSignCertificateRequestToJSONTyped(value, ignoreDiscriminator = false
         return value;
     }
     return {
-        cert_type: value['certType'],
-        critical_options: value['criticalOptions'],
-        extensions: value['extensions'],
-        key_id: value['keyId'],
-        public_key: value['publicKey'],
-        ttl: value['ttl'],
-        valid_principals: value['validPrincipals'],
+        'cert_type': value['certType'],
+        'critical_options': value['criticalOptions'],
+        'extensions': value['extensions'],
+        'key_id': value['keyId'],
+        'public_key': value['publicKey'],
+        'ttl': value['ttl'],
+        'valid_principals': value['validPrincipals'],
     };
 }

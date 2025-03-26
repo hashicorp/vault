@@ -25,11 +25,11 @@ export function PkiConfigureCaResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        existingIssuers: json['existing_issuers'] == null ? undefined : json['existing_issuers'],
-        existingKeys: json['existing_keys'] == null ? undefined : json['existing_keys'],
-        importedIssuers: json['imported_issuers'] == null ? undefined : json['imported_issuers'],
-        importedKeys: json['imported_keys'] == null ? undefined : json['imported_keys'],
-        mapping: json['mapping'] == null ? undefined : json['mapping'],
+        'existingIssuers': json['existing_issuers'] == null ? undefined : json['existing_issuers'],
+        'existingKeys': json['existing_keys'] == null ? undefined : json['existing_keys'],
+        'importedIssuers': json['imported_issuers'] == null ? undefined : json['imported_issuers'],
+        'importedKeys': json['imported_keys'] == null ? undefined : json['imported_keys'],
+        'mapping': json['mapping'] == null ? undefined : json['mapping'],
     };
 }
 export function PkiConfigureCaResponseToJSON(json) {
@@ -40,10 +40,10 @@ export function PkiConfigureCaResponseToJSONTyped(value, ignoreDiscriminator = f
         return value;
     }
     return {
-        existing_issuers: value['existingIssuers'],
-        existing_keys: value['existingKeys'],
-        imported_issuers: value['importedIssuers'],
-        imported_keys: value['importedKeys'],
-        mapping: value['mapping'],
+        'existing_issuers': value['existingIssuers'],
+        'existing_keys': value['existingKeys'],
+        'imported_issuers': value['importedIssuers'],
+        'imported_keys': value['importedKeys'],
+        'mapping': value['mapping'],
     };
 }

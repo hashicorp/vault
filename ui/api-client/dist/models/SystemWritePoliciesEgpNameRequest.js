@@ -32,9 +32,9 @@ function SystemWritePoliciesEgpNameRequestFromJSONTyped(json, ignoreDiscriminato
         return json;
     }
     return {
-        enforcementLevel: json['enforcement_level'] == null ? undefined : json['enforcement_level'],
-        paths: json['paths'] == null ? undefined : json['paths'],
-        policy: json['policy'] == null ? undefined : json['policy'],
+        'enforcementLevel': json['enforcement_level'] == null ? undefined : json['enforcement_level'],
+        'paths': json['paths'] == null ? undefined : json['paths'],
+        'policy': json['policy'] == null ? undefined : json['policy'],
     };
 }
 function SystemWritePoliciesEgpNameRequestToJSON(json) {
@@ -45,8 +45,8 @@ function SystemWritePoliciesEgpNameRequestToJSONTyped(value, ignoreDiscriminator
         return value;
     }
     return {
-        enforcement_level: value['enforcementLevel'],
-        paths: value['paths'],
-        policy: value['policy'],
+        'enforcement_level': value['enforcementLevel'],
+        'paths': value['paths'],
+        'policy': value['policy'],
     };
 }

@@ -239,18 +239,18 @@ export interface PkiRootSignIntermediateRequest {
     usePss?: boolean;
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum PkiRootSignIntermediateRequestFormatEnum {
     PEM = "pem",
     DER = "der",
     PEM_BUNDLE = "pem_bundle"
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export declare enum PkiRootSignIntermediateRequestPrivateKeyFormatEnum {
     EMPTY = "",
     DER = "der",

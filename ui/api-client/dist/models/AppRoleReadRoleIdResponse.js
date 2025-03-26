@@ -32,7 +32,7 @@ function AppRoleReadRoleIdResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        roleId: json['role_id'] == null ? undefined : json['role_id'],
+        'roleId': json['role_id'] == null ? undefined : json['role_id'],
     };
 }
 function AppRoleReadRoleIdResponseToJSON(json) {
@@ -43,6 +43,6 @@ function AppRoleReadRoleIdResponseToJSONTyped(value, ignoreDiscriminator = false
         return value;
     }
     return {
-        role_id: value['roleId'],
+        'role_id': value['roleId'],
     };
 }

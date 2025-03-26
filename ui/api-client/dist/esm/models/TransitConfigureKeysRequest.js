@@ -25,7 +25,7 @@ export function TransitConfigureKeysRequestFromJSONTyped(json, ignoreDiscriminat
         return json;
     }
     return {
-        disableUpsert: json['disable_upsert'] == null ? undefined : json['disable_upsert'],
+        'disableUpsert': json['disable_upsert'] == null ? undefined : json['disable_upsert'],
     };
 }
 export function TransitConfigureKeysRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function TransitConfigureKeysRequestToJSONTyped(value, ignoreDiscriminato
         return value;
     }
     return {
-        disable_upsert: value['disableUpsert'],
+        'disable_upsert': value['disableUpsert'],
     };
 }

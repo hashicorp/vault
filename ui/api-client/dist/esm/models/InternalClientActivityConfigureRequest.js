@@ -25,9 +25,9 @@ export function InternalClientActivityConfigureRequestFromJSONTyped(json, ignore
         return json;
     }
     return {
-        defaultReportMonths: json['default_report_months'] == null ? undefined : json['default_report_months'],
-        enabled: json['enabled'] == null ? undefined : json['enabled'],
-        retentionMonths: json['retention_months'] == null ? undefined : json['retention_months'],
+        'defaultReportMonths': json['default_report_months'] == null ? undefined : json['default_report_months'],
+        'enabled': json['enabled'] == null ? undefined : json['enabled'],
+        'retentionMonths': json['retention_months'] == null ? undefined : json['retention_months'],
     };
 }
 export function InternalClientActivityConfigureRequestToJSON(json) {
@@ -38,8 +38,8 @@ export function InternalClientActivityConfigureRequestToJSONTyped(value, ignoreD
         return value;
     }
     return {
-        default_report_months: value['defaultReportMonths'],
-        enabled: value['enabled'],
-        retention_months: value['retentionMonths'],
+        'default_report_months': value['defaultReportMonths'],
+        'enabled': value['enabled'],
+        'retention_months': value['retentionMonths'],
     };
 }

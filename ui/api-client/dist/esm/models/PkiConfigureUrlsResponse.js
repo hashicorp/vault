@@ -25,10 +25,10 @@ export function PkiConfigureUrlsResponseFromJSONTyped(json, ignoreDiscriminator)
         return json;
     }
     return {
-        crlDistributionPoints: json['crl_distribution_points'] == null ? undefined : json['crl_distribution_points'],
-        enableTemplating: json['enable_templating'] == null ? undefined : json['enable_templating'],
-        issuingCertificates: json['issuing_certificates'] == null ? undefined : json['issuing_certificates'],
-        ocspServers: json['ocsp_servers'] == null ? undefined : json['ocsp_servers'],
+        'crlDistributionPoints': json['crl_distribution_points'] == null ? undefined : json['crl_distribution_points'],
+        'enableTemplating': json['enable_templating'] == null ? undefined : json['enable_templating'],
+        'issuingCertificates': json['issuing_certificates'] == null ? undefined : json['issuing_certificates'],
+        'ocspServers': json['ocsp_servers'] == null ? undefined : json['ocsp_servers'],
     };
 }
 export function PkiConfigureUrlsResponseToJSON(json) {
@@ -39,9 +39,9 @@ export function PkiConfigureUrlsResponseToJSONTyped(value, ignoreDiscriminator =
         return value;
     }
     return {
-        crl_distribution_points: value['crlDistributionPoints'],
-        enable_templating: value['enableTemplating'],
-        issuing_certificates: value['issuingCertificates'],
-        ocsp_servers: value['ocspServers'],
+        'crl_distribution_points': value['crlDistributionPoints'],
+        'enable_templating': value['enableTemplating'],
+        'issuing_certificates': value['issuingCertificates'],
+        'ocsp_servers': value['ocspServers'],
     };
 }

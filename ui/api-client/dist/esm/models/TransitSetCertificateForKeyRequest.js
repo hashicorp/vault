@@ -27,8 +27,8 @@ export function TransitSetCertificateForKeyRequestFromJSONTyped(json, ignoreDisc
         return json;
     }
     return {
-        certificateChain: json['certificate_chain'],
-        version: json['version'] == null ? undefined : json['version'],
+        'certificateChain': json['certificate_chain'],
+        'version': json['version'] == null ? undefined : json['version'],
     };
 }
 export function TransitSetCertificateForKeyRequestToJSON(json) {
@@ -39,7 +39,7 @@ export function TransitSetCertificateForKeyRequestToJSONTyped(value, ignoreDiscr
         return value;
     }
     return {
-        certificate_chain: value['certificateChain'],
-        version: value['version'],
+        'certificate_chain': value['certificateChain'],
+        'version': value['version'],
     };
 }

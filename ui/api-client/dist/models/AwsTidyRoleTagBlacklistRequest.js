@@ -32,7 +32,7 @@ function AwsTidyRoleTagBlacklistRequestFromJSONTyped(json, ignoreDiscriminator) 
         return json;
     }
     return {
-        safetyBuffer: json['safety_buffer'] == null ? undefined : json['safety_buffer'],
+        'safetyBuffer': json['safety_buffer'] == null ? undefined : json['safety_buffer'],
     };
 }
 function AwsTidyRoleTagBlacklistRequestToJSON(json) {
@@ -43,6 +43,6 @@ function AwsTidyRoleTagBlacklistRequestToJSONTyped(value, ignoreDiscriminator = 
         return value;
     }
     return {
-        safety_buffer: value['safetyBuffer'],
+        'safety_buffer': value['safetyBuffer'],
     };
 }

@@ -32,7 +32,7 @@ function TokenLookUpSelf2RequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        token: json['token'] == null ? undefined : json['token'],
+        'token': json['token'] == null ? undefined : json['token'],
     };
 }
 function TokenLookUpSelf2RequestToJSON(json) {
@@ -43,6 +43,6 @@ function TokenLookUpSelf2RequestToJSONTyped(value, ignoreDiscriminator = false) 
         return value;
     }
     return {
-        token: value['token'],
+        'token': value['token'],
     };
 }

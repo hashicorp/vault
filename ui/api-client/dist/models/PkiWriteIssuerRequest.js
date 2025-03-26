@@ -32,21 +32,19 @@ function PkiWriteIssuerRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        crlDistributionPoints: json['crl_distribution_points'] == null ? undefined : json['crl_distribution_points'],
-        disableCriticalExtensionChecks: json['disable_critical_extension_checks'] == null
-            ? undefined
-            : json['disable_critical_extension_checks'],
-        disableNameChecks: json['disable_name_checks'] == null ? undefined : json['disable_name_checks'],
-        disableNameConstraintChecks: json['disable_name_constraint_checks'] == null ? undefined : json['disable_name_constraint_checks'],
-        disablePathLengthChecks: json['disable_path_length_checks'] == null ? undefined : json['disable_path_length_checks'],
-        enableAiaUrlTemplating: json['enable_aia_url_templating'] == null ? undefined : json['enable_aia_url_templating'],
-        issuerName: json['issuer_name'] == null ? undefined : json['issuer_name'],
-        issuingCertificates: json['issuing_certificates'] == null ? undefined : json['issuing_certificates'],
-        leafNotAfterBehavior: json['leaf_not_after_behavior'] == null ? undefined : json['leaf_not_after_behavior'],
-        manualChain: json['manual_chain'] == null ? undefined : json['manual_chain'],
-        ocspServers: json['ocsp_servers'] == null ? undefined : json['ocsp_servers'],
-        revocationSignatureAlgorithm: json['revocation_signature_algorithm'] == null ? undefined : json['revocation_signature_algorithm'],
-        usage: json['usage'] == null ? undefined : json['usage'],
+        'crlDistributionPoints': json['crl_distribution_points'] == null ? undefined : json['crl_distribution_points'],
+        'disableCriticalExtensionChecks': json['disable_critical_extension_checks'] == null ? undefined : json['disable_critical_extension_checks'],
+        'disableNameChecks': json['disable_name_checks'] == null ? undefined : json['disable_name_checks'],
+        'disableNameConstraintChecks': json['disable_name_constraint_checks'] == null ? undefined : json['disable_name_constraint_checks'],
+        'disablePathLengthChecks': json['disable_path_length_checks'] == null ? undefined : json['disable_path_length_checks'],
+        'enableAiaUrlTemplating': json['enable_aia_url_templating'] == null ? undefined : json['enable_aia_url_templating'],
+        'issuerName': json['issuer_name'] == null ? undefined : json['issuer_name'],
+        'issuingCertificates': json['issuing_certificates'] == null ? undefined : json['issuing_certificates'],
+        'leafNotAfterBehavior': json['leaf_not_after_behavior'] == null ? undefined : json['leaf_not_after_behavior'],
+        'manualChain': json['manual_chain'] == null ? undefined : json['manual_chain'],
+        'ocspServers': json['ocsp_servers'] == null ? undefined : json['ocsp_servers'],
+        'revocationSignatureAlgorithm': json['revocation_signature_algorithm'] == null ? undefined : json['revocation_signature_algorithm'],
+        'usage': json['usage'] == null ? undefined : json['usage'],
     };
 }
 function PkiWriteIssuerRequestToJSON(json) {
@@ -57,18 +55,18 @@ function PkiWriteIssuerRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        crl_distribution_points: value['crlDistributionPoints'],
-        disable_critical_extension_checks: value['disableCriticalExtensionChecks'],
-        disable_name_checks: value['disableNameChecks'],
-        disable_name_constraint_checks: value['disableNameConstraintChecks'],
-        disable_path_length_checks: value['disablePathLengthChecks'],
-        enable_aia_url_templating: value['enableAiaUrlTemplating'],
-        issuer_name: value['issuerName'],
-        issuing_certificates: value['issuingCertificates'],
-        leaf_not_after_behavior: value['leafNotAfterBehavior'],
-        manual_chain: value['manualChain'],
-        ocsp_servers: value['ocspServers'],
-        revocation_signature_algorithm: value['revocationSignatureAlgorithm'],
-        usage: value['usage'],
+        'crl_distribution_points': value['crlDistributionPoints'],
+        'disable_critical_extension_checks': value['disableCriticalExtensionChecks'],
+        'disable_name_checks': value['disableNameChecks'],
+        'disable_name_constraint_checks': value['disableNameConstraintChecks'],
+        'disable_path_length_checks': value['disablePathLengthChecks'],
+        'enable_aia_url_templating': value['enableAiaUrlTemplating'],
+        'issuer_name': value['issuerName'],
+        'issuing_certificates': value['issuingCertificates'],
+        'leaf_not_after_behavior': value['leafNotAfterBehavior'],
+        'manual_chain': value['manualChain'],
+        'ocsp_servers': value['ocspServers'],
+        'revocation_signature_algorithm': value['revocationSignatureAlgorithm'],
+        'usage': value['usage'],
     };
 }

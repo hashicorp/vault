@@ -25,14 +25,14 @@ export function InitializeRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        pgpKeys: json['pgp_keys'] == null ? undefined : json['pgp_keys'],
-        recoveryPgpKeys: json['recovery_pgp_keys'] == null ? undefined : json['recovery_pgp_keys'],
-        recoveryShares: json['recovery_shares'] == null ? undefined : json['recovery_shares'],
-        recoveryThreshold: json['recovery_threshold'] == null ? undefined : json['recovery_threshold'],
-        rootTokenPgpKey: json['root_token_pgp_key'] == null ? undefined : json['root_token_pgp_key'],
-        secretShares: json['secret_shares'] == null ? undefined : json['secret_shares'],
-        secretThreshold: json['secret_threshold'] == null ? undefined : json['secret_threshold'],
-        storedShares: json['stored_shares'] == null ? undefined : json['stored_shares'],
+        'pgpKeys': json['pgp_keys'] == null ? undefined : json['pgp_keys'],
+        'recoveryPgpKeys': json['recovery_pgp_keys'] == null ? undefined : json['recovery_pgp_keys'],
+        'recoveryShares': json['recovery_shares'] == null ? undefined : json['recovery_shares'],
+        'recoveryThreshold': json['recovery_threshold'] == null ? undefined : json['recovery_threshold'],
+        'rootTokenPgpKey': json['root_token_pgp_key'] == null ? undefined : json['root_token_pgp_key'],
+        'secretShares': json['secret_shares'] == null ? undefined : json['secret_shares'],
+        'secretThreshold': json['secret_threshold'] == null ? undefined : json['secret_threshold'],
+        'storedShares': json['stored_shares'] == null ? undefined : json['stored_shares'],
     };
 }
 export function InitializeRequestToJSON(json) {
@@ -43,13 +43,13 @@ export function InitializeRequestToJSONTyped(value, ignoreDiscriminator = false)
         return value;
     }
     return {
-        pgp_keys: value['pgpKeys'],
-        recovery_pgp_keys: value['recoveryPgpKeys'],
-        recovery_shares: value['recoveryShares'],
-        recovery_threshold: value['recoveryThreshold'],
-        root_token_pgp_key: value['rootTokenPgpKey'],
-        secret_shares: value['secretShares'],
-        secret_threshold: value['secretThreshold'],
-        stored_shares: value['storedShares'],
+        'pgp_keys': value['pgpKeys'],
+        'recovery_pgp_keys': value['recoveryPgpKeys'],
+        'recovery_shares': value['recoveryShares'],
+        'recovery_threshold': value['recoveryThreshold'],
+        'root_token_pgp_key': value['rootTokenPgpKey'],
+        'secret_shares': value['secretShares'],
+        'secret_threshold': value['secretThreshold'],
+        'stored_shares': value['storedShares'],
     };
 }

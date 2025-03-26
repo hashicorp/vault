@@ -25,9 +25,9 @@ export function PkiRevokeWithKeyResponseFromJSONTyped(json, ignoreDiscriminator)
         return json;
     }
     return {
-        revocationTime: json['revocation_time'] == null ? undefined : json['revocation_time'],
-        revocationTimeRfc3339: json['revocation_time_rfc3339'] == null ? undefined : new Date(json['revocation_time_rfc3339']),
-        state: json['state'] == null ? undefined : json['state'],
+        'revocationTime': json['revocation_time'] == null ? undefined : json['revocation_time'],
+        'revocationTimeRfc3339': json['revocation_time_rfc3339'] == null ? undefined : (new Date(json['revocation_time_rfc3339'])),
+        'state': json['state'] == null ? undefined : json['state'],
     };
 }
 export function PkiRevokeWithKeyResponseToJSON(json) {
@@ -38,8 +38,8 @@ export function PkiRevokeWithKeyResponseToJSONTyped(value, ignoreDiscriminator =
         return value;
     }
     return {
-        revocation_time: value['revocationTime'],
-        revocation_time_rfc3339: value['revocationTimeRfc3339'] == null ? undefined : value['revocationTimeRfc3339'].toISOString(),
-        state: value['state'],
+        'revocation_time': value['revocationTime'],
+        'revocation_time_rfc3339': value['revocationTimeRfc3339'] == null ? undefined : ((value['revocationTimeRfc3339']).toISOString()),
+        'state': value['state'],
     };
 }

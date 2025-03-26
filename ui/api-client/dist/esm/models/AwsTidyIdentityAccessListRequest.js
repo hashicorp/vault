@@ -25,7 +25,7 @@ export function AwsTidyIdentityAccessListRequestFromJSONTyped(json, ignoreDiscri
         return json;
     }
     return {
-        safetyBuffer: json['safety_buffer'] == null ? undefined : json['safety_buffer'],
+        'safetyBuffer': json['safety_buffer'] == null ? undefined : json['safety_buffer'],
     };
 }
 export function AwsTidyIdentityAccessListRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function AwsTidyIdentityAccessListRequestToJSONTyped(value, ignoreDiscrim
         return value;
     }
     return {
-        safety_buffer: value['safetyBuffer'],
+        'safety_buffer': value['safetyBuffer'],
     };
 }

@@ -32,7 +32,7 @@ function LoggersUpdateVerbosityLevelForRequestFromJSONTyped(json, ignoreDiscrimi
         return json;
     }
     return {
-        level: json['level'] == null ? undefined : json['level'],
+        'level': json['level'] == null ? undefined : json['level'],
     };
 }
 function LoggersUpdateVerbosityLevelForRequestToJSON(json) {
@@ -43,6 +43,6 @@ function LoggersUpdateVerbosityLevelForRequestToJSONTyped(value, ignoreDiscrimin
         return value;
     }
     return {
-        level: value['level'],
+        'level': value['level'],
     };
 }

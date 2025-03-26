@@ -32,10 +32,10 @@ function InternalUiReadResultantAclResponseFromJSONTyped(json, ignoreDiscriminat
         return json;
     }
     return {
-        chrootNamespace: json['chroot_namespace'] == null ? undefined : json['chroot_namespace'],
-        exactPaths: json['exact_paths'] == null ? undefined : json['exact_paths'],
-        globPaths: json['glob_paths'] == null ? undefined : json['glob_paths'],
-        root: json['root'] == null ? undefined : json['root'],
+        'chrootNamespace': json['chroot_namespace'] == null ? undefined : json['chroot_namespace'],
+        'exactPaths': json['exact_paths'] == null ? undefined : json['exact_paths'],
+        'globPaths': json['glob_paths'] == null ? undefined : json['glob_paths'],
+        'root': json['root'] == null ? undefined : json['root'],
     };
 }
 function InternalUiReadResultantAclResponseToJSON(json) {
@@ -46,9 +46,9 @@ function InternalUiReadResultantAclResponseToJSONTyped(value, ignoreDiscriminato
         return value;
     }
     return {
-        chroot_namespace: value['chrootNamespace'],
-        exact_paths: value['exactPaths'],
-        glob_paths: value['globPaths'],
-        root: value['root'],
+        'chroot_namespace': value['chrootNamespace'],
+        'exact_paths': value['exactPaths'],
+        'glob_paths': value['globPaths'],
+        'root': value['root'],
     };
 }

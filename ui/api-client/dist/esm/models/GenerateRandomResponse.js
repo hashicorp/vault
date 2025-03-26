@@ -25,7 +25,7 @@ export function GenerateRandomResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        randomBytes: json['random_bytes'] == null ? undefined : json['random_bytes'],
+        'randomBytes': json['random_bytes'] == null ? undefined : json['random_bytes'],
     };
 }
 export function GenerateRandomResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function GenerateRandomResponseToJSONTyped(value, ignoreDiscriminator = f
         return value;
     }
     return {
-        random_bytes: value['randomBytes'],
+        'random_bytes': value['randomBytes'],
     };
 }

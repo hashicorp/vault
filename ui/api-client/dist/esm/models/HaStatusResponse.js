@@ -25,7 +25,7 @@ export function HaStatusResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        nodes: json['nodes'] == null ? undefined : json['nodes'],
+        'nodes': json['nodes'] == null ? undefined : json['nodes'],
     };
 }
 export function HaStatusResponseToJSON(json) {
@@ -36,6 +36,6 @@ export function HaStatusResponseToJSONTyped(value, ignoreDiscriminator = false) 
         return value;
     }
     return {
-        nodes: value['nodes'],
+        'nodes': value['nodes'],
     };
 }

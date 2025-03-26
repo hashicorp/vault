@@ -25,7 +25,7 @@ export function SystemWriteNamespacesApiLockUnlockRequestFromJSONTyped(json, ign
         return json;
     }
     return {
-        unlockKey: json['unlock_key'] == null ? undefined : json['unlock_key'],
+        'unlockKey': json['unlock_key'] == null ? undefined : json['unlock_key'],
     };
 }
 export function SystemWriteNamespacesApiLockUnlockRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function SystemWriteNamespacesApiLockUnlockRequestToJSONTyped(value, igno
         return value;
     }
     return {
-        unlock_key: value['unlockKey'],
+        'unlock_key': value['unlockKey'],
     };
 }

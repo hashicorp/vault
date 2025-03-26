@@ -32,7 +32,7 @@ function AppRoleLoginResponseFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        role: json['role'] == null ? undefined : json['role'],
+        'role': json['role'] == null ? undefined : json['role'],
     };
 }
 function AppRoleLoginResponseToJSON(json) {
@@ -43,6 +43,6 @@ function AppRoleLoginResponseToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        role: value['role'],
+        'role': value['role'],
     };
 }

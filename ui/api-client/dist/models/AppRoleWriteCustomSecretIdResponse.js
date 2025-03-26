@@ -32,10 +32,10 @@ function AppRoleWriteCustomSecretIdResponseFromJSONTyped(json, ignoreDiscriminat
         return json;
     }
     return {
-        secretId: json['secret_id'] == null ? undefined : json['secret_id'],
-        secretIdAccessor: json['secret_id_accessor'] == null ? undefined : json['secret_id_accessor'],
-        secretIdNumUses: json['secret_id_num_uses'] == null ? undefined : json['secret_id_num_uses'],
-        secretIdTtl: json['secret_id_ttl'] == null ? undefined : json['secret_id_ttl'],
+        'secretId': json['secret_id'] == null ? undefined : json['secret_id'],
+        'secretIdAccessor': json['secret_id_accessor'] == null ? undefined : json['secret_id_accessor'],
+        'secretIdNumUses': json['secret_id_num_uses'] == null ? undefined : json['secret_id_num_uses'],
+        'secretIdTtl': json['secret_id_ttl'] == null ? undefined : json['secret_id_ttl'],
     };
 }
 function AppRoleWriteCustomSecretIdResponseToJSON(json) {
@@ -46,9 +46,9 @@ function AppRoleWriteCustomSecretIdResponseToJSONTyped(value, ignoreDiscriminato
         return value;
     }
     return {
-        secret_id: value['secretId'],
-        secret_id_accessor: value['secretIdAccessor'],
-        secret_id_num_uses: value['secretIdNumUses'],
-        secret_id_ttl: value['secretIdTtl'],
+        'secret_id': value['secretId'],
+        'secret_id_accessor': value['secretIdAccessor'],
+        'secret_id_num_uses': value['secretIdNumUses'],
+        'secret_id_ttl': value['secretIdTtl'],
     };
 }

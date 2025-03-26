@@ -25,8 +25,8 @@ export function AppRoleWritePeriodRequestFromJSONTyped(json, ignoreDiscriminator
         return json;
     }
     return {
-        period: json['period'] == null ? undefined : json['period'],
-        tokenPeriod: json['token_period'] == null ? undefined : json['token_period'],
+        'period': json['period'] == null ? undefined : json['period'],
+        'tokenPeriod': json['token_period'] == null ? undefined : json['token_period'],
     };
 }
 export function AppRoleWritePeriodRequestToJSON(json) {
@@ -37,7 +37,7 @@ export function AppRoleWritePeriodRequestToJSONTyped(value, ignoreDiscriminator 
         return value;
     }
     return {
-        period: value['period'],
-        token_period: value['tokenPeriod'],
+        'period': value['period'],
+        'token_period': value['tokenPeriod'],
     };
 }

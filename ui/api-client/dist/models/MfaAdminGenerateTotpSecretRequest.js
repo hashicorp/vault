@@ -36,8 +36,8 @@ function MfaAdminGenerateTotpSecretRequestFromJSONTyped(json, ignoreDiscriminato
         return json;
     }
     return {
-        entityId: json['entity_id'],
-        methodId: json['method_id'],
+        'entityId': json['entity_id'],
+        'methodId': json['method_id'],
     };
 }
 function MfaAdminGenerateTotpSecretRequestToJSON(json) {
@@ -48,7 +48,7 @@ function MfaAdminGenerateTotpSecretRequestToJSONTyped(value, ignoreDiscriminator
         return value;
     }
     return {
-        entity_id: value['entityId'],
-        method_id: value['methodId'],
+        'entity_id': value['entityId'],
+        'method_id': value['methodId'],
     };
 }

@@ -25,7 +25,7 @@ export function LdapLibraryForceCheckInRequestFromJSONTyped(json, ignoreDiscrimi
         return json;
     }
     return {
-        serviceAccountNames: json['service_account_names'] == null ? undefined : json['service_account_names'],
+        'serviceAccountNames': json['service_account_names'] == null ? undefined : json['service_account_names'],
     };
 }
 export function LdapLibraryForceCheckInRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function LdapLibraryForceCheckInRequestToJSONTyped(value, ignoreDiscrimin
         return value;
     }
     return {
-        service_account_names: value['serviceAccountNames'],
+        'service_account_names': value['serviceAccountNames'],
     };
 }

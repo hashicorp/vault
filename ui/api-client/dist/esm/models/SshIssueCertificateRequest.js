@@ -25,14 +25,14 @@ export function SshIssueCertificateRequestFromJSONTyped(json, ignoreDiscriminato
         return json;
     }
     return {
-        certType: json['cert_type'] == null ? undefined : json['cert_type'],
-        criticalOptions: json['critical_options'] == null ? undefined : json['critical_options'],
-        extensions: json['extensions'] == null ? undefined : json['extensions'],
-        keyBits: json['key_bits'] == null ? undefined : json['key_bits'],
-        keyId: json['key_id'] == null ? undefined : json['key_id'],
-        keyType: json['key_type'] == null ? undefined : json['key_type'],
-        ttl: json['ttl'] == null ? undefined : json['ttl'],
-        validPrincipals: json['valid_principals'] == null ? undefined : json['valid_principals'],
+        'certType': json['cert_type'] == null ? undefined : json['cert_type'],
+        'criticalOptions': json['critical_options'] == null ? undefined : json['critical_options'],
+        'extensions': json['extensions'] == null ? undefined : json['extensions'],
+        'keyBits': json['key_bits'] == null ? undefined : json['key_bits'],
+        'keyId': json['key_id'] == null ? undefined : json['key_id'],
+        'keyType': json['key_type'] == null ? undefined : json['key_type'],
+        'ttl': json['ttl'] == null ? undefined : json['ttl'],
+        'validPrincipals': json['valid_principals'] == null ? undefined : json['valid_principals'],
     };
 }
 export function SshIssueCertificateRequestToJSON(json) {
@@ -43,13 +43,13 @@ export function SshIssueCertificateRequestToJSONTyped(value, ignoreDiscriminator
         return value;
     }
     return {
-        cert_type: value['certType'],
-        critical_options: value['criticalOptions'],
-        extensions: value['extensions'],
-        key_bits: value['keyBits'],
-        key_id: value['keyId'],
-        key_type: value['keyType'],
-        ttl: value['ttl'],
-        valid_principals: value['validPrincipals'],
+        'cert_type': value['certType'],
+        'critical_options': value['criticalOptions'],
+        'extensions': value['extensions'],
+        'key_bits': value['keyBits'],
+        'key_id': value['keyId'],
+        'key_type': value['keyType'],
+        'ttl': value['ttl'],
+        'valid_principals': value['validPrincipals'],
     };
 }

@@ -32,10 +32,10 @@ function GoogleCloudWriteStaticAccountRequestFromJSONTyped(json, ignoreDiscrimin
         return json;
     }
     return {
-        bindings: json['bindings'] == null ? undefined : json['bindings'],
-        secretType: json['secret_type'] == null ? undefined : json['secret_type'],
-        serviceAccountEmail: json['service_account_email'] == null ? undefined : json['service_account_email'],
-        tokenScopes: json['token_scopes'] == null ? undefined : json['token_scopes'],
+        'bindings': json['bindings'] == null ? undefined : json['bindings'],
+        'secretType': json['secret_type'] == null ? undefined : json['secret_type'],
+        'serviceAccountEmail': json['service_account_email'] == null ? undefined : json['service_account_email'],
+        'tokenScopes': json['token_scopes'] == null ? undefined : json['token_scopes'],
     };
 }
 function GoogleCloudWriteStaticAccountRequestToJSON(json) {
@@ -46,9 +46,9 @@ function GoogleCloudWriteStaticAccountRequestToJSONTyped(value, ignoreDiscrimina
         return value;
     }
     return {
-        bindings: value['bindings'],
-        secret_type: value['secretType'],
-        service_account_email: value['serviceAccountEmail'],
-        token_scopes: value['tokenScopes'],
+        'bindings': value['bindings'],
+        'secret_type': value['secretType'],
+        'service_account_email': value['serviceAccountEmail'],
+        'token_scopes': value['tokenScopes'],
     };
 }

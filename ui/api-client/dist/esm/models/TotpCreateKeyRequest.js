@@ -25,18 +25,18 @@ export function TotpCreateKeyRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        accountName: json['account_name'] == null ? undefined : json['account_name'],
-        algorithm: json['algorithm'] == null ? undefined : json['algorithm'],
-        digits: json['digits'] == null ? undefined : json['digits'],
-        exported: json['exported'] == null ? undefined : json['exported'],
-        generate: json['generate'] == null ? undefined : json['generate'],
-        issuer: json['issuer'] == null ? undefined : json['issuer'],
-        key: json['key'] == null ? undefined : json['key'],
-        keySize: json['key_size'] == null ? undefined : json['key_size'],
-        period: json['period'] == null ? undefined : json['period'],
-        qrSize: json['qr_size'] == null ? undefined : json['qr_size'],
-        skew: json['skew'] == null ? undefined : json['skew'],
-        url: json['url'] == null ? undefined : json['url'],
+        'accountName': json['account_name'] == null ? undefined : json['account_name'],
+        'algorithm': json['algorithm'] == null ? undefined : json['algorithm'],
+        'digits': json['digits'] == null ? undefined : json['digits'],
+        'exported': json['exported'] == null ? undefined : json['exported'],
+        'generate': json['generate'] == null ? undefined : json['generate'],
+        'issuer': json['issuer'] == null ? undefined : json['issuer'],
+        'key': json['key'] == null ? undefined : json['key'],
+        'keySize': json['key_size'] == null ? undefined : json['key_size'],
+        'period': json['period'] == null ? undefined : json['period'],
+        'qrSize': json['qr_size'] == null ? undefined : json['qr_size'],
+        'skew': json['skew'] == null ? undefined : json['skew'],
+        'url': json['url'] == null ? undefined : json['url'],
     };
 }
 export function TotpCreateKeyRequestToJSON(json) {
@@ -47,17 +47,17 @@ export function TotpCreateKeyRequestToJSONTyped(value, ignoreDiscriminator = fal
         return value;
     }
     return {
-        account_name: value['accountName'],
-        algorithm: value['algorithm'],
-        digits: value['digits'],
-        exported: value['exported'],
-        generate: value['generate'],
-        issuer: value['issuer'],
-        key: value['key'],
-        key_size: value['keySize'],
-        period: value['period'],
-        qr_size: value['qrSize'],
-        skew: value['skew'],
-        url: value['url'],
+        'account_name': value['accountName'],
+        'algorithm': value['algorithm'],
+        'digits': value['digits'],
+        'exported': value['exported'],
+        'generate': value['generate'],
+        'issuer': value['issuer'],
+        'key': value['key'],
+        'key_size': value['keySize'],
+        'period': value['period'],
+        'qr_size': value['qrSize'],
+        'skew': value['skew'],
+        'url': value['url'],
     };
 }

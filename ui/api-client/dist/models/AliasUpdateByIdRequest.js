@@ -32,10 +32,10 @@ function AliasUpdateByIdRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        canonicalId: json['canonical_id'] == null ? undefined : json['canonical_id'],
-        entityId: json['entity_id'] == null ? undefined : json['entity_id'],
-        mountAccessor: json['mount_accessor'] == null ? undefined : json['mount_accessor'],
-        name: json['name'] == null ? undefined : json['name'],
+        'canonicalId': json['canonical_id'] == null ? undefined : json['canonical_id'],
+        'entityId': json['entity_id'] == null ? undefined : json['entity_id'],
+        'mountAccessor': json['mount_accessor'] == null ? undefined : json['mount_accessor'],
+        'name': json['name'] == null ? undefined : json['name'],
     };
 }
 function AliasUpdateByIdRequestToJSON(json) {
@@ -46,9 +46,9 @@ function AliasUpdateByIdRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
-        canonical_id: value['canonicalId'],
-        entity_id: value['entityId'],
-        mount_accessor: value['mountAccessor'],
-        name: value['name'],
+        'canonical_id': value['canonicalId'],
+        'entity_id': value['entityId'],
+        'mount_accessor': value['mountAccessor'],
+        'name': value['name'],
     };
 }

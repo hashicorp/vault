@@ -25,7 +25,7 @@ export function OidcRotateKeyRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        verificationTtl: json['verification_ttl'] == null ? undefined : json['verification_ttl'],
+        'verificationTtl': json['verification_ttl'] == null ? undefined : json['verification_ttl'],
     };
 }
 export function OidcRotateKeyRequestToJSON(json) {
@@ -36,6 +36,6 @@ export function OidcRotateKeyRequestToJSONTyped(value, ignoreDiscriminator = fal
         return value;
     }
     return {
-        verification_ttl: value['verificationTtl'],
+        'verification_ttl': value['verificationTtl'],
     };
 }

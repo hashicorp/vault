@@ -25,11 +25,11 @@ export function PersonaCreateRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
-        entityId: json['entity_id'] == null ? undefined : json['entity_id'],
-        id: json['id'] == null ? undefined : json['id'],
-        metadata: json['metadata'] == null ? undefined : json['metadata'],
-        mountAccessor: json['mount_accessor'] == null ? undefined : json['mount_accessor'],
-        name: json['name'] == null ? undefined : json['name'],
+        'entityId': json['entity_id'] == null ? undefined : json['entity_id'],
+        'id': json['id'] == null ? undefined : json['id'],
+        'metadata': json['metadata'] == null ? undefined : json['metadata'],
+        'mountAccessor': json['mount_accessor'] == null ? undefined : json['mount_accessor'],
+        'name': json['name'] == null ? undefined : json['name'],
     };
 }
 export function PersonaCreateRequestToJSON(json) {
@@ -40,10 +40,10 @@ export function PersonaCreateRequestToJSONTyped(value, ignoreDiscriminator = fal
         return value;
     }
     return {
-        entity_id: value['entityId'],
-        id: value['id'],
-        metadata: value['metadata'],
-        mount_accessor: value['mountAccessor'],
-        name: value['name'],
+        'entity_id': value['entityId'],
+        'id': value['id'],
+        'metadata': value['metadata'],
+        'mount_accessor': value['mountAccessor'],
+        'name': value['name'],
     };
 }

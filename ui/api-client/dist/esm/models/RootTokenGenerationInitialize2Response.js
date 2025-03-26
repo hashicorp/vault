@@ -25,16 +25,16 @@ export function RootTokenGenerationInitialize2ResponseFromJSONTyped(json, ignore
         return json;
     }
     return {
-        complete: json['complete'] == null ? undefined : json['complete'],
-        encodedRootToken: json['encoded_root_token'] == null ? undefined : json['encoded_root_token'],
-        encodedToken: json['encoded_token'] == null ? undefined : json['encoded_token'],
-        nonce: json['nonce'] == null ? undefined : json['nonce'],
-        otp: json['otp'] == null ? undefined : json['otp'],
-        otpLength: json['otp_length'] == null ? undefined : json['otp_length'],
-        pgpFingerprint: json['pgp_fingerprint'] == null ? undefined : json['pgp_fingerprint'],
-        progress: json['progress'] == null ? undefined : json['progress'],
-        required: json['required'] == null ? undefined : json['required'],
-        started: json['started'] == null ? undefined : json['started'],
+        'complete': json['complete'] == null ? undefined : json['complete'],
+        'encodedRootToken': json['encoded_root_token'] == null ? undefined : json['encoded_root_token'],
+        'encodedToken': json['encoded_token'] == null ? undefined : json['encoded_token'],
+        'nonce': json['nonce'] == null ? undefined : json['nonce'],
+        'otp': json['otp'] == null ? undefined : json['otp'],
+        'otpLength': json['otp_length'] == null ? undefined : json['otp_length'],
+        'pgpFingerprint': json['pgp_fingerprint'] == null ? undefined : json['pgp_fingerprint'],
+        'progress': json['progress'] == null ? undefined : json['progress'],
+        'required': json['required'] == null ? undefined : json['required'],
+        'started': json['started'] == null ? undefined : json['started'],
     };
 }
 export function RootTokenGenerationInitialize2ResponseToJSON(json) {
@@ -45,15 +45,15 @@ export function RootTokenGenerationInitialize2ResponseToJSONTyped(value, ignoreD
         return value;
     }
     return {
-        complete: value['complete'],
-        encoded_root_token: value['encodedRootToken'],
-        encoded_token: value['encodedToken'],
-        nonce: value['nonce'],
-        otp: value['otp'],
-        otp_length: value['otpLength'],
-        pgp_fingerprint: value['pgpFingerprint'],
-        progress: value['progress'],
-        required: value['required'],
-        started: value['started'],
+        'complete': value['complete'],
+        'encoded_root_token': value['encodedRootToken'],
+        'encoded_token': value['encodedToken'],
+        'nonce': value['nonce'],
+        'otp': value['otp'],
+        'otp_length': value['otpLength'],
+        'pgp_fingerprint': value['pgpFingerprint'],
+        'progress': value['progress'],
+        'required': value['required'],
+        'started': value['started'],
     };
 }

@@ -25,9 +25,9 @@ export function QueryTokenAccessorCapabilitiesRequestFromJSONTyped(json, ignoreD
         return json;
     }
     return {
-        accessor: json['accessor'] == null ? undefined : json['accessor'],
-        path: json['path'] == null ? undefined : json['path'],
-        paths: json['paths'] == null ? undefined : json['paths'],
+        'accessor': json['accessor'] == null ? undefined : json['accessor'],
+        'path': json['path'] == null ? undefined : json['path'],
+        'paths': json['paths'] == null ? undefined : json['paths'],
     };
 }
 export function QueryTokenAccessorCapabilitiesRequestToJSON(json) {
@@ -38,8 +38,8 @@ export function QueryTokenAccessorCapabilitiesRequestToJSONTyped(value, ignoreDi
         return value;
     }
     return {
-        accessor: value['accessor'],
-        path: value['path'],
-        paths: value['paths'],
+        'accessor': value['accessor'],
+        'path': value['path'],
+        'paths': value['paths'],
     };
 }
