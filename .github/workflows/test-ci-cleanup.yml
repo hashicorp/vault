@@ -1,8 +1,12 @@
 name: test-ci-cleanup
 on:
-  schedule:
-    # * is a special character in YAML so you have to quote this string
-    - cron:  '05 02 * * *'
+#  schedule:
+#    # * is a special character in YAML so you have to quote this string
+#    - cron:  '05 02 * * *'
+  pull_request:
+    # This ensures the workflow runs when there's a pull request targeting tin-test
+    branches:
+      - enos/VAULT-34794
 
 jobs:
   setup:
