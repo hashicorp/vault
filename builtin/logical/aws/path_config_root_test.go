@@ -317,9 +317,12 @@ func TestBackend_PathConfigRoot_STSFallback_defaultEndpointRegion(t *testing.T) 
 		t.Fatalf("bad: config writing failed: err: %v", err)
 	}
 
-	_, err = b.getRootConfigs(context.Background(), config.StorageView, "sts", b.Logger())
+	cfgs, err := b.getRootConfigs(context.Background(), config.StorageView, "sts", b.Logger())
 	if err != nil {
 		t.Fatalf("couldn't get STS configs with default region/endpoints: %v", err)
+	}
+	if len(cfgs) != 1 {
+		t.Fatalf("got %d configs, but expected 1", len(cfgs))
 	}
 }
 
@@ -355,9 +358,12 @@ func TestBackend_PathConfigRoot_IAM_defaultEndpointRegion(t *testing.T) {
 		t.Fatalf("bad: config writing failed: err: %v", err)
 	}
 
-	_, err = b.getRootConfigs(context.Background(), config.StorageView, "iam", b.Logger())
+	cfgs, err := b.getRootConfigs(context.Background(), config.StorageView, "iam", b.Logger())
 	if err != nil {
 		t.Fatalf("couldn't get IAM configs with default region/endpoints: %v", err)
+	}
+	if len(cfgs) != 1 {
+		t.Fatalf("got %d configs, but expected 1", len(cfgs))
 	}
 }
 
