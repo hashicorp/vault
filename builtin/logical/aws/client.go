@@ -119,12 +119,17 @@ func (b *backend) getRootConfigs(ctx context.Context, s logical.Storage, clientT
 		credsConfig.RoleARN = config.RoleARN
 	}
 
+	// at this point, in the IAM case, regions contains nothing, and endpoints contains iam_endpoint, if it was set.
+	// in the sts case, regions contains sts_region, if it was set, then the sts_fallback_regions in order, if they were set.
+	//                  endpoints contains sts_endpint, if it wa set, then sts_fallback_endpoints in order, if they were set.
+
 	// case in which nothing was supplied
 	if len(regions) == 0 {
+		// fallback region is in descending order, AWS_REGION, or AWS_DEFAULT_REGION, or us-east-1
 		regions = append(regions, fallbackRegion)
 
-		// we also need to set the endpoint
-		if len(endpoints) == 0 {
+		// we also need to set the endpoint if we're using sts
+		if len(endpoints) == 0 && clientType == "sts" {
 			endpoints = append(endpoints, matchingSTSEndpoint(fallbackRegion))
 		}
 	}
