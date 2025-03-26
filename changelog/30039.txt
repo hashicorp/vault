@@ -1,15 +1,15 @@
 ```release-note:bug
-secrets/aws: Forward Performance Secondary requests when configuring root credentials.
+secrets/aws: fix a panic when a performance standby node attempts to write/update config.
 ```
 
 ```release-note:bug
-auth/aws: Forward Performance Secondary requests when configuring root credentials.
+auth/aws: fix a panic when a performance standby node attempts to write/update config.
 ```
 
 ```release-note:bug
-auth/ldap: Forward Performance Secondary requests when configuring root credentials.
+auth/ldap: fix a panic when a performance standby node attempts to write/update config.
 ```
 
 ```release-note:bug
-secrets/db: Forward Performance Secondary requests when configuring root credentials.
+secrets/db: fix a panic when a performance standby node attempts to write/update config.
 ```
