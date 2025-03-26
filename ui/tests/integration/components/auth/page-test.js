@@ -38,16 +38,13 @@ module('Integration | Component | auth | page', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.router = this.owner.lookup('service:router');
-    this.auth = this.owner.lookup('service:auth');
+    this.version = this.owner.lookup('service:version');
     this.cluster = { id: '1' };
-    this.authQp = 'token';
-    // this.nsQp = 'admin';
     // this.providerQp = 'token';
     this.onAuthSuccess = sinon.spy();
     this.onNamespaceUpdate = sinon.spy();
 
-    this.renderComponent = async () => {
+    this.renderComponent = () => {
       return render(hbs`
         <Auth::Page
           @authMethodQueryParam={{this.authQp}}
@@ -62,7 +59,28 @@ module('Integration | Component | auth | page', function (hooks) {
     };
   });
 
-  // TODO build out for all auth types
+  test('it calls onNamespaceUpdate', async function (assert) {
+    assert.expect(1);
+    this.version.features = ['Namespaces'];
+    await this.renderComponent();
+    await fillIn(AUTH_FORM.namespaceInput, 'mynamespace');
+    const [actual] = this.onNamespaceUpdate.lastCall.args;
+    assert.strictEqual(actual, 'mynamespace', `onNamespaceUpdate called with: ${actual}`);
+  });
+
+  test('it calls onNamespaceUpdate for HVD managed clusters', async function (assert) {
+    assert.expect(2);
+    this.version.features = ['Namespaces'];
+    this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+    this.nsQp = 'admin';
+    await this.renderComponent();
+
+    assert.dom(AUTH_FORM.namespaceInput).hasValue('');
+    await fillIn(AUTH_FORM.namespaceInput, 'mynamespace');
+    const [actual] = this.onNamespaceUpdate.lastCall.args;
+    assert.strictEqual(actual, 'mynamespace', `onNamespaceUpdate called with: ${actual}`);
+  });
+
   const REQUEST_DATA = {
     token: {
       loginData: { token: 'mysupersecuretoken' },
@@ -203,7 +221,7 @@ module('Integration | Component | auth | page', function (hooks) {
   }
 
   // token makes a GET request so test separately
-  test(`token: it calls onAuthSuccess on submit`, async function (assert) {
+  test('token: it calls onAuthSuccess on submit', async function (assert) {
     assert.expect(1);
     const authType = 'token';
     const { loginData, url } = REQUEST_DATA.token;
