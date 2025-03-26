@@ -4,8 +4,7 @@ on:
 #    # * is a special character in YAML so you have to quote this string
 #    - cron:  '05 02 * * *'
   pull_request:
-    # This ensures the workflow runs when there's a pull request targeting tin-test
-    branches:
+    paths:
       - enos/VAULT-34794
 
 jobs:
