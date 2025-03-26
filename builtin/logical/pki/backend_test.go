@@ -7435,9 +7435,7 @@ func TestIssuance_SignIntermediateKeyUsages(t *testing.T) {
 	requireSuccessNonNilResponse(t, resp, err, "expected root generation to succeed")
 	rootCertRaw := resp.Data["certificate"]
 	rootCert := parseCert(t, rootCertRaw.(string))
-	// TODO: Help (Victor?)
-	require.NotEqual(t, 0, rootCert.KeyUsage&x509.KeyUsageDigitalSignature, "keyUsage Digital Signature was not present")
-
+	require.Equal(t, x509.KeyUsageDigitalSignature, rootCert.KeyUsage&x509.KeyUsageDigitalSignature, "keyUsage Digital Signature was not present")
 	resp, err = CBWrite(b, s, "intermediate/generate/internal", map[string]interface{}{
 		"common_name": "myint.com",
 	})
@@ -7453,8 +7451,7 @@ func TestIssuance_SignIntermediateKeyUsages(t *testing.T) {
 	requireSuccessNonNilResponse(t, resp, err, "expected intermediate signing to succeed")
 	intCertRaw := resp.Data["certificate"]
 	intCert := parseCert(t, intCertRaw.(string))
-	// TODO: Help (Victor?)
-	require.NotEqual(t, 0, intCert.KeyUsage&x509.KeyUsageDigitalSignature, "keyUsage Digital Signature was not present")
+	require.Equal(t, x509.KeyUsageDigitalSignature, intCert.KeyUsage&x509.KeyUsageDigitalSignature, "keyUsage Digital Signature was not present")
 
 }
 
