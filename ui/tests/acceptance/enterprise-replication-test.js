@@ -91,7 +91,10 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await click('#deny');
     await clickTrigger();
     await searchSelect.options.objectAt(0).click();
-    const mountPath = find('[data-test-selected-option="0"]').innerText?.trim();
+
+    await click('[data-test-namespace-toggle]');
+
+    const mountPath = find('[data-option-index="0"]').innerText?.trim();
     await click('[data-test-secondary-add]');
 
     await pollCluster(this.owner);
@@ -108,8 +111,8 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     );
     assert.dom('[data-test-mount-config-mode]').includesText(mode, 'show page renders the correct mode');
     assert
-      .dom('[data-test-mount-config-paths]')
-      .includesText(`${mountPath}/`, 'show page renders the correct mount path');
+      .dom('[data-test-namespace-toggle]')
+      .includesText(`${mountPath}`, 'show page renders the correct mount path');
 
     // delete config by choosing "no filter" in the edit screen
     await click('[data-test-replication-link="edit-mount-config"]');

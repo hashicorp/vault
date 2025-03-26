@@ -4,6 +4,11 @@
 }}
 
 <div class="hds-power-select__after-options">
-  <Hds::Button @color="secondary" @text="Refresh List" {{on "click" (action "refreshNamespaceList")}} />
+  <Hds::Button
+    @color="secondary"
+    @text="Refresh List"
+    {{on "click" (action "refreshNamespaceList")}}
+    data-test-refresh-namespaces
+  />
   <Hds::Button @color="secondary" @text="Manage" @icon="settings" @route="vault.cluster.access.namespaces" />
 </div>

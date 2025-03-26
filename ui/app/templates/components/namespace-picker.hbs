@@ -15,14 +15,13 @@ SPDX-License-Identifier: BUSL-1.1
     @searchEnabled={{true}}
     @showAfterOptions={{this.showAfterOptions}}
     @verticalPosition="above"
+    data-test-namespace-toggle
     as |F|
   >
     <F.Label>Namespace</F.Label>
     <F.Options>
       {{#let F.options as |option|}}
-        <ExternalLink @href={{this.getNamespaceLink option}} @sameTab={{true}}>
-          {{option}}
-        </ExternalLink>
+        <span data-test-namespace-link="{{option.display}}">{{option.display}}</span>
       {{/let}}
     </F.Options>
   </Hds::Form::SuperSelect::Single::Field>

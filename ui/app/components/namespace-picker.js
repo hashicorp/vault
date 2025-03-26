@@ -11,9 +11,10 @@ import { service } from '@ember/service';
 export default class ApplicationComponent extends Component {
   @service namespace;
   @service store;
+  @service router;
 
   @tracked showAfterOptions = false;
-  @tracked selected = this.namespace?.currentNamespace;
+  @tracked selected = {};
   @tracked options = [];
   // @tracked groupedOptions = {groupName: '', options: []} // SHANNONTODO: All Namespaces Label
 
@@ -37,26 +38,50 @@ export default class ApplicationComponent extends Component {
   @action
   async loadOptions() {
     await this.namespace?.findNamespacesForUser.perform();
-    this.options = ['root', ...(this.namespace?.accessibleNamespaces || [])];
+    this.options = getOptions(this.namespace);
+    this.selected = getSelected(this.options, this.namespace);
     this.fetchListCapability();
     // this.groupedOptions.options = this.options; // SHANNONTODO: All Namespaces Label
     // this.groupedOptions.groupName = `All namespaces (${this.options.length})`; // SHANNONTODO: All Namespaces Label
   }
 
   @action
-  handleChange(selectedOption) {
-    window.location.href = getNamespaceLink(window.location, selectedOption);
+  handleChange(selected) {
+    window.location.href = getNamespaceLink(window.location, selected);
   }
 }
 
 // PRIVATE Helper Functions
 
+function getSelected(options, currentNamespace) {
+  return options.find((option) => matchesPath(option, currentNamespace));
+}
+
+function matchesPath(option, currentNamespace) {
+  return option?.path === currentNamespace?.path || `/${option?.path}` === currentNamespace?.path;
+}
+
+function getOptions(namespace) {
+  return [
+    { namespace: 'root', path: '', display: 'root' },
+    ...(namespace?.accessibleNamespaces || []).map((ns) => {
+      const parts = ns.split('/');
+      return { namespace: parts[parts.length - 1], path: ns, display: ns };
+    }),
+  ];
+}
+
 function getNamespaceLink(location, namespace) {
   const origin = getOrigin(location);
-  const encodedNamespace = encodeURIComponent(namespace);
+  const encodedNamespace = encodeURIComponent(namespace.path);
+
+  let queryParams = '';
+  if (namespace.path !== '') {
+    queryParams = `?namespace=${encodedNamespace}`;
+  }
 
   // The full URL/origin is required so that the page is reloaded.
-  return `${origin}/ui/vault/dashboard?namespace=${encodedNamespace}`;
+  return `${origin}/ui/vault/dashboard${queryParams}`;
 }
 
 function getOrigin(location) {
