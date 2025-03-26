@@ -823,12 +823,7 @@ func AddKeyUsages(data *CreationBundle, certTemplate *x509.Certificate) {
 	certTemplate.KeyUsage = data.Params.KeyUsage
 
 	if data.Params.IsCA {
-		if certTemplate.KeyUsage&x509.KeyUsageCertSign == x509.KeyUsage(0) {
-			certTemplate.KeyUsage |= x509.KeyUsageCertSign
-		}
-		if certTemplate.KeyUsage&x509.KeyUsageCRLSign == x509.KeyUsage(0) {
-			certTemplate.KeyUsage |= x509.KeyUsageCRLSign
-		}
+		certTemplate.KeyUsage |= x509.KeyUsageCertSign | x509.KeyUsageCRLSign
 	}
 
 	if data.Params.ExtKeyUsage&AnyExtKeyUsage != 0 {
