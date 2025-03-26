@@ -14,25 +14,6 @@ import { AUTH_FORM, MFA_SELECTORS } from 'vault/tests/helpers/auth/auth-form-sel
 import { fillInLoginFields } from 'vault/tests/helpers/auth/auth-helpers';
 import { setupTotpMfaResponse } from 'vault/tests/helpers/auth/mfa-helpers';
 
-// in the real world more info is returned by auth requests
-// only including pertinent data for testing
-const authRequest = (context, options) => {
-  const { isMfa = false, authMountPath = '', url = '' } = options;
-  return context.server.post(url, () => {
-    if (isMfa) {
-      return {
-        warnings: [
-          'A login request was issued that is subject to MFA validation. Please make sure to validate the login by sending another request to mfa/validate endpoint.',
-        ],
-        ...setupTotpMfaResponse(authMountPath),
-      };
-    }
-    return {
-      auth: { policies: ['default'] },
-    };
-  });
-};
-
 module('Integration | Component | auth | page', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
@@ -55,6 +36,25 @@ module('Integration | Component | auth | page', function (hooks) {
           @wrappedToken={{this.wrappedToken}}
         />
         `);
+    };
+
+    // in the real world more info is returned by auth requests
+    // only including pertinent data for testing
+    this.authRequest = (options) => {
+      const { isMfa = false, authMountPath = '', url = '' } = options;
+      return this.server.post(url, () => {
+        if (isMfa) {
+          return {
+            warnings: [
+              'A login request was issued that is subject to MFA validation. Please make sure to validate the login by sending another request to mfa/validate endpoint.',
+            ],
+            ...setupTotpMfaResponse(authMountPath),
+          };
+        }
+        return {
+          auth: { policies: ['default'] },
+        };
+      });
     };
   });
 
@@ -141,7 +141,7 @@ module('Integration | Component | auth | page', function (hooks) {
       assert.expect(1);
       const { loginData, url } = options;
       const requestUrl = url({ path: authType, username: loginData?.username });
-      authRequest(this, { url: requestUrl });
+      this.authRequest({ url: requestUrl });
 
       await this.renderComponent();
       await fillIn(AUTH_FORM.method, authType);
@@ -163,7 +163,7 @@ module('Integration | Component | auth | page', function (hooks) {
       const loginDataWithPath = { ...loginData, 'auth-form-mount-path': customPath };
       // pass custom path to request URL
       const requestUrl = url({ path: customPath, username: loginData?.username });
-      authRequest(this, { url: requestUrl });
+      this.authRequest({ url: requestUrl });
 
       await this.renderComponent();
       await fillIn(AUTH_FORM.method, authType);
@@ -186,7 +186,7 @@ module('Integration | Component | auth | page', function (hooks) {
 
       const requestUrl = url({ path: authType, username: loginData?.username });
       // authMountPath necessary to return mfa_constraints
-      authRequest(this, { isMfa: true, authMountPath: authType, url: requestUrl });
+      this.authRequest({ isMfa: true, authMountPath: authType, url: requestUrl });
 
       await this.renderComponent();
       await fillIn(AUTH_FORM.method, authType);
@@ -216,7 +216,7 @@ module('Integration | Component | auth | page', function (hooks) {
       // pass custom path to request URL
       const requestUrl = url({ path: customPath, username: loginData?.username });
       // authMountPath necessary to return mfa_constraints
-      authRequest(this, { isMfa: true, authMountPath: customPath, url: requestUrl });
+      this.authRequest({ isMfa: true, authMountPath: customPath, url: requestUrl });
 
       await this.renderComponent();
       await fillIn(AUTH_FORM.method, authType);
