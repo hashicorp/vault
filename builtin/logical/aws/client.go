@@ -128,7 +128,7 @@ func (b *backend) getRootConfigs(ctx context.Context, s logical.Storage, clientT
 		// fallback region is in descending order, AWS_REGION, or AWS_DEFAULT_REGION, or us-east-1
 		regions = append(regions, fallbackRegion)
 
-		// we also need to set the endpoint if we're using sts
+		// we also need to set the endpoint based on this region (since we need matched length arrays)
 		if len(endpoints) == 0 {
 			switch clientType {
 			case "sts":
@@ -139,12 +139,8 @@ func (b *backend) getRootConfigs(ctx context.Context, s logical.Storage, clientT
 		}
 	}
 
-	// our input validation (on root/config write) checks to make sure there are the same number of fallback regions and
-	// fallback endpoints.
-	//
-	// It does not check to see if both sts_region and sts_endpoint are supplied, but it is specified in the docs that
-	// they 'should' be.
-	if clientType == "sts" && len(regions) != len(endpoints) {
+	// for this approach of using parallel arrays to part out the configs, we want equal numbers of regions and endpoints
+	if len(regions) != len(endpoints) {
 		return nil, errors.New("number of regions does not match number of endpoints")
 	}
 
