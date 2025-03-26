@@ -17,7 +17,9 @@ The `/sys/config/cors` endpoint is used to configure CORS settings.
 
 ## Read CORS settings
 
-This endpoint returns the current CORS configuration.
+This endpoint returns the current CORS configuration. 
+
+**Vault Enterprise:** In performance replication, you set the CORS configuration on the primary and secondary clusters independently. If you want to mirror the CORS configuration set on the primary cluster to its secondary clusters, you need to invoke this endpoint on each cluster. 
 
 | Method | Path               |
 | :----- | :----------------- |
