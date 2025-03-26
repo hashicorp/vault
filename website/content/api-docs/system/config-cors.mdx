@@ -55,7 +55,13 @@ $ curl \
 This endpoint allows configuring the origins that are permitted to make
 cross-origin requests, as well as headers that are allowed on cross-origin requests.
 
-**Vault Enterprise:** In performance replication, you set the CORS configuration on the primary and secondary clusters independently. If you want to mirror the CORS configuration set on the primary cluster to its secondary clusters, you need to invoke this endpoint on each cluster. 
+<EnterpriseAlert>
+
+The CORS configuration endpoint does not apply changes across clusters. You must
+invoke the configuration endpoint on each secondary cluster independently to
+mirror the primary cluster CORS configuration
+
+</EnterpriseAlert>
 
 | Method | Path               |
 | :----- | :----------------- |
