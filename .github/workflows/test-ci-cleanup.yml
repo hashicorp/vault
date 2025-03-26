@@ -5,7 +5,7 @@ on:
 #    - cron:  '05 02 * * *'
   pull_request:
     paths:
-      - enos/VAULT-34794
+      - enos/**
 
 jobs:
   setup:

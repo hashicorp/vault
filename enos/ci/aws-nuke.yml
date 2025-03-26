@@ -406,3 +406,4 @@ resource-types:
     - WorkSpacesWorkspace
     - XRayGroup
     - XRaySamplingRule
+
