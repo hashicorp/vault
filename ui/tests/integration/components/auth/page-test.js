@@ -11,7 +11,27 @@ import sinon from 'sinon';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { AUTH_FORM, MFA_SELECTORS } from 'vault/tests/helpers/auth/auth-form-selectors';
-import { authRequest, fillInLoginFields } from 'vault/tests/helpers/auth/auth-helpers';
+import { fillInLoginFields } from 'vault/tests/helpers/auth/auth-helpers';
+import { setupTotpMfaResponse } from 'vault/tests/helpers/auth/mfa-helpers';
+
+// in the real world more info is returned by auth requests
+// only including pertinent data for testing
+const authRequest = (context, options) => {
+  const { isMfa = false, authMountPath = '', url = '' } = options;
+  return context.server.post(url, () => {
+    if (isMfa) {
+      return {
+        warnings: [
+          'A login request was issued that is subject to MFA validation. Please make sure to validate the login by sending another request to mfa/validate endpoint.',
+        ],
+        ...setupTotpMfaResponse(authMountPath),
+      };
+    }
+    return {
+      auth: { policies: ['default'] },
+    };
+  });
+};
 
 module('Integration | Component | auth | page', function (hooks) {
   setupRenderingTest(hooks);
@@ -46,7 +66,7 @@ module('Integration | Component | auth | page', function (hooks) {
   const REQUEST_DATA = {
     token: {
       loginData: { token: 'mysupersecuretoken' },
-      url: () => 'auth/token/lookup-self',
+      url: () => '/auth/token/lookup-self',
     },
     username: {
       loginData: { username: 'matilda', password: 'password' },
@@ -54,23 +74,30 @@ module('Integration | Component | auth | page', function (hooks) {
     },
     github: {
       loginData: { token: 'mysupersecuretoken' },
-      url: ({ path }) => `auth/${path}/login`,
+      url: ({ path }) => `/auth/${path}/login`,
     },
-    oidc: {
-      loginData: {},
-      url: ({ path }) => `auth/${path}/oidc/auth_url`,
-    },
-    saml: {
-      loginData: {},
-      url: ({ path }) => `auth/${path}/sso_service_url`,
-    },
+    // oidc: {
+    //   loginData: { role: 'some-dev' },
+    //   url: ({ path }) => `/auth/${path}/oidc/auth_url`,
+    //   responseType: 'oidc',
+    // },
+    // saml: {
+    //   loginData: { role: 'some-dev' },
+    //   url: ({ path }) => `/auth/${path}/sso_service_url`,
+    // },
   };
+
   const AUTH_METHOD_TEST_CASES = [
+    { authType: 'github', options: REQUEST_DATA.github },
+    //input username + password
     { authType: 'userpass', options: REQUEST_DATA.username },
     { authType: 'ldap', options: REQUEST_DATA.username },
     { authType: 'okta', options: REQUEST_DATA.username },
     { authType: 'radius', options: REQUEST_DATA.username },
-    { authType: 'github', options: REQUEST_DATA.github },
+    // TODO CMB add these tests cases when login logic is standardized (currently login success/mfa is tested by the individual components)
+    // { authType: 'oidc', options: REQUEST_DATA.oidc },
+    // { authType: 'jwt', options: REQUEST_DATA.oidc },
+    // { authType: 'saml', options: REQUEST_DATA.saml },
   ];
 
   for (const { authType, options } of AUTH_METHOD_TEST_CASES) {
@@ -84,7 +111,6 @@ module('Integration | Component | auth | page', function (hooks) {
       await fillIn(AUTH_FORM.method, authType);
       await fillInLoginFields(loginData);
       await click(AUTH_FORM.login);
-
       const [actual] = this.onAuthSuccess.lastCall.args;
       const expected = {
         namespace: '',
@@ -175,4 +201,26 @@ module('Integration | Component | auth | page', function (hooks) {
       }
     });
   }
+
+  // token makes a GET request so test separately
+  test(`token: it calls onAuthSuccess on submit`, async function (assert) {
+    assert.expect(1);
+    const authType = 'token';
+    const { loginData, url } = REQUEST_DATA.token;
+    this.server.get(url(), () => {
+      return { data: { policies: ['default'] } };
+    });
+
+    await this.renderComponent();
+    await fillIn(AUTH_FORM.method, authType);
+    await fillInLoginFields(loginData);
+    await click(AUTH_FORM.login);
+    const [actual] = this.onAuthSuccess.lastCall.args;
+    const expected = {
+      namespace: '',
+      token: `vault-${authType}☃1`,
+      isRoot: false,
+    };
+    assert.propEqual(actual, expected, `onAuthSuccess called with: ${JSON.stringify(actual)}`);
+  });
 });

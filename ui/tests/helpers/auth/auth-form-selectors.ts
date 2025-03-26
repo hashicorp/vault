@@ -15,3 +15,8 @@ export const AUTH_FORM = {
   moreOptions: '[data-test-auth-form-options-toggle]',
   namespaceInput: '[data-test-auth-form-ns-input]',
 };
+
+export const MFA_SELECTORS = {
+  mfaForm: '[data-test-mfa-form]',
+  passcode: (idx: number) => `[data-test-mfa-passcode=${idx}]`,
+};

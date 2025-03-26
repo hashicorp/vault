@@ -263,10 +263,15 @@ module('Acceptance | auth', function (hooks) {
         `write auth/${this.userpass}/users/${this.user} password=${this.user} token_policies=${this.policyName}`,
       ]);
 
-      const options = { username: this.user, password: this.user, 'auth-form-mount-path': this.userpass };
+      const inputValues = {
+        username: this.user,
+        password: this.user,
+        'auth-form-mount-path': this.userpass,
+        'auth-form-ns-input': this.ns,
+      };
 
       // login as user just to get token (this is the only way to generate a token in the UI right now..)
-      await loginMethod('userpass', options, { toggleOptions: true, ns: this.ns });
+      await loginMethod(inputValues, { authType: 'userpass', toggleOptions: true });
       await click('[data-test-user-menu-trigger=""]');
       const token = find('[data-test-copy-button]').getAttribute('data-test-copy-button');
 
