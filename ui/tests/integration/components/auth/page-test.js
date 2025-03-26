@@ -40,8 +40,7 @@ module('Integration | Component | auth | page', function (hooks) {
 
     // in the real world more info is returned by auth requests
     // only including pertinent data for testing
-    this.authRequest = (options) => {
-      const { isMfa = false, authMountPath = '', url = '' } = options;
+    this.authRequest = ({ isMfa = false, authMountPath = '', url = '' }) => {
       return this.server.post(url, () => {
         if (isMfa) {
           return {
