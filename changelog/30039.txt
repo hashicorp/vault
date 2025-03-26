@@ -1,0 +1,11 @@
+```release-note:bug
+secrets/aws: Forward Performance Secondary requests when configuring root credentials.
+```
+
+```release-note:bug
+auth/aws: Forward Performance Secondary requests when configuring root credentials.
+```
+
+```release-note:bug
+auth/ldap: Forward Performance Secondary requests when configuring root credentials.
+```
