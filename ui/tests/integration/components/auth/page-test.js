@@ -40,7 +40,6 @@ module('Integration | Component | auth | page', function (hooks) {
   hooks.beforeEach(function () {
     this.version = this.owner.lookup('service:version');
     this.cluster = { id: '1' };
-    // this.providerQp = 'token';
     this.onAuthSuccess = sinon.spy();
     this.onNamespaceUpdate = sinon.spy();
 
@@ -57,6 +56,25 @@ module('Integration | Component | auth | page', function (hooks) {
         />
         `);
     };
+  });
+
+  test('it renders splash logo when oidc provider query param is present', async function (assert) {
+    this.providerQp = 'myprovider';
+    await this.renderComponent();
+    assert.dom(AUTH_FORM.logo).exists();
+    assert
+      .dom(AUTH_FORM.helpText)
+      .hasText(
+        'Once you log in, you will be redirected back to your application. If you require login credentials, contact your administrator.'
+      );
+  });
+
+  test('it disables namespace input when oidc provider query param is present', async function (assert) {
+    this.providerQp = 'myprovider';
+    this.version.features = ['Namespaces'];
+    await this.renderComponent();
+    assert.dom(AUTH_FORM.logo).exists();
+    assert.dom(AUTH_FORM.namespaceInput).isDisabled();
   });
 
   test('it calls onNamespaceUpdate', async function (assert) {
