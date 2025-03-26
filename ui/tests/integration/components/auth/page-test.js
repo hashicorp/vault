@@ -144,7 +144,7 @@ module('Integration | Component | auth | page ', function (hooks) {
     this.server.post('/sys/wrapping/unwrap', (_, req) => {
       assert.strictEqual(req.url, '/v1/sys/wrapping/unwrap', 'makes call to unwrap the token');
       assert.strictEqual(
-        req.requestHeaders['X-Vault-Token'],
+        req.requestHeaders['x-vault-token'],
         this.wrappedToken,
         'uses passed wrapped token for the unwrap'
       );
