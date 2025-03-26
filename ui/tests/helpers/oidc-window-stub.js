@@ -6,29 +6,9 @@
 import EmberObject, { computed } from '@ember/object';
 import Evented from '@ember/object/evented';
 
-export class NewFakeWindow {
-  origin = 'https://my-vault.com';
-  closed = false;
-
-  #listeners = [];
-
-  open() {
-    this.closed = false;
-  }
-
+export class FakeWindow extends EventTarget {
   close() {
-    this.closed = true;
-    this.#triggerClose();
-  }
-
-  on(event, callback) {
-    if (event === 'close') {
-      this.#listeners.push(callback);
-    }
-  }
-
-  #triggerClose() {
-    this.#listeners.forEach((callback) => callback());
+    this.dispatchEvent(new CustomEvent('close')); // Trigger 'close' event using CustomEvent
   }
 }
 
