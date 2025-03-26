@@ -820,12 +820,16 @@ type CreationBundle struct {
 // addKeyUsages adds appropriate key usages to the template given the creation
 // information
 func AddKeyUsages(data *CreationBundle, certTemplate *x509.Certificate) {
-	if data.Params.IsCA {
-		certTemplate.KeyUsage = x509.KeyUsage(x509.KeyUsageCertSign | x509.KeyUsageCRLSign)
-		return
-	}
-
 	certTemplate.KeyUsage = data.Params.KeyUsage
+
+	if data.Params.IsCA {
+		if certTemplate.KeyUsage&x509.KeyUsageCertSign == x509.KeyUsage(0) {
+			certTemplate.KeyUsage |= x509.KeyUsageCertSign
+		}
+		if certTemplate.KeyUsage&x509.KeyUsageCRLSign == x509.KeyUsage(0) {
+			certTemplate.KeyUsage |= x509.KeyUsageCRLSign
+		}
+	}
 
 	if data.Params.ExtKeyUsage&AnyExtKeyUsage != 0 {
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageAny)

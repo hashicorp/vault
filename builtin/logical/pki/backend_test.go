@@ -7420,6 +7420,44 @@ func TestIssuance_AlwaysEnforceErr(t *testing.T) {
 	})
 }
 
+func TestIssuance_SignIntermediateKeyUsages(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"key_type":    "ec",
+		"ttl":         "10h",
+		"issuer_name": "root-ca",
+		"key_name":    "root-key",
+		"key_usage":   "DigitalSignature",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "expected root generation to succeed")
+	rootCertRaw := resp.Data["certificate"]
+	rootCert := parseCert(t, rootCertRaw.(string))
+	// TODO: Help (Victor?)
+	require.NotEqual(t, 0, rootCert.KeyUsage&x509.KeyUsageDigitalSignature, "keyUsage Digital Signature was not present")
+
+	resp, err = CBWrite(b, s, "intermediate/generate/internal", map[string]interface{}{
+		"common_name": "myint.com",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed generating intermediary CSR")
+	requireFieldsSetInResp(t, resp, "csr")
+	csr := resp.Data["csr"]
+
+	resp, err = CBWrite(b, s, "issuer/root-ca/sign-intermediate", map[string]interface{}{
+		"csr":       csr,
+		"key_usage": "DigitalSignature",
+		"ttl":       "60h",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "expected intermediate signing to succeed")
+	intCertRaw := resp.Data["certificate"]
+	intCert := parseCert(t, intCertRaw.(string))
+	// TODO: Help (Victor?)
+	require.NotEqual(t, 0, intCert.KeyUsage&x509.KeyUsageDigitalSignature, "keyUsage Digital Signature was not present")
+
+}
+
 var (
 	initTest  sync.Once
 	rsaCAKey  string
