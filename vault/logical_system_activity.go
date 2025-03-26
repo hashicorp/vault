@@ -408,7 +408,13 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 	}
 
 	var err error
-	startTime, endTime, timesAligned, err = getBillingPeriodTimes(d, b.Core.BillingStart())
+	// allow arbitrary start and end times if billing start date is zero, which means the cluster is CE
+	// for ENT, we get the whole billing period by aligning the given start and end times
+	if b.Core.BillingStart().IsZero() {
+		startTime, endTime, err = parseStartEndTimes(d, b.Core.BillingStart())
+	} else {
+		startTime, endTime, timesAligned, err = getBillingPeriodTimes(d, b.Core.BillingStart())
+	}
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
