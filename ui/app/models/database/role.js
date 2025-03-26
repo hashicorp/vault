@@ -29,14 +29,19 @@ const validations = {
         const { type, skip_import_rotation, password, selfManaged } = model;
         if (!type || type === 'dynamic') return true;
         if (password) return true;
-        if (skip_import_rotation) return true;
 
-        // if rotating immediately
-        if (!skip_import_rotation) {
-          // and if role is self managed
-          if (selfManaged) {
-            if (password) return true; // require password
-          }
+        // if not self managed and not rotating
+        if (!selfManaged && skip_import_rotation) {
+          if (password) return true; // require password
+        } else {
+          return false;
+        }
+
+        // if role is self managed and if rotating immediately
+        if (selfManaged && !skip_import_rotation) {
+          if (password) return true; // require password
+        } else {
+          return false;
         }
       },
       message: 'Password is required.',
@@ -157,8 +162,9 @@ export default class RoleModel extends Model {
     label: 'Rotate immediately',
     editType: 'toggleButton',
     defaultValue: true, // this defaultValue will be set in database-role-setting-form.js based on parent database value
-    helperTextEnabled: 'Vault will rotate the password for this static role on creation.',
-    helperTextDisabled: "Vault will not rotate this role's password on creation.",
+    helperTextDisabled: 'Vault will rotate the password for this static role on creation.',
+    helperTextEnabled: "Vault will not rotate this role's password on creation.",
+    isOppositeValue: true,
   })
   skip_import_rotation;
 

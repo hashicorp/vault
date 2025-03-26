@@ -45,7 +45,7 @@ export default class DatabaseRoleEdit extends Component {
   }
 
   isValid() {
-    this.args.model.selfManaged = this.isSelfManaged; // set db value for form validation
+    this.args.model.selfManaged = this.isSelfManaged; // promise unfilled
     const { isValid, state } = this.args.model.validate();
     this.modelValidations = isValid ? null : state;
     this.invalidFormAlert = isValid ? '' : 'There was an error submitting this form.';
@@ -78,9 +78,10 @@ export default class DatabaseRoleEdit extends Component {
     }
     return this.store
       .queryRecord('database/connection', { id: dbs[0], backend })
-      .then(({ plugin_name, skip_static_role_rotation_import }) => ({
+      .then(({ plugin_name, skip_static_role_rotation_import, self_managed }) => ({
         plugin_name,
         skip_static_role_rotation_import,
+        self_managed,
       }))
       .catch(() => null);
   }
@@ -139,7 +140,7 @@ export default class DatabaseRoleEdit extends Component {
       // if we're creating and rotating a static role immediately, warn user
       if (!model.skip_import_rotation && model.type === 'static' && mode === 'create') {
         this.saveIssuerWarning =
-          "You have set the param 'Skip initial rotation' for this role to false. \n Vault will rotate the password the password immediately once saved. \n NOTE: This will disrupt any active use of this role outside of Vault.";
+          "You have set the param 'Skip initial rotation' for this static role to false. \n Vault will rotate the password the password immediately once saved. \n \n NOTE: This will disrupt any active use of this role outside of Vault.";
         return;
       }
       await this.saveRole.perform();

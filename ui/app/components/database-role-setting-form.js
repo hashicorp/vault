@@ -33,7 +33,7 @@ export default class DatabaseRoleSettingForm extends Component {
     return this.args.attrs.filter((a) => {
       // Sets default value for skip_import_rotation based on parent db config value
       if (a.name === 'skip_import_rotation' && this.args.mode === 'create') {
-        a.options.defaultValue = !dbValues?.skip_static_role_rotation_import;
+        a.options.defaultValue = dbValues?.skip_static_role_rotation_import;
       }
       return dbValidFields.includes(a.name);
     });
@@ -51,7 +51,7 @@ export default class DatabaseRoleSettingForm extends Component {
   get isOverridden() {
     if (this.args.mode !== 'create' || !this.dbConfig) return null;
 
-    const dbSkip = !this.dbConfig.skip_static_role_rotation_import;
+    const dbSkip = this.dbConfig.skip_static_role_rotation_import;
     const staticVal = this.args.model.get('skip_import_rotation');
     return this.args.mode === 'create' && dbSkip !== staticVal;
   }

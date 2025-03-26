@@ -280,7 +280,7 @@
       <Toggle
         @name="toggle-{{@attr.name}}"
         @onChange={{this.toggleButton}}
-        @checked={{this.toggleInputEnabled}}
+        @checked={{if @attr.options.isOppositeValue (not this.toggleInputEnabled) this.toggleInputEnabled}}
         data-test-toggle={{@attr.name}}
         disabled={{this.disabled}}
       >
