@@ -129,8 +129,13 @@ func (b *backend) getRootConfigs(ctx context.Context, s logical.Storage, clientT
 		regions = append(regions, fallbackRegion)
 
 		// we also need to set the endpoint if we're using sts
-		if len(endpoints) == 0 && clientType == "sts" {
-			endpoints = append(endpoints, matchingSTSEndpoint(fallbackRegion))
+		if len(endpoints) == 0 {
+			switch clientType {
+			case "sts":
+				endpoints = append(endpoints, matchingSTSEndpoint(fallbackRegion))
+			case "iam":
+				endpoints = append(endpoints, "https://iam.amazonaws.com") // see https://docs.aws.amazon.com/general/latest/gr/iam-service.html
+			}
 		}
 	}
 
