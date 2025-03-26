@@ -5,6 +5,8 @@ package command
 
 import (
 	"context"
+	"github.com/stretchr/testify/require"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -612,4 +614,42 @@ func TestLoginMFATwoPhaseNonInteractiveMethodName(t *testing.T) {
 	}
 
 	validateFunc(methodName)
+}
+
+// TestLoginPrintsWarningOnDuplicateHclKeys ensures that a warning is printed when
+func TestLoginPrintsWarningOnDuplicateHclKeys(t *testing.T) {
+	f, err := os.CreateTemp(t.TempDir(), ".vault")
+	f.WriteString(`
+token_helper = "/token"
+token_helper = ""
+`)
+	require.NoError(t, err)
+	t.Setenv("VAULT_CONFIG_PATH", f.Name())
+
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"default"},
+		TTL:      "30m",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	token := secret.Auth.ClientToken
+
+	ui, cmd := testLoginCommand(t)
+	cmd.tokenHelper = nil // cause default one to be used
+	cmd.client = client
+
+	code := cmd.Run([]string{
+		token,
+	})
+	if exp := 0; code != exp {
+		t.Errorf("expected %d to be %d", code, exp)
+	}
+
+	// TODO (HCL_DUP_KEYS_DEPRECATION): Instead ensure that login command fails if the config file contains duplicate keys
+	require.Contains(t, ui.ErrorWriter.String(),
+		"WARNING: Duplicate keys found in the Vault token helper configuration file, duplicate keys in HCL files are deprecated and will be forbidden in a future release.")
 }

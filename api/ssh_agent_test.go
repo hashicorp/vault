@@ -5,10 +5,21 @@ package api
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"strings"
 	"testing"
 )
+
+// TestSSH_CanLoadDuplicateKeys verifies that during the deprecation process of duplicate HCL attributes this function
+// will still allow them.
+func TestSSH_CanLoadDuplicateKeys(t *testing.T) {
+	_, err := LoadSSHHelperConfig("./test-fixtures/agent_config_duplicate_keys.hcl")
+	require.NoError(t, err)
+	// TODO (HCL_DUP_KEYS_DEPRECATION): Change test to expect an error
+	//require.Error(t, err)
+	//require.Contains(t, err.Error(), "Each argument can only be defined once")
+}
 
 func TestSSH_CreateTLSClient(t *testing.T) {
 	// load the default configuration
