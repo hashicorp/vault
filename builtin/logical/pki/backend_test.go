@@ -7452,7 +7452,6 @@ func TestIssuance_SignIntermediateKeyUsages(t *testing.T) {
 	intCertRaw := resp.Data["certificate"]
 	intCert := parseCert(t, intCertRaw.(string))
 	require.Equal(t, x509.KeyUsageDigitalSignature, intCert.KeyUsage&x509.KeyUsageDigitalSignature, "keyUsage Digital Signature was not present")
-
 }
 
 var (
