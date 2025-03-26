@@ -139,7 +139,7 @@ func (b *backend) getRootConfigs(ctx context.Context, s logical.Storage, clientT
 	//
 	// It does not check to see if both sts_region and sts_endpoint are supplied, but it is specified in the docs that
 	// they 'should' be.
-	if len(regions) != len(endpoints) {
+	if clientType == "sts" && len(regions) != len(endpoints) {
 		return nil, errors.New("number of regions does not match number of endpoints")
 	}
 
@@ -226,6 +226,8 @@ func (b *backend) nonCachedClientSTS(ctx context.Context, s logical.Storage, log
 	return nil, fmt.Errorf("could not obtain sts client")
 }
 
+// matchingSTSEndpoint returns the endpoint for the supplied region, according to
+// http://docs.aws.amazon.com/general/latest/gr/sts.html
 func matchingSTSEndpoint(stsRegion string) string {
 	return fmt.Sprintf("https://sts.%s.amazonaws.com", stsRegion)
 }
