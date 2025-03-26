@@ -284,7 +284,8 @@ func TestBackend_PathConfigRoot_STSFallback_mismatchedfallback(t *testing.T) {
 	}
 }
 
-// TestBackend_PathConfigRoot_STSFallback_defaultEndpointRegion ensures
+// TestBackend_PathConfigRoot_STSFallback_defaultEndpointRegion ensures that if no endpoints are specified, we can
+// still make a config with the appropriate values.
 func TestBackend_PathConfigRoot_STSFallback_defaultEndpointRegion(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -326,6 +327,8 @@ func TestBackend_PathConfigRoot_STSFallback_defaultEndpointRegion(t *testing.T) 
 	}
 }
 
+// TestBackend_PathConfigRoot_IAM_defaultEndpointRegion ensures taht if no endpoints are specified, we can still
+// make a config with the appropriate values.
 func TestBackend_PathConfigRoot_IAM_defaultEndpointRegion(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
