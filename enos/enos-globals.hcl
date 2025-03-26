@@ -158,4 +158,5 @@ globals {
   }
   vault_license_path = abspath(var.vault_license_path != null ? var.vault_license_path : joinpath(path.root, "./support/vault.hclic"))
   vault_tag_key      = "vault-cluster"
+  vault_disable_mlock = false
 }
