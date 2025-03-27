@@ -247,4 +247,18 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
 
     assert.dom(GENERAL.navLink('Vault Usage')).doesNotExist();
   });
+
+  test('it shows Vault Usage when user is in HVD admin namespace', async function (assert) {
+    const stubs = stubFeaturesAndPermissions(this.owner, true, false, [], false);
+    stubs.hasNavPermission.callsFake((route) => route === 'monitoring');
+
+    this.flags.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+
+    const namespace = this.owner.lookup('service:namespace');
+    namespace.setNamespace('admin/');
+
+    await renderComponent();
+
+    assert.dom(GENERAL.navLink('Vault Usage')).exists();
+  });
 });
