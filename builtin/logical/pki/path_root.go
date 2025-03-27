@@ -140,6 +140,13 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 
 	sc := b.makeStorageContext(ctx, req.Storage)
 
+	if keyUsages, ok := data.GetOk("key_usage"); ok {
+		err = validateCaKeyUsages(keyUsages.([]string))
+		if err != nil {
+			return logical.ErrorResponse("Invalid key usage: %v", err.Error()), nil
+		}
+	}
+
 	exported, format, role, errorResp := getGenerationParams(sc, data)
 	if errorResp != nil {
 		return errorResp, nil
@@ -331,6 +338,13 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 	format := getFormat(data)
 	if format == "" {
 		return logical.ErrorResponse(`The "format" path parameter must be "pem", "der" or "pem_bundle"`), nil
+	}
+
+	if keyUsages, ok := data.GetOk("key_usage"); ok {
+		err = validateCaKeyUsages(keyUsages.([]string))
+		if err != nil {
+			return logical.ErrorResponse("Invalid key usage: %v", err.Error()), nil
+		}
 	}
 
 	role := &issuing.RoleEntry{
@@ -629,6 +643,20 @@ func publicKeyType(pub crypto.PublicKey) (pubType x509.PublicKeyAlgorithm, sigAl
 		err = errors.New("x509: only RSA, ECDSA and Ed25519 keys supported")
 	}
 	return
+}
+
+func validateCaKeyUsages(keyUsages []string) error {
+	for _, usage := range keyUsages {
+		cleanUsage := strings.ToLower(strings.TrimSpace(usage))
+		switch cleanUsage {
+		case "crlsign", "certsign", "digitalsigning":
+		case "contentcommitment", "keyencipherment", "dataencipherment", "keyagreement", "encipheronly", "decipheronly":
+			return fmt.Errorf("key usage %s is only valid for non-Ca certs", usage)
+		default:
+			return fmt.Errorf("unrecognized key usage %s", usage)
+		}
+	}
+	return nil
 }
 
 const pathGenerateRootHelpSyn = `
