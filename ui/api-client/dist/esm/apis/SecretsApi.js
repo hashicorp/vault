@@ -574,6 +574,38 @@ export class SecretsApi extends runtime.BaseAPI {
     }
     /**
      */
+    awsListStaticRolesRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['awsMountPath'] == null) {
+                throw new runtime.RequiredError('awsMountPath', 'Required parameter "awsMountPath" was null or undefined when calling awsListStaticRoles().');
+            }
+            if (requestParameters['list'] == null) {
+                throw new runtime.RequiredError('list', 'Required parameter "list" was null or undefined when calling awsListStaticRoles().');
+            }
+            const queryParameters = {};
+            if (requestParameters['list'] != null) {
+                queryParameters['list'] = requestParameters['list'];
+            }
+            const headerParameters = {};
+            const response = yield this.request({
+                path: `/{aws_mount_path}/static-roles/`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                method: 'GET',
+                headers: headerParameters,
+                query: queryParameters,
+            }, initOverrides);
+            return new runtime.JSONApiResponse(response, (jsonValue) => StandardListResponseFromJSON(jsonValue));
+        });
+    }
+    /**
+     */
+    awsListStaticRoles(awsMountPath, list, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.awsListStaticRolesRaw({ awsMountPath: awsMountPath, list: list }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
     awsReadLeaseConfigurationRaw(requestParameters, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
             if (requestParameters['awsMountPath'] == null) {
@@ -16662,6 +16694,14 @@ export var AwsListRolesListEnum;
 (function (AwsListRolesListEnum) {
     AwsListRolesListEnum["TRUE"] = "true";
 })(AwsListRolesListEnum || (AwsListRolesListEnum = {}));
+/**
+  * @export
+  * @enum {string}
+  */
+export var AwsListStaticRolesListEnum;
+(function (AwsListStaticRolesListEnum) {
+    AwsListStaticRolesListEnum["TRUE"] = "true";
+})(AwsListStaticRolesListEnum || (AwsListStaticRolesListEnum = {}));
 /**
   * @export
   * @enum {string}

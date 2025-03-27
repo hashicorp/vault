@@ -2717,6 +2717,12 @@ export declare class SystemApi extends runtime.BaseAPI {
      */
     systemReadSyncGithubAppsName(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SystemReadSyncGithubAppsNameResponse>;
     /**
+     */
+    systemReadUtilizationReportRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     */
+    systemReadUtilizationReport(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
+    /**
      * Configure control group global settings.
      */
     systemWriteConfigControlGroupRaw(requestParameters: SystemApiSystemWriteConfigControlGroupOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
