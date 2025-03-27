@@ -396,8 +396,8 @@ export interface ApiResponse<T> {
 }
 
 export interface VoidResponse {
-  auth: unknown;
-  data: unknown;
+  auth: null;
+  data: null;
   lease_duration: number;
   lease_id: string;
   mount_type: string;
@@ -422,8 +422,7 @@ export class JSONApiResponse<T> {
     constructor(public raw: Response, private transformer: ResponseTransformer<T> = (jsonValue: any) => jsonValue) {}
 
     async value(): Promise<T> {
-        const response = await this.raw.json();
-        return this.transformer(response.data);
+        return this.transformer(await this.raw.json());
     }
 }
 
