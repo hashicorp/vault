@@ -88,7 +88,7 @@ module('Acceptance | database workflow', function (hooks) {
           label: 'Root rotation statements',
           value: `Default`,
         },
-        { label: 'Skip initial rotation on static roles', value: 'No' },
+        { label: 'Rotate static roles immediately', value: 'No' },
       ];
     });
     test('create with rotate', async function (assert) {
@@ -121,7 +121,7 @@ module('Acceptance | database workflow', function (hooks) {
       assert.dom(PAGE.infoRow).exists({ count: this.expectedRows.length }, 'correct number of rows');
       this.expectedRows.forEach(({ label, value }) => {
         const valueSelector =
-          label === 'Skip initial rotation on static roles'
+          label === 'Rotate static roles immediately'
             ? PAGE.infoRowValueDiv(label)
             : PAGE.infoRowValue(label);
         assert.dom(PAGE.infoRowLabel(label)).hasText(label, `Label for ${label} is correct`);
@@ -158,7 +158,7 @@ module('Acceptance | database workflow', function (hooks) {
       assert.dom(PAGE.infoRow).exists({ count: this.expectedRows.length }, 'correct number of rows');
       this.expectedRows.forEach(({ label, value }) => {
         const valueSelector =
-          label === 'Skip initial rotation on static roles'
+          label === 'Rotate static roles immediately'
             ? PAGE.infoRowValueDiv(label)
             : PAGE.infoRowValue(label);
         assert.dom(PAGE.infoRowLabel(label)).hasText(label, `Label for ${label} is correct`);
@@ -202,7 +202,7 @@ module('Acceptance | database workflow', function (hooks) {
       assert.dom(PAGE.infoRow).exists({ count: this.expectedRows.length }, 'correct number of rows');
       this.expectedRows.forEach(({ label, value }) => {
         const valueSelector =
-          label === 'Skip initial rotation on static roles'
+          label === 'Rotate static roles immediately'
             ? PAGE.infoRowValueDiv(label)
             : PAGE.infoRowValue(label);
         assert.dom(PAGE.infoRowLabel(label)).hasText(label, `Label for ${label} is correct`);
