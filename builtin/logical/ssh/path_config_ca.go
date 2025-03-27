@@ -219,7 +219,7 @@ func (b *backend) pathConfigCAUpdate(ctx context.Context, req *logical.Request, 
 			return nil, err
 		}
 	} else {
-		if !generateSigningKey && publicKey != "" && privateKey != "" {
+		if publicKey != "" && privateKey != "" {
 			_, err := ssh.ParsePrivateKey([]byte(privateKey))
 			if err != nil {
 				return logical.ErrorResponse(fmt.Sprintf("Unable to parse private_key as an SSH private key: %v", err)), nil
@@ -237,16 +237,16 @@ func (b *backend) pathConfigCAUpdate(ctx context.Context, req *logical.Request, 
 			if err != nil {
 				return nil, err
 			}
-
-			errResp, err := createStoredKey(ctx, req.Storage, publicKey, privateKey)
-			if err != nil {
-				return nil, err
-			}
-			if errResp != nil {
-				return errResp, nil
-			}
 		} else {
 			return logical.ErrorResponse("if generate_signing_key is false, either both public_key and private_key or a managed key must be provided"), nil
+		}
+
+		errResp, err := createStoredKey(ctx, req.Storage, publicKey, privateKey)
+		if err != nil {
+			return nil, err
+		}
+		if errResp != nil {
+			return errResp, nil
 		}
 	}
 
