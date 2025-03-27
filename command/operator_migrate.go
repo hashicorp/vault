@@ -6,6 +6,7 @@ package command
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/vault/helper/random"
 	"io/ioutil"
 	"math"
 	"net/url"
@@ -331,9 +332,13 @@ func (c *OperatorMigrateCommand) loadMigratorConfig(path string) (*migratorConfi
 		return nil, err
 	}
 
-	obj, err := hcl.ParseBytes(d)
+	// TODO (HCL_DUP_KEYS_DEPRECATION): Return to hcl.Parse once duplicates are forbidden
+	obj, duplicate, err := random.ParseAndCheckForDuplicateHclAttributes(string(d))
 	if err != nil {
 		return nil, err
+	}
+	if duplicate {
+		c.UI.Warn("WARNING: Duplicate keys found in migration configuration file, duplicate keys in HCL files are deprecated and will be forbidden in a future release.")
 	}
 
 	var result migratorConfig

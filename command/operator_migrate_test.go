@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/cli"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/vault/command/server"
@@ -187,7 +188,12 @@ func TestMigration(t *testing.T) {
 	})
 
 	t.Run("Config parsing", func(t *testing.T) {
-		cmd := new(OperatorMigrateCommand)
+		ui := cli.NewMockUi()
+		cmd := &OperatorMigrateCommand{
+			BaseCommand: &BaseCommand{
+				UI: ui,
+			},
+		}
 		cfgName := filepath.Join(t.TempDir(), "migrator")
 		os.WriteFile(cfgName, []byte(`
 storage_source "consul" {
@@ -195,6 +201,7 @@ storage_source "consul" {
 }
 
 storage_destination "raft" {
+  path = "dest_path"
   path = "dest_path"
 }`), 0o644)
 
@@ -219,6 +226,9 @@ storage_destination "raft" {
 		if diff := deep.Equal(cfg, expCfg); diff != nil {
 			t.Fatal(diff)
 		}
+		// TODO (HCL_DUP_KEYS_DEPRECATION): Remove warning and instead add one of these "verifyBad" tests down below
+		// to ensure that duplicate attributes fail to parse.
+		strings.Contains(ui.ErrorWriter.String(), "WARNING: Duplicate keys found in migration configuration file, duplicate keys in HCL files are deprecated and will be forbidden in a future release.")
 
 		verifyBad := func(cfg string) {
 			os.WriteFile(cfgName, []byte(cfg), 0o644)
