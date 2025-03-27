@@ -374,7 +374,21 @@ func TestRaftHACluster_Removed_ReAdd(t *testing.T) {
 		"server_id": follower.NodeID,
 	})
 	require.NoError(t, err)
-	require.Eventually(t, follower.Sealed, 10*time.Second, 250*time.Millisecond)
+
+	follower.Logger().Info("waiting for shutdown to finish")
+
+	// Something about this test very flaky. Let's give the shutdown as long
+	// as it needs before anymore assertions. This shouldn't be too big of a
+	// deal, since the ShutdonwDone channel ensures we only take as much time as
+	// we need and this test is running in parallel anyway...
+	timeout := time.After(5 * time.Minute)
+	select {
+	case <-follower.ShutdownDone():
+	case <-timeout:
+		t.Fatalf("test timed out waiting for shutdown")
+	}
+
+	require.True(t, follower.Sealed(), "follower node still unsealed after shutdown")
 
 	_, err = follower.Client.Sys().RaftJoin(joinReq)
 	require.Error(t, err)
