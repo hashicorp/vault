@@ -34,6 +34,12 @@ export interface PkiConfigureCmpRequest {
      */
     defaultPathPolicy?: string;
     /**
+     * A comma-separated list of validations not to perform on CMPv2 messages. Possible entries are DisableCertTimeValidation and DisableMatchingKeyIdValidation.
+     * @type {Array<string>}
+     * @memberof PkiConfigureCmpRequest
+     */
+    disabledValidations?: Array<string>;
+    /**
      * Parse CSR to that its fields can be used by sentinel policies.
      * @type {boolean}
      * @memberof PkiConfigureCmpRequest

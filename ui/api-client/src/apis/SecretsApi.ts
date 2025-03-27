@@ -1167,6 +1167,11 @@ export interface SecretsApiAwsListRolesRequest {
     list: AwsListRolesListEnum;
 }
 
+export interface SecretsApiAwsListStaticRolesRequest {
+    awsMountPath: string;
+    list: AwsListStaticRolesListEnum;
+}
+
 export interface SecretsApiAwsReadLeaseConfigurationRequest {
     awsMountPath: string;
 }
@@ -4615,6 +4620,48 @@ export class SecretsApi extends runtime.BaseAPI {
      */
     async awsListRoles(awsMountPath: string, list: AwsListRolesListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse> {
         const response = await this.awsListRolesRaw({ awsMountPath: awsMountPath, list: list }, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     */
+    async awsListStaticRolesRaw(requestParameters: SecretsApiAwsListStaticRolesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<StandardListResponse>> {
+        if (requestParameters['awsMountPath'] == null) {
+            throw new runtime.RequiredError(
+                'awsMountPath',
+                'Required parameter "awsMountPath" was null or undefined when calling awsListStaticRoles().'
+            );
+        }
+
+        if (requestParameters['list'] == null) {
+            throw new runtime.RequiredError(
+                'list',
+                'Required parameter "list" was null or undefined when calling awsListStaticRoles().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['list'] != null) {
+            queryParameters['list'] = requestParameters['list'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/{aws_mount_path}/static-roles/`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => StandardListResponseFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async awsListStaticRoles(awsMountPath: string, list: AwsListStaticRolesListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse> {
+        const response = await this.awsListStaticRolesRaw({ awsMountPath: awsMountPath, list: list }, initOverrides);
         return await response.value();
     }
 
@@ -26292,6 +26339,13 @@ export enum AliCloudListRolesListEnum {
   * @enum {string}
   */
 export enum AwsListRolesListEnum {
+    TRUE = 'true'
+}
+/**
+  * @export
+  * @enum {string}
+  */
+export enum AwsListStaticRolesListEnum {
     TRUE = 'true'
 }
 /**

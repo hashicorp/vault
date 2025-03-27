@@ -7038,6 +7038,29 @@ export class SystemApi extends runtime.BaseAPI {
         });
     }
     /**
+     */
+    systemReadUtilizationReportRaw(initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const queryParameters = {};
+            const headerParameters = {};
+            const response = yield this.request({
+                path: `/sys/utilization-report`,
+                method: 'GET',
+                headers: headerParameters,
+                query: queryParameters,
+            }, initOverrides);
+            return new runtime.VoidApiResponse(response);
+        });
+    }
+    /**
+     */
+    systemReadUtilizationReport(initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.systemReadUtilizationReportRaw(initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
      * Configure control group global settings.
      */
     systemWriteConfigControlGroupRaw(requestParameters, initOverrides) {
