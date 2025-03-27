@@ -15,8 +15,7 @@ export default class ApplicationComponent extends Component {
 
   @tracked showAfterOptions = false;
   @tracked selected = {};
-  @tracked options = [];
-  // @tracked groupedOptions = {groupName: '', options: []} // SHANNONTODO: All Namespaces Label
+  @tracked groupedOptions = [{ options: [], groupName: '' }];
 
   constructor() {
     super(...arguments);
@@ -38,11 +37,11 @@ export default class ApplicationComponent extends Component {
   @action
   async loadOptions() {
     await this.namespace?.findNamespacesForUser.perform();
-    this.options = getOptions(this.namespace);
-    this.selected = getSelected(this.options, this.namespace);
+    const options = getOptions(this.namespace);
+    this.selected = getSelected(options, this.namespace);
     this.fetchListCapability();
-    // this.groupedOptions.options = this.options; // SHANNONTODO: All Namespaces Label
-    // this.groupedOptions.groupName = `All namespaces (${this.options.length})`; // SHANNONTODO: All Namespaces Label
+    this.groupedOptions[0].options = options;
+    this.groupedOptions[0].groupName = `All namespaces (${options.length})`;
   }
 
   @action
