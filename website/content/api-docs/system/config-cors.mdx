@@ -57,9 +57,10 @@ cross-origin requests, as well as headers that are allowed on cross-origin reque
 
 <EnterpriseAlert>
 
-The CORS configuration endpoint does not apply changes across clusters. You must
-invoke the configuration endpoint on each secondary cluster independently to
-mirror the primary cluster CORS configuration.
+The CORS configuration endpoint does not apply changes across clusters. If you
+use performance replication, you must invoke the configuration endpoint on each
+secondary cluster independently to mirror the primary cluster CORS
+configuration.
 
 </EnterpriseAlert>
 
