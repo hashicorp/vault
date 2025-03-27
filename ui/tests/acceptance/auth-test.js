@@ -19,7 +19,7 @@ import {
 import { login, loginMethod, loginNs, logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { v4 as uuidv4 } from 'uuid';
-import { GENERAL } from '../helpers/general-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const ENT_AUTH_METHODS = ['saml'];
 const { rootToken } = VAULT_KEYS;

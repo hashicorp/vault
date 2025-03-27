@@ -17,8 +17,3 @@ export const AUTH_FORM = {
   logo: '[data-test-auth-logo]',
   helpText: '[data-test-auth-helptext]',
 };
-
-export const MFA_SELECTORS = {
-  mfaForm: '[data-test-mfa-form]',
-  passcode: (idx: number) => `[data-test-mfa-passcode=${idx}]`,
-};

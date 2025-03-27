@@ -11,7 +11,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
 import authPage from 'vault/tests/pages/auth';
 import { WindowStub } from 'vault/tests/helpers/oidc-window-stub';
-import { setupTotpMfaResponse } from 'vault/tests/helpers/auth/mfa-helpers';
+import { setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
 
 module('Acceptance | enterprise saml auth method', function (hooks) {
   setupApplicationTest(hooks);

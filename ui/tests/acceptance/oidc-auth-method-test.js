@@ -11,7 +11,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { WindowStub, buildMessage } from 'vault/tests/helpers/oidc-window-stub';
 import sinon from 'sinon';
 import { Response } from 'miragejs';
-import { setupTotpMfaResponse } from 'vault/tests/helpers/auth/mfa-helpers';
+import { setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
 
 module('Acceptance | oidc auth method', function (hooks) {
   setupApplicationTest(hooks);

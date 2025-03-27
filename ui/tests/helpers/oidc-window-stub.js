@@ -35,11 +35,14 @@ export const fakeWindow = EmberObject.extend(Evented, {
 export const buildMessage = (opts) => ({
   isTrusted: true,
   origin: 'https://my-vault.com',
-  data: {
-    source: 'oidc-callback',
-    path: 'foo',
-    state: 'state',
-    code: 'code',
-  },
+  data: callbackData(),
   ...opts,
+});
+
+export const callbackData = (data = {}) => ({
+  source: 'oidc-callback',
+  path: 'foo',
+  state: 'state',
+  code: 'code',
+  ...data,
 });

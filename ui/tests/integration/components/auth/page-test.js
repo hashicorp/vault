@@ -9,10 +9,8 @@ import { click, fillIn, render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { AUTH_FORM, MFA_SELECTORS } from 'vault/tests/helpers/auth/auth-form-selectors';
+import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { fillInLoginFields } from 'vault/tests/helpers/auth/auth-helpers';
-import { setupTotpMfaResponse } from 'vault/tests/helpers/auth/mfa-helpers';
 
 module('Integration | Component | auth | page', function (hooks) {
   setupRenderingTest(hooks);
@@ -40,21 +38,7 @@ module('Integration | Component | auth | page', function (hooks) {
 
     // in the real world more info is returned by auth requests
     // only including pertinent data for testing
-    this.authRequest = ({ isMfa = false, authMountPath = '', url = '' }) => {
-      return this.server.post(url, () => {
-        if (isMfa) {
-          return {
-            warnings: [
-              'A login request was issued that is subject to MFA validation. Please make sure to validate the login by sending another request to mfa/validate endpoint.',
-            ],
-            ...setupTotpMfaResponse(authMountPath),
-          };
-        }
-        return {
-          auth: { policies: ['default'] },
-        };
-      });
-    };
+    this.authRequest = (url) => this.server.post(url, () => ({ auth: { policies: ['default'] } }));
   });
 
   test('it renders splash logo when oidc provider query param is present', async function (assert) {
@@ -99,10 +83,6 @@ module('Integration | Component | auth | page', function (hooks) {
   });
 
   const REQUEST_DATA = {
-    token: {
-      loginData: { token: 'mysupersecuretoken' },
-      url: () => '/auth/token/lookup-self',
-    },
     username: {
       loginData: { username: 'matilda', password: 'password' },
       url: ({ path, username }) => `/auth/${path}/login/${username}`,
@@ -111,28 +91,15 @@ module('Integration | Component | auth | page', function (hooks) {
       loginData: { token: 'mysupersecuretoken' },
       url: ({ path }) => `/auth/${path}/login`,
     },
-    // oidc: {
-    //   loginData: { role: 'some-dev' },
-    //   url: ({ path }) => `/auth/${path}/oidc/auth_url`,
-    //   responseType: 'oidc',
-    // },
-    // saml: {
-    //   loginData: { role: 'some-dev' },
-    //   url: ({ path }) => `/auth/${path}/sso_service_url`,
-    // },
   };
 
+  // only testing methods that submit via AuthForm (and not separate, child component)
   const AUTH_METHOD_TEST_CASES = [
     { authType: 'github', options: REQUEST_DATA.github },
-    //input username + password
     { authType: 'userpass', options: REQUEST_DATA.username },
     { authType: 'ldap', options: REQUEST_DATA.username },
     { authType: 'okta', options: REQUEST_DATA.username },
     { authType: 'radius', options: REQUEST_DATA.username },
-    // TODO CMB add these tests cases when login logic is standardized (currently login success/mfa is tested by the individual components)
-    // { authType: 'oidc', options: REQUEST_DATA.oidc },
-    // { authType: 'jwt', options: REQUEST_DATA.oidc },
-    // { authType: 'saml', options: REQUEST_DATA.saml },
   ];
 
   for (const { authType, options } of AUTH_METHOD_TEST_CASES) {
@@ -140,7 +107,7 @@ module('Integration | Component | auth | page', function (hooks) {
       assert.expect(1);
       const { loginData, url } = options;
       const requestUrl = url({ path: authType, username: loginData?.username });
-      this.authRequest({ url: requestUrl });
+      this.authRequest(requestUrl);
 
       await this.renderComponent();
       await fillIn(AUTH_FORM.method, authType);
@@ -162,7 +129,7 @@ module('Integration | Component | auth | page', function (hooks) {
       const loginDataWithPath = { ...loginData, 'auth-form-mount-path': customPath };
       // pass custom path to request URL
       const requestUrl = url({ path: customPath, username: loginData?.username });
-      this.authRequest({ url: requestUrl });
+      this.authRequest(requestUrl);
 
       await this.renderComponent();
       await fillIn(AUTH_FORM.method, authType);
@@ -178,82 +145,23 @@ module('Integration | Component | auth | page', function (hooks) {
       };
       assert.propEqual(actual, expected, `onAuthSuccess called with: ${JSON.stringify(actual)}`);
     });
-
-    test(`${authType}: it should display mfa requirement for default path`, async function (assert) {
-      const { loginData, url } = options;
-      assert.expect(3 + Object.keys(loginData).length);
-
-      const requestUrl = url({ path: authType, username: loginData?.username });
-      // authMountPath necessary to return mfa_constraints
-      this.authRequest({ isMfa: true, authMountPath: authType, url: requestUrl });
-
-      await this.renderComponent();
-      await fillIn(AUTH_FORM.method, authType);
-      await fillInLoginFields(loginData);
-      await click(AUTH_FORM.login);
-
-      assert
-        .dom(MFA_SELECTORS.mfaForm)
-        .hasText(
-          'Multi-factor authentication is enabled for your account. Enter your authentication code to log in. TOTP passcode Verify'
-        );
-      await click(GENERAL.backButton);
-      assert.dom(AUTH_FORM.form).exists('clicking back returns to auth form');
-      assert.dom(GENERAL.selectByAttr('auth-method')).hasValue(authType, 'preserves method type on back');
-
-      for (const field of Object.keys(loginData)) {
-        assert.dom(AUTH_FORM.input(field)).hasValue('', `${field} input clears on back`);
-      }
-    });
-
-    test(`${authType}: it should display mfa requirement for custom path`, async function (assert) {
-      const customPath = `${authType}-custom`;
-      const { loginData, url } = options;
-      assert.expect(3 + Object.keys(loginData).length);
-
-      const loginDataWithPath = { ...loginData, 'auth-form-mount-path': customPath };
-      // pass custom path to request URL
-      const requestUrl = url({ path: customPath, username: loginData?.username });
-      // authMountPath necessary to return mfa_constraints
-      this.authRequest({ isMfa: true, authMountPath: customPath, url: requestUrl });
-
-      await this.renderComponent();
-      await fillIn(AUTH_FORM.method, authType);
-      await fillInLoginFields(loginDataWithPath, { toggleOptions: true });
-      await click(AUTH_FORM.login);
-
-      assert
-        .dom(MFA_SELECTORS.mfaForm)
-        .hasText(
-          'Multi-factor authentication is enabled for your account. Enter your authentication code to log in. TOTP passcode Verify'
-        );
-      await click(GENERAL.backButton);
-      assert.dom(AUTH_FORM.form).exists('clicking back returns to auth form');
-      assert.dom(GENERAL.selectByAttr('auth-method')).hasValue(authType, 'preserves method type on back');
-
-      for (const field of Object.keys(loginData)) {
-        assert.dom(AUTH_FORM.input(field)).hasValue('', `${field} input clears on back`);
-      }
-    });
   }
 
   // token makes a GET request so test separately
   test('token: it calls onAuthSuccess on submit', async function (assert) {
     assert.expect(1);
-    const authType = 'token';
-    const { loginData, url } = REQUEST_DATA.token;
-    this.server.get(url(), () => {
+    this.server.get('/auth/token/lookup-self', () => {
       return { data: { policies: ['default'] } };
     });
 
     await this.renderComponent();
-    await fillIn(AUTH_FORM.method, authType);
-    await fillInLoginFields(loginData);
+    await fillIn(AUTH_FORM.method, 'token');
+    await fillInLoginFields({ token: 'mysupersecuretoken' });
     await click(AUTH_FORM.login);
     const [actual] = this.onAuthSuccess.lastCall.args;
     const expected = {
       namespace: '',
-      token: `vault-${authType}☃1`,
+      token: `vault-token☃1`,
       isRoot: false,
     };
     assert.propEqual(actual, expected, `onAuthSuccess called with: ${JSON.stringify(actual)}`);
