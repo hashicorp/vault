@@ -21,7 +21,31 @@ This documentation assumes the Azure method is mounted at the `/auth/azure`
 path in Vault. Since it is possible to enable auth methods at any location,
 please update your API calls accordingly.
 
-## Prerequisites:
+## Token validation ((#token-validation))
+
+Vault validates the resource group (`resource_group_name`), VM name (`vm_name`)
+and VM scale set name (`vmss_name`) parameters against token claims. Depending
+on the identities attached to the machine generating the MSI token, the
+associated claims must include at least one of the following claims
+to pass validation: "xms_mirid" or "xms_az_rid".
+
+System-assigned management identity | "xms_mirid"                                                                                                                                | "xms_az_rid"
+----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------| ---------------
+Enabled                             | `/subscriptions/{subscription-id}/resourcegroups/{resource-group-name}/providers/Microsoft.Compute/virtualMachines/{virtual-machine-name}` | Does not exist
+Not enabled                         | `/subscriptions/{subscription-id}/resourcegroups/{resource-group-name}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/{user-assigned-managed-identity}` |`/subscriptions/{subscription-id}/resourcegroups/{resource-group-name}/providers/Microsoft.Compute/virtualMachines/{virtual-machine-name}`
+
+See [Azure managed identity REST endpoint reference](https://learn.microsoft.com/en-us/azure/app-service/overview-managed-identity?tabs=portal%2Chttp#rest-endpoint-reference) and
+[Managed identities for Azure resources frequently asked questions](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/managed-identities-faq#what-identity-will-imds-default-to-if-i-dont-specify-the-identity-in-the-request) for more details on how to request MSI tokens.
+
+When Vault evaluates the token claims, it checks the validation parameter values
+against the claim parameters:
+
+- `{resource-group-name}` must match `resource_group_name`.
+- `{virtual-machine-name}` must match `vm_name` or `{vmss_name}_{instance-id}` if `vmss_name` is provided.
+
+If either check fails, the login also fails.
+
+## Prerequisites
 
 The Azure auth method requires client credentials to access Azure APIs. The following
 are required to configure the auth method:
