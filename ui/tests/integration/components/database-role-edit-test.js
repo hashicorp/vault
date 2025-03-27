@@ -77,7 +77,7 @@ module('Integration | Component | database-role-edit', function (hooks) {
     await click('[data-test-secret-save]');
   });
 
-  test('enterprise: it should successfully create user with skip import rotation', async function (assert) {
+  test('enterprise: it should successfully create user that does not rotate immediately', async function (assert) {
     this.version.type = 'enterprise';
     this.server.post('/sys/capabilities-self', capabilitiesStub('database/static-creds/my-role', ['create']));
     this.server.post(`/database/static-roles/my-static-role`, (schema, req) => {
@@ -98,6 +98,17 @@ module('Integration | Component | database-role-edit', function (hooks) {
     await fillIn('[data-test-ttl-value="Rotation period"]', '2');
     await click('[data-test-toggle-input="toggle-skip_import_rotation"]');
 
+    await click('[data-test-secret-save]');
+
+    await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="show"/>`);
+    assert.dom('[data-test-value-div="Rotate immediately"]').containsText('No');
+  });
+
+  test('enterprise: it should successfully create user that does rotate immediately', async function (assert) {
+    this.version.type = 'enterprise';
+    this.server.post('/sys/capabilities-self', capabilitiesStub('database/static-creds/my-role', ['create']));
+
+    await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="create"/>`);
     await click('[data-test-secret-save]');
 
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="show"/>`);

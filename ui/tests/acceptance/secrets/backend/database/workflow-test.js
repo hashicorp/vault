@@ -88,7 +88,7 @@ module('Acceptance | database workflow', function (hooks) {
           label: 'Root rotation statements',
           value: `Default`,
         },
-        { label: 'Rotate static roles immediately', value: 'No' },
+        { label: 'Rotate static roles immediately', value: 'Yes' },
       ];
     });
     test('create with rotate', async function (assert) {
