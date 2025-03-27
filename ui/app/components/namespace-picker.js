@@ -63,10 +63,10 @@ function matchesPath(option, currentNamespace) {
 
 function getOptions(namespace) {
   return [
-    { namespace: 'root', path: '', display: 'root' },
+    { id: 'root', path: '', label: 'root' },
     ...(namespace?.accessibleNamespaces || []).map((ns) => {
       const parts = ns.split('/');
-      return { namespace: parts[parts.length - 1], path: ns, display: ns };
+      return { id: parts[parts.length - 1], path: ns, label: ns };
     }),
   ];
 }
