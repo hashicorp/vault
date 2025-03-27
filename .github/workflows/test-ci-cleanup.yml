@@ -1,11 +1,8 @@
 name: test-ci-cleanup
 on:
-#  schedule:
-#    # * is a special character in YAML so you have to quote this string
-#    - cron:  '05 02 * * *'
-  pull_request:
-    paths:
-      - enos/**
+  schedule:
+    # * is a special character in YAML so you have to quote this string
+    - cron:  '05 02 * * *'
 
 jobs:
   setup:
