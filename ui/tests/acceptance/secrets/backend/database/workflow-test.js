@@ -356,4 +356,55 @@ module('Acceptance | database workflow', function (hooks) {
         .hasText(`database/creds/${roleName}/abcd`, 'shows lease ID from response');
     });
   });
+
+  module('static roles', function () {
+    test('set parent db to rotate static roles immediately, verify static role reflects that default', async function (assert) {
+      this.connection = `connect-${this.backend}`;
+      await visit(`/vault/secrets/${this.backend}/create`);
+      await fillOutConnection(this.connection);
+      await click(FORM.saveBtn);
+      await visit(`/vault/secrets/${this.backend}/show/${this.connection}`);
+
+      const roleName = 'static-role';
+      await click(PAGE.addRole);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.backend}/create?initialKey=${this.connection}&itemType=role`,
+        'Takes you to create role page'
+      );
+
+      await fillIn(FORM.inputByAttr('name'), roleName);
+
+      await fillIn(FORM.inputByAttr('type'), 'static');
+
+      assert
+        .dom('[data-test-toggle-subtext]')
+        .containsText(`Vault will rotate the password for this static role on creation.`);
+    });
+
+    test('set parent db to not rotate static roles immediately, verify static role reflects that default', async function (assert) {
+      this.connection = `connect-${this.backend}`;
+      await visit(`/vault/secrets/${this.backend}/create`);
+      await fillOutConnection(this.connection);
+      await click('[data-test-toggle-input="toggle-skip_static_role_rotation_import"]');
+      await click(FORM.saveBtn);
+      await visit(`/vault/secrets/${this.backend}/show/${this.connection}`);
+
+      const roleName = 'static-role';
+      await click(PAGE.addRole);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.backend}/create?initialKey=${this.connection}&itemType=role`,
+        'Takes you to create role page'
+      );
+
+      await fillIn(FORM.inputByAttr('name'), roleName);
+
+      await fillIn(FORM.inputByAttr('type'), 'static');
+
+      assert
+        .dom('[data-test-toggle-subtext]')
+        .containsText(`Vault will not rotate this role's password on creation.`);
+    });
+  });
 });
