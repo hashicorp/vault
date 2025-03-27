@@ -165,7 +165,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
 
       this.version.type = 'enterprise';
       this.flags.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
-      this.namespace.path = 'admin/';
+      this.namespace.path = 'admin';
       this.isRootNamespace = false;
 
       await this.renderComponent();
