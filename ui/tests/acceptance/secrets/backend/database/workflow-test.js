@@ -238,7 +238,7 @@ module('Acceptance | database workflow', function (hooks) {
       );
     });
   });
-  module('roles', function (hooks) {
+  module('dynamic roles', function (hooks) {
     hooks.beforeEach(async function () {
       this.connection = `connect-${this.backend}`;
       await visit(`/vault/secrets/${this.backend}/create`);
