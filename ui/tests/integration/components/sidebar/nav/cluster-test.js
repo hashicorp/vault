@@ -206,4 +206,45 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     await renderComponent();
     assert.dom(GENERAL.navLink('Secrets Sync')).exists();
   });
+
+  test('it shows Vault Usage when user is enterprise and in root namespace', async function (assert) {
+    stubFeaturesAndPermissions(this.owner, true);
+    await renderComponent();
+    assert.dom(GENERAL.navLink('Vault Usage')).exists();
+  });
+
+  test('it does NOT show Vault Usage when user is not enterprise', async function (assert) {
+    stubFeaturesAndPermissions(this.owner, false);
+    await renderComponent();
+    assert.dom(GENERAL.navLink('Vault Usage')).doesNotExist();
+  });
+
+  test('it does NOT show Vault Usage when user is enterprise but not in root namespace', async function (assert) {
+    stubFeaturesAndPermissions(this.owner, true);
+
+    this.owner.lookup('service:namespace').set('path', 'foo');
+
+    await renderComponent();
+    assert.dom(GENERAL.navLink('Vault Usage')).doesNotExist();
+  });
+
+  test('it does NOT show Vault Usage when user lacks the dashboard permission', async function (assert) {
+    // no permissions
+    stubFeaturesAndPermissions(this.owner, true, false, [], false);
+
+    await renderComponent();
+    assert.dom(GENERAL.navLink('Vault Usage')).doesNotExist();
+  });
+
+  test('it does NOT Vault Usage if the user has the dashboard permission but not enterprise', async function (assert) {
+    // no permissions
+    const stubs = stubFeaturesAndPermissions(this.owner, false, false, [], false);
+
+    // allow the dashboard route
+    stubs.hasNavPermission.callsFake((route) => route === 'dashboard');
+
+    await renderComponent();
+
+    assert.dom(GENERAL.navLink('Vault Usage')).doesNotExist();
+  });
 });
