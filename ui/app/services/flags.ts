@@ -29,6 +29,7 @@ export default class FlagsService extends Service {
   @tracked featureFlags: string[] = [];
 
   get isHvdManaged(): boolean {
+    // SHANNONTODO - HVD Hack
     return this.featureFlags?.includes(FLAGS.vaultCloudNamespace);
   }
 
