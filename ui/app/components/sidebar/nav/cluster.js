@@ -36,11 +36,11 @@ export default class SidebarNavClusterComponent extends Component {
         b) hvd cluster and /admin namespace
     */
 
-    return (
-      this.permissions.hasNavPermission('dashboard') &&
-      ((this.version.isEnterprise && this.isRootNamespace) ||
-        (this.flags.isHvdManaged && this.namespace.inHvdAdminNamespace))
-    );
+    const hasPermission = this.permissions.hasNavPermission('monitoring');
+    const isEnterprise = this.version.isEnterprise;
+    const isCorrectNamespace = this.isRootNamespace || this.namespace.inHvdAdminNamespace;
+
+    return hasPermission && isEnterprise && isCorrectNamespace;
   }
 
   get showSecretsSync() {

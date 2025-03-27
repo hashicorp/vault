@@ -55,7 +55,7 @@ const API_PATHS = {
     config: 'sys/sync/config',
     github: 'sys/sync/github-apps',
   },
-  dashboard: {
+  monitoring: {
     'utilization-report': 'sys/v1/utilization-report',
   },
 };

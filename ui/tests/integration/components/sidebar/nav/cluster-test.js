@@ -228,7 +228,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     assert.dom(GENERAL.navLink('Vault Usage')).doesNotExist();
   });
 
-  test('it does NOT show Vault Usage when user lacks the dashboard permission', async function (assert) {
+  test('it does NOT show Vault Usage when user lacks the necessary permission', async function (assert) {
     // no permissions
     stubFeaturesAndPermissions(this.owner, true, false, [], false);
 
@@ -236,12 +236,12 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     assert.dom(GENERAL.navLink('Vault Usage')).doesNotExist();
   });
 
-  test('it does NOT Vault Usage if the user has the dashboard permission but not enterprise', async function (assert) {
+  test('it does NOT Vault Usage if the user has the necessary permission but not enterprise', async function (assert) {
     // no permissions
     const stubs = stubFeaturesAndPermissions(this.owner, false, false, [], false);
 
-    // allow the dashboard route
-    stubs.hasNavPermission.callsFake((route) => route === 'dashboard');
+    // allow the route
+    stubs.hasNavPermission.callsFake((route) => route === 'monitoring');
 
     await renderComponent();
 
