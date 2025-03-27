@@ -134,8 +134,8 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 	// db, err := sql.Open("pgx", connURL)
 	config := iam.DBConfig{
 		URL:           connURL,
-		UseAWSIAMAuth: true,        // TODO: Take this from config,
-		AWSDBRegion:   "us-west-2", // TODO: Take this from config,
+		UseAWSIAMAuth: true,
+		AWSDBRegion:   "us-east-1",
 	}
 
 	db, err := iam.DBHandler(config)
