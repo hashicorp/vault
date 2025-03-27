@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Update the Vault Namespace Picker to utilize the Hds::Form::SuperSelect component. Allow the user to navigate to any namespace that the current user has access to.
+```
