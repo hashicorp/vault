@@ -3,55 +3,20 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-// SHANNONTODO: add component docs see configer-wif.ts
-
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 
-// PRIVATE Helper Functions
-// SHANNONTEST post about this pattern in #vault-ui-devs
-
-function _matchesPath(option, currentNamespace) {
-  // SHANNONTODO: Revisit this, this seems hacky, but fixes a breaking test
-  // assumption is that namespace shouldn't start with a "/", is this a HVD thing?
-  // or is the test outdated?
-  return option?.path === currentNamespace?.path || `/${option?.path}` === currentNamespace?.path;
-}
-
-function _getSelected(options, currentNamespace) {
-  return options.find((option) => _matchesPath(option, currentNamespace));
-}
-
-function _getOptions(namespace) {
-  return [
-    // SHANNONTODO: Add Comment explaining 3 properties because root is blank
-    // SHANNONTODO: HDS Admin User (and others?) should never see root
-    { id: 'root', path: '', label: 'root' },
-    ...(namespace?.accessibleNamespaces || []).map((ns) => {
-      const parts = ns.split('/');
-      return { id: parts[parts.length - 1], path: ns, label: ns };
-    }),
-  ];
-}
-
-function _getNamespaceLink(location, namespace) {
-  const origin = _getOrigin(location);
-  const encodedNamespace = encodeURIComponent(namespace.path);
-
-  let queryParams = '';
-  if (namespace.path !== '') {
-    queryParams = `?namespace=${encodedNamespace}`;
-  }
-
-  // The full URL/origin is required so that the page is reloaded.
-  return `${origin}/ui/vault/dashboard${queryParams}`;
-}
-
-function _getOrigin(location) {
-  return location.protocol + '//' + location.hostname + (location.port ? ':' + location.port : '');
-}
+/**
+ * @module ApplicationComponent component is used to display a dropdown listing all namespaces that the current user has access to.
+ *  The user can select a namespace from the dropdown to navigate directly to that namespace.
+ *  The "Manage" button directs the user to the namespace management page.
+ *  The "Refresh List" button refrehes the list of namespaces in the dropdown.
+ *
+ * @example
+ * <NamespacePicker class="hds-side-nav-hide-when-minimized" />
+ */
 
 export default class ApplicationComponent extends Component {
   @service namespace;
@@ -68,11 +33,63 @@ export default class ApplicationComponent extends Component {
     this.loadOptions();
   }
 
-  // SHANNONTODO this is fetching sys internal namespaces capabilities, is this still needed??
+  #matchesPath(option, currentNamespace) {
+    // TODO: Revisit. A hardcoded check for "path" & "/path" seems hacky, but it fixes a breaking test:
+    //  "Acceptance | Enterprise | namespaces: it shows nested namespaces if you log in with a namespace starting with a /"
+    //  My assumption is that namespace shouldn't start with a "/", but is this a HVD thing? or is the test outdated?
+    return option?.path === currentNamespace?.path || `/${option?.path}` === currentNamespace?.path;
+  }
+
+  #getSelected(options, currentNamespace) {
+    return options.find((option) => this.#matchesPath(option, currentNamespace));
+  }
+
+  #getOptions(namespace) {
+    /* Each namespace option has 3 properties: { id, path, and label }
+     *   - id: node / namespace name (displayed when the namespace picker is closed)
+     *   - path: full namespace path (used to navigate to the namespace)
+     *   - label: text displayed inside the namespace picker dropdown (if root, then label = id, else label = path)
+     *
+     *  Example:
+     *   | id         | path                    | label                   |
+     *   | ---        | ----                    | -----                   |
+     *   | root       | ''                      | 'root'                  |
+     *   | namespace1 | 'namespace1'            | 'namespace1'            |
+     *   | namespace2 | 'namespace1/namespace2' | 'namespace1/namespace2' |
+     */
+    return [
+      // TODO: Some users (including HDS Admin User) should never see the root namespace. Address this in a followup PR.
+      { id: 'root', path: '', label: 'root' },
+      ...(namespace?.accessibleNamespaces || []).map((ns) => {
+        const parts = ns.split('/');
+        return { id: parts[parts.length - 1], path: ns, label: ns };
+      }),
+    ];
+  }
+
+  #getNamespaceLink(location, namespace) {
+    const origin = this.#getOrigin(location);
+    const encodedNamespace = encodeURIComponent(namespace.path);
+
+    let queryParams = '';
+    if (namespace.path !== '') {
+      queryParams = `?namespace=${encodedNamespace}`;
+    }
+
+    // The full URL/origin is required so that the page is reloaded.
+    return `${origin}/ui/vault/dashboard${queryParams}`;
+  }
+
+  #getOrigin(location) {
+    return location.protocol + '//' + location.hostname + (location.port ? ':' + location.port : '');
+  }
+
   @action
   async fetchListCapability() {
+    // TODO: Revist. This logic was carried over from previous component implmenetation.
+    //  When the user doesn't have this capability, shouldn't we just hide the "Manage" button,
+    //  instead of hiding both the "Manage" and "Refresh List" buttons?
     try {
-      // SHANNONTODO test w/o capabilities
       await this.store.findRecord('capabilities', 'sys/namespaces/');
       this.showAfterOptions = true;
     } catch (e) {
@@ -84,21 +101,23 @@ export default class ApplicationComponent extends Component {
 
   @action
   async loadOptions() {
-    // SHANNONTODO Currently this never throws an error, should we handle error situation? Check w/ design
+    // TODO: namespace service's findNamespacesForUser will never throw an error.
+    //  Check with design to determine if we should continue to ignore or handle an error situation here.
     await this.namespace?.findNamespacesForUser.perform();
 
-    const options = _getOptions(this.namespace);
-    this.selected = _getSelected(options, this.namespace);
+    const options = this.#getOptions(this.namespace);
+    this.selected = this.#getSelected(options, this.namespace);
     await this.fetchListCapability();
 
-    // SHANNONTODO: add comment
+    // TODO: Using groupedOptions is a workaround to show a label w/ namespace count above the namespaces listed.
+    //  Reach out to the HDS team to determine if there is a better way to accomplish this.
     this.groupedOptions[0].options = options;
     this.groupedOptions[0].groupName = `All namespaces (${options.length})`;
   }
 
   @action
   handleChange(selected) {
-    // SHANNONTODO add github comment
-    window.location.href = _getNamespaceLink(window.location, selected);
+    // Updated href value instead of using the router in order to trigger a full page reload
+    window.location.href = this.#getNamespaceLink(window.location, selected);
   }
 }

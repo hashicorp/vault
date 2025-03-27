@@ -5,7 +5,10 @@ SPDX-License-Identifier: BUSL-1.1
 
 <div class="namespace-picker" ...attributes>
   <Hds::Form::SuperSelect::Single::Field
-    {{! SHANNONTODO add github comment explaining that this implementation isn't in the hds examples, but got it from the source code for the examples }}
+    {{! 
+      This implementation isn't in the documented hds code examples; instead I referenced the hds source code for the examples, see:
+      https://github.com/hashicorp/design-system/blob/9e7362a8d048f88a361636a2564646ba4b65b77f/showcase/app/templates/components/form/super-select.hbs#L337 
+    }}
     @afterOptionsComponent={{component "namespace-picker/after-options" loadOptions=this.loadOptions}}
     @selectedItemComponent={{component "namespace-picker/selected-option"}}
     @label="Namespace"
