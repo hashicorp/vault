@@ -7,7 +7,11 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import errorMessage from 'vault/utils/error-message';
+import apiErrorMessage from 'vault/utils/api-error-message';
+
+import type ApiService from 'vault/services/api';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type { HTMLElementEvent } from 'vault/forms';
 
 /**
  * @module ToolsHash
@@ -17,13 +21,13 @@ import errorMessage from 'vault/utils/error-message';
  * <Tools::Hash />
  */
 export default class ToolsHash extends Component {
-  @service store;
-  @service flashMessages;
+  @service declare readonly api: ApiService;
+  @service declare readonly flashMessages: FlashMessageService;
 
   @tracked algorithm = 'sha2-256';
   @tracked format = 'base64';
   @tracked hashData = '';
-  @tracked sum = null;
+  @tracked sum = '';
   @tracked errorMessage = '';
 
   @action
@@ -31,18 +35,19 @@ export default class ToolsHash extends Component {
     this.algorithm = 'sha2-256';
     this.format = 'base64';
     this.hashData = '';
-    this.sum = null;
+    this.sum = '';
     this.errorMessage = '';
   }
 
   @action
-  handleEvent(evt) {
+  handleEvent(evt: HTMLElementEvent<HTMLInputElement>) {
     const { name, value } = evt.target;
-    this[name] = value;
+    const key = name as 'algorithm' | 'format' | 'hashData';
+    this[key] = value;
   }
 
   @action
-  async handleSubmit(evt) {
+  async handleSubmit(evt: HTMLElementEvent<HTMLFormElement>) {
     evt.preventDefault();
     const data = {
       input: this.hashData,
@@ -51,11 +56,11 @@ export default class ToolsHash extends Component {
     };
 
     try {
-      const response = await this.store.adapterFor('tools').toolAction('hash', data);
-      this.sum = response.data.sum;
+      const { sum } = await this.api.sys.generateHash(data);
+      this.sum = sum || '';
       this.flashMessages.success('Hash was successful.');
     } catch (error) {
-      this.errorMessage = errorMessage(error);
+      this.errorMessage = await apiErrorMessage(error);
     }
   }
 }

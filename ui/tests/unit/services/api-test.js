@@ -146,16 +146,6 @@ module('Unit | Service | api', function (hooks) {
     assert.deepEqual(error, expectedError, 'Error is reformated and returned');
   });
 
-  test('it should extract data from response', async function (assert) {
-    const data = { data: { foo: 'bar' } };
-    const response = new Response(JSON.stringify(data), { status: 200 });
-
-    const extractedDataResponse = await this.apiService.extractData({ response, url: this.url });
-    const json = await extractedDataResponse.json();
-
-    assert.deepEqual(json, { foo: 'bar' }, 'Data is extracted and returned');
-  });
-
   test('it should build headers', async function (assert) {
     const headerMap = {
       token: 'foobar',
