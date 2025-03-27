@@ -91,7 +91,10 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await click('#deny');
     await clickTrigger();
     await searchSelect.options.objectAt(0).click();
-    const mountPath = find('[data-test-selected-option="0"]').innerText?.trim();
+
+    await click('[data-test-namespace-toggle]');
+
+    const mountPath = find('[data-option-index="0"]').innerText?.trim();
     await click('[data-test-secondary-add]');
 
     await pollCluster(this.owner);

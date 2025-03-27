@@ -24,8 +24,8 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await logout.visit();
     await authPage.login(token);
     await click('[data-test-namespace-toggle]');
-    assert.dom('[data-test-current-namespace]').hasText('root', 'root renders as current namespace');
-    assert.dom('[data-test-namespace-link]').doesNotExist('Additional namespace have been cleared');
+    assert.dom('[aria-selected="true"]').hasText('root', 'root renders as current namespace');
+    assert.dom('[data-test-namespace-link]').exists({ count: 1 }, 'Only the root namespace exists');
   });
 
   test('it shows nested namespaces if you log in with a namespace starting with a /', async function (assert) {
@@ -47,7 +47,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
       // check that the single namespace "beep" or "boop" not "beep/boop" shows in the toggle display
       assert
         .dom(`[data-test-namespace-link="${targetNamespace}"]`)
-        .hasText(ns, `shows the namespace ${ns} in the toggle component`);
+        .hasText(targetNamespace, `shows the namespace ${targetNamespace} in the toggle component`);
       // because quint does not like page reloads, visiting url directly instead of clicking on namespace in toggle
       await visit(url);
     }
@@ -59,8 +59,10 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await authPage.tokenInput('root').submit();
     await settled();
     await click('[data-test-namespace-toggle]');
-    await waitFor('[data-test-current-namespace]');
-    assert.dom('[data-test-current-namespace]').hasText('/beep/boop/', 'current namespace begins with a /');
+    await waitFor('[aria-selected="true"]');
+    assert
+      .dom('[aria-selected="true"]')
+      .hasText('beep/boop', 'current namespace does not begin or end with /');
     assert
       .dom('[data-test-namespace-link="beep/boop/bop"]')
       .exists('renders the link to the nested namespace');
