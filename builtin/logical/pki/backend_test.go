@@ -7430,9 +7430,10 @@ func TestIssuance_SignIntermediateKeyUsages(t *testing.T) {
 		"ttl":         "10h",
 		"issuer_name": "root-ca",
 		"key_name":    "root-key",
-		"key_usage":   "DigitalSignature",
+		"key_usage":   "DigitalSignature,DogPetting",
 	})
 	requireSuccessNonNilResponse(t, resp, err, "expected root generation to succeed")
+	require.Contains(t, resp.Warnings, "Invalid key usage will be ignored: unrecognized key usage DogPetting")
 	rootCertRaw := resp.Data["certificate"]
 	rootCert := parseCert(t, rootCertRaw.(string))
 	require.Equal(t, x509.KeyUsageDigitalSignature, rootCert.KeyUsage&x509.KeyUsageDigitalSignature, "keyUsage Digital Signature was not present")
@@ -7445,10 +7446,11 @@ func TestIssuance_SignIntermediateKeyUsages(t *testing.T) {
 
 	resp, err = CBWrite(b, s, "issuer/root-ca/sign-intermediate", map[string]interface{}{
 		"csr":       csr,
-		"key_usage": "DigitalSignature",
+		"key_usage": "DigitalSignature,KeyEncipherment,KeyAgreement",
 		"ttl":       "60h",
 	})
 	requireSuccessNonNilResponse(t, resp, err, "expected intermediate signing to succeed")
+	require.Contains(t, resp.Warnings, "Invalid key usage: key usage KeyEncipherment is only valid for non-Ca certs; key usage KeyAgreement is only valid for non-Ca certs")
 	intCertRaw := resp.Data["certificate"]
 	intCert := parseCert(t, intCertRaw.(string))
 	require.Equal(t, x509.KeyUsageDigitalSignature, intCert.KeyUsage&x509.KeyUsageDigitalSignature, "keyUsage Digital Signature was not present")

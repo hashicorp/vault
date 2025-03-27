@@ -140,13 +140,6 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 
 	sc := b.makeStorageContext(ctx, req.Storage)
 
-	if keyUsages, ok := data.GetOk("key_usage"); ok {
-		err = validateCaKeyUsages(keyUsages.([]string))
-		if err != nil {
-			return logical.ErrorResponse("Invalid key usage: %v", err.Error()), nil
-		}
-	}
-
 	exported, format, role, errorResp := getGenerationParams(sc, data)
 	if errorResp != nil {
 		return errorResp, nil
@@ -202,6 +195,13 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 			"expiration":    int64(parsedBundle.Certificate.NotAfter.Unix()),
 			"serial_number": cb.SerialNumber,
 		},
+	}
+
+	if keyUsages, ok := data.GetOk("key_usage"); ok {
+		err = validateCaKeyUsages(keyUsages.([]string))
+		if err != nil {
+			resp.AddWarning(fmt.Sprintf("Invalid key usage will be ignored: %v", err.Error()))
+		}
 	}
 
 	if len(parsedBundle.Certificate.RawSubject) <= 2 {
@@ -340,13 +340,6 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		return logical.ErrorResponse(`The "format" path parameter must be "pem", "der" or "pem_bundle"`), nil
 	}
 
-	if keyUsages, ok := data.GetOk("key_usage"); ok {
-		err = validateCaKeyUsages(keyUsages.([]string))
-		if err != nil {
-			return logical.ErrorResponse("Invalid key usage: %v", err.Error()), nil
-		}
-	}
-
 	role := &issuing.RoleEntry{
 		OU:                        data.Get("ou").([]string),
 		Organization:              data.Get("organization").([]string),
@@ -444,6 +437,13 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 	if warnAboutTruncate &&
 		signingBundle.Certificate.NotAfter.Equal(parsedBundle.Certificate.NotAfter) {
 		resp.AddWarning(intCaTruncatationWarning)
+	}
+
+	if keyUsages, ok := data.GetOk("key_usage"); ok {
+		err = validateCaKeyUsages(keyUsages.([]string))
+		if err != nil {
+			resp.AddWarning(fmt.Sprintf("Invalid key usage: %v", err.Error()))
+		}
 	}
 
 	return resp, nil
@@ -646,15 +646,19 @@ func publicKeyType(pub crypto.PublicKey) (pubType x509.PublicKeyAlgorithm, sigAl
 }
 
 func validateCaKeyUsages(keyUsages []string) error {
+	invalidKeyUsages := []string{}
 	for _, usage := range keyUsages {
 		cleanUsage := strings.ToLower(strings.TrimSpace(usage))
 		switch cleanUsage {
-		case "crlsign", "certsign", "digitalsigning":
+		case "crlsign", "certsign", "digitalsignature":
 		case "contentcommitment", "keyencipherment", "dataencipherment", "keyagreement", "encipheronly", "decipheronly":
-			return fmt.Errorf("key usage %s is only valid for non-Ca certs", usage)
+			invalidKeyUsages = append(invalidKeyUsages, fmt.Sprintf("key usage %s is only valid for non-Ca certs", usage))
 		default:
-			return fmt.Errorf("unrecognized key usage %s", usage)
+			invalidKeyUsages = append(invalidKeyUsages, fmt.Sprintf("unrecognized key usage %s", usage))
 		}
+	}
+	if invalidKeyUsages != nil {
+		return fmt.Errorf(strings.Join(invalidKeyUsages, "; "))
 	}
 	return nil
 }
