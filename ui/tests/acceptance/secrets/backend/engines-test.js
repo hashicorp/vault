@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, find, findAll, currentRouteName, visit } from '@ember/test-helpers';
+import { click, fillIn, find, findAll, currentRouteName, visit, currentURL } from '@ember/test-helpers';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -13,8 +13,8 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { UNSUPPORTED_ENGINES, mountableEngines } from 'vault/helpers/mountable-secret-engines';
-import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
-
+import { PAGE, FORM } from 'vault/tests/helpers/kv/kv-selectors';
+import { SECRET_ENGINE_SELECTORS } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 const SELECTORS = {
   backendLink: (path) =>
     path ? `[data-test-secrets-backend-link="${path}"]` : '[data-test-secrets-backend-link]',
@@ -22,6 +22,25 @@ const SELECTORS = {
 
 module('Acceptance | secret-engine list view', function (hooks) {
   setupApplicationTest(hooks);
+
+  const createSecret = async (path, key, value, enginePath) => {
+    await click(SECRET_ENGINE_SELECTORS.createSecret);
+    await fillIn('[data-test-secret-path]', path);
+
+    await fillIn('[data-test-secret-key]', key);
+    await fillIn(GENERAL.inputByAttr(key), value);
+    await click('[data-test-secret-save]');
+    await click(SECRET_ENGINE_SELECTORS.crumb(enginePath));
+  };
+
+  const createKVV2Secret = async (path, key, value) => {
+    await click(PAGE.list.createSecret);
+    await fillIn(FORM.inputByAttr('path'), path);
+    await fillIn(FORM.keyInput(), key);
+    await fillIn(FORM.maskedValueInput(), value);
+    await click(FORM.saveBtn);
+    await click(PAGE.breadcrumbAtIdx(1));
+  };
 
   hooks.beforeEach(function () {
     this.uid = uuidv4();
@@ -55,7 +74,6 @@ module('Acceptance | secret-engine list view', function (hooks) {
       await runCmd(mountEngineCmd(engine, enginePath));
       await visit('/vault/cluster/dashboard');
       await visit('/vault/secrets');
-
       if (UNSUPPORTED_ENGINES.includes(engine)) {
         assert
           .dom(PAGE.backends.link(enginePath))
@@ -107,5 +125,123 @@ module('Acceptance | secret-engine list view', function (hooks) {
     // cleanup
     await runCmd(deleteEngineCmd(enginePath1));
     await runCmd(deleteEngineCmd(enginePath2));
+  });
+
+  test('it allows navigation to a non-nested secret with pagination', async function (assert) {
+    assert.expect(4);
+
+    const enginePath1 = `kv-v1-${this.uid}`;
+    const enginePath2 = `kv-v2-${this.uid}`;
+    const secretPath = 'secret-9';
+
+    await runCmd(mountEngineCmd('kv', enginePath1));
+    await runCmd(mountEngineCmd('kv-v2', enginePath2));
+
+    // check kv1
+    await visit('/vault/secrets');
+    await click(SELECTORS.backendLink(enginePath1));
+    for (let i = 0; i <= 15; i++) {
+      await createSecret(`secret-${i}`, 'foo', 'bar', enginePath1);
+    }
+
+    // navigate and check that details view is shown from non-nested secrets
+    await click(GENERAL.pagination.next);
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${enginePath1}/list?page=2`,
+      'After clicking next page in navigates to the second page.'
+    );
+    await click(SECRET_ENGINE_SELECTORS.secretLink(secretPath));
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${enginePath1}/show/${secretPath}`,
+      'After clicking a non-nested secret, it navigates to the details view.'
+    );
+
+    // check kv2 as it follows a different pattern
+    await visit('/vault/secrets');
+    await click(SELECTORS.backendLink(enginePath2));
+    await createKVV2Secret(`secret-test`, 'foo', 'bar');
+    for (let i = 0; i <= 15; i++) {
+      await createKVV2Secret(`secret-${i}`, 'foo', 'bar');
+    }
+
+    // navigate and check that details view is shown from non-nested secrets
+    await click(GENERAL.pagination.next);
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${enginePath2}/kv/list?page=2`,
+      'After clicking next page in navigates to the second page.'
+    );
+
+    await click(PAGE.list.item('secret-9'));
+
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${enginePath2}/kv/secret-9`,
+      'After clicking a non-nested secret, it navigates to the details view.'
+    );
+
+    // cleanup
+    await runCmd(deleteEngineCmd(enginePath1));
+    await runCmd(deleteEngineCmd(enginePath2));
+  });
+
+  test('it allows navigation to a nested secret with pagination', async function (assert) {
+    assert.expect(4);
+
+    const enginePath1 = `kv-v1-${this.uid}`;
+    const enginePath2 = `kv-v2-${this.uid}`;
+    const parentPath = 'nested';
+
+    await runCmd(mountEngineCmd('kv', enginePath1));
+    await runCmd(mountEngineCmd('kv-v2', enginePath2));
+
+    // check kv1
+    await visit('/vault/secrets');
+    await click(SELECTORS.backendLink(enginePath1));
+    for (let i = 0; i <= 15; i++) {
+      await createSecret(`${parentPath}/secret-${i}`, 'foo', 'bar', enginePath1);
+    }
+
+    // navigate and check that the children list view is shown from nested secrets
+    await click(SECRET_ENGINE_SELECTORS.secretLink(`${parentPath}/`));
+
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${enginePath1}/list/${parentPath}/`,
+      'After clicking a nested secret it navigates to the children list view.'
+    );
+
+    await click(GENERAL.pagination.next);
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${enginePath1}/list/${parentPath}/?page=2`,
+      'After clicking next page it navigates to the second page.'
+    );
+
+    // check kv2 as it follows a different pattern
+    await visit('/vault/secrets');
+    await click(SELECTORS.backendLink(enginePath2));
+
+    for (let i = 0; i <= 15; i++) {
+      await createKVV2Secret(`${parentPath}/secret-${i}`, 'foo', 'bar', enginePath1);
+    }
+
+    // navigate and check that the children list view is shown from nested secrets
+    await click(PAGE.list.item(`${parentPath}/`));
+
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${enginePath2}/kv/list/${parentPath}/`,
+      'After clicking a nested secret it navigates to the children list view.'
+    );
+
+    await click(GENERAL.pagination.next);
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${enginePath2}/kv/list/${parentPath}/?page=2`,
+      'After clicking next page in navigates to the second page.'
+    );
   });
 });
