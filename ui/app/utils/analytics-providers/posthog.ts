@@ -35,10 +35,14 @@ export default class PostHogProvider implements Provider {
     this.client.capture('$pageview', {
       currentRouteName,
       referrer,
+      path,
     });
   }
 
-  identifyUser() {
-    console.log('[tracking] - IDENTIFYING USER');
+  identifyUser(identifier: string, metadata) {
+    console.group('[Analytics] - IDENTIFYING USER');
+      console.log('id', identifier);
+      console.log('metadata', metadata);
+    console.groupEnd();
   }
 }

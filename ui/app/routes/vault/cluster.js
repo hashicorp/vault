@@ -139,11 +139,9 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
       return this.router.transitionTo(this.routeName, { queryParams: { namespace: '' } });
     }
 
-    const license = await this.store.queryRecord('license', {});
-
     this.analytics.identifyUser('', {
       clusterId: model.id,
-      licenseId: license.licenseId,
+      // licenseId: license.licenseId,
       version: this.version.version,
     });
 

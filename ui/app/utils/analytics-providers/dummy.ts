@@ -1,5 +1,6 @@
 import type { ProviderConfig, Provider } from 'vault/utils/analytics-providers/generic';
 
+
 class DummyClient {
   identify() {
     // noop
