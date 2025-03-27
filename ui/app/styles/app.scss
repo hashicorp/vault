@@ -8,6 +8,7 @@
 @use 'ember-power-select';
 @use 'core';
 @use 'docs';
+@use './showcase';
 
 @mixin font-face($name) {
   @font-face {
