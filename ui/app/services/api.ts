@@ -117,23 +117,6 @@ export default class ApiService extends Service {
 
     return;
   };
-
-  // the responses in the OpenAPI spec don't account for the return values to be under the 'data' key
-  // return the data rather than the entire response
-  // if there is no data then return the full response
-  extractData = async (context: ResponseContext) => {
-    const response = context.response.clone();
-    const { headers, ok, status, statusText } = response;
-
-    if (ok) {
-      const json = await response?.json();
-      if (json.data) {
-        return new Response(JSON.stringify(json.data), { headers, status, statusText });
-      }
-    }
-
-    return;
-  };
   // --- End Middleware ---
 
   configuration = new Configuration({
@@ -145,7 +128,6 @@ export default class ApiService extends Service {
       { post: this.showWarnings },
       { post: this.deleteControlGroupToken },
       { post: this.formatErrorResponse },
-      { post: this.extractData },
     ],
   });
 
