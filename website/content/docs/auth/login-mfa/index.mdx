@@ -236,13 +236,11 @@ To get started with Login MFA, refer to the [Login MFA](/vault/tutorials/auth-me
 
 Enable a Login MFA method to enforce TOTP on the LDAP auth method.
 
- Authenticator applications are not consistent in their support of encryption algorithms. You should research the algorithms supported by your preferred authenticator app. The [Configure TOTP MFA Method documentation](/vault/api-docs/secret/identity/mfa/totp#algorithm) lists algorithms supported by the Login MFA TOTP method. Google Authenticator supports SHA256.
+<Note title="Authenticator applications and encryption algorithms">
 
-| Authenticator application             | SHA-256  |  SHA-1  |
-| ------------------------------------- | :------: | :-----: |
-| Google Authenticator Chrome extension | &#10060; | &#9989; |
-| Google Authenticator mobile app       | &#9989;  | &#9989; |
-| Yubico Authenticator (PC)             | &#9989;  | &#9989; |
+ Authenticator applications are not consistent in their support of encryption algorithms. You should research the algorithms supported by your preferred authenticator app. The [Configure TOTP MFA Method documentation](/vault/api-docs/secret/identity/mfa/totp#algorithm) lists algorithms supported by the Login MFA TOTP method.
+
+</Note>
 
 Configure the Login MFA TOTP method and note down the resulting `method_id`.
 
@@ -307,3 +305,13 @@ By default, Vault allows for 5 consecutive failed TOTP passcode validation.
 This value can also be configured by adding `max_validation_attempts` to the TOTP configuration.
 If the number of consecutive failed TOTP passcode validation exceeds the configured value, the user
 needs to wait until a fresh TOTP passcode is available.
+
+#### Known compatibility
+
+The following table lists the known authenticator applications and encryption algorithms compatibility. 
+
+| Authenticator application             | SHA-256  |  SHA-1  |
+| ------------------------------------- | :------: | :-----: |
+| Google Authenticator Chrome extension | &#10060; | &#9989; |
+| Google Authenticator mobile app       | &#9989;  | &#9989; |
+| Yubico Authenticator (PC)             | &#9989;  | &#9989; |
