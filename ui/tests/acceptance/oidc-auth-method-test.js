@@ -8,7 +8,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import { click, fillIn, find, waitUntil } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { FakeWindow, buildMessage } from 'vault/tests/helpers/oidc-window-stub';
+import { WindowStub, buildMessage } from 'vault/tests/helpers/oidc-window-stub';
 import sinon from 'sinon';
 import { Response } from 'miragejs';
 import { setupTotpMfaResponse } from 'vault/tests/helpers/auth/mfa-helpers';
@@ -18,7 +18,7 @@ module('Acceptance | oidc auth method', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.openStub = sinon.stub(window, 'open').callsFake(() => new FakeWindow());
+    this.openStub = sinon.stub(window, 'open').callsFake(() => new WindowStub());
 
     this.setupMocks = (assert) => {
       this.server.post('/auth/oidc/oidc/auth_url', () => ({
