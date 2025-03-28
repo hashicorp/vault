@@ -86,6 +86,14 @@
           @value={{format-duration (get @model attr.name)}}
           @isLink={{eq attr.name "database"}}
         />
+      {{else if (eq attr.name "skip_import_rotation")}}
+        <InfoTableRow
+          @alwaysRender={{true}}
+          @defaultShown={{defaultDisplay}}
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{not (get @model attr.name)}}
+          @isLink={{eq attr.name "database"}}
+        />
       {{else}}
         <InfoTableRow
           @alwaysRender={{true}}
