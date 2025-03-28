@@ -828,6 +828,7 @@ func TestPluginCatalog_ErrDirectoryNotConfigured(t *testing.T) {
 				Name:    "binary",
 				Type:    consts.PluginTypeDatabase,
 				Command: command,
+				Sha256:  []byte{'1'},
 			})
 			dirSet := catalog.directory != ""
 			if dirSet {
