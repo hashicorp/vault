@@ -255,7 +255,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     this.flags.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
 
     const namespace = this.owner.lookup('service:namespace');
-    namespace.setNamespace('admin/');
+    namespace.setNamespace('admin');
 
     await renderComponent();
 
