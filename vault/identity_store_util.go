@@ -2654,7 +2654,13 @@ func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(ctx context.Co
 			group.MemberEntityIDs = append(group.MemberEntityIDs, entityID)
 
 			err = i.UpsertGroupInTxn(ctx, txn, group, true)
-			if err != nil {
+			if errors.Is(err, logical.ErrReadOnly) {
+				i.logger.Info("forwarding update group request to active", "group_id", group.ID)
+				// Forward the group update to the active node
+				if err := i.groupUpdater.SendGroupUpdate(ctx, group); err != nil {
+					return false, nil, err
+				}
+			} else if err != nil {
 				return false, nil, err
 			}
 		}
@@ -2682,7 +2688,13 @@ func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(ctx context.Co
 			group.MemberEntityIDs = strutil.StrListDelete(group.MemberEntityIDs, entityID)
 
 			err = i.UpsertGroupInTxn(ctx, txn, group, true)
-			if err != nil {
+			if errors.Is(err, logical.ErrReadOnly) {
+				i.logger.Info("forwarding update group request to active", "group_id", group.ID)
+				// Forward the group update to the active node
+				if err := i.groupUpdater.SendGroupUpdate(ctx, group); err != nil {
+					return false, nil, err
+				}
+			} else if err != nil {
 				return false, nil, err
 			}
 		}
