@@ -1409,8 +1409,8 @@ github.com/hashicorp/go-discover v0.0.0-20210818145131-c573d69da192 h1:eje2KOX8S
 github.com/hashicorp/go-discover v0.0.0-20210818145131-c573d69da192/go.mod h1:3/4dzY4lR1Hzt9bBqMhBzG7lngZ0GKx/nL6G/ad62wE=
 github.com/hashicorp/go-gatedio v0.5.0 h1:Jm1X5yP4yCqqWj5L1TgW7iZwCVPGtVc+mro5r/XX7Tg=
 github.com/hashicorp/go-gatedio v0.5.0/go.mod h1:Lr3t8L6IyxD3DAeaUxGcgl2JnRUpWMCsmBl4Omu/2t4=
-github.com/hashicorp/go-gcp-common v0.9.1 h1:ZzAJNAz6OwpNUutnnUVnFERtR2fI1oZT5Z2i1vOly/s=
-github.com/hashicorp/go-gcp-common v0.9.1/go.mod h1:JJ5Zvnsmrn1GkBg64+oDfSK/gJtnGyX5x2nFuSdulLw=
+github.com/hashicorp/go-gcp-common v0.9.2 h1:hUZ46EdGwlbP+Ttrif6hlcfvtQGzJiS6FUbb649yAOQ=
+github.com/hashicorp/go-gcp-common v0.9.2/go.mod h1:STcRASKUYdCtaKbZinoAR/URmkIUGIOTOHUNPrF9xOE=
 github.com/hashicorp/go-hclog v0.9.1/go.mod h1:5CU+agLiy3J7N7QjHK5d05KxGsuXiQLrjA0H7acj2lQ=
 github.com/hashicorp/go-hclog v0.9.2/go.mod h1:5CU+agLiy3J7N7QjHK5d05KxGsuXiQLrjA0H7acj2lQ=
 github.com/hashicorp/go-hclog v1.5.0/go.mod h1:W4Qnvbt70Wk/zYJryRzDRU/4r0kIg0PVHBcfoyhpF5M=
@@ -1567,8 +1567,8 @@ github.com/hashicorp/vault-plugin-auth-azure v0.20.2 h1:GSEO0YvIg+H/wI72fM3YTu5L
 github.com/hashicorp/vault-plugin-auth-azure v0.20.2/go.mod h1:GV5vLlZdX4zqmN5sRDOW+TfcYI91Wj87WuHIkSo15+E=
 github.com/hashicorp/vault-plugin-auth-cf v0.20.0 h1:KOdNy0uSffjw0sOU9zg9JgdCkuRPcqOjOIxyV2NZLjg=
 github.com/hashicorp/vault-plugin-auth-cf v0.20.0/go.mod h1:SO35/C2iS12kIqIoux4AB2QSQ2IO+hbZ4/UQrQDyawo=
-github.com/hashicorp/vault-plugin-auth-gcp v0.20.1 h1:FlucOwK3h67+ThgAf5B2wHYxoI96ryAgyWThe5piE4g=
-github.com/hashicorp/vault-plugin-auth-gcp v0.20.1/go.mod h1:XVsmYHrJ0dByHIRXW7crHnXwV+QwZEOjaZBO1JlMQ5I=
+github.com/hashicorp/vault-plugin-auth-gcp v0.20.2 h1:M1gWdAo/WTu9PR8j8kfnDwDEqlgJKUDgEla/aB5IaZk=
+github.com/hashicorp/vault-plugin-auth-gcp v0.20.2/go.mod h1:FEXGIQPbjjc3Dzf3FEwRzj4qK7YfzwELd6ZHHsFXXM4=
 github.com/hashicorp/vault-plugin-auth-jwt v0.23.0 h1:LErXihivT7I8ZWB7jzQlp/IA54PdMWCaXNdkjmB0Z3c=
 github.com/hashicorp/vault-plugin-auth-jwt v0.23.0/go.mod h1:a/PUlLU88uUe1GtUTdSDkp/0HVXM7p9CY2vcwEh7NeU=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.14.0 h1:kJGBKDk8lJXftM8PVG9ars3NWHOdylJaeutTsI/7E0w=
@@ -1597,8 +1597,8 @@ github.com/hashicorp/vault-plugin-secrets-alicloud v0.19.0 h1:XH1typO/R5RlyyW5cm
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.19.0/go.mod h1:MxfMowH1VenMCtixd/mDqq9z10CBobzOMZJOXRLi0TA=
 github.com/hashicorp/vault-plugin-secrets-azure v0.21.2 h1:y/w2VAloMLxfPLEFGBmrpNFu43m8ilhfX2MN9pW0Ry8=
 github.com/hashicorp/vault-plugin-secrets-azure v0.21.2/go.mod h1:rc30x1Kd5/wIBvz6VpGt2T97yfLA5WBYJKfdaOlpWss=
-github.com/hashicorp/vault-plugin-secrets-gcp v0.21.2 h1:amrHmYzqaidTYBtPaIXE/Dl/GNJ2miEFYX0DfTpWYgM=
-github.com/hashicorp/vault-plugin-secrets-gcp v0.21.2/go.mod h1:U8zNzUnbCspeGTuLMN+OwRBJEjFkWGwb7jhOnqP8Amw=
+github.com/hashicorp/vault-plugin-secrets-gcp v0.21.3 h1:iPa0odSb6WFxOpiNOMZE+wIoyYkDGfWQtellg1NiA8A=
+github.com/hashicorp/vault-plugin-secrets-gcp v0.21.3/go.mod h1:kgg83bUN1aPOaRTTaYGsJGiKzd2CberhmjA73Er2vfM=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.20.0 h1:gFPxVPaFJjyPUF3GE7LwgGkVkQ+BA7BE775IfdznZ5M=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.20.0/go.mod h1:SgKyMgD4+Jj4jDRgFOactHENY7Vov6Hi0UdYWVO9NGY=
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.10.0 h1:Fw7s2f1WNW1GZgd3jb+7mkx6jPH528AFwWMHg9LarCQ=
@@ -1607,8 +1607,8 @@ github.com/hashicorp/vault-plugin-secrets-kv v0.21.0 h1:P8WPzAkttLnhZyhTmY15bKlG
 github.com/hashicorp/vault-plugin-secrets-kv v0.21.0/go.mod h1:CY63j85kYvO+GjDvMmZlhyJixoQhEf+SenY/OwNSrpI=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.14.0 h1:N7zUrgQqvDVUsOZW4x49Cbx6WcjEU5Qwe8hrr4lYvV8=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.14.0/go.mod h1:nRcr6W9rb3vDMLDGb/ZovsFhrEM8Q1WLNUKDGRaDplM=
-github.com/hashicorp/vault-plugin-secrets-openldap v0.15.1 h1:OE2IZXpfcT1Ft1DpQGFwDdbJlFyrqBnhhd/KTIX1GpE=
-github.com/hashicorp/vault-plugin-secrets-openldap v0.15.1/go.mod h1:jztXgadwFYKkmozTgLhUdCNFjJmLhOr88kjbKrJCXEw=
+github.com/hashicorp/vault-plugin-secrets-openldap v0.15.2 h1:TJWLlTManbIA1AVVgj+3PTwmsYd2ppf2O4qATrdRc+o=
+github.com/hashicorp/vault-plugin-secrets-openldap v0.15.2/go.mod h1:tJDZLDAk4Y0po8t6OvBf/mwFMScWzhXYiVPH666CAks=
 github.com/hashicorp/vault-plugin-secrets-terraform v0.11.0 h1:dIOJ7VKyYU8o9xH1DuD61Fsfl6uSPHy6OrYdEjp4Ku0=
 github.com/hashicorp/vault-plugin-secrets-terraform v0.11.0/go.mod h1:6FNbBAQvISpPqLXdvhV8MvxXKWG9iS+D+spzIGU2WuI=
 github.com/hashicorp/vault-testing-stepwise v0.3.2 h1:FCe0yrbK/hHiHqzu7utLcvCTTKjghWHyXwOQ2lxfoQM=

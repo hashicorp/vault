@@ -2488,7 +2488,7 @@ func TestSystemBackend_tuneAuth(t *testing.T) {
 			Command: "foo",
 			Args:    []string{},
 			Env:     []string{},
-			Sha256:  []byte{},
+			Sha256:  []byte("sha256"),
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -2625,7 +2625,7 @@ func TestSystemBackend_tune_updatePreV1MountEntryType(t *testing.T) {
 				Command: tc.pluginName,
 				Args:    []string{},
 				Env:     []string{},
-				Sha256:  []byte{},
+				Sha256:  []byte("sha256"),
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -6451,7 +6451,7 @@ func TestValidateVersion_HelpfulErrorWhenBuiltinOverridden(t *testing.T) {
 		Command: command,
 		Args:    nil,
 		Env:     nil,
-		Sha256:  nil,
+		Sha256:  []byte("sha256"),
 	})
 	if err != nil {
 		t.Fatal(err)
