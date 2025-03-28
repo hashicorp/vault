@@ -83,9 +83,7 @@ jobs:
       github.event_name == 'schedule' ||
       (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","linux","small"]') }}
-    permissions:
-      id-token: write # vault-auth
-      contents: read
+    permissions: write-all # vault-auth
     outputs:
       build-date: ${{ steps.metadata.outputs.vault-build-date }}
       changed-files: ${{ steps.changed-files.outputs.changed-files }}
@@ -170,6 +168,7 @@ jobs:
         needs.setup.outputs.is-draft == 'false' &&
         (
           contains(fromJSON(needs.setup.outputs.changed-files).groups, 'ui') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline') ||
           contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app')
         )
       )
@@ -220,6 +219,7 @@ jobs:
     if: |
       needs.setup.outputs.workflow-trigger == 'schedule' ||
       contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline') ||
       contains(fromJSON(needs.setup.outputs.labels), 'build/all')
     needs:
       - setup
