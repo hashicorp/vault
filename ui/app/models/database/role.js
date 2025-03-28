@@ -129,9 +129,8 @@ export default class RoleModel extends Model {
   @attr({
     label: 'Rotate immediately',
     editType: 'toggleButton',
-    defaultValue: true, // this defaultValue will be set in database-role-setting-form.js based on parent database value
-    helperTextDisabled: 'Vault will rotate the password for this static role on creation.',
-    helperTextEnabled: "Vault will not rotate this role's password on creation.",
+    helperTextEnabled: 'Vault will rotate the password for this static role on creation.',
+    helperTextDisabled: "Vault will not rotate this role's password on creation.",
     isOppositeValue: true,
   })
   skip_import_rotation;

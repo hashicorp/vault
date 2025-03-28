@@ -288,9 +288,9 @@
         <div class="description has-text-grey" data-test-toggle-subtext>
           <span>
             {{#if this.toggleInputEnabled}}
-              {{@attr.options.helperTextEnabled}}
+              {{if @attr.options.isOppositeValue @attr.options.helperTextDisabled @attr.options.helperTextEnabled}}
             {{else}}
-              {{@attr.options.helperTextDisabled}}
+              {{if @attr.options.isOppositeValue @attr.options.helperTextEnabled @attr.options.helperTextDisabled}}
             {{/if}}
           </span>
         </div>
