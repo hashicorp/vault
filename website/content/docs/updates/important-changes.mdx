@@ -13,10 +13,11 @@ before upgrading Vault.
 
 <!--
 Change types:
-  - Bug
+  - Bug --> must include workaround/recommendation info
   - New default
   - New behavior
-  - Breaking change
+  - Breaking --> must include workaround/recommendation info
+  - Change in support
 -->
 
 
@@ -46,10 +47,6 @@ returns an Ed25519ph or Pure Ed25519 signature based on the configuration of
 | CE            | false       | sha2-512                      | Error
 | CE            | true        | any value other than sha2-512 | Error
 | CE            | true        | sha2-512                      | Error
-
-### Recommendation
-
-TBD
 
 
 ## Identity system duplicate cleanup ((#dedupe)) <EnterpriseAlert inline="true" />
@@ -83,7 +80,7 @@ resolves safely.
 
 | Change   | Affected version | Affected deployments
 | -------- | ---------------- | --------------------
-| Breaking | 1.19.0           | any
+| Breaking | 1.19.x           | any
 
 Security improvements to
 [`hashicorp/cap/ldap`](https://github.com/hashicorp/cap/tree/main/ldap) ensure
@@ -103,9 +100,9 @@ details.
 
 ## Duplicate unseal/seal wrap HSM keys ((#hsm-keys)) <EnterpriseAlert inline="true" />
 
-| Change | Affected version | Affected deployments
-| ------ | ---------------- | --------------------
-| Bug    | 1.19.0           | HSM-HA configurations migrating from Shamir to HSM-backed unseal/seal wraps.
+| Change      | Affected version               | Affected deployments
+| ----------- | ------------------------------ | --------------------
+| Known issue | 1.19.x, 1.18.x, 1.17.x, 1.16.x | HSM-HA configurations migrating from Shamir to HSM-backed unseal/seal wraps.
 
 Vault may create duplicate HSM keys when you migrate from Shamir to an
 HSM-backed unseal configuration for high availability (HA) HSM deployments. Key
@@ -122,3 +119,61 @@ Duplicate HSM keys can cause the following errors:
 
 Always run Vault with `generate_key = false` and manually create all required
 keys within the HSM during the setup process.
+
+
+## Anonymized cluster data returned with license utilization ((#anon-data)) <EnterpriseAlert inline="true" />
+
+| Change       | Affected version | Affected deployments
+| ------------ | ---------------- | --------------------
+| New behavior | 1.19.0           | any
+
+
+As of version 1.19.0 Vault Enterprise collects
+[anonymous usage data](/vault/docs/enterprise/license/product-usage-reporting#anonymous-product-usage-reporting)
+about the running Vault cluster and automatically sends the cluster usage data
+along with the standard utilization data currently reported through automated
+license reporting.
+
+
+## RADIUS authentication is no longer case sensitive ((#case-sensitive))
+
+| Change       | Affected version | Affected deployments
+| ------------ | ---------------- | --------------------
+| New behavior | 1.19.0           | any
+
+As of Vault 1.19.0 the RADIUS authentication plugin does not enforce case
+sensitivity on entered credentials.
+
+
+## Login/token renewal failures after group changes ((#group-writes))
+
+| Change      | Affected version | Affected deployments
+| ----------- | ---------------- | --------------------
+| Known issue | 1.19.0           | any
+
+Performance standby nodes cannot persist updated group membership to storage.
+As a result, standby nodes return a `500` error during login or token renewal if
+the external group associated with the client entity changes. 
+
+### Recommendation
+
+Direct all logins and token renewals to the active/primary node.
+
+
+## Strict validation for Azure auth login requests ((#strict-azure))
+
+| Change       | Affected version                 | Affected deployments
+| ------------ | -------------------------------- | --------------------
+| New behavior | 1.19.1, 1.18.7, 1.17.14, 1.16.18 | any
+
+Azure auth plugin requires `resource_group_name`, `vm_name`, and `vmss_name` to match the JWT claims on login
+
+Vault versions before 1.19.1, 1.18.7, 1.17.14, and 1.16.18 did not strictly
+validate the `resource_group_name`, `vm_name`, and `vmss_name` parameters
+against their token claims for clients logging in with Azure authentication.
+
+### Recommendation
+
+Review the [Token validation](/vault/docs/auth/azure#token-validation) section
+of the Azure authN plugin guide for more information on the new validation
+requirements.
