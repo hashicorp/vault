@@ -37,6 +37,13 @@ path, specify `-path=/my-path` in the CLI.
 $ vault login -method=github token="MY_TOKEN"
 ```
 
+It is also possible to use the `VAULT_AUTH_GITHUB_TOKE` environment variable to authenticate to GitHub, such as:
+
+```shell-session
+$ export VAULT_AUTH_GITHUB_TOKE="MY_TOKEN"
+$ vault login -method=github
+```
+
 ### Via the API
 
 The default endpoint is `auth/github/login`. If this auth method was enabled
