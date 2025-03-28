@@ -41,39 +41,52 @@ const (
 )
 
 // Name is the file name of the changed file
-func (c *File) Name() string {
-	if c == nil || c.File == nil {
+func (f *File) Name() string {
+	if f == nil || f.File == nil {
 		return ""
 	}
 
-	return c.File.GetFilename()
+	return f.File.GetFilename()
 }
 
 // Add takes a variadic set of groups and adds them to the ordered set of groups
-func (c FileGroups) Add(groups ...FileGroup) FileGroups {
+func (g FileGroups) Add(groups ...FileGroup) FileGroups {
 	for _, group := range groups {
-		idx, in := c.In(group)
+		idx, in := g.In(group)
 		if in {
 			continue
 		}
 
-		c = slices.Insert(c, idx, group)
+		g = slices.Insert(g, idx, group)
 	}
 
-	return c
+	return g
 }
 
 // In takes a group and determines the index and presence of the group in the group set
-func (c FileGroups) In(group FileGroup) (int, bool) {
-	return slices.BinarySearch(c, group)
+func (g FileGroups) In(group FileGroup) (int, bool) {
+	return slices.BinarySearch(g, group)
 }
 
 // String is a string representation of all groups a file is in
-func (c FileGroups) String() string {
+func (g FileGroups) String() string {
 	groups := []string{}
-	for _, g := range c {
+	for _, g := range g {
 		groups = append(groups, string(g))
 	}
 
 	return strings.Join(groups, ", ")
+}
+
+// Names returns a list of file names
+func (f Files) Names() []string {
+	if len(f) < 1 {
+		return nil
+	}
+	files := []string{}
+	for _, file := range f {
+		files = append(files, file.Name())
+	}
+
+	return files
 }

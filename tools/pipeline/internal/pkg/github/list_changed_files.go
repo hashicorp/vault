@@ -15,22 +15,31 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 )
 
-// ListChangedFilesReq is a request to list workflows runs. The fields represent
-// various criteria we can use to filter.
-type ListChangedFilesReq struct {
-	Owner               string
-	Repo                string
-	PullNumber          int
-	CommitSHA           string
-	GroupFiles          bool
-	WriteToGithubOutput bool
-}
+type (
+	// ListChangedFilesReq is a request to list workflows runs. The fields represent
+	// various criteria we can use to filter.
+	ListChangedFilesReq struct {
+		Owner               string
+		Repo                string
+		PullNumber          int
+		CommitSHA           string
+		GroupFiles          bool
+		WriteToGithubOutput bool
+	}
 
-// ListChangedFilesRes is a list workflows response.
-type ListChangedFilesRes struct {
-	Files  changed.Files      `json:"files,omitempty"`
-	Groups changed.FileGroups `json:"groups,omitempty"`
-}
+	// ListChangedFilesRes is a list workflows response.
+	ListChangedFilesRes struct {
+		Files  changed.Files      `json:"files,omitempty"`
+		Groups changed.FileGroups `json:"groups,omitempty"`
+	}
+
+	// ListChangedFilesGithubOutput is out GITHUB_OUTPUT type. It's a slimmed down
+	// type that only include file names and groups.
+	ListChangedFilesGithubOutput struct {
+		Files  []string           `json:"files,omitempty"`
+		Groups changed.FileGroups `json:"groups,omitempty"`
+	}
+)
 
 // Run runs the request to gather all instances of the workflow that match
 // our filter criteria.
@@ -166,12 +175,29 @@ func (r *ListChangedFilesRes) ToJSON() ([]byte, error) {
 	return b, nil
 }
 
+// ToGithubOutput writes a simplified list of changed files to be used $GITHUB_OUTPUT
+func (r ListChangedFilesRes) ToGithubOutput() ([]byte, error) {
+	res := &ListChangedFilesGithubOutput{
+		Groups: r.Groups,
+	}
+	if f := r.Files; f != nil {
+		res.Files = f.Names()
+	}
+
+	b, err := json.Marshal(res)
+	if err != nil {
+		return nil, fmt.Errorf("marshaling list changed files GITHUB_OUTPUT to JSON: %w", err)
+	}
+
+	return b, nil
+}
+
 // ToTable marshals the response to a text table.
 func (r *ListChangedFilesRes) ToTable(groups bool) string {
 	if !groups {
 		w := strings.Builder{}
-		for _, file := range r.Files {
-			w.WriteString(file.Name() + "\n")
+		for _, name := range r.Files.Names() {
+			w.WriteString(name + "\n")
 		}
 
 		return w.String()

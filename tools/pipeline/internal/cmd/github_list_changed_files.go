@@ -43,27 +43,21 @@ func runListGithubChangedFilesCmd(cmd *cobra.Command, args []string) error {
 	case "json":
 		b, err := res.ToJSON()
 		if err != nil {
-			return fmt.Errorf("marshaling response to JSON: %w", err)
+			return err
 		}
 		fmt.Println(string(b))
-
-		if listGithubChangedFiles.WriteToGithubOutput {
-			return writeToGithubOutput("changed-files", b)
-		}
-
-		return nil
 	default:
 		fmt.Println(res.ToTable(listGithubChangedFiles.GroupFiles))
-
-		if listGithubChangedFiles.WriteToGithubOutput {
-			b, err := res.ToJSON()
-			if err != nil {
-				return fmt.Errorf("marshaling response to JSON: %w", err)
-			}
-
-			return writeToGithubOutput("changed-files", b)
-		}
 	}
 
-	return err
+	if listGithubChangedFiles.WriteToGithubOutput {
+		output, err := res.ToGithubOutput()
+		if err != nil {
+			return err
+		}
+
+		return writeToGithubOutput("changed-files", output)
+	}
+
+	return nil
 }
