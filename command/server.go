@@ -448,29 +448,6 @@ func (c *ServerCommand) parseConfig() (*server.Config, []configutil.ConfigError,
 	}
 	entCheckRequestLimiter(c, config)
 
-	configsPresent := config != nil && config.SharedConfig != nil && config.Storage != nil
-
-	// ensure that the DisableMlock key is explicitly set if using integrated storage
-	if configsPresent &&
-		// using integrated storage
-		config.Storage.Type == storageTypeRaft &&
-		// DisableMlock key has been found and thus explicitly set
-		!(strutil.StrListContainsCaseInsensitive(config.SharedConfig.FoundKeys, "DisableMlock") ||
-			// mlock is disabled and hence has been explicitly set
-			config.SharedConfig.DisableMlock) {
-
-		c.UI.Error(wrapAtLength(
-			"ERROR: disable_mlock must be configured 'true' or 'false': Mlock " +
-				"prevents memory from being swapped to disk for security reasons, " +
-				"but can cause Vault on Integrated Storage to run out of memory " +
-				"if the machine was not provisioned with enough RAM. Disabling " +
-				"mlock can prevent this issue, but can result in the reveal of " +
-				"plaintext secrets when memory is swapped to disk, so it is only " +
-				"recommended on systems with encrypted swap or where swap is disabled.",
-		))
-		return nil, configErrors, fmt.Errorf("disable_mlock must be configured")
-	}
-
 	return config, configErrors, nil
 }
 
@@ -1154,13 +1131,36 @@ func (c *ServerCommand) Run(args []string) int {
 
 	logProxyEnvironmentVariables(c.logger)
 
-	if envMlock := os.Getenv("VAULT_DISABLE_MLOCK"); envMlock != "" {
+	envMlock := os.Getenv("VAULT_DISABLE_MLOCK")
+	if envMlock != "" {
 		var err error
 		config.DisableMlock, err = strconv.ParseBool(envMlock)
 		if err != nil {
 			c.UI.Output("Error parsing the environment variable VAULT_DISABLE_MLOCK")
 			return 1
 		}
+	}
+
+	configsPresent := config != nil && config.SharedConfig != nil && config.Storage != nil
+	// ensure that the DisableMlock key is explicitly set if using integrated storage
+	if configsPresent && envMlock != "" &&
+		// using integrated storage
+		config.Storage.Type == storageTypeRaft &&
+		// DisableMlock key has been found and thus explicitly set
+		!(strutil.StrListContainsCaseInsensitive(config.SharedConfig.FoundKeys, "DisableMlock") ||
+			// mlock is disabled and hence has been explicitly set
+			config.SharedConfig.DisableMlock) {
+
+		c.UI.Error(wrapAtLength(
+			"ERROR: disable_mlock must be configured 'true' or 'false': Mlock " +
+				"prevents memory from being swapped to disk for security reasons, " +
+				"but can cause Vault on Integrated Storage to run out of memory " +
+				"if the machine was not provisioned with enough RAM. Disabling " +
+				"mlock can prevent this issue, but can result in the reveal of " +
+				"plaintext secrets when memory is swapped to disk, so it is only " +
+				"recommended on systems with encrypted swap or where swap is disabled.",
+		))
+		return 1
 	}
 
 	if envLicensePath := os.Getenv(EnvVaultLicensePath); envLicensePath != "" {
