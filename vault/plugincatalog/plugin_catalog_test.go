@@ -199,6 +199,7 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 		Type:    consts.PluginTypeDatabase,
 		Version: "1.0.0",
 		Command: filepath.Base(file.Name()),
+		Sha256:  []byte{'1'},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -646,7 +647,7 @@ func TestPluginCatalog_ListHandlesPluginNamesWithSlashes(t *testing.T) {
 			Command: command,
 			Args:    nil,
 			Env:     nil,
-			Sha256:  nil,
+			Sha256:  []byte{'1'},
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -1267,6 +1268,7 @@ func TestPluginCatalog_CannotDeletePinnedVersion(t *testing.T) {
 		Type:    consts.PluginTypeSecrets,
 		Version: "1.0.0",
 		Command: filepath.Base(file.Name()),
+		Sha256:  []byte{'1'},
 	})
 	if err != nil {
 		t.Fatal(err)

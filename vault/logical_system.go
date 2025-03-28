@@ -546,6 +546,10 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 		}
 	}
 
+	if resp := validateSha256IsEmptyForEntPluginVersion(pluginVersion, sha256); resp.IsError() {
+		return resp, nil
+	}
+
 	command := d.Get("command").(string)
 	ociImage := d.Get("oci_image").(string)
 	if command == "" && ociImage == "" {
