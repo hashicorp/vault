@@ -534,9 +534,9 @@ and consider if they're appropriate for your deployment.
 
   ```yaml
   preStop:
-    - "/bin/sh"
-    - "-c"
-    - "sleep {{ .Values.server.preStopSleepSeconds }} && kill -SIGTERM $(pidof vault)"
+    - /bin/sh
+    - -c
+    - sleep {{ .Values.server.preStopSleepSeconds }} && kill -SIGTERM $(pidof vault)
   ```
 
   - `postStart` (`array: []`) - Used to define commands to run after the pod is ready. This can be used to automate processes such as initialization or bootstrapping auth methods.
