@@ -7420,6 +7420,11 @@ func TestIssuance_AlwaysEnforceErr(t *testing.T) {
 	})
 }
 
+// TestIssuance_SignIntermediateKeyUsages tests the field "key_usage" both when directly generating a root certificate,
+// and when signing a CA CSR.  In particular, this test verifies that:
+// - the key usage DigitalSignature is added if present
+// - non-existent or invalid key usages return a warning, but are ignored by certificate generation
+// - CertSign and CRLSign are ignored
 func TestIssuance_SignIntermediateKeyUsages(t *testing.T) {
 	t.Parallel()
 	b, s := CreateBackendWithStorage(t)
@@ -7446,7 +7451,7 @@ func TestIssuance_SignIntermediateKeyUsages(t *testing.T) {
 
 	resp, err = CBWrite(b, s, "issuer/root-ca/sign-intermediate", map[string]interface{}{
 		"csr":       csr,
-		"key_usage": "DigitalSignature,KeyEncipherment,KeyAgreement",
+		"key_usage": "CRLSign,CertSign,DigitalSignature,KeyEncipherment,KeyAgreement",
 		"ttl":       "60h",
 	})
 	requireSuccessNonNilResponse(t, resp, err, "expected intermediate signing to succeed")
