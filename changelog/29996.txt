@@ -1,0 +1,4 @@
+```release-note:bug
+aws/secrets: Prevent vault from rejecting secret role configurations where no regions or endpoints are set
+```
+

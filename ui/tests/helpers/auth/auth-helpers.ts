@@ -9,6 +9,15 @@ import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 
 const { rootToken } = VAULT_KEYS;
 
+// LOGOUT
+export const logout = async () => {
+  // make sure we're always logged out and logged back in
+  await visit('/vault/logout');
+  // clear session storage to ensure we have a clean state
+  window.localStorage.clear();
+  return;
+};
+
 // LOGIN WITH TOKEN
 export const login = async (token = rootToken) => {
   // make sure we're always logged out and logged back in
@@ -28,33 +37,33 @@ export const loginNs = async (ns: string, token = rootToken) => {
 };
 
 // LOGIN WITH NON-TOKEN methods
-/*
-inputValues are for filling in the form values
-the key completes to the input's test selector and fills it in with the corresponding value
-for example: { username: 'bob', password: 'my-password', 'auth-form-mount-path': 'userpasss1' };
-*/
-export const loginMethod = async (
-  methodType: string,
-  inputValues: object,
-  { toggleOptions = false, ns = '' }
-) => {
+interface LoginOptions {
+  authType?: string;
+  toggleOptions?: boolean;
+}
+export const loginMethod = async (loginFields: LoginFields, options: LoginOptions) => {
   // make sure we're always logged out and logged back in
   await logout();
-  await visit(`/vault/auth?with=${methodType}`);
+  await visit(`/vault/auth?with=${options.authType}`);
 
-  if (ns) await fillIn(AUTH_FORM.namespaceInput, ns);
-  if (toggleOptions) await click(AUTH_FORM.moreOptions);
-
-  for (const [input, value] of Object.entries(inputValues)) {
-    await fillIn(AUTH_FORM.input(input), value);
-  }
+  await fillInLoginFields(loginFields, options);
   return click(AUTH_FORM.login);
 };
 
-export const logout = async () => {
-  // make sure we're always logged out and logged back in
-  await visit('/vault/logout');
-  // clear session storage to ensure we have a clean state
-  window.localStorage.clear();
-  return;
+// the keys complete the input's test selector and the helper fills the input with the corresponding value
+interface LoginFields {
+  username?: string;
+  password?: string;
+  token?: string;
+  role?: string;
+  'auth-form-mount-path': string; // todo update selectors
+  'auth-form-ns-input': string; // todo update selectors
+}
+
+export const fillInLoginFields = async (loginFields: LoginFields, { toggleOptions = false } = {}) => {
+  if (toggleOptions) await click(AUTH_FORM.moreOptions);
+
+  for (const [input, value] of Object.entries(loginFields)) {
+    await fillIn(AUTH_FORM.input(input), value);
+  }
 };

@@ -162,12 +162,6 @@ export class BaseAPI {
     createFetchParams(context, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
             let url = this.configuration.basePath + context.path;
-            if (context.query !== undefined && Object.keys(context.query).length !== 0) {
-                // only add the querystring to the URL if there are query parameters.
-                // this is done to avoid urls ending with a "?" character which buggy webservers
-                // do not handle correctly sometimes.
-                url += '?' + this.configuration.queryParamsStringify(context.query);
-            }
             const headers = Object.assign({}, this.configuration.headers, context.headers);
             Object.keys(headers).forEach(key => headers[key] === undefined ? delete headers[key] : {});
             const initOverrideFn = typeof initOverrides === "function"
@@ -183,6 +177,12 @@ export class BaseAPI {
                 init: initParams,
                 context,
             })));
+            if (context.query !== undefined && Object.keys(context.query).length !== 0) {
+                // only add the querystring to the URL if there are query parameters.
+                // this is done to avoid urls ending with a "?" character which buggy webservers
+                // do not handle correctly sometimes.
+                url += '?' + this.configuration.queryParamsStringify(context.query);
+            }
             let body;
             if (isFormData(overriddenInit.body)
                 || (overriddenInit.body instanceof URLSearchParams)
