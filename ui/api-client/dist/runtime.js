@@ -304,7 +304,8 @@ class JSONApiResponse {
     }
     value() {
         return __awaiter(this, void 0, void 0, function* () {
-            return this.transformer(yield this.raw.json());
+            const response = yield this.raw.json();
+            return this.transformer(response.data);
         });
     }
 }

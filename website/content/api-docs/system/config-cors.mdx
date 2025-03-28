@@ -17,7 +17,7 @@ The `/sys/config/cors` endpoint is used to configure CORS settings.
 
 ## Read CORS settings
 
-This endpoint returns the current CORS configuration.
+This endpoint returns the current CORS configuration. 
 
 | Method | Path               |
 | :----- | :----------------- |
@@ -54,6 +54,15 @@ $ curl \
 
 This endpoint allows configuring the origins that are permitted to make
 cross-origin requests, as well as headers that are allowed on cross-origin requests.
+
+<EnterpriseAlert>
+
+The CORS configuration endpoint does not apply changes across clusters. If you
+use performance replication, you must invoke the configuration endpoint on each
+secondary cluster independently to mirror the primary cluster CORS
+configuration.
+
+</EnterpriseAlert>
 
 | Method | Path               |
 | :----- | :----------------- |
