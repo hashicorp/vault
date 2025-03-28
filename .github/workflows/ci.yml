@@ -19,6 +19,7 @@ concurrency:
 jobs:
   setup:
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","linux","small"]') }}
+    permissions: write-all # vault-auth
     outputs:
       changed-files: ${{ steps.changed-files.outputs.changed-files }}
       checkout-ref: ${{ steps.checkout.outputs.ref }}

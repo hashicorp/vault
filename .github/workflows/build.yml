@@ -83,9 +83,7 @@ jobs:
       github.event_name == 'schedule' ||
       (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","linux","small"]') }}
-    permissions:
-      id-token: write # vault-auth
-      contents: read
+    permissions: write-all # vault-auth
     outputs:
       build-date: ${{ steps.metadata.outputs.vault-build-date }}
       changed-files: ${{ steps.changed-files.outputs.changed-files }}
