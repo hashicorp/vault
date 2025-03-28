@@ -9,7 +9,8 @@ import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 
 /**
- * @module ApplicationComponent component is used to display a dropdown listing all namespaces that the current user has access to.
+ * @module NamespacePicker
+ * @description component is used to display a dropdown listing all namespaces that the current user has access to.
  *  The user can select a namespace from the dropdown to navigate directly to that namespace.
  *  The "Manage" button directs the user to the namespace management page.
  *  The "Refresh List" button refrehes the list of namespaces in the dropdown.
