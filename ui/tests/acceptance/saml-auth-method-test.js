@@ -10,15 +10,15 @@ import { click, fillIn, find, waitUntil } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
 import authPage from 'vault/tests/pages/auth';
-import { fakeWindow } from 'vault/tests/helpers/oidc-window-stub';
-import { setupTotpMfaResponse } from 'vault/tests/helpers/auth/mfa-helpers';
+import { WindowStub } from 'vault/tests/helpers/oidc-window-stub';
+import { setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
 
 module('Acceptance | enterprise saml auth method', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.openStub = sinon.stub(window, 'open').callsFake(() => fakeWindow.create());
+    this.openStub = sinon.stub(window, 'open').callsFake(() => new WindowStub());
     this.server.put('/auth/saml/sso_service_url', () => ({
       data: {
         sso_service_url: 'http://sso-url.hashicorp.com/service',
