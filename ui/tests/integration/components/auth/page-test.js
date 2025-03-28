@@ -3,203 +3,167 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { later, _cancelTimers as cancelTimers } from '@ember/runloop';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { click, fillIn, render, settled } from '@ember/test-helpers';
+import { click, fillIn, render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
-import { validate } from 'uuid';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { Response } from 'miragejs';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
+import { fillInLoginFields } from 'vault/tests/helpers/auth/auth-helpers';
 
-module('Integration | Component | auth | page ', function (hooks) {
+module('Integration | Component | auth | page', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.router = this.owner.lookup('service:router');
-    this.auth = this.owner.lookup('service:auth');
+    this.version = this.owner.lookup('service:version');
     this.cluster = { id: '1' };
-    this.selectedAuth = 'token';
-    this.onSuccess = sinon.spy();
+    this.onAuthSuccess = sinon.spy();
+    this.onNamespaceUpdate = sinon.spy();
 
-    this.renderComponent = async () => {
+    this.renderComponent = () => {
       return render(hbs`
-        <Auth::LoginForm
-          @wrappedToken={{this.wrappedToken}}
+        <Auth::Page
+          @authMethodQueryParam={{this.authQp}}
           @cluster={{this.cluster}}
-          @namespace={{this.namespaceQueryParam}}
-          @selectedAuth={{this.authMethod}}
-          @onSuccess={{this.onSuccess}}
+          @namespaceQueryParam={{this.nsQp}}
+          @oidcProviderQueryParam={{this.providerQp}}
+          @onAuthSuccess={{this.onAuthSuccess}}
+          @onNamespaceUpdate={{this.onNamespaceUpdate}}
+          @wrappedToken={{this.wrappedToken}}
         />
         `);
     };
-  });
-  const CSP_ERR_TEXT = `Error This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.`;
-  test('it renders error on CSP violation', async function (assert) {
-    assert.expect(2);
-    this.cluster.standby = true;
-    await this.renderComponent();
-    assert.dom(GENERAL.messageError).doesNotExist();
-    this.owner.lookup('service:csp-event').handleEvent({ violatedDirective: 'connect-src' });
-    await settled();
-    assert.dom(GENERAL.messageError).hasText(CSP_ERR_TEXT);
+
+    // in the real world more info is returned by auth requests
+    // only including pertinent data for testing
+    this.authRequest = (url) => this.server.post(url, () => ({ auth: { policies: ['default'] } }));
   });
 
-  test('it renders with vault style errors', async function (assert) {
-    assert.expect(1);
-    this.server.get('/auth/token/lookup-self', () => {
-      return new Response(400, { 'Content-Type': 'application/json' }, { errors: ['Not allowed'] });
-    });
-
+  test('it renders splash logo when oidc provider query param is present', async function (assert) {
+    this.providerQp = 'myprovider';
     await this.renderComponent();
-    await click(AUTH_FORM.login);
-    assert.dom(GENERAL.messageError).hasText('Error Authentication failed: Not allowed');
-  });
-
-  test('it renders AdapterError style errors', async function (assert) {
-    assert.expect(1);
-    this.server.get('/auth/token/lookup-self', () => {
-      return new Response(400, { 'Content-Type': 'application/json' }, { errors: ['API Error here'] });
-    });
-
-    await this.renderComponent();
-    await click(AUTH_FORM.login);
+    assert.dom(AUTH_FORM.logo).exists();
     assert
-      .dom(GENERAL.messageError)
-      .hasText('Error Authentication failed: API Error here', 'shows the error from the API');
-  });
-
-  test('it calls auth service authenticate method with expected args', async function (assert) {
-    assert.expect(1);
-    const authenticateStub = sinon.stub(this.auth, 'authenticate');
-    this.selectedAuth = 'foo/'; // set to a non-default path
-    this.server.get('/sys/internal/ui/mounts', () => {
-      return {
-        data: {
-          auth: {
-            'foo/': {
-              type: 'userpass',
-            },
-          },
-        },
-      };
-    });
-
-    await this.renderComponent();
-    await fillIn(AUTH_FORM.input('username'), 'sandy');
-    await fillIn(AUTH_FORM.input('password'), '1234');
-    await click(AUTH_FORM.login);
-    const [actual] = authenticateStub.lastCall.args;
-    const expectedArgs = {
-      backend: 'userpass',
-      clusterId: '1',
-      data: {
-        username: 'sandy',
-        password: '1234',
-        path: 'foo',
-      },
-      selectedAuth: 'foo/',
-    };
-    assert.propEqual(
-      actual,
-      expectedArgs,
-      `it calls auth service authenticate method with expected args: ${JSON.stringify(actual)} `
-    );
-  });
-
-  test('it calls onSuccess with expected args', async function (assert) {
-    assert.expect(3);
-    this.server.get(`auth/token/lookup-self`, () => {
-      return {
-        data: {
-          policies: ['default'],
-        },
-      };
-    });
-
-    await this.renderComponent();
-    await fillIn(AUTH_FORM.input('token'), 'mytoken');
-    await click(AUTH_FORM.login);
-    const [authResponse, backendType, data] = this.onSuccess.lastCall.args;
-    const expected = { isRoot: false, namespace: '', token: 'vault-token☃1' };
-
-    assert.propEqual(
-      authResponse,
-      expected,
-      `it calls onSuccess with response: ${JSON.stringify(authResponse)} `
-    );
-    assert.strictEqual(backendType, 'token', `it calls onSuccess with backend type: ${backendType}`);
-    assert.propEqual(data, { token: 'mytoken' }, `it calls onSuccess with data: ${JSON.stringify(data)}`);
-  });
-
-  test('it makes a request to unwrap if passed a wrappedToken and logs in', async function (assert) {
-    assert.expect(3);
-    const authenticateStub = sinon.stub(this.auth, 'authenticate');
-    this.wrappedToken = '54321';
-
-    this.server.post('/sys/wrapping/unwrap', (_, req) => {
-      assert.strictEqual(req.url, '/v1/sys/wrapping/unwrap', 'makes call to unwrap the token');
-      assert.strictEqual(
-        req.requestHeaders['X-Vault-Token'],
-        this.wrappedToken,
-        'uses passed wrapped token for the unwrap'
-      );
-      return {
-        auth: {
-          client_token: '12345',
-        },
-      };
-    });
-
-    await this.renderComponent();
-    later(() => cancelTimers(), 50);
-    await settled();
-    const [actual] = authenticateStub.lastCall.args;
-    assert.propEqual(
-      actual,
-      {
-        backend: 'token',
-        clusterId: '1',
-        data: {
-          token: '12345',
-        },
-        selectedAuth: 'token',
-      },
-      `it calls auth service authenticate method with correct args: ${JSON.stringify(actual)} `
-    );
-  });
-
-  test('it should set nonce value as uuid for okta method type', async function (assert) {
-    assert.expect(4);
-    this.server.post('/auth/okta/login/foo', (_, req) => {
-      const { nonce } = JSON.parse(req.requestBody);
-      assert.true(validate(nonce), 'Nonce value passed as uuid for okta login');
-      return {
-        auth: {
-          client_token: '12345',
-          policies: ['default'],
-        },
-      };
-    });
-
-    await this.renderComponent();
-
-    await fillIn(GENERAL.selectByAttr('auth-method'), 'okta');
-    await fillIn(AUTH_FORM.input('username'), 'foo');
-    await fillIn(AUTH_FORM.input('password'), 'bar');
-    await click(AUTH_FORM.login);
-    assert
-      .dom('[data-test-okta-number-challenge]')
+      .dom(AUTH_FORM.helpText)
       .hasText(
-        'To finish signing in, you will need to complete an additional MFA step. Please wait... Back to login',
-        'renders okta number challenge on submit'
+        'Once you log in, you will be redirected back to your application. If you require login credentials, contact your administrator.'
       );
-    await click(GENERAL.backButton);
-    assert.dom(AUTH_FORM.form).exists('renders auth form on return to login');
-    assert.dom(GENERAL.selectByAttr('auth-method')).hasValue('okta', 'preserves method type on back');
+  });
+
+  test('it disables namespace input when oidc provider query param is present', async function (assert) {
+    this.providerQp = 'myprovider';
+    this.version.features = ['Namespaces'];
+    await this.renderComponent();
+    assert.dom(AUTH_FORM.logo).exists();
+    assert.dom(AUTH_FORM.namespaceInput).isDisabled();
+  });
+
+  test('it calls onNamespaceUpdate', async function (assert) {
+    assert.expect(1);
+    this.version.features = ['Namespaces'];
+    await this.renderComponent();
+    await fillIn(AUTH_FORM.namespaceInput, 'mynamespace');
+    const [actual] = this.onNamespaceUpdate.lastCall.args;
+    assert.strictEqual(actual, 'mynamespace', `onNamespaceUpdate called with: ${actual}`);
+  });
+
+  test('it calls onNamespaceUpdate for HVD managed clusters', async function (assert) {
+    assert.expect(2);
+    this.version.features = ['Namespaces'];
+    this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+    this.nsQp = 'admin';
+    await this.renderComponent();
+
+    assert.dom(AUTH_FORM.namespaceInput).hasValue('');
+    await fillIn(AUTH_FORM.namespaceInput, 'mynamespace');
+    const [actual] = this.onNamespaceUpdate.lastCall.args;
+    assert.strictEqual(actual, 'mynamespace', `onNamespaceUpdate called with: ${actual}`);
+  });
+
+  const REQUEST_DATA = {
+    username: {
+      loginData: { username: 'matilda', password: 'password' },
+      url: ({ path, username }) => `/auth/${path}/login/${username}`,
+    },
+    github: {
+      loginData: { token: 'mysupersecuretoken' },
+      url: ({ path }) => `/auth/${path}/login`,
+    },
+  };
+
+  // only testing methods that submit via AuthForm (and not separate, child component)
+  const AUTH_METHOD_TEST_CASES = [
+    { authType: 'github', options: REQUEST_DATA.github },
+    { authType: 'userpass', options: REQUEST_DATA.username },
+    { authType: 'ldap', options: REQUEST_DATA.username },
+    { authType: 'okta', options: REQUEST_DATA.username },
+    { authType: 'radius', options: REQUEST_DATA.username },
+  ];
+
+  for (const { authType, options } of AUTH_METHOD_TEST_CASES) {
+    test(`${authType}: it calls onAuthSuccess on submit for default path`, async function (assert) {
+      assert.expect(1);
+      const { loginData, url } = options;
+      const requestUrl = url({ path: authType, username: loginData?.username });
+      this.authRequest(requestUrl);
+
+      await this.renderComponent();
+      await fillIn(AUTH_FORM.method, authType);
+      await fillInLoginFields(loginData);
+      await click(AUTH_FORM.login);
+      const [actual] = this.onAuthSuccess.lastCall.args;
+      const expected = {
+        namespace: '',
+        token: `vault-${authType}☃1`,
+        isRoot: false,
+      };
+      assert.propEqual(actual, expected, `onAuthSuccess called with: ${JSON.stringify(actual)}`);
+    });
+
+    test(`${authType}: it calls onAuthSuccess on submit for custom path`, async function (assert) {
+      assert.expect(1);
+      const customPath = `${authType}-custom`;
+      const { loginData, url } = options;
+      const loginDataWithPath = { ...loginData, 'auth-form-mount-path': customPath };
+      // pass custom path to request URL
+      const requestUrl = url({ path: customPath, username: loginData?.username });
+      this.authRequest(requestUrl);
+
+      await this.renderComponent();
+      await fillIn(AUTH_FORM.method, authType);
+      // toggle mount path input to specify custom path
+      await fillInLoginFields(loginDataWithPath, { toggleOptions: true });
+      await click(AUTH_FORM.login);
+
+      const [actual] = this.onAuthSuccess.lastCall.args;
+      const expected = {
+        namespace: '',
+        token: `vault-${authType}☃1`,
+        isRoot: false,
+      };
+      assert.propEqual(actual, expected, `onAuthSuccess called with: ${JSON.stringify(actual)}`);
+    });
+  }
+
+  // token makes a GET request so test separately
+  test('token: it calls onAuthSuccess on submit', async function (assert) {
+    assert.expect(1);
+    this.server.get('/auth/token/lookup-self', () => {
+      return { data: { policies: ['default'] } };
+    });
+
+    await this.renderComponent();
+    await fillIn(AUTH_FORM.method, 'token');
+    await fillInLoginFields({ token: 'mysupersecuretoken' });
+    await click(AUTH_FORM.login);
+    const [actual] = this.onAuthSuccess.lastCall.args;
+    const expected = {
+      namespace: '',
+      token: `vault-token☃1`,
+      isRoot: false,
+    };
+    assert.propEqual(actual, expected, `onAuthSuccess called with: ${JSON.stringify(actual)}`);
   });
 });
