@@ -1,3 +1,6 @@
+@use '../utils/color_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -8,12 +11,12 @@
 .field {
   // cannot use :read-only selector because tag used for other purposes
   &.is-readOnly {
-    background-color: $ui-gray-100;
+    background-color: color_variables.$ui-gray-100;
     cursor: not-allowed;
   }
 
   &:not(:last-child) {
-    margin-bottom: $spacing-20;
+    margin-bottom: size_variables.$spacing-20;
   }
 }
 // must come after field due to overriding the margin-bottom of not last-child
@@ -47,8 +50,8 @@
       .checkbox,
       .input,
       .select select {
-        border-bottom-left-radius: $radius;
-        border-top-left-radius: $radius;
+        border-bottom-left-radius: size_variables.$radius;
+        border-top-left-radius: size_variables.$radius;
       }
     }
     &:last-child {
@@ -56,8 +59,8 @@
       .checkbox,
       .input,
       .select select {
-        border-bottom-right-radius: $radius;
-        border-top-right-radius: $radius;
+        border-bottom-right-radius: size_variables.$radius;
+        border-top-right-radius: size_variables.$radius;
       }
     }
   }
@@ -110,7 +113,7 @@ fieldset.form-fieldset {
     flex-shrink: 1;
 
     > .field:not(:last-child) {
-      margin-right: $spacing-10;
+      margin-right: size_variables.$spacing-10;
     }
     .field:not(.is-narrow) {
       flex-grow: 1;

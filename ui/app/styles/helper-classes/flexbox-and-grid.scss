@@ -1,3 +1,6 @@
+@use '../utils/mixins';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -23,11 +26,11 @@
   }
 
   &.row-gap-8 {
-    row-gap: $spacing-8;
+    row-gap: size_variables.$spacing-8;
   }
 
   &.column-gap-16 {
-    column-gap: $spacing-16;
+    column-gap: size_variables.$spacing-16;
   }
 }
 
@@ -47,15 +50,15 @@
 }
 
 .gap-16 {
-  gap: $spacing-16;
+  gap: size_variables.$spacing-16;
 }
 
 .gap-24 {
-  gap: $spacing-24;
+  gap: size_variables.$spacing-24;
 }
 
 .gap-36 {
-  gap: $spacing-36;
+  gap: size_variables.$spacing-36;
 }
 
 // Alignment of the items
@@ -96,7 +99,7 @@
   justify-content: flex-start;
 
   &.has-gap {
-    gap: $spacing-16;
+    gap: size_variables.$spacing-16;
   }
 }
 
@@ -144,7 +147,7 @@
   }
 }
 
-@include until($mobile) {
+@include mixins.until(size_variables.$mobile) {
   .is-flex-row {
     flex-flow: column wrap;
   }
@@ -158,7 +161,7 @@
 .grid-2-columns {
   grid-template-columns: 2fr 2fr;
 
-  @include until($mobile) {
+  @include mixins.until(size_variables.$mobile) {
     grid-template-columns: 1fr;
   }
 }

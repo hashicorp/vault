@@ -1,3 +1,7 @@
+@use '../utils/color_variables';
+@use '../utils/font_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -8,19 +12,19 @@
 
   .popup-menu-content {
     .menu-label {
-      color: $black;
+      color: color_variables.$black;
       font-size: 14px;
-      font-weight: $font-weight-bold;
+      font-weight: font_variables.$font-weight-bold;
       text-transform: unset;
     }
     .token-alert {
-      padding: $spacing-8;
+      padding: size_variables.$spacing-8;
     }
   }
 
   .confirm-action-message p {
-    padding-top: $spacing-4;
-    font-weight: $font-weight-semibold;
-    color: $black;
+    padding-top: size_variables.$spacing-4;
+    font-weight: font_variables.$font-weight-semibold;
+    color: color_variables.$black;
   }
 }

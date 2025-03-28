@@ -259,5 +259,20 @@ module.exports = [
     source: '/vault/docs/platform/k8s/:slug*',
     destination: '/vault/docs/deploy/kubernetes/:slug*',
     permanent: true,
+  },
+  {
+    source: '/vault/api-docs/secret/ad',
+    destination: '/vault/api-docs/secret/ldap',
+    permanent: true,
+  },
+  {
+    source: '/vault/docs/secrets/ad',
+    destination: '/vault/docs/secrets/ldap',
+    permanent: true,
+  },
+  {
+    source: '/vault/docs/secrets/ad/migration-guide',
+    destination: '/vault/docs/v1.18.x/secrets/ad/migration-guide',
+    permanent: true,
   }
 ]

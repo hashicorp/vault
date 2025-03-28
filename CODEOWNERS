@@ -67,6 +67,7 @@
 /enos/     @hashicorp/quality-team
 
 # Cryptosec
+/api/auth/cert/                                      @hashicorp/vault-crypto
 /builtin/logical/pki/                                @hashicorp/vault-crypto
 /builtin/logical/pkiext/                             @hashicorp/vault-crypto
 /website/content/docs/secrets/pki/                   @hashicorp/vault-crypto @hashicorp/vault-education-approvers

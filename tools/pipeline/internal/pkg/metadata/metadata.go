@@ -12,8 +12,10 @@ var EntEditions = []string{
 	"ent",
 	"enterprise",
 	"ent.fips1402",
+	"ent.fips1403",
 	"ent.hsm",
 	"ent.hsm.fips1402",
+	"ent.hsm.fips1403",
 }
 
 var Editions = append(CeEditions, EntEditions...)
