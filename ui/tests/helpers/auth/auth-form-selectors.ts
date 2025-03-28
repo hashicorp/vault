@@ -14,4 +14,6 @@ export const AUTH_FORM = {
   mountPathInput: '[data-test-auth-form-mount-path]',
   moreOptions: '[data-test-auth-form-options-toggle]',
   namespaceInput: '[data-test-auth-form-ns-input]',
+  logo: '[data-test-auth-logo]',
+  helpText: '[data-test-auth-helptext]',
 };
