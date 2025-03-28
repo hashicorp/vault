@@ -1607,8 +1607,8 @@ github.com/hashicorp/vault-plugin-secrets-kv v0.21.0 h1:P8WPzAkttLnhZyhTmY15bKlG
 github.com/hashicorp/vault-plugin-secrets-kv v0.21.0/go.mod h1:CY63j85kYvO+GjDvMmZlhyJixoQhEf+SenY/OwNSrpI=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.14.0 h1:N7zUrgQqvDVUsOZW4x49Cbx6WcjEU5Qwe8hrr4lYvV8=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.14.0/go.mod h1:nRcr6W9rb3vDMLDGb/ZovsFhrEM8Q1WLNUKDGRaDplM=
-github.com/hashicorp/vault-plugin-secrets-openldap v0.15.1 h1:OE2IZXpfcT1Ft1DpQGFwDdbJlFyrqBnhhd/KTIX1GpE=
-github.com/hashicorp/vault-plugin-secrets-openldap v0.15.1/go.mod h1:jztXgadwFYKkmozTgLhUdCNFjJmLhOr88kjbKrJCXEw=
+github.com/hashicorp/vault-plugin-secrets-openldap v0.15.2 h1:TJWLlTManbIA1AVVgj+3PTwmsYd2ppf2O4qATrdRc+o=
+github.com/hashicorp/vault-plugin-secrets-openldap v0.15.2/go.mod h1:tJDZLDAk4Y0po8t6OvBf/mwFMScWzhXYiVPH666CAks=
 github.com/hashicorp/vault-plugin-secrets-terraform v0.11.0 h1:dIOJ7VKyYU8o9xH1DuD61Fsfl6uSPHy6OrYdEjp4Ku0=
 github.com/hashicorp/vault-plugin-secrets-terraform v0.11.0/go.mod h1:6FNbBAQvISpPqLXdvhV8MvxXKWG9iS+D+spzIGU2WuI=
 github.com/hashicorp/vault-testing-stepwise v0.3.2 h1:FCe0yrbK/hHiHqzu7utLcvCTTKjghWHyXwOQ2lxfoQM=
