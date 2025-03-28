@@ -39,8 +39,6 @@ export interface UsageDashboardData {
     };
     secret_engines: Record<string, number>;
 }
-export interface IUsageDashboardService {
-    getUsageData(): Promise<UsageDashboardData>;
-}
+export type getUsageDataFunction = () => Promise<UsageDashboardData>;
 export {};
 //# sourceMappingURL=index.d.ts.map
