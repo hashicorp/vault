@@ -89,7 +89,7 @@ require (
 	github.com/hashicorp/go-bexpr v0.1.12
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-discover v0.0.0-20210818145131-c573d69da192
-	github.com/hashicorp/go-gcp-common v0.9.1
+	github.com/hashicorp/go-gcp-common v0.9.2
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-kms-wrapping/entropy/v2 v2.0.1
 	github.com/hashicorp/go-kms-wrapping/v2 v2.0.18
@@ -137,9 +137,9 @@ require (
 	github.com/hashicorp/raft-wal v0.4.0
 	github.com/hashicorp/vault-hcp-lib v0.0.0-20250306185756-615fe2449b16
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.20.0
-	github.com/hashicorp/vault-plugin-auth-azure v0.20.2
+	github.com/hashicorp/vault-plugin-auth-azure v0.20.3
 	github.com/hashicorp/vault-plugin-auth-cf v0.20.0
-	github.com/hashicorp/vault-plugin-auth-gcp v0.20.1
+	github.com/hashicorp/vault-plugin-auth-gcp v0.20.2
 	github.com/hashicorp/vault-plugin-auth-jwt v0.23.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.14.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.21.0
@@ -153,13 +153,13 @@ require (
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.20.1
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.19.0
-	github.com/hashicorp/vault-plugin-secrets-azure v0.21.2
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.21.2
+	github.com/hashicorp/vault-plugin-secrets-azure v0.21.3
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.21.3
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.20.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.10.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.21.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.14.0
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.15.1
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.15.2
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.11.0
 	github.com/hashicorp/vault-testing-stepwise v0.3.2
 	github.com/hashicorp/vault/api v1.16.0
@@ -190,7 +190,7 @@ require (
 	github.com/okta/okta-sdk-golang/v5 v5.0.2
 	github.com/oracle/oci-go-sdk v24.3.0+incompatible
 	github.com/ory/dockertest v3.3.5+incompatible
-	github.com/ory/dockertest/v3 v3.11.0
+	github.com/ory/dockertest/v3 v3.11.1-0.20250102095203-4b59dd3f56ac
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pires/go-proxyproto v0.8.0
 	github.com/pkg/errors v0.9.1
@@ -220,7 +220,7 @@ require (
 	go.uber.org/goleak v1.3.0
 	golang.org/x/crypto v0.36.0
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
-	golang.org/x/net v0.37.0
+	golang.org/x/net v0.38.0
 	golang.org/x/oauth2 v0.28.0
 	golang.org/x/sync v0.12.0
 	golang.org/x/sys v0.31.0
@@ -367,7 +367,7 @@ require (
 	github.com/digitalocean/godo v1.7.5 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/cli v27.2.1+incompatible // indirect
+	github.com/docker/cli v27.4.1+incompatible // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dvsekhvalnov/jose2go v1.6.0 // indirect
@@ -489,7 +489,7 @@ require (
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
-	github.com/opencontainers/runc v1.2.0-rc.1 // indirect
+	github.com/opencontainers/runc v1.2.3 // indirect
 	github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b // indirect
 	github.com/oracle/oci-go-sdk/v59 v59.0.0 // indirect
 	github.com/oracle/oci-go-sdk/v60 v60.0.0 // indirect

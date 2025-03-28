@@ -33,6 +33,7 @@ func TestPluginCatalog_PinnedVersionCRUD(t *testing.T) {
 			Type:    consts.PluginTypeSecrets,
 			Version: version,
 			Command: filepath.Base(file.Name()),
+			Sha256:  []byte("sha256"),
 		})
 		require.NoError(t, err)
 	}

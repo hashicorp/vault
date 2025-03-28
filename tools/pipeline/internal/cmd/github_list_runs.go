@@ -8,10 +8,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"time"
 
-	ghclient "github.com/google/go-github/v68/github"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/github"
 	"github.com/spf13/cobra"
 )
@@ -20,7 +18,7 @@ var listGithubWorkflowRuns = &github.ListWorkflowRunsReq{}
 
 func newGithubListRunCmd() *cobra.Command {
 	listRuns := &cobra.Command{
-		Use:   "list-workflow-runs [WORKFLOW_NAME]",
+		Use:   "workflow-runs [WORKFLOW_NAME]",
 		Short: "List workflow runs",
 		Long:  "List Github Actions workflow runs for a given workflow. Be sure to use filter arguments to reduce the search, otherwise you'll likely hit your API limit.",
 		RunE:  runListGithubWorkflowsCmd,
@@ -55,14 +53,7 @@ func newGithubListRunCmd() *cobra.Command {
 func runListGithubWorkflowsCmd(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true // Don't spam the usage on failure
 
-	client := ghclient.NewClient(nil)
-	if token, set := os.LookupEnv("GITHUB_TOKEN"); set {
-		client = client.WithAuthToken(token)
-	} else {
-		fmt.Println("\x1b[1;33;49mWARNING\x1b[0m: GITHUB_TOKEN has not been set. While not required for public repositories you're likely to get throttled without it")
-	}
-
-	res, err := listGithubWorkflowRuns.Run(context.TODO(), client)
+	res, err := listGithubWorkflowRuns.Run(context.TODO(), githubCmdState.Client)
 	if err != nil {
 		return fmt.Errorf("listing github workflow failures: %w", err)
 	}
