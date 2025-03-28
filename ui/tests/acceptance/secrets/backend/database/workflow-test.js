@@ -357,13 +357,22 @@ module('Acceptance | database workflow', function (hooks) {
     });
   });
 
-  module('static roles', function () {
+  module('static roles', function (hooks) {
+    hooks.beforeEach(async function () {
+      this.setup = async ({ toggleRotateOff = false }) => {
+        this.connection = `connect-${this.backend}`;
+        await visit(`/vault/secrets/${this.backend}/create`);
+        await fillOutConnection(this.connection);
+        if (toggleRotateOff) {
+          await click('[data-test-toggle-input="toggle-skip_static_role_rotation_import"]');
+        }
+        await click(FORM.saveBtn);
+        await visit(`/vault/secrets/${this.backend}/show/${this.connection}`);
+      };
+    });
+
     test('set parent db to rotate static roles immediately, verify static role reflects that default', async function (assert) {
-      this.connection = `connect-${this.backend}`;
-      await visit(`/vault/secrets/${this.backend}/create`);
-      await fillOutConnection(this.connection);
-      await click(FORM.saveBtn);
-      await visit(`/vault/secrets/${this.backend}/show/${this.connection}`);
+      await this.setup({ toggleRotateOff: false });
 
       const roleName = 'static-role';
       await click(PAGE.addRole);
@@ -383,12 +392,7 @@ module('Acceptance | database workflow', function (hooks) {
     });
 
     test('set parent db to not rotate static roles immediately, verify static role reflects that default', async function (assert) {
-      this.connection = `connect-${this.backend}`;
-      await visit(`/vault/secrets/${this.backend}/create`);
-      await fillOutConnection(this.connection);
-      await click('[data-test-toggle-input="toggle-skip_static_role_rotation_import"]');
-      await click(FORM.saveBtn);
-      await visit(`/vault/secrets/${this.backend}/show/${this.connection}`);
+      await this.setup({ toggleRotateOff: true });
 
       const roleName = 'static-role';
       await click(PAGE.addRole);
