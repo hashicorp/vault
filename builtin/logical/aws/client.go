@@ -24,6 +24,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+const fallbackEndpoint = "https://sts.amazonaws.com" // this is not regionally distributed; all requests go to us-east-1
+
 // Return a slice of *aws.Config, based on descending configuration priority. STS endpoints are the only place this is used.
 // NOTE: The caller is required to ensure that b.clientMutex is at least read locked
 func (b *backend) getRootConfigs(ctx context.Context, s logical.Storage, clientType string, logger hclog.Logger) ([]*aws.Config, error) {
@@ -122,12 +124,28 @@ func (b *backend) getRootConfigs(ctx context.Context, s logical.Storage, clientT
 		opts = append(opts, awsutil.WithEnvironmentCredentials(false), awsutil.WithSharedCredentials(false))
 	}
 
+	// at this point, in the IAM case, regions contains nothing, and endpoints contains iam_endpoint, if it was set.
+	// in the sts case, regions contains sts_region, if it was set, then the sts_fallback_regions in order, if they were set.
+	//                  endpoints contains sts_endpint, if it wa set, then sts_fallback_endpoints in order, if they were set.
+
+	// case in which nothing was supplied
 	if len(regions) == 0 {
+		// fallback region is in descending order, AWS_REGION, or AWS_DEFAULT_REGION, or us-east-1
 		regions = append(regions, fallbackRegion)
+
+		// we also need to set the endpoint based on this region (since we need matched length arrays)
+		if len(endpoints) == 0 {
+			switch clientType {
+			case "sts":
+				endpoints = append(endpoints, matchingSTSEndpoint(fallbackRegion))
+			case "iam":
+				endpoints = append(endpoints, "https://iam.amazonaws.com") // see https://docs.aws.amazon.com/general/latest/gr/iam-service.html
+			}
+		}
 	}
 
+	// for this approach of using parallel arrays to part out the configs, we want equal numbers of regions and endpoints
 	if len(regions) != len(endpoints) {
-		// this probably can't happen, if the input was checked correctly
 		return nil, errors.New("number of regions does not match number of endpoints")
 	}
 
@@ -207,11 +225,17 @@ func (b *backend) nonCachedClientSTS(ctx context.Context, s logical.Storage, log
 		if err == nil {
 			return client, nil
 		} else {
-			b.Logger().Debug("couldn't connect with config trying next", "failed endpoint", cfg.Endpoint, "failed region", cfg.Region)
+			b.Logger().Debug("couldn't connect with config trying next", "failed endpoint", *cfg.Endpoint, "failed region", *cfg.Region)
 		}
 	}
 
 	return nil, fmt.Errorf("could not obtain sts client")
+}
+
+// matchingSTSEndpoint returns the endpoint for the supplied region, according to
+// http://docs.aws.amazon.com/general/latest/gr/sts.html
+func matchingSTSEndpoint(stsRegion string) string {
+	return fmt.Sprintf("https://sts.%s.amazonaws.com", stsRegion)
 }
 
 // PluginIdentityTokenFetcher fetches plugin identity tokens from Vault. It is provided

@@ -137,7 +137,7 @@ require (
 	github.com/hashicorp/raft-wal v0.4.0
 	github.com/hashicorp/vault-hcp-lib v0.0.0-20250306185756-615fe2449b16
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.20.0
-	github.com/hashicorp/vault-plugin-auth-azure v0.20.2
+	github.com/hashicorp/vault-plugin-auth-azure v0.20.3
 	github.com/hashicorp/vault-plugin-auth-cf v0.20.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.20.2
 	github.com/hashicorp/vault-plugin-auth-jwt v0.23.0
@@ -153,7 +153,7 @@ require (
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.20.1
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.19.0
-	github.com/hashicorp/vault-plugin-secrets-azure v0.21.2
+	github.com/hashicorp/vault-plugin-secrets-azure v0.21.3
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.21.3
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.20.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.10.0
@@ -220,7 +220,7 @@ require (
 	go.uber.org/goleak v1.3.0
 	golang.org/x/crypto v0.36.0
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
-	golang.org/x/net v0.37.0
+	golang.org/x/net v0.38.0
 	golang.org/x/oauth2 v0.28.0
 	golang.org/x/sync v0.12.0
 	golang.org/x/sys v0.31.0
