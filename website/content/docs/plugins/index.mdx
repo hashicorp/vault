@@ -2,8 +2,8 @@
 layout: docs
 page_title: Plugin ecosystem
 description: >- 
-   Learn about the plugin ecosystem including external vs embedded plugins and
-   preregistered plugins.
+   Learn about the plugin ecosystem and the difference between built-in and
+   external plugins.
 ---
 
 
@@ -29,14 +29,29 @@ Refer to the [plugin upgrade guide](/vault/docs/plugins/upgrade) for more
 information on upgrading plugins.
 
 
-## Embedded vs external plugins
+## Plugin sources
 
-An **embedded plugin** is any authentication, secrets, or database plugin built
-from code maintained within
-[the Vault repository on GitHub](https://github.com/hashicorp/vault).
+Plugin code falls into one of the following categories:
 
-An **external plugin** is any authentication, secrets, or database plugin built
-from code maintained outside the Vault repository on GitHub.
+- **embedded plugins** build from code maintained within
+  [the Vault repository on GitHub](https://github.com/hashicorp/vault).
+  HashiCorp develops and maintains all embedded plugins.
+- **discrete plugins** build from code maintained independently from the Vault
+  code. External plugins can be HashiCorp plugins, third-party plugins, or
+  community plugins.
+- **custom plugins** are discrete plugins built from specialized code either
+  written from scratch or by modifying an existing plugin. Typically, custom
+  plugins solve a specific, niche problem and are not publicly available.
+
+
+## Built-in vs external plugins
+
+Plugins run within Vault as **built-in** or **external** plugins.
+
+Vault ships with a set of built-in plugins for commonly used integrations. Vault
+preregisters built-in plugins and runs those plugins within the main Vault
+process. You can enable and use built-in plugins without manually registering
+them, regardless of whether the plugin build from an embedded or discrete source.
 
 External plugins run as separate, standalone applications that Vault executes
 and communicates with over RPC. When you mount an external plugin, Vault spawns
@@ -46,14 +61,6 @@ to improve performance by reusing plugin instances across all mounts of a given
 type.
 
 @include 'tips/get-plugins.mdx'
-
-
-## Preregistered plugins
-
-Vault ships with a set of preregistered plugins (also called "built-in" plugins)
-for commonly used integrations.  You can enable and use any preregistered
-plugin without manually registering them, regardless of whether the plugin is
-external or embedded.
 
 
 ## Community plugins
@@ -91,16 +98,16 @@ configuration for a specific plugin mount. Embedded plugins compile as part of
 the Vault binary, so they always have the same version number as your Vault
 version.
 
-Preregistered plugin versions include tags to show whether the plugin was
-preregistered as an embedded plugin (`+builtin.vault`) or an external plugin
+Built-in plugin versions include tags to show whether the plugin was
+preregistered as an embedded plugin (`+builtin.vault`) or a discrete plugin
 (`+builtin`).
 
 For example, in the following CLI output:
 
-- `azure` is version 0.20.1 of a preregistered, external plugin.
-- `aws` is version 1.18.5 of a preregistered, embedded plugin.
-- `mykv` is version 1.0.0 of a manually registered, external plugin.
-- `testkv` is an unversioned, manually registered, external plugin.
+- `azure` is version 0.20.1 of a built-in, discrete plugin.
+- `aws` is version 1.18.5 of a built-in, embedded plugin.
+- `mykv` is version 1.0.0 of an external plugin.
+- `testkv` is an unversioned external plugin.
 
 ```shell-session
 $ vault plugin list secret
@@ -140,7 +147,8 @@ the appropriate version:
 
 <Note title="Reserved word">
 
-Vault reserves the `+builtin` metadata identifier for preregistered plugins.
-You cannot use the `+builtin` string when manually registering a plugin.
+Vault reserves the `+builtin` metadata identifier for built-in plugins.
+You cannot use the `+builtin` string when manually registering an external
+plugin.
 
 </Note>

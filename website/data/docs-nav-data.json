@@ -19,7 +19,8 @@
           },
           {
             "title": "Manage certificates",
-            "path": "about-vault/why-use-vault/certificates"
+            "path": "about-vault/why-use-vault/certificates",
+            "hidden": "true"
           },
           {
             "title": "Manage identities",
@@ -681,19 +682,257 @@
       },
       {
         "title": "Run on AWS",
-        "path": "deploy/aws"
-      },
-      {
-        "title": "Run on Azure",
-        "path": "deploy/azure"
-      },
-      {
-        "title": "Run on GCP",
-        "path": "deploy/gcp"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "deploy/aws"
+          },
+          {
+            "title": "Vault Lambda Extension",
+            "path": "deploy/aws/lambda-extension"
+          },
+          {
+            "title": "Running Vault",
+            "path": "deploy/aws/run"
+          }
+        ]
       },
       {
         "title": "Run on Kubernetes",
-        "path": "deploy/kubernetes"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "deploy/kubernetes"
+          },
+          {
+            "title": "Agent Injector vs. Vault CSI Provider",
+            "path": "deploy/kubernetes/injector-csi"
+          },
+          {
+            "title": "Migrate Consul to Raft storage",
+            "path": "deploy/kubernetes/consul-to-raft"
+          },
+          {
+            "title": "Helm Chart",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "deploy/kubernetes/helm"
+              },
+              {
+                "title": "Running Vault",
+                "path": "deploy/kubernetes/helm/run"
+              },
+              {
+                "title": "Enterprise Licensing",
+                "path": "deploy/kubernetes/helm/enterprise"
+              },
+              {
+                "title": "Running Vault on OpenShift",
+                "path": "deploy/kubernetes/helm/openshift"
+              },
+              {
+                "title": "Configuration",
+                "path": "deploy/kubernetes/helm/configuration"
+              },
+              {
+                "title": "Terraform",
+                "path": "deploy/kubernetes/helm/terraform"
+              },
+              {
+                "title": "Examples",
+                "routes": [
+                  {
+                    "title": "Overview",
+                    "path": "deploy/kubernetes/helm/examples"
+                  },
+                  {
+                    "title": "Development",
+                    "path": "deploy/kubernetes/helm/examples/development"
+                  },
+                  {
+                    "title": "Standalone with Load Balanced UI",
+                    "path": "deploy/kubernetes/helm/examples/standalone-load-balanced-ui"
+                  },
+                  {
+                    "title": "Standalone with TLS",
+                    "path": "deploy/kubernetes/helm/examples/standalone-tls"
+                  },
+                  {
+                    "title": "Standalone with Audit Storage",
+                    "path": "deploy/kubernetes/helm/examples/standalone-audit"
+                  },
+                  {
+                    "title": "External Vault",
+                    "path": "deploy/kubernetes/helm/examples/external"
+                  },
+                  {
+                    "title": "Using Kubernetes Auth Method",
+                    "path": "deploy/kubernetes/helm/examples/kubernetes-auth"
+                  },
+                  {
+                    "title": "HA Cluster with Consul",
+                    "path": "deploy/kubernetes/helm/examples/ha-with-consul"
+                  },
+                  {
+                    "title": "HA Cluster with Raft",
+                    "path": "deploy/kubernetes/helm/examples/ha-with-raft"
+                  },
+                  {
+                    "title": "HA Cluster with Raft and TLS",
+                    "path": "deploy/kubernetes/helm/examples/ha-tls"
+                  },
+                  {
+                    "title": "HA Enterprise Cluster with Raft",
+                    "path": "deploy/kubernetes/helm/examples/enterprise-with-raft"
+                  },
+                  {
+                    "title": "HA Enterprise DR Clusters with Raft",
+                    "path": "deploy/kubernetes/helm/examples/enterprise-dr-with-raft"
+                  },
+                  {
+                    "title": "HA Enterprise Performance Clusters with Raft",
+                    "path": "deploy/kubernetes/helm/examples/enterprise-perf-with-raft"
+                  },
+                  {
+                    "title": "Vault Agent Injector TLS Configuration",
+                    "path": "deploy/kubernetes/helm/examples/injector-tls"
+                  },
+                  {
+                    "title": "Vault Agent Injector TLS with Cert-Manager",
+                    "path": "deploy/kubernetes/helm/examples/injector-tls-cert-manager"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "title": "Agent Injector",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "deploy/kubernetes/injector"
+              },
+              {
+                "title": "Annotations",
+                "path": "deploy/kubernetes/injector/annotations"
+              },
+              {
+                "title": "Installation",
+                "path": "deploy/kubernetes/injector/installation"
+              },
+              {
+                "title": "Examples",
+                "path": "deploy/kubernetes/injector/examples"
+              }
+            ]
+          },
+          {
+            "title": "Vault CSI Provider",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "deploy/kubernetes/csi"
+              },
+              {
+                "title": "Installation",
+                "path": "deploy/kubernetes/csi/installation"
+              },
+              {
+                "title": "Configurations",
+                "path": "deploy/kubernetes/csi/configurations"
+              },
+              {
+                "title": "Examples",
+                "path": "deploy/kubernetes/csi/examples"
+              }
+            ]
+          },
+          {
+            "title": "Vault Secrets Operator",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "deploy/kubernetes/vso"
+              },
+              {
+                "title": "Installation",
+                "path": "deploy/kubernetes/vso/installation"
+              },
+              {
+                "title": "Secret Sources",
+                "routes": [
+                  {
+                    "title": "Overview",
+                    "path": "deploy/kubernetes/vso/sources"
+                  },
+                  {
+                    "title": "Vault",
+                    "routes": [
+                      {
+                        "title": "Overview",
+                        "path": "deploy/kubernetes/vso/sources/vault"
+                      },
+                      {
+                        "title": "Authentication",
+                        "routes": [
+                          {
+                            "title": "Overview",
+                            "path": "deploy/kubernetes/vso/sources/vault/auth"
+                          },
+                          {
+                            "title": "AWS",
+                            "path": "deploy/kubernetes/vso/sources/vault/auth/aws"
+                          },
+                          {
+                            "title": "GCP",
+                            "path": "deploy/kubernetes/vso/sources/vault/auth/gcp"
+                          }
+                        ]
+                      },
+                      {
+                        "title": "Encrypted client cache",
+                        "path": "deploy/kubernetes/vso/sources/vault/client-cache"
+                      },
+                      {
+                        "title": "Instant updates",
+                        "path": "deploy/kubernetes/vso/sources/vault/instant-updates"
+                      }
+                    ]
+                  },
+                  {
+                    "title": "HCP Vault Secrets",
+                    "path": "deploy/kubernetes/vso/sources/hvs"
+                  }
+                ]
+              },
+              {
+                "title": "Secret Data Transformation",
+                "path": "deploy/kubernetes/vso/secret-transformation"
+              },
+              {
+                "title": "Helm Chart",
+                "path": "deploy/kubernetes/vso/helm"
+              },
+              {
+                "title": "Examples",
+                "path": "deploy/kubernetes/vso/examples"
+              },
+              {
+                "title": "Telemetry",
+                "path": "deploy/kubernetes/vso/telemetry"
+              },
+              {
+                "title": "API Reference",
+                "path": "deploy/kubernetes/vso/api-reference"
+              },
+              {
+                "title": "OpenShift",
+                "path": "deploy/kubernetes/vso/openshift"
+              }
+            ]
+          }
+        ]
       }
     ]
   },
@@ -724,31 +963,6 @@
           "type": "outlined",
           "color": "neutral"
         }
-      },
-      {
-        "title": "Resolve duplicate identities",
-        "routes": [
-          {
-            "title": "Process overview",
-            "path": "upgrade/deduplication"
-          },
-          {
-            "title": "Fix different-case entity alias duplicates",
-            "path": "upgrade/deduplication/different-case"
-          },
-          {
-            "title": "Fix entity and group duplicates",
-            "path": "upgrade/deduplication/entity-group"
-          },
-          {
-            "title": "Resolve ACL policy templates",
-            "path": "upgrade/deduplication/acl-policy-templates"
-          },
-          {
-            "title": "Resolve Terraform config",
-            "path": "upgrade/deduplication/terraform-refs"
-          }
-        ]
       }
     ]
   },
@@ -1649,19 +1863,6 @@
         "path": "secrets"
       },
       {
-        "title": "Active Directory",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "secrets/ad"
-          },
-          {
-            "title": "Migration Guide",
-            "path": "secrets/ad/migration-guide"
-          }
-        ]
-      },
-      {
         "title": "AliCloud",
         "path": "secrets/alicloud"
       },
@@ -1780,6 +1981,31 @@
           {
             "title": "OIDC Identity Provider",
             "path": "secrets/identity/oidc-provider"
+          },
+          {
+            "title": "Resolve duplicate identities",
+            "routes": [
+              {
+                "title": "Process overview",
+                "path": "secrets/identity/deduplication"
+              },
+              {
+                "title": "Fix different-case entity alias duplicates",
+                "path": "secrets/identity/deduplication/different-case"
+              },
+              {
+                "title": "Fix entity and group duplicates",
+                "path": "secrets/identity/deduplication/entity-group"
+              },
+              {
+                "title": "Resolve ACL policy templates",
+                "path": "secrets/identity/deduplication/acl-policy-templates"
+              },
+              {
+                "title": "Resolve Terraform config",
+                "path": "secrets/identity/deduplication/terraform-refs"
+              }
+            ]
           }
         ]
       },
@@ -2360,7 +2586,7 @@
         "path": "plugins"
       },
       {
-        "title": "Plugin Architecture",
+        "title": "Plugin architecture",
         "path": "plugins/plugin-architecture"
       },
       {
@@ -2376,11 +2602,11 @@
         "path" : "plugins/rollback"
       },
       {
-        "title": "Plugin Development",
+        "title": "Plugin development",
         "path": "plugins/plugin-development"
       },
       {
-        "title": "Plugin Development — Event Notifications",
+        "title": "Plugin event notifications",
         "path": "plugins/plugin-development-event-notifications",
         "badge": {
           "text": "ENT",
@@ -2389,7 +2615,7 @@
         }
       },
       {
-        "title": "Plugin Management",
+        "title": "Plugin management",
         "path": "plugins/plugin-management"
       },
       {
@@ -2439,269 +2665,11 @@
     "title": "Platforms",
     "routes": [
       {
-        "title": "Overview",
-        "path": "platform"
-      },
-      {
-        "title": "AWS",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "platform/aws"
-          },
-          {
-            "title": "Vault Lambda Extension",
-            "path": "platform/aws/lambda-extension"
-          },
-          {
-            "title": "Running Vault",
-            "path": "platform/aws/run"
-          }
-        ]
-      },
-      {
         "title": "GitHub",
         "routes": [
           {
             "title": "GitHub Actions",
             "path": "platform/github-actions"
-          }
-        ]
-      },
-      {
-        "title": "Kubernetes",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "platform/k8s"
-          },
-          {
-            "title": "Agent Injector vs. Vault CSI Provider",
-            "path": "platform/k8s/injector-csi"
-          },
-          {
-            "title": "Migrate Consul to Raft storage",
-            "path": "platform/k8s/consul-to-raft"
-          },
-          {
-            "title": "Helm Chart",
-            "routes": [
-              {
-                "title": "Overview",
-                "path": "platform/k8s/helm"
-              },
-              {
-                "title": "Running Vault",
-                "path": "platform/k8s/helm/run"
-              },
-              {
-                "title": "Enterprise Licensing",
-                "path": "platform/k8s/helm/enterprise"
-              },
-              {
-                "title": "Running Vault on OpenShift",
-                "path": "platform/k8s/helm/openshift"
-              },
-              {
-                "title": "Configuration",
-                "path": "platform/k8s/helm/configuration"
-              },
-              {
-                "title": "Terraform",
-                "path": "platform/k8s/helm/terraform"
-              },
-              {
-                "title": "Examples",
-                "routes": [
-                  {
-                    "title": "Overview",
-                    "path": "platform/k8s/helm/examples"
-                  },
-                  {
-                    "title": "Development",
-                    "path": "platform/k8s/helm/examples/development"
-                  },
-                  {
-                    "title": "Standalone with Load Balanced UI",
-                    "path": "platform/k8s/helm/examples/standalone-load-balanced-ui"
-                  },
-                  {
-                    "title": "Standalone with TLS",
-                    "path": "platform/k8s/helm/examples/standalone-tls"
-                  },
-                  {
-                    "title": "Standalone with Audit Storage",
-                    "path": "platform/k8s/helm/examples/standalone-audit"
-                  },
-                  {
-                    "title": "External Vault",
-                    "path": "platform/k8s/helm/examples/external"
-                  },
-                  {
-                    "title": "Using Kubernetes Auth Method",
-                    "path": "platform/k8s/helm/examples/kubernetes-auth"
-                  },
-                  {
-                    "title": "HA Cluster with Consul",
-                    "path": "platform/k8s/helm/examples/ha-with-consul"
-                  },
-                  {
-                    "title": "HA Cluster with Raft",
-                    "path": "platform/k8s/helm/examples/ha-with-raft"
-                  },
-                  {
-                    "title": "HA Cluster with Raft and TLS",
-                    "path": "platform/k8s/helm/examples/ha-tls"
-                  },
-                  {
-                    "title": "HA Enterprise Cluster with Raft",
-                    "path": "platform/k8s/helm/examples/enterprise-with-raft"
-                  },
-                  {
-                    "title": "HA Enterprise DR Clusters with Raft",
-                    "path": "platform/k8s/helm/examples/enterprise-dr-with-raft"
-                  },
-                  {
-                    "title": "HA Enterprise Performance Clusters with Raft",
-                    "path": "platform/k8s/helm/examples/enterprise-perf-with-raft"
-                  },
-                  {
-                    "title": "Vault Agent Injector TLS Configuration",
-                    "path": "platform/k8s/helm/examples/injector-tls"
-                  },
-                  {
-                    "title": "Vault Agent Injector TLS with Cert-Manager",
-                    "path": "platform/k8s/helm/examples/injector-tls-cert-manager"
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "title": "Agent Injector",
-            "routes": [
-              {
-                "title": "Overview",
-                "path": "platform/k8s/injector"
-              },
-              {
-                "title": "Annotations",
-                "path": "platform/k8s/injector/annotations"
-              },
-              {
-                "title": "Installation",
-                "path": "platform/k8s/injector/installation"
-              },
-              {
-                "title": "Examples",
-                "path": "platform/k8s/injector/examples"
-              }
-            ]
-          },
-          {
-            "title": "Vault CSI Provider",
-            "routes": [
-              {
-                "title": "Overview",
-                "path": "platform/k8s/csi"
-              },
-              {
-                "title": "Installation",
-                "path": "platform/k8s/csi/installation"
-              },
-              {
-                "title": "Configurations",
-                "path": "platform/k8s/csi/configurations"
-              },
-              {
-                "title": "Examples",
-                "path": "platform/k8s/csi/examples"
-              }
-            ]
-          },
-          {
-            "title": "Vault Secrets Operator",
-            "routes": [
-              {
-                "title": "Overview",
-                "path": "platform/k8s/vso"
-              },
-              {
-                "title": "Installation",
-                "path": "platform/k8s/vso/installation"
-              },
-              {
-                "title": "Secret Sources",
-                "routes": [
-                  {
-                    "title": "Overview",
-                    "path": "platform/k8s/vso/sources"
-                  },
-                  {
-                    "title": "Vault",
-                    "routes": [
-                      {
-                        "title": "Overview",
-                        "path": "platform/k8s/vso/sources/vault"
-                      },
-                      {
-                        "title": "Authentication",
-                        "routes": [
-                          {
-                            "title": "Overview",
-                            "path": "platform/k8s/vso/sources/vault/auth"
-                          },
-                          {
-                            "title": "AWS",
-                            "path": "platform/k8s/vso/sources/vault/auth/aws"
-                          },
-                          {
-                            "title": "GCP",
-                            "path": "platform/k8s/vso/sources/vault/auth/gcp"
-                          }
-                        ]
-                      },
-                      {
-                        "title": "Encrypted client cache",
-                        "path": "platform/k8s/vso/sources/vault/client-cache"
-                      },
-                      {
-                        "title": "Instant updates",
-                        "path": "platform/k8s/vso/sources/vault/instant-updates"
-                      }
-                    ]
-                  },
-                  {
-                    "title": "HCP Vault Secrets",
-                    "path": "platform/k8s/vso/sources/hvs"
-                  }
-                ]
-              },
-              {
-                "title": "Secret Data Transformation",
-                "path": "platform/k8s/vso/secret-transformation"
-              },
-              {
-                "title": "Helm Chart",
-                "path": "platform/k8s/vso/helm"
-              },
-              {
-                "title": "Examples",
-                "path": "platform/k8s/vso/examples"
-              },
-              {
-                "title": "Telemetry",
-                "path": "platform/k8s/vso/telemetry"
-              },
-              {
-                "title": "API Reference",
-                "path": "platform/k8s/vso/api-reference"
-              },
-              {
-                "title": "OpenShift",
-                "path": "platform/k8s/vso/openshift"
-              }
-            ]
           }
         ]
       },

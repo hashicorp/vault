@@ -44,10 +44,12 @@ SHA256 sum. If the sums match, Vault starts the plugin using the command
 registered in the catalog along with a JWT formatted response wrapping token and
 any relevant [mlock](/vault/docs/configuration#disable_mlock) settings.
 
-Vault spawns plugins as separate processes, with Vault as the parent process.
-Active Vault nodes and performance standby nodes can both spawn plugin processes.
-Plugin processes continue to run after spawning until Vault explicitly terminates
-them. Common termination events are:
+Vault spawns built-in plugins within the Vault process and external plugins as
+separate processes, with Vault as the parent process.
+
+Active Vault nodes and performance standby nodes can both spawn external plugin
+processes. Plugin processes continue to run after spawning until Vault
+explicitly terminates them. Common termination events are:
 
 - Vault active node step-down
 - Vault barrier seal
@@ -87,7 +89,7 @@ TLS connection to the RPC server on the plugin side. HashiCorp-managed plugins
 use the AutoMTLS feature of [go-plugin](https://www.github.com/hashicorp/go-plugin)
 to automatically negotiate mutual TLS for transport authentication.
 
-Preregistered plugins included with the Vault binary at compile time already
+Built-in plugins included with the Vault binary at compile time already
 know the correct API address to establish a TLS connection, but you must set the
 [`api_addr`](/vault/docs/configuration#api_addr) parameter in your Vault
 configuration so manually registered plugins can establish communication with
