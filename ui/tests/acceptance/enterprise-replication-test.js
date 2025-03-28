@@ -92,9 +92,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await clickTrigger();
     await searchSelect.options.objectAt(0).click();
 
-    await click('[data-test-namespace-toggle]');
-
-    const mountPath = find('[data-option-index="0"]').innerText?.trim();
+    const mountPath = find('[data-test-selected-namespace]').innerText?.trim();
     await click('[data-test-secondary-add]');
 
     await pollCluster(this.owner);
