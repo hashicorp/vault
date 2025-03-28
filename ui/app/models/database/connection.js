@@ -203,8 +203,8 @@ export default Model.extend({
   skip_static_role_rotation_import: attr({
     editType: 'toggleButton',
     label: 'Rotate static roles immediately',
-    helperTextDisabled: 'Vault automatically rotates static roles upon their initial creation.',
-    helperTextEnabled: 'Vault will not automatically rotate static role passwords upon creation.',
+    helperTextEnabled: 'Vault automatically rotates static roles upon their initial creation.',
+    helperTextDisabled: 'Vault will not automatically rotate static role passwords upon creation.',
     defaultValue: false,
     isOppositeValue: true,
   }),
