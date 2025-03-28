@@ -44,7 +44,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
       await click('[data-test-namespace-toggle]');
       await click('[data-test-refresh-namespaces]');
       await waitFor(`[data-test-namespace-link="${targetNamespace}"]`);
-      // check that the single namespace "beep" or "boop" not "beep/boop" shows in the toggle display
+      // check that the full namespace path, like "beep/boop", shows in the toggle display
       assert
         .dom(`[data-test-namespace-link="${targetNamespace}"]`)
         .hasText(targetNamespace, `shows the namespace ${targetNamespace} in the toggle component`);
