@@ -24,7 +24,7 @@ Success! Registered plugin: my-custom-plugin
 
 Register an Enterprise plugin:
 
--> **Note:** See [Plugin managment for Enterprise plugins](/vault/docs/plugins/plugin-management#enterprise-plugins)
+-> **Note:** See [Plugin management for Enterprise plugins](/vault/docs/plugins/plugin-management#enterprise-plugins)
 for details on Vault Enterprise compatible versions.
 
 Before registering Key Management secrets engine v0.16.0+ent for the linux/amd64 system that runs Vault Enterprise,
@@ -32,9 +32,9 @@ Before registering Key Management secrets engine v0.16.0+ent for the linux/amd64
 https://releases.hashicorp.com/vault-plugin-secrets-keymgmt and placed in the plugin directory.
 
 ```shell-session
-$ vault plugin register 
+$ vault plugin register
     -version=0.16.0+ent \                      # version must match the plugin version on the releases page
-    secret \        
+    secret \
     vault-plugin-secrets-keymgmt               # name must match the plugin name on the releases page
 Success! Registered plugin: vault-plugin-secrets-keymgmt
 ```
