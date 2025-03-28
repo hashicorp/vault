@@ -19,7 +19,7 @@ import { service } from '@ember/service';
  * <NamespacePicker class="hds-side-nav-hide-when-minimized" />
  */
 
-export default class ApplicationComponent extends Component {
+export default class NamespacePicker extends Component {
   @service namespace;
 
   @tracked selected = {};
