@@ -15,7 +15,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-// parseAndCheckForDuplicateHclAttributes parses the input JSON/HCL file and if it is HCL it also checks
+// ParseAndCheckForDuplicateHclAttributes parses the input JSON/HCL file and if it is HCL it also checks
 // for duplicate keys in the HCL file, allowing callers to handle the issue accordingly. In a future release we'll
 // change the behavior to treat duplicate keys as an error and eventually remove this helper altogether.
 // TODO (HCL_DUP_KEYS_DEPRECATION): remove once not used anymore
