@@ -19,8 +19,7 @@
           },
           {
             "title": "Manage certificates",
-            "path": "about-vault/why-use-vault/certificates",
-            "hidden": "true"
+            "path": "about-vault/why-use-vault/certificates"
           },
           {
             "title": "Manage identities",
@@ -35,7 +34,7 @@
             "path": "about-vault/why-use-vault/sensitive-data"
           },
           {
-            "title": "Manage regulatory compliance",
+            "title": "Support regulatory compliance",
             "path": "about-vault/why-use-vault/regulatory-compliance"
           }
         ]
@@ -310,7 +309,7 @@
         "href": "https://developer.hashicorp.com/vault/install/enterprise",
         "badge": {
           "text": "COMMUNITY",
-          "type": "outlined",
+          "type": "filled",
           "color": "neutral"
         }
       },
@@ -2633,7 +2632,7 @@
         ]
       },
       {
-        "title": "Integrations Library",
+        "title": "Plugin library",
         "href": "/vault/integrations"
       }
     ]
@@ -2954,7 +2953,5 @@
   {
     "title": "Glossary",
     "path": "glossary"
-  },
-  { "divider": true },
-  { "heading": "TO BE DELETED" }
+  }
 ]
