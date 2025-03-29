@@ -1,0 +1,4 @@
+```release-note:bug
+secrets/pki: fix a bug where key_usage was ignored when generating root certificates, and signing certain
+intermediate certificates.
+```
