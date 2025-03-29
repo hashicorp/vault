@@ -10,7 +10,6 @@
 
 SECURITY:
 
-* raft/snapshotagent (enterprise): upgrade raft-snapshotagent to v0.0.0-20241115202008-166203013d8e
 * raft/snapshotagent (enterprise): upgrade raft-snapshotagent to v0.2.0
 
 CHANGES:
@@ -202,7 +201,6 @@ seal unwrapper was performing the read twice, and would also issue an unnecessar
 * database/mssql: Fix a bug where contained databases would silently fail root rotation if a custom root rotation statement was not provided. [[GH-29399](https://github.com/hashicorp/vault/pull/29399)]
 * database: Fix a bug where static role passwords are erroneously rotated across backend restarts when using skip import rotation. [[GH-29537](https://github.com/hashicorp/vault/pull/29537)]
 * export API: Normalize the start_date parameter to the start of the month as is done in the sys/counters API to keep the results returned from both of the API's consistent. [[GH-29562](https://github.com/hashicorp/vault/pull/29562)]
-* export API: Normalize the start_date parameter to the start of the month as is done in the sys/counters API to keep the results returned from both of the API's consistent.
 * identity/oidc (enterprise): Fix delays in rotation and invalidation of OIDC keys when there are too many namespaces.
 The Cache-Control header returned by the identity/oidc/.well-known/keys endpoint now depends only on the named keys for
 the queried namespace. [[GH-29312](https://github.com/hashicorp/vault/pull/29312)]
