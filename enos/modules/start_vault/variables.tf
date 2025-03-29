@@ -34,6 +34,12 @@ variable "config_mode" {
   }
 }
 
+variable "disable_mlock" {
+  type        = bool
+  description = "Disable mlock for Vault process."
+  default     = false
+}
+
 variable "environment" {
   description = "Optional Vault configuration environment variables to set starting Vault"
   type        = map(string)
