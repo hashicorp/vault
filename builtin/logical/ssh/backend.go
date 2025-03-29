@@ -5,10 +5,13 @@ package ssh
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -17,9 +20,10 @@ const operationPrefixSSH = "ssh"
 
 type backend struct {
 	*framework.Backend
-	view      logical.Storage
-	salt      *salt.Salt
-	saltMutex sync.RWMutex
+	view        logical.Storage
+	salt        *salt.Salt
+	saltMutex   sync.RWMutex
+	backendUUID string
 }
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -77,6 +81,8 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 		Invalidate:  b.invalidate,
 		BackendType: logical.TypeLogical,
 	}
+
+	b.backendUUID = conf.BackendUUID
 	return &b, nil
 }
 
@@ -110,6 +116,22 @@ func (b *backend) invalidate(_ context.Context, key string) {
 		defer b.saltMutex.Unlock()
 		b.salt = nil
 	}
+}
+
+func (b *backend) IsSecondaryNode() bool {
+	return b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby)
+}
+
+func (b *backend) GetManagedKeyView() (logical.ManagedKeySystemView, error) {
+	managedKeyView, ok := b.System().(logical.ManagedKeySystemView)
+	if !ok {
+		return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported system view")}
+	}
+	return managedKeyView, nil
+}
+
+func (b *backend) BackendUUID() string {
+	return b.backendUUID
 }
 
 const backendHelp = `
