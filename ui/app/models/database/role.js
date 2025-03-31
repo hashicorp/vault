@@ -135,6 +135,11 @@ export default class RoleModel extends Model {
   })
   skip_import_rotation;
 
+  @attr('string', {
+    subText: 'The database password that this Vault role corresponds to.',
+  })
+  password;
+
   /* FIELD ATTRIBUTES */
   get fieldAttrs() {
     // Main fields on edit/create form
@@ -156,6 +161,7 @@ export default class RoleModel extends Model {
       'default_ttl',
       'max_ttl',
       'username',
+      'password',
       'rotation_period',
       'skip_import_rotation',
       'creation_statements',
@@ -169,7 +175,9 @@ export default class RoleModel extends Model {
 
     // remove enterprise-only attrs if on community
     if (!this.version.isEnterprise) {
-      allRoleSettingFields = allRoleSettingFields.filter((role) => role !== 'skip_import_rotation');
+      allRoleSettingFields = allRoleSettingFields.filter(
+        (role) => !['skip_import_rotation', 'password'].includes(role)
+      );
     }
 
     return expandAttributeMeta(this, allRoleSettingFields);
