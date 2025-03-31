@@ -124,7 +124,7 @@ export default class DatabaseRoleEdit extends Component {
       // if we're creating and rotating a static role immediately, warn user
       if (!model.skip_import_rotation && model.type === 'static' && mode === 'create') {
         this.saveIssuerWarning =
-          "You have set the param 'Rotate immediately' for this static role to true. \n Vault will rotate the password the password immediately once saved. \n \n NOTE: This will disrupt any active use of this role outside of Vault.";
+          "You have enabled 'Rotate immediately' for this static role. \n Vault will update the password immediately after you save. \n \n NOTE: This will disrupt any active use of this role outside of Vault.";
         return;
       }
       await this.saveRole.perform();
