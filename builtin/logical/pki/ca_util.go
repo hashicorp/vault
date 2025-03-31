@@ -73,6 +73,8 @@ func getGenerationParams(sc *storageContext, data *framework.FieldData) (exporte
 		NotBeforeDuration:         time.Duration(data.Get("not_before_duration").(int)) * time.Second,
 		CNValidations:             []string{"disabled"},
 		KeyUsage:                  data.Get("key_usage").([]string),
+		ExtKeyUsage:               data.Get("ext_key_usage").([]string),
+		ExtKeyUsageOIDs:           data.Get("ext_key_usage_oids").([]string),
 	}
 	*role.AllowWildcardCertificates = true
 
