@@ -1,3 +1,0 @@
-```release-note:improvement
-activity: mount_type was added to the API response of sys/internal/counters/activity
-```
