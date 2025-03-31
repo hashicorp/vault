@@ -1785,6 +1785,7 @@ type ResponseNewClients struct {
 
 type ResponseMount struct {
 	MountPath string          `json:"mount_path" mapstructure:"mount_path"`
+	MountType string          `json:"mount_type" mapstructure:"mount_type"`
 	Counts    *ResponseCounts `json:"counts"`
 }
 
@@ -2781,11 +2782,19 @@ func (a *ActivityLog) calculateByNamespaceResponseForQuery(ctx context.Context, 
 		if err != nil {
 			return nil, nil, err
 		}
+		var displayPath string
+		if ns == nil {
+			displayPath = fmt.Sprintf(DeletedNamespaceFmt, nsRecord.NamespaceID)
+		} else {
+			displayPath = ns.Path
+		}
 		if a.includeInResponse(queryNS, ns) {
 			mountResponse := make([]*ResponseMount, 0, len(nsRecord.Mounts))
 			for _, mountRecord := range nsRecord.Mounts {
+				mountType := a.mountPathToMountType(ctx, strings.Join([]string{namespace.Canonicalize(displayPath), mountRecord.MountPath}, ""))
 				mountResponse = append(mountResponse, &ResponseMount{
 					MountPath: mountRecord.MountPath,
+					MountType: mountType,
 					Counts:    a.countsRecordToCountsResponse(mountRecord.Counts),
 				})
 			}
@@ -2794,12 +2803,6 @@ func (a *ActivityLog) calculateByNamespaceResponseForQuery(ctx context.Context, 
 				return mountResponse[i].Counts.Clients > mountResponse[j].Counts.Clients
 			})
 
-			var displayPath string
-			if ns == nil {
-				displayPath = fmt.Sprintf(DeletedNamespaceFmt, nsRecord.NamespaceID)
-			} else {
-				displayPath = ns.Path
-			}
 			nsCounts := a.namespaceRecordToCountsResponse(nsRecord)
 			byNamespaceResponse = append(byNamespaceResponse, &ResponseNamespace{
 				NamespaceID:   nsRecord.NamespaceID,
@@ -2864,23 +2867,26 @@ func (a *ActivityLog) prepareNamespaceResponse(ctx context.Context, nsRecords []
 		}
 		if a.includeInResponse(queryNS, ns) {
 			mountResponse := make([]*ResponseMount, 0, len(nsRecord.Mounts))
-			for _, mountRecord := range nsRecord.Mounts {
-				if !mountRecord.Counts.HasCounts() {
-					continue
-				}
-
-				mountResponse = append(mountResponse, &ResponseMount{
-					MountPath: mountRecord.MountPath,
-					Counts:    a.countsRecordToCountsResponse(mountRecord.Counts),
-				})
-			}
-
 			var displayPath string
 			if ns == nil {
 				displayPath = fmt.Sprintf(DeletedNamespaceFmt, nsRecord.NamespaceID)
 			} else {
 				displayPath = ns.Path
 			}
+
+			for _, mountRecord := range nsRecord.Mounts {
+				if !mountRecord.Counts.HasCounts() {
+					continue
+				}
+
+				mountType := a.mountPathToMountType(ctx, strings.Join([]string{namespace.Canonicalize(displayPath), mountRecord.MountPath}, ""))
+				mountResponse = append(mountResponse, &ResponseMount{
+					MountPath: mountRecord.MountPath,
+					MountType: mountType,
+					Counts:    a.countsRecordToCountsResponse(mountRecord.Counts),
+				})
+			}
+
 			nsResponse := &ResponseNamespace{
 				NamespaceID:   nsRecord.NamespaceID,
 				NamespacePath: displayPath,
