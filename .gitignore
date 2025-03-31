@@ -89,6 +89,9 @@ dist/*
 *.ipr
 *.iml
 
+# LazyVim
+.lazy.lua
+
 # compiled output
 ui/dist
 ui/tmp
