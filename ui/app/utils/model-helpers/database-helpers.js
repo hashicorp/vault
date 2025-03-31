@@ -197,7 +197,7 @@ export const AVAILABLE_PLUGIN_TYPES = [
 ];
 
 export const ROLE_FIELDS = {
-  static: ['username', 'rotation_period', 'skip_import_rotation'],
+  static: ['username', 'rotation_period', 'skip_import_rotation', 'password'],
   dynamic: ['default_ttl', 'max_ttl'],
 };
 
