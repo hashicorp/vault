@@ -19,8 +19,9 @@ concurrency:
 jobs:
   setup:
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","linux","small"]') }}
+    permissions: write-all # vault-auth
     outputs:
-      app-changed: ${{ steps.changed-files.outputs.app-changed }}
+      changed-files: ${{ steps.changed-files.outputs.changed-files }}
       checkout-ref: ${{ steps.checkout.outputs.ref }}
       compute-small: ${{ steps.metadata.outputs.compute-small }}
       compute-test-go: ${{ steps.metadata.outputs.compute-test-go }}
@@ -30,16 +31,34 @@ jobs:
       is-enterprise: ${{ steps.metadata.outputs.is-enterprise }}
       is-fork: ${{ steps.metadata.outputs.is-fork }}
       labels: ${{ steps.metadata.outputs.labels }}
-      ui-changed: ${{ steps.changed-files.outputs.ui-changed }}
       workflow-trigger: ${{ steps.metadata.outputs.workflow-trigger }}
     steps:
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
-      - uses: ./.github/actions/changed-files
-        id: changed-files
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      # Make sure we check out correct ref based on PR labels and such
       - uses: ./.github/actions/checkout
-        id: checkout # make sure we check out correct ref after checking changed files
+        id: checkout
       - uses: ./.github/actions/metadata
         id: metadata
+      # Get the elevated github token
+      - if: steps.metadata.outputs.is-enterprise == 'true'
+        id: vault-auth
+        name: Vault Authenticate
+        run: vault-auth
+      - if: steps.metadata.outputs.is-enterprise == 'true'
+        id: vault-secrets
+        name: Fetch Vault Secrets
+        uses: hashicorp/vault-action@d1720f055e0635fd932a1d2a48f87a666a57906c # v3.0.0
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          secrets: |
+            kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
+      # Determine the changed files
+      - uses: ./.github/actions/changed-files
+        id: changed-files
+        with:
+          github-token: ${{ steps.metadata.outputs.is-enterprise != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
       - name: Ensure Go modules are cached
         uses: ./.github/actions/set-up-go
         with:
@@ -48,7 +67,9 @@ jobs:
 
   test-go:
     # Run Go tests if the vault app changed
-    if: needs.setup.outputs.app-changed == 'true'
+    if: |
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline')
     name: Run Go tests
     needs: setup
     uses: ./.github/workflows/test-go.yml
@@ -68,7 +89,7 @@ jobs:
 
   test-go-testonly:
     # Run Go tests tagged with "testonly" if the vault app changed
-    if: needs.setup.outputs.app-changed == 'true'
+    if: contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app')
     name: Run Go tests tagged with testonly
     needs: setup
     uses: ./.github/workflows/test-go.yml
@@ -87,7 +108,7 @@ jobs:
   test-go-race:
     # Run Go test with the data race detector enabled if the vault app changed and we're out of
     # drafts mode.
-    if: needs.setup.outputs.app-changed == 'true' && needs.setup.outputs.is-draft == 'false'
+    if: contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') && needs.setup.outputs.is-draft == 'false'
     name: Run Go tests with data race detection
     needs: setup
     uses: ./.github/workflows/test-go.yml
@@ -112,7 +133,7 @@ jobs:
     # Run the Go tests with fips if the vault app changed, we're in the context vault enterprise
     # and our trigger is a merge to main or releases/* or if the 'fips' label is present on a PR.
     if: |
-      needs.setup.outputs.app-changed == 'true' &&
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') &&
       needs.setup.outputs.is-enterprise == 'true' &&
       (needs.setup.outputs.workflow-trigger == 'push' || contains(needs.setup.outputs.labels, 'fips'))
     needs: setup
@@ -137,7 +158,7 @@ jobs:
     # Run the UI tests if our UI has changed, or a 'ui' label is present, or our workflow trigger
     # was triggered by a merge to main or releases/*.
     if: |
-      needs.setup.outputs.ui-changed == 'true' ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'ui') ||
       needs.setup.outputs.workflow-trigger == 'push' ||
       contains(github.event.pull_request.labels.*.name, 'ui')
     needs: setup
@@ -146,7 +167,7 @@ jobs:
       contents: read
     runs-on: ${{ fromJSON(needs.setup.outputs.compute-test-ui) }}
     steps:
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         name: status
         with:
           ref: ${{ needs.setup.outputs.checkout-ref }}
@@ -154,22 +175,31 @@ jobs:
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       # Setup node.js without caching to allow running npm install -g yarn (next step)
-      - uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
+      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
         with:
           node-version-file: './ui/package.json'
       - run: npm install -g yarn
       # Setup node.js with caching using the yarn.lock file
-      - uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
+      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
         with:
           node-version-file: './ui/package.json'
           cache: yarn
           cache-dependency-path: ui/yarn.lock
-      - uses: browser-actions/setup-chrome@9683066f53b47e92c4104e1bd5535aff208c3530 # v1.6.2
+      - uses: browser-actions/setup-chrome@db1b524c26f20a8d1a10f7fc385c92387e2d0477 # v1.7.1
+        with:
+          # Temporarily pin our Chrome version while we sort out a broken test on latest
+          chrome-version: 1314712
       - name: ui-dependencies
         working-directory: ./ui
         run: |
           yarn install --frozen-lockfile
           npm rebuild node-sass
+      - if: needs.setup.outputs.is-enterprise != 'true'
+        name: Rebuild font cache on Github hosted runner
+        # Fix `Fontconfig error: No writable cache directories` error on Github hosted runners
+        # This seems to have been introduced with this runner image: https://github.com/actions/runner-images/releases/tag/ubuntu22%2F20240818.1
+        # Hopefully this will resolve itself at some point with a newer image and we can remove it
+        run: fc-cache -f -v
       - if: needs.setup.outputs.is-enterprise == 'true'
         id: vault-auth
         name: Authenticate to Vault
@@ -185,6 +215,7 @@ jobs:
           secrets: |
             kv/data/github/hashicorp/vault-enterprise/github-token username-and-token | PRIVATE_REPO_GITHUB_TOKEN;
             kv/data/github/hashicorp/vault-enterprise/license license_1 | VAULT_LICENSE;
+            kv/data/github/${{ github.repository }}/datadog-ci DATADOG_API_KEY;
       - if: needs.setup.outputs.is-enterprise == 'true'
         name: Set up Git
         run: git config --global url."https://${{ steps.secrets.outputs.PRIVATE_REPO_GITHUB_TOKEN }}@github.com".insteadOf https://github.com
@@ -204,12 +235,38 @@ jobs:
           mkdir -p test-results/qunit
           yarn ${{ needs.setup.outputs.is-enterprise == 'true' && 'test' || 'test:oss' }}
       - if: always()
-        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         with:
           name: test-results-ui
           path: ui/test-results
+      - name: Prepare datadog-ci
+        if: (github.repository == 'hashicorp/vault' || github.repository == 'hashicorp/vault-enterprise') && (success() || failure())
+        continue-on-error: true
+        run: |
+          if type datadog-ci > /dev/null 2>&1; then
+            exit 0
+          fi
+          # Curl does not always exit 1 if things go wrong. To determine if this is successful
+          # we'll silence all non-error output and check the results to determine success.
+          if ! out="$(curl -sSL --fail https://github.com/DataDog/datadog-ci/releases/latest/download/datadog-ci_linux-x64 --output /usr/local/bin/datadog-ci 2>&1)"; then
+            printf "failed to download datadog-ci: %s" "$out"
+          fi
+          if [[ -n "$out" ]]; then
+            printf "failed to download datadog-ci: %s" "$out"
+          fi
+          chmod +x /usr/local/bin/datadog-ci
+      - name: Upload test results to DataDog
+        if: success() || failure()
+        continue-on-error: true
+        env:
+          DD_ENV: ci
+        run: |
+          if [[ ${{ github.repository }} == 'hashicorp/vault' ]]; then
+            export DATADOG_API_KEY=${{ secrets.DATADOG_API_KEY }}
+          fi
+          datadog-ci junit upload --service "$GITHUB_REPOSITORY" 'ui/test-results/qunit/results.xml'
       - if: always()
-        uses: test-summary/action@032c8a9cec6aaa3c20228112cae6ca10a3b29336 # v2.3
+        uses: test-summary/action@31493c76ec9e7aa675f1585d3ed6f1da69269a86 # v2.4
         with:
           paths: "ui/test-results/qunit/results.xml"
           show: "fail"
@@ -226,7 +283,7 @@ jobs:
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","linux","small"]') }}
     permissions: write-all # Ensure we have id-token:write access for vault-auth.
     steps:
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       # Determine the overall status of our required test jobs.
       - name: Determine status
         id: status
@@ -289,7 +346,7 @@ jobs:
             needs.test-ui.result == 'failure'
           )
         name: Notify build failures in Slack
-        uses: slackapi/slack-github-action@70cd7be8e40a46e8b0eced40b0de447bdb42f68e # v1.26.0
+        uses: slackapi/slack-github-action@37ebaef184d7626c5f204ab8d3baff4262dd30f0 # v1.27.0
         env:
           SLACK_BOT_TOKEN: ${{ steps.slackbot-token.outputs.slackbot-token }}
         with:
@@ -332,7 +389,7 @@ jobs:
       # to secrets.
       - if: ${{ needs.setup.outputs.is-fork == 'false' }}
         name: Download failure summaries
-        uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # v4.1.7
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
           pattern: failure-summary-*.md
           path: failure-summaries
