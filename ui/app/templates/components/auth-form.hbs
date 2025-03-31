@@ -69,10 +69,9 @@
         @namespace={{this.namespace}}
         @onNamespace={{action (mut this.namespace)}}
         @onSubmit={{action "doSubmit"}}
-        @onRoleName={{action (mut this.roleName)}}
-        @roleName={{this.roleName}}
         @selectedAuthType={{this.selectedAuthBackend.type}}
         @selectedAuthPath={{or this.customPath this.selectedAuthBackend.id}}
+        {{! todo remove @disabled arg }}
         @disabled={{or this.authIsRunning this.isLoading}}
       >
         <AuthFormOptions
