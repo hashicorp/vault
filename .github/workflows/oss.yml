@@ -98,7 +98,7 @@ jobs:
   #               }
   #             }
   #           }' -f org=$ORGANIZATION -F number=$PROJECT_NUMBER > project_data.json
-  #         echo "::set-output name=project_id::$(jq '.data.organization.projectV2.id' project_data.json)"
+  #         echo "project_id=$(jq '.data.organization.projectV2.id' project_data.json)" >> "$GITHUB_OUTPUT"
 
   # delete-from-project:
   #   name: Remove issue or PR from project
