@@ -108,7 +108,7 @@
 {{else}}
   {{! Edit or Create }}
   <div class="box is-sideless is-fullwidth is-marginless">
-    <form {{on "submit" (perform this.handleCreateEditRole)}}>
+    <form {{on "submit" this.handleCreateEditRole}}>
       <MessageError @errorMessage={{this.errorMessage}} />
       {{#each @model.fieldAttrs as |attr|}}
         {{#if (eq @mode "edit")}}
@@ -197,7 +197,7 @@
 {{/if}}
 
 {{#if this.saveIssuerWarning}}
-  <Hds::Modal @color="warning" @onClose={{action (mut this.saveIssuerWarning) ""}} data-test-issuer-warning as |M|>
+  <Hds::Modal @color="warning" @onClose={{fn (mut this.saveIssuerWarning) ""}} data-test-issuer-warning as |M|>
     <M.Header @icon="alert-circle">
       Are you sure?
     </M.Header>
