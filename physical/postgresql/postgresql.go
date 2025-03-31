@@ -136,6 +136,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 		URL:           connURL,
 		UseAWSIAMAuth: true,
 		AWSDBRegion:   "us-east-1",
+		Logger:        logger,
 	}
 
 	db, err := iam.DBHandler(config)

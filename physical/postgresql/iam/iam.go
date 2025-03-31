@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/hashicorp/go-hclog"
 	"sync"
 	"time"
 
@@ -16,6 +17,7 @@ type DBConfig struct {
 
 	UseAWSIAMAuth bool
 	AWSDBRegion   string
+	Logger        hclog.Logger
 }
 
 type authToken struct {
@@ -48,7 +50,7 @@ func (t *authToken) getTokenString(dbConfig DBConfig, pgConfig pgx.ConnConfig) (
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
-	if time.Since(t.createdTime) <= 10*time.Minute {
+	if time.Since(t.createdTime) <= 2*time.Minute {
 		return t.token, nil
 	}
 
