@@ -2546,11 +2546,15 @@ __metadata:
     "@hashicorp/design-system-tokens": ^2.2.1
     "@hashicorp/ember-flight-icons": ^5.1.3
     "@lineal-viz/lineal": ^0.5.1
+    "@rollup/rollup-linux-x64-gnu": "*"
     decorator-transforms: ^2.2.2
     ember-modifier: ^4.2.0
     rollup-plugin-scss: ^4.0.1
   peerDependencies:
     ember-source: ">= 4.12.0"
+  dependenciesMeta:
+    "@rollup/rollup-linux-x64-gnu":
+      optional: true
   languageName: node
   linkType: soft
 
@@ -3135,6 +3139,13 @@ __metadata:
   peerDependencies:
     rollup: ^1.20.0
   checksum: 561e483398d15f594ebc87fda2760a5528da9abfa1fe1c3865280e18201fafb4e60587dc38e8b7781b15db10acc39da5f6ec700ac129fc931d31c060b304b96b
+  languageName: node
+  linkType: hard
+
+"@rollup/rollup-linux-x64-gnu@npm:*":
+  version: 4.37.0
+  resolution: "@rollup/rollup-linux-x64-gnu@npm:4.37.0"
+  conditions: os=linux & cpu=x64 & libc=glibc
   languageName: node
   linkType: hard
 
