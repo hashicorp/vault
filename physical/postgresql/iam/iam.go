@@ -4,10 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/hashicorp/go-hclog"
 	"sync"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/stdlib"
 )
