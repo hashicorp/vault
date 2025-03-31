@@ -13,7 +13,3 @@ import (
 func (a *ActivityLog) sendCurrentFragment(ctx context.Context) error {
 	return nil
 }
-
-// setupClientIDsUsageInfo is a no-op on OSS
-func (c *Core) setupClientIDsUsageInfo(ctx context.Context) {
-}

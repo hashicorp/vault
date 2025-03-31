@@ -212,16 +212,6 @@ type ActivityLog struct {
 	// precomputedQueryWritten receives an element whenever a precomputed query
 	// is written. It's used for unit testing
 	precomputedQueryWritten chan struct{}
-
-	// The clientIDsUsageInfo map has clientIDs that have been used in the current billing period
-	clientIDsUsageInfo map[string]struct{}
-
-	// clientIDsUsageInfoLock controls access to the clientIDsUsageInfo
-	clientIDsUsageInfoLock sync.RWMutex
-
-	// clientIDsUsageInfoLoaded is set to true when the clientIDsUsageInfo has up-to date information upon startup.
-	// This ensures that the counters api returns exact values for new clients in the current month upon startup.
-	clientIDsUsageInfoLoaded *atomic.Bool
 }
 
 // These non-persistent configuration options allow us to disable
@@ -341,8 +331,6 @@ func NewActivityLog(core *Core, logger log.Logger, view *BarrierView, metrics me
 		standbyFragmentsReceived: make([]*activity.LogFragment, 0),
 		inprocessExport:          atomic.NewBool(false),
 		precomputedQueryWritten:  make(chan struct{}),
-		clientIDsUsageInfo:       make(map[string]struct{}),
-		clientIDsUsageInfoLoaded: new(atomic.Bool),
 	}
 
 	config, err := a.loadConfigOrDefault(core.activeContext)
@@ -1263,114 +1251,9 @@ func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup, r
 			manager.retentionWorker(ctx, manager.clock.Now(), months)
 			close(manager.retentionDone)
 		}(manager.retentionMonths)
-
-		// set up clientIDs in memory, this happens as part of post unseal
-		c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
-			// errors are logged within the function
-			c.setupClientIDsUsageInfo(ctx)
-		})
 	}
 
 	return nil
-}
-
-// loadClientIDsToMemory loads all the clientIDs seen into a.clientIDsUsageInfo for a given start and end time
-func (a *ActivityLog) loadClientIDsToMemory(ctx context.Context, startTime, endTime time.Time) error {
-	if startTime.IsZero() || endTime.IsZero() {
-		// nothing to load
-		return nil
-	}
-	times, err := a.availableLogs(ctx, endTime)
-	if err != nil {
-		return fmt.Errorf("error fetching available logs: %w", err)
-	}
-
-	// Filter over just the months we care about
-	filteredList := make([]time.Time, 0, len(times))
-	for _, t := range times {
-		if timeutil.InRange(t, startTime, endTime) {
-			filteredList = append(filteredList, t)
-		}
-	}
-
-	if len(filteredList) == 0 {
-		a.logger.Info("no clientIDs to load to memory", "start_time", startTime, "end_time", endTime)
-		return nil
-	}
-
-	a.logger.Info("starting to load clientIDS to memory", "start_time", startTime, "end_time", endTime, "months_included", filteredList)
-
-	// For each month in the filtered list walk all the log segments
-	inMemClientIDsMap := make(map[string]struct{})
-
-	for _, startTime := range filteredList {
-		inMemClientIDsMap, err = a.getClientIDsForStartTime(ctx, inMemClientIDsMap, startTime)
-		if err != nil {
-			return err
-		}
-	}
-	a.logger.Info("finished loading segments to store client IDs in memory")
-
-	// update in-memory map in activity log
-	a.SetClientIDsUsageInfo(inMemClientIDsMap)
-	return nil
-}
-
-// getClientIDsForStartTime loads each of the entity segments for a particular start time and adds the clientIDs to a map
-func (a *ActivityLog) getClientIDsForStartTime(ctx context.Context, inMemoryClientIDs map[string]struct{}, startTime time.Time) (map[string]struct{}, error) {
-	basePath := activityEntityBasePath + fmt.Sprint(startTime.Unix()) + "/"
-	pathList, err := a.view.List(ctx, basePath)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, path := range pathList {
-		raw, err := a.view.Get(ctx, basePath+path)
-		if err != nil {
-			return nil, err
-		}
-		if raw == nil {
-			a.logger.Warn("expected log segment not found", "startTime", startTime, "segment", path)
-			continue
-		}
-
-		out := &activity.EntityActivityLog{}
-		err = proto.Unmarshal(raw.Value, out)
-		if err != nil {
-			return nil, fmt.Errorf("unable to parse segment %v%v: %w", basePath, path, err)
-		}
-
-		for _, e := range out.Clients {
-			inMemoryClientIDs[e.ClientID] = struct{}{}
-		}
-	}
-	return inMemoryClientIDs, nil
-}
-
-// getStartTimeAndEndTimeUntilLastMonth returns the start time and end time
-// if entireBillingPeriod is set to true, it returns the start time as the start of the current billing cycle and the end of the last month
-// if not, it returns the start of the last month and end of the last month
-func (a *ActivityLog) getStartTimeAndEndTimeUntilLastMonth(entireBillingPeriod bool) (time.Time, time.Time) {
-	currBillingPeriodStartTime := a.core.BillingStart()
-	now := a.clock.Now().UTC()
-
-	// if we are in the first month of the billing cycle, return empty values
-	if timeutil.IsCurrentMonth(currBillingPeriodStartTime, now) {
-		return time.Time{}, time.Time{}
-	}
-
-	// Normalize to start of current month to prevent end of month weirdness
-	startOfCurrMonth := timeutil.StartOfMonth(now)
-
-	// get start time and end time of the last month
-	startOfLastMonth := startOfCurrMonth.AddDate(0, -1, 0)
-	endOfLastMonth := timeutil.EndOfMonth(startOfLastMonth)
-
-	if entireBillingPeriod {
-		// startTime is the billing start time and endTime is the end of last month
-		return currBillingPeriodStartTime, endOfLastMonth
-	}
-	return startOfLastMonth, endOfLastMonth
 }
 
 func (a *ActivityLog) hasRegeneratedACME(ctx context.Context) bool {
