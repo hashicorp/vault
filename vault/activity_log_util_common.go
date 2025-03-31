@@ -557,21 +557,3 @@ func (a *ActivityLog) namespaceRecordToCountsResponse(record *activity.Namespace
 		ACMEClients:      int(record.ACMEClients),
 	}
 }
-
-func (a *ActivityLog) GetClientIDsUsageInfo() map[string]struct{} {
-	a.clientIDsUsageInfoLock.Lock()
-	defer a.clientIDsUsageInfoLock.Unlock()
-	return a.clientIDsUsageInfo
-}
-
-func (a *ActivityLog) SetClientIDsUsageInfo(inMemClientIDsMap map[string]struct{}) {
-	a.clientIDsUsageInfoLock.Lock()
-	defer a.clientIDsUsageInfoLock.Unlock()
-
-	a.clientIDsUsageInfo = inMemClientIDsMap
-}
-
-// GetclientIDsUsageInfoLoaded gets a.clientIDsUsageInfoLoaded for external tests
-func (a *ActivityLog) GetClientIDsUsageInfoLoaded() bool {
-	return a.clientIDsUsageInfoLoaded.Load()
-}
