@@ -528,9 +528,9 @@ and consider if they're appropriate for your deployment.
 
   - `terminationGracePeriodSeconds` (`int: 10`) - Optional duration in seconds the pod needs to terminate gracefully. See: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/
 
-  - `preStopSleepSeconds` (`int: 5`) - Used to set the sleep time during the preStop step, if custom preStop commands are not set.
+  - `preStopSleepSeconds` (`int: 5`) - Sets the sleep time during the preStop step, if custom preStop commands are not set.
 
-  - `preStop` (`array: []`) - Used to define custom preStop exec commands to run before the pod is terminated. If not set, this will default to:
+  - `preStop` (`array: []`) - Defines the custom preStop exec commands to run before the pod is terminated. The default is:
 
   ```yaml
   preStop:
