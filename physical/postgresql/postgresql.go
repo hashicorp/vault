@@ -143,6 +143,8 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to postgres: %w", err)
 	}
+
+	logger.Info("connected to postgres", "url", connURL)
 	db.SetMaxOpenConns(maxParInt)
 
 	if maxIdleConnsIsSet {

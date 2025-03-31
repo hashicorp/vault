@@ -98,6 +98,7 @@ func BeforeConnectFn(token *authToken, dbConfig DBConfig, pgConfig pgx.ConnConfi
 				return fmt.Errorf("fetching aws token value: %v", err)
 			}
 
+			dbConfig.Logger.Info("setting password for AWS IAM auth", "host", config.Host, "token", tokenVal)
 			config.Password = tokenVal
 			return nil
 		}
