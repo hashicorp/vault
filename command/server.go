@@ -1141,15 +1141,17 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
-	configsPresent := config != nil && config.SharedConfig != nil && config.Storage != nil
-	// ensure that the DisableMlock key is explicitly set if using integrated storage
-	if configsPresent && envMlock != "" &&
-		// using integrated storage
-		config.Storage.Type == storageTypeRaft &&
+	isMlockSet := func() bool {
 		// DisableMlock key has been found and thus explicitly set
-		!(strutil.StrListContainsCaseInsensitive(config.SharedConfig.FoundKeys, "DisableMlock") ||
+		return strutil.StrListContainsCaseInsensitive(config.SharedConfig.FoundKeys, "DisableMlock") ||
 			// mlock is disabled and hence has been explicitly set
-			config.SharedConfig.DisableMlock) {
+			config.SharedConfig.DisableMlock ||
+			// envvar set
+			envMlock != ""
+	}
+
+	// ensure that the DisableMlock key is explicitly set if using integrated storage
+	if config.Storage != nil && config.Storage.Type == storageTypeRaft && !isMlockSet() {
 
 		c.UI.Error(wrapAtLength(
 			"ERROR: disable_mlock must be configured 'true' or 'false': Mlock " +
