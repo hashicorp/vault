@@ -284,6 +284,92 @@ func TestBackend_PathConfigRoot_STSFallback_mismatchedfallback(t *testing.T) {
 	}
 }
 
+// TestBackend_PathConfigRoot_STSFallback_defaultEndpointRegion ensures that if no endpoints are specified, we can
+// still make a config with the appropriate values.
+func TestBackend_PathConfigRoot_STSFallback_defaultEndpointRegion(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = &testSystemView{}
+
+	b := Backend(config)
+	if err := b.Setup(context.Background(), config); err != nil {
+		t.Fatal(err)
+	}
+
+	configData := map[string]interface{}{
+		"access_key":              "AKIAEXAMPLE",
+		"secret_key":              "RandomData",
+		"max_retries":             10,
+		"username_template":       defaultUserNameTemplate,
+		"role_arn":                "",
+		"identity_token_audience": "",
+		"identity_token_ttl":      int64(0),
+	}
+
+	configReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   config.StorageView,
+		Path:      "config/root",
+		Data:      configData,
+	}
+
+	_, err := b.HandleRequest(context.Background(), configReq)
+	if err != nil {
+		t.Fatalf("bad: config writing failed: err: %v", err)
+	}
+
+	cfgs, err := b.getRootConfigs(context.Background(), config.StorageView, "sts", b.Logger())
+	if err != nil {
+		t.Fatalf("couldn't get STS configs with default region/endpoints: %v", err)
+	}
+	if len(cfgs) != 1 {
+		t.Fatalf("got %d configs, but expected 1", len(cfgs))
+	}
+}
+
+// TestBackend_PathConfigRoot_IAM_defaultEndpointRegion ensures taht if no endpoints are specified, we can still
+// make a config with the appropriate values.
+func TestBackend_PathConfigRoot_IAM_defaultEndpointRegion(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = &testSystemView{}
+
+	b := Backend(config)
+	if err := b.Setup(context.Background(), config); err != nil {
+		t.Fatal(err)
+	}
+
+	configData := map[string]interface{}{
+		"access_key":              "AKIAEXAMPLE",
+		"secret_key":              "RandomData",
+		"max_retries":             10,
+		"username_template":       defaultUserNameTemplate,
+		"role_arn":                "",
+		"identity_token_audience": "",
+		"identity_token_ttl":      int64(0),
+	}
+
+	configReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   config.StorageView,
+		Path:      "config/root",
+		Data:      configData,
+	}
+
+	_, err := b.HandleRequest(context.Background(), configReq)
+	if err != nil {
+		t.Fatalf("bad: config writing failed: err: %v", err)
+	}
+
+	cfgs, err := b.getRootConfigs(context.Background(), config.StorageView, "iam", b.Logger())
+	if err != nil {
+		t.Fatalf("couldn't get IAM configs with default region/endpoints: %v", err)
+	}
+	if len(cfgs) != 1 {
+		t.Fatalf("got %d configs, but expected 1", len(cfgs))
+	}
+}
+
 // TestBackend_PathConfigRoot_PluginIdentityToken tests that configuration
 // of plugin WIF returns an immediate error.
 func TestBackend_PathConfigRoot_PluginIdentityToken(t *testing.T) {

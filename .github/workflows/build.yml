@@ -83,20 +83,19 @@ jobs:
       github.event_name == 'schedule' ||
       (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","linux","small"]') }}
+    permissions: write-all # vault-auth
     outputs:
-      app-changed: ${{ steps.changed-files.outputs.app-changed }}
       build-date: ${{ steps.metadata.outputs.vault-build-date }}
+      changed-files: ${{ steps.changed-files.outputs.changed-files }}
       checkout-ref: ${{ steps.checkout.outputs.ref }}
       compute-build: ${{ steps.metadata.outputs.compute-build }}
       compute-build-compat: ${{ steps.metadata.outputs.compute-build-compat }}
       compute-build-ui: ${{ steps.metadata.outputs.compute-build-ui }}
       compute-small: ${{ steps.metadata.outputs.compute-small }}
-      docs-changed: ${{ steps.changed-files.outputs.docs-changed }}
       is-draft: ${{ steps.metadata.outputs.is-draft }}
       is-enterprise: ${{ steps.metadata.outputs.is-enterprise }}
       is-fork: ${{ steps.metadata.outputs.is-fork }}
       labels: ${{ steps.metadata.outputs.labels }}
-      ui-changed: ${{ steps.changed-files.outputs.ui-changed }}
       vault-binary-name: ${{ steps.metadata.outputs.vault-binary-name }}
       vault-revision: ${{ steps.metadata.outputs.vault-revision }}
       vault-version: ${{ steps.metadata.outputs.vault-version }}
@@ -104,12 +103,10 @@ jobs:
       vault-version-package: ${{ steps.metadata.outputs.vault-version-package }}
       workflow-trigger: ${{ steps.metadata.outputs.workflow-trigger }}
     steps:
-      # Run the changed-files action to determine what Git reference we should check out
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: ./.github/actions/changed-files
-        id: changed-files
+      # Make sure we check out correct ref based on PR labels and such
       - uses: ./.github/actions/checkout
-        id: checkout # Make sure we check out correct ref after checking changed files
+        id: checkout
       # Get the vault version metadata
       - uses: hashicorp/actions-set-product-version@v2
         id: set-product-version
@@ -120,9 +117,29 @@ jobs:
         id: metadata
         with:
           vault-version: ${{ steps.set-product-version.outputs.product-version }}
+      # Get the elevated github token
+      - if: steps.metadata.outputs.is-enterprise == 'true'
+        id: vault-auth
+        name: Vault Authenticate
+        run: vault-auth
+      - if: steps.metadata.outputs.is-enterprise == 'true'
+        id: vault-secrets
+        name: Fetch Vault Secrets
+        uses: hashicorp/vault-action@d1720f055e0635fd932a1d2a48f87a666a57906c # v3.0.0
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          secrets: |
+            kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
+      # Determine the changed files
+      - uses: ./.github/actions/changed-files
+        id: changed-files
+        with:
+          github-token: ${{ steps.metadata.outputs.is-enterprise != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+      # Make sure all required Go modules are cached at this point. We don't want all of the Go
+      # tests and build jobs to download modules and race to upload them to the cache.
       - uses: ./.github/actions/set-up-go
-        # Make sure all required Go modules are cached at this point. We don't want all of the Go
-        # tests and build jobs to download modules and race to upload them to the cache.
         name: Ensure Go modules are cached
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
@@ -150,8 +167,9 @@ jobs:
         needs.setup.outputs.workflow-trigger == 'pull_request' &&
         needs.setup.outputs.is-draft == 'false' &&
         (
-          needs.setup.outputs.ui-changed == 'true' ||
-          needs.setup.outputs.app-changed == 'true'
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'ui') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app')
         )
       )
     needs: setup
@@ -200,7 +218,8 @@ jobs:
     #   * The build/all label is present on a pull request or push.
     if: |
       needs.setup.outputs.workflow-trigger == 'schedule' ||
-      needs.setup.outputs.app-changed == 'true' ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline') ||
       contains(fromJSON(needs.setup.outputs.labels), 'build/all')
     needs:
       - setup
@@ -210,7 +229,7 @@ jobs:
     with:
       # The inputs defined here must be supported in both the build-artifacts-ce and
       # build-artifacts-ent workflows. The implementations should seek to keep a compatible interface.
-      build-all: ${{ contains(fromJSON(needs.setup.outputs.labels), 'build/all') || needs.setup.outputs.workflow-trigger == 'schedule' }}
+      build-all: ${{ contains(fromJSON(needs.setup.outputs.labels), 'build/all') || needs.setup.outputs.workflow-trigger == 'schedule' || contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gomod') }}
       build-date: ${{ needs.setup.outputs.build-date }}
       checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
       compute-build: ${{ needs.setup.outputs.compute-build }}

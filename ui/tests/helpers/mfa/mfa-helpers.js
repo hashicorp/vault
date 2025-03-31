@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+export const constraintId = '7028db82-7de3-01d7-26b5-84b147c80966';
+
 export const setupTotpMfaResponse = (mountPath) => ({
   auth: {
     mfa_requirement: {
@@ -12,7 +14,7 @@ export const setupTotpMfaResponse = (mountPath) => ({
           any: [
             {
               type: 'totp',
-              id: '7028db82-7de3-01d7-26b5-84b147c80966',
+              id: constraintId,
               uses_passcode: true,
             },
           ],
