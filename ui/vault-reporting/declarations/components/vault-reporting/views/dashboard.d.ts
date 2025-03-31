@@ -4,7 +4,7 @@
  */
 import Component from '@glimmer/component';
 import './dashboard.scss';
-import type { IUsageDashboardService, UsageDashboardData, SimpleDatum } from '../../../types';
+import type { UsageDashboardData, SimpleDatum, getUsageDataFunction } from '../../../types';
 import type { IconName } from '@hashicorp/flight-icons/svg';
 interface CounterBlock {
     title: string;
@@ -15,7 +15,7 @@ interface CounterBlock {
 }
 export interface SSUViewDashboardSignature {
     Args: {
-        service: IUsageDashboardService;
+        onFetchUsageData: getUsageDataFunction;
     };
     Blocks: {
         default: [];

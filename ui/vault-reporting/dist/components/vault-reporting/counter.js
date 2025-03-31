@@ -18,7 +18,7 @@ class SSUReportingCounter extends Component {
     return this.args.icon || 'info';
   }
   static {
-    setComponentTemplate(precompileTemplate("\n    <div ...attributes data-test-counter class=\"ssu-counter\">\n      <div class=\"ssu-counter__title-row\">\n        <HdsTextBody @weight=\"semibold\">{{@title}}</HdsTextBody>\n      </div>\n\n      {{!-- Render count as a link if a link is provided --}}\n      {{#if @link}}\n        <a href={{@link}} class=\"ssu-counter__link\">\n          <HdsTextBody>{{this.count}}</HdsTextBody>\n        </a>\n      {{else}}\n        <HdsTextBody>{{this.count}}</HdsTextBody>\n      {{/if}}\n    </div>\n  ", {
+    setComponentTemplate(precompileTemplate("\n    <div ...attributes data-test-counter={{@title}} class=\"ssu-counter\">\n      <div class=\"ssu-counter__title-row\">\n        <HdsTextBody @weight=\"semibold\">{{@title}}</HdsTextBody>\n      </div>\n\n      {{!-- Render count as a link if a link is provided --}}\n      {{#if @link}}\n        <a href={{@link}} class=\"ssu-counter__link\">\n          <HdsTextBody>{{this.count}}</HdsTextBody>\n        </a>\n      {{else}}\n        <HdsTextBody>{{this.count}}</HdsTextBody>\n      {{/if}}\n    </div>\n  ", {
       strictMode: true,
       scope: () => ({
         HdsTextBody
