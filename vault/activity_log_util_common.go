@@ -392,7 +392,9 @@ func (a *ActivityLog) sortActivityLogMonthsResponse(months []*ResponseMonth) {
 
 const (
 	noMountAccessor     = "no mount accessor (pre-1.10 upgrade?)"
+	noMountPath         = "no mount path (pre-1.10 upgrade?)"
 	DeletedMountFmt     = "deleted mount; accessor %q"
+	DeletedMountPath    = "deleted mount"
 	DeletedNamespaceFmt = "deleted namespace %q"
 )
 
@@ -414,6 +416,26 @@ func (a *ActivityLog) mountAccessorToMountPath(mountAccessor string) string {
 		}
 	}
 	return displayPath
+}
+
+// mountPathToMountType transforms the mount path to the mount type
+// returns a placeholder string if the mount path is empty or deleted
+func (a *ActivityLog) mountPathToMountType(ctx context.Context, mountPath string) string {
+	var mountType string
+	if mountPath == "" {
+		mountType = noMountPath
+	} else {
+		path, valResp := a.core.router.MatchingMountAndEntry(ctx, mountPath)
+		if path == "" {
+			mountType = DeletedMountPath
+		} else {
+			mountType = valResp.Type
+			if !strings.HasSuffix(mountType, "/") {
+				mountType += "/"
+			}
+		}
+	}
+	return mountType
 }
 
 type singleTypeSegmentReader struct {
