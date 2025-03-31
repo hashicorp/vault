@@ -79,7 +79,7 @@ and consider if they're appropriate for your deployment.
 
     - `repository` (`string: "hashicorp/vault-k8s"`) - The name of the Docker image for Vault Agent Injector.
 
-    - `tag` (`string: "1.5.0"`) - The tag of the Docker image for the Vault Agent Injector. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
+    - `tag` (`string: "1.6.2"`) - The tag of the Docker image for the Vault Agent Injector. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
 
     - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
 
@@ -87,7 +87,7 @@ and consider if they're appropriate for your deployment.
 
     - `repository` (`string: "hashicorp/vault"`) - The name of the Docker image for the Vault Agent sidecar. This should be set to the official Vault Docker image.
 
-    - `tag` (`string: "1.18.1"`) - The tag of the Vault Docker image to use for the Vault Agent Sidecar. **Vault 1.3.1+ is required by the admission controller**.
+    - `tag` (`string: "1.19.0"`) - The tag of the Vault Docker image to use for the Vault Agent Sidecar. **Vault 1.3.1+ is required by the admission controller**.
 
   - `agentDefaults` - Values that configure the injected Vault Agent containers default values.
 
@@ -351,7 +351,7 @@ and consider if they're appropriate for your deployment.
 
     - `repository` (`string: "hashicorp/vault"`) - The name of the Docker image for the containers running Vault.
 
-    - `tag` (`string: "1.18.1"`) - The tag of the Docker image for the containers running Vault. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
+    - `tag` (`string: "1.19.0"`) - The tag of the Docker image for the containers running Vault. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
 
     - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
 
@@ -528,7 +528,16 @@ and consider if they're appropriate for your deployment.
 
   - `terminationGracePeriodSeconds` (`int: 10`) - Optional duration in seconds the pod needs to terminate gracefully. See: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/
 
-  - `preStopSleepSeconds` (`int: 5`) - Used to set the sleep time during the preStop step.
+  - `preStopSleepSeconds` (`int: 5`) - Sets the sleep time during the preStop step, if custom preStop commands are not set.
+
+  - `preStop` (`array: []`) - Defines the custom preStop exec commands to run before the pod is terminated. The default is:
+
+  ```yaml
+  preStop:
+    - /bin/sh
+    - -c
+    - sleep {{ .Values.server.preStopSleepSeconds }} && kill -SIGTERM $(pidof vault)
+  ```
 
   - `postStart` (`array: []`) - Used to define commands to run after the pod is ready. This can be used to automate processes such as initialization or bootstrapping auth methods.
 
@@ -1246,7 +1255,7 @@ and consider if they're appropriate for your deployment.
 
       - `repository` (`string: "hashicorp/vault"`) - The name of the Docker image for the Vault Agent sidecar. This should be set to the official Vault Docker image.
 
-      - `tag` (`string: "1.18.1"`) - The tag of the Vault Docker image to use for the Vault Agent Sidecar.
+      - `tag` (`string: "1.19.0"`) - The tag of the Vault Docker image to use for the Vault Agent Sidecar.
 
     - `logFormat` (`string: "standard"`) -
     - `logLevel` (`string: "info"`) -
