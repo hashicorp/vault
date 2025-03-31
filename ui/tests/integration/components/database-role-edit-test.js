@@ -104,12 +104,15 @@ module('Integration | Component | database-role-edit', function (hooks) {
     assert.dom('[data-test-value-div="Rotate immediately"]').containsText('No');
   });
 
-  test('enterprise: it should successfully create user that does rotate immediately', async function (assert) {
+  test('enterprise: it should successfully create user that does rotate immediately & verify warning modal pops up', async function (assert) {
     this.version.type = 'enterprise';
     this.server.post('/sys/capabilities-self', capabilitiesStub('database/static-creds/my-role', ['create']));
 
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="create"/>`);
     await click('[data-test-secret-save]');
+
+    assert.dom('[data-test-issuer-warning]').exists(); // check if warning modal shows after clicking save
+    await click('[data-test-issuer-save]'); // click continue button on modal
 
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="show"/>`);
     assert.dom('[data-test-value-div="Rotate immediately"]').containsText('Yes');
