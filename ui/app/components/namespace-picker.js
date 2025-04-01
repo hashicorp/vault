@@ -3,168 +3,80 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import Component from '@glimmer/component';
+import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
-import { alias, gt } from '@ember/object/computed';
-import Component from '@ember/component';
-import { computed } from '@ember/object';
-import { task, timeout } from 'ember-concurrency';
-import pathToTree from 'vault/lib/path-to-tree';
-import { ancestorKeysForKey } from 'core/utils/key-utils';
 
-const DOT_REPLACEMENT = '☃';
-const ANIMATION_DURATION = 250;
+/**
+ * @module NamespacePicker
+ * @description component is used to display a dropdown listing all namespaces that the current user has access to.
+ *  The user can select a namespace from the dropdown to navigate directly to that namespace.
+ *  The "Manage" button directs the user to the namespace management page.
+ *  The "Refresh List" button refrehes the list of namespaces in the dropdown.
+ *
+ * @example
+ * <NamespacePicker class="hds-side-nav-hide-when-minimized" />
+ */
 
-export default Component.extend({
-  tagName: '',
-  namespaceService: service('namespace'),
-  auth: service(),
-  store: service(),
-  namespace: null,
-  listCapability: null,
-  canList: false,
+export default class NamespacePicker extends Component {
+  @service namespace;
 
-  init() {
-    this._super(...arguments);
-    this.namespaceService?.findNamespacesForUser.perform();
-  },
+  @tracked selected = {};
+  @tracked options = [];
 
-  didReceiveAttrs() {
-    this._super(...arguments);
+  constructor() {
+    super(...arguments);
+    this.loadOptions();
+  }
 
-    const ns = this.namespace;
-    const oldNS = this.oldNamespace;
-    if (!oldNS || ns !== oldNS) {
-      this.setForAnimation.perform();
-      this.fetchListCapability.perform();
-    }
-    this.set('oldNamespace', ns);
-  },
+  #matchesPath(option, currentNamespace) {
+    // TODO: Revisit. A hardcoded check for "path" & "/path" seems hacky, but it fixes a breaking test:
+    //  "Acceptance | Enterprise | namespaces: it shows nested namespaces if you log in with a namespace starting with a /"
+    //  My assumption is that namespace shouldn't start with a "/", but is this a HVD thing? or is the test outdated?
+    return option?.path === currentNamespace?.path || `/${option?.path}` === currentNamespace?.path;
+  }
 
-  fetchListCapability: task(function* () {
-    try {
-      const capability = yield this.store.findRecord('capabilities', 'sys/namespaces/');
-      this.set('listCapability', capability);
-      this.set('canList', true);
-    } catch (e) {
-      // If error out on findRecord call it's because you don't have permissions
-      // and therefore don't have permission to manage namespaces
-      this.set('canList', false);
-    }
-  }),
-  setForAnimation: task(function* () {
-    const leaves = this.menuLeaves;
-    const lastLeaves = this.lastMenuLeaves;
-    if (!lastLeaves) {
-      this.set('lastMenuLeaves', leaves);
-      yield timeout(0);
-      return;
-    }
-    const isAdding = leaves.length > lastLeaves.length;
-    const changedLeaves = isAdding ? leaves : lastLeaves;
-    const [changedLeaf] = changedLeaves.slice(-1);
-    this.set('isAdding', isAdding);
-    this.set('changedLeaf', changedLeaf);
+  #getSelected(options, currentNamespace) {
+    return options.find((option) => this.#matchesPath(option, currentNamespace));
+  }
 
-    // if we're adding we want to render immediately an animate it in
-    // if we're not adding, we need time to move the item out before
-    // a rerender removes it
-    if (isAdding) {
-      this.set('lastMenuLeaves', leaves);
-      yield timeout(0);
-      return;
-    }
-    yield timeout(ANIMATION_DURATION);
-    this.set('lastMenuLeaves', leaves);
-  }).drop(),
+  #getOptions(namespace) {
+    /* Each namespace option has 3 properties: { id, path, and label }
+     *   - id: node / namespace name (displayed when the namespace picker is closed)
+     *   - path: full namespace path (used to navigate to the namespace)
+     *   - label: text displayed inside the namespace picker dropdown (if root, then label = id, else label = path)
+     *
+     *  Example:
+     *   | id         | path                    | label                   |
+     *   | ---        | ----                    | -----                   |
+     *   | root       | ''                      | 'root'                  |
+     *   | namespace1 | 'namespace1'            | 'namespace1'            |
+     *   | namespace2 | 'namespace1/namespace2' | 'namespace1/namespace2' |
+     */
+    return [
+      // TODO: Some users (including HDS Admin User) should never see the root namespace. Address this in a followup PR.
+      { id: 'root', path: '', label: 'root' },
+      ...(namespace?.accessibleNamespaces || []).map((ns) => {
+        const parts = ns.split('/');
+        return { id: parts[parts.length - 1], path: ns, label: ns };
+      }),
+    ];
+  }
 
-  isAnimating: alias('setForAnimation.isRunning'),
+  @action
+  async loadOptions() {
+    // TODO: namespace service's findNamespacesForUser will never throw an error.
+    //  Check with design to determine if we should continue to ignore or handle an error situation here.
+    await this.namespace?.findNamespacesForUser.perform();
 
-  namespacePath: alias('namespaceService.path'),
+    this.options = this.#getOptions(this.namespace);
+    this.selected = this.#getSelected(this.options, this.namespace);
+  }
 
-  // this is an array of namespace paths that the current user
-  // has access to
-  accessibleNamespaces: alias('namespaceService.accessibleNamespaces'),
-  inRootNamespace: alias('namespaceService.inRootNamespace'),
-
-  namespaceTree: computed('accessibleNamespaces', function () {
-    const nsList = this.accessibleNamespaces;
-
-    if (!nsList) {
-      return [];
-    }
-    return pathToTree(nsList);
-  }),
-
-  maybeAddRoot(leaves) {
-    const userRoot = this.auth.authData.userRootNamespace;
-    if (userRoot === '') {
-      leaves.unshift('');
-    }
-
-    return leaves.uniq();
-  },
-
-  pathToLeaf(path) {
-    // dots are allowed in namespace paths
-    // so we need to preserve them, and replace slashes with dots
-    // in order to use Ember's get function on the namespace tree
-    // to pull out the correct level
-    return (
-      path
-        // trim trailing slash
-        .replace(/\/$/, '')
-        // replace dots with snowman
-        .replace(/\.+/g, DOT_REPLACEMENT)
-        // replace slash with dots
-        .replace(/\/+/g, '.')
-    );
-  },
-
-  // an array that keeps track of what additional panels to render
-  // on the menu stack
-  // if you're in  'foo/bar/baz',
-  // this array will be: ['foo', 'foo.bar', 'foo.bar.baz']
-  // the template then iterates over this, and does  Ember.get(namespaceTree, leaf)
-  // to render the nodes of each leaf
-
-  // gets set as  'lastMenuLeaves' in the ember concurrency task above
-  menuLeaves: computed('namespacePath', 'namespaceTree', 'pathToLeaf', function () {
-    let ns = this.namespacePath;
-    ns = (ns || '').replace(/^\//, '');
-    let leaves = ancestorKeysForKey(ns);
-    leaves.push(ns);
-    leaves = this.maybeAddRoot(leaves);
-
-    leaves = leaves.map(this.pathToLeaf);
-    return leaves;
-  }),
-
-  // the nodes at the root of the namespace tree
-  // these will get rendered as the bottom layer
-  rootLeaves: computed('namespaceTree', function () {
-    const tree = this.namespaceTree;
-    const leaves = Object.keys(tree);
-    return leaves;
-  }),
-
-  currentLeaf: alias('lastMenuLeaves.lastObject'),
-  canAccessMultipleNamespaces: gt('accessibleNamespaces.length', 1),
-  isUserRootNamespace: computed('auth.authData.userRootNamespace', 'namespacePath', function () {
-    return this.auth.authData.userRootNamespace === this.namespacePath;
-  }),
-
-  namespaceDisplay: computed('namespacePath', 'accessibleNamespaces', 'accessibleNamespaces.[]', function () {
-    const namespace = this.namespacePath;
-    if (!namespace) {
-      return 'root';
-    }
-    const parts = namespace?.split('/');
-    return parts[parts.length - 1];
-  }),
-
-  actions: {
-    refreshNamespaceList() {
-      this.namespaceService.findNamespacesForUser.perform();
-    },
-  },
-});
+  @action
+  async onChange(selectedOption) {
+    // TODO: redirect to selected namespace
+    this.selected = selectedOption;
+  }
+}

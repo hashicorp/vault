@@ -23,8 +23,8 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     const token = await runCmd(`write -field=client_token auth/token/create policies=default`);
     await login(token);
     await click('[data-test-namespace-toggle]');
-    assert.dom('[data-test-current-namespace]').hasText('root', 'root renders as current namespace');
-    assert.dom('[data-test-namespace-link]').doesNotExist('Additional namespace have been cleared');
+    assert.dom('[aria-selected="true"]').hasText('root', 'root renders as current namespace');
+    assert.dom('[data-test-namespace-link]').exists({ count: 1 }, 'Only the root namespace exists');
   });
 
   test('it shows nested namespaces if you log in with a namespace starting with a /', async function (assert) {
@@ -43,10 +43,10 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
       await click('[data-test-namespace-toggle]');
       await click('[data-test-refresh-namespaces]');
       await waitFor(`[data-test-namespace-link="${targetNamespace}"]`);
-      // check that the single namespace "beep" or "boop" not "beep/boop" shows in the toggle display
+      // check that the full namespace path, like "beep/boop", shows in the toggle display
       assert
         .dom(`[data-test-namespace-link="${targetNamespace}"]`)
-        .hasText(ns, `shows the namespace ${ns} in the toggle component`);
+        .hasText(targetNamespace, `shows the namespace ${targetNamespace} in the toggle component`);
       // because quint does not like page reloads, visiting url directly instead of clicking on namespace in toggle
       await visit(url);
     }
