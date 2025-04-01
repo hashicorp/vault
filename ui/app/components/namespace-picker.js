@@ -21,6 +21,10 @@ import { service } from '@ember/service';
 
 export default class NamespacePicker extends Component {
   @service namespace;
+  @service store;
+
+  // Show/hide refresh & manage namespaces buttons
+  @tracked showAfterOptions = false;
 
   @tracked selected = {};
   @tracked options = [];
@@ -64,6 +68,38 @@ export default class NamespacePicker extends Component {
     ];
   }
 
+  #getNamespaceLink(location, namespace) {
+    const origin = this.#getOrigin(location);
+    const encodedNamespace = encodeURIComponent(namespace.path);
+
+    let queryParams = '';
+    if (namespace.path !== '') {
+      queryParams = `?namespace=${encodedNamespace}`;
+    }
+
+    // The full URL/origin is required so that the page is reloaded.
+    return `${origin}/ui/vault/dashboard${queryParams}`;
+  }
+
+  #getOrigin(location) {
+    return location.protocol + '//' + location.hostname + (location.port ? ':' + location.port : '');
+  }
+
+  @action
+  async fetchListCapability() {
+    // TODO: Revist. This logic was carried over from previous component implmenetation.
+    //  When the user doesn't have this capability, shouldn't we just hide the "Manage" button,
+    //  instead of hiding both the "Manage" and "Refresh List" buttons?
+    try {
+      await this.store.findRecord('capabilities', 'sys/namespaces/');
+      this.showAfterOptions = true;
+    } catch (e) {
+      // If error out on findRecord call it's because you don't have permissions
+      // and therefore don't have permission to manage namespaces
+      this.showAfterOptions = false;
+    }
+  }
+
   @action
   async loadOptions() {
     // TODO: namespace service's findNamespacesForUser will never throw an error.
@@ -72,11 +108,13 @@ export default class NamespacePicker extends Component {
 
     this.options = this.#getOptions(this.namespace);
     this.selected = this.#getSelected(this.options, this.namespace);
+
+    await this.fetchListCapability();
   }
 
   @action
-  async onChange(selectedOption) {
-    // TODO: redirect to selected namespace
-    this.selected = selectedOption;
+  async onChange(selected) {
+    // Updated href value instead of using the router in order to trigger a full page reload
+    window.location.href = this.#getNamespaceLink(window.location, selected);
   }
 }

@@ -5,6 +5,7 @@ SPDX-License-Identifier: BUSL-1.1
 
 <div class="namespace-picker" ...attributes>
   <Hds::Form::SuperSelect::Single::Field
+    @afterOptionsComponent={{component "namespace-picker/after-options" loadOptions=this.loadOptions}}
     @ariaLabel="Namespace"
     @onChange={{this.onChange}}
     @options={{this.options}}
@@ -12,6 +13,7 @@ SPDX-License-Identifier: BUSL-1.1
     @searchEnabled={{true}}
     @selected={{this.selected}}
     @selectedItemComponent={{component "namespace-picker/selected-option"}}
+    @showAfterOptions={{this.showAfterOptions}}
     @verticalPosition="above"
     data-test-namespace-toggle
     as |F|
