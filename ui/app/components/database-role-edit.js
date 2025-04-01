@@ -35,6 +35,7 @@ export default class DatabaseRoleEdit extends Component {
   @tracked modelValidations;
   @tracked invalidFormAlert;
   @tracked errorMessage = '';
+  @tracked saveIssuerWarning = '';
 
   constructor() {
     super(...arguments);
@@ -83,6 +84,11 @@ export default class DatabaseRoleEdit extends Component {
       .catch(() => null);
   }
 
+  @action continueSubmitForm() {
+    this.saveIssuerWarning = '';
+    this.saveRole.perform();
+  }
+
   @action
   generateCreds(roleId, roleType = '') {
     this.router.transitionTo('vault.cluster.secrets.backend.credentials', roleId, {
@@ -108,12 +114,25 @@ export default class DatabaseRoleEdit extends Component {
       });
   }
 
-  handleCreateEditRole = task(
-    waitFor(async (evt) => {
-      evt.preventDefault();
-      this.resetErrors();
+  @action
+  async handleCreateEditRole(evt) {
+    evt.preventDefault();
+    this.resetErrors();
+    const { mode, model } = this.args;
+    if (!this.isValid()) return;
+
+    // if we're creating and rotating a static role immediately, warn user
+    if (!model.skip_import_rotation && model.type === 'static' && mode === 'create') {
+      this.saveIssuerWarning =
+        "You have enabled 'Rotate immediately' for this static role. Vault will update the password immediately after you save. NOTE: This will disrupt any active use of this role outside of Vault.";
+      return;
+    }
+    await this.saveRole.perform();
+  }
+
+  saveRole = task(
+    waitFor(async () => {
       const { mode, model } = this.args;
-      if (!this.isValid()) return;
 
       if (mode === 'create') {
         model.id = model.name;
