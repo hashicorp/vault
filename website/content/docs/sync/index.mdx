@@ -7,7 +7,7 @@ description: >-
 
 # Secrets sync
 
-<EnterpriseAlert product="vault" />
+@include 'alerts/enterprise-and-hcp.mdx'
 
 In certain circumstances, fetching secrets directly from Vault is impossible or impractical. To help with this challenge,
 Vault can maintain a one-way sync for KVv2 secrets into various destinations that are easier to access for some clients.
@@ -19,14 +19,11 @@ process. If the secret value is updated in Vault, the secret is updated in the d
 from Vault, it is deleted on the external system as well. This process is asynchronous and event-based. Vault propagates
 modifications into the proper destinations automatically in a handful of seconds.
 
-<Note title="Not related to HCP Vault Secrets">
+<Highlight title="Sync secrets with HCP Vault Secrets">
 
-  Secrets sync is a Vault Enterprise feature. For information on secrets sync
-  with [HCP Vault Secrets](/hcp/docs/vault-secrets), refer to the HashiCorp Cloud
-  Platform documentation for
-  [Vault Secrets integrations](/hcp/docs/vault-secrets/integrations).
+Secrets sync is a Vault Enterprise feature. For information on secrets sync with [HCP Vault Secrets](/hcp/docs/vault-secrets), refer to the HashiCorp Cloud Platform documentation for [Vault Secrets integrations](/hcp/docs/vault-secrets/integrations).
 
-</Note>
+</Highlight>
 
 ## Activating the feature
 
@@ -36,22 +33,22 @@ potential [client count impacts](#client-counts) of using secrets sync before pr
 
 Activating the feature can be done through one of several methods:
 
-  1. Activation directly through the UI.
+1. Activation directly through the UI.
+
+1. Acitvation through the CLI:
   
-  1. Acitvation through the CLI:
-    
-    ```shell-session
-    vault write -f sys/activation-flags/secrets-sync/activate
-    ``` 
+  ```shell-session
+  $ vault write -f sys/activation-flags/secrets-sync/activate
+  ``` 
 
-  1. Activation through a POST or PUT request:
+1. Activation through a POST or PUT request:
 
-    ```shell-session
-    $ curl \
-      --request PUT \
-      --header "X-Vault-Token: ..." \
-      http://127.0.0.1:8200/v1/sys/activation-flags/secrets-sync/activate
-    ```
+  ```shell-session
+  $ curl \
+    --request PUT \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/activation-flags/secrets-sync/activate
+  ```
 
 ## Destinations
 
@@ -110,26 +107,28 @@ The following placeholders are available:
 | `SecretBaseName`    | The segment following the last `/` character from the full path                                             |
 | `SecretKey`         | The individual secret key being synced, only available if the destination uses the `secret-key` granularity |
 
-Let's assume we want to sync the following secret:
+The following example syncs the KV secrets.
 
-  <CodeBlockConfig hideClipboard>
+<CodeBlockConfig hideClipboard>
 
-    $ VAULT_NAMESPACE=ns1/ns2 vault kv get -mount=path/to/kv1 path/to/secret1
+```shell-session
+$ VAULT_NAMESPACE=ns1/ns2 vault kv get -mount=path/to/kv1 path/to/secret1
 
-    ========== Secret Path ==========
-    path/to/kv1/data/path/to/secret1
+========== Secret Path ==========
+path/to/kv1/data/path/to/secret1
 
-    ======= Metadata =======
-    (...)
+======= Metadata =======
+(...)
 
-    === Data ===
-    Key    Value
-    ---    -----
-    foo    bar
+=== Data ===
+Key    Value
+---    -----
+foo    bar
+```
 
-  </CodeBlockConfig>
+</CodeBlockConfig>
 
-Let's look at some name template examples and the resulting secret name at the sync destination.
+The table below shows some name template examples and the resulting secret name at the sync destination.
 
 | Name template                            | Result                 |
 |:-----------------------------------------|:-----------------------|
@@ -167,7 +166,7 @@ The secret synced with the old granularity will be deleted and new secrets will 
 
 ## Security
 
-~> Note: Vault does not control the permissions at the destination. It is the responsibility
+Vault does not control the permissions at the destination. It is the responsibility
 of the operator to configure and maintain proper access controls on the external system so synced
 secrets are not accessed unintentionally.
 
@@ -177,60 +176,65 @@ Vault verifies the client has read access on the secret before syncing it with a
 there to prevent users from maliciously or unintentionally leveraging elevated permissions on an external system to access
 secrets they normally wouldn't be able to.
 
-Let's assume we have a secret located at `path/to/data/secret1` and a user with write access to the sync feature,
-but no read access to that secret. This scenario is equivalent to this ACL policy:
+The following example assumes you have a secret located at `path/to/data/secret1` and a user with write access to the sync feature, but no read access to that secret. This scenario is equivalent to this ACL policy:
 
-  <CodeBlockConfig hideClipboard>
+<CodeBlockConfig hideClipboard>
 
-    # Allow full access to the sync feature
-    path "sys/sync/*" {
-      capabilities = ["read", "list", "create", "update", "delete"]
-    }
+```hcl
+# Allow full access to the sync feature
+path "sys/sync/*" {
+  capabilities = ["read", "list", "create", "update", "delete"]
+}
 
-    # Allow read access to the secret mount path/to
-    path "path/to/*" {
-      capabilities = ["read"]
-    }
+# Allow read access to the secret mount path/to
+path "path/to/*" {
+  capabilities = ["read"]
+}
 
-    # Deny access to a specific secret
-    path "path/to/data/my-secret-1" {
-      capabilities = ["deny"]
-    }
+# Deny access to a specific secret
+path "path/to/data/my-secret-1" {
+  capabilities = ["deny"]
+}
+```
 
-  </CodeBlockConfig>
+</CodeBlockConfig>
 
 If a client with this policy tries to read this secret they will receive an unauthorized error:
 
-  <CodeBlockConfig hideClipboard>
+<CodeBlockConfig hideClipboard>
 
-    $ vault kv get -mount=path/to my-secret-1
+```shell-session
+$ vault kv get -mount=path/to my-secret-1
 
-    Error reading path/to/data/my-secret-1: Error making API request.
+Error reading path/to/data/my-secret-1: Error making API request.
 
-    URL: GET http://127.0.0.1:8200/v1/path/to/data/my-secret-1
-    Code: 403. Errors:
+URL: GET http://127.0.0.1:8200/v1/path/to/data/my-secret-1
+Code: 403. Errors:
 
-    * 1 error occurred:
-      * permission denied
+* 1 error occurred:
+  * permission denied
+```
 
-  </CodeBlockConfig>
+</CodeBlockConfig>
 
 Likewise, if the client tries to sync this secret to any destination they will receive a similar unauthorized error:
 
-  <CodeBlockConfig hideClipboard>
+<CodeBlockConfig hideClipboard>
 
-    $ vault write sys/sync/destinations/$TYPE/$NAME/associations/set \
+```shell-session
+$ vault write sys/sync/destinations/$TYPE/$NAME/associations/set \
     mount="path/to" \
     secret_name="my-secret-1"
 
-    Error writing data to sys/sync/destinations/$TYPE/$NAME/associations/set: Error making API request.
+Error writing data to sys/sync/destinations/$TYPE/$NAME/associations/set: Error making API request.
 
-    URL: PUT http://127.0.0.1:8200/v1/sys/sync/destinations/$TYPE/$NAME/associations/set
-    Code: 403. Errors:
+URL: PUT http://127.0.0.1:8200/v1/sys/sync/destinations/$TYPE/$NAME/associations/set
+Code: 403. Errors:
 
-    * permission denied to read the content of the secret my-secret-1 in mount path/to
+* permission denied to read the content of the secret my-secret-1 in mount path/to
+```
 
-  </CodeBlockConfig>
+</CodeBlockConfig>
 
 This read access verification is only done when creating or updating an association. Once the association is created, revoking
 read access to the policy that was used to sync the secret has no effect.
@@ -292,6 +296,11 @@ Each secret that is synced with one or more destinations is counted as a
 distinct client in Vault's client counting. See [entity assignments with secret
 sync](/vault/docs/concepts/client-count#secret-sync-clients)
 for more information.
+
+## Tutorial
+
+Refer to the [Synchronize cloud native secrets](/vault/tutorials/enterprise/enable-secrets-sync) tutorial for an end-to-end example.
+
 
 ## API
 
