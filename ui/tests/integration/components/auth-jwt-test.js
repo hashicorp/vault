@@ -46,15 +46,14 @@ const renderIt = async (context, path = 'jwt') => {
   context.set('selectedAuthPath', path);
   await render(hbs`
     <AuthJwt
-      @window={{this.window}}
       @roleName={{this.roleName}}
       @selectedAuthPath={{this.selectedAuthPath}}
-      @onError={{action (mut this.error)}}
-      @onLoading={{action (mut this.isLoading)}}
-      @onNamespace={{action (mut this.namespace)}}
-      @onSelectedAuth={{action (mut this.selectedAuth)}}
-      @onSubmit={{action this.handler}}
-      @onRoleName={{action (mut this.roleName)}}
+      @onError={{fn (mut this.error)}}
+      @onLoading={{fn (mut this.isLoading)}}
+      @onNamespace={{fn (mut this.namespace)}}
+      @onSelectedAuth={{fn (mut this.selectedAuth)}}
+      @onSubmit={{this.handler}}
+      @onRoleName={{fn (mut this.roleName)}}
     />
     `);
 };
@@ -63,7 +62,10 @@ module('Integration | Component | auth jwt', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.openSpy = sinon.spy(fakeWindow.proto(), 'open');
+    const popup = { closed: true };
+    this.windowStub = sinon.stub(window, 'open');
+    this.windowStub.returns(popup);
+
     this.owner.lookup('service:router').reopen({
       urlFor() {
         return 'http://example.com';
@@ -86,8 +88,7 @@ module('Integration | Component | auth jwt', function (hooks) {
   });
 
   hooks.afterEach(function () {
-    this.openSpy.restore();
-    this.server.shutdown();
+    this.windowStub.restore();
   });
 
   test('it renders the yield', async function (assert) {
@@ -169,30 +170,30 @@ module('Integration | Component | auth jwt', function (hooks) {
     this.set('selectedAuthPath', 'foo');
     await component.role('test');
     component.login();
+    sinon.replaceGetter(window, 'screen', () => ({ height: 600, width: 500 }));
     await waitUntil(() => {
-      return this.openSpy.calledOnce;
+      return this.windowStub.calledOnce;
     });
 
-    cancelTimers();
-    await settled();
-
-    const call = this.openSpy.getCall(0);
+    const call = this.windowStub.lastCall;
     assert.deepEqual(
       call.args,
       ['http://example.com', 'vaultOIDCWindow', 'width=500,height=600,resizable,scrollbars=yes,top=0,left=0'],
       'called with expected args'
     );
+    sinon.restore();
   });
 
   test('oidc: it calls error handler when popup is closed', async function (assert) {
+    // const closeStub = sinon.stub(window, 'close');
     await renderIt(this);
     this.set('selectedAuthPath', 'foo');
     await component.role('test');
     component.login();
     await waitUntil(() => {
-      return this.openSpy.calledOnce;
+      return this.windowStub.calledOnce;
     });
-    this.window.close();
+    window.close();
     await settled();
     assert.strictEqual(this.error, ERROR_WINDOW_CLOSED, 'calls onError with error string');
   });
@@ -203,9 +204,9 @@ module('Integration | Component | auth jwt', function (hooks) {
     await component.role('test');
     component.login();
     await waitUntil(() => {
-      return this.openSpy.calledOnce;
+      return this.windowStub.calledOnce;
     });
-    this.window.trigger(
+    window.trigger(
       'message',
       buildMessage({ data: { source: 'oidc-callback', state: 'state', foo: 'bar' } })
     );
@@ -221,9 +222,10 @@ module('Integration | Component | auth jwt', function (hooks) {
     await component.role('test');
     component.login();
     await waitUntil(() => {
-      return this.openSpy.calledOnce;
+      return this.windowStub.calledOnce;
     });
-    this.window.trigger('message', buildMessage());
+
+    window.trigger('message', buildMessage());
     await settled();
     const [callbackData, , token] = this.handler.lastCall.args;
     assert.propEqual(
@@ -240,9 +242,9 @@ module('Integration | Component | auth jwt', function (hooks) {
     await component.role('test');
     component.login();
     await waitUntil(() => {
-      return this.openSpy.calledOnce;
+      return this.windowStub.calledOnce;
     });
-    this.window.trigger('message', buildMessage({ origin: 'http://hackerz.com' }));
+    window.trigger('message', buildMessage({ origin: 'http://hackerz.com' }));
 
     cancelTimers();
     await settled();
@@ -256,9 +258,9 @@ module('Integration | Component | auth jwt', function (hooks) {
     await component.role('test');
     component.login();
     await waitUntil(() => {
-      return this.openSpy.calledOnce;
+      return this.windowStub.calledOnce;
     });
-    this.window.trigger('message', buildMessage({ isTrusted: false }));
+    window.trigger('message', buildMessage({ isTrusted: false }));
     cancelTimers();
     await settled();
 
