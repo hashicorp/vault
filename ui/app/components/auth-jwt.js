@@ -57,8 +57,8 @@ export default class AuthOidcJwt extends Component {
     this._authType = this.args.selectedAuthType;
   }
 
-  getWindow() {
-    return this.window || window;
+  get getWindow() {
+    return window;
   }
 
   fetchRole = restartableTask(async (wait) => {
@@ -112,7 +112,7 @@ export default class AuthOidcJwt extends Component {
   // work with implicit flow. See issue https://github.com/hashicorp/vault-plugin-auth-jwt/pull/192
   prepareForOIDC = task(
     waitFor(async (oidcWindow) => {
-      const thisWindow = this.getWindow();
+      const thisWindow = this.getWindow;
       // show the loading animation in the parent
       this.args.onLoading(true);
       // start watching the popup window and the current one
@@ -146,7 +146,7 @@ export default class AuthOidcJwt extends Component {
   watchCurrent = task(
     waitFor(async (oidcWindow) => {
       // when user is about to change pages, close the popup window
-      await waitForEvent(this.getWindow(), 'beforeunload');
+      await waitForEvent(this.getWindow, 'beforeunload');
       oidcWindow.close();
     })
   );
@@ -209,7 +209,7 @@ export default class AuthOidcJwt extends Component {
     if (error) {
       this.args.onError(error);
     } else {
-      const win = this.getWindow();
+      const win = this.getWindow;
       const POPUP_WIDTH = 500;
       const POPUP_HEIGHT = 600;
       const left = win.screen.width / 2 - POPUP_WIDTH / 2;
