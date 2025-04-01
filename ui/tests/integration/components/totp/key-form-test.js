@@ -31,11 +31,6 @@ module('Integration | Component | totp/key-form', function (hooks) {
     });
 
     this.model = this.store.createRecord('totp-key');
-    this.defaultKeyFormFields = ['name', 'generate', 'issuer', 'accountName', 'exported'];
-    this.groups = {
-      'TOTP Code Options': ['algorithm', 'digits', 'period'],
-      'Provider Options': ['keySize', 'skew', 'qrSize'],
-    };
 
     this.onSubmit = () => assert.ok(true, 'onSubmit callback fires on save success');
     await render(hbs`
@@ -43,8 +38,6 @@ module('Integration | Component | totp/key-form', function (hooks) {
         @mode="create"
         @onSubmit={{this.onSubmit}}
         @model={{this.model}}
-        @defaultKeyFormFields={{this.defaultKeyFormFields}}
-        @groups={{this.groups}}
     />
     `);
 
@@ -85,10 +78,6 @@ module('Integration | Component | totp/key-form', function (hooks) {
     });
 
     this.model = this.store.createRecord('totp-key');
-    this.defaultKeyFormFields = ['name', 'generate', 'issuer', 'accountName', 'url', 'key'];
-    this.groups = {
-      'TOTP Code Options': ['algorithm', 'digits', 'period'],
-    };
 
     this.onSubmit = () => assert.ok(true, 'onSubmit callback fires on save success');
     await render(hbs`
