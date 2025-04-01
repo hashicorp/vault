@@ -177,3 +177,18 @@ against their token claims for clients logging in with Azure authentication.
 Review the [Token validation](/vault/docs/auth/azure#token-validation) section
 of the Azure authN plugin guide for more information on the new validation
 requirements.
+
+## Static role rotations on upgrade ((#static-role-rotations))
+
+| Change       | Affected version                 | Affected deployments
+| ------------ | -------------------------------- | --------------------
+| Known issue  | 1.19.0, 1.18.5, 1.17.12, 1.16.16 | any
+
+Vault automatically rotates existing static roles tied to database and LDAP
+credentials once when upgrading to an affected version. After the one-time
+rotation, the static roles behave as expected.
+
+### Recommendation
+
+If you rely on LDAP or static database roles, avoid upgrading to the affected
+versions until we fix the issue.

@@ -947,10 +947,6 @@
         "path": "upgrade/replicated-deployment"
       },
       {
-        "title": "Upgrade Vault HA installations",
-        "path": "upgrade/vault-ha-upgrade"
-      },
-      {
         "title": "Rollback an upgrade",
         "path": "upgrade/rollback"
       },

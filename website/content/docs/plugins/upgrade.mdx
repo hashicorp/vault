@@ -15,7 +15,7 @@ control tags, rather than overwriting them explicitly.
 
 Always check the plugin release notes for unsupported transitions before
 upgrading your plugins. Core systems within Vault manage the token and lease
-lifecycle, and plugins only renew or revoke tokens and leases when the core
+lifecycle so plugins only renew or revoke tokens and leases when the core
 systems requests it. As a result, existing tokens and leases are generally
 unaffected by plugin upgrades.
 

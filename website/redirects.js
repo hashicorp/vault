@@ -274,5 +274,10 @@ module.exports = [
     source: '/vault/docs/secrets/ad/migration-guide',
     destination: '/vault/docs/v1.18.x/secrets/ad/migration-guide',
     permanent: true,
+  },
+  {
+    source: '/vault/docs/upgrading/vault-ha-upgrade',
+    destination: '/vault/docs/v1.10.x/upgrading/vault-ha-upgrade',
+    permanent: true,
   }
 ]
