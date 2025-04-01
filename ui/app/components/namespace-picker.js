@@ -21,6 +21,7 @@ import { service } from '@ember/service';
 
 export default class NamespacePicker extends Component {
   @service namespace;
+  @service router;
   @service store;
 
   // Show/hide refresh & manage namespaces buttons
@@ -114,7 +115,7 @@ export default class NamespacePicker extends Component {
 
   @action
   async onChange(selected) {
-    // Updated href value instead of using the router in order to trigger a full page reload
-    window.location.href = this.#getNamespaceLink(window.location, selected);
+    this.selected = selected;
+    this.router.transitionTo('vault.cluster.dashboard', { queryParams: { namespace: selected.path } });
   }
 }
