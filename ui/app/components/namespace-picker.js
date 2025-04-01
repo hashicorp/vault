@@ -7,6 +7,7 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
+import { isEmpty } from '@ember/utils';
 
 /**
  * @module NamespacePicker
@@ -35,6 +36,7 @@ export default class NamespacePicker extends Component {
     this.loadOptions();
   }
 
+  // TODO make private when converting from js to ts
   #matchesPath(option, currentNamespace) {
     // TODO: Revisit. A hardcoded check for "path" & "/path" seems hacky, but it fixes a breaking test:
     //  "Acceptance | Enterprise | namespaces: it shows nested namespaces if you log in with a namespace starting with a /"
@@ -42,10 +44,12 @@ export default class NamespacePicker extends Component {
     return option?.path === currentNamespace?.path || `/${option?.path}` === currentNamespace?.path;
   }
 
+  // TODO make private when converting from js to ts
   #getSelected(options, currentNamespace) {
     return options.find((option) => this.#matchesPath(option, currentNamespace));
   }
 
+  // TODO make private when converting from js to ts
   #getOptions(namespace) {
     /* Each namespace option has 3 properties: { id, path, and label }
      *   - id: node / namespace name (displayed when the namespace picker is closed)
@@ -69,12 +73,13 @@ export default class NamespacePicker extends Component {
     ];
   }
 
+  // TODO make private when converting from js to ts
   #getNamespaceLink(location, namespace) {
     const origin = this.#getOrigin(location);
-    const encodedNamespace = encodeURIComponent(namespace.path);
 
     let queryParams = '';
-    if (namespace.path !== '') {
+    if (!isEmpty(namespace.path)) {
+      const encodedNamespace = encodeURIComponent(namespace.path);
       queryParams = `?namespace=${encodedNamespace}`;
     }
 
@@ -82,6 +87,7 @@ export default class NamespacePicker extends Component {
     return `${origin}/ui/vault/dashboard${queryParams}`;
   }
 
+  // TODO make private when converting from js to ts
   #getOrigin(location) {
     return location.protocol + '//' + location.hostname + (location.port ? ':' + location.port : '');
   }
