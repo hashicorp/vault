@@ -35,7 +35,7 @@ func TestIdentityStore_ExternalGroupMemberships_DifferentMounts(t *testing.T) {
 	cleanup, config1 := ldaphelper.PrepareTestContainer(t, ldaphelper.DefaultVersion)
 	defer cleanup()
 
-	cleanu2, config2 := ldaphelper.PrepareTestContainer(t, ldaphelper.DefaultVersion)
+	cleanup2, config2 := ldaphelper.PrepareTestContainer(t, ldaphelper.DefaultVersion)
 	defer cleanup2()
 
 	setupFunc := func(path string, cfg *ldaputil.ConfigEntry) string {
