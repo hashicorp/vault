@@ -1,0 +1,13 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+<div>
+  <Hds::Button
+    @color="secondary"
+    @text="Refresh List"
+    {{on "click" (action "refreshNamespaceList")}}
+    data-test-refresh-namespaces
+  />
+  <Hds::Button @color="secondary" @text="Manage" @icon="settings" @route="vault.cluster.access.namespaces" />
+</div>
