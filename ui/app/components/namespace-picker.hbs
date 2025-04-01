@@ -1,0 +1,25 @@
+{{!
+Copyright (c) HashiCorp, Inc.
+SPDX-License-Identifier: BUSL-1.1
+}}
+
+<div class="namespace-picker" ...attributes>
+  <Hds::Form::SuperSelect::Single::Field
+    @ariaLabel="Namespace"
+    @onChange={{this.onChange}}
+    @options={{this.options}}
+    @placeholder="Search"
+    @searchEnabled={{true}}
+    @selected={{this.selected}}
+    @selectedItemComponent={{component "namespace-picker/selected-option"}}
+    @verticalPosition="above"
+    data-test-namespace-toggle
+    as |F|
+  >
+    <F.Options>
+      {{#let F.options as |option|}}
+        <span data-test-namespace-link="{{option.label}}">{{option.label}}</span>
+      {{/let}}
+    </F.Options>
+  </Hds::Form::SuperSelect::Single::Field>
+</div>
