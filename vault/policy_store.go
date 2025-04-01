@@ -871,9 +871,12 @@ func (ps *PolicyStore) ACL(ctx context.Context, entity *identity.Entity, policyN
 					groups = append(directGroups, inheritedGroups...)
 				}
 			}
-			p, err := parseACLPolicyWithTemplating(policy.namespace, policy.Raw, true, entity, groups)
+			p, duplicate, err := parseACLPolicyWithTemplating(policy.namespace, policy.Raw, true, entity, groups)
 			if err != nil {
 				return nil, fmt.Errorf("error parsing templated policy %q: %w", policy.Name, err)
+			}
+			if duplicate {
+				ps.logger.Warn("HCL policy contains duplicate attributes", "policy", policy.Name, "namespace", policy.namespace.Path)
 			}
 			p.Name = policy.Name
 			allPolicies[i] = p
