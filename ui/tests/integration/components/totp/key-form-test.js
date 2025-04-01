@@ -30,8 +30,7 @@ module('Integration | Component | totp/key-form', function (hooks) {
       return JSON.parse(req.requestBody);
     });
 
-    this.model = this.store.createRecord('totp-key');
-
+    this.model = this.store.createRecord('totp-key', { backend: 'totp', id: 'totp-test' });
     this.onSubmit = () => assert.ok(true, 'onSubmit callback fires on save success');
     await render(hbs`
       <TotpEdit
@@ -77,7 +76,7 @@ module('Integration | Component | totp/key-form', function (hooks) {
       return JSON.parse(req.requestBody);
     });
 
-    this.model = this.store.createRecord('totp-key');
+    this.model = this.store.createRecord('totp-key', { backend: 'totp', id: 'totp-test' });
 
     this.onSubmit = () => assert.ok(true, 'onSubmit callback fires on save success');
     await render(hbs`
@@ -115,7 +114,7 @@ module('Integration | Component | totp/key-form', function (hooks) {
   test('it should toggle groups according to generate', async function (assert) {
     assert.expect(4);
 
-    this.model = this.store.createRecord('totp-key');
+    this.model = this.store.createRecord('totp-key', { backend: 'totp', id: 'totp-test' });
     this.onSubmit = () => assert.ok(true, 'onSubmit callback fires on save success');
 
     await render(hbs`
