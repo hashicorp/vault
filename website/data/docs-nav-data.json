@@ -1815,7 +1815,7 @@
       {
         "title": "Venafi (Certificates)",
         "path": "secrets/venafi",
-        "hidden": "true"
+        "hidden": true
       }
     ]
   },
