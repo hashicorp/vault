@@ -5,11 +5,8 @@
 import EmberObject from '@ember/object';
 import Evented from '@ember/object/evented';
 
-export class WindowStub extends EventTarget {
-  close() {
-    this.dispatchEvent(new CustomEvent('close')); // Trigger 'close' event using CustomEvent
-  }
-}
+// automatically close popups opened from window.open()
+export const popup = { close: () => true };
 
 // using Evented is deprecated, but it's the only way we can trigger a message that is trusted
 // by calling window.trigger. Using dispatchEvent will always result in an untrusted event.

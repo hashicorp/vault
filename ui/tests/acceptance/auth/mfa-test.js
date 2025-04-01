@@ -12,7 +12,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { MFA_SELECTORS } from 'vault/tests/helpers/mfa/mfa-selectors';
 import { constraintId, setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
 import { fillInLoginFields } from 'vault/tests/helpers/auth/auth-helpers';
-import { callbackData, WindowStub } from 'vault/tests/helpers/oidc-window-stub';
+import { callbackData, popup } from 'vault/tests/helpers/oidc-window-stub';
 import sinon from 'sinon';
 
 const ENT_ONLY = ['saml'];
@@ -78,7 +78,7 @@ for (const method of AUTH_METHOD_TEST_CASES) {
 
     hooks.beforeEach(async function () {
       if (options?.hasPopupWindow) {
-        this.windowStub = sinon.stub(window, 'open').callsFake(() => new WindowStub());
+        this.windowStub = sinon.stub(window, 'open').returns(popup);
       }
       await visit('/vault/auth');
     });
