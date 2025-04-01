@@ -7,10 +7,9 @@ package managed_key
 
 import (
 	"context"
-	"crypto"
 	"errors"
 )
 
-func GetManagedKeyPublicKey(ctx context.Context, mkv SSHManagedKeyView, keyId managedKeyId) (crypto.PublicKey, error) {
+func GetManagedKeyInfo(ctx context.Context, mkv SSHManagedKeyView, keyId managedKeyId) (*ManagedKeyInfo, error) {
 	return nil, errors.New("managed keys are supported within enterprise edition only")
 }

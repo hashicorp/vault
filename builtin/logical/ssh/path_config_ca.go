@@ -424,22 +424,22 @@ func generateSSHKeyPair(randomSource io.Reader, keyType string, keyBits int) (st
 func (b *backend) createManagedKey(ctx context.Context, s logical.Storage, managedKeyName, managedKeyId string) error {
 	var keyId managed_key.UUIDKey
 	var keyName managed_key.NameKey
-	var publicKey crypto.PublicKey
+	var keyInfo *managed_key.ManagedKeyInfo
 	var err error
 
 	if managedKeyId != "" {
 		keyId = managed_key.UUIDKey(managedKeyId)
-		publicKey, err = managed_key.GetManagedKeyPublicKey(ctx, b, keyId)
+		keyInfo, err = managed_key.GetManagedKeyInfo(ctx, b, keyId)
 	} else if managedKeyName != "" {
 		keyName = managed_key.NameKey(managedKeyName)
-		publicKey, err = managed_key.GetManagedKeyPublicKey(ctx, b, keyName)
+		keyInfo, err = managed_key.GetManagedKeyInfo(ctx, b, keyName)
 	}
 
 	if err != nil {
 		return fmt.Errorf("error retrieving public key: %s", err)
 	}
 
-	sshPub, err := ssh.NewPublicKey(publicKey)
+	sshPub, err := ssh.NewPublicKey(keyInfo.PublicKey)
 	if err != nil {
 		return fmt.Errorf("error creatin SSH public key: %s", err)
 	}

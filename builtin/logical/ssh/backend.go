@@ -5,12 +5,10 @@ package ssh
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"sync"
 
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -118,14 +116,10 @@ func (b *backend) invalidate(_ context.Context, key string) {
 	}
 }
 
-func (b *backend) IsSecondaryNode() bool {
-	return b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby)
-}
-
 func (b *backend) GetManagedKeyView() (logical.ManagedKeySystemView, error) {
 	managedKeyView, ok := b.System().(logical.ManagedKeySystemView)
 	if !ok {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported system view")}
+		return nil, errutil.InternalError{Err: "unsupported system view"}
 	}
 	return managedKeyView, nil
 }

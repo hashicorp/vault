@@ -4,10 +4,17 @@
 package managed_key
 
 import (
+	"crypto"
 	"io"
 
 	"github.com/hashicorp/vault/sdk/logical"
 )
+
+type ManagedKeyInfo struct {
+	PublicKey crypto.PublicKey
+	Name      NameKey
+	Uuid      UUIDKey
+}
 
 type managedKeyId interface {
 	String() string
@@ -15,7 +22,6 @@ type managedKeyId interface {
 
 type SSHManagedKeyView interface {
 	BackendUUID() string
-	IsSecondaryNode() bool
 	GetManagedKeyView() (logical.ManagedKeySystemView, error)
 	GetRandomReader() io.Reader
 }
