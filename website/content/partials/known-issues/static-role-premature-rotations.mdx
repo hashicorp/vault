@@ -1,0 +1,12 @@
+### Static role rotations on upgrade ((#static-role-rotations))
+
+#### Affected Versions
+- 1.19.0, 1.18.5, 1.17.12, 1.16.16
+
+#### Issue
+LDAP or Database static-role credentials created before the upgrade are rotated once automatically during the upgrade. 
+After this one-time rotation, the static roles behave as expected.
+
+#### Workaround
+Avoid upgrading to the affected versions if you rely on LDAP or Database static roles. A fix is currently 
+in progress and will be included in an upcoming release.
