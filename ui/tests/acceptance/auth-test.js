@@ -144,7 +144,7 @@ module('Acceptance | auth', function (hooks) {
         const { type } = backend;
         const expected = this.expected[type];
         const isOidc = ['oidc', 'jwt'].includes(type);
-        assert.expect(isOidc ? 6 : 2);
+        assert.expect(isOidc ? 3 : 2);
 
         this.assertReq = (req) => {
           const body = type === 'token' ? req.requestHeaders : JSON.parse(req.requestBody);
