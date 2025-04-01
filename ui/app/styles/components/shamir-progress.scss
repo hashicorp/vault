@@ -1,3 +1,6 @@
+@use '../utils/color_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -6,12 +9,12 @@
 .shamir-progress {
   .shamir-progress-progress {
     display: inline-block;
-    margin-top: $spacing-8;
-    margin-right: $spacing-12;
+    margin-top: size_variables.$spacing-8;
+    margin-right: size_variables.$spacing-12;
   }
   .progress {
-    box-shadow: 0 0 0 4px $ui-gray-050;
-    margin-top: $spacing-8;
+    box-shadow: 0 0 0 4px color_variables.$ui-gray-050;
+    margin-top: size_variables.$spacing-8;
     min-width: 90px;
   }
 }

@@ -1,3 +1,7 @@
+@use '../utils/box-shadow_variables';
+@use '../utils/color_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -5,12 +9,12 @@
 
 .progress {
   appearance: none;
-  background: $ui-gray-050;
+  background: color_variables.$ui-gray-050;
   border: none;
-  box-shadow: inset $box-link-shadow;
-  border-radius: $radius;
+  box-shadow: inset box-shadow_variables.$box-link-shadow;
+  border-radius: size_variables.$radius;
   display: block;
-  height: $size-6;
+  height: size_variables.$size-6;
   overflow: hidden;
   padding: 0;
   margin-bottom: 0;
@@ -23,7 +27,7 @@
     width: 30px;
   }
   &.is-medium {
-    height: $size-5;
+    height: size_variables.$size-5;
     width: 120px;
   }
 }
@@ -31,20 +35,20 @@
 // style the container in chrome
 .progress[value]::-webkit-progress-bar {
   background-color: #ededed;
-  box-shadow: inset $box-link-shadow;
+  box-shadow: inset box-shadow_variables.$box-link-shadow;
 }
 
 // style the bar in chrome
 .progress[value]::-webkit-progress-value {
   background-color: #4a4a4a;
-  border-radius: $radius;
-  transition: width 1s $easing;
+  border-radius: size_variables.$radius;
+  transition: width 1s size_variables.$easing;
 }
 
 // style the bar in firefox
 .progress[value]::-moz-progress-bar {
-  border-radius: $radius;
-  transition: width 1s $easing;
+  border-radius: size_variables.$radius;
+  transition: width 1s size_variables.$easing;
 }
 
 .progress::-ms-fill {
@@ -70,17 +74,17 @@
 }
 
 .progress.is-success::-webkit-progress-value {
-  background-color: $green-500;
+  background-color: color_variables.$green-500;
 }
 
 .progress.is-success::-moz-progress-bar {
-  background-color: $green-500;
+  background-color: color_variables.$green-500;
 }
 
 .progress.is-success::-ms-fill {
-  background-color: $green-500;
+  background-color: color_variables.$green-500;
 }
 
 .progress.is-success:indeterminate {
-  background-image: linear-gradient(to right, $green-500 30%, #ededed 30%);
+  background-image: linear-gradient(to right, color_variables.$green-500 30%, #ededed 30%);
 }
