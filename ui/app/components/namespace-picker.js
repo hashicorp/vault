@@ -7,6 +7,7 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
+import { isEmpty } from '@ember/utils';
 
 /**
  * @module NamespacePicker
@@ -21,6 +22,11 @@ import { service } from '@ember/service';
 
 export default class NamespacePicker extends Component {
   @service namespace;
+  @service router;
+  @service store;
+
+  // Show/hide refresh & manage namespaces buttons
+  @tracked showAfterOptions = false;
 
   @tracked selected = {};
   @tracked options = [];
@@ -30,6 +36,7 @@ export default class NamespacePicker extends Component {
     this.loadOptions();
   }
 
+  // TODO make private when converting from js to ts
   #matchesPath(option, currentNamespace) {
     // TODO: Revisit. A hardcoded check for "path" & "/path" seems hacky, but it fixes a breaking test:
     //  "Acceptance | Enterprise | namespaces: it shows nested namespaces if you log in with a namespace starting with a /"
@@ -37,10 +44,12 @@ export default class NamespacePicker extends Component {
     return option?.path === currentNamespace?.path || `/${option?.path}` === currentNamespace?.path;
   }
 
+  // TODO make private when converting from js to ts
   #getSelected(options, currentNamespace) {
     return options.find((option) => this.#matchesPath(option, currentNamespace));
   }
 
+  // TODO make private when converting from js to ts
   #getOptions(namespace) {
     /* Each namespace option has 3 properties: { id, path, and label }
      *   - id: node / namespace name (displayed when the namespace picker is closed)
@@ -64,6 +73,40 @@ export default class NamespacePicker extends Component {
     ];
   }
 
+  // TODO make private when converting from js to ts
+  #getNamespaceLink(location, namespace) {
+    const origin = this.#getOrigin(location);
+
+    let queryParams = '';
+    if (!isEmpty(namespace.path)) {
+      const encodedNamespace = encodeURIComponent(namespace.path);
+      queryParams = `?namespace=${encodedNamespace}`;
+    }
+
+    // The full URL/origin is required so that the page is reloaded.
+    return `${origin}/ui/vault/dashboard${queryParams}`;
+  }
+
+  // TODO make private when converting from js to ts
+  #getOrigin(location) {
+    return location.protocol + '//' + location.hostname + (location.port ? ':' + location.port : '');
+  }
+
+  @action
+  async fetchListCapability() {
+    // TODO: Revist. This logic was carried over from previous component implmenetation.
+    //  When the user doesn't have this capability, shouldn't we just hide the "Manage" button,
+    //  instead of hiding both the "Manage" and "Refresh List" buttons?
+    try {
+      await this.store.findRecord('capabilities', 'sys/namespaces/');
+      this.showAfterOptions = true;
+    } catch (e) {
+      // If error out on findRecord call it's because you don't have permissions
+      // and therefore don't have permission to manage namespaces
+      this.showAfterOptions = false;
+    }
+  }
+
   @action
   async loadOptions() {
     // TODO: namespace service's findNamespacesForUser will never throw an error.
@@ -72,11 +115,13 @@ export default class NamespacePicker extends Component {
 
     this.options = this.#getOptions(this.namespace);
     this.selected = this.#getSelected(this.options, this.namespace);
+
+    await this.fetchListCapability();
   }
 
   @action
-  async onChange(selectedOption) {
-    // TODO: redirect to selected namespace
-    this.selected = selectedOption;
+  async onChange(selected) {
+    this.selected = selected;
+    this.router.transitionTo('vault.cluster.dashboard', { queryParams: { namespace: selected.path } });
   }
 }
