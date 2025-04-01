@@ -1,4 +1,0 @@
-```release-note:bug
-website/content/docs/enterprise/sentinel: fix typo in title of Sentinel docs page
-website/data/docs-nav-data.json: fix typo in title of Sentinel docs route
-```
