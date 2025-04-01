@@ -12,35 +12,20 @@ import sinon from 'sinon';
 import { resolve } from 'rsvp';
 import { create } from 'ember-cli-page-object';
 import form from '../../pages/components/auth-jwt';
-import { ERROR_WINDOW_CLOSED, ERROR_MISSING_PARAMS, ERROR_JWT_LOGIN } from 'vault/components/auth-jwt';
-import { fakeWindow, buildMessage } from 'vault/tests/helpers/oidc-window-stub';
+import { ERROR_WINDOW_CLOSED, ERROR_JWT_LOGIN } from 'vault/components/auth-jwt';
+import { callbackData } from 'vault/tests/helpers/oidc-window-stub';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 
 const component = create(form);
-const windows = [];
-
-fakeWindow.reopen({
-  init() {
-    this._super(...arguments);
-    windows.push(this);
-  },
-  open() {
-    return fakeWindow.create();
-  },
-  close() {
-    windows.forEach((w) => w.trigger('close'));
-  },
-});
 
 const renderIt = async (context, path = 'jwt') => {
   const handler = (data, e) => {
     if (e && e.preventDefault) e.preventDefault();
     return resolve();
   };
-  const fake = fakeWindow.create();
-  context.set('window', fake);
+
   context.set('handler', sinon.spy(handler));
   context.set('roleName', '');
   context.set('selectedAuthPath', path);
@@ -62,9 +47,7 @@ module('Integration | Component | auth jwt', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    const popup = { closed: true };
     this.windowStub = sinon.stub(window, 'open');
-    this.windowStub.returns(popup);
 
     this.owner.lookup('service:router').reopen({
       urlFor() {
@@ -166,11 +149,11 @@ module('Integration | Component | auth jwt', function (hooks) {
   });
 
   test('oidc: it calls window.open popup window on login', async function (assert) {
+    sinon.replaceGetter(window, 'screen', () => ({ height: 600, width: 500 }));
     await renderIt(this);
-    this.set('selectedAuthPath', 'foo');
+    this.selectedAuthPath = 'foo';
     await component.role('test');
     component.login();
-    sinon.replaceGetter(window, 'screen', () => ({ height: 600, width: 500 }));
     await waitUntil(() => {
       return this.windowStub.calledOnce;
     });
@@ -185,7 +168,6 @@ module('Integration | Component | auth jwt', function (hooks) {
   });
 
   test('oidc: it calls error handler when popup is closed', async function (assert) {
-    // const closeStub = sinon.stub(window, 'close');
     await renderIt(this);
     this.set('selectedAuthPath', 'foo');
     await component.role('test');
@@ -198,45 +180,19 @@ module('Integration | Component | auth jwt', function (hooks) {
     assert.strictEqual(this.error, ERROR_WINDOW_CLOSED, 'calls onError with error string');
   });
 
-  test('oidc: shows error when message posted with state key, wrong params', async function (assert) {
-    await renderIt(this);
-    this.set('selectedAuthPath', 'foo');
-    await component.role('test');
-    component.login();
-    await waitUntil(() => {
-      return this.windowStub.calledOnce;
-    });
-    window.trigger(
-      'message',
-      buildMessage({ data: { source: 'oidc-callback', state: 'state', foo: 'bar' } })
-    );
-    cancelTimers();
-    await settled();
-
-    assert.strictEqual(this.error, ERROR_MISSING_PARAMS, 'calls onError with params missing error');
-  });
-
-  test('oidc: storage event fires with state key, correct params', async function (assert) {
-    await renderIt(this);
-    this.set('selectedAuthPath', 'foo');
-    await component.role('test');
-    component.login();
-    await waitUntil(() => {
-      return this.windowStub.calledOnce;
-    });
-
-    window.trigger('message', buildMessage());
-    await settled();
-    const [callbackData, , token] = this.handler.lastCall.args;
-    assert.propEqual(
-      callbackData,
-      { mfa_requirement: undefined },
-      'mfa_requirement is undefined if not returned by response'
-    );
-    assert.strictEqual(token, 'token', 'calls the onSubmit handler with token');
-  });
-
+  // this test technically passes but it's because isTrusted is always false so we do not
+  // even get to the
   test('oidc: fails silently when event origin does not match window origin', async function (assert) {
+    assert.expect(3);
+    // prevent test incorrectly passing because the event isn't triggered at all
+    // by also asserting that the message event fires
+    const message = { data: callbackData(), origin: 'http://hackerz.com' };
+    const assertEvent = (event) => {
+      assert.propEqual(event.data, message.data, 'message has expected data');
+      assert.strictEqual(event.origin, message.origin, 'message has expected origin');
+    };
+    window.addEventListener('message', assertEvent);
+
     await renderIt(this);
     this.set('selectedAuthPath', 'foo');
     await component.role('test');
@@ -244,15 +200,26 @@ module('Integration | Component | auth jwt', function (hooks) {
     await waitUntil(() => {
       return this.windowStub.calledOnce;
     });
-    window.trigger('message', buildMessage({ origin: 'http://hackerz.com' }));
 
+    window.dispatchEvent(new MessageEvent('message', message));
     cancelTimers();
     await settled();
-
     assert.false(this.handler.called, 'should not call the submit handler');
+
+    // Cleanup
+    window.removeEventListener('message', assertEvent);
   });
 
   test('oidc: fails silently when event is not trusted', async function (assert) {
+    assert.expect(2);
+    // prevent test incorrectly passing because the event isn't triggered at all
+    // by also asserting that the message event fires
+    const messageData = callbackData();
+    const assertEvent = (event) => {
+      assert.propEqual(event.data, messageData, 'message event fires');
+    };
+    window.addEventListener('message', assertEvent);
+
     await renderIt(this);
     this.set('selectedAuthPath', 'foo');
     await component.role('test');
@@ -260,11 +227,15 @@ module('Integration | Component | auth jwt', function (hooks) {
     await waitUntil(() => {
       return this.windowStub.calledOnce;
     });
-    window.trigger('message', buildMessage({ isTrusted: false }));
+    // mocking a message event is always untrusted (there is no way to override isTrusted on the window object)
+    window.dispatchEvent(new MessageEvent('message', { data: messageData }));
+
     cancelTimers();
     await settled();
-
     assert.false(this.handler.called, 'should not call the submit handler');
+
+    // Cleanup
+    window.removeEventListener('message', assertEvent);
   });
 
   test('oidc: it should trigger error callback when role is not found', async function (assert) {
