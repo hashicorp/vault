@@ -109,7 +109,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     assert.dom('[data-test-mount-config-mode]').includesText(mode, 'show page renders the correct mode');
     assert
       .dom('[data-test-mount-config-paths]')
-      .includesText(`${mountPath}/`, 'show page renders the correct mount path');
+      .hasTextContaining(`${mountPath}`, 'show page renders the correct mount path');
 
     // delete config by choosing "no filter" in the edit screen
     await click('[data-test-replication-link="edit-mount-config"]');

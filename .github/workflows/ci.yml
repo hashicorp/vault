@@ -19,6 +19,7 @@ concurrency:
 jobs:
   setup:
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","linux","small"]') }}
+    permissions: write-all # vault-auth
     outputs:
       changed-files: ${{ steps.changed-files.outputs.changed-files }}
       checkout-ref: ${{ steps.checkout.outputs.ref }}
@@ -139,7 +140,9 @@ jobs:
 
   test-go:
     # Run Go tests if the vault app changed
-    if: contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app')
+    if: |
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline')
     name: Run Go tests
     needs: setup
     uses: ./.github/workflows/test-go.yml
