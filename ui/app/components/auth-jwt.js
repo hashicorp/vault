@@ -9,7 +9,6 @@ import { service } from '@ember/service';
 import { restartableTask, task, timeout, waitForEvent } from 'ember-concurrency';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import { waitFor } from '@ember/test-waiters';
 
 const ERROR_WINDOW_CLOSED =
   'The provider window was closed before authentication was complete. Your web browser may have blocked or closed a pop-up window. Please check your settings and click Sign In to try again.';
@@ -110,91 +109,83 @@ export default class AuthOidcJwt extends Component {
 
   // NOTE TO DEVS: Be careful when updating the OIDC flow and ensure the updates
   // work with implicit flow. See issue https://github.com/hashicorp/vault-plugin-auth-jwt/pull/192
-  prepareForOIDC = task(
-    waitFor(async (oidcWindow) => {
-      const thisWindow = this.getWindow;
-      // show the loading animation in the parent
-      this.args.onLoading(true);
-      // start watching the popup window and the current one
-      this.watchPopup.perform(oidcWindow);
-      this.watchCurrent.perform(oidcWindow);
-      // wait for message posted from oidc callback
-      // see issue https://github.com/hashicorp/vault/issues/12436
-      // ensure that postMessage event is from expected source
-      let event;
-      while (!event) {
-        // continue to wait for the correct message
-        event = await waitForEvent(thisWindow, 'message');
-      }
+  prepareForOIDC = task(async (oidcWindow) => {
+    const thisWindow = this.getWindow;
+    // show the loading animation in the parent
+    this.args.onLoading(true);
+    // start watching the popup window and the current one
+    this.watchPopup.perform(oidcWindow);
+    this.watchCurrent.perform(oidcWindow);
+    // wait for message posted from oidc callback
+    // see issue https://github.com/hashicorp/vault/issues/12436
+    // ensure that postMessage event is from expected source
+    let event;
+    while (!event) {
+      // continue to wait for the correct message
+      event = await waitForEvent(thisWindow, 'message');
+    }
 
-      if (event.origin === thisWindow.origin && event.isTrusted && event.data.source === 'oidc-callback') {
-        return this.exchangeOIDC.perform(event.data, oidcWindow);
-      }
-    })
-  );
+    if (event.origin === thisWindow.origin && event.isTrusted && event.data.source === 'oidc-callback') {
+      return this.exchangeOIDC.perform(event.data, oidcWindow);
+    }
+  });
 
-  watchPopup = task(
-    waitFor(async (oidcWindow) => {
-      while (oidcWindow && !oidcWindow.closed) {
-        const WAIT_TIME = Ember.testing ? 50 : 500;
-        await timeout(WAIT_TIME);
-      }
-      return this.handleOIDCError(ERROR_WINDOW_CLOSED);
-    })
-  );
+  watchPopup = task(async (oidcWindow) => {
+    while (oidcWindow && !oidcWindow.closed) {
+      const WAIT_TIME = Ember.testing ? 50 : 500;
+      await timeout(WAIT_TIME);
+    }
+    return this.handleOIDCError(ERROR_WINDOW_CLOSED);
+  });
 
-  watchCurrent = task(
-    waitFor(async (oidcWindow) => {
-      // when user is about to change pages, close the popup window
-      await waitForEvent(this.getWindow, 'beforeunload');
-      oidcWindow.close();
-    })
-  );
+  watchCurrent = task(async (oidcWindow) => {
+    // when user is about to change pages, close the popup window
+    await waitForEvent(this.getWindow, 'beforeunload');
+    oidcWindow.close();
+  });
 
-  exchangeOIDC = task(
-    waitFor(async (oidcState, oidcWindow) => {
-      if (oidcState === null || oidcState === undefined) {
-        return;
-      }
-      this.args.onLoading(true);
+  exchangeOIDC = task(async (oidcState, oidcWindow) => {
+    if (oidcState === null || oidcState === undefined) {
+      return;
+    }
+    this.args.onLoading(true);
 
-      let { namespace, path, state, code } = oidcState;
+    let { namespace, path, state, code } = oidcState;
 
-      // The namespace can be either be passed as a query parameter, or be embedded
-      // in the state param in the format `<state_id>,ns=<namespace>`. So if
-      // `namespace` is empty, check for namespace in state as well.
-      // TODO smoke test HVD flag here and add test
-      if (namespace === '' || this.flags.hvdManagedNamespaceRoot) {
-        const i = state.indexOf(',ns=');
-        if (i >= 0) {
-          // ",ns=" is 4 characters
-          namespace = state.substring(i + 4);
-          state = state.substring(0, i);
-        }
+    // The namespace can be either be passed as a query parameter, or be embedded
+    // in the state param in the format `<state_id>,ns=<namespace>`. So if
+    // `namespace` is empty, check for namespace in state as well.
+    // TODO smoke test HVD flag here and add test
+    if (namespace === '' || this.flags.hvdManagedNamespaceRoot) {
+      const i = state.indexOf(',ns=');
+      if (i >= 0) {
+        // ",ns=" is 4 characters
+        namespace = state.substring(i + 4);
+        state = state.substring(0, i);
       }
+    }
 
-      if (!path || !state || !code) {
-        return this.cancelLogin(oidcWindow, ERROR_MISSING_PARAMS);
-      }
-      const adapter = this.store.adapterFor('auth-method');
-      // pass namespace from state back to AuthForm
-      this.args.onNamespace(namespace);
-      let resp;
-      // do the OIDC exchange, set the token on the parent component
-      // and submit auth form
-      try {
-        resp = await adapter.exchangeOIDC(path, state, code);
-        this.closeWindow(oidcWindow);
-      } catch (e) {
-        // If there was an error on Vault's end, close the popup
-        // and show the error on the login screen
-        return this.cancelLogin(oidcWindow, e);
-      }
-      const { mfa_requirement, client_token } = resp.auth;
-      // onSubmit calls doSubmit in auth-form.js
-      await this.args.onSubmit({ mfa_requirement }, null, client_token);
-    })
-  );
+    if (!path || !state || !code) {
+      return this.cancelLogin(oidcWindow, ERROR_MISSING_PARAMS);
+    }
+    const adapter = this.store.adapterFor('auth-method');
+    // pass namespace from state back to AuthForm
+    this.args.onNamespace(namespace);
+    let resp;
+    // do the OIDC exchange, set the token on the parent component
+    // and submit auth form
+    try {
+      resp = await adapter.exchangeOIDC(path, state, code);
+      this.closeWindow(oidcWindow);
+    } catch (e) {
+      // If there was an error on Vault's end, close the popup
+      // and show the error on the login screen
+      return this.cancelLogin(oidcWindow, e);
+    }
+    const { mfa_requirement, client_token } = resp.auth;
+    // onSubmit calls doSubmit in auth-form.js
+    await this.args.onSubmit({ mfa_requirement }, null, client_token);
+  });
 
   async startOIDCAuth() {
     this.args.onError(null);
