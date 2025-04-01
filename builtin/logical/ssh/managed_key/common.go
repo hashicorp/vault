@@ -4,14 +4,14 @@
 package managed_key
 
 import (
-	"crypto"
 	"io"
 
 	"github.com/hashicorp/vault/sdk/logical"
+	"golang.org/x/crypto/ssh"
 )
 
 type ManagedKeyInfo struct {
-	PublicKey crypto.PublicKey
+	publicKey ssh.PublicKey
 	Name      NameKey
 	Uuid      UUIDKey
 }
@@ -37,4 +37,12 @@ func (u UUIDKey) String() string {
 
 func (n NameKey) String() string {
 	return string(n)
+}
+
+func (m ManagedKeyInfo) PublicKey() ssh.PublicKey {
+	return m.publicKey
+}
+
+func (m ManagedKeyInfo) Sign(rand io.Reader, data []byte) (*ssh.Signature, error) {
+	return nil, nil
 }

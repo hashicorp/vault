@@ -439,13 +439,8 @@ func (b *backend) createManagedKey(ctx context.Context, s logical.Storage, manag
 		return fmt.Errorf("error retrieving public key: %s", err)
 	}
 
-	sshPub, err := ssh.NewPublicKey(keyInfo.PublicKey)
-	if err != nil {
-		return fmt.Errorf("error creatin SSH public key: %s", err)
-	}
-
 	entry, err := logical.StorageEntryJSON(caManagedKeyStoragePath, &managedKeyStorageEntry{
-		PublicKey: string(ssh.MarshalAuthorizedKey(sshPub)),
+		PublicKey: string(keyInfo.PublicKey().Marshal()),
 		KeyName:   keyName,
 		KeyId:     keyId,
 	})
