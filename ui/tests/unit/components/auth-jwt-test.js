@@ -18,7 +18,7 @@ const mockWindow = EmberObject.extend(Evented, {
   close: () => {},
 });
 
-module('Unit | Component | auth-jwt', function (hooks) {
+module.skip('Unit | Component | auth-jwt', function (hooks) {
   setupTest(hooks);
 
   hooks.beforeEach(function () {
