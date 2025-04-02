@@ -13,10 +13,6 @@ import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-
 import { v4 as uuidv4 } from 'uuid';
 import sinon from 'sinon';
 
-const SELECTORS = {
-  menuItem: (item) => `[data-test-popup-menu="${item}"]`,
-};
-
 module('Acceptance | totp key backend', function (hooks) {
   setupApplicationTest(hooks);
 
@@ -70,7 +66,7 @@ module('Acceptance | totp key backend', function (hooks) {
     await click(GENERAL.backButton);
     await visit(`/vault/secrets/${this.path}`);
     await click(GENERAL.menuTrigger);
-    await click(`${SELECTORS.menuItem('details')}`);
+    await click(`${GENERAL.menuItem('details')}`);
 
     assert.dom('.title').hasText(`TOTP key ${this.keyName}`);
     assert.dom('[data-test-totp-key-details]').exists();
