@@ -18,14 +18,14 @@ Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-1) for arguments common 
 - `credentials_profile` `(string: "")` - The name of the profile in your credentials file to authenticate with.
   If not set, Vault uses the default credential provider mechanisms.
 
-- `vault_mount_path` `(string: "")` - The Vault mount path to a pre-configured GCP
+- `vault_mount_path` `(string: "")` - The Vault mount path to a pre-configured AWS
   secrets engine used to generate dynamic credentials for the importer.
 
 - `vault_role_name` `(string: "")` - The Vault role used to generate a dynamic
-  credential for the importer. The role name must exist in the pre-configured GCP secrets
+  credential for the importer. The role name must exist in the pre-configured AWS secrets
   engine mount.
 
-- `vault_namespace` `(string: "")` - The Vault namespace containing the pre-configured GCP secrets engine
+- `vault_namespace` `(string: "")` - The Vault namespace containing the pre-configured AWS secrets engine
   mount path specified in `vault_mount_path` for use with dynamic secrets.
 
 - `vault_address` `(string: "")` - The address of the Vault server to use for dynamic credentials. 
