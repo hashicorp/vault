@@ -20,7 +20,9 @@ module('Acceptance | totp key backend', function (hooks) {
     await fillIn(GENERAL.inputByAttr('name'), keyName);
     await fillIn(GENERAL.inputByAttr('issuer'), issuer);
     await fillIn(GENERAL.inputByAttr('accountName'), accountName);
-    if (!exported) await click(GENERAL.ttl.toggle('toggle-exported'));
+    if (!exported) {
+      await click(GENERAL.ttl.toggle('toggle-exported'));
+    }
     await click(GENERAL.saveButton);
   };
 
