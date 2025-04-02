@@ -7,7 +7,6 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
-import { isEmpty } from '@ember/utils';
 
 /**
  * @module NamespacePicker
@@ -57,11 +56,11 @@ export default class NamespacePicker extends Component {
      *   - label: text displayed inside the namespace picker dropdown (if root, then label = id, else label = path)
      *
      *  Example:
-     *   | id         | path                    | label                   |
-     *   | ---        | ----                    | -----                   |
-     *   | root       | ''                      | 'root'                  |
-     *   | namespace1 | 'namespace1'            | 'namespace1'            |
-     *   | namespace2 | 'namespace1/namespace2' | 'namespace1/namespace2' |
+     *   | id       | path           | label          |
+     *   | ---      | ----           | -----          |
+     *   | 'root'   | ''             | 'root'         |
+     *   | 'parent' | 'parent'       | 'parent'       |
+     *   | 'child'  | 'parent/child' | 'parent/child' |
      */
     return [
       // TODO: Some users (including HDS Admin User) should never see the root namespace. Address this in a followup PR.
@@ -71,25 +70,6 @@ export default class NamespacePicker extends Component {
         return { id: parts[parts.length - 1], path: ns, label: ns };
       }),
     ];
-  }
-
-  // TODO make private when converting from js to ts
-  #getNamespaceLink(location, namespace) {
-    const origin = this.#getOrigin(location);
-
-    let queryParams = '';
-    if (!isEmpty(namespace.path)) {
-      const encodedNamespace = encodeURIComponent(namespace.path);
-      queryParams = `?namespace=${encodedNamespace}`;
-    }
-
-    // The full URL/origin is required so that the page is reloaded.
-    return `${origin}/ui/vault/dashboard${queryParams}`;
-  }
-
-  // TODO make private when converting from js to ts
-  #getOrigin(location) {
-    return location.protocol + '//' + location.hostname + (location.port ? ':' + location.port : '');
   }
 
   @action
