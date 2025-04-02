@@ -28,6 +28,7 @@ export function PkiConfigureCmpRequestFromJSONTyped(json, ignoreDiscriminator) {
         'auditFields': json['audit_fields'] == null ? undefined : json['audit_fields'],
         'authenticators': json['authenticators'] == null ? undefined : json['authenticators'],
         'defaultPathPolicy': json['default_path_policy'] == null ? undefined : json['default_path_policy'],
+        'disabledValidations': json['disabled_validations'] == null ? undefined : json['disabled_validations'],
         'enableSentinelParsing': json['enable_sentinel_parsing'] == null ? undefined : json['enable_sentinel_parsing'],
         'enabled': json['enabled'] == null ? undefined : json['enabled'],
     };
@@ -43,6 +44,7 @@ export function PkiConfigureCmpRequestToJSONTyped(value, ignoreDiscriminator = f
         'audit_fields': value['auditFields'],
         'authenticators': value['authenticators'],
         'default_path_policy': value['defaultPathPolicy'],
+        'disabled_validations': value['disabledValidations'],
         'enable_sentinel_parsing': value['enableSentinelParsing'],
         'enabled': value['enabled'],
     };

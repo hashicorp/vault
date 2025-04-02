@@ -157,8 +157,8 @@ export interface ApiResponse<T> {
     value(): Promise<T>;
 }
 export interface VoidResponse {
-    auth: null;
-    data: null;
+    auth: unknown;
+    data: unknown;
     lease_duration: number;
     lease_id: string;
     mount_type: string;
