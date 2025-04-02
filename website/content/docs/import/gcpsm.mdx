@@ -24,7 +24,7 @@ Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-1) for arguments common 
   credential for the importer. The role name must exist in the pre-configured GCP secrets
   engine mount.
 
-- `vault_namespace` `(string: "")` - The Vault namespace containing the preconfigured GCP secrets engine
+- `vault_namespace` `(string: "")` - The Vault namespace containing the pre-configured GCP secrets engine
   mount path specified in `vault_mount_path` for use with dynamic secrets.
 
 - `vault_address` `(string: "")` - The address of the Vault server to use for dynamic credentials. 
@@ -34,7 +34,7 @@ Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-1) for arguments common 
 #### Note
  - If `credentials_file` is set, then `vault_mount_path`, `vault_role_name`,`vault_namespace`,`vault_address` and `vault_credentials_file` must be unset.
 
- - If one of `vault_mount_path`,`vault_role_name`, `vault_namespace`,`vault_address` or `vault_credentials_file`  are set, then `credentials` must be unset.
+ - If one of `vault_mount_path`,`vault_role_name`, `vault_namespace`,`vault_address` or `vault_credentials_file`  are set, then `credentials_file` must be unset.
 
 
 ## Example

@@ -18,6 +18,25 @@ Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-1) for arguments common 
 - `credentials_profile` `(string: "")` - The name of the profile in your credentials file to authenticate with.
   If not set, Vault uses the default credential provider mechanisms.
 
+- `vault_mount_path` `(string: "")` - The Vault mount path to a pre-configured GCP
+  secrets engine used to generate dynamic credentials for the importer.
+
+- `vault_role_name` `(string: "")` - The Vault role used to generate a dynamic
+  credential for the importer. The role name must exist in the pre-configured GCP secrets
+  engine mount.
+
+- `vault_namespace` `(string: "")` - The Vault namespace containing the pre-configured GCP secrets engine
+  mount path specified in `vault_mount_path` for use with dynamic secrets.
+
+- `vault_address` `(string: "")` - The address of the Vault server to use for dynamic credentials. 
+
+- `vault_credentials_file` `(string: "")` - The path to a file containing a Vault token for the vault server configured above.
+
+#### Note
+ - If `credentials_profile` is set, then `vault_mount_path`, `vault_role_name`,`vault_namespace`,`vault_address` and `vault_credentials_file` must be unset.
+
+ - If one of `vault_mount_path`,`vault_role_name`, `vault_namespace`,`vault_address` or `vault_credentials_file`  are set, then `credentials_profile` must be unset.
+
 ## Example
 
 Define and configure the `my-aws-source-1` AWS source:
@@ -26,6 +45,15 @@ Define and configure the `my-aws-source-1` AWS source:
 source_aws {
   name = "my-aws-source-1"
   credentials_profile = "my-cred-profile-name"
+}```
+
+```hcl
+source_aws {
+  vault_mount_path = "aws"
+  vault_role_name  = "temp_user"
+  vault_namespace  = "ns-1"
+  vault_address    = "https://vault.example.com:8200"
+  vault_credentials_file = "/path/to/vault/token"
 }
 ```
 
