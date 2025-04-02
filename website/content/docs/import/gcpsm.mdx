@@ -43,6 +43,12 @@ Define and configure the `my-gcp-source-1` GCP source:
 
 ```hcl
 source_gcp {
+  credentials_file = "/path/to/credentials-file"
+}
+```
+
+```hcl
+source_gcp {
   name             = "my-gcp-source-1"
   vault_mount_path = "gcp"
   vault_role_name  = "my-gcp-role-1"
