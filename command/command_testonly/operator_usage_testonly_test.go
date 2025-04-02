@@ -39,7 +39,12 @@ func testOperatorUsageCommand(tb testing.TB) (*cli.MockUi, *command.OperatorUsag
 // This test cannot be run in parallel because it sets the VAULT_TOKEN env
 // var
 func TestOperatorUsageCommandRun(t *testing.T) {
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+	now := time.Now().UTC()
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		EntCoreConfig: vault.EntCoreConfig{
+			BillingStart: timeutil.MonthsPreviousTo(1, now),
+		},
+	}, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 		NumCores:    1,
 	})
@@ -50,8 +55,6 @@ func TestOperatorUsageCommandRun(t *testing.T) {
 	client := cluster.Cores[0].Client
 	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{"enabled": "enable"})
 	require.NoError(t, err)
-
-	now := time.Now().UTC()
 
 	_, err = clientcountutil.NewActivityLogData(client).
 		NewPreviousMonthData(1).

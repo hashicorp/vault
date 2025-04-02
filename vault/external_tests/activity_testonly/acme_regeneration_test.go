@@ -47,13 +47,18 @@ func forceRegeneration(t *testing.T, cluster *vault.TestCluster) {
 // the current month
 func TestACMERegeneration_RegenerateWithCurrentMonth(t *testing.T) {
 	t.Parallel()
-	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{EnableRaw: true})
+	now := time.Now().UTC()
+	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
+		EntCoreConfig: vault.EntCoreConfig{
+			BillingStart: timeutil.StartOfMonth(timeutil.MonthsPreviousTo(5, now)),
+		},
+		EnableRaw: true,
+	})
 	client := cluster.Cores[0].Client
 	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
 		"enabled": "enable",
 	})
 	require.NoError(t, err)
-	now := time.Now().UTC()
 	_, err = clientcountutil.NewActivityLogData(client).
 		NewPreviousMonthData(3).
 		// 3 months ago, 15 non-entity clients and 10 ACME clients
@@ -82,16 +87,17 @@ func TestACMERegeneration_RegenerateWithCurrentMonth(t *testing.T) {
 
 	forceRegeneration(t, cluster)
 
-	// current month isn't included in this query
+	// current month isn't included in this
+	// it should still return results for current month as the end time is aligned to whole billing period
 	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
 		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(5, now)).Format(time.RFC3339)},
 		"end_time":   {timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
 	})
 	require.NoError(t, err)
 	require.Equal(t, vault.ResponseCounts{
-		NonEntityClients: 26,
-		Clients:          43,
-		ACMEClients:      17,
+		NonEntityClients: 36,
+		Clients:          73,
+		ACMEClients:      37,
 	}, getTotals(t, resp))
 
 	// explicitly include the current month
