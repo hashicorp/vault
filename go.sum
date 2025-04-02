@@ -1571,8 +1571,8 @@ github.com/hashicorp/vault-plugin-auth-gcp v0.20.2 h1:M1gWdAo/WTu9PR8j8kfnDwDEql
 github.com/hashicorp/vault-plugin-auth-gcp v0.20.2/go.mod h1:FEXGIQPbjjc3Dzf3FEwRzj4qK7YfzwELd6ZHHsFXXM4=
 github.com/hashicorp/vault-plugin-auth-jwt v0.23.0 h1:LErXihivT7I8ZWB7jzQlp/IA54PdMWCaXNdkjmB0Z3c=
 github.com/hashicorp/vault-plugin-auth-jwt v0.23.0/go.mod h1:a/PUlLU88uUe1GtUTdSDkp/0HVXM7p9CY2vcwEh7NeU=
-github.com/hashicorp/vault-plugin-auth-kerberos v0.14.0 h1:kJGBKDk8lJXftM8PVG9ars3NWHOdylJaeutTsI/7E0w=
-github.com/hashicorp/vault-plugin-auth-kerberos v0.14.0/go.mod h1:JV+qr3M+OIiquVjSHD0AN6p6kTEoEo2GvSdq6Ih5zvo=
+github.com/hashicorp/vault-plugin-auth-kerberos v0.14.1-0.20250401002843-4c49b805db88 h1:RNUBFnb40yXbBI++L8S/JMwgOAXrP9b18zTwjFR5WvM=
+github.com/hashicorp/vault-plugin-auth-kerberos v0.14.1-0.20250401002843-4c49b805db88/go.mod h1:AZct2rO3eLW677+Y9YXkfHdkrWEV91dqi9CdNJI1WMs=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.21.0 h1:YmwthfYgEjv+2rir+DY/ADznVtHQ43qPUo6XT6I3Fxs=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.21.0/go.mod h1:V36/cDsl8tjdr8xQ35uLzvlDLclpPCOdLheAk42ks6E=
 github.com/hashicorp/vault-plugin-auth-oci v0.18.0 h1:/9H4bv8mCRpO3oHDRuFv7lyWRXLQtdjSEDpCtCfPQOw=
@@ -1966,8 +1966,8 @@ github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8
 github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
 github.com/opencontainers/image-spec v1.1.0 h1:8SG7/vwALn54lVB/0yZ/MMwhFrPYtpEHQb2IpWsCzug=
 github.com/opencontainers/image-spec v1.1.0/go.mod h1:W4s4sFTMaBeK1BQLXbG4AdM2szdn85PY75RI83NrTrM=
-github.com/opencontainers/runc v1.2.3 h1:fxE7amCzfZflJO2lHXf4y/y8M1BoAqp+FVmG19oYB80=
-github.com/opencontainers/runc v1.2.3/go.mod h1:nSxcWUydXrsBZVYNSkTjoQ/N6rcyTtn+1SD5D4+kRIM=
+github.com/opencontainers/runc v1.2.6 h1:P7Hqg40bsMvQGCS4S7DJYhUZOISMLJOB2iGX5COWiPk=
+github.com/opencontainers/runc v1.2.6/go.mod h1:dOQeFo29xZKBNeRBI0B19mJtfHv68YgCTh1X+YphA+4=
 github.com/opentracing/opentracing-go v1.1.0/go.mod h1:UkNAQd3GIcIGf0SeVgPpRdFStlNbqXla1AfSYxPUl2o=
 github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b h1:FfH+VrHHk6Lxt9HdVS0PXzSXFyS2NbZKXv33FYPol0A=
 github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b/go.mod h1:AC62GU6hc0BrNm+9RK9VSiwa/EUe1bkIeFORAMcHvJU=
