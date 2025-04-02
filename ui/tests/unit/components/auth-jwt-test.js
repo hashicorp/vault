@@ -11,6 +11,8 @@ import Evented from '@ember/object/evented';
 import sinon from 'sinon';
 import { _cancelTimers as cancelTimers } from '@ember/runloop';
 
+// TODO Convert to acceptance/integration tests
+
 const mockWindow = EmberObject.extend(Evented, {
   origin: 'http://localhost:4200',
   close: () => {},

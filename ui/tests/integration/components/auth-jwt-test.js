@@ -12,7 +12,7 @@ import sinon from 'sinon';
 import { resolve } from 'rsvp';
 import { create } from 'ember-cli-page-object';
 import form from '../../pages/components/auth-jwt';
-import { ERROR_WINDOW_CLOSED, ERROR_JWT_LOGIN } from 'vault/components/auth-jwt';
+import { ERROR_JWT_LOGIN } from 'vault/components/auth-jwt';
 import { callbackData } from 'vault/tests/helpers/oidc-window-stub';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
@@ -26,15 +26,15 @@ const renderIt = async (context, path = 'jwt') => {
     return resolve();
   };
 
-  context.set('handler', sinon.spy(handler));
-  context.set('roleName', '');
-  context.set('selectedAuthPath', path);
+  context.error = '';
+  context.handler = sinon.spy(handler);
+  context.roleName = '';
+  context.selectedAuthPath = path;
   await render(hbs`
     <AuthJwt
       @roleName={{this.roleName}}
       @selectedAuthPath={{this.selectedAuthPath}}
       @onError={{fn (mut this.error)}}
-      @onLoading={{fn (mut this.isLoading)}}
       @onNamespace={{fn (mut this.namespace)}}
       @onSelectedAuth={{fn (mut this.selectedAuth)}}
       @onSubmit={{this.handler}}
@@ -165,19 +165,6 @@ module('Integration | Component | auth jwt', function (hooks) {
       'called with expected args'
     );
     sinon.restore();
-  });
-
-  test('oidc: it calls error handler when popup is closed', async function (assert) {
-    await renderIt(this);
-    this.set('selectedAuthPath', 'foo');
-    await component.role('test');
-    component.login();
-    await waitUntil(() => {
-      return this.windowStub.calledOnce;
-    });
-    window.close();
-    await settled();
-    assert.strictEqual(this.error, ERROR_WINDOW_CLOSED, 'calls onError with error string');
   });
 
   // this test technically passes but it's because isTrusted is always false so we do not

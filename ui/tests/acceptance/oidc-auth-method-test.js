@@ -5,20 +5,25 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, fillIn, find, waitUntil } from '@ember/test-helpers';
+import { click, fillIn, find, visit, waitUntil } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { buildMessage, popup } from 'vault/tests/helpers/oidc-window-stub';
+import { buildMessage } from 'vault/tests/helpers/oidc-window-stub';
 import sinon from 'sinon';
 import { Response } from 'miragejs';
 import { setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
+import { GENERAL } from '../helpers/general-selectors';
+import { ERROR_MISSING_PARAMS, ERROR_WINDOW_CLOSED } from 'vault/components/auth-jwt';
 
 module('Acceptance | oidc auth method', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.openStub = sinon.stub(window, 'open').returns(popup);
+    this.openStub = sinon.stub(window, 'open');
+    // this automatically closes the popup window
+    // some tests return close() as a function because internal logic calls window.close
+    this.openStub.returns({ close: true });
 
     this.setupMocks = (assert) => {
       this.server.post('/auth/oidc/oidc/auth_url', () => ({
@@ -62,7 +67,7 @@ module('Acceptance | oidc auth method', function (hooks) {
 
   test('it should login with oidc when selected from auth methods dropdown', async function (assert) {
     assert.expect(1);
-
+    this.openStub.returns({ close: () => true });
     this.setupMocks(assert);
 
     await this.selectMethod('oidc');
@@ -75,6 +80,7 @@ module('Acceptance | oidc auth method', function (hooks) {
 
   test('it should login with oidc from listed auth mount tab', async function (assert) {
     assert.expect(3);
+    this.openStub.returns({ close: () => true });
 
     this.setupMocks(assert);
 
@@ -102,6 +108,8 @@ module('Acceptance | oidc auth method', function (hooks) {
 
   // coverage for bug where token was selected as auth method for oidc and jwt
   test('it should populate oidc auth method on logout', async function (assert) {
+    this.openStub.returns({ close: () => true });
+
     this.setupMocks();
     await this.selectMethod('oidc');
 
@@ -110,9 +118,8 @@ module('Acceptance | oidc auth method', function (hooks) {
     }, 50);
 
     await click('[data-test-auth-submit]');
-    await waitUntil(() => find('[data-test-user-menu-trigger]'));
-    await click('[data-test-user-menu-trigger]');
-    await click('#logout');
+    await waitUntil(() => find('[data-test-dashboard-card-header="Vault version"]'));
+    await visit('/vault/logout');
     assert
       .dom('[data-test-select="auth-method"]')
       .hasValue('oidc', 'Previous auth method selected on logout');
@@ -155,6 +162,7 @@ module('Acceptance | oidc auth method', function (hooks) {
 
   test('it prompts mfa if configured', async function (assert) {
     assert.expect(1);
+    this.openStub.returns({ close: () => true });
 
     this.setupMocks(assert);
     this.server.get('/auth/foo/oidc/callback', () => setupTotpMfaResponse('foo'));
@@ -166,5 +174,64 @@ module('Acceptance | oidc auth method', function (hooks) {
     await click('[data-test-auth-submit]');
     await waitUntil(() => find('[data-test-mfa-form]'));
     assert.dom('[data-test-mfa-form]').exists('it renders TOTP MFA form');
+  });
+
+  test('auth service is called with client_token and cluster data', async function (assert) {
+    this.openStub.returns({ close: () => true });
+    const authSpy = sinon.spy(this.owner.lookup('service:auth'), 'authenticate');
+    this.setupMocks();
+    await this.selectMethod('oidc');
+    setTimeout(() => {
+      window.postMessage(buildMessage().data, window.origin);
+    }, 50);
+    await click('[data-test-auth-submit]');
+    const [actual] = authSpy.lastCall.args;
+    const expected = {
+      // even though this is the oidc auth method,
+      // the callback has returned a token at this point of the login flow
+      // and so the backend is 'token'
+      backend: 'token',
+      clusterId: '1',
+      data: {
+        // data from oidc/callback url
+        mfa_requirement: undefined,
+        token: 'root',
+      },
+      selectedAuth: 'oidc',
+    };
+
+    assert.propEqual(
+      actual,
+      expected,
+      `authenticate method called with correct args, ${JSON.stringify({ actual, expected })}`
+    );
+  });
+
+  test('it shows error when message posted with state key, wrong params', async function (assert) {
+    this.openStub.returns({ close: () => true });
+    this.setupMocks();
+    await this.selectMethod('oidc');
+    setTimeout(() => {
+      // callback params are missing "code"
+      window.postMessage({ source: 'oidc-callback', state: 'state', foo: 'bar' }, window.origin);
+    }, 50);
+    await click('[data-test-auth-submit]');
+    assert
+      .dom(GENERAL.messageError)
+      .hasText(`Error ${ERROR_MISSING_PARAMS}`, 'displays error when missing params');
+  });
+
+  test('it shows error when popup is closed', async function (assert) {
+    this.openStub.returns({ closed: true });
+    this.setupMocks();
+    await this.selectMethod('oidc');
+    setTimeout(() => {
+      // callback params are missing "code"
+      window.postMessage({ source: 'oidc-callback', state: 'state', foo: 'bar' }, window.origin);
+    }, 50);
+    await click('[data-test-auth-submit]');
+    assert
+      .dom(GENERAL.messageError)
+      .hasText(`Error ${ERROR_WINDOW_CLOSED}`, 'displays error when missing params');
   });
 });
