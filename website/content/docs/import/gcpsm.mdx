@@ -29,7 +29,7 @@ Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-1) for arguments common 
 
 - `vault_address` `(string: "")` - The address of the Vault server to use for dynamic credentials. 
 
-- `vault_credentials_file` `(string: "")` - The path to a file containing a Vault token.
+- `vault_credentials_file` `(string: "")` - The path to a file containing a Vault token for the vault server configured above.
 
 #### Note
  - If `credentials_file` is set, then `vault_mount_path`, `vault_role_name`,`vault_namespace`,`vault_address` and `vault_credentials_file` must be unset.
