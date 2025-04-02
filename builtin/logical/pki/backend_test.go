@@ -7442,6 +7442,9 @@ func TestIssuance_SignIntermediateKeyUsages(t *testing.T) {
 	rootCertRaw := resp.Data["certificate"]
 	rootCert := parseCert(t, rootCertRaw.(string))
 	require.Equal(t, x509.KeyUsageDigitalSignature, rootCert.KeyUsage&x509.KeyUsageDigitalSignature, "keyUsage Digital Signature was not present")
+	require.Equal(t, x509.KeyUsageCertSign, rootCert.KeyUsage&x509.KeyUsageCertSign, "keyUsage CertSign was not present")
+	require.Equal(t, x509.KeyUsageCRLSign, rootCert.KeyUsage&x509.KeyUsageCRLSign, "keyUsage CRLSign was not present")
+	require.Equal(t, x509.KeyUsageDigitalSignature|x509.KeyUsageCertSign|x509.KeyUsageCRLSign, rootCert.KeyUsage, "unexpected KeyUsage present")
 	resp, err = CBWrite(b, s, "intermediate/generate/internal", map[string]interface{}{
 		"common_name": "myint.com",
 	})
@@ -7459,6 +7462,9 @@ func TestIssuance_SignIntermediateKeyUsages(t *testing.T) {
 	intCertRaw := resp.Data["certificate"]
 	intCert := parseCert(t, intCertRaw.(string))
 	require.Equal(t, x509.KeyUsageDigitalSignature, intCert.KeyUsage&x509.KeyUsageDigitalSignature, "keyUsage Digital Signature was not present")
+	require.Equal(t, x509.KeyUsageCertSign, intCert.KeyUsage&x509.KeyUsageCertSign, "keyUsage CertSign was not present")
+	require.Equal(t, x509.KeyUsageCRLSign, intCert.KeyUsage&x509.KeyUsageCRLSign, "keyUsage CRLSign was not present")
+	require.Equal(t, x509.KeyUsageDigitalSignature|x509.KeyUsageCertSign|x509.KeyUsageCRLSign, intCert.KeyUsage, "unexpected KeyUsage present on intermediate certificate")
 }
 
 var (
