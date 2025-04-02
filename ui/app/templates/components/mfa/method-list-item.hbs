@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 <LinkedBlock
   class="list-item-row"
@@ -17,12 +17,14 @@
             {{@model.name}}
           </span>
           <Hds::Badge @text={{@model.id}} class="has-left-margin-xs" />
-          <div class="has-top-margin-xs">
-            <code class="is-size-9">
-              Namespace:
-              {{@model.namespace_id}}
-            </code>
-          </div>
+          {{#if @model.namespace_path}}
+            <div class="has-top-margin-xs">
+              <code class="is-size-9">
+                Namespace:
+                {{@model.namespace_path}}
+              </code>
+            </div>
+          {{/if}}
         </div>
       </div>
     </div>

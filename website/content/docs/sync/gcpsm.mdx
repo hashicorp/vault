@@ -119,7 +119,7 @@ Moving forward, any modification on the Vault secret will be propagated in near 
 counterpart. Creating a new secret version in Vault will create a new version in GCP Secret Manager. Deleting the secret
 or the association in Vault will delete the secret in your GCP project as well.
 
-### Replication policy
+## Replication policy
 
 GCP can target specific geographic regions to provide strict control on where
 your applications store data and sync secrets. You can target specific GCP 
@@ -129,9 +129,23 @@ secrets.
 Regardless of the region limits on writes, synced secrets are always readable 
 globally when the client has the required permissions.
 
+### Encryption keys
+
+Vault can leverage customer-managed encryption keys (CMEK) instead of Google-managed keys to encrypt secrets in GCP Secret Manager 
+as part of the replication policy. To use CMEK, you must first create key ring(s) and key(s) as desired, ensuring that the key quantity
+corresponds with the planned replication policy. The key rings and keys must be created before configuring the sync destination.
+
+When using a global KMS key, it must be the only key set on the destination and the replication locations must remain unset, meaning
+it can only be used with using GCP's automatic replication. When specifying regional keys, a key must be set for each region in the
+replication location list. GCP key names are expected in the format of the entire resource ID, e.g. `projects/<project_id>/locations/<location_name>/keyRings/<key_ring_name>/cryptoKeys/<key_name>`. See the [API](#api) section for more details.
+
 ## Permissions
 
-The credentials given to Vault must have the following permissions to synchronize secrets:
+Enabling the Secret Manager API and the Cloud Resource Manager API's are prerequisites to using secrets sync with
+GCP Secret Manager. Once both APIs are enabled, it may take several minutes for the changes to take effect within
+the GCP project. 
+
+After the necessary APIs are active, the credentials given to Vault must have the following permissions to synchronize secrets:
 
 ```shell-session
 secretmanager.secrets.create

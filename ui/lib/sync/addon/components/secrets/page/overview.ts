@@ -12,7 +12,7 @@ import Ember from 'ember';
 import { DEBUG } from '@glimmer/env';
 
 import type FlashMessageService from 'vault/services/flash-messages';
-import type StoreService from 'vault/services/store';
+import type Store from '@ember-data/store';
 import type VersionService from 'vault/services/version';
 import type FlagsService from 'vault/services/flags';
 import type { SyncDestinationAssociationMetrics } from 'vault/vault/adapters/sync/association';
@@ -21,14 +21,11 @@ import type SyncDestinationModel from 'vault/vault/models/sync/destination';
 interface Args {
   destinations: Array<SyncDestinationModel>;
   totalVaultSecrets: number;
-  isActivated: boolean;
-  licenseHasSecretsSync: boolean;
-  isHvdManaged: boolean;
 }
 
 export default class SyncSecretsDestinationsPageComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
-  @service declare readonly store: StoreService;
+  @service declare readonly store: Store;
   @service declare readonly version: VersionService;
   @service declare readonly flags: FlagsService;
 
@@ -73,7 +70,7 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
 
     const errors = [errorMsg];
 
-    if (this.args.isHvdManaged) {
+    if (this.flags.isHvdManaged) {
       errors.push(
         'Secrets Sync is available for Plus tier clusters only. Please check the tier of your cluster to enable Secrets Sync.'
       );

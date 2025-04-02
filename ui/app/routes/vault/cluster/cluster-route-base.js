@@ -9,6 +9,9 @@
 import Route from '@ember/routing/route';
 import ClusterRoute from 'vault/mixins/cluster-route';
 
+/**
+ * @type Class
+ */
 export default Route.extend(ClusterRoute, {
   model() {
     return this.modelFor('vault.cluster');
