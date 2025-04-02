@@ -87,7 +87,7 @@ func TestACMERegeneration_RegenerateWithCurrentMonth(t *testing.T) {
 
 	forceRegeneration(t, cluster)
 
-	// current month isn't included in this
+	// current month isn't included in this query
 	// it should still return results for current month as the end time is aligned to whole billing period
 	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
 		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(5, now)).Format(time.RFC3339)},
