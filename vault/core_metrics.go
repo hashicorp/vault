@@ -607,6 +607,17 @@ func (c *Core) GetSecretEngineUsageMetrics() map[string]int {
 
 	for _, entry := range c.mounts.Entries {
 		mountType := entry.Type
+
+		if mountType == mountTypeNSIdentity {
+			mountType = pluginconsts.SecretEngineIdentity
+		}
+		if mountType == mountTypeNSSystem {
+			mountType = pluginconsts.SecretEngineSystem
+		}
+		if mountType == mountTypeNSCubbyhole {
+			mountType = pluginconsts.SecretEngineCubbyhole
+		}
+
 		if _, ok := mounts[mountType]; !ok {
 			mounts[mountType] = 1
 		} else {
@@ -625,6 +636,11 @@ func (c *Core) GetAuthMethodUsageMetrics() map[string]int {
 
 	for _, entry := range c.auth.Entries {
 		authType := entry.Type
+
+		if authType == mountTypeNSToken {
+			authType = pluginconsts.AuthTypeToken
+		}
+
 		if _, ok := mounts[authType]; !ok {
 			mounts[authType] = 1
 		} else {
@@ -632,6 +648,35 @@ func (c *Core) GetAuthMethodUsageMetrics() map[string]int {
 		}
 	}
 	return mounts
+}
+
+// GetAuthMethodLeaseCounts returns a map of auth mount types to the number of leases those mounts have.
+func (c *Core) GetAuthMethodLeaseCounts() (map[string]int, error) {
+	mounts := make(map[string]int)
+
+	c.authLock.RLock()
+	defer c.authLock.RUnlock()
+
+	for _, entry := range c.auth.Entries {
+		authType := entry.Type
+
+		if authType == mountTypeNSToken {
+			authType = pluginconsts.AuthTypeToken
+		}
+
+		mountPath := fmt.Sprintf("%s/%s", credentialTableType, entry.Path)
+		keys, err := logical.CollectKeysWithPrefix(c.expiration.quitContext, c.expiration.leaseView(entry.namespace), mountPath)
+		if err != nil {
+			return nil, err
+		}
+
+		if _, ok := mounts[authType]; !ok {
+			mounts[authType] = len(keys)
+		} else {
+			mounts[authType] += len(keys)
+		}
+	}
+	return mounts, nil
 }
 
 // GetKvUsageMetrics returns a map of namespace paths to KV secret counts within those namespaces.

@@ -1,3 +1,5 @@
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -14,85 +16,85 @@
 }
 
 .has-short-padding {
-  padding: $spacing-4 $spacing-18;
+  padding: size_variables.$spacing-4 size_variables.$spacing-18;
 }
 
 .has-tall-padding {
-  padding: $spacing-36;
+  padding: size_variables.$spacing-36;
 }
 
 .has-side-padding-8 {
-  padding-left: $spacing-8;
-  padding-right: $spacing-8;
+  padding-left: size_variables.$spacing-8;
+  padding-right: size_variables.$spacing-8;
 }
 
 .has-side-padding-s {
-  padding-left: $spacing-12;
-  padding-right: $spacing-12;
+  padding-left: size_variables.$spacing-12;
+  padding-right: size_variables.$spacing-12;
 }
 
 .has-padding-s {
-  padding: $spacing-12;
+  padding: size_variables.$spacing-12;
 }
 
 .has-padding-xxs {
-  padding: $spacing-4;
+  padding: size_variables.$spacing-4;
 }
 
 .has-padding-m {
-  padding: $spacing-16;
+  padding: size_variables.$spacing-16;
 }
 
 .has-padding-l {
-  padding: $spacing-24;
+  padding: size_variables.$spacing-24;
 }
 
 .has-bottom-padding-s {
-  padding-bottom: $spacing-12;
+  padding-bottom: size_variables.$spacing-12;
 }
 
 .has-bottom-padding-m {
-  padding-bottom: $spacing-16;
+  padding-bottom: size_variables.$spacing-16;
 }
 
 .has-bottom-padding-l {
-  padding-bottom: $spacing-24;
+  padding-bottom: size_variables.$spacing-24;
 }
 
 .has-top-padding-xs {
-  padding-top: $spacing-8;
+  padding-top: size_variables.$spacing-8;
 }
 
 .top-padding-4 {
-  padding-top: $spacing-4;
+  padding-top: size_variables.$spacing-4;
 }
 
 .has-top-padding-s {
-  padding-top: $spacing-12;
+  padding-top: size_variables.$spacing-12;
 }
 
 .has-top-padding-m {
-  padding-top: $spacing-16;
+  padding-top: size_variables.$spacing-16;
 }
 
 .has-top-padding-l {
-  padding-top: $spacing-24;
+  padding-top: size_variables.$spacing-24;
 }
 
 .has-left-padding-xs {
-  padding-left: $spacing-8;
+  padding-left: size_variables.$spacing-8;
 }
 
 .has-left-padding-s {
-  padding-left: $spacing-12;
+  padding-left: size_variables.$spacing-12;
 }
 
 .has-left-padding-l {
-  padding-left: $spacing-24;
+  padding-left: size_variables.$spacing-24;
 }
 
 .has-top-padding-xxl {
-  padding-top: $spacing-48;
+  padding-top: size_variables.$spacing-48;
 }
 
 // All Margin helpers
@@ -102,135 +104,135 @@
 
 // spacing-18 is between medium + large
 .has-top-bottom-margin {
-  margin: $spacing-18 0rem;
+  margin: size_variables.$spacing-18 0rem;
 }
 
 .has-top-bottom-margin-xxs {
-  margin: $spacing-4 0;
+  margin: size_variables.$spacing-4 0;
 }
 
 // moving towards numerical class names (i.e. -12) and away from s/m/l etc.
 .has-top-bottom-margin-12 {
-  margin: $spacing-12 0;
+  margin: size_variables.$spacing-12 0;
 }
 
 .has-top-margin-negative-m {
-  margin-top: -$spacing-16;
+  margin-top: -(size_variables.$spacing-16);
 }
 
 .has-top-bottom-margin-negative-m {
-  margin-top: -$spacing-16;
-  margin-bottom: -$spacing-16;
+  margin-top: -(size_variables.$spacing-16);
+  margin-bottom: -(size_variables.$spacing-16);
 }
 
 .has-top-margin-negative-xxl {
-  margin-top: -$spacing-48;
+  margin-top: -(size_variables.$spacing-48);
 }
 
 .has-left-margin-xxs {
-  margin-left: $spacing-4;
+  margin-left: size_variables.$spacing-4;
 }
 
 .has-bottom-margin-xxs {
-  margin-bottom: $spacing-4 !important;
+  margin-bottom: size_variables.$spacing-4 !important;
 }
 
 .has-bottom-margin-xs {
-  margin-bottom: $spacing-8 !important;
+  margin-bottom: size_variables.$spacing-8 !important;
 }
 
 .has-bottom-margin-s {
-  margin-bottom: $spacing-12;
+  margin-bottom: size_variables.$spacing-12;
 }
 
 .has-bottom-margin-m {
-  margin-bottom: $spacing-16;
+  margin-bottom: size_variables.$spacing-16;
 }
 
 .has-bottom-margin-l {
-  margin-bottom: $spacing-24;
+  margin-bottom: size_variables.$spacing-24;
 }
 
 .has-bottom-margin-xl {
-  margin-bottom: $spacing-36;
+  margin-bottom: size_variables.$spacing-36;
 }
 
 .has-bottom-margin-xxl {
-  margin-bottom: $spacing-48;
+  margin-bottom: size_variables.$spacing-48;
 }
 
 .has-top-margin-xxs {
-  margin-top: $spacing-4;
+  margin-top: size_variables.$spacing-4;
 }
 
 .has-top-margin-s {
-  margin-top: $spacing-12;
+  margin-top: size_variables.$spacing-12;
 }
 
 .has-top-margin-xs {
-  margin-top: $spacing-8;
+  margin-top: size_variables.$spacing-8;
 }
 
 .has-top-margin-m {
-  margin-top: $spacing-16;
+  margin-top: size_variables.$spacing-16;
 }
 
 .has-top-margin-l {
-  margin-top: $spacing-24;
+  margin-top: size_variables.$spacing-24;
 }
 
 .has-top-margin-xl {
-  margin-top: $spacing-36;
+  margin-top: size_variables.$spacing-36;
 }
 
 .has-top-margin-xxl {
-  margin-top: $spacing-48;
+  margin-top: size_variables.$spacing-48;
 }
 
 .has-top-margin-xxxl {
-  margin-top: $spacing-64;
+  margin-top: size_variables.$spacing-64;
 }
 
 .has-top-margin-negative-s {
-  margin-top: (-1 * $spacing-12);
+  margin-top: (-1 * size_variables.$spacing-12);
 }
 
 .has-left-margin-xxs {
-  margin-left: $spacing-4;
+  margin-left: size_variables.$spacing-4;
 }
 
 .has-left-margin-xs {
-  margin-left: $spacing-8;
+  margin-left: size_variables.$spacing-8;
 }
 
 .has-left-margin-s {
-  margin-left: $spacing-12;
+  margin-left: size_variables.$spacing-12;
 }
 
 .has-left-margin-m {
-  margin-left: $spacing-16;
+  margin-left: size_variables.$spacing-16;
 }
 
 .has-left-margin-l {
-  margin-left: $spacing-24;
+  margin-left: size_variables.$spacing-24;
 }
 
 .has-left-margin-xl {
-  margin-left: $spacing-36;
+  margin-left: size_variables.$spacing-36;
 }
 
 .has-right-margin-4 {
-  margin-right: $spacing-4;
+  margin-right: size_variables.$spacing-4;
 }
 
 .has-right-margin-8 {
-  margin-right: $spacing-8;
+  margin-right: size_variables.$spacing-8;
 }
 
 .has-right-margin-m {
-  margin-right: $spacing-16;
+  margin-right: size_variables.$spacing-16;
 }
 
 .has-right-margin-l {
-  margin-right: $spacing-24;
+  margin-right: size_variables.$spacing-24;
 }

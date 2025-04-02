@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 <Hds::SideNav::Portal @ariaLabel="Cluster Navigation Links" data-test-sidebar-nav-panel="Cluster" as |Nav|>
   <Nav.Title data-test-sidebar-nav-heading="Vault">Vault</Nav.Title>
@@ -13,7 +13,7 @@
     @text="Secrets Engines"
     data-test-sidebar-nav-link="Secrets Engines"
   />
-  {{#if this.flags.showSecretsSync}}
+  {{#if this.showSecretsSync}}
     <Nav.Link
       @route="vault.cluster.sync"
       @text="Secrets Sync"

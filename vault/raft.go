@@ -27,6 +27,7 @@ import (
 	raftlib "github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/api"
 	httpPriority "github.com/hashicorp/vault/http/priority"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -1301,7 +1302,7 @@ func (c *Core) raftLeaderInfo(leaderInfo *raft.LeaderJoinInfo, disco *discover.D
 		}
 		for _, ip := range clusterIPs {
 			addr := formatDiscoveredAddr(ip, port)
-			u := fmt.Sprintf("%s://%s", scheme, addr)
+			u := configutil.NormalizeAddr(fmt.Sprintf("%s://%s", scheme, addr))
 			info := *leaderInfo
 			info.LeaderAPIAddr = u
 			ret = append(ret, &info)

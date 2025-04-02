@@ -8,7 +8,7 @@ import { assert } from '@ember/debug';
 
 import type AdapterError from '@ember-data/adapter/error';
 import type CapabilitiesModel from 'vault/vault/models/capabilities';
-import type StoreService from 'vault/services/store';
+import type Store from '@ember-data/store';
 
 interface Capabilities {
   canCreate: boolean;
@@ -25,7 +25,7 @@ interface MultipleCapabilities {
 }
 
 export default class CapabilitiesService extends Service {
-  @service declare readonly store: StoreService;
+  @service declare readonly store: Store;
 
   async request(query: { paths?: string[]; path?: string }) {
     if (query?.paths) {
@@ -74,7 +74,7 @@ export default class CapabilitiesService extends Service {
     try {
       return this.request({ path });
     } catch (error) {
-      return error;
+      return error as AdapterError;
     }
   }
 
@@ -85,12 +85,12 @@ export default class CapabilitiesService extends Service {
   async _fetchSpecificCapability(
     path: string,
     capability: string
-  ): Promise<CapabilitiesModel> | AdapterError {
+  ): Promise<CapabilitiesModel | AdapterError> {
     try {
       const capabilities = await this.request({ path });
       return capabilities[capability];
     } catch (e) {
-      return e;
+      return e as AdapterError;
     }
   }
 

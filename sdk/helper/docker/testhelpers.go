@@ -369,9 +369,15 @@ func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*St
 		name += "-" + suffix
 	}
 
+	ref := fmt.Sprintf("%s:%s", d.RunOptions.ImageRepo, d.RunOptions.ImageTag)
+	if strings.Contains(d.RunOptions.ImageTag, ":") {
+		// Handle "tags" that are actually references with a digest, e.g. repo:sha256:1234abcd...
+		ref = fmt.Sprintf("%s@%s", d.RunOptions.ImageRepo, d.RunOptions.ImageTag)
+	}
+
 	cfg := &container.Config{
 		Hostname: name,
-		Image:    fmt.Sprintf("%s:%s", d.RunOptions.ImageRepo, d.RunOptions.ImageTag),
+		Image:    ref,
 		Env:      d.RunOptions.Env,
 		Cmd:      d.RunOptions.Cmd,
 	}
