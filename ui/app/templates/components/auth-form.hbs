@@ -65,14 +65,11 @@
     {{#if (or (eq this.selectedAuthBackend.type "jwt") (eq this.selectedAuthBackend.type "oidc"))}}
       <AuthJwt
         @onError={{action "handleError"}}
-        @onLoading={{action (mut this.isLoading)}}
         @namespace={{this.namespace}}
         @onNamespace={{action (mut this.namespace)}}
         @onSubmit={{action "doSubmit"}}
         @selectedAuthType={{this.selectedAuthBackend.type}}
         @selectedAuthPath={{or this.customPath this.selectedAuthBackend.id}}
-        {{! todo remove @disabled arg }}
-        @disabled={{or this.authIsRunning this.isLoading}}
       >
         <AuthFormOptions
           @customPath={{this.customPath}}
