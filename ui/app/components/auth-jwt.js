@@ -121,23 +121,25 @@ export default class AuthOidcJwt extends Component {
     // wait for message posted from oidc callback
     // see issue https://github.com/hashicorp/vault/issues/12436
     // ensure that postMessage event is from expected source
-    let event;
-    while (!event) {
-      // continue to wait for the correct message
-      event = await waitForEvent(thisWindow, 'message');
-    }
-
-    if (event.origin === thisWindow.origin && event.isTrusted && event.data.source === 'oidc-callback') {
-      return this.exchangeOIDC.perform(event.data, oidcWindow);
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const event = await waitForEvent(thisWindow, 'message');
+      if (event.origin === thisWindow.origin && event.isTrusted && event.data.source === 'oidc-callback') {
+        return this.exchangeOIDC.perform(event.data, oidcWindow);
+      }
     }
   });
 
   watchPopup = task(async (oidcWindow) => {
-    while (oidcWindow && !oidcWindow.closed) {
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
       const WAIT_TIME = Ember.testing ? 50 : 500;
+
       await timeout(WAIT_TIME);
+      if (!oidcWindow || oidcWindow.closed) {
+        return this.handleOIDCError(ERROR_WINDOW_CLOSED);
+      }
     }
-    return this.handleOIDCError(ERROR_WINDOW_CLOSED);
   });
 
   watchCurrent = task(async (oidcWindow) => {

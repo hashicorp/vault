@@ -20,7 +20,7 @@ import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 
 const component = create(form);
 
-const renderIt = async (context, path = 'jwt') => {
+const renderIt = async (context, { path = 'jwt', type = 'jwt' } = {}) => {
   const handler = (data, e) => {
     if (e && e.preventDefault) e.preventDefault();
     return resolve();
@@ -30,10 +30,12 @@ const renderIt = async (context, path = 'jwt') => {
   context.handler = sinon.spy(handler);
   context.roleName = '';
   context.selectedAuthPath = path;
+  context.selectedAuthType = type;
   await render(hbs`
     <AuthJwt
       @roleName={{this.roleName}}
       @selectedAuthPath={{this.selectedAuthPath}}
+      @selectedAuthType={{this.selectedAuthType}}
       @onError={{fn (mut this.error)}}
       @onNamespace={{fn (mut this.namespace)}}
       @onSelectedAuth={{fn (mut this.selectedAuth)}}
@@ -79,6 +81,32 @@ module('Integration | Component | auth jwt', function (hooks) {
     assert.strictEqual(component.yieldContent, 'Hello!', 'yields properly');
   });
 
+  test('it fetches auth_url when type changes', async function (assert) {
+    assert.expect(2);
+    await renderIt(this, { path: '', type: 'jwt' });
+    // auth_url is requested on initial render so stubbing after rendering the component
+    // to test auth_url is called when the type changes
+    this.server.post('/auth/:path/oidc/auth_url', (_, request) => {
+      assert.true(true, 'request is made to auth_url');
+      const { path } = request.params;
+      assert.strictEqual(path, 'oidc', `path param is updated type: ${path}`);
+      return {
+        data: { auth_url: '' },
+      };
+    });
+    this.set('selectedAuthType', 'oidc');
+    await settled();
+  });
+
+  test('if auth path exists it uses it to build url request instead of type', async function (assert) {
+    this.server.post('/auth/:path/oidc/auth_url', (_, request) => {
+      const { path } = request.params;
+      assert.strictEqual(path, 'custom-jwt', `path param is custom path: ${path}`);
+      return {};
+    });
+    await renderIt(this, { path: 'custom-jwt' });
+  });
+
   test('jwt: it renders and makes auth_url requests', async function (assert) {
     let postCount = 0;
     this.server.post('/auth/:path/oidc/auth_url', (_, request) => {
@@ -106,9 +134,6 @@ module('Integration | Component | auth jwt', function (hooks) {
   });
 
   test('oidc: test role: it renders', async function (assert) {
-    // setting the path also fires off a request to auth_url but this happens inconsistently in tests
-    // setting here so it doesn't affect the postCount because it's not relevant to what's being tested
-    this.set('selectedAuthPath', 'foo');
     let postCount = 0;
     this.server.post('/auth/:path/oidc/auth_url', (_, request) => {
       postCount++;
@@ -118,7 +143,7 @@ module('Integration | Component | auth jwt', function (hooks) {
         data: { auth_url },
       };
     });
-    await renderIt(this);
+    await renderIt(this, { path: 'foo', type: 'oidc' });
     await settled();
     await fillIn(AUTH_FORM.roleInput, 'test');
     assert
@@ -133,8 +158,7 @@ module('Integration | Component | auth jwt', function (hooks) {
 
   test('oidc: it fetches auth_url when path changes', async function (assert) {
     assert.expect(2);
-    this.set('selectedAuthPath', 'foo');
-    await renderIt(this);
+    await renderIt(this, { path: 'oidc', type: 'oidc' });
     // auth_url is requested on initial render so stubbing after rendering the component
     // to test auth_url is called when the :path changes
     this.server.post('/auth/:path/oidc/auth_url', (_, request) => {
@@ -144,14 +168,14 @@ module('Integration | Component | auth jwt', function (hooks) {
         data: { auth_url: '' },
       };
     });
+
     this.set('selectedAuthPath', 'foo');
     await settled();
   });
 
   test('oidc: it calls window.open popup window on login', async function (assert) {
     sinon.replaceGetter(window, 'screen', () => ({ height: 600, width: 500 }));
-    await renderIt(this);
-    this.selectedAuthPath = 'foo';
+    await renderIt(this, { path: 'foo', type: 'oidc' });
     await component.role('test');
     component.login();
     await waitUntil(() => {
@@ -167,8 +191,8 @@ module('Integration | Component | auth jwt', function (hooks) {
     sinon.restore();
   });
 
-  // this test technically passes but it's because isTrusted is always false so we do not
-  // even get to the
+  // not the greatest test because this test would also pass if the origin matched
+  // because event.isTrusted is always false (another condition checked by the component)
   test('oidc: fails silently when event origin does not match window origin', async function (assert) {
     assert.expect(3);
     // prevent test incorrectly passing because the event isn't triggered at all
@@ -180,8 +204,7 @@ module('Integration | Component | auth jwt', function (hooks) {
     };
     window.addEventListener('message', assertEvent);
 
-    await renderIt(this);
-    this.set('selectedAuthPath', 'foo');
+    await renderIt(this, { path: 'foo', type: 'oidc' });
     await component.role('test');
     component.login();
     await waitUntil(() => {
@@ -207,8 +230,7 @@ module('Integration | Component | auth jwt', function (hooks) {
     };
     window.addEventListener('message', assertEvent);
 
-    await renderIt(this);
-    this.set('selectedAuthPath', 'foo');
+    await renderIt(this, { path: 'foo', type: 'oidc' });
     await component.role('test');
     component.login();
     await waitUntil(() => {
@@ -226,7 +248,7 @@ module('Integration | Component | auth jwt', function (hooks) {
   });
 
   test('oidc: it should trigger error callback when role is not found', async function (assert) {
-    await renderIt(this, 'oidc');
+    await renderIt(this, { path: 'oidc', type: 'oidc' });
     await component.role('foo');
     await component.login();
     assert.strictEqual(
@@ -237,7 +259,7 @@ module('Integration | Component | auth jwt', function (hooks) {
   });
 
   test('oidc: it should trigger error callback when role is returned without auth_url', async function (assert) {
-    await renderIt(this, 'oidc');
+    await renderIt(this, { path: 'oidc', type: 'oidc' });
     await component.role('bar');
     await component.login();
     assert.strictEqual(

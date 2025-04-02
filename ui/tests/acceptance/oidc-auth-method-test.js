@@ -2,13 +2,12 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
-
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, fillIn, find, visit, waitUntil } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { buildMessage } from 'vault/tests/helpers/oidc-window-stub';
+import { buildMessage, callbackData } from 'vault/tests/helpers/oidc-window-stub';
 import sinon from 'sinon';
 import { Response } from 'miragejs';
 import { setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
@@ -207,6 +206,40 @@ module('Acceptance | oidc auth method', function (hooks) {
     );
   });
 
+  // test case for https://github.com/hashicorp/vault/issues/12436
+  test('it should ignore messages sent from outside the app while waiting for oidc callback', async function (assert) {
+    assert.expect(3); // one for both message events (2) and one for callback request
+    this.openStub.returns({ close: () => true });
+    this.setupMocks();
+    this.server.get('/auth/foo/oidc/callback', () => {
+      // third assertion
+      assert.true(true, 'request is made to callback url');
+      return { auth: { client_token: 'root' } };
+    });
+
+    let count = 0;
+    const assertEvent = (event) => {
+      count++;
+      // we have to use the same event method, but need to update what it checks for depending on when it's called
+      const source = count === 1 ? 'miscellaneous-source' : 'oidc-callback';
+      assert.strictEqual(event.data.source, source, `message event fires with source: ${event.data.source}`);
+    };
+    window.addEventListener('message', assertEvent);
+
+    await this.selectMethod('oidc');
+
+    setTimeout(async () => {
+      // first assertion
+      window.postMessage(callbackData({ source: 'miscellaneous-source' }), window.origin);
+      // second assertion
+      window.postMessage(callbackData({ source: 'oidc-callback' }), window.origin);
+    }, 50);
+
+    await click('[data-test-auth-submit]');
+    // cleanup
+    window.removeEventListener('message', assertEvent);
+  });
+
   test('it shows error when message posted with state key, wrong params', async function (assert) {
     this.openStub.returns({ close: () => true });
     this.setupMocks();
@@ -222,13 +255,10 @@ module('Acceptance | oidc auth method', function (hooks) {
   });
 
   test('it shows error when popup is closed', async function (assert) {
-    this.openStub.returns({ closed: true });
+    this.openStub.returns({ closed: true, close: () => {} });
+
     this.setupMocks();
     await this.selectMethod('oidc');
-    setTimeout(() => {
-      // callback params are missing "code"
-      window.postMessage({ source: 'oidc-callback', state: 'state', foo: 'bar' }, window.origin);
-    }, 50);
     await click('[data-test-auth-submit]');
     assert
       .dom(GENERAL.messageError)
