@@ -1,0 +1,216 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+<PageHeader as |p|>
+  <p.top>
+    <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{@mode}} @root={{@root}} @showCurrent={{true}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-secret-header="true">
+      {{#if (eq @mode "create")}}
+        Create Role
+      {{else if (eq @mode "edit")}}
+        Edit Role
+      {{else}}
+        {{@model.id}}
+      {{/if}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+{{#if (eq @mode "show")}}
+  <Toolbar>
+    <ToolbarActions>
+      {{#if @model.canDelete}}
+        <ConfirmAction
+          @buttonText="Delete role"
+          class="toolbar-button"
+          @buttonColor="secondary"
+          @onConfirmAction={{this.delete}}
+          @confirmTitle="Delete role?"
+          @confirmMessage="This role will be permanently deleted. You will need to recreate it to use it again."
+          data-test-database-role-delete
+        />
+        <div class="toolbar-separator"></div>
+      {{/if}}
+      {{#if (and @model.canRotateRoleCredentials (eq @model.type "static"))}}
+        <Hds::Button
+          @text="Rotate credentials"
+          @color="secondary"
+          class="toolbar-button"
+          {{on "click" (fn this.rotateRoleCred @model.id)}}
+        />
+      {{/if}}
+      {{#if
+        (or
+          (and (eq @model.type "static") @model.canGetCredentials)
+          (and (eq @model.type "dynamic") @model.canGenerateCredentials)
+        )
+      }}
+        <Hds::Button
+          @text={{if (eq @model.type "static") "Get credentials" "Generate credentials"}}
+          @color="secondary"
+          class="toolbar-button"
+          {{on "click" (fn this.generateCreds @model.id @model.type)}}
+          data-test-database-role-creds={{@model.type}}
+        />
+      {{/if}}
+      {{#if @model.canEditRole}}
+        <ToolbarSecretLink
+          @secret={{concat "role/" @model.id}}
+          @mode="edit"
+          @backend={{@model.backend}}
+          @replace={{true}}
+          @queryParams={{hash itemType="role"}}
+          data-test-edit-link={{true}}
+        >
+          Edit role
+        </ToolbarSecretLink>
+      {{/if}}
+    </ToolbarActions>
+  </Toolbar>
+  {{#each @model.showFields as |attr|}}
+    {{#let attr.options.defaultShown as |defaultDisplay|}}
+      {{#if (eq attr.type "object")}}
+        <InfoTableRow
+          @alwaysRender={{true}}
+          @defaultShown={{defaultDisplay}}
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{stringify (get @model attr.name)}}
+        />
+      {{else if (eq attr.options.editType "ttl")}}
+        <InfoTableRow
+          @alwaysRender={{true}}
+          @defaultShown={{defaultDisplay}}
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{format-duration (get @model attr.name)}}
+          @isLink={{eq attr.name "database"}}
+        />
+      {{else if (eq attr.name "skip_import_rotation")}}
+        <InfoTableRow
+          @alwaysRender={{true}}
+          @defaultShown={{defaultDisplay}}
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{not (get @model attr.name)}}
+          @isLink={{eq attr.name "database"}}
+        />
+      {{else}}
+        <InfoTableRow
+          @alwaysRender={{true}}
+          @defaultShown={{defaultDisplay}}
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{get @model attr.name}}
+          @isLink={{eq attr.name "database"}}
+        />
+      {{/if}}
+    {{/let}}
+  {{/each}}
+{{else}}
+  {{! Edit or Create }}
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <form {{on "submit" this.handleCreateEditRole}}>
+      <MessageError @errorMessage={{this.errorMessage}} />
+      {{#each @model.fieldAttrs as |attr|}}
+        {{#if (eq @mode "edit")}}
+          <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
+        {{else if (not-eq attr.options.readOnly true)}}
+          {{#if (eq attr.name "type")}}
+            {{#if @model.database}}
+              <FormField
+                data-test-field={{true}}
+                @attr={{attr}}
+                @model={{@model}}
+                @modelValidations={{this.modelValidations}}
+              />
+            {{/if}}
+          {{else}}
+            <FormField
+              data-test-field={{true}}
+              @attr={{attr}}
+              @model={{@model}}
+              @modelValidations={{this.modelValidations}}
+            />
+          {{/if}}
+          {{! TODO: If database && !updateDB show warning }}
+          {{#if (get this.warningMessages attr.name)}}
+            <Hds::Alert @type="inline" @color="warning" class="has-top-margin-negative-s has-bottom-margin-s" as |A|>
+              <A.Title>Warning</A.Title>
+              <A.Description>{{get this.warningMessages attr.name}}</A.Description>
+            </Hds::Alert>
+          {{/if}}
+        {{/if}}
+      {{/each}}
+      {{#if @model.database}}
+        <DatabaseRoleSettingForm
+          @attrs={{@model.roleSettingAttrs}}
+          @roleType={{@model.type}}
+          @model={{@model}}
+          @mode={{@mode}}
+          @dbParams={{await this.databaseParams}}
+          @modelValidations={{this.modelValidations}}
+        />
+      {{else}}
+        <EmptyState
+          @title="No database connection selected"
+          @message="Choose a connection to be able to configure a role type."
+        />
+      {{/if}}
+      <div class="field is-fullwidth box is-bottomless">
+        <Hds::ButtonSet>
+          <Hds::Button
+            @text={{if (eq @mode "create") "Create role" "Save"}}
+            @icon={{if this.handleCreateEditRole.isRunning "loading"}}
+            type="submit"
+            disabled={{this.handleCreateEditRole.isRunning}}
+            data-test-secret-save
+          />
+          <Hds::Button
+            @text="Cancel"
+            @color="secondary"
+            @route="vault.cluster.secrets.backend.list-root"
+            @model={{@model.backend}}
+            @query={{hash tab="role"}}
+            data-test-database-role-cancel
+          />
+        </Hds::ButtonSet>
+        {{#if this.invalidFormAlert}}
+          <AlertInline
+            data-test-invalid-form-alert
+            class="has-top-padding-s"
+            @type="danger"
+            @message={{this.invalidFormAlert}}
+          />
+        {{/if}}
+        {{#if (not (is-empty-value this.warningMessages))}}
+          <Hds::Alert @type="compact" @color="warning" class="has-left-margin-s" as |A|>
+            <A.Title>Warning</A.Title>
+            <A.Description>
+              You don't have permissions required to
+              {{if (eq @mode "create") "create" "update"}}
+              this role. See form for details.
+            </A.Description>
+          </Hds::Alert>
+        {{/if}}
+      </div>
+    </form>
+  </div>
+{{/if}}
+
+{{#if this.saveIssuerWarning}}
+  <Hds::Modal @color="warning" @onClose={{fn (mut this.saveIssuerWarning) ""}} data-test-issuer-warning as |M|>
+    <M.Header @icon="alert-circle">
+      Are you sure?
+    </M.Header>
+    <M.Body>
+      <p data-test-issuer-warning-message>
+        {{this.saveIssuerWarning}}
+      </p>
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::ButtonSet>
+        <Hds::Button @text="Continue" {{on "click" this.continueSubmitForm}} data-test-issuer-save />
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} data-test-issuer-cancel />
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

@@ -106,6 +106,26 @@ module('Integration | Component | form field', function (hooks) {
     assert.ok(spy.calledWith('foo', 'hello'), 'onChange called with correct args');
   });
 
+  test('it renders: toggleButton', async function (assert) {
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('foobar', 'toggleButton', {
+        defaultValue: false,
+        editType: 'toggleButton',
+        helperTextEnabled: 'Toggled on',
+        helperTextDisabled: 'Toggled off',
+      })
+    );
+    assert.ok(component.hasToggleButton, 'renders a toggle button');
+    assert.dom('[data-test-toggle-input]').isNotChecked();
+    assert.dom('[data-test-toggle-subtext]').hasText('Toggled off');
+
+    await component.fields.objectAt(0).toggleButton();
+
+    assert.true(model.get('foobar'));
+    assert.ok(spy.calledWith('foobar', true), 'onChange called with correct args');
+  });
+
   test('it renders: editType file', async function (assert) {
     const subText = 'My subtext.';
     await setup.call(this, createAttr('foo', 'string', { editType: 'file', subText, docLink: '/docs' }));

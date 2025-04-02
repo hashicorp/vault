@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 <PageHeader as |p|>
   <p.top>
@@ -347,6 +347,13 @@
           @isLink={{true}}
           @queryParam="role"
           @type={{attr.type}}
+        />
+      {{else if (eq attr.name "skip_static_role_rotation_import")}}
+        <InfoTableRow
+          @alwaysRender={{not (is-empty-value (get @model attr.name) hasDefault=defaultDisplay)}}
+          @defaultShown={{defaultDisplay}}
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{not (get @model attr.name)}}
         />
       {{else}}
         <InfoTableRow

@@ -1,3 +1,5 @@
+@use '../utils/color_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -7,23 +9,23 @@
 
 // background colors
 .has-background-white-bis {
-  background: $ui-gray-050;
+  background: color_variables.$ui-gray-050;
 }
 
 .has-background-gray-100 {
-  background-color: $ui-gray-100;
+  background-color: color_variables.$ui-gray-100;
 }
 
 .has-background-gray-200 {
-  background-color: $ui-gray-200;
+  background-color: color_variables.$ui-gray-200;
 }
 
 .has-background-gray-300 {
-  background-color: $ui-gray-300;
+  background-color: color_variables.$ui-gray-300;
 }
 
 .has-background-gray-900 {
-  background-color: $ui-gray-900;
+  background-color: color_variables.$ui-gray-900;
 }
 
 .background-color-black {
@@ -33,12 +35,12 @@
 // borders
 .has-border-top-light {
   border-radius: 0;
-  border-top: 1px solid $grey-light;
+  border-top: 1px solid color_variables.$grey-light;
 }
 
 .has-border-bottom-light {
   border-radius: 0;
-  border-bottom: 1px solid $grey-light;
+  border-bottom: 1px solid color_variables.$grey-light;
 }
 
 .has-error-border,
@@ -46,22 +48,22 @@ select.has-error-border,
 .ttl-picker-form-field-error input,
 .string-list-form-field-error .field:first-of-type textarea,
 .hds-form-checkbox.has-error-border {
-  border: 1px solid $red-500;
+  border: 1px solid color_variables.$red-500;
 }
 
 .error-border-child-inputs input,
 .error-border-child-inputs textarea {
-  border: 1px solid $red-500;
+  border: 1px solid color_variables.$red-500;
 }
 
 // specifically for the SearchSelect dropdown.
 .dropdown-has-error-border > div.ember-basic-dropdown-trigger {
-  border: 1px solid $red-500;
+  border: 1px solid color_variables.$red-500;
 }
 
 // text color
 .text-grey-lightest {
-  color: $grey-lightest;
+  color: color_variables.$grey-lightest;
 }
 
 .has-text-grey-light {
@@ -73,23 +75,23 @@ select.has-error-border,
 }
 
 .has-text-grey-dark {
-  color: $ui-gray-700 !important;
+  color: color_variables.$ui-gray-700 !important;
 }
 
 .has-text-white {
-  color: $white !important;
+  color: color_variables.$white !important;
 }
 
 .has-text-black {
-  color: $black !important;
+  color: color_variables.$black !important;
 }
 
 .has-text-info {
-  color: $blue-500 !important;
+  color: color_variables.$blue-500 !important;
 }
 // same without the !important
 .has-text-primary {
-  color: $blue-500;
+  color: color_variables.$blue-500;
 }
 
 .has-text-success {
@@ -97,13 +99,13 @@ select.has-error-border,
 }
 
 .has-text-highlight {
-  color: $yellow-500;
+  color: color_variables.$yellow-500;
 }
 
 .has-text-danger {
-  color: $red-500 !important;
+  color: color_variables.$red-500 !important;
 }
 
 .has-text-primary {
-  color: $blue;
+  color: color_variables.$blue;
 }

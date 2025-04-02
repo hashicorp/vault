@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 {{#if this.mfaErrors}}
   <div class="has-top-margin-xxl" data-test-mfa-error>
@@ -21,7 +21,7 @@
     <:header>
       {{#if @oidcProviderQueryParam}}
         <div class="box is-shadowless is-flex-v-centered" data-test-auth-logo>
-          <LogoEdition aria-label="Sign in with Hashicorp Vault" />
+          <LogoEdition aria-label="Sign in with Hashicorp Vault" role="img" />
         </div>
       {{else}}
         <div class="is-flex-v-centered has-bottom-margin-xxl">
@@ -37,6 +37,7 @@
               @isIconOnly={{true}}
               @color="tertiary"
               {{on "click" (fn (mut this.mfaAuthData) null)}}
+              data-test-back-button
             />
           {{/if}}
           <h1 class="title is-3">

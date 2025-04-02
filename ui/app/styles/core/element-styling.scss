@@ -1,3 +1,7 @@
+@use '../utils/color_variables';
+@use '../utils/font_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -37,7 +41,7 @@ body,
 pre:not(.hds-code-block__code),
 strong,
 table th {
-  color: $ui-gray-900;
+  color: color_variables.$ui-gray-900;
 }
 
 h1,
@@ -80,8 +84,8 @@ object {
 }
 
 html {
-  background-color: $white;
-  font-size: $base-font-size; // 16px
+  background-color: color_variables.$white;
+  font-size: size_variables.$base-font-size; // 16px
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
   min-width: 300px;
@@ -104,7 +108,7 @@ button,
 input,
 select,
 textarea {
-  font-family: $family-sans;
+  font-family: font_variables.$family-sans;
 }
 
 code,
@@ -121,14 +125,14 @@ pre code {
 }
 
 body {
-  font-size: $size-6;
+  font-size: size_variables.$size-6;
   line-height: 1.5;
   overflow-x: hidden;
   overflow-y: scroll;
 }
 
 a {
-  color: $blue-500;
+  color: color_variables.$blue-500;
   cursor: pointer;
   text-decoration: underline;
 
@@ -140,19 +144,19 @@ a {
 }
 
 a:hover {
-  color: $ui-gray-900;
+  color: color_variables.$ui-gray-900;
 }
 
 code {
   background-color: transparent;
-  color: $ui-gray-700;
+  color: color_variables.$ui-gray-700;
   font-size: 1em;
   font-weight: 400;
   padding: 0;
 }
 
 hr {
-  background-color: $ui-gray-300;
+  background-color: color_variables.$ui-gray-300;
   border: none;
   display: block;
   height: 1px;
@@ -190,7 +194,7 @@ label {
 // <Hds::Dropdown>
 .hds-dropdown-list-item {
   > button:disabled {
-    color: $black;
+    color: color_variables.$black;
     opacity: 0.5;
     cursor: not-allowed;
   }

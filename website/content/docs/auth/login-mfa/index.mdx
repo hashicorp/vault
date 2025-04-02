@@ -236,11 +236,15 @@ To get started with Login MFA, refer to the [Login MFA](/vault/tutorials/auth-me
 
 Enable a Login MFA method to enforce TOTP on the LDAP auth method.
 
-<Note>
+Authenticator applications are not consistent in their support of encryption algorithms. You should research the algorithms supported by your preferred authenticator app. The [Configure TOTP MFA Method documentation](/vault/api-docs/secret/identity/mfa/totp#algorithm) lists algorithms supported by the Login MFA TOTP method.
 
- Authenticator applications are not consistent in their support of encryption algorithms. You should research the algorithms supported by your preferred authenticator app. The [Configure TOTP MFA Method documentation](/vault/api-docs/secret/identity/mfa/totp#algorithm) lists algorithms supported by the Login MFA TOTP method. Google Authenticator supports SHA256.
+The following table lists the known authenticator applications and encryption algorithms compatibility. 
 
-</Note>
+| Authenticator application             |  SHA256  |  SHA1   |
+| ------------------------------------- | :------: | :-----: |
+| Google Authenticator Chrome extension | &#10060; | &#9989; |
+| Google Authenticator mobile app       | &#9989;  | &#9989; |
+| Yubico Authenticator for Desktop      | &#9989;  | &#9989; |
 
 Configure the Login MFA TOTP method and note down the resulting `method_id`.
 

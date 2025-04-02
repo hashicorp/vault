@@ -288,6 +288,8 @@ func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 					OperationVerb:   "configure",
 					OperationSuffix: "connection",
 				},
+				ForwardPerformanceSecondary: true,
+				ForwardPerformanceStandby:   true,
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.connectionWriteHandler(),
@@ -295,6 +297,8 @@ func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 					OperationVerb:   "configure",
 					OperationSuffix: "connection",
 				},
+				ForwardPerformanceSecondary: true,
+				ForwardPerformanceStandby:   true,
 			},
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.connectionReadHandler(),
