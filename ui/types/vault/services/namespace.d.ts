@@ -13,8 +13,10 @@ interface PathsResponse {
 export default class NamespaceService extends Service {
   userRootNamespace: string;
   inRootNamespace: boolean;
+  inHvdAdminNamespace: boolean;
   currentNamespace: string;
   relativeNamespace: string;
+  path: string;
   setNamespace: () => void;
   findNamespacesForUser: () => void;
   reset: () => void;

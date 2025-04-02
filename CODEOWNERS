@@ -31,7 +31,21 @@
 /vault/plugin_catalog.go      @hashicorp/vault-ecosystem
 
 # Content on developer.hashicorp.com
-/website/ @hashicorp/vault-education-approvers
+
+# Web presence gets notified of, and can approve changes to web tooling, but not content.
+
+/website/               @hashicorp/web-presence
+/website/data/
+/website/public/
+/website/content/
+
+# Education gets notified of, and can approve changes to web content.
+
+/website/data/          @hashicorp/vault-education-approvers
+/website/public/        @hashicorp/vault-education-approvers
+/website/content/       @hashicorp/vault-education-approvers
+/website/templates/     @hashicorp/vault-education-approvers
+/website/redirects.js   @hashicorp/vault-education-approvers
 
 # Plugin docs
 /website/content/docs/plugins/              @hashicorp/vault-ecosystem @hashicorp/vault-education-approvers
@@ -53,6 +67,7 @@
 /enos/     @hashicorp/quality-team
 
 # Cryptosec
+/api/auth/cert/                                      @hashicorp/vault-crypto
 /builtin/logical/pki/                                @hashicorp/vault-crypto
 /builtin/logical/pkiext/                             @hashicorp/vault-crypto
 /website/content/docs/secrets/pki/                   @hashicorp/vault-crypto @hashicorp/vault-education-approvers

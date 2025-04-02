@@ -11,7 +11,7 @@ import { guidFor } from '@ember/object/internals';
 import { run } from '@ember/runloop';
 import { keyIsFolder, parentKeyForKey, keyWithoutParentKey } from 'core/utils/key-utils';
 
-import type StoreService from 'vault/services/store';
+import type Store from '@ember-data/store';
 import type KvSecretMetadataModel from 'vault/models/kv/metadata';
 
 /**
@@ -49,7 +49,7 @@ interface PowerSelectAPI {
 }
 
 export default class KvSuggestionInputComponent extends Component<Args> {
-  @service declare readonly store: StoreService;
+  @service declare readonly store: Store;
 
   @tracked secrets: KvSecretMetadataModel[] = [];
   powerSelectAPI: PowerSelectAPI | undefined;

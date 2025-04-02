@@ -18,10 +18,6 @@
         "path": "secret"
       },
       {
-        "title": "Active Directory",
-        "path": "secret/ad"
-      },
-      {
         "title": "AliCloud",
         "path": "secret/alicloud"
       },

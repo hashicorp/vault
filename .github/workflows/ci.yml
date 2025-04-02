@@ -19,9 +19,9 @@ concurrency:
 jobs:
   setup:
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","linux","small"]') }}
+    permissions: write-all # vault-auth
     outputs:
-      app-changed: ${{ steps.changed-files.outputs.app-changed }}
-      autopilot-changed: ${{ steps.changed-files.outputs.autopilot-changed }}
+      changed-files: ${{ steps.changed-files.outputs.changed-files }}
       checkout-ref: ${{ steps.checkout.outputs.ref }}
       compute-small: ${{ steps.metadata.outputs.compute-small }}
       compute-test-go: ${{ steps.metadata.outputs.compute-test-go }}
@@ -31,16 +31,34 @@ jobs:
       is-enterprise: ${{ steps.metadata.outputs.is-enterprise }}
       is-fork: ${{ steps.metadata.outputs.is-fork }}
       labels: ${{ steps.metadata.outputs.labels }}
-      ui-changed: ${{ steps.changed-files.outputs.ui-changed }}
       workflow-trigger: ${{ steps.metadata.outputs.workflow-trigger }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: ./.github/actions/changed-files
-        id: changed-files
+      # Make sure we check out correct ref based on PR labels and such
       - uses: ./.github/actions/checkout
-        id: checkout # make sure we check out correct ref after checking changed files
+        id: checkout
       - uses: ./.github/actions/metadata
         id: metadata
+      # Get the elevated github token
+      - if: steps.metadata.outputs.is-enterprise == 'true'
+        id: vault-auth
+        name: Vault Authenticate
+        run: vault-auth
+      - if: steps.metadata.outputs.is-enterprise == 'true'
+        id: vault-secrets
+        name: Fetch Vault Secrets
+        uses: hashicorp/vault-action@d1720f055e0635fd932a1d2a48f87a666a57906c # v3.0.0
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          secrets: |
+            kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
+      # Determine the changed files
+      - uses: ./.github/actions/changed-files
+        id: changed-files
+        with:
+          github-token: ${{ steps.metadata.outputs.is-enterprise != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
       - name: Ensure Go modules are cached
         uses: ./.github/actions/set-up-go
         with:
@@ -59,8 +77,8 @@ jobs:
     # If you'd like to run the autopilot tests for a specific git checkout or set of source versions,
     # you can manually trigger the workflow, see the .github/workflows/run-apupgrade-tests-ent.yml file in the ENT repo.
     if: |
-      needs.setup.outputs.autopilot-changed == 'true' &&
-      github.repository == 'hashicorp/vault-enterprise' &&
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'autopilot') ||
+      needs.setup.outputs.is-enterprise == 'true' &&
       ((github.event_name == 'pull_request' && github.base_ref == 'main') ||
       (github.event_name == 'push' && github.ref == 'refs/heads/main'))
     needs: setup
@@ -122,7 +140,9 @@ jobs:
 
   test-go:
     # Run Go tests if the vault app changed
-    if: needs.setup.outputs.app-changed == 'true'
+    if: |
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline')
     name: Run Go tests
     needs: setup
     uses: ./.github/workflows/test-go.yml
@@ -142,7 +162,7 @@ jobs:
 
   test-go-testonly:
     # Run Go tests tagged with "testonly" if the vault app changed
-    if: needs.setup.outputs.app-changed == 'true'
+    if: contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app')
     name: Run Go tests tagged with testonly
     needs: setup
     uses: ./.github/workflows/test-go.yml
@@ -161,7 +181,7 @@ jobs:
   test-go-race:
     # Run Go test with the data race detector enabled if the vault app changed and we're out of
     # drafts mode.
-    if: needs.setup.outputs.app-changed == 'true' && needs.setup.outputs.is-draft == 'false'
+    if: contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') && needs.setup.outputs.is-draft == 'false'
     name: Run Go tests with data race detection
     needs: setup
     uses: ./.github/workflows/test-go.yml
@@ -186,7 +206,7 @@ jobs:
     # Run the Go tests with fips if the vault app changed, we're in the context vault enterprise
     # and our trigger is a merge to main or releases/* or if the 'fips' label is present on a PR.
     if: |
-      needs.setup.outputs.app-changed == 'true' &&
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') &&
       needs.setup.outputs.is-enterprise == 'true' &&
       (needs.setup.outputs.workflow-trigger == 'push' || contains(needs.setup.outputs.labels, 'fips'))
     needs: setup
@@ -211,7 +231,7 @@ jobs:
     # Run the UI tests if our UI has changed, or a 'ui' label is present, or our workflow trigger
     # was triggered by a merge to main or releases/*.
     if: |
-      needs.setup.outputs.ui-changed == 'true' ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'ui') ||
       needs.setup.outputs.workflow-trigger == 'push' ||
       contains(github.event.pull_request.labels.*.name, 'ui')
     needs: setup

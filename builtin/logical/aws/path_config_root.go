@@ -6,6 +6,7 @@ package aws
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -80,6 +81,8 @@ func pathConfigRoot(b *backend) *framework.Path {
 			},
 		},
 
+		ExistenceCheck: b.pathConfigRootExistenceCheck,
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigRootRead,
@@ -93,6 +96,17 @@ func pathConfigRoot(b *backend) *framework.Path {
 					OperationVerb:   "configure",
 					OperationSuffix: "root-iam-credentials",
 				},
+				ForwardPerformanceSecondary: true,
+				ForwardPerformanceStandby:   true,
+			},
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.pathConfigRootWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "root-iam-credentials",
+				},
+				ForwardPerformanceSecondary: true,
+				ForwardPerformanceStandby:   true,
 			},
 		},
 
@@ -105,15 +119,25 @@ func pathConfigRoot(b *backend) *framework.Path {
 	return p
 }
 
+// Establishes dichotomy of request operation between CreateOperation and UpdateOperation.
+// Returning 'true' forces an UpdateOperation, CreateOperation otherwise.
+func (b *backend) pathConfigRootExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
+	entry, err := getConfigFromStorage(ctx, req)
+	if err != nil {
+		return false, err
+	}
+	return entry != nil, nil
+}
+
 func (b *backend) pathConfigRootRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.clientMutex.RLock()
 	defer b.clientMutex.RUnlock()
 
-	config, exists, err := getConfigFromStorage(ctx, req)
+	config, err := getConfigFromStorage(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	if !exists {
+	if config == nil {
 		return nil, nil
 	}
 
@@ -139,46 +163,90 @@ func (b *backend) pathConfigRootRead(ctx context.Context, req *logical.Request, 
 }
 
 func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	region := data.Get("region").(string)
-	iamendpoint := data.Get("iam_endpoint").(string)
-	stsendpoint := data.Get("sts_endpoint").(string)
-	stsregion := data.Get("sts_region").(string)
-	maxretries := data.Get("max_retries").(int)
-	roleARN := data.Get("role_arn").(string)
-	usernameTemplate := data.Get("username_template").(string)
-	if usernameTemplate == "" {
-		usernameTemplate = defaultUserNameTemplate
-	}
-
-	stsFallbackEndpoints := data.Get("sts_fallback_endpoints").([]string)
-	stsFallbackRegions := data.Get("sts_fallback_regions").([]string)
-
-	if len(stsFallbackEndpoints) != len(stsFallbackRegions) {
-		return logical.ErrorResponse("fallback endpoints and fallback regions must be the same length"), nil
-	}
-
 	b.clientMutex.Lock()
 	defer b.clientMutex.Unlock()
 
 	// check for existing config
-	previousCfg, previousCfgExists, err := getConfigFromStorage(ctx, req)
+	rc, err := getConfigFromStorage(ctx, req)
 	if err != nil {
 		return nil, err
 	}
 
-	rc := rootConfig{
-		AccessKey:            data.Get("access_key").(string),
-		SecretKey:            data.Get("secret_key").(string),
-		IAMEndpoint:          iamendpoint,
-		STSEndpoint:          stsendpoint,
-		STSRegion:            stsregion,
-		STSFallbackEndpoints: stsFallbackEndpoints,
-		STSFallbackRegions:   stsFallbackRegions,
-		Region:               region,
-		MaxRetries:           maxretries,
-		UsernameTemplate:     usernameTemplate,
-		RoleARN:              roleARN,
+	if rc == nil {
+		// Baseline
+		rc = &rootConfig{}
 	}
+
+	if accessKey, ok := data.GetOk("access_key"); ok {
+		rc.AccessKey = accessKey.(string)
+	} else if req.Operation == logical.CreateOperation {
+		rc.AccessKey = data.Get("access_key").(string)
+	}
+
+	if secretKey, ok := data.GetOk("secret_key"); ok {
+		rc.SecretKey = secretKey.(string)
+	} else if req.Operation == logical.CreateOperation {
+		rc.SecretKey = data.Get("secret_key").(string)
+	}
+
+	if region, ok := data.GetOk("region"); ok {
+		rc.Region = region.(string)
+	} else if req.Operation == logical.CreateOperation {
+		rc.Region = data.Get("region").(string)
+	}
+
+	if iamEndpoint, ok := data.GetOk("iam_endpoint"); ok {
+		rc.IAMEndpoint = iamEndpoint.(string)
+	} else if req.Operation == logical.CreateOperation {
+		rc.IAMEndpoint = data.Get("iam_endpoint").(string)
+	}
+
+	if stsEndpoint, ok := data.GetOk("sts_endpoint"); ok {
+		rc.STSEndpoint = stsEndpoint.(string)
+	} else if req.Operation == logical.CreateOperation {
+		rc.STSEndpoint = data.Get("sts_endpoint").(string)
+	}
+
+	if stsRegion, ok := data.GetOk("sts_region"); ok {
+		rc.STSRegion = stsRegion.(string)
+	} else if req.Operation == logical.CreateOperation {
+		rc.STSRegion = data.Get("sts_region").(string)
+	}
+
+	if maxRetries, ok := data.GetOk("max_retries"); ok {
+		rc.MaxRetries = maxRetries.(int)
+	} else if req.Operation == logical.CreateOperation {
+		rc.MaxRetries = data.Get("max_retries").(int)
+	}
+
+	if roleARN, ok := data.GetOk("role_arn"); ok {
+		rc.RoleARN = roleARN.(string)
+	} else if req.Operation == logical.CreateOperation {
+		rc.RoleARN = data.Get("role_arn").(string)
+	}
+
+	if stsFallbackEndpoints, ok := data.GetOk("sts_fallback_endpoints"); ok {
+		rc.STSFallbackEndpoints = stsFallbackEndpoints.([]string)
+	} else if req.Operation == logical.CreateOperation {
+		rc.STSFallbackEndpoints = data.Get("sts_fallback_endpoints").([]string)
+	}
+
+	if stsFallbackRegions, ok := data.GetOk("sts_fallback_regions"); ok {
+		rc.STSFallbackRegions = stsFallbackRegions.([]string)
+	} else if req.Operation == logical.CreateOperation {
+		rc.STSFallbackRegions = data.Get("sts_fallback_regions").([]string)
+	}
+
+	usernameTemplate := data.Get("username_template").(string)
+	if usernameTemplate == "" {
+		usernameTemplate = defaultUserNameTemplate
+	}
+	rc.UsernameTemplate = usernameTemplate
+
+	if len(rc.STSFallbackEndpoints) != len(rc.STSFallbackRegions) {
+		return logical.ErrorResponse("fallback endpoints and fallback regions must be the same length"), nil
+	}
+
 	if err := rc.ParsePluginIdentityTokenFields(data); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -206,49 +274,46 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 		}
 	}
 
-	// Save the initial config only if it does not already exist
-	if !previousCfgExists {
-		if err := putConfigToStorage(ctx, req, &rc); err != nil {
-			return nil, err
+	var performedRotationManagerOpern string
+	if rc.ShouldDeregisterRotationJob() {
+		performedRotationManagerOpern = rotation.PerformedDeregistration
+		// Disable Automated Rotation and Deregister credentials if required
+		deregisterReq := &rotation.RotationJobDeregisterRequest{
+			MountPoint: req.MountPoint,
+			ReqPath:    req.Path,
 		}
-	}
 
-	// Now that the root config is set up, register the rotation job if it required
-	if rc.ShouldRegisterRotationJob() {
+		b.Logger().Debug("Deregistering rotation job", "mount", req.MountPoint+req.Path)
+		if err := b.System().DeregisterRotationJob(ctx, deregisterReq); err != nil {
+			return logical.ErrorResponse("error deregistering rotation job: %s", err), nil
+		}
+	} else if rc.ShouldRegisterRotationJob() {
+		performedRotationManagerOpern = rotation.PerformedRegistration
+		// Register the rotation job if it's required.
 		cfgReq := &rotation.RotationJobConfigureRequest{
-			Name:             rootRotationJobName,
-			MountType:        req.MountType,
+			MountPoint:       req.MountPoint,
 			ReqPath:          req.Path,
 			RotationSchedule: rc.RotationSchedule,
 			RotationWindow:   rc.RotationWindow,
 			RotationPeriod:   rc.RotationPeriod,
 		}
 
-		_, err = b.System().RegisterRotationJob(ctx, cfgReq)
-		if err != nil {
+		b.Logger().Debug("Registering rotation job", "mount", req.MountPoint+req.Path)
+		if _, err = b.System().RegisterRotationJob(ctx, cfgReq); err != nil {
 			return logical.ErrorResponse("error registering rotation job: %s", err), nil
 		}
 	}
 
-	// Disable Automated Rotation and Deregister credentials if required
-	if rc.DisableAutomatedRotation {
-		// Ensure de-registering only occurs on updates and if
-		// a credential has actually been registered (rotation_period or rotation_schedule is set)
-		deregisterReq := &rotation.RotationJobDeregisterRequest{
-			MountType: req.MountType,
-			ReqPath:   req.Path,
+	// Save the config
+	if err := putConfigToStorage(ctx, req, rc); err != nil {
+		wrappedError := err
+		if performedRotationManagerOpern != "" {
+			b.Logger().Error("write to storage failed but the rotation manager still succeeded.",
+				"operation", performedRotationManagerOpern, "mount", req.MountPoint, "path", req.Path)
+			wrappedError = fmt.Errorf("write to storage failed but the rotation manager still succeeded; "+
+				"operation=%s, mount=%s, path=%s, storageError=%s", performedRotationManagerOpern, req.MountPoint, req.Path, err)
 		}
-		if previousCfgExists && previousCfg.ShouldRegisterRotationJob() {
-			err := b.System().DeregisterRotationJob(ctx, deregisterReq)
-			if err != nil {
-				return logical.ErrorResponse("error de-registering rotation job: %s", err), nil
-			}
-		}
-	}
-
-	// update config entry with rotation ID
-	if err := putConfigToStorage(ctx, req, &rc); err != nil {
-		return nil, err
+		return nil, wrappedError
 	}
 
 	// clear possible cached IAM / STS clients after successfully updating
@@ -259,22 +324,22 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 	return nil, nil
 }
 
-func getConfigFromStorage(ctx context.Context, req *logical.Request) (*rootConfig, bool, error) {
+func getConfigFromStorage(ctx context.Context, req *logical.Request) (*rootConfig, error) {
 	entry, err := req.Storage.Get(ctx, "config/root")
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 	if entry == nil {
-		return nil, false, nil
+		return nil, nil
 	}
 
 	var config rootConfig
 
 	if err := entry.DecodeJSON(&config); err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
-	return &config, true, nil
+	return &config, nil
 }
 
 func putConfigToStorage(ctx context.Context, req *logical.Request, rc *rootConfig) error {

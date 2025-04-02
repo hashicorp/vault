@@ -1,0 +1,3 @@
+```release-note:bug
+database: Fix a bug where static role passwords are erroneously rotated across backend restarts when using skip import rotation.
+```

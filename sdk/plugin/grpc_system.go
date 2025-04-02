@@ -231,11 +231,13 @@ func (s *gRPCSystemViewClient) RegisterRotationJob(ctx context.Context, req *rot
 	cfgReq := &pb.RegisterRotationJobRequest{
 		Job: &pb.RotationJobInput{
 			Name:             req.Name,
-			MountType:        req.MountType,
+			MountPoint:       req.MountPoint,
 			Path:             req.ReqPath,
 			RotationSchedule: req.RotationSchedule,
-			RotationWindow:   int64(req.RotationWindow),
-			RotationPeriod:   int64(req.RotationPeriod),
+
+			// on the side outbound from the plugin, we convert duration to seconds, so seconds get sent over the wire
+			RotationWindow: int64(req.RotationWindow.Seconds()),
+			RotationPeriod: int64(req.RotationPeriod.Seconds()),
 		},
 	}
 	resp, err := s.client.RegisterRotationJob(ctx, cfgReq)
@@ -248,8 +250,8 @@ func (s *gRPCSystemViewClient) RegisterRotationJob(ctx context.Context, req *rot
 func (s *gRPCSystemViewClient) DeregisterRotationJob(ctx context.Context, req *rotation.RotationJobDeregisterRequest) error {
 	_, err := s.client.DeregisterRotationJob(ctx, &pb.DeregisterRotationJobRequest{
 		Req: &pb.DeregisterRotationRequestInput{
-			MountType: req.MountType,
-			ReqPath:   req.ReqPath,
+			MountPoint: req.MountPoint,
+			ReqPath:    req.ReqPath,
 		},
 	})
 	if err != nil {
@@ -469,11 +471,14 @@ func (s *gRPCSystemViewServer) RegisterRotationJob(ctx context.Context, req *pb.
 
 	cfgReq := &rotation.RotationJobConfigureRequest{
 		Name:             req.Job.Name,
-		MountType:        req.Job.MountType,
+		MountPoint:       req.Job.MountPoint,
 		ReqPath:          req.Job.Path,
 		RotationSchedule: req.Job.RotationSchedule,
-		RotationWindow:   int(req.Job.RotationWindow),
-		RotationPeriod:   int(req.Job.RotationPeriod),
+		// on the side inbound to vault, we convert seconds back to time.Duration
+		// Note: this value is seconds (as per the outbound client call, despite being int64)
+		// The field is int64 because of gRPC reasons, not time.Duration reasons
+		RotationWindow: time.Duration(req.Job.RotationWindow) * time.Second,
+		RotationPeriod: time.Duration(req.Job.RotationPeriod) * time.Second,
 	}
 
 	rotationID, err := s.impl.RegisterRotationJob(ctx, cfgReq)
@@ -493,8 +498,8 @@ func (s *gRPCSystemViewServer) DeregisterRotationJob(ctx context.Context, req *p
 	}
 
 	cfgReq := &rotation.RotationJobDeregisterRequest{
-		MountType: req.Req.MountType,
-		ReqPath:   req.Req.ReqPath,
+		MountPoint: req.Req.MountPoint,
+		ReqPath:    req.Req.ReqPath,
 	}
 
 	err := s.impl.DeregisterRotationJob(ctx, cfgReq)

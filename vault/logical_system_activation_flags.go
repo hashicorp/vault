@@ -165,7 +165,8 @@ func (b *SystemBackend) activateIdentityDeduplication(ctx context.Context, _ *lo
 	}
 
 	if err := b.idStoreBackend.ActivationFunc(ctx, nil); err != nil {
-		return fmt.Errorf("failed to activate identity deduplication: %w", err)
+		b.logger.Error("activation flag error", "error", err)
 	}
+
 	return nil
 }

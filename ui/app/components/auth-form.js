@@ -13,6 +13,7 @@ import { allSupportedAuthBackends, supportedAuthBackends } from 'vault/helpers/s
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { v4 as uuidv4 } from 'uuid';
+import apiErrorMessage from 'vault/utils/api-error-message';
 
 /**
  * @module AuthForm
@@ -45,6 +46,7 @@ export default Component.extend(DEFAULTS, {
   store: service(),
   csp: service('csp-event'),
   version: service(),
+  api: service(),
 
   // set by query params, passed from parent Auth::Page component
   selectedAuth: null,
@@ -183,13 +185,13 @@ export default Component.extend(DEFAULTS, {
     waitFor(function* (token) {
       // will be using the Token Auth Method, so set it here
       this.set('selectedAuth', 'token');
-      const adapter = this.store.adapterFor('tools');
       try {
-        const response = yield adapter.toolAction('unwrap', null, { clientToken: token });
+        const response = yield this.api.sys.unwrap({}, this.api.buildHeaders({ token }));
         this.set('token', response.auth.client_token);
         this.send('doSubmit');
       } catch (e) {
-        this.set('error', `Token unwrap failed: ${e.errors[0]}`);
+        const error = yield apiErrorMessage(e);
+        this.set('error', `Token unwrap failed: ${error}`);
       }
     })
   ),

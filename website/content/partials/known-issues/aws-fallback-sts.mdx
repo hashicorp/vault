@@ -1,0 +1,27 @@
+### STS configuration can fail if STS endpoints are unspecified
+
+#### Affected Versions
+
+- 1.19.0
+
+#### Issue
+
+When configuring an sts endpoint in the AWS Secrets engine, when no sts_endpoint is set, the engine will return
+an error stating that the number of endpoints and regions do not match:
+
+```
+{"errors":["number of regions does not match number of endpoints"]}
+```
+
+#### Workaround
+
+Explicitly set the default endpoint and region when configuring sts:
+
+```
+{
+...
+  sts_region = "us-east-1"
+  sts_endpoint = "https://sts.amazonaws.com"
+...
+}
+```

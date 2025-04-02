@@ -28,7 +28,7 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     container:
-      image: rebuy/aws-nuke
+      image: rebuy/aws-nuke # for ekristen version: https://github.com/ekristen/aws-nuke/pkgs/container/aws-nuke
       options:
          --user root
          -t
@@ -36,7 +36,7 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
         TIME_LIMIT: "72h"
-    timeout-minutes: 60
+    timeout-minutes: 120
     steps:
       - name: Configure AWS credentials
         id: aws-configure
@@ -59,6 +59,7 @@ jobs:
       # we'll fail on actually actionable things in the quota steep afterwards.
       - name: Clean up abandoned resources
         # Filter STDERR because it's super noisy about things we don't have access to
+        # Remove --no-dry-run to do dry run
         run: |
           aws-nuke -c aws-nuke.yml -q --no-dry-run --force 2>/tmp/aws-nuke-error.log || true
 
