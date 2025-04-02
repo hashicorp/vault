@@ -9,6 +9,7 @@ import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
+import errorMessage from 'vault/utils/error-message';
 
 /**
  * @module TotpEdit
@@ -70,11 +71,10 @@ export default class TotpEdit extends Component {
     try {
       await this.args.model.destroyRecord();
       this.transitionToRoute(LIST_ROOT_ROUTE);
+      this.flashMessages.success(`${this.args.model.id} was successfully deleted.`);
     } catch (err) {
-      // err will display via model state
-      return;
+      this.flashMessages.danger(errorMessage(err));
     }
-    this.flashMessages.success(`${this.args.model.id} was successfully deleted.`);
   }
 
   createKey = task(
