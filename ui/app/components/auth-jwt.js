@@ -39,10 +39,6 @@ export default class AuthOidcJwt extends Component {
     this.fetchRole.perform();
   }
 
-  get tasksAreRunning() {
-    return this.prepareForOIDC.isRunning || this.exchangeOIDC.isRunning;
-  }
-
   @action
   checkArgUpdate() {
     // if mount path or type changes we need to check again for JWT configuration
@@ -106,6 +102,7 @@ export default class AuthOidcJwt extends Component {
   }
 
   handleOIDCError(err) {
+    this.args.onLoading(false);
     this.prepareForOIDC.cancelAll();
     this.args.onError(err);
   }
@@ -114,7 +111,8 @@ export default class AuthOidcJwt extends Component {
   // work with implicit flow. See issue https://github.com/hashicorp/vault-plugin-auth-jwt/pull/192
   prepareForOIDC = task(async (oidcWindow) => {
     const thisWindow = this.getWindow;
-
+    // show the loading animation in the parent
+    this.args.onLoading(true);
     // start watching the popup window and the current one
     this.watchPopup.perform(oidcWindow);
     this.watchCurrent.perform(oidcWindow);
@@ -150,6 +148,7 @@ export default class AuthOidcJwt extends Component {
     if (oidcState === null || oidcState === undefined) {
       return;
     }
+    this.args.onLoading(true);
 
     let { namespace, path, state, code } = oidcState;
 
