@@ -7,6 +7,7 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { task, timeout } from 'ember-concurrency';
 import { service } from '@ember/service';
+import { action } from '@ember/object';
 
 export default class GenerateCredentialsTotp extends Component {
   @tracked elapsedTime = 0;
@@ -57,5 +58,9 @@ export default class GenerateCredentialsTotp extends Component {
       // swallow error, non-essential data
       return;
     }
+  }
+
+  @action redirectPreviousPage() {
+    window.history.back();
   }
 }
