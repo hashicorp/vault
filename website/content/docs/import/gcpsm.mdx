@@ -6,7 +6,8 @@ description: The Google Cloud Platform Secret Manager source imports secrets fro
 
 # GCP secret import source
 
-Use the GCP source to import secret data from GCP Secret Manager into your Vault instance.
+Use the GCP source to import secret data from GCP Secret Manager into your Vault instance. To use dynamic
+credentials with GCP import, ensure the [GCP secrets engine](/vault/docs/secrets/gcp) is already configured.
 
 ## Argument reference
 
@@ -16,6 +17,26 @@ Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-1) for arguments common 
 
 - `credentials_file` `(string: "")` - The path to the service account key credentials file to authenticate with.
 
+- `vault_mount_path` `(string: "")` - The Vault mount path to a pre-configured GCP
+  secrets engine used to generate dynamic credentials for the importer.
+
+- `vault_role_name` `(string: "")` - The Vault role used to generate a dynamic
+  credential for the importer. The role name must exist in the pre-configured GCP secrets
+  engine mount.
+
+- `vault_namespace` `(string: "")` - The Vault namespace containing the preconfigured GCP secrets engine
+  mount path specified in `vault_mount_path` for use with dynamic secrets.
+
+- `vault_address` `(string: "")` - The address of the Vault server to use for dynamic credentials. 
+
+- `vault_credentials_file` `(string: "")` - The path to a file containing a Vault token. If not set, the CLI uses the
+  environment variable `VAULT_TOKEN`.
+
+<Note>
+-  If `credentials_file` is set, then `vault_mount_path`, `vault_role_name`,`vault_namespace`,`vault_address` and `vault_credentials_file` must be unset.
+-  If one of `vault_mount_path`,`vault_role_name`, `vault_namespace`,`vault_address` or `vault_credentials_file`  are set, then `credentials` must be unset.
+</Note>
+
 ## Example
 
 Define and configure the `my-gcp-source-1` GCP source:
@@ -23,7 +44,11 @@ Define and configure the `my-gcp-source-1` GCP source:
 ```hcl
 source_gcp {
   name             = "my-gcp-source-1"
-  credentials_file = "path/to/credentials_file"
+  vault_mount_path = "gcp"
+  vault_role_name  = "my-gcp-role-1"
+  vault_namespace  = "ns-1"
+  vault_address    = "https://vault.example.com:8200"
+  vault_credentials_file = "/path/to/vault/token"
 }
 ```
 
