@@ -7,7 +7,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import { click, fillIn, find, visit, waitUntil } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { buildMessage, callbackData } from 'vault/tests/helpers/oidc-window-stub';
+import { buildMessage, callbackData, windowStub } from 'vault/tests/helpers/oidc-window-stub';
 import sinon from 'sinon';
 import { Response } from 'miragejs';
 import { setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
@@ -19,10 +19,7 @@ module('Acceptance | oidc auth method', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.openStub = sinon.stub(window, 'open');
-    // this automatically closes the popup window
-    // some tests return close() as a function because internal logic calls window.close
-    this.openStub.returns({ close: true });
+    this.openStub = windowStub();
 
     this.setupMocks = (assert) => {
       this.server.post('/auth/oidc/oidc/auth_url', () => ({
@@ -66,7 +63,6 @@ module('Acceptance | oidc auth method', function (hooks) {
 
   test('it should login with oidc when selected from auth methods dropdown', async function (assert) {
     assert.expect(1);
-    this.openStub.returns({ close: () => true });
     this.setupMocks(assert);
 
     await this.selectMethod('oidc');
@@ -79,7 +75,6 @@ module('Acceptance | oidc auth method', function (hooks) {
 
   test('it should login with oidc from listed auth mount tab', async function (assert) {
     assert.expect(3);
-    this.openStub.returns({ close: () => true });
 
     this.setupMocks(assert);
 
@@ -107,8 +102,6 @@ module('Acceptance | oidc auth method', function (hooks) {
 
   // coverage for bug where token was selected as auth method for oidc and jwt
   test('it should populate oidc auth method on logout', async function (assert) {
-    this.openStub.returns({ close: () => true });
-
     this.setupMocks();
     await this.selectMethod('oidc');
 
@@ -161,7 +154,6 @@ module('Acceptance | oidc auth method', function (hooks) {
 
   test('it prompts mfa if configured', async function (assert) {
     assert.expect(1);
-    this.openStub.returns({ close: () => true });
 
     this.setupMocks(assert);
     this.server.get('/auth/foo/oidc/callback', () => setupTotpMfaResponse('foo'));
@@ -176,7 +168,6 @@ module('Acceptance | oidc auth method', function (hooks) {
   });
 
   test('auth service is called with client_token and cluster data', async function (assert) {
-    this.openStub.returns({ close: () => true });
     const authSpy = sinon.spy(this.owner.lookup('service:auth'), 'authenticate');
     this.setupMocks();
     await this.selectMethod('oidc');
@@ -209,7 +200,6 @@ module('Acceptance | oidc auth method', function (hooks) {
   // test case for https://github.com/hashicorp/vault/issues/12436
   test('it should ignore messages sent from outside the app while waiting for oidc callback', async function (assert) {
     assert.expect(3); // one for both message events (2) and one for callback request
-    this.openStub.returns({ close: () => true });
     this.setupMocks();
     this.server.get('/auth/foo/oidc/callback', () => {
       // third assertion
@@ -241,7 +231,6 @@ module('Acceptance | oidc auth method', function (hooks) {
   });
 
   test('it shows error when message posted with state key, wrong params', async function (assert) {
-    this.openStub.returns({ close: () => true });
     this.setupMocks();
     await this.selectMethod('oidc');
     setTimeout(() => {
@@ -255,7 +244,7 @@ module('Acceptance | oidc auth method', function (hooks) {
   });
 
   test('it shows error when popup is closed', async function (assert) {
-    this.openStub.returns({ closed: true, close: () => {} });
+    windowStub({ stub: this.openStub, popup: { closed: true, close: () => {} } });
 
     this.setupMocks();
     await this.selectMethod('oidc');

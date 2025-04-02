@@ -22,8 +22,8 @@ export default class AuthOidcJwt extends Component {
   @service flags;
 
   // cache values to determine whether or not to refire fetchRole task
-  @tracked _authType;
-  @tracked _authPath;
+  _authType;
+  _authPath;
   // set by form inputs
   @tracked roleName = null;
   @tracked jwt;
@@ -60,18 +60,14 @@ export default class AuthOidcJwt extends Component {
     this._authType = this.args.selectedAuthType;
   }
 
-  get getWindow() {
-    return window;
-  }
-
   fetchRole = restartableTask(async (wait) => {
-    // if we have a custom path is inputted use that,
-    // otherwise fallback to type (which is the default path)
-    const path = this.args.selectedAuthPath || this.args.selectedAuthType;
-
     // task is `restartable` so if the user starts typing again,
     // it will cancel and restart from the beginning.
     if (wait) await timeout(wait);
+
+    // if we have a custom path is inputted use that,
+    // otherwise fallback to type (which is the default path)
+    const path = this.args.selectedAuthPath || this.args.selectedAuthType;
 
     const id = JSON.stringify([path, this.roleName]);
 
@@ -113,7 +109,7 @@ export default class AuthOidcJwt extends Component {
   // NOTE TO DEVS: Be careful when updating the OIDC flow and ensure the updates
   // work with implicit flow. See issue https://github.com/hashicorp/vault-plugin-auth-jwt/pull/192
   prepareForOIDC = task(async (oidcWindow) => {
-    const thisWindow = this.getWindow;
+    const thisWindow = window;
 
     // start watching the popup window and the current one
     this.watchPopup.perform(oidcWindow);
@@ -144,7 +140,7 @@ export default class AuthOidcJwt extends Component {
 
   watchCurrent = task(async (oidcWindow) => {
     // when user is about to change pages, close the popup window
-    await waitForEvent(this.getWindow, 'beforeunload');
+    await waitForEvent(window, 'beforeunload');
     oidcWindow.close();
   });
 
@@ -203,7 +199,7 @@ export default class AuthOidcJwt extends Component {
     if (error) {
       this.args.onError(error);
     } else {
-      const win = this.getWindow;
+      const win = window;
       const POPUP_WIDTH = 500;
       const POPUP_HEIGHT = 600;
       const left = win.screen.width / 2 - POPUP_WIDTH / 2;

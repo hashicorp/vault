@@ -2,32 +2,19 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
-import EmberObject from '@ember/object';
-import Evented from '@ember/object/evented';
+import sinon from 'sinon';
 
-// automatically close popups opened from window.open()
-export const popup = { close: () => true };
+// suggestions for a custom popup
+// passing { close: true } automatically closes popups opened from window.open()
+// passing { closed: true } sets value on popup window
+export const windowStub = ({ stub, popup } = {}) => {
+  // if already stubbed, don't re-stub
+  const openStub = stub ? stub : sinon.stub(window, 'open');
 
-// using Evented is deprecated, but it's the only way we can trigger a message that is trusted
-// by calling window.trigger. Using dispatchEvent will always result in an untrusted event.
-export const fakeWindow = EmberObject.extend(Evented, {
-  init() {
-    this._super(...arguments);
-    this.on('close', () => {
-      this.set('closed', true);
-    });
-  },
-  get screen() {
-    return {
-      height: 600,
-      width: 500,
-    };
-  },
-  origin: 'https://my-vault.com',
-  closed: false,
-  open() {},
-  close() {},
-});
+  const defaultPopup = { close: () => true };
+  openStub.returns(popup || defaultPopup);
+  return openStub;
+};
 
 export const buildMessage = (opts) => ({
   isTrusted: true,

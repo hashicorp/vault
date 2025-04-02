@@ -5,12 +5,11 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import sinon from 'sinon';
 import { click, fillIn, find, waitUntil } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
 import authPage from 'vault/tests/pages/auth';
-import { popup } from 'vault/tests/helpers/oidc-window-stub';
+import { windowStub } from 'vault/tests/helpers/oidc-window-stub';
 import { setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
 
 module('Acceptance | enterprise saml auth method', function (hooks) {
@@ -18,7 +17,7 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.openStub = sinon.stub(window, 'open').returns(popup);
+    this.openStub = windowStub();
     this.server.put('/auth/saml/sso_service_url', () => ({
       data: {
         sso_service_url: 'http://sso-url.hashicorp.com/service',
