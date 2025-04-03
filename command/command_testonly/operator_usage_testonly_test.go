@@ -7,12 +7,14 @@ package command_testonly
 
 import (
 	"context"
+	"crypto/ed25519"
 	"fmt"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/cli"
+	"github.com/hashicorp/vault-licensing/license"
 	"github.com/hashicorp/vault/command"
 	"github.com/hashicorp/vault/helper/timeutil"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -40,11 +42,29 @@ func testOperatorUsageCommand(tb testing.TB) (*cli.MockUi, *command.OperatorUsag
 // var
 func TestOperatorUsageCommandRun(t *testing.T) {
 	now := time.Now().UTC()
-	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
-		EntCoreConfig: vault.EntCoreConfig{
-			BillingStart: timeutil.MonthsPreviousTo(1, now),
+	billingStartTime := timeutil.MonthsPreviousTo(1, now)
+	lic := vault.TestLicenseWithStart(billingStartTime,
+		map[string]interface{}{
+			"package": license.PackagePremium.String(),
+		})
+	lic.LicenseID = t.Name()
+	pub, pri, err := vault.GenerateTestLicenseKeys()
+	require.NoError(t, err)
+	signed, err := lic.SignedString(pri)
+	require.NoError(t, err)
+	coreConfig := &vault.CoreConfig{
+		ActivityLogConfig: vault.ActivityLogCoreConfig{
+			DisableTimers:          true,
+			MinimumRetentionMonths: 1200,
 		},
-	}, &vault.TestClusterOptions{
+		LicensingConfig: &vault.LicensingConfig{
+			AdditionalPublicKeys: []ed25519.PublicKey{pub},
+			LicenseRaw:           signed,
+			DoNotGenerate:        true,
+		},
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 		NumCores:    1,
 	})
@@ -53,7 +73,7 @@ func TestOperatorUsageCommandRun(t *testing.T) {
 	vault.TestWaitActive(t, core)
 
 	client := cluster.Cores[0].Client
-	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{"enabled": "enable"})
+	_, err = client.Logical().Write("sys/internal/counters/config", map[string]interface{}{"enabled": "enable"})
 	require.NoError(t, err)
 
 	_, err = clientcountutil.NewActivityLogData(client).
