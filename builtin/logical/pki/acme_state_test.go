@@ -43,6 +43,10 @@ func TestAcmeNonces(t *testing.T) {
 	}
 }
 
+// TestErrorResponseNoSubproblems builds the http body that exists in the header of an ACME error response and checks
+// in a simple case that "type" and "detail" two fields on the body do exist, but that "subproblems" a field which is
+// optional, is omitted because it does not exist in this case (rather than being included with a value null which can
+// trip up some systems).
 func TestErrorResponseNoSubproblems(t *testing.T) {
 	t.Parallel()
 	errResponse, err := TranslateError(ErrAlreadyRevoked)
