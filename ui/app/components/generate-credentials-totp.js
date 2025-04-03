@@ -7,11 +7,15 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { task, timeout } from 'ember-concurrency';
 import { service } from '@ember/service';
+import { action } from '@ember/object';
+
+const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
 export default class GenerateCredentialsTotp extends Component {
   @tracked elapsedTime = 0;
   @tracked totpCode = null;
   @service store;
+  @service router;
 
   title = 'Generate TOTP code';
 
@@ -56,6 +60,15 @@ export default class GenerateCredentialsTotp extends Component {
     } catch (e) {
       // swallow error, non-essential data
       return;
+    }
+  }
+
+  @action redirectPreviousPage() {
+    const { backRoute, keyName } = this.args;
+    if (backRoute === SHOW_ROUTE) {
+      this.router.transitionTo(this.args.backRoute, keyName);
+    } else {
+      this.router.transitionTo(this.args.backRoute);
     }
   }
 }
