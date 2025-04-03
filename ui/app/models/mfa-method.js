@@ -172,6 +172,10 @@ export default class MfaMethod extends Model {
     switch (this.type) {
       case 'totp':
         return 'history';
+      case 'pingid':
+        return 'ping-identity-color';
+      case 'duo':
+        return 'duo-color';
       default:
         return this.type;
     }
