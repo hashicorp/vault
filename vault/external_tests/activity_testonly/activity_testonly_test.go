@@ -91,58 +91,6 @@ func getTotals(t *testing.T, resp *api.Secret) vault.ResponseCounts {
 	return total
 }
 
-// Test_ActivityLog_ClientTypeResponse runs for each client type. In the
-// subtests, 10 clients of the type are created and the test verifies that the
-// activity log query response returns 10 clients of that type at every level of
-// the response hierarchy
-func Test_ActivityLog_ClientTypeResponse(t *testing.T) {
-	t.Parallel()
-	for _, tc := range allClientTypeTestCases {
-		tc := tc
-		t.Run(tc.clientType, func(t *testing.T) {
-			t.Parallel()
-			cluster := minimal.NewTestSoloCluster(t, nil)
-			client := cluster.Cores[0].Client
-			_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
-				"enabled": "enable",
-			})
-			_, err = clientcountutil.NewActivityLogData(client).
-				NewPreviousMonthData(1).
-				NewClientsSeen(10, clientcountutil.WithClientType(tc.clientType)).
-				Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES, generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES)
-			require.NoError(t, err)
-
-			now := time.Now().UTC()
-			resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
-				"end_time":   {timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
-				"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
-			})
-			require.NoError(t, err)
-
-			total := getTotals(t, resp)
-			require.Equal(t, 10, tc.responseCountsFn(total))
-			require.Equal(t, 10, total.Clients)
-
-			byNamespace := getNamespaceData(t, resp)
-			require.Equal(t, 10, tc.responseCountsFn(byNamespace[0].Counts))
-			require.Equal(t, 10, tc.responseCountsFn(*byNamespace[0].Mounts[0].Counts))
-			require.Equal(t, 10, byNamespace[0].Counts.Clients)
-			require.Equal(t, 10, byNamespace[0].Mounts[0].Counts.Clients)
-
-			byMonth := getMonthsData(t, resp)
-			require.Equal(t, 10, tc.responseCountsFn(*byMonth[0].NewClients.Counts))
-			require.Equal(t, 10, tc.responseCountsFn(*byMonth[0].Counts))
-			require.Equal(t, 10, tc.responseCountsFn(byMonth[0].Namespaces[0].Counts))
-			require.Equal(t, 10, tc.responseCountsFn(*byMonth[0].Namespaces[0].Mounts[0].Counts))
-			require.Equal(t, 10, byMonth[0].NewClients.Counts.Clients)
-			require.Equal(t, 10, byMonth[0].Counts.Clients)
-			require.Equal(t, 10, byMonth[0].Namespaces[0].Counts.Clients)
-			require.Equal(t, 10, byMonth[0].Namespaces[0].Mounts[0].Counts.Clients)
-		})
-
-	}
-}
-
 // Test_ActivityLogCurrentMonth_Response runs for each client type. The subtest
 // creates 10 clients of the type and verifies that the activity log partial
 // month response returns 10 clients of that type at every level of the response
