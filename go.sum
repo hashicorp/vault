@@ -1440,6 +1440,8 @@ github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2 v2.0.9 h1:rlKOPHzZ41QeV/
 github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2 v2.0.9/go.mod h1:pHJfTvq97FAKCWxIJOHZWQmVfRXmUN6tmgEcgj3nC+M=
 github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2 v2.0.13 h1:UuDeq3nr0e+H9CrZM3dvpDGkWFSJYTtuTqVekn2za2k=
 github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2 v2.0.13/go.mod h1:E2dYgXYNkvKe84PIxD9eJqqhFRA4guCTDweJR4i0gds=
+github.com/hashicorp/go-licensing/v3 v3.2.0 h1:8BZWO5HCKmbTBt2JFLj+OBSunIOUw1/AvZvQx3RyYnM=
+github.com/hashicorp/go-licensing/v3 v3.2.0/go.mod h1:9eogbY0f0RBBPnkAMPoPP+yTaSAYnlqDwrE1aV1tz9o=
 github.com/hashicorp/go-memdb v1.3.4 h1:XSL3NR682X/cVk2IeV0d70N4DZ9ljI885xAEU8IoK3c=
 github.com/hashicorp/go-memdb v1.3.4/go.mod h1:uBTr1oQbtuMgd1SSGoR8YV27eT3sBHbYiNm53bMpgSg=
 github.com/hashicorp/go-metrics v0.5.4 h1:8mmPiIJkTPPEbAiV97IxdAGNdRdaWwVap1BU6elejKY=
@@ -1561,6 +1563,8 @@ github.com/hashicorp/serf v0.10.1 h1:Z1H2J60yRKvfDYAOZLd2MU0ND4AH/WDz7xYHDWQsIPY
 github.com/hashicorp/serf v0.10.1/go.mod h1:yL2t6BqATOLGc5HF7qbFkTfXoPIY0WZdWHfEvMqbG+4=
 github.com/hashicorp/vault-hcp-lib v0.0.0-20250306185756-615fe2449b16 h1:OYPMX3Td3XTL0Xk5N3Se1KLde630diD1X+v3wgJXDhQ=
 github.com/hashicorp/vault-hcp-lib v0.0.0-20250306185756-615fe2449b16/go.mod h1:v4RnW8isIioLAc11prbTczNCq9TiEWE5MwizMsgY5mE=
+github.com/hashicorp/vault-licensing v1.7.2 h1:w+hWFcFKv5I/6v0mCa5+PZNVqT4eXrKr5wDYRJU7tvw=
+github.com/hashicorp/vault-licensing v1.7.2/go.mod h1:8YdM4+jxNI0H0v2lXkLcajkFQ9nnjrgSHSunFs0o5u4=
 github.com/hashicorp/vault-plugin-auth-alicloud v0.20.0 h1:yw96/zWrNPFTH8yTqTvVtraJ3EWk9vewvx1H7X6lekI=
 github.com/hashicorp/vault-plugin-auth-alicloud v0.20.0/go.mod h1:aAE14G1n1/Qw5/Vj+P0eaEuo8m6op2/3RhR4gN3q5AI=
 github.com/hashicorp/vault-plugin-auth-azure v0.20.3 h1:FqgmEHUyTHzNAMlRqq8x/9XFhaOAgiJRSvB6LTs2pmI=
