@@ -69,9 +69,10 @@ export default class TotpEdit extends Component {
   @action
   async deleteKey() {
     try {
+      const { id } = this.args.model;
       await this.args.model.destroyRecord();
       this.transitionToRoute(LIST_ROOT_ROUTE);
-      this.flashMessages.success(`${this.args.model.id} was successfully deleted.`);
+      this.flashMessages.success(`${id} was successfully deleted.`);
     } catch (err) {
       this.flashMessages.danger(errorMessage(err));
     }
