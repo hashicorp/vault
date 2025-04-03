@@ -197,6 +197,13 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		},
 	}
 
+	if keyUsages, ok := data.GetOk("key_usage"); ok {
+		err = validateCaKeyUsages(keyUsages.([]string))
+		if err != nil {
+			resp.AddWarning(fmt.Sprintf("Invalid key usage will be ignored: %v", err.Error()))
+		}
+	}
+
 	if len(parsedBundle.Certificate.RawSubject) <= 2 {
 		// Strictly a subject is a SEQUENCE of SETs of SEQUENCES.
 		//
@@ -432,6 +439,13 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		resp.AddWarning(intCaTruncatationWarning)
 	}
 
+	if keyUsages, ok := data.GetOk("key_usage"); ok {
+		err = validateCaKeyUsages(keyUsages.([]string))
+		if err != nil {
+			resp.AddWarning(fmt.Sprintf("Invalid key usage: %v", err.Error()))
+		}
+	}
+
 	return resp, nil
 }
 
@@ -629,6 +643,24 @@ func publicKeyType(pub crypto.PublicKey) (pubType x509.PublicKeyAlgorithm, sigAl
 		err = errors.New("x509: only RSA, ECDSA and Ed25519 keys supported")
 	}
 	return
+}
+
+func validateCaKeyUsages(keyUsages []string) error {
+	invalidKeyUsages := []string{}
+	for _, usage := range keyUsages {
+		cleanUsage := strings.ToLower(strings.TrimSpace(usage))
+		switch cleanUsage {
+		case "crlsign", "certsign", "digitalsignature":
+		case "contentcommitment", "keyencipherment", "dataencipherment", "keyagreement", "encipheronly", "decipheronly":
+			invalidKeyUsages = append(invalidKeyUsages, fmt.Sprintf("key usage %s is only valid for non-Ca certs", usage))
+		default:
+			invalidKeyUsages = append(invalidKeyUsages, fmt.Sprintf("unrecognized key usage %s", usage))
+		}
+	}
+	if invalidKeyUsages != nil {
+		return fmt.Errorf(strings.Join(invalidKeyUsages, "; "))
+	}
+	return nil
 }
 
 const pathGenerateRootHelpSyn = `
