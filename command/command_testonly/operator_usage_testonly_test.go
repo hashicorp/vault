@@ -54,12 +54,12 @@ func TestOperatorUsageCommandRun(t *testing.T) {
 	now := time.Now().UTC()
 
 	_, err = clientcountutil.NewActivityLogData(client).
-		NewPreviousMonthData(1).
+		NewPreviousMonthData(2).
 		NewClientsSeen(6, clientcountutil.WithClientType("entity")).
 		NewClientsSeen(4, clientcountutil.WithClientType("non-entity-token")).
 		NewClientsSeen(2, clientcountutil.WithClientType("secret-sync")).
 		NewClientsSeen(7, clientcountutil.WithClientType("pki-acme")).
-		NewCurrentMonthData().
+		NewPreviousMonthData(1).
 		NewClientsSeen(3, clientcountutil.WithClientType("entity")).
 		NewClientsSeen(4, clientcountutil.WithClientType("non-entity-token")).
 		NewClientsSeen(5, clientcountutil.WithClientType("secret-sync")).
@@ -70,8 +70,8 @@ func TestOperatorUsageCommandRun(t *testing.T) {
 	ui, cmd := testOperatorUsageCommand(t)
 
 	t.Setenv("VAULT_TOKEN", client.Token())
-	start := timeutil.MonthsPreviousTo(1, now).Format(time.RFC3339)
-	end := timeutil.EndOfMonth(now).UTC().Format(time.RFC3339)
+	start := timeutil.MonthsPreviousTo(2, now).Format(time.RFC3339)
+	end := timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now)).UTC().Format(time.RFC3339)
 	// Reset and check output
 	code := cmd.Run([]string{
 		"-address", client.Address(),
