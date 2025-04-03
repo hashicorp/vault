@@ -66,9 +66,9 @@ var allClientTypeTestCases = []struct {
 	},
 }
 
-// Test_ActivityLog_LoseLeadership writes data for this month, then causes the
+// Test_ActivityLog_LoseLeadership writes data for the last month, then causes the
 // active node to lose leadership. Once a new node becomes the leader, then the
-// test queries for the current month data and verifies that the data from
+// test queries for the last month data and verifies that the data from
 // before the leadership transfer is returned
 func Test_ActivityLog_LoseLeadership(t *testing.T) {
 	t.Parallel()
@@ -87,9 +87,9 @@ func Test_ActivityLog_LoseLeadership(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = clientcountutil.NewActivityLogData(client).
-		NewCurrentMonthData().
+		NewPreviousMonthData(1).
 		NewClientsSeen(10).
-		Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES)
+		Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES, generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES)
 	require.NoError(t, err)
 	now := time.Now().UTC()
 
@@ -100,18 +100,18 @@ func Test_ActivityLog_LoseLeadership(t *testing.T) {
 	testhelpers.EnsureCoreUnsealed(t, cluster, standby)
 
 	resp, err := newActive.Client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
-		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
-		"start_time": {timeutil.StartOfMonth(now).Format(time.RFC3339)},
+		"end_time":   {timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
+		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
 	})
 	monthResponse := getMonthsData(t, resp)
 	require.Len(t, monthResponse, 1)
 	require.Equal(t, 10, monthResponse[0].NewClients.Counts.Clients)
 }
 
-// Test_ActivityLog_ClientsOverlapping writes data for the previous month and
-// current month. In the previous month, 7 new clients are seen. In the current
+// Test_ActivityLog_ClientsOverlapping writes data for the second last month and
+// the previous month. In the second last month, 7 new clients are seen. In the previous
 // month, there are 5 repeated and 2 new clients. The test queries over the
-// previous and current months, and verifies that the repeated clients are not
+// second last and previous months, and verifies that the repeated clients are not
 // considered new
 func Test_ActivityLog_ClientsOverlapping(t *testing.T) {
 	t.Parallel()
@@ -122,9 +122,9 @@ func Test_ActivityLog_ClientsOverlapping(t *testing.T) {
 	})
 	require.NoError(t, err)
 	_, err = clientcountutil.NewActivityLogData(client).
-		NewPreviousMonthData(1).
+		NewPreviousMonthData(2).
 		NewClientsSeen(7).
-		NewCurrentMonthData().
+		NewPreviousMonthData(1).
 		RepeatedClientsSeen(5).
 		NewClientsSeen(2).
 		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
@@ -132,10 +132,10 @@ func Test_ActivityLog_ClientsOverlapping(t *testing.T) {
 
 	now := time.Now().UTC()
 
-	// query from the beginning of the previous month to the end of this month
+	// query from the beginning of the second last month to the end of the previous month
 	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
-		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
-		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
+		"end_time":   {timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
+		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(2, now)).Format(time.RFC3339)},
 	})
 	require.NoError(t, err)
 	monthsResponse := getMonthsData(t, resp)
@@ -143,13 +143,13 @@ func Test_ActivityLog_ClientsOverlapping(t *testing.T) {
 	for _, month := range monthsResponse {
 		ts, err := time.Parse(time.RFC3339, month.Timestamp)
 		require.NoError(t, err)
-		// This month should have a total of 7 clients
+		// The previous month should have a total of 7 clients
 		// 2 of those will be considered new
-		if ts.UTC().Equal(timeutil.StartOfMonth(now)) {
+		if ts.UTC().Equal(timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now))) {
 			require.Equal(t, month.Counts.Clients, 7)
 			require.Equal(t, month.NewClients.Counts.Clients, 2)
 		} else {
-			// All clients will be considered new for the previous month
+			// All clients will be considered new for the second last month
 			require.Equal(t, month.Counts.Clients, 7)
 			require.Equal(t, month.NewClients.Counts.Clients, 7)
 
@@ -157,10 +157,10 @@ func Test_ActivityLog_ClientsOverlapping(t *testing.T) {
 	}
 }
 
-// Test_ActivityLog_ClientsNewCurrentMonth writes data for the past month and
-// current month with 5 repeated clients and 2 new clients in the current month.
-// The test then queries the activity log for only the current month, and
-// verifies that all 7 clients seen this month are considered new.
+// Test_ActivityLog_ClientsNewCurrentMonth writes data for the second last month and
+// past month with 5 repeated clients and 2 new clients in the past month.
+// The test then queries the activity log for only the past month, and
+// verifies that all 7 clients seen the past month are considered new.
 func Test_ActivityLog_ClientsNewCurrentMonth(t *testing.T) {
 	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
@@ -170,9 +170,9 @@ func Test_ActivityLog_ClientsNewCurrentMonth(t *testing.T) {
 	})
 	require.NoError(t, err)
 	_, err = clientcountutil.NewActivityLogData(client).
-		NewPreviousMonthData(1).
+		NewPreviousMonthData(2).
 		NewClientsSeen(5).
-		NewCurrentMonthData().
+		NewPreviousMonthData(1).
 		RepeatedClientsSeen(5).
 		NewClientsSeen(2).
 		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
@@ -180,10 +180,10 @@ func Test_ActivityLog_ClientsNewCurrentMonth(t *testing.T) {
 
 	now := time.Now().UTC()
 
-	// query from the beginning of this month to the end of this month
+	// query from the beginning of the second last month to the end of the previous month
 	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
-		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
-		"start_time": {timeutil.StartOfMonth(now).Format(time.RFC3339)},
+		"end_time":   {timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
+		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
 	})
 	require.NoError(t, err)
 	monthsResponse := getMonthsData(t, resp)
@@ -191,9 +191,9 @@ func Test_ActivityLog_ClientsNewCurrentMonth(t *testing.T) {
 	require.Equal(t, 7, monthsResponse[0].NewClients.Counts.Clients)
 }
 
-// Test_ActivityLog_EmptyDataMonths writes data for only the current month,
+// Test_ActivityLog_EmptyDataMonths writes data for only the past month,
 // then queries a timeframe of several months in the past to now. The test
-// verifies that empty months of data are returned for the past, and the current
+// verifies that empty months of data are returned for the past, and the past
 // month data is correct.
 func Test_ActivityLog_EmptyDataMonths(t *testing.T) {
 	t.Parallel()
@@ -204,16 +204,16 @@ func Test_ActivityLog_EmptyDataMonths(t *testing.T) {
 	})
 	require.NoError(t, err)
 	_, err = clientcountutil.NewActivityLogData(client).
-		NewCurrentMonthData().
+		NewPreviousMonthData(1).
 		NewClientsSeen(10).
 		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
 	require.NoError(t, err)
 
 	now := time.Now().UTC()
-	// query from the beginning of 3 months ago to the end of this month
+	// query from the beginning of 4 months ago to the end of past month
 	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
-		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
-		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(3, now)).Format(time.RFC3339)},
+		"end_time":   {timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
+		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(4, now)).Format(time.RFC3339)},
 	})
 	require.NoError(t, err)
 	monthsResponse := getMonthsData(t, resp)
@@ -222,8 +222,8 @@ func Test_ActivityLog_EmptyDataMonths(t *testing.T) {
 	for _, month := range monthsResponse {
 		ts, err := time.Parse(time.RFC3339, month.Timestamp)
 		require.NoError(t, err)
-		// current month should have data
-		if ts.UTC().Equal(timeutil.StartOfMonth(now)) {
+		// past month should have data
+		if ts.UTC().Equal(timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now))) {
 			require.Equal(t, month.Counts.Clients, 10)
 		} else {
 			// other months should be empty
@@ -317,15 +317,15 @@ func Test_ActivityLog_ClientTypeResponse(t *testing.T) {
 				"enabled": "enable",
 			})
 			_, err = clientcountutil.NewActivityLogData(client).
-				NewCurrentMonthData().
+				NewPreviousMonthData(1).
 				NewClientsSeen(10, clientcountutil.WithClientType(tc.clientType)).
-				Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES)
+				Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES, generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES)
 			require.NoError(t, err)
 
 			now := time.Now().UTC()
 			resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
-				"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
-				"start_time": {timeutil.StartOfMonth(now).Format(time.RFC3339)},
+				"end_time":   {timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
+				"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
 			})
 			require.NoError(t, err)
 
@@ -447,10 +447,10 @@ func Test_ActivityLog_Deduplication(t *testing.T) {
 	}
 }
 
-// Test_ActivityLog_MountDeduplication writes data for the previous
+// Test_ActivityLog_MountDeduplication writes data for the second last
 // month across 4 mounts. The cubbyhole and sys mounts have clients in the
-// current month as well. The test verifies that the mount counts are correctly
-// summed in the results when the previous and current month are queried.
+// past month as well. The test verifies that the mount counts are correctly
+// summed in the results when the second last month and past month are queried.
 func Test_ActivityLog_MountDeduplication(t *testing.T) {
 	t.Parallel()
 
@@ -463,20 +463,20 @@ func Test_ActivityLog_MountDeduplication(t *testing.T) {
 	now := time.Now().UTC()
 
 	_, err = clientcountutil.NewActivityLogData(client).
-		NewPreviousMonthData(1).
+		NewPreviousMonthData(2).
 		NewClientSeen(clientcountutil.WithClientMount("sys")).
 		NewClientSeen(clientcountutil.WithClientMount("secret")).
 		NewClientSeen(clientcountutil.WithClientMount("cubbyhole")).
 		NewClientSeen(clientcountutil.WithClientMount("identity")).
-		NewCurrentMonthData().
+		NewPreviousMonthData(1).
 		NewClientSeen(clientcountutil.WithClientMount("cubbyhole")).
 		NewClientSeen(clientcountutil.WithClientMount("sys")).
 		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
 	require.NoError(t, err)
 
 	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
-		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
-		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
+		"end_time":   {timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
+		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(2, now)).Format(time.RFC3339)},
 	})
 
 	require.NoError(t, err)
@@ -817,8 +817,8 @@ func TestHandleQuery_MultipleMounts(t *testing.T) {
 
 			activityLogGenerator := clientcountutil.NewActivityLogData(client)
 
-			// Write two months ago data
-			activityLogGenerator = activityLogGenerator.NewPreviousMonthData(2)
+			// Write three months ago data
+			activityLogGenerator = activityLogGenerator.NewPreviousMonthData(3)
 			for nsIndex, nsId := range namespaces {
 				for mountIndex, mount := range mounts[nsId] {
 					activityLogGenerator = activityLogGenerator.
@@ -826,8 +826,8 @@ func TestHandleQuery_MultipleMounts(t *testing.T) {
 				}
 			}
 
-			// Write previous months data
-			activityLogGenerator = activityLogGenerator.NewPreviousMonthData(1)
+			// Write two months ago data
+			activityLogGenerator = activityLogGenerator.NewPreviousMonthData(2)
 			for nsIndex, nsId := range namespaces {
 				for mountIndex, mount := range mounts[nsId] {
 					activityLogGenerator = activityLogGenerator.
@@ -835,8 +835,8 @@ func TestHandleQuery_MultipleMounts(t *testing.T) {
 				}
 			}
 
-			// Write current month data
-			activityLogGenerator = activityLogGenerator.NewCurrentMonthData()
+			// Write previous month data
+			activityLogGenerator = activityLogGenerator.NewPreviousMonthData(1)
 			for nsIndex, nsPath := range namespaces {
 				for mountIndex, mount := range mounts[nsPath] {
 					activityLogGenerator = activityLogGenerator.
@@ -849,12 +849,12 @@ func TestHandleQuery_MultipleMounts(t *testing.T) {
 			_, err = activityLogGenerator.Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
 			require.NoError(t, err)
 
-			endOfCurrentMonth := timeutil.EndOfMonth(time.Now().UTC())
+			endOfLastMonth := timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, time.Now()).UTC())
 
 			// query activity log
 			resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
-				"end_time":   {endOfCurrentMonth.Format(time.RFC3339)},
-				"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(2, time.Now().UTC())).Format(time.RFC3339)},
+				"end_time":   {endOfLastMonth.Format(time.RFC3339)},
+				"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(3, time.Now().UTC())).Format(time.RFC3339)},
 			})
 			require.NoError(t, err)
 
