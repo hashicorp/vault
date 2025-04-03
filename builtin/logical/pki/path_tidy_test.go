@@ -39,9 +39,13 @@ func TestTidyConfigs(t *testing.T) {
 	require.Greater(t, len(operations), 1, "expected more than one operation")
 	t.Logf("Got tidy operations: %v", operations)
 
-	lastOp := operations[len(operations)-1]
+	lastOp := "tidy_acme"
 
 	for _, operation := range operations {
+		if operation == "tidy_cmpv2_nonce_store" || operation == "tidy_cert_metadata" {
+			// Skip, since these require ENT
+			continue
+		}
 		b, s := CreateBackendWithStorage(t)
 
 		resp, err := CBWrite(b, s, "config/auto-tidy", map[string]interface{}{

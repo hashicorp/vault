@@ -10,11 +10,6 @@ import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 export default class Alphabet extends Model {
   idPrefix = 'alphabet/';
 
-  get idForNav() {
-    const modelId = this.id || '';
-    return `${this.idPrefix}${modelId}`;
-  }
-
   @attr('string', {
     readOnly: true,
     subText: 'The alphabet name. Keep in mind that spaces are not allowed and this cannot be edited later.',

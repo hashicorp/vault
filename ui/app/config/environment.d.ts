@@ -13,7 +13,16 @@ declare const config: {
   podModulePrefix: string;
   locationType: 'history' | 'hash' | 'none';
   rootURL: string;
-  APP: Record<string, unknown>;
+  APP: {
+    POLLING_URLS: string[];
+    NAMESPACE_ROOT_URLS: string[];
+    DEFAULT_PAGE_SIZE: number;
+    LOG_TRANSITIONS?: boolean;
+    LOG_ACTIVE_GENERATION?: boolean;
+    LOG_VIEW_LOOKUPS?: boolean;
+    rootElement?: string;
+    autoboot?: boolean;
+  };
 };
 
 export default config;

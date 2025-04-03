@@ -63,8 +63,10 @@ export default class FormFieldComponent extends Component {
     'searchSelect',
     'stringArray',
     'ttl',
+    'toggleButton',
   ];
-  @tracked showInput = false;
+  @tracked showToggleTextInput = false;
+  @tracked toggleInputEnabled = false;
 
   constructor() {
     super(...arguments);
@@ -75,7 +77,39 @@ export default class FormFieldComponent extends Component {
       valuePath.toLowerCase() !== 'id'
     );
     const modelValue = model[valuePath];
-    this.showInput = !!modelValue;
+    this.showToggleTextInput = !!modelValue;
+    this.toggleInputEnabled = !!modelValue;
+  }
+
+  // ---------------------------------------------------------------
+  // IMPORTANT:
+  // this controls the top-level logic in the associated template
+  // to decide which type of form field to render (Vault or HDS)
+  // ---------------------------------------------------------------
+  //
+  get isHdsFormField() {
+    const { type, options } = this.args.attr;
+
+    // here we replicate the logic in the template, to make sure we don't change the order in which the "ifs" are evaluated
+    if (options?.possibleValues?.length > 0) {
+      // we still have to migrate the `radio` use case
+      if (options?.editType === 'radio') {
+        return false;
+      } else {
+        return true;
+      }
+    } else {
+      if (type === 'number' || type === 'string') {
+        if (options?.editType === 'password') {
+          return true;
+        } else {
+          return false;
+        }
+      } else {
+        // we leave these fields as they are (for now)
+        return false;
+      }
+    }
   }
 
   get hasRadioSubText() {
@@ -96,8 +130,12 @@ export default class FormFieldComponent extends Component {
     return this.args.disabled || false;
   }
 
-  get showHelpText() {
-    return this.args.showHelpText === false ? false : true;
+  get helpTextString() {
+    const helpText = this.args.attr?.options?.helpText;
+    if (this.args.showHelpText !== false && helpText) {
+      return helpText;
+    }
+    return '';
   }
 
   // used in the label element next to the form element
@@ -177,12 +215,17 @@ export default class FormFieldComponent extends Component {
     }
   }
   @action
-  toggleShow() {
-    const value = !this.showInput;
-    this.showInput = value;
+  toggleTextShow() {
+    const value = !this.showToggleTextInput;
+    this.showToggleTextInput = value;
     if (!value) {
       this.setAndBroadcast(null);
     }
+  }
+  @action
+  toggleButton() {
+    this.toggleInputEnabled = !this.toggleInputEnabled;
+    this.setAndBroadcast(this.toggleInputEnabled);
   }
   @action
   handleKeyUp(maybeEvent) {

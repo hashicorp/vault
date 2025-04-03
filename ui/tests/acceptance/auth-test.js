@@ -19,7 +19,7 @@ import {
 import { login, loginMethod, loginNs, logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { v4 as uuidv4 } from 'uuid';
-import { GENERAL } from '../helpers/general-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const ENT_AUTH_METHODS = ['saml'];
 const { rootToken } = VAULT_KEYS;
@@ -144,7 +144,7 @@ module('Acceptance | auth', function (hooks) {
         const { type } = backend;
         const expected = this.expected[type];
         const isOidc = ['oidc', 'jwt'].includes(type);
-        assert.expect(isOidc ? 6 : 2);
+        assert.expect(isOidc ? 3 : 2);
 
         this.assertReq = (req) => {
           const body = type === 'token' ? req.requestHeaders : JSON.parse(req.requestBody);
@@ -263,10 +263,15 @@ module('Acceptance | auth', function (hooks) {
         `write auth/${this.userpass}/users/${this.user} password=${this.user} token_policies=${this.policyName}`,
       ]);
 
-      const options = { username: this.user, password: this.user, 'auth-form-mount-path': this.userpass };
+      const inputValues = {
+        username: this.user,
+        password: this.user,
+        'auth-form-mount-path': this.userpass,
+        'auth-form-ns-input': this.ns,
+      };
 
       // login as user just to get token (this is the only way to generate a token in the UI right now..)
-      await loginMethod('userpass', options, { toggleOptions: true, ns: this.ns });
+      await loginMethod(inputValues, { authType: 'userpass', toggleOptions: true });
       await click('[data-test-user-menu-trigger=""]');
       const token = find('[data-test-copy-button]').getAttribute('data-test-copy-button');
 

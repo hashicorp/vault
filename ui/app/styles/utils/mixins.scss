@@ -1,3 +1,4 @@
+@use 'sass:math';
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -43,9 +44,9 @@
   &:before {
     border-color: rgba($border-color, 0);
     border-bottom-color: $border-color;
-    border-width: $size + round(1.41421356 * $border-width);
+    border-width: $size + math.round(1.41421356 * $border-width);
     left: calc(#{$left} + #{$left-offset});
-    margin-left: -($size + round(1.41421356 * $border-width));
+    margin-left: -($size + math.round(1.41421356 * $border-width));
   }
   &:before,
   &:after {
