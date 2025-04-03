@@ -4,20 +4,32 @@ SPDX-License-Identifier: BUSL-1.1
 }}
 
 <div class="namespace-picker" ...attributes>
-  <Hds::Form::SuperSelect::Single::Field
-    @afterOptionsComponent={{component "namespace-picker/after-options" loadOptions=this.loadOptions}}
-    @ariaLabel="Namespace"
-    @onChange={{this.onChange}}
-    @options={{this.options}}
-    @placeholder="Search"
-    @searchEnabled={{true}}
-    @selected={{this.selected}}
-    @selectedItemComponent={{component "namespace-picker/selected-option"}}
-    @showAfterOptions={{this.showAfterOptions}}
-    @verticalPosition="above"
-    data-test-namespace-toggle
-    as |F|
-  >
-    <F.Options>{{F.options.label}}</F.Options>
-  </Hds::Form::SuperSelect::Single::Field>
+  <Hds::Dropdown @enableCollisionDetection={{true}} as |D|>
+
+    <D.ToggleButton @icon="org" @text={{this.selectedNamespace}} data-test-namespace-toggle />
+
+    <D.Title @text={{component "namespace-picker/title" count=this.options.length}} />
+
+    {{#each this.options as |option|}}
+      <D.Checkmark
+        @selected={{this.isSelected option}}
+        {{on "click" (action "onChange" option)}}
+        data-test-namespace-link={{option.path}}
+        data-test-current-namespace={{this.isSelected option}}
+      >
+        {{option.label}}
+      </D.Checkmark>
+    {{/each}}
+
+    <D.Footer @hasDivider={{true}}>
+      <Hds::Button
+        @color="secondary"
+        @text="Refresh List"
+        {{on "click" (action "loadOptions")}}
+        data-test-refresh-namespaces
+      />
+      <Hds::Button @color="secondary" @text="Manage" @icon="settings" @route="vault.cluster.access.namespaces" />
+    </D.Footer>
+
+  </Hds::Dropdown>
 </div>

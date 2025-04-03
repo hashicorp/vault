@@ -24,8 +24,8 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await logout.visit();
     await authPage.login(token);
     await click('[data-test-namespace-toggle]');
-    assert.dom('[aria-selected="true"]').hasText('root', 'root renders as current namespace');
-    assert.dom('[data-option-index]').exists({ count: 1 }, 'Only the root namespace exists');
+    assert.dom('[data-test-current-namespace]').hasText('root', 'root renders as current namespace');
+    assert.dom('[data-test-namespace-link]').exists({ count: 1 }, 'Only the root namespace exists');
   });
 
   test('it shows nested namespaces if you log in with a namespace starting with a /', async function (assert) {
@@ -43,10 +43,10 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
       // this is usually triggered when creating a ns in the form -- trigger a reload of the namespaces manually
       await click('[data-test-namespace-toggle]');
       await click('[data-test-refresh-namespaces]');
-      await waitFor(`[data-option-index="${i + 1}"]`);
+      await waitFor(`[data-test-namespace-link="${targetNamespace}"]`);
       // check that the full namespace path, like "beep/boop", shows in the toggle display
       assert
-        .dom(`[data-option-index="${i + 1}"]`)
+        .dom(`[data-test-namespace-link="${targetNamespace}"]`)
         .hasText(targetNamespace, `shows the namespace ${targetNamespace} in the toggle component`);
       // because quint does not like page reloads, visiting url directly instead of clicking on namespace in toggle
       await visit(url);
@@ -59,13 +59,13 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await authPage.tokenInput('root').submit();
     await settled();
     await click('[data-test-namespace-toggle]');
-    await waitFor('[aria-selected="true"]');
+    await waitFor('[data-test-current-namespace]');
     assert
-      .dom('[aria-selected="true"]')
+      .dom('[data-test-current-namespace]')
       .hasText('beep/boop', 'current namespace does not begin or end with /');
     assert
-      .dom('[data-option-index="3"]')
-      .hasText('beep/boop/bop', 'shows the full namespace path in the toggle');
+      .dom('[data-test-namespace-link="beep/boop/bop"]')
+      .exists('renders the link to the nested namespace');
   });
 
   test('it shows the regular namespace toolbar when not managed', async function (assert) {
