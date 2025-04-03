@@ -3,4 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<VaultReporting::Views::Dashboard @onFetchUsageData={{this.handleFetchUsageData}} />
+<VaultReporting::Views::Dashboard
+  @onFetchUsageData={{this.handleFetchUsageData}}
+  @isVaultDedicated={{this.isVaultDedicated}}
+/>
