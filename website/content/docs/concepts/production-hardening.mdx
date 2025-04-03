@@ -214,10 +214,13 @@ not be suitable for every deployment.
   (mlock) inside a Vault container, you need to use the `overlayfs2` or another
   supporting driver.
 
-- **Consider memory usage when setting `disable_mlock` with integrated storage**.
-  When `disable_mlock` is set to `false`, meaning `mlock` is enabled, no memory
-  will be swapped to disk. This is more secure than swapping, but can risk "out
-  of memory" errors if memory is under provisioned. If `disable_mlock` is set
-  to `true`, memory may be swapped to disk to relieve memory pressure, but
-  secrets may be read by inspecting swap. Given the recommendations in this
-  document, enabling `mlock` and increasing memory is advised.
+-	**Consider memory usage when configuring disable_mlock with integrated storage**.
+  When `disable_mlock` is set to false (i.e., `mlock` is enabled), Vault prevents
+  memory from being swapped to disk. This enhances security by ensuring sensitive
+  data remains in RAM, but it increases the risk of out-of-memory (OOM) errors
+  if the system is under-provisioned. Conversely, setting `disable_mlock` to true
+  allows the operating system to swap memory to disk under pressure, which can
+  reduce the likelihood of OOM conditions but introduces a potential risk of
+  secrets being exposed through the swap file. Given the security posture
+  recommended in this guide, enabling `mlock` and provisioning sufficient memory
+  for Vault’s workload—especially when using integrated storage—is advised.
