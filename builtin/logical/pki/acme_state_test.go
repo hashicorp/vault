@@ -62,5 +62,4 @@ func TestErrorResponseNoSubproblems(t *testing.T) {
 	require.True(t, ok, "Detail on Raw Body of Error response should exist, but doesn't")
 	subProblems, ok := body["subproblems"]
 	require.False(t, ok, "subproblems on Raw Body of Error response should be omitted, but exists with value %v", subProblems)
-
 }
