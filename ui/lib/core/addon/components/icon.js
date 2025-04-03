@@ -5,8 +5,6 @@
 
 import Component from '@glimmer/component';
 import { assert } from '@ember/debug';
-import flightIconMap from '@hashicorp/flight-icons/catalog.json';
-const flightIconNames = flightIconMap.assets.map((asset) => asset.iconName).uniq();
 
 /**
  * @module Icon
@@ -23,23 +21,14 @@ const flightIconNames = flightIconMap.assets.map((asset) => asset.iconName).uniq
  *
  */
 
+// TODO - deprecate and remove this after migrating all `<Icon />` instances to `<Hds::Icon />`
 export default class IconComponent extends Component {
   constructor(owner, args) {
     super(owner, args);
-    assert('Icon component size argument must be either "16" or "24"', ['16', '24'].includes(this.size));
-    assert('Icon name argument must be provided', this.args.name);
-  }
 
-  get size() {
-    return this.args.size || '16';
-  }
+    const { name, size = '16' } = args;
 
-  // favor HDS icon set and fall back to structure icons if not found
-  get isHdsIcon() {
-    return this.args.name ? flightIconNames.includes(this.args.name) : false;
-  }
-
-  get hsIconClass() {
-    return this.size === '24' ? 'hs-icon-xlm' : 'hs-icon-l';
+    assert('Icon component size argument must be either "16" or "24"', ['16', '24'].includes(size));
+    assert('Icon name argument must be provided', name);
   }
 }
