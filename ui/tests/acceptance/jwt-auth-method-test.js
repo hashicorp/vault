@@ -38,7 +38,7 @@ module('Acceptance | jwt auth method', function (hooks) {
       const { jwt, role } = JSON.parse(req.requestBody);
       assert.ok(true, 'request made to auth/jwt/login after submit');
       assert.strictEqual(jwt, 'my-test-jwt-token', 'JWT token is sent in body');
-      assert.strictEqual(role, undefined, 'role is not sent in body when not filled in');
+      assert.strictEqual(role, null, 'role is not sent in body when not filled in');
       req.passthrough();
     });
     await visit('/vault/auth');

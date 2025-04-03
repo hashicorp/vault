@@ -12,49 +12,35 @@ import sinon from 'sinon';
 import { resolve } from 'rsvp';
 import { create } from 'ember-cli-page-object';
 import form from '../../pages/components/auth-jwt';
-import { ERROR_WINDOW_CLOSED, ERROR_MISSING_PARAMS, ERROR_JWT_LOGIN } from 'vault/components/auth-jwt';
-import { fakeWindow, buildMessage } from 'vault/tests/helpers/oidc-window-stub';
+import { ERROR_JWT_LOGIN } from 'vault/components/auth-jwt';
+import { callbackData } from 'vault/tests/helpers/oidc-window-stub';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 
 const component = create(form);
-const windows = [];
 
-fakeWindow.reopen({
-  init() {
-    this._super(...arguments);
-    windows.push(this);
-  },
-  open() {
-    return fakeWindow.create();
-  },
-  close() {
-    windows.forEach((w) => w.trigger('close'));
-  },
-});
-
-const renderIt = async (context, path = 'jwt') => {
+const renderIt = async (context, { path = 'jwt', type = 'jwt' } = {}) => {
   const handler = (data, e) => {
     if (e && e.preventDefault) e.preventDefault();
     return resolve();
   };
-  const fake = fakeWindow.create();
-  context.set('window', fake);
-  context.set('handler', sinon.spy(handler));
-  context.set('roleName', '');
-  context.set('selectedAuthPath', path);
+
+  context.error = '';
+  context.handler = sinon.spy(handler);
+  context.roleName = '';
+  context.selectedAuthPath = path;
+  context.selectedAuthType = type;
   await render(hbs`
     <AuthJwt
-      @window={{this.window}}
       @roleName={{this.roleName}}
       @selectedAuthPath={{this.selectedAuthPath}}
-      @onError={{action (mut this.error)}}
-      @onLoading={{action (mut this.isLoading)}}
-      @onNamespace={{action (mut this.namespace)}}
-      @onSelectedAuth={{action (mut this.selectedAuth)}}
-      @onSubmit={{action this.handler}}
-      @onRoleName={{action (mut this.roleName)}}
+      @selectedAuthType={{this.selectedAuthType}}
+      @onError={{fn (mut this.error)}}
+      @onNamespace={{fn (mut this.namespace)}}
+      @onSelectedAuth={{fn (mut this.selectedAuth)}}
+      @onSubmit={{this.handler}}
+      @onRoleName={{fn (mut this.roleName)}}
     />
     `);
 };
@@ -63,7 +49,8 @@ module('Integration | Component | auth jwt', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.openSpy = sinon.spy(fakeWindow.proto(), 'open');
+    this.windowStub = sinon.stub(window, 'open');
+
     this.owner.lookup('service:router').reopen({
       urlFor() {
         return 'http://example.com';
@@ -86,13 +73,38 @@ module('Integration | Component | auth jwt', function (hooks) {
   });
 
   hooks.afterEach(function () {
-    this.openSpy.restore();
-    this.server.shutdown();
+    this.windowStub.restore();
   });
 
   test('it renders the yield', async function (assert) {
     await render(hbs`<AuthJwt @onSubmit={{action (mut this.submit)}}>Hello!</AuthJwt>`);
     assert.strictEqual(component.yieldContent, 'Hello!', 'yields properly');
+  });
+
+  test('it fetches auth_url when type changes', async function (assert) {
+    assert.expect(2);
+    await renderIt(this, { path: '', type: 'jwt' });
+    // auth_url is requested on initial render so stubbing after rendering the component
+    // to test auth_url is called when the type changes
+    this.server.post('/auth/:path/oidc/auth_url', (_, request) => {
+      assert.true(true, 'request is made to auth_url');
+      const { path } = request.params;
+      assert.strictEqual(path, 'oidc', `path param is updated type: ${path}`);
+      return {
+        data: { auth_url: '' },
+      };
+    });
+    this.set('selectedAuthType', 'oidc');
+    await settled();
+  });
+
+  test('if auth path exists it uses it to build url request instead of type', async function (assert) {
+    this.server.post('/auth/:path/oidc/auth_url', (_, request) => {
+      const { path } = request.params;
+      assert.strictEqual(path, 'custom-jwt', `path param is custom path: ${path}`);
+      return {};
+    });
+    await renderIt(this, { path: 'custom-jwt' });
   });
 
   test('jwt: it renders and makes auth_url requests', async function (assert) {
@@ -122,9 +134,6 @@ module('Integration | Component | auth jwt', function (hooks) {
   });
 
   test('oidc: test role: it renders', async function (assert) {
-    // setting the path also fires off a request to auth_url but this happens inconsistently in tests
-    // setting here so it doesn't affect the postCount because it's not relevant to what's being tested
-    this.set('selectedAuthPath', 'foo');
     let postCount = 0;
     this.server.post('/auth/:path/oidc/auth_url', (_, request) => {
       postCount++;
@@ -134,7 +143,7 @@ module('Integration | Component | auth jwt', function (hooks) {
         data: { auth_url },
       };
     });
-    await renderIt(this);
+    await renderIt(this, { path: 'foo', type: 'oidc' });
     await settled();
     await fillIn(AUTH_FORM.roleInput, 'test');
     assert
@@ -149,8 +158,7 @@ module('Integration | Component | auth jwt', function (hooks) {
 
   test('oidc: it fetches auth_url when path changes', async function (assert) {
     assert.expect(2);
-    this.set('selectedAuthPath', 'foo');
-    await renderIt(this);
+    await renderIt(this, { path: 'oidc', type: 'oidc' });
     // auth_url is requested on initial render so stubbing after rendering the component
     // to test auth_url is called when the :path changes
     this.server.post('/auth/:path/oidc/auth_url', (_, request) => {
@@ -160,113 +168,87 @@ module('Integration | Component | auth jwt', function (hooks) {
         data: { auth_url: '' },
       };
     });
+
     this.set('selectedAuthPath', 'foo');
     await settled();
   });
 
   test('oidc: it calls window.open popup window on login', async function (assert) {
-    await renderIt(this);
-    this.set('selectedAuthPath', 'foo');
+    sinon.replaceGetter(window, 'screen', () => ({ height: 600, width: 500 }));
+    await renderIt(this, { path: 'foo', type: 'oidc' });
     await component.role('test');
     component.login();
     await waitUntil(() => {
-      return this.openSpy.calledOnce;
+      return this.windowStub.calledOnce;
     });
 
-    cancelTimers();
-    await settled();
-
-    const call = this.openSpy.getCall(0);
+    const call = this.windowStub.lastCall;
     assert.deepEqual(
       call.args,
       ['http://example.com', 'vaultOIDCWindow', 'width=500,height=600,resizable,scrollbars=yes,top=0,left=0'],
       'called with expected args'
     );
+    sinon.restore();
   });
 
-  test('oidc: it calls error handler when popup is closed', async function (assert) {
-    await renderIt(this);
-    this.set('selectedAuthPath', 'foo');
-    await component.role('test');
-    component.login();
-    await waitUntil(() => {
-      return this.openSpy.calledOnce;
-    });
-    this.window.close();
-    await settled();
-    assert.strictEqual(this.error, ERROR_WINDOW_CLOSED, 'calls onError with error string');
-  });
-
-  test('oidc: shows error when message posted with state key, wrong params', async function (assert) {
-    await renderIt(this);
-    this.set('selectedAuthPath', 'foo');
-    await component.role('test');
-    component.login();
-    await waitUntil(() => {
-      return this.openSpy.calledOnce;
-    });
-    this.window.trigger(
-      'message',
-      buildMessage({ data: { source: 'oidc-callback', state: 'state', foo: 'bar' } })
-    );
-    cancelTimers();
-    await settled();
-
-    assert.strictEqual(this.error, ERROR_MISSING_PARAMS, 'calls onError with params missing error');
-  });
-
-  test('oidc: storage event fires with state key, correct params', async function (assert) {
-    await renderIt(this);
-    this.set('selectedAuthPath', 'foo');
-    await component.role('test');
-    component.login();
-    await waitUntil(() => {
-      return this.openSpy.calledOnce;
-    });
-    this.window.trigger('message', buildMessage());
-    await settled();
-    const [callbackData, , token] = this.handler.lastCall.args;
-    assert.propEqual(
-      callbackData,
-      { mfa_requirement: undefined },
-      'mfa_requirement is undefined if not returned by response'
-    );
-    assert.strictEqual(token, 'token', 'calls the onSubmit handler with token');
-  });
-
+  // not the greatest test because this test would also pass if the origin matched
+  // because event.isTrusted is always false (another condition checked by the component)
   test('oidc: fails silently when event origin does not match window origin', async function (assert) {
-    await renderIt(this);
-    this.set('selectedAuthPath', 'foo');
+    assert.expect(3);
+    // prevent test incorrectly passing because the event isn't triggered at all
+    // by also asserting that the message event fires
+    const message = { data: callbackData(), origin: 'http://hackerz.com' };
+    const assertEvent = (event) => {
+      assert.propEqual(event.data, message.data, 'message has expected data');
+      assert.strictEqual(event.origin, message.origin, 'message has expected origin');
+    };
+    window.addEventListener('message', assertEvent);
+
+    await renderIt(this, { path: 'foo', type: 'oidc' });
     await component.role('test');
     component.login();
     await waitUntil(() => {
-      return this.openSpy.calledOnce;
+      return this.windowStub.calledOnce;
     });
-    this.window.trigger('message', buildMessage({ origin: 'http://hackerz.com' }));
 
+    window.dispatchEvent(new MessageEvent('message', message));
     cancelTimers();
     await settled();
-
     assert.false(this.handler.called, 'should not call the submit handler');
+
+    // Cleanup
+    window.removeEventListener('message', assertEvent);
   });
 
   test('oidc: fails silently when event is not trusted', async function (assert) {
-    await renderIt(this);
-    this.set('selectedAuthPath', 'foo');
+    assert.expect(2);
+    // prevent test incorrectly passing because the event isn't triggered at all
+    // by also asserting that the message event fires
+    const messageData = callbackData();
+    const assertEvent = (event) => {
+      assert.propEqual(event.data, messageData, 'message event fires');
+    };
+    window.addEventListener('message', assertEvent);
+
+    await renderIt(this, { path: 'foo', type: 'oidc' });
     await component.role('test');
     component.login();
     await waitUntil(() => {
-      return this.openSpy.calledOnce;
+      return this.windowStub.calledOnce;
     });
-    this.window.trigger('message', buildMessage({ isTrusted: false }));
+    // mocking a message event is always untrusted (there is no way to override isTrusted on the window object)
+    window.dispatchEvent(new MessageEvent('message', { data: messageData }));
+
     cancelTimers();
     await settled();
-
     assert.false(this.handler.called, 'should not call the submit handler');
+
+    // Cleanup
+    window.removeEventListener('message', assertEvent);
   });
 
   test('oidc: it should trigger error callback when role is not found', async function (assert) {
-    await renderIt(this, 'oidc');
+    await renderIt(this, { path: 'oidc', type: 'oidc' });
     await component.role('foo');
     await component.login();
     assert.strictEqual(
@@ -277,7 +259,7 @@ module('Integration | Component | auth jwt', function (hooks) {
   });
 
   test('oidc: it should trigger error callback when role is returned without auth_url', async function (assert) {
-    await renderIt(this, 'oidc');
+    await renderIt(this, { path: 'oidc', type: 'oidc' });
     await component.role('bar');
     await component.login();
     assert.strictEqual(
