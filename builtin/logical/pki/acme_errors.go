@@ -110,7 +110,7 @@ type ErrorResponse struct {
 	StatusCode  int              `json:"-"`
 	Type        string           `json:"type"`
 	Detail      string           `json:"detail"`
-	Subproblems []*ErrorResponse `json:"subproblems"`
+	Subproblems []*ErrorResponse `json:"subproblems,omitempty" mapstructure:"subproblems"`
 }
 
 func (e *ErrorResponse) MarshalForStorage() map[string]interface{} {
