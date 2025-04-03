@@ -28,7 +28,7 @@ Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-1) for arguments common 
 - `vault_namespace` `(string: "")` - The Vault namespace containing the pre-configured AWS secrets engine
   mount path specified in `vault_mount_path` for use with dynamic secrets.
 
-- `vault_address` `(string: "")` - The address of the Vault server to use for dynamic credentials. 
+- `vault_address` `(string: "")` - The address of the Vault server to use for dynamic credentials.
 
 - `vault_credentials_file` `(string: "")` - The path to a file containing a Vault token for the vault server configured above.
 
@@ -45,9 +45,8 @@ Define and configure the `my-aws-source-1` AWS source:
 source_aws {
   name = "my-aws-source-1"
   credentials_profile = "my-cred-profile-name"
-}```
+}
 
-```hcl
 source_aws {
   name = "my-aws-source-2"
   vault_mount_path = "aws"
