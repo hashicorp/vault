@@ -27,6 +27,26 @@ by a preceding `az login`.
 - `client_id` `(string: "")` - Client ID to use
 - `credentials_file` `(string: "")` - Path to a file with the client secret
 
+- `vault_mount_path` `(string: "")` - The Vault mount path to a pre-configured Azure
+  secrets engine used to generate dynamic credentials for the importer.
+
+- `vault_role_name` `(string: "")` - The Vault role used to generate a dynamic
+  credential for the importer. The role name must exist in the pre-configured Azure secrets
+  engine mount.
+
+- `vault_namespace` `(string: "")` - The Vault namespace containing the pre-configured Azure secrets engine
+  mount path specified in `vault_mount_path` for use with dynamic secrets.
+
+- `vault_address` `(string: "")` - The address of the Vault server to use for dynamic credentials. 
+
+- `vault_credentials_file` `(string: "")` - The path to a file containing a Vault token for the vault server configured above.
+
+#### Note
+ - If `tenant_id`, `client_id` and `credentials_file` is set, then `vault_mount_path`, `vault_role_name`,`vault_namespace`,`vault_address` and `vault_credentials_file` must be unset.
+
+ - If one of `vault_mount_path`,`vault_role_name`, `vault_namespace`,`vault_address` or `vault_credentials_file`  are set, then `tenant_id`, `client_id` and `credentials_file`  must be unset.
+
+
 ## Example
 
 Define and configure the `my-azure-source-1` Azure source:
@@ -35,6 +55,17 @@ Define and configure the `my-azure-source-1` Azure source:
 source_azure {
   name = "my-azure-source-1"
   key_vault_uri = "https://keyvault-1234abcd.vault.azure.net"
+}
+```
+
+```hcl
+source_azure {
+  name             = "my-azure-source-1"
+  vault_mount_path = "azure"
+  vault_role_name  = "my-azure-role-1"
+  vault_namespace  = "ns-1"
+  vault_address    = "https://vault.example.com:8200"
+  vault_credentials_file = "/path/to/vault/token"
 }
 ```
 
