@@ -72,12 +72,7 @@ var allClientTypeTestCases = []struct {
 // before the leadership transfer is returned
 func Test_ActivityLog_LoseLeadership(t *testing.T) {
 	t.Parallel()
-	now := time.Now().UTC()
-	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
-		EntCoreConfig: vault.EntCoreConfig{
-			BillingStart: timeutil.StartOfMonth(now),
-		},
-	}, &vault.TestClusterOptions{
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 		NumCores:    2,
 	})
@@ -96,6 +91,7 @@ func Test_ActivityLog_LoseLeadership(t *testing.T) {
 		NewClientsSeen(10).
 		Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES)
 	require.NoError(t, err)
+	now := time.Now().UTC()
 
 	testhelpers.EnsureCoreSealed(t, active)
 	newActive := testhelpers.WaitForActiveNode(t, cluster)
@@ -119,12 +115,7 @@ func Test_ActivityLog_LoseLeadership(t *testing.T) {
 // considered new
 func Test_ActivityLog_ClientsOverlapping(t *testing.T) {
 	t.Parallel()
-	now := time.Now().UTC()
-	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
-		EntCoreConfig: vault.EntCoreConfig{
-			BillingStart: timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now)),
-		},
-	})
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
 		"enabled": "enable",
@@ -138,6 +129,8 @@ func Test_ActivityLog_ClientsOverlapping(t *testing.T) {
 		NewClientsSeen(2).
 		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
 	require.NoError(t, err)
+
+	now := time.Now().UTC()
 
 	// query from the beginning of the previous month to the end of this month
 	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
@@ -170,12 +163,7 @@ func Test_ActivityLog_ClientsOverlapping(t *testing.T) {
 // verifies that all 7 clients seen this month are considered new.
 func Test_ActivityLog_ClientsNewCurrentMonth(t *testing.T) {
 	t.Parallel()
-	now := time.Now().UTC()
-	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
-		EntCoreConfig: vault.EntCoreConfig{
-			BillingStart: timeutil.StartOfMonth(now),
-		},
-	})
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
 		"enabled": "enable",
@@ -189,6 +177,8 @@ func Test_ActivityLog_ClientsNewCurrentMonth(t *testing.T) {
 		NewClientsSeen(2).
 		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
 	require.NoError(t, err)
+
+	now := time.Now().UTC()
 
 	// query from the beginning of this month to the end of this month
 	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
@@ -207,12 +197,7 @@ func Test_ActivityLog_ClientsNewCurrentMonth(t *testing.T) {
 // month data is correct.
 func Test_ActivityLog_EmptyDataMonths(t *testing.T) {
 	t.Parallel()
-	now := time.Now().UTC()
-	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
-		EntCoreConfig: vault.EntCoreConfig{
-			BillingStart: timeutil.StartOfMonth(timeutil.MonthsPreviousTo(3, now)),
-		},
-	})
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
 		"enabled": "enable",
@@ -223,6 +208,8 @@ func Test_ActivityLog_EmptyDataMonths(t *testing.T) {
 		NewClientsSeen(10).
 		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
 	require.NoError(t, err)
+
+	now := time.Now().UTC()
 	// query from the beginning of 3 months ago to the end of this month
 	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
 		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
@@ -250,12 +237,7 @@ func Test_ActivityLog_EmptyDataMonths(t *testing.T) {
 // verifies that the current month is returned in the response.
 func Test_ActivityLog_FutureEndDate(t *testing.T) {
 	t.Parallel()
-	now := time.Now().UTC()
-	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
-		EntCoreConfig: vault.EntCoreConfig{
-			BillingStart: timeutil.StartOfMonth(timeutil.MonthsPreviousTo(3, now)),
-		},
-	})
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
 		"enabled": "enable",
@@ -269,6 +251,7 @@ func Test_ActivityLog_FutureEndDate(t *testing.T) {
 		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
 	require.NoError(t, err)
 
+	now := time.Now().UTC()
 	// query from the beginning of 3 months ago to beginning of next month
 	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
 		"end_time":   {timeutil.StartOfNextMonth(now).Format(time.RFC3339)},
@@ -326,19 +309,9 @@ func Test_ActivityLog_ClientTypeResponse(t *testing.T) {
 	t.Parallel()
 	for _, tc := range allClientTypeTestCases {
 		tc := tc
-		// Normalize to start of month to prevent end of month weirdness
-		now := time.Now().UTC()
-		billingStart := timeutil.StartOfMonth(now).UTC()
-		endTime := timeutil.EndOfMonth(now).Format(time.RFC3339)
-		startTime := timeutil.StartOfMonth(now).Format(time.RFC3339)
-
 		t.Run(tc.clientType, func(t *testing.T) {
 			t.Parallel()
-			cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
-				EntCoreConfig: vault.EntCoreConfig{
-					BillingStart: billingStart,
-				},
-			})
+			cluster := minimal.NewTestSoloCluster(t, nil)
 			client := cluster.Cores[0].Client
 			_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
 				"enabled": "enable",
@@ -349,9 +322,10 @@ func Test_ActivityLog_ClientTypeResponse(t *testing.T) {
 				Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES)
 			require.NoError(t, err)
 
+			now := time.Now().UTC()
 			resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
-				"end_time":   {endTime},
-				"start_time": {startTime},
+				"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
+				"start_time": {timeutil.StartOfMonth(now).Format(time.RFC3339)},
 			})
 			require.NoError(t, err)
 
