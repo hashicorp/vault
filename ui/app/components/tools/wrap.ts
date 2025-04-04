@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+// TODO: Test this component
+
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
@@ -13,7 +15,6 @@ import type ApiService from 'vault/services/api';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type { TtlEvent } from 'vault/app-types';
 import type { HTMLElementEvent } from 'vault/forms';
-import type { Editor } from 'codemirror';
 
 /**
  * @module ToolsWrap
@@ -67,8 +68,12 @@ export default class ToolsWrap extends Component {
     this.wrapTTL = evt.enabled ? `${evt.seconds}s` : '30m';
   }
 
+  // TODO: Make this work
   @action
-  codemirrorUpdated(val: string, codemirror: Editor) {
+  codemirrorUpdated(
+    val: string,
+    codemirror: { performLint: () => void; state: { lint: { marked: unknown[] } } }
+  ) {
     codemirror.performLint();
     this.hasLintingErrors = codemirror?.state.lint.marked?.length > 0;
     if (!this.hasLintingErrors) this.wrapData = JSON.parse(val);
