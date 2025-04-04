@@ -2,14 +2,14 @@
 # SPDX-License-Identifier: BUSL-1.1
 
 ---
-name: Set up gofumpt from Github releases
-description: Set up gofumpt from Github releases
+name: Set up shfmt from Github releases
+description: Set up shfmt from Github releases
 
 inputs:
   destination:
-    description: "Where to install the gofumpt binary (default: $HOME/bin/gofumpt)"
+    description: "Where to install the shfmt binary (default: $HOME/bin/shfmt)"
     type: boolean
-    default: "$HOME/bin/gofumpt"
+    default: "$HOME/bin/shfmt"
   version:
     description: "The version to install (default: latest)"
     type: string
@@ -17,13 +17,13 @@ inputs:
 
 outputs:
   destination:
-    description: Where the installed gofumpt binary is
+    description: Where the installed shfmt binary is
     value: ${{ steps.install.outputs.destination }}
   destination-dir:
-    description: The directory where the installed gofumpt binary is
+    description: The directory where the installed shfmt binary is
     value: ${{ steps.install.outputs.destination-dir }}
   version:
-    description: The installed version of gofumpt
+    description: The installed version of shfmt
     value: ${{ steps.install.outputs.version }}
 
 runs:
@@ -34,7 +34,7 @@ runs:
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
-        VERSION=$(./.github/scripts/retry-command.sh gh release list -R mvdan/gofumpt --exclude-drafts --exclude-pre-releases | grep ${{ inputs.version }} | cut -f1)
+        VERSION=$(./.github/scripts/retry-command.sh gh release list -R mvdan/sh --exclude-drafts --exclude-pre-releases | grep ${{ inputs.version }} | cut -f1)
 
         mkdir -p $(dirname ${{ inputs.destination }})
         DESTINATION="$(readlink -f "${{ inputs.destination }}")"
@@ -56,6 +56,6 @@ runs:
           export OS="darwin"
         fi
 
-        ./.github/scripts/retry-command.sh gh release download "$VERSION" --clobber -p "gofumpt_*_${OS}_${ARCH}" -O gofumpt -R mvdan/gofumpt
-        chmod +x gofumpt
-        mv gofumpt "$DESTINATION"
+        ./.github/scripts/retry-command.sh gh release download "$VERSION" --clobber -p "shfmt_*_${OS}_${ARCH}" -O shfmt -R mvdan/sh
+        chmod +x shfmt
+        mv shfmt "$DESTINATION"
