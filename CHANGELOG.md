@@ -24,7 +24,6 @@ CHANGES:
 IMPROVEMENTS:
 
 * activity: mount_type was added to the API response of sys/internal/counters/activity [[GH-30071](https://github.com/hashicorp/vault/pull/30071)]
-* activity: mount_type was added to the API response of sys/internal/counters/activity
 * core (enterprise): report errors from the underlying seal when getting entropy.
 * storage/raft: Upgrade hashicorp/raft library to v1.7.3 which includes additional logging on the leader when opening and sending a snapshot to a follower. [[GH-29976](https://github.com/hashicorp/vault/pull/29976)]
 
@@ -303,7 +302,6 @@ BUG FIXES:
 * core: Fix a bug that prevents certain loggers from writing to a log file. [[GH-29917](https://github.com/hashicorp/vault/pull/29917)]
 * plugins (enterprise): Fix plugin registration with artifact when a binary for the same plugin is already present in the plugin directory.
 * plugins: plugin registration should honor the `plugin_tmpdir` config [[GH-29978](https://github.com/hashicorp/vault/pull/29978)]
-* plugins: plugin registration should honor the `plugin_tmpdir` config
 * secrets/azure: Upgrade plugin to v0.20.2 which reverts role name changes to no longer be a GUID.
 * secrets/pki: Fix a bug that prevents enabling automatic tidying of the CMPv2 nonce store. [[GH-29852](https://github.com/hashicorp/vault/pull/29852)]
 
@@ -724,7 +722,6 @@ BUG FIXES:
 * export API: Normalize the start_date parameter to the start of the month as is done in the sys/counters API to keep the results returned from both of the API's consistent.
 * plugins (enterprise): Fix plugin registration with artifact when a binary for the same plugin is already present in the plugin directory.
 * plugins: plugin registration should honor the `plugin_tmpdir` config [[GH-29978](https://github.com/hashicorp/vault/pull/29978)]
-* plugins: plugin registration should honor the `plugin_tmpdir` config
 * secrets/azure: Upgrade plugin to v0.19.3 which reverts role name changes to no longer be a GUID.
 * secrets/database: Fix a bug where a global database plugin reload exits if any of the database connections are not available [[GH-29519](https://github.com/hashicorp/vault/pull/29519)]
 
@@ -1292,7 +1289,6 @@ BUG FIXES:
 * export API: Normalize the start_date parameter to the start of the month as is done in the sys/counters API to keep the results returned from both of the API's consistent.
 * plugins (enterprise): Fix plugin registration with artifact when a binary for the same plugin is already present in the plugin directory.
 * plugins: plugin registration should honor the `plugin_tmpdir` config [[GH-29978](https://github.com/hashicorp/vault/pull/29978)]
-* plugins: plugin registration should honor the `plugin_tmpdir` config
 * secrets/azure: Upgrade plugin to v0.17.4 which reverts role name changes to no longer be a GUID.
 * secrets/database: Fix a bug where a global database plugin reload exits if any of the database connections are not available [[GH-29519](https://github.com/hashicorp/vault/pull/29519)]
 
