@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 )
 
@@ -40,14 +39,14 @@ func ExternalTokenHelperPath(path string) (string, error) {
 	return path, nil
 }
 
-var _ TokenHelper = (*ExternalTokenHelper)(nil)
+var _ TokenHelper = new(ExternalTokenHelper)
 
 // ExternalTokenHelper should only be used in a dev mode. For all other cases,
 // InternalTokenHelper should be used.
 // ExternalTokenHelper is the struct that has all the logic for storing and retrieving
 // tokens from the token helper. The API for the helpers is simple: the
-// BinaryPath is executed within a shell with environment Env. The last argument
-// appended will be the operation, which is:
+// BinaryPath is executed directly with arguments Args and environment Env.
+// The last argument appended to Args will be the operation, which is:
 //
 //   - "get" - Read the value of the token and write it to stdout.
 //   - "store" - Store the value of the token which is on stdin. Output
@@ -58,6 +57,7 @@ var _ TokenHelper = (*ExternalTokenHelper)(nil)
 // exit code then the stderr will be made part of the error value.
 type ExternalTokenHelper struct {
 	BinaryPath string
+	Args       []string
 	Env        []string
 }
 
@@ -109,28 +109,13 @@ func (h *ExternalTokenHelper) Path() string {
 }
 
 func (h *ExternalTokenHelper) cmd(op string) (*exec.Cmd, error) {
-	script := strings.ReplaceAll(h.BinaryPath, "\\", "\\\\") + " " + op
-	cmd, err := execScript(script)
-	if err != nil {
-		return nil, err
-	}
-	cmd.Env = h.Env
-	return cmd, nil
-}
+	binPath := strings.ReplaceAll(h.BinaryPath, "\\", "\\\\")
 
-// execScript returns a command to execute a script
-func execScript(script string) (*exec.Cmd, error) {
-	var shell, flag string
-	if runtime.GOOS == "windows" {
-		shell = "cmd"
-		flag = "/C"
-	} else {
-		shell = "/bin/sh"
-		flag = "-c"
-	}
-	if other := os.Getenv("SHELL"); other != "" {
-		shell = other
-	}
-	cmd := exec.Command(shell, flag, script)
+	args := make([]string, len(h.Args))
+	copy(args, h.Args)
+	args = append(args, op)
+
+	cmd := exec.Command(binPath, args...)
+	cmd.Env = h.Env
 	return cmd, nil
 }
