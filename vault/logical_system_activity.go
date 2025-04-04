@@ -359,9 +359,7 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 
 	var err error
 	var timeWarnings StartEndTimesWarnings
-	startTime := d.Get("start_time").(time.Time)
-	endTime := d.Get("end_time").(time.Time)
-	startTime, endTime, timeWarnings, err = getStartEndTime(startTime, endTime, b.Core.BillingStart())
+	startTime, endTime, timeWarnings, err := getStartEndTime(d, b.Core.BillingStart())
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}

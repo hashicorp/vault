@@ -1,0 +1,2698 @@
+diff --git a/builtin/credential/ldap/backend_test.go b/builtin/credential/ldap/backend_test.go
+index 9e8ef6675a..28dfc1d414 100644
+--- a/builtin/credential/ldap/backend_test.go
++++ b/builtin/credential/ldap/backend_test.go
+@@ -329,7 +329,7 @@ func TestLdapAuthBackend_CaseSensitivity(t *testing.T) {
+ 		}
+ 	}
+ 
+-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
++	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+ 	defer cleanup()
+ 	configReq := &logical.Request{
+ 		Operation: logical.UpdateOperation,
+@@ -375,7 +375,7 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
+ 	var err error
+ 	b, storage := createBackendWithStorage(t)
+ 
+-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
++	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+ 	defer cleanup()
+ 	configReq := &logical.Request{
+ 		Operation: logical.UpdateOperation,
+@@ -486,7 +486,7 @@ func factory(t *testing.T) logical.Backend {
+ // https://github.com/hashicorp/vault/issues/26183.
+ func TestBackend_LoginRegression_AnonBind(t *testing.T) {
+ 	b := factory(t)
+-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
++	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+ 	cfg.AnonymousGroupSearch = true
+ 	defer cleanup()
+ 
+@@ -521,7 +521,7 @@ func TestBackend_LoginRegression_AnonBind(t *testing.T) {
+ // attributes to entity alias metadata.
+ func TestBackend_LoginRegression_UserAttr(t *testing.T) {
+ 	b := factory(t)
+-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
++	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+ 	cfg.UserAttr = "givenName"
+ 	defer cleanup()
+ 
+@@ -552,7 +552,7 @@ func TestBackend_LoginRegression_UserAttr(t *testing.T) {
+ 
+ func TestBackend_basic(t *testing.T) {
+ 	b := factory(t)
+-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
++	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+ 	defer cleanup()
+ 
+ 	logicaltest.Test(t, logicaltest.TestCase{
+@@ -582,7 +582,7 @@ func TestBackend_basic(t *testing.T) {
+ 
+ func TestBackend_basic_noPolicies(t *testing.T) {
+ 	b := factory(t)
+-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
++	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+ 	defer cleanup()
+ 
+ 	logicaltest.Test(t, logicaltest.TestCase{
+@@ -600,7 +600,7 @@ func TestBackend_basic_noPolicies(t *testing.T) {
+ 
+ func TestBackend_basic_group_noPolicies(t *testing.T) {
+ 	b := factory(t)
+-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
++	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+ 	defer cleanup()
+ 
+ 	logicaltest.Test(t, logicaltest.TestCase{
+@@ -621,7 +621,7 @@ func TestBackend_basic_group_noPolicies(t *testing.T) {
+ 
+ func TestBackend_basic_authbind(t *testing.T) {
+ 	b := factory(t)
+-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
++	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+ 	defer cleanup()
+ 
+ 	logicaltest.Test(t, logicaltest.TestCase{
+@@ -638,7 +638,7 @@ func TestBackend_basic_authbind(t *testing.T) {
+ 
+ func TestBackend_basic_authbind_userfilter(t *testing.T) {
+ 	b := factory(t)
+-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
++	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+ 	defer cleanup()
+ 
+ 	// userattr not used in the userfilter should result in a warning in the response
+@@ -781,7 +781,7 @@ func TestBackend_basic_authbind_userfilter(t *testing.T) {
+ 
+ func TestBackend_basic_authbind_metadata_name(t *testing.T) {
+ 	b := factory(t)
+-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
++	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+ 	defer cleanup()
+ 
+ 	cfg.UserAttr = "cn"
+@@ -846,7 +846,7 @@ func addUPNAttributeToLDAPSchemaAndUser(t *testing.T, cfg *ldaputil.ConfigEntry,
+ 
+ func TestBackend_basic_discover(t *testing.T) {
+ 	b := factory(t)
+-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
++	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+ 	defer cleanup()
+ 
+ 	logicaltest.Test(t, logicaltest.TestCase{
+@@ -863,7 +863,7 @@ func TestBackend_basic_discover(t *testing.T) {
+ 
+ func TestBackend_basic_nogroupdn(t *testing.T) {
+ 	b := factory(t)
+-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
++	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+ 	defer cleanup()
+ 
+ 	logicaltest.Test(t, logicaltest.TestCase{
+@@ -1313,7 +1313,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
+ 
+ 	ctx := context.Background()
+ 
+-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
++	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+ 	defer cleanup()
+ 	configReq := &logical.Request{
+ 		Operation: logical.UpdateOperation,
+diff --git a/builtin/credential/ldap/path_config_rotate_root_test.go b/builtin/credential/ldap/path_config_rotate_root_test.go
+index 65073472ca..9b0287f495 100644
+--- a/builtin/credential/ldap/path_config_rotate_root_test.go
++++ b/builtin/credential/ldap/path_config_rotate_root_test.go
+@@ -22,7 +22,7 @@ func TestRotateRoot(t *testing.T) {
+ 	ctx := context.Background()
+ 
+ 	b, store := createBackendWithStorage(t)
+-	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
++	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+ 	defer cleanup()
+ 	// set up auth config
+ 	req := &logical.Request{
+diff --git a/builtin/credential/userpass/path_user_password.go b/builtin/credential/userpass/path_user_password.go
+index 431028b9cf..95826f15aa 100644
+--- a/builtin/credential/userpass/path_user_password.go
++++ b/builtin/credential/userpass/path_user_password.go
+@@ -83,7 +83,7 @@ func (b *backend) pathUserPasswordUpdate(ctx context.Context, req *logical.Reque
+ 
+ 	userErr, intErr := b.updateUserPassword(req, d, userEntry)
+ 	if intErr != nil {
+-		return nil, err
++		return nil, intErr
+ 	}
+ 	if userErr != nil {
+ 		return logical.ErrorResponse(userErr.Error()), logical.ErrInvalidRequest
+diff --git a/builtin/logical/pki/acme_errors.go b/builtin/logical/pki/acme_errors.go
+index e82920a738..81a211399c 100644
+--- a/builtin/logical/pki/acme_errors.go
++++ b/builtin/logical/pki/acme_errors.go
+@@ -110,7 +110,7 @@ type ErrorResponse struct {
+ 	StatusCode  int              `json:"-"`
+ 	Type        string           `json:"type"`
+ 	Detail      string           `json:"detail"`
+-	Subproblems []*ErrorResponse `json:"subproblems"`
++	Subproblems []*ErrorResponse `json:"subproblems,omitempty"`
+ }
+ 
+ func (e *ErrorResponse) MarshalForStorage() map[string]interface{} {
+diff --git a/builtin/logical/pki/acme_state_test.go b/builtin/logical/pki/acme_state_test.go
+index ed9586e834..2b7357553a 100644
+--- a/builtin/logical/pki/acme_state_test.go
++++ b/builtin/logical/pki/acme_state_test.go
+@@ -4,6 +4,7 @@
+ package pki
+ 
+ import (
++	"encoding/json"
+ 	"testing"
+ 
+ 	"github.com/stretchr/testify/require"
+@@ -41,3 +42,28 @@ func TestAcmeNonces(t *testing.T) {
+ 		require.False(t, a.RedeemNonce(nonce))
+ 	}
+ }
++
++// TestErrorResponseNoSubproblems builds the http body that exists in the header of an ACME error response and checks
++// in a simple case that "type" and "detail" two fields on the body do exist, but that "subproblems" a field which is
++// optional, is omitted because it does not exist in this case (rather than being included with a value null which can
++// trip up some systems).
++func TestErrorResponseNoSubproblems(t *testing.T) {
++	t.Parallel()
++	errResponse, err := TranslateError(ErrAlreadyRevoked)
++	if err != nil {
++		return
++	}
++	require.NoError(t, err, "already revoked should generate an error response")
++	require.NotNil(t, errResponse.Data)
++	body := map[string]string{}
++	rawBody, ok := errResponse.Data["http_raw_body"]
++	err = json.Unmarshal(rawBody.([]byte), &body)
++	require.True(t, ok, "Raw Body of Error response should exist, but doesn't")
++	typeString, ok := body["type"]
++	require.True(t, ok, "Type on Raw Body of Error response should exist, but doesn't")
++	require.Equal(t, typeString, "urn:ietf:params:acme:error:alreadyRevoked")
++	_, ok = body["detail"]
++	require.True(t, ok, "Detail on Raw Body of Error response should exist, but doesn't")
++	subProblems, ok := body["subproblems"]
++	require.False(t, ok, "subproblems on Raw Body of Error response should be omitted, but exists with value %v", subProblems)
++}
+diff --git a/builtin/logical/pki/backend_test.go b/builtin/logical/pki/backend_test.go
+index eb2c9f93da..a9f7686897 100644
+--- a/builtin/logical/pki/backend_test.go
++++ b/builtin/logical/pki/backend_test.go
+@@ -7420,6 +7420,53 @@ func TestIssuance_AlwaysEnforceErr(t *testing.T) {
+ 	})
+ }
+ 
++// TestIssuance_SignIntermediateKeyUsages tests the field "key_usage" both when directly generating a root certificate,
++// and when signing a CA CSR.  In particular, this test verifies that:
++// - the key usage DigitalSignature is added if present
++// - non-existent or invalid key usages return a warning, but are ignored by certificate generation
++// - CertSign and CRLSign are ignored
++func TestIssuance_SignIntermediateKeyUsages(t *testing.T) {
++	t.Parallel()
++	b, s := CreateBackendWithStorage(t)
++
++	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
++		"common_name": "root myvault.com",
++		"key_type":    "ec",
++		"ttl":         "10h",
++		"issuer_name": "root-ca",
++		"key_name":    "root-key",
++		"key_usage":   "DigitalSignature,DogPetting",
++	})
++	requireSuccessNonNilResponse(t, resp, err, "expected root generation to succeed")
++	require.Contains(t, resp.Warnings, "Invalid key usage will be ignored: unrecognized key usage DogPetting")
++	rootCertRaw := resp.Data["certificate"]
++	rootCert := parseCert(t, rootCertRaw.(string))
++	require.Equal(t, x509.KeyUsageDigitalSignature, rootCert.KeyUsage&x509.KeyUsageDigitalSignature, "keyUsage Digital Signature was not present")
++	require.Equal(t, x509.KeyUsageCertSign, rootCert.KeyUsage&x509.KeyUsageCertSign, "keyUsage CertSign was not present")
++	require.Equal(t, x509.KeyUsageCRLSign, rootCert.KeyUsage&x509.KeyUsageCRLSign, "keyUsage CRLSign was not present")
++	require.Equal(t, x509.KeyUsageDigitalSignature|x509.KeyUsageCertSign|x509.KeyUsageCRLSign, rootCert.KeyUsage, "unexpected KeyUsage present")
++	resp, err = CBWrite(b, s, "intermediate/generate/internal", map[string]interface{}{
++		"common_name": "myint.com",
++	})
++	requireSuccessNonNilResponse(t, resp, err, "failed generating intermediary CSR")
++	requireFieldsSetInResp(t, resp, "csr")
++	csr := resp.Data["csr"]
++
++	resp, err = CBWrite(b, s, "issuer/root-ca/sign-intermediate", map[string]interface{}{
++		"csr":       csr,
++		"key_usage": "CRLSign,CertSign,DigitalSignature,KeyEncipherment,KeyAgreement",
++		"ttl":       "60h",
++	})
++	requireSuccessNonNilResponse(t, resp, err, "expected intermediate signing to succeed")
++	require.Contains(t, resp.Warnings, "Invalid key usage: key usage KeyEncipherment is only valid for non-Ca certs; key usage KeyAgreement is only valid for non-Ca certs")
++	intCertRaw := resp.Data["certificate"]
++	intCert := parseCert(t, intCertRaw.(string))
++	require.Equal(t, x509.KeyUsageDigitalSignature, intCert.KeyUsage&x509.KeyUsageDigitalSignature, "keyUsage Digital Signature was not present")
++	require.Equal(t, x509.KeyUsageCertSign, intCert.KeyUsage&x509.KeyUsageCertSign, "keyUsage CertSign was not present")
++	require.Equal(t, x509.KeyUsageCRLSign, intCert.KeyUsage&x509.KeyUsageCRLSign, "keyUsage CRLSign was not present")
++	require.Equal(t, x509.KeyUsageDigitalSignature|x509.KeyUsageCertSign|x509.KeyUsageCRLSign, intCert.KeyUsage, "unexpected KeyUsage present on intermediate certificate")
++}
++
+ var (
+ 	initTest  sync.Once
+ 	rsaCAKey  string
+diff --git a/builtin/logical/pki/path_root.go b/builtin/logical/pki/path_root.go
+index d5f9b90533..a705ee5f38 100644
+--- a/builtin/logical/pki/path_root.go
++++ b/builtin/logical/pki/path_root.go
+@@ -197,6 +197,13 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request,
+ 		},
+ 	}
+ 
++	if keyUsages, ok := data.GetOk("key_usage"); ok {
++		err = validateCaKeyUsages(keyUsages.([]string))
++		if err != nil {
++			resp.AddWarning(fmt.Sprintf("Invalid key usage will be ignored: %v", err.Error()))
++		}
++	}
++
+ 	if len(parsedBundle.Certificate.RawSubject) <= 2 {
+ 		// Strictly a subject is a SEQUENCE of SETs of SEQUENCES.
+ 		//
+@@ -432,6 +439,13 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
+ 		resp.AddWarning(intCaTruncatationWarning)
+ 	}
+ 
++	if keyUsages, ok := data.GetOk("key_usage"); ok {
++		err = validateCaKeyUsages(keyUsages.([]string))
++		if err != nil {
++			resp.AddWarning(fmt.Sprintf("Invalid key usage: %v", err.Error()))
++		}
++	}
++
+ 	return resp, nil
+ }
+ 
+@@ -631,6 +645,24 @@ func publicKeyType(pub crypto.PublicKey) (pubType x509.PublicKeyAlgorithm, sigAl
+ 	return
+ }
+ 
++func validateCaKeyUsages(keyUsages []string) error {
++	invalidKeyUsages := []string{}
++	for _, usage := range keyUsages {
++		cleanUsage := strings.ToLower(strings.TrimSpace(usage))
++		switch cleanUsage {
++		case "crlsign", "certsign", "digitalsignature":
++		case "contentcommitment", "keyencipherment", "dataencipherment", "keyagreement", "encipheronly", "decipheronly":
++			invalidKeyUsages = append(invalidKeyUsages, fmt.Sprintf("key usage %s is only valid for non-Ca certs", usage))
++		default:
++			invalidKeyUsages = append(invalidKeyUsages, fmt.Sprintf("unrecognized key usage %s", usage))
++		}
++	}
++	if invalidKeyUsages != nil {
++		return fmt.Errorf(strings.Join(invalidKeyUsages, "; "))
++	}
++	return nil
++}
++
+ const pathGenerateRootHelpSyn = `
+ Generate a new CA certificate and private key used for signing.
+ `
+diff --git a/builtin/logical/ssh/backend.go b/builtin/logical/ssh/backend.go
+index f750e79fac..cbb372a719 100644
+--- a/builtin/logical/ssh/backend.go
++++ b/builtin/logical/ssh/backend.go
+@@ -9,6 +9,7 @@ import (
+ 	"sync"
+ 
+ 	"github.com/hashicorp/vault/sdk/framework"
++	"github.com/hashicorp/vault/sdk/helper/errutil"
+ 	"github.com/hashicorp/vault/sdk/helper/salt"
+ 	"github.com/hashicorp/vault/sdk/logical"
+ )
+@@ -17,9 +18,10 @@ const operationPrefixSSH = "ssh"
+ 
+ type backend struct {
+ 	*framework.Backend
+-	view      logical.Storage
+-	salt      *salt.Salt
+-	saltMutex sync.RWMutex
++	view        logical.Storage
++	salt        *salt.Salt
++	saltMutex   sync.RWMutex
++	backendUUID string
+ }
+ 
+ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
+@@ -77,6 +79,8 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
+ 		Invalidate:  b.invalidate,
+ 		BackendType: logical.TypeLogical,
+ 	}
++
++	b.backendUUID = conf.BackendUUID
+ 	return &b, nil
+ }
+ 
+@@ -112,6 +116,18 @@ func (b *backend) invalidate(_ context.Context, key string) {
+ 	}
+ }
+ 
++func (b *backend) GetManagedKeyView() (logical.ManagedKeySystemView, error) {
++	managedKeyView, ok := b.System().(logical.ManagedKeySystemView)
++	if !ok {
++		return nil, errutil.InternalError{Err: "unsupported system view"}
++	}
++	return managedKeyView, nil
++}
++
++func (b *backend) BackendUUID() string {
++	return b.backendUUID
++}
++
+ const backendHelp = `
+ The SSH backend generates credentials allowing clients to establish SSH
+ connections to remote hosts.
+diff --git a/builtin/logical/ssh/managed_key/common.go b/builtin/logical/ssh/managed_key/common.go
+new file mode 100644
+index 0000000000..a281e1a570
+--- /dev/null
++++ b/builtin/logical/ssh/managed_key/common.go
+@@ -0,0 +1,48 @@
++// Copyright (c) HashiCorp, Inc.
++// SPDX-License-Identifier: BUSL-1.1
++
++package managed_key
++
++import (
++	"io"
++
++	"github.com/hashicorp/vault/sdk/logical"
++	"golang.org/x/crypto/ssh"
++)
++
++type ManagedKeyInfo struct {
++	publicKey ssh.PublicKey
++	Name      NameKey
++	Uuid      UUIDKey
++}
++
++type managedKeyId interface {
++	String() string
++}
++
++type SSHManagedKeyView interface {
++	BackendUUID() string
++	GetManagedKeyView() (logical.ManagedKeySystemView, error)
++	GetRandomReader() io.Reader
++}
++
++type (
++	UUIDKey string
++	NameKey string
++)
++
++func (u UUIDKey) String() string {
++	return string(u)
++}
++
++func (n NameKey) String() string {
++	return string(n)
++}
++
++func (m ManagedKeyInfo) PublicKey() ssh.PublicKey {
++	return m.publicKey
++}
++
++func (m ManagedKeyInfo) Sign(rand io.Reader, data []byte) (*ssh.Signature, error) {
++	return nil, nil
++}
+diff --git a/builtin/logical/ssh/managed_key/managed_key_util_ce.go b/builtin/logical/ssh/managed_key/managed_key_util_ce.go
+new file mode 100644
+index 0000000000..35b9817aa8
+--- /dev/null
++++ b/builtin/logical/ssh/managed_key/managed_key_util_ce.go
+@@ -0,0 +1,15 @@
++// Copyright (c) HashiCorp, Inc.
++// SPDX-License-Identifier: BUSL-1.1
++
++//go:build !enterprise
++
++package managed_key
++
++import (
++	"context"
++	"errors"
++)
++
++func GetManagedKeyInfo(ctx context.Context, mkv SSHManagedKeyView, keyId managedKeyId) (*ManagedKeyInfo, error) {
++	return nil, errors.New("managed keys are supported within enterprise edition only")
++}
+diff --git a/builtin/logical/ssh/path_config_ca.go b/builtin/logical/ssh/path_config_ca.go
+index d0f0abae13..05106cbfa9 100644
+--- a/builtin/logical/ssh/path_config_ca.go
++++ b/builtin/logical/ssh/path_config_ca.go
+@@ -17,6 +17,7 @@ import (
+ 	"io"
+ 
+ 	multierror "github.com/hashicorp/go-multierror"
++	"github.com/hashicorp/vault/builtin/logical/ssh/managed_key"
+ 	"github.com/hashicorp/vault/sdk/framework"
+ 	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
+ 	"github.com/hashicorp/vault/sdk/logical"
+@@ -31,12 +32,19 @@ const (
+ 	caPublicKeyStoragePathDeprecated  = "public_key"
+ 	caPrivateKeyStoragePath           = "config/ca_private_key"
+ 	caPrivateKeyStoragePathDeprecated = "config/ca_bundle"
++	caManagedKeyStoragePath           = "config/ca_managed_key"
+ )
+ 
+ type keyStorageEntry struct {
+ 	Key string `json:"key" structs:"key" mapstructure:"key"`
+ }
+ 
++type managedKeyStorageEntry struct {
++	KeyId     managed_key.UUIDKey `json:"key_id" structs:"key_id" mapstructure:"key_id"`
++	KeyName   managed_key.NameKey `json:"key_name" structs:"key_name" mapstructure:"key_name"`
++	PublicKey string              `json:"public_key" structs:"public_key" mapstructure:"public_key"`
++}
++
+ func pathConfigCA(b *backend) *framework.Path {
+ 	return &framework.Path{
+ 		Pattern: "config/ca",
+@@ -56,7 +64,7 @@ func pathConfigCA(b *backend) *framework.Path {
+ 			},
+ 			"generate_signing_key": {
+ 				Type:        framework.TypeBool,
+-				Description: `Generate SSH key pair internally rather than use the private_key and public_key fields.`,
++				Description: `Generate SSH key pair internally rather than use the private_key and public_key fields. If managed key config is provided, this field is ignored.`,
+ 				Default:     true,
+ 			},
+ 			"key_type": {
+@@ -69,6 +77,14 @@ func pathConfigCA(b *backend) *framework.Path {
+ 				Description: `Specifies the desired key bits when generating variable-length keys (such as when key_type="ssh-rsa") or which NIST P-curve to use when key_type="ec" (256, 384, or 521).`,
+ 				Default:     0,
+ 			},
++			"managed_key_name": {
++				Type:        framework.TypeString,
++				Description: `The name of the managed key to use. When using a managed key, this field or managed_key_id is required.`,
++			},
++			"managed_key_id": {
++				Type:        framework.TypeString,
++				Description: `The id of the managed key to use. When using a managed key, this field or managed_key_name is required.`,
++			},
+ 		},
+ 
+ 		Operations: map[logical.Operation]framework.OperationHandler{
+@@ -189,67 +205,75 @@ func (b *backend) pathConfigCAUpdate(ctx context.Context, req *logical.Request,
+ 	publicKey := data.Get("public_key").(string)
+ 	privateKey := data.Get("private_key").(string)
+ 
+-	var generateSigningKey bool
++	managedKeyName := data.Get("managed_key_name").(string)
++	managedKeyID := data.Get("managed_key_id").(string)
+ 
+-	generateSigningKeyRaw, ok := data.GetOk("generate_signing_key")
+-	switch {
+-	// explicitly set true
+-	case ok && generateSigningKeyRaw.(bool):
+-		if publicKey != "" || privateKey != "" {
+-			return logical.ErrorResponse("public_key and private_key must not be set when generate_signing_key is set to true"), nil
+-		}
++	useManagedKey := managedKeyName != "" || managedKeyID != ""
+ 
+-		generateSigningKey = true
++	generateSigningKey := data.Get("generate_signing_key").(bool)
+ 
+-	// explicitly set to false, or not set and we have both a public and private key
+-	case ok, publicKey != "" && privateKey != "":
+-		if publicKey == "" {
+-			return logical.ErrorResponse("missing public_key"), nil
++	if useManagedKey {
++		generateSigningKey = false
++		err = b.createManagedKey(ctx, req.Storage, managedKeyName, managedKeyID)
++		if err != nil {
++			return nil, err
+ 		}
++	} else {
++		if publicKey != "" && privateKey != "" {
++			_, err := ssh.ParsePrivateKey([]byte(privateKey))
++			if err != nil {
++				return logical.ErrorResponse(fmt.Sprintf("Unable to parse private_key as an SSH private key: %v", err)), nil
++			}
+ 
+-		if privateKey == "" {
+-			return logical.ErrorResponse("missing private_key"), nil
+-		}
++			_, err = parsePublicSSHKey(publicKey)
++			if err != nil {
++				return logical.ErrorResponse(fmt.Sprintf("Unable to parse public_key as an SSH public key: %v", err)), nil
++			}
++		} else if generateSigningKey {
++			keyType := data.Get("key_type").(string)
++			keyBits := data.Get("key_bits").(int)
+ 
+-		_, err := ssh.ParsePrivateKey([]byte(privateKey))
+-		if err != nil {
+-			return logical.ErrorResponse(fmt.Sprintf("Unable to parse private_key as an SSH private key: %v", err)), nil
++			publicKey, privateKey, err = generateSSHKeyPair(b.Backend.GetRandomReader(), keyType, keyBits)
++			if err != nil {
++				return nil, err
++			}
++		} else {
++			return logical.ErrorResponse("if generate_signing_key is false, either both public_key and private_key or a managed key must be provided"), nil
+ 		}
+ 
+-		_, err = parsePublicSSHKey(publicKey)
++		errResp, err := createStoredKey(ctx, req.Storage, publicKey, privateKey)
+ 		if err != nil {
+-			return logical.ErrorResponse(fmt.Sprintf("Unable to parse public_key as an SSH public key: %v", err)), nil
++			return nil, err
++		}
++		if errResp != nil {
++			return errResp, nil
+ 		}
+-
+-	// not set and no public/private key provided so generate
+-	case publicKey == "" && privateKey == "":
+-		generateSigningKey = true
+-
+-	// not set, but one or the other supplied
+-	default:
+-		return logical.ErrorResponse("only one of public_key and private_key set; both must be set to use, or both must be blank to auto-generate"), nil
+ 	}
+ 
+ 	if generateSigningKey {
+-		keyType := data.Get("key_type").(string)
+-		keyBits := data.Get("key_bits").(int)
+-
+-		publicKey, privateKey, err = generateSSHKeyPair(b.Backend.GetRandomReader(), keyType, keyBits)
+-		if err != nil {
+-			return nil, err
++		response := &logical.Response{
++			Data: map[string]interface{}{
++				"public_key": publicKey,
++			},
+ 		}
++
++		return response, nil
+ 	}
+ 
++	return nil, nil
++}
++
++func createStoredKey(ctx context.Context, s logical.Storage, publicKey, privateKey string) (*logical.Response, error) {
+ 	if publicKey == "" || privateKey == "" {
+ 		return nil, fmt.Errorf("failed to generate or parse the keys")
+ 	}
+ 
+-	publicKeyEntry, err := caKey(ctx, req.Storage, caPublicKey)
++	publicKeyEntry, err := caKey(ctx, s, caPublicKey)
+ 	if err != nil {
+ 		return nil, fmt.Errorf("failed to read CA public key: %w", err)
+ 	}
+ 
+-	privateKeyEntry, err := caKey(ctx, req.Storage, caPrivateKey)
++	privateKeyEntry, err := caKey(ctx, s, caPrivateKey)
+ 	if err != nil {
+ 		return nil, fmt.Errorf("failed to read CA private key: %w", err)
+ 	}
+@@ -266,7 +290,7 @@ func (b *backend) pathConfigCAUpdate(ctx context.Context, req *logical.Request,
+ 	}
+ 
+ 	// Save the public key
+-	err = req.Storage.Put(ctx, entry)
++	err = s.Put(ctx, entry)
+ 	if err != nil {
+ 		return nil, err
+ 	}
+@@ -279,7 +303,7 @@ func (b *backend) pathConfigCAUpdate(ctx context.Context, req *logical.Request,
+ 	}
+ 
+ 	// Save the private key
+-	err = req.Storage.Put(ctx, entry)
++	err = s.Put(ctx, entry)
+ 	if err != nil {
+ 		var mErr *multierror.Error
+ 
+@@ -287,7 +311,7 @@ func (b *backend) pathConfigCAUpdate(ctx context.Context, req *logical.Request,
+ 
+ 		// If storing private key fails, the corresponding public key should be
+ 		// removed
+-		if delErr := req.Storage.Delete(ctx, caPublicKeyStoragePath); delErr != nil {
++		if delErr := s.Delete(ctx, caPublicKeyStoragePath); delErr != nil {
+ 			mErr = multierror.Append(mErr, fmt.Errorf("failed to cleanup CA public key: %w", delErr))
+ 			return nil, mErr
+ 		}
+@@ -295,16 +319,6 @@ func (b *backend) pathConfigCAUpdate(ctx context.Context, req *logical.Request,
+ 		return nil, err
+ 	}
+ 
+-	if generateSigningKey {
+-		response := &logical.Response{
+-			Data: map[string]interface{}{
+-				"public_key": publicKey,
+-			},
+-		}
+-
+-		return response, nil
+-	}
+-
+ 	return nil, nil
+ }
+ 
+@@ -406,3 +420,39 @@ func generateSSHKeyPair(randomSource io.Reader, keyType string, keyBits int) (st
+ 
+ 	return string(ssh.MarshalAuthorizedKey(public)), string(pem.EncodeToMemory(privateBlock)), nil
+ }
++
++func (b *backend) createManagedKey(ctx context.Context, s logical.Storage, managedKeyName, managedKeyId string) error {
++	var keyId managed_key.UUIDKey
++	var keyName managed_key.NameKey
++	var keyInfo *managed_key.ManagedKeyInfo
++	var err error
++
++	if managedKeyId != "" {
++		keyId = managed_key.UUIDKey(managedKeyId)
++		keyInfo, err = managed_key.GetManagedKeyInfo(ctx, b, keyId)
++	} else if managedKeyName != "" {
++		keyName = managed_key.NameKey(managedKeyName)
++		keyInfo, err = managed_key.GetManagedKeyInfo(ctx, b, keyName)
++	}
++
++	if err != nil {
++		return fmt.Errorf("error retrieving public key: %s", err)
++	}
++
++	entry, err := logical.StorageEntryJSON(caManagedKeyStoragePath, &managedKeyStorageEntry{
++		PublicKey: string(keyInfo.PublicKey().Marshal()),
++		KeyName:   keyInfo.Name,
++		KeyId:     keyInfo.Uuid,
++	})
++	if err != nil {
++		return fmt.Errorf("error creating storage entry: %s", err)
++	}
++
++	// Save the public key
++	err = s.Put(ctx, entry)
++	if err != nil {
++		return fmt.Errorf("error writing key entry to storage: %s", err)
++	}
++
++	return nil
++}
+diff --git a/command/command_testonly/operator_usage_testonly_oss_test.go b/command/command_testonly/operator_usage_testonly_oss_test.go
+new file mode 100644
+index 0000000000..1b805c31d5
+--- /dev/null
++++ b/command/command_testonly/operator_usage_testonly_oss_test.go
+@@ -0,0 +1,101 @@
++// Copyright (c) HashiCorp, Inc.
++// SPDX-License-Identifier: BUSL-1.1
++
++//go:build testonly && !enterprise
++
++package command_testonly
++
++import (
++	"context"
++	"fmt"
++	"strings"
++	"testing"
++	"time"
++
++	"github.com/hashicorp/cli"
++	"github.com/hashicorp/vault/command"
++	"github.com/hashicorp/vault/helper/timeutil"
++	vaulthttp "github.com/hashicorp/vault/http"
++	"github.com/hashicorp/vault/sdk/helper/clientcountutil"
++	"github.com/hashicorp/vault/sdk/helper/clientcountutil/generation"
++	"github.com/hashicorp/vault/vault"
++	"github.com/stretchr/testify/require"
++)
++
++func testOperatorUsageCommand(tb testing.TB) (*cli.MockUi, *command.OperatorUsageCommand) {
++	tb.Helper()
++
++	ui := cli.NewMockUi()
++	return ui, &command.OperatorUsageCommand{
++		BaseCommand: &command.BaseCommand{
++			UI: ui,
++		},
++	}
++}
++
++// TestOperatorUsageCommandRun writes mock activity log data and runs the
++// operator usage command. The test verifies that the output contains the
++// expected values per client type.
++// This test cannot be run in parallel because it sets the VAULT_TOKEN env
++// var
++func TestOperatorUsageCommandRun(t *testing.T) {
++	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
++		HandlerFunc: vaulthttp.Handler,
++		NumCores:    1,
++	})
++	defer cluster.Cleanup()
++	core := cluster.Cores[0].Core
++	vault.TestWaitActive(t, core)
++
++	client := cluster.Cores[0].Client
++	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{"enabled": "enable"})
++	require.NoError(t, err)
++
++	now := time.Now().UTC()
++
++	_, err = clientcountutil.NewActivityLogData(client).
++		NewPreviousMonthData(2).
++		NewClientsSeen(6, clientcountutil.WithClientType("entity")).
++		NewClientsSeen(4, clientcountutil.WithClientType("non-entity-token")).
++		NewClientsSeen(2, clientcountutil.WithClientType("secret-sync")).
++		NewClientsSeen(7, clientcountutil.WithClientType("pki-acme")).
++		NewPreviousMonthData(1).
++		NewClientsSeen(3, clientcountutil.WithClientType("entity")).
++		NewClientsSeen(4, clientcountutil.WithClientType("non-entity-token")).
++		NewClientsSeen(5, clientcountutil.WithClientType("secret-sync")).
++		NewClientsSeen(8, clientcountutil.WithClientType("pki-acme")).
++		Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES, generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES)
++	require.NoError(t, err)
++
++	ui, cmd := testOperatorUsageCommand(t)
++
++	t.Setenv("VAULT_TOKEN", client.Token())
++	start := timeutil.MonthsPreviousTo(2, now).Format(time.RFC3339)
++	end := timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now)).UTC().Format(time.RFC3339)
++	// Reset and check output
++	code := cmd.Run([]string{
++		"-address", client.Address(),
++		"-tls-skip-verify",
++		"-start-time", start,
++		"-end-time", end,
++	})
++	require.Equal(t, 0, code, ui.ErrorWriter.String())
++	output := ui.OutputWriter.String()
++	outputLines := strings.Split(output, "\n")
++	require.Equal(t, fmt.Sprintf("Period start: %s", start), outputLines[0])
++	require.Equal(t, fmt.Sprintf("Period end: %s", end), outputLines[1])
++
++	require.Contains(t, outputLines[3], "Secret sync")
++	require.Contains(t, outputLines[3], "ACME clients")
++	nsCounts := strings.Fields(outputLines[5])
++	require.Equal(t, "[root]", nsCounts[0])
++	require.Equal(t, "9", nsCounts[1])
++	require.Equal(t, "8", nsCounts[2])
++	require.Equal(t, "7", nsCounts[3])
++	require.Equal(t, "15", nsCounts[4])
++	require.Equal(t, "39", nsCounts[5])
++
++	totalCounts := strings.Fields(outputLines[7])
++	require.Equal(t, "Total", totalCounts[0])
++	require.Equal(t, nsCounts[1:], totalCounts[1:])
++}
+diff --git a/enos/ci/aws-nuke.yml b/enos/ci/aws-nuke.yml
+index fd7dd54506..b350bd08e7 100644
+--- a/enos/ci/aws-nuke.yml
++++ b/enos/ci/aws-nuke.yml
+@@ -21,7 +21,7 @@ regions:
+ - us-west-2
+ - global
+ 
+-blocklist:
++account-blocklist:
+  - 1234567890
+ 
+ accounts:
+diff --git a/helper/pkcs7/ber.go b/helper/pkcs7/ber.go
+index 898cf262ee..eede997667 100644
+--- a/helper/pkcs7/ber.go
++++ b/helper/pkcs7/ber.go
+@@ -5,8 +5,6 @@ import (
+ 	"errors"
+ )
+ 
+-var encodeIndent = 0
+-
+ type asn1Object interface {
+ 	EncodeTo(writer *bytes.Buffer) error
+ }
+@@ -17,8 +15,6 @@ type asn1Structured struct {
+ }
+ 
+ func (s asn1Structured) EncodeTo(out *bytes.Buffer) error {
+-	// fmt.Printf("%s--> tag: % X\n", strings.Repeat("| ", encodeIndent), s.tagBytes)
+-	encodeIndent++
+ 	inner := new(bytes.Buffer)
+ 	for _, obj := range s.content {
+ 		err := obj.EncodeTo(inner)
+@@ -26,7 +22,6 @@ func (s asn1Structured) EncodeTo(out *bytes.Buffer) error {
+ 			return err
+ 		}
+ 	}
+-	encodeIndent--
+ 	out.Write(s.tagBytes)
+ 	encodeLength(out, inner.Len())
+ 	out.Write(inner.Bytes())
+@@ -47,8 +42,6 @@ func (p asn1Primitive) EncodeTo(out *bytes.Buffer) error {
+ 	if err = encodeLength(out, p.length); err != nil {
+ 		return err
+ 	}
+-	// fmt.Printf("%s--> tag: % X length: %d\n", strings.Repeat("| ", encodeIndent), p.tagBytes, p.length)
+-	// fmt.Printf("%s--> content length: %d\n", strings.Repeat("| ", encodeIndent), len(p.content))
+ 	out.Write(p.content)
+ 
+ 	return nil
+diff --git a/helper/testhelpers/ldap/ldaphelper.go b/helper/testhelpers/ldap/ldaphelper.go
+index fa6cf9ff99..2572cef718 100644
+--- a/helper/testhelpers/ldap/ldaphelper.go
++++ b/helper/testhelpers/ldap/ldaphelper.go
+@@ -16,6 +16,10 @@ import (
+ 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
+ )
+ 
++// DefaultVersion is the default version of the container to pull.
++// NOTE: This is currently pinned to a sha instead of "master", see: https://github.com/rroemhild/docker-test-openldap/issues/62
++const DefaultVersion = "sha256:f4d9c5ba97f9662e9aea082b4aa89233994ca6e232abc1952d5d90da7e16b0eb"
++
+ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ldaputil.ConfigEntry) {
+ 	// note: this image isn't supported on arm64 architecture in CI.
+ 	// but if you're running on Apple Silicon, feel free to comment out the code below locally.
+diff --git a/physical/mysql/mysql.go b/physical/mysql/mysql.go
+index 6361ae97b5..984a2c5e8e 100644
+--- a/physical/mysql/mysql.go
++++ b/physical/mysql/mysql.go
+@@ -13,6 +13,7 @@ import (
+ 	"io/ioutil"
+ 	"math"
+ 	"net/url"
++	"os"
+ 	"sort"
+ 	"strconv"
+ 	"strings"
+@@ -268,13 +269,22 @@ func NewMySQLClient(conf map[string]string, logger log.Logger) (*sql.DB, error)
+ 	var err error
+ 
+ 	// Get the MySQL credentials to perform read/write operations.
+-	username, ok := conf["username"]
+-	if !ok || username == "" {
+-		return nil, fmt.Errorf("missing username")
++	username := os.Getenv("VAULT_MYSQL_USERNAME")
++	if username == "" {
++		confUsername, ok := conf["username"]
++		if !ok || confUsername == "" {
++			return nil, fmt.Errorf("missing username")
++		}
++		username = confUsername
+ 	}
+-	password, ok := conf["password"]
+-	if !ok || password == "" {
+-		return nil, fmt.Errorf("missing password")
++
++	password := os.Getenv("VAULT_MYSQL_PASSWORD")
++	if password == "" {
++		confPassword, ok := conf["password"]
++		if !ok || confPassword == "" {
++			return nil, fmt.Errorf("missing password")
++		}
++		password = confPassword
+ 	}
+ 
+ 	// Get or set MySQL server address. Defaults to localhost and default port(3306)
+diff --git a/sdk/helper/certutil/types.go b/sdk/helper/certutil/types.go
+index e9834b3586..5ad866ed2f 100644
+--- a/sdk/helper/certutil/types.go
++++ b/sdk/helper/certutil/types.go
+@@ -821,7 +821,14 @@ type CreationBundle struct {
+ // information
+ func AddKeyUsages(data *CreationBundle, certTemplate *x509.Certificate) {
+ 	if data.Params.IsCA {
+-		certTemplate.KeyUsage = x509.KeyUsage(x509.KeyUsageCertSign | x509.KeyUsageCRLSign)
++		// https://cabforum.org/working-groups/server/baseline-requirements/documents/CA-Browser-Forum-TLS-BR-2.1.4.pdf
++		// Per Section 7.1.2.10.7, the only acceptable additional key usage is Digital Signature
++		if data.Params.KeyUsage&x509.KeyUsageDigitalSignature == x509.KeyUsageDigitalSignature {
++			certTemplate.KeyUsage = x509.KeyUsageDigitalSignature
++		} else {
++			certTemplate.KeyUsage = x509.KeyUsage(0)
++		}
++		certTemplate.KeyUsage |= x509.KeyUsageCertSign | x509.KeyUsageCRLSign
+ 		return
+ 	}
+ 
+diff --git a/sdk/helper/docker/testhelpers.go b/sdk/helper/docker/testhelpers.go
+index 6a29f285db..ea0c4e2101 100644
+--- a/sdk/helper/docker/testhelpers.go
++++ b/sdk/helper/docker/testhelpers.go
+@@ -369,9 +369,15 @@ func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*St
+ 		name += "-" + suffix
+ 	}
+ 
++	ref := fmt.Sprintf("%s:%s", d.RunOptions.ImageRepo, d.RunOptions.ImageTag)
++	if strings.Contains(d.RunOptions.ImageTag, ":") {
++		// Handle "tags" that are actually references with a digest, e.g. repo:sha256:1234abcd...
++		ref = fmt.Sprintf("%s@%s", d.RunOptions.ImageRepo, d.RunOptions.ImageTag)
++	}
++
+ 	cfg := &container.Config{
+ 		Hostname: name,
+-		Image:    fmt.Sprintf("%s:%s", d.RunOptions.ImageRepo, d.RunOptions.ImageTag),
++		Image:    ref,
+ 		Env:      d.RunOptions.Env,
+ 		Cmd:      d.RunOptions.Cmd,
+ 	}
+diff --git a/sdk/helper/pluginruntimeutil/config.go b/sdk/helper/pluginruntimeutil/config.go
+index f674c7df36..62e402c18c 100644
+--- a/sdk/helper/pluginruntimeutil/config.go
++++ b/sdk/helper/pluginruntimeutil/config.go
+@@ -13,5 +13,5 @@ type PluginRuntimeConfig struct {
+ 	CgroupParent string                   `json:"cgroup_parent" structs:"cgroup_parent"`
+ 	CPU          int64                    `json:"cpu" structs:"cpu"`
+ 	Memory       int64                    `json:"memory" structs:"memory"`
+-	Rootless     bool                     `json:"rootless" structs:"rootlesss"`
++	Rootless     bool                     `json:"rootless" structs:"rootless"`
+ }
+diff --git a/vault/activity_log.go b/vault/activity_log.go
+index 2a97796b13..2a65dba67b 100644
+--- a/vault/activity_log.go
++++ b/vault/activity_log.go
+@@ -10,6 +10,7 @@ import (
+ 	"errors"
+ 	"fmt"
+ 	"io"
++	"maps"
+ 	"net/http"
+ 	"os"
+ 	"slices"
+@@ -1311,8 +1312,12 @@ func (a *ActivityLog) loadClientIDsToMemory(ctx context.Context, startTime, endT
+ 	}
+ 	a.logger.Info("finished loading segments to store client IDs in memory")
+ 
++	// add the new clients to the existing map in memory
++	clientIDsUsageInfo := a.GetClientIDsUsageInfo()
++	maps.Copy(clientIDsUsageInfo, inMemClientIDsMap)
++
+ 	// update in-memory map in activity log
+-	a.SetClientIDsUsageInfo(inMemClientIDsMap)
++	a.SetClientIDsUsageInfo(clientIDsUsageInfo)
+ 	return nil
+ }
+ 
+@@ -1367,8 +1372,8 @@ func (a *ActivityLog) getStartTimeAndEndTimeUntilLastMonth(entireBillingPeriod b
+ 	endOfLastMonth := timeutil.EndOfMonth(startOfLastMonth)
+ 
+ 	if entireBillingPeriod {
+-		// startTime is the billing start time and endTime is the end of last month
+-		return currBillingPeriodStartTime, endOfLastMonth
++		// startTime is the start of month of billing start time and endTime is the end of last month
++		return timeutil.StartOfMonth(currBillingPeriodStartTime), endOfLastMonth
+ 	}
+ 	return startOfLastMonth, endOfLastMonth
+ }
+@@ -1700,6 +1705,10 @@ func (a *ActivityLog) HandleEndOfMonth(ctx context.Context, currentTime time.Tim
+ 	// Work on precomputed queries in background
+ 	go a.precomputedQueryWorker(ctx, nil)
+ 
++	// update the clientIDs in memory for the last month.
++	// if new billing cycle is detected, reset clientIDs in memory
++	a.handleClientIDsInMemoryEndOfMonth(ctx, currentTime)
++
+ 	return nil
+ }
+ 
+@@ -2024,18 +2033,14 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
+ 
+ 	// Now populate the response based on breakdowns.
+ 	responseData := make(map[string]interface{})
+-	responseData["start_time"] = pq.StartTime.Format(time.RFC3339)
++	responseData["start_time"] = startTime.Format(time.RFC3339)
+ 
+ 	// If we computed partial counts, we should return the actual end time we computed counts for, not the pre-computed
+ 	// query end time. If we don't do this, the end_time in the response doesn't match the actual data in the response,
+ 	// which is confusing. Note that regardless of what end time is given, if it falls within the current month, it will
+ 	// be set to the end of the current month. This is definitely suboptimal, and possibly confusing, but still an
+ 	// improvement over using the pre-computed query end time.
+-	if computePartial {
+-		responseData["end_time"] = endTime.Format(time.RFC3339)
+-	} else {
+-		responseData["end_time"] = pq.EndTime.Format(time.RFC3339)
+-	}
++	responseData["end_time"] = endTime.Format(time.RFC3339)
+ 
+ 	responseData["by_namespace"] = byNamespaceResponse
+ 	responseData["total"] = totalCounts
+diff --git a/vault/activity_log_testing_util.go b/vault/activity_log_testing_util.go
+index bbaae95511..8df1ac7189 100644
+--- a/vault/activity_log_testing_util.go
++++ b/vault/activity_log_testing_util.go
+@@ -12,6 +12,7 @@ import (
+ 	"github.com/google/go-cmp/cmp"
+ 	"github.com/google/go-cmp/cmp/cmpopts"
+ 	"github.com/hashicorp/vault/helper/constants"
++	"github.com/hashicorp/vault/helper/timeutil"
+ 	"github.com/hashicorp/vault/sdk/logical"
+ 	"github.com/hashicorp/vault/vault/activity"
+ 	"google.golang.org/protobuf/testing/protocmp"
+@@ -247,3 +248,10 @@ func (a *ActivityLog) GetEnabled() bool {
+ func (c *Core) GetActivityLog() *ActivityLog {
+ 	return c.activityLog
+ }
++
++// SetClock sets the clock on the activity log. This is used for testing with mock clocks
++func (a *ActivityLog) SetClock(clock timeutil.Clock) {
++	a.l.Lock()
++	defer a.l.Unlock()
++	a.clock = clock
++}
+diff --git a/vault/activity_log_util.go b/vault/activity_log_util.go
+index b23475fcba..428d237081 100644
+--- a/vault/activity_log_util.go
++++ b/vault/activity_log_util.go
+@@ -7,6 +7,10 @@ package vault
+ 
+ import (
+ 	"context"
++	"fmt"
++	"time"
++
++	"github.com/hashicorp/vault/helper/timeutil"
+ )
+ 
+ // sendCurrentFragment is a no-op on OSS
+@@ -17,3 +21,41 @@ func (a *ActivityLog) sendCurrentFragment(ctx context.Context) error {
+ // setupClientIDsUsageInfo is a no-op on OSS
+ func (c *Core) setupClientIDsUsageInfo(ctx context.Context) {
+ }
++
++// handleClientIDsInMemoryEndOfMonth is a no-op on OSS
++func (a *ActivityLog) handleClientIDsInMemoryEndOfMonth(ctx context.Context, currentTime time.Time) {
++}
++
++// getStartEndTime parses input for start and end times
++// If the end time corresponds to the current month, it is adjusted to the last month
++func getStartEndTime(startTime, endTime, billingStartTime time.Time) (time.Time, time.Time, StartEndTimesWarnings, error) {
++	warnings := StartEndTimesWarnings{}
++
++	// If a specific endTime is used, then respect that
++	// otherwise we want to query up until the end of the current month.
++	//
++	// Also convert any user inputs to UTC to avoid
++	// problems later.
++	if endTime.IsZero() {
++		endTime = timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, timeutil.StartOfMonth(time.Now().UTC())))
++	} else {
++		endTime = endTime.UTC()
++		if timeutil.IsCurrentMonth(endTime, time.Now().UTC()) {
++			endTime = timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, timeutil.StartOfMonth(endTime)))
++			warnings.CurrentMonthAsEndTimeIgnored = true
++		}
++	}
++
++	// If startTime is not specified, we would like to query
++	// from the beginning of the billing period
++	if startTime.IsZero() {
++		startTime = billingStartTime
++	} else {
++		startTime = startTime.UTC()
++	}
++	if startTime.After(endTime) {
++		return time.Time{}, time.Time{}, StartEndTimesWarnings{}, fmt.Errorf("start_time is later than end_time")
++	}
++
++	return startTime, endTime, warnings, nil
++}
+diff --git a/vault/external_tests/activity_testonly/acme_regeneration_oss_test.go b/vault/external_tests/activity_testonly/acme_regeneration_oss_test.go
+new file mode 100644
+index 0000000000..c9f447f9f8
+--- /dev/null
++++ b/vault/external_tests/activity_testonly/acme_regeneration_oss_test.go
+@@ -0,0 +1,86 @@
++// Copyright (c) HashiCorp, Inc.
++// SPDX-License-Identifier: BUSL-1.1
++
++//go:build testonly && !enterprise
++
++package activity_testonly
++
++import (
++	"context"
++	"testing"
++	"time"
++
++	"github.com/hashicorp/vault/helper/testhelpers/minimal"
++	"github.com/hashicorp/vault/helper/timeutil"
++	"github.com/hashicorp/vault/sdk/helper/clientcountutil"
++	"github.com/hashicorp/vault/sdk/helper/clientcountutil/generation"
++	"github.com/hashicorp/vault/vault"
++	"github.com/stretchr/testify/require"
++)
++
++// TestACMERegeneration_RegenerateWithCurrentMonth writes segments for previous
++// months and the current month. The test regenerates the precomputed queries,
++// and verifies that the counts are correct when querying both with and without
++// the current month
++func TestACMERegeneration_RegenerateWithCurrentMonth(t *testing.T) {
++	t.Parallel()
++	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{EnableRaw: true})
++	client := cluster.Cores[0].Client
++	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
++		"enabled": "enable",
++	})
++	require.NoError(t, err)
++	now := time.Now().UTC()
++	_, err = clientcountutil.NewActivityLogData(client).
++		NewPreviousMonthData(3).
++		// 3 months ago, 15 non-entity clients and 10 ACME clients
++		NewClientsSeen(15, clientcountutil.WithClientType("non-entity-token")).
++		NewClientsSeen(10, clientcountutil.WithClientType(vault.ACMEActivityType)).
++		NewPreviousMonthData(2).
++		// 2 months ago, 7 new non-entity clients and 5 new ACME clients
++		RepeatedClientsSeen(2, clientcountutil.WithClientType("non-entity-token")).
++		NewClientsSeen(7, clientcountutil.WithClientType("non-entity-token")).
++		RepeatedClientsSeen(5, clientcountutil.WithClientType(vault.ACMEActivityType)).
++		NewClientsSeen(5, clientcountutil.WithClientType(vault.ACMEActivityType)).
++		NewPreviousMonthData(1).
++		// 1 months ago, 4 new non-entity clients and 2 new ACME clients
++		RepeatedClientsSeen(3, clientcountutil.WithClientType("non-entity-token")).
++		NewClientsSeen(4, clientcountutil.WithClientType("non-entity-token")).
++		RepeatedClientsSeen(1, clientcountutil.WithClientType(vault.ACMEActivityType)).
++		NewClientsSeen(2, clientcountutil.WithClientType(vault.ACMEActivityType)).
++
++		// current month, 10 new non-entity clients and 20 new ACME clients
++		NewCurrentMonthData().
++		NewClientsSeen(10, clientcountutil.WithClientType("non-entity-token")).
++		NewClientsSeen(20, clientcountutil.WithClientType(vault.ACMEActivityType)).
++		Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES)
++
++	require.NoError(t, err)
++
++	forceRegeneration(t, cluster)
++
++	// current month isn't included in this query
++	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
++		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(5, now)).Format(time.RFC3339)},
++		"end_time":   {timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
++	})
++	require.NoError(t, err)
++	require.Equal(t, vault.ResponseCounts{
++		NonEntityClients: 26,
++		Clients:          43,
++		ACMEClients:      17,
++	}, getTotals(t, resp))
++
++	// explicitly include the current month in the request
++	// the given end time is adjusted to the last month, excluding the current month at the API
++	respWithCurrent, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
++		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(5, now)).Format(time.RFC3339)},
++		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
++	})
++	require.NoError(t, err)
++	require.Equal(t, vault.ResponseCounts{
++		NonEntityClients: 26,
++		Clients:          43,
++		ACMEClients:      17,
++	}, getTotals(t, respWithCurrent))
++}
+diff --git a/vault/external_tests/activity_testonly/acme_regeneration_test.go b/vault/external_tests/activity_testonly/acme_regeneration_test.go
+index dbd8355f81..8d0e1de339 100644
+--- a/vault/external_tests/activity_testonly/acme_regeneration_test.go
++++ b/vault/external_tests/activity_testonly/acme_regeneration_test.go
+@@ -41,72 +41,6 @@ func forceRegeneration(t *testing.T, cluster *vault.TestCluster) {
+ 	})
+ }
+ 
+-// TestACMERegeneration_RegenerateWithCurrentMonth writes segments for previous
+-// months and the current month. The test regenerates the precomputed queries,
+-// and verifies that the counts are correct when querying both with and without
+-// the current month
+-func TestACMERegeneration_RegenerateWithCurrentMonth(t *testing.T) {
+-	t.Parallel()
+-	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{EnableRaw: true})
+-	client := cluster.Cores[0].Client
+-	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
+-		"enabled": "enable",
+-	})
+-	require.NoError(t, err)
+-	now := time.Now().UTC()
+-	_, err = clientcountutil.NewActivityLogData(client).
+-		NewPreviousMonthData(3).
+-		// 3 months ago, 15 non-entity clients and 10 ACME clients
+-		NewClientsSeen(15, clientcountutil.WithClientType("non-entity-token")).
+-		NewClientsSeen(10, clientcountutil.WithClientType(vault.ACMEActivityType)).
+-		NewPreviousMonthData(2).
+-		// 2 months ago, 7 new non-entity clients and 5 new ACME clients
+-		RepeatedClientsSeen(2, clientcountutil.WithClientType("non-entity-token")).
+-		NewClientsSeen(7, clientcountutil.WithClientType("non-entity-token")).
+-		RepeatedClientsSeen(5, clientcountutil.WithClientType(vault.ACMEActivityType)).
+-		NewClientsSeen(5, clientcountutil.WithClientType(vault.ACMEActivityType)).
+-		NewPreviousMonthData(1).
+-		// 1 months ago, 4 new non-entity clients and 2 new ACME clients
+-		RepeatedClientsSeen(3, clientcountutil.WithClientType("non-entity-token")).
+-		NewClientsSeen(4, clientcountutil.WithClientType("non-entity-token")).
+-		RepeatedClientsSeen(1, clientcountutil.WithClientType(vault.ACMEActivityType)).
+-		NewClientsSeen(2, clientcountutil.WithClientType(vault.ACMEActivityType)).
+-
+-		// current month, 10 new non-entity clients and 20 new ACME clients
+-		NewCurrentMonthData().
+-		NewClientsSeen(10, clientcountutil.WithClientType("non-entity-token")).
+-		NewClientsSeen(20, clientcountutil.WithClientType(vault.ACMEActivityType)).
+-		Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES)
+-
+-	require.NoError(t, err)
+-
+-	forceRegeneration(t, cluster)
+-
+-	// current month isn't included in this query
+-	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
+-		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(5, now)).Format(time.RFC3339)},
+-		"end_time":   {timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
+-	})
+-	require.NoError(t, err)
+-	require.Equal(t, vault.ResponseCounts{
+-		NonEntityClients: 26,
+-		Clients:          43,
+-		ACMEClients:      17,
+-	}, getTotals(t, resp))
+-
+-	// explicitly include the current month
+-	respWithCurrent, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
+-		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(5, now)).Format(time.RFC3339)},
+-		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
+-	})
+-	require.NoError(t, err)
+-	require.Equal(t, vault.ResponseCounts{
+-		NonEntityClients: 36,
+-		Clients:          73,
+-		ACMEClients:      37,
+-	}, getTotals(t, respWithCurrent))
+-}
+-
+ // TestACMERegeneration_RegenerateMuchOlder creates segments 5 months ago, 4
+ // months ago, and 3 months ago. The test regenerates the precomputed queries
+ // and then verifies that this older data is included in the generated results.
+diff --git a/vault/external_tests/activity_testonly/activity_testonly_oss_test.go b/vault/external_tests/activity_testonly/activity_testonly_oss_test.go
+index dbb11c8453..6b7ae9bd60 100644
+--- a/vault/external_tests/activity_testonly/activity_testonly_oss_test.go
++++ b/vault/external_tests/activity_testonly/activity_testonly_oss_test.go
+@@ -7,13 +7,21 @@ package activity_testonly
+ 
+ import (
+ 	"context"
++	"fmt"
++	"math"
+ 	"testing"
+ 	"time"
+ 
++	"github.com/hashicorp/vault/api"
++	"github.com/hashicorp/vault/helper/namespace"
++	"github.com/hashicorp/vault/helper/testhelpers"
+ 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
+ 	"github.com/hashicorp/vault/helper/timeutil"
++	vaulthttp "github.com/hashicorp/vault/http"
+ 	"github.com/hashicorp/vault/sdk/helper/clientcountutil"
+ 	"github.com/hashicorp/vault/sdk/helper/clientcountutil/generation"
++	"github.com/hashicorp/vault/vault"
++	"github.com/mitchellh/mapstructure"
+ 	"github.com/stretchr/testify/require"
+ )
+ 
+@@ -59,3 +67,477 @@ func Test_ActivityLog_Disable(t *testing.T) {
+ 	require.NoError(t, err)
+ 	require.Equal(t, ts.UTC(), timeutil.StartOfPreviousMonth(now.UTC()))
+ }
++
++// Test_ActivityLog_LoseLeadership writes data for the second last month, then causes the
++// active node to lose leadership. Once a new node becomes the leader, then the
++// test queries for the second last month data and verifies that the data from
++// before the leadership transfer is returned
++func Test_ActivityLog_LoseLeadership(t *testing.T) {
++	t.Parallel()
++	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
++		HandlerFunc: vaulthttp.Handler,
++		NumCores:    2,
++	})
++	cluster.Start()
++	defer cluster.Cleanup()
++
++	active := testhelpers.DeriveStableActiveCore(t, cluster)
++	client := active.Client
++	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
++		"enabled": "enable",
++	})
++	require.NoError(t, err)
++
++	_, err = clientcountutil.NewActivityLogData(client).
++		NewPreviousMonthData(1).
++		NewClientsSeen(10).
++		Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES, generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES)
++	require.NoError(t, err)
++	now := time.Now().UTC()
++
++	testhelpers.EnsureCoreSealed(t, active)
++	newActive := testhelpers.WaitForActiveNode(t, cluster)
++	standby := active
++	testhelpers.WaitForStandbyNode(t, standby)
++	testhelpers.EnsureCoreUnsealed(t, cluster, standby)
++
++	resp, err := newActive.Client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
++		"end_time":   {timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
++		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
++	})
++	monthResponse := getMonthsData(t, resp)
++	require.Len(t, monthResponse, 1)
++	require.Equal(t, 10, monthResponse[0].NewClients.Counts.Clients)
++}
++
++// Test_ActivityLog_ClientsOverlapping writes data for the second last month and
++// the previous month. In the second last month, 7 new clients are seen. In the previous
++// month, there are 5 repeated and 2 new clients. The test queries over the
++// second last and previous months, and verifies that the repeated clients are not
++// considered new
++func Test_ActivityLog_ClientsOverlapping(t *testing.T) {
++	t.Parallel()
++	cluster := minimal.NewTestSoloCluster(t, nil)
++	client := cluster.Cores[0].Client
++	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
++		"enabled": "enable",
++	})
++	require.NoError(t, err)
++	_, err = clientcountutil.NewActivityLogData(client).
++		NewPreviousMonthData(2).
++		NewClientsSeen(7).
++		NewPreviousMonthData(1).
++		RepeatedClientsSeen(5).
++		NewClientsSeen(2).
++		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
++	require.NoError(t, err)
++
++	now := time.Now().UTC()
++
++	// query from the beginning of the second last month to the end of the previous month
++	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
++		"end_time":   {timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
++		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(2, now)).Format(time.RFC3339)},
++	})
++	require.NoError(t, err)
++	monthsResponse := getMonthsData(t, resp)
++	require.Len(t, monthsResponse, 2)
++	for _, month := range monthsResponse {
++		ts, err := time.Parse(time.RFC3339, month.Timestamp)
++		require.NoError(t, err)
++		// The previous month should have a total of 7 clients
++		// 2 of those will be considered new
++		if ts.UTC().Equal(timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now))) {
++			require.Equal(t, month.Counts.Clients, 7)
++			require.Equal(t, month.NewClients.Counts.Clients, 2)
++		} else {
++			// All clients will be considered new for the second last month
++			require.Equal(t, month.Counts.Clients, 7)
++			require.Equal(t, month.NewClients.Counts.Clients, 7)
++
++		}
++	}
++}
++
++// Test_ActivityLog_ClientsNewCurrentMonth writes data for the second last month and
++// past month with 5 repeated clients and 2 new clients in the past month.
++// The test then queries the activity log for only the past month, and
++// verifies that all 7 clients seen the past month are considered new.
++func Test_ActivityLog_ClientsNewCurrentMonth(t *testing.T) {
++	t.Parallel()
++	cluster := minimal.NewTestSoloCluster(t, nil)
++	client := cluster.Cores[0].Client
++	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
++		"enabled": "enable",
++	})
++	require.NoError(t, err)
++	_, err = clientcountutil.NewActivityLogData(client).
++		NewPreviousMonthData(2).
++		NewClientsSeen(5).
++		NewPreviousMonthData(1).
++		RepeatedClientsSeen(5).
++		NewClientsSeen(2).
++		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
++	require.NoError(t, err)
++
++	now := time.Now().UTC()
++
++	// query from the beginning of the second last month to the end of the previous month
++	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
++		"end_time":   {timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
++		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
++	})
++	require.NoError(t, err)
++	monthsResponse := getMonthsData(t, resp)
++	require.Len(t, monthsResponse, 1)
++	require.Equal(t, 7, monthsResponse[0].NewClients.Counts.Clients)
++}
++
++// Test_ActivityLog_EmptyDataMonths writes data for only the past month,
++// then queries a timeframe of several months in the past to now. The test
++// verifies that empty months of data are returned for the past, and the past
++// month data is correct.
++func Test_ActivityLog_EmptyDataMonths(t *testing.T) {
++	t.Parallel()
++	cluster := minimal.NewTestSoloCluster(t, nil)
++	client := cluster.Cores[0].Client
++	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
++		"enabled": "enable",
++	})
++	require.NoError(t, err)
++	_, err = clientcountutil.NewActivityLogData(client).
++		NewPreviousMonthData(1).
++		NewClientsSeen(10).
++		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
++	require.NoError(t, err)
++
++	now := time.Now().UTC()
++	// query from the beginning of 4 months ago to the end of past month
++	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
++		"end_time":   {timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
++		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(4, now)).Format(time.RFC3339)},
++	})
++	require.NoError(t, err)
++	monthsResponse := getMonthsData(t, resp)
++
++	require.Len(t, monthsResponse, 4)
++	for _, month := range monthsResponse {
++		ts, err := time.Parse(time.RFC3339, month.Timestamp)
++		require.NoError(t, err)
++		// past month should have data
++		if ts.UTC().Equal(timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now))) {
++			require.Equal(t, month.Counts.Clients, 10)
++		} else {
++			// other months should be empty
++			require.Nil(t, month.Counts)
++		}
++	}
++}
++
++// Test_ActivityLog_FutureEndDate queries a start time from the past
++// and an end date in the future. The test
++// verifies that the current month is returned in the response.
++func Test_ActivityLog_FutureEndDate(t *testing.T) {
++	t.Parallel()
++	cluster := minimal.NewTestSoloCluster(t, nil)
++	client := cluster.Cores[0].Client
++	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
++		"enabled": "enable",
++	})
++	require.NoError(t, err)
++	_, err = clientcountutil.NewActivityLogData(client).
++		NewPreviousMonthData(1).
++		NewClientsSeen(10).
++		NewCurrentMonthData().
++		NewClientsSeen(10).
++		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
++	require.NoError(t, err)
++
++	now := time.Now().UTC()
++	// query from the beginning of 3 months ago to beginning of next month
++	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
++		"end_time":   {timeutil.StartOfNextMonth(now).Format(time.RFC3339)},
++		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(3, now)).Format(time.RFC3339)},
++	})
++	require.NoError(t, err)
++	monthsResponse := getMonthsData(t, resp)
++
++	require.Len(t, monthsResponse, 4)
++
++	// Get the last month of data in the slice
++	expectedCurrentMonthData := monthsResponse[3]
++	expectedTime, err := time.Parse(time.RFC3339, expectedCurrentMonthData.Timestamp)
++	require.NoError(t, err)
++	if !timeutil.IsCurrentMonth(expectedTime, now) {
++		t.Fatalf("final month data is not current month")
++	}
++}
++
++// Test_ActivityLog_ClientTypeResponse runs for each client type. In the
++// subtests, 10 clients of the type are created and the test verifies that the
++// activity log query response returns 10 clients of that type at every level of
++// the response hierarchy
++func Test_ActivityLog_ClientTypeResponse(t *testing.T) {
++	t.Parallel()
++	for _, tc := range allClientTypeTestCases {
++		tc := tc
++		t.Run(tc.clientType, func(t *testing.T) {
++			t.Parallel()
++			cluster := minimal.NewTestSoloCluster(t, nil)
++			client := cluster.Cores[0].Client
++			_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
++				"enabled": "enable",
++			})
++			_, err = clientcountutil.NewActivityLogData(client).
++				NewPreviousMonthData(1).
++				NewClientsSeen(10, clientcountutil.WithClientType(tc.clientType)).
++				Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES, generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES)
++			require.NoError(t, err)
++
++			now := time.Now().UTC()
++			resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
++				"end_time":   {timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
++				"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
++			})
++			require.NoError(t, err)
++
++			total := getTotals(t, resp)
++			require.Equal(t, 10, tc.responseCountsFn(total))
++			require.Equal(t, 10, total.Clients)
++
++			byNamespace := getNamespaceData(t, resp)
++			require.Equal(t, 10, tc.responseCountsFn(byNamespace[0].Counts))
++			require.Equal(t, 10, tc.responseCountsFn(*byNamespace[0].Mounts[0].Counts))
++			require.Equal(t, 10, byNamespace[0].Counts.Clients)
++			require.Equal(t, 10, byNamespace[0].Mounts[0].Counts.Clients)
++
++			byMonth := getMonthsData(t, resp)
++			require.Equal(t, 10, tc.responseCountsFn(*byMonth[0].NewClients.Counts))
++			require.Equal(t, 10, tc.responseCountsFn(*byMonth[0].Counts))
++			require.Equal(t, 10, tc.responseCountsFn(byMonth[0].Namespaces[0].Counts))
++			require.Equal(t, 10, tc.responseCountsFn(*byMonth[0].Namespaces[0].Mounts[0].Counts))
++			require.Equal(t, 10, byMonth[0].NewClients.Counts.Clients)
++			require.Equal(t, 10, byMonth[0].Counts.Clients)
++			require.Equal(t, 10, byMonth[0].Namespaces[0].Counts.Clients)
++			require.Equal(t, 10, byMonth[0].Namespaces[0].Mounts[0].Counts.Clients)
++		})
++
++	}
++}
++
++// Test_ActivityLog_MountDeduplication writes data for the second last
++// month across 4 mounts. The cubbyhole and sys mounts have clients in the
++// past month as well. The test verifies that the mount counts are correctly
++// summed in the results when the second last month and past month are queried.
++func Test_ActivityLog_MountDeduplication(t *testing.T) {
++	t.Parallel()
++
++	cluster := minimal.NewTestSoloCluster(t, nil)
++	client := cluster.Cores[0].Client
++	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
++		"enabled": "enable",
++	})
++	require.NoError(t, err)
++	now := time.Now().UTC()
++
++	_, err = clientcountutil.NewActivityLogData(client).
++		NewPreviousMonthData(2).
++		NewClientSeen(clientcountutil.WithClientMount("sys")).
++		NewClientSeen(clientcountutil.WithClientMount("secret")).
++		NewClientSeen(clientcountutil.WithClientMount("cubbyhole")).
++		NewClientSeen(clientcountutil.WithClientMount("identity")).
++		NewPreviousMonthData(1).
++		NewClientSeen(clientcountutil.WithClientMount("cubbyhole")).
++		NewClientSeen(clientcountutil.WithClientMount("sys")).
++		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
++	require.NoError(t, err)
++
++	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
++		"end_time":   {timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
++		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(2, now)).Format(time.RFC3339)},
++	})
++
++	require.NoError(t, err)
++	byNamespace := getNamespaceData(t, resp)
++	require.Len(t, byNamespace, 1)
++	require.Len(t, byNamespace[0].Mounts, 4)
++	mountSet := make(map[string]int, 4)
++	for _, mount := range byNamespace[0].Mounts {
++		mountSet[mount.MountPath] = mount.Counts.Clients
++	}
++	require.Equal(t, map[string]int{
++		"identity/":  1,
++		"sys/":       2,
++		"cubbyhole/": 2,
++		"secret/":    1,
++	}, mountSet)
++}
++
++// TestHandleQuery_MultipleMounts creates a cluster with
++// two userpass mounts. It then tests verifies that
++// the total new counts are calculated within a reasonably level of accuracy for
++// various numbers of clients in each mount.
++func TestHandleQuery_MultipleMounts(t *testing.T) {
++	tests := map[string]struct {
++		twoMonthsAgo          [][]int
++		oneMonthAgo           [][]int
++		currentMonth          [][]int
++		expectedNewClients    int
++		expectedTotalAccuracy float64
++	}{
++		"low volume, all mounts": {
++			twoMonthsAgo: [][]int{
++				{20, 20},
++			},
++			oneMonthAgo: [][]int{
++				{30, 30},
++			},
++			currentMonth: [][]int{
++				{40, 40},
++			},
++			expectedNewClients:    80,
++			expectedTotalAccuracy: 1,
++		},
++		"medium volume, all mounts": {
++			twoMonthsAgo: [][]int{
++				{200, 200},
++			},
++			oneMonthAgo: [][]int{
++				{300, 300},
++			},
++			currentMonth: [][]int{
++				{400, 400},
++			},
++			expectedNewClients:    800,
++			expectedTotalAccuracy: 0.98,
++		},
++		"higher volume, all mounts": {
++			twoMonthsAgo: [][]int{
++				{200, 200},
++			},
++			oneMonthAgo: [][]int{
++				{300, 300},
++			},
++			currentMonth: [][]int{
++				{2000, 5000},
++			},
++			expectedNewClients:    7000,
++			expectedTotalAccuracy: 0.95,
++		},
++		"higher volume, no repeats": {
++			twoMonthsAgo: [][]int{
++				{200, 200},
++			},
++			oneMonthAgo: [][]int{
++				{300, 300},
++			},
++			currentMonth: [][]int{
++				{4000, 6000},
++			},
++			expectedNewClients:    10000,
++			expectedTotalAccuracy: 0.98,
++		},
++	}
++
++	for i, tt := range tests {
++		testname := fmt.Sprintf("%s", i)
++		t.Run(testname, func(t *testing.T) {
++			var err error
++			cluster := minimal.NewTestSoloCluster(t, nil)
++			client := cluster.Cores[0].Client
++			_, err = client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
++				"enabled": "enable",
++			})
++			require.NoError(t, err)
++
++			// Create two namespaces
++			namespaces := []string{namespace.RootNamespaceID}
++			mounts := make(map[string][]string)
++
++			// Add two userpass mounts to each namespace
++			for _, ns := range namespaces {
++				err = client.WithNamespace(ns).Sys().EnableAuthWithOptions("userpass1", &api.EnableAuthOptions{
++					Type: "userpass",
++				})
++				require.NoError(t, err)
++				err = client.WithNamespace(ns).Sys().EnableAuthWithOptions("userpass2", &api.EnableAuthOptions{
++					Type: "userpass",
++				})
++				require.NoError(t, err)
++				mounts[ns] = []string{"auth/userpass1", "auth/userpass2"}
++			}
++
++			activityLogGenerator := clientcountutil.NewActivityLogData(client)
++
++			// Write three months ago data
++			activityLogGenerator = activityLogGenerator.NewPreviousMonthData(3)
++			for nsIndex, nsId := range namespaces {
++				for mountIndex, mount := range mounts[nsId] {
++					activityLogGenerator = activityLogGenerator.
++						NewClientsSeen(tt.twoMonthsAgo[nsIndex][mountIndex], clientcountutil.WithClientNamespace(nsId), clientcountutil.WithClientMount(mount))
++				}
++			}
++
++			// Write two months ago data
++			activityLogGenerator = activityLogGenerator.NewPreviousMonthData(2)
++			for nsIndex, nsId := range namespaces {
++				for mountIndex, mount := range mounts[nsId] {
++					activityLogGenerator = activityLogGenerator.
++						NewClientsSeen(tt.oneMonthAgo[nsIndex][mountIndex], clientcountutil.WithClientNamespace(nsId), clientcountutil.WithClientMount(mount))
++				}
++			}
++
++			// Write previous month data
++			activityLogGenerator = activityLogGenerator.NewPreviousMonthData(1)
++			for nsIndex, nsPath := range namespaces {
++				for mountIndex, mount := range mounts[nsPath] {
++					activityLogGenerator = activityLogGenerator.
++						RepeatedClientSeen(clientcountutil.WithClientNamespace(nsPath), clientcountutil.WithClientMount(mount)).
++						NewClientsSeen(tt.currentMonth[nsIndex][mountIndex], clientcountutil.WithClientNamespace(nsPath), clientcountutil.WithClientMount(mount))
++				}
++			}
++
++			// Write all the client count data
++			_, err = activityLogGenerator.Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
++			require.NoError(t, err)
++
++			endOfLastMonth := timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, time.Now()).UTC())
++
++			// query activity log
++			resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
++				"end_time":   {endOfLastMonth.Format(time.RFC3339)},
++				"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(3, time.Now().UTC())).Format(time.RFC3339)},
++			})
++			require.NoError(t, err)
++
++			// Ensure that the month response is the same as the totals, because all clients
++			// are new clients and there will be no approximation in the single month partial
++			// case
++			monthsRaw, ok := resp.Data["months"]
++			if !ok {
++				t.Fatalf("malformed results. got %v", resp.Data)
++			}
++			monthsResponse := make([]*vault.ResponseMonth, 0)
++			err = mapstructure.Decode(monthsRaw, &monthsResponse)
++
++			currentMonthClients := monthsResponse[len(monthsResponse)-1]
++
++			// Now verify that the new client totals for ALL namespaces are approximately accurate (there are no namespaces in CE)
++			newClientsError := math.Abs((float64)(currentMonthClients.NewClients.Counts.Clients - tt.expectedNewClients))
++			newClientsErrorMargin := newClientsError / (float64)(tt.expectedNewClients)
++			expectedAccuracyCalc := (1 - tt.expectedTotalAccuracy) * 100 / 100
++			if newClientsErrorMargin > expectedAccuracyCalc {
++				t.Fatalf("bad accuracy: expected %+v, found %+v", expectedAccuracyCalc, newClientsErrorMargin)
++			}
++
++			// Verify that the totals for the clients are visibly sensible (that is the total of all the individual new clients per namespace)
++			total := 0
++			for _, newClientCounts := range currentMonthClients.NewClients.Namespaces {
++				total += newClientCounts.Counts.Clients
++			}
++			if diff := math.Abs(float64(currentMonthClients.NewClients.Counts.Clients - total)); diff >= 1 {
++				t.Fatalf("total expected was %d but got %d", currentMonthClients.NewClients.Counts.Clients, total)
++			}
++		})
++	}
++}
+diff --git a/vault/external_tests/activity_testonly/activity_testonly_test.go b/vault/external_tests/activity_testonly/activity_testonly_test.go
+index 644ba70e8d..44a66d8a03 100644
+--- a/vault/external_tests/activity_testonly/activity_testonly_test.go
++++ b/vault/external_tests/activity_testonly/activity_testonly_test.go
+@@ -10,20 +10,15 @@ import (
+ 	"context"
+ 	"encoding/csv"
+ 	"encoding/json"
+-	"fmt"
+ 	"io"
+-	"math"
+ 	"strconv"
+ 	"strings"
+ 	"testing"
+ 	"time"
+ 
+ 	"github.com/hashicorp/vault/api"
+-	"github.com/hashicorp/vault/helper/namespace"
+-	"github.com/hashicorp/vault/helper/testhelpers"
+ 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
+ 	"github.com/hashicorp/vault/helper/timeutil"
+-	vaulthttp "github.com/hashicorp/vault/http"
+ 	"github.com/hashicorp/vault/sdk/helper/clientcountutil"
+ 	"github.com/hashicorp/vault/sdk/helper/clientcountutil/generation"
+ 	"github.com/hashicorp/vault/vault"
+@@ -66,211 +61,6 @@ var allClientTypeTestCases = []struct {
+ 	},
+ }
+ 
+-// Test_ActivityLog_LoseLeadership writes data for this month, then causes the
+-// active node to lose leadership. Once a new node becomes the leader, then the
+-// test queries for the current month data and verifies that the data from
+-// before the leadership transfer is returned
+-func Test_ActivityLog_LoseLeadership(t *testing.T) {
+-	t.Parallel()
+-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+-		HandlerFunc: vaulthttp.Handler,
+-		NumCores:    2,
+-	})
+-	cluster.Start()
+-	defer cluster.Cleanup()
+-
+-	active := testhelpers.DeriveStableActiveCore(t, cluster)
+-	client := active.Client
+-	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
+-		"enabled": "enable",
+-	})
+-	require.NoError(t, err)
+-
+-	_, err = clientcountutil.NewActivityLogData(client).
+-		NewCurrentMonthData().
+-		NewClientsSeen(10).
+-		Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES)
+-	require.NoError(t, err)
+-	now := time.Now().UTC()
+-
+-	testhelpers.EnsureCoreSealed(t, active)
+-	newActive := testhelpers.WaitForActiveNode(t, cluster)
+-	standby := active
+-	testhelpers.WaitForStandbyNode(t, standby)
+-	testhelpers.EnsureCoreUnsealed(t, cluster, standby)
+-
+-	resp, err := newActive.Client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
+-		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
+-		"start_time": {timeutil.StartOfMonth(now).Format(time.RFC3339)},
+-	})
+-	monthResponse := getMonthsData(t, resp)
+-	require.Len(t, monthResponse, 1)
+-	require.Equal(t, 10, monthResponse[0].NewClients.Counts.Clients)
+-}
+-
+-// Test_ActivityLog_ClientsOverlapping writes data for the previous month and
+-// current month. In the previous month, 7 new clients are seen. In the current
+-// month, there are 5 repeated and 2 new clients. The test queries over the
+-// previous and current months, and verifies that the repeated clients are not
+-// considered new
+-func Test_ActivityLog_ClientsOverlapping(t *testing.T) {
+-	t.Parallel()
+-	cluster := minimal.NewTestSoloCluster(t, nil)
+-	client := cluster.Cores[0].Client
+-	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
+-		"enabled": "enable",
+-	})
+-	require.NoError(t, err)
+-	_, err = clientcountutil.NewActivityLogData(client).
+-		NewPreviousMonthData(1).
+-		NewClientsSeen(7).
+-		NewCurrentMonthData().
+-		RepeatedClientsSeen(5).
+-		NewClientsSeen(2).
+-		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
+-	require.NoError(t, err)
+-
+-	now := time.Now().UTC()
+-
+-	// query from the beginning of the previous month to the end of this month
+-	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
+-		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
+-		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
+-	})
+-	require.NoError(t, err)
+-	monthsResponse := getMonthsData(t, resp)
+-	require.Len(t, monthsResponse, 2)
+-	for _, month := range monthsResponse {
+-		ts, err := time.Parse(time.RFC3339, month.Timestamp)
+-		require.NoError(t, err)
+-		// This month should have a total of 7 clients
+-		// 2 of those will be considered new
+-		if ts.UTC().Equal(timeutil.StartOfMonth(now)) {
+-			require.Equal(t, month.Counts.Clients, 7)
+-			require.Equal(t, month.NewClients.Counts.Clients, 2)
+-		} else {
+-			// All clients will be considered new for the previous month
+-			require.Equal(t, month.Counts.Clients, 7)
+-			require.Equal(t, month.NewClients.Counts.Clients, 7)
+-
+-		}
+-	}
+-}
+-
+-// Test_ActivityLog_ClientsNewCurrentMonth writes data for the past month and
+-// current month with 5 repeated clients and 2 new clients in the current month.
+-// The test then queries the activity log for only the current month, and
+-// verifies that all 7 clients seen this month are considered new.
+-func Test_ActivityLog_ClientsNewCurrentMonth(t *testing.T) {
+-	t.Parallel()
+-	cluster := minimal.NewTestSoloCluster(t, nil)
+-	client := cluster.Cores[0].Client
+-	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
+-		"enabled": "enable",
+-	})
+-	require.NoError(t, err)
+-	_, err = clientcountutil.NewActivityLogData(client).
+-		NewPreviousMonthData(1).
+-		NewClientsSeen(5).
+-		NewCurrentMonthData().
+-		RepeatedClientsSeen(5).
+-		NewClientsSeen(2).
+-		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
+-	require.NoError(t, err)
+-
+-	now := time.Now().UTC()
+-
+-	// query from the beginning of this month to the end of this month
+-	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
+-		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
+-		"start_time": {timeutil.StartOfMonth(now).Format(time.RFC3339)},
+-	})
+-	require.NoError(t, err)
+-	monthsResponse := getMonthsData(t, resp)
+-	require.Len(t, monthsResponse, 1)
+-	require.Equal(t, 7, monthsResponse[0].NewClients.Counts.Clients)
+-}
+-
+-// Test_ActivityLog_EmptyDataMonths writes data for only the current month,
+-// then queries a timeframe of several months in the past to now. The test
+-// verifies that empty months of data are returned for the past, and the current
+-// month data is correct.
+-func Test_ActivityLog_EmptyDataMonths(t *testing.T) {
+-	t.Parallel()
+-	cluster := minimal.NewTestSoloCluster(t, nil)
+-	client := cluster.Cores[0].Client
+-	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
+-		"enabled": "enable",
+-	})
+-	require.NoError(t, err)
+-	_, err = clientcountutil.NewActivityLogData(client).
+-		NewCurrentMonthData().
+-		NewClientsSeen(10).
+-		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
+-	require.NoError(t, err)
+-
+-	now := time.Now().UTC()
+-	// query from the beginning of 3 months ago to the end of this month
+-	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
+-		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
+-		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(3, now)).Format(time.RFC3339)},
+-	})
+-	require.NoError(t, err)
+-	monthsResponse := getMonthsData(t, resp)
+-
+-	require.Len(t, monthsResponse, 4)
+-	for _, month := range monthsResponse {
+-		ts, err := time.Parse(time.RFC3339, month.Timestamp)
+-		require.NoError(t, err)
+-		// current month should have data
+-		if ts.UTC().Equal(timeutil.StartOfMonth(now)) {
+-			require.Equal(t, month.Counts.Clients, 10)
+-		} else {
+-			// other months should be empty
+-			require.Nil(t, month.Counts)
+-		}
+-	}
+-}
+-
+-// Test_ActivityLog_FutureEndDate queries a start time from the past
+-// and an end date in the future. The test
+-// verifies that the current month is returned in the response.
+-func Test_ActivityLog_FutureEndDate(t *testing.T) {
+-	t.Parallel()
+-	cluster := minimal.NewTestSoloCluster(t, nil)
+-	client := cluster.Cores[0].Client
+-	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
+-		"enabled": "enable",
+-	})
+-	require.NoError(t, err)
+-	_, err = clientcountutil.NewActivityLogData(client).
+-		NewPreviousMonthData(1).
+-		NewClientsSeen(10).
+-		NewCurrentMonthData().
+-		NewClientsSeen(10).
+-		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
+-	require.NoError(t, err)
+-
+-	now := time.Now().UTC()
+-	// query from the beginning of 3 months ago to beginning of next month
+-	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
+-		"end_time":   {timeutil.StartOfNextMonth(now).Format(time.RFC3339)},
+-		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(3, now)).Format(time.RFC3339)},
+-	})
+-	require.NoError(t, err)
+-	monthsResponse := getMonthsData(t, resp)
+-
+-	require.Len(t, monthsResponse, 4)
+-
+-	// Get the last month of data in the slice
+-	expectedCurrentMonthData := monthsResponse[3]
+-	expectedTime, err := time.Parse(time.RFC3339, expectedCurrentMonthData.Timestamp)
+-	require.NoError(t, err)
+-	if !timeutil.IsCurrentMonth(expectedTime, now) {
+-		t.Fatalf("final month data is not current month")
+-	}
+-}
+-
+ func getMonthsData(t *testing.T, resp *api.Secret) []vault.ResponseMonth {
+ 	t.Helper()
+ 	monthsRaw, ok := resp.Data["months"]
+@@ -301,58 +91,6 @@ func getTotals(t *testing.T, resp *api.Secret) vault.ResponseCounts {
+ 	return total
+ }
+ 
+-// Test_ActivityLog_ClientTypeResponse runs for each client type. In the
+-// subtests, 10 clients of the type are created and the test verifies that the
+-// activity log query response returns 10 clients of that type at every level of
+-// the response hierarchy
+-func Test_ActivityLog_ClientTypeResponse(t *testing.T) {
+-	t.Parallel()
+-	for _, tc := range allClientTypeTestCases {
+-		tc := tc
+-		t.Run(tc.clientType, func(t *testing.T) {
+-			t.Parallel()
+-			cluster := minimal.NewTestSoloCluster(t, nil)
+-			client := cluster.Cores[0].Client
+-			_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
+-				"enabled": "enable",
+-			})
+-			_, err = clientcountutil.NewActivityLogData(client).
+-				NewCurrentMonthData().
+-				NewClientsSeen(10, clientcountutil.WithClientType(tc.clientType)).
+-				Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES)
+-			require.NoError(t, err)
+-
+-			now := time.Now().UTC()
+-			resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
+-				"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
+-				"start_time": {timeutil.StartOfMonth(now).Format(time.RFC3339)},
+-			})
+-			require.NoError(t, err)
+-
+-			total := getTotals(t, resp)
+-			require.Equal(t, 10, tc.responseCountsFn(total))
+-			require.Equal(t, 10, total.Clients)
+-
+-			byNamespace := getNamespaceData(t, resp)
+-			require.Equal(t, 10, tc.responseCountsFn(byNamespace[0].Counts))
+-			require.Equal(t, 10, tc.responseCountsFn(*byNamespace[0].Mounts[0].Counts))
+-			require.Equal(t, 10, byNamespace[0].Counts.Clients)
+-			require.Equal(t, 10, byNamespace[0].Mounts[0].Counts.Clients)
+-
+-			byMonth := getMonthsData(t, resp)
+-			require.Equal(t, 10, tc.responseCountsFn(*byMonth[0].NewClients.Counts))
+-			require.Equal(t, 10, tc.responseCountsFn(*byMonth[0].Counts))
+-			require.Equal(t, 10, tc.responseCountsFn(byMonth[0].Namespaces[0].Counts))
+-			require.Equal(t, 10, tc.responseCountsFn(*byMonth[0].Namespaces[0].Mounts[0].Counts))
+-			require.Equal(t, 10, byMonth[0].NewClients.Counts.Clients)
+-			require.Equal(t, 10, byMonth[0].Counts.Clients)
+-			require.Equal(t, 10, byMonth[0].Namespaces[0].Counts.Clients)
+-			require.Equal(t, 10, byMonth[0].Namespaces[0].Mounts[0].Counts.Clients)
+-		})
+-
+-	}
+-}
+-
+ // Test_ActivityLogCurrentMonth_Response runs for each client type. The subtest
+ // creates 10 clients of the type and verifies that the activity log partial
+ // month response returns 10 clients of that type at every level of the response
+@@ -447,54 +185,6 @@ func Test_ActivityLog_Deduplication(t *testing.T) {
+ 	}
+ }
+ 
+-// Test_ActivityLog_MountDeduplication writes data for the previous
+-// month across 4 mounts. The cubbyhole and sys mounts have clients in the
+-// current month as well. The test verifies that the mount counts are correctly
+-// summed in the results when the previous and current month are queried.
+-func Test_ActivityLog_MountDeduplication(t *testing.T) {
+-	t.Parallel()
+-
+-	cluster := minimal.NewTestSoloCluster(t, nil)
+-	client := cluster.Cores[0].Client
+-	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
+-		"enabled": "enable",
+-	})
+-	require.NoError(t, err)
+-	now := time.Now().UTC()
+-
+-	_, err = clientcountutil.NewActivityLogData(client).
+-		NewPreviousMonthData(1).
+-		NewClientSeen(clientcountutil.WithClientMount("sys")).
+-		NewClientSeen(clientcountutil.WithClientMount("secret")).
+-		NewClientSeen(clientcountutil.WithClientMount("cubbyhole")).
+-		NewClientSeen(clientcountutil.WithClientMount("identity")).
+-		NewCurrentMonthData().
+-		NewClientSeen(clientcountutil.WithClientMount("cubbyhole")).
+-		NewClientSeen(clientcountutil.WithClientMount("sys")).
+-		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
+-	require.NoError(t, err)
+-
+-	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
+-		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
+-		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
+-	})
+-
+-	require.NoError(t, err)
+-	byNamespace := getNamespaceData(t, resp)
+-	require.Len(t, byNamespace, 1)
+-	require.Len(t, byNamespace[0].Mounts, 4)
+-	mountSet := make(map[string]int, 4)
+-	for _, mount := range byNamespace[0].Mounts {
+-		mountSet[mount.MountPath] = mount.Counts.Clients
+-	}
+-	require.Equal(t, map[string]int{
+-		"identity/":  1,
+-		"sys/":       2,
+-		"cubbyhole/": 2,
+-		"secret/":    1,
+-	}, mountSet)
+-}
+-
+ // getJSONExport is used to fetch activity export records using json format.
+ // The records will be returned as a map keyed by client ID.
+ func getJSONExport(t *testing.T, client *api.Client, startTime time.Time, now time.Time) (map[string]vault.ActivityLogExportRecord, error) {
+@@ -720,172 +410,3 @@ path "sys/internal/counters/activity/export" {
+ 	require.NoError(t, err)
+ 	require.Len(t, clients, 10)
+ }
+-
+-// TestHandleQuery_MultipleMounts creates a cluster with
+-// two userpass mounts. It then tests verifies that
+-// the total new counts are calculated within a reasonably level of accuracy for
+-// various numbers of clients in each mount.
+-func TestHandleQuery_MultipleMounts(t *testing.T) {
+-	tests := map[string]struct {
+-		twoMonthsAgo          [][]int
+-		oneMonthAgo           [][]int
+-		currentMonth          [][]int
+-		expectedNewClients    int
+-		expectedTotalAccuracy float64
+-	}{
+-		"low volume, all mounts": {
+-			twoMonthsAgo: [][]int{
+-				{20, 20},
+-			},
+-			oneMonthAgo: [][]int{
+-				{30, 30},
+-			},
+-			currentMonth: [][]int{
+-				{40, 40},
+-			},
+-			expectedNewClients:    80,
+-			expectedTotalAccuracy: 1,
+-		},
+-		"medium volume, all mounts": {
+-			twoMonthsAgo: [][]int{
+-				{200, 200},
+-			},
+-			oneMonthAgo: [][]int{
+-				{300, 300},
+-			},
+-			currentMonth: [][]int{
+-				{400, 400},
+-			},
+-			expectedNewClients:    800,
+-			expectedTotalAccuracy: 0.98,
+-		},
+-		"higher volume, all mounts": {
+-			twoMonthsAgo: [][]int{
+-				{200, 200},
+-			},
+-			oneMonthAgo: [][]int{
+-				{300, 300},
+-			},
+-			currentMonth: [][]int{
+-				{2000, 5000},
+-			},
+-			expectedNewClients:    7000,
+-			expectedTotalAccuracy: 0.95,
+-		},
+-		"higher volume, no repeats": {
+-			twoMonthsAgo: [][]int{
+-				{200, 200},
+-			},
+-			oneMonthAgo: [][]int{
+-				{300, 300},
+-			},
+-			currentMonth: [][]int{
+-				{4000, 6000},
+-			},
+-			expectedNewClients:    10000,
+-			expectedTotalAccuracy: 0.98,
+-		},
+-	}
+-
+-	for i, tt := range tests {
+-		testname := fmt.Sprintf("%s", i)
+-		t.Run(testname, func(t *testing.T) {
+-			var err error
+-			cluster := minimal.NewTestSoloCluster(t, nil)
+-			client := cluster.Cores[0].Client
+-			_, err = client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
+-				"enabled": "enable",
+-			})
+-			require.NoError(t, err)
+-
+-			// Create two namespaces
+-			namespaces := []string{namespace.RootNamespaceID}
+-			mounts := make(map[string][]string)
+-
+-			// Add two userpass mounts to each namespace
+-			for _, ns := range namespaces {
+-				err = client.WithNamespace(ns).Sys().EnableAuthWithOptions("userpass1", &api.EnableAuthOptions{
+-					Type: "userpass",
+-				})
+-				require.NoError(t, err)
+-				err = client.WithNamespace(ns).Sys().EnableAuthWithOptions("userpass2", &api.EnableAuthOptions{
+-					Type: "userpass",
+-				})
+-				require.NoError(t, err)
+-				mounts[ns] = []string{"auth/userpass1", "auth/userpass2"}
+-			}
+-
+-			activityLogGenerator := clientcountutil.NewActivityLogData(client)
+-
+-			// Write two months ago data
+-			activityLogGenerator = activityLogGenerator.NewPreviousMonthData(2)
+-			for nsIndex, nsId := range namespaces {
+-				for mountIndex, mount := range mounts[nsId] {
+-					activityLogGenerator = activityLogGenerator.
+-						NewClientsSeen(tt.twoMonthsAgo[nsIndex][mountIndex], clientcountutil.WithClientNamespace(nsId), clientcountutil.WithClientMount(mount))
+-				}
+-			}
+-
+-			// Write previous months data
+-			activityLogGenerator = activityLogGenerator.NewPreviousMonthData(1)
+-			for nsIndex, nsId := range namespaces {
+-				for mountIndex, mount := range mounts[nsId] {
+-					activityLogGenerator = activityLogGenerator.
+-						NewClientsSeen(tt.oneMonthAgo[nsIndex][mountIndex], clientcountutil.WithClientNamespace(nsId), clientcountutil.WithClientMount(mount))
+-				}
+-			}
+-
+-			// Write current month data
+-			activityLogGenerator = activityLogGenerator.NewCurrentMonthData()
+-			for nsIndex, nsPath := range namespaces {
+-				for mountIndex, mount := range mounts[nsPath] {
+-					activityLogGenerator = activityLogGenerator.
+-						RepeatedClientSeen(clientcountutil.WithClientNamespace(nsPath), clientcountutil.WithClientMount(mount)).
+-						NewClientsSeen(tt.currentMonth[nsIndex][mountIndex], clientcountutil.WithClientNamespace(nsPath), clientcountutil.WithClientMount(mount))
+-				}
+-			}
+-
+-			// Write all the client count data
+-			_, err = activityLogGenerator.Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
+-			require.NoError(t, err)
+-
+-			endOfCurrentMonth := timeutil.EndOfMonth(time.Now().UTC())
+-
+-			// query activity log
+-			resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
+-				"end_time":   {endOfCurrentMonth.Format(time.RFC3339)},
+-				"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(2, time.Now().UTC())).Format(time.RFC3339)},
+-			})
+-			require.NoError(t, err)
+-
+-			// Ensure that the month response is the same as the totals, because all clients
+-			// are new clients and there will be no approximation in the single month partial
+-			// case
+-			monthsRaw, ok := resp.Data["months"]
+-			if !ok {
+-				t.Fatalf("malformed results. got %v", resp.Data)
+-			}
+-			monthsResponse := make([]*vault.ResponseMonth, 0)
+-			err = mapstructure.Decode(monthsRaw, &monthsResponse)
+-
+-			currentMonthClients := monthsResponse[len(monthsResponse)-1]
+-
+-			// Now verify that the new client totals for ALL namespaces are approximately accurate (there are no namespaces in CE)
+-			newClientsError := math.Abs((float64)(currentMonthClients.NewClients.Counts.Clients - tt.expectedNewClients))
+-			newClientsErrorMargin := newClientsError / (float64)(tt.expectedNewClients)
+-			expectedAccuracyCalc := (1 - tt.expectedTotalAccuracy) * 100 / 100
+-			if newClientsErrorMargin > expectedAccuracyCalc {
+-				t.Fatalf("bad accuracy: expected %+v, found %+v", expectedAccuracyCalc, newClientsErrorMargin)
+-			}
+-
+-			// Verify that the totals for the clients are visibly sensible (that is the total of all the individual new clients per namespace)
+-			total := 0
+-			for _, newClientCounts := range currentMonthClients.NewClients.Namespaces {
+-				total += newClientCounts.Counts.Clients
+-			}
+-			if diff := math.Abs(float64(currentMonthClients.NewClients.Counts.Clients - total)); diff >= 1 {
+-				t.Fatalf("total expected was %d but got %d", currentMonthClients.NewClients.Counts.Clients, total)
+-			}
+-		})
+-	}
+-}
+diff --git a/vault/external_tests/identity/groups_test.go b/vault/external_tests/identity/groups_test.go
+index 648fc71edd..5e11e5abd8 100644
+--- a/vault/external_tests/identity/groups_test.go
++++ b/vault/external_tests/identity/groups_test.go
+@@ -153,7 +153,7 @@ func TestIdentityStore_ExternalGroupMembershipsAcrossMounts(t *testing.T) {
+ 	}
+ 	ldapMountAccessor1 := auths["ldap/"].Accessor
+ 
+-	cleanup, cfg := ldaphelper.PrepareTestContainer(t, "master")
++	cleanup, cfg := ldaphelper.PrepareTestContainer(t, ldaphelper.DefaultVersion)
+ 	defer cleanup()
+ 
+ 	// Configure LDAP auth
+@@ -255,7 +255,7 @@ func TestIdentityStore_ExternalGroupMembershipsAcrossMounts(t *testing.T) {
+ 		t.Fatal(err)
+ 	}
+ 
+-	cleanup2, cfg2 := ldaphelper.PrepareTestContainer(t, "master")
++	cleanup2, cfg2 := ldaphelper.PrepareTestContainer(t, ldaphelper.DefaultVersion)
+ 	defer cleanup2()
+ 
+ 	// Configure LDAP auth
+diff --git a/vault/external_tests/identity/identity_test.go b/vault/external_tests/identity/identity_test.go
+index ed8117d2db..66c49fc0cf 100644
+--- a/vault/external_tests/identity/identity_test.go
++++ b/vault/external_tests/identity/identity_test.go
+@@ -32,10 +32,10 @@ func TestIdentityStore_ExternalGroupMemberships_DifferentMounts(t *testing.T) {
+ 	require.NoError(t, err)
+ 	entityID := secret.Data["id"].(string)
+ 
+-	cleanup, config1 := ldaphelper.PrepareTestContainer(t, "master")
++	cleanup, config1 := ldaphelper.PrepareTestContainer(t, ldaphelper.DefaultVersion)
+ 	defer cleanup()
+ 
+-	cleanup2, config2 := ldaphelper.PrepareTestContainer(t, "master")
++	cleanup2, config2 := ldaphelper.PrepareTestContainer(t, ldaphelper.DefaultVersion)
+ 	defer cleanup2()
+ 
+ 	setupFunc := func(path string, cfg *ldaputil.ConfigEntry) string {
+@@ -224,7 +224,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
+ 		t.Fatalf("bad: group alias: %#v\n", aliasMap)
+ 	}
+ 
+-	cleanup, cfg := ldaphelper.PrepareTestContainer(t, "master")
++	cleanup, cfg := ldaphelper.PrepareTestContainer(t, ldaphelper.DefaultVersion)
+ 	defer cleanup()
+ 
+ 	// Configure LDAP auth
+@@ -459,7 +459,7 @@ func TestIdentityStore_Integ_RemoveFromExternalGroup(t *testing.T) {
+ 		t.Fatalf("bad: group alias: %#v\n", aliasMap)
+ 	}
+ 
+-	cleanup, cfg := ldaphelper.PrepareTestContainer(t, "master")
++	cleanup, cfg := ldaphelper.PrepareTestContainer(t, ldaphelper.DefaultVersion)
+ 	defer cleanup()
+ 
+ 	// Configure LDAP auth
+diff --git a/vault/external_tests/policy/policy_test.go b/vault/external_tests/policy/policy_test.go
+index 76ff47e78c..4644c868c3 100644
+--- a/vault/external_tests/policy/policy_test.go
++++ b/vault/external_tests/policy/policy_test.go
+@@ -48,7 +48,7 @@ func TestPolicy_NoDefaultPolicy(t *testing.T) {
+ 	}
+ 
+ 	// Configure LDAP auth backend
+-	cleanup, cfg := ldaphelper.PrepareTestContainer(t, "master")
++	cleanup, cfg := ldaphelper.PrepareTestContainer(t, ldaphelper.DefaultVersion)
+ 	defer cleanup()
+ 
+ 	_, err = client.Logical().Write("auth/ldap/config", map[string]interface{}{
+@@ -106,7 +106,7 @@ func TestPolicy_NoConfiguredPolicy(t *testing.T) {
+ 	}
+ 
+ 	// Configure LDAP auth backend
+-	cleanup, cfg := ldaphelper.PrepareTestContainer(t, "master")
++	cleanup, cfg := ldaphelper.PrepareTestContainer(t, ldaphelper.DefaultVersion)
+ 	defer cleanup()
+ 
+ 	_, err = client.Logical().Write("auth/ldap/config", map[string]interface{}{
+diff --git a/vault/external_tests/token/token_test.go b/vault/external_tests/token/token_test.go
+index 8acd3cfd11..9b3f1dcf71 100644
+--- a/vault/external_tests/token/token_test.go
++++ b/vault/external_tests/token/token_test.go
+@@ -102,7 +102,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
+ 		t.Fatal(err)
+ 	}
+ 
+-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
++	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+ 	defer cleanup()
+ 
+ 	// Configure LDAP auth
+diff --git a/vault/logical_system_activity.go b/vault/logical_system_activity.go
+index 56f9ecb665..458814cef0 100644
+--- a/vault/logical_system_activity.go
++++ b/vault/logical_system_activity.go
+@@ -29,8 +29,19 @@ const (
+ 
+ 	// WarningCurrentMonthIsAnEstimate is a warning string that is used to let the customer know that for this query, the current month's data is estimated.
+ 	WarningCurrentMonthIsAnEstimate = "Since this usage period includes both the current month and at least one historical month, counts returned in this usage period are an estimate. Client counts for this period will no longer be estimated at the start of the next month."
++
++	// WarningProvidedStartAndEndTimesIgnored is a warning string that is used to indicate that the provided start and end times by the user have been aligned to a billing period's start and end times
++	WarningProvidedStartAndEndTimesIgnored = "start_time and end_time parameters can only be used to specify the beginning or end of the same billing period. The values provided for these parameters are not supported and are ignored. Showing the data for the entire billing period corresponding to start_time. If start_time is not provided, the billing period is determined based on the end_time"
++
++	// WarningEndTimeAsCurrentMonthIgnored is a warning string that is used to indicate the provided end time has been adjusted to the previous month if it was provided to be within the current month
++	WarningEndTimeAsCurrentMonthIgnored = "end_time parameter can only be used to specify until the end of last month. The value provided for this parameter is not supported and is ignored. Showing counts until the end of last month."
+ )
+ 
++type StartEndTimesWarnings struct {
++	TimesAlignedToBilling        bool
++	CurrentMonthAsEndTimeIgnored bool
++}
++
+ // activityQueryPath is available in every namespace
+ func (b *SystemBackend) activityQueryPath() *framework.Path {
+ 	return &framework.Path{
+@@ -332,7 +343,7 @@ func (b *SystemBackend) handleClientExport(ctx context.Context, req *logical.Req
+ }
+ 
+ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+-	var startTime, endTime time.Time
++	var timesAligned bool
+ 	b.Core.activityLogLock.RLock()
+ 	a := b.Core.activityLog
+ 	b.Core.activityLogLock.RUnlock()
+@@ -347,7 +358,10 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
+ 	}
+ 
+ 	var err error
+-	startTime, endTime, err = parseStartEndTimes(d, b.Core.BillingStart())
++	var timeWarnings StartEndTimesWarnings
++	startTime := d.Get("start_time").(time.Time)
++	endTime := d.Get("end_time").(time.Time)
++	startTime, endTime, timeWarnings, err = getStartEndTime(startTime, endTime, b.Core.BillingStart())
+ 	if err != nil {
+ 		return logical.ErrorResponse(err.Error()), nil
+ 	}
+@@ -371,6 +385,15 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
+ 	if queryContainsEstimates(startTime, endTime) {
+ 		warnings = append(warnings, WarningCurrentMonthIsAnEstimate)
+ 	}
++	if timesAligned {
++		warnings = append(warnings, WarningProvidedStartAndEndTimesIgnored)
++	}
++	if timeWarnings.CurrentMonthAsEndTimeIgnored {
++		warnings = append(warnings, WarningEndTimeAsCurrentMonthIgnored)
++	}
++	if timeWarnings.TimesAlignedToBilling {
++		warnings = append(warnings, WarningProvidedStartAndEndTimesIgnored)
++	}
+ 
+ 	return &logical.Response{
+ 		Warnings: warnings,
+diff --git a/website/content/api-docs/secret/pki/index.mdx b/website/content/api-docs/secret/pki/index.mdx
+index ad49b763d8..ed2f543719 100644
+--- a/website/content/api-docs/secret/pki/index.mdx
++++ b/website/content/api-docs/secret/pki/index.mdx
+@@ -751,9 +751,9 @@ intermediary goes beyond the prescribed length.
+ 
+ - `key_usage` `([]string: CRL,CertSign)` - This list of key usages will be added
+   to the existing set of key usages, CRL,CertSign, on the generated certificate.
+-  Values can be found at https://golang.org/pkg/crypto/x509/#KeyUsage part of the
+-  name.  This is overwritten by use_csr_values if a key usage extension exists
+-  within the csr.
++  Per the CAB Forum requirements, Vault ignores values other than `DigitalSignature`.
++  To get a certificate with additional `key_usage` values, add the desired values to
++  the CSR, then call this function with `use_csr_values` set to `true`.
+ 
+ - `exclude_cn_from_sans` `(bool: false)` - If true, the given `common_name` will
+   not be included in DNS or Email Subject Alternate Names (as appropriate).
+@@ -2166,8 +2166,7 @@ use the values set via `config/urls`.
+ 
+ - `key_usage` `([]string: CRL,CertSign)` - This list of key usages will be added
+   to the existing set of key usages, CRL,CertSign, on the generated certificate.
+-  Values can be found at https://golang.org/pkg/crypto/x509/#KeyUsage part of the
+-  name.
++  Per the CAB Forum, Vault ignores additional values other than `DigitalSignature`.
+ 
+ - `exclude_cn_from_sans` `(bool: false)` - If true, the given `common_name` will
+   not be included in DNS or Email Subject Alternate Names (as appropriate).
+diff --git a/website/content/docs/configuration/storage/mysql.mdx b/website/content/docs/configuration/storage/mysql.mdx
+index 2e08cb1e07..7434e4601a 100644
+--- a/website/content/docs/configuration/storage/mysql.mdx
++++ b/website/content/docs/configuration/storage/mysql.mdx
+@@ -43,7 +43,7 @@ storage "mysql" {
+ - `tls_ca_file` `(string: "")` – Specifies the path to the CA certificate to
+   connect using TLS.
+ 
+-- `plaintext_credentials_transmission` `(string: "")` - Provides authorization
++- `plaintext_connection_allowed` `(string: "")` - Provides authorization
+   to send credentials over plaintext. Failure to provide a value AND a failure
+   to provide a TLS CA certificate will warn that the credentials are being sent
+   over plain text. In the future, failure to do acknowledge or use TLS will
+@@ -64,10 +64,10 @@ storage "mysql" {
+ Additionally, Vault requires the following authentication information.
+ 
+ - `username` `(string: <required>)` – Specifies the MySQL username to connect to
+-  the database.
++  the database. This value can also be set using the `VAULT_MYSQL_USERNAME` environment variable.
+ 
+ - `password` `(string: <required>)` – Specifies the MySQL password to connect to
+-  the database.
++  the database. This value can also be set using the `VAULT_MYSQL_PASSWORD` environment variable.
+ 
+ ### High availability parameters
+ 
+diff --git a/website/content/docs/enterprise/sentinel/index.mdx b/website/content/docs/enterprise/sentinel/index.mdx
+index 671fa8bb89..342b58e7d1 100644
+--- a/website/content/docs/enterprise/sentinel/index.mdx
++++ b/website/content/docs/enterprise/sentinel/index.mdx
+@@ -1,11 +1,11 @@
+ ---
+ layout: docs
+-page_title: Mange Vault policies with Sentinel
++page_title: Manage Vault policies with Sentinel
+ description: >-
+-  Mange Vault policies programmatically with Sentinel.
++  Manage Vault policies programmatically with Sentinel.
+ ---
+ 
+-# Mange Vault policies with Sentinel
++# Manage Vault policies with Sentinel
+ 
+ @include 'alerts/enterprise-and-hcp.mdx'
+ 
+diff --git a/website/content/docs/platform/k8s/injector/annotations.mdx b/website/content/docs/platform/k8s/injector/annotations.mdx
+index 944b2cf951..f5e485d05d 100644
+--- a/website/content/docs/platform/k8s/injector/annotations.mdx
++++ b/website/content/docs/platform/k8s/injector/annotations.mdx
+@@ -273,14 +273,14 @@ etc.
+   This annotation can be reused multiple times to configure multiple settings for the authentication
+   method. Some authentication methods may require additional secrets and should be mounted via the
+   `vault.hashicorp.com/agent-extra-secret` annotation. For a list of valid authentication configurations,
+-  see the Vault Agent [auto-auth documentation](/vault/docs/agent-and-proxy/autoauth/methods).
++  see the Vault Agent [auto-auth documentation](/vault/docs/agent-and-proxy/autoauth).
+ 
+ - `vault.hashicorp.com/auth-path` - configures the authentication path for the Kubernetes
+   auth method. Defaults to `auth/kubernetes`.
+ 
+ - `vault.hashicorp.com/auth-type` - configures the authentication type for Vault Agent.
+   Defaults to `kubernetes`. For a list of valid authentication methods, see the Vault Agent
+-  [auto-auth documentation](/vault/docs/agent-and-proxy/autoauth/methods).
++  [auto-auth documentation](/vault/docs/agent-and-proxy/autoauth).
+ 
+ - `vault.hashicorp.com/auth-min-backoff` - set the [min_backoff](/vault/docs/agent-and-proxy/autoauth#min_backoff) option in the auto-auth config. Requires Vault 1.11+.
+ 
+diff --git a/website/content/docs/release-notes/1.16.1.mdx b/website/content/docs/release-notes/1.16.1.mdx
+index 56426187ad..9943b698d2 100644
+--- a/website/content/docs/release-notes/1.16.1.mdx
++++ b/website/content/docs/release-notes/1.16.1.mdx
+@@ -31,7 +31,7 @@ description: |-
+ | New default (1.16.13)       | [Vault product usage metrics reporting](/vault/docs/upgrading/upgrade-to-1.6.x#product-usage-reporting)                                                                                      |
+ | Deprecation (1.16.13)       | [`default_report_months` is deprecated for the `sys/internal/counters` API](/vault/docs/upgrading/upgrade-to-1.16.x#activity-log-changes)                                                    |
+ | Known Issue (1.16.16)       | [Authorization failures using Azure federated identity credentials](/vault/docs/upgrading/upgrade-to-1.16.x#authorization-failures-using-azure-federated-identity-credentials) |
+-
++| Known issue (1.16.16)       | [Unexpected static role rotations on upgrade](/vault/docs/upgrading/upgrade-to-1.16.x#static-role-rotations)
+ 
+ ## Vault companion updates
+ 
+diff --git a/website/content/docs/release-notes/1.17.0.mdx b/website/content/docs/release-notes/1.17.0.mdx
+index 44c6cbeeb8..914a0478a4 100644
+--- a/website/content/docs/release-notes/1.17.0.mdx
++++ b/website/content/docs/release-notes/1.17.0.mdx
+@@ -31,6 +31,7 @@ description: |-
+ | New default (1.17.9)                           | [Vault product usage metrics reporting](/vault/docs/upgrading/upgrade-to-1.17.x#product-usage-reporting)                                                                                         |
+ | Deprecation (1.17.9)                           | [`default_report_months` is deprecated for the `sys/internal/counters` API](/vault/docs/upgrading/upgrade-to-1.17.x#activity-log-changes)                                                        |
+ | Known Issue (1.17.12)                          | [Authorization failures using Azure federated identity credentials](/vault/docs/upgrading/upgrade-to-1.17.x#authorization-failures-using-azure-federated-identity-credentials) |
++| Known issue (1.17.12)                          | [Unexpected static role rotations on upgrade](/vault/docs/upgrading/upgrade-to-1.17.x#static-role-rotations)
+ 
+ ## Vault companion updates
+ 
+diff --git a/website/content/docs/release-notes/1.18.0.mdx b/website/content/docs/release-notes/1.18.0.mdx
+index e8668bcd1a..f766a1e890 100644
+--- a/website/content/docs/release-notes/1.18.0.mdx
++++ b/website/content/docs/release-notes/1.18.0.mdx
+@@ -20,6 +20,7 @@ description: |-
+ | Beta feature removed (1.18) | [Request limiter removed](/vault/docs/upgrading/upgrade-to-1.18.x#request-limiter-configuration-removal)             |
+ | New default (1.18.2)        | [Vault product usage metrics reporting](/vault/docs/upgrading/upgrade-to-1.18.x#product-usage-reporting)             |
+ | Known Issue (1.18.5)        | [Authorization failures using Azure federated identity credentials](/vault/docs/upgrading/upgrade-to-1.18.x#authorization-failures-using-azure-federated-identity-credentials) |
++| Known issue (1.18.5)        | [Unexpected static role rotations on upgrade](/vault/docs/upgrading/upgrade-to-1.18.x#static-role-rotations)
+ 
+ ## Vault companion updates
+ 
+diff --git a/website/content/docs/release-notes/1.19.0.mdx b/website/content/docs/release-notes/1.19.0.mdx
+index 442d707ea6..938ea0b04c 100644
+--- a/website/content/docs/release-notes/1.19.0.mdx
++++ b/website/content/docs/release-notes/1.19.0.mdx
+@@ -23,7 +23,8 @@ description: |-
+ | Known issue (1.19.x, 1.18.x, 1.17.x, 1.16.x)  | [Duplicate HSM keys creation when migrating to HSM from Shamir](/vault/docs/upgrading/upgrade-to-1.19.x#hsm-keys)
+ | New behavior (1.19.0)                         | [Uppercase values are no longer forced to lower case](/vault/docs/upgrading/upgrade-to-1.19.x#case-sensitive)
+ | Known issue (1.19.0)                          | [Login/token renewal failures after group changes](/vault/docs/upgrading/upgrade-to-1.19.x#group-writes)
+-
++| Known issue (1.19.0)                          | [Unexpected static role rotations on upgrade](/vault/docs/upgrading/upgrade-to-1.19.x#static-role-rotations)
++       
+ 
+ ## Feature deprecations and EOL
+ 
+diff --git a/website/content/docs/secrets/kv/index.mdx b/website/content/docs/secrets/kv/index.mdx
+index 3e135121c1..d32f0f33b9 100644
+--- a/website/content/docs/secrets/kv/index.mdx
++++ b/website/content/docs/secrets/kv/index.mdx
+@@ -11,6 +11,8 @@ secrets within the configured physical storage for Vault. This secrets engine
+ can run in one of two modes; store a single value for a key, or store a number
+ of versions for each key and maintain the record of them.
+ 
++@include 'tips/try-hvs.mdx'
++
+ ## KV version 1
+ 
+ When running the `kv` secrets engine non-versioned, it stores the most recently
+diff --git a/website/content/docs/upgrading/upgrade-to-1.16.x.mdx b/website/content/docs/upgrading/upgrade-to-1.16.x.mdx
+index d68d3880fe..9d80b025ca 100644
+--- a/website/content/docs/upgrading/upgrade-to-1.16.x.mdx
++++ b/website/content/docs/upgrading/upgrade-to-1.16.x.mdx
+@@ -240,3 +240,5 @@ more details, and information about opt-out.
+ @include 'known-issues/database-skip-static-role-rotation.mdx'
+ 
+ @include 'known-issues/azure-unseal-regression.mdx'
++
++@include 'known-issues/static-role-premature-rotations.mdx'
+\ No newline at end of file
+diff --git a/website/content/docs/upgrading/upgrade-to-1.17.x.mdx b/website/content/docs/upgrading/upgrade-to-1.17.x.mdx
+index 1ba332c3e4..7e08afa4f3 100644
+--- a/website/content/docs/upgrading/upgrade-to-1.17.x.mdx
++++ b/website/content/docs/upgrading/upgrade-to-1.17.x.mdx
+@@ -211,3 +211,5 @@ more details, and information about opt-out.
+ @include 'known-issues/database-skip-static-role-rotation.mdx'
+ 
+ @include 'known-issues/azure-unseal-regression.mdx'
++
++@include 'known-issues/static-role-premature-rotations.mdx'
+diff --git a/website/content/docs/upgrading/upgrade-to-1.18.x.mdx b/website/content/docs/upgrading/upgrade-to-1.18.x.mdx
+index b773f19a6e..4e511f6e1a 100644
+--- a/website/content/docs/upgrading/upgrade-to-1.18.x.mdx
++++ b/website/content/docs/upgrading/upgrade-to-1.18.x.mdx
+@@ -146,3 +146,5 @@ more details, and information about opt-out.
+ @include 'known-issues/database-skip-static-role-rotation.mdx'
+ 
+ @include 'known-issues/azure-unseal-regression.mdx'
++
++@include 'known-issues/static-role-premature-rotations.mdx'
+\ No newline at end of file
+diff --git a/website/content/docs/upgrading/upgrade-to-1.19.x.mdx b/website/content/docs/upgrading/upgrade-to-1.19.x.mdx
+index f05a0a6155..0415d780bd 100644
+--- a/website/content/docs/upgrading/upgrade-to-1.19.x.mdx
++++ b/website/content/docs/upgrading/upgrade-to-1.19.x.mdx
+@@ -97,4 +97,6 @@ As of Vault 1.19.0 the RADIUS authentication plugin will not force case sensitiv
+ 
+ @include 'known-issues/duplicate-hsm-key.mdx'
+ 
+-@include 'known-issues/1_19-failures-after-external-group-changes-standby.mdx'
+\ No newline at end of file
++@include 'known-issues/1_19-failures-after-external-group-changes-standby.mdx'
++
++@include 'known-issues/static-role-premature-rotations.mdx'
+diff --git a/website/content/partials/known-issues/static-role-premature-rotations.mdx b/website/content/partials/known-issues/static-role-premature-rotations.mdx
+new file mode 100644
+index 0000000000..e54c285301
+--- /dev/null
++++ b/website/content/partials/known-issues/static-role-premature-rotations.mdx
+@@ -0,0 +1,13 @@
++### Static role rotations on upgrade ((#static-role-rotations))
++
++#### Affected Versions
++- 1.19.0, 1.18.5, 1.17.12, 1.16.16
++
++#### Issue
++Vault automatically rotates existing static roles tied to database and LDAP
++credentials once when upgrading to an affected version. After the one-time
++rotation, the static roles behave as expected.
++
++#### Workaround
++If you rely on LDAP or static database roles, avoid upgrading to the affected
++versions until we fix the issue.
+\ No newline at end of file
+diff --git a/website/content/partials/tips/try-hvs.mdx b/website/content/partials/tips/try-hvs.mdx
+new file mode 100644
+index 0000000000..1fe232c227
+--- /dev/null
++++ b/website/content/partials/tips/try-hvs.mdx
+@@ -0,0 +1,5 @@
++<Highlight title="Try HCP Vault Secrets">
++
++HCP Vault Secrets is a SaaS platform that provides secure and simplified workflows for managing secrets in minutes. Try [HCP Vault Secrets](https://portal.cloud.hashicorp.com/sign-up?utm_source=learn&utm_content=tutorial_vault) to experience HashiCorp-managed secret store solution.
++
++</Highlight>
+\ No newline at end of file

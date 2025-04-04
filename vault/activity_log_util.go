@@ -7,10 +7,10 @@ package vault
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/hashicorp/vault/helper/timeutil"
+	"github.com/hashicorp/vault/sdk/framework"
 )
 
 // sendCurrentFragment is a no-op on OSS
@@ -28,33 +28,16 @@ func (a *ActivityLog) handleClientIDsInMemoryEndOfMonth(ctx context.Context, cur
 
 // getStartEndTime parses input for start and end times
 // If the end time corresponds to the current month, it is adjusted to the last month
-func getStartEndTime(startTime, endTime, billingStartTime time.Time) (time.Time, time.Time, StartEndTimesWarnings, error) {
+func getStartEndTime(d *framework.FieldData, billingStartTime time.Time) (time.Time, time.Time, StartEndTimesWarnings, error) {
 	warnings := StartEndTimesWarnings{}
-
-	// If a specific endTime is used, then respect that
-	// otherwise we want to query up until the end of the current month.
-	//
-	// Also convert any user inputs to UTC to avoid
-	// problems later.
-	if endTime.IsZero() {
-		endTime = timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, timeutil.StartOfMonth(time.Now().UTC())))
-	} else {
-		endTime = endTime.UTC()
-		if timeutil.IsCurrentMonth(endTime, time.Now().UTC()) {
-			endTime = timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, timeutil.StartOfMonth(endTime)))
-			warnings.CurrentMonthAsEndTimeIgnored = true
-		}
+	startTime, endTime, err := parseStartEndTimes(d, billingStartTime)
+	if err != nil {
+		return startTime, endTime, warnings, err
 	}
-
-	// If startTime is not specified, we would like to query
-	// from the beginning of the billing period
-	if startTime.IsZero() {
-		startTime = billingStartTime
-	} else {
-		startTime = startTime.UTC()
-	}
-	if startTime.After(endTime) {
-		return time.Time{}, time.Time{}, StartEndTimesWarnings{}, fmt.Errorf("start_time is later than end_time")
+	// ensure end time is adjusted to the past month if it falls within the current month
+	if timeutil.IsCurrentMonth(endTime, time.Now().UTC()) {
+		endTime = timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, timeutil.StartOfMonth(endTime)))
+		warnings.CurrentMonthAsEndTimeIgnored = true
 	}
 
 	return startTime, endTime, warnings, nil

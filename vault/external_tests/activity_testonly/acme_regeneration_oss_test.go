@@ -59,10 +59,12 @@ func TestACMERegeneration_RegenerateWithCurrentMonth(t *testing.T) {
 
 	forceRegeneration(t, cluster)
 
+	startFiveMonthsAgo := timeutil.StartOfMonth(timeutil.MonthsPreviousTo(5, now))
+	endPastMonth := timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now))
 	// current month isn't included in this query
 	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
-		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(5, now)).Format(time.RFC3339)},
-		"end_time":   {timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
+		"start_time": {startFiveMonthsAgo.Format(time.RFC3339)},
+		"end_time":   {endPastMonth.Format(time.RFC3339)},
 	})
 	require.NoError(t, err)
 	require.Equal(t, vault.ResponseCounts{
@@ -70,13 +72,20 @@ func TestACMERegeneration_RegenerateWithCurrentMonth(t *testing.T) {
 		Clients:          43,
 		ACMEClients:      17,
 	}, getTotals(t, resp))
+	// verify start and end times in the response
+	require.Equal(t, resp.Data["start_time"], startFiveMonthsAgo.UTC().Format(time.RFC3339))
+	require.Equal(t, resp.Data["end_time"], endPastMonth.UTC().Format(time.RFC3339))
 
 	// explicitly include the current month in the request
 	// the given end time is adjusted to the last month, excluding the current month at the API
 	respWithCurrent, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
-		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(5, now)).Format(time.RFC3339)},
+		"start_time": {startFiveMonthsAgo.Format(time.RFC3339)},
 		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
 	})
+	// verify start and end times in the response
+	// end time is expected to be adjusted to the past month, excluding the current month
+	require.Equal(t, resp.Data["start_time"], startFiveMonthsAgo.UTC().Format(time.RFC3339))
+	require.Equal(t, resp.Data["end_time"], endPastMonth.UTC().Format(time.RFC3339))
 	require.NoError(t, err)
 	require.Equal(t, vault.ResponseCounts{
 		NonEntityClients: 26,
