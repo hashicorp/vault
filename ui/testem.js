@@ -26,7 +26,7 @@ module.exports = {
       ].filter(Boolean),
     },
     Firefox: {
-      ci: ['--headless'],
+      ci: ['--headless', '--height=900', '--width=1440'],
     },
   },
   proxies: {
