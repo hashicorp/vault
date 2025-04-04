@@ -33,8 +33,8 @@ const (
 	// WarningProvidedStartAndEndTimesIgnored is a warning string that is used to indicate that the provided start and end times by the user have been aligned to a billing period's start and end times
 	WarningProvidedStartAndEndTimesIgnored = "start_time and end_time parameters can only be used to specify the beginning or end of the same billing period. The values provided for these parameters are not supported and are ignored. Showing the data for the entire billing period corresponding to start_time. If start_time is not provided, the billing period is determined based on the end_time"
 
-	// WarningEndTimeAsCurrentMonthIgnored is a warning string that is used to indicate the provided end time has been adjusted to the previous month if it was provided to be within the current month
-	WarningEndTimeAsCurrentMonthIgnored = "end_time parameter can only be used to specify until the end of last month. The value provided for this parameter is not supported and is ignored. Showing counts until the end of last month."
+	// WarningEndTimeAsCurrentMonthOrFutureIgnored is a warning string that is used to indicate the provided end time has been adjusted to the previous month if it was provided to be within the current month or in future date
+	WarningEndTimeAsCurrentMonthOrFutureIgnored = "end_time parameter can only be used to specify a month date until the end of previous month. The value provided for this parameter was in the current month or in the future date was ignored. The response includes data until the end of the previous month."
 )
 
 type StartEndTimesWarnings struct {
@@ -383,7 +383,7 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 		warnings = append(warnings, WarningCurrentMonthIsAnEstimate)
 	}
 	if timeWarnings.EndTimeAdjustedToPastMonth {
-		warnings = append(warnings, WarningEndTimeAsCurrentMonthIgnored)
+		warnings = append(warnings, WarningEndTimeAsCurrentMonthOrFutureIgnored)
 	}
 	if timeWarnings.TimesAlignedToBilling {
 		warnings = append(warnings, WarningProvidedStartAndEndTimesIgnored)
