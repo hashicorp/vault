@@ -123,7 +123,7 @@ not be suitable for every deployment.
 
   When using platform-specific identity solutions, you should be mindful of auth
   method and secret engine configuration within namespaces. You can share
-  platform identity across Vault namespaces, as these provider features 
+  platform identity across Vault namespaces, as these provider features
   generally offer host-based identity solutions.
 
   If that is not applicable, set the credentials as environment variables
@@ -154,7 +154,7 @@ not be suitable for every deployment.
   give secret values from either standard input or with command-line arguments.
   Command-line arguments can persisted in shell history, and are readable by other unprivileged users on the same host.
 
-- **Develop an off-boarding process**. Removing accounts in Vault or associated 
+- **Develop an off-boarding process**. Removing accounts in Vault or associated
   identity providers may not immediately revoke [token-based access](/vault/docs/concepts/tokens#user-management-considerations).
   Depending on how you manage access to Vault, operators should consider:
 
@@ -213,3 +213,14 @@ not be suitable for every deployment.
 - **Be aware of special container considerations**. To use memory locking
   (mlock) inside a Vault container, you need to use the `overlayfs2` or another
   supporting driver.
+
+-	**Consider memory usage when configuring disable_mlock with integrated storage**.
+  When `disable_mlock` is set to false (i.e., `mlock` is enabled), Vault prevents
+  memory from being swapped to disk. This enhances security by ensuring sensitive
+  data remains in RAM, but it increases the risk of out-of-memory (OOM) errors
+  if the system is under-provisioned. Conversely, setting `disable_mlock` to true
+  allows the operating system to swap memory to disk under pressure, which can
+  reduce the likelihood of OOM conditions but introduces a potential risk of
+  secrets being exposed through the swap file. Given the security posture
+  recommended in this guide, enabling `mlock` and provisioning sufficient memory
+  for Vault’s workload—especially when using integrated storage—is advised.
