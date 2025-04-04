@@ -2,74 +2,83 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 }}
-
-{{! TODO list
-- [ ] Figure out help text
-- [ ] Figure out how to handle extraKeys
-- [ ] Figure out how to handle gutters
-- [ ] Figure out the container
-- [ ] Remove theme overrides
-- [ ] Remove theme viewportMargin
-- [ ] Figure out "onSetup" and "onFocus"
-- [ ] Figure out "autoRefresh" }}
-
-<Hds::CodeEditor
-  @ariaLabel="JSON editor"
-  @value={{or @value @example}}
-  @language={{@mode}}
-  @onInput={{this.onUpdate}}
-  data-test-component="code-mirror-modifier"
-  ...attributes
-  as |CE|
->
-  {{#if this.getShowToolbar}}
-    <div data-test-component="json-editor-toolbar">
+<div ...attributes>
+  {{#if @readOnly}}
+    <Hds::CodeBlock @hasCopyButton={{true}} @language={{@mode}} @value={{or @value @example}} as |CB|>
       {{#if @title}}
-        <CE.Title data-test-component="json-editor-title">
+        <CB.Title data-test-component="json-editor-title">
           {{@title}}
-        </CE.Title>
-      {{/if}}
-
-      {{#if @subTitle}}
-        <CE.Description>
-          {{@subTitle}}
-        </CE.Description>
+        </CB.Title>
       {{/if}}
 
       {{#if @helpText}}
-        <CE.Description>
+        <CB.Description>
           {{@helpText}}
-        </CE.Description>
+        </CB.Description>
       {{/if}}
+    </Hds::CodeBlock>
+  {{else}}
+    <Hds::CodeEditor
+      data-test-component="code-mirror-modifier"
+      @ariaLabel={{this.ariaLabel}}
+      @extraKeys={{@extraKeys}}
+      @language={{@mode}}
+      @value={{or @value @example}}
+      @onBlur={{@onBlur}}
+      @onInput={{this.onUpdate}}
+      @onSetup={{fn (mut this._codemirrorEditor)}}
+      as |CE|
+    >
+      {{#if this.getShowToolbar}}
+        <div data-test-component="json-editor-toolbar">
+          {{#if @title}}
+            <CE.Title data-test-component="json-editor-title">
+              {{@title}}
+            </CE.Title>
+          {{/if}}
 
-      <CE.Generic>
-        {{yield}}
+          {{#if @subTitle}}
+            <CE.Description>
+              {{@subTitle}}
+            </CE.Description>
+          {{/if}}
 
-        {{#if @example}}
-          <Hds::Button
-            class="toolbar-button"
-            @icon="reload"
-            @text="Restore example"
-            disabled={{not @value}}
-            {{on "click" this.restoreExample}}
-            data-test-restore-example
-          />
-        {{/if}}
+          {{#if @helpText}}
+            <CE.Description>
+              {{@helpText}}
+            </CE.Description>
+          {{/if}}
 
-        <div class="toolbar-separator"></div>
+          <CE.Generic>
+            {{yield}}
 
-        <Hds::Copy::Button
-          @container={{@container}}
-          @text="Copy"
-          @isIconOnly={{true}}
-          @textToCopy={{@value}}
-          @onError={{(fn
-            (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
-          )}}
-          class="transparent"
-          data-test-copy-button={{@value}}
-        />
-      </CE.Generic>
-    </div>
+            {{#if @example}}
+              <Hds::Button
+                class="toolbar-button"
+                @icon="reload"
+                @text="Restore example"
+                disabled={{not @value}}
+                {{on "click" this.restoreExample}}
+                data-test-restore-example
+              />
+            {{/if}}
+
+            <div class="toolbar-separator"></div>
+
+            <Hds::Copy::Button
+              @container={{@container}}
+              @text="Copy"
+              @isIconOnly={{true}}
+              @textToCopy={{@value}}
+              @onError={{(fn
+                (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
+              )}}
+              class="transparent"
+              data-test-copy-button={{@value}}
+            />
+          </CE.Generic>
+        </div>
+      {{/if}}
+    </Hds::CodeEditor>
   {{/if}}
-</Hds::CodeEditor>
+</div>
