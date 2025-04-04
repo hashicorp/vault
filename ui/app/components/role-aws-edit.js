@@ -43,6 +43,7 @@ export default RoleEdit.extend({
       });
     },
 
+    // TODO: address linting errors
     codemirrorUpdated(attr, val, codemirror) {
       codemirror.performLint();
       const hasErrors = codemirror.state.lint.marked.length > 0;
