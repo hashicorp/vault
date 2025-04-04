@@ -35,8 +35,10 @@ func getStartEndTime(d *framework.FieldData, billingStartTime time.Time) (time.T
 		return startTime, endTime, warnings, err
 	}
 	// ensure end time is adjusted to the past month if it falls within the current month
-	if timeutil.IsCurrentMonth(endTime, time.Now().UTC()) {
-		endTime = timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, timeutil.StartOfMonth(endTime)))
+	// or is in a future month
+	now := time.Now().UTC()
+	if !endTime.Before(timeutil.StartOfMonth(now)) {
+		endTime = timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, timeutil.StartOfMonth(now)))
 		warnings.CurrentMonthAsEndTimeIgnored = true
 	}
 

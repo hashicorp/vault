@@ -101,10 +101,16 @@ func Test_ActivityLog_LoseLeadership(t *testing.T) {
 	testhelpers.WaitForStandbyNode(t, standby)
 	testhelpers.EnsureCoreUnsealed(t, cluster, standby)
 
+	endPastMonth := timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now))
+	startPastMonth := timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now))
 	resp, err := newActive.Client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
-		"end_time":   {timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
-		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
+		"end_time":   {endPastMonth.Format(time.RFC3339)},
+		"start_time": {startPastMonth.Format(time.RFC3339)},
 	})
+	require.NoError(t, err)
+	// verify start and end times in the response
+	require.Equal(t, resp.Data["start_time"], startPastMonth.UTC().Format(time.RFC3339))
+	require.Equal(t, resp.Data["end_time"], endPastMonth.UTC().Format(time.RFC3339))
 	monthResponse := getMonthsData(t, resp)
 	require.Len(t, monthResponse, 1)
 	require.Equal(t, 10, monthResponse[0].NewClients.Counts.Clients)
@@ -133,13 +139,17 @@ func Test_ActivityLog_ClientsOverlapping(t *testing.T) {
 	require.NoError(t, err)
 
 	now := time.Now().UTC()
-
+	endPastMonth := timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now))
+	startTwoMonthsAgo := timeutil.StartOfMonth(timeutil.MonthsPreviousTo(2, now))
 	// query from the beginning of the second last month to the end of the previous month
 	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
-		"end_time":   {timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
-		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(2, now)).Format(time.RFC3339)},
+		"end_time":   {endPastMonth.Format(time.RFC3339)},
+		"start_time": {startTwoMonthsAgo.Format(time.RFC3339)},
 	})
 	require.NoError(t, err)
+	// verify start and end times in the response
+	require.Equal(t, resp.Data["start_time"], startTwoMonthsAgo.UTC().Format(time.RFC3339))
+	require.Equal(t, resp.Data["end_time"], endPastMonth.UTC().Format(time.RFC3339))
 	monthsResponse := getMonthsData(t, resp)
 	require.Len(t, monthsResponse, 2)
 	for _, month := range monthsResponse {
@@ -181,12 +191,16 @@ func Test_ActivityLog_ClientsNewCurrentMonth(t *testing.T) {
 	require.NoError(t, err)
 
 	now := time.Now().UTC()
-
+	endPastMonth := timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now))
+	startPastMonth := timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now))
 	// query from the beginning of the second last month to the end of the previous month
 	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
-		"end_time":   {timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
-		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
+		"end_time":   {endPastMonth.Format(time.RFC3339)},
+		"start_time": {startPastMonth.Format(time.RFC3339)},
 	})
+	// verify start and end times in the response
+	require.Equal(t, resp.Data["start_time"], startPastMonth.UTC().Format(time.RFC3339))
+	require.Equal(t, resp.Data["end_time"], endPastMonth.UTC().Format(time.RFC3339))
 	require.NoError(t, err)
 	monthsResponse := getMonthsData(t, resp)
 	require.Len(t, monthsResponse, 1)
@@ -212,12 +226,17 @@ func Test_ActivityLog_EmptyDataMonths(t *testing.T) {
 	require.NoError(t, err)
 
 	now := time.Now().UTC()
+	endPastMonth := timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now))
+	startFourMonthsAgo := timeutil.StartOfMonth(timeutil.MonthsPreviousTo(4, now))
 	// query from the beginning of 4 months ago to the end of past month
 	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
-		"end_time":   {timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
-		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(4, now)).Format(time.RFC3339)},
+		"end_time":   {endPastMonth.Format(time.RFC3339)},
+		"start_time": {startFourMonthsAgo.Format(time.RFC3339)},
 	})
 	require.NoError(t, err)
+	// verify start and end times in the response
+	require.Equal(t, resp.Data["start_time"], startFourMonthsAgo.UTC().Format(time.RFC3339))
+	require.Equal(t, resp.Data["end_time"], endPastMonth.UTC().Format(time.RFC3339))
 	monthsResponse := getMonthsData(t, resp)
 
 	require.Len(t, monthsResponse, 4)
@@ -254,22 +273,28 @@ func Test_ActivityLog_FutureEndDate(t *testing.T) {
 	require.NoError(t, err)
 
 	now := time.Now().UTC()
+	startThreeMonthsAgo := timeutil.StartOfMonth(timeutil.MonthsPreviousTo(3, now))
 	// query from the beginning of 3 months ago to beginning of next month
 	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
 		"end_time":   {timeutil.StartOfNextMonth(now).Format(time.RFC3339)},
-		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(3, now)).Format(time.RFC3339)},
+		"start_time": {startThreeMonthsAgo.Format(time.RFC3339)},
 	})
 	require.NoError(t, err)
+	endPastMonth := timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now))
+	// verify start and end times in the response
+	// end time must be adjusted to past month if within current month or in future date
+	require.Equal(t, resp.Data["start_time"], startThreeMonthsAgo.UTC().Format(time.RFC3339))
+	require.Equal(t, resp.Data["end_time"], endPastMonth.UTC().Format(time.RFC3339))
 	monthsResponse := getMonthsData(t, resp)
 
-	require.Len(t, monthsResponse, 4)
+	require.Len(t, monthsResponse, 3)
 
 	// Get the last month of data in the slice
-	expectedCurrentMonthData := monthsResponse[3]
+	expectedCurrentMonthData := monthsResponse[2]
 	expectedTime, err := time.Parse(time.RFC3339, expectedCurrentMonthData.Timestamp)
 	require.NoError(t, err)
-	if !timeutil.IsCurrentMonth(expectedTime, now) {
-		t.Fatalf("final month data is not current month")
+	if !timeutil.IsCurrentMonth(expectedTime, endPastMonth) {
+		t.Fatalf("final month data is not past month")
 	}
 }
 
@@ -295,11 +320,16 @@ func Test_ActivityLog_ClientTypeResponse(t *testing.T) {
 			require.NoError(t, err)
 
 			now := time.Now().UTC()
+			endPastMonth := timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now))
+			startPastMonth := timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now))
 			resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
-				"end_time":   {timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
-				"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
+				"end_time":   {endPastMonth.Format(time.RFC3339)},
+				"start_time": {startPastMonth.Format(time.RFC3339)},
 			})
 			require.NoError(t, err)
+			// verify start and end times in the response
+			require.Equal(t, resp.Data["start_time"], startPastMonth.UTC().Format(time.RFC3339))
+			require.Equal(t, resp.Data["end_time"], endPastMonth.UTC().Format(time.RFC3339))
 
 			total := getTotals(t, resp)
 			require.Equal(t, 10, tc.responseCountsFn(total))
@@ -352,10 +382,15 @@ func Test_ActivityLog_MountDeduplication(t *testing.T) {
 		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
 	require.NoError(t, err)
 
+	endPastMonth := timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now))
+	startTwoMonthsAgo := timeutil.StartOfMonth(timeutil.MonthsPreviousTo(2, now))
 	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
-		"end_time":   {timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
-		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(2, now)).Format(time.RFC3339)},
+		"end_time":   {endPastMonth.Format(time.RFC3339)},
+		"start_time": {startTwoMonthsAgo.Format(time.RFC3339)},
 	})
+	// verify start and end times in the response
+	require.Equal(t, resp.Data["start_time"], startTwoMonthsAgo.UTC().Format(time.RFC3339))
+	require.Equal(t, resp.Data["end_time"], endPastMonth.UTC().Format(time.RFC3339))
 
 	require.NoError(t, err)
 	byNamespace := getNamespaceData(t, resp)
@@ -501,14 +536,18 @@ func TestHandleQuery_MultipleMounts(t *testing.T) {
 			_, err = activityLogGenerator.Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
 			require.NoError(t, err)
 
-			endOfLastMonth := timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, time.Now()).UTC())
+			endPastMonth := timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, time.Now()).UTC())
+			startThreeMonthsAgo := timeutil.StartOfMonth(timeutil.MonthsPreviousTo(3, time.Now().UTC()))
 
 			// query activity log
 			resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
-				"end_time":   {endOfLastMonth.Format(time.RFC3339)},
-				"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(3, time.Now().UTC())).Format(time.RFC3339)},
+				"end_time":   {endPastMonth.Format(time.RFC3339)},
+				"start_time": {startThreeMonthsAgo.Format(time.RFC3339)},
 			})
 			require.NoError(t, err)
+			// verify start and end times in the response
+			require.Equal(t, resp.Data["start_time"], startThreeMonthsAgo.UTC().Format(time.RFC3339))
+			require.Equal(t, resp.Data["end_time"], endPastMonth.UTC().Format(time.RFC3339))
 
 			// Ensure that the month response is the same as the totals, because all clients
 			// are new clients and there will be no approximation in the single month partial
