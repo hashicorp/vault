@@ -38,8 +38,8 @@ const (
 )
 
 type StartEndTimesWarnings struct {
-	TimesAlignedToBilling        bool
-	CurrentMonthAsEndTimeIgnored bool
+	TimesAlignedToBilling      bool
+	EndTimeAdjustedToPastMonth bool
 }
 
 // activityQueryPath is available in every namespace
@@ -343,7 +343,6 @@ func (b *SystemBackend) handleClientExport(ctx context.Context, req *logical.Req
 }
 
 func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	var timesAligned bool
 	b.Core.activityLogLock.RLock()
 	a := b.Core.activityLog
 	b.Core.activityLogLock.RUnlock()
@@ -383,10 +382,7 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 	if queryContainsEstimates(startTime, endTime) {
 		warnings = append(warnings, WarningCurrentMonthIsAnEstimate)
 	}
-	if timesAligned {
-		warnings = append(warnings, WarningProvidedStartAndEndTimesIgnored)
-	}
-	if timeWarnings.CurrentMonthAsEndTimeIgnored {
+	if timeWarnings.EndTimeAdjustedToPastMonth {
 		warnings = append(warnings, WarningEndTimeAsCurrentMonthIgnored)
 	}
 	if timeWarnings.TimesAlignedToBilling {

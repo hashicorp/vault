@@ -130,7 +130,7 @@ func TestGetStartEndTime_EndTimeAdjustedToPastMonth(t *testing.T) {
 			require.NoError(t, err)
 			require.WithinDuration(t, tc.expectedStart, start, time.Second, "Expected start time did not match")
 			require.WithinDuration(t, tc.expectedEnd, end, time.Second, "Expected end time did not match")
-			require.Equal(t, tc.expectWarning, warnings.CurrentMonthAsEndTimeIgnored)
+			require.Equal(t, tc.expectWarning, warnings.EndTimeAdjustedToPastMonth)
 		})
 	}
 }

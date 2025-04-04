@@ -39,7 +39,7 @@ func getStartEndTime(d *framework.FieldData, billingStartTime time.Time) (time.T
 	now := time.Now().UTC()
 	if !endTime.Before(timeutil.StartOfMonth(now)) {
 		endTime = timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, timeutil.StartOfMonth(now)))
-		warnings.CurrentMonthAsEndTimeIgnored = true
+		warnings.EndTimeAdjustedToPastMonth = true
 	}
 
 	return startTime, endTime, warnings, nil
