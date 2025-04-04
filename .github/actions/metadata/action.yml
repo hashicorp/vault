@@ -102,20 +102,39 @@ runs:
         if [ '${{ github.event_name }}' = 'pull_request' ]; then
           is_draft='${{ github.event.pull_request.draft }}'
 
-          # Determine our labels. If our event type is pull_request this is rather straight forward. If
-          # our even_type is push (merge) we'll need to look up the pull request associated with the
-          # commit and get the labels. This will return the label names as an array.
-          labels=$(jq -rc <<< '${{ toJSON(github.event.pull_request.labels.*.name) }}')
+          # Determine our pull request labels. We specifically look them up via the pulls API
+          # because at some point they stopped being reliable in the
+          # github.event.pull_request.labels.*.name context.
+
+          labels=$(gh api "/repos/${{ github.repository }}/issues/${{ github.event.number }}/labels" | jq -erc '. | map(.name)')
         else
+          # We can assume we're being triggered for a 'push' (a merge)
           is_draft='false'
 
-          # Look up the labels for the pull request that is associated with the last commit. If
-          # there are none set it as a JSON encoded empty array.
-          if pr_number=$(gh api "/repos/${{ github.repository }}/commits/${{ github.ref }}/pulls" | jq -erc '.[0].number'); then
-            if ! labels=$(gh api "/repos/${{ github.repository }}/issues/${pr_number}/labels" | jq -erc '. | map(.name)'); then
-              labels='[]'
-            fi
-          else
+          # Look up the pull request labels for the PR that is associated with
+          # the commit. If there are none set it as a JSON encoded empty array.
+          repo=$(printf ${{ github.repository }} | cut -d "/" -f2)
+          if ! labels=$(gh api graphql -F repo="$repo" -F sha="${{ steps.vault-metadata.outputs.vault-revision }}" -f query='
+            query($repo: String!, $sha: String!){
+              repository(name: $repo, owner: "hashicorp") {
+                commit: object(expression: $sha) {
+                  ... on Commit {
+                    associatedPullRequests(first:1){
+                      edges{
+                        node{
+                          labels(first: 10) {
+                            nodes {
+                              name
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }' | jq -erc '.data.repository.commit.associatedPullRequests.edges[0].node.labels.nodes | map(.name)');
+          then
             labels='[]'
           fi
         fi
