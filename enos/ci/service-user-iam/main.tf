@@ -74,6 +74,7 @@ data "aws_iam_policy_document" "aws_nuke" {
       "iam:ListAccessKeys",
       "iam:ListAccountAliases",
       "iam:ListGroupsForUser",
+      "iam:ListMFADevices",
       "iam:ListUserPolicies",
       "iam:ListUserTags",
       "iam:ListUsers",
