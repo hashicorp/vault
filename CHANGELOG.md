@@ -241,7 +241,6 @@ seal unwrapper was performing the read twice, and would also issue an unnecessar
 * database/mssql: Fix a bug where contained databases would silently fail root rotation if a custom root rotation statement was not provided. [[GH-29399](https://github.com/hashicorp/vault/pull/29399)]
 * database: Fix a bug where static role passwords are erroneously rotated across backend restarts when using skip import rotation. [[GH-29537](https://github.com/hashicorp/vault/pull/29537)]
 * export API: Normalize the start_date parameter to the start of the month as is done in the sys/counters API to keep the results returned from both of the API's consistent. [[GH-29562](https://github.com/hashicorp/vault/pull/29562)]
-* export API: Normalize the start_date parameter to the start of the month as is done in the sys/counters API to keep the results returned from both of the API's consistent.
 * identity/oidc (enterprise): Fix delays in rotation and invalidation of OIDC keys when there are too many namespaces.
 The Cache-Control header returned by the identity/oidc/.well-known/keys endpoint now depends only on the named keys for
 the queried namespace. [[GH-29312](https://github.com/hashicorp/vault/pull/29312)]
@@ -348,7 +347,6 @@ BUG FIXES:
 * core: Fix bug when if failing to persist the barrier keyring to track encryption counts, the number of outstanding encryptions remains added to the count, overcounting encryptions. [[GH-29506](https://github.com/hashicorp/vault/pull/29506)]
 * database: Fix a bug where static role passwords are erroneously rotated across backend restarts when using skip import rotation. [[GH-29537](https://github.com/hashicorp/vault/pull/29537)]
 * export API: Normalize the start_date parameter to the start of the month as is done in the sys/counters API to keep the results returned from both of the API's consistent. [[GH-29562](https://github.com/hashicorp/vault/pull/29562)]
-* export API: Normalize the start_date parameter to the start of the month as is done in the sys/counters API to keep the results returned from both of the API's consistent.
 * identity/oidc (enterprise): Fix delays in rotation and invalidation of OIDC keys when there are too many namespaces.
 The Cache-Control header returned by the identity/oidc/.well-known/keys endpoint now depends only on the named keys for
 the queried namespace. [[GH-29312](https://github.com/hashicorp/vault/pull/29312)]
@@ -719,7 +717,7 @@ BUG FIXES:
 * auth/ldap: Fix a bug that does not properly delete users and groups by first converting their names to lowercase when case senstivity option is off. [[GH-29922](https://github.com/hashicorp/vault/pull/29922)]
 * core: Fix Azure authentication for seal/managed keys to work for both federated workload identity and managed user identities.  Fixes regression for federated workload identities. [[GH-29792](https://github.com/hashicorp/vault/pull/29792)]
 * core: Fix a bug that prevents certain loggers from writing to a log file. [[GH-29917](https://github.com/hashicorp/vault/pull/29917)]
-* export API: Normalize the start_date parameter to the start of the month as is done in the sys/counters API to keep the results returned from both of the API's consistent.
+* export API: Normalize the start_date parameter to the start of the month as is done in the sys/counters API to keep the results returned from both of the API's consistent. [[GH-29562](https://github.com/hashicorp/vault/pull/29562)]
 * plugins (enterprise): Fix plugin registration with artifact when a binary for the same plugin is already present in the plugin directory.
 * plugins: plugin registration should honor the `plugin_tmpdir` config [[GH-29978](https://github.com/hashicorp/vault/pull/29978)]
 * secrets/azure: Upgrade plugin to v0.19.3 which reverts role name changes to no longer be a GUID.
@@ -1286,7 +1284,7 @@ BUG FIXES:
 * auth/ldap: Fix a bug that does not properly delete users and groups by first converting their names to lowercase when case senstivity option is off. [[GH-29922](https://github.com/hashicorp/vault/pull/29922)]
 * core: Fix Azure authentication for seal/managed keys to work for both federated workload identity and managed user identities.  Fixes regression for federated workload identities. [[GH-29792](https://github.com/hashicorp/vault/pull/29792)]
 * core: Fix a bug that prevents certain loggers from writing to a log file. [[GH-29917](https://github.com/hashicorp/vault/pull/29917)]
-* export API: Normalize the start_date parameter to the start of the month as is done in the sys/counters API to keep the results returned from both of the API's consistent.
+* export API: Normalize the start_date parameter to the start of the month as is done in the sys/counters API to keep the results returned from both of the API's consistent. [[GH-29562](https://github.com/hashicorp/vault/pull/29562)]
 * plugins (enterprise): Fix plugin registration with artifact when a binary for the same plugin is already present in the plugin directory.
 * plugins: plugin registration should honor the `plugin_tmpdir` config [[GH-29978](https://github.com/hashicorp/vault/pull/29978)]
 * secrets/azure: Upgrade plugin to v0.17.4 which reverts role name changes to no longer be a GUID.
