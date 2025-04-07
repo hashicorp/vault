@@ -7,7 +7,8 @@ description: The AWS Secret Manager source imports secrets from AWS to Vault.
 # AWS secret import source
 
 Use the AWS source to import secret data from AWS Secret Manager into your Vault instance.
-The user must provide the necessary AWS credentials as environment variables or as mentioned in the additional arguments section.
+The user must provide the necessary AWS credentials as environment variables or as mentioned in the additional arguments section.To use dynamic
+credentials with AWS import, ensure the [AWS secrets engine](/vault/docs/secrets/aws) is already configured.
 
 ## Argument reference
 
@@ -39,14 +40,20 @@ Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-1) for arguments common 
 
 ## Example
 
-Define and configure the `my-aws-source-1` AWS source:
+Define and configure the `my-aws-source-1` AWS source.. This uses the configured static credentials.
 
 ```hcl
 source_aws {
   name = "my-aws-source-1"
   credentials_profile = "my-cred-profile-name"
 }
+```
 
+Define and configure the `my-aws-source-2` AWS source. 
+This uses the AWS secrets engine configured at the given `vault_address` to generate dynamic secrets in order to scan secrets in AWS Secret Manager.
+
+
+```hcl
 source_aws {
   name = "my-aws-source-2"
   vault_mount_path = "aws"
