@@ -1160,7 +1160,9 @@ func (c *ServerCommand) Run(args []string) int {
 				"if the machine was not provisioned with enough RAM. Disabling " +
 				"mlock can prevent this issue, but can result in the reveal of " +
 				"plaintext secrets when memory is swapped to disk, so it is only " +
-				"recommended on systems with encrypted swap or where swap is disabled.",
+				"recommended on systems with encrypted swap or where swap is disabled." +
+				"Prior to Vault 1.20, disable_mlock defaulted to 'false' when the" +
+				"value was not set explicitly.",
 		))
 		return 1
 	}
