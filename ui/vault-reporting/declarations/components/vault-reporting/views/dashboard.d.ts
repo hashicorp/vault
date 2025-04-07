@@ -8,6 +8,7 @@ import type { UsageDashboardData, SimpleDatum, getUsageDataFunction } from '../.
 import type { IconName } from '@hashicorp/flight-icons/svg';
 interface CounterBlock {
     title: string;
+    tooltipMessage: string;
     data: number;
     icon?: IconName;
     suffix?: string;
@@ -16,6 +17,7 @@ interface CounterBlock {
 export interface SSUViewDashboardSignature {
     Args: {
         onFetchUsageData: getUsageDataFunction;
+        isVaultDedicated: boolean;
     };
     Blocks: {
         default: [];
@@ -25,10 +27,13 @@ export interface SSUViewDashboardSignature {
 export default class SSUViewDashboard extends Component<SSUViewDashboardSignature> {
     data?: UsageDashboardData;
     lastUpdatedTime: string;
+    error?: unknown;
     constructor(owner: unknown, args: SSUViewDashboardSignature['Args']);
-    fetchAllData: () => Promise<void>;
+    fetchAllData: () => void;
     getBarChartData: (map: Record<string, number>) => SimpleDatum[];
+    get isVaultDedicated(): boolean;
     get counters(): CounterBlock[];
+    get namespace(): string;
 }
 export {};
 //# sourceMappingURL=dashboard.d.ts.map

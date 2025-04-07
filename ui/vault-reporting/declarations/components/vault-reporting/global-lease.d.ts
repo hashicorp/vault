@@ -18,5 +18,6 @@ export default class GlobalLease extends Component<GlobalLeaseSignature> {
     get percentage(): number;
     get progressFillClass(): "ssu-global-lease__progress-fill--low" | "ssu-global-lease__progress-fill--medium" | "ssu-global-lease__progress-fill--high";
     get formattedCount(): string;
+    get percentageString(): string;
 }
 //# sourceMappingURL=global-lease.d.ts.map
