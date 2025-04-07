@@ -9,12 +9,12 @@ import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
-import editPage from 'vault/tests/pages/secrets/backend/kv/edit-secret';
 import showPage from 'vault/tests/pages/secrets/backend/kv/show';
 import listPage from 'vault/tests/pages/secrets/backend/list';
 import authPage from 'vault/tests/pages/auth';
 import { assertSecretWrap } from 'vault/tests/helpers/components/secret-edit-toolbar';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import { createSecret } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 
 module('Acceptance | secrets/cubbyhole/create', function (hooks) {
   setupApplicationTest(hooks);
@@ -41,10 +41,8 @@ module('Acceptance | secrets/cubbyhole/create', function (hooks) {
       'navigates to the list page'
     );
 
-    await listPage.create();
-    await settled();
-    await editPage.createSecret(kvPath, 'foo', 'bar');
-    await settled();
+    await click(SES.createSecretLink);
+    await createSecret(kvPath, 'foo', 'bar');
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.secrets.backend.show',
