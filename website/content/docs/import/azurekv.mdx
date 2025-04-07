@@ -6,7 +6,8 @@ description: The Azure KeyVault source imports secrets from Azure to Vault.
 
 # Azure secret import source
 
-Use the Azure source to import secret data from Azure KeyVault into your Vault instance.
+Use the Azure source to import secret data from Azure KeyVault into your Vault instance.To use dynamic
+credentials with Azure import, ensure the [Azure secrets engine](/vault/docs/secrets/azure) is already configured.
 
 ## Argument reference
 
@@ -49,18 +50,24 @@ by a preceding `az login`.
 
 ## Example
 
-Define and configure the `my-azure-source-1` Azure source:
+Define and configure the `my-azure-source-1` Azure source. This uses the configured static credentials.
 
 ```hcl
 source_azure {
   name = "my-azure-source-1"
   key_vault_uri = "https://keyvault-1234abcd.vault.azure.net"
+  tenant_id = "<your tenant id>"
+  client_id = "<your client id>"
+  credentials_file = "/path/to/client-secret"
 }
 ```
 
+Define and configure the `my-azure-source-2` Azure source. 
+This uses the Azure secrets engine configured at the given `vault_address` to generate dynamic secrets in order to scan secrets in Azure KeyVault.
+
 ```hcl
 source_azure {
-  name             = "my-azure-source-1"
+  name             = "my-azure-source-2"
   vault_mount_path = "azure"
   vault_role_name  = "my-azure-role-1"
   vault_namespace  = "ns-1"
