@@ -22,7 +22,7 @@ func TestRotateRoot(t *testing.T) {
 	ctx := context.Background()
 
 	b, store := createBackendWithStorage(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
 	defer cleanup()
 	// set up auth config
 	req := &logical.Request{
