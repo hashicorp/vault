@@ -39,17 +39,21 @@ Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-1) for arguments common 
 
 ## Example
 
-Define and configure the `my-gcp-source-1` GCP source:
-
-```hcl
-source_gcp {
-  credentials_file = "/path/to/credentials-file"
-}
-```
+Define and configure the `my-gcp-source-1` GCP source. This uses the static credential provided by the `credentials_file`.
 
 ```hcl
 source_gcp {
   name             = "my-gcp-source-1"
+  credentials_file = "/path/to/credentials-file"
+}
+```
+
+Define and configure the `my-gcp-source-2` GCP source. 
+This uses the GCP secrets engine confiured at the given `vault_address` to generate dynamic secrets in order to scan GCP secrets.
+
+```hcl
+source_gcp {
+  name             = "my-gcp-source-2"
   vault_mount_path = "gcp"
   vault_role_name  = "my-gcp-role-1"
   vault_namespace  = "ns-1"
