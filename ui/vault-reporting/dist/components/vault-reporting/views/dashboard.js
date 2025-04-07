@@ -1,11 +1,13 @@
 import Component from '@glimmer/component';
+import { concat } from '@ember/helper';
 import SSUReportingCounter from '../counter.js';
 import SSUReportingHorizontalBarChart from '../horizontal-bar-chart.js';
 import GlobalLease from '../global-lease.js';
 import ClusterReplication from '../cluster-replication.js';
+import DashboardExport from '../dashboard/export.js';
 import { tracked } from '@glimmer/tracking';
 import { on } from '@ember/modifier';
-import { HdsTextDisplay, HdsSeparator, HdsCardContainer, HdsButton, HdsLinkInline, HdsPageHeader } from '@hashicorp/design-system-components/components';
+import { HdsTextDisplay, HdsSeparator, HdsCardContainer, HdsAlert, HdsButton, HdsLinkInline, HdsBadge, HdsPageHeader } from '@hashicorp/design-system-components/components';
 import { precompileTemplate } from '@ember/template-compilation';
 import { setComponentTemplate } from '@ember/component';
 import { g, i } from 'decorator-transforms/runtime';
@@ -25,22 +27,24 @@ class SSUViewDashboard extends Component {
     });
   }
   #lastUpdatedTime = (i(this, "lastUpdatedTime"), void 0);
+  static {
+    g(this.prototype, "error", [tracked]);
+  }
+  #error = (i(this, "error"), void 0);
   constructor(owner, args) {
     super(owner, args);
-    this.fetchAllData().catch(error => {
-      console.error('Error fetching data', error);
-    });
+    this.fetchAllData();
   }
   fetchAllData = async () => {
     try {
+      this.error = undefined;
       this.data = await this.args.onFetchUsageData();
       this.lastUpdatedTime = new Intl.DateTimeFormat('en-US', {
         dateStyle: 'medium',
         timeStyle: 'medium'
       }).format(new Date());
-    } catch {
-      this.data = undefined;
-      //TODO: Handle error state https://hashicorp.atlassian.net/browse/HVT-6838
+    } catch (e) {
+      this.error = e;
     }
   };
   getBarChartData = (map = {}) => {
@@ -51,31 +55,45 @@ class SSUViewDashboard extends Component {
       };
     });
   };
+  get isVaultDedicated() {
+    return this.args.isVaultDedicated ?? true;
+  }
   get counters() {
     return [{
       title: 'Child namespaces',
+      tooltipMessage: this.isVaultDedicated ? 'Total number of direct child namespaces under the root/ namespace' : 'Total number of direct child namespaces under the admin/ namespace',
       data: this.data?.namespaces ?? 0,
-      link: '/access/namespaces'
+      link: 'access/namespaces'
     }, {
       title: 'KV secrets',
+      tooltipMessage: this.isVaultDedicated ? 'Combined count of 1,000 KV v1 secrets and 245 KV v2 secrets' : 'Total number of 1,000 KV secrets',
       data: (this.data?.kvv1_secrets ?? 0) + (this.data?.kvv2_secrets ?? 0)
     }, {
       title: 'Secrets sync',
+      tooltipMessage: this.isVaultDedicated ? 'Total number of destinations (e.g. third-party integrations) synced with secrets from this namespace' : '',
       data: this.data?.secrets_sync ?? 0,
-      link: '/sync/secrets'
+      link: 'sync/secrets'
     }, {
       title: 'PKI roles',
+      tooltipMessage: this.isVaultDedicated ? 'Total number of PKI roles configured in this namespace' : '',
       data: this.data?.pki?.total_roles ?? 0
     }];
   }
+  get namespace() {
+    return this.isVaultDedicated ? 'Admin' : 'Root';
+  }
   static {
-    setComponentTemplate(precompileTemplate("\n    <div class=\"dashboard\">\n      <HdsPageHeader as |PH|>\n        <PH.Title>Vault Usage</PH.Title>\n        <PH.Description>\n          {{#if this.lastUpdatedTime}}\n            Last updated\n            {{this.lastUpdatedTime}}.\n          {{/if}}\n          Don't see what you're looking for?\n          <HdsLinkInline @icon=\"external-link\" @href=\"#\">Share feedback.</HdsLinkInline>\n        </PH.Description>\n        <PH.Actions>\n          <HdsButton @text=\"Refresh\" @icon=\"reload\" @iconPosition=\"leading\" @color=\"secondary\" {{on \"click\" this.fetchAllData}} />\n        </PH.Actions>\n      </HdsPageHeader>\n      {{#if this.data}}\n        <HdsCardContainer @hasBorder={{true}} class=\"dashboard__counters\" data-test-dashboard-counters>\n          {{#each this.counters as |counter|}}\n            <ReportingCounter @title={{counter.title}} @count={{counter.data}} @icon={{counter.icon}} @suffix={{counter.suffix}} @link={{counter.link}} />\n          {{/each}}\n        </HdsCardContainer>\n        <HdsSeparator />\n        <HdsTextDisplay @tag=\"h2\" @size=\"400\" class=\"dashboard__inventory-header\">Resource inventory</HdsTextDisplay>\n        <div class=\"dashboard__viz-blocks\">\n          <div>\n            <ReportingHorizontalBarChart @data={{this.getBarChartData this.data.secret_engines}} @title=\"Secret engines\" @description=\"Breakdown of secret engines for this namespace(s)\" @linkUrl=\"secrets\" class=\"dashboard__viz-block\" data-test-dashboard-secret-engines />\n            <GlobalLease @count={{this.data.lease_count_quotas.global_lease_count_quota.count}} @quota={{this.data.lease_count_quotas.global_lease_count_quota.capacity}} class=\"dashboard__viz-block\" data-test-dashboard-lease-count />\n          </div>\n\n          <div>\n            <ReportingHorizontalBarChart @data={{this.getBarChartData this.data.auth_methods}} @title=\"Authentication methods\" @description=\"Breakdown of authentication methods\" @linkUrl=\"access\" class=\"dashboard__viz-block\" data-test-dashboard-auth-methods />\n\n            <ClusterReplication @isDisasterRecoveryPrimary={{this.data.replication_status.dr_primary}} @disasterRecoveryState={{this.data.replication_status.dr_state}} @isPerformancePrimary={{this.data.replication_status.pr_primary}} @performanceState={{this.data.replication_status.pr_state}} data-test-dashboard-cluster-replication />\n          </div>\n        </div>\n      {{/if}}\n    </div>\n  ", {
+    setComponentTemplate(precompileTemplate("\n    <div class=\"dashboard\">\n      <HdsPageHeader as |PH|>\n        <PH.Title>Vault Usage\n          <HdsBadge class=\"dashboard__badge\" @size=\"small\" @type=\"inverted\" @text={{concat \"Namespace: \" this.namespace}} />\n        </PH.Title>\n        <PH.Description>\n          {{#if this.lastUpdatedTime}}\n            Last updated\n            {{this.lastUpdatedTime}}.\n          {{/if}}\n          Don't see what you're looking for?\n          <HdsLinkInline @icon=\"external-link\" @href=\"#\">Share feedback.</HdsLinkInline>\n        </PH.Description>\n        <PH.Actions>\n          <HdsButton @text=\"Refresh\" @icon=\"reload\" @iconPosition=\"leading\" @color=\"secondary\" data-test-dashboard-refresh-button {{on \"click\" this.fetchAllData}} />\n          <DashboardExport @data={{this.data}} />\n        </PH.Actions>\n      </HdsPageHeader>\n      {{#if this.error}}\n        <HdsAlert data-test-dashboard-error @type=\"inline\" @color=\"critical\" class=\"dashboard__error\" as |A|>\n          <A.Title>Error</A.Title>\n          <A.Description data-test-dashboard-error-description>An error\n            occurred, please try again.</A.Description>\n        </HdsAlert>\n      {{/if}}\n      {{#if this.data}}\n        <HdsCardContainer @hasBorder={{true}} class=\"dashboard__counters\" data-test-dashboard-counters>\n          {{#each this.counters as |counter|}}\n            <ReportingCounter @title={{counter.title}} @tooltipMessage={{counter.tooltipMessage}} @count={{counter.data}} @icon={{counter.icon}} @suffix={{counter.suffix}} @link={{counter.link}} />\n          {{/each}}\n        </HdsCardContainer>\n        <HdsSeparator />\n        <HdsTextDisplay @tag=\"h2\" @size=\"400\" class=\"dashboard__inventory-header\">Resource inventory</HdsTextDisplay>\n        <div class=\"dashboard__viz-blocks\">\n          <div>\n            <ReportingHorizontalBarChart @data={{this.getBarChartData this.data.secret_engines}} @title=\"Secret engines\" @description=\"Breakdown of secret engines for this namespace(s)\" @linkUrl=\"secrets\" class=\"dashboard__viz-block\" data-test-dashboard-secret-engines />\n            <GlobalLease @count={{this.data.lease_count_quotas.global_lease_count_quota.count}} @quota={{this.data.lease_count_quotas.global_lease_count_quota.capacity}} class=\"dashboard__viz-block\" data-test-dashboard-lease-count />\n          </div>\n\n          <div>\n            <ReportingHorizontalBarChart @data={{this.getBarChartData this.data.auth_methods}} @title=\"Authentication methods\" @description=\"Breakdown of authentication methods\" @linkUrl=\"access\" class=\"dashboard__viz-block\" data-test-dashboard-auth-methods />\n\n            <ClusterReplication @isDisasterRecoveryPrimary={{this.data.replication_status.dr_primary}} @disasterRecoveryState={{this.data.replication_status.dr_state}} @isPerformancePrimary={{this.data.replication_status.pr_primary}} @performanceState={{this.data.replication_status.pr_state}} data-test-dashboard-cluster-replication />\n          </div>\n        </div>\n      {{/if}}\n    </div>\n  ", {
       strictMode: true,
       scope: () => ({
         HdsPageHeader,
+        HdsBadge,
+        concat,
         HdsLinkInline,
         HdsButton,
         on,
+        DashboardExport,
+        HdsAlert,
         HdsCardContainer,
         ReportingCounter: SSUReportingCounter,
         HdsSeparator,
