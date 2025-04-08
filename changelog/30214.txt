@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/transit: fix a panic when rotating on a managed key returns an error
+```
