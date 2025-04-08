@@ -656,12 +656,50 @@ scenario "autopilot" {
     }
   }
 
+  step "verify_raft_node_removed" {
+    description = <<-EOF
+      Verify that the removed nodes are marked as such
+    EOF
+    module      = semverconstraint(var.vault_upgrade_initial_version, ">=1.19.0-0") ? "vault_verify_removed_node" : "vault_verify_removed_node_shim"
+    depends_on = [
+      step.create_vault_cluster,
+      step.create_vault_cluster_targets,
+      step.get_updated_vault_cluster_ips,
+      step.raft_remove_peers,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_raft_removed_after_restart,
+      quality.vault_raft_removed_statuses,
+      quality.vault_raft_removed_cant_rejoin,
+    ]
+
+    variables {
+      add_back_nodes    = false
+      cluster_port      = step.create_vault_cluster.cluster_port
+      hosts             = step.create_vault_cluster.hosts
+      ip_version        = matrix.ip_version
+      listener_port     = step.create_vault_cluster.listener_port
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      vault_leader_host = step.get_updated_vault_cluster_ips.leader_host
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
+      vault_root_token  = step.create_vault_cluster.root_token
+      vault_seal_type   = matrix.seal
+      vault_unseal_keys = matrix.seal == "shamir" ? step.create_vault_cluster.unseal_keys_hex : null
+    }
+  }
+
   step "remove_old_nodes" {
     description = global.description.shutdown_nodes
     module      = module.shutdown_multiple_nodes
     depends_on = [
       step.create_vault_cluster,
-      step.raft_remove_peers
+      step.raft_remove_peers,
+      step.verify_raft_node_removed,
     ]
 
     providers = {
