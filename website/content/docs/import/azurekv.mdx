@@ -9,6 +9,10 @@ description: The Azure KeyVault source imports secrets from Azure to Vault.
 Use the Azure source to import secret data from Azure KeyVault into your Vault instance.To use dynamic
 credentials with Azure import, ensure the [Azure secrets engine](/vault/docs/secrets/azure) is already configured.
 
+<Note>
+All secrets including expired ones will imported from the provided Azure KeyVault URI
+</Note>
+
 ## Argument reference
 
 Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-1) for arguments common to all source types.
