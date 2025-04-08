@@ -16,6 +16,10 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 )
 
+// DefaultVersion is the default version of the container to pull.
+// NOTE: This is currently pinned to a sha instead of "master", see: https://github.com/rroemhild/docker-test-openldap/issues/62
+const DefaultVersion = "sha256:f4d9c5ba97f9662e9aea082b4aa89233994ca6e232abc1952d5d90da7e16b0eb"
+
 func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ldaputil.ConfigEntry) {
 	// note: this image isn't supported on arm64 architecture in CI.
 	// but if you're running on Apple Silicon, feel free to comment out the code below locally.
