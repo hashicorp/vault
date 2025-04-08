@@ -28,7 +28,7 @@ func TestRecovery(t *testing.T) {
 	{
 		conf := vault.CoreConfig{
 			Physical:     inm,
-			DisableMlock: false,
+			DisableMlock: true,
 		}
 		opts := vault.TestClusterOptions{
 			HandlerFunc: http.Handler,

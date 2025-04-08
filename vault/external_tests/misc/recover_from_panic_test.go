@@ -20,7 +20,7 @@ func TestRecoverFromPanic(t *testing.T) {
 			"noop": vault.NoopBackendFactory,
 		},
 		EnableRaw:    true,
-		DisableMlock: false,
+		DisableMlock: true,
 	}
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
