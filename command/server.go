@@ -1144,8 +1144,6 @@ func (c *ServerCommand) Run(args []string) int {
 	isMlockSet := func() bool {
 		// DisableMlock key has been found and thus explicitly set
 		return strutil.StrListContainsCaseInsensitive(config.SharedConfig.FoundKeys, "DisableMlock") ||
-			// mlock is disabled and hence has been explicitly set
-			config.SharedConfig.DisableMlock ||
 			// envvar set
 			envMlock != ""
 	}
