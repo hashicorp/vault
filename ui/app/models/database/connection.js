@@ -200,6 +200,15 @@ export default Model.extend({
   }),
 
   // ENTERPRISE ONLY
+  skip_static_role_rotation_import: attr({
+    editType: 'toggleButton',
+    label: 'Rotate static roles immediately',
+    helperTextEnabled: 'Vault automatically rotates static roles upon their initial creation.',
+    helperTextDisabled: 'Vault will not automatically rotate static role passwords upon creation.',
+    defaultValue: false,
+    isOppositeValue: true,
+  }),
+
   self_managed: attr('boolean', {
     subText:
       'Allows onboarding static roles with a rootless connection configuration. Mutually exclusive with username and password. If true, will force verify_connection to be false.',

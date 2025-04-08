@@ -1412,19 +1412,6 @@
         "path": "secrets"
       },
       {
-        "title": "Active Directory",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "secrets/ad"
-          },
-          {
-            "title": "Migration Guide",
-            "path": "secrets/ad/migration-guide"
-          }
-        ]
-      },
-      {
         "title": "AliCloud",
         "path": "secrets/alicloud"
       },
@@ -1827,7 +1814,8 @@
       },
       {
         "title": "Venafi (Certificates)",
-        "path": "secrets/venafi"
+        "path": "secrets/venafi",
+        "hidden": true
       }
     ]
   },
@@ -2837,6 +2825,10 @@
         "path": "release-notes"
       },
       {
+        "title": "1.19.0",
+        "path": "release-notes/1.19.0"
+      },
+      {
         "title": "1.18.0",
         "path": "release-notes/1.18.0"
       },
@@ -3168,7 +3160,7 @@
         "title": "Manage policies as code",
         "routes": [
           {
-            "title": "Mange Vault policies with Sentinel",
+            "title": "Manage Vault policies with Sentinel",
             "path": "enterprise/sentinel"
           },
           {

@@ -21,9 +21,6 @@ import type SyncDestinationModel from 'vault/vault/models/sync/destination';
 interface Args {
   destinations: Array<SyncDestinationModel>;
   totalVaultSecrets: number;
-  isActivated: boolean;
-  licenseHasSecretsSync: boolean;
-  isHvdManaged: boolean;
 }
 
 export default class SyncSecretsDestinationsPageComponent extends Component<Args> {
@@ -73,7 +70,7 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
 
     const errors = [errorMsg];
 
-    if (this.args.isHvdManaged) {
+    if (this.flags.isHvdManaged) {
       errors.push(
         'Secrets Sync is available for Plus tier clusters only. Please check the tier of your cluster to enable Secrets Sync.'
       );

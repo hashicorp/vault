@@ -1,3 +1,8 @@
+@use '../utils/box-shadow_variables';
+@use '../utils/color_variables';
+@use '../utils/font_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -18,13 +23,13 @@ $dark-gray: #535f73;
   }
 }
 .calendar-title {
-  padding: $spacing-10 $spacing-12;
+  padding: size_variables.$spacing-10 size_variables.$spacing-12;
 }
 
 .select-year {
   grid-area: select-year;
   margin: 10px 24px;
-  font-weight: $font-weight-bold;
+  font-weight: font_variables.$font-weight-bold;
   display: flex;
   justify-content: space-between;
   align-items: first baseline;
@@ -36,7 +41,7 @@ $dark-gray: #535f73;
 
 .border-col {
   grid-area: border-col;
-  background-color: $ui-gray-200;
+  background-color: color_variables.$ui-gray-200;
 }
 
 .calendar-widget-container {
@@ -46,9 +51,9 @@ $dark-gray: #535f73;
     'calendar-widget';
   grid-template-columns: 1fr;
   grid-template-rows: 0.7fr 3fr;
-  box-shadow: $box-shadow, $box-shadow-middle;
+  box-shadow: box-shadow_variables.$box-shadow, box-shadow_variables.$box-shadow-middle;
   background-color: white;
-  border-radius: $radius;
+  border-radius: size_variables.$radius;
 }
 
 .calendar-widget-grid {

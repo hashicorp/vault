@@ -45,6 +45,12 @@ func (c *Core) IdentityStore() *IdentityStore {
 	return c.identityStore
 }
 
+func (i *IdentityStore) GetDisableLowerCasedNames() bool {
+	i.lock.RLock()
+	defer i.lock.RUnlock()
+	return i.disableLowerCasedNames
+}
+
 func (i *IdentityStore) resetDB() error {
 	var err error
 
@@ -58,20 +64,22 @@ func (i *IdentityStore) resetDB() error {
 
 func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendConfig, logger log.Logger) (*IdentityStore, error) {
 	iStore := &IdentityStore{
-		view:             config.StorageView,
-		logger:           logger,
-		router:           core.router,
-		redirectAddr:     core.redirectAddr,
-		localNode:        core,
-		namespacer:       core,
-		metrics:          core.MetricSink(),
-		totpPersister:    core,
-		tokenStorer:      core,
-		entityCreator:    core,
-		mountLister:      core,
-		mfaBackend:       core.loginMFABackend,
-		aliasLocks:       locksutil.CreateLocks(),
-		renameDuplicates: core.FeatureActivationFlags,
+		view:                   config.StorageView,
+		logger:                 logger,
+		router:                 core.router,
+		redirectAddr:           core.redirectAddr,
+		localNode:              core,
+		namespacer:             core,
+		metrics:                core.MetricSink(),
+		totpPersister:          core,
+		groupUpdater:           core,
+		tokenStorer:            core,
+		entityCreator:          core,
+		mountLister:            core,
+		mfaBackend:             core.loginMFABackend,
+		aliasLocks:             locksutil.CreateLocks(),
+		renameDuplicates:       core.FeatureActivationFlags,
+		activationErrorHandler: core,
 	}
 
 	// Create a memdb instance, which by default, operates on lower cased
@@ -751,7 +759,7 @@ func (i *IdentityStore) invalidateEntityBucket(ctx context.Context, key string) 
 				}
 			}
 
-			err = i.upsertEntityInTxn(ctx, txn, bucketEntity, nil, false)
+			_, err = i.upsertEntityInTxn(ctx, txn, bucketEntity, nil, false, false)
 			if err != nil {
 				i.logger.Error("failed to update entity in MemDB", "entity_id", bucketEntity.ID, "error", err)
 				return
@@ -1415,7 +1423,7 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 	}
 
 	// Update MemDB and persist entity object
-	err = i.upsertEntityInTxn(ctx, txn, entity, nil, true)
+	_, err = i.upsertEntityInTxn(ctx, txn, entity, nil, true, false)
 	if err != nil {
 		return entity, entityCreated, err
 	}

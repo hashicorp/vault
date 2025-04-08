@@ -1,25 +1,24 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
-<div class="field is-grouped" ...attributes>
-  <div class="control is-expanded">
+<div class="field" ...attributes>
+  <Hds::Form::TextInput::Field
+    @type="text"
+    @id={{@id}}
+    @value={{this.searchInput}}
+    {{on "keyup" this.inputChanged}}
+    placeholder={{@placeholder}}
+    autocomplete="off"
+    data-test-input-search={{@id}}
+    as |F|
+  >
     {{#if @label}}
-      <label for={{@id}} class="is-label">{{@label}}</label>
+      <F.Label>{{@label}}</F.Label>
     {{/if}}
     {{#if @subText}}
-      <p class="sub-text">{{@subText}}</p>
+      <F.HelperText>{{@subText}}</F.HelperText>
     {{/if}}
-    <Input
-      id={{@id}}
-      class="input"
-      @type="text"
-      @value={{this.searchInput}}
-      {{on "keyup" this.inputChanged}}
-      placeholder={{@placeholder}}
-      autocomplete="off"
-      data-test-input-search={{@id}}
-    />
-  </div>
+  </Hds::Form::TextInput::Field>
 </div>

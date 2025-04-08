@@ -149,12 +149,10 @@ relevant functionality is only supported in Vault Enterprise:
   auth methods are not replicated nor (if a secondary) removed by replication.
   Local auth mounts also generate entities for tokens issued. The entity will
   be replicated across clusters and the aliases generated on the local auth
-  mount will be local to the cluster. If the goal of marking an auth method
-  as `local` was to comply with GDPR guidelines, then care must be taken to not
-  set the data pertaining to local auth mount or local auth mount aliases in the
-  metadata of the associated entity. Metadata related to local auth mount aliases
-  can be stored as `custom_metadata` on the alias itself which will also be
-  retained locally to the cluster.
+  mount will be local to the cluster. Entities created by local auth mounts
+  are still replicated to other clusters, however it is possible to prevent
+  data pertaining to the local auth mount, including related aliases, from being
+  replicated by omitting them from the entity metadata.
 
   ~> ** Warning:** Remember, policies when using replication secondaries are
   validated by the local cluster. An administrator that can set up a local auth

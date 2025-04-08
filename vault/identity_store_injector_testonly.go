@@ -359,7 +359,7 @@ func (i *IdentityStore) createDuplicateEntityAliases() framework.OperationFunc {
 			flags.Count = 2
 		}
 
-		ids, _, err := i.CreateDuplicateEntityAliasesInStorage(ctx, flags)
+		ids, err := i.CreateDuplicateEntityAliasesInStorage(ctx, flags)
 		if err != nil {
 			i.logger.Error("error creating duplicate entities", "error", err)
 			return logical.ErrorResponse("error creating duplicate entities"), err
@@ -500,58 +500,64 @@ func (i *IdentityStore) CreateDuplicateGroupsInStorage(ctx context.Context, flag
 	return groupIDs, nil
 }
 
-// CreateDuplicateEntityAliasesInStorage creates n entities with a duplicate alias in storage
-// This should only be used in testing
+// CreateDuplicateEntityAliasesInStorage creates n entities with a duplicate
+// alias in storage This should only be used in testing. This method can only
+// create non-local aliases. Local aliases are stored differently.
 //
 // Pass in mount type and accessor to create the entities
-func (i *IdentityStore) CreateDuplicateEntityAliasesInStorage(ctx context.Context, flags DuplicateEntityAliasFlags) ([]string, []string, error) {
-	var bucketKeys []string
+func (i *IdentityStore) CreateDuplicateEntityAliasesInStorage(ctx context.Context, flags DuplicateEntityAliasFlags) ([]string, error) {
 	var entityIDs []string
-
+	if flags.NamespaceID == "" {
+		flags.NamespaceID = namespace.RootNamespaceID
+	}
 	for d := 0; d < flags.Count; d++ {
-		entityID := fmt.Sprintf("%s-%d", flags.Name, d)
+		aliasID, err := uuid.GenerateUUID()
+		if err != nil {
+			return nil, err
+		}
 
-		policyID := fmt.Sprintf("policy-%s-%d", flags.Name, d)
+		// Alias name is either exact match or different case
+		dupAliasName := flags.Name
+		if flags.DifferentCase {
+			dupAliasName = randomCase(flags.Name)
+		}
 
-		entityDupName := fmt.Sprintf("%s-entity-dup-%d", flags.Name, d)
-		aliasDupName := fmt.Sprintf("%s-alias-dup", flags.Name)
+		// In real life alias dupes are due to races where they were auto-created
+		// along with the entities they point to. When we auto create entities like
+		// this they get random names so never collide with each other directly so
+		// don't create entities with duplicate names for this case as it doesn't
+		// match what customers who get in this state see. Instead use the same code
+		// path as CreateOfFetchEntity.
+		e := new(identity.Entity)
+		e.NamespaceID = flags.NamespaceID
+		err = i.sanitizeEntity(ctx, e)
+		if err != nil {
+			return nil, err
+		}
+		entityIDs = append(entityIDs, e.ID)
 
 		a := &identity.Alias{
-			ID:            entityID,
-			CanonicalID:   entityID,
+			ID:            aliasID,
+			CanonicalID:   e.ID,
 			MountAccessor: flags.CommonAliasFlags.MountAccessor,
-			Name:          aliasDupName,
+			Name:          dupAliasName,
 		}
-
-		bucketKey := i.entityPacker.BucketKey(entityID)
-		bucketKeys = append(bucketKeys, bucketKey)
-		entityIDs = append(entityIDs, entityID)
-
-		e := &identity.Entity{
-			ID:   entityID,
-			Name: entityDupName,
-			Aliases: []*identity.Alias{
-				a,
-			},
-			NamespaceID: namespace.RootNamespaceID,
-			BucketKey:   bucketKey,
-			Policies:    []string{policyID},
-		}
+		e.UpsertAlias(a)
 
 		entity, err := ptypes.MarshalAny(e)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		item := &storagepacker.Item{
 			ID:      e.ID,
 			Message: entity,
 		}
 		if err = i.entityPacker.PutItem(ctx, item); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
-	return entityIDs, bucketKeys, nil
+	return entityIDs, nil
 }
 
 // CreateDuplicateLocalEntityAliasInStorage creates a single local entity alias

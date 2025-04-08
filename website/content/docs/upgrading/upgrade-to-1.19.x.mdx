@@ -14,7 +14,17 @@ Vault 1.18. **Please read carefully**.
 
 ## Important changes
 
-### Transit support for Ed25519ph and Ed25519ctx signatures
+### Azure auth plugin requires `resource_group_name`, `vm_name`, and `vmss_name` to match the JWT claims on login
+
+Vault versions before 1.19.1, 1.18.7, 1.17.14, and 1.16.18, do not strictly
+validate the `resource_group_name`, `vm_name`, and `vmss_name` parameters
+against their token claims during login with Azure authentication.
+
+Refer to the [Token validation](/vault/docs/auth/azure#token-validation) section
+of the Azure authN plugin guide for more information on the new validation
+requirements.
+
+### Transit support for Ed25519ph and Ed25519ctx signatures ((#ed25519))
 
 **NOTE**: This only applies to Transit Ed25519 keys.
 
@@ -42,7 +52,7 @@ based on the table below.
 | CE            | true      | any value other than sha2-512 | An error is returned                       | Pure Ed25519                      |
 | CE            | true      | sha2-512                      | An error is returned (not supported on CE) | Pure Ed25519                      |
 
-### Identity system duplicate cleanup
+### Identity system duplicate cleanup ((#dedupe))
 
 **Users should review their server logs after upgrading to see if identity
 duplicates are reported.**
@@ -71,6 +81,24 @@ In previous versions of Vault, multiple users could be returned when searching f
 with `upndomain` configured, and the last user would be selected. As of 1.19.x, such searches will
 error if multiple users are returned.
 
+### Anonymous usage data collection ((#anon-data)) <EnterpriseAlert inline="true" />
+
+Vault 1.19.0 collects
+[anonymous usage data](/vault/docs/enterprise/license/product-usage-reporting#anonymous-product-usage-reporting)
+about the Vault cluster and automatically sends the cluster usage data with the
+standard utilization data reported through automated license reporting.
+
+### RADIUS authentication is no longer case sensitive ((#case-sensitive))
+
+As of Vault 1.19.0 the RADIUS authentication plugin will not force case sensitivity when entered.
+
+
 ## Known issues and workarounds
 
 @include 'known-issues/duplicate-hsm-key.mdx'
+
+@include 'known-issues/1_19-failures-after-external-group-changes-standby.mdx'
+
+@include 'known-issues/static-role-premature-rotations.mdx'
+
+@include 'known-issues/log_file_flush_issue.mdx'

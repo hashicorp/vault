@@ -1,3 +1,11 @@
+@use '../utils/box-shadow_variables';
+@use '../utils/color_variables';
+@use '../utils/font_variables';
+@use '../utils/size_variables';
+@use '../core/box.scss';
+@use '../helper-classes/general.scss';
+@use '../helper-classes/spacing.scss';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -17,9 +25,9 @@
   .center-inside-row {
     width: 50%;
     margin-left: auto;
-    font-size: $size-8;
-    font-weight: $font-weight-semibold;
-    color: $ui-gray-500;
+    font-size: size_variables.$size-8;
+    font-weight: font_variables.$font-weight-semibold;
+    color: color_variables.$ui-gray-500;
   }
 
   .center-display {
@@ -35,19 +43,25 @@
 
 a.list-item-row,
 .linked-block.list-item-row {
-  transition: box-shadow $speed, margin $speed, padding $speed;
+  transition:
+    box-shadow size_variables.$speed,
+    margin size_variables.$speed,
+    padding size_variables.$speed;
   will-change: box-shadow, margin, padding;
 
   &:hover,
   &:focus,
   &:active {
-    margin-left: #{-$spacing-10} !important;
-    margin-right: #{-$spacing-10} !important;
-    padding-left: $spacing-10;
-    padding-right: $spacing-10;
+    margin-left: #{-(size_variables.$spacing-10)} !important;
+    margin-right: #{-(size_variables.$spacing-10)} !important;
+    padding-left: size_variables.$spacing-10;
+    padding-right: size_variables.$spacing-10;
     position: relative;
-    box-shadow: 0 2px 0 -1px $grey-light, 0 -2px 0 -1px $grey-light, $box-link-hover-shadow,
-      $box-shadow-middle;
+    box-shadow:
+      0 2px 0 -1px color_variables.$grey-light,
+      0 -2px 0 -1px color_variables.$grey-light,
+      box-shadow_variables.$box-link-hover-shadow,
+      box-shadow_variables.$box-shadow-middle;
   }
 
   &.no-destination {

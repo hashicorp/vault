@@ -55,6 +55,7 @@ presets:
       EC2InternetGatewayAttachment:
         - property: DefaultVPC
           value: "true"
+
   olderthan:
     # Filters resources by age (when available)
     # TIME_LIMIT replaced in CI
@@ -91,12 +92,21 @@ presets:
       IAMRole:
         - property: tag:hc-config-as-code
           value: "honeybee"
+        - property: Name
+          type: glob
+          value: "vault-assumed-role-credentials-demo"
       IAMRolePolicy:
         - property: tag:role:hc-config-as-code
           value: "honeybee"
+        - property: role:RoleName
+          type: glob
+          value: "vault-assumed-role-credentials-demo"
       IAMRolePolicyAttachment:
         - property: tag:role:hc-config-as-code
           value: "honeybee"
+        - property: Name
+          type: glob
+          value: "vault-assumed-role-credentials-demo"
 
   enos:
     # Existing CI to be cleaned up later
@@ -396,3 +406,4 @@ resource-types:
     - WorkSpacesWorkspace
     - XRayGroup
     - XRaySamplingRule
+
