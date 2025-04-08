@@ -97,7 +97,7 @@ to specify where the configuration is.
   the read cache used by the physical storage subsystem. This will very
   significantly impact performance.
 
-- `disable_mlock` `(bool: false)` – Required to be explicitly set
+- `disable_mlock` `(bool: <required>)` – Required to be explicitly set
   if using integrated storage. Disables the server from executing the `mlock`
   syscall. `mlock` prevents memory from  being swapped to disk.
   Disabling `mlock` is not recommended unless using

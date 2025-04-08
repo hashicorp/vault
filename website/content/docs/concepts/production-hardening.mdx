@@ -217,10 +217,9 @@ not be suitable for every deployment.
 -	**Consider memory usage when configuring disable_mlock with integrated storage**.
   When `disable_mlock` is set to false (i.e., `mlock` is enabled), Vault prevents
   memory from being swapped to disk. This enhances security by ensuring sensitive
-  data remains in RAM, but it increases the risk of out-of-memory (OOM) errors
-  if the system is under-provisioned. Conversely, setting `disable_mlock` to true
+  Vault data remains in RAM, but it increases the risk of out-of-memory (OOM) errors
+  if the system is under-provisioned. Conversely, setting `disable_mlock` to `true`
   allows the operating system to swap memory to disk under pressure, which can
   reduce the likelihood of OOM conditions but introduces a potential risk of
-  secrets being exposed through the swap file. Given the security posture
-  recommended in this guide, enabling `mlock` and provisioning sufficient memory
-  for Vault’s workload—especially when using integrated storage—is advised.
+  secrets being exposed through the swap file. Encrypting swap is one possible
+  way of preventing the swap from being inspected.
