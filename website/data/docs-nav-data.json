@@ -1865,7 +1865,7 @@
         "title": "Overview",
         "path": "import",
         "badge": {
-          "text": "ALPHA",
+          "text": "BETA",
           "type": "outlined",
           "color": "highlight"
         }
