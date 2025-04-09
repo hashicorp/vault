@@ -10,9 +10,9 @@ description: The `/sys/utilization-report` produces a snapshot report of this cl
 
 @include 'alerts/restricted-admin.mdx'
 
-The `/sys/utilization-report` endpoint is a read-only endpoint that produces a snapshot
-report if this cluster's utilization from all namespaces, giving several high-level insights,
-including information about mounts, leases, lease count quotas, PKI, and KV secrets.
+The `/sys/utilization-report` endpoint returns a snapshot utilization report
+for the targeted cluster. The report covers all namespaces and includes
+high-level insights on mounts, leases, lease count quotas, PKI, and KV secrets.
 
 ## Get utilization report
 
