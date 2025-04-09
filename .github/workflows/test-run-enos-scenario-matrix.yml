@@ -4,6 +4,9 @@ name: enos
 on:
   # Only trigger this working using workflow_call. This workflow requires many
   # secrets that must be inherited from the caller workflow.
+  push:
+    branches:
+      - enos/VAULT-35305_pki_test
   workflow_call:
     inputs:
       # The name of the artifact that we're going to use for testing. This should
