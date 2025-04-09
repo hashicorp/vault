@@ -1,0 +1,18 @@
+### Authorization failures using Azure federated identity credentials
+
+A regression was introduced when attempting to fix automated unsealing
+using managed identity based credentials. The regression occurs when
+using Azure federated identity credentials supplying the client ID
+via an environment variable or through configuration while not
+supplying the tenant id and client secret.
+
+The regression causes authorization failures within auto-unseal,
+managed keys and seal wrapping.
+
+#### Workaround
+
+None at this time.
+
+#### Impacted versions
+
+Affects 1.19.0-rc1, 1.18.5, 1.17.12, 1.16.16
