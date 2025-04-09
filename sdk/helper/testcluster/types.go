@@ -42,6 +42,7 @@ type VaultNodeConfig struct {
 	//   Storage   *Storage `hcl:"-"`
 	//   HAStorage *Storage `hcl:"-"`
 	//   ClusterName string `hcl:"cluster_name"`
+	// 	 DisableMlock bool  `hcl:"disable_mlock"`
 
 	// Not configurable yet:
 	//   Listeners []*Listener `hcl:"-"`
@@ -78,7 +79,6 @@ type VaultNodeConfig struct {
 	LogRequestsLevel               string        `json:"log_requests_level"`
 	EnableResponseHeaderRaftNodeID bool          `json:"enable_response_header_raft_node_id"`
 	LicensePath                    string        `json:"license_path"`
-	DisableMlock                   bool          `json:"disable_mlock"`
 }
 
 type ClusterNode struct {

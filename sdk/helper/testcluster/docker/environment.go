@@ -708,8 +708,7 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 
 	//// disable_mlock is required for working in the Docker environment with
 	//// custom plugins
-	disableMlock := true
-	vaultCfg["disable_mlock"] = disableMlock
+	vaultCfg["disable_mlock"] = opts.DisableMlock
 
 	protocol := "https"
 	if opts.DisableTLS {
@@ -731,7 +730,6 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 
 	if opts.VaultNodeConfig != nil {
 		localCfg := *opts.VaultNodeConfig
-		localCfg.DisableMlock = disableMlock
 		if opts.VaultNodeConfig.LicensePath != "" {
 			b, err := os.ReadFile(opts.VaultNodeConfig.LicensePath)
 			if err != nil || len(b) == 0 {
@@ -815,6 +813,7 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 		"SKIP_SETCAP=true",
 		"VAULT_LOG_FORMAT=json",
 		"VAULT_LICENSE=" + opts.VaultLicense,
+		"VAULT_DISABLE_MLOCK=" + strconv.FormatBool(opts.DisableMlock),
 	}
 	envs = append(envs, opts.Envs...)
 
