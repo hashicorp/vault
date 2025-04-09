@@ -61,8 +61,8 @@ if [ "${VERIFY_PKI_CERTS}" = true ]; then
     echo "Verifying certificate contents..."
     openssl x509 -in "${TEST_DIR}/${TMP_FILE}" -text -noout || fail "The certificate appears to be improperly configured or contains errors"
     CURR_CERT_SERIAL=$(echo "${CERT}" | tr -d ':' | tr '[:lower:]' '[:upper:]')
-    TMP_CERT_SUBJECT=$(openssl x509 -in "${TEST_DIR}/${TMP_FILE}" -noout -subject | awk -F'= ' '{print $2}')
-    TMP_CERT_ISSUER=$(openssl x509 -in "${TEST_DIR}/${TMP_FILE}" -noout -issuer | awk -F'= ' '{print $2}')
+    TMP_CERT_SUBJECT=$(openssl x509 -in "${TEST_DIR}/${TMP_FILE}" -noout -subject | awk -F'CN=' '{print "CN=" $2}')
+    TMP_CERT_ISSUER=$(openssl x509 -in "${TEST_DIR}/${TMP_FILE}" -noout -issuer | awk -F'CN=' '{print "CN=" $2}')
     TMP_CERT_SERIAL=$(openssl x509 -in "${TEST_DIR}/${TMP_FILE}" -noout -serial | awk -F'=' '{print $2}')
     [[ "${TMP_CERT_SUBJECT}" == *"${COMMON_NAME}.com"* ]] || fail "Subject is incorrect. Actual Subject: ${TMP_CERT_SUBJECT}"
     [[ "${TMP_CERT_ISSUER}" == *"${COMMON_NAME}.com"* ]] || fail "Issuer is incorrect. Actual Issuer: ${TMP_CERT_ISSUER}"
