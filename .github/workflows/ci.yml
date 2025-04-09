@@ -463,7 +463,7 @@ jobs:
       # to secrets.
       - if: ${{ needs.setup.outputs.is-fork == 'false' }}
         name: Download failure summaries
-        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
         with:
           pattern: failure-summary-*.md
           path: failure-summaries
