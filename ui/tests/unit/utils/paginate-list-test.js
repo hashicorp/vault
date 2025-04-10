@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { paginate } from 'core/utils/paginate-list';
 import { module, test } from 'qunit';
 
