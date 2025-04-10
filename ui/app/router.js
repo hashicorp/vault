@@ -169,6 +169,7 @@ Router.map(function () {
           this.mount('pki');
           this.route('index', { path: '/' });
           this.route('configuration', function () {
+            this.route('tune');
             // only CONFIGURABLE_SECRET_ENGINES can be configured and access the edit route
             this.route('edit');
           });
@@ -215,6 +216,16 @@ Router.map(function () {
       this.route('not-found', { path: '/*path' });
     });
     this.route('not-found', { path: '/*path' });
+
+    this.route('cluyster', function () {
+      this.route('secrets', function () {
+        this.route('backend', function () {
+          this.route('configuration', function () {
+            this.route('tune');
+          });
+        });
+      });
+    });
   });
   if (config.environment !== 'production') {
     addDocfyRoutes(this);
