@@ -159,6 +159,8 @@ export default class SecretCreateOrUpdate extends Component {
     }
     this.checkRows();
   }
+
+  // TODO: address linting errors
   @action
   codemirrorUpdated(val, codemirror) {
     this.error = null;
