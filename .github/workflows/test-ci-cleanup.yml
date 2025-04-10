@@ -28,7 +28,7 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     container:
-      image: rebuy/aws-nuke # for ekristen version: https://github.com/ekristen/aws-nuke/pkgs/container/aws-nuke
+      image: ghcr.io/ekristen/aws-nuke:v3.51.0 # https://github.com/ekristen/aws-nuke/pkgs/container/aws-nuke
       options:
          --user root
          -t
@@ -61,7 +61,7 @@ jobs:
         # Filter STDERR because it's super noisy about things we don't have access to
         # Remove --no-dry-run to do dry run
         run: |
-          aws-nuke -c aws-nuke.yml -q --no-dry-run --force 2>/tmp/aws-nuke-error.log || true
+          aws-nuke run -c aws-nuke.yml -q --no-dry-run --force 2>/tmp/aws-nuke-error.log | grep -v "level=error" || true
 
   check-quotas:
     needs: [ setup, aws-nuke ]
