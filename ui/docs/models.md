@@ -35,7 +35,7 @@ Other patterns and where they belong in relation to the Model:
 
 - **Validations** - While an argument can go either way about this one, we are going to continue defining these on the Model using our handy [withModelValidation decorator](#withmodelvalidations). The state of validation is directly correlated to a given Record which is a strong reason to keep it on the Model. **TL;DR: Lives on Model**
 
-- **[Capabilities](#capabilities)** - Capabilities are calculated by fetching permissions by path -- often multiple paths, based on the same information we need to fetch the Record data (eg. backend, ID). When using `lazyCapabilities` on the model we kick off one API request for each of the paths we need, while using the capabilities service `fetchMultiplePaths` method we can make one request with all the required paths included. Our best practice is to fetch capabilities outside of the Model (perhaps as part of a route model, or on a user action such as dropdown click open). A downside to this approach is that the API may get re-requested per page we check the capability (eg. list view dropdown and then detail view) -- but we can optimize this in the future by first checking the store for `capabilities` of matching path/ID before sending the API request. **TL;DR: Lives in route or component where they are used**
+- **[Capabilities](#capabilities)** - Capabilities are calculated by fetching permissions by path -- often multiple paths, based on the same information we need to fetch the Record data (eg. backend, ID). When using `lazyCapabilities` on the model we kick off one API request for each of the paths we need, while using the capabilities service `fetch` method we can make one request with all the required paths included. Our best practice is to fetch capabilities outside of the Model (perhaps as part of a route model, or on a user action such as dropdown click open). A downside to this approach is that the API may get re-requested per page we check the capability (eg. list view dropdown and then detail view) -- but we can optimize this in the future by first checking the store for `capabilities` of matching path/ID before sending the API request. **TL;DR: Lives in route or component where they are used**
 
 ## Patterns
 
@@ -218,14 +218,14 @@ async getExportCapabilities(ns = '') {
 ```
 
 **Multiple capabilities checked at once**
-When there are multiple capabilities paths to check, the recommended approach is to use the [capabilities service's](../app/services/capabilities.ts) `fetchMultiplePaths` method. It will pass all the paths in a single API request instead of making a capabilities-self call for each path as the other techniques do. In [this example](../lib/kv/addon/routes/secret.js), we get the capabilities as part of the route's model hook and then return the relevant `can*` values:
+When there are multiple capabilities paths to check, the recommended approach is to use the [capabilities service's](../app/services/capabilities.ts) `fetch` method. It will pass all the paths in a single API request instead of making a capabilities-self call for each path as the other techniques do. In [this example](../lib/kv/addon/routes/secret.js), we get the capabilities as part of the route's model hook and then return the relevant `can*` values:
 
 ```js
 async fetchCapabilities(backend, path) {
   const metadataPath = `${backend}/metadata/${path}`;
   const dataPath = `${backend}/data/${path}`;
   const subkeysPath = `${backend}/subkeys/${path}`;
-  const perms = await this.capabilities.fetchMultiplePaths([metadataPath, dataPath, subkeysPath]);
+  const perms = await this.capabilities.fetch([metadataPath, dataPath, subkeysPath]);
   // returns values keyed at the path
   return {
     metadata: perms[metadataPath],

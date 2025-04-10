@@ -17,7 +17,7 @@ export default Route.extend(ClusterRoute, {
 
   async fetchCapabilities() {
     const enablePath = (type, cluster) => `sys/replication/${type}/${cluster}/enable`;
-    const perms = await this.capabilities.fetchMultiplePaths([
+    const perms = await this.capabilities.fetch([
       enablePath('dr', 'primary'),
       enablePath('dr', 'primary'),
       enablePath('performance', 'secondary'),
