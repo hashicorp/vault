@@ -17,10 +17,10 @@ import type FlashMessageService from 'vault/services/flash-messages';
 import SecretEngineModel from 'vault/models/secret-engine';
 
 /**
- * @module SecretListList handles the display of the list of secret engines, including the filtering.
+ * @module SecretEngineList handles the display of the list of secret engines, including the filtering.
  * 
  * @example
- * <SecretList::List
+ * <SecretEngine::List
     @secretEngineModels={{this.model}}
     />
  *

@@ -17,7 +17,7 @@ import { UNSUPPORTED_ENGINES, mountableEngines } from 'vault/helpers/mountable-s
 
 module('Acceptance | secret-engine list view', function (hooks) {
   setupApplicationTest(hooks);
-  // ARG TODO move a lot of this to the component test secret-list/list-test.js
+  // ARG TODO move a lot of this to the component test secret-engine/list-test.js
 
   hooks.beforeEach(function () {
     this.uid = uuidv4();

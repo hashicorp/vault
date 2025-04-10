@@ -11,7 +11,7 @@ import { createSecretsEngine } from 'vault/tests/helpers/secret-engine/secret-en
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
-module('Integration | Component | secret-list/list', function (hooks) {
+module('Integration | Component | secret-engine/list', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
