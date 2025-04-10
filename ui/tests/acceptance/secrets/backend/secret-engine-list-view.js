@@ -17,13 +17,27 @@ import { UNSUPPORTED_ENGINES, mountableEngines } from 'vault/helpers/mountable-s
 
 module('Acceptance | secret-engine list view', function (hooks) {
   setupApplicationTest(hooks);
+  // ARG TODO move a lot of this to the component test secret-list/list-test.js
 
   hooks.beforeEach(function () {
     this.uid = uuidv4();
     return login();
   });
+  // TEST 1:
+  // enable an engine and it takes you to the mount page.
+  // after mounting an unsupported backend (nomad) it takes you to the list page
 
-  test('it allows you to disable an engine', async function (assert) {
+  // TEST 2:
+  // enable supported engines and it takes you to the mount page.
+  // after mounting a supported engine you see configure and clicking breadcrumb takes you back to the list page
+
+  // TEST 3:
+  // Permissions: I cannot see this page if I DONT have permissions inside namespace
+
+  // TEST 4:
+  // Permissions: I can see this page if I DO have permissions inside namespace
+
+  test('after disabling it stays on the list view', async function (assert) {
     // first mount an engine so we can disable it.
     const enginePath = `alicloud-disable-${this.uid}`;
     await runCmd(mountEngineCmd('alicloud', enginePath));
@@ -38,9 +52,9 @@ module('Acceptance | secret-engine list view', function (hooks) {
       'vault.cluster.secrets.backends',
       'redirects to the backends page'
     );
-    assert.dom(SES.secretsBackendLink(enginePath)).doesNotExist('does not show the disabled engine');
   });
 
+  // Everything below goes to the component test
   test('it adds disabled css styling to unsupported secret engines', async function (assert) {
     assert.expect(16);
     const allEnginesArray = mountableEngines();

@@ -8,6 +8,7 @@ import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { dropTask } from 'ember-concurrency';
+import errorMessage from 'vault/utils/error-message';
 
 import type Router from '@ember/routing/router';
 import type Store from '@ember-data/store';
@@ -108,10 +109,10 @@ export default class ConfigureWif extends Component<Args> {
       this.flashMessages.success(`The ${engineType} Secrets Engine at ${path} has been disabled.`);
     } catch (err) {
       this.flashMessages.danger(
-        `There was an error disabling the ${engineType} Secrets Engine at ${path}: ${err.errors.join(' ')}.`
+        `There was an error disabling the ${engineType} Secrets Engines at ${path}: ${errorMessage(err)}}.`
       );
     } finally {
-      this.engineToDisable = null;
+      this.engineToDisable = undefined;
     }
   }
 }
