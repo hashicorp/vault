@@ -2,29 +2,54 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
-/* eslint ember/no-computed-properties-in-native-classes: 'warn' */
-import Controller from '@ember/controller';
-import { service } from '@ember/service';
+
+import Component from '@glimmer/component';
 import { action } from '@ember/object';
+import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { dropTask } from 'ember-concurrency';
+import errorMessage from 'vault/utils/error-message';
 
-export default class VaultClusterSecretsBackendController extends Controller {
-  @service flashMessages;
+import type Router from '@ember/routing/router';
+import type Store from '@ember-data/store';
+import type VersionService from 'vault/services/version';
+import type FlashMessageService from 'vault/services/flash-messages';
+import SecretEngineModel from 'vault/models/secret-engine';
 
-  @tracked secretEngineOptions = [];
-  @tracked selectedEngineType = null;
-  @tracked selectedEngineName = null;
-  @tracked engineToDisable = null;
+/**
+ * @module SecretEngineList handles the display of the list of secret engines, including the filtering.
+ * 
+ * @example
+ * <SecretEngine::List
+    @secretEngineModels={{this.model}}
+    />
+ *
+ * @param {array} secretEngineModels - An array of Secret Engine models returned from query on the parent route.
+ */
+
+interface Args {
+  secretEngineModels: Array<SecretEngineModel>;
+}
+
+export default class ConfigureWif extends Component<Args> {
+  @service declare readonly router: Router;
+  @service declare readonly store: Store;
+  @service declare readonly version: VersionService;
+  @service declare readonly flashMessages: FlashMessageService;
+
+  @tracked secretEngineOptions: Array<string> | [] = [];
+  @tracked selectedEngineType: string | undefined = undefined;
+  @tracked selectedEngineName: string | undefined = undefined;
+  @tracked engineToDisable: string | undefined = undefined;
 
   get displayableBackends() {
-    return this.model.filter((backend) => backend.shouldIncludeInList);
+    return this.args.secretEngineModels.filter((backend) => backend.shouldIncludeInList);
   }
 
   get sortedDisplayableBackends() {
     // show supported secret engines first and then organize those by id.
     const sortedBackends = this.displayableBackends.sort(
-      (a, b) => b.isSupportedBackend - a.isSupportedBackend || a.id - b.id
+      (a, b) => Number(b.isSupportedBackend) - Number(a.isSupportedBackend) || a.id.localeCompare(b.id)
     );
 
     // return an options list to filter by engine type, ex: 'kv'
@@ -45,6 +70,7 @@ export default class VaultClusterSecretsBackendController extends Controller {
     return sortedBackends;
   }
 
+  // Filtering & searching
   get secretEngineArrayByType() {
     const arrayOfAllEngineTypes = this.sortedDisplayableBackends.map((modelObject) => modelObject.engineType);
     // filter out repeated engineTypes (e.g. [kv, kv] => [kv])
@@ -64,27 +90,29 @@ export default class VaultClusterSecretsBackendController extends Controller {
   }
 
   @action
-  filterEngineType([type]) {
-    this.selectedEngineType = type;
+  filterEngineType(type: string[]) {
+    const [selectedType] = type;
+    this.selectedEngineType = selectedType;
   }
 
   @action
-  filterEngineName([name]) {
-    this.selectedEngineName = name;
+  filterEngineName(name: string[]) {
+    const [selectedName] = name;
+    this.selectedEngineName = selectedName;
   }
 
   @dropTask
-  *disableEngine(engine) {
+  *disableEngine(engine: SecretEngineModel) {
     const { engineType, path } = engine;
     try {
       yield engine.destroyRecord();
       this.flashMessages.success(`The ${engineType} Secrets Engine at ${path} has been disabled.`);
     } catch (err) {
       this.flashMessages.danger(
-        `There was an error disabling the ${engineType} Secrets Engine at ${path}: ${err.errors.join(' ')}.`
+        `There was an error disabling the ${engineType} Secrets Engines at ${path}: ${errorMessage(err)}}.`
       );
     } finally {
-      this.engineToDisable = null;
+      this.engineToDisable = undefined;
     }
   }
 }

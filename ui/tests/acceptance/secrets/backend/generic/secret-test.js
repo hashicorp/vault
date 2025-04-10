@@ -16,6 +16,8 @@ import consolePanel from 'vault/tests/pages/components/console/ui-panel';
 import authPage from 'vault/tests/pages/auth';
 import { writeSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import { createSecret } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 
 import { create } from 'ember-cli-page-object';
 import { deleteEngineCmd, runCmd } from 'vault/tests/helpers/commands';
@@ -42,8 +44,8 @@ module('Acceptance | secrets/generic/create', function (hooks) {
     );
     assert.strictEqual(listPage.secrets.length, 1, 'lists one secret in the backend');
 
-    await listPage.create();
-    await editPage.createSecret(kvPath, 'foo', 'bar');
+    await click(SES.createSecretLink);
+    await createSecret(kvPath, 'foo', 'bar');
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.secrets.backend.show',
@@ -67,7 +69,7 @@ module('Acceptance | secrets/generic/create', function (hooks) {
     await visit('/vault/secrets');
     await selectChoose('[data-test-component="search-select"]#filter-by-engine-name', path);
     await settled();
-    await click(`[data-test-secrets-backend-link="${path}"]`);
+    await click(SES.secretsBackendLink(path));
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.secrets.backend.kv.list',

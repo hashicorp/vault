@@ -27,7 +27,7 @@ const SELECT = {
   filterBar: '[data-test-component="navigate-input"]',
   delete: '[data-test-confirm-action-trigger]',
   confirmDelete: '[data-test-confirm-button]',
-  createLink: '[data-test-policy-create-link]',
+  createPolicy: '[data-test-policy-create-link]',
   nameInput: '[data-test-policy-input="name"]',
   save: '[data-test-policy-save]',
   createError: '[data-test-message-error]',
@@ -85,7 +85,7 @@ module('Acceptance | policies/acl', function (hooks) {
 
     await visit('/vault/policies/acl');
     // new policy creation
-    await click(SELECT.createLink);
+    await click(SELECT.createPolicy);
 
     await fillIn(SELECT.nameInput, policyName);
     codemirror().setValue(policyString);
@@ -105,7 +105,7 @@ module('Acceptance | policies/acl', function (hooks) {
 
     await visit('/vault/policies/acl');
     // new policy creation
-    await click(SELECT.createLink);
+    await click(SELECT.createPolicy);
 
     await fillIn(SELECT.nameInput, policyName);
     await click(SELECT.save);

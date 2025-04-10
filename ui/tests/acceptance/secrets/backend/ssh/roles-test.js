@@ -120,7 +120,7 @@ module('Acceptance | ssh | roles', function (hooks) {
     await click(GENERAL.tab(sshPath));
     for (const role of ROLES) {
       // create a role
-      await click(SES.createSecret);
+      await click(SES.createSecretLink);
       assert.dom(SES.secretHeader).includesText('SSH Role', `${role.type}: renders the create page`);
 
       await fillIn(GENERAL.inputByAttr('name'), role.name);

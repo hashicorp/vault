@@ -20,6 +20,7 @@ import searchSelect from 'vault/tests/pages/components/search-select';
 import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
 const searchSelectComponent = create(searchSelect);
 
@@ -41,7 +42,7 @@ const newConnection = async (
 
 const navToConnection = async (backend, connection) => {
   await visit('/vault/secrets');
-  await click(`[data-test-secrets-backend-link="${backend}"]`);
+  await click(SES.secretsBackendLink(backend));
   await click('[data-test-secret-list-tab="Connections"]');
   await click(`[data-test-secret-link="${connection}"]`);
   return;
@@ -448,7 +449,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
       ],
     };
     await visit(`/vault/secrets/${backend}/list`);
-    await connectionPage.createLink();
+    await click(SES.createSecretLink);
     assert.strictEqual(currentURL(), `/vault/secrets/${backend}/create`, 'Create link goes to create page');
     assert
       .dom('[data-test-empty-state-title]')
@@ -521,13 +522,13 @@ module('Acceptance | secrets/database/*', function (hooks) {
     assert
       .dom('[data-test-database-connection-reset]')
       .hasText('Reset connection', 'Reset button exists with correct text');
-    assert.dom('[data-test-secret-create]').hasText('Add role', 'Add role button exists with correct text');
+    assert.dom('[data-test-add-role]').hasText('Add role', 'Add role button exists with correct text');
     assert.dom('[data-test-edit-link]').hasText('Edit configuration', 'Edit button exists with correct text');
     await authPage.logout();
     // Check with restricted permissions
     await authPage.login(token);
     await click('[data-test-sidebar-nav-link="Secrets Engines"]');
-    assert.dom(`[data-test-secrets-backend-link="${backend}"]`).exists('Shows backend on secret list page');
+    assert.dom(SES.secretsBackendLink(backend)).exists('Shows backend on secret list page');
     await navToConnection(backend, connection);
     assert.strictEqual(
       currentURL(),
@@ -540,7 +541,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     assert
       .dom('[data-test-database-connection-reset]')
       .doesNotExist('Reset button does not show due to permissions');
-    assert.dom('[data-test-secret-create]').doesNotExist('Add role button does not show due to permissions');
+    assert.dom('[data-test-add-role]').doesNotExist('Add role button does not show due to permissions');
     assert.dom('[data-test-edit-link]').doesNotExist('Edit button does not show due to permissions');
     await visit(`/vault/secrets/${backend}/overview`);
     assert.dom('[data-test-overview-card="Connections"]').exists('Connections card exists on overview');
@@ -624,7 +625,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     assert.dom('[data-test-secret-list-tab="Connections"]').exists('renders connections tab');
     assert.dom('[data-test-secret-list-tab="Roles"]').exists('renders connections tab');
 
-    await click('[data-test-secret-create="connections"]');
+    await click(SES.createSecretLink);
     assert.strictEqual(currentURL(), `/vault/secrets/${backend}/create?itemType=connection`);
 
     // Login with restricted policy
