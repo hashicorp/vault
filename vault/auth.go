@@ -987,7 +987,7 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 			factory = wrapFactoryCheckPerms(c, plugin.Factory)
 		}
 
-		entSetExternalPluginConfig(plug, conf)
+		setExternalPluginConfig(plug, conf)
 	}
 
 	// Set up conf to pass in plugin_name
