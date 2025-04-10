@@ -13,6 +13,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -29,6 +30,9 @@ type gRPCClient struct {
 	client        proto.DatabaseClient
 	versionClient logical.PluginVersionClient
 	doneCtx       context.Context
+
+	// tier is the plugin tier
+	tier consts.PluginTier
 }
 
 func (c gRPCClient) PluginVersion() logical.PluginVersion {
