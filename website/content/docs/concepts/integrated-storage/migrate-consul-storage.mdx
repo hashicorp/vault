@@ -1,0 +1,276 @@
+---
+layout: docs
+page_title: Migrate Consul storage to Integrated Storage
+description: Learn how to migrate Vault from Consul storage to Integrated Storage.
+---
+
+# Migrate Consul storage to Integrated Storage
+
+This guidance provides steps to migrate Vault server storage from Consul to
+Integrated Storage.
+
+<Note>
+
+Integrated Storage requires **Vault 1.4** or later.
+
+</Note>
+
+<Tip>
+
+Before continuing with this guidance, be sure to read the [Migration checklist](/vault/docs/concepts/integrated-storage/migration-checklist)
+first.
+
+Also, review the [upgrade guide](/vault/docs/upgrading) to learn about version specific
+details related to your current Vault version or versions between your current
+version and the intended upgrade version.
+
+</Tip>
+
+Use the following workflow to migrate Consul storage to Integrated Storage,
+noting the recommendations specific to Vault Enterprise and Enterprise Replication.
+
+## Snapshot Vault data
+
+You should take a snapshot of the Vault data using [Consul
+Snapshot](/consul/commands/snapshot) before performing an upgrade or Vault
+storage migration.
+
+[Consul Enterprise](/consul/docs/enterprise) users can use the 
+[automated Snapshot Agent](/consul/commands/snapshot/agent) to
+periodically capture and retain snapshots in a specified destination.
+You can use the latest available snapshot to restore in case of issues
+with upgrading or migrating the storage.
+
+### Snapshot Vault data
+
+Execute the following command from either directly on a Consul server, or
+any system running a Consul client agent connected to the server cluster that
+holds the Vault data.
+
+```shell-session
+$ consul snapshot save backup.snap
+Saved and verified snapshot to index 1394
+```
+
+The snapshot file `backup.snap` will be present in the current working
+directory.
+
+### Inspect the snapshot
+
+The snapshot file is a gzip compressed archive. You can perform some
+inspection on the snapshot file via the `consul snapshot inspect`
+command and also manually by decompressing the file and examining its contents.
+
+```shell-session
+$ consul snapshot inspect backup.snap
+
+ID           2-1394-1515172423763
+Size         481887
+Index        1394
+Term         2
+Version      1
+```
+
+This output shows the snapshot ID, size in bytes, plus the snapshot index, term,
+and version. You can compare this with the server (for example, with 
+`consul info`) and is useful to detect any data corruption.
+
+<Note>
+
+ Refer to [Datacenter backups](/consul/tutorials/production-deploy/backup-and-restore) for more information.
+
+</Note>
+
+## Migrate Vault storage
+
+If you have a multi-datacenter Vault Enterprise Replication deployments, skip to
+the [Vault Enterprise Replication](#vault-enterprise-replications) section.
+
+<Note>
+
+ Vault will need to be offline during the migration process.
+
+</Note>
+
+Perform the migration step on one of the nodes in the cluster which will become
+the leader node.
+
+To walkthrough the migration steps, assume that the following is your **new**
+Vault server configuration.
+
+```hcl
+# Storage configuration
+storage "raft" {
+  path = "/vault/raft/"
+  node_id = "node_1"
+}
+
+listener "tcp" {
+  address = "0.0.0.0:8200"
+  cluster_address = "0.0.0.0:8201"
+  tls_cert_file = "/path/to/fullchain.pem"
+  tls_key_file  = "/path/to/privkey.pem"
+}
+
+api_addr = "https://13.57.14.206:8200"
+cluster_addr = "https://10.0.101.22:8201"
+disable_mlock = true
+ui=true
+```
+
+Notice that the `path` value is `/vault/raft/` and `node_id` value is
+`node_1`. (Refer to the [server configuration documentation](/vault/docs/configuration/storage/raft)
+for details.)
+
+<Note>
+
+ When using Integrated Storage , it is strongly recommended to
+set `disable_mlock` to `true`, and to disable memory swapping on the system.
+
+</Note>
+
+1. Create a migration configuration file (e.g. `migrate.hcl`).
+
+   ```hcl
+   storage_source "consul" {
+   address = "127.0.0.1:8500"
+   path	= "vault"
+   }
+
+   storage_destination "raft" {
+     path = "/vault/raft/"
+     node_id = "node_1"
+   }
+
+   cluster_addr = "https://10.0.101.22:8201"
+   ```
+
+   The `storage_source` stanza should be the current storage type (`consul`)
+   configuration, and the `storage_destination` points to the [Integrated Storage
+   (`raft`)
+   configuration](/vault/docs/configuration/storage/raft).
+
+   The `path` and `node_id` values must match the values you set in the server
+   configuration file.
+
+   <Note>
+
+   The `/vault/raft/` path must exist on the host machine. The
+      migration command will not create the folder for you.
+
+   </Note>
+
+1. Execute the `vault operator` command to perform the migration.
+
+   ```shell-session
+   $ vault operator migrate -config=migrate.hcl
+   ```
+
+   Refer to the Vault command documentation on [operator
+   migrate](/vault/docs/commands/operator/migrate#migrating-to-integrated-raft-storage)
+   for more information.
+
+1. You can start the Vault server using the new server configuration pointing to
+   the `raft` storage and unseal.
+
+   At this point, there is just one raft cluster member.
+
+   ```shell-session
+   $ vault operator raft list-peers
+
+   Node       Address                    State     Voter
+   ----       -------                    -----     -----
+   node_1     https://10.0.101.22:8201   leader    true
+   ```
+
+1. Start the remaining Vault nodes in the cluster and add each node to the
+   cluster using the `vault operator raft join` command. If the configuration
+   enables [`retry_join`](/vault/docs/configuration/storage/raft#retry_join-stanza),
+   then there is no need to invoke the `raft join` command. The follower
+   nodes join the cluster automatically in this case.
+
+   ```shell-session
+   $ vault operator raft join https://13.57.14.206:8200
+   ```
+
+   While `https://13.57.14.206:8200` is the leader node's `api_addr`.
+
+   If you are not familiar with how the HA cluster with Integrated Storage works,
+   read the [Vault HA Cluster with Integrated
+   Storage](/vault/tutorials/raft/raft-storage) tutorial to familiarize yourself with
+   the Integrated Storage.
+
+## Vault Enterprise Replication
+
+If you have multi-datacenter Vault Enterprise Replication deployments such as
+the diagram, read the recommendation in this section.
+
+<ImageConfig hideBorder>
+
+![Vault Enterprise Replication](/img/vault-ent-replication.png)
+
+</ImageConfig>
+
+### Recommended approach for Vault Enterprise
+
+1. Stop the DR secondary cluster (Cluster 4 in the diagram above as an example).
+
+1. [Create a new Vault cluster](/vault/tutorials/raft/raft-storage) configured with
+   Integrated Storage (Cluster 5 in the diagram) and [add it as a new DR
+   secondary](/vault/tutorials/enterprise/disaster-recovery#enable-dr-secondary-replication).
+
+   <ImageConfig hideBorder>
+
+   ![Vault Enterprise Replication](/img/vault-ent-replication-2.png)
+
+   </ImageConfig>
+
+1. As some workload comes through, monitor that the [DR secondary cluster is
+   catching up with its primary
+   cluster](/vault/tutorials/monitoring/monitor-replication#are-my-dr-clusters-in-sync)
+   (Cluster 2) which is still using Consul as storage. If there is no
+   issue, you can stop and decommission the old secondary cluster (Cluster 4) at this
+   point.
+
+1. Stop the primary cluster (Cluster 2) and [promote the DR
+   secondary](/vault/tutorials/enterprise/disaster-recovery#promote-dr-secondary-to-primary)
+   (Cluster 5) to be the new primary.
+
+   If the cluster is a performance secondary, check to make sure that it is
+   [syncing up with its performance
+   primary](/vault/tutorials/monitoring/monitor-replication#are-my-performance-clusters-in-sync)
+   (Cluster 1).
+
+1. Repeat the step by creating a new cluster configured with Integrated Storage
+   (Cluster 6) and add it as a DR secondary to the new primary (Cluster 5).
+
+   <ImageConfig hideBorder>
+
+   ![Vault Enterprise Replication](/img/vault-ent-replication-3.png)
+
+   </ImageConfig>
+
+   Monitor that [it syncs up with its
+   primary](/vault/tutorials/monitoring/monitor-replication#are-my-dr-clusters-in-sync)
+   as some workload comes through. Finally, you can terminate the old primary
+   cluster (Cluster 2).
+
+Repeat the same workflow to migrate the Vault data to Integrated Storage on the
+performance primary (Cluster 1) and its DR secondary (Cluster 3).
+
+## Post-migration health check
+
+Once you migrate the storage, verify that the cluster is healthy, and check
+logs for any unusual errors related to cluster health. Refer to the
+following guidance to learn more:
+
+- [Troubleshooting Vault - Vault Logs](/vault/tutorials/monitoring/troubleshooting-vault#vault-logs)
+- If you have Vault Enterprise Replication environment, refer to the [Monitoring Vault Replication](/vault/tutorials/monitoring/monitor-replication)
+
+## Help and reference
+
+- Vault command documentation on [operator migrate](/vault/docs/commands/operator/migrate#migrating-to-integrated-raft-storage)
+- [Integrated Storage documentation](/vault/docs/internals/integrated-storage)
+- [Integrated Storage Concepts](/vault/docs/concepts/integrated-storage)
+- [Upgrading Vault guide](/vault/docs/upgrading)
+- [Inspect Data in Integrated Storage](/vault/tutorials/monitoring/inspect-data-integrated-storage)

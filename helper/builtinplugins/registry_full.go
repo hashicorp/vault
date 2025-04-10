@@ -40,6 +40,7 @@ import (
 	logicalNomad "github.com/hashicorp/vault/builtin/logical/nomad"
 	logicalRabbit "github.com/hashicorp/vault/builtin/logical/rabbitmq"
 	logicalTotp "github.com/hashicorp/vault/builtin/logical/totp"
+	"github.com/hashicorp/vault/helper/pluginconsts"
 	dbCass "github.com/hashicorp/vault/plugins/database/cassandra"
 	dbHana "github.com/hashicorp/vault/plugins/database/hana"
 	dbInflux "github.com/hashicorp/vault/plugins/database/influxdb"
@@ -54,26 +55,26 @@ import (
 func newFullAddonRegistry() *registry {
 	return &registry{
 		credentialBackends: map[string]credentialBackend{
-			"alicloud": {Factory: credAliCloud.Factory},
-			"app-id": {
+			pluginconsts.AuthTypeAliCloud: {Factory: credAliCloud.Factory},
+			pluginconsts.AuthTypeAppId: {
 				Factory:           removedFactory,
 				DeprecationStatus: consts.Removed,
 			},
-			"aws":        {Factory: credAws.Factory},
-			"azure":      {Factory: credAzure.Factory},
-			"cf":         {Factory: credCF.Factory},
-			"gcp":        {Factory: credGcp.Factory},
-			"github":     {Factory: credGitHub.Factory},
-			"kerberos":   {Factory: credKerb.Factory},
-			"kubernetes": {Factory: credKube.Factory},
-			"ldap":       {Factory: credLdap.Factory},
-			"oci":        {Factory: credOCI.Factory},
-			"okta":       {Factory: credOkta.Factory},
-			"pcf": {
+			pluginconsts.AuthTypeAWS:        {Factory: credAws.Factory},
+			pluginconsts.AuthTypeAzure:      {Factory: credAzure.Factory},
+			pluginconsts.AuthTypeCF:         {Factory: credCF.Factory},
+			pluginconsts.AuthTypeGCP:        {Factory: credGcp.Factory},
+			pluginconsts.AuthTypeGitHub:     {Factory: credGitHub.Factory},
+			pluginconsts.AuthTypeKerberos:   {Factory: credKerb.Factory},
+			pluginconsts.AuthTypeKubernetes: {Factory: credKube.Factory},
+			pluginconsts.AuthTypeLDAP:       {Factory: credLdap.Factory},
+			pluginconsts.AuthTypeOCI:        {Factory: credOCI.Factory},
+			pluginconsts.AuthTypeOkta:       {Factory: credOkta.Factory},
+			pluginconsts.AuthTypePCF: {
 				Factory:           credCF.Factory,
 				DeprecationStatus: consts.Deprecated,
 			},
-			"radius": {Factory: credRadius.Factory},
+			pluginconsts.AuthTypeRadius: {Factory: credRadius.Factory},
 		},
 		databasePlugins: map[string]databasePlugin{
 			// These four plugins all use the same mysql implementation but with
@@ -98,44 +99,44 @@ func newFullAddonRegistry() *registry {
 			"snowflake-database-plugin":         {Factory: dbSnowflake.New},
 		},
 		logicalBackends: map[string]logicalBackend{
-			"ad": {
+			pluginconsts.SecretEngineAD: {
 				Factory:           logicalAd.Factory,
 				DeprecationStatus: consts.Deprecated,
 			},
-			"alicloud": {Factory: logicalAlicloud.Factory},
-			"aws":      {Factory: logicalAws.Factory},
-			"azure":    {Factory: logicalAzure.Factory},
-			"cassandra": {
+			pluginconsts.SecretEngineAlicloud: {Factory: logicalAlicloud.Factory},
+			pluginconsts.SecretEngineAWS:      {Factory: logicalAws.Factory},
+			pluginconsts.SecretEngineAzure:    {Factory: logicalAzure.Factory},
+			pluginconsts.SecretEngineCassandra: {
 				Factory:           removedFactory,
 				DeprecationStatus: consts.Removed,
 			},
-			"consul":     {Factory: logicalConsul.Factory},
-			"gcp":        {Factory: logicalGcp.Factory},
-			"gcpkms":     {Factory: logicalGcpKms.Factory},
-			"kubernetes": {Factory: logicalKube.Factory},
-			"mongodb": {
+			pluginconsts.SecretEngineConsul:     {Factory: logicalConsul.Factory},
+			pluginconsts.SecretEngineGCP:        {Factory: logicalGcp.Factory},
+			pluginconsts.SecretEngineGCPKMS:     {Factory: logicalGcpKms.Factory},
+			pluginconsts.SecretEngineKubernetes: {Factory: logicalKube.Factory},
+			pluginconsts.SecretEngineMongoDB: {
 				Factory:           removedFactory,
 				DeprecationStatus: consts.Removed,
 			},
-			"mongodbatlas": {Factory: logicalMongoAtlas.Factory},
-			"mssql": {
+			pluginconsts.SecretEngineMongoDBAtlas: {Factory: logicalMongoAtlas.Factory},
+			pluginconsts.SecretEngineMSSQL: {
 				Factory:           removedFactory,
 				DeprecationStatus: consts.Removed,
 			},
-			"mysql": {
+			pluginconsts.SecretEngineMySQL: {
 				Factory:           removedFactory,
 				DeprecationStatus: consts.Removed,
 			},
-			"nomad":    {Factory: logicalNomad.Factory},
-			"openldap": {Factory: logicalLDAP.Factory},
-			"ldap":     {Factory: logicalLDAP.Factory},
-			"postgresql": {
+			pluginconsts.SecretEngineNomad:    {Factory: logicalNomad.Factory},
+			pluginconsts.SecretEngineOpenLDAP: {Factory: logicalLDAP.Factory},
+			pluginconsts.SecretEngineLDAP:     {Factory: logicalLDAP.Factory},
+			pluginconsts.SecretEnginePostgresql: {
 				Factory:           removedFactory,
 				DeprecationStatus: consts.Removed,
 			},
-			"rabbitmq":  {Factory: logicalRabbit.Factory},
-			"terraform": {Factory: logicalTerraform.Factory},
-			"totp":      {Factory: logicalTotp.Factory},
+			pluginconsts.SecretEngineRabbitMQ:  {Factory: logicalRabbit.Factory},
+			pluginconsts.SecretEngineTerraform: {Factory: logicalTerraform.Factory},
+			pluginconsts.SecretEngineTOTP:      {Factory: logicalTotp.Factory},
 		},
 	}
 }

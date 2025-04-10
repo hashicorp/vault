@@ -105,6 +105,13 @@ const azure = {
         'The OAuth2 client secret to connection to Azure. This value can also be provided with the AZURE_CLIENT_SECRET environment variable.',
       type: 'string',
     },
+    disableAutomatedRotation: {
+      editType: 'boolean',
+      fieldGroup: 'default',
+      helpText:
+        'If set to true, will deregister all registered rotation jobs from the RotationManager for the plugin.',
+      type: 'boolean',
+    },
     environment: {
       editType: 'string',
       fieldGroup: 'default',
@@ -142,6 +149,25 @@ const azure = {
       helpText:
         'The TTL of the root password in Azure. This can be either a number of seconds or a time formatted duration (ex: 24h, 48ds)',
     },
+    rotationPeriod: {
+      editType: 'ttl',
+      fieldGroup: 'default',
+      helpText:
+        'TTL for automatic credential rotation of the given username. Mutually exclusive with rotation_schedule',
+    },
+    rotationSchedule: {
+      editType: 'string',
+      fieldGroup: 'default',
+      helpText:
+        'CRON-style string that will define the schedule on which rotations should occur. Mutually exclusive with rotation_period',
+      type: 'string',
+    },
+    rotationWindow: {
+      editType: 'ttl',
+      fieldGroup: 'default',
+      helpText:
+        'Specifies the amount of time in which the rotation is allowed to occur starting from a given rotation_schedule',
+    },
     tenantId: {
       editType: 'string',
       fieldGroup: 'default',
@@ -178,6 +204,12 @@ const cert = {
       helpText:
         'If set, metadata of the certificate including the metadata corresponding to allowed_metadata_extensions will be stored in the alias. Defaults to false.',
       fieldGroup: 'default',
+      type: 'boolean',
+    },
+    enableMetadataOnFailures: {
+      editType: 'boolean',
+      fieldGroup: 'default',
+      helpText: 'If set, metadata of the client certificate will be returned on authentication failures.',
       type: 'boolean',
     },
     ocspCacheSize: {
@@ -372,6 +404,13 @@ const gcp = {
       fieldGroup: 'default',
       type: 'object',
     },
+    disableAutomatedRotation: {
+      editType: 'boolean',
+      fieldGroup: 'default',
+      helpText:
+        'If set to true, will deregister all registered rotation jobs from the RotationManager for the plugin.',
+      type: 'boolean',
+    },
     gceAlias: {
       editType: 'string',
       helpText: 'Indicates what value to use when generating an alias for GCE authentications.',
@@ -410,6 +449,25 @@ const gcp = {
       editType: 'ttl',
       fieldGroup: 'default',
       helpText: 'Time-to-live of plugin identity tokens',
+    },
+    rotationPeriod: {
+      editType: 'ttl',
+      fieldGroup: 'default',
+      helpText:
+        'TTL for automatic credential rotation of the given username. Mutually exclusive with rotation_schedule',
+    },
+    rotationSchedule: {
+      editType: 'string',
+      fieldGroup: 'default',
+      helpText:
+        'CRON-style string that will define the schedule on which rotations should occur. Mutually exclusive with rotation_period',
+      type: 'string',
+    },
+    rotationWindow: {
+      editType: 'ttl',
+      fieldGroup: 'default',
+      helpText:
+        'Specifies the amount of time in which the rotation is allowed to occur starting from a given rotation_schedule',
     },
     serviceAccountEmail: {
       editType: 'string',
@@ -836,11 +894,25 @@ const ldap = {
       fieldGroup: 'default',
       type: 'string',
     },
+    disableAutomatedRotation: {
+      editType: 'boolean',
+      fieldGroup: 'default',
+      helpText:
+        'If set to true, will deregister all registered rotation jobs from the RotationManager for the plugin.',
+      type: 'boolean',
+    },
     discoverdn: {
       editType: 'boolean',
       helpText: 'Use anonymous bind to discover the bind DN of a user (optional)',
       fieldGroup: 'default',
       label: 'Discover DN',
+      type: 'boolean',
+    },
+    enableSamaccountnameLogin: {
+      editType: 'boolean',
+      fieldGroup: 'default',
+      helpText:
+        'If true, matching sAMAccountName attribute values will be allowed to login when upndomain is defined.',
       type: 'boolean',
     },
     groupattr: {
@@ -892,6 +964,25 @@ const ldap = {
       helpText:
         'Timeout, in seconds, for the connection when making requests against the server before returning back an error.',
       fieldGroup: 'default',
+    },
+    rotationPeriod: {
+      editType: 'ttl',
+      fieldGroup: 'default',
+      helpText:
+        'TTL for automatic credential rotation of the given username. Mutually exclusive with rotation_schedule',
+    },
+    rotationSchedule: {
+      editType: 'string',
+      fieldGroup: 'default',
+      helpText:
+        'CRON-style string that will define the schedule on which rotations should occur. Mutually exclusive with rotation_period',
+      type: 'string',
+    },
+    rotationWindow: {
+      editType: 'ttl',
+      fieldGroup: 'default',
+      helpText:
+        'Specifies the amount of time in which the rotation is allowed to occur starting from a given rotation_schedule',
     },
     starttls: {
       editType: 'boolean',

@@ -5,7 +5,7 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { ldapBreadcrumbs } from 'ldap/utils/ldap-breadcrumbs';
+import { ldapBreadcrumbs, roleRoutes } from 'ldap/utils/ldap-breadcrumbs';
 
 import type { Breadcrumb } from 'vault/vault/app-types';
 import type Controller from '@ember/controller';
@@ -24,11 +24,15 @@ export default class LdapRolesRoleDetailsRoute extends Route {
   setupController(controller: RouteController, resolvedModel: LdapRoleModel, transition: Transition) {
     super.setupController(controller, resolvedModel, transition);
 
+    const routeParams = (childResource: string) => {
+      return [this.secretMountPath.currentPath, resolvedModel.type, childResource];
+    };
+
     controller.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backend, route: 'overview' },
       { label: 'Roles', route: 'roles' },
-      ...ldapBreadcrumbs(resolvedModel.name, resolvedModel.type, this.secretMountPath.currentPath, true),
+      ...ldapBreadcrumbs(resolvedModel.name, routeParams, roleRoutes, true),
     ];
   }
 }

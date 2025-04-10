@@ -13,7 +13,7 @@ jobs:
   backport-targeted-release-branch:
     if: github.event.pull_request.merged && github.repository == 'hashicorp/vault'
     runs-on: ubuntu-latest
-    container: hashicorpdev/backport-assistant:0.4.3
+    container: hashicorpdev/backport-assistant:0.5.3
     steps:
       - name: Backport changes to targeted release branch
         run: |

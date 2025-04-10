@@ -48,6 +48,10 @@ module "create_vpc" {
   common_tags = var.tags
 }
 
+module "choose_follower_host" {
+  source = "./modules/choose_follower_host"
+}
+
 module "ec2_info" {
   source = "./modules/ec2_info"
 }
@@ -90,6 +94,11 @@ module "read_license" {
 
 module "replication_data" {
   source = "./modules/replication_data"
+}
+
+module "restart_vault" {
+  source            = "./modules/restart_vault"
+  vault_install_dir = var.vault_install_dir
 }
 
 module "seal_awskms" {
@@ -221,6 +230,11 @@ module "vault_failover_update_dr_primary" {
   vault_install_dir = var.vault_install_dir
 }
 
+module "vault_raft_remove_node_and_verify" {
+  source            = "./modules/vault_raft_remove_node_and_verify"
+  vault_install_dir = var.vault_install_dir
+}
+
 module "vault_raft_remove_peer" {
   source            = "./modules/vault_raft_remove_peer"
   vault_install_dir = var.vault_install_dir
@@ -280,6 +294,18 @@ module "vault_verify_dr_replication" {
 
   vault_install_dir = var.vault_install_dir
 }
+
+module "vault_verify_removed_node" {
+  source = "./modules/vault_verify_raft_removed"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_verify_removed_node_shim" {
+  source            = "./modules/vault_verify_removed_node_shim"
+  vault_install_dir = var.vault_install_dir
+}
+
 
 module "vault_verify_secrets_engines_create" {
   source = "./modules/verify_secrets_engines/modules/create"
@@ -350,6 +376,12 @@ module "vault_wait_for_seal_rewrap" {
   vault_install_dir = var.vault_install_dir
 }
 
+module "verify_log_secrets" {
+  source = "./modules/verify_log_secrets"
+
+  radar_license_path = var.vault_radar_license_path != null ? abspath(var.vault_radar_license_path) : null
+}
+
 module "verify_seal_type" {
   source = "./modules/verify_seal_type"
 
@@ -363,4 +395,3 @@ module "vault_verify_billing_start_date" {
   vault_instance_count    = var.vault_instance_count
   vault_cluster_addr_port = global.ports["vault_cluster"]["port"]
 }
-

@@ -5,18 +5,40 @@ scenario "upgrade" {
   description = <<-EOF
     The upgrade scenario verifies in-place upgrades between previously released versions of Vault
     against another candidate build. The build can be a local branch, any CRT built Vault artifact
-    saved to the local machine, or any CRT built Vault artifact in the stable channel in
-    Artifactory.
+    saved to the local machine, or any CRT built Vault artifact in the stable channel in Artifactory.
 
-    The scenario will first create a new Vault Cluster with a previously released version of Vault,
-    mount engines and create data, then perform an in-place upgrade with any candidate built and
-    perform quality verification.
+    The scenario creates a new Vault cluster with a previously released version of Vault. It then
+    mounts engines, creates data, and performs an in-place upgrade with any candidate built. Finally,
+    it performs quality verification.
 
-    If you want to use the 'distro:leap' variant you must first accept SUSE's terms for the AWS
-    account. To verify that your account has agreed, sign-in to your AWS through Doormat,
-    and visit the following links to verify your subscription or subscribe:
-      arm64 AMI: https://aws.amazon.com/marketplace/server/procurement?productId=a516e959-df54-4035-bb1a-63599b7a6df9
-      amd64 AMI: https://aws.amazon.com/marketplace/server/procurement?productId=5535c495-72d4-4355-b169-54ffa874f849
+    # How to run this scenario
+
+    For general instructions on running a scenario, refer to the Enos docs: https://eng-handbook.hashicorp.services/internal-tools/enos/running-a-scenario/
+    For troubleshooting tips and common errors, see https://eng-handbook.hashicorp.services/internal-tools/enos/troubleshooting/.
+
+    Variables required for all scenario variants:
+      - aws_ssh_private_key_path (more info about AWS SSH keypairs: https://eng-handbook.hashicorp.services/internal-tools/enos/getting-started/#set-your-aws-key-pair-name-and-private-key)
+      - aws_ssh_keypair_name
+      - vault_build_date*
+      - vault_product_version
+      - vault_revision*
+    
+    * If you don't already know what build date and revision you should be using, see
+    https://eng-handbook.hashicorp.services/internal-tools/enos/troubleshooting/#execution-error-expected-vs-got-for-vault-versioneditionrevisionbuild-date.
+  
+    Variables required for some scenario variants:
+      - artifactory_username (if using `artifact_source:artifactory` in your filter)
+      - artifactory_token (if using `artifact_source:artifactory` in your filter)
+      - aws_region (if different from the default value in enos-variables.hcl)
+      - consul_license_path (if using an ENT edition of Consul)
+      - distro_version_<distro> (if different from the default version for your target
+      distro. See supported distros and default versions in the distro_version_<distro>
+      definitions in enos-variables.hcl)
+      - vault_artifact_path (the path to where you have a Vault artifact already downloaded,
+      if using `artifact_source:crt` in your filter)
+      - vault_license_path (if using an ENT edition of Vault)
+      - vault_upgrade_initial_version (if the version you want to start with differs
+      from the default value defined in enos-variables.hcl)
   EOF
 
   matrix {
@@ -646,6 +668,38 @@ scenario "upgrade" {
       hosts             = step.get_updated_vault_cluster_ips.follower_hosts
       vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
+  step "verify_log_secrets" {
+    // Only verify log secrets if the audit devices are turned on and we've enabled the check (as
+    // it requires a radar license). Some older versions have known issues so we'll skip this step
+    // in the event that we're upgrading from them, see VAULT-30557 for more information.
+    skip_step = !var.vault_enable_audit_devices || !var.verify_log_secrets || semverconstraint(var.vault_upgrade_initial_version, "=1.17.3 || =1.17.4 || =1.16.7 || =1.16.8")
+
+    description = global.description.verify_log_secrets
+    module      = module.verify_log_secrets
+    depends_on = [
+      step.verify_secrets_engines_read,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_audit_log_secrets,
+      quality.vault_journal_secrets,
+      quality.vault_radar_index_create,
+      quality.vault_radar_scan_file,
+    ]
+
+    variables {
+      audit_log_file_path = step.create_vault_cluster.audit_device_file_path
+      leader_host         = step.get_updated_vault_cluster_ips.leader_host
+      vault_addr          = step.create_vault_cluster.api_addr_localhost
+      vault_root_token    = step.create_vault_cluster.root_token
     }
   }
 

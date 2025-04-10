@@ -14,6 +14,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/locking"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
@@ -115,7 +116,7 @@ func TestLogicalMountMetrics(t *testing.T) {
 
 func TestCore_DefaultMountTable(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)
-	verifyDefaultTable(t, c.mounts, 4)
+	verifyDefaultTable(t, c.mounts, 4, c.mountsLock)
 
 	// Start a second core with same physical
 	inmemSink := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
@@ -141,6 +142,10 @@ func TestCore_DefaultMountTable(t *testing.T) {
 		}
 	}
 
+	c.mountsLock.Lock()
+	defer c.mountsLock.Unlock()
+	c2.mountsLock.Lock()
+	defer c2.mountsLock.Unlock()
 	if diff := deep.Equal(c.mounts.sortEntriesByPath(), c2.mounts.sortEntriesByPath()); len(diff) > 0 {
 		t.Fatalf("mismatch: %v", diff)
 	}
@@ -187,6 +192,10 @@ func TestCore_Mount(t *testing.T) {
 	}
 
 	// Verify matching mount tables
+	c.mountsLock.Lock()
+	defer c.mountsLock.Unlock()
+	c2.mountsLock.Lock()
+	defer c2.mountsLock.Unlock()
 	if diff := deep.Equal(c.mounts.sortEntriesByPath(), c2.mounts.sortEntriesByPath()); len(diff) > 0 {
 		t.Fatalf("mismatch: %v", diff)
 	}
@@ -259,6 +268,10 @@ func TestCore_Mount_kv_generic(t *testing.T) {
 	}
 
 	// Verify matching mount tables
+	c.mountsLock.Lock()
+	defer c.mountsLock.Unlock()
+	c2.mountsLock.Lock()
+	defer c2.mountsLock.Unlock()
 	if diff := deep.Equal(c.mounts.sortEntriesByPath(), c2.mounts.sortEntriesByPath()); len(diff) > 0 {
 		t.Fatalf("mismatch: %v", diff)
 	}
@@ -717,7 +730,7 @@ func TestCore_Remount_Protected(t *testing.T) {
 func TestDefaultMountTable(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	table := c.defaultMountTable()
-	verifyDefaultTable(t, table, 3)
+	verifyDefaultTable(t, table, 3, c.mountsLock)
 }
 
 func TestCore_MountTable_UpgradeToTyped(t *testing.T) {
@@ -886,7 +899,9 @@ func testCore_MountTable_UpgradeToTyped_Common(
 	}
 }
 
-func verifyDefaultTable(t *testing.T, table *MountTable, expected int) {
+func verifyDefaultTable(t *testing.T, table *MountTable, expected int, mountsLock locking.RWMutex) {
+	mountsLock.Lock()
+	defer mountsLock.Unlock()
 	if len(table.Entries) != expected {
 		t.Fatalf("bad: %v", table.Entries)
 	}

@@ -1,9 +1,9 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
-<form id="auth-form" {{on "submit" (action "signIn")}}>
+<form id="auth-form" {{on "submit" this.signIn}} {{did-update this.checkArgUpdate @selectedAuthPath @selectedAuthType}}>
   <div class="field">
     <label for="role" class="is-label">Role</label>
     <div class="control">
@@ -16,7 +16,7 @@
         id="role"
         class="input"
         type="text"
-        {{on "input" (action "onRoleChange")}}
+        {{on "input" this.onRoleInput}}
         data-test-role
       />
     </div>
@@ -44,25 +44,26 @@
     </div>
   {{/unless}}
   <div data-test-yield-content>
+    {{! Custom mount path input renders here }}
     {{yield}}
   </div>
 
   {{#if this.isOIDC}}
     <Hds::Button
-      @text={{concat "Sign in with " (or this.role.providerName "OIDC Provider")}}
-      @icon={{if @disabled "loading" this.role.providerIcon}}
+      @text="Sign in with {{or this.fetchedRole.providerName 'OIDC Provider'}}"
+      @icon={{if this.tasksAreRunning "loading" this.fetchedRole.providerIcon}}
       data-test-auth-submit
       type="submit"
-      disabled={{@disabled}}
+      disabled={{this.tasksAreRunning}}
       id="auth-submit"
     />
   {{else}}
     <Hds::Button
       @text="Sign in"
-      @icon={{if @disabled "loading"}}
+      @icon={{if this.tasksAreRunning "loading"}}
       data-test-auth-submit
       type="submit"
-      disabled={{@disabled}}
+      disabled={{this.tasksAreRunning}}
       id="auth-submit"
     />
   {{/if}}

@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -34,7 +35,8 @@ import (
 var allTestKeyTypes = []KeyType{
 	KeyType_AES256_GCM96, KeyType_ECDSA_P256, KeyType_ED25519, KeyType_RSA2048,
 	KeyType_RSA4096, KeyType_ChaCha20_Poly1305, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_AES128_GCM96,
-	KeyType_RSA3072, KeyType_MANAGED_KEY, KeyType_HMAC, KeyType_AES128_CMAC, KeyType_AES256_CMAC,
+	KeyType_RSA3072, KeyType_MANAGED_KEY, KeyType_HMAC, KeyType_AES128_CMAC, KeyType_AES256_CMAC, KeyType_ML_DSA,
+	KeyType_HYBRID,
 }
 
 func TestPolicy_KeyTypes(t *testing.T) {
@@ -53,7 +55,7 @@ func TestPolicy_KeyTypes(t *testing.T) {
 	}
 }
 
-func TestPolicy_HmacCmacSuported(t *testing.T) {
+func TestPolicy_HmacCmacSupported(t *testing.T) {
 	// Test HMAC supported feature
 	for _, keyType := range allTestKeyTypes {
 		switch keyType {
@@ -810,7 +812,7 @@ func Test_Import(t *testing.T) {
 func generateTestKeys() (map[KeyType][]byte, error) {
 	keyMap := make(map[KeyType][]byte)
 
-	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	rsaKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	if err != nil {
 		return nil, err
 	}
@@ -820,7 +822,7 @@ func generateTestKeys() (map[KeyType][]byte, error) {
 	}
 	keyMap[KeyType_RSA2048] = rsaKeyBytes
 
-	rsaKey, err = rsa.GenerateKey(rand.Reader, 3072)
+	rsaKey, err = cryptoutil.GenerateRSAKey(rand.Reader, 3072)
 	if err != nil {
 		return nil, err
 	}
@@ -830,7 +832,7 @@ func generateTestKeys() (map[KeyType][]byte, error) {
 	}
 	keyMap[KeyType_RSA3072] = rsaKeyBytes
 
-	rsaKey, err = rsa.GenerateKey(rand.Reader, 4096)
+	rsaKey, err = cryptoutil.GenerateRSAKey(rand.Reader, 4096)
 	if err != nil {
 		return nil, err
 	}

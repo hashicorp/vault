@@ -15,6 +15,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -64,7 +65,7 @@ type PostgreSQLBackend struct {
 
 	haEnabled  bool
 	logger     log.Logger
-	permitPool *physical.PermitPool
+	permitPool *permitpool.Pool
 }
 
 // PostgreSQLLock implements a lock using an PostgreSQL client.
@@ -192,7 +193,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 		// $1=ha_identity $2=ha_key
 		" DELETE FROM " + quoted_ha_table + " WHERE ha_identity=$1 AND ha_key=$2 ",
 		logger:     logger,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: permitpool.New(maxParInt),
 		haEnabled:  conf["ha_enabled"] == "true",
 	}
 
@@ -240,7 +241,9 @@ func (m *PostgreSQLBackend) splitKey(fullPath string) (string, string, string) {
 func (m *PostgreSQLBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"postgres", "put"}, time.Now())
 
-	m.permitPool.Acquire()
+	if err := m.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer m.permitPool.Release()
 
 	parentPath, path, key := m.splitKey(entry.Key)
@@ -256,7 +259,9 @@ func (m *PostgreSQLBackend) Put(ctx context.Context, entry *physical.Entry) erro
 func (m *PostgreSQLBackend) Get(ctx context.Context, fullPath string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"postgres", "get"}, time.Now())
 
-	m.permitPool.Acquire()
+	if err := m.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer m.permitPool.Release()
 
 	_, path, key := m.splitKey(fullPath)
@@ -281,7 +286,9 @@ func (m *PostgreSQLBackend) Get(ctx context.Context, fullPath string) (*physical
 func (m *PostgreSQLBackend) Delete(ctx context.Context, fullPath string) error {
 	defer metrics.MeasureSince([]string{"postgres", "delete"}, time.Now())
 
-	m.permitPool.Acquire()
+	if err := m.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer m.permitPool.Release()
 
 	_, path, key := m.splitKey(fullPath)
@@ -298,7 +305,9 @@ func (m *PostgreSQLBackend) Delete(ctx context.Context, fullPath string) error {
 func (m *PostgreSQLBackend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"postgres", "list"}, time.Now())
 
-	m.permitPool.Acquire()
+	if err := m.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer m.permitPool.Release()
 
 	rows, err := m.client.QueryContext(ctx, m.list_query, "/"+prefix)
@@ -377,7 +386,9 @@ func (l *PostgreSQLLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 // PostgreSQL table.
 func (l *PostgreSQLLock) Unlock() error {
 	pg := l.backend
-	pg.permitPool.Acquire()
+	if err := pg.permitPool.Acquire(context.Background()); err != nil {
+		return err
+	}
 	defer pg.permitPool.Release()
 
 	if l.renewTicker != nil {
@@ -393,7 +404,9 @@ func (l *PostgreSQLLock) Unlock() error {
 // including this one, and returns the current value.
 func (l *PostgreSQLLock) Value() (bool, string, error) {
 	pg := l.backend
-	pg.permitPool.Acquire()
+	if err := pg.permitPool.Acquire(context.Background()); err != nil {
+		return false, "", err
+	}
 	defer pg.permitPool.Release()
 	var result string
 	err := pg.client.QueryRow(pg.haGetLockValueQuery, l.key).Scan(&result)
@@ -453,7 +466,9 @@ func (l *PostgreSQLLock) periodicallyRenewLock(done chan struct{}) {
 // else has the lock, whereas non-nil means that something unexpected happened.
 func (l *PostgreSQLLock) writeItem() (bool, error) {
 	pg := l.backend
-	pg.permitPool.Acquire()
+	if err := pg.permitPool.Acquire(context.Background()); err != nil {
+		return false, err
+	}
 	defer pg.permitPool.Release()
 
 	// Try steal lock or update expiry on my lock

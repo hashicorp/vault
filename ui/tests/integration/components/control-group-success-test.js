@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { resolve } from 'rsvp';
-import Service from '@ember/service';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { click, fillIn, find, render } from '@ember/test-helpers';
@@ -25,7 +23,6 @@ module('Integration | Component | control group success', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
     this.transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
     this.controlGroup = this.owner.lookup('service:control-group');
     this.markTokenForUnwrapStub = sinon.stub(this.controlGroup, 'markTokenForUnwrap');
@@ -75,21 +72,15 @@ module('Integration | Component | control group success', function (hooks) {
 
   test('it unwraps data on submit', async function (assert) {
     assert.expect(2);
-    const storeService = Service.extend({
-      adapterFor() {
-        return {
-          toolAction() {
-            return resolve({ data: { foo: 'bar' } });
-          },
-        };
-      },
-    });
-    this.owner.unregister('service:store');
-    this.owner.register('service:store', storeService);
+
+    sinon.stub(this.owner.lookup('service:api').sys, 'unwrap').resolves({ data: { foo: 'bar' } });
+
     await render(hbs`<ControlGroupSuccess @model={{this.model}} />`);
     assert.dom(SELECTORS.tokenInput).hasValue('');
+
     await fillIn(SELECTORS.tokenInput, 'token');
     await click(SELECTORS.unwrap);
+
     const actual = find(SELECTORS.jsonViewer).innerText;
     const expected = JSON.stringify({ foo: 'bar' }, null, 2);
     assert.strictEqual(actual, expected, `it renders unwrapped data: ${actual}`);

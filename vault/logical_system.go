@@ -33,6 +33,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	semver "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/activationflags"
 	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
@@ -231,6 +232,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 	b.Backend.Paths = append(b.Backend.Paths, b.experimentPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.introspectionPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.wellKnownPaths()...)
+	b.Backend.Paths = append(b.Backend.Paths, b.activationFlagsPaths()...)
 
 	if core.rawEnabled {
 		b.Backend.Paths = append(b.Backend.Paths, b.rawPaths()...)
@@ -277,7 +279,9 @@ type SystemBackend struct {
 	logger               log.Logger
 	mfaBackend           *PolicyMFABackend
 	syncBackend          *SecretsSyncBackend
+	idStoreBackend       *framework.Backend
 	raftChallengeLimiter *rate.Limiter
+	activationFlags      *activationflags.FeatureActivationFlags
 }
 
 // handleConfigStateSanitized returns the current configuration state. The configuration
@@ -537,9 +541,13 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 	sha256 := d.Get("sha256").(string)
 	if sha256 == "" {
 		sha256 = d.Get("sha_256").(string)
-		if sha256 == "" {
-			return logical.ErrorResponse("missing SHA-256 value"), nil
+		if resp := validateSHA256(sha256); resp.IsError() {
+			return resp, nil
 		}
+	}
+
+	if resp := validateSha256IsEmptyForEntPluginVersion(pluginVersion, sha256); resp.IsError() {
+		return resp, nil
 	}
 
 	command := d.Get("command").(string)
@@ -5503,24 +5511,25 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 }
 
 type SealStatusResponse struct {
-	Type              string   `json:"type"`
-	Initialized       bool     `json:"initialized"`
-	Sealed            bool     `json:"sealed"`
-	T                 int      `json:"t"`
-	N                 int      `json:"n"`
-	Progress          int      `json:"progress"`
-	Nonce             string   `json:"nonce"`
-	Version           string   `json:"version"`
-	BuildDate         string   `json:"build_date"`
-	Migration         bool     `json:"migration"`
-	ClusterName       string   `json:"cluster_name,omitempty"`
-	ClusterID         string   `json:"cluster_id,omitempty"`
-	RecoverySeal      bool     `json:"recovery_seal"`
-	StorageType       string   `json:"storage_type,omitempty"`
-	HCPLinkStatus     string   `json:"hcp_link_status,omitempty"`
-	HCPLinkResourceID string   `json:"hcp_link_resource_ID,omitempty"`
-	Warnings          []string `json:"warnings,omitempty"`
-	RecoverySealType  string   `json:"recovery_seal_type,omitempty"`
+	Type               string   `json:"type"`
+	Initialized        bool     `json:"initialized"`
+	Sealed             bool     `json:"sealed"`
+	T                  int      `json:"t"`
+	N                  int      `json:"n"`
+	Progress           int      `json:"progress"`
+	Nonce              string   `json:"nonce"`
+	Version            string   `json:"version"`
+	BuildDate          string   `json:"build_date"`
+	Migration          bool     `json:"migration"`
+	ClusterName        string   `json:"cluster_name,omitempty"`
+	ClusterID          string   `json:"cluster_id,omitempty"`
+	RecoverySeal       bool     `json:"recovery_seal"`
+	StorageType        string   `json:"storage_type,omitempty"`
+	HCPLinkStatus      string   `json:"hcp_link_status,omitempty"`
+	HCPLinkResourceID  string   `json:"hcp_link_resource_ID,omitempty"`
+	Warnings           []string `json:"warnings,omitempty"`
+	RecoverySealType   string   `json:"recovery_seal_type,omitempty"`
+	RemovedFromCluster *bool    `json:"removed_from_cluster,omitempty"`
 }
 
 type SealBackendStatus struct {
@@ -5557,16 +5566,22 @@ func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResp
 	hcpLinkStatus, resourceIDonHCP := core.GetHCPLinkStatus()
 
 	redactVersion, _, redactClusterName, _ := logical.CtxRedactionSettingsValue(ctx)
+	var removed *bool
+	isRemoved, shouldInclude := core.IsRemovedFromCluster()
+	if shouldInclude {
+		removed = &isRemoved
+	}
 
 	if sealConfig == nil {
 		s := &SealStatusResponse{
-			Type:         core.SealAccess().BarrierSealConfigType().String(),
-			Initialized:  initialized,
-			Sealed:       true,
-			RecoverySeal: core.SealAccess().RecoveryKeySupported(),
-			StorageType:  core.StorageType(),
-			Version:      version.GetVersion().VersionNumber(),
-			BuildDate:    version.BuildDate,
+			Type:               core.SealAccess().BarrierSealConfigType().String(),
+			Initialized:        initialized,
+			Sealed:             true,
+			RecoverySeal:       core.SealAccess().RecoveryKeySupported(),
+			StorageType:        core.StorageType(),
+			Version:            version.GetVersion().VersionNumber(),
+			BuildDate:          version.BuildDate,
+			RemovedFromCluster: removed,
 		}
 
 		if redactVersion {
@@ -5608,21 +5623,22 @@ func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResp
 	progress, nonce := core.SecretProgress(lock)
 
 	s := &SealStatusResponse{
-		Type:             sealType,
-		Initialized:      initialized,
-		Sealed:           sealed,
-		T:                sealConfig.SecretThreshold,
-		N:                sealConfig.SecretShares,
-		Progress:         progress,
-		Nonce:            nonce,
-		Version:          version.GetVersion().VersionNumber(),
-		BuildDate:        version.BuildDate,
-		Migration:        core.IsInSealMigrationMode(lock) && !core.IsSealMigrated(lock),
-		ClusterName:      clusterName,
-		ClusterID:        clusterID,
-		RecoverySeal:     core.SealAccess().RecoveryKeySupported(),
-		RecoverySealType: recoverySealType,
-		StorageType:      core.StorageType(),
+		Type:               sealType,
+		Initialized:        initialized,
+		Sealed:             sealed,
+		T:                  sealConfig.SecretThreshold,
+		N:                  sealConfig.SecretShares,
+		Progress:           progress,
+		Nonce:              nonce,
+		Version:            version.GetVersion().VersionNumber(),
+		BuildDate:          version.BuildDate,
+		Migration:          core.IsInSealMigrationMode(lock) && !core.IsSealMigrated(lock),
+		RemovedFromCluster: removed,
+		ClusterName:        clusterName,
+		ClusterID:          clusterID,
+		RecoverySeal:       core.SealAccess().RecoveryKeySupported(),
+		RecoverySealType:   recoverySealType,
+		StorageType:        core.StorageType(),
 	}
 
 	if resourceIDonHCP != "" {
@@ -6476,7 +6492,7 @@ This path responds to the following HTTP methods.
 	},
 
 	"alias_identifier": {
-		`It is the name of the alias (user). For example, if the alias belongs to userpass backend, 
+		`It is the name of the alias (user). For example, if the alias belongs to userpass backend,
 	   the name should be a valid username within userpass auth method. If the alias belongs
 	    to an approle auth method, the name should be a valid RoleID`,
 		"",

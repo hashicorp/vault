@@ -5,14 +5,14 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { ldapBreadcrumbs } from 'ldap/utils/ldap-breadcrumbs';
+import { ldapBreadcrumbs, roleRoutes } from 'ldap/utils/ldap-breadcrumbs';
 
 import type Store from '@ember-data/store';
 import type LdapRoleModel from 'vault/models/ldap/role';
 import type Controller from '@ember/controller';
 import type Transition from '@ember/routing/transition';
 import type { Breadcrumb } from 'vault/vault/app-types';
-import type AdapterError from 'ember-data/adapter'; // eslint-disable-line ember/use-ember-data-rfc-395-imports
+import type AdapterError from '@ember-data/adapter/error';
 
 export interface StaticCredentials {
   dn: string;
@@ -58,11 +58,14 @@ export default class LdapRoleCredentialsRoute extends Route {
     super.setupController(controller, resolvedModel, transition);
 
     const role = this.modelFor('roles.role') as LdapRoleModel;
+    const routeParams = (childResource: string) => {
+      return [role.backend, role.type, childResource];
+    };
     controller.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: role.backend, route: 'overview' },
       { label: 'Roles', route: 'roles' },
-      ...ldapBreadcrumbs(role.name, role.type, role.backend),
+      ...ldapBreadcrumbs(role.name, routeParams, roleRoutes),
       { label: 'Credentials' },
     ];
   }

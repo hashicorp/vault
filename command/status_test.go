@@ -4,10 +4,15 @@
 package command
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/cli"
+	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/stretchr/testify/require"
 )
 
 func testStatusCommand(tb testing.TB) (*cli.MockUi, *StatusCommand) {
@@ -19,6 +24,41 @@ func testStatusCommand(tb testing.TB) (*cli.MockUi, *StatusCommand) {
 			UI: ui,
 		},
 	}
+}
+
+// TestStatusCommand_RaftCluster creates a raft cluster and verifies that a
+// follower has "Removed From Cluster" returned as false in the status command.
+// The test then removes that follower, and checks that "Removed From Cluster"
+// is now true
+func TestStatusCommand_RaftCluster(t *testing.T) {
+	t.Parallel()
+	cluster := testVaultRaftCluster(t)
+	defer cluster.Cleanup()
+
+	toRemove := cluster.Cores[1]
+	expectRemovedFromCluster := func(expectCode int, removed bool) {
+		ui, cmd := testStatusCommand(t)
+		cmd.client = toRemove.Client
+		code := cmd.Run(nil)
+		require.Equal(t, expectCode, code)
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		require.Regexp(t, fmt.Sprintf(".*Removed From Cluster\\s+%t.*", removed), combined)
+	}
+
+	expectRemovedFromCluster(0, false)
+
+	_, err := cluster.Cores[0].Client.Logical().Write("sys/storage/raft/remove-peer",
+		map[string]interface{}{
+			"server_id": toRemove.NodeID,
+		})
+	require.NoError(t, err)
+	testhelpers.RetryUntil(t, 10*time.Second, func() error {
+		if !toRemove.Sealed() {
+			return errors.New("core not sealed")
+		}
+		return nil
+	})
+	expectRemovedFromCluster(2, true)
 }
 
 func TestStatusCommand_Run(t *testing.T) {

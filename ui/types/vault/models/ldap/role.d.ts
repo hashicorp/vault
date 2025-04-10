@@ -20,6 +20,7 @@ export default interface LdapRoleModel extends WithFormFieldsAndValidationsModel
   username_template: string;
   creation_ldif: string;
   rollback_ldif: string;
+  get completeRoleName(): string;
   get isStatic(): string;
   get isDynamic(): string;
   get fieldsForType(): Array<string>;

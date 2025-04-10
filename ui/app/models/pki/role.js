@@ -72,6 +72,7 @@ export default class PkiRoleModel extends Model {
         'Additional subject fields': [
           'allowedUserIds',
           'allowedSerialNumbers',
+          'serialNumberSource',
           'requireCn',
           'useCsrCommonName',
           'useCsrSans',
@@ -244,12 +245,29 @@ export default class PkiRoleModel extends Model {
 
   /* Overriding OpenApi Additional subject field options */
   @attr({
-    label: 'Allowed serial numbers',
     subText:
       'A list of allowed serial numbers to be requested during certificate issuance. Shell-style globbing is supported. If empty, custom-specified serial numbers will be forbidden.',
     editType: 'stringArray',
   })
   allowedSerialNumbers;
+
+  @attr({
+    editType: 'radio',
+    possibleValues: [
+      {
+        value: 'json-csr',
+        subText:
+          'The subject serial number will be taken from the "serial_number" parameter and fall back to the serial number in the CSR.',
+      },
+      {
+        value: 'json',
+        subText:
+          'The subject serial number will be taken from the "serial_number" parameter but will ignore any value in the CSR.',
+      },
+    ],
+    defaultValue: 'json-csr',
+  })
+  serialNumberSource;
 
   @attr('boolean', {
     label: 'Require common name',

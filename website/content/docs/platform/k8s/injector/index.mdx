@@ -1,12 +1,11 @@
 ---
 layout: docs
-page_title: Agent Sidecar Injector Overview
+page_title: Vault Agent Injector
 description: >-
-  The Vault Agent Sidecar Injector is a Kubernetes admission webhook that adds
-  Vault Agent containers to pods for consuming Vault secrets.
+  Learn how Vault Agent Injector works. It is a Kubernetes admission webhook that adds Vault Agent containers to pods for consuming Vault secrets.
 ---
 
-# Agent sidecar injector
+# Vault Agent Injector
 
 The Vault Agent Injector alters pod specifications to include Vault Agent
 containers that render Vault secrets to a shared memory volume using
@@ -189,6 +188,33 @@ The configuration map must contain either one or both of the following files:
 - **config.hcl** used by the sidecar container. This must have `exit_after_auth` set to `false`.
 
 An example of mounting a Vault Agent configmap [can be found here](/vault/docs/platform/k8s/injector/examples#configmap-example).
+
+### Injector telemetry
+
+<Tip>
+
+Set [`injector.metrics.enabled`](/vault/docs/platform/k8s/helm/configuration#metrics) 
+to `true` in the Helm chart to start collecting injector metrics.
+
+</Tip>
+
+Vault Agent injector collects the following Prometheus metrics in addition to
+the default set of `golang` metrics:
+
+- `vault_agent_injector_request_queue_length` - The number of pending webhook requests for the injector.
+
+- `vault_agent_injector_request_processing_duration_ms` - A histogram of webhook
+  request processing times in milliseconds.
+
+- `vault_agent_injector_injections_by_namespace_total` - The total count of
+  Agent container injections, grouped by Kubernetes `namespace` and `injection_type`.
+  Vault Agent injector counts the following injection types:
+    - `init_only`
+    - `sidecar_only`
+    - `init_and_sidecar`
+
+- `vault_agent_injector_failed_injections_by_namespace_total` - The total count
+  of failed Agent sidecar injections, grouped by Kubernetes `namespace`.
 
 ## Tutorial
 

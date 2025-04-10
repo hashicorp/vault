@@ -16,6 +16,8 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/version"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var (
@@ -283,6 +285,50 @@ func TestDynamicSystemView_GeneratePasswordFromPolicy_failed(t *testing.T) {
 				t.Fatalf("no password expected, got %s", actualPassword)
 			}
 		})
+	}
+}
+
+// TestDynamicSystemView_PluginEnv_successful checks that the PluginEnv method returns the expected values in a successful case.
+func TestDynamicSystemView_PluginEnv_successful(t *testing.T) {
+	coreConfig := &CoreConfig{
+		CredentialBackends: map[string]logical.Factory{},
+	}
+
+	cluster := NewTestCluster(t, coreConfig, &TestClusterOptions{})
+
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	core := cluster.Cores[0].Core
+	TestWaitActive(t, core)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	ctx = namespace.RootContext(ctx)
+	dsv := TestDynamicSystemView(cluster.Cores[0].Core, nil)
+
+	pluginEnv, err := dsv.PluginEnv(ctx)
+	if err != nil {
+		t.Fatalf("no error expected, but got: %s", err)
+	}
+
+	expectedVersionInfo := version.GetVersion()
+
+	expectedBuildDate, err := version.GetVaultBuildDate()
+	if err != nil {
+		t.Fatalf("failed to set up expectedBuildDate: %v", err)
+	}
+
+	expectedPluginEnv := &logical.PluginEnvironment{
+		VaultVersion:           expectedVersionInfo.Version,
+		VaultVersionPrerelease: expectedVersionInfo.VersionPrerelease,
+		VaultVersionMetadata:   expectedVersionInfo.VersionMetadata,
+		VaultBuildDate:         timestamppb.New(expectedBuildDate),
+	}
+
+	if !reflect.DeepEqual(pluginEnv, expectedPluginEnv) {
+		t.Fatalf("got %q, expected %q", pluginEnv, expectedPluginEnv)
 	}
 }
 

@@ -83,6 +83,13 @@ func (i *InmemHABackend) HAEnabled() bool {
 	return true
 }
 
+func (i *InmemHABackend) Underlying() *InmemBackend {
+	if txBackend, ok := i.Backend.(*TransactionalInmemBackend); ok {
+		return &txBackend.InmemBackend
+	}
+	return i.Backend.(*InmemBackend)
+}
+
 // InmemLock is an in-memory Lock implementation for the HABackend
 type InmemLock struct {
 	in    *InmemHABackend

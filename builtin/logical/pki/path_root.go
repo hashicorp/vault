@@ -197,6 +197,13 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		},
 	}
 
+	if keyUsages, ok := data.GetOk("key_usage"); ok {
+		err = validateCaKeyUsages(keyUsages.([]string))
+		if err != nil {
+			resp.AddWarning(fmt.Sprintf("Invalid key usage will be ignored: %v", err.Error()))
+		}
+	}
+
 	if len(parsedBundle.Certificate.RawSubject) <= 2 {
 		// Strictly a subject is a SEQUENCE of SETs of SEQUENCES.
 		//
@@ -366,7 +373,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 
 	var caErr error
 	sc := b.makeStorageContext(ctx, req.Storage)
-	signingBundle, caErr := sc.fetchCAInfo(issuerName, issuing.IssuanceUsage)
+	signingBundle, issuerId, caErr := sc.fetchCAInfoWithIssuer(issuerName, issuing.IssuanceUsage)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
@@ -383,8 +390,10 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		// Since we are signing an intermediate, we will by default truncate the
 		// signed intermediary in order to generate a valid intermediary chain. This
 		// was changed in 1.17.x as the default prior was PermitNotAfterBehavior
-		warnAboutTruncate = true
-		signingBundle.LeafNotAfterBehavior = certutil.TruncateNotAfterBehavior
+		if signingBundle.LeafNotAfterBehavior != certutil.AlwaysEnforceErr {
+			warnAboutTruncate = true
+			signingBundle.LeafNotAfterBehavior = certutil.TruncateNotAfterBehavior
+		}
 	}
 
 	useCSRValues := data.Get("use_csr_values").(bool)
@@ -411,7 +420,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		}
 	}
 
-	if err := parsedBundle.Verify(); err != nil {
+	if err := issuing.VerifyCertificate(sc.GetContext(), sc.GetStorage(), issuerId, parsedBundle); err != nil {
 		return nil, fmt.Errorf("verification of parsed bundle failed: %w", err)
 	}
 
@@ -428,6 +437,13 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 	if warnAboutTruncate &&
 		signingBundle.Certificate.NotAfter.Equal(parsedBundle.Certificate.NotAfter) {
 		resp.AddWarning(intCaTruncatationWarning)
+	}
+
+	if keyUsages, ok := data.GetOk("key_usage"); ok {
+		err = validateCaKeyUsages(keyUsages.([]string))
+		if err != nil {
+			resp.AddWarning(fmt.Sprintf("Invalid key usage: %v", err.Error()))
+		}
 	}
 
 	return resp, nil
@@ -627,6 +643,24 @@ func publicKeyType(pub crypto.PublicKey) (pubType x509.PublicKeyAlgorithm, sigAl
 		err = errors.New("x509: only RSA, ECDSA and Ed25519 keys supported")
 	}
 	return
+}
+
+func validateCaKeyUsages(keyUsages []string) error {
+	invalidKeyUsages := []string{}
+	for _, usage := range keyUsages {
+		cleanUsage := strings.ToLower(strings.TrimSpace(usage))
+		switch cleanUsage {
+		case "crlsign", "certsign", "digitalsignature":
+		case "contentcommitment", "keyencipherment", "dataencipherment", "keyagreement", "encipheronly", "decipheronly":
+			invalidKeyUsages = append(invalidKeyUsages, fmt.Sprintf("key usage %s is only valid for non-Ca certs", usage))
+		default:
+			invalidKeyUsages = append(invalidKeyUsages, fmt.Sprintf("unrecognized key usage %s", usage))
+		}
+	}
+	if invalidKeyUsages != nil {
+		return fmt.Errorf(strings.Join(invalidKeyUsages, "; "))
+	}
+	return nil
 }
 
 const pathGenerateRootHelpSyn = `

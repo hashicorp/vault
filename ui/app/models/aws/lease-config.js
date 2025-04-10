@@ -32,8 +32,15 @@ export default class AwsLeaseConfig extends Model {
   })
   lease;
 
-  get attrs() {
-    const keys = ['lease', 'leaseMax'];
-    return expandAttributeMeta(this, keys);
+  configurableParams = ['lease', 'leaseMax'];
+
+  get displayAttrs() {
+    // while identical to formFields, keeping the same pattern as other configurable secret engines for consistency
+    // and to easily filter out displayAttributes in the future if needed
+    return this.formFields;
+  }
+
+  get formFields() {
+    return expandAttributeMeta(this, this.configurableParams);
   }
 }

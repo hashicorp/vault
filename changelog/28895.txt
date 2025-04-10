@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Added new `enable_post_unseal_trace` and `post_unseal_trace_directory` config options to generate Go traces during the post-unseal step for debug purposes.
+```

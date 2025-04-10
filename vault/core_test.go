@@ -379,7 +379,7 @@ func TestCore_HasVaultVersion(t *testing.T) {
 	upgradeTime := versionEntry.TimestampInstalled
 
 	if upgradeTime.After(time.Now()) || upgradeTime.Before(time.Now().Add(-1*time.Hour)) {
-		t.Fatalf("upgrade time isn't within reasonable bounds of new core initialization. " +
+		t.Fatal("upgrade time isn't within reasonable bounds of new core initialization. " +
 			fmt.Sprintf("time is: %+v, upgrade time is %+v", time.Now(), upgradeTime))
 	}
 }
@@ -3400,15 +3400,11 @@ func TestDefaultDeadlock(t *testing.T) {
 	InduceDeadlock(t, testCore, 0)
 }
 
-func RestoreDeadlockOpts() func() {
-	opts := deadlock.Opts
-	return func() {
-		deadlock.Opts = opts
-	}
-}
-
 func InduceDeadlock(t *testing.T, vaultcore *Core, expected uint32) {
-	defer RestoreDeadlockOpts()()
+	priorDeadlockFunc := deadlock.Opts.OnPotentialDeadlock
+	defer func() {
+		deadlock.Opts.OnPotentialDeadlock = priorDeadlockFunc
+	}()
 	var deadlocks uint32
 	deadlock.Opts.OnPotentialDeadlock = func() {
 		atomic.AddUint32(&deadlocks, 1)
@@ -3668,7 +3664,7 @@ func TestBuildUnsealSetupFunctionSlice(t *testing.T) {
 			core: &Core{
 				replicationState: uint32Ptr(uint32(0)),
 			},
-			expectedLength: 25,
+			expectedLength: 26,
 		},
 		{
 			name: "dr secondary core",
@@ -3678,7 +3674,7 @@ func TestBuildUnsealSetupFunctionSlice(t *testing.T) {
 			expectedLength: 14,
 		},
 	} {
-		funcs := buildUnsealSetupFunctionSlice(testcase.core)
+		funcs := buildUnsealSetupFunctionSlice(testcase.core, true)
 		assert.Equal(t, testcase.expectedLength, len(funcs), testcase.name)
 	}
 }
@@ -3724,7 +3720,7 @@ func TestCore_IsRemovedFromCluster(t *testing.T) {
 	core.underlyingPhysical = mockHA
 	removed, ok = core.IsRemovedFromCluster()
 	if removed || !ok {
-		t.Fatalf("expected removed and ok to be false, got removed: %v, ok: %v", removed, ok)
+		t.Fatalf("expected removed to be false and ok to be true, got removed: %v, ok: %v", removed, ok)
 	}
 
 	// Test case where HA backend is nil, but the underlying physical is there, supports RemovableNodeHABackend, and is removed
@@ -3735,6 +3731,7 @@ func TestCore_IsRemovedFromCluster(t *testing.T) {
 	}
 
 	// Test case where HA backend does not support RemovableNodeHABackend
+	core.underlyingPhysical = &MockHABackend{}
 	core.ha = &MockHABackend{}
 	removed, ok = core.IsRemovedFromCluster()
 	if removed || ok {
@@ -3755,4 +3752,17 @@ func TestCore_IsRemovedFromCluster(t *testing.T) {
 	if !removed || !ok {
 		t.Fatalf("expected removed to be false and ok to be true, got removed: %v, ok: %v", removed, ok)
 	}
+}
+
+// Test_administrativeNamespacePath verifies if administrativeNamespacePath function returns the configured administrative namespace path
+func Test_administrativeNamespacePath(t *testing.T) {
+	adminNamespacePath := "admin"
+	coreConfig := &CoreConfig{
+		RawConfig: &server.Config{
+			SharedConfig: &configutil.SharedConfig{AdministrativeNamespacePath: adminNamespacePath},
+		},
+		AdministrativeNamespacePath: adminNamespacePath,
+	}
+	core, _, _ := TestCoreUnsealedWithConfig(t, coreConfig)
+	require.Equal(t, core.administrativeNamespacePath(), adminNamespacePath)
 }

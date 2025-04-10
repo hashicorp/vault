@@ -31,6 +31,10 @@ func (c *Core) EntGetLicenseState() (*LicenseState, error) {
 	return nil, nil
 }
 
+func (c *Core) EntGetLicense() (string, error) {
+	return "", nil
+}
+
 func (c *Core) EntReloadLicense() error {
 	return nil
 }

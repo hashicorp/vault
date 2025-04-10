@@ -181,6 +181,9 @@ type ExecConfig struct {
 func NewConfig() *Config {
 	return &Config{
 		SharedConfig: new(configutil.SharedConfig),
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 }
 
@@ -248,8 +251,13 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.DisableKeepAlivesTemplating = c2.DisableKeepAlivesTemplating
 	}
 
+	// Instead of checking if TemplateConfig is not nil, we compare against the default value
+	// that is set in NewConfig to determine if a TemplateConfig was specified in the config
+	defaultConfig := TemplateConfig{
+		MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+	}
 	result.TemplateConfig = c.TemplateConfig
-	if c2.TemplateConfig != nil {
+	if *c2.TemplateConfig != defaultConfig {
 		result.TemplateConfig = c2.TemplateConfig
 	}
 
@@ -743,6 +751,10 @@ func parseVault(result *Config, list *ast.ObjectList) error {
 		return err
 	}
 
+	if v.Address != "" {
+		v.Address = configutil.NormalizeAddr(v.Address)
+	}
+
 	if v.TLSSkipVerifyRaw != nil {
 		v.TLSSkipVerify, err = parseutil.ParseBool(v.TLSSkipVerifyRaw)
 		if err != nil {
@@ -1030,8 +1042,61 @@ func parseMethod(result *Config, list *ast.ObjectList) error {
 	// Canonicalize namespace path if provided
 	m.Namespace = namespace.Canonicalize(m.Namespace)
 
+	// Normalize any configuration addresses
+	if len(m.Config) > 0 {
+		var err error
+		for k, v := range m.Config {
+			vStr, ok := v.(string)
+			if !ok {
+				continue
+			}
+			m.Config[k], err = normalizeAutoAuthMethod(m.Type, k, vStr)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	result.AutoAuth.Method = &m
 	return nil
+}
+
+// autoAuthMethodKeys maps an auto-auth method type to its associated
+// configuration whose values are URLs, IP addresses, or host:port style
+// addresses. All auto-auth types must have an entry in this map, otherwise our
+// normalization check will fail when parsing the storage entry config.
+// Auto-auth method types which don't contain such keys should include an empty
+// array.
+var autoAuthMethodKeys = map[string][]string{
+	"alicloud":   {""},
+	"approle":    {""},
+	"aws":        {""},
+	"azure":      {"resource"},
+	"cert":       {""},
+	"cf":         {""},
+	"gcp":        {"service_account"},
+	"jwt":        {""},
+	"ldap":       {""},
+	"kerberos":   {""},
+	"kubernetes": {""},
+	"oci":        {""},
+	"token_file": {""},
+}
+
+// normalizeAutoAuthMethod takes a storage name, a configuration key
+// and its associated value and will normalize any URLs, IP addresses, or
+// host:port style addresses.
+func normalizeAutoAuthMethod(method string, key string, value string) (string, error) {
+	keys, ok := autoAuthMethodKeys[method]
+	if !ok {
+		return "", fmt.Errorf("unknown auto-auth method type %s", method)
+	}
+
+	if slices.Contains(keys, key) {
+		return configutil.NormalizeAddr(value), nil
+	}
+
+	return value, nil
 }
 
 func parseSinks(result *Config, list *ast.ObjectList) error {
@@ -1104,9 +1169,6 @@ func parseTemplateConfig(result *Config, list *ast.ObjectList) error {
 
 	templateConfigList := list.Filter(name)
 	if len(templateConfigList.Items) == 0 {
-		result.TemplateConfig = &TemplateConfig{
-			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
-		}
 		return nil
 	}
 

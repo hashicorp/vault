@@ -63,7 +63,7 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
 
     await this.renderComponent();
 
-    assert.dom('.title svg').hasClass('flight-icon-folder-users', 'LDAP icon renders in title');
+    assert.dom('.title svg').hasClass('hds-icon-folder-users', 'LDAP icon renders in title');
     assert.dom('.title').hasText('ldap-test', 'Mount path renders in title');
     assert
       .dom('[data-test-toolbar-action="config"]')
@@ -79,7 +79,7 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
     assert.dom('[data-test-toolbar-action="role"]').hasText('Create role', 'Toolbar action has correct text');
     assert
       .dom('[data-test-toolbar-action="role"] svg')
-      .hasClass('flight-icon-plus', 'Toolbar action has correct icon');
+      .hasClass('hds-icon-plus', 'Toolbar action has correct icon');
     assert
       .dom('[data-test-filter-input]')
       .doesNotExist('Roles filter input is hidden when roles have not been created');
@@ -95,7 +95,7 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
   test('it should render roles list', async function (assert) {
     await this.renderComponent();
 
-    assert.dom('[data-test-list-item-content] svg').hasClass('flight-icon-user', 'List item icon renders');
+    assert.dom('[data-test-list-item-content] svg').hasClass('hds-icon-user', 'List item icon renders');
     assert
       .dom(LDAP_SELECTORS.roleItem('static', 'static-test'))
       .hasText(this.roles[0].name, 'List item name renders');

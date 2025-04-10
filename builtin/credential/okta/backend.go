@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/okta/okta-sdk-golang/v2/okta"
+	"github.com/okta/okta-sdk-golang/v5/okta"
 	"github.com/patrickmn/go-cache"
 )
 
@@ -118,6 +118,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username, pas
 		StateToken   string         `json:"stateToken"`
 	}
 
+	// The okta-sdk-golang API says to construct your own requests for auth, and the Request Executor is gone, so
 	authReq, err := shim.NewRequest("POST", "authn", map[string]interface{}{
 		"username": username,
 		"password": password,
@@ -129,9 +130,6 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username, pas
 	var result authResult
 	rsp, err := shim.Do(authReq, &result)
 	if err != nil {
-		if oe, ok := err.(*okta.Error); ok {
-			return nil, logical.ErrorResponse("Okta auth failed: %v (code=%v)", err, oe.ErrorCode), nil, nil
-		}
 		return nil, logical.ErrorResponse(fmt.Sprintf("Okta auth failed: %v", err)), nil, nil
 	}
 	if rsp == nil {
@@ -370,23 +368,23 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username, pas
 	return policies, oktaResponse, allGroups, nil
 }
 
-func (b *backend) getOktaGroups(ctx context.Context, client *okta.Client, user *okta.User) ([]string, error) {
-	groups, resp, err := client.User.ListUserGroups(ctx, user.Id)
+func (b *backend) getOktaGroups(ctx context.Context, client *okta.APIClient, user *okta.User) ([]string, error) {
+	groups, resp, err := client.UserAPI.ListUserGroups(ctx, user.GetId()).Execute()
 	if err != nil {
 		return nil, err
 	}
 	oktaGroups := make([]string, 0, len(groups))
 	for _, group := range groups {
-		oktaGroups = append(oktaGroups, group.Profile.Name)
+		oktaGroups = append(oktaGroups, group.Profile.GetName())
 	}
 	for resp.HasNextPage() {
 		var nextGroups []*okta.Group
-		resp, err = resp.Next(ctx, &nextGroups)
+		resp, err = resp.Next(&nextGroups)
 		if err != nil {
 			return nil, err
 		}
 		for _, group := range nextGroups {
-			oktaGroups = append(oktaGroups, group.Profile.Name)
+			oktaGroups = append(oktaGroups, group.Profile.GetName())
 		}
 	}
 	if b.Logger().IsDebug() {

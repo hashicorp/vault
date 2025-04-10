@@ -1,23 +1,19 @@
 ---
 layout: docs
-page_title: UI - Configuration
-description: |-
-  Vault features a user interface (web interface) for interacting with Vault.
-  Easily create, read, update, and delete secrets, authenticate, unseal, and
-  more with the Vault UI.
+page_title: GUI - Configuration
+description: >-
+  Configure the web interface (GUI) for Vault.
 ---
 
-# Vault UI
+# Vault GUI configuration
 
 Vault features a user interface (web interface) for interacting with Vault.
 Easily create, read, update, and delete secrets, authenticate, unseal, and
-more with the Vault UI.
+more with the Vault GUI.
 
--> The UI requires **Vault 0.10 or higher** or Vault Enterprise.
+## Activating the Vault GUI
 
-## Activating the Vault UI
-
-The Vault UI is not activated by default. To activate the UI, set the `ui`
+The Vault GUI is not activated by default. To activate the UI, set the `ui`
 configuration option in the Vault server configuration. Vault clients do not
 need to set this option, since they will not be serving the UI.
 
@@ -32,7 +28,7 @@ listener "tcp" {
 For more information, please see the
 [Vault configuration options](/vault/docs/configuration).
 
-## Accessing the Vault UI
+## Accessing the Vault GUI
 
 The UI runs on the same port as the Vault listener. As such, you must configure
 at least one `listener` stanza in order to access the UI.
@@ -41,7 +37,7 @@ at least one `listener` stanza in order to access the UI.
 listener "tcp" {
   address = "10.0.1.35:8200"
 
-  # If bound to localhost, the Vault UI is only
+  # If bound to localhost, the Vault GUI is only
   # accessible from the local machine!
   # address = "127.0.0.1:8200"
 }
@@ -64,16 +60,16 @@ https://vault.service.consul:8200/ui/
 ### Note on TLS
 
 When using TLS (recommended), the certificate must be valid for all DNS entries
-you will be accessing the Vault UI on, and any IP addresses on the SAN. If you
+you will be accessing the Vault GUI on, and any IP addresses on the SAN. If you
 are running Vault with a self-signed certificate, any browsers that access the
-Vault UI will need to have the root CA installed. Failure to do so may result in
+Vault GUI will need to have the root CA installed. Failure to do so may result in
 the browser displaying a warning that the site is "untrusted". It is highly
-recommended that client browsers accessing the Vault UI install the proper CA
+recommended that client browsers accessing the Vault GUI install the proper CA
 root for validation to reduce the chance of a MITM attack.
 
 
-## Vault UI Web REPL
+## CLI emulation in the Vault GUI
 
-The Vault UI includes an interactive Web REPL to interact with Vault's API much
+The Vault GUI includes an interactive Web REPL to interact with Vault's API much
 like the Vault CLI. For more on that, see the
 [Web REPL documentation](/vault/docs/commands/web).

@@ -79,7 +79,7 @@ module('Integration | Component | pki | Page::PkiIssuerEditPage::PkiIssuerEdit',
     assert
       .dom(selectors.leafOption)
       .hasText(
-        'Error if the computed NotAfter exceeds that of this issuer',
+        'Error if the computed NotAfter exceeds that of this issuer in all circumstances (leaf, CA issuance and ACME)',
         'Correct text renders for leaf option'
       );
     assert.dom(selectors.usageCert).isChecked('Usage issuing certificates is checked');

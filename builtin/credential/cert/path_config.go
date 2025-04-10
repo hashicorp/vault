@@ -42,6 +42,11 @@ func pathConfig(b *backend) *framework.Path {
 				Default:     defaultRoleCacheSize,
 				Description: `The size of the in memory role cache`,
 			},
+			"enable_metadata_on_failures": {
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: `If set, metadata of the client certificate will be returned on authentication failures.`,
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -87,6 +92,9 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 		}
 		config.RoleCacheSize = cacheSize
 	}
+	if enableMetadataOnFailures, ok := data.GetOk("enable_metadata_on_failures"); ok {
+		config.EnableMetadataOnFailures = enableMetadataOnFailures.(bool)
+	}
 	if err := b.storeConfig(ctx, req.Storage, config); err != nil {
 		return nil, err
 	}
@@ -104,6 +112,7 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 		"enable_identity_alias_metadata": cfg.EnableIdentityAliasMetadata,
 		"ocsp_cache_size":                cfg.OcspCacheSize,
 		"role_cache_size":                cfg.RoleCacheSize,
+		"enable_metadata_on_failures":    cfg.EnableMetadataOnFailures,
 	}
 
 	return &logical.Response{
@@ -133,4 +142,5 @@ type config struct {
 	EnableIdentityAliasMetadata bool `json:"enable_identity_alias_metadata"`
 	OcspCacheSize               int  `json:"ocsp_cache_size"`
 	RoleCacheSize               int  `json:"role_cache_size"`
+	EnableMetadataOnFailures    bool `json:"enable_metadata_on_failures"`
 }

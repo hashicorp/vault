@@ -10,12 +10,22 @@ import { action } from '@ember/object';
 
 /**
  * @module AuthPage
- * The Auth::Page wraps OktaNumberChallenge and AuthForm to manage the login flow and is responsible for calling the authenticate method
+ * The Auth::Page is the route template for the login splash view. It renders the Auth::LoginForm or MFA component if an 
+ * mfa validation is returned from the auth request. It also handles display logic if there is an oidc provider query param.
  *
  * @example
- * <Auth::Page @namespaceQueryParam={{this.namespaceQueryParam}} @onAuthSuccess={{action "authSuccess"}} @oidcProviderQueryParam={{this.oidcProvider}} @cluster={{this.model}} @onNamespaceUpdate={{perform this.updateNamespace}} />
+ * <Auth::Page
+ * @authMethodQueryParam={{this.authMethod}}
+ * @cluster={{this.model}}
+ * @namespaceQueryParam={{this.namespaceQueryParam}}
+ * @oidcProviderQueryParam={{this.oidcProvider}}
+ * @onAuthSuccess={{action "authSuccess"}}
+ * @onNamespaceUpdate={{perform this.updateNamespace}}
+ * @wrappedToken={{this.wrappedToken}}
+/>
  *
  * @param {string} authMethodQueryParam - auth method type to login with, updated by selecting an auth method from the dropdown
+ * @param {object} cluster - the ember data cluster model. contains information such as cluster id, name and boolean for if the cluster is in standby
  * @param {string} namespaceQueryParam - namespace to login with, updated by typing in to the namespace input
  * @param {string} oidcProviderQueryParam - oidc provider query param, set in url as "?o=someprovider"
  * @param {function} onAuthSuccess - callback task in controller that receives the auth response (after MFA, if enabled) when login is successful
@@ -51,16 +61,25 @@ export default class AuthPage extends Component {
   @action
   onAuthResponse(authResponse, backend, data) {
     const { mfa_requirement } = authResponse;
-    // if an mfa requirement exists further action is required
+    /*
+    Checking for an mfa_requirement happens in two places.
+    If doSubmit in <AuthForm> is called directly (by the <form> component) mfa is just handled here.
+  
+    Login methods submitted using a child form component of <AuthForm> are first checked for mfa 
+    in the Auth::LoginForm "authenticate" task, and then that data eventually bubbles up here.
+    */
     if (mfa_requirement) {
+      // if an mfa requirement exists further action is required
       this.mfaAuthData = { mfa_requirement, backend, data };
     } else {
+      // calls authSuccess in auth.js controller
       this.args.onAuthSuccess(authResponse);
     }
   }
 
   @action
   onMfaSuccess(authResponse) {
+    // calls authSuccess in auth.js controller
     this.args.onAuthSuccess(authResponse);
   }
 

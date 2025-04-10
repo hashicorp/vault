@@ -26,9 +26,9 @@ module('Integration | Component | ldap | Page::Library::CheckOut', function (hoo
     };
     this.breadcrumbs = [
       { label: 'ldap-test', route: 'overview' },
-      { label: 'libraries', route: 'libraries' },
+      { label: 'Libraries', route: 'libraries' },
       { label: 'test-library', route: 'libraries.library' },
-      { label: 'check-out' },
+      { label: 'Check-Out' },
     ];
 
     this.renderComponent = () => {
@@ -48,13 +48,13 @@ module('Integration | Component | ldap | Page::Library::CheckOut', function (hoo
       .containsText('ldap-test', 'Overview breadcrumb renders');
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(2) a')
-      .containsText('libraries', 'Libraries breadcrumb renders');
+      .containsText('Libraries', 'Libraries breadcrumb renders');
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(3)')
       .containsText('test-library', 'Library breadcrumb renders');
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(4)')
-      .containsText('check-out', 'Check-out breadcrumb renders');
+      .containsText('Check-Out', 'Check-out breadcrumb renders');
   });
 
   test('it should render check out information and credentials', async function (assert) {
@@ -76,7 +76,7 @@ module('Integration | Component | ldap | Page::Library::CheckOut', function (hoo
       .hasText('ldap/library/test/check-out/123', 'Lease ID renders');
     assert
       .dom('[data-test-value-div="Lease renewable"] svg')
-      .hasClass('flight-icon-check-circle', 'Lease renewable true icon renders');
+      .hasClass('hds-icon-check-circle', 'Lease renewable true icon renders');
     assert
       .dom('[data-test-value-div="Lease renewable"] svg')
       .hasClass('has-text-success', 'Lease renewable true icon color renders');
@@ -86,7 +86,7 @@ module('Integration | Component | ldap | Page::Library::CheckOut', function (hoo
     await this.renderComponent();
     assert
       .dom('[data-test-value-div="Lease renewable"] svg')
-      .hasClass('flight-icon-x-circle', 'Lease renewable false icon renders');
+      .hasClass('hds-icon-x-circle', 'Lease renewable false icon renders');
     assert
       .dom('[data-test-value-div="Lease renewable"] svg')
       .hasClass('has-text-danger', 'Lease renewable false icon color renders');

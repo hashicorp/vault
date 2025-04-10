@@ -11,10 +11,12 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-discover"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
@@ -115,6 +117,9 @@ type Config struct {
 	License          string `hcl:"-"`
 	LicensePath      string `hcl:"license_path"`
 	DisableSSCTokens bool   `hcl:"-"`
+
+	EnablePostUnsealTrace bool   `hcl:"enable_post_unseal_trace"`
+	PostUnsealTraceDir    string `hcl:"post_unseal_trace_directory"`
 }
 
 const (
@@ -423,6 +428,16 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.LicensePath = c.LicensePath
 	if c2.LicensePath != "" {
 		result.LicensePath = c2.LicensePath
+	}
+
+	result.EnablePostUnsealTrace = c.EnablePostUnsealTrace
+	if c2.EnablePostUnsealTrace {
+		result.EnablePostUnsealTrace = c2.EnablePostUnsealTrace
+	}
+
+	result.PostUnsealTraceDir = c.PostUnsealTraceDir
+	if c2.PostUnsealTraceDir != "" {
+		result.PostUnsealTraceDir = c2.PostUnsealTraceDir
 	}
 
 	// Use values from top-level configuration for storage if set
@@ -921,33 +936,49 @@ func ParseStorage(result *Config, list *ast.ObjectList, name string) error {
 	}
 
 	m := make(map[string]string)
-	for key, val := range config {
-		valStr, ok := val.(string)
+	for k, v := range config {
+		vStr, ok := v.(string)
 		if ok {
-			m[key] = valStr
+			var err error
+			m[k], err = normalizeStorageConfigAddresses(key, k, vStr)
+			if err != nil {
+				return err
+			}
 			continue
 		}
-		valBytes, err := json.Marshal(val)
-		if err != nil {
-			return err
+
+		var err error
+		var vBytes []byte
+		// Raft's retry_join requires special normalization due to its complexity
+		if key == "raft" && k == "retry_join" {
+			vBytes, err = normalizeRaftRetryJoin(v)
+			if err != nil {
+				return err
+			}
+		} else {
+			vBytes, err = json.Marshal(v)
+			if err != nil {
+				return err
+			}
 		}
-		m[key] = string(valBytes)
+
+		m[k] = string(vBytes)
 	}
 
 	// Pull out the redirect address since it's common to all backends
 	var redirectAddr string
 	if v, ok := m["redirect_addr"]; ok {
-		redirectAddr = v
+		redirectAddr = configutil.NormalizeAddr(v)
 		delete(m, "redirect_addr")
 	} else if v, ok := m["advertise_addr"]; ok {
-		redirectAddr = v
+		redirectAddr = configutil.NormalizeAddr(v)
 		delete(m, "advertise_addr")
 	}
 
 	// Pull out the cluster address since it's common to all backends
 	var clusterAddr string
 	if v, ok := m["cluster_addr"]; ok {
-		clusterAddr = v
+		clusterAddr = configutil.NormalizeAddr(v)
 		delete(m, "cluster_addr")
 	}
 
@@ -963,11 +994,11 @@ func ParseStorage(result *Config, list *ast.ObjectList, name string) error {
 
 	// Override with top-level values if they are set
 	if result.APIAddr != "" {
-		redirectAddr = result.APIAddr
+		redirectAddr = configutil.NormalizeAddr(result.APIAddr)
 	}
 
 	if result.ClusterAddr != "" {
-		clusterAddr = result.ClusterAddr
+		clusterAddr = configutil.NormalizeAddr(result.ClusterAddr)
 	}
 
 	if result.DisableClusteringRaw != nil {
@@ -982,6 +1013,117 @@ func ParseStorage(result *Config, list *ast.ObjectList, name string) error {
 		Config:            m,
 	}
 	return nil
+}
+
+// storageAddressKeys maps a storage backend type to its associated
+// configuration whose values are URLs, IP addresses, or host:port style
+// addresses. All physical storage types must have an entry in this map,
+// otherwise our normalization check will fail when parsing the storage entry
+// config. Physical storage types which don't contain such keys should include
+// an empty array.
+var storageAddressKeys = map[string][]string{
+	"aerospike":              {"hostname"},
+	"alicloudoss":            {"endpoint"},
+	"azure":                  {"arm_endpoint"},
+	"cassandra":              {"hosts"},
+	"cockroachdb":            {"connection_url"},
+	"consul":                 {"address", "service_address"},
+	"couchdb":                {"endpoint"},
+	"dynamodb":               {"endpoint"},
+	"etcd":                   {"address", "discovery_srv"},
+	"file":                   {},
+	"filesystem":             {},
+	"foundationdb":           {},
+	"gcs":                    {},
+	"inmem":                  {},
+	"inmem_ha":               {},
+	"inmem_transactional":    {},
+	"inmem_transactional_ha": {},
+	"manta":                  {"url"},
+	"mssql":                  {"server"},
+	"mysql":                  {"address"},
+	"oci":                    {},
+	"postgresql":             {"connection_url"},
+	"raft":                   {}, // retry_join is handled separately in normalizeRaftRetryJoin()
+	"s3":                     {"endpoint"},
+	"spanner":                {},
+	"swift":                  {"auth_url", "storage_url"},
+	"zookeeper":              {"address"},
+}
+
+// normalizeStorageConfigAddresses takes a storage name, a configuration key
+// and it's associated value and will normalize any URLs, IP addresses, or
+// host:port style addresses.
+func normalizeStorageConfigAddresses(storage string, key string, value string) (string, error) {
+	keys, ok := storageAddressKeys[storage]
+	if !ok {
+		return "", fmt.Errorf("unknown storage type %s", storage)
+	}
+
+	if slices.Contains(keys, key) {
+		return configutil.NormalizeAddr(value), nil
+	}
+
+	return value, nil
+}
+
+// normalizeRaftRetryJoin takes the hcl decoded value representation of a
+// retry_join stanza and normalizes any URLs, IP addresses, or host:port style
+// addresses, and returns the value encoded as JSON.
+func normalizeRaftRetryJoin(val any) ([]byte, error) {
+	res := []map[string]any{}
+
+	// Depending on whether the retry_join stanzas were configured as an attribute,
+	// a block, or a mixture of both, we'll get different values from which we
+	// need to extract our individual retry joins stanzas.
+	stanzas := []map[string]any{}
+	if retryJoin, ok := val.([]map[string]any); ok {
+		// retry_join stanzas are defined as blocks
+		stanzas = retryJoin
+	} else {
+		// retry_join stanzas are defined as attributes or attributes and blocks
+		retryJoin, ok := val.([]any)
+		if !ok {
+			// retry_join stanzas have not been configured correctly
+			return nil, fmt.Errorf("malformed retry_join stanza: %v", val)
+		}
+
+		for _, stanza := range retryJoin {
+			stanzaVal, ok := stanza.(map[string]any)
+			if !ok {
+				return nil, fmt.Errorf("malformed retry_join stanza: %v", stanza)
+			}
+			stanzas = append(stanzas, stanzaVal)
+		}
+	}
+
+	for _, stanza := range stanzas {
+		normalizedStanza := map[string]any{}
+		for k, v := range stanza {
+			switch k {
+			case "auto_join":
+				cfg, err := discover.Parse(v.(string))
+				if err != nil {
+					return nil, err
+				}
+				for k, v := range cfg {
+					// These are auto_join keys that are valid for the provider in go-discover
+					if slices.Contains([]string{"domain", "auth_url", "url", "host"}, k) {
+						cfg[k] = configutil.NormalizeAddr(v)
+					}
+				}
+				normalizedStanza[k] = cfg.String()
+			case "leader_api_addr":
+				normalizedStanza[k] = configutil.NormalizeAddr(v.(string))
+			default:
+				normalizedStanza[k] = v
+			}
+		}
+
+		res = append(res, normalizedStanza)
+	}
+
+	return json.Marshal(res)
 }
 
 func parseHAStorage(result *Config, list *ast.ObjectList, name string) error {
@@ -1003,33 +1145,49 @@ func parseHAStorage(result *Config, list *ast.ObjectList, name string) error {
 	}
 
 	m := make(map[string]string)
-	for key, val := range config {
-		valStr, ok := val.(string)
+	for k, v := range config {
+		vStr, ok := v.(string)
 		if ok {
-			m[key] = valStr
+			var err error
+			m[k], err = normalizeStorageConfigAddresses(key, k, vStr)
+			if err != nil {
+				return err
+			}
 			continue
 		}
-		valBytes, err := json.Marshal(val)
-		if err != nil {
-			return err
+
+		var err error
+		var vBytes []byte
+		// Raft's retry_join requires special normalization due to its complexity
+		if key == "raft" && k == "retry_join" {
+			vBytes, err = normalizeRaftRetryJoin(v)
+			if err != nil {
+				return err
+			}
+		} else {
+			vBytes, err = json.Marshal(v)
+			if err != nil {
+				return err
+			}
 		}
-		m[key] = string(valBytes)
+
+		m[k] = string(vBytes)
 	}
 
 	// Pull out the redirect address since it's common to all backends
 	var redirectAddr string
 	if v, ok := m["redirect_addr"]; ok {
-		redirectAddr = v
+		redirectAddr = configutil.NormalizeAddr(v)
 		delete(m, "redirect_addr")
 	} else if v, ok := m["advertise_addr"]; ok {
-		redirectAddr = v
+		redirectAddr = configutil.NormalizeAddr(v)
 		delete(m, "advertise_addr")
 	}
 
 	// Pull out the cluster address since it's common to all backends
 	var clusterAddr string
 	if v, ok := m["cluster_addr"]; ok {
-		clusterAddr = v
+		clusterAddr = configutil.NormalizeAddr(v)
 		delete(m, "cluster_addr")
 	}
 
@@ -1045,11 +1203,11 @@ func parseHAStorage(result *Config, list *ast.ObjectList, name string) error {
 
 	// Override with top-level values if they are set
 	if result.APIAddr != "" {
-		redirectAddr = result.APIAddr
+		redirectAddr = configutil.NormalizeAddr(result.APIAddr)
 	}
 
 	if result.ClusterAddr != "" {
-		clusterAddr = result.ClusterAddr
+		clusterAddr = configutil.NormalizeAddr(result.ClusterAddr)
 	}
 
 	if result.DisableClusteringRaw != nil {
@@ -1081,6 +1239,12 @@ func parseServiceRegistration(result *Config, list *ast.ObjectList, name string)
 	var m map[string]string
 	if err := hcl.DecodeObject(&m, item.Val); err != nil {
 		return multierror.Prefix(err, fmt.Sprintf("%s.%s:", name, key))
+	}
+
+	if key == "consul" {
+		if addr, ok := m["address"]; ok {
+			m["address"] = configutil.NormalizeAddr(addr)
+		}
 	}
 
 	result.ServiceRegistration = &ServiceRegistration{
@@ -1150,6 +1314,9 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"detect_deadlocks": c.DetectDeadlocks,
 
 		"imprecise_lease_role_tracking": c.ImpreciseLeaseRoleTracking,
+
+		"enable_post_unseal_trace":    c.EnablePostUnsealTrace,
+		"post_unseal_trace_directory": c.PostUnsealTraceDir,
 	}
 	for k, v := range sharedResult {
 		result[k] = v
@@ -1168,6 +1335,9 @@ func (c *Config) Sanitized() map[string]interface{} {
 		if storageType == "raft" {
 			sanitizedStorage["raft"] = map[string]interface{}{
 				"max_entry_size": c.Storage.Config["max_entry_size"],
+			}
+			for k, v := range c.Storage.Config {
+				sanitizedStorage["raft"].(map[string]interface{})[k] = v
 			}
 		}
 

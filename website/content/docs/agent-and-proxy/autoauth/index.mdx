@@ -1,32 +1,42 @@
 ---
 layout: docs
-page_title: Vault Agent and Vault Proxy Auto-Auth
-description: |-
-  Vault Agent and Vault Proxy's Auto-Auth functionality allows easy and automatic
+page_title: What is Auto-authentication?
+description: >-
+  Use auto-authentication with Vault Agent or Vault Proxy to simplify client
   authentication to Vault in a variety of environments.
 ---
 
-# Vault Agent and Vault Proxy Auto-Auth
+# What is Auto-authentication?
 
-The Auto-Auth functionality of Vault Agent and Vault Proxy allow for
-easy authentication in a wide variety of environments.
+Auto-authentication simplifies client authentication in a wide variety of
+environments. The following Vault tools come with auto-authentication built in:
 
-## Functionality
+- Vault Agent
+- Vault Proxy
 
-Auto-Auth consists of two parts: a Method, which is the authentication method
-that should be used in the current environment; and any number of Sinks, which
-are locations where the agent should write a token any time the current token
-value has changed.
+## Methods and sinks
 
-When Vault Agent or Vault Proxy are started with Auto-Auth enabled, it will attempt to acquire a
-Vault token using the configured Method. On failure, it will exponentially back
-off and then retry. On success, unless the auth method is configured to wrap
-the tokens, it will keep the resulting token renewed until renewal is no longer
-allowed. If renewal fails, the token has been revoked, the token has exceeded the maximum number of uses,
-or the token is an otherwise invalid value, it will attempt to reauthenticate.
+Auto-auth consists of two parts:
 
-Every time an authentication is successful, the token is written to the
-configured Sinks, subject to their configuration.
+- a **method** - the desired authentication method for the current environment
+- a **sink** - the location where tools save tokens when the token value changes
+
+When a supported tool starts with auto-auth enabled, the tool requests a Vault
+token using the configured method. If the request fails, the tool retries the
+request with an exponential back off.
+
+Once the request succeeds, the auth-auth renews unwrapped authentication tokens
+automatically until Vault denies the renewal. If the authentication method wraps
+tokens, auto-authentication cannot renew the token automatically.
+
+Vault typically denies renewal if the token:
+
+- the token was revoked.
+- the token has exceeded the maximum number of uses.
+- the token is otherwise invalid.
+
+Every time authentication succeeds, auto-auth writes the token to any
+appropriately configured sink.
 
 ## Advanced functionality
 
@@ -209,7 +219,7 @@ These configuration values are common to all Sinks:
 
 ### Auto auth examples
 
-Auto-Auth configuration objects take two separate forms when specified in HCL
+Auto-auth configuration objects take two separate forms when specified in HCL
 and JSON. The following examples are meant to clarify the differences between
 the two formats.
 

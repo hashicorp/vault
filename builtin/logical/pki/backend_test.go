@@ -50,6 +50,7 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -297,6 +298,87 @@ func TestBackend_CSRValues(t *testing.T) {
 	logicaltest.Test(t, testCase)
 }
 
+func TestBackend_SerialNumberSource(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	var err error
+
+	_, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "myvault.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = CBWrite(b, s, "roles/json-csr", map[string]interface{}{
+		"allow_any_name":         true,
+		"enforce_hostnames":      false,
+		"allowed_serial_numbers": "foo*",
+		"serial_number_source":   "json-csr",
+		"key_type":               "any",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = CBWrite(b, s, "roles/json", map[string]interface{}{
+		"allow_any_name":         true,
+		"enforce_hostnames":      false,
+		"allowed_serial_numbers": "foo*",
+		"serial_number_source":   "json",
+		"key_type":               "any",
+	})
+
+	// Create a CSR with a serial number not allowed by the role.
+	tmpl := &x509.CertificateRequest{
+		Subject: pkix.Name{SerialNumber: "bar"},
+	}
+	_, _, csrPem := generateCSR(t, tmpl, "ec", 256)
+
+	// Signing a csr with a disallowed subject serial number in the CSR
+	// with serial_number_source=json-csr should fail.
+	_, err = CBWrite(b, s, "sign/json-csr", map[string]interface{}{
+		"common_name": "localhost",
+		"csr":         csrPem,
+	})
+	if err == nil {
+		t.Fatal("expected an error")
+	}
+
+	// The serial number in the request should take precedence.
+	_, err = CBWrite(b, s, "sign/json-csr", map[string]interface{}{
+		"common_name":   "localhost",
+		"csr":           csrPem,
+		"serial_number": "foobar",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Try signing the cert with serial_number_source=json.
+	// The serial in the CSR should be ignored.
+	_, err = CBWrite(b, s, "sign/json", map[string]interface{}{
+		"common_name": "localhost",
+		"csr":         csrPem,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Try signing the cert with serial_number_source=json
+	// and a serial number in the request
+	_, err = CBWrite(b, s, "sign/json", map[string]interface{}{
+		"common_name":   "localhost",
+		"csr":           csrPem,
+		"serial_number": "foobar2",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestBackend_URLsCRUD(t *testing.T) {
 	t.Parallel()
 	initTest.Do(setCerts)
@@ -510,14 +592,14 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 		},
 	}
 
-	priv1024, _ := rsa.GenerateKey(rand.Reader, 1024)
+	priv1024, _ := cryptoutil.GenerateRSAKey(rand.Reader, 1024)
 	csr1024, _ := x509.CreateCertificateRequest(rand.Reader, &csrTemplate, priv1024)
 	csrPem1024 := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
 		Type:  "CERTIFICATE REQUEST",
 		Bytes: csr1024,
 	})))
 
-	priv2048, _ := rsa.GenerateKey(rand.Reader, 2048)
+	priv2048, _ := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	csr2048, _ := x509.CreateCertificateRequest(rand.Reader, &csrTemplate, priv2048)
 	csrPem2048 := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
 		Type:  "CERTIFICATE REQUEST",
@@ -699,7 +781,7 @@ func generateCSR(t *testing.T, csrTemplate *x509.CertificateRequest, keyType str
 	var err error
 	switch keyType {
 	case "rsa":
-		priv, err = rsa.GenerateKey(rand.Reader, keyBits)
+		priv, err = cryptoutil.GenerateRSAKey(rand.Reader, keyBits)
 	case "ec":
 		switch keyBits {
 		case 224:
@@ -1180,7 +1262,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		case "rsa":
 			privKey, ok = generatedRSAKeys[keyBits]
 			if !ok {
-				privKey, _ = rsa.GenerateKey(rand.Reader, keyBits)
+				privKey, _ = cryptoutil.GenerateRSAKey(rand.Reader, keyBits)
 				generatedRSAKeys[keyBits] = privKey
 			}
 
@@ -2164,7 +2246,7 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 	}
 
 	// create a CSR and key
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	key, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2276,7 +2358,7 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 		t.Fatal(err)
 	}
 	if resp != nil && resp.IsError() {
-		t.Fatalf(resp.Error().Error())
+		t.Fatal(resp.Error().Error())
 	}
 	if resp.Data == nil || resp.Data["certificate"] == nil {
 		t.Fatal("did not get expected data")
@@ -2316,7 +2398,7 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 		t.Fatal(err)
 	}
 	if resp != nil && resp.IsError() {
-		t.Fatalf(resp.Error().Error())
+		t.Fatal(resp.Error().Error())
 	}
 	if resp.Data == nil || resp.Data["certificate"] == nil {
 		t.Fatal("did not get expected data")
@@ -2735,7 +2817,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	key, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2879,7 +2961,7 @@ func TestBackend_SignSelfIssued_DifferentTypes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	key, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3721,6 +3803,7 @@ func TestReadWriteDeleteRoles(t *testing.T) {
 	expectedData := map[string]interface{}{
 		"key_type":                           "rsa",
 		"use_csr_sans":                       true,
+		"serial_number_source":               "json-csr",
 		"client_flag":                        true,
 		"allowed_serial_numbers":             []interface{}{},
 		"generate_lease":                     false,
@@ -3834,7 +3917,7 @@ func setCerts() {
 	}
 	ecCACert = strings.TrimSpace(string(pem.EncodeToMemory(caCertPEMBlock)))
 
-	rak, err := rsa.GenerateKey(rand.Reader, 2048)
+	rak, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	if err != nil {
 		panic(err)
 	}
@@ -6830,6 +6913,7 @@ func TestProperAuthing(t *testing.T) {
 	}
 	serial := resp.Data["serial_number"].(string)
 	eabKid := "13b80844-e60d-42d2-b7e9-152a8e834b90"
+	acmeKeyId := "hrKmDYTvicHoHGVN2-3uzZV_BPGdE0W_dNaqYTtYqeo="
 	paths := map[string]pathAuthChecker{
 		"ca_chain":                               shouldBeUnauthedReadList,
 		"cert/ca_chain":                          shouldBeUnauthedReadList,
@@ -6949,6 +7033,8 @@ func TestProperAuthing(t *testing.T) {
 		"unified-ocsp/dGVzdAo=":                  shouldBeUnauthedReadList,
 		"eab/":                                   shouldBeAuthed,
 		"eab/" + eabKid:                          shouldBeAuthed,
+		"acme/mgmt/account/keyid/":               shouldBeAuthed,
+		"acme/mgmt/account/keyid/" + acmeKeyId:   shouldBeAuthed,
 	}
 
 	entPaths := getEntProperAuthingPaths(serial)
@@ -7019,7 +7105,10 @@ func TestProperAuthing(t *testing.T) {
 			raw_path = strings.ReplaceAll(raw_path, "{serial}", serial)
 		}
 		if strings.Contains(raw_path, "acme/account/") && strings.Contains(raw_path, "{kid}") {
-			raw_path = strings.ReplaceAll(raw_path, "{kid}", "hrKmDYTvicHoHGVN2-3uzZV_BPGdE0W_dNaqYTtYqeo=")
+			raw_path = strings.ReplaceAll(raw_path, "{kid}", acmeKeyId)
+		}
+		if strings.Contains(raw_path, "acme/mgmt/account/") && strings.Contains(raw_path, "{keyid}") {
+			raw_path = strings.ReplaceAll(raw_path, "{keyid}", acmeKeyId)
 		}
 		if strings.Contains(raw_path, "acme/") && strings.Contains(raw_path, "{auth_id}") {
 			raw_path = strings.ReplaceAll(raw_path, "{auth_id}", "29da8c38-7a09-465e-b9a6-3d76802b1afd")
@@ -7241,6 +7330,141 @@ func TestGenerateRootCAWithAIA(t *testing.T) {
 		"key_type":    "ec",
 	})
 	requireSuccessNonNilResponse(t, resp, err, "expected root generation to succeed")
+}
+
+// TestIssuance_AlwaysEnforceErr validates that we properly return an error in all request
+// types that go beyond the issuer's NotAfter
+func TestIssuance_AlwaysEnforceErr(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"key_type":    "ec",
+		"ttl":         "10h",
+		"issuer_name": "root-ca",
+		"key_name":    "root-key",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "expected root generation to succeed")
+
+	resp, err = CBPatch(b, s, "issuer/root-ca", map[string]interface{}{
+		"leaf_not_after_behavior": "always_enforce_err",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed updating root issuer with always_enforce_err")
+
+	resp, err = CBWrite(b, s, "roles/test-role", map[string]interface{}{
+		"allow_any_name":         true,
+		"key_type":               "ec",
+		"allowed_serial_numbers": "*",
+	})
+
+	expectedErrContains := "cannot satisfy request, as TTL would result in notAfter"
+
+	// Make sure we fail on CA issuance requests now
+	t.Run("ca-issuance", func(t *testing.T) {
+		resp, err = CBWrite(b, s, "intermediate/generate/internal", map[string]interface{}{
+			"common_name": "myint.com",
+		})
+		requireSuccessNonNilResponse(t, resp, err, "failed generating intermediary CSR")
+		requireFieldsSetInResp(t, resp, "csr")
+		csr := resp.Data["csr"]
+
+		_, err = CBWrite(b, s, "issuer/root-ca/sign-intermediate", map[string]interface{}{
+			"csr":            csr,
+			"use_csr_values": true,
+			"ttl":            "60h",
+		})
+		require.ErrorContains(t, err, expectedErrContains, "sign-intermediate should have failed as root issuer leaf behavior is set to always_enforce_err")
+
+		// Make sure it works if we are under
+		resp, err = CBWrite(b, s, "issuer/root-ca/sign-intermediate", map[string]interface{}{
+			"csr":            csr,
+			"use_csr_values": true,
+			"ttl":            "30m",
+		})
+		requireSuccessNonNilResponse(t, resp, err, "sign-intermediate should have passed with a lower TTL value and always_enforce_err")
+	})
+
+	// Make sure we fail on leaf csr signing leaf as we always did for 'err'
+	t.Run("sign-leaf-csr", func(t *testing.T) {
+		_, csrPem := generateTestCsr(t, certutil.ECPrivateKey, 256)
+
+		resp, err = CBWrite(b, s, "issuer/root-ca/sign/test-role", map[string]interface{}{
+			"ttl": "60h",
+			"csr": csrPem,
+		})
+		require.ErrorContains(t, err, expectedErrContains, "expected error from sign csr got: %v", resp)
+
+		// Make sure it works if we are under
+		resp, err = CBWrite(b, s, "issuer/root-ca/sign/test-role", map[string]interface{}{
+			"ttl": "30m",
+			"csr": csrPem,
+		})
+		requireSuccessNonNilResponse(t, resp, err, "sign should have succeeded with a lower TTL and always_enforce_err")
+	})
+
+	// Make sure we fail on leaf csr signing leaf as we always did for 'err'
+	t.Run("issue-leaf-csr", func(t *testing.T) {
+		resp, err = CBWrite(b, s, "issuer/root-ca/issue/test-role", map[string]interface{}{
+			"ttl":         "60h",
+			"common_name": "leaf.example.com",
+		})
+		require.ErrorContains(t, err, expectedErrContains, "expected error from issue got: %v", resp)
+
+		// Make sure it works if we are under
+		resp, err = CBWrite(b, s, "issuer/root-ca/issue/test-role", map[string]interface{}{
+			"ttl":         "30m",
+			"common_name": "leaf.example.com",
+		})
+		requireSuccessNonNilResponse(t, resp, err, "issue should have worked with a lower TTL and always_enforce_err")
+	})
+}
+
+// TestIssuance_SignIntermediateKeyUsages tests the field "key_usage" both when directly generating a root certificate,
+// and when signing a CA CSR.  In particular, this test verifies that:
+// - the key usage DigitalSignature is added if present
+// - non-existent or invalid key usages return a warning, but are ignored by certificate generation
+// - CertSign and CRLSign are ignored
+func TestIssuance_SignIntermediateKeyUsages(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"key_type":    "ec",
+		"ttl":         "10h",
+		"issuer_name": "root-ca",
+		"key_name":    "root-key",
+		"key_usage":   "DigitalSignature,DogPetting",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "expected root generation to succeed")
+	require.Contains(t, resp.Warnings, "Invalid key usage will be ignored: unrecognized key usage DogPetting")
+	rootCertRaw := resp.Data["certificate"]
+	rootCert := parseCert(t, rootCertRaw.(string))
+	require.Equal(t, x509.KeyUsageDigitalSignature, rootCert.KeyUsage&x509.KeyUsageDigitalSignature, "keyUsage Digital Signature was not present")
+	require.Equal(t, x509.KeyUsageCertSign, rootCert.KeyUsage&x509.KeyUsageCertSign, "keyUsage CertSign was not present")
+	require.Equal(t, x509.KeyUsageCRLSign, rootCert.KeyUsage&x509.KeyUsageCRLSign, "keyUsage CRLSign was not present")
+	require.Equal(t, x509.KeyUsageDigitalSignature|x509.KeyUsageCertSign|x509.KeyUsageCRLSign, rootCert.KeyUsage, "unexpected KeyUsage present")
+	resp, err = CBWrite(b, s, "intermediate/generate/internal", map[string]interface{}{
+		"common_name": "myint.com",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed generating intermediary CSR")
+	requireFieldsSetInResp(t, resp, "csr")
+	csr := resp.Data["csr"]
+
+	resp, err = CBWrite(b, s, "issuer/root-ca/sign-intermediate", map[string]interface{}{
+		"csr":       csr,
+		"key_usage": "CRLSign,CertSign,DigitalSignature,KeyEncipherment,KeyAgreement",
+		"ttl":       "60h",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "expected intermediate signing to succeed")
+	require.Contains(t, resp.Warnings, "Invalid key usage: key usage KeyEncipherment is only valid for non-Ca certs; key usage KeyAgreement is only valid for non-Ca certs")
+	intCertRaw := resp.Data["certificate"]
+	intCert := parseCert(t, intCertRaw.(string))
+	require.Equal(t, x509.KeyUsageDigitalSignature, intCert.KeyUsage&x509.KeyUsageDigitalSignature, "keyUsage Digital Signature was not present")
+	require.Equal(t, x509.KeyUsageCertSign, intCert.KeyUsage&x509.KeyUsageCertSign, "keyUsage CertSign was not present")
+	require.Equal(t, x509.KeyUsageCRLSign, intCert.KeyUsage&x509.KeyUsageCRLSign, "keyUsage CRLSign was not present")
+	require.Equal(t, x509.KeyUsageDigitalSignature|x509.KeyUsageCertSign|x509.KeyUsageCRLSign, intCert.KeyUsage, "unexpected KeyUsage present on intermediate certificate")
 }
 
 var (
