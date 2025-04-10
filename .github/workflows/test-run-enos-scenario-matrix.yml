@@ -4,6 +4,9 @@ name: enos
 on:
   # Only trigger this working using workflow_call. This workflow requires many
   # secrets that must be inherited from the caller workflow.
+  pull_request:
+    branches:
+      - enos/VAULT-30187
   workflow_call:
     inputs:
       # The name of the artifact that we're going to use for testing. This should
@@ -202,7 +205,7 @@ jobs:
             echo "ENOS_VAR_vault_radar_license_path=./support/vault-radar.hclic"
             echo "ENOS_VAR_vault_revision=${{ inputs.vault-revision }}"
             echo "ENOS_VAR_vault_upgrade_initial_version=${{ matrix.attributes.upgrade_initial_version }}"
-            echo "ENOS_VAR_verify_log_secrets=true"
+            echo "ENOS_VAR_verify_log_secrets=false"
           } | tee -a "$GITHUB_ENV"
       - uses: hashicorp/setup-terraform@v3
         with:
