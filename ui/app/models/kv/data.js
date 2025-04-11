@@ -8,7 +8,7 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 import { isDeleted } from 'kv/utils/kv-deleted';
-import { WHITESPACE_WARNING } from 'vault/utils/model-helpers/validators';
+import { WHITESPACE_WARNING } from 'vault/utils/forms/validators';
 
 /* sample response
 {

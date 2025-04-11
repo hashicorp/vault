@@ -26,22 +26,57 @@ export interface FormFieldGroupOptions {
   [key: string]: Array<string>;
 }
 
+export type Validator =
+  | 'presence'
+  | 'length'
+  | 'number'
+  | 'containsWhiteSpace'
+  | 'endsInSlash'
+  | 'hasWhitespace'
+  | 'isNonString';
+
+export type ValidatorOption =
+  | {
+      nullable?: boolean;
+    }
+  | {
+      nullable?: boolean;
+      min?: number;
+      max?: number;
+    };
+
+export type Validation =
+  | {
+      message: string | ((data: unknown) => string);
+      type: Validator;
+      options?: ValidatorOption;
+      level?: 'warn';
+      validator?: never;
+    }
+  | {
+      message: string | ((data: unknown) => string);
+      type?: never;
+      options?: ValidatorOption;
+      level?: 'warn';
+      validator(data: unknown, options?: unknown): boolean;
+    };
+export interface Validations {
+  [key: string]: Validation[];
+}
 export interface ValidationMap {
   [key: string]: {
     isValid: boolean;
     errors: Array<string>;
+    warnings: Array<string>;
   };
 }
 export interface ModelValidations {
   isValid: boolean;
-  state: {
-    [key: string]: {
-      isValid: boolean;
-      errors: Array<string>;
-    };
-  };
+  state: ValidationMap;
   invalidFormMessage: string;
 }
+// TODO: [Ember Data] - ModelValidations can be renamed to FormValidations and this can be removed
+export type FormValidations = ModelValidations;
 
 export type Model = Omit<EmberDataModel, 'isNew'> & {
   // override isNew which is a computed prop and ts will complain since it sees it as a function

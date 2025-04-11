@@ -11,7 +11,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import sinon from 'sinon';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { FORM } from 'vault/tests/helpers/kv/kv-selectors';
-import { NON_STRING_WARNING, WHITESPACE_WARNING } from 'vault/utils/model-helpers/validators';
+import { NON_STRING_WARNING, WHITESPACE_WARNING } from 'vault/utils/forms/validators';
 
 module('Integration | Component | kv | kv-patch/editor/form', function (hooks) {
   setupRenderingTest(hooks);
