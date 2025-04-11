@@ -107,4 +107,10 @@ export default class TuneMount extends Component<Args> {
     this.invalidFormAlert = isValid ? '' : invalidFormMessage;
     return isValid;
   }
+
+  @action
+  onCancel() {
+    this.resetErrors();
+    this.transition();
+  }
 }
