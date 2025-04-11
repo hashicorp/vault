@@ -37,7 +37,7 @@ BUG FIXES:
 * core: Fix a bug that prevents certain loggers from writing to a log file. [[GH-29917](https://github.com/hashicorp/vault/pull/29917)]
 * identity: reintroduce RPC functionality for group creates, allowing performance standbys to handle external group changes during login and token renewal [[GH-30069](https://github.com/hashicorp/vault/pull/30069)]
 * plugins (enterprise): Fix plugin registration with artifact when a binary for the same plugin is already present in the plugin directory.
-* raft/retry_join: Fix decoding `auto_join` configurations that include escape characters. [[GH-29874](https://github.com/hashicorp/vault/pull/29874)]
+* core/raft: Fix decoding `auto_join` configurations that include escape characters. [[GH-29874](https://github.com/hashicorp/vault/pull/29874)]
 * secrets/aws: fix a bug where environment and shared credential providers were overriding the WIF configuration [[GH-29982](https://github.com/hashicorp/vault/pull/29982)]
 * secrets/aws: fix a panic when a performance standby node attempts to write/update config. [[GH-30039](https://github.com/hashicorp/vault/pull/30039)]
 * secrets/db: fix a panic when a performance standby node attempts to write/update config. [[GH-30039](https://github.com/hashicorp/vault/pull/30039)]
