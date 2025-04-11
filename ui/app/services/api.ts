@@ -12,6 +12,9 @@ import {
   IdentityApi,
   SecretsApi,
   SystemApi,
+  HTTPQuery,
+  HTTPRequestInit,
+  RequestOpts,
 } from '@hashicorp/vault-client-typescript';
 import config from '../config/environment';
 
@@ -153,5 +156,13 @@ export default class ApiService extends Service {
     }
 
     return { headers };
+  }
+
+  // convenience method for updating the query params object on the request context
+  // eg. this.api.sys.uiConfigListCustomMessages(true, ({ context: { query } }) => { query.authenticated = true });
+  // -> this.api.sys.uiConfigListCustomMessages(true, (context) => this.api.addQueryParams(context, { authenticated: true }));
+  addQueryParams(requestContext: { init: HTTPRequestInit; context: RequestOpts }, params: HTTPQuery = {}) {
+    const { context } = requestContext;
+    context.query = { ...context.query, ...params };
   }
 }
