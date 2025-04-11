@@ -5,9 +5,10 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+import CustomMessage from 'vault/forms/custom-message';
 
 export default class MessagesCreateRoute extends Route {
-  @service store;
+  @service api;
 
   queryParams = {
     authenticated: {
@@ -17,9 +18,8 @@ export default class MessagesCreateRoute extends Route {
 
   async getMessages(authenticated) {
     try {
-      return await this.store.query('config-ui/message', {
-        authenticated,
-      });
+      const { keyInfo } = await this.api.sys.uiConfigListCustomMessages(true, undefined, authenticated);
+      return Object.values(keyInfo);
     } catch {
       return [];
     }
@@ -27,8 +27,9 @@ export default class MessagesCreateRoute extends Route {
 
   async model(params) {
     const { authenticated } = params;
-    const message = this.store.createRecord('config-ui/message', {
+    const message = new CustomMessage({
       authenticated,
+      type: 'banner',
     });
     const messages = await this.getMessages(authenticated);
 
@@ -36,8 +37,6 @@ export default class MessagesCreateRoute extends Route {
       message,
       messages,
       authenticated,
-      hasSomeActiveModals:
-        messages.length && messages?.some((message) => message.type === 'modal' && message.active),
     };
   }
 

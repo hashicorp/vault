@@ -24,6 +24,8 @@ export default class App extends Application {
           'pagination',
           'version',
           'custom-messages',
+          'api',
+          'capabilities',
         ],
       },
     },

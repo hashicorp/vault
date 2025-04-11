@@ -11,7 +11,7 @@
 
 <Toolbar>
   <ToolbarActions aria-label="message delete and edit">
-    {{#if @message.canDeleteCustomMessages}}
+    {{#if @capabilities.canDelete}}
       <ConfirmAction
         class="toolbar-button"
         @buttonColor="secondary"
@@ -23,7 +23,7 @@
       />
       <div class="toolbar-separator"></div>
     {{/if}}
-    {{#if @message.canEditCustomMessages}}
+    {{#if @capabilities.canUpdate}}
       <LinkTo class="toolbar-link" @route="messages.message.edit" @model={{@message.id}} data-test-link="edit">
         Edit message
         <Icon @name="chevron-right" />
@@ -32,18 +32,18 @@
   </ToolbarActions>
 </Toolbar>
 
-{{#each @message.allFields as |attr|}}
-  {{#if (or (eq attr.name "endTime") (eq attr.name "startTime"))}}
+{{#each this.orderedKeys as |key|}}
+  {{#if (or (eq key "endTime") (eq key "startTime"))}}
     {{! if the attr is an endTime and is falsy, we want to show a 'Never' text value }}
     <InfoTableRow
-      @label={{capitalize (humanize (dasherize attr.name))}}
+      @label={{capitalize (humanize (dasherize key))}}
       @value={{if
-        (and (eq attr.name "endTime") (not (get @message attr.name)))
+        (and (eq key "endTime") (not (get @message key)))
         "Never"
-        (date-format (get @message attr.name) "MMM d, yyyy hh:mm aaa" withTimeZone=true)
+        (date-format (get @message key) "MMM d, yyyy hh:mm aaa" withTimeZone=true)
       }}
     />
-  {{else if (eq attr.name "link")}}
+  {{else if (eq key "link")}}
     {{#if (is-empty-value @message.link)}}
       <InfoTableRow @label="Link" @value="None" />
     {{else}}
@@ -54,7 +54,7 @@
       {{/each-in}}
     {{/if}}
   {{else}}
-    <InfoTableRow @label={{capitalize (humanize (dasherize attr.name))}} @value={{get @message attr.name}} />
+    <InfoTableRow @label={{capitalize (humanize (dasherize key))}} @value={{get @message key}} />
   {{/if}}
 
 {{/each}}

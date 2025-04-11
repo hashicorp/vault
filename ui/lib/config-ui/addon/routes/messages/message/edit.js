@@ -5,25 +5,23 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { hash } from 'rsvp';
 
 export default class MessagesMessageEditRoute extends Route {
-  @service store;
-
-  getMessages(authenticated = true) {
-    return this.store.query('config-ui/message', { authenticated }).catch(() => []);
-  }
+  @service api;
 
   async model() {
     const { id } = this.paramsFor('messages.message');
-    const message = await this.store.queryRecord('config-ui/message', id);
-    const messages = await this.getMessages(message.authenticated);
-    return hash({
+    const message = await this.api.sys.uiConfigReadCustomMessage(id);
+    const { keyInfo = {} } = await this.api.sys.uiConfigListCustomMessages(
+      true,
+      undefined,
+      message.authenticated
+    );
+    const messages = Object.values(keyInfo);
+    return {
       message,
-      messages,
-      hasSomeActiveModals:
-        messages.length && messages?.some((message) => message.type === 'modal' && message.active),
-    });
+      messages: Object.values(messages),
+    };
   }
 
   setupController(controller, resolvedModel) {

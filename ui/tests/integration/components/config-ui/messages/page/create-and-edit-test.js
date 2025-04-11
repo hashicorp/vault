@@ -248,7 +248,7 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
     this.messages = this.store.peekAll('config-ui/message');
 
     await render(
-      hbs`<Messages::Page::CreateAndEdit @message={{this.message}} @messages={{this.messages}} @hasSomeActiveModals={{true}} />`,
+      hbs`<Messages::Page::CreateAndEdit @message={{this.message}} @messages={{this.messages}} />`,
       {
         owner: this.engine,
       }

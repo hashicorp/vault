@@ -5,10 +5,10 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { hash } from 'rsvp';
+import { paginate } from 'core/utils/paginate-list';
 
 export default class MessagesRoute extends Route {
-  @service pagination;
+  @service api;
 
   queryParams = {
     page: {
@@ -28,36 +28,54 @@ export default class MessagesRoute extends Route {
     },
   };
 
-  model(params) {
+  async model(params) {
     const { authenticated, page, pageFilter, status, type } = params;
-    const filter = pageFilter
-      ? (dataset) => dataset.filter((item) => item?.title.toLowerCase().includes(pageFilter.toLowerCase()))
-      : null;
-    let active;
+    const active =
+      {
+        active: true,
+        inactive: false,
+      }[status] || undefined;
 
-    if (status === 'active') active = true;
-    if (status === 'inactive') active = false;
-
-    const messages = this.pagination
-      .lazyPaginatedQuery('config-ui/message', {
-        authenticated,
-        pageFilter: filter,
+    try {
+      const { keyInfo, keys } = await this.api.sys.uiConfigListCustomMessages(
+        true,
         active,
-        type,
-        responsePath: 'data.keys',
-        page: page || 1,
-        size: 10,
-      })
-      .catch((e) => {
-        if (e.httpStatus === 404) {
-          return [];
-        }
-        throw e;
+        authenticated,
+        type
+      );
+      // ids are in the keys array and can be mapped to the object in keyInfo
+      // map and set id property on keyInfo object
+      const data = keys.map((id) => ({ id, ...keyInfo[id] }));
+      const messages = paginate(data, {
+        page,
+        pageSize: 2,
+        filter: pageFilter,
+        filterKey: 'title',
       });
-    return hash({
-      params,
-      messages,
-    });
+      return { params, messages };
+    } catch (e) {
+      if (e.response?.status === 404) {
+        return { params, messages: [] };
+      }
+      throw e;
+    }
+
+    // const messages = this.pagination
+    //   .lazyPaginatedQuery('config-ui/message', {
+    //     authenticated,
+    //     pageFilter: filter,
+    //     active,
+    //     type,
+    //     responsePath: 'data.keys',
+    //     page: page || 1,
+    //     size: 10,
+    //   })
+    //   .catch((e) => {
+    //     if (e.httpStatus === 404) {
+    //       return [];
+    //     }
+    //     throw e;
+    //   });
   }
 
   setupController(controller, resolvedModel) {
