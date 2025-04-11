@@ -27,6 +27,7 @@ func DefaultOptions(t *testing.T) *DockerClusterOptions {
 				LogLevel: "TRACE",
 			},
 		},
+		DisableMlock: true,
 	}
 }
 

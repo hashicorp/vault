@@ -31,7 +31,8 @@ func TestRecovery_Docker(t *testing.T) {
 		t.Skip("only running docker test when $VAULT_BINARY present")
 	}
 	opts := &docker.DockerClusterOptions{
-		ImageRepo: "hashicorp/vault",
+		ImageRepo:    "hashicorp/vault",
+		DisableMlock: true,
 		// We're replacing the binary anyway, so we're not too particular about
 		// the docker image version tag.
 		ImageTag:    "latest",

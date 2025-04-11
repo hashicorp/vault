@@ -27,7 +27,8 @@ func TestRecovery(t *testing.T) {
 	var rootToken string
 	{
 		conf := vault.CoreConfig{
-			Physical: inm,
+			Physical:     inm,
+			DisableMlock: true,
 		}
 		opts := vault.TestClusterOptions{
 			HandlerFunc: http.Handler,
