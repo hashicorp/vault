@@ -16,6 +16,7 @@ const LINKED_BACKENDS = supportedSecretBackends();
 
 // identity will be managed separately and the inclusion
 // of the system backend is an implementation detail
+// Clarification: these are not plugin types. See https://github.com/hashicorp/vault-enterprise/blob/80f85a05f6a787d066aa0fed007df11737309e4a/sdk/helper/consts/plugin_types.go#L37 for plugin types
 const LIST_EXCLUDED_BACKENDS = ['system', 'identity'];
 
 const validations = {
@@ -99,6 +100,8 @@ export default class SecretEngineModel extends Model {
   })
   deleteVersionAfter;
 
+  @attr('string') runningPluginVersion;
+
   /* GETTERS */
   get isV2KV() {
     return this.version === 2 && (this.engineType === 'kv' || this.engineType === 'generic');
@@ -160,7 +163,7 @@ export default class SecretEngineModel extends Model {
 
   get formFields() {
     const type = this.engineType;
-    const fields = ['type', 'path', 'description', 'accessor', 'local', 'sealWrap'];
+    const fields = ['type', 'path', 'description', 'accessor', 'local', 'sealWrap', 'runningPluginVersion'];
     // no ttl options for keymgmt
     if (type !== 'keymgmt') {
       fields.push('config.defaultLeaseTtl', 'config.maxLeaseTtl');
