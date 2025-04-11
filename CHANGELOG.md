@@ -35,6 +35,7 @@ BUG FIXES:
 * aws/secrets: Prevent vault from rejecting secret role configurations where no regions or endpoints are set [[GH-29996](https://github.com/hashicorp/vault/pull/29996)]
 * core (enterprise): add nil check before attempting to use Rotation Manager operations.
 * core: Fix a bug that prevents certain loggers from writing to a log file. [[GH-29917](https://github.com/hashicorp/vault/pull/29917)]
+* core/raft: Fix decoding `auto_join` configurations that include escape characters. [[GH-29874](https://github.com/hashicorp/vault/pull/29874)]
 * identity: reintroduce RPC functionality for group creates, allowing performance standbys to handle external group changes during login and token renewal [[GH-30069](https://github.com/hashicorp/vault/pull/30069)]
 * plugins (enterprise): Fix plugin registration with artifact when a binary for the same plugin is already present in the plugin directory.
 * secrets/aws: fix a bug where environment and shared credential providers were overriding the WIF configuration [[GH-29982](https://github.com/hashicorp/vault/pull/29982)]
