@@ -27,6 +27,7 @@ export default class SecretEngineModel extends Model {
   maxVersions: number;
   casRequired: boolean;
   deleteVersionAfter: string;
+  runningPluginVersion: string;
   get modelTypeForKV(): string;
   get isV2KV(): boolean;
   get attrs(): Array<FormField>;

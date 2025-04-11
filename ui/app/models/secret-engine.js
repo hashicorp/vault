@@ -163,7 +163,7 @@ export default class SecretEngineModel extends Model {
 
   get formFields() {
     const type = this.engineType;
-    const fields = ['type', 'path', 'description', 'accessor', 'local', 'sealWrap', 'runningPluginVersion'];
+    const fields = ['type', 'path', 'description', 'accessor', 'runningPluginVersion', 'local', 'sealWrap'];
     // no ttl options for keymgmt
     if (type !== 'keymgmt') {
       fields.push('config.defaultLeaseTtl', 'config.maxLeaseTtl');

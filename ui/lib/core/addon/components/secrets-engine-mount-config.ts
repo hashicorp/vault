@@ -36,6 +36,7 @@ export default class SecretsEngineMountConfig extends Component<Args> {
       { label: 'Secret Engine Type', value: model.engineType },
       { label: 'Path', value: model.path },
       { label: 'Accessor', value: model.accessor },
+      { label: 'Running Plugin Version', value: model.runningPluginVersion },
       { label: 'Local', value: model.local },
       { label: 'Seal Wrap', value: model.sealWrap },
       { label: 'Default Lease TTL', value: duration([model.config.defaultLeaseTtl]) },
