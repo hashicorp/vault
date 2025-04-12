@@ -12,6 +12,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { allEngines } from 'vault/helpers/mountable-secret-engines';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { runCmd } from '../helpers/commands';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
 module('Acceptance | Enterprise | keymgmt', function (hooks) {
   setupApplicationTest(hooks);
@@ -45,7 +46,7 @@ module('Acceptance | Enterprise | keymgmt', function (hooks) {
     this.server.put(`/${path}/kms/test-keyvault/key/test-key`, () => ({}));
 
     await mountSecrets.enable('keymgmt', path);
-    await click('[data-test-secret-create]');
+    await click(SES.createSecretLink);
     await fillIn('[data-test-input="provider"]', 'azurekeyvault');
     await fillIn('[data-test-input="name"]', 'test-keyvault');
     await fillIn('[data-test-input="keyCollection"]', 'test-keycollection');

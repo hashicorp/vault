@@ -1,0 +1,42 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<form {{on "submit" (perform this.save)}} aria-label="tune {{@backend}} mount" data-test-tune-mount-form>
+  {{! TODO any namespace tuning gates? is it root only? }}
+  <NamespaceReminder @mode="save" @noun="configuration" />
+  <MessageError @errorMessage={{this.errorMessage}} />
+
+  <div class="box is-fullwidth is-sideless">
+    <h2 class="title is-5 has-bottom-padding-s has-top-margin-l" data-test-additional-config-model-title>
+      Tune Mount
+    </h2>
+    <div class="box is-fullwidth is-sideless is-bottomless">
+      {{#each @tuneMountModel.formFields as |attr|}}
+        <FormField @attr={{attr}} @model={{@tuneMountModel}} @modelValidations={{this.modelValidations}} />
+      {{/each}}
+    </div>
+  </div>
+
+  <Hds::ButtonSet>
+    <Hds::Button
+      @text="Save"
+      @icon={{if this.save.isRunning "loading"}}
+      type="submit"
+      disabled={{this.save.isRunning}}
+      data-test-save
+    />
+    <Hds::Button
+      @text="Cancel"
+      @color="secondary"
+      class="has-left-margin-s"
+      disabled={{this.save.isRunning}}
+      {{on "click" this.onCancel}}
+      data-test-cancel
+    />
+  </Hds::ButtonSet>
+  {{#if this.invalidFormAlert}}
+    <AlertInline data-test-invalid-form-alert class="has-top-padding-s" @type="danger" @message={{this.invalidFormAlert}} />
+  {{/if}}
+</form>
