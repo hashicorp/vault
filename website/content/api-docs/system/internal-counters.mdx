@@ -253,6 +253,135 @@ The `start_time` in the response is the earliest time there is activity data
 in the queried period. The `end_time` is the end of the final month of the queried
 period.
 
+<Note title="Behavior Differences between Vault Enterprise and Community Edition">
+  The behavior of the `start_time` and `end_time` parameters in the Counters API differs based on the Vault edition.
+  In **Vault Enterprise (ENT)**, these parameters are restricted to aligning with full billing periods only. In **Vault Community
+  Edition (CE)**, the API supports flexible historical time ranges, but excludes the current month and any future dates. 
+  See below for details.
+</Note>
+
+<Tabs>
+   <Tab heading="ENT">
+      - The Counters API only returns **data for an entire billing period**.
+      - By default, the API returns activity data for the **current billing period**.
+      - If `start_time` is provided, the query is aligned to the **start of the billing period** to which that timestamp belongs.
+      - If only `end_time` is provided, the query is aligned to the **start of the billing period** to which the `end_time` belongs.
+      - If `start_time` and `end_time` do **not** correspond to the start and end of the **same billing period**, Vault Enterprise:
+         - **Aligns** the `start_time` to the start of the billing period (using either `start_time` or `end_time` as reference).
+         - **Sets** the `end_time` to the **end of that billing period**.
+         - **Returns a warning**:
+
+         ```json
+         {
+            "warning": "start_time and end_time parameters can only be used to specify the beginning or end of the same billing period. The values provided for these parameters are not supported and are ignored. Showing the data for the entire billing period corresponding to start_time. If start_time is not provided, the billing period is determined based on the end_time."
+         }
+         ```
+
+      ### Sample request
+      Assume the start of the billing period is January 1, 2023 and current date is December 31, 2025.
+
+      ```shell-session
+      $ curl \
+         --header "X-Vault-Token: ..." \
+         --request GET \
+         http://127.0.0.1:8200/v1/sys/internal/counters/activity?end_time=2023-12-31T00%3A00%3A00Z&start_time=2023-03-01T00%3A00%3A00Z
+      ```
+
+      If the start_time or end_time is within the billing period or has overlapping billing periods, the response looks like this:
+
+      ### Sample response
+      <CodeBlockConfig hideClipboard>
+
+      ```json
+      {
+         "request_id":"26be5ab9-dcac-9237-ec12-269a8ca647d5",
+         "lease_id":"",
+         "renewable":false,
+         "lease_duration":0,
+         "data":{
+            :
+            // data returned for that billing period
+            :
+            "start_time":"2023-01-01T00:00:00Z",
+            "end_time":"2023-12-31T00:00:00Z",
+            "total":{
+               "entity_clients":20,
+               "non_entity_clients":20,
+               "secret_syncs":5,
+               "acme_clients":3,
+               "clients":48
+            }
+         },
+         "wrap_info":null,
+         "warnings":"start_time and end_time parameters can only be used to specify the beginning or end of the same billing period. The values provided for these parameters are not supported and are ignored. Showing the data for the entire billing period corresponding to start_time. If start_time is not provided, the billing period is determined based on the end_time.",
+         "auth":null
+      }
+      ```
+
+      </CodeBlockConfig>
+
+   </Tab>
+
+   <Tab heading="CE">
+      - The Counters API supports **arbitrary historical time ranges**, **except** for the **current month or any future dates**.
+      - By default, the API returns results **until the end of the last complete month**.
+      - If `end_time` falls in the **current month or a future date**, Vault CE:
+         - **Ignores** the unsupported value.
+         - Returns data **only up to the end of the last month**.
+         - **Returns a warning**:
+
+            ```json
+            {
+               "warning": "end_time parameter can only be used to specify until the end of last month. The value provided for this parameter is not supported and is ignored. Showing counts until the end of last month."
+            }
+            ```
+      
+      ### Sample request
+      Assume the current date is September 25, 2025.
+
+      ```shell-session
+      $ curl \
+         --header "X-Vault-Token: ..." \
+         --request GET \
+         http://127.0.0.1:8200/v1/sys/internal/counters/activity?end_time=2025-10-01T00%3A00%3A00Z&start_time=2025-01-01T00%3A00%3A00Z
+      ```
+
+      ### Sample response
+
+      <CodeBlockConfig hideClipboard>
+
+       ```json
+      {
+         "request_id":"26be5ab9-dcac-9237-ec12-269a8ca647d5",
+         "lease_id":"",
+         "renewable":false,
+         "lease_duration":0,
+         "data":{
+            :
+            // data returned for that billing period
+            :
+            "start_time":"2025-01-01T00:00:00Z",
+            "end_time":"2025-08-31T00:00:00Z",
+            "total":{
+               "entity_clients":20,
+               "non_entity_clients":20,
+               "secret_syncs":5,
+               "acme_clients":3,
+               "clients":48
+            }
+         },
+         "wrap_info":null,
+         "warnings":"end_time parameter can only be used to specify until the end of last month. The value provided for this parameter is not supported and is ignored. Showing counts until the end of last month.",
+         "auth":null
+      }
+      ```
+
+      </CodeBlockConfig>
+
+   </Tab>
+
+</Tabs>
+
 - If the `end_date` supplied to the API is the current month, exact activity
 information will be returned for all months in the queried period, except for the
 current month. The last element in the `months` response stanza will signify the current month. Furthermore, the
@@ -370,7 +499,7 @@ is unknown.
   period for which client counts will be reported. If no start time is specified, the billing start date will be used.
   The [billing start date](/vault/docs/concepts/billing-start-date) automatically rolls over to the latest billing year at the end of the last cycle.
 - `end_time` `(string, optional)` - An RFC3339 timestamp or Unix epoch time. Specifies the end of the period
-  for which client counts will be reported. If no end time is specified, the end of the current month will be used.
+  for which client counts will be reported. If no end time is specified, the end of the last month will be used.
 - `limit_namespaces` `(int, optional)` - Controls the total number of by_namespace data returned. This can
    be used to return the client counts for the specified number of namespaces having highest activity.
    If no `limit_namespaces` parameter is specified, client counts for all namespaces in specified usage period is returned.
