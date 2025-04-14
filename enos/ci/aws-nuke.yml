@@ -21,7 +21,7 @@ regions:
 - us-west-2
 - global
 
-account-blocklist:
+blocklist:
  - 1234567890
 
 accounts:
