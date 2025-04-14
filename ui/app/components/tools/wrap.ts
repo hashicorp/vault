@@ -68,15 +68,17 @@ export default class ToolsWrap extends Component {
     this.wrapTTL = evt.enabled ? `${evt.seconds}s` : '30m';
   }
 
+  @action
+  codemirrorLinted(diagnostics: unknown[]) {
+    if (diagnostics.length > 0) {
+      this.hasLintingErrors = true;
+    }
+  }
+
   // TODO: Make this work
   @action
-  codemirrorUpdated(
-    val: string,
-    codemirror: { performLint: () => void; state: { lint: { marked: unknown[] } } }
-  ) {
-    codemirror.performLint();
-    this.hasLintingErrors = codemirror?.state.lint.marked?.length > 0;
-    if (!this.hasLintingErrors) this.wrapData = JSON.parse(val);
+  codemirrorUpdated(val: string) {
+    this.wrapData = JSON.parse(val);
   }
 
   @action
