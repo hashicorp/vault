@@ -31,15 +31,24 @@ Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-1) for arguments common 
 
 - `vault_credentials_file` `(string: "")` - The path to a file containing a Vault token for the vault server configured above.
 
-#### Note
- - If `credentials_file` is set, then `vault_mount_path`, `vault_role_name`,`vault_namespace`,`vault_address` and `vault_credentials_file` must be unset.
 
- - If one of `vault_mount_path`,`vault_role_name`, `vault_namespace`,`vault_address` or `vault_credentials_file`  are set, then `credentials_file` must be unset.
+## Step 1: Set GCP Identity Permissions
 
+To use GCP import, you must grant the associated GCP identity permission to read secrets:
 
-## Example
+```shell-session
+"secretmanager.secrets.list",
+"secretmanager.versions.access",
+```
 
-Define and configure the `my-gcp-source-1` GCP source. This uses the configured static credentials.
+## Step 2: Define the Azure source
+
+<Tabs>
+<Tab heading="Static credentials">
+
+The following configuration example uses Azure static credentials to
+import secrets from Azure Key Vault:
+
 
 ```hcl
 source_gcp {
@@ -48,7 +57,13 @@ source_gcp {
 }
 ```
 
-Define and configure the `my-gcp-source-2` GCP source. 
+If `credentials_file` is set, then `vault_mount_path`, `vault_role_name`,`vault_namespace`,`vault_address` and `vault_credentials_file` must be unset.
+
+</Tab>
+<Tab heading="Dynamic credentials">
+
+Alternatively, source credentials can also be derived dynamically using the [GCP Secret Engine](/vault/docs/secrets/gcp)
+
 This uses the GCP secrets engine configured at the given `vault_address` to generate dynamic secrets in order to scan secrets in GCP Secret Manager.
 
 ```hcl
@@ -62,11 +77,7 @@ source_gcp {
 }
 ```
 
-## Permissions
+If one of `vault_mount_path`,`vault_role_name`, `vault_namespace`,`vault_address` or `vault_credentials_file`  are set, then `credentials_file` must be unset.
 
-To use GCP import, you must grant the associated GCP identity permission to read secrets:
-
-```shell-session
-"secretmanager.secrets.list",
-"secretmanager.versions.access",
-```
+</Tab>
+</Tabs>
