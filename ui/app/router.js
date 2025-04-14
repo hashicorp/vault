@@ -205,9 +205,8 @@ Router.map(function () {
           // Ideally, this would have been done under the 'secrets' route, but it was separated
           // to avoid a large refactor of the existing secret engine mounting logic.
           this.route('create', { path: '/:mount_type/create' });
-          this.route('details', { path: '/:mount_name/details' }, function () {
-            this.route('tune');
-          });
+          this.route('details', { path: '/:mount_name/details' });
+          this.route('tune', { path: '/:mount_name/tune' });
         });
       });
       this.route('policies', { path: '/policies/:type' }, function () {

@@ -32,35 +32,11 @@ export default class SecretsBackendConfigurationEdit extends Route {
   @service declare readonly store: Store;
   @service declare readonly version: VersionService;
 
-  async model() {
-    const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    const secretEngineRecord = this.modelFor('vault.cluster.secrets.backend') as SecretEngineModel;
-    const type = secretEngineRecord.type;
-    let tuneMountResponse;
-
-    // TODO are there any mount types that we don't allow tuning?
-
-    try {
-      // const response = await this.api.sys.mountsReadTuningInformation(
-      //   { path: secretEngineRecord.id },
-      //   this.api.buildHeaders({ token: '' })
-      // );
-      tuneMountResponse = {
-        default_lease_ttl: 3600,
-        max_lease_ttl: 7200,
-        force_no_cache: false,
-        plugin_version: 'some-string', // plugin version does not get returned on read?
-      };
-    } catch (e) {
-      // todo handle error
-    }
-
-    return hash({
-      secretEngineRecord,
-      backend,
-      type,
-      tuneMount: tuneMountResponse,
-    });
+  async model(params: { mount_name: string }) {
+    const mount_name = params.mount_name;
+    const secretEngineModel = this.store.createRecord('secret-engine');
+    secretEngineModel.set('path', mount_name);
+    return secretEngineModel;
   }
 
   setupController(controller: RouteController, resolvedModel: RouteModel, transition: Transition) {
