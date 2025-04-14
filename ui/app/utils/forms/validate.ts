@@ -52,7 +52,7 @@ export const validate = (
       if (!validator) {
         console.error(
           !type
-            ? 'Validator not found. Define either type or pass custom validator function under "validator" key in validations object'
+            ? 'Validator not found. Either define type or pass custom validator function under "validator" key in validations object'
             : `Validator type: "${type}" not found. Available validators: ${Object.keys(validators).join(
                 ', '
               )}`
