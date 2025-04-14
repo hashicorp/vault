@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-// TODO: Test this component
-
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
@@ -70,12 +68,9 @@ export default class ToolsWrap extends Component {
 
   @action
   codemirrorLinted(diagnostics: unknown[]) {
-    if (diagnostics.length > 0) {
-      this.hasLintingErrors = true;
-    }
+    this.hasLintingErrors = diagnostics.length > 0;
   }
 
-  // TODO: Make this work
   @action
   codemirrorUpdated(val: string) {
     this.wrapData = JSON.parse(val);
