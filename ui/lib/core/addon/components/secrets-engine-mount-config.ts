@@ -8,7 +8,7 @@ import { tracked } from '@glimmer/tracking';
 import { duration } from 'core/helpers/format-duration';
 
 import type SecretEngineModel from 'vault/models/secret-engine';
-
+// ARG TODO ideally we'd have this in a directory of some kind, maybe a new SecretEngine, but issues with engines
 /**
  * @module SecretsEngineMountConfig
  * SecretsEngineMountConfig component is used to display a "Show mount configuration" toggle section. It is generally used alongside the fetch-secret-engine-config decorator which displays the engine configuration above this component. Mount configuration is always available for display but is hidden by default behind a toggle.

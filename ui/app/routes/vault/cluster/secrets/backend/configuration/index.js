@@ -17,7 +17,7 @@ import { reject } from 'rsvp';
 export default class SecretsBackendConfigurationRoute extends Route {
   @service store;
   @service version;
-
+  // ARG TODO clean up after you move all mount info to separate route
   async model() {
     const secretEngineModel = this.modelFor('vault.cluster.secrets.backend');
     if (secretEngineModel.isV2KV) {

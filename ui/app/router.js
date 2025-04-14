@@ -160,7 +160,9 @@ Router.map(function () {
         });
       });
       this.route('secrets', function () {
-        this.route('backends', { path: '/' });
+        // The 'secrets' route handles all secret engine-related functionality.
+        // It includes routes for mounting, configuring and, specific secret operations.
+        this.route('backends', { path: '/' }); // this is the list view of all secret engines
         this.route('backend', { path: '/:backend' }, function () {
           this.mount('kmip');
           this.mount('kubernetes');
@@ -196,11 +198,16 @@ Router.map(function () {
           // database specific route
           this.route('overview');
         });
+        // The 'mount' route is used for managing secret engine mounts.
+        // This is conceptually similar to the 'secrets' sibling route but focuses on the mounting endpoints.
         this.route('mount', function () {
-          // ideally this would have been done under secrets route, but that would require a large refactor
-          // moving all secret engine mounting logic here.
+          // Mount is the list of available mounts.
+          // Ideally, this would have been done under the 'secrets' route, but it was separated
+          // to avoid a large refactor of the existing secret engine mounting logic.
           this.route('create', { path: '/:mount_type/create' });
-          this.route('tune');
+          this.route('details', { path: '/:mount_name/details' }, function () {
+            this.route('tune');
+          });
         });
       });
       this.route('policies', { path: '/policies/:type' }, function () {
