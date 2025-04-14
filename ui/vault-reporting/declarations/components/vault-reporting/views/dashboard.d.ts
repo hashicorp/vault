@@ -13,6 +13,7 @@ interface CounterBlock {
     icon?: IconName;
     suffix?: string;
     link?: string;
+    emptyText?: string;
 }
 export interface SSUViewDashboardSignature {
     Args: {
