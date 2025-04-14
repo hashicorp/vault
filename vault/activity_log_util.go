@@ -27,7 +27,7 @@ func (a *ActivityLog) handleClientIDsInMemoryEndOfMonth(ctx context.Context, cur
 }
 
 // getStartEndTime parses input for start and end times
-// If the end time corresponds to the current month, it is adjusted to the last month
+// If the end time is after the end of last month, it is adjusted to the last month
 func getStartEndTime(d *framework.FieldData, billingStartTime time.Time) (time.Time, time.Time, StartEndTimesWarnings, error) {
 	warnings := StartEndTimesWarnings{}
 	startTime, endTime, err := parseStartEndTimes(d, billingStartTime)
