@@ -1,0 +1,17 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#each @loginFields as |field|}}
+  <Hds::Form::TextInput::Field
+    autocomplete={{this.setAutocomplete field}}
+    @type={{this.setInputType field}}
+    name={{field}}
+    class="has-bottom-margin-m"
+    data-test-input={{field}}
+    as |F|
+  >
+    <F.Label>{{capitalize field}}</F.Label>
+  </Hds::Form::TextInput::Field>
+{{/each}}
