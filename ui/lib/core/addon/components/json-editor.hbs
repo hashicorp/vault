@@ -22,7 +22,9 @@
       data-test-component="code-mirror-modifier"
       @ariaLabel={{this.ariaLabel}}
       @extraKeys={{@extraKeys}}
-      @language={{@mode}}
+      @hasCopyButton={{true}}
+      @language={{this.mode}}
+      @isLintingEnabled={{eq this.mode "json"}}
       @value={{or @value @example}}
       @onBlur={{@onBlur}}
       @onInput={{this.onUpdate}}
@@ -31,54 +33,38 @@
       as |CE|
     >
       {{#if this.getShowToolbar}}
-        <div data-test-component="json-editor-toolbar">
-          {{#if @title}}
-            <CE.Title data-test-component="json-editor-title">
-              {{@title}}
-            </CE.Title>
-          {{/if}}
+        {{#if @title}}
+          <CE.Title data-test-component="json-editor-title">
+            {{@title}}
+          </CE.Title>
+        {{/if}}
 
-          {{#if @subTitle}}
-            <CE.Description>
-              {{@subTitle}}
-            </CE.Description>
-          {{/if}}
+        {{#if @subTitle}}
+          <CE.Description>
+            {{@subTitle}}
+          </CE.Description>
+        {{/if}}
 
-          {{#if @helpText}}
-            <CE.Description>
-              {{@helpText}}
-            </CE.Description>
-          {{/if}}
+        {{#if @helpText}}
+          <CE.Description>
+            {{@helpText}}
+          </CE.Description>
+        {{/if}}
 
-          <CE.Generic>
-            {{yield}}
+        <CE.Generic>
+          {{yield}}
 
-            {{#if @example}}
-              <Hds::Button
-                class="toolbar-button"
-                @icon="reload"
-                @text="Restore example"
-                disabled={{not @value}}
-                {{on "click" this.restoreExample}}
-                data-test-restore-example
-              />
-            {{/if}}
-
-            <div class="toolbar-separator"></div>
-
-            <Hds::Copy::Button
-              @container={{@container}}
-              @text="Copy"
-              @isIconOnly={{true}}
-              @textToCopy={{@value}}
-              @onError={{(fn
-                (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
-              )}}
-              class="transparent"
-              data-test-copy-button={{@value}}
+          {{#if @example}}
+            <Hds::Button
+              class="toolbar-button"
+              @icon="reload"
+              @text="Restore example"
+              disabled={{not @value}}
+              {{on "click" this.restoreExample}}
+              data-test-restore-example
             />
-          </CE.Generic>
-        </div>
+          {{/if}}
+        </CE.Generic>
       {{/if}}
     </Hds::CodeEditor>
   {{/if}}

@@ -29,6 +29,10 @@ import { action } from '@ember/object';
  */
 
 export default class JsonEditorComponent extends Component {
+  get mode() {
+    return this.args.mode ?? 'json';
+  }
+
   get getShowToolbar() {
     return this.args.showToolbar ?? true;
   }
