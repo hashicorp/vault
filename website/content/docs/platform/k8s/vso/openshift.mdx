@@ -19,10 +19,14 @@ Navigate to the OperatorHub page of your OpenShift cluster and search for `Vault
 
 Set the following environment variables [on the subscription](https://access.redhat.com/solutions/5761251) to customize the Kubernetes Operator behavior.
 
+- [VSO_CLIENT_CACHE_NUM_LOCKS](/vault/docs/platform/k8s/vso/helm#v-controller-manager-clientcache-numlocks)
 - [VSO_CLIENT_CACHE_PERSISTENCE_MODEL](/vault/docs/platform/k8s/vso/helm#v-controller-manager-clientcache-persistencemodel)
 - [VSO_CLIENT_CACHE_SIZE](/vault/docs/platform/k8s/vso/helm#v-controller-manager-clientcache-cachesize)
+- [VSO_KUBE_CLIENT_QPS](/vault/docs/platform/k8s/vso/helm#v-controller-manager-kubeclient-qps)
+- [VSO_KUBE_CLIENT_BURST](/vault/docs/platform/k8s/vso/helm#v-controller-manager-kubeclient-burst)
 - [VSO_MAX_CONCURRENT_RECONCILES](/vault/docs/platform/k8s/vso/helm#v-controller-manager-maxconcurrentreconciles)
 - [VSO_GLOBAL_TRANSFORMATION_OPTIONS](/vault/docs/platform/k8s/vso/helm#v-controller-manager-globaltransformationoptions)
+- [VSO_GLOBAL_VAULT_AUTH_OPTIONS](/vault/docs/platform/k8s/vso/helm#v-controller-manager-globalvaultauthoptions)
 
 ## Helm chart
 
