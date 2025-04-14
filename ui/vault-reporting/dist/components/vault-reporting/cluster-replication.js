@@ -18,7 +18,7 @@ class ClusterReplication extends Component {
       color: 'success'
     } : {
       icon: 'x',
-      text: 'Disabled',
+      text: 'Not set up',
       color: 'neutral'
     };
   }
@@ -29,7 +29,7 @@ class ClusterReplication extends Component {
       color: 'success'
     } : {
       icon: 'x',
-      text: 'Disabled',
+      text: 'Not set up',
       color: 'neutral'
     };
   }
