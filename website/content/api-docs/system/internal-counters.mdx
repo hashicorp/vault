@@ -341,7 +341,7 @@ In **Vault CE**, `end_time` is adjusted to the last month if the current month o
 
       ```json
       {
-         "warning": "end_time parameter can only be used to specify until the end of last month. The value provided for this parameter is not supported and is ignored. Showing counts until the end of last month."
+         "warning": "end_time parameter can only be used to specify a date until the end of previous month. The value provided for this parameter was in the current month or in the future date and was therefore ignored. The response includes data until the end of the previous month."
       }
       ```
 
@@ -380,7 +380,7 @@ $ curl \
       }
    },
    "wrap_info":null,
-   "warnings":"end_time parameter can only be used to specify until the end of last month. The value provided for this parameter is not supported and is ignored. Showing counts until the end of last month.",
+   "warnings":"end_time parameter can only be used to specify a date until the end of previous month. The value provided for this parameter was in the current month or in the future date and was therefore ignored. The response includes data until the end of the previous month.",
    "auth":null
 }
 ```
