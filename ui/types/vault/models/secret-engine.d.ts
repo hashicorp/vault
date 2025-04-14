@@ -42,6 +42,7 @@ export default class SecretEngineModel extends Model {
   get formFields(): Array<FormField>;
   get formFieldGroups(): FormFieldGroups;
   destroyRecord(): void;
+  unloadRecord(): void;
   saveZeroAddressConfig(): Promise;
   validate(): ModelValidations;
   // need to override isNew which is a computed prop and ts will complain since it sees it as a function

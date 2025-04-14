@@ -8,6 +8,7 @@ import { helper as buildHelper } from '@ember/component/helper';
 /**
  * These are all the secret and auth methods, including enterprise.
  * This is to be used for displaying the method name in the UI.
+ * TODO: maybe add param on object that mentions secret or auth or enterprise
  */
 
 const ALL_ENGINES = [
@@ -58,6 +59,22 @@ const ALL_ENGINES = [
     glyph: 'gcp-color',
   },
   {
+    displayName: 'Key Management',
+    type: 'keymgmt',
+    glyph: 'key',
+    category: 'cloud',
+    requiredFeature: 'Key Management Secrets Engine',
+    routeQueryParams: { tab: 'provider' },
+  },
+  {
+    displayName: 'KMIP',
+    type: 'kmip',
+    glyph: 'lock',
+    engineRoute: 'kmip.scopes.index',
+    category: 'generic',
+    requiredFeature: 'KMIP',
+  },
+  {
     displayName: 'KV',
     type: 'kv',
     glyph: 'key-values',
@@ -88,6 +105,13 @@ const ALL_ENGINES = [
     type: 'ssh',
     glyph: 'terminal-screen',
     category: 'generic',
+  },
+  {
+    displayName: 'Transform',
+    type: 'transform',
+    category: 'generic',
+    requiredFeature: 'Transform Secrets Engine',
+    glyph: 'transform-data',
   },
   {
     displayName: 'Transit',

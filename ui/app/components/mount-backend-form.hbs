@@ -16,6 +16,7 @@
           {{/if}}
         {{/let}}
       {{else if (eq @mountType "secret")}}
+        {{! ARG TODO remove old code when update done }}
         Enable a Secrets Engine
       {{else}}
         Enable an Authentication Method
@@ -56,7 +57,7 @@
       <div class="field is-grouped box is-fullwidth is-bottomless">
         <div class="control">
           <Hds::Button
-            @text={{if (eq @mountType "secret") "Enable engine" "Enable method"}}
+            @text={{if (eq @mountType "secret") "Enable OLDengine" "Enable method"}}
             @icon={{if this.mountBackend.isRunning "loading"}}
             type="submit"
             data-test-save

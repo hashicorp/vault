@@ -10,8 +10,6 @@ import { waitFor } from '@ember/test-waiters';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { ValidationMap } from 'vault/vault/app-types';
-import { assert } from '@ember/debug';
-import { capitalize } from '@ember/string';
 import errorMessage from 'vault/utils/error-message';
 
 import type MountConfigModel from 'vault/vault/models/secret-engine/mount-config';

@@ -169,7 +169,6 @@ Router.map(function () {
           this.mount('pki');
           this.route('index', { path: '/' });
           this.route('configuration', function () {
-            this.route('tune');
             // only CONFIGURABLE_SECRET_ENGINES can be configured and access the edit route
             this.route('edit');
           });
@@ -197,6 +196,12 @@ Router.map(function () {
           // database specific route
           this.route('overview');
         });
+        this.route('mount', function () {
+          // ideally this would have been done under secrets route, but that would require a large refactor
+          // moving all secret engine mounting logic here.
+          this.route('create', { path: '/:mount_type/create' });
+          this.route('tune');
+        });
       });
       this.route('policies', { path: '/policies/:type' }, function () {
         this.route('index', { path: '/' });
@@ -216,16 +221,6 @@ Router.map(function () {
       this.route('not-found', { path: '/*path' });
     });
     this.route('not-found', { path: '/*path' });
-
-    this.route('cluyster', function () {
-      this.route('secrets', function () {
-        this.route('backend', function () {
-          this.route('configuration', function () {
-            this.route('tune');
-          });
-        });
-      });
-    });
   });
   if (config.environment !== 'production') {
     addDocfyRoutes(this);
