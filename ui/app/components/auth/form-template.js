@@ -7,14 +7,19 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-
 import { restartableTask, timeout } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { ALL_LOGIN_METHODS, supportedTypes } from 'vault/utils/supported-login-methods';
 
 /**
  * @module Auth::FormTemplate
+ * This component is responsible for managing the layout and display logic for the auth form. When initialized it fetches
+ * the unauthenticated sys/internal/ui/mounts endpoint to check the listing_visibility configuration of available mounts.
+ * If mounts have been configured as listing_visibility="unauth" then tabs render for the corresponding method types,
+ * otherwise all auth methods display in a dropdown list. The endpoint is re-requested anytime the namespace input is updated.
  *
+ * When auth type changes (by selecting a new one from the dropdown or select a tab), the form component updates and
+ * dynamically renders the corresponding form.
  *
  * @example
  * <Auth::FormTemplate
@@ -24,7 +29,7 @@ import { ALL_LOGIN_METHODS, supportedTypes } from 'vault/utils/supported-login-m
  *  @namespace={{@namespaceQueryParam}}
  *  @onSuccess={{this.onAuthResponse}}
  *  />
-
+ *
  * @param {string} wrappedToken - Query param value of a wrapped token that can be used to login when added directly to the URL via the "wrapped_token" query param
  * @param {object} cluster - The route model which is the ember data cluster model. contains information such as cluster id, name and boolean for if the cluster is in standby
  * @param {function} handleNamespaceUpdate - callback task that passes user input to the controller and updates the namespace query param in the url
