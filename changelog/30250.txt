@@ -1,0 +1,3 @@
+```release-note:improvement
+Reporting UI (Enterprise): Adds a reporting dashboard view.
+```
