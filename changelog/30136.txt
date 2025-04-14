@@ -1,0 +1,3 @@
+```release-note:improvement
+storage/mysql: Added support for getting mysql backend username and password from the environment variables `VAULT_MYSQL_USERNAME` and `VAULT_MYSQL_PASSWORD`.
+```

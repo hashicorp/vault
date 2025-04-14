@@ -16,7 +16,7 @@
 // configured.
 package metricregistry
 
-import promsink "github.com/armon/go-metrics/prometheus"
+import promsink "github.com/hashicorp/go-metrics/compat/prometheus"
 
 var Registry definitionRegistry
 

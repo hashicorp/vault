@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"os"
 	"slices"
@@ -1311,8 +1312,12 @@ func (a *ActivityLog) loadClientIDsToMemory(ctx context.Context, startTime, endT
 	}
 	a.logger.Info("finished loading segments to store client IDs in memory")
 
+	// add the new clients to the existing map in memory
+	clientIDsUsageInfo := a.GetClientIDsUsageInfo()
+	maps.Copy(clientIDsUsageInfo, inMemClientIDsMap)
+
 	// update in-memory map in activity log
-	a.SetClientIDsUsageInfo(inMemClientIDsMap)
+	a.SetClientIDsUsageInfo(clientIDsUsageInfo)
 	return nil
 }
 
@@ -1367,8 +1372,8 @@ func (a *ActivityLog) getStartTimeAndEndTimeUntilLastMonth(entireBillingPeriod b
 	endOfLastMonth := timeutil.EndOfMonth(startOfLastMonth)
 
 	if entireBillingPeriod {
-		// startTime is the billing start time and endTime is the end of last month
-		return currBillingPeriodStartTime, endOfLastMonth
+		// startTime is the start of month of billing start time and endTime is the end of last month
+		return timeutil.StartOfMonth(currBillingPeriodStartTime), endOfLastMonth
 	}
 	return startOfLastMonth, endOfLastMonth
 }
@@ -1699,6 +1704,10 @@ func (a *ActivityLog) HandleEndOfMonth(ctx context.Context, currentTime time.Tim
 
 	// Work on precomputed queries in background
 	go a.precomputedQueryWorker(ctx, nil)
+
+	// update the clientIDs in memory for the last month.
+	// if new billing cycle is detected, reset clientIDs in memory
+	a.handleClientIDsInMemoryEndOfMonth(ctx, currentTime)
 
 	return nil
 }
