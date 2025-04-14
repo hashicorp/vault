@@ -34,7 +34,7 @@ const (
 	WarningProvidedStartAndEndTimesIgnored = "start_time and end_time parameters can only be used to specify the beginning or end of the same billing period. The values provided for these parameters are not supported and are ignored. Showing the data for the entire billing period corresponding to start_time. If start_time is not provided, the billing period is determined based on the end_time"
 
 	// WarningEndTimeAsCurrentMonthOrFutureIgnored is a warning string that is used to indicate the provided end time has been adjusted to the previous month if it was provided to be within the current month or in future date
-	WarningEndTimeAsCurrentMonthOrFutureIgnored = "end_time parameter can only be used to specify a month date until the end of previous month. The value provided for this parameter was in the current month or in the future date was ignored. The response includes data until the end of the previous month."
+	WarningEndTimeAsCurrentMonthOrFutureIgnored = "end_time parameter can only be used to specify a date until the end of previous month. The value provided for this parameter was in the current month or in the future date and was therefore ignored. The response includes data until the end of the previous month."
 )
 
 type StartEndTimesWarnings struct {
