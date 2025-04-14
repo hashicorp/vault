@@ -6,31 +6,13 @@ description: The Google Cloud Platform Secret Manager source imports secrets fro
 
 # GCP secret import source
 
-Use the GCP source to import secret data from GCP Secret Manager into your Vault instance. To use dynamic
-credentials with GCP import, ensure the [GCP secrets engine](/vault/docs/secrets/gcp) is already configured.
+Use the GCP Importer to read secret data from GCP Secrets Manager into your Vault
+instance.
 
-## Argument reference
-
-Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-1) for arguments common to all source types.
-
-## Additional arguments
-
-- `credentials_file` `(string: "")` - The path to the service account key credentials file to authenticate with.
-
-- `vault_mount_path` `(string: "")` - The Vault mount path to a pre-configured GCP
-  secrets engine used to generate dynamic credentials for the importer.
-
-- `vault_role_name` `(string: "")` - The Vault role used to generate a dynamic
-  credential for the importer. The role name must exist in the pre-configured GCP secrets
-  engine mount.
-
-- `vault_namespace` `(string: "")` - The Vault namespace containing the pre-configured GCP secrets engine
-  mount path specified in `vault_mount_path` for use with dynamic secrets.
-
-- `vault_address` `(string: "")` - The address of the Vault server to use for dynamic credentials. 
-
-- `vault_credentials_file` `(string: "")` - The path to a file containing a Vault token for the vault server configured above.
-
+## Before you start
+- **You must know the relevant GCP credentials**. You can provide the credentials
+  as environment variables, as explicit arguments, or use dynamic credentials
+  from an existing [GCP secrets plugin](/vault/docs/secrets/gcp) mount path.
 
 ## Step 1: Set GCP Identity Permissions
 
@@ -81,3 +63,27 @@ If one of `vault_mount_path`,`vault_role_name`, `vault_namespace`,`vault_address
 
 </Tab>
 </Tabs>
+
+## Argument reference
+
+Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-1) for arguments common to all source types.
+
+## Additional arguments
+
+- `credentials_file` `(string: "")` - The path to the service account key credentials file to authenticate with.
+
+- `vault_mount_path` `(string: "")` - The Vault mount path to a pre-configured GCP
+  secrets engine used to generate dynamic credentials for the importer.
+
+- `vault_role_name` `(string: "")` - GCP secrets plugin role used to generate
+  dynamic credentials for the importer. Only required for dynamic credentials.
+
+- `vault_namespace` `(string: "")` - Vault namespace for the mount path
+  specified in `vault_mount_path`. Only required for dynamic credentials.
+
+- `vault_address` `(string: "")` - The address of your Vault server. Only
+  required for dynamic credentials. 
+
+- `vault_credentials_file` `(string: "")` - Local path to a file containing a
+  valid token for the Vault server at `vault_address`. Only required for dynamic
+  credentials.
