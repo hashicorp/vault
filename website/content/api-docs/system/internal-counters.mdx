@@ -508,7 +508,7 @@ is unknown.
   period for which client counts will be reported. If no start time is specified, the billing start date will be used.
   The [billing start date](/vault/docs/concepts/billing-start-date) automatically rolls over to the latest billing year at the end of the last cycle.
 - `end_time` `(string, optional)` - An RFC3339 timestamp or Unix epoch time. Specifies the end of the period
-  for which client counts will be reported. If no end time is specified, the end of the last month will be used.
+  for which client counts will be reported. If no end time is specified, the end of the current month will be used.
 - `limit_namespaces` `(int, optional)` - Controls the total number of by_namespace data returned. This can
    be used to return the client counts for the specified number of namespaces having highest activity.
    If no `limit_namespaces` parameter is specified, client counts for all namespaces in specified usage period is returned.
