@@ -3,14 +3,15 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 import Component from '@glimmer/component';
-import { REPLICATION_ENABLED_STATE } from '../../types/index.ts';
 import './cluster-replication.scss';
+export declare const ENABLED_STATE = "enabled";
+export declare const DISABLED_STATE = "disabled";
 export interface ClusterReplicationSignature {
     Args: {
         isDisasterRecoveryPrimary: boolean;
-        disasterRecoveryState: REPLICATION_ENABLED_STATE | 'disabled';
+        disasterRecoveryState: string;
         isPerformancePrimary: boolean;
-        performanceState: REPLICATION_ENABLED_STATE | 'disabled';
+        performanceState: string;
     };
     Blocks: {
         default: [];

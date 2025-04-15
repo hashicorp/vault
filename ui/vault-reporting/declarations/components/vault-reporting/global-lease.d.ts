@@ -31,6 +31,6 @@ export default class GlobalLease extends Component<GlobalLeaseSignature> {
     get percentageString(): string;
     get hasData(): boolean | 0 | undefined;
     get description(): "Snapshot of global lease count quota consumption" | undefined;
-    get linkUrl(): "https://developer.hashicorp.com/vault/docs/enterprise/lease-count-quotas" | undefined;
+    get linkUrl(): "https://developer.hashicorp.com/vault/docs/enterprise/lease-count-quotas\"" | undefined;
 }
 //# sourceMappingURL=global-lease.d.ts.map
