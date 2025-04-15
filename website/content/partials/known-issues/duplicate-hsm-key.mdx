@@ -1,0 +1,13 @@
+### Seal/Seal Wrapped - Duplicate HSM Keys ((#hsm-keys))
+
+#### Affected Versions
+- All versions that support migration from Shamir to HSM-backed unseal/seal wrap in HSM-HA configurations.
+
+#### Issue
+During a migration from Shamir to an HSM-backed unseal configuration with HSM - High Availability (HA), duplicate HSM keys may be created.
+These issues can occur even after a seal migration to HSM that initially appeared successful. The root cause is under investigation, with potential links to key handling during HA configuration or migration processes.
+- Unseal failures: Nodes may fail to unseal after a restart, with errors such as CKR_DATA_INVALID.
+- Duplicate HSM keys: These may be created, resulting in intermittent read failures with errors such as CKR_SIGNATURE_INVALID and CKR_KEY_HANDLE_INVALID for any seal wrapped value - see /vault/docs/enterprise/sealwrap#wrapped-parameters.
+
+#### Workaround
+As a workaround, always run Vault with `generate_key = false`, creating the required keys within the HSM manually during the setup process.
