@@ -73,7 +73,11 @@ export default class ToolsWrap extends Component {
 
   @action
   codemirrorUpdated(val: string) {
-    this.wrapData = JSON.parse(val);
+    try {
+      this.wrapData = JSON.parse(val);
+    } catch {
+      // linting errors will be caught in the component
+    }
   }
 
   @action
