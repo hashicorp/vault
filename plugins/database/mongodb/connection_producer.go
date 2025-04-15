@@ -119,15 +119,7 @@ func (c *mongoDBConnectionProducer) createClient(ctx context.Context) (client *m
 	if c.clientOptions == nil {
 		return nil, fmt.Errorf("missing client options")
 	}
-	mergedOptions := options.MergeClientOptions(
-		options.Client().ApplyURI(c.getConnectionURL()),
-		c.clientOptions,
-	)
-	// Ensure SCRAM-SHA-256 is explicitly set if username/password auth is provided
-	if mergedOptions.Auth != nil && mergedOptions.Auth.Username != "" && mergedOptions.Auth.Password != "" {
-		mergedOptions.Auth.AuthMechanism = "SCRAM-SHA-256" // Force SCRAM-SHA-256 if username/password is present
-	}
-	client, err = mongo.Connect(ctx, mergedOptions)
+	client, err = mongo.Connect(ctx, options.MergeClientOptions(options.Client().ApplyURI(c.getConnectionURL()), c.clientOptions))
 	if err != nil {
 		return nil, err
 	}
@@ -257,12 +249,18 @@ func (c *mongoDBConnectionProducer) getTLSAuth() (opts *options.ClientOptions, e
 
 	if len(c.TLSCertificateKeyData) > 0 {
 		certificate, err := tls.X509KeyPair(c.TLSCertificateKeyData, c.TLSCertificateKeyData)
+		authMechanism := "MONGODB-X509"
 		if err != nil {
 			return nil, fmt.Errorf("unable to load tls_certificate_key_data: %w", err)
 		}
 
+		// Ensure SCRAM-SHA-256 is explicitly set if username/password auth is provided
+		if c.Username != "" && c.Password != "" {
+			authMechanism = "SCRAM-SHA-256"
+		}
+
 		opts.SetAuth(options.Credential{
-			AuthMechanism: "MONGODB-X509",
+			AuthMechanism: authMechanism,
 			Username:      c.Username,
 			Password:      c.Password,
 		})
