@@ -326,12 +326,6 @@ func TestReadStoredKey(t *testing.T) {
 			publicKey:             testCAPublicKey,
 			privateKey:            testCAPrivateKey,
 		},
-		"deprecated-path-keys-configured": {
-			privateKeyStoragePath: caPrivateKeyStoragePathDeprecated,
-			publicKeyStoragePath:  caPublicKeyStoragePathDeprecated,
-			publicKey:             testCAPublicKey,
-			privateKey:            testCAPrivateKey,
-		},
 	}
 
 	for name, tt := range testCases {
@@ -376,10 +370,6 @@ func TestGetCAPublicKey(t *testing.T) {
 	}{
 		"stored-keys-configured": {
 			publicKeyStoragePath: caPublicKeyStoragePath,
-			publicKey:            testCAPublicKey,
-		},
-		"deprecated-path-keys-configured": {
-			publicKeyStoragePath: caPublicKeyStoragePathDeprecated,
 			publicKey:            testCAPublicKey,
 		},
 		"managed-key-configured": {

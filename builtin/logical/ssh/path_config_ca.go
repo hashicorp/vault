@@ -177,11 +177,13 @@ func readStoredKey(ctx context.Context, storage logical.Storage, keyType string)
 			return nil, err
 		}
 		if entry != nil {
-			newEntry := &logical.StorageEntry{
-				Key:   path,
-				Value: entry.Value,
+			entry, err = logical.StorageEntryJSON(path, keyStorageEntry{
+				Key: string(entry.Value),
+			})
+			if err != nil {
+				return nil, err
 			}
-			if err := storage.Put(ctx, newEntry); err != nil {
+			if err := storage.Put(ctx, entry); err != nil {
 				return nil, err
 			}
 			if err = storage.Delete(ctx, deprecatedPath); err != nil {
