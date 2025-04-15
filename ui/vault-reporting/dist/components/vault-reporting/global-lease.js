@@ -52,7 +52,7 @@ class GlobalLease extends Component {
   }
   get linkUrl() {
     if (this.hasData) {
-      return 'https://developer.hashicorp.com/vault/docs/enterprise/lease-count-quotas"';
+      return 'https://developer.hashicorp.com/vault/docs/enterprise/lease-count-quotas';
     }
   }
   static {

@@ -13,6 +13,12 @@ export interface SimpleDatum {
     value: number;
     label: string;
 }
+export declare enum REPLICATION_ENABLED_STATE {
+    PRIMARY = "primary",
+    SECONDARY = "secondary",
+    BOOTSTRAPPING = "bootstrapping"
+}
+export declare const REPLICATION_DISABLED_STATE = "disabled";
 export interface UsageDashboardData {
     auth_methods: Record<string, number>;
     kvv1_secrets: number;
@@ -33,9 +39,9 @@ export interface UsageDashboardData {
     };
     replication_status: {
         dr_primary: boolean;
-        dr_state: string;
+        dr_state: REPLICATION_ENABLED_STATE | typeof REPLICATION_DISABLED_STATE;
         pr_primary: boolean;
-        pr_state: string;
+        pr_state: REPLICATION_ENABLED_STATE | typeof REPLICATION_DISABLED_STATE;
     };
     secret_engines: Record<string, number>;
 }
