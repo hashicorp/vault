@@ -29,7 +29,18 @@ const (
 
 	// WarningCurrentMonthIsAnEstimate is a warning string that is used to let the customer know that for this query, the current month's data is estimated.
 	WarningCurrentMonthIsAnEstimate = "Since this usage period includes both the current month and at least one historical month, counts returned in this usage period are an estimate. Client counts for this period will no longer be estimated at the start of the next month."
+
+	// WarningProvidedStartAndEndTimesIgnored is a warning string that is used to indicate that the provided start and end times by the user have been aligned to a billing period's start and end times
+	WarningProvidedStartAndEndTimesIgnored = "start_time and end_time parameters can only be used to specify the beginning or end of the same billing period. The values provided for these parameters are not supported and are ignored. Showing the data for the entire billing period corresponding to start_time. If start_time is not provided, the billing period is determined based on the end_time."
+
+	// WarningEndTimeAsCurrentMonthOrFutureIgnored is a warning string that is used to indicate the provided end time has been adjusted to the previous month if it was provided to be within the current month or in future date
+	WarningEndTimeAsCurrentMonthOrFutureIgnored = "end_time parameter can only be used to specify a date until the end of previous month. The value provided for this parameter was in the current month or in the future date and was therefore ignored. The response includes data until the end of the previous month."
 )
+
+type StartEndTimesWarnings struct {
+	TimesAlignedToBilling      bool
+	EndTimeAdjustedToPastMonth bool
+}
 
 // activityQueryPath is available in every namespace
 func (b *SystemBackend) activityQueryPath() *framework.Path {
@@ -332,7 +343,6 @@ func (b *SystemBackend) handleClientExport(ctx context.Context, req *logical.Req
 }
 
 func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	var startTime, endTime time.Time
 	b.Core.activityLogLock.RLock()
 	a := b.Core.activityLog
 	b.Core.activityLogLock.RUnlock()
@@ -347,7 +357,8 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 	}
 
 	var err error
-	startTime, endTime, err = parseStartEndTimes(d, b.Core.BillingStart())
+	var timeWarnings StartEndTimesWarnings
+	startTime, endTime, timeWarnings, err := getStartEndTime(d, b.Core.BillingStart())
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -370,6 +381,12 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 
 	if queryContainsEstimates(startTime, endTime) {
 		warnings = append(warnings, WarningCurrentMonthIsAnEstimate)
+	}
+	if timeWarnings.EndTimeAdjustedToPastMonth {
+		warnings = append(warnings, WarningEndTimeAsCurrentMonthOrFutureIgnored)
+	}
+	if timeWarnings.TimesAlignedToBilling {
+		warnings = append(warnings, WarningProvidedStartAndEndTimesIgnored)
 	}
 
 	return &logical.Response{
