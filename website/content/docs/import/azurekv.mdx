@@ -13,13 +13,14 @@ All secrets including expired ones will imported from the provided Azure Key Vau
 
 Use the Azure importer to read secret data from Azure Key Vault into your Vault
 instance.
+
 ## Before you start
 - **You must know the relevant Azure credentials**. You can provide the credentials
   as environment variables, as explicit arguments, or use dynamic credentials
   from an existing [Azure secrets plugin](/vault/docs/secrets/azure) mount path.
 
 
-## Step 1: Set Azure Identity Permissions
+## Step 1: Set Azure Identity permissions
 
 To use Azure import, you must grant the associated Azure identity permission to read secrets
 from the specified Key Vault:
@@ -75,8 +76,6 @@ If one of `vault_mount_path`,`vault_role_name`, `vault_namespace`,`vault_address
 ## Argument reference
 
 Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-1) for arguments common to all source types.
-
-## Additional arguments
 
 - `key_vault_uri` `(string: <required>)` - The URI of the Azure Key Vault you want to import from.
 

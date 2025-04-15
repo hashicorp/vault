@@ -14,7 +14,7 @@ instance.
   as environment variables, as explicit arguments, or use dynamic credentials
   from an existing [GCP secrets plugin](/vault/docs/secrets/gcp) mount path.
 
-## Step 1: Set GCP Identity Permissions
+## Step 1: Set GCP Identity permissions
 
 To use GCP import, you must grant the associated GCP identity permission to read secrets:
 
@@ -67,8 +67,6 @@ If one of `vault_mount_path`,`vault_role_name`, `vault_namespace`,`vault_address
 ## Argument reference
 
 Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-1) for arguments common to all source types.
-
-## Additional arguments
 
 - `credentials_file` `(string: "")` - The path to the service account key credentials file to authenticate with.
 
