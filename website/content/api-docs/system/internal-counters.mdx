@@ -256,7 +256,7 @@ period.
 <Note title="Behavior Differences between Vault Enterprise and Community Edition">
 
 The behavior of the `start_time` and `end_time` parameters in the Counters API differs based on the Vault edition.
-In **Vault Enterprise (ENT)**, these parameters are restricted to aligning with full billing periods only. In **Vault Community
+In **Vault Enterprise (ENT)**, these parameters are must align with the full billing period. In **Vault Community
 Edition (CE)**, the API supports flexible historical time ranges, but excludes the current month and any future dates. 
 See below for details.
 
