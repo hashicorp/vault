@@ -214,11 +214,18 @@ type ActivityLog struct {
 	// is written. It's used for unit testing
 	precomputedQueryWritten chan struct{}
 
+	clientIDsUsage ClientUsageInfo
+}
+
+type ClientUsageInfo struct {
+	// clientIDsUsageInfoLock controls access to the ClientUsageInfo
+	clientIDsUsageInfoLock sync.RWMutex
+
+	// setupClientIDsUsageInfoCancelCtx is used to cancel and restart setupClientIDsUsageInfo goroutine during reloads
+	setupClientIDsUsageInfoCancelCtx context.CancelFunc
+
 	// The clientIDsUsageInfo map has clientIDs that have been used in the current billing period
 	clientIDsUsageInfo map[string]struct{}
-
-	// clientIDsUsageInfoLock controls access to the clientIDsUsageInfo
-	clientIDsUsageInfoLock sync.RWMutex
 
 	// clientIDsUsageInfoLoaded is set to true when the clientIDsUsageInfo has up-to date information upon startup.
 	// This ensures that the counters api returns exact values for new clients in the current month upon startup.
@@ -342,8 +349,10 @@ func NewActivityLog(core *Core, logger log.Logger, view *BarrierView, metrics me
 		standbyFragmentsReceived: make([]*activity.LogFragment, 0),
 		inprocessExport:          atomic.NewBool(false),
 		precomputedQueryWritten:  make(chan struct{}),
-		clientIDsUsageInfo:       make(map[string]struct{}),
-		clientIDsUsageInfoLoaded: new(atomic.Bool),
+		clientIDsUsage: ClientUsageInfo{
+			clientIDsUsageInfo:       make(map[string]struct{}),
+			clientIDsUsageInfoLoaded: new(atomic.Bool),
+		},
 	}
 
 	config, err := a.loadConfigOrDefault(core.activeContext)
