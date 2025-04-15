@@ -821,7 +821,14 @@ type CreationBundle struct {
 // information
 func AddKeyUsages(data *CreationBundle, certTemplate *x509.Certificate) {
 	if data.Params.IsCA {
-		certTemplate.KeyUsage = x509.KeyUsage(x509.KeyUsageCertSign | x509.KeyUsageCRLSign)
+		// https://cabforum.org/working-groups/server/baseline-requirements/documents/CA-Browser-Forum-TLS-BR-2.1.4.pdf
+		// Per Section 7.1.2.10.7, the only acceptable additional key usage is Digital Signature
+		if data.Params.KeyUsage&x509.KeyUsageDigitalSignature == x509.KeyUsageDigitalSignature {
+			certTemplate.KeyUsage = x509.KeyUsageDigitalSignature
+		} else {
+			certTemplate.KeyUsage = x509.KeyUsage(0)
+		}
+		certTemplate.KeyUsage |= x509.KeyUsageCertSign | x509.KeyUsageCRLSign
 		return
 	}
 
