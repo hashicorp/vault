@@ -29,7 +29,6 @@
         </span>
       {{/unless}}
       <Toolbar aria-label="toolbar for managing {{or @model.name 'new'}} policy">
-        <label class="has-text-weight-bold has-right-margin-4">Policy</label>
         {{#if @renderPolicyExampleModal}}
           {{! only true in policy create and edit routes }}
           <ToolbarFilters aria-label="help tools for managing {{or @model.name 'new'}} policy">
@@ -43,9 +42,8 @@
             />
           </ToolbarFilters>
         {{/if}}
-        <ToolbarActions aria-label="actions for managing {{or @model.name 'new'}} policy">
-          <div class="toolbar-separator"></div>
-          {{#if @model.isNew}}
+        {{#if @model.isNew}}
+          <ToolbarActions aria-label="actions for managing {{or @model.name 'new'}} policy">
             <div class="control is-flex">
               <Input
                 id="fileUploadToggle"
@@ -58,20 +56,8 @@
               />
               <label for="fileUploadToggle" class="has-text-weight-bold is-size-8">Upload file</label>
             </div>
-          {{else}}
-            {{! EDITING - no file upload toggle}}
-            <Hds::Copy::Button
-              @text="Copy"
-              @isIconOnly={{true}}
-              @textToCopy={{@model.policy}}
-              @onError={{(fn
-                (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
-              )}}
-              class="transparent"
-              data-test-copy-button
-            />
-          {{/if}}
-        </ToolbarActions>
+          </ToolbarActions>
+        {{/if}}
       </Toolbar>
       {{#if this.showFileUpload}}
         <div class="has-top-margin-xs">
@@ -80,7 +66,6 @@
       {{else}}
         <JsonEditor
           @title="Policy"
-          @showToolbar={{false}}
           @value={{@model.policy}}
           @valueUpdated={{action (mut @model.policy)}}
           @mode="ruby"
@@ -88,7 +73,6 @@
           data-test-policy-editor
         />
       {{/if}}
-
     </div>
     {{#each @model.additionalAttrs as |attr|}}
       <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
