@@ -73,7 +73,7 @@ class SSUViewDashboard extends Component {
       title: 'Secrets sync',
       tooltipMessage: this.isVaultDedicated ? 'Total number of destinations (e.g. third-party integrations) synced with secrets from this namespace' : '',
       data: this.data?.secrets_sync ?? 0,
-      link: 'sync/secrets',
+      link: 'sync/secrets/overview',
       emptyText: 'Not configured',
       suffix: 'destinations'
     }, {
