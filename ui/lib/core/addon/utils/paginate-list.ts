@@ -29,7 +29,10 @@ export const paginate = (data: PaginatedData, options: PaginateOptions = {}) => 
     if (filter) {
       filteredData = data.filter((item) => {
         const filterValue = filterKey ? item[filterKey] : item;
-        return filterValue || ''.toLowerCase().includes(filter.toLowerCase());
+        if (typeof filterValue === 'string') {
+          return filterValue.toLowerCase().includes(filter.toLowerCase());
+        }
+        return false;
       });
     }
 

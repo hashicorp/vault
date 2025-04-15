@@ -39,14 +39,16 @@ module('Unit | Utility | paginate-list', function (hooks) {
 
   test('it should filter items and then paginate', function (assert) {
     let data = ['Test', 'foo', 'test', 'bar', 'test'];
+    let expected = ['Test', 'test'];
     const options = { page: 1, pageSize: 2, filter: 'test' };
 
     let paginatedData = paginate(data, options);
-    assert.strictEqual(paginatedData.length, 2, 'returns correct number of filtered items');
+    assert.deepEqual(paginatedData, expected, 'returns correct number of filtered items');
 
     data = data.map((id) => ({ id }));
+    expected = [{ id: 'Test' }, { id: 'test' }];
     paginatedData = paginate(data, { ...options, filterKey: 'id' });
-    assert.strictEqual(paginatedData.length, 2, 'returns correct number of filtered objects');
+    assert.deepEqual(paginatedData, expected, 'returns correct number of filtered objects');
   });
 
   test('it should add meta data to returned object', function (assert) {
