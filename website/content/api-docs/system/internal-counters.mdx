@@ -274,7 +274,7 @@ In **Vault ENT**, `start_time` and `ent_time` are adjusted to align with the sta
 - If only `end_time` is provided, the query is aligned to the entire default billing period to which the `end_time` belongs.
 - If `start_time` and `end_time` do **not** correspond to the **same billing period**, Vault Enterprise:
    - Billing period will be aligned to the date specified in `start_time`
-   - **Sets** the `end_time` to the **end of that billing period**.
+   - `end_time` will be adjusted to the **end of that billing period**.
    - **Returns a warning**:
 
    ```json
