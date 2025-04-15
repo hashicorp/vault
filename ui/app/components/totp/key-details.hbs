@@ -4,6 +4,9 @@
 ~}}
 <Toolbar>
   <ToolbarActions>
+    <ToolbarLink @route="vault.cluster.secrets.backend.credentials" @model={{@model.id}}>
+      Generate code
+    </ToolbarLink>
     {{#if @model.canDelete}}
       <ConfirmAction
         @buttonText="Delete key"
