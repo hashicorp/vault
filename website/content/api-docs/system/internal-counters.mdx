@@ -270,12 +270,12 @@ In **Vault ENT**, `start_time` and `ent_time` are adjusted to align with the sta
 
 - The Counters API only returns **data for an entire billing period**.
 - By default, the API returns activity data for the start of the **current billing period** until the **current moment**.
-- If  the provided`start_time` is outside of the current billing period, the query is aligned to entire default billing period to which `start_time` belongs.
+- If  the provided `start_time` is outside of the current billing period, the query is aligned to an entire default billing period to which `start_time` belongs.
 - If only `end_time` is provided, the query is aligned to the entire default billing period to which the `end_time` belongs.
-- If `start_time` and `end_time` do **not** correspond to the **same billing period**, Vault Enterprise:
-   - Billing period will be aligned to the date specified in `start_time`
+- If `start_time` and `end_time` do **not** correspond to the **same billing period**, in Vault Enterprise:
+   - `start_time` will be adjusted to the **start of the billing period it belongs to**.
    - `end_time` will be adjusted to the **end of that billing period**.
-   - **Returns a warning**:
+   - **The following warning is returned**:
 
    ```json
    {
