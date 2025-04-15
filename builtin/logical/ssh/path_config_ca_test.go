@@ -483,11 +483,6 @@ func TestCAKeysConfigured(t *testing.T) {
 			publicKeyStoragePath:  caPublicKeyStoragePath,
 			expectedValue:         false,
 		},
-		"deprecated-path-stored-keys-empty": {
-			privateKeyStoragePath: caPrivateKeyStoragePathDeprecated,
-			publicKeyStoragePath:  caPublicKeyStoragePathDeprecated,
-			expectedValue:         false,
-		},
 		"no-storage-entry": {
 			expectedValue: false,
 		},
@@ -525,8 +520,13 @@ func writeKey(ctx context.Context, s logical.Storage, path, key string) error {
 	var entry *logical.StorageEntry
 	var err error
 	switch path {
-	case caPublicKeyStoragePathDeprecated, caPublicKeyStoragePath, caPrivateKeyStoragePathDeprecated, caPrivateKeyStoragePath:
+	case caPublicKeyStoragePath, caPrivateKeyStoragePath:
 		entry, err = logical.StorageEntryJSON(path, &keyStorageEntry{Key: key})
+		if err != nil {
+			return err
+		}
+	case caPublicKeyStoragePathDeprecated, caPrivateKeyStoragePathDeprecated:
+		entry, err = logical.StorageEntryJSON(path, []byte(key))
 		if err != nil {
 			return err
 		}
