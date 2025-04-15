@@ -273,7 +273,7 @@ In **Vault ENT**, `start_time` and `ent_time` are aligned to the start and end o
 - If `start_time` is provided, the query is aligned to the **start of the billing period** to which that timestamp belongs.
 - If only `end_time` is provided, the query is aligned to the **start of the billing period** to which the `end_time` belongs.
 - If `start_time` and `end_time` do **not** correspond to the **same billing period**, Vault Enterprise:
-   - **Aligns** the `start_time` to the start of the billing period (using either `start_time` or `end_time` as reference).
+   - Billing period will be aligned date specified in `start_time`
    - **Sets** the `end_time` to the **end of that billing period**.
    - **Returns a warning**:
 
