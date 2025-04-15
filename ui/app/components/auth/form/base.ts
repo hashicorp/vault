@@ -9,6 +9,10 @@ import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 
+import type AuthService from 'vault/vault/services/auth';
+import type ClusterModel from 'vault/models/cluster';
+import type { HTMLElementEvent } from 'vault/forms';
+
 /**
  * @module Auth::Base
  *
@@ -18,14 +22,21 @@ import { waitFor } from '@ember/test-waiters';
  * @param {function} onSuccess - calls onAuthResponse in auth/page redirects if successful
  */
 
-export default class AuthBase extends Component {
-  @service auth;
+interface Args {
+  authType: string;
+  cluster: ClusterModel;
+  onError: CallableFunction;
+  onSuccess: CallableFunction;
+}
+
+export default class AuthBase extends Component<Args> {
+  @service declare readonly auth: AuthService;
 
   @action
-  onSubmit(event) {
+  onSubmit(event: HTMLElementEvent<HTMLFormElement>) {
     event.preventDefault();
-    const formData = new FormData(event.target);
-    const data = {};
+    const formData = new FormData(event.target as HTMLFormElement);
+    const data: Record<string, FormDataEntryValue | null> = {};
 
     for (const key of formData.keys()) {
       data[key] = formData.get(key);
@@ -47,20 +58,20 @@ export default class AuthBase extends Component {
         // responsible for redirect after auth data is persisted
         this.onSuccess(authResponse);
       } catch (error) {
-        this.onError(error);
+        this.onError(error as Error);
       }
     })
   );
 
   // if we move auth service authSuccess method here (or to each auth method component)
   // then call that before calling parent this.args.onSuccess
-  onSuccess(authResponse) {
+  onSuccess(authResponse: object) {
     //  responsible for redirect after auth data is persisted
     this.args.onSuccess(authResponse, this.args.authType);
   }
 
-  onError(error) {
-    if (!this.auth.mfaError) {
+  onError(error: Error) {
+    if (!this.auth.mfaErrors) {
       const errorMessage = `Authentication failed: ${this.auth.handleError(error)}`;
       this.args.onError(errorMessage);
     }

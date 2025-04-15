@@ -21,4 +21,12 @@ export default class AuthService extends Service {
   authData: AuthData;
   currentToken: string;
   setLastFetch: (time: number) => void;
+  handleError: (error: Error) => string | error[] | [error];
+  authenticate(params: {
+    clusterId: string;
+    backend: string;
+    data: Record<string, FormDataEntryValue | null>;
+    selectedAuth: string;
+  }): Promise<any>;
+  mfaErrors: null | Errors[];
 }
