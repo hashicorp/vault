@@ -11,6 +11,12 @@ import { restartableTask, timeout } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { ALL_LOGIN_METHODS, supportedTypes } from 'vault/utils/supported-login-methods';
 
+import type FlagsService from 'vault/services/flags';
+import type Store from '@ember-data/store';
+import type VersionService from 'vault/services/version';
+import type ClusterModel from 'vault/models/cluster';
+import type { HTMLElementEvent } from 'vault/forms';
+
 /**
  * @module Auth::FormTemplate
  * This component is responsible for managing the layout and display logic for the auth form. When initialized it fetches
@@ -21,14 +27,6 @@ import { ALL_LOGIN_METHODS, supportedTypes } from 'vault/utils/supported-login-m
  * When auth type changes (by selecting a new one from the dropdown or select a tab), the form component updates and
  * dynamically renders the corresponding form.
  *
- * @example
- * <Auth::FormTemplate
- *  @wrappedToken={{@wrappedToken}}
- *  @cluster={{@cluster}}
- *  @handleNamespaceUpdate={{this.handleNamespaceUpdate}}
- *  @namespace={{@namespaceQueryParam}}
- *  @onSuccess={{this.onAuthResponse}}
- *  />
  *
  * @param {string} wrappedToken - Query param value of a wrapped token that can be used to login when added directly to the URL via the "wrapped_token" query param
  * @param {object} cluster - The route model which is the ember data cluster model. contains information such as cluster id, name and boolean for if the cluster is in standby
@@ -38,27 +36,47 @@ import { ALL_LOGIN_METHODS, supportedTypes } from 'vault/utils/supported-login-m
  *
  * */
 
-export default class AuthFormTemplate extends Component {
-  @service flags;
-  @service store;
-  @service version;
+interface Args {
+  wrappedToken: string;
+  cluster: ClusterModel;
+  handleNamespaceUpdate: CallableFunction;
+  namespace: string;
+  onSuccess: CallableFunction;
+}
+
+interface AuthTabs {
+  // key is the auth method type
+  [key: string]: MountData[];
+}
+
+interface MountData {
+  path: string;
+  type: string;
+  description?: string;
+  config?: object | null;
+}
+
+export default class AuthFormTemplate extends Component<Args> {
+  @service declare readonly flags: FlagsService;
+  @service declare readonly store: Store;
+  @service declare readonly version: VersionService;
 
   // form display logic
-  @tracked authTabs = null; // renders method types as tabs (default is to list in a dropdown)
+  @tracked authTabs: AuthTabs | null = null;
   @tracked selectedTabIndex = 0;
   @tracked showOtherMethods = false;
 
   // auth login variables
   @tracked selectedAuthMethod = 'token';
-  @tracked errorMessage = null;
+  @tracked errorMessage = '';
 
-  displayName = (type) => {
+  displayName = (type: string) => {
     const displayName = ALL_LOGIN_METHODS?.find((t) => t.type === type)?.displayName;
     return displayName || type;
   };
 
-  constructor() {
-    super(...arguments);
+  constructor(owner: unknown, args: Args) {
+    super(owner, args);
     this.fetchMounts.perform();
   }
 
@@ -101,21 +119,23 @@ export default class AuthFormTemplate extends Component {
   }
 
   @action
-  handleAuthSelect(element, event, idx) {
+  handleAuthSelect(element: string, event: HTMLElementEvent<HTMLInputElement> | null, idx: number) {
     if (element === 'tab') {
       this.setAuthTypeFromTab(idx);
-    } else {
-      this.selectedAuthMethod = event.target.value;
+    } else if (event?.target?.value) {
+      this.selectedAuthMethod = event?.target.value;
     }
   }
 
-  setAuthTypeFromTab(idx) {
-    this.selectedAuthMethod = Object.keys(this.authTabs)[idx];
-    this.selectedTabIndex = idx;
+  setAuthTypeFromTab(idx: number) {
+    if (this.authTabs) {
+      this.selectedAuthMethod = Object.keys(this.authTabs)[idx] || '';
+      this.selectedTabIndex = idx;
+    }
   }
 
   @action
-  handleError(message) {
+  handleError(message: string) {
     this.errorMessage = message;
   }
 
@@ -133,7 +153,7 @@ export default class AuthFormTemplate extends Component {
   }
 
   @action
-  async handleNamespaceUpdate(event) {
+  async handleNamespaceUpdate(event: HTMLElementEvent<HTMLInputElement>) {
     // update query param
     this.args.handleNamespaceUpdate(event.target.value);
     // reset tabs
@@ -143,7 +163,7 @@ export default class AuthFormTemplate extends Component {
   }
 
   fetchMounts = restartableTask(
-    waitFor(async (wait) => {
+    waitFor(async (wait = 0) => {
       // task is `restartable` so if the user starts typing again,
       // it will cancel and restart from the beginning.
       if (wait) await timeout(wait);
@@ -159,7 +179,7 @@ export default class AuthFormTemplate extends Component {
         });
 
         if (unauthMounts.length !== 0) {
-          this.authTabs = unauthMounts.reduce((obj, m) => {
+          this.authTabs = unauthMounts.reduce((obj: AuthTabs, m) => {
             // serialize the ember data model into a regular ol' object
             const mountData = m.serialize();
             const methodType = mountData.type;
@@ -167,8 +187,12 @@ export default class AuthFormTemplate extends Component {
               // create a new empty array for that type
               obj[methodType] = [];
             }
-            // push mount data into corresponding type's array
-            obj[methodType].push(mountData);
+
+            if (Array.isArray(obj[methodType])) {
+              // push mount data into corresponding type's array
+              obj[methodType].push(mountData);
+            }
+
             return obj;
           }, {});
 
