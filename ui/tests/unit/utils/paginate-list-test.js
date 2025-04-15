@@ -52,16 +52,22 @@ module('Unit | Utility | paginate-list', function (hooks) {
   });
 
   test('it should add meta data to returned object', function (assert) {
-    const { meta } = paginate(this.items, { page: 2, pageSize: 5 });
+    const { meta } = paginate(this.items, { page: 2, pageSize: 3 });
     const expectedMeta = {
       currentPage: 2,
-      lastPage: 4,
+      lastPage: 7,
       nextPage: 3,
       prevPage: 1,
       total: 20,
-      filteredTotal: 5,
-      pageSize: 5,
+      filteredTotal: 3,
+      pageSize: 3,
     };
     assert.deepEqual(meta, expectedMeta, 'returns correct meta data');
+  });
+
+  test('it should return remaining results on last page', async function (assert) {
+    const paginatedData = paginate(this.items, { page: 7, pageSize: 3 });
+    const expected = [18, 19];
+    assert.deepEqual(paginatedData, expected, 'returns correct items for last page');
   });
 });

@@ -36,7 +36,7 @@ export const paginate = (data: PaginatedData, options: PaginateOptions = {}) => 
       });
     }
 
-    const lastPage = Math.floor(filteredData.length / pageSize);
+    const lastPage = Math.ceil(filteredData.length / pageSize);
     const start = (page - 1) * pageSize;
     const end = start + pageSize;
     filteredData = filteredData.slice(start, end);
