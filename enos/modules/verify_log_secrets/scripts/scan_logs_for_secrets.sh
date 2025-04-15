@@ -11,6 +11,7 @@ verify_radar_scan_output_file() {
   # Given a file with a radar scan output, filter out tagged false positives and verify that no
   # other secrets remain.
   ls -lt ~/.hashicorp/vault-radar/
+  cat ~/.hashicorp/vault-radar/ignore.yaml
   if ! jq -eMcn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))] | length == 0' < "$2"; then
     found=$(jq -eMn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))]' < "$2")
     fail "failed to radar secrets output: vault radar detected secrets in $1!: $found"
