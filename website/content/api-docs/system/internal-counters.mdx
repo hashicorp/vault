@@ -268,7 +268,8 @@ future dates.
 
 <Tab heading="Vault Enterprise">
 
-In **Vault ENT**, `start_time` and `ent_time` are adjusted to align with the start and end of the corresponding billing period:
+In Vault Enterprise, the Get Client Count endpoint adjusts `start_time` and
+`end_time` to align with the start and end of the corresponding billing period.
 
 - The Counters API only returns **data for an entire billing period**.
 - By default, the API returns activity data for the start of the **current billing period** until the **current moment**.
