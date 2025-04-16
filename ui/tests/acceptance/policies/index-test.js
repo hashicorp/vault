@@ -19,7 +19,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { runCmd } from 'vault/tests/helpers/commands';
-import codemirror from 'vault/tests/helpers/codemirror';
+import codemirror, { setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SELECT = {
@@ -88,7 +88,11 @@ module('Acceptance | policies/acl', function (hooks) {
     await click(SELECT.createLink);
 
     await fillIn(SELECT.nameInput, policyName);
-    codemirror().setValue(policyString);
+
+    await waitFor('.cm-editor');
+    const editor = codemirror();
+    setCodeEditorValue(editor, policyString);
+
     await click(SELECT.save);
     assert.strictEqual(
       currentURL(),
@@ -112,7 +116,9 @@ module('Acceptance | policies/acl', function (hooks) {
     assert
       .dom(SELECT.createError)
       .hasText(`Error 'policy' parameter not supplied or empty`, 'renders error message on save');
-    codemirror().setValue(policyString);
+    await waitFor('.cm-editor');
+    const editor = codemirror();
+    setCodeEditorValue(editor, policyString);
     await click(SELECT.save);
 
     await waitUntil(() => currentURL() === `/vault/policy/acl/${encodeURIComponent(policyLower)}`);

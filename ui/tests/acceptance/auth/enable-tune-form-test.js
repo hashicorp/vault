@@ -68,7 +68,7 @@ module('Acceptance | auth enable tune form test', function (hooks) {
       this.type = 'jwt';
       this.path = `${this.type}-${uuidv4()}`;
       this.customSelectors = {
-        providerConfig: `${GENERAL.fieldByAttr('providerConfig')} textarea`,
+        providerConfig: `${GENERAL.fieldByAttr('providerConfig')} .cm-editor`,
       };
       this.tuneFields = [
         'defaultRole',
@@ -156,7 +156,7 @@ module('Acceptance | auth enable tune form test', function (hooks) {
       this.type = 'oidc';
       this.path = `${this.type}-${uuidv4()}`;
       this.customSelectors = {
-        providerConfig: `${GENERAL.fieldByAttr('providerConfig')} textarea`,
+        providerConfig: `${GENERAL.fieldByAttr('providerConfig')} .cm-editor`,
       };
       this.tuneFields = [
         'oidcDiscoveryUrl',
