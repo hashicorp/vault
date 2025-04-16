@@ -14,11 +14,13 @@ verify_radar_scan_output_file() {
   cat ~/.hashicorp/vault-radar/ignore.yaml
   echo "-----------0"
   jq -eMcn '[inputs]'
+  echo "-----------00"
+  jq -eMcn '[inputs] | [.[]]'
+  echo "-----------01"
+  jq -eMcn '[inputs] | [.[] | select((.tags == null))]'
   echo "-----------1"
-  jq -eMcn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))]'
-  echo "-----------3"
   jq -eMcn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))] | length == 0'
-  echo "-----------4"
+  echo -e "-----------4\n"
   cat <<EOF >> ~/.hashicorp/vault-radar/ignore.yaml
 - secret_values:
   - "AWS_ACCESS_KEY_ID:*"
