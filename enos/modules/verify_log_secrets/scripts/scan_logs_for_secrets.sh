@@ -12,6 +12,7 @@ verify_radar_scan_output_file() {
   # other secrets remain.
   ls -lt ~/.hashicorp/vault-radar/
   cat ~/.hashicorp/vault-radar/ignore.yaml
+  echo "-----------0"
   jq -eMcn '[inputs]'
   echo "-----------1"
   jq -eMcn '[inputs] | [.[]'
