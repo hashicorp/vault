@@ -432,6 +432,8 @@ func TestGetTLSAuth(t *testing.T) {
 	}
 }
 
+// TestGetTLSAndUserPasswordAuth verify that when a User/Password authentication with TLS certs,
+// the client will still use the SCRAM-SHA-256 mecanism
 func TestGetTLSAndUserPasswordAuth(t *testing.T) {
 	ca := certhelpers.NewCert(t,
 		certhelpers.CommonName("certificate authority"),
