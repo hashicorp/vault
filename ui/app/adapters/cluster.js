@@ -136,6 +136,8 @@ export default ApplicationAdapter.extend({
       options.data = { role, jwt };
     } else if (backend === 'okta') {
       options.data = { password, nonce };
+    } else if (backend === 'cert') {
+      options.data = { name: role };
     } else {
       options.data = token ? { token, password } : { password };
     }
@@ -186,6 +188,7 @@ export default ApplicationAdapter.extend({
       okta: `login/${encodeURIComponent(username)}`,
       radius: `login/${encodeURIComponent(username)}`,
       token: 'lookup-self',
+      cert: 'login',
     };
     const urlSuffix = authURLs[authBackend];
     const urlPrefix = path && authBackend !== 'token' ? path : authBackend;

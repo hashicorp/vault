@@ -130,6 +130,27 @@
               />
             </div>
           </div>
+        {{else if (eq this.selectedAuthBackend.type "cert")}}
+          <div class="field">
+            <label for="role" class="is-label">Role</label>
+            <div class="control">
+              <Input
+                @type="text"
+                @value={{this.role}}
+                autocomplete="off"
+                spellcheck="false"
+                name="role"
+                id="role"
+                class="input"
+                data-test-role
+              />
+            </div>
+            <AlertInline
+              class="has-top-padding-s"
+              @type="info"
+              @message="Leave blank to sign in with any role matching your certificate"
+            />
+          </div>
         {{else}}
           <div class="field">
             <label for="username" class="is-label">Username</label>

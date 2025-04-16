@@ -76,6 +76,14 @@ const SUPPORTED_AUTH_BACKENDS = [
     displayNamePath: ['metadata.org', 'metadata.username'],
     formAttributes: ['token'],
   },
+  {
+    type: 'cert',
+    typeDisplay: 'TLS Certificates',
+    description: 'Authenticate using certificates.',
+    tokenPath: 'client_token',
+    displayNamePath: ['metadata.cert_name', 'metadata.common_name'],
+    formAttributes: ['role'],
+  },
 ];
 
 const ENTERPRISE_AUTH_METHODS = [

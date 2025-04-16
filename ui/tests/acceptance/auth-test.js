@@ -134,6 +134,12 @@ module('Acceptance | auth', function (hooks) {
             role: 'some-role',
           },
         },
+        cert: {
+          url: '/v1/auth/custom-cert/login',
+          payload: {
+            name: 'some-role',
+          },
+        },
       };
     });
 

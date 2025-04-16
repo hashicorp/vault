@@ -1,0 +1,3 @@
+```release-note:feature
+ui: Add support for cert auth method in UI
+```
