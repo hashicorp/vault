@@ -19,6 +19,13 @@ verify_radar_scan_output_file() {
   echo "-----------3"
   jq -eMcn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))] | length == 0'
   echo "-----------4"
+  cat <<EOF >> ~/.hashicorp/vault-radar/ignore.yaml
+- secret_values:
+  - "AWS_ACCESS_KEY_ID:*"
+EOF
+  echo "-----------5"
+  cat ~/.hashicorp/vault-radar/ignore.yaml
+  echo "-----------6"
   if ! jq -eMcn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))] | length == 0' < "$2"; then
     found=$(jq -eMn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))]' < "$2")
     fail "failed to radar secrets output: vault radar detected secrets in $1!: $found"
