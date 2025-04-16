@@ -12,7 +12,7 @@ import {
   isNonString,
   WHITESPACE_WARNING,
   NON_STRING_WARNING,
-} from 'vault/utils/model-helpers/validators';
+} from 'vault/utils/forms/validators';
 
 /**
  * @module KvPatch::Editor::Form

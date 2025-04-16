@@ -54,7 +54,7 @@ export default class KvSecretRoute extends Route {
     const metadataPath = `${backend}/metadata/${path}`;
     const dataPath = `${backend}/data/${path}`;
     const subkeysPath = `${backend}/subkeys/${path}`;
-    const perms = await this.capabilities.fetchMultiplePaths([metadataPath, dataPath, subkeysPath]);
+    const perms = await this.capabilities.fetch([metadataPath, dataPath, subkeysPath]);
     return {
       metadata: perms[metadataPath],
       data: perms[dataPath],
