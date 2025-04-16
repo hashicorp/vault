@@ -74,9 +74,10 @@
       </:error>
 
       <:advancedSettings>
-        {{#if (not-eq this.selectedAuthMethod "token")}}
+        {{! tabs render their own mount path inputs and token does not support custom paths }}
+        {{#if (and (not this.renderTabs) (not-eq this.selectedAuthMethod "token"))}}
           <Hds::Reveal @text="Advanced settings" data-test-auth-form-options-toggle class="is-fullwidth">
-            <Hds::Form::TextInput::Field name="path" data-test-auth-form-mount-path as |F|>
+            <Hds::Form::TextInput::Field name="path" data-test-input="path" as |F|>
               <F.Label class="has-top-margin-m">Mount path</F.Label>
               <F.HelperText>If this authentication method was mounted using a non-default path input it below. Otherwise
                 Vault will assume the default path

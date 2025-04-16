@@ -64,7 +64,6 @@ export default class AuthFormTemplate extends Component<Args> {
 
   // form display logic
   @tracked authTabs: AuthTabs | null = null;
-  @tracked selectedTabIndex = 0;
   @tracked showOtherMethods = false;
 
   // auth login variables
@@ -100,7 +99,7 @@ export default class AuthFormTemplate extends Component<Args> {
     const namespaceQP = this.args.namespace;
     if (this.flags.hvdManagedNamespaceRoot) {
       // When managed, the user isn't allowed to edit the prefix `admin/`
-      // so just prefill the relative path in the namespace input
+      // so prefill just the relative path in the namespace input
       const path = getRelativePath(namespaceQP, this.flags.hvdManagedNamespaceRoot);
       return path ? `/${path}` : '';
     }
@@ -116,25 +115,25 @@ export default class AuthFormTemplate extends Component<Args> {
     return false;
   }
 
+  get selectedTabIndex() {
+    if (this.authTabs) {
+      return Object.keys(this.authTabs).indexOf(this.selectedAuthMethod);
+    }
+    return 0;
+  }
+
+  setAuthTypeFromTab(idx: number) {
+    const authTypes = this.authTabs ? Object.keys(this.authTabs) : [];
+    this.selectedAuthMethod = authTypes[idx] || '';
+  }
+
   @action
   handleAuthSelect(element: string, event: HTMLElementEvent<HTMLInputElement> | null, idx: number) {
     if (element === 'tab') {
       this.setAuthTypeFromTab(idx);
     } else if (event?.target?.value) {
-      this.selectedAuthMethod = event?.target.value;
+      this.selectedAuthMethod = event.target.value;
     }
-  }
-
-  setAuthTypeFromTab(idx: number) {
-    if (this.authTabs) {
-      this.selectedAuthMethod = Object.keys(this.authTabs)[idx] || '';
-      this.selectedTabIndex = idx;
-    }
-  }
-
-  @action
-  handleError(message: string) {
-    this.errorMessage = message;
   }
 
   @action
@@ -151,7 +150,12 @@ export default class AuthFormTemplate extends Component<Args> {
   }
 
   @action
-  async handleNamespaceUpdate(event: HTMLElementEvent<HTMLInputElement>) {
+  handleError(message: string) {
+    this.errorMessage = message;
+  }
+
+  @action
+  handleNamespaceUpdate(event: HTMLElementEvent<HTMLInputElement>) {
     // update query param
     this.args.handleNamespaceUpdate(event.target.value);
     // reset tabs
@@ -170,6 +174,7 @@ export default class AuthFormTemplate extends Component<Args> {
         // clear ember data store before re-requesting.. :(
         this.store.unloadAll('auth-method');
 
+        // unauthMounts are tuned with listing_visibility="unauth"
         const unauthMounts = await this.store.findAll('auth-method', {
           adapterOptions: {
             unauthenticated: true,
