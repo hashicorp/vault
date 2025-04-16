@@ -50,12 +50,13 @@ export default class KvDataFields extends Component {
     return Math.min(max, 1000); // cap at 1000 lines to avoid performance implications
   }
 
+  // TODO: Clean this up (linting)
   @action
-  handleJson(value, codemirror) {
-    codemirror.performLint();
-    this.lintingErrors = codemirror.state.lint.marked.length > 0;
-    if (!this.lintingErrors) {
+  handleJson(value) {
+    try {
       this.args.secret.secretData = JSON.parse(value);
+    } catch {
+      // do nothing
     }
   }
 }
