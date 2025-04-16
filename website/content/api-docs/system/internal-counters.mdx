@@ -253,6 +253,11 @@ The `start_time` in the response is the earliest time there is activity data
 in the queried period. The `end_time` is the end of the final month of the queried
 period.
 
+- If the `end_date` supplied to the API is the current month, exact activity
+information will be returned for all months in the queried period, except for the
+current month. The last element in the `months` response stanza will signify the current month. Furthermore, the
+`new_clients` counts returned for the current month will be an estimate.
+
 ### Behavior Differences between Vault Enterprise and Vault Community ((#count-difference))
 
 The `start_time` and `end_time` request parameters behave differently between
@@ -389,11 +394,6 @@ Vault adjusts `end_time` to the last day in the previous month (August 31, 2025)
 </Tab>
 
 </Tabs>
-
-- If the `end_date` supplied to the API is the current month, exact activity
-information will be returned for all months in the queried period, except for the
-current month. The last element in the `months` response stanza will signify the current month. Furthermore, the
-`new_clients` counts returned for the current month will be an estimate.
 
 The following is an example of the `months` breakdown with just the current month information.
 
