@@ -21,14 +21,14 @@ export default class AuthFields extends Component<Args> {
   // token or password should render as "password" types, otherwise render text inputs
   setInputType = (field: string) => (['token', 'password'].includes(field) ? 'password' : 'text');
 
-  setAutocomplete = (field: string) => {
-    switch (field) {
+  setAutocomplete = (fieldName: string) => {
+    switch (fieldName) {
       case 'password':
         return 'current-password';
       case 'token':
         return 'off';
       default:
-        return field;
+        return fieldName;
     }
   };
 }
