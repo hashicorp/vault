@@ -277,12 +277,12 @@ In Vault Enterprise, the Get Client Count endpoint adjusts `start_time` and
 `end_time` to align with the start and end of the corresponding billing period.
 
 - The endpoint only returns data for an entire billing period.
-- By default, the endpoint returns activity data for the start of the current
-  billing period through the time when you call the endpoint.
+- By default, the endpoint returns activity data from the start of the current 
+  billing period up to the time you call the endpoint.
 - If you provide a start time outside the current billing period, Vault
   aligns the query to the full default billing period associated with the
   provided start time.
-- If provide an end time, but no start time, Vault aligns the query to the
+- If you provide an end time, but no start time, Vault aligns the query to the
   full default billing period associated with the provided end time.
 - If you provide start and end times from different billing periods:
    - Vault adjusts `start_time` to the start of the associated billing period.
@@ -305,7 +305,7 @@ $ curl \
    http://127.0.0.1:8200/v1/sys/internal/counters/activity?end_time=2023-12-31T00%3A00%3A00Z&start_time=2023-03-01T00%3A00%3A00Z
 ```
 
-If `start_time` or `end_time` is within the billing period or has overlapping billing periods, Vault returns the folowing:
+If `start_time` or `end_time` falls within the billing period or overlaps multiple billing periods, Vault returns the following::
 
 <CodeBlockConfig hideClipboard>
 
@@ -342,7 +342,7 @@ In Vault Community edition, the Get Client Count endpoint supports arbitrary
 historical time ranges. The default range for Get Client Count is the start of
 the current cycle through the end of the previous month.
 
-When`end_time` falls in the current month or the future, Vault adjusts the query
+When `end_time` falls in the current month or a future month, Vault adjusts the query
 end time to the last day of the previous month and includes the following
 warning along with the associated counts:
 
@@ -394,6 +394,8 @@ Vault adjusts `end_time` to the last day in the previous month (August 31, 2025)
 </Tab>
 
 </Tabs>
+
+### Sample response
 
 The following is an example of the `months` breakdown with just the current month information.
 
