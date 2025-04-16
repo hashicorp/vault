@@ -15,11 +15,9 @@ verify_radar_scan_output_file() {
   echo "-----------00"
   jq -eMn '[inputs] | [.[]]' < "$2"
   echo "-----------01"
-  jq -eMn '[inputs] | [.[] | select((.tags == null))]' < "$2"
+  jq -eMn '[inputs] | [.[] | select((.tags == null)) or select(.type != "aws_access_key_id")]' < "$2"
   echo "-----------02"
-  jq -eMn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"])) or (.type | contains(["aws_access_key_id"])))]' < "$2"
-  echo "-----------03"
-  jq -eMn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ) or (.type | contains(["aws_access_key_id"]) | not ))]' < "$2"
+  jq -eMcn '[inputs] | [.[] | select((.tags == null) or select(.type != "aws_access_key_id") or (.tags | contains(["ignore_rule"]) | not ))] | length == 0' < "$2"
   echo "-----------04"
   if ! jq -eMcn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))] | length == 0' < "$2"; then
     found=$(jq -eMn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))]' < "$2")
