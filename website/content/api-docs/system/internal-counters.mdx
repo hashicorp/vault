@@ -272,7 +272,8 @@ In Vault Enterprise, the Get Client Count endpoint adjusts `start_time` and
 `end_time` to align with the start and end of the corresponding billing period.
 
 - The endpoint only returns data for an entire billing period.
-- By default, the API returns activity data for the start of the **current billing period** until the **current moment**.
+- By default, the endpoint returns activity data for the start of the current
+  billing period through the time when you call the endpoint.
 - If  the provided `start_time` is outside of the current billing period, the query is aligned to an entire default billing period to which `start_time` belongs.
 - If only `end_time` is provided, the query is aligned to the entire default billing period to which the `end_time` belongs.
 - If `start_time` and `end_time` do **not** correspond to the **same billing period**, in Vault Enterprise:
