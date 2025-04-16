@@ -1,6 +1,6 @@
 {{!
-Copyright (c) HashiCorp, Inc.
-SPDX-License-Identifier: BUSL-1.1
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
 }}
 
 <div class="namespace-picker" ...attributes>
@@ -8,28 +8,27 @@ SPDX-License-Identifier: BUSL-1.1
 
     <D.ToggleButton @icon="org" @text={{this.selectedNamespace}} data-test-namespace-toggle />
 
-    <D.Title @text={{component "namespace-picker/title" count=this.options.length}} />
+    <D.Generic>
+      {{this.namespaceLabel}}
+      <Hds::BadgeCount @text={{this.options.length}} />
+    </D.Generic>
 
     {{#each this.options as |option|}}
       <D.Checkmark
-        @selected={{this.isSelected option}}
-        {{on "click" (action "onChange" option)}}
+        @selected={{eq option.id this.selected.id}}
+        {{on "click" (fn this.onChange option)}}
         data-test-namespace-link={{option.path}}
-        data-test-current-namespace={{this.isSelected option}}
       >
         {{option.label}}
       </D.Checkmark>
     {{/each}}
 
-    <D.Footer @hasDivider={{true}}>
-      <Hds::Button
-        @color="secondary"
-        @text="Refresh List"
-        {{on "click" (action "loadOptions")}}
-        data-test-refresh-namespaces
-      />
-      <Hds::Button @color="secondary" @text="Manage" @icon="settings" @route="vault.cluster.access.namespaces" />
-    </D.Footer>
+    {{#if this.hasListPermissions}}
+      <D.Footer @hasDivider={{true}}>
+        <Hds::Button @color="secondary" @text="Refresh list" {{on "click" this.loadOptions}} data-test-refresh-namespaces />
+        <Hds::Button @color="secondary" @text="Manage" @icon="settings" @route="vault.cluster.access.namespaces" />
+      </D.Footer>
+    {{/if}}
 
   </Hds::Dropdown>
 </div>
