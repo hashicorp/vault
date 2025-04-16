@@ -15,8 +15,6 @@ verify_radar_scan_output_file() {
   echo "-----------0"
   jq -eMcn '[inputs]'
   echo "-----------1"
-  jq -eMcn '[inputs] | [.[]'
-  echo "-----------2"
   jq -eMcn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))]'
   echo "-----------3"
   jq -eMcn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))] | length == 0'
