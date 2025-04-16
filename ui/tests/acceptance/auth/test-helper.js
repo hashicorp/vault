@@ -9,7 +9,7 @@ import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 
 const assertFields = (assert, fields, customSelectors = {}) => {
-  fields.forEach((param) => {
+  fields.forEach(async (param) => {
     if (Object.keys(customSelectors).includes(param)) {
       assert.dom(customSelectors[param]).exists();
     } else if (param === 'config.listingVisibility') {

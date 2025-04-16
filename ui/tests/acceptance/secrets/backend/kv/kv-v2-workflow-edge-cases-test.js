@@ -14,6 +14,7 @@ import {
   typeIn,
   visit,
   triggerKeyEvent,
+  waitFor,
 } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import { login, loginNs } from 'vault/tests/helpers/auth/auth-helpers';
@@ -35,7 +36,7 @@ import { clearRecords, writeSecret, writeVersionedSecret } from 'vault/tests/hel
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
-import codemirror from 'vault/tests/helpers/codemirror';
+import codemirror, { getCodeEditorValue, setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 import { personas } from 'vault/tests/helpers/kv/policy-generator';
 
 /**
@@ -296,14 +297,18 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
     await click(GENERAL.toggleInput('json'));
 
+    await waitFor('.cm-editor');
+
+    const editor = codemirror();
+
     assert.strictEqual(
-      codemirror().getValue(),
+      getCodeEditorValue(editor),
       `{
   \"\": \"\"
 }`,
       'JSON editor displays correct empty object'
     );
-    codemirror().setValue('{ "foo3": { "name": "bar3" } }');
+    setCodeEditorValue(editor, '{ "foo3": { "name": "bar3" } }');
     await click(FORM.saveBtn);
 
     // Details view
@@ -320,12 +325,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     assert.dom(GENERAL.toggleInput('json')).isNotDisabled();
     assert.dom(GENERAL.toggleInput('json')).isChecked();
     assert.deepEqual(
-      codemirror().getValue(),
-      `{
-  "foo3": {
-    "name": "bar3"
-  }
-}`,
+      getCodeEditorValue(editor),
+      '{ "foo3": { "name": "bar3" } }',
       'Values are displayed in the new version view'
     );
   });

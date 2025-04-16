@@ -19,7 +19,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { runCmd } from 'vault/tests/helpers/commands';
-import codemirror from 'vault/tests/helpers/codemirror';
+import codemirror, { setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SELECT = {

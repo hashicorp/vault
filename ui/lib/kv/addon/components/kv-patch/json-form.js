@@ -32,13 +32,10 @@ export default class KvPatchJsonForm extends Component {
     this.jsonObject = JSON.stringify({ '': '' }, null, 2);
   }
 
+  // TODO: Clean this up (linting)
   @action
-  handleJson(value, codemirror) {
-    codemirror.performLint();
-    this.lintingErrors = codemirror.state.lint.marked.length > 0;
-    if (!this.lintingErrors) {
-      this.jsonObject = value;
-    }
+  handleJson(value) {
+    this.jsonObject = value;
   }
 
   @action
