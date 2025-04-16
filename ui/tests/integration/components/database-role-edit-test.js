@@ -97,11 +97,13 @@ module('Integration | Component | database-role-edit', function (hooks) {
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="create"/>`);
     await fillIn('[data-test-ttl-value="Rotation period"]', '2');
     await click('[data-test-toggle-input="toggle-skip_import_rotation"]');
+    await fillIn('[data-test-input="password"]', 'testPassword'); // fill in password field
 
     await click('[data-test-secret-save]');
 
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="show"/>`);
     assert.dom('[data-test-value-div="Rotate immediately"]').containsText('No');
+    assert.dom('[data-test-value="Password"]').doesNotExist(); // verify password field doesn't show on details view
   });
 
   test('enterprise: it should successfully create user that does rotate immediately & verify warning modal pops up', async function (assert) {

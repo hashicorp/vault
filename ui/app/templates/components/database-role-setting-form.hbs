@@ -14,6 +14,9 @@
           {{else}}
             <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
           {{/if}}
+          {{! disable password field on edit once password has been rotated }}
+        {{else if (and (eq attr.name "password") (not (eq (get @model "last_vault_rotation") undefined)))}}
+          <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
         {{else}}
           <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} @modelValidations={{@modelValidations}} />
           {{#if (and (eq attr.name "skip_import_rotation") this.isOverridden)}}

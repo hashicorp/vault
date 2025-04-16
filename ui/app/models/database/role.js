@@ -125,6 +125,8 @@ export default class RoleModel extends Model {
   })
   revocation_statement;
 
+  @attr('string', { readOnly: true }) last_vault_rotation;
+
   // ENTERPRISE ONLY
   @attr({
     label: 'Rotate immediately',
