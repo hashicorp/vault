@@ -279,7 +279,7 @@ In Vault Enterprise, the Get Client Count endpoint adjusts `start_time` and
   provided start time.
 - If provide an end time, but no start time, Vault aligns the query to the
   full default billing period associated with the provided end time.
-- If `start_time` and `end_time` do **not** correspond to the **same billing period**, in Vault Enterprise:
+- If you provide start and end times from different billing periods:
    - `start_time` will be adjusted to the **start of the billing period it belongs to**.
    - `end_time` will be adjusted to the **end of that billing period**.
    - **The following warning is returned**:
