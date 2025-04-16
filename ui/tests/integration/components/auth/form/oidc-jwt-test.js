@@ -33,14 +33,14 @@ module('Integration | Component | auth | form | oidc-jwt', function (hooks) {
         />
         `);
     };
+  });
 
-    test('it renders helper text', async function (assert) {
-      await this.renderComponent();
-      const id = find(GENERAL.inputByAttr('role')).id;
-      assert
-        .dom(`#helper-text-${id}`)
-        .hasText('Vault will use the default role to sign in if this field is left blank.');
-    });
+  test('it renders helper text', async function (assert) {
+    await this.renderComponent();
+    const id = find(GENERAL.inputByAttr('role')).id;
+    assert
+      .dom(`#helper-text-${id}`)
+      .hasText('Vault will use the default role to sign in if this field is left blank.');
   });
 
   module('oidc', function (hooks) {
