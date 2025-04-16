@@ -6,10 +6,11 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import hbs from 'htmlbars-inline-precompile';
-import { render } from '@ember/test-helpers';
+import { find, render } from '@ember/test-helpers';
 import sinon from 'sinon';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import testHelper from './test-helper';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | auth | form | saml', function (hooks) {
   setupRenderingTest(hooks);
@@ -35,4 +36,12 @@ module('Integration | Component | auth | form | saml', function (hooks) {
   });
 
   testHelper(test);
+
+  test('it renders helper text', async function (assert) {
+    await this.renderComponent();
+    const id = find(GENERAL.inputByAttr('role')).id;
+    assert
+      .dom(`#helper-text-${id}`)
+      .hasText('Vault will use the default role to sign in if this field is left blank.');
+  });
 });

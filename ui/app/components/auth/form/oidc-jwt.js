@@ -18,7 +18,7 @@ export default class AuthFormOidcJwt extends AuthBase {
   loginFields = [
     {
       name: 'role',
-      helperText: 'Leave blank to sign in with the default role, if one is configured.',
+      helperText: 'Vault will use the default role to sign in if this field is left blank.',
     },
   ];
 }

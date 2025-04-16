@@ -6,9 +6,10 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import hbs from 'htmlbars-inline-precompile';
-import { render } from '@ember/test-helpers';
+import { find, render } from '@ember/test-helpers';
 import sinon from 'sinon';
 import testHelper from './test-helper';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 // These auth types all use the default methods in auth/form/base
 // Any auth types with custom logic should be in a separate test file, i.e. okta
@@ -37,7 +38,14 @@ module('Integration | Component | auth | form | base', function (hooks) {
           />`);
       };
     });
+
     testHelper(test);
+
+    test('it renders custom label', async function (assert) {
+      await this.renderComponent();
+      const id = find(GENERAL.inputByAttr('token')).id;
+      assert.dom(`#label-${id}`).hasText('Github token');
+    });
   });
 
   module('ldap', function (hooks) {
@@ -54,6 +62,7 @@ module('Integration | Component | auth | form | base', function (hooks) {
           />`);
       };
     });
+
     testHelper(test);
   });
 
