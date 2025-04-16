@@ -300,9 +300,8 @@ $ curl \
    http://127.0.0.1:8200/v1/sys/internal/counters/activity?end_time=2023-12-31T00%3A00%3A00Z&start_time=2023-03-01T00%3A00%3A00Z
 ```
 
-If the start_time or end_time is within the billing period or has overlapping billing periods, the response looks like this:
+If `start_time` or `end_time` is within the billing period or has overlapping billing periods, Vault returns the folowing:
 
-### Sample response
 <CodeBlockConfig hideClipboard>
 
 ```json
