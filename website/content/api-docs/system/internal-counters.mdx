@@ -357,7 +357,7 @@ $ curl \
    http://127.0.0.1:8200/v1/sys/internal/counters/activity?end_time=2025-10-01T00%3A00%3A00Z&start_time=2025-01-01T00%3A00%3A00Z
 ```
 
-### Sample response
+Vault adjusts `end_time` to the last day in the previous month (August 31, 2025) and returns the following:
 
 <CodeBlockConfig hideClipboard>
 
