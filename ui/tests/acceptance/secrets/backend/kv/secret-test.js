@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, visit, settled, currentURL, currentRouteName, fillIn } from '@ember/test-helpers';
+import { click, visit, settled, currentURL, currentRouteName, fillIn, waitFor } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -16,7 +16,7 @@ import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
-import codemirror from 'vault/tests/helpers/codemirror';
+import codemirror, { setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SS } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
@@ -340,7 +340,9 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await click(SS.createSecretLink);
       await fillIn(SS.secretPath('create'), secretPath);
       await click(GENERAL.toggleInput('json'));
-      codemirror().setValue(content);
+      await waitFor('.cm-editor');
+      const editor = codemirror();
+      setCodeEditorValue(editor, content);
       await click(GENERAL.submitButton);
 
       assert.strictEqual(
@@ -349,11 +351,12 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         'redirects to the show page'
       );
       assert.ok(showPage.editIsPresent, 'shows the edit button');
-      assert.strictEqual(
-        codemirror().options.value,
-        JSON.stringify({ bar: 'boo', foo: 'fa' }, null, 2),
-        'saves the content'
-      );
+      assert
+        .dom('.hds-code-block')
+        .includesText(
+          `Secret Data ${JSON.stringify({ bar: 'boo', foo: 'fa' }, null, 2).replace(/\n\s*/g, ' ').trim()}`,
+          'shows the secret data'
+        );
     });
   });
 });

@@ -19,14 +19,35 @@ sample use:
   )}
 */
 export default function (parent) {
-  const selector = parent ? `${parent} .CodeMirror` : '.CodeMirror';
+  const selector = parent ? `${parent} .hds-code-editor__editor` : '.hds-code-editor__editor';
   const element = document.querySelector(selector);
-  invariant(element, `Selector '.CodeMirror' matched no elements`);
+  invariant(element, `Selector '${selector}' matched no elements`);
 
-  const cm = element.CodeMirror;
-  invariant(cm, `No registered CodeMirror instance for '.CodeMirror'`);
+  const cm = element.editor;
+  invariant(cm, `No registered CodeMirror instance for ''${selector}'`);
 
   return cm;
+}
+
+export function setCodeEditorValue(editorView, value, { from, to } = {}) {
+  invariant(editorView, 'No editor view provided');
+  invariant(value, 'No value provided');
+
+  editorView.dispatch({
+    changes: [
+      {
+        from: from ?? 0,
+        to: to ?? editorView.state.doc.length,
+        insert: value,
+      },
+    ],
+  });
+}
+
+export function getCodeEditorValue(editorView) {
+  invariant(editorView, 'No editor view provided');
+
+  return editorView.state.doc.toString();
 }
 
 const invariant = (truthy, error) => {

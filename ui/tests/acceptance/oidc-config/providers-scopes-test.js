@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { visit, currentURL, click, fillIn, findAll, currentRouteName } from '@ember/test-helpers';
+import { find, visit, currentURL, click, fillIn, findAll, currentRouteName } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
@@ -178,7 +178,19 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     );
     await fillIn('[data-test-input="name"]', 'test-scope');
     await fillIn('[data-test-input="description"]', 'this is a test');
-    await fillIn('[data-test-component="code-mirror-modifier"] textarea', SCOPE_DATA_RESPONSE.template);
+
+    const editorElement = await find('[data-test-component="code-mirror-modifier"] .hds-code-editor__editor');
+    const { editor } = editorElement;
+
+    editor.dispatch({
+      changes: [
+        {
+          from: 0,
+          to: editor.state.doc.length,
+          insert: SCOPE_DATA_RESPONSE.template,
+        },
+      ],
+    });
     await click(SELECTORS.scopeSaveButton);
     assert.strictEqual(
       flashMessage.latestMessage,
