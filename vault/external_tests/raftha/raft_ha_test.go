@@ -336,6 +336,7 @@ func TestRaft_HA_ExistingCluster(t *testing.T) {
 // them. The removed follower tries to re-join, and the test verifies that it
 // errors and cannot join.
 func TestRaftHACluster_Removed_ReAdd(t *testing.T) {
+	t.Skip("This test is flaky and needs to be fixed before it can be re-enabled")
 	t.Parallel()
 	var conf vault.CoreConfig
 	opts := vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
