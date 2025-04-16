@@ -274,26 +274,28 @@ module('Unit | Service | capabilities', function (hooks) {
 
     test('fetch works as expected', async function (assert) {
       const ns = this.nsSvc.path;
-      const paths = ['/my/api/path', '/another/api/path'];
-      const expectedPayload = paths.map((p) => `${ns}${p}`);
+      // there was a bug when stripping the relativeNamespace from the key in the response data
+      // this would result in a leading slash in the returned key causing a mismatch if the path was provided without a leading slash
+      // ensure the provided path is returned by passing at least one path without a leading slash
+      const paths = ['my/api/path', '/another/api/path'];
+      const expectedPayload = [`${ns}/my/api/path`, `${ns}/another/api/path`];
 
       this.server.post('/sys/capabilities-self', (schema, req) => {
         const actual = JSON.parse(req.requestBody);
         assert.strictEqual(req.url, '/v1/sys/capabilities-self', 'request made to capabilities-self');
         assert.propEqual(actual.paths, expectedPayload, `request made with paths: ${JSON.stringify(actual)}`);
-        const resp = this.generateResponse({
+        return this.generateResponse({
           paths: expectedPayload,
           capabilities: {
             [`${ns}/my/api/path`]: ['read', 'list'],
             [`${ns}/another/api/path`]: ['update', 'patch'],
           },
         });
-        return resp;
       });
 
       const actual = await this.capabilities.fetch(paths);
       const expected = {
-        '/my/api/path': {
+        'my/api/path': {
           canCreate: false,
           canDelete: false,
           canList: true,

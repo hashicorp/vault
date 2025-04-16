@@ -559,19 +559,19 @@ func (a *ActivityLog) namespaceRecordToCountsResponse(record *activity.Namespace
 }
 
 func (a *ActivityLog) GetClientIDsUsageInfo() map[string]struct{} {
-	a.clientIDsUsageInfoLock.Lock()
-	defer a.clientIDsUsageInfoLock.Unlock()
-	return a.clientIDsUsageInfo
+	a.clientIDsUsage.clientIDsUsageInfoLock.Lock()
+	defer a.clientIDsUsage.clientIDsUsageInfoLock.Unlock()
+	return a.clientIDsUsage.clientIDsUsageInfo
 }
 
 func (a *ActivityLog) SetClientIDsUsageInfo(inMemClientIDsMap map[string]struct{}) {
-	a.clientIDsUsageInfoLock.Lock()
-	defer a.clientIDsUsageInfoLock.Unlock()
+	a.clientIDsUsage.clientIDsUsageInfoLock.Lock()
+	defer a.clientIDsUsage.clientIDsUsageInfoLock.Unlock()
 
-	a.clientIDsUsageInfo = inMemClientIDsMap
+	a.clientIDsUsage.clientIDsUsageInfo = inMemClientIDsMap
 }
 
 // GetclientIDsUsageInfoLoaded gets a.clientIDsUsageInfoLoaded for external tests
 func (a *ActivityLog) GetClientIDsUsageInfoLoaded() bool {
-	return a.clientIDsUsageInfoLoaded.Load()
+	return a.clientIDsUsage.clientIDsUsageInfoLoaded.Load()
 }
