@@ -11,17 +11,17 @@ verify_radar_scan_output_file() {
   # Given a file with a radar scan output, filter out tagged false positives and verify that no
   # other secrets remain.
   echo "-----------0"
-  jq -eMn '[inputs]'
+  jq -eMn '[inputs]' < "$2"
   echo "-----------00"
-  jq -eMn '[inputs] | [.[]]'
+  jq -eMn '[inputs] | [.[]]' < "$2"
   echo "-----------01"
-  jq -eMn '[inputs] | [.[] | select((.tags == null))]'
+  jq -eMn '[inputs] | [.[] | select((.tags == null))]' < "$2"
   echo "-----------02"
-  jq -eMn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"])))]'
+  jq -eMn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"])))]' < "$2"
   echo "-----------03"
-  jq -eMn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))]'
+  jq -eMn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))]' < "$2"
   echo "-----------04"
-  jq -eMn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))] | length == 0'
+  jq -eMn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))] | length == 0' < "$2"
   echo -e "-----------4\n"
   if ! jq -eMcn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))] | length == 0' < "$2"; then
     found=$(jq -eMn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))]' < "$2")
