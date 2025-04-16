@@ -10,6 +10,7 @@ import { action } from '@ember/object';
 import { restartableTask, timeout } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { ALL_LOGIN_METHODS, supportedTypes } from 'vault/utils/supported-login-methods';
+import { getRelativePath } from 'core/utils/sanitize-path';
 
 import type FlagsService from 'vault/services/flags';
 import type Store from '@ember-data/store';
@@ -98,13 +99,10 @@ export default class AuthFormTemplate extends Component<Args> {
   get namespaceInput() {
     const namespaceQP = this.args.namespace;
     if (this.flags.hvdManagedNamespaceRoot) {
-      // When managed, the user isn't allowed to edit the prefix `admin/` for their nested namespace
-      const split = namespaceQP.split('/');
-      if (split.length > 1) {
-        split.shift();
-        return `/${split.join('/')}`;
-      }
-      return '';
+      // When managed, the user isn't allowed to edit the prefix `admin/`
+      // so just prefill the relative path in the namespace input
+      const path = getRelativePath(namespaceQP, this.flags.hvdManagedNamespaceRoot);
+      return path ? `/${path}` : '';
     }
     return namespaceQP;
   }
