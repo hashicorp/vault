@@ -12,6 +12,14 @@ verify_radar_scan_output_file() {
   # other secrets remain.
   ls -lt ~/.hashicorp/vault-radar/
   cat ~/.hashicorp/vault-radar/ignore.yaml
+  jq -eMcn '[inputs]'
+  echo "-----------1"
+  jq -eMcn '[inputs] | [.[]'
+  echo "-----------2"
+  jq -eMcn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))]'
+  echo "-----------3"
+  jq -eMcn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))] | length == 0'
+  echo "-----------4"
   if ! jq -eMcn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))] | length == 0' < "$2"; then
     found=$(jq -eMn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))]' < "$2")
     fail "failed to radar secrets output: vault radar detected secrets in $1!: $found"
