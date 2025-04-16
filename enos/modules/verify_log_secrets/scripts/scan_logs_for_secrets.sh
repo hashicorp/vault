@@ -10,14 +10,12 @@ fail() {
 verify_radar_scan_output_file() {
   # Given a file with a radar scan output, filter out tagged false positives and verify that no
   # other secrets remain.
-  ls -lt ~/.hashicorp/vault-radar/
-  cat ~/.hashicorp/vault-radar/ignore.yaml
   echo "-----------0"
   jq -eMcn '[inputs]'
   echo "-----------00"
   jq -eMcn '[inputs] | [.[]]'
   echo "-----------01"
-  jq -eMcn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]))]'
+  jq -eMcn '[inputs] | [.[] | select((.tags == null))]'
   echo "-----------02"
   jq -eMcn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"])))]'
   echo "-----------03"
@@ -25,13 +23,6 @@ verify_radar_scan_output_file() {
   echo "-----------04"
   jq -eMcn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))] | length == 0'
   echo -e "-----------4\n"
-  cat <<EOF >> ~/.hashicorp/vault-radar/ignore.yaml
-- secret_values:
-  - "AWS_ACCESS_KEY_ID:*"
-EOF
-  echo "-----------5"
-  cat ~/.hashicorp/vault-radar/ignore.yaml
-  echo "-----------6"
   if ! jq -eMcn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))] | length == 0' < "$2"; then
     found=$(jq -eMn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))]' < "$2")
     fail "failed to radar secrets output: vault radar detected secrets in $1!: $found"
