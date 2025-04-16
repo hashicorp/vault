@@ -96,14 +96,14 @@ export default class AuthFormTemplate extends Component<Args> {
   }
 
   get namespaceInput() {
-    const namespaceQP = this.args.namespace;
+    const namespaceQueryParam = this.args.namespace;
     if (this.flags.hvdManagedNamespaceRoot) {
       // When managed, the user isn't allowed to edit the prefix `admin/`
       // so prefill just the relative path in the namespace input
-      const path = getRelativePath(namespaceQP, this.flags.hvdManagedNamespaceRoot);
+      const path = getRelativePath(namespaceQueryParam, this.flags.hvdManagedNamespaceRoot);
       return path ? `/${path}` : '';
     }
-    return namespaceQP;
+    return namespaceQueryParam;
   }
 
   get renderTabs() {

@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+// TODO pending feedback from the security team, we may keep autocomplete="off" for login fields
+// which means deleting this file since `setInputType` can happen directly in the template.
+
 import Component from '@glimmer/component';
 
 /**

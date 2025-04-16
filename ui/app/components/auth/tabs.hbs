@@ -8,9 +8,9 @@
     <T.Tab data-test-auth-method={{methodType}}>{{@displayNameHelper methodType}}</T.Tab>
     <T.Panel>
       <div class="has-top-padding-m">
-        {{! elements "behind" tabs always render on the DOM and are just superficially hidden/shown 
-        for accessibility we only want to render form inputs relevant to the selected method 
-        wrapping the elements in this conditional only renders them when the tab is selected }}
+        {{! Elements "behind" tabs always render on the DOM and are just superficially hidden/shown. 
+	        However, for accessibility, we only want to render form inputs relevant to the selected method. 
+	        By wrapping the elements in this conditional, it only renders them when the tab is selected. }}
         {{#if (eq @selectedAuthMethod methodType)}}
           {{#if (gt mounts.length 1)}}
             {{! render dropdown of mount paths }}
