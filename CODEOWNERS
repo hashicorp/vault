@@ -53,6 +53,10 @@
 /enos/     @hashicorp/quality-team
 
 # Cryptosec
+# Temporarily require the crypto team to approve Go updates as we need to make sure
+# 1.24 doesn't make it onto release branches until the FIPS paperwork has been completed.
+/.go-version                                         @hashicorp/vault-crypto
+
 /builtin/logical/pki/                                @hashicorp/vault-crypto
 /builtin/logical/pkiext/                             @hashicorp/vault-crypto
 /website/content/docs/secrets/pki/                   @hashicorp/vault-crypto @hashicorp/vault-education-approvers
