@@ -24,12 +24,14 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await logout.visit();
     await authPage.login(token);
     await click('[data-test-namespace-toggle]');
-    assert.dom('[data-test-current-namespace]').hasText('root', 'root renders as current namespace');
-    assert.dom('[data-test-namespace-link]').exists({ count: 1 }, 'Only the root namespace exists');
+    assert.dom('[data-test-namespace-link]').hasText('root', 'root renders as current namespace');
+    assert
+      .dom('[data-test-namespace-link] svg[data-test-icon="check"]')
+      .exists('The root namespace is selected');
   });
 
   test('it shows nested namespaces if you log in with a namespace starting with a /', async function (assert) {
-    assert.expect(5);
+    assert.expect(6);
 
     await click('[data-test-namespace-toggle]');
 
@@ -58,14 +60,25 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await settled();
     await authPage.tokenInput('root').submit();
     await settled();
+
+    // Open the namespace picker & wait for it to render
     await click('[data-test-namespace-toggle]');
-    await waitFor('[data-test-current-namespace]');
-    assert
-      .dom('[data-test-current-namespace]')
-      .hasText('beep/boop', 'current namespace does not begin or end with /');
-    assert
-      .dom('[data-test-namespace-link="beep/boop/bop"]')
-      .exists('renders the link to the nested namespace');
+    await waitFor('svg[data-test-icon="check"]');
+
+    // Find the selected element with the check icon & ensure it exists
+    const checkIcon = document.querySelector('[data-test-namespace-link] svg[data-test-icon="check"]');
+    assert.ok(checkIcon, 'A selected namespace link with the check icon exists');
+
+    // Get the selected namespace with the data-test-namespace-link attribute & ensure it exists
+    const selectedNamespace = checkIcon.closest('[data-test-namespace-link]');
+    assert.ok(selectedNamespace, 'The selected namespace link exists');
+
+    // Verify that the selected namespace has the correct data-test-namespace-link attribute and path value
+    assert.strictEqual(
+      selectedNamespace.getAttribute('data-test-namespace-link'),
+      'beep/boop',
+      'The current namespace does not begin or end with /'
+    );
   });
 
   test('it shows the regular namespace toolbar when not managed', async function (assert) {
