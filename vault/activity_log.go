@@ -2018,7 +2018,7 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 
 		// Estimate the current month totals. These record contains is complete with all the
 		// current month data, grouped by namespace and mounts
-		currentMonth, err := a.computeCurrentMonthForBillingPeriod(ctx, partialByMonth, startTime, adjustedEndTime)
+		currentMonth, err := a.computeCurrentMonthForBillingPeriod(partialByMonth, startTime, adjustedEndTime)
 		if err != nil {
 			return nil, err
 		}
