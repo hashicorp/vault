@@ -74,9 +74,7 @@ if ! out=$("$radar_bin_path" scan file --offline --disable-ui -p audit.log --ind
   fail "failed to scan vault audit log: vault-radar scan file failed: $out"
 fi
 
-echo "-------------------00000"
 verify_radar_scan_output_file vault-audit-log audit-secrets.json
-echo "-------------------00001"
 
 # Scan the vault journal for known secrets via the audit log and other secrets using radars built-in
 # secret types.
