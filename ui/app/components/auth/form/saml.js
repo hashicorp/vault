@@ -11,5 +11,10 @@ import AuthBase from './base';
  */
 
 export default class AuthFormSaml extends AuthBase {
-  loginFields = ['role'];
+  loginFields = [
+    {
+      name: 'role',
+      helperText: 'Leave blank to sign in with the default role, if one is configured.',
+    },
+  ];
 }

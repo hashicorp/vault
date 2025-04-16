@@ -11,5 +11,5 @@ import AuthBase from './base';
  * */
 
 export default class AuthFormOkta extends AuthBase {
-  loginFields = ['username', 'password'];
+  loginFields = [{ name: 'username' }, { name: 'password' }];
 }

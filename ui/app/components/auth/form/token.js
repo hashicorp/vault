@@ -11,5 +11,5 @@ import AuthBase from './base';
  * */
 
 export default class AuthFormToken extends AuthBase {
-  loginFields = ['token'];
+  loginFields = [{ name: 'token' }];
 }

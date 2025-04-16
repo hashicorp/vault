@@ -11,5 +11,5 @@ import AuthBase from './base';
  */
 
 export default class AuthFormGithub extends AuthBase {
-  loginFields = ['token'];
+  loginFields = [{ name: 'token', label: 'Github token' }];
 }
