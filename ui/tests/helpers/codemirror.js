@@ -18,6 +18,9 @@ sample use:
     assert.strictEqual(codemirror('#my-control').getValue(), 'some value')
   )}
 */
+
+import { find } from '@ember/test-helpers';
+
 export default function (parent) {
   const selector = parent ? `${parent} .hds-code-editor__editor` : '.hds-code-editor__editor';
   const element = document.querySelector(selector);
@@ -48,6 +51,41 @@ export function getCodeEditorValue(editorView) {
   invariant(editorView, 'No editor view provided');
 
   return editorView.state.doc.toString();
+}
+
+export function assertCodeBlockValue(assert, selector, expected) {
+  invariant(selector, 'No selector provided to assertCodeBlockValue');
+  invariant(
+    typeof expected === 'string' || typeof expected === 'object',
+    'Expected value must be a JSON string or an object'
+  );
+
+  const element = find(selector);
+  assert.ok(element, `Element "${selector}" should exist`);
+
+  const raw = element.textContent.trim();
+  assert.ok(raw.length > 0, `Element "${selector}" should not be empty`);
+
+  let actual;
+  try {
+    actual = JSON.parse(raw);
+  } catch (err) {
+    throw new Error(`Could not parse JSON from "${selector}":\n${raw}`);
+  }
+
+  // normalize the expected value into an object
+  const expectedObj =
+    typeof expected === 'string'
+      ? (() => {
+          try {
+            return JSON.parse(expected);
+          } catch {
+            throw new Error(`Expected string was not valid JSON:\n${expected}`);
+          }
+        })()
+      : expected;
+
+  assert.deepEqual(actual, expectedObj);
 }
 
 const invariant = (truthy, error) => {
