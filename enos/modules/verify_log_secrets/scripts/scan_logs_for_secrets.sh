@@ -17,12 +17,10 @@ verify_radar_scan_output_file() {
   echo "-----------01"
   jq -eMn '[inputs] | [.[] | select((.tags == null))]' < "$2"
   echo "-----------02"
-  jq -eMn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"])))]' < "$2"
+  jq -eMn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"])) or (.type | contains(["aws_access_key_id"])))]' < "$2"
   echo "-----------03"
-  jq -eMn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))]' < "$2"
+  jq -eMn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ) or (.type | contains(["aws_access_key_id"]) | not ))]' < "$2"
   echo "-----------04"
-  jq -eMn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))] | length == 0' < "$2"
-  echo -e "-----------4\n"
   if ! jq -eMcn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))] | length == 0' < "$2"; then
     found=$(jq -eMn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))]' < "$2")
     fail "failed to radar secrets output: vault radar detected secrets in $1!: $found"
