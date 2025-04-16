@@ -29,18 +29,18 @@ func pathFetchPublicKey(b *backend) *framework.Path {
 }
 
 func (b *backend) pathFetchPublicKey(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	publicKeyEntry, err := caKey(ctx, req.Storage, caPublicKey)
+	publicKey, err := getCAPublicKey(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
-	if publicKeyEntry == nil || publicKeyEntry.Key == "" {
+	if publicKey == "" {
 		return nil, nil
 	}
 
 	response := &logical.Response{
 		Data: map[string]interface{}{
 			logical.HTTPContentType: "text/plain",
-			logical.HTTPRawBody:     []byte(publicKeyEntry.Key),
+			logical.HTTPRawBody:     []byte(publicKey),
 			logical.HTTPStatusCode:  200,
 		},
 	}
