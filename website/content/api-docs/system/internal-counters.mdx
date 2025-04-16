@@ -333,14 +333,13 @@ If `start_time` or `end_time` is within the billing period or has overlapping bi
 
 <Tab heading="Vault Community">
 
-In **Vault CE**, `end_time` is adjusted to the last month if the current month or a future date is provided:
+In Vault Community edition, the Get Client Count endpoint supports arbitrary
+historical time ranges. The default range for Get Client Count is the start of
+the current cycle through the end of the previous month.
 
-- The Counters API supports **arbitrary historical time ranges**, **except** for the **current month or any future dates**.
-- By default, the API returns results **until the end of the last complete month**.
-- If `end_time` falls in the **current month or a future date**, Vault CE:
-   - **Ignores** the unsupported value.
-   - Returns data **only up to the end of the last month**.
-   - **Returns a warning**:
+When`end_time` falls in the current month or the future, Vault adjusts the query
+end time to the last day of the previous month and includes the following
+warning along with the associated counts:
 
       ```json
       {
