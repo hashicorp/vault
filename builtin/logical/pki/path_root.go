@@ -658,7 +658,7 @@ func validateCaKeyUsages(keyUsages []string) error {
 		}
 	}
 	if invalidKeyUsages != nil {
-		return fmt.Errorf(strings.Join(invalidKeyUsages, "; "))
+		return errors.New(strings.Join(invalidKeyUsages, "; "))
 	}
 	return nil
 }
