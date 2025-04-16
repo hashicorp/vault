@@ -13,7 +13,7 @@
         wrapping the elements in this conditional only renders them when the tab is selected }}
         {{#if (eq @selectedAuthMethod methodType)}}
           {{#if (gt mounts.length 1)}}
-            {{! dropdown of mount paths }}
+            {{! render dropdown of mount paths }}
             <Hds::Form::Select::Field name="path" data-test-select="path" as |F|>
               <F.Label>Mount path</F.Label>
               <F.Options>
@@ -23,18 +23,13 @@
               </F.Options>
             </Hds::Form::Select::Field>
           {{else}}
-            {{! readonly input of it's the only available mount path }}
             {{#let (get mounts "0") as |mount|}}
               {{#if (and (eq @selectedAuthMethod "token") mount.description)}}
+                {{! the token auth method does't support a custom path }}
                 <Hds::Text::Body @tag="p" @color="faint">{{mount.description}} data-test-description</Hds::Text::Body>
               {{else}}
-                <Hds::Form::TextInput::Field
-                  readonly
-                  name="path"
-                  @value={{mount.path}}
-                  data-test-auth-form-mount-path
-                  as |F|
-                >
+                {{! if it's the only available mount path render a readonly input }}
+                <Hds::Form::TextInput::Field readonly name="path" @value={{mount.path}} data-test-input="path" as |F|>
                   <F.Label>Mount path</F.Label>
                   {{#if mount.description}}
                     <F.HelperText data-test-description>{{mount.description}}</F.HelperText>

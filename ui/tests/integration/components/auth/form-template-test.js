@@ -152,16 +152,19 @@ module('Integration | Component | auth | form template', function (hooks) {
       assertSelected('userpass');
       assertUnselected('oidc');
       assertUnselected('token');
+      assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
 
       await click(AUTH_FORM.tabBtn('oidc'));
       assertSelected('oidc');
       assertUnselected('token');
       assertUnselected('userpass');
+      assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
 
       await click(AUTH_FORM.tabBtn('token'));
       assertSelected('token');
       assertUnselected('oidc');
       assertUnselected('userpass');
+      assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
     });
 
     test('it renders the mount description', async function (assert) {
@@ -183,8 +186,8 @@ module('Integration | Component | auth | form template', function (hooks) {
     test('it renders a readonly input if only one mount path is returned', async function (assert) {
       await this.renderComponent();
       await click(AUTH_FORM.tabBtn('oidc'));
-      assert.dom(AUTH_FORM.mountPathInput).hasAttribute('readonly');
-      assert.dom(AUTH_FORM.mountPathInput).hasValue('my-oidc/');
+      assert.dom(GENERAL.inputByAttr('path')).hasAttribute('readonly');
+      assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
     });
 
     test('it clicks "Sign in with other methods"', async function (assert) {
@@ -231,7 +234,7 @@ module('Integration | Component | auth | form template', function (hooks) {
 
     test('it does not render the namespace input on community', async function (assert) {
       await this.renderComponent();
-      assert.dom(AUTH_FORM.namespaceInput).doesNotExist();
+      assert.dom(GENERAL.inputByAttr('namespace')).doesNotExist();
     });
 
     test('dropdown does not include enterprise methods', async function (assert) {
@@ -289,7 +292,7 @@ module('Integration | Component | auth | form template', function (hooks) {
         }
 
         const assertion = authType === 'token' ? 'doesNotExist' : 'exists';
-        assert.dom(AUTH_FORM.mountPathInput)[assertion](`${authType}: mount path input ${assertion}`);
+        assert.dom(GENERAL.inputByAttr('path'))[assertion](`${authType}: mount path input ${assertion}`);
 
         fields.forEach((field) => {
           assert.dom(GENERAL.inputByAttr(field)).exists(`${authType}: ${field} input renders`);
@@ -300,7 +303,7 @@ module('Integration | Component | auth | form template', function (hooks) {
     test('it disables namespace input when an oidc provider query param exists', async function (assert) {
       this.oidcProviderQueryParam = 'myprovider';
       await this.renderComponent();
-      assert.dom(AUTH_FORM.namespaceInput).isDisabled();
+      assert.dom(GENERAL.inputByAttr('namespace')).isDisabled();
     });
 
     test('dropdown includes enterprise methods', async function (assert) {
@@ -327,7 +330,7 @@ module('Integration | Component | auth | form template', function (hooks) {
       });
 
       await this.renderComponent();
-      await fillIn(AUTH_FORM.namespaceInput, expectedNs);
+      await fillIn(GENERAL.inputByAttr('namespace'), expectedNs);
       const [actual] = this.onNamespaceChange.lastCall.args;
       assert.strictEqual(actual, expectedNs, 'callback has expected args');
     });
@@ -346,7 +349,7 @@ module('Integration | Component | auth | form template', function (hooks) {
       });
 
       await this.renderComponent();
-      await typeIn(AUTH_FORM.namespaceInput, childNs);
+      await typeIn(GENERAL.inputByAttr('namespace'), childNs);
       const [actual] = this.onNamespaceChange.lastCall.args;
       assert.strictEqual(actual, `${this.namespaceQueryParam}${childNs}`, 'callback has expected args');
     });
@@ -357,7 +360,7 @@ module('Integration | Component | auth | form template', function (hooks) {
       await this.renderComponent();
       assert.dom(AUTH_FORM.managedNsRoot).hasValue('/admin');
       assert.dom(AUTH_FORM.managedNsRoot).hasAttribute('readonly');
-      assert.dom(AUTH_FORM.namespaceInput).hasValue('/west-coast');
+      assert.dom(GENERAL.inputByAttr('namespace')).hasValue('/west-coast');
     });
 
     test('it does NOT display tabs when updated namespace has no visible mounts', async function (assert) {
@@ -385,7 +388,7 @@ module('Integration | Component | auth | form template', function (hooks) {
       await this.renderComponent();
       assert.dom(AUTH_FORM.tabs('userpass')).exists('userpass renders as a tab');
       assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist('dropdown does not render');
-      await fillIn(AUTH_FORM.namespaceInput, 'admin');
+      await fillIn(GENERAL.inputByAttr('namespace'), 'admin');
       assert.dom(AUTH_FORM.tabs()).doesNotExist('tabs do not render');
       assert.dom(GENERAL.selectByAttr('auth type')).exists('dropdown renders');
     });
@@ -416,7 +419,7 @@ module('Integration | Component | auth | form template', function (hooks) {
       assert.dom(AUTH_FORM.tabs()).doesNotExist('tabs do not render');
       assert.dom(GENERAL.selectByAttr('auth type')).exists('dropdown renders');
       // fire off second request to sys/internal/mounts
-      await fillIn(AUTH_FORM.namespaceInput, 'admin');
+      await fillIn(GENERAL.inputByAttr('namespace'), 'admin');
       assert.dom(AUTH_FORM.tabs('userpass')).exists('userpass renders as a tab');
       assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist('dropdown does not render');
     });
