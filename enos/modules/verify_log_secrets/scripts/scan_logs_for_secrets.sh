@@ -70,7 +70,9 @@ if ! out=$("$radar_bin_path" scan file --offline --disable-ui -p audit.log --ind
   fail "failed to scan vault audit log: vault-radar scan file failed: $out"
 fi
 
+echo "-------------------00000"
 verify_radar_scan_output_file vault-audit-log audit-secrets.json
+echo "-------------------00001"
 
 # Scan the vault journal for known secrets via the audit log and other secrets using radars built-in
 # secret types.
@@ -78,4 +80,6 @@ if ! out=$(sudo journalctl --no-pager -u "$VAULT_UNIT_NAME" -a | "$radar_bin_pat
   fail "failed to scan vault journal: vault-radar scan file failed: $out"
 fi
 
+echo "-------------------00002"
 verify_radar_scan_output_file vault-journal journal-secrets.json
+echo "-------------------00003"
