@@ -17,8 +17,12 @@ verify_radar_scan_output_file() {
   echo "-----------00"
   jq -eMcn '[inputs] | [.[]]'
   echo "-----------01"
-  jq -eMcn '[inputs] | [.[] | select((.tags == null))]'
-  echo "-----------1"
+  jq -eMcn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]))]'
+  echo "-----------02"
+  jq -eMcn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"])))]'
+  echo "-----------03"
+  jq -eMcn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))]'
+  echo "-----------04"
   jq -eMcn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))] | length == 0'
   echo -e "-----------4\n"
   cat <<EOF >> ~/.hashicorp/vault-radar/ignore.yaml
