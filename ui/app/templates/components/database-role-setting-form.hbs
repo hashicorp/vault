@@ -14,9 +14,16 @@
           {{else}}
             <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
           {{/if}}
-          {{! disable password field on edit once password has been rotated }}
-        {{else if (and (eq attr.name "password") (not (eq (get @model "last_vault_rotation") undefined)))}}
-          <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
+        {{else if (and (eq @mode "edit") (eq attr.name "password"))}}
+          {{! password field is disabled on edit once password has been rotated }}
+          <EnableInput
+            data-test-enable-field={{attr.name}}
+            class="field"
+            @attr={{attr}}
+            @disabled={{(not (eq (get @model "last_vault_rotation") undefined))}}
+          >
+            <FormField @attr={{attr}} @model={{@model}} />
+          </EnableInput>
         {{else}}
           <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} @modelValidations={{@modelValidations}} />
           {{#if (and (eq attr.name "skip_import_rotation") this.isOverridden)}}
