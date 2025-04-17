@@ -3,7 +3,7 @@ import { tracked } from '@glimmer/tracking';
 
 import { DummyProvider, PROVIDER_NAME as DummyProviderName } from 'vault/utils/analytics-providers/dummy';
 
-import type { AnalyticsProvider, AnalyticsProviderConfig } from 'vault/vault/analytics';
+import type { AnalyticsProvider } from 'vault/vault/analytics';
 import type Owner from '@ember/owner';
 import type RouterService from '@ember/routing/router-service';
 
@@ -43,7 +43,7 @@ export default class AnalyticsService extends Service {
     this.log('identifyUser', identifer, traits);
   }
 
-  start(provider: string, config: AnalyticsProviderConfig = {}) {
+  start(provider: string, config = {}) {
     // fail silently, analytics is nonessential
     if (!provider) return;
 

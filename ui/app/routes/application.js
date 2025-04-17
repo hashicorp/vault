@@ -7,10 +7,9 @@ import { service } from '@ember/service';
 import Route from '@ember/routing/route';
 import { action } from '@ember/object';
 
-import ControlGroupError from 'vault/lib/control-group-error';
+import config from 'vault/config/environment';
 
-// import { PROVIDER_NAME } from 'vault/utils/analytics-providers/posthog';
-import { PROVIDER_NAME } from 'vault/utils/analytics-providers/dummy';
+import ControlGroupError from 'vault/lib/control-group-error';
 
 export default class ApplicationRoute extends Route {
   @service analytics;
@@ -76,10 +75,8 @@ export default class ApplicationRoute extends Route {
   }
 
   afterModel() {
-    this.analytics.start(PROVIDER_NAME, {
-      enabled: true,
-      API_KEY: 'DUMMY_KEY',
-      api_host: 'whatever',
-    });
+    const { ANALYTICS_CONFIG } = config.APP;
+
+    this.analytics.start(ANALYTICS_CONFIG.provider, ANALYTICS_CONFIG);
   }
 }

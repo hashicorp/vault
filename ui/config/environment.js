@@ -38,6 +38,12 @@ module.exports = function (environment) {
       ],
       // number of records to show on a single page by default - this is used by the client-side pagination
       DEFAULT_PAGE_SIZE: 100,
+
+      ANALYTICS_CONFIG: {
+        provider: 'dummy',
+        enabled: false,
+        project_id: '',
+      },
     },
     flashMessageDefaults: {
       timeout: 7000,
@@ -56,6 +62,13 @@ module.exports = function (environment) {
         handler: process.env.MIRAGE_DEV_HANDLER,
       };
     }
+
+    ENV.APP.ANALYTICS_CONFIG = {
+      provider: 'posthog',
+      enabled: true,
+      project_id: 'phc_zPQ9fPlFj4ZTYKJmThG1C8AE4J4RgPQx8dJJ7agg4SG',
+      api_host: 'https://eu.i.posthog.com',
+    };
   }
 
   if (environment === 'test') {
@@ -73,6 +86,11 @@ module.exports = function (environment) {
   }
   if (environment !== 'production') {
     ENV.APP.DEFAULT_PAGE_SIZE = 15;
+    ENV.APP.ANALYTICS_CONFIG = {
+      provider: 'dummy',
+      enabled: false,
+      project_id: '',
+    };
   }
 
   ENV.welcomeMessage = process.env.UI_AUTH_WELCOME;
