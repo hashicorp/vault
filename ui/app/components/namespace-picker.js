@@ -32,8 +32,6 @@ export default class NamespacePicker extends Component {
   @tracked search = '';
   @tracked namespaceLabel = 'All Namespaces';
 
-  @tracked selectedNamespace = () => this.selected?.id || '-';
-
   constructor() {
     super(...arguments);
     this.loadOptions();
