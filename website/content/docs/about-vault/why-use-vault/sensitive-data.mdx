@@ -1,21 +1,95 @@
 ---
 layout: docs
-page_title: Why use Vault
+page_title: Secure sensitive data
 description: >-
-  TBD
+  Encrypt or tokenize sensitive data in transit and at rest without storing the
+  data in Vault.
 ---
 
-# Why use Vault?
+# Secure sensitive data
 
-Modern software works because of **secrets**. Secrets are discrete pieces of
-information like credentials, encryption keys, authentication certificates,
-sensitive data, and any other critical piece of information you need to keep
-private and secure.
+@include '/why-use-vault/secure-sensitive-data-small.mdx'
 
-HashiCorp Vault can help harden your applications by centralizing secret
-management, rotating old credentials, generating credentials on demand, auditing
-all interactions, and supporting regulatory compliance.
 
-- [**Manage sensitive data**](/vault/docs/about-vault/why-use-vault/sensitive-data) - 
-  Define custom parameters to encrypt or tokenize sensitive data in transit and at
-  rest without storing the data in Vault.
+## Encrypt data at rest
+
+Many organizations seek solutions to encrypt/decrypt application data within a cloud or multi-datacenter environment; deploying cryptography and maintaining a complex key management infrastructure can be expensive and challenging to develop. Vault provides [encryption as a service](/vault/docs/secrets/transit) with centralized key management to simplify encrypting data in transit and stored across clouds and datacenters. Vault can encrypt/decrypt data stored elsewhere, essentially allowing applications to encrypt their data while storing it in the primary data store. Vault's security team manages and maintains the responsibility of the data encryption within the Vault environment, allowing developers to focus solely on encrypting/decrypting data as needed.
+
+<Tabs>
+<Tab heading="Key concepts" group="concept">
+
+TBD
+
+</Tab>
+<Tab heading="Guides" group="guides">
+
+TBD
+
+</Tab>
+<Tab heading="Tutorials" group="tutorials">
+
+TBD
+
+</Tab>
+<Tab heading="References" group="reference">
+
+TBD
+
+</Tab>
+</Tabs>
+
+
+## Encrypt data in transit
+
+Many organizations seek solutions to encrypt/decrypt application data within a cloud or multi-datacenter environment; deploying cryptography and maintaining a complex key management infrastructure can be expensive and challenging to develop. Vault provides [encryption as a service](/vault/docs/secrets/transit) with centralized key management to simplify encrypting data in transit and stored across clouds and datacenters. Vault can encrypt/decrypt data stored elsewhere, essentially allowing applications to encrypt their data while storing it in the primary data store. Vault's security team manages and maintains the responsibility of the data encryption within the Vault environment, allowing developers to focus solely on encrypting/decrypting data as needed.
+
+<Tabs>
+<Tab heading="Key concepts" group="concept">
+
+TBD
+
+</Tab>
+<Tab heading="Guides" group="guides">
+
+TBD
+
+</Tab>
+<Tab heading="Tutorials" group="tutorials">
+
+TBD
+
+</Tab>
+<Tab heading="References" group="reference">
+
+TBD
+
+</Tab>
+</Tabs>
+
+
+## Tokenize data
+
+Many organizations seek solutions to encrypt/decrypt application data within a cloud or multi-datacenter environment; deploying cryptography and maintaining a complex key management infrastructure can be expensive and challenging to develop. Vault provides [encryption as a service](/vault/docs/secrets/transit) with centralized key management to simplify encrypting data in transit and stored across clouds and datacenters. Vault can encrypt/decrypt data stored elsewhere, essentially allowing applications to encrypt their data while storing it in the primary data store. Vault's security team manages and maintains the responsibility of the data encryption within the Vault environment, allowing developers to focus solely on encrypting/decrypting data as needed.
+
+<Tabs>
+<Tab heading="Key concepts" group="concept">
+
+TBD
+
+</Tab>
+<Tab heading="Guides" group="guides">
+
+TBD
+
+</Tab>
+<Tab heading="Tutorials" group="tutorials">
+
+TBD
+
+</Tab>
+<Tab heading="References" group="reference">
+
+TBD
+
+</Tab>
+</Tabs>

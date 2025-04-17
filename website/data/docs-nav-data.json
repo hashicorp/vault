@@ -10,12 +10,12 @@
         "title": "Why use Vault?",
         "routes": [
           {
-            "title": "Overview",
+            "title": "Solve security problems",
             "path": "about-vault/why-use-vault"
           },
           {
-            "title": "Manage static secrets",
-            "path": "about-vault/why-use-vault/static-secrets"
+            "title": "Manage 3rd-party secrets",
+            "path": "about-vault/why-use-vault/3rd-party-secrets"
           },
           {
             "title": "Manage certificates",
@@ -26,11 +26,11 @@
             "path": "about-vault/why-use-vault/identities"
           },
           {
-            "title": "Manage 3rd-party secrets",
-            "path": "about-vault/why-use-vault/3rd-party-secrets"
+            "title": "Manage static secrets",
+            "path": "about-vault/why-use-vault/static-secrets"
           },
           {
-            "title": "Manage sensitive data",
+            "title": "Secure sensitive data",
             "path": "about-vault/why-use-vault/sensitive-data"
           },
           {
@@ -41,16 +41,7 @@
       },
       {
         "title": "How Vault works",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "about-vault/how-vault-works"
-          },
-          {
-            "title": "Authentication",
-            "path": "about-vault/how-vault-works/authn"
-          }
-        ]
+        "path": "about-vault/how-vault-works"
       }
     ]
   },
@@ -306,7 +297,7 @@
       },
       {
         "title": "Package manager installs",
-        "href": "https://developer.hashicorp.com/vault/install/enterprise",
+        "href": "https://developer.hashicorp.com/vault/install",
         "badge": {
           "text": "COMMUNITY",
           "type": "filled",

@@ -127,7 +127,6 @@ keys within the HSM during the setup process.
 | ------------ | ---------------- | --------------------
 | New behavior | 1.19.0           | any
 
-
 As of version 1.19.0 Vault Enterprise collects
 [anonymous usage data](/vault/docs/enterprise/license/product-usage-reporting#anonymous-product-usage-reporting)
 about the running Vault cluster and automatically sends the cluster usage data
@@ -178,11 +177,12 @@ Review the [Token validation](/vault/docs/auth/azure#token-validation) section
 of the Azure authN plugin guide for more information on the new validation
 requirements.
 
+
 ## Static role rotations on upgrade ((#static-role-rotations))
 
-| Change       | Affected version                 | Affected deployments
-| ------------ | -------------------------------- | --------------------
-| Known issue  | 1.19.0, 1.18.5, 1.17.12, 1.16.16 | any
+| Change       | Affected version                     | Affected deployments
+| ------------ | ------------------------------------ | --------------------
+| Known issue  | 1.19.0+, 1.18.5+, 1.17.12+, 1.16.16+ | any
 
 Vault automatically rotates existing static roles tied to database and LDAP
 credentials once when upgrading to an affected version. After the one-time
@@ -192,3 +192,19 @@ rotation, the static roles behave as expected.
 
 If you rely on LDAP or static database roles, avoid upgrading to the affected
 versions until we fix the issue.
+
+
+## Vault log file missing subsystem logs ((#missing-logs))
+
+| Change       | Affected version                 | Affected deployments
+| ------------ | -------------------------------- | --------------------
+| Known issue  | 1.16.0, 1.17.13, 1.18.6, 1.19.0  | any
+
+Log entries, including plugin logs, for Vault deployments using `log_file` do
+not capture all relevant information even though the information appears as
+expected in standard error and standard output.
+
+### Recommendation
+
+Upgrade to one of the following Vault versions: 1.16.1+, 1.17.14+, 1.18.7+,
+1.19.1+
