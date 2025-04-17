@@ -6,6 +6,7 @@
 import { click, fillIn, visit } from '@ember/test-helpers';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
+import { Server } from 'miragejs';
 
 const { rootToken } = VAULT_KEYS;
 
@@ -67,3 +68,61 @@ export const fillInLoginFields = async (loginFields: LoginFields, { toggleOption
     await fillIn(AUTH_FORM.input(input), value);
   }
 };
+
+// See AUTH_METHOD_MAP for how login data maps to method types,
+// stubRequests are the requests made on submit for that method type
+export const LOGIN_DATA = {
+  token: {
+    loginData: { token: 'mytoken' },
+    stubRequests: (server: Server, response: object) => server.get('/auth/token/lookup-self', () => response),
+  },
+  username: {
+    loginData: { username: 'matilda', password: 'password' },
+    stubRequests: (server: Server, path: string, response: object) =>
+      server.post(`/auth/${path}/login/matilda`, () => response),
+  },
+  github: {
+    loginData: { token: 'mysupersecuretoken' },
+    stubRequests: (server: Server, path: string, response: object) =>
+      server.post(`/auth/${path}/login`, () => response),
+  },
+  oidc: {
+    loginData: { role: 'some-dev' },
+    hasPopupWindow: true,
+    stubRequests: (server: Server, path: string, response: object) => {
+      server.get(`/auth/${path}/oidc/callback`, () => response);
+      server.post(`/auth/${path}/oidc/auth_url`, () => {
+        return { data: { auth_url: 'http://dev-foo-bar.com' } };
+      });
+    },
+  },
+  saml: {
+    loginData: { role: 'some-dev' },
+    hasPopupWindow: true,
+    stubRequests: (server: Server, path: string, response: object) => {
+      server.put(`/auth/${path}/token`, () => response);
+      server.put(`/auth/${path}/sso_service_url`, () => {
+        return { data: { sso_service_url: 'http://sso-url.hashicorp.com/service', token_poll_id: '1234' } };
+      });
+    },
+  },
+};
+
+// maps auth type to request data
+export const AUTH_METHOD_MAP = [
+  { authType: 'token', options: LOGIN_DATA.token },
+  { authType: 'github', options: LOGIN_DATA.github },
+
+  // username and password methods
+  { authType: 'userpass', options: LOGIN_DATA.username },
+  { authType: 'ldap', options: LOGIN_DATA.username },
+  { authType: 'okta', options: LOGIN_DATA.username },
+  { authType: 'radius', options: LOGIN_DATA.username },
+
+  // oidc
+  { authType: 'oidc', options: LOGIN_DATA.oidc },
+  { authType: 'jwt', options: LOGIN_DATA.oidc },
+
+  // ENTERPRISE ONLY
+  { authType: 'saml', options: LOGIN_DATA.saml },
+];

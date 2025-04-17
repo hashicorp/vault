@@ -8,6 +8,10 @@
 /* This helper includes styles referencing background color, border color, and text color. */
 
 // background colors
+.background-neutral-50 {
+  background: color_variables.$neutral-50;
+}
+
 .has-background-white-bis {
   background: color_variables.$ui-gray-050;
 }
