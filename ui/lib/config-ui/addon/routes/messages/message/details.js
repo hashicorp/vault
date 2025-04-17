@@ -6,6 +6,7 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { decodeString } from 'core/utils/b64';
+import { PATH_MAP } from 'core/utils/capabilities';
 
 export default class MessagesMessageDetailsRoute extends Route {
   @service api;
@@ -13,11 +14,10 @@ export default class MessagesMessageDetailsRoute extends Route {
 
   async model() {
     const { id } = this.paramsFor('messages.message');
-    const resourcePath = `sys/config/ui/custom-messages/${id}`;
 
     const requests = [
       this.api.sys.uiConfigReadCustomMessage(id),
-      this.capabilities.fetchPathCapabilities(resourcePath),
+      this.capabilities.fetchPathCapabilities(`${PATH_MAP.customMessages}/${id}`),
     ];
     const [customMessage, capabilities] = await Promise.all(requests);
     customMessage.message = decodeString(customMessage.message);

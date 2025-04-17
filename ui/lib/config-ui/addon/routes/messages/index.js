@@ -6,9 +6,11 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { paginate } from 'core/utils/paginate-list';
+import { PATH_MAP } from 'core/utils/capabilities';
 
 export default class MessagesRoute extends Route {
   @service api;
+  @service capabilities;
 
   queryParams = {
     page: {
@@ -30,11 +32,10 @@ export default class MessagesRoute extends Route {
 
   async model(params) {
     const { authenticated, page, pageFilter, status, type } = params;
-    const active =
-      {
-        active: true,
-        inactive: false,
-      }[status] || undefined;
+    const active = {
+      active: true,
+      inactive: false,
+    }[status];
 
     try {
       const { keyInfo, keys } = await this.api.sys.uiConfigListCustomMessages(
@@ -45,14 +46,27 @@ export default class MessagesRoute extends Route {
       );
       // ids are in the keys array and can be mapped to the object in keyInfo
       // map and set id property on keyInfo object
-      const data = keys.map((id) => ({ id, ...keyInfo[id] }));
+      const data = keys.map((id) => {
+        const { startTime, endTime, ...message } = keyInfo[id];
+        // dates returned from list endpoint are strings -- convert to date
+        return {
+          id,
+          ...message,
+          startTime: startTime ? new Date(startTime) : startTime,
+          endTime: endTime ? new Date(endTime) : endTime,
+        };
+      });
       const messages = paginate(data, {
         page,
         pageSize: 2,
         filter: pageFilter,
         filterKey: 'title',
       });
-      return { params, messages };
+      // fetch capabilities for each message path
+      const paths = messages.map((message) => `${PATH_MAP.customMessages}/${message.id}`);
+      const capabilities = await this.capabilities.fetch(paths);
+
+      return { params, messages, capabilities };
     } catch (e) {
       if (e.response?.status === 404) {
         return { params, messages: [] };
