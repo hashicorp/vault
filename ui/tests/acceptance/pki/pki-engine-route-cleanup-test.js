@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { click, currentURL, fillIn, visit } from '@ember/test-helpers';
@@ -31,7 +31,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
 
   hooks.beforeEach(async function () {
     this.store = this.owner.lookup('service:store');
-    await authPage.login();
+    await login();
     // Setup PKI engine
     const mountPath = `pki-workflow-${uuidv4()}`;
     await enablePage.enable('pki', mountPath);
@@ -41,7 +41,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
 
   hooks.afterEach(async function () {
     await logout.visit();
-    await authPage.login();
+    await login();
     // Cleanup engine
     await runCmd([`delete sys/mounts/${this.mountPath}`]);
   });
@@ -49,7 +49,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
   module('configuration', function () {
     test('create config', async function (assert) {
       let configs, urls, config;
-      await authPage.login(this.pkiAdminToken);
+      await login(this.pkiAdminToken);
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(`${GENERAL.emptyStateActions} a`);
       configs = this.store.peekAll('pki/action');
@@ -85,7 +85,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
 
   module('role routes', function (hooks) {
     hooks.beforeEach(async function () {
-      await authPage.login();
+      await login();
       // Configure PKI
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(`${GENERAL.emptyStateActions} a`);
@@ -98,7 +98,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
 
     test('create role exit via cancel', async function (assert) {
       let roles;
-      await authPage.login();
+      await login();
       // Create PKI
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(GENERAL.secretTab('Roles'));
@@ -115,7 +115,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
     });
     test('create role exit via breadcrumb', async function (assert) {
       let roles;
-      await authPage.login();
+      await login();
       // Create PKI
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(GENERAL.secretTab('Roles'));
@@ -133,7 +133,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
     test('edit role', async function (assert) {
       let roles, role;
       const roleId = 'workflow-edit-role';
-      await authPage.login();
+      await login();
       // Create PKI
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(GENERAL.secretTab('Roles'));
@@ -176,7 +176,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
   module('issuer routes', function () {
     test('import issuer exit via cancel', async function (assert) {
       let issuers;
-      await authPage.login();
+      await login();
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(GENERAL.secretTab('Issuers'));
       issuers = this.store.peekAll('pki/issuer');
@@ -195,7 +195,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
     });
     test('import issuer exit via breadcrumb', async function (assert) {
       let issuers;
-      await authPage.login();
+      await login();
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(GENERAL.secretTab('Issuers'));
       issuers = this.store.peekAll('pki/issuer');
@@ -214,7 +214,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
     });
     test('generate root exit via cancel', async function (assert) {
       let actions;
-      await authPage.login();
+      await login();
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(GENERAL.secretTab('Issuers'));
       actions = this.store.peekAll('pki/action');
@@ -235,7 +235,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
     });
     test('generate root exit via breadcrumb', async function (assert) {
       let actions;
-      await authPage.login();
+      await login();
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(GENERAL.secretTab('Issuers'));
       actions = this.store.peekAll('pki/action');
@@ -256,7 +256,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
     });
     test('generate intermediate csr exit via cancel', async function (assert) {
       let actions;
-      await authPage.login();
+      await login();
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(GENERAL.secretTab('Issuers'));
       actions = this.store.peekAll('pki/action');
@@ -277,7 +277,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
     });
     test('generate intermediate csr exit via breadcrumb', async function (assert) {
       let actions;
-      await authPage.login();
+      await login();
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(GENERAL.secretTab('Issuers'));
       actions = this.store.peekAll('pki/action');
@@ -298,7 +298,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
     });
     test('edit issuer exit', async function (assert) {
       let issuers, issuer;
-      await authPage.login();
+      await login();
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(`${GENERAL.emptyStateActions} a`);
       await click(PKI_CONFIGURE_CREATE.optionByKey('generate-root'));
@@ -327,7 +327,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
 
   module('key routes', function (hooks) {
     hooks.beforeEach(async function () {
-      await authPage.login();
+      await login();
       // Configure PKI -- key creation not allowed unless configured
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(`${GENERAL.emptyStateActions} a`);
@@ -339,7 +339,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
     });
     test('create key exit', async function (assert) {
       let keys, key;
-      await authPage.login();
+      await login();
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(GENERAL.secretTab('Keys'));
       keys = this.store.peekAll('pki/key');
@@ -372,7 +372,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
     });
     test('edit key exit', async function (assert) {
       let keys, key;
-      await authPage.login();
+      await login();
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(GENERAL.secretTab('Keys'));
       keys = this.store.peekAll('pki/key');

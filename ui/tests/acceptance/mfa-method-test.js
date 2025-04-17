@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, currentRouteName, currentURL, fillIn, visit } from '@ember/test-helpers';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import mfaConfigHandler from 'vault/mirage/handlers/mfa-config';
 import { Response } from 'miragejs';
@@ -25,7 +25,7 @@ module('Acceptance | mfa-method', function (hooks) {
         methods = [...methods, ...this.server.db[`mfa${type}Methods`].where({})];
         return methods;
       }, []);
-    return authPage.login();
+    return login();
   });
 
   test('it should display landing page when no methods exist', async function (assert) {

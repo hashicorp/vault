@@ -22,7 +22,7 @@ import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { create } from 'ember-cli-page-object';
 import page from 'vault/tests/pages/settings/mount-secret-backend';
 import configPage from 'vault/tests/pages/secrets/backend/configuration';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import logout from 'vault/tests/pages/logout';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
@@ -49,7 +49,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       const remainder = hours % 24;
       return `${days} days ${remainder} hours`;
     };
-    return authPage.login();
+    return login();
   });
 
   test('it sets the ttl correctly when mounting', async function (assert) {
@@ -182,7 +182,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     await settled();
     const userToken = consoleComponent.lastLogOutput;
     await logout.visit();
-    await authPage.login(userToken);
+    await login(userToken);
     // create the engine
     await mountSecrets.visit();
     await click(MOUNT_BACKEND_FORM.mountType('kv'));
@@ -349,7 +349,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     test('it allows a user with permissions to oidc/key to create an identity_token_key', async function (assert) {
       logout.visit();
       const engine = 'aws'; // only testing aws of the WIF engines as the functionality for all others WIF engines in this form are the same
-      await authPage.login();
+      await login();
       const path = `secrets-adminPolicy-${engine}`;
       const newKey = `key-${engine}-${uuidv4()}`;
       const secrets_admin_policy = adminOidcCreateRead(path);
@@ -358,7 +358,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       );
 
       await logout.visit();
-      await authPage.login(secretsAdminToken);
+      await login(secretsAdminToken);
       await visit('/vault/settings/mount-secret-backend');
       await click(MOUNT_BACKEND_FORM.mountType(engine));
       await fillIn(GENERAL.inputByAttr('path'), path);
@@ -393,7 +393,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     test('it allows user with NO access to oidc/key to manually input an identity_token_key', async function (assert) {
       await logout.visit();
       const engine = 'aws'; // only testing aws of the WIF engines as the functionality for all others WIF engines in this form are the same
-      await authPage.login();
+      await login();
       const path = `secrets-noOidcAdmin-${engine}`;
       const secretsNoOidcAdminPolicy = adminOidcCreate(path);
       const secretsNoOidcAdminToken = await runCmd(
@@ -403,7 +403,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       await runCmd(`write identity/oidc/key/general-key allowed_client_ids="*"`);
 
       await logout.visit();
-      await authPage.login(secretsNoOidcAdminToken);
+      await login(secretsNoOidcAdminToken);
       await page.visit();
       await click(MOUNT_BACKEND_FORM.mountType(engine));
       await fillIn(GENERAL.inputByAttr('path'), path);

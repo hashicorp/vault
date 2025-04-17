@@ -13,7 +13,7 @@ import showPage from 'vault/tests/pages/secrets/backend/kv/show';
 import listPage from 'vault/tests/pages/secrets/backend/list';
 
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import logout from 'vault/tests/pages/logout';
 import { writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { runCmd } from 'vault/tests/helpers/commands';
@@ -25,7 +25,7 @@ import { SECRET_ENGINE_SELECTORS as SS } from 'vault/tests/helpers/secret-engine
 
 const deleteEngine = async function (enginePath, assert) {
   await logout.visit();
-  await authPage.login();
+  await login();
 
   const response = await runCmd([`delete sys/mounts/${enginePath}`]);
   assert.strictEqual(
@@ -40,7 +40,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
 
   hooks.beforeEach(async function () {
     this.uid = uuidv4();
-    await authPage.login();
+    await login();
   });
 
   module('mount and configure', function () {

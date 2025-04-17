@@ -14,7 +14,7 @@ import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import connectionPage from 'vault/tests/pages/secrets/backend/database/connection';
 import rolePage from 'vault/tests/pages/secrets/backend/database/role';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import logout from 'vault/tests/pages/logout';
 import searchSelect from 'vault/tests/pages/components/search-select';
 import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
@@ -233,11 +233,11 @@ module('Acceptance | secrets/database/*', function (hooks) {
 
   hooks.beforeEach(async function () {
     this.backend = `database-testing`;
-    await authPage.login();
+    await login();
     return runCmd(mountEngineCmd('database', this.backend), false);
   });
   hooks.afterEach(async function () {
-    await authPage.login();
+    await login();
     return runCmd(deleteEngineCmd(this.backend), false);
   });
 
@@ -523,9 +523,9 @@ module('Acceptance | secrets/database/*', function (hooks) {
       .hasText('Reset connection', 'Reset button exists with correct text');
     assert.dom('[data-test-secret-create]').hasText('Add role', 'Add role button exists with correct text');
     assert.dom('[data-test-edit-link]').hasText('Edit configuration', 'Edit button exists with correct text');
-    await authPage.logout();
+    await logout();
     // Check with restricted permissions
-    await authPage.login(token);
+    await login(token);
     await click('[data-test-sidebar-nav-link="Secrets Engines"]');
     assert.dom(`[data-test-secrets-backend-link="${backend}"]`).exists('Shows backend on secret list page');
     await navToConnection(backend, connection);
@@ -629,7 +629,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
 
     // Login with restricted policy
     await logout.visit();
-    await authPage.login(token);
+    await login(token);
     await visit(`/vault/secrets/${backend}/overview`);
     assert.dom('[data-test-tab="overview"]').exists('renders overview tab');
     assert.dom('[data-test-secret-list-tab="Connections"]').exists('renders connections tab');

@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, visit, fillIn, currentRouteName, currentURL } from '@ember/test-helpers';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import logout from 'vault/tests/pages/logout';
 import { format, addDays, startOfDay } from 'date-fns';
 import { datetimeLocalStringFormat } from 'core/utils/date-formatters';
@@ -28,7 +28,7 @@ module('Acceptance | Community | config-ui/messages', function (hooks) {
   hooks.beforeEach(async function () {
     const version = this.owner.lookup('service:version');
     version.type = 'community';
-    await authPage.login();
+    await login();
   });
 
   hooks.afterEach(async function () {
@@ -87,7 +87,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
       await click(CUSTOM_MESSAGES.confirmActionButton('Delete message'));
       await click(GENERAL.confirmButton);
     };
-    await authPage.login();
+    await login();
   });
 
   hooks.afterEach(async function () {

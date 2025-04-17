@@ -5,7 +5,7 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, fillIn, find, visit, waitUntil } from '@ember/test-helpers';
-import authPage from 'vault/tests/pages/auth';
+import { logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { buildMessage, callbackData, windowStub } from 'vault/tests/helpers/oidc-window-stub';
 import sinon from 'sinon';
@@ -54,7 +54,7 @@ module('Acceptance | oidc auth method', function (hooks) {
 
     // ensure clean state
     localStorage.removeItem('selectedAuth');
-    authPage.logout();
+    logout();
   });
 
   hooks.afterEach(function () {

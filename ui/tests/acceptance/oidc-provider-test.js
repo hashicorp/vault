@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
 import { visit, settled, currentURL, waitFor, currentRouteName, fillIn, click } from '@ember/test-helpers';
@@ -122,14 +122,14 @@ module('Acceptance | oidc provider', function (hooks) {
   hooks.beforeEach(async function () {
     this.uid = uuidv4();
     this.store = this.owner.lookup('service:store');
-    await authPage.login();
+    await login();
     await settled();
     this.oidcSetupInformation = await setupOidc(this.uid);
     return;
   });
 
   hooks.afterEach(async function () {
-    await authPage.login();
+    await login();
   });
 
   test('OIDC Provider logs in and redirects correctly', async function (assert) {
