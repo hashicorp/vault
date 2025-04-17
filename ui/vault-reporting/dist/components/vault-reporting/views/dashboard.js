@@ -58,6 +58,22 @@ class SSUViewDashboard extends Component {
   get isVaultDedicated() {
     return this.args.isVaultDedicated ?? true;
   }
+  get kvSecretsTooltipMessage() {
+    const kvv1Secrets = this.data?.kvv1_secrets ?? 0;
+    const kvv2Secrets = this.data?.kvv2_secrets ?? 0;
+    const kvv1Formatted = Intl.NumberFormat().format(kvv1Secrets);
+    const kvv2Formatted = Intl.NumberFormat().format(kvv2Secrets);
+    if (kvv1Secrets && kvv2Secrets) {
+      return `Combined count of ${kvv1Formatted} KV v1 secrets and ${kvv2Formatted} KV v2 secrets in this namespace`;
+    }
+    if (kvv1Secrets) {
+      return `Total number of ${kvv1Formatted} KV v1 secrets in this namespace`;
+    }
+    if (kvv2Secrets) {
+      return `Total number of ${kvv2Formatted} KV v2 secrets in this namespace`;
+    }
+    return '';
+  }
   get counters() {
     return [{
       title: 'Child namespaces',
@@ -66,7 +82,7 @@ class SSUViewDashboard extends Component {
       link: 'access/namespaces'
     }, {
       title: 'KV secrets',
-      tooltipMessage: this.isVaultDedicated ? 'Combined count of 1,000 KV v1 secrets and 245 KV v2 secrets' : 'Total number of 1,000 KV secrets',
+      tooltipMessage: this.kvSecretsTooltipMessage,
       data: (this.data?.kvv1_secrets ?? 0) + (this.data?.kvv2_secrets ?? 0),
       emptyText: 'No secrets stored'
     }, {
