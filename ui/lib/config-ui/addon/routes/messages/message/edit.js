@@ -5,22 +5,23 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+import CustomMessage from 'vault/forms/custom-message';
+import { decodeString } from 'core/utils/b64';
 
 export default class MessagesMessageEditRoute extends Route {
   @service api;
 
   async model() {
     const { id } = this.paramsFor('messages.message');
-    const message = await this.api.sys.uiConfigReadCustomMessage(id);
-    const { keyInfo = {} } = await this.api.sys.uiConfigListCustomMessages(
+    const data = await this.api.sys.uiConfigReadCustomMessage(id);
+    const { keyInfo, keys } = await this.api.sys.uiConfigListCustomMessages(
       true,
       undefined,
-      message.authenticated
+      data.authenticated
     );
-    const messages = Object.values(keyInfo);
     return {
-      message,
-      messages: Object.values(messages),
+      message: new CustomMessage({ ...data, message: decodeString(data.message) }),
+      messages: keys.map((id) => ({ ...keyInfo[id], id })),
     };
   }
 

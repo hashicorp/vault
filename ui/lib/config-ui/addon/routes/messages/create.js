@@ -6,6 +6,8 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import CustomMessage from 'vault/forms/custom-message';
+import { addDays, startOfDay } from 'date-fns';
+import timestamp from 'core/utils/timestamp';
 
 export default class MessagesCreateRoute extends Route {
   @service api;
@@ -27,10 +29,15 @@ export default class MessagesCreateRoute extends Route {
 
   async model(params) {
     const { authenticated } = params;
-    const message = new CustomMessage({
-      authenticated,
-      type: 'banner',
-    });
+    const message = new CustomMessage(
+      {
+        authenticated,
+        type: 'banner',
+        startTime: addDays(startOfDay(timestamp.now()), 1).toISOString(),
+      },
+      { isNew: true }
+    );
+
     const messages = await this.getMessages(authenticated);
 
     return {
