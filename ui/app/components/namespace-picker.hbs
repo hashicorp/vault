@@ -6,7 +6,7 @@
 <div class="namespace-picker" ...attributes>
   <Hds::Dropdown @enableCollisionDetection={{true}} as |D|>
 
-    <D.ToggleButton @icon="org" @text={{(or this.selected.id "-")}} data-test-namespace-toggle />
+    <D.ToggleButton @icon="org" @text={{or this.selected.id "-"}} data-test-namespace-toggle />
 
     <D.Generic>
       {{this.namespaceLabel}}
