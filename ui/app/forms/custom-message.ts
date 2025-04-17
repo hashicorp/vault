@@ -4,8 +4,7 @@
  */
 import Form from './form';
 import FormField from 'vault/utils/forms/field';
-import { addDays, startOfDay, isBefore, isAfter } from 'date-fns';
-import timestamp from 'core/utils/timestamp';
+import { isBefore, isAfter } from 'date-fns';
 import { encodeString } from 'core/utils/b64';
 
 import type { CreateCustomMessageRequest } from '@hashicorp/vault-client-typescript';
@@ -16,86 +15,69 @@ type CustomMessageFormData = Partial<CreateCustomMessageRequest>;
 export default class CustomMessageForm extends Form {
   declare data: CustomMessageFormData;
 
-  authenticated = new FormField('authenticated', undefined, {
-    label: 'Where should we display this message?',
-    editType: 'radio',
-    fieldValue: 'authenticatedString',
-    possibleValues: [
-      {
-        label: 'After the user logs in',
-        subText: 'Display to users after they have successfully logged in to Vault.',
-        value: 'authenticated',
-      },
-      {
-        label: 'On the login page',
-        subText: 'Display to users on the login page before they have authenticated.',
-        value: 'unauthenticated',
-      },
-    ],
-  });
-
-  type = new FormField('type', 'string', {
-    label: 'Type',
-    editType: 'radio',
-    possibleValues: [
-      {
-        label: 'Alert message',
-        subText:
-          'A banner that appears on the top of every page to display brief but high-signal messages like an update or system alert.',
-        value: 'banner',
-      },
-      {
-        label: 'Modal',
-        subText: 'A pop-up window used to bring immediate attention for important notifications or actions.',
-        value: 'modal',
-      },
-    ],
-  });
-
-  title = new FormField('title', 'string');
-
-  message = new FormField('message', 'string', { editType: 'textarea' });
-
-  link = new FormField('link', 'string', {
-    editType: 'kv',
-    keyPlaceholder: 'Display text (e.g. Learn more)',
-    valuePlaceholder: 'Link URL (e.g. https://www.hashicorp.com/)',
-    label: 'Link (optional)',
-    isSingleRow: true,
-    allowWhiteSpace: true,
-  });
-
-  startTime = new FormField('startTime', 'dateTimeLocal', {
-    editType: 'dateTimeLocal',
-    label: 'Message starts',
-    subText: 'Defaults to 12:00 a.m. the following day (local timezone).',
-    defaultValue() {
-      return addDays(startOfDay(timestamp.now()), 1).toISOString();
-    },
-  });
-
-  endTime = new FormField('endTime', 'dateTimeLocal', {
-    editType: 'yield',
-    label: 'Message expires',
-  });
-
   formFields = [
-    this.authenticated,
-    this.type,
-    this.title,
-    this.message,
-    this.link,
-    this.startTime,
-    this.endTime,
+    new FormField('authenticated', undefined, {
+      label: 'Where should we display this message?',
+      editType: 'radio',
+      possibleValues: [
+        {
+          label: 'After the user logs in',
+          subText: 'Display to users after they have successfully logged in to Vault.',
+          value: true,
+          id: 'authenticated',
+        },
+        {
+          label: 'On the login page',
+          subText: 'Display to users on the login page before they have authenticated.',
+          value: false,
+          id: 'unauthenticated',
+        },
+      ],
+    }),
+
+    new FormField('type', 'string', {
+      label: 'Type',
+      editType: 'radio',
+      possibleValues: [
+        {
+          label: 'Alert message',
+          subText:
+            'A banner that appears on the top of every page to display brief but high-signal messages like an update or system alert.',
+          value: 'banner',
+        },
+        {
+          label: 'Modal',
+          subText:
+            'A pop-up window used to bring immediate attention for important notifications or actions.',
+          value: 'modal',
+        },
+      ],
+    }),
+
+    new FormField('title', 'string'),
+
+    new FormField('message', 'string', { editType: 'textarea' }),
+
+    new FormField('link', 'string', {
+      editType: 'kv',
+      keyPlaceholder: 'Display text (e.g. Learn more)',
+      valuePlaceholder: 'Link URL (e.g. https://www.hashicorp.com/)',
+      label: 'Link (optional)',
+      isSingleRow: true,
+      allowWhiteSpace: true,
+    }),
+
+    new FormField('startTime', 'dateTimeLocal', {
+      editType: 'dateTimeLocal',
+      label: 'Message starts',
+      subText: 'Defaults to 12:00 a.m. the following day (local timezone).',
+    }),
+
+    new FormField('endTime', 'dateTimeLocal', {
+      editType: 'yield',
+      label: 'Message expires',
+    }),
   ];
-
-  get authenticatedString() {
-    return this.data.authenticated ? 'authenticated' : 'unauthenticated';
-  }
-
-  set authenticatedString(value) {
-    this.data.authenticated = value === 'authenticated' ? true : false;
-  }
 
   validations: Validations = {
     title: [{ type: 'presence', message: 'Title is required.' }],
