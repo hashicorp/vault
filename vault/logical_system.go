@@ -541,9 +541,10 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 	sha256 := d.Get("sha256").(string)
 	if sha256 == "" {
 		sha256 = d.Get("sha_256").(string)
-		if resp := validateSHA256(sha256); resp.IsError() {
-			return resp, nil
-		}
+	}
+
+	if sha256 == "" && pluginVersion == "" {
+		return logical.ErrorResponse("must provide at least one of sha256 or version: use sha256 for binary registration (version optional) or version only for artifact registration"), nil
 	}
 
 	if resp := validateSha256IsEmptyForEntPluginVersion(pluginVersion, sha256); resp.IsError() {

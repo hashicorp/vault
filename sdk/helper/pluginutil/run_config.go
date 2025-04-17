@@ -30,7 +30,6 @@ const (
 )
 
 type PluginClientConfig struct {
-	EntPluginClientConfig
 	Name            string
 	PluginType      consts.PluginType
 	Version         string
@@ -41,6 +40,7 @@ type PluginClientConfig struct {
 	AutoMTLS        bool
 	MLock           bool
 	Wrapper         RunnerUtil
+	Tier            consts.PluginTier
 }
 
 type runConfig struct {

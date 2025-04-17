@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -28,4 +29,9 @@ func collectBackendSpecialPaths(backend logical.Backend, viewPath string, access
 	}
 
 	return ret
+}
+
+// setExternalPluginConfig sets key value pairs to config based on pluginutil.PluginRunner
+func setExternalPluginConfig(runner *pluginutil.PluginRunner, config map[string]string) {
+	config[pluginutil.ConfigPluginTier] = runner.Tier.String()
 }
