@@ -9,8 +9,8 @@ import { setupApplicationTest } from 'vault/tests/helpers';
 import { login, loginMethod, logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { createPolicyCmd, deleteAuthCmd, mountAuthCmd, runCmd } from '../helpers/commands';
 import { v4 as uuidv4 } from 'uuid';
-import { GENERAL } from '../helpers/general-selectors';
-import { AUTH_FORM } from '../helpers/auth/auth-form-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 
 const SUCCESS_MESSAGE = 'Successfully reset password';
 

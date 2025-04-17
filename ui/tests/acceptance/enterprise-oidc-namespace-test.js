@@ -10,7 +10,7 @@ import { runCmd, createNS } from 'vault/tests/helpers/commands';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import parseURL from 'core/utils/parse-url';
 import { login, loginNs, logout } from 'vault/tests/helpers/auth/auth-helpers';
-import { GENERAL } from '../helpers/general-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SELECTORS = {
   authTab: (path) => `[data-test-auth-method="${path}"] a`,

@@ -7,7 +7,7 @@ import { click, currentURL, currentRouteName, visit } from '@ember/test-helpers'
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
-import { GENERAL } from '../helpers/general-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | policies', function (hooks) {
   setupApplicationTest(hooks);
