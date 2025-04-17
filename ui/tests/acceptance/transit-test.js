@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn, find, currentURL, settled, visit, findAll } from '@ember/test-helpers';
+import { click, fillIn, find, currentURL, settled, visit, findAll, waitFor } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -11,7 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { encodeString } from 'vault/utils/b64';
 import authPage from 'vault/tests/pages/auth';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
-import codemirror from 'vault/tests/helpers/codemirror';
+import codemirror, { setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 import { GENERAL } from '../helpers/general-selectors';
 
 const SELECTORS = {
@@ -149,9 +149,12 @@ const testConvergentEncryption = async function (assert, keyName) {
   ];
 
   for (const testCase of tests) {
+    let editor;
     await click('[data-test-transit-action-link="encrypt"]');
 
-    codemirror('#plaintext-control').setValue(testCase.plaintext);
+    await waitFor('.cm-editor');
+    editor = codemirror('#plaintext-control');
+    setCodeEditorValue(editor, testCase.plaintext);
     await fillIn('[data-test-transit-input="context"]', testCase.context);
 
     if (!testCase.encodePlaintext) {
@@ -180,7 +183,9 @@ const testConvergentEncryption = async function (assert, keyName) {
       testCase.assertBeforeDecrypt(keyName);
     }
 
-    codemirror('#ciphertext-control').setValue(copiedCiphertext);
+    await waitFor('.cm-editor');
+    editor = codemirror('#ciphertext-control');
+    setCodeEditorValue(editor, copiedCiphertext);
     await click('[data-test-button-decrypt]');
 
     if (testCase.assertAfterDecrypt) {
