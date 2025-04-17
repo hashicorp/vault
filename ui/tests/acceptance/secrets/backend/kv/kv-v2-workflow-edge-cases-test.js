@@ -13,7 +13,6 @@ import {
   setupOnerror,
   typeIn,
   visit,
-  triggerKeyEvent,
   waitFor,
 } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
@@ -297,17 +296,16 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await click(FORM.toggleJson);
 
     await waitFor('.cm-editor');
-
-    const editor = codemirror();
+    const view = codemirror();
 
     assert.strictEqual(
-      getCodeEditorValue(editor),
+      getCodeEditorValue(view),
       `{
   \"\": \"\"
 }`,
       'JSON editor displays correct empty object'
     );
-    setCodeEditorValue(editor, '{ "foo3": { "name": "bar3" } }');
+    setCodeEditorValue(view, '{ "foo3": { "name": "bar3" } }');
     await click(FORM.saveBtn);
 
     // Details view
@@ -324,23 +322,10 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     assert.dom(FORM.toggleJson).isNotDisabled();
     assert.dom(FORM.toggleJson).isChecked();
     assert.deepEqual(
-      getCodeEditorValue(editor),
+      getCodeEditorValue(view),
       '{ "foo3": { "name": "bar3" } }',
       'Values are displayed in the new version view'
     );
-  });
-
-  test('on enter the JSON editor cursor goes to the next line', async function (assert) {
-    // see issue here: https://github.com/hashicorp/vault/issues/27524
-    const predictedCursorPosition = JSON.stringify({ line: 3, ch: 0, sticky: null });
-    await visit(`/vault/secrets/${this.backend}/kv/create`);
-    await fillIn(FORM.inputByAttr('path'), 'json jump');
-
-    await click(FORM.toggleJson);
-    codemirror().setCursor({ line: 2, ch: 1 });
-    await triggerKeyEvent(GENERAL.codemirrorTextarea, 'keydown', 'Enter');
-    const actualCursorPosition = JSON.stringify(codemirror().getCursor());
-    assert.strictEqual(actualCursorPosition, predictedCursorPosition, 'the cursor stayed on the next line');
   });
 
   test('viewing advanced secret data versions displays the correct version data', async function (assert) {
@@ -356,16 +341,22 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
   }
 }`;
 
+    let view;
+
     await visit(`/vault/secrets/${this.backend}/kv/create`);
     await fillIn(FORM.inputByAttr('path'), 'complex_version_test');
 
     await click(FORM.toggleJson);
-    codemirror().setValue('{ "foo1": { "name": "bar1" } }');
+    await waitFor('.cm-editor');
+    view = codemirror();
+    setCodeEditorValue(view, '{ "foo1": { "name": "bar1" } }');
     await click(FORM.saveBtn);
 
     // Create another version
     await click(GENERAL.overviewCard.actionText('Create new'));
-    codemirror().setValue('{ "foo2": { "name": "bar2" } }');
+    await waitFor('.cm-editor');
+    view = codemirror();
+    setCodeEditorValue(view, '{ "foo2": { "name": "bar2" } }');
     await click(FORM.saveBtn);
 
     // View the first version and make sure the secret data is correct

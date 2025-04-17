@@ -29,6 +29,8 @@ import { action } from '@ember/object';
  */
 
 export default class JsonEditorComponent extends Component {
+  _codemirrorEditor = null;
+
   get mode() {
     return this.args.mode ?? 'json';
   }
@@ -51,7 +53,15 @@ export default class JsonEditorComponent extends Component {
 
   @action
   restoreExample() {
-    // set value to null which will cause the example value to be passed into the editor
+    this._codemirrorEditor.dispatch({
+      changes: [
+        {
+          from: 0,
+          to: this._codemirrorEditor.state.doc.length,
+          insert: this.args.example,
+        },
+      ],
+    });
     this.args.valueUpdated(null, this._codemirrorEditor);
   }
 }
