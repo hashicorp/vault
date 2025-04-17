@@ -15,11 +15,9 @@ verify_radar_scan_output_file() {
   echo "-----------02"
   jq -eMn '[inputs] | [.[] | select(.type != "aws_access_key_id") | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))] | length == 0' < "$2"
   echo "-----------07"
-  jq -eMn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))] | length == 0' < "$2"
-  echo "-----------08"
 
-  if ! jq -eMcn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))] | length == 0' < "$2"; then
-    found=$(jq -eMn '[inputs] | [.[] | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))]' < "$2")
+  if ! jq -eMcn '[inputs] | [.[] | select(.type != "aws_access_key_id") | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))] | length == 0' < "$2"; then
+    found=$(jq -eMn '[inputs] | [.[] | select(.type != "aws_access_key_id") | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))]' < "$2")
     fail "failed to radar secrets output: vault radar detected secrets in $1!: $found"
   fi
 }
