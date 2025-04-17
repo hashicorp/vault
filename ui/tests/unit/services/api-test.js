@@ -111,13 +111,19 @@ module('Unit | Service | api', function (hooks) {
   });
 
   test('it should show warnings', async function (assert) {
-    const warnings = ['warning1', 'warning2'];
-    const response = new Response(JSON.stringify({ warnings }));
+    const warnings = JSON.stringify({ warnings: ['warning1', 'warning2'] });
+    const response = new Response(warnings, { headers: { 'Content-Length': warnings.length } });
 
     await this.apiService.showWarnings({ response });
 
-    assert.true(this.info.firstCall.calledWith(warnings[0]), 'First warning message is shown');
-    assert.true(this.info.secondCall.calledWith(warnings[1]), 'Second warning message is shown');
+    assert.true(this.info.firstCall.calledWith('warning1'), 'First warning message is shown');
+    assert.true(this.info.secondCall.calledWith('warning2'), 'Second warning message is shown');
+  });
+
+  test('it should not attempt to set warnings for empty response', async function (assert) {
+    const response = new Response();
+    await this.apiService.showWarnings({ response });
+    assert.true(this.info.notCalled, 'No warning messages are shown');
   });
 
   test('it should delete control group token', async function (assert) {

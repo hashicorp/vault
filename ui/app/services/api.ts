@@ -17,6 +17,7 @@ import {
   RequestOpts,
 } from '@hashicorp/vault-client-typescript';
 import config from '../config/environment';
+import { waitForPromise } from '@ember/test-waiters';
 
 import type AuthService from 'vault/services/auth';
 import type NamespaceService from 'vault/services/namespace';
@@ -83,12 +84,15 @@ export default class ApiService extends Service {
   // -- Post Request Middleware --
   showWarnings = async (context: ResponseContext) => {
     const response = context.response.clone();
-    const json = await response?.json();
+    // if the response is empty, don't try to parse it
+    if (response.headers.get('Content-Length')) {
+      const json = await response.json();
 
-    if (json?.warnings) {
-      json.warnings.forEach((message: string) => {
-        this.flashMessages.info(message);
-      });
+      if (json?.warnings) {
+        json.warnings.forEach((message: string) => {
+          this.flashMessages.info(message);
+        });
+      }
     }
   };
 
@@ -132,6 +136,9 @@ export default class ApiService extends Service {
       { post: this.deleteControlGroupToken },
       { post: this.formatErrorResponse },
     ],
+    fetchApi: (...args: [Request]) => {
+      return waitForPromise(window.fetch(...args));
+    },
   });
 
   auth = new AuthApi(this.configuration);
