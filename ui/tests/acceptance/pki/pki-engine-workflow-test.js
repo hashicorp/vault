@@ -8,7 +8,6 @@ import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
-import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { click, currentURL, fillIn, find, isSettled, visit } from '@ember/test-helpers';
 import { adminPolicy, readerPolicy, updatePolicy } from 'vault/tests/helpers/pki/policy-generator';
@@ -43,12 +42,10 @@ module('Acceptance | pki workflow', function (hooks) {
     const mountPath = `pki-workflow-${uuidv4()}`;
     await enablePage.enable('pki', mountPath);
     this.mountPath = mountPath;
-    await logout.visit();
     clearRecords(this.store);
   });
 
   hooks.afterEach(async function () {
-    await logout.visit();
     await login();
     // Cleanup engine
     await runCmd([`delete sys/mounts/${this.mountPath}`]);
@@ -59,7 +56,6 @@ module('Acceptance | pki workflow', function (hooks) {
       await login();
       const pki_admin_policy = adminPolicy(this.mountPath, 'roles');
       this.pkiAdminToken = await runCmd(tokenWithPolicyCmd(`pki-admin-${this.mountPath}`, pki_admin_policy));
-      await logout.visit();
       clearRecords(this.store);
     });
 
@@ -123,7 +119,6 @@ module('Acceptance | pki workflow', function (hooks) {
         tokenWithPolicyCmd(`pki-editor-${this.mountPath}`, pki_editor_policy)
       );
       this.pkiAdminToken = await runCmd(tokenWithPolicyCmd(`pki-admin-${this.mountPath}`, pki_admin_policy));
-      await logout.visit();
       clearRecords(this.store);
     });
 
@@ -259,7 +254,6 @@ module('Acceptance | pki workflow', function (hooks) {
       this.pkiKeyReader = await runCmd(tokenWithPolicyCmd(`pki-reader-${this.mountPath}`, pki_reader_policy));
       this.pkiKeyEditor = await runCmd(tokenWithPolicyCmd(`pki-editor-${this.mountPath}`, pki_editor_policy));
       this.pkiAdminToken = await runCmd(tokenWithPolicyCmd(`pki-admin-${this.mountPath}`, pki_admin_policy));
-      await logout.visit();
       clearRecords(this.store);
     });
 
@@ -382,7 +376,6 @@ module('Acceptance | pki workflow', function (hooks) {
       await runCmd([
         `write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test" name="Hashicorp Test"`,
       ]);
-      await logout.visit();
       clearRecords(this.store);
     });
     test('lists the correct issuer metadata info', async function (assert) {
@@ -414,7 +407,6 @@ module('Acceptance | pki workflow', function (hooks) {
       this.token = await runCmd(
         tokenWithPolicyCmd(`pki-issuer-denied-policy-${this.mountPath}`, pki_issuer_denied_policy)
       );
-      await logout.visit();
       await login(this.token);
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(GENERAL.secretTab('Issuers'));
@@ -489,7 +481,6 @@ module('Acceptance | pki workflow', function (hooks) {
     hooks.beforeEach(async function () {
       await login();
       await runCmd([`write ${this.mountPath}/root/generate/internal issuer_name="existing-issuer"`]);
-      await logout.visit();
     });
     test('it renders a warning banner when parent issuer has unsupported OIDs', async function (assert) {
       await login();
@@ -530,7 +521,7 @@ module('Acceptance | pki workflow', function (hooks) {
       this.mixedConfigCapabilities = await runCmd(
         tokenWithPolicyCmd(`pki-reader-${this.mountPath}`, mixed_config_policy)
       );
-      await logout.visit();
+      await visit('/vault/logout');
     });
 
     test('it updates config when user only has permission to some endpoints', async function (assert) {

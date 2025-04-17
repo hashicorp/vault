@@ -24,7 +24,6 @@ import page from 'vault/tests/pages/settings/mount-secret-backend';
 import configPage from 'vault/tests/pages/secrets/backend/configuration';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
-import logout from 'vault/tests/pages/logout';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import { CONFIGURATION_ONLY, mountableEngines } from 'vault/helpers/mountable-secret-engines';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
@@ -181,7 +180,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     );
     await settled();
     const userToken = consoleComponent.lastLogOutput;
-    await logout.visit();
+
     await login(userToken);
     // create the engine
     await mountSecrets.visit();
@@ -347,7 +346,6 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     });
 
     test('it allows a user with permissions to oidc/key to create an identity_token_key', async function (assert) {
-      logout.visit();
       const engine = 'aws'; // only testing aws of the WIF engines as the functionality for all others WIF engines in this form are the same
       await login();
       const path = `secrets-adminPolicy-${engine}`;
@@ -357,7 +355,6 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
         tokenWithPolicyCmd(`secrets-admin-${path}`, secrets_admin_policy)
       );
 
-      await logout.visit();
       await login(secretsAdminToken);
       await visit('/vault/settings/mount-secret-backend');
       await click(MOUNT_BACKEND_FORM.mountType(engine));
@@ -387,11 +384,9 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       await runCmd(`delete sys/mounts/${path}`);
       await runCmd(`delete identity/oidc/key/some-key`);
       await runCmd(`delete identity/oidc/key/${newKey}`);
-      await logout.visit();
     });
 
     test('it allows user with NO access to oidc/key to manually input an identity_token_key', async function (assert) {
-      await logout.visit();
       const engine = 'aws'; // only testing aws of the WIF engines as the functionality for all others WIF engines in this form are the same
       await login();
       const path = `secrets-noOidcAdmin-${engine}`;
@@ -402,7 +397,6 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       // create an oidc/key that they can then use even if they can't read it.
       await runCmd(`write identity/oidc/key/general-key allowed_client_ids="*"`);
 
-      await logout.visit();
       await login(secretsNoOidcAdminToken);
       await page.visit();
       await click(MOUNT_BACKEND_FORM.mountType(engine));
@@ -424,7 +418,6 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
 
       // cleanup
       await runCmd(`delete sys/mounts/${path}`);
-      await logout.visit();
     });
   });
 });

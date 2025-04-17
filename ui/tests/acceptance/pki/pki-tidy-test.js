@@ -11,7 +11,6 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { v4 as uuidv4 } from 'uuid';
 
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
-import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -30,11 +29,9 @@ module('Acceptance | pki tidy', function (hooks) {
     await runCmd([
       `write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test" name="Hashicorp Test"`,
     ]);
-    await logout.visit();
   });
 
   hooks.afterEach(async function () {
-    await logout.visit();
     await login();
     // Cleanup engine
     await runCmd([`delete sys/mounts/${this.mountPath}`]);

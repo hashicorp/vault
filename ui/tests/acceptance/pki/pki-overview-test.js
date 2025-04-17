@@ -8,7 +8,6 @@ import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
-import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { click, currentURL, currentRouteName, visit } from '@ember/test-helpers';
 import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
@@ -47,12 +46,11 @@ module('Acceptance | pki overview', function (hooks) {
     this.pkiRolesList = await runCmd(tokenWithPolicyCmd('pki-roles-list', pki_roles_list_policy));
     this.pkiIssuersList = await runCmd(tokenWithPolicyCmd('pki-issuers-list', pki_issuers_list_policy));
     this.pkiAdminToken = await runCmd(tokenWithPolicyCmd('pki-admin', pki_admin_policy));
-    await logout.visit();
+
     clearRecords(this.store);
   });
 
   hooks.afterEach(async function () {
-    await logout.visit();
     await login();
     // Cleanup engine
     await runCmd([`delete sys/mounts/${this.mountPath}`]);

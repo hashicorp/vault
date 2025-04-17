@@ -10,7 +10,6 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { v4 as uuidv4 } from 'uuid';
 
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
-import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -28,11 +27,10 @@ module('Acceptance | pki action forms test', function (hooks) {
     const mountPath = `pki-workflow-${uuidv4()}`;
     await enablePage.enable('pki', mountPath);
     this.mountPath = mountPath;
-    await logout.visit();
+    await visit('/vault/logout');
   });
 
   hooks.afterEach(async function () {
-    await logout.visit();
     await login();
     // Cleanup engine
     await runCmd([`delete sys/mounts/${this.mountPath}`]);

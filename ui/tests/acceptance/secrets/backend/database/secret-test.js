@@ -15,7 +15,6 @@ import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import connectionPage from 'vault/tests/pages/secrets/backend/database/connection';
 import rolePage from 'vault/tests/pages/secrets/backend/database/role';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
-import logout from 'vault/tests/pages/logout';
 import searchSelect from 'vault/tests/pages/components/search-select';
 import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 
@@ -523,7 +522,6 @@ module('Acceptance | secrets/database/*', function (hooks) {
       .hasText('Reset connection', 'Reset button exists with correct text');
     assert.dom('[data-test-secret-create]').hasText('Add role', 'Add role button exists with correct text');
     assert.dom('[data-test-edit-link]').hasText('Edit configuration', 'Edit button exists with correct text');
-    await logout();
     // Check with restricted permissions
     await login(token);
     await click('[data-test-sidebar-nav-link="Secrets Engines"]');
@@ -628,7 +626,6 @@ module('Acceptance | secrets/database/*', function (hooks) {
     assert.strictEqual(currentURL(), `/vault/secrets/${backend}/create?itemType=connection`);
 
     // Login with restricted policy
-    await logout.visit();
     await login(token);
     await visit(`/vault/secrets/${backend}/overview`);
     assert.dom('[data-test-tab="overview"]').exists('renders overview tab');

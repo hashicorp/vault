@@ -14,7 +14,6 @@ import listPage from 'vault/tests/pages/secrets/backend/list';
 
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
-import logout from 'vault/tests/pages/logout';
 import { writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
@@ -24,7 +23,6 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SS } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
 const deleteEngine = async function (enginePath, assert) {
-  await logout.visit();
   await login();
 
   const response = await runCmd([`delete sys/mounts/${enginePath}`]);

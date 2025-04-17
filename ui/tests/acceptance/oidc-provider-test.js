@@ -8,7 +8,6 @@ import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
-import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
 import { visit, settled, currentURL, waitFor, currentRouteName, fillIn, click } from '@ember/test-helpers';
 import { clearRecord } from 'vault/tests/helpers/oidc-config';
@@ -138,8 +137,7 @@ module('Acceptance | oidc provider', function (hooks) {
     assert
       .dom(`[data-test-oidc-client-linked-block='${WEB_APP_NAME}']`)
       .exists({ count: 1 }, 'shows webapp in oidc provider list');
-    await logout.visit();
-    await settled();
+    await visit('/vault/logout');
     const url = getAuthzUrl(providerName, callback, clientId);
     await visit(url);
 
@@ -200,7 +198,7 @@ module('Acceptance | oidc provider', function (hooks) {
   test('OIDC Provider shows consent form when prompt = consent', async function (assert) {
     const { providerName, callback, clientId, authMethodPath } = this.oidcSetupInformation;
     const url = getAuthzUrl(providerName, callback, clientId, { prompt: 'consent' });
-    await logout.visit();
+    await visit('/vault/logout');
     await fillIn(AUTH_FORM.method, authMethodPath);
     await fillIn(GENERAL.inputByAttr('username'), OIDC_USER);
     await fillIn(GENERAL.inputByAttr('password'), USER_PASSWORD);
