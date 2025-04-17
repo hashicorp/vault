@@ -1881,10 +1881,6 @@
       {
         "title": "GCP Secret Manager",
         "path": "import/gcpsm"
-      },
-      {
-        "title": "HashiCorp Vault",
-        "path": "import/vault"
       }
     ]
   },
