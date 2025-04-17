@@ -5,20 +5,20 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import sinon from 'sinon';
 import { click, fillIn, find, waitUntil } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
 import authPage from 'vault/tests/pages/auth';
-import { WindowStub } from 'vault/tests/helpers/oidc-window-stub';
+import { windowStub } from 'vault/tests/helpers/oidc-window-stub';
 import { setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | enterprise saml auth method', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.openStub = sinon.stub(window, 'open').callsFake(() => new WindowStub());
+    this.openStub = windowStub();
     this.server.put('/auth/saml/sso_service_url', () => ({
       data: {
         sso_service_url: 'http://sso-url.hashicorp.com/service',
@@ -130,19 +130,19 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
     // select saml auth type
     await waitUntil(() => find('[data-test-select="auth-method"]'));
     await fillIn('[data-test-select="auth-method"]', 'saml');
-    await fillIn('[data-test-auth-form-ns-input]', 'some-ns');
+    await fillIn(GENERAL.inputByAttr('namespace'), 'some-ns');
     await click('[data-test-auth-submit]');
     assert
       .dom('[data-test-message-error-description]')
       .hasText("missing required 'role' parameter", 'shows API error from role fetch');
 
-    await fillIn('[data-test-role]', 'my-role');
+    await fillIn(GENERAL.inputByAttr('role'), 'my-role');
     await click('[data-test-auth-submit]');
     assert
       .dom('[data-test-message-error-description]')
       .hasText('something went wrong', 'shows API error from login attempt');
 
-    await fillIn('[data-test-auth-form-ns-input]', '');
+    await fillIn(GENERAL.inputByAttr('namespace'), '');
     await click('[data-test-auth-submit]');
   });
 

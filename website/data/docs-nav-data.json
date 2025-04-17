@@ -2276,7 +2276,7 @@
       {
         "title": "Venafi (Certificates)",
         "path": "secrets/venafi",
-        "hidden": "true"
+        "hidden": true
       }
     ]
   },
@@ -2915,7 +2915,7 @@
         "title": "Manage policies as code",
         "routes": [
           {
-            "title": "Mange Vault policies with Sentinel",
+            "title": "Manage Vault policies with Sentinel",
             "path": "enterprise/sentinel"
           },
           {

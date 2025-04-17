@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"os"
 	"slices"
@@ -213,11 +214,18 @@ type ActivityLog struct {
 	// is written. It's used for unit testing
 	precomputedQueryWritten chan struct{}
 
+	clientIDsUsage ClientUsageInfo
+}
+
+type ClientUsageInfo struct {
+	// clientIDsUsageInfoLock controls access to the ClientUsageInfo
+	clientIDsUsageInfoLock sync.RWMutex
+
+	// setupClientIDsUsageInfoCancelCtx is used to cancel and restart setupClientIDsUsageInfo goroutine during reloads
+	setupClientIDsUsageInfoCancelCtx context.CancelFunc
+
 	// The clientIDsUsageInfo map has clientIDs that have been used in the current billing period
 	clientIDsUsageInfo map[string]struct{}
-
-	// clientIDsUsageInfoLock controls access to the clientIDsUsageInfo
-	clientIDsUsageInfoLock sync.RWMutex
 
 	// clientIDsUsageInfoLoaded is set to true when the clientIDsUsageInfo has up-to date information upon startup.
 	// This ensures that the counters api returns exact values for new clients in the current month upon startup.
@@ -341,8 +349,10 @@ func NewActivityLog(core *Core, logger log.Logger, view *BarrierView, metrics me
 		standbyFragmentsReceived: make([]*activity.LogFragment, 0),
 		inprocessExport:          atomic.NewBool(false),
 		precomputedQueryWritten:  make(chan struct{}),
-		clientIDsUsageInfo:       make(map[string]struct{}),
-		clientIDsUsageInfoLoaded: new(atomic.Bool),
+		clientIDsUsage: ClientUsageInfo{
+			clientIDsUsageInfo:       make(map[string]struct{}),
+			clientIDsUsageInfoLoaded: new(atomic.Bool),
+		},
 	}
 
 	config, err := a.loadConfigOrDefault(core.activeContext)
@@ -1311,8 +1321,12 @@ func (a *ActivityLog) loadClientIDsToMemory(ctx context.Context, startTime, endT
 	}
 	a.logger.Info("finished loading segments to store client IDs in memory")
 
+	// add the new clients to the existing map in memory
+	clientIDsUsageInfo := a.GetClientIDsUsageInfo()
+	maps.Copy(clientIDsUsageInfo, inMemClientIDsMap)
+
 	// update in-memory map in activity log
-	a.SetClientIDsUsageInfo(inMemClientIDsMap)
+	a.SetClientIDsUsageInfo(clientIDsUsageInfo)
 	return nil
 }
 
@@ -1367,8 +1381,8 @@ func (a *ActivityLog) getStartTimeAndEndTimeUntilLastMonth(entireBillingPeriod b
 	endOfLastMonth := timeutil.EndOfMonth(startOfLastMonth)
 
 	if entireBillingPeriod {
-		// startTime is the billing start time and endTime is the end of last month
-		return currBillingPeriodStartTime, endOfLastMonth
+		// startTime is the start of month of billing start time and endTime is the end of last month
+		return timeutil.StartOfMonth(currBillingPeriodStartTime), endOfLastMonth
 	}
 	return startOfLastMonth, endOfLastMonth
 }
@@ -1700,6 +1714,10 @@ func (a *ActivityLog) HandleEndOfMonth(ctx context.Context, currentTime time.Tim
 	// Work on precomputed queries in background
 	go a.precomputedQueryWorker(ctx, nil)
 
+	// update the clientIDs in memory for the last month.
+	// if new billing cycle is detected, reset clientIDs in memory
+	a.handleClientIDsInMemoryEndOfMonth(ctx, currentTime)
+
 	return nil
 }
 
@@ -2024,18 +2042,14 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 
 	// Now populate the response based on breakdowns.
 	responseData := make(map[string]interface{})
-	responseData["start_time"] = pq.StartTime.Format(time.RFC3339)
+	responseData["start_time"] = startTime.Format(time.RFC3339)
 
 	// If we computed partial counts, we should return the actual end time we computed counts for, not the pre-computed
 	// query end time. If we don't do this, the end_time in the response doesn't match the actual data in the response,
 	// which is confusing. Note that regardless of what end time is given, if it falls within the current month, it will
 	// be set to the end of the current month. This is definitely suboptimal, and possibly confusing, but still an
 	// improvement over using the pre-computed query end time.
-	if computePartial {
-		responseData["end_time"] = endTime.Format(time.RFC3339)
-	} else {
-		responseData["end_time"] = pq.EndTime.Format(time.RFC3339)
-	}
+	responseData["end_time"] = endTime.Format(time.RFC3339)
 
 	responseData["by_namespace"] = byNamespaceResponse
 	responseData["total"] = totalCounts

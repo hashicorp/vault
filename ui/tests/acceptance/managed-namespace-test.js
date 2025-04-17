@@ -8,6 +8,7 @@ import { currentURL, visit, fillIn } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import { getManagedNamespace } from 'vault/routes/vault/cluster';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 
 module('Acceptance | Enterprise | Managed namespace root', function (hooks) {
   setupApplicationTest(hooks);
@@ -24,7 +25,7 @@ module('Acceptance | Enterprise | Managed namespace root', function (hooks) {
     assert.ok(currentURL().startsWith('/vault/auth'), 'Redirected to auth');
     assert.ok(currentURL().includes('?namespace=admin'), 'with base namespace');
     assert.dom('[data-test-namespace-toolbar]').exists('Namespace toolbar exists');
-    assert.dom('[data-test-managed-namespace-root]').hasText('/admin', 'Shows /admin namespace prefix');
+    assert.dom(AUTH_FORM.managedNsRoot).hasText('/admin', 'Shows /admin namespace prefix');
     assert.dom('input#namespace').hasAttribute('placeholder', '/ (Default)');
     await fillIn('input#namespace', '/foo');
     const encodedNamespace = encodeURIComponent('admin/foo');
@@ -64,7 +65,7 @@ module('Acceptance | Enterprise | Managed namespace root', function (hooks) {
       'with appended namespace'
     );
 
-    assert.dom('[data-test-managed-namespace-root]').hasText('/admin', 'Shows /admin namespace prefix');
+    assert.dom(AUTH_FORM.managedNsRoot).hasText('/admin', 'Shows /admin namespace prefix');
     assert.dom('input#namespace').hasValue('/admindev', 'Input has /dev value');
   });
 });
