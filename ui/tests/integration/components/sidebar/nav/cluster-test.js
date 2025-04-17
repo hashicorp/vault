@@ -213,7 +213,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     assert.dom(GENERAL.navLink('Vault Usage')).exists();
   });
 
-  test('it does NOT show Vault Usage when user is not enterprise', async function (assert) {
+  test('it does NOT show Vault Usage when user is user is on CE || OSS || community', async function (assert) {
     stubFeaturesAndPermissions(this.owner, false);
     await renderComponent();
     assert.dom(GENERAL.navLink('Vault Usage')).doesNotExist();
@@ -236,7 +236,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     assert.dom(GENERAL.navLink('Vault Usage')).doesNotExist();
   });
 
-  test('it does NOT Vault Usage if the user has the necessary permission but not enterprise', async function (assert) {
+  test('it does NOT Vault Usage if the user has the necessary permission but user is on CE || OSS || community', async function (assert) {
     // no permissions
     const stubs = stubFeaturesAndPermissions(this.owner, false, false, [], false);
 
