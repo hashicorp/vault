@@ -13,7 +13,6 @@ import {
   setupOnerror,
   typeIn,
   visit,
-  triggerKeyEvent,
   waitFor,
 } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
@@ -298,17 +297,16 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await click(GENERAL.toggleInput('json'));
 
     await waitFor('.cm-editor');
-
-    const editor = codemirror();
+    const view = codemirror();
 
     assert.strictEqual(
-      getCodeEditorValue(editor),
+      getCodeEditorValue(view),
       `{
   \"\": \"\"
 }`,
       'JSON editor displays correct empty object'
     );
-    setCodeEditorValue(editor, '{ "foo3": { "name": "bar3" } }');
+    setCodeEditorValue(view, '{ "foo3": { "name": "bar3" } }');
     await click(FORM.saveBtn);
 
     // Details view
@@ -325,7 +323,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     assert.dom(GENERAL.toggleInput('json')).isNotDisabled();
     assert.dom(GENERAL.toggleInput('json')).isChecked();
     assert.deepEqual(
-      getCodeEditorValue(editor),
+      getCodeEditorValue(view),
       '{ "foo3": { "name": "bar3" } }',
       'Values are displayed in the new version view'
     );
@@ -357,16 +355,22 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
   }
 }`;
 
+    let view;
+
     await visit(`/vault/secrets/${this.backend}/kv/create`);
     await fillIn(FORM.inputByAttr('path'), 'complex_version_test');
 
     await click(GENERAL.toggleInput('json'));
-    codemirror().setValue('{ "foo1": { "name": "bar1" } }');
+    await waitFor('.cm-editor');
+    view = codemirror();
+    setCodeEditorValue(view, '{ "foo1": { "name": "bar1" } }');
     await click(FORM.saveBtn);
 
     // Create another version
     await click(GENERAL.overviewCard.actionText('Create new'));
-    codemirror().setValue('{ "foo2": { "name": "bar2" } }');
+    await waitFor('.cm-editor');
+    view = codemirror();
+    setCodeEditorValue(view, '{ "foo2": { "name": "bar2" } }');
     await click(FORM.saveBtn);
 
     // View the first version and make sure the secret data is correct
