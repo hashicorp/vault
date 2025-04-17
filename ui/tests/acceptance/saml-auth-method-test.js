@@ -11,6 +11,7 @@ import { Response } from 'miragejs';
 import authPage from 'vault/tests/pages/auth';
 import { windowStub } from 'vault/tests/helpers/oidc-window-stub';
 import { setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | enterprise saml auth method', function (hooks) {
   setupApplicationTest(hooks);
@@ -129,19 +130,19 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
     // select saml auth type
     await waitUntil(() => find('[data-test-select="auth-method"]'));
     await fillIn('[data-test-select="auth-method"]', 'saml');
-    await fillIn('[data-test-auth-form-ns-input]', 'some-ns');
+    await fillIn(GENERAL.inputByAttr('namespace'), 'some-ns');
     await click('[data-test-auth-submit]');
     assert
       .dom('[data-test-message-error-description]')
       .hasText("missing required 'role' parameter", 'shows API error from role fetch');
 
-    await fillIn('[data-test-role]', 'my-role');
+    await fillIn(GENERAL.inputByAttr('role'), 'my-role');
     await click('[data-test-auth-submit]');
     assert
       .dom('[data-test-message-error-description]')
       .hasText('something went wrong', 'shows API error from login attempt');
 
-    await fillIn('[data-test-auth-form-ns-input]', '');
+    await fillIn(GENERAL.inputByAttr('namespace'), '');
     await click('[data-test-auth-submit]');
   });
 

@@ -13,12 +13,12 @@ export default create({
   visit: visitable('/vault/auth'),
   logout: visitable('/vault/logout'),
   submit: clickable('[data-test-auth-submit]'),
-  tokenInput: fillable('[data-test-token]'),
-  usernameInput: fillable('[data-test-username]'),
-  passwordInput: fillable('[data-test-password]'),
-  namespaceInput: fillable('[data-test-auth-form-ns-input]'),
+  tokenInput: fillable('[data-test-input="token"]'),
+  usernameInput: fillable('[data-test-input="username"]'),
+  passwordInput: fillable('[data-test-input="password"]'),
+  namespaceInput: fillable('[data-test-input="namespace"]'),
   optionsToggle: clickable('[data-test-auth-form-options-toggle]'),
-  mountPath: fillable('[data-test-auth-form-mount-path]'),
+  mountPath: fillable('[data-test-input="path"]'),
   authType: fillable('[data-test-select="auth-method"]'),
 
   login: async function (token = rootToken) {

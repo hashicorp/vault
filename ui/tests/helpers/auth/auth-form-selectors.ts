@@ -10,12 +10,10 @@ export const AUTH_FORM = {
   tabs: (method: string) => (method ? `[data-test-auth-method="${method}"]` : '[data-test-auth-method]'),
   tabBtn: (method: string) => `[data-test-auth-method="${method}"] button`,
   description: '[data-test-description]',
-  roleInput: '[data-test-role]',
-  input: (item: string) => `[data-test-${item}]`, // i.e. jwt, role, token, password or username
-  mountPathInput: '[data-test-auth-form-mount-path]',
+  // old form toggle, will eventually be deleted
   moreOptions: '[data-test-auth-form-options-toggle]',
+  // new toggle, hds component is a button
   advancedSettings: '[data-test-auth-form-options-toggle] button',
-  namespaceInput: '[data-test-auth-form-ns-input]',
   managedNsRoot: '[data-test-managed-namespace-root]',
   logo: '[data-test-auth-logo]',
   helpText: '[data-test-auth-helptext]',
