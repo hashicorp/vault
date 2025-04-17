@@ -45,10 +45,10 @@ module('Acceptance | auth', function (hooks) {
 
   test('it clears token when changing selected auth method', async function (assert) {
     await visit('/vault/auth');
-    await fillIn(AUTH_FORM.input('token'), 'token');
+    await fillIn(GENERAL.inputByAttr('token'), 'token');
     await fillIn(AUTH_FORM.method, 'github');
     await fillIn(AUTH_FORM.method, 'token');
-    assert.dom(AUTH_FORM.input('token')).hasNoValue('it clears the token value when toggling methods');
+    assert.dom(GENERAL.inputByAttr('token')).hasNoValue('it clears the token value when toggling methods');
   });
 
   module('it sends the right payload when authenticating', function (hooks) {
@@ -169,15 +169,14 @@ module('Acceptance | auth', function (hooks) {
 
         if (type !== 'token') {
           // set custom mount
-          await click('[data-test-auth-form-options-toggle]');
-          await fillIn('[data-test-auth-form-mount-path]', `custom-${type}`);
+          await click(AUTH_FORM.moreOptions);
+          await fillIn(GENERAL.inputByAttr('path'), `custom-${type}`);
         }
-        backend.formAttributes.forEach(async (key) => {
+        for (const key of backend.formAttributes) {
           // fill in all form items, except JWT which is not rendered
           if (key === 'jwt') return;
-          await fillIn(`[data-test-${key}]`, `some-${key}`);
-        });
-
+          await fillIn(GENERAL.inputByAttr(key), `some-${key}`);
+        }
         await click(AUTH_FORM.login);
       });
     }
@@ -197,7 +196,7 @@ module('Acceptance | auth', function (hooks) {
       },
       { timing: 1000 }
     );
-    await visit('/vault/auth');
+    await visit('/vault/auth?with=token');
     await fillIn(AUTH_FORM.method, 'token');
     await click('[data-test-auth-submit]');
   });
@@ -248,8 +247,8 @@ module('Acceptance | auth', function (hooks) {
       const inputValues = {
         username: user,
         password: user,
-        'auth-form-mount-path': userpass,
-        'auth-form-ns-input': ns,
+        path: userpass,
+        namespace: ns,
       };
 
       // login as user just to get token (this is the only way to generate a token in the UI right now..)
@@ -277,7 +276,7 @@ module('Acceptance | auth', function (hooks) {
 
       // cleanup
       await visit(`/vault/logout?namespace=${ns}`);
-      await fillIn(AUTH_FORM.namespaceInput, ''); // clear login form namespace input
+      await fillIn(GENERAL.inputByAttr('namespace'), ''); // clear login form namespace input
       await login();
       await runCmd([`delete sys/namespaces/${ns}`], false);
     });
@@ -294,7 +293,7 @@ module('Acceptance | auth', function (hooks) {
         );
         return { errors: ['permission denied'] };
       });
-      await typeIn(AUTH_FORM.namespaceInput, 'admin');
+      await typeIn(GENERAL.inputByAttr('namespace'), 'admin');
     });
   });
 });

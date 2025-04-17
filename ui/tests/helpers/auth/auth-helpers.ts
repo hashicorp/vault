@@ -6,6 +6,7 @@
 import { click, fillIn, visit } from '@ember/test-helpers';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { Server } from 'miragejs';
 
 const { rootToken } = VAULT_KEYS;
@@ -24,7 +25,7 @@ export const login = async (token = rootToken) => {
   // make sure we're always logged out and logged back in
   await logout();
   await visit('/vault/auth?with=token');
-  await fillIn(AUTH_FORM.input('token'), token);
+  await fillIn(GENERAL.inputByAttr('token'), token);
   return click(AUTH_FORM.login);
 };
 
@@ -32,8 +33,8 @@ export const loginNs = async (ns: string, token = rootToken) => {
   // make sure we're always logged out and logged back in
   await logout();
   await visit('/vault/auth?with=token');
-  await fillIn(AUTH_FORM.namespaceInput, ns);
-  await fillIn(AUTH_FORM.input('token'), token);
+  await fillIn(GENERAL.inputByAttr('namespace'), ns);
+  await fillIn(GENERAL.inputByAttr('token'), token);
   return click(AUTH_FORM.login);
 };
 
@@ -57,15 +58,15 @@ interface LoginFields {
   password?: string;
   token?: string;
   role?: string;
-  'auth-form-mount-path': string; // todo update selectors
-  'auth-form-ns-input': string; // todo update selectors
+  path: string;
+  namespace: string;
 }
 
 export const fillInLoginFields = async (loginFields: LoginFields, { toggleOptions = false } = {}) => {
   if (toggleOptions) await click(AUTH_FORM.moreOptions);
 
   for (const [input, value] of Object.entries(loginFields)) {
-    await fillIn(AUTH_FORM.input(input), value);
+    await fillIn(GENERAL.inputByAttr(input), value);
   }
 };
 

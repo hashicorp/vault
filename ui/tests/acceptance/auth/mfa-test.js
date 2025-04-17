@@ -69,7 +69,7 @@ for (const method of AUTH_METHOD_MAP) {
       assert.dom(AUTH_FORM.form).exists('clicking back returns to auth form');
       assert.dom(GENERAL.selectByAttr('auth-method')).hasValue(authType, 'preserves method type on back');
       for (const field of loginKeys) {
-        assert.dom(AUTH_FORM.input(field)).hasValue('', `${field} input clears on back`);
+        assert.dom(GENERAL.inputByAttr(field)).hasValue('', `${field} input clears on back`);
       }
     });
 
@@ -82,10 +82,7 @@ for (const method of AUTH_METHOD_MAP) {
       // Fill in login form
       await fillIn(AUTH_FORM.method, authType);
       // Toggle more options to input a custom mount path
-      await fillInLoginFields(
-        { ...options.loginData, 'auth-form-mount-path': this.mountPath },
-        { toggleOptions: true }
-      );
+      await fillInLoginFields({ ...options.loginData, path: this.mountPath }, { toggleOptions: true });
 
       if (options?.hasPopupWindow) {
         // fires "message" event which methods that rely on popup windows wait for
@@ -105,7 +102,7 @@ for (const method of AUTH_METHOD_MAP) {
       assert.dom(AUTH_FORM.form).exists('clicking back returns to auth form');
       assert.dom(GENERAL.selectByAttr('auth-method')).hasValue(authType, 'preserves method type on back');
       for (const field of loginKeys) {
-        assert.dom(AUTH_FORM.input(field)).hasValue('', `${field} input clears on back`);
+        assert.dom(GENERAL.inputByAttr(field)).hasValue('', `${field} input clears on back`);
       }
     });
 
@@ -154,10 +151,7 @@ for (const method of AUTH_METHOD_MAP) {
       // Fill in login form
       await fillIn(AUTH_FORM.method, authType);
       // Toggle more options to input a custom mount path
-      await fillInLoginFields(
-        { ...options.loginData, 'auth-form-mount-path': this.mountPath },
-        { toggleOptions: true }
-      );
+      await fillInLoginFields({ ...options.loginData, path: this.mountPath }, { toggleOptions: true });
 
       if (options?.hasPopupWindow) {
         // fires "message" event which methods that rely on popup windows wait for

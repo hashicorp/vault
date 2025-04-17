@@ -9,6 +9,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import { runCmd, createNS } from 'vault/tests/helpers/commands';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
+import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 
 module('Acceptance | Enterprise | namespaces', function (hooks) {
   setupApplicationTest(hooks);
@@ -71,9 +72,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await logout.visit();
     assert.strictEqual(currentURL(), '/vault/auth?with=token', 'Does not redirect');
     assert.dom('[data-test-namespace-toolbar]').exists('Normal namespace toolbar exists');
-    assert
-      .dom('[data-test-managed-namespace-root]')
-      .doesNotExist('Managed namespace indicator does not exist');
+    assert.dom(AUTH_FORM.managedNsRoot).doesNotExist('Managed namespace indicator does not exist');
     assert.dom('input#namespace').hasAttribute('placeholder', '/ (Root)');
     await fillIn('input#namespace', '/foo/bar ');
     const encodedNamespace = encodeURIComponent('foo/bar');
