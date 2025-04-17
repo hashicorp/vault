@@ -11,76 +11,41 @@ description: >-
 @include '/why-use-vault/manage-identities-small.mdx'
 
 
-## Manage entities
-
-CRUD guides
-Use entity aliases
-Merge entities
-
-<Tabs>
-<Tab heading="Key concepts" group="concept">
-
-- TBD
-- TBD
-- TBD
-
-</Tab>
-<Tab heading="Guides" group="guides">
-
-- TBD
-- TBD
-- TBD
-
-</Tab>
-<Tab heading="Tutorials" group="tutorials">
-
-- TBD
-- TBD
-- TBD
-
-</Tab>
-<Tab heading="References" group="reference">
-
-- TBD
-- TBD
-- TBD
-
-</Tab>
-</Tabs>
-
-
-## Use identity tokens
+## Manage entities and identities
 
 Manage roles
 Manage identity keys
 
+
 <Tabs>
 <Tab heading="Key concepts" group="concept">
 
-- TBD
-- TBD
-- TBD
+- [Identities overview](/vault/docs/concepts/identity)
+- [Policies overview](/vault/docs/concepts/policies)
+- [Authentication overview](/vault/docs/concepts/auth)
+- [Clients and entities overview](/vault/docs/concepts/client-count)
+
 
 </Tab>
 <Tab heading="Guides" group="guides">
 
-- TBD
-- TBD
-- TBD
+- [Find and resolve duplicate Vault identities](/vault/docs/secrets/identity/deduplication)
+- [Use identity tokens](/vault/docs/secrets/identity/identity-token)
+- [Identity plugin overview](/vault/docs/secrets/identity)
 
 </Tab>
 <Tab heading="Tutorials" group="tutorials">
 
-- TBD
-- TBD
-- TBD
+- [Implement identity entities and groups](/vault/tutorials/auth-methods/identity)
+- [Introduction to tokens](/vault/tutorials/get-started/introduction-tokens)
+- [Generate tokens for machine authentication with AppRole](/vault/tutorials/auth-methods/approle)
 
 </Tab>
 <Tab heading="References" group="reference">
 
-- TBD
-- TBD
-- TBD
+- [Identity tokens API](/vault/api-docs/secret/identity/tokens)
+- [`vault policy` CLI command](/vault/docs/commands/policy)
+- [Authentication telemetry metrics](/vault/docs/internals/telemetry/metrics/authn)
 
 </Tab>
 </Tabs>
@@ -108,8 +73,8 @@ Manage OIDC flows?
 </Tab>
 <Tab heading="Tutorials" group="tutorials">
 
-- TBD
-- TBD
+- [Confirm client idenity with an OIDC identity provider](/vault/tutorials/auth-methods/oidc-identity-provider)
+- [OIDC authentication with Okta](/vault/tutorials/manage-hcp-vault-dedicated/vault-oidc-okta)
 - TBD
 
 </Tab>
