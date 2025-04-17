@@ -4,22 +4,19 @@ page_title: Important changes
 description: >-
   Deprecations, important or breaking changes, and remediation recommendations
   for upgrading Vault.
+
+Valid change types: >-
+  - Bug --> must include workaround/recommendation info
+  - New default
+  - New behavior
+  - Breaking --> must include workaround/recommendation info
+  - Change in support
 ---
 
 # Important changes
 
 Always review important or breaking changes and remediation recommendations
 before upgrading Vault.
-
-<!--
-Change types:
-  - Bug --> must include workaround/recommendation info
-  - New default
-  - New behavior
-  - Breaking --> must include workaround/recommendation info
-  - Change in support
--->
-
 
 ## Transit support for Ed25519ph and Ed25519ctx signatures ((#ed25519))
 
@@ -198,7 +195,7 @@ versions until we fix the issue.
 
 | Change       | Affected version                 | Affected deployments
 | ------------ | -------------------------------- | --------------------
-| Known issue  | 1.16.0, 1.17.13, 1.18.6, 1.19.0  | any
+| Bug          | 1.16.0, 1.17.13, 1.18.6, 1.19.0  | any
 
 Log entries, including plugin logs, for Vault deployments using `log_file` do
 not capture all relevant information even though the information appears as
