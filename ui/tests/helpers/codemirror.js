@@ -34,7 +34,7 @@ export default function (parent) {
 
 export function setCodeEditorValue(editorView, value, { from, to } = {}) {
   invariant(editorView, 'No editor view provided');
-  invariant(value, 'No value provided');
+  invariant(value != null, 'No value provided');
 
   editorView.dispatch({
     changes: [
