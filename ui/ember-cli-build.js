@@ -54,6 +54,7 @@ const appConfig = {
       './node_modules/@hashicorp/design-system-tokens/dist/products/css',
       './node_modules/ember-basic-dropdown/',
       './node_modules/ember-power-select/',
+      './node_modules/@hashicorp/vault-reporting/dist/styles',
     ],
   },
   minifyCSS: {
@@ -94,7 +95,6 @@ module.exports = function (defaults) {
   app.import(
     'node_modules/@hashicorp/design-system-components/dist/styles/@hashicorp/design-system-components.css'
   );
-  app.import('node_modules/@hashicorp/vault-reporting/dist/styles/vault-reporting.css');
 
   return app.toTree();
 };
