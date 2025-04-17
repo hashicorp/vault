@@ -41,7 +41,7 @@ func Group(ctx context.Context, file *File, checkers ...FileGroupCheck) {
 	}
 }
 
-// Group takes a context, a slice of files, and one-to-many file group checkers and adds group
+// GroupFiles takes a context, a slice of files, and one-to-many file group checkers and adds group
 // metadata to the files.
 func GroupFiles(ctx context.Context, files []*File, checkers ...FileGroupCheck) {
 	for _, file := range files {
