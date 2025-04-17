@@ -18,7 +18,7 @@ Manage identity keys
 
 
 <Tabs>
-<Tab heading="Key concepts" group="concept">
+<Tab heading="Key concepts + Overviews" group="overviews">
 
 - [Identities overview](/vault/docs/concepts/identity)
 - [Policies overview](/vault/docs/concepts/policies)
@@ -36,15 +36,17 @@ Manage identity keys
 </Tab>
 <Tab heading="Tutorials" group="tutorials">
 
-- [Implement identity entities and groups](/vault/tutorials/auth-methods/identity)
 - [Introduction to tokens](/vault/tutorials/get-started/introduction-tokens)
-- [Generate tokens for machine authentication with AppRole](/vault/tutorials/auth-methods/approle)
+- [Introduction to roles](/vault/tutorials/get-started/introduction-roles)
+- [Introduction to policies](/vault/tutorials/get-started/introduction-policies)
+- [Implement identity entities and groups](/vault/tutorials/auth-methods/identity)
 
 </Tab>
 <Tab heading="References" group="reference">
 
 - [Identity tokens API](/vault/api-docs/secret/identity/tokens)
-- [`vault policy` CLI command](/vault/docs/commands/policy)
+- [`vault policy` CLI commands](/vault/docs/commands/policy)
+- [`vault token` CLI commands](https://developer.hashicorp.com/vault/docs/commands/token)
 - [Authentication telemetry metrics](/vault/docs/internals/telemetry/metrics/authn)
 
 </Tab>
@@ -57,32 +59,31 @@ Create an OIDC provider
 Manage OIDC flows?
 
 <Tabs>
-<Tab heading="Key concepts" group="concept">
+<Tab heading="Key concepts + Overviews" group="overviews">
 
-- TBD
-- TBD
-- TBD
+- [Using Vault as an OIDC provider](/vault/docs/concepts/oidc-provider)
 
 </Tab>
 <Tab heading="Guides" group="guides">
 
-- TBD
-- TBD
-- TBD
+- [Setup an OIDC identity provider](/vault/docs/secrets/identity/oidc-provider)
+- [Use JWT/OIDC authentication](/vault/docs/auth/jwt)
+- [Supported OIDC providers](/vault/docs/auth/jwt/oidc-providers)
+- [Use Kubernetes for OIDC authentication](/vault/docs/auth/jwt/oidc-providers/kubernetes)
 
 </Tab>
 <Tab heading="Tutorials" group="tutorials">
 
-- [Confirm client idenity with an OIDC identity provider](/vault/tutorials/auth-methods/oidc-identity-provider)
+- [Confirm client identity with an OIDC identity provider](/vault/tutorials/auth-methods/oidc-identity-provider)
 - [OIDC authentication with Okta](/vault/tutorials/manage-hcp-vault-dedicated/vault-oidc-okta)
-- TBD
+- [Secure workflows with OIDC authentication](/vault/tutorials/auth-methods/oidc-auth)
+- [Use Vault as an OIDC provider for single sign-on](/nomad/tutorials/single-sign-on/sso-oidc-vault)
 
 </Tab>
 <Tab heading="References" group="reference">
 
-- TBD
-- TBD
-- TBD
+- [JWT/OIDC authentication API](/vault/api-docs/auth/jwt)
+- [OIDC provider API](/vault/api-docs/secret/identity/oidc-provider)
 
 </Tab>
 </Tabs>
@@ -95,32 +96,16 @@ Setup WIF for Azure
 Setup WIF for GCP
 
 <Tabs>
-<Tab heading="Key concepts" group="concept">
-
-- TBD
-- TBD
-- TBD
-
-</Tab>
 <Tab heading="Guides" group="guides">
 
-- TBD
-- TBD
-- TBD
+- [Workload Identity Federation with AWS](/vault/docs/secrets/aws#plugin-workload-identity-federation-wif)
+- [Workload Identity Federation with Azure](/vault/docs/secrets/azure#plugin-workload-identity-federation-wif)
+- [Workload Identity Federation with GCP](/vault/docs/secrets/gcp#plugin-workload-identity-federation-wif)
 
 </Tab>
 <Tab heading="Tutorials" group="tutorials">
 
-- TBD
-- TBD
-- TBD
-
-</Tab>
-<Tab heading="References" group="reference">
-
-- TBD
-- TBD
-- TBD
+- [Manage federated workload identities with AWS IAM and Vault Enterprise](/vault/tutorials/enterprise/plugin-workoad-identity-federation)
 
 </Tab>
 </Tabs>

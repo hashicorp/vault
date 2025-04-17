@@ -11,57 +11,37 @@ description: >-
 @include '/why-use-vault/secure-sensitive-data-small.mdx'
 
 
-## Encrypt data at rest
+## Encrypt data
+
+
+at rest
+in transit
 
 Many organizations seek solutions to encrypt/decrypt application data within a cloud or multi-datacenter environment; deploying cryptography and maintaining a complex key management infrastructure can be expensive and challenging to develop. Vault provides [encryption as a service](/vault/docs/secrets/transit) with centralized key management to simplify encrypting data in transit and stored across clouds and datacenters. Vault can encrypt/decrypt data stored elsewhere, essentially allowing applications to encrypt their data while storing it in the primary data store. Vault's security team manages and maintains the responsibility of the data encryption within the Vault environment, allowing developers to focus solely on encrypting/decrypting data as needed.
 
 <Tabs>
-<Tab heading="Key concepts" group="concept">
+<Tab heading="Key concepts + Overviews" group="overviews">
 
-TBD
-
-</Tab>
-<Tab heading="Guides" group="guides">
-
-TBD
-
-</Tab>
-<Tab heading="Tutorials" group="tutorials">
-
-TBD
-
-</Tab>
-<Tab heading="References" group="reference">
-
-TBD
-
-</Tab>
-</Tabs>
-
-
-## Encrypt data in transit
-
-Many organizations seek solutions to encrypt/decrypt application data within a cloud or multi-datacenter environment; deploying cryptography and maintaining a complex key management infrastructure can be expensive and challenging to develop. Vault provides [encryption as a service](/vault/docs/secrets/transit) with centralized key management to simplify encrypting data in transit and stored across clouds and datacenters. Vault can encrypt/decrypt data stored elsewhere, essentially allowing applications to encrypt their data while storing it in the primary data store. Vault's security team manages and maintains the responsibility of the data encryption within the Vault environment, allowing developers to focus solely on encrypting/decrypting data as needed.
-
-<Tabs>
-<Tab heading="Key concepts" group="concept">
-
-TBD
+- [Well architected framework: Best practices to protect sensitive data](/well-architected-framework/security/security-sensitive-data)
 
 </Tab>
 <Tab heading="Guides" group="guides">
 
-TBD
+- [Wrap seals with encryption](/vault/docs/enterprise/sealwrap)
+- [Transit plugin overview](/vault/docs/secrets/transit)
 
 </Tab>
 <Tab heading="Tutorials" group="tutorials">
 
-TBD
+- [Encrypt data in transit with Vault](/vault/tutorials/encryption-as-a-service/eaas-transit)
+- [Re-wrapping data after encryption key rotatio](/vault/tutorials/encryption-as-a-service/eaas-transit-rewrap)
+- [Key wrapping for transit key import](/vault/docs/secrets/transit/key-wrapping-guide)
 
 </Tab>
 <Tab heading="References" group="reference">
 
-TBD
+- [Transit plugin API](/vault/api-docs/secret/transit)
+- [`vault transit` CLI commands](/vault/docs/commands/transit)
 
 </Tab>
 </Tabs>
@@ -72,24 +52,27 @@ TBD
 Many organizations seek solutions to encrypt/decrypt application data within a cloud or multi-datacenter environment; deploying cryptography and maintaining a complex key management infrastructure can be expensive and challenging to develop. Vault provides [encryption as a service](/vault/docs/secrets/transit) with centralized key management to simplify encrypting data in transit and stored across clouds and datacenters. Vault can encrypt/decrypt data stored elsewhere, essentially allowing applications to encrypt their data while storing it in the primary data store. Vault's security team manages and maintains the responsibility of the data encryption within the Vault environment, allowing developers to focus solely on encrypting/decrypting data as needed.
 
 <Tabs>
-<Tab heading="Key concepts" group="concept">
+<Tab heading="Key concepts + Overviews" group="overviews">
 
-TBD
+- [Tokenization transform overview](/vault/docs/secrets/transform/tokenization)
+- [Well architected framework: Best practices to protect sensitive data](/well-architected-framework/security/security-sensitive-data)
 
 </Tab>
 <Tab heading="Guides" group="guides">
 
-TBD
+- [Transform plugin overview](/vault/docs/secrets/transform)
+- [Tokenization transform](/vault/docs/secrets/transform/tokenization)
 
 </Tab>
 <Tab heading="Tutorials" group="tutorials">
 
-TBD
+- [Data tokenization with transform secrets engine](/vault/tutorials/encryption-as-a-service/tokenization)
 
 </Tab>
 <Tab heading="References" group="reference">
 
-TBD
+- [Transform plugin API](/vault/api-docs/secret/transform)
+- [`vault transform` CLI command](/vault/docs/commands/transform)
 
 </Tab>
 </Tabs>
