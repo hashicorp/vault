@@ -33,6 +33,7 @@ export default class SSUViewDashboard extends Component<SSUViewDashboardSignatur
     fetchAllData: () => void;
     getBarChartData: (map: Record<string, number>) => SimpleDatum[];
     get isVaultDedicated(): boolean;
+    get kvSecretsTooltipMessage(): string;
     get counters(): CounterBlock[];
     get namespace(): string;
 }
