@@ -5,10 +5,15 @@
 
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
-import ControlGroupError from 'vault/lib/control-group-error';
 import { action } from '@ember/object';
 
+import ControlGroupError from 'vault/lib/control-group-error';
+
+// import { PROVIDER_NAME } from 'vault/utils/analytics-providers/posthog';
+import { PROVIDER_NAME } from 'vault/utils/analytics-providers/dummy';
+
 export default class ApplicationRoute extends Route {
+  @service analytics;
   @service controlGroup;
   @service('router') routing;
   @service('namespace') namespaceService;
@@ -68,5 +73,13 @@ export default class ApplicationRoute extends Route {
 
   beforeModel() {
     return this.flagsService.fetchFeatureFlags();
+  }
+
+  afterModel() {
+    this.analytics.start(PROVIDER_NAME, {
+      enabled: true,
+      API_KEY: 'DUMMY_KEY',
+      api_host: 'whatever',
+    });
   }
 }
