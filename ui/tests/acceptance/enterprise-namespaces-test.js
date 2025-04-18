@@ -31,7 +31,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
       .exists('The root namespace is selected');
   });
 
-  // TODO: Is this test description still accurate?
+  // TODO: revisit test name/description, is this still relevant? A '/' prefix is stripped from namespace on login form
   test('it shows nested namespaces if you log in with a namespace starting with a /', async function (assert) {
     assert.expect(6);
 
@@ -41,17 +41,24 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     for (const [i, ns] of nses.entries()) {
       await runCmd(createNS(ns), false);
       await settled();
+
       // the namespace path will include all of the namespaces up to this point
       const targetNamespace = nses.slice(0, i + 1).join('/');
       const url = `/vault/secrets?namespace=${targetNamespace}`;
+
       // this is usually triggered when creating a ns in the form -- trigger a reload of the namespaces manually
       await click(NAMESPACE_PICKER_SELECTORS.toggle);
+
+      // refresh the list of namespaces
+      await waitFor(NAMESPACE_PICKER_SELECTORS.refreshList);
       await click(NAMESPACE_PICKER_SELECTORS.refreshList);
-      await waitFor(NAMESPACE_PICKER_SELECTORS.link(targetNamespace));
+
       // check that the full namespace path, like "beep/boop", shows in the toggle display
+      await waitFor(NAMESPACE_PICKER_SELECTORS.link(targetNamespace));
       assert
         .dom(NAMESPACE_PICKER_SELECTORS.link(targetNamespace))
         .hasText(targetNamespace, `shows the namespace ${targetNamespace} in the toggle component`);
+
       // because quint does not like page reloads, visiting url directly instead of clicking on namespace in toggle
       await visit(url);
     }
