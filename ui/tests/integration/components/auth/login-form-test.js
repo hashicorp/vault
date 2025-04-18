@@ -7,6 +7,7 @@ import { _cancelTimers as cancelTimers } from '@ember/runloop';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { click, fillIn, render, settled } from '@ember/test-helpers';
+import { later } from '@ember/runloop';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { validate } from 'uuid';
@@ -158,7 +159,7 @@ module('Integration | Component | auth | login-form', function (hooks) {
 
     await this.renderComponent();
 
-    setTimeout(() => cancelTimers(), 50);
+    later(this, () => cancelTimers(), 50);
     await settled();
     const [actual] = authenticateStub.lastCall.args;
     assert.propEqual(

@@ -6,6 +6,7 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, visit, fillIn } from '@ember/test-helpers';
+import { later } from '@ember/runloop';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -15,6 +16,7 @@ import { AUTH_METHOD_MAP, fillInLoginFields } from 'vault/tests/helpers/auth/aut
 import { callbackData, windowStub } from 'vault/tests/helpers/oidc-window-stub';
 
 const ENT_ONLY = ['saml'];
+const DELAY_IN_MS = 50;
 
 for (const method of AUTH_METHOD_MAP) {
   const { authType, options } = method;
@@ -53,10 +55,14 @@ for (const method of AUTH_METHOD_MAP) {
 
       if (options?.hasPopupWindow) {
         // fires "message" event which methods that rely on popup windows wait for
-        setTimeout(() => {
-          // set path which is used to set :mount param in the callback url => /auth/:mount/oidc/callback
-          window.postMessage(callbackData({ path: this.mountPath }), window.origin);
-        }, 50);
+        later(
+          this,
+          () => {
+            // set path which is used to set :mount param in the callback url => /auth/:mount/oidc/callback
+            window.postMessage(callbackData({ path: this.mountPath }), window.origin);
+          },
+          DELAY_IN_MS
+        );
       }
 
       await click(AUTH_FORM.login);
@@ -86,10 +92,14 @@ for (const method of AUTH_METHOD_MAP) {
 
       if (options?.hasPopupWindow) {
         // fires "message" event which methods that rely on popup windows wait for
-        setTimeout(() => {
-          // set path which is used to set :mount param in the callback url => /auth/:mount/oidc/callback
-          window.postMessage(callbackData({ path: this.mountPath }), window.origin);
-        }, 50);
+        later(
+          this,
+          () => {
+            // set path which is used to set :mount param in the callback url => /auth/:mount/oidc/callback
+            window.postMessage(callbackData({ path: this.mountPath }), window.origin);
+          },
+          DELAY_IN_MS
+        );
       }
 
       await click(AUTH_FORM.login);
@@ -124,10 +134,14 @@ for (const method of AUTH_METHOD_MAP) {
 
       if (options?.hasPopupWindow) {
         // fires "message" event which methods that rely on popup windows wait for
-        setTimeout(() => {
-          // set path which is used to set :mount param in the callback url => /auth/:mount/oidc/callback
-          window.postMessage(callbackData({ path: this.mountPath }), window.origin);
-        }, 50);
+        later(
+          this,
+          () => {
+            // set path which is used to set :mount param in the callback url => /auth/:mount/oidc/callback
+            window.postMessage(callbackData({ path: this.mountPath }), window.origin);
+          },
+          DELAY_IN_MS
+        );
       }
 
       await click(AUTH_FORM.login);
@@ -155,10 +169,14 @@ for (const method of AUTH_METHOD_MAP) {
 
       if (options?.hasPopupWindow) {
         // fires "message" event which methods that rely on popup windows wait for
-        setTimeout(() => {
-          // set path which is used to set :mount param in the callback url => /auth/:mount/oidc/callback
-          window.postMessage(callbackData({ path: this.mountPath }), window.origin);
-        }, 50);
+        later(
+          this,
+          () => {
+            // set path which is used to set :mount param in the callback url => /auth/:mount/oidc/callback
+            window.postMessage(callbackData({ path: this.mountPath }), window.origin);
+          },
+          DELAY_IN_MS
+        );
       }
 
       await click(AUTH_FORM.login);
