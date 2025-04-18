@@ -985,6 +985,10 @@ func (c *TestClusterCore) NetworkLayer() cluster.NetworkLayer {
 	return c.Core.clusterNetworkLayer
 }
 
+func (c *TestClusterCore) RotationManager() *RotationManager {
+	return c.Core.rotationManager
+}
+
 func (c *TestCluster) Cleanup() {
 	c.Logger.Info("cleaning up vault cluster")
 	if tl, ok := c.Logger.(*corehelpers.TestLogger); ok {

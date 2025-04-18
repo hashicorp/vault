@@ -35,7 +35,7 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 		LogStdout: logsWriter,
 	})
 	if err != nil {
-		t.Fatalf("could not start local LDAP docker container: %s", err)
+		t.Fatalf("could not configure LDAP docker service runner: %s", err)
 	}
 
 	cfg = new(ldaputil.ConfigEntry)
@@ -67,7 +67,6 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 			if err != nil {
 				return nil, err
 			}
-
 			return docker.NewServiceURLParse(connURL)
 		})
 		if err != nil {

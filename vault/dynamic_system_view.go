@@ -362,6 +362,9 @@ func (d dynamicSystemView) RegisterRotationJob(ctx context.Context, req *rotatio
 	}
 	nsCtx := namespace.ContextWithNamespace(ctx, mountEntry.Namespace())
 
+	// TODO: plugins don't need to set the Mount Path, it can be injected here
+	// req.MountPoint = mountEntry.Path
+
 	job, err := rotation.ConfigureRotationJob(req)
 	if err != nil {
 		return "", fmt.Errorf("error configuring rotation job: %s", err)
