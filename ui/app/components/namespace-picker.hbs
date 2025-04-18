@@ -1,23 +1,35 @@
 {{!
-Copyright (c) HashiCorp, Inc.
-SPDX-License-Identifier: BUSL-1.1
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
 }}
 
 <div class="namespace-picker" ...attributes>
-  <Hds::Form::SuperSelect::Single::Field
-    @afterOptionsComponent={{component "namespace-picker/after-options" loadOptions=this.loadOptions}}
-    @ariaLabel="Namespace"
-    @onChange={{this.onChange}}
-    @options={{this.options}}
-    @placeholder="Search"
-    @searchEnabled={{true}}
-    @selected={{this.selected}}
-    @selectedItemComponent={{component "namespace-picker/selected-option"}}
-    @showAfterOptions={{this.showAfterOptions}}
-    @verticalPosition="above"
-    data-test-namespace-toggle
-    as |F|
-  >
-    <F.Options>{{F.options.label}}</F.Options>
-  </Hds::Form::SuperSelect::Single::Field>
+  <Hds::Dropdown @enableCollisionDetection={{true}} as |D|>
+
+    <D.ToggleButton @icon="org" @text={{or this.selected.id "-"}} data-test-namespace-toggle />
+
+    <D.Generic>
+      {{this.namespaceLabel}}
+      <Hds::BadgeCount @text={{or this.options.length 0}} />
+    </D.Generic>
+
+    {{#each this.options as |option|}}
+      <D.Checkmark
+        @selected={{eq option.id this.selected.id}}
+        {{on "click" (fn this.onChange option)}}
+        data-test-namespace-link={{option.path}}
+      >
+        {{option.label}}
+      </D.Checkmark>
+    {{/each}}
+
+    {{! Check if the user has permissions to list namespaces. If true, display additional footer options like "Refresh list" and "Manage". }}
+    {{#if this.hasListPermissions}}
+      <D.Footer @hasDivider={{true}}>
+        <Hds::Button @color="secondary" @text="Refresh list" {{on "click" this.loadOptions}} data-test-refresh-namespaces />
+        <Hds::Button @color="secondary" @text="Manage" @icon="settings" @route="vault.cluster.access.namespaces" />
+      </D.Footer>
+    {{/if}}
+
+  </Hds::Dropdown>
 </div>

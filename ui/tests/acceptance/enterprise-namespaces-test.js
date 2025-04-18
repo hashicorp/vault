@@ -9,6 +9,8 @@ import { setupApplicationTest } from 'ember-qunit';
 import { runCmd, createNS } from 'vault/tests/helpers/commands';
 import { login, loginNs, logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
+import { GENERAL } from '../helpers/general-selectors';
+import { NAMESPACE_PICKER_SELECTORS } from '../helpers/namespace-picker';
 
 module('Acceptance | Enterprise | namespaces', function (hooks) {
   setupApplicationTest(hooks);
@@ -22,15 +24,18 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await runCmd(createNS(ns), false);
     const token = await runCmd(`write -field=client_token auth/token/create policies=default`);
     await login(token);
-    await click('[data-test-namespace-toggle]');
-    assert.dom('[aria-selected="true"]').hasText('root', 'root renders as current namespace');
-    assert.dom('[data-option-index]').exists({ count: 1 }, 'Only the root namespace exists');
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    assert.dom(NAMESPACE_PICKER_SELECTORS.link()).hasText('root', 'root renders as current namespace');
+    assert
+      .dom(`${NAMESPACE_PICKER_SELECTORS.link()} svg${GENERAL.icon('check')}`)
+      .exists('The root namespace is selected');
   });
 
+  // TODO: Is this test description still accurate?
   test('it shows nested namespaces if you log in with a namespace starting with a /', async function (assert) {
-    assert.expect(5);
+    assert.expect(6);
 
-    await click('[data-test-namespace-toggle]');
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
 
     const nses = ['beep', 'boop', 'bop'];
     for (const [i, ns] of nses.entries()) {
@@ -40,12 +45,12 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
       const targetNamespace = nses.slice(0, i + 1).join('/');
       const url = `/vault/secrets?namespace=${targetNamespace}`;
       // this is usually triggered when creating a ns in the form -- trigger a reload of the namespaces manually
-      await click('[data-test-namespace-toggle]');
-      await click('[data-test-refresh-namespaces]');
-      await waitFor(`[data-option-index="${i + 1}"]`);
+      await click(NAMESPACE_PICKER_SELECTORS.toggle);
+      await click(NAMESPACE_PICKER_SELECTORS.refreshList);
+      await waitFor(NAMESPACE_PICKER_SELECTORS.link(targetNamespace));
       // check that the full namespace path, like "beep/boop", shows in the toggle display
       assert
-        .dom(`[data-option-index="${i + 1}"]`)
+        .dom(NAMESPACE_PICKER_SELECTORS.link(targetNamespace))
         .hasText(targetNamespace, `shows the namespace ${targetNamespace} in the toggle component`);
       // because quint does not like page reloads, visiting url directly instead of clicking on namespace in toggle
       await visit(url);
@@ -53,12 +58,27 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
 
     await loginNs('/beep/boop');
     await settled();
-    await click('[data-test-namespace-toggle]');
-    await waitFor('[data-test-current-namespace]');
-    assert.dom('[data-test-current-namespace]').hasText('beep/boop/');
-    assert
-      .dom('[data-option-index="3"]')
-      .hasText('beep/boop/bop', 'shows the full namespace path in the toggle');
+
+    // Open the namespace picker & wait for it to render
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    await waitFor(`svg${GENERAL.icon('check')}`);
+
+    // Find the selected element with the check icon & ensure it exists
+    const checkIcon = document.querySelector(
+      `${NAMESPACE_PICKER_SELECTORS.link()} svg${GENERAL.icon('check')}`
+    );
+    assert.ok(checkIcon, 'A selected namespace link with the check icon exists');
+
+    // Get the selected namespace with the data-test-namespace-link attribute & ensure it exists
+    const selectedNamespace = checkIcon.closest(NAMESPACE_PICKER_SELECTORS.link());
+    assert.ok(selectedNamespace, 'The selected namespace link exists');
+
+    // Verify that the selected namespace has the correct data-test-namespace-link attribute and path value
+    assert.strictEqual(
+      selectedNamespace.getAttribute('data-test-namespace-link'),
+      'beep/boop',
+      'The current namespace does not begin or end with /'
+    );
   });
 
   test('it shows the regular namespace toolbar when not managed', async function (assert) {
