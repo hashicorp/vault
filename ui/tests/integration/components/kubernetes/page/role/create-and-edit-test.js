@@ -7,11 +7,12 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { render, click, fillIn } from '@ember/test-helpers';
+import { render, click, fillIn, waitFor, settled } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import codemirror, { setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 
 module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', function (hooks) {
   setupRenderingTest(hooks);
@@ -252,9 +253,12 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
       owner: this.engine,
     });
     const addedText = 'this will be add to the start of the first line in the JsonEditor';
-    await fillIn('[data-test-component="code-mirror-modifier"] textarea', addedText);
+    await waitFor('.cm-editor');
+    const editor = codemirror();
+    setCodeEditorValue(editor, addedText);
+    await settled();
     await click('[data-test-restore-example]');
-    assert.dom('.CodeMirror-code').doesNotContainText(addedText, 'Role rules example restored');
+    assert.dom('.cm-content').doesNotContainText(addedText, 'Role rules example restored');
   });
 
   test('it should set generatedRoleRoles model prop on save', async function (assert) {
