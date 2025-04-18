@@ -7,7 +7,7 @@ import { click, visit } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 
 import { CONTROL_GROUP_PREFIX, TOKEN_SEPARATOR } from 'vault/services/control-group';
-import authPage from 'vault/tests/pages/auth';
+import { login, loginMethod } from 'vault/tests/helpers/auth/auth-helpers';
 import controlGroup from 'vault/tests/pages/components/control-group';
 import { createPolicyCmd, createTokenCmd, mountAuthCmd, runCmd } from './commands';
 const controlGroupComponent = create(controlGroup);
@@ -86,10 +86,13 @@ export async function grantAccessForWrite({
     throw new Error('missing required fields for grantAccessForWrite');
   }
   const userpassMount = `userpass-${backend}`;
-  await authPage.loginUsername(authorizerUser, authorizerPassword, userpassMount);
+  await loginMethod(
+    { username: authorizerUser, password: authorizerPassword, path: userpassMount },
+    { authType: 'userpass', toggleOptions: true }
+  );
   await visit(`/vault/access/control-groups/${accessor}`);
   await controlGroupComponent.authorize();
-  await authPage.login(userToken);
+  await login(userToken);
   localStorage.setItem(
     storageKey(accessor, creation_path),
     JSON.stringify({
@@ -123,10 +126,13 @@ export async function grantAccess({
   const userpassMount = `userpass-${backend}`;
   const accessor = controlGroupComponent.accessor;
   const controlGroupToken = controlGroupComponent.token;
-  await authPage.loginUsername(authorizerUser, authorizerPassword, userpassMount);
+  await loginMethod(
+    { username: authorizerUser, password: authorizerPassword, path: userpassMount },
+    { authType: 'userpass', toggleOptions: true }
+  );
   await visit(`/vault/access/control-groups/${accessor}`);
   await controlGroupComponent.authorize();
-  await authPage.login(userToken);
+  await login(userToken);
   localStorage.setItem(
     storageKey(accessor, apiPath),
     JSON.stringify({

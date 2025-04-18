@@ -8,7 +8,7 @@ import { visit, click, fillIn, find } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import { v4 as uuidv4 } from 'uuid';
 
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { verifyCertificates } from 'vault/utils/parse-pki-cert';
@@ -23,7 +23,7 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
-    await authPage.login();
+    await login();
     this.parentMountPath = `parent-mount-${uuidv4()}`;
     this.oldParentIssuerName = 'old-parent-issuer'; // old parent issuer we're transferring from
     this.parentIssuerName = 'new-parent-issuer'; // issuer where cross-signing action will begin

@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'vault/tests/helpers';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { deleteAuthCmd, deleteEngineCmd, mountAuthCmd, mountEngineCmd, runCmd } from '../helpers/commands';
 import expectedSecretAttrs from 'vault/tests/helpers/openapi/expected-secret-attrs';
 import expectedAuthAttrs from 'vault/tests/helpers/openapi/expected-auth-attrs';
@@ -27,7 +27,7 @@ module(
     hooks.beforeEach(function () {
       this.pathHelp = this.owner.lookup('service:pathHelp');
       this.store = this.owner.lookup('service:store');
-      return authPage.login();
+      return login();
     });
 
     // Secret engines that use OpenAPI

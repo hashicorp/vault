@@ -7,8 +7,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
-import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { click, currentURL, currentRouteName, visit } from '@ember/test-helpers';
 import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
@@ -22,7 +21,7 @@ module('Acceptance | pki overview', function (hooks) {
 
   hooks.beforeEach(async function () {
     this.store = this.owner.lookup('service:store');
-    await authPage.login();
+    await login();
     // Setup PKI engine
     const mountPath = `pki-${uuidv4()}`;
     await enablePage.enable('pki', mountPath);
@@ -47,19 +46,18 @@ module('Acceptance | pki overview', function (hooks) {
     this.pkiRolesList = await runCmd(tokenWithPolicyCmd('pki-roles-list', pki_roles_list_policy));
     this.pkiIssuersList = await runCmd(tokenWithPolicyCmd('pki-issuers-list', pki_issuers_list_policy));
     this.pkiAdminToken = await runCmd(tokenWithPolicyCmd('pki-admin', pki_admin_policy));
-    await logout.visit();
+
     clearRecords(this.store);
   });
 
   hooks.afterEach(async function () {
-    await logout.visit();
-    await authPage.login();
+    await login();
     // Cleanup engine
     await runCmd([`delete sys/mounts/${this.mountPath}`]);
   });
 
   test('navigates to view issuers when link is clicked on issuer card', async function (assert) {
-    await authPage.login(this.pkiAdminToken);
+    await login(this.pkiAdminToken);
     await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
     assert.dom(overviewCard.title('Issuers')).hasText('Issuers');
     assert.dom(`${overviewCard.container('Issuers')} p`).hasText('1');
@@ -69,7 +67,7 @@ module('Acceptance | pki overview', function (hooks) {
   });
 
   test('navigates to view roles when link is clicked on roles card', async function (assert) {
-    await authPage.login(this.pkiAdminToken);
+    await login(this.pkiAdminToken);
     await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
     assert.dom(overviewCard.title('Roles')).hasText('Roles');
     assert.dom(`${overviewCard.container('Roles')} p`).hasText('0');
@@ -87,14 +85,14 @@ module('Acceptance | pki overview', function (hooks) {
   });
 
   test('hides roles card if user does not have permissions', async function (assert) {
-    await authPage.login(this.pkiIssuersList);
+    await login(this.pkiIssuersList);
     await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
     assert.dom(overviewCard.title('Roles')).doesNotExist('Roles card does not exist');
     assert.dom(overviewCard.title('Issuers')).hasText('Issuers');
   });
 
   test('navigates to generate certificate page for Issue Certificates card', async function (assert) {
-    await authPage.login(this.pkiAdminToken);
+    await login(this.pkiAdminToken);
     await runCmd([
       `write ${this.mountPath}/roles/some-role \
     issuer_ref="default" \
@@ -110,7 +108,7 @@ module('Acceptance | pki overview', function (hooks) {
   });
 
   test('navigates to certificate details page for View Certificates card', async function (assert) {
-    await authPage.login(this.pkiAdminToken);
+    await login(this.pkiAdminToken);
     await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
     await click(PKI_OVERVIEW.viewCertificatePowerSearch);
     await click(PKI_OVERVIEW.firstPowerSelectOption);
@@ -122,7 +120,7 @@ module('Acceptance | pki overview', function (hooks) {
   });
 
   test('navigates to issuer details page for View Issuer card', async function (assert) {
-    await authPage.login(this.pkiAdminToken);
+    await login(this.pkiAdminToken);
     await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
     await click(PKI_OVERVIEW.viewIssuerPowerSearch);
     await click(PKI_OVERVIEW.firstPowerSelectOption);
