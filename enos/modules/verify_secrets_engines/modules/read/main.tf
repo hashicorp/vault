@@ -38,6 +38,12 @@ variable "vault_root_token" {
   default     = null
 }
 
+variable "verify_aws_engine_creds" {
+  type        = bool
+  description = "Flag to verify AWS Engine creds"
+  default     = true
+}
+
 variable "verify_pki_certs" {
   type        = bool
   description = "Flag to verify pki certificates"
