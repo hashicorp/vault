@@ -26,18 +26,18 @@ type (
 )
 
 const (
-	FileGroupAutopilot  FileGroup = "autopilot"
-	FileGroupChangelog  FileGroup = "changelog"
-	FileGroupCommunity  FileGroup = "community"
-	FileGroupDocs       FileGroup = "docs"
-	FileGroupEnos       FileGroup = "enos"
-	FileGroupEnterprise FileGroup = "enterprise"
-	FileGroupGoApp      FileGroup = "app"
-	FileGroupGoModules  FileGroup = "gomod"
-	FileGroupPipeline   FileGroup = "pipeline"
-	FileGroupProto      FileGroup = "proto"
-	FileGroupTools      FileGroup = "tools"
-	FileGroupWebUI      FileGroup = "ui"
+	FileGroupAutopilot   FileGroup = "autopilot"
+	FileGroupChangelog   FileGroup = "changelog"
+	FileGroupCommunity   FileGroup = "community"
+	FileGroupDocs        FileGroup = "docs"
+	FileGroupEnos        FileGroup = "enos"
+	FileGroupEnterprise  FileGroup = "enterprise"
+	FileGroupGoApp       FileGroup = "app"
+	FileGroupGoToolchain FileGroup = "gotoolchain"
+	FileGroupPipeline    FileGroup = "pipeline"
+	FileGroupProto       FileGroup = "proto"
+	FileGroupTools       FileGroup = "tools"
+	FileGroupWebUI       FileGroup = "ui"
 )
 
 // Name is the file name of the changed file

@@ -11,6 +11,9 @@ inputs:
   no-restore:
     description: Whether or not to restore the Go module cache on a cache hit
     default: "false"
+  no-save:
+    description: Whether or not to create a Go module cache on cache miss
+    default: "false"
   go-version:
     description: "Override .go-version"
     default: ""
@@ -68,7 +71,7 @@ runs:
         # keeps cache upload time, download time, and storage size to a minimum.
         path: ${{ steps.metadata.outputs.cache-path }}
         key: ${{ steps.metadata.outputs.cache-key }}
-    - if: steps.cache-modules.outputs.cache-hit != 'true'
+    - if: steps.cache-modules.outputs.cache-hit != 'true' && inputs.no-save != 'false'
       name: Download go modules
       shell: bash
       env:

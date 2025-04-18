@@ -16,6 +16,7 @@ runs:
       with:
         github-token: ${{ inputs.github-token || github.token }}
         no-restore: true # Don't download vault's modules for pipeline
+        no-save: true # Don't attempt to save modules either
     - name: pipeline-metadata
       id: pipeline-metadata
       shell: bash
