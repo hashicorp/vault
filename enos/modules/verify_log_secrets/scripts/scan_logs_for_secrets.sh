@@ -69,6 +69,4 @@ if ! out=$(sudo journalctl --no-pager -u "$VAULT_UNIT_NAME" -a | "$radar_bin_pat
   fail "failed to scan vault journal: vault-radar scan file failed: $out"
 fi
 
-echo "-------------------00002"
 verify_radar_scan_output_file vault-journal journal-secrets.json
-echo "-------------------00003"
