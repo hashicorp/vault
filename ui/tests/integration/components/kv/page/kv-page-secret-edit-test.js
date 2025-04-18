@@ -9,8 +9,8 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
 import { hbs } from 'ember-cli-htmlbars';
-import { click, fillIn, render } from '@ember/test-helpers';
-import codemirror from 'vault/tests/helpers/codemirror';
+import { click, fillIn, render, settled, waitFor } from '@ember/test-helpers';
+import codemirror, { getCodeEditorValue, setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
@@ -89,9 +89,13 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
     assert.dom(FORM.maskedValueInput()).hasValue('bar');
     assert.dom(FORM.dataInputLabel({ isJson: false })).hasText('Version data');
     await click(GENERAL.toggleInput('json'));
-    assert.strictEqual(
-      codemirror().getValue(' '),
-      `{   \"foo": \"bar" }`, // eslint-disable-line no-useless-escape
+    await waitFor('.cm-editor');
+    const editor = codemirror();
+    const editorValue = getCodeEditorValue(editor);
+      editorValue,
+      `{
+  "foo": "bar"
+}`,
       'json editor initializes with empty object'
     );
     assert.dom(FORM.dataInputLabel({ isJson: true })).hasText('Version data');
@@ -133,7 +137,11 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
     assert.dom(PAGE.diff.added).hasText(`foo2"bar2"`);
 
     await click(GENERAL.toggleInput('json'));
-    codemirror().setValue('{ "foo3": "bar3" }');
+    await waitFor('.cm-editor');
+    const editor = codemirror();
+
+    setCodeEditorValue(editor, '{ "foo3": "bar3" }');
+    await settled();
 
     assert.dom(PAGE.diff.visualDiff).exists('Visual diff updates');
     assert.dom(PAGE.diff.deleted).hasText(`foo"bar"`);
@@ -219,12 +227,16 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
     );
 
     await click(GENERAL.toggleInput('json'));
-    codemirror().setValue('i am a string and not JSON');
+    await waitFor('.cm-editor');
+    const editor = codemirror();
+    setCodeEditorValue(editor, 'i am a string and not JSON');
+    await settled();
     assert
       .dom(FORM.inlineAlert)
       .hasText('JSON is unparsable. Fix linting errors to avoid data discrepancies.');
 
-    codemirror().setValue(`""`);
+    setCodeEditorValue(editor, '');
+    await settled();
     await click(FORM.saveBtn);
     assert.dom(FORM.inlineAlert).hasText('Vault expects data to be formatted as an JSON object.');
   });
@@ -263,8 +275,9 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
     assert.dom(FORM.dataInputLabel({ isJson: false })).hasText('Version data');
     await click(GENERAL.toggleInput('json'));
     assert.dom(FORM.dataInputLabel({ isJson: true })).hasText('Version data');
-
-    codemirror().setValue(`{ "hello": "there"}`);
+    await waitFor('.cm-editor');
+    const editor = codemirror();
+    setCodeEditorValue(editor, '{ "hello": "there" }');
     await click(FORM.saveBtn);
   });
 

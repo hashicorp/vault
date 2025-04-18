@@ -67,16 +67,13 @@ export default class ToolsWrap extends Component {
   }
 
   @action
-  codemirrorLinted(diagnostics: unknown[]) {
-    this.hasLintingErrors = diagnostics.length > 0;
-  }
-
-  @action
   codemirrorUpdated(val: string) {
+    this.hasLintingErrors = false;
+
     try {
       this.wrapData = JSON.parse(val);
     } catch {
-      // linting errors will be caught in the component
+      this.hasLintingErrors = true;
     }
   }
 
