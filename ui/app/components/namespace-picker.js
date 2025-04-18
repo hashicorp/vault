@@ -23,13 +23,16 @@ export default class NamespacePicker extends Component {
   @service namespace;
   @service router;
   @service store;
+  @service auth;
 
   // Show/hide refresh & manage namespaces buttons
   @tracked hasListPermissions = false;
 
-  @tracked selected = {};
+  @tracked allNamespaces = [];
   @tracked options = [];
+  @tracked namespaceCount = 0;
   @tracked searchInput = '';
+  @tracked selected = {};
 
   constructor() {
     super(...arguments);
@@ -63,18 +66,50 @@ export default class NamespacePicker extends Component {
      *   | 'parent' | 'parent'       | 'parent'       |
      *   | 'child'  | 'parent/child' | 'parent/child' |
      */
-    return [
-      // TODO: Some users (including HDS Admin User) should never see the root namespace. Address this in a followup PR.
-      { id: 'root', path: '', label: 'root' },
+    const options = [
       ...(namespace?.accessibleNamespaces || []).map((ns) => {
         const parts = ns.split('/');
         return { id: parts[parts.length - 1], path: ns, label: ns };
       }),
     ];
+
+    // Conditionally add the root namespace
+    if (this.auth.authData.userRootNamespace === '') {
+      options.unshift({ id: 'root', path: '', label: 'root' });
+    }
+
+    return options;
   }
 
   get namespaceLabel() {
     return this.searchInput === '' ? 'All namespaces' : 'Matching namespaces';
+  }
+
+  async resetList() {
+    this.allNamespaces = this.#getOptions(this.namespace);
+    this.selected = this.#getSelected(this.allNamespaces, this.namespace);
+
+    // default options and namespace count
+    this.options = this.allNamespaces;
+    this.namespaceCount = this.options.length;
+  }
+
+  @action
+  onSearchInput(event) {
+    this.searchInput = event.target.value;
+
+    // Filter options based on the search input
+    if (this.searchInput.trim() === '') {
+      // If the search input is empty, reset to all namespaces
+      this.options = this.allNamespaces;
+    } else {
+      // Filter namespaces based on the search input
+      this.options = this.allNamespaces.filter((option) =>
+        option.label.toLowerCase().includes(this.searchInput.toLowerCase())
+      );
+    }
+
+    this.namespaceCount = this.options.length;
   }
 
   @action
@@ -98,10 +133,15 @@ export default class NamespacePicker extends Component {
     //  Check with design to determine if we should continue to ignore or handle an error situation here.
     await this.namespace?.findNamespacesForUser.perform();
 
-    this.options = this.#getOptions(this.namespace);
-    this.selected = this.#getSelected(this.options, this.namespace);
+    this.resetList();
 
     await this.fetchListCapability();
+  }
+
+  @action
+  async refreshList() {
+    this.searchInput = '';
+    await this.loadOptions();
   }
 
   @action
