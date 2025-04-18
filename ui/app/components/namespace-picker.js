@@ -29,8 +29,7 @@ export default class NamespacePicker extends Component {
 
   @tracked selected = {};
   @tracked options = [];
-  @tracked search = '';
-  @tracked namespaceLabel = 'All Namespaces';
+  @tracked searchInput = '';
 
   constructor() {
     super(...arguments);
@@ -72,6 +71,10 @@ export default class NamespacePicker extends Component {
         return { id: parts[parts.length - 1], path: ns, label: ns };
       }),
     ];
+  }
+
+  get namespaceLabel() {
+    return this.searchInput === '' ? 'All namespaces' : 'Matching namespaces';
   }
 
   @action
