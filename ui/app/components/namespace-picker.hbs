@@ -21,10 +21,10 @@
 
     <D.Generic>
       {{this.namespaceLabel}}
-      <Hds::BadgeCount @text={{or this.options.length 0}} />
+      <Hds::BadgeCount @text={{or this.namespaceOptions.length 0}} />
     </D.Generic>
 
-    {{#each this.options as |option|}}
+    {{#each this.namespaceOptions as |option|}}
       <D.Checkmark
         @selected={{eq option.id this.selected.id}}
         {{on "click" (fn this.onChange option)}}

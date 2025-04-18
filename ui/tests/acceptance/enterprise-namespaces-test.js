@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, settled, visit, fillIn, currentURL, waitFor } from '@ember/test-helpers';
+import { click, settled, visit, fillIn, currentURL, waitFor, findAll } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { runCmd, createNS } from 'vault/tests/helpers/commands';
@@ -12,11 +12,110 @@ import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { GENERAL } from '../helpers/general-selectors';
 import { NAMESPACE_PICKER_SELECTORS } from '../helpers/namespace-picker';
 
+import sinon from 'sinon';
+
 module('Acceptance | Enterprise | namespaces', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function () {
+  let fetchSpy;
+
+  hooks.beforeEach(() => {
+    fetchSpy = sinon.spy(window, 'fetch');
     return login();
+  });
+
+  hooks.afterEach(() => {
+    fetchSpy.restore();
+  });
+
+  test('it filters namespaces based on search input', async function (assert) {
+    assert.expect(7);
+
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+
+    // Verify all namespaces are displayed initially
+    assert.dom(NAMESPACE_PICKER_SELECTORS.link()).exists('Namespace link(s) exist');
+    assert.strictEqual(
+      findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
+      5,
+      'All namespaces are displayed initially'
+    );
+
+    // Verify the search input field exists
+    assert.dom('[type="search"]').exists('The namespace search field exists');
+
+    // Verify 3 namespaces are displayed after searching for "beep"
+    await fillIn('[type="search"]', 'beep');
+    assert.strictEqual(
+      findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
+      3,
+      'Display 3 namespaces matching "beep" after searching'
+    );
+
+    // Verify 1 namespace is displayed after searching for "bop"
+    await fillIn('[type="search"]', 'bop');
+    assert.strictEqual(
+      findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
+      1,
+      'Display 1 namespace matching "bop" after searching'
+    );
+
+    // Verify no namespaces are displayed after searching for "other"
+    await fillIn('[type="search"]', 'other');
+    assert.strictEqual(
+      findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
+      0,
+      'No namespaces are displayed after searching for "other"'
+    );
+
+    // Clear the search input & verify all namespaces are displayed again
+    await fillIn('[type="search"]', '');
+    assert.strictEqual(
+      findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
+      5,
+      'All namespaces are displayed after clearing search input'
+    );
+  });
+
+  test('it updates the namespace list after clicking "Refresh list"', async function (assert) {
+    assert.expect(3);
+
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+
+    // Verify that the namespace list was fetched on load
+    let listNamespaceRequests = fetchSpy
+      .getCalls()
+      .filter((call) => call.args[0].includes('/v1/sys/internal/ui/namespaces'));
+    assert.strictEqual(
+      listNamespaceRequests.length,
+      1,
+      'The network call to the specific endpoint was made twice (once on load, once on refresh)'
+    );
+
+    // Refresh the list of namespaces
+    assert.dom(NAMESPACE_PICKER_SELECTORS.refreshList).exists('Refresh list button exists');
+    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
+
+    // Verify that the namespace list was fetched on refresh
+    listNamespaceRequests = fetchSpy
+      .getCalls()
+      .filter((call) => call.args[0].includes('/v1/sys/internal/ui/namespaces'));
+    assert.strictEqual(
+      listNamespaceRequests.length,
+      2,
+      'The network call to the specific endpoint was made twice (once on load, once on refresh)'
+    );
+  });
+
+  test('it displays the "Manage" button with the correct URL', async function (assert) {
+    assert.expect(1);
+
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+
+    // Verify the "Manage" button is rendered and has the correct URL
+    assert
+      .dom('[href="/ui/vault/access/namespaces"]')
+      .exists('The "Manage" button is displayed with the correct URL');
   });
 
   test('it clears namespaces when you log out', async function (assert) {

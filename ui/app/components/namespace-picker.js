@@ -20,17 +20,15 @@ import { service } from '@ember/service';
  */
 
 export default class NamespacePicker extends Component {
+  @service auth;
   @service namespace;
   @service router;
   @service store;
-  @service auth;
 
   // Show/hide refresh & manage namespaces buttons
   @tracked hasListPermissions = false;
 
   @tracked allNamespaces = [];
-  @tracked options = [];
-  @tracked namespaceCount = 0;
   @tracked searchInput = '';
   @tracked selected = {};
 
@@ -85,31 +83,21 @@ export default class NamespacePicker extends Component {
     return this.searchInput === '' ? 'All namespaces' : 'Matching namespaces';
   }
 
-  async resetList() {
-    this.allNamespaces = this.#getOptions(this.namespace);
-    this.selected = this.#getSelected(this.allNamespaces, this.namespace);
-
-    // default options and namespace count
-    this.options = this.allNamespaces;
-    this.namespaceCount = this.options.length;
+  get namespaceOptions() {
+    if (this.searchInput.trim() === '') {
+      // If the search input is empty, reset to all namespaces
+      return this.allNamespaces;
+    } else {
+      // Filter namespaces based on the search input
+      return this.allNamespaces.filter((ns) =>
+        ns.label.toLowerCase().includes(this.searchInput.toLowerCase())
+      );
+    }
   }
 
   @action
   onSearchInput(event) {
     this.searchInput = event.target.value;
-
-    // Filter options based on the search input
-    if (this.searchInput.trim() === '') {
-      // If the search input is empty, reset to all namespaces
-      this.options = this.allNamespaces;
-    } else {
-      // Filter namespaces based on the search input
-      this.options = this.allNamespaces.filter((option) =>
-        option.label.toLowerCase().includes(this.searchInput.toLowerCase())
-      );
-    }
-
-    this.namespaceCount = this.options.length;
   }
 
   @action
@@ -133,7 +121,8 @@ export default class NamespacePicker extends Component {
     //  Check with design to determine if we should continue to ignore or handle an error situation here.
     await this.namespace?.findNamespacesForUser.perform();
 
-    this.resetList();
+    this.allNamespaces = this.#getOptions(this.namespace);
+    this.selected = this.#getSelected(this.allNamespaces, this.namespace);
 
     await this.fetchListCapability();
   }
