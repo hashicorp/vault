@@ -159,7 +159,7 @@ module('Integration | Component | auth | login-form', function (hooks) {
 
     await this.renderComponent();
 
-    later(this, () => cancelTimers(), 50);
+    later(() => cancelTimers(), 50);
     await settled();
     const [actual] = authenticateStub.lastCall.args;
     assert.propEqual(

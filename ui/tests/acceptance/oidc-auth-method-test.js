@@ -70,13 +70,9 @@ module('Acceptance | oidc auth method', function (hooks) {
     this.setupMocks(assert);
 
     await this.selectMethod('oidc');
-    later(
-      this,
-      () => {
-        window.postMessage(buildMessage().data, window.origin);
-      },
-      DELAY_IN_MS
-    );
+    later(() => {
+      window.postMessage(buildMessage().data, window.origin);
+    }, DELAY_IN_MS);
 
     await click(AUTH_FORM.login);
   });
@@ -102,13 +98,9 @@ module('Acceptance | oidc auth method', function (hooks) {
     });
 
     await this.selectMethod('oidc', true);
-    later(
-      this,
-      () => {
-        window.postMessage(buildMessage().data, window.origin);
-      },
-      DELAY_IN_MS
-    );
+    later(() => {
+      window.postMessage(buildMessage().data, window.origin);
+    }, DELAY_IN_MS);
     await click(AUTH_FORM.login);
   });
 
@@ -119,13 +111,9 @@ module('Acceptance | oidc auth method', function (hooks) {
     this.setupMocks();
     await this.selectMethod('oidc');
 
-    later(
-      this,
-      () => {
-        window.postMessage(buildMessage().data, window.origin);
-      },
-      DELAY_IN_MS
-    );
+    later(() => {
+      window.postMessage(buildMessage().data, window.origin);
+    }, DELAY_IN_MS);
 
     await click(AUTH_FORM.login);
     await waitUntil(() => find('[data-test-dashboard-card-header="Vault version"]'));
@@ -179,13 +167,9 @@ module('Acceptance | oidc auth method', function (hooks) {
     this.setupMocks(assert);
     this.server.get('/auth/foo/oidc/callback', () => setupTotpMfaResponse('foo'));
     await this.selectMethod('oidc');
-    later(
-      this,
-      () => {
-        window.postMessage(buildMessage().data, window.origin);
-      },
-      DELAY_IN_MS
-    );
+    later(() => {
+      window.postMessage(buildMessage().data, window.origin);
+    }, DELAY_IN_MS);
 
     await click(AUTH_FORM.login);
     await waitUntil(() => find('[data-test-mfa-form]'));
@@ -196,13 +180,9 @@ module('Acceptance | oidc auth method', function (hooks) {
     const authSpy = sinon.spy(this.owner.lookup('service:auth'), 'authenticate');
     this.setupMocks();
     await this.selectMethod('oidc');
-    later(
-      this,
-      () => {
-        window.postMessage(buildMessage().data, window.origin);
-      },
-      DELAY_IN_MS
-    );
+    later(() => {
+      window.postMessage(buildMessage().data, window.origin);
+    }, DELAY_IN_MS);
     await click(AUTH_FORM.login);
     const [actual] = authSpy.lastCall.args;
     const expected = {
@@ -247,16 +227,12 @@ module('Acceptance | oidc auth method', function (hooks) {
 
     await this.selectMethod('oidc');
 
-    later(
-      this,
-      () => {
-        // first assertion
-        window.postMessage(callbackData({ source: 'miscellaneous-source' }), window.origin);
-        // second assertion
-        window.postMessage(callbackData({ source: 'oidc-callback' }), window.origin);
-      },
-      DELAY_IN_MS
-    );
+    later(() => {
+      // first assertion
+      window.postMessage(callbackData({ source: 'miscellaneous-source' }), window.origin);
+      // second assertion
+      window.postMessage(callbackData({ source: 'oidc-callback' }), window.origin);
+    }, DELAY_IN_MS);
 
     await click(AUTH_FORM.login);
     // cleanup
@@ -266,14 +242,10 @@ module('Acceptance | oidc auth method', function (hooks) {
   test('it shows error when message posted with state key, wrong params', async function (assert) {
     this.setupMocks();
     await this.selectMethod('oidc');
-    later(
-      this,
-      () => {
-        // callback params are missing "code"
-        window.postMessage({ source: 'oidc-callback', state: 'state', foo: 'bar' }, window.origin);
-      },
-      DELAY_IN_MS
-    );
+    later(() => {
+      // callback params are missing "code"
+      window.postMessage({ source: 'oidc-callback', state: 'state', foo: 'bar' }, window.origin);
+    }, DELAY_IN_MS);
     await click(AUTH_FORM.login);
     assert
       .dom(GENERAL.messageError)
