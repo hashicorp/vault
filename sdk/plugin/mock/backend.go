@@ -56,6 +56,7 @@ func Backend() *backend {
 			errorPaths(&b),
 			kvPaths(&b),
 			[]*framework.Path{
+				pathConfig(&b),
 				pathInternal(&b),
 				pathSpecial(&b),
 				pathRaw(&b),
@@ -67,9 +68,10 @@ func Backend() *backend {
 				"special",
 			},
 		},
-		Secrets:     []*framework.Secret{},
-		Invalidate:  b.invalidate,
-		BackendType: logical.TypeLogical,
+		Secrets:          []*framework.Secret{},
+		Invalidate:       b.invalidate,
+		BackendType:      logical.TypeLogical,
+		RotateCredential: b.rotateRootCredential,
 	}
 	b.internal = MockPluginDefaultInternalValue
 	b.RunningVersion = "v0.0.0+mock"
@@ -91,6 +93,12 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 	case "internal":
 		b.internal = ""
 	}
+}
+
+func (b *backend) rotateRootCredential(ctx context.Context, req *logical.Request) error {
+	b.Logger().Debug("mock rotateRootCredential")
+	b.internal = "rotated"
+	return nil
 }
 
 // WriteInternalValue is a helper to set an in-memory value in the plugin,

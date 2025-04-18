@@ -1,0 +1,3 @@
+```release-note:bug
+core/rotation-manager: fix a bug where plugin automatic root rotations would stop after seal and unseal operations
+```

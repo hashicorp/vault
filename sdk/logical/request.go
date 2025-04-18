@@ -205,7 +205,7 @@ type Request struct {
 
 	// RotationID is set by the Rotation Manager
 	// when making rotate requests to plugin backends
-	RotationID string
+	RotationID string `json:"rotation_id" structs:"rotation_id" mapstructure:"rotation_id" sentinel:""`
 
 	// Cached token entry. This avoids another lookup in request handling when
 	// we've already looked it up at http handling time. Note that this token
