@@ -1,0 +1,519 @@
+[
+  {
+    "title": "Use a custom token helper",
+    "path": "token-helper"
+  },
+  {
+    "title": "CLI commands",
+    "routes": [
+      {
+        "title": "Vault Agent",
+        "routes": [
+          {
+            "title": "<code>agent</code>",
+            "path": "commands/agent"
+          },
+          {
+            "title": "<code>generate-config</code>",
+            "path": "commands/agent/generate-config"
+          }
+        ]
+      },
+      {
+        "title": "<code>audit</code>",
+        "routes": [
+          {
+            "title": "<code>disable</code>",
+            "path": "commands/audit/disable"
+          },
+          {
+            "title": "<code>enable</code>",
+            "path": "commands/audit/enable"
+          },
+          {
+            "title": "<code>list</code>",
+            "path": "commands/audit/list"
+          }
+        ]
+      },
+      {
+        "title": "<code>auth</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/auth"
+          },
+          {
+            "title": "<code>disable</code>",
+            "path": "commands/auth/disable"
+          },
+          {
+            "title": "<code>enable</code>",
+            "path": "commands/auth/enable"
+          },
+          {
+            "title": "<code>help</code>",
+            "path": "commands/auth/help"
+          },
+          {
+            "title": "<code>list</code>",
+            "path": "commands/auth/list"
+          },
+          {
+            "title": "<code>move</code>",
+            "path": "commands/auth/move"
+          },
+          {
+            "title": "<code>tune</code>",
+            "path": "commands/auth/tune"
+          }
+        ]
+      },
+      {
+        "title": "<code>debug</code>",
+        "path": "commands/debug"
+      },
+      {
+        "title": "<code>delete</code>",
+        "path": "commands/delete"
+      },
+      {
+        "title": "<code>events</code>",
+        "path": "commands/events"
+      },
+      {
+        "title": "<code>hcp</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/hcp"
+          },
+          {
+            "title": "<code>connect</code>",
+            "path": "commands/hcp/connect"
+          },
+          {
+            "title": "<code>disconnect</code>",
+            "path": "commands/hcp/disconnect"
+          }
+        ]
+      },
+      {
+        "title": "<code>kv</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/kv"
+          },
+          {
+            "title": "<code>delete</code>",
+            "path": "commands/kv/delete"
+          },
+          {
+            "title": "<code>destroy</code>",
+            "path": "commands/kv/destroy"
+          },
+          {
+            "title": "<code>enable-versioning</code>",
+            "path": "commands/kv/enable-versioning"
+          },
+          {
+            "title": "<code>get</code>",
+            "path": "commands/kv/get"
+          },
+          {
+            "title": "<code>list</code>",
+            "path": "commands/kv/list"
+          },
+          {
+            "title": "<code>metadata</code>",
+            "path": "commands/kv/metadata"
+          },
+          {
+            "title": "<code>patch</code>",
+            "path": "commands/kv/patch"
+          },
+          {
+            "title": "<code>put</code>",
+            "path": "commands/kv/put"
+          },
+          {
+            "title": "<code>rollback</code>",
+            "path": "commands/kv/rollback"
+          },
+          {
+            "title": "<code>undelete</code>",
+            "path": "commands/kv/undelete"
+          }
+        ]
+      },
+      {
+        "title": "<code>lease</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/lease"
+          },
+          {
+            "title": "<code>lookup</code>",
+            "path": "commands/lease/lookup"
+          },
+          {
+            "title": "<code>renew</code>",
+            "path": "commands/lease/renew"
+          },
+          {
+            "title": "<code>revoke</code>",
+            "path": "commands/lease/revoke"
+          }
+        ]
+      },
+      {
+        "title": "<code>license</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/license"
+          },
+          {
+            "title": "<code>get</code>",
+            "path": "commands/license/get"
+          },
+          {
+            "title": "<code>inspect</code>",
+            "path": "commands/license/inspect"
+          }
+        ]
+      },
+      {
+        "title": "<code>list</code>",
+        "path": "commands/list"
+      },
+      {
+        "title": "<code>login</code>",
+        "path": "commands/login"
+      },
+      {
+        "title": "<code>monitor</code>",
+        "path": "commands/monitor"
+      },
+      {
+        "title": "<code>namespace</code>",
+        "path": "commands/namespace"
+      },
+      {
+        "title": "<code>operator</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/operator"
+          },
+          {
+            "title": "<code>diagnose</code>",
+            "path": "commands/operator/diagnose"
+          },
+          {
+            "title": "<code>generate-root</code>",
+            "path": "commands/operator/generate-root"
+          },
+          {
+            "title": "<code>import</code>",
+            "path": "commands/operator/import"
+          },
+          {
+            "title": "<code>init</code>",
+            "path": "commands/operator/init"
+          },
+          {
+            "title": "<code>key-status</code>",
+            "path": "commands/operator/key-status"
+          },
+          {
+            "title": "<code>members</code>",
+            "path": "commands/operator/members"
+          },
+          {
+            "title": "<code>migrate</code>",
+            "path": "commands/operator/migrate"
+          },
+          {
+            "title": "<code>raft</code>",
+            "path": "commands/operator/raft"
+          },
+          {
+            "title": "<code>rekey</code>",
+            "path": "commands/operator/rekey"
+          },
+          {
+            "title": "<code>rotate</code>",
+            "path": "commands/operator/rotate"
+          },
+          {
+            "title": "<code>seal</code>",
+            "path": "commands/operator/seal"
+          },
+          {
+            "title": "<code>step-down</code>",
+            "path": "commands/operator/step-down"
+          },
+          {
+            "title": "<code>unseal</code>",
+            "path": "commands/operator/unseal"
+          },
+          {
+            "title": "<code>usage</code>",
+            "path": "commands/operator/usage"
+          },
+          {
+            "title": "<code>utilization</code>",
+            "path": "commands/operator/utilization"
+          }
+        ]
+      },
+      {
+        "title": "<code>patch</code>",
+        "path": "commands/patch"
+      },
+      {
+        "title": "<code>path-help</code>",
+        "path": "commands/path-help"
+      },
+      {
+        "title": "<code>pki</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/pki"
+          },
+          {
+            "title": "<code>health-check</code>",
+            "path": "commands/pki/health-check"
+          },
+          {
+            "title": "<code>verify-sign</code>",
+            "path": "commands/pki/verify-sign"
+          },
+          {
+            "title": "<code>list-intermediates</code>",
+            "path": "commands/pki/list-intermediates"
+          },
+          {
+            "title": "<code>issue</code>",
+            "path": "commands/pki/issue"
+          },
+          {
+            "title": "<code>reissue</code>",
+            "path": "commands/pki/reissue"
+          }
+        ]
+      },
+      {
+        "title": "<code>plugin</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/plugin"
+          },
+          {
+            "title": "<code>deregister</code>",
+            "path": "commands/plugin/deregister"
+          },
+          {
+            "title": "<code>info</code>",
+            "path": "commands/plugin/info"
+          },
+          {
+            "title": "<code>list</code>",
+            "path": "commands/plugin/list"
+          },
+          {
+            "title": "<code>register</code>",
+            "path": "commands/plugin/register"
+          },
+          {
+            "title": "<code>reload</code>",
+            "path": "commands/plugin/reload"
+          },
+          {
+            "title": "<code>runtime</code>",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "commands/plugin/runtime"
+              },
+              {
+                "title": "<code>deregister</code>",
+                "path": "commands/plugin/runtime/deregister"
+              },
+              {
+                "title": "<code>info</code>",
+                "path": "commands/plugin/runtime/info"
+              },
+              {
+                "title": "<code>list</code>",
+                "path": "commands/plugin/runtime/list"
+              },
+              {
+                "title": "<code>register</code>",
+                "path": "commands/plugin/runtime/register"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "title": "<code>policy</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/policy"
+          },
+          {
+            "title": "<code>delete</code>",
+            "path": "commands/policy/delete"
+          },
+          {
+            "title": "<code>fmt</code>",
+            "path": "commands/policy/fmt"
+          },
+          {
+            "title": "<code>list</code>",
+            "path": "commands/policy/list"
+          },
+          {
+            "title": "<code>read</code>",
+            "path": "commands/policy/read"
+          },
+          {
+            "title": "<code>write</code>",
+            "path": "commands/policy/write"
+          }
+        ]
+      },
+      {
+        "title": "<code>print</code>",
+        "path": "commands/print"
+      },
+      {
+        "title": "<code>proxy</code>",
+        "path": "commands/proxy"
+      },
+      {
+        "title": "<code>read</code>",
+        "path": "commands/read"
+      },
+      {
+        "title": "<code>secrets</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/secrets"
+          },
+          {
+            "title": "<code>disable</code>",
+            "path": "commands/secrets/disable"
+          },
+          {
+            "title": "<code>enable</code>",
+            "path": "commands/secrets/enable"
+          },
+          {
+            "title": "<code>list</code>",
+            "path": "commands/secrets/list"
+          },
+          {
+            "title": "<code>move</code>",
+            "path": "commands/secrets/move"
+          },
+          {
+            "title": "<code>tune</code>",
+            "path": "commands/secrets/tune"
+          }
+        ]
+      },
+      {
+        "title": "<code>server</code>",
+        "path": "commands/server"
+      },
+      {
+        "title": "<code>ssh</code>",
+        "path": "commands/ssh"
+      },
+      {
+        "title": "<code>status</code>",
+        "path": "commands/status"
+      },
+      {
+        "title": "<code>token</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/token"
+          },
+          {
+            "title": "<code>capabilities</code>",
+            "path": "commands/token/capabilities"
+          },
+          {
+            "title": "<code>create</code>",
+            "path": "commands/token/create"
+          },
+          {
+            "title": "<code>lookup</code>",
+            "path": "commands/token/lookup"
+          },
+          {
+            "title": "<code>renew</code>",
+            "path": "commands/token/renew"
+          },
+          {
+            "title": "<code>revoke</code>",
+            "path": "commands/token/revoke"
+          }
+        ]
+      },
+      {
+        "title": "<code>transit</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/transit"
+          },
+          {
+            "title": "<code>import</code> and <code>import-version</code>",
+            "path": "commands/transit/import"
+          }
+        ]
+      },
+      {
+        "title": "<code>transform</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/transform"
+          },
+          {
+            "title": "<code>import</code> and <code>import-version</code>",
+            "path": "commands/transform/import"
+          }
+        ]
+      },
+      {
+        "title": "<code>unwrap</code>",
+        "path": "commands/unwrap"
+      },
+      {
+        "title": "<code>version</code>",
+        "path": "commands/version"
+      },
+      {
+        "title": "<code>version-history</code>",
+        "path": "commands/version-history"
+      },
+      {
+        "title": "<code>write</code>",
+        "path": "commands/write"
+      }
+    ]
+  }
+]

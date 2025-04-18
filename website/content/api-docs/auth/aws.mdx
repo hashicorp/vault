@@ -8,8 +8,6 @@ description: This is the API documentation for the Vault AWS auth method.
 
 @include 'x509-sha1-deprecation.mdx'
 
-@include 'aws-sha1-deprecation.mdx'
-
 This is the API documentation for the Vault AWS auth method. For
 general information about the usage and operation of the AWS method, please
 see the [Vault AWS method documentation](/vault/docs/auth/aws).
@@ -309,6 +307,9 @@ set of AWS certificates built-in.
 The `pkcs7` type is used to verify PKCS#7 signatures from the AWS
 `http://169.254.169.254/latest/dynamic/instance-identity/pkcs7` and
 `http://169.254.169.254/latest/dynamic/instance-identity/rsa2048` endpoints.
+Vault does not support X.509 certificates with SHA-1 signatures. If you use AWS
+[`/rsa2048` signature endpoint](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/verify-rsa2048.html)
+credentials, you must use the `pkcs7` login flow.
 
 The `identity` type is used to verify signatures from the
 `http://169.254.169.254/latest/dynamic/instance-identity/document` and

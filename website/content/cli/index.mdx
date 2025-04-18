@@ -1,0 +1,323 @@
+---
+layout: docs
+page_title: Vault CLI usage
+description: >-
+  Technical reference for the Vault CLI
+---
+
+# Vault CLI
+
+The Vault CLI is a static binary that wraps the Vault API. While every CLI
+command maps directly to one or more APIs internally, not every endpoint is
+exposed publicly and not every API endpoint has a corresponding CLI command.
+
+
+
+## Usage 
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault <command> [subcommand(s)] [flag(s)] [command-argument(s)]
+
+$ vault <command> [subcommand(s)] [-help | -h]
+```
+
+</CodeBlockConfig>
+
+<Tip>
+
+  Use the `-help` flag with any command to see a description of the command and a
+  list of supported options and flags.
+
+</Tip>
+
+The Vault CLI returns different exit codes depending on whether and where an
+error occurred:
+
+- **`0`** - Success
+- **`1`** - Local/terminal error (invalid flags, failed validation, wrong
+  numbers of arguments, etc.)
+- **`2`** - Remote/server error (API failures, bad TLS, incorrect API
+  parameters, etc.)
+
+
+### Authenticating to Vault
+
+Unauthenticated users can use CLI commands with the `--help` flag, but must use
+[`vault login`](/vault/docs/commands/login) or set the
+[`VAULT_TOKEN`](/vault/docs/commands#standard-vault_token) environment variable
+to use the CLI.
+
+The CLI uses a token helper to cache access tokens after authenticating with
+`vault login` The default file for cached tokens is `~/.vault-token` and
+deleting the file forcibly logs the user out of Vault.
+
+If you prefer to use a custom token helper,
+[you can create your own](/vault/docs/commands/token-helper) and configure the
+CLI to use it.
+
+
+### Passing command arguments
+
+Command arguments include any relevant configuration settings and
+command-specific options. Command options pass input data as `key=value` pairs,
+which you can provided inline, as a `stdin` stream, or from a local file.
+
+<Tabs>
+
+<Tab heading="Inline">
+
+To pass input inline with the command, use the `<option-name>=<value>` syntax:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault audit enable file file_path="/var/log/vault.log"
+```
+
+</CodeBlockConfig>
+
+</Tab>
+
+<Tab heading="stdin">
+
+To pass input from `stdin`, use `-` as a stand-in for the entire `key=value`
+pair or a specific option value.
+
+To pipe the option and value, use a JSON object with the option name and value:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ echo -n '{"file_path":"/var/log/vault.log"}' | vault audit enable file -
+```
+
+</CodeBlockConfig>
+
+To pipe the option value by itself, provide the option name inline:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ echo -n "/var/log/vault.log" | vault audit enable file file_path=-
+```
+
+</CodeBlockConfig>
+
+</Tab>
+
+<Tab heading="Local file">
+
+To pass data as a file, use `@` as a stand-in for the entire
+`<option-name>=<value>` pair or a specific option value.
+
+To pass the option and value, use a JSON file:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+data.json:
+{
+  "file_path":"/var/log/vault.log"
+}
+
+$ vault audit enable file @data.json
+```
+
+</CodeBlockConfig>
+
+To pass the option value by itself, use the option name inline and pass the
+value as text:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+data.txt:
+/var/log/vault.log
+
+$ vault audit enable file file_path=@data.txt
+```
+
+</CodeBlockConfig>
+
+If you use `@` as part of an argument **name** in `<option-name>=<value>`
+format, Vault treats the `@` as part of the key name, rather than a file
+reference. As a result, Vault does not support filenames that include the `=`
+character.
+
+<Note title="Escape literal '@' values">
+
+  To keep Vault from parsing values that begin with a literal `@`, escape the
+  value with a backslash (`\`):
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault login -method userpass  \
+    username="mitchellh"        \
+    password="\@badpasswordisbad"
+```
+
+</CodeBlockConfig>
+
+</Note>
+
+</Tab>
+
+</Tabs>
+
+
+### Calling API endpoints 
+
+To invoke an API endpoint with the Vault CLI, you can use one of the following
+CLI commands with the associated endpoint path:
+
+CLI command    | HTTP verbs
+-------------- | -------------
+`vault read`   | `GET`
+`vault write`  | `PUT`, `POST`
+`vault delete` | `DELETE`
+`vault list`   | `LIST`
+
+For example, to call the UpsertLDAPGroup endpoint,
+`/auth/ldap/groups/{group-name}` to create a new LDAP group called `admin`:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault write /auth/ldap/groups/admin policies="admin,default"
+```
+
+</CodeBlockConfig>
+
+<Tip title="Core plugins have dedicated commands">
+
+  You can use `read`, `write`, `delete`, or `list` with the relevant paths for
+  any valid API endpoint, but some plugins are central to the functionality
+  of Vault and have dedicated CLI commands:
+
+  - [`vault kv`](/vault/docs/commands/kv)
+  - [`vault transit`](/vault/docs/commands/transit)
+  - [`vault transform`](/vault/docs/commands/transform)
+  - [`vault token`](/vault/docs/commands/token)
+
+</Tip>
+
+
+
+## Enable autocomplete
+
+The CLI does not autocomplete commands by default. To enable autocomplete for
+flags, subcommands, and arguments (where supported), use the
+`-autocomplete-install` flag and **restart your shell session**:
+
+```shell-session
+$ vault -autocomplete-install
+```
+
+To use autocomplete, press `<tab>` while typing a command to show a list of
+available completions. Or, use the `-<tab>` flag to show available flag
+completions for the current command.
+
+<Tip>
+
+  If you have configured the `VAULT_*` environment variables needed to connect to
+  your Vault instance, the autocomplete feature automatically queries the Vault
+  server and returns helpful argument suggestions.
+
+</Tip>
+
+
+
+## Configure environment variables
+
+You can use environment variables to configure the CLI globally. Some
+configuration settings have a corresponding CLI flag to configure a specific
+command.
+
+For example, `export VAULT_ADDR='http://localhost:8200'` sets the
+address of your Vault server globally, while
+`-address='http://someotherhost:8200'` overrides the value for a specific
+command.
+
+---
+
+@include 'global-settings/all-env-variables.mdx'
+
+
+
+## Troubleshoot CLI errors
+
+If you run into errors when executing a particular CLI command, the following
+flags and commands can help you track down the problem.
+
+
+### Confirm you are using the right endpoint or command
+
+If a command behaves differently than expected or you need details about a
+specific endpoint, you can use the
+[`vault path-help`](/vault/docs/commands/path-help) command to see the help text
+for a given endpoint path.
+
+For example, to see the help for `sys/mounts`:
+
+```shell-session
+$ vault path-help sys/mounts
+Request:        mounts
+Matching Route: ^mounts$
+
+List the currently mounted backends.
+
+## DESCRIPTION
+
+This path responds to the following HTTP methods.
+
+    GET /
+        Lists all the mounted secret backends.
+
+    GET /<mount point>
+        Get information about the mount at the specified path.
+
+    POST /<mount point>
+        Mount a new secret backend to the mount point in the URL.
+
+    POST /<mount point>/tune
+        Tune configuration parameters for the given mount point.
+
+    DELETE /<mount point>
+        Unmount the specified mount point.
+```
+
+### Construct the associated cURL command
+
+To determine if the problem exists with the structure of your CLI command or the
+associated endpoint, you can use the `-output-curl-string` flag:
+
+For example, to test that a `vault write` command to create a new user is not
+failing due to an issue with the `/auth/userpass/users/{username}` endpoint, use
+the generated cURL command to call the endpoint directly:
+
+```shell-session
+$ vault write -output-curl-string  auth/userpass/users/bob password="long-password"
+
+curl -X PUT -H "X-Vault-Request: true" -H "X-Vault-Token: $(vault print token)" -d '{"password":"long-password"}' http://127.0.0.1:8200/v1/auth/userpass/users/bob
+```
+
+### Construct the required Vault policy
+
+To determine if the problem relates to insufficient permissions, you can use the
+`-output-policy` flag to construct a minimal Vault policy that grants the
+permissions needed to execute the relevant command.
+
+For example, to confirm you have permission to write a secret to the `kv`
+plugin, mounted at `kv/secret`, use `-output-policy` then confirm you have the
+capabilities listed:
+
+```
+$ vault kv put -output-policy kv/secret value=itsasecret
+
+path "kv/data/secret" {
+  capabilities = ["create", "update"]
+}
+```

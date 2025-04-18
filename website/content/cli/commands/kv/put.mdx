@@ -1,0 +1,74 @@
+---
+layout: docs
+page_title: kv put - Command
+description: |-
+  The "kv put" command writes the data to the given path in the KV secrets
+  engine. The data can be of any type.
+---
+
+# kv put
+
+The `kv put` command writes the data to the given path in the KV secrets
+engine.
+
+If working with KV v2, this command creates a new version of a secret at the
+specified location. If working with KV v1, this command stores the given secret
+at the specified location.
+
+Regardless of the KV version, if the value does not yet exist at the specified
+path, the calling token must have an ACL policy granting the "create"
+capability. If the value already exists, the calling token must have an ACL
+policy granting the "update" capability.
+
+## Examples
+
+Writes the data to the key "creds":
+
+```shell-session
+$ vault kv put -mount=secret creds passcode=my-long-passcode
+```
+
+The data can also be consumed from a file on disk by prefixing with the "@"
+symbol. For example:
+
+```shell-session
+$ vault kv put -mount=secret foo @data.json
+```
+
+Or it can be read from stdin using the "-" symbol:
+
+```shell-session
+$ echo "abcd1234" | vault kv put -mount=secret foo bar=-
+```
+
+## Usage
+
+There are no flags beyond the [standard set of flags](/vault/docs/commands)
+included on all commands.
+
+### Output options
+
+- `-field` `(string: "")` - Print only the field with the given name. Specifying
+  this option will take precedence over other formatting directives. The result
+  will not have a trailing newline making it ideal for piping to other
+  processes.
+
+- `-format` `(string: "table")` - Print the output in the given format. Valid
+  formats are "table", "json", or "yaml". This can also be specified via the
+  `VAULT_FORMAT` environment variable.
+
+### Command options
+
+- `-cas` `(int: 0)` - Specifies to use a Check-And-Set operation. If not set the
+  write will be allowed. In order for a write to be successful, `cas` must be set to 
+  the current version of the secret. If set to 0 a write will only be allowed if 
+  the key doesn’t exist as unset keys do not have any version information. Also 
+  remember that soft deletes do not remove any underlying version data from storage.
+  In order to write to a soft deleted key, the cas parameter must match the key's 
+  current version. The default is -1.
+
+- `-mount` `(string: "")` - Specifies the path where the KV backend is mounted. 
+  If specified, the next argument will be interpreted as the secret path. If 
+  this flag is not specified, the next argument will be interpreted as the 
+  combined mount path and secret path, with /data/ automatically inserted for 
+  KV v2 secrets.

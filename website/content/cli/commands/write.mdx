@@ -1,0 +1,130 @@
+---
+layout: docs
+page_title: write - Command
+description: |-
+  The "write" command writes data to Vault at the given path. The data can be
+  credentials, secrets, configuration, or arbitrary data. The specific behavior
+  of this command is determined at the thing mounted at the path.
+---
+
+# write
+
+The `write` command writes data to Vault at the given path (wrapper command for
+HTTP PUT or POST). The data can be credentials, secrets, configuration, or
+arbitrary data. The specific behavior of the `write` command is determined at
+the thing mounted at the path.
+
+Data is specified as "**key=value**" pairs on the command line. If the value begins
+with an "**@**", then it is loaded from a file. If the value for a key is "**-**", Vault
+will read the value from stdin rather than the command line.
+
+Some API fields require more advanced structures such as maps. These cannot
+directly be represented on the command line. However, direct control of the
+request parameters can be achieved by using `-` as the only data argument.
+This causes `vault write` to read a JSON blob containing all request parameters
+from stdin. This argument will be ignored if used in conjunction with any
+"key=value" pairs.
+
+For a full list of examples and paths, please see the documentation that
+corresponds to the secrets engines in use.
+
+## Examples
+
+Store an arbitrary secrets in the token's cubbyhole.
+
+```shell-session
+$ vault write cubbyhole/git-credentials username="student01" password="p@$$w0rd"
+```
+
+Create a new encryption key in the transit secrets engine:
+
+```shell-session
+$ vault write -force transit/keys/my-key
+```
+
+The `-force` flag allows the write operation without input data. (See [command
+options](#command-options).)
+
+Upload an AWS IAM policy from a file on disk:
+
+```shell-session
+$ vault write aws/roles/ops policy=@policy.json
+```
+
+Configure access to Consul by providing an access token:
+
+```shell-session
+$ echo $MY_TOKEN | vault write consul/config/access token=-
+```
+
+Set role-level TTL values for a user named "alice" so the generated lease has a
+default TTL of 8 hours (28800 seconds) and maximum TTL of 12 hours
+(43200 seconds):
+
+```shell-session
+$ VAULT_TOKEN=$VAULT_TOKEN vault write /auth/userpass/users/alice \
+    token_ttl="8h" token_max_ttl="12h"
+```
+
+### API versus CLI
+
+Create a token with TTL set to 8 hours, limited to 3 uses, and attach `admin`
+and `secops` policies.
+
+```shell-session
+$ vault write auth/token/create policies="admin" policies="secops" ttl=8h num_uses=3
+```
+
+Equivalent cURL command for this operation:
+
+```shell-session
+$ tee request_payload.json -<<EOF
+{
+   "policies": ["admin", "secops"],
+   "ttl": "8h",
+   "num_uses": 3
+}
+EOF
+
+$ curl --header "X-Vault-Token: $VAULT_TOKEN" \
+    --request POST \
+    --data @request_payload.json \
+    $VAULT_ADDR/v1/auth/token/create
+```
+
+The `vault write` command simplifies the API call.
+
+Since token management is a common task, Vault CLI provides a
+[`token`](/vault/docs/commands/token) command with
+[`create`](/vault/docs/commands/token/create) subcommand. The CLI command simplifies
+the token creation. Use the `vault create` command with options to set the token
+TTL, policies, and use limit.
+
+```shell-session
+$ vault token create -policy=admin -policy=secops -ttl=8h -use-limit=3
+```
+
+-> **Syntax:** The command options start with `-` (e.g. `-ttl`) while API path
+parameters do not (e.g. `ttl`). You always set the API parameters after the path
+you are invoking.
+
+## Usage
+
+The following flags are available in addition to the [standard set of
+flags](/vault/docs/commands) included on all commands.
+
+### Output options
+
+- `-field` `(string: "")` - Print only the field with the given name, in the format
+  specified in the `-format` directive. The result will not have a trailing
+  newline making it ideal for piping to other processes.
+
+- `-format` `(string: "table")` - Print the output in the given format. Valid
+  formats are "table", "json", or "yaml". This can also be specified via the
+  `VAULT_FORMAT` environment variable.
+
+### Command options
+
+- `-force` `(bool: false)` - Allow the operation to continue with no key=value
+  pairs. This allows writing to keys that do not need or expect data. This is
+  aliased as `-f`.

@@ -1,0 +1,83 @@
+---
+layout: docs
+page_title: operator utilization - Command
+description: |-
+  The "operator utilization" generates license utilization reporting bundles for the Vault Enterprise users.
+---
+
+# operator utilization
+
+The `operator utilization` allows the Vault Enterprise users to generate license
+utilization reporting bundles. When users have disabled automated license
+reporting, use this command to manually generate the report and send it to
+HashiCorp.
+
+<Note title="Vault Enterprise">
+
+Refer to the [manual license utilization
+reporting](/vault/docs/enterprise/license/manual-reporting) page to learn more
+about reporting your Vault Enterprise license utilization.
+
+</Note>
+
+## Examples
+
+Create a license utilization bundle that includes all persisted historical
+snapshots and has the default bundle name
+(`vault-utilization-<time_stamp>.json`):
+
+```shell-session
+$ vault operator utilization
+Success! License utilization reporting bundle written to: vault-utilization-2024-02-16T22-23-25Z.json
+```
+
+Create a license utilization bundle with a message about the bundle, and output
+the file at the specified path, `/utilization/reports/latest.json`.
+
+```shell-session
+$ vault operator utilization \
+    -message="Change Control 654987" \
+    -output="/utilization/reports/latest.json"
+```
+
+**Example output:**
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
+Success! License utilization reporting bundle written to: /utilization/reports/latest.json
+```
+
+</CodeBlockConfig>
+
+The message, `Change Control 654987`, is included in the _server log_, but not
+in the bundle.
+
+**Example entry in the server log:**
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
+[INFO]  reporting: generating license utilization bundle
+[INFO]  reporting: generating license utilization bundle: message="Change Control 654987"
+```
+
+</CodeBlockConfig>
+
+## Usage
+
+The following flags are available in addition to the [standard set of
+flags](/vault/docs/commands) included on all commands.
+
+### Command options
+
+- `-message` `(string; "")` - Provide context about the conditions under which
+the report was generated and submitted. This message is not included in the
+license utilization bundle but will be included in the vault server logs.
+
+- `-output` `(string; "")` - Specifies the output path for the bundle. Defaults
+to a time-based generated file name.
+
+- `-today-only` `(bool: false)` - To include only today’s snapshot, no
+historical snapshots. If no snapshots were persisted in the last 24 hrs, it
+takes a snapshot and exports it to a bundle.

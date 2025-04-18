@@ -1,0 +1,70 @@
+---
+layout: docs
+page_title: "audit list - Vault CLI"
+description: >-
+  List active audit devices for Vault.
+---
+
+# `audit list`
+
+List information about active audit devices.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault audit list [flags]
+
+$ vault audit list [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`vault audit list` displays information about active audit devices.
+
+<Tip title="Related API endpoints">
+
+  ListAuditDevices - [`GET:/sys/audit`](/vault/api-docs/system/audit#list-enabled-audit-devices)
+
+</Tip>
+
+## Command arguments
+
+None.
+
+## Command options
+
+None.
+
+## Command flags
+
+<br />
+
+@include 'cli/audit/flags/detailed.mdx'
+
+## Standard flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags.mdx'
+
+## Examples
+
+List basic information for all active audit devices:
+
+```shell-session
+$ vault audit list
+Path     Type    Description
+----     ----    -----------
+file/    file    n/a
+```
+
+List detailed information for all active audit devices:
+
+```shell-session
+$ vault audit list -detailed
+Path     Type    Description    Replication    Options
+----     ----    -----------    -----------    -------
+file/    file    n/a            replicated     file_path=/var/log/audit.log
+```

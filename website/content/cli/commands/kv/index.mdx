@@ -1,0 +1,163 @@
+---
+layout: docs
+page_title: kv - Command
+description: |-
+  The "kv" command groups subcommands for interacting with Vault's key/value
+  secret engine.
+---
+
+# kv
+
+The `kv` command groups subcommands for interacting with Vault's key/value
+secrets engine (both [KV version 1](/vault/docs/secrets/kv/kv-v1) and [KV
+Version 2](/vault/docs/secrets/kv/kv-v2).
+
+## Syntax
+
+Option flags for a given subcommand are provided after the subcommand, but before the arguments.
+
+The path to where the secrets engine is mounted can be indicated with the `-mount` flag, such as `vault kv get -mount=secret creds`.
+
+The deprecated path-like syntax can also be used (e.g. `vault kv get secret/creds`), but this should be avoided
+for KV v2, because it is not actually the full API path to the secret 
+(secret/data/foo) and may cause confusion.
+
+~> A `flag provided but not defined: -mount` error means you are using an older version of Vault before the 
+mount flag syntax was introduced. Upgrade to at least Vault 1.11, or refer to previous versions of the docs 
+which only use the old syntax to refer to the mount path.
+
+## Mount flag syntax (KV)
+
+All `kv` commands can alternatively refer to the path to the KV secrets engine using a flag-based syntax like `$ vault kv get -mount=secret password`
+instead of `$ vault kv get secret/password`. The mount flag syntax was created to mitigate confusion caused by the fact that for KV v2 secrets,
+their full path (used in policies and raw API calls) actually contains a nested `/data/` element (e.g. `secret/data/password`) which can be easily overlooked when using
+the above KV v1-like syntax `secret/password`. To avoid this confusion, all KV-specific docs pages will use the `-mount` flag.
+
+## Exit codes
+
+The Vault CLI aims to be consistent and well-behaved unless documented
+otherwise.
+
+- Local errors such as incorrect flags, failed validations, or wrong numbers
+  of arguments return an exit code of 1.
+
+- Any remote errors such as API failures, bad TLS, or incorrect API parameters
+  return an exit status of 2
+
+Some commands override this default where it makes sense. These commands
+document this anomaly.
+
+
+## Examples
+
+Create or update the key named "creds" in the KV version 2 enabled at "secret"
+with the value "passcode=my-long-passcode":
+
+```shell-session
+$ vault kv put -mount=secret creds passcode=my-long-passcode
+== Secret Path ==
+secret/data/creds
+
+======= Metadata =======
+Key                Value
+---                -----
+created_time       2022-06-15T20:14:17.107852Z
+custom_metadata    <nil>
+deletion_time      n/a
+destroyed          false
+version            1
+```
+
+Read this value back:
+
+```shell-session
+$ vault kv get -mount=secret creds
+== Secret Path ==
+secret/data/creds
+
+======= Metadata =======
+Key                Value
+---                -----
+created_time       2022-06-15T20:14:17.107852Z
+custom_metadata    <nil>
+deletion_time      n/a
+destroyed          false
+version            1
+
+====== Data ======
+Key         Value
+---         -----
+passcode    my-long-passcode
+```
+
+Get metadata for the key named "creds":
+
+```shell-session
+$ vault kv metadata get -mount=secret creds
+=== Metadata Path ===
+secret/metadata/creds
+
+========== Metadata ==========
+Key                     Value
+---                     -----
+cas_required            false
+created_time            2022-06-15T20:14:17.107852Z
+current_version         1
+custom_metadata         <nil>
+delete_version_after    0s
+max_versions            0
+oldest_version          0
+updated_time            2022-06-15T20:14:17.107852Z
+
+====== Version 1 ======
+Key              Value
+---              -----
+created_time     2022-06-15T20:14:17.107852Z
+deletion_time    n/a
+destroyed        false
+```
+
+Get a specific version of the key named "creds":
+
+```shell-session
+$ vault kv get -mount=secret -version=1 creds
+== Secret Path ==
+secret/data/creds
+
+======= Metadata =======
+Key                Value
+---                -----
+created_time       2022-06-15T20:14:17.107852Z
+custom_metadata    <nil>
+deletion_time      n/a
+destroyed          false
+version            1
+
+====== Data ======
+Key         Value
+---         -----
+passcode    my-long-passcode
+```
+
+## Usage
+
+```text
+Usage: vault kv <subcommand> [options] [args]
+
+  # ...
+
+Subcommands:
+    delete               Deletes versions in the KV store
+    destroy              Permanently removes one or more versions in the KV store
+    enable-versioning    Turns on versioning for a KV store
+    get                  Retrieves data from the KV store
+    list                 List data or secrets
+    metadata             Interact with Vault's Key-Value storage
+    patch                Sets or updates data in the KV store without overwriting
+    put                  Sets or updates data in the KV store
+    rollback             Rolls back to a previous version of data
+    undelete             Undeletes versions in the KV store
+```
+
+For more information, examples, and usage about a subcommand, click on the name
+of the subcommand in the sidebar.

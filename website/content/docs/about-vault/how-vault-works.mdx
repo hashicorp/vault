@@ -1,0 +1,121 @@
+---
+layout: docs
+page_title: How Vault works
+description: >-
+  Learn about the internal architecture of Vault.
+---
+
+# How Vault works
+
+
+Vault is an identity-based secrets and encryption management system
+that centralizes secret management, rotates old credentials, generates
+credentials on demand, audits client interactions, and supports regulatory
+compliance.
+
+It provides encryption services that are gated by authentication and authorization 
+methods to ensure secure, auditable and restricted access to _secrets_. 
+
+A secret is anything that you want to tightly control access to, such as tokens,
+API keys, passwords, encryption keys or certificates. Vault provides a unified
+interface to any secret, while providing tight access control and recording a
+detailed audit log.
+
+API keys for external services, credentials for service-oriented architecture
+communication, etc. It can be difficult to understand who is accessing which
+secrets, especially since this can be platform-specific. Adding on key rolling,
+secure storage, and detailed audit logs is almost impossible without a custom
+solution. This is where Vault steps in.
+
+Vault validates and authorizes clients (users, machines, apps) before providing
+them access to secrets or stored sensitive data.
+
+![How Vault Works](/img/how-vault-works.png)
+
+
+## Core Vault workflow
+
+Vault works primarily with tokens and a token is associated to the client's policy. Each policy is path-based and policy rules constrains the actions and accessibility to the paths for each client. With Vault, you can create tokens manually and assign them to your clients, or the clients can log in and obtain a token. The illustration below displays Vault's core workflow.
+
+![Vault Workflow](/img/vault-workflow-diagram1.png)
+
+ The core Vault workflow consists of four stages:
+
+- **Authenticate:** Authentication in Vault is the process by which a client supplies information that Vault uses to determine if they are who they say they are. Once the client is authenticated against an auth method, a token is generated and associated to a policy.
+- **Validation:** Vault validates the client against third-party trusted sources, such as Github, LDAP, AppRole, and more.
+- **Authorize**: A client is matched against the Vault security policy.  This policy is a set of rules defining which API endpoints a client has access to with its Vault token. Policies provide a declarative way to grant or forbid access to certain paths and operations in Vault.
+- **Access**: Vault grants access to secrets, keys, and encryption capabilities by issuing a token based on policies associated with the client’s identity. The client can then use their Vault token for future operations.
+
+
+## The encryption barrier
+
+The diagram below illustrates the intricacies and distinct components of Vault.
+
+[![Architecture Overview](/img/layers.png)](/img/layers.png)
+
+Vault’s encryption layer, referred to as the _barrier_, is responsible for encrypting and decrypting Vault data. When the Vault server starts, it writes data to its storage backend. Since the storage backend resides outside the barrier, it’s considered untrusted so Vault will encrypt the data before it sends them to the storage backend. This mechanism ensures that if a malicious attacker attempts to gain access to the storage backend, the data cannot be compromised since it remains encrypted, until Vault decrypts the data. The storage backend provides a durable data persistent layer where data is secured and available across server restarts.
+
+When a Vault server is started, it begins in a _sealed_ state. Before any
+operation can be performed on Vault, it must be _unsealed_. This is done by
+providing the unseal keys. During the Vault initialization, it generates an
+encryption key, which is used to protect all Vault data. This key is protected by
+a root key that is stored alongside all other Vault data, but is encrypted by another mechanism: the unseal key.
+
+
+
+
+By default, Vault uses [Shamir's Secret
+Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing) to split the
+unseal key into a configured number of shards (key shares or unseal
+keys). A precise number of shards are required to reconstruct the unseal key,
+which is then used to decrypt the Vault's root key.
+
+![Unseal keys](/img/vault-shamir-seal.png)
+
+Refer to the [Seal/Unseal](/vault/docs/concepts/seal#seal-unseal) documentation for
+further details.
+
+The number of shares and the minimum number of shards required can both be specified.
+Shamir's technique can be disabled, and the root key can be used directly for
+unsealing. Once Vault retrieves the encryption key, it decrypts the
+data in the storage backend, and enters the _unsealed_ state. Once unsealed,
+Vault loads the configured audit devices, auth methods, and secrets
+engines.
+
+~> **Note:** The default Vault configuration uses a Shamir seal; however, Vault can be [auto
+unsealed](/vault/docs/concepts/seal#auto-unseal) by a trusted cloud key management
+system (KMS) or hardware security module (HSM) to increase security.
+
+The configuration of the audit devices, auth methods, and secrets engines are security sensitive and are stored in Vault. Users with permissions can modify them and cannot be specified outside of the barrier. By storing them in Vault, changes are protected by the ACL system and tracked by audit logs.
+
+Requests may be processed from the HTTP API to the core once Vault is unsealed.
+The core manages the flow of requests through the system,
+enforces ACLs, and ensures audit logging is done.
+
+When a client first connects to Vault, the client needs to authenticate. Vault provides
+configurable auth methods and offers flexibility within the authentication mechanism
+used. Mechanisms such as username/password or GitHub may be
+used for operators, while applications may use public/private keys or tokens to
+authenticate. An authentication request that flows through the core and into an auth
+method determines if the request is valid and returns a list of
+associated policies.
+
+Policies are just a named ACL rule. For example, the "root" policy is built-in
+and permits access to all resources. You may create any number of named policies
+with fine-grained control over paths. Vault operates in an allowed-access mode, meaning the action is not allowed unless access is granted via a policy explicitly. Since a user may have multiple policies associated, actions are allowed when policy permits. Policies are stored and managed by an internal
+policy store. This internal store is affected through the system backend,
+which is always mounted at `sys/`.
+
+Once authentication takes place and an auth method provides a set of applicable
+policies, a new client token is generated and managed by the token store. This
+client token is used to make future requests.
+This token method is similar to a cookie sent by a website when a user logs in. Depending on the auth method configuration, the client
+token may have a lease associated with it, and may need to be renewed periodically to avoid invalidation.
+
+Once authenticated, requests are made by providing the client token. The client token is
+used to verify the client, ensuring they are authorized while loading the relevant policies. The
+policies are used to authorize the client request. The request is then routed to the secrets engine, which is processed depending on its type. When the secrets engine returns the secret, the core registers it with the expiration manager and attaches a lease ID.  Clients use the lease ID to renew or revoke their
+secret. The expiration manager automatically revokes the secret if a client allows the lease to expire.
+
+The core logs requests and responses to the audit broker, distributing the requests to all configured audit devices. Outside of the request
+flow, the core performs specific background activities. Lease management is critical, allowing expired client tokens or secrets to be revoked automatically. Additionally, Vault handles specific partial-failure cases by using write-ahead logging with a rollback manager. This is managed transparently within the core and is not user-visible.

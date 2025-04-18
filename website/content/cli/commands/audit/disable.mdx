@@ -1,0 +1,76 @@
+---
+layout: docs
+page_title: "audit disable - Vault CLI"
+description: >-
+  Disable an audit device capturing log data from Vault.
+---
+
+# `audit disable`
+
+Disable an audit device if it exists.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault audit disable [flags] <device_path>
+
+$ vault audit disable [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`vault audit disable` deactivates an audit device without destroying data
+already logged by the device. The operation is idempotent and succeeds if the
+audit device is properly disabled **or** if the device path does not
+correspond to an active audit device.
+
+<Tip title="Related API endpoints">
+
+  DisableAuditDevice - [`DELETE:/sys/audit/{mount-path}`](/vault/api-docs/system/audit#disable-audit-device)
+
+</Tip>
+
+### Limitations and warnings 
+
+- You cannot HMAC values for comparison against audit logs for a disabled audit
+  device.
+- Vault does not preserve HMAC encryption if you reenable an audit device at the
+  same path. Each time you enable a device, Vault uses a new salt for hashing.
+
+## Command arguments
+
+<br />
+
+@include 'cli/audit/args/device_path.mdx'
+
+## Command options
+
+- None
+
+## Command flags
+
+- None
+
+## Standard flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags-but-format.mdx'
+
+## Examples
+
+Disable a file-type audit device at the default path, `file/`:
+
+```shell-session
+$ vault audit disable file/
+Success! Disabled audit device (if it was enabled) at: file/
+```
+
+Disable a socket audit device at the path `audit/kv-socket`:
+
+```shell-session
+$ vault audit disable audit/kv-socket/
+Success! Disabled audit device (if it was enabled) at: audit/kv-socket/
+```

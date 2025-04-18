@@ -1,0 +1,32 @@
+---
+layout: docs
+page_title: version-history - Command
+description: |-
+  The "version-history" command prints the historical list of installed Vault versions in chronological order.
+---
+
+# version-history
+
+The `version-history` command prints the historical list of installed Vault versions in chronological order.
+
+```shell-session
+Note: Version tracking was added in 1.9.0. Earlier versions have not been tracked.
+      The Build Date will only be available for versions 1.11.0 or greater.
+
+Version  Installation Time     Build Date
+-------  -----------------     ----------
+1.9.0    2021-11-18T10:23:16Z
+1.9.1    2022-12-13T11:09:52Z
+1.9.2    2021-12-23T10:56:37Z
+1.11.0   2022-05-03T13:16:04Z  2022-05-03T08:34:11Z
+
+## Usage
+
+The following flags are available in addition to the [standard set of
+flags](/docs/commands) included on all commands.
+
+### Output options
+
+- `-format` `(string: "table")` - Print the output in the given format. Valid
+  formats are "table" or json". This can also be specified via the
+  `VAULT_FORMAT` environment variable.

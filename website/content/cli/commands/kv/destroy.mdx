@@ -1,0 +1,47 @@
+---
+layout: docs
+page_title: kv destroy - Command
+description: |-
+  The "kv destroy" command permanently removes the specified version data for
+  the provided key and version numbers from the key-value store.
+---
+
+# kv destroy
+
+~> **NOTE:** This is a [KV version 2](/vault/docs/secrets/kv/kv-v2) secrets
+engine command, and not available for Version 1.
+
+The `kv destroy` command permanently removes the specified versions' data
+from the key/value secrets engine. If no key exists at the path, no action is
+taken.
+
+## Examples
+
+Destroy version 11 of the key "creds":
+
+```shell-session
+$ vault kv destroy -mount=secret -versions=11 creds
+Success! Data written to: secret/destroy/creds
+```
+
+## Usage
+
+There are no flags beyond the [standard set of flags](/vault/docs/commands)
+included on all commands.
+
+### Output options
+
+- `-format` `(string: "table")` - Print the output in the given format. Valid
+  formats are "table", "json", or "yaml". This can also be specified via the
+  `VAULT_FORMAT` environment variable.
+
+### Command options
+
+- `-mount` `(string: "")` - Specifies the path where the KV backend is mounted. 
+  If specified, the next argument will be interpreted as the secret path. If 
+  this flag is not specified, the next argument will be interpreted as the 
+  combined mount path and secret path, with /data/ automatically inserted for 
+  KV v2 secrets.
+
+- `-versions` `([]int: <required>)` - The versions to destroy. Their data will
+  be permanently deleted.
