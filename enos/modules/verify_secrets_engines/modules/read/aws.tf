@@ -15,6 +15,7 @@ resource "enos_remote_exec" "aws_verify_new_creds" {
     VAULT_ADDR            = var.vault_addr
     VAULT_TOKEN           = var.vault_root_token
     VAULT_INSTALL_DIR     = var.vault_install_dir
+    VERIFY_AWS_ENGINE_CERTS = var.verify_aws_engine_creds
   }
 
   scripts = [abspath("${path.module}/../../scripts/aws-verify-new-creds.sh")]

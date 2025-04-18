@@ -14,6 +14,7 @@ fail() {
 [[ -z "$VAULT_INSTALL_DIR" ]] && fail "VAULT_INSTALL_DIR env variable has not been set"
 [[ -z "$VAULT_TOKEN" ]] && fail "VAULT_TOKEN env variable has not been set"
 [[ -z "$VAULT_AWS_ROLE" ]] && fail "VAULT_AWS_ROLE env variable has not been set"
+[[ -z "$VERIFY_AWS_ENGINE_CERTS" ]] && fail "VERIFY_AWS_ENGINE_CERTS env variable has not been set"
 [[ -z "$AWS_REGION" ]] && fail "AWS_REGION env variable has not been set"
 [[ -z "$AWS_USER_NAME" ]] && fail "AWS_USER_NAME env variable has not been set"
 [[ -z "$AWS_ACCESS_KEY_ID" ]] && fail "AWS_ACCESS_KEY_ID env variable has not been set"
@@ -24,10 +25,14 @@ test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
 export VAULT_FORMAT=json
 
+if [ "${VERIFY_AWS_ENGINE_CERTS}" = false ]; then
+  echo "AWS Engine certificate verification is disabled. Skipping verification."
+  exit 0
+fi
+
 echo -e "Configuring Vault AWS \n"
 USERNAME_TEMPLATE="{{ if (eq .Type \"STS\") }}{{ printf \"${AWS_USER_NAME}-%s-%s\" (random 20) (unix_time) | truncate 32 }}{{ else }}{{ printf \"${AWS_USER_NAME}-%s-%s\" (unix_time) (random 20) | truncate 60 }}{{ end }}"
 "$binpath" write "${MOUNT}/config/root" access_key="${AWS_ACCESS_KEY_ID}" secret_key="${AWS_SECRET_ACCESS_KEY}" username_template="${USERNAME_TEMPLATE}"
-echo "---------------------------------"
 
 echo -e "Verifying root config \n"
 "$binpath" read "${MOUNT}/config/root"
