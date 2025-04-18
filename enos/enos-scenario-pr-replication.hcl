@@ -939,12 +939,12 @@ scenario "pr_replication" {
     ]
 
     variables {
-      create_state      = step.verify_secrets_engines_on_primary.state
-      hosts             = step.get_secondary_cluster_ips.follower_hosts
-      vault_addr        = step.create_secondary_cluster.api_addr_localhost
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_root_token  = step.create_secondary_cluster.root_token
-      verify_pki_certs  = false
+      create_state            = step.verify_secrets_engines_on_primary.state
+      hosts                   = step.get_secondary_cluster_ips.follower_hosts
+      vault_addr              = step.create_secondary_cluster.api_addr_localhost
+      vault_install_dir       = global.vault_install_dir[matrix.artifact_type]
+      vault_root_token        = step.create_secondary_cluster.root_token
+      verify_pki_certs        = false
       verify_aws_engine_creds = false
     }
   }
