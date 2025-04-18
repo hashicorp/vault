@@ -3,10 +3,4 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#if this.isHdsIcon}}
-  <Hds::Icon @name={{@name}} @size={{this.size}} @stretched={{@stretched}} @isInline={{true}} ...attributes />
-{{else}}
-  <span class="hs-icon {{this.hsIconClass}}" aria-hidden="true" ...attributes>
-    {{svg-jar @name}}
-  </span>
-{{/if}}
+<Hds::Icon @name={{@name}} @size={{(or @size "16")}} @stretched={{@stretched}} @isInline={{true}} ...attributes />
