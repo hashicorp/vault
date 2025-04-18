@@ -9,7 +9,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import syncScenario from 'vault/mirage/scenarios/sync';
 import syncHandlers from 'vault/mirage/handlers/sync';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { settled, click, visit, currentURL, fillIn, currentRouteName } from '@ember/test-helpers';
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -22,7 +22,7 @@ module('Acceptance | sync | destination (singular)', function (hooks) {
   hooks.beforeEach(async function () {
     syncScenario(this.server);
     syncHandlers(this.server);
-    return authPage.login();
+    return login();
   });
 
   test('it should transition to overview route via breadcrumb', async function (assert) {

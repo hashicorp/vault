@@ -6,9 +6,11 @@
 import { module, test } from 'qunit';
 import { currentURL, click, fillIn, settled, waitFor } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
-import authPage from 'vault/tests/pages/auth';
+import { login, loginMethod, logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { createPolicyCmd, deleteAuthCmd, mountAuthCmd, runCmd } from '../helpers/commands';
 import { v4 as uuidv4 } from 'uuid';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 
 const SUCCESS_MESSAGE = 'Successfully reset password';
 
@@ -26,12 +28,12 @@ module('Acceptance | reset password', function (hooks) {
   });
 
   hooks.afterEach(async function () {
-    await authPage.login();
+    await login();
     await runCmd([deleteAuthCmd(this.userpass), `delete sys/policies/acl/${this.userpass}`], false);
   });
 
   test('does not allow password reset for non-userpass users', async function (assert) {
-    await authPage.login();
+    await login();
     await settled();
 
     await click('[data-test-user-menu-trigger]');
@@ -39,13 +41,17 @@ module('Acceptance | reset password', function (hooks) {
   });
 
   test('allows password reset for userpass users logged in via dropdown', async function (assert) {
-    await authPage.login();
+    await login();
     await runCmd([
       mountAuthCmd('userpass', this.userpass),
       createPolicyCmd(this.userpass, this.policy),
       `write auth/${this.userpass}/users/reset-me password=password token_policies=${this.userpass}`,
     ]);
-    await authPage.loginUsername('reset-me', 'password', this.userpass);
+
+    await loginMethod(
+      { username: 'reset-me', password: 'password', path: this.userpass },
+      { authType: 'userpass', toggleOptions: true }
+    );
 
     await click('[data-test-user-menu-trigger]');
     await click('[data-test-user-menu-item="reset-password"]');
@@ -67,17 +73,18 @@ module('Acceptance | reset password', function (hooks) {
   });
 
   test('allows password reset for userpass users logged in via tab', async function (assert) {
-    await authPage.login();
+    await login();
     await runCmd([
       mountAuthCmd('userpass', this.userpass),
       `write sys/auth/${this.userpass}/tune listing_visibility="unauth"`,
       createPolicyCmd(this.userpass, this.policy),
       `write auth/${this.userpass}/users/reset-me password=password token_policies=${this.userpass}`,
     ]);
-    await authPage.logout();
+    await logout();
     await click(`[data-test-auth-method="${this.userpass}"] a`);
-    await authPage.usernameInput('reset-me');
-    await authPage.passwordInput('password').submit();
+    await fillIn(GENERAL.inputByAttr('username'), 'reset-me');
+    await fillIn(GENERAL.inputByAttr('password'), 'password');
+    await click(AUTH_FORM.login);
 
     await click('[data-test-user-menu-trigger]');
     await click('[data-test-user-menu-item="reset-password"]');

@@ -5,13 +5,13 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, fillIn, find, visit, waitUntil } from '@ember/test-helpers';
-import authPage from 'vault/tests/pages/auth';
+import { logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { buildMessage, callbackData, windowStub } from 'vault/tests/helpers/oidc-window-stub';
 import sinon from 'sinon';
 import { Response } from 'miragejs';
 import { setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
-import { GENERAL } from '../helpers/general-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { ERROR_MISSING_PARAMS, ERROR_WINDOW_CLOSED } from 'vault/components/auth-jwt';
 
 module('Acceptance | oidc auth method', function (hooks) {
@@ -54,7 +54,7 @@ module('Acceptance | oidc auth method', function (hooks) {
 
     // ensure clean state
     localStorage.removeItem('selectedAuth');
-    authPage.logout();
+    logout();
   });
 
   hooks.afterEach(function () {

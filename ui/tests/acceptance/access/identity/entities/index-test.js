@@ -7,7 +7,7 @@ import { fillIn, click, currentRouteName, currentURL, visit } from '@ember/test-
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/access/identity/index';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { v4 as uuidv4 } from 'uuid';
@@ -23,7 +23,7 @@ module('Acceptance | /access/identity/entities', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
-    return authPage.login();
+    return login();
   });
 
   test('it renders the entities page', async function (assert) {

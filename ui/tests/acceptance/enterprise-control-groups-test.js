@@ -12,7 +12,7 @@ import { storageKey } from 'vault/services/control-group';
 import controlGroup from 'vault/tests/pages/components/control-group';
 import controlGroupSuccess from 'vault/tests/pages/components/control-group-success';
 import { writeSecret } from 'vault/tests/helpers/kv/kv-run-commands';
-import authPage from 'vault/tests/pages/auth';
+import { login, logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -31,7 +31,7 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
         'color-contrast': { enabled: false },
       },
     });
-    return authPage.login();
+    return login();
   });
 
   const POLICY = `
@@ -109,7 +109,7 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
       'write -field=client_token auth/token/create policies=kv-control-group',
     ]);
     context.userToken = userToken;
-    await authPage.login(userToken);
+    await login(userToken);
     await settled();
     return context;
   };
@@ -143,7 +143,7 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
 
     const accessor = controlGroupComponent.accessor;
     const controlGroupToken = controlGroupComponent.token;
-    await authPage.logout();
+    await logout();
     await settled();
     // log in as the admin, navigate to the accessor page,
     // and authorize the control group request
@@ -160,9 +160,7 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
     await settled();
     assert.strictEqual(controlGroupComponent.bannerPrefix, 'Thanks!', 'text display changes');
     await settled();
-    await authPage.logout();
-    await settled();
-    await authPage.login(context.userToken);
+    await login(context.userToken);
     await settled();
     if (shouldStoreToken) {
       localStorage.setItem(
