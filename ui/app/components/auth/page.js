@@ -10,7 +10,7 @@ import { action } from '@ember/object';
 
 /**
  * @module AuthPage
- * The Auth::Page is the route template for the login splash view. It renders the Auth::LoginForm or MFA component if an 
+ * The Auth::Page is the route template for the login splash view. It renders the Auth::LoginForm or MFA component if an
  * mfa validation is returned from the auth request. It also handles display logic if there is an oidc provider query param.
  *
  * @example
@@ -34,11 +34,12 @@ import { action } from '@ember/object';
  * */
 
 export default class AuthPage extends Component {
-  @service flags;
+  @service flags; // TODO REMOVE
 
   @tracked mfaErrors;
   @tracked mfaAuthData;
 
+  // TODO MOVE TO AUTH::FORMTEMPLATE
   get namespaceInput() {
     const namespaceQP = this.args.namespaceQueryParam;
     if (this.flags.hvdManagedNamespaceRoot) {
@@ -53,6 +54,7 @@ export default class AuthPage extends Component {
     return namespaceQP;
   }
 
+  // TODO MOVE TO AUTH::FORMTEMPLATE
   @action
   handleNamespaceUpdate(event) {
     this.args.onNamespaceUpdate(event.target.value);
