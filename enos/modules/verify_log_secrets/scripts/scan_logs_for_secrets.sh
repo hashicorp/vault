@@ -70,3 +70,4 @@ if ! out=$(sudo journalctl --no-pager -u "$VAULT_UNIT_NAME" -a | "$radar_bin_pat
 fi
 
 verify_radar_scan_output_file vault-journal journal-secrets.json
+
