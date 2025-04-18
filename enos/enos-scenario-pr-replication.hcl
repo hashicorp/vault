@@ -1289,7 +1289,6 @@ scenario "pr_replication" {
 
   output "secrets_engines_state" {
     description = "The state of configured secrets engines"
-    sensitive   = true
     value       = step.verify_secrets_engines_on_primary.state
   }
 
