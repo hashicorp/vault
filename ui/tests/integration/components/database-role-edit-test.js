@@ -87,6 +87,7 @@ module('Integration | Component | database-role-edit', function (hooks) {
         {
           path: 'static-roles',
           username: 'staticTestUser',
+          password: 'testPassword',
           rotation_period: '172800s', // 2 days in seconds
           skip_import_rotation: true,
         },
@@ -97,11 +98,16 @@ module('Integration | Component | database-role-edit', function (hooks) {
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="create"/>`);
     await fillIn('[data-test-ttl-value="Rotation period"]', '2');
     await click('[data-test-toggle-input="toggle-skip_import_rotation"]');
+    await fillIn('[data-test-input="password"]', 'testPassword'); // fill in password field
 
     await click('[data-test-secret-save]');
 
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="show"/>`);
     assert.dom('[data-test-value-div="Rotate immediately"]').containsText('No');
+    assert.dom('[data-test-value="Password"]').doesNotExist(); // verify password field doesn't show on details view
+
+    await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="edit"/>`);
+    assert.dom('[data-test-icon="edit"]').exists(); // verify password field is enabled for edit & enable button is rendered bc role hasn't been rotated
   });
 
   test('enterprise: it should successfully create user that does rotate immediately & verify warning modal pops up', async function (assert) {
@@ -116,6 +122,9 @@ module('Integration | Component | database-role-edit', function (hooks) {
 
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="show"/>`);
     assert.dom('[data-test-value-div="Rotate immediately"]').containsText('Yes');
+
+    await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="edit"/>`);
+    assert.dom('[data-test-icon="edit"]').doesNotExist(); // verify password field is disabled for edit & enable button isn't rendered bc role has already been rotated
   });
 
   test('it should show Get credentials button when a user has the correct policy', async function (assert) {
