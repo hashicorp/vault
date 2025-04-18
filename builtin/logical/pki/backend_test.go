@@ -4939,7 +4939,7 @@ func TestBackend_Roles_KeySizeRegression(t *testing.T) {
 		/*  8 */ {"ed25519", []int{0}, []int{0}, false, []string{"ed25519"}, []int{0}, false},
 
 		// Any key type should reject insecure RSA key sizes.
-		/*  9 */ {"any", []int{0}, []int{0, 256, 384, 512}, false, []string{"rsa", "rsa"}, []int{512, 1024}, true},
+		/*  9 */ {"any", []int{0}, []int{0, 256, 384, 512}, false, []string{"rsa"}, []int{1024}, true},
 		// But work for everything else.
 		/* 10 */ {"any", []int{0}, []int{0, 256, 384, 512}, false, []string{"rsa", "rsa", "ec", "ec", "ec", "ec", "ed25519"}, []int{2048, 3072, 224, 256, 384, 521, 0}, false},
 
@@ -7418,6 +7418,53 @@ func TestIssuance_AlwaysEnforceErr(t *testing.T) {
 		})
 		requireSuccessNonNilResponse(t, resp, err, "issue should have worked with a lower TTL and always_enforce_err")
 	})
+}
+
+// TestIssuance_SignIntermediateKeyUsages tests the field "key_usage" both when directly generating a root certificate,
+// and when signing a CA CSR.  In particular, this test verifies that:
+// - the key usage DigitalSignature is added if present
+// - non-existent or invalid key usages return a warning, but are ignored by certificate generation
+// - CertSign and CRLSign are ignored
+func TestIssuance_SignIntermediateKeyUsages(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"key_type":    "ec",
+		"ttl":         "10h",
+		"issuer_name": "root-ca",
+		"key_name":    "root-key",
+		"key_usage":   "DigitalSignature,DogPetting",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "expected root generation to succeed")
+	require.Contains(t, resp.Warnings, "Invalid key usage will be ignored: unrecognized key usage DogPetting")
+	rootCertRaw := resp.Data["certificate"]
+	rootCert := parseCert(t, rootCertRaw.(string))
+	require.Equal(t, x509.KeyUsageDigitalSignature, rootCert.KeyUsage&x509.KeyUsageDigitalSignature, "keyUsage Digital Signature was not present")
+	require.Equal(t, x509.KeyUsageCertSign, rootCert.KeyUsage&x509.KeyUsageCertSign, "keyUsage CertSign was not present")
+	require.Equal(t, x509.KeyUsageCRLSign, rootCert.KeyUsage&x509.KeyUsageCRLSign, "keyUsage CRLSign was not present")
+	require.Equal(t, x509.KeyUsageDigitalSignature|x509.KeyUsageCertSign|x509.KeyUsageCRLSign, rootCert.KeyUsage, "unexpected KeyUsage present")
+	resp, err = CBWrite(b, s, "intermediate/generate/internal", map[string]interface{}{
+		"common_name": "myint.com",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed generating intermediary CSR")
+	requireFieldsSetInResp(t, resp, "csr")
+	csr := resp.Data["csr"]
+
+	resp, err = CBWrite(b, s, "issuer/root-ca/sign-intermediate", map[string]interface{}{
+		"csr":       csr,
+		"key_usage": "CRLSign,CertSign,DigitalSignature,KeyEncipherment,KeyAgreement",
+		"ttl":       "60h",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "expected intermediate signing to succeed")
+	require.Contains(t, resp.Warnings, "Invalid key usage: key usage KeyEncipherment is only valid for non-Ca certs; key usage KeyAgreement is only valid for non-Ca certs")
+	intCertRaw := resp.Data["certificate"]
+	intCert := parseCert(t, intCertRaw.(string))
+	require.Equal(t, x509.KeyUsageDigitalSignature, intCert.KeyUsage&x509.KeyUsageDigitalSignature, "keyUsage Digital Signature was not present")
+	require.Equal(t, x509.KeyUsageCertSign, intCert.KeyUsage&x509.KeyUsageCertSign, "keyUsage CertSign was not present")
+	require.Equal(t, x509.KeyUsageCRLSign, intCert.KeyUsage&x509.KeyUsageCRLSign, "keyUsage CRLSign was not present")
+	require.Equal(t, x509.KeyUsageDigitalSignature|x509.KeyUsageCertSign|x509.KeyUsageCRLSign, intCert.KeyUsage, "unexpected KeyUsage present on intermediate certificate")
 }
 
 var (

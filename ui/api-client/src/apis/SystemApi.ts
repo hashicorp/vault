@@ -9933,6 +9933,30 @@ export class SystemApi extends runtime.BaseAPI {
     }
 
     /**
+     */
+    async systemReadUtilizationReportRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/sys/utilization-report`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     */
+    async systemReadUtilizationReport(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse> {
+        const response = await this.systemReadUtilizationReportRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Configure control group global settings.
      */
     async systemWriteConfigControlGroupRaw(requestParameters: SystemApiSystemWriteConfigControlGroupOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>> {

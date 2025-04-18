@@ -37,7 +37,7 @@ module('Integration | Component | auth form', function (hooks) {
 
   test('it calls performAuth on submit', async function (assert) {
     await this.renderComponent();
-    await fillIn(AUTH_FORM.input('token'), '123token');
+    await fillIn(GENERAL.inputByAttr('token'), '123token');
     await click(AUTH_FORM.login);
     const [type, data] = this.performAuth.lastCall.args;
     assert.strictEqual(type, 'token', 'performAuth is called with type');
@@ -183,11 +183,11 @@ module('Integration | Component | auth form', function (hooks) {
     await this.renderComponent();
 
     await fillIn(GENERAL.selectByAttr('auth-method'), 'oidc');
-    await fillIn(AUTH_FORM.input('role'), 'foo');
+    await fillIn(GENERAL.inputByAttr('role'), 'foo');
     await click(AUTH_FORM.moreOptions);
-    await fillIn(AUTH_FORM.input('role'), 'foo');
-    await fillIn(AUTH_FORM.mountPathInput, 'foo-oidc');
-    assert.dom(AUTH_FORM.input('role')).hasValue('foo', 'role is retained when mount path is changed');
+    await fillIn(GENERAL.inputByAttr('role'), 'foo');
+    await fillIn(GENERAL.inputByAttr('path'), 'foo-oidc');
+    assert.dom(GENERAL.inputByAttr('role')).hasValue('foo', 'role is retained when mount path is changed');
     await click(AUTH_FORM.login);
   });
 });

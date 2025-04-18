@@ -146,6 +146,15 @@ const SECRET_BACKENDS = {
     listItemPartial: 'secret-list/item',
     firstStep: `To use transit, you'll need to create a key`,
   },
+  totp: {
+    displayName: 'TOTP',
+    searchPlaceholder: 'Filter keys',
+    item: 'key',
+    create: 'Add key',
+    navigateTree: false,
+    editComponent: 'totp-edit',
+    listItemPartial: 'secret-list/totp-list-item',
+  },
 };
 
 export function optionsForBackend(backend, tab) {

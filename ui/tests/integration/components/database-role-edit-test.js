@@ -16,6 +16,7 @@ module('Integration | Component | database-role-edit', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
+    this.version = this.owner.lookup('service:version');
     this.store = this.owner.lookup('service:store');
     this.store.pushPayload('database-role', {
       modelName: 'database/role',
@@ -76,7 +77,8 @@ module('Integration | Component | database-role-edit', function (hooks) {
     await click('[data-test-secret-save]');
   });
 
-  test('it should successfully create user with skip import rotation', async function (assert) {
+  test('enterprise: it should successfully create user that does not rotate immediately', async function (assert) {
+    this.version.type = 'enterprise';
     this.server.post('/sys/capabilities-self', capabilitiesStub('database/static-creds/my-role', ['create']));
     this.server.post(`/database/static-roles/my-static-role`, (schema, req) => {
       assert.true(true, 'request made to create static role');
@@ -99,7 +101,21 @@ module('Integration | Component | database-role-edit', function (hooks) {
     await click('[data-test-secret-save]');
 
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="show"/>`);
-    assert.dom('[data-test-value-div="Skip initial rotation"]').containsText('Yes');
+    assert.dom('[data-test-value-div="Rotate immediately"]').containsText('No');
+  });
+
+  test('enterprise: it should successfully create user that does rotate immediately & verify warning modal pops up', async function (assert) {
+    this.version.type = 'enterprise';
+    this.server.post('/sys/capabilities-self', capabilitiesStub('database/static-creds/my-role', ['create']));
+
+    await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="create"/>`);
+    await click('[data-test-secret-save]');
+
+    assert.dom('[data-test-issuer-warning]').exists(); // check if warning modal shows after clicking save
+    await click('[data-test-issuer-save]'); // click continue button on modal
+
+    await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="show"/>`);
+    assert.dom('[data-test-value-div="Rotate immediately"]').containsText('Yes');
   });
 
   test('it should show Get credentials button when a user has the correct policy', async function (assert) {

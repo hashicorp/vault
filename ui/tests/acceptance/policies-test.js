@@ -6,14 +6,14 @@
 import { click, currentURL, currentRouteName, visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import authPage from 'vault/tests/pages/auth';
-import { GENERAL } from '../helpers/general-selectors';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | policies', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
-    return authPage.login();
+    return login();
   });
 
   test('it redirects from plural policies route with unknown policy type', async function (assert) {

@@ -21,7 +21,7 @@
     <:header>
       {{#if @oidcProviderQueryParam}}
         <div class="box is-shadowless is-flex-v-centered" data-test-auth-logo>
-          <LogoEdition aria-label="Sign in with Hashicorp Vault" />
+          <LogoEdition aria-label="Sign in with Hashicorp Vault" role="img" />
         </div>
       {{else}}
         <div class="is-flex-v-centered has-bottom-margin-xxl">
@@ -37,6 +37,7 @@
               @isIconOnly={{true}}
               @color="tertiary"
               {{on "click" (fn (mut this.mfaAuthData) null)}}
+              data-test-back-button
             />
           {{/if}}
           <h1 class="title is-3">
@@ -63,7 +64,7 @@
                 <div class="field">
                   <div class="control">
                     <input
-                      data-test-auth-form-ns-input
+                      data-test-input="namespace"
                       value={{this.namespaceInput}}
                       placeholder={{if this.flags.hvdManagedNamespaceRoot "/ (Default)" "/ (Root)"}}
                       {{on "input" this.handleNamespaceUpdate}}

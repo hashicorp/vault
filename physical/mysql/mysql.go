@@ -13,6 +13,7 @@ import (
 	"io/ioutil"
 	"math"
 	"net/url"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -268,13 +269,22 @@ func NewMySQLClient(conf map[string]string, logger log.Logger) (*sql.DB, error) 
 	var err error
 
 	// Get the MySQL credentials to perform read/write operations.
-	username, ok := conf["username"]
-	if !ok || username == "" {
-		return nil, fmt.Errorf("missing username")
+	username := os.Getenv("VAULT_MYSQL_USERNAME")
+	if username == "" {
+		confUsername, ok := conf["username"]
+		if !ok || confUsername == "" {
+			return nil, fmt.Errorf("missing username")
+		}
+		username = confUsername
 	}
-	password, ok := conf["password"]
-	if !ok || password == "" {
-		return nil, fmt.Errorf("missing password")
+
+	password := os.Getenv("VAULT_MYSQL_PASSWORD")
+	if password == "" {
+		confPassword, ok := conf["password"]
+		if !ok || confPassword == "" {
+			return nil, fmt.Errorf("missing password")
+		}
+		password = confPassword
 	}
 
 	// Get or set MySQL server address. Defaults to localhost and default port(3306)

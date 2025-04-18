@@ -86,6 +86,10 @@ export interface SecretsApiAwsListRolesRequest {
     awsMountPath: string;
     list: AwsListRolesListEnum;
 }
+export interface SecretsApiAwsListStaticRolesRequest {
+    awsMountPath: string;
+    list: AwsListStaticRolesListEnum;
+}
 export interface SecretsApiAwsReadLeaseConfigurationRequest {
     awsMountPath: string;
 }
@@ -2432,6 +2436,12 @@ export declare class SecretsApi extends runtime.BaseAPI {
      * List the existing roles in this backend
      */
     awsListRoles(awsMountPath: string, list: AwsListRolesListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse>;
+    /**
+     */
+    awsListStaticRolesRaw(requestParameters: SecretsApiAwsListStaticRolesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<StandardListResponse>>;
+    /**
+     */
+    awsListStaticRoles(awsMountPath: string, list: AwsListStaticRolesListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse>;
     /**
      */
     awsReadLeaseConfigurationRaw(requestParameters: SecretsApiAwsReadLeaseConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
@@ -5687,6 +5697,13 @@ export declare enum AliCloudListRolesListEnum {
   * @enum {string}
   */
 export declare enum AwsListRolesListEnum {
+    TRUE = "true"
+}
+/**
+  * @export
+  * @enum {string}
+  */
+export declare enum AwsListStaticRolesListEnum {
     TRUE = "true"
 }
 /**
