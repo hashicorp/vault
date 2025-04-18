@@ -91,6 +91,9 @@
       data-test-sidebar-nav-link="Client Count"
     />
   {{/if}}
+  {{#if this.canAccessVaultUsageDashboard}}
+    <Nav.Link @route="vault.cluster.usage-reporting" @text="Vault Usage" data-test-sidebar-nav-link="Vault Usage" />
+  {{/if}}
   {{#if
     (and
       this.version.features

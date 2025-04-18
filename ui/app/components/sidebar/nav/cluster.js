@@ -27,6 +27,22 @@ export default class SidebarNavClusterComponent extends Component {
     return this.namespace.inRootNamespace && !this.hasChrootNamespace;
   }
 
+  get canAccessVaultUsageDashboard() {
+    /*
+    A user can access Vault Usage if they satisfy the following conditions:
+      1) They have access to sys/v1/utilization-report endpoint
+      2) They are either
+        a) enterprise cluster and root namespace
+        b) hvd cluster and /admin namespace
+    */
+
+    const hasPermission = this.permissions.hasNavPermission('monitoring');
+    const isEnterprise = this.version.isEnterprise;
+    const isCorrectNamespace = this.isRootNamespace || this.namespace.inHvdAdminNamespace;
+
+    return hasPermission && isEnterprise && isCorrectNamespace;
+  }
+
   get showSecretsSync() {
     // always show for HVD managed clusters
     if (this.flags.isHvdManaged) return true;
