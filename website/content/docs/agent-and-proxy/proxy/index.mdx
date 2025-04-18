@@ -10,35 +10,35 @@ description: >-
 
 Vault Proxy aims to remove the initial hurdle to adopt Vault by providing a
 more scalable and simpler way for applications to integrate with Vault.
-Vault Proxy acts as an [API Proxy][apiproxy] for Vault, and can optionally allow
+Vault Proxy acts as an [API proxy][apiproxy] for Vault, and can optionally allow
 or force interacting clients to use its [automatically authenticated token][autoauth].
 
 Vault Proxy is a client daemon that provides the following features:
 
-- [Auto-Auth][autoauth] - Automatically authenticate to Vault and manage the
+- [Auto-auth][autoauth] - Automatically authenticate to Vault and manage the
 token renewal process for locally-retrieved dynamic secrets.
-- [API Proxy][apiproxy] - Acts as a proxy for Vault's API,
-optionally using (or forcing the use of) the Auto-Auth token.
+- [API proxy][apiproxy] - Acts as a proxy for Vault's API,
+optionally using (or forcing the use of) the auto-auth token.
 - [Caching][caching] - Allows client-side caching of responses containing newly
 created tokens and responses containing leased secrets generated off of these
 newly created tokens. The agent also manages the renewals of the cached tokens and leases.
 
-## Auto-Auth
+## Auto-auth
 
 Vault Proxy allows easy authentication to Vault in a wide variety of
-environments. Please see the [Auto-Auth docs][autoauth]
+environments. Please see the [Auto-auth docs][autoauth]
 for information.
 
-Auto-Auth functionality takes place within an `auto_auth` configuration stanza.
+Auto-auth functionality takes place within an `auto_auth` configuration stanza.
 
 ## API proxy
 
 Vault Proxy's primary purpose is to act as an API proxy for Vault, allowing you to talk to Vault's
 API via a listener. It can be configured to optionally allow or force the automatic use of
-the Auto-Auth token for these requests. Please see the [API Proxy docs][apiproxy]
+the auto-auth token for these requests. Please see  the [Use Vault Proxy as an API proxy][apiproxy] page
 for more information.
 
-API Proxy functionality takes place within a defined `listener`, and its behaviour can be configured with an
+API proxy functionality takes place within a defined `listener`, and its behaviour can be configured with an
 [`api_proxy` stanza](/vault/docs/agent-and-proxy/proxy/apiproxy#configuration-api_proxy).
 
 ## Caching
@@ -105,16 +105,20 @@ These are the currently-available general configuration options:
 
 - `vault` <code>([vault][vault]: <optional\>)</code> - Specifies the remote Vault server the Proxy connects to.
 
-- `auto_auth` <code>([auto_auth][autoauth]: <optional\>)</code> - Specifies the method and other options used for Auto-Auth functionality.
+- `auto_auth` <code>([auto_auth][autoauth]: <optional\>)</code> - Specifies the method and other options used for auto-auth functionality.
 
-- `api_proxy` <code>([api_proxy][apiproxy]: <optional\>)</code> - Specifies options used for API Proxy functionality.
+- `api_proxy` <code>([api_proxy][apiproxy]: <optional\>)</code> - Specifies options used for API proxy functionality.
 
 - `cache` <code>([cache][caching]: <optional\>)</code> - Specifies options used for Caching functionality.
 
 - `listener` <code>([listener][listener]: <optional\>)</code> - Specifies the addresses and ports on which the Proxy will respond to requests.
 
-~> **Note:** On `SIGHUP` (`kill -SIGHUP $(pidof vault)`), Vault Proxy will attempt to reload listener TLS configuration.
-This method can be used to refresh certificates used by Vault Proxy without having to restart its process.
+  <Highlight>
+
+  On `SIGHUP` (`kill -SIGHUP $(pidof vault)`), Vault Proxy will attempt to reload listener TLS configuration.
+  This method can be used to refresh certificates used by Vault Proxy without having to restart its process.
+
+  </Highlight>
 
 - `pid_file` `(string: "")` - Path to the file in which the Proxy's Process ID
 (PID) should be stored
@@ -137,8 +141,12 @@ for a list of metrics specific to Proxy.
 
 - `log_level` - Equivalent to the [`-log-level` command-line flag](#_log_level).
 
-~> **Note:** On `SIGHUP` (`kill -SIGHUP $(pidof vault)`), Vault Proxy will update the log level to the value
-specified by configuration file (including overriding values set using CLI or environment variable parameters).
+  <Highlight>
+
+  On `SIGHUP` (`kill -SIGHUP $(pidof vault)`), Vault Proxy will update the log level to the value
+  specified by configuration file (including overriding values set using CLI or environment variable parameters).
+
+  </Highlight>
 
 - `log_format` - Equivalent to the [`-log-format` command-line flag](#_log_format).
 
@@ -253,7 +261,7 @@ runtime metrics about its performance, the auto-auth and the cache status:
 | `vault.proxy.cache.hit`          | Number of cache hits                                 | counter |
 | `vault.proxy.cache.miss`         | Number of cache misses                               | counter |
 
-## Start Vault proxy
+## Start Vault Proxy
 
 To run Vault Proxy:
 
@@ -265,17 +273,17 @@ Configuration](#example-configuration) section for an example configuration.)
 
 1. Start a Vault Proxy with the configuration file.
 
-**Example:**
+  **Example:**
 
-```shell-session
-$ vault proxy -config=/etc/vault/proxy-config.hcl
-   ```
+  ```shell-session
+  $ vault proxy -config=/etc/vault/proxy-config.hcl
+  ```
 
-To get help, run:
+  To get the command help, run:
 
-```shell-session
-$ vault proxy -h
-   ```
+  ```shell-session
+  $ vault proxy -h
+  ```
 
 As with Vault, the `-config` flag can be used in three different ways:
 

@@ -207,7 +207,7 @@ Defaults to `/var/run/secrets/kubernetes.io/serviceaccount/token`.
 - `listener` `(array of objects: required)` - Configuration for the listeners.
 
 There can be one or more `listener` blocks at the top level. Adding a listener enables
-the [API Proxy](/vault/docs/agent-and-proxy/proxy/apiproxy) and enables the API proxy to use the cache, if configured.
+the [API proxy](/vault/docs/agent-and-proxy/proxy/apiproxy) and enables the API proxy to use the cache, if configured.
 These configuration values are common to both `tcp` and `unix` listener blocks. Blocks of type
 `tcp` support the standard `tcp` [listener](/vault/docs/configuration/listener/tcp)
 options. Additionally, the `role` string option is available as part of the top level

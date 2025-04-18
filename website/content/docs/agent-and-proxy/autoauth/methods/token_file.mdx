@@ -7,9 +7,13 @@ description: >-
 
 # Auto-auth method: token file
 
-~> Note: This authentication method is tailored for the development experience,
+<Note>
+
+This authentication method is tailored for the development experience,
 and to facilitate getting started with Vault Agent and Vault Proxy. Vault Agent and
 Vault Proxy should never be configured to use this auto-auth method in a production environment.
+
+</Note>
 
 The `token_file` method reads in an existing, valid Vault token from a file, and uses that
 token in lieu of authenticating itself. While it's a first class auto-auth method for all intents
