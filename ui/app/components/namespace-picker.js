@@ -25,10 +25,11 @@ export default class NamespacePicker extends Component {
   @service store;
 
   // Show/hide refresh & manage namespaces buttons
-  @tracked showAfterOptions = false;
+  @tracked hasListPermissions = false;
 
   @tracked selected = {};
   @tracked options = [];
+  @tracked searchInput = '';
 
   constructor() {
     super(...arguments);
@@ -72,6 +73,10 @@ export default class NamespacePicker extends Component {
     ];
   }
 
+  get namespaceLabel() {
+    return this.searchInput === '' ? 'All namespaces' : 'Matching namespaces';
+  }
+
   @action
   async fetchListCapability() {
     // TODO: Revist. This logic was carried over from previous component implmenetation.
@@ -79,11 +84,11 @@ export default class NamespacePicker extends Component {
     //  instead of hiding both the "Manage" and "Refresh List" buttons?
     try {
       await this.store.findRecord('capabilities', 'sys/namespaces/');
-      this.showAfterOptions = true;
+      this.hasListPermissions = true;
     } catch (e) {
       // If error out on findRecord call it's because you don't have permissions
       // and therefore don't have permission to manage namespaces
-      this.showAfterOptions = false;
+      this.hasListPermissions = false;
     }
   }
 
