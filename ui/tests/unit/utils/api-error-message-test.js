@@ -5,6 +5,8 @@
 
 import { module, test } from 'qunit';
 import apiErrorMessage from 'vault/utils/api-error-message';
+import ENV from 'vault/config/environment';
+import sinon from 'sinon';
 
 module('Unit | Util | api-error-message', function (hooks) {
   hooks.beforeEach(function () {
@@ -47,5 +49,14 @@ module('Unit | Util | api-error-message', function (hooks) {
     const fallback = 'Everything is broken, sorry';
     const message = await apiErrorMessage('some random error', fallback);
     assert.strictEqual(message, fallback);
+  });
+
+  test('it should log out error in development environment', async function (assert) {
+    const consoleStub = sinon.stub(console, 'error');
+    sinon.stub(ENV, 'environment').value('development');
+    const error = new Error('some js type error');
+    await apiErrorMessage(error);
+    assert.true(consoleStub.calledWith('API Error:', error));
+    sinon.restore();
   });
 });

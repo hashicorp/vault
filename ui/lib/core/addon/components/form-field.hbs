@@ -152,17 +152,18 @@
               <RadioButton
                 class="radio"
                 name={{@attr.name}}
-                id={{or val.value val}}
-                value={{or val.value val}}
-                @value={{or val.value val}}
+                id={{or val.id (this.radioValue val)}}
+                value={{this.radioValue val}}
+                @value={{this.radioValue val}}
                 @onChange={{this.setAndBroadcast}}
                 @groupValue={{get @model this.valuePath}}
                 @disabled={{and @attr.options.editDisabled (not @model.isNew)}}
-                data-test-radio={{or val.value val}}
+                data-test-radio={{or val.id (this.radioValue val)}}
               />
               <div class="has-left-margin-xs">
                 <label
-                  for="{{or val.value val}}"
+                  for={{or val.id (this.radioValue val)}}
+                  value={{this.radioValue val}}
                   class="has-left-margin-xs is-size-7"
                   data-test-radio-label={{or val.label val.value val}}
                 >
