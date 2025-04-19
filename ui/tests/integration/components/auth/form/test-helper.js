@@ -65,7 +65,7 @@ export default (test) => {
 
   // not for testing real-world submit, that happens in acceptance tests
   // component here just yields <:advancedSettings> to test form submits data from yielded inputs
-  test('it submits form data yielded inputs', async function (assert) {
+  test('it submits form data from yielded inputs', async function (assert) {
     await this.renderComponent({ yieldBlock: true });
     const { options } = AUTH_METHOD_MAP.find((m) => m.authType === this.authType);
     const { loginData } = options;
@@ -80,12 +80,13 @@ export default (test) => {
     } else {
       await fillIn(GENERAL.inputByAttr('path'), `custom-${this.authType}`);
     }
+
     await click(AUTH_FORM.login);
     const [actual] = this.authenticateStub.lastCall.args;
     assert.propEqual(
       actual.data,
       this.expectedSubmit.custom,
-      'auth service "authenticate" method is called with form data'
+      'auth service "authenticate" method is called with yielded form data'
     );
   });
 };
