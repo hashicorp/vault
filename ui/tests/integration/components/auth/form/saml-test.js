@@ -24,7 +24,25 @@ module('Integration | Component | auth | form | saml', function (hooks) {
     this.cluster = { id: 1 };
     this.onError = sinon.spy();
     this.onSuccess = sinon.spy();
-    this.renderComponent = () => {
+    this.expectedSubmit = {
+      default: { path: 'saml', role: 'some-dev' },
+      custom: { path: 'custom-saml', role: 'some-dev' },
+    };
+    this.renderComponent = ({ yieldBlock = false } = {}) => {
+      if (yieldBlock) {
+        return render(hbs`
+          <Auth::Form::Saml 
+            @authType={{this.authType}} 
+            @cluster={{this.cluster}}
+            @onError={{this.onError}}
+            @onSuccess={{this.onSuccess}}
+          >
+            <:advancedSettings>
+              <label for="path">Mount path</label>
+              <input data-test-input="path" id="path" name="path" type="text" /> 
+            </:advancedSettings>
+          </Auth::Form::Saml>`);
+      }
       return render(hbs`
       <Auth::Form::Saml       
         @authType={{this.authType}}
