@@ -249,13 +249,20 @@ func (c *mongoDBConnectionProducer) getTLSAuth() (opts *options.ClientOptions, e
 
 	if len(c.TLSCertificateKeyData) > 0 {
 		certificate, err := tls.X509KeyPair(c.TLSCertificateKeyData, c.TLSCertificateKeyData)
+		authMechanism := "MONGODB-X509"
 		if err != nil {
 			return nil, fmt.Errorf("unable to load tls_certificate_key_data: %w", err)
 		}
 
+		// Ensure SCRAM-SHA-256 is explicitly set if username/password auth is provided
+		if c.Username != "" && c.Password != "" {
+			authMechanism = "SCRAM-SHA-256"
+		}
+
 		opts.SetAuth(options.Credential{
-			AuthMechanism: "MONGODB-X509",
+			AuthMechanism: authMechanism,
 			Username:      c.Username,
+			Password:      c.Password,
 		})
 
 		tlsConfig.Certificates = append(tlsConfig.Certificates, certificate)
