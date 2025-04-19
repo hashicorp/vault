@@ -42,6 +42,13 @@ export default class AuthBase extends Component<Args> {
       data[key] = formData.get(key);
     }
 
+    // If path is not included in the submitted form data,
+    // set it as the auth type which is the default path Vault expects.
+    // The "token" auth method does not support custom login paths.
+    if (this.args.authType !== 'token' && !Object.keys(data).includes('path')) {
+      data['path'] = this.args.authType;
+    }
+
     this.login.unlinked().perform(data);
   }
 
