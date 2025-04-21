@@ -104,9 +104,7 @@ module('Acceptance | oidc auth method', function (hooks) {
   });
 
   // coverage for bug where token was selected as auth method for oidc and jwt
-  // TODO: revisit this test after the auth form refactor as this is not a timeout issue but most likely broken logic that inconsistently fails.
-  test('(flaky): it should populate oidc auth method on logout', async function (assert) {
-    // This test is flaky and hopefully will be less flaky after the auth form refactor
+  test('it should populate oidc auth method on logout', async function (assert) {
     this.setupMocks();
     await logout();
     await this.selectMethod('oidc');
