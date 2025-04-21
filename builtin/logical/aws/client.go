@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -81,13 +82,19 @@ func (b *backend) getRootConfigs(ctx context.Context, s logical.Storage, clientT
 	credsConfig.HTTPClient = cleanhttp.DefaultClient()
 	credsConfig.Logger = logger
 
+	if config.Region != "" {
+		regions = append(regions, config.Region)
+	}
+
 	maxRetries = config.MaxRetries
 	if clientType == "iam" && config.IAMEndpoint != "" {
 		endpoints = append(endpoints, config.IAMEndpoint)
+		// in the iam case, region is set from config.Region, unless it's blank
 	} else if clientType == "sts" && config.STSEndpoint != "" {
 		endpoints = append(endpoints, config.STSEndpoint)
 		if config.STSRegion != "" {
-			regions = append(regions, config.STSRegion)
+			// this retains original logic, where sts region was only used if sts endpoint was set
+			regions = []string{config.STSRegion} // override to be "only" region if set
 		}
 
 		if len(config.STSFallbackEndpoints) > 0 {
@@ -124,22 +131,28 @@ func (b *backend) getRootConfigs(ctx context.Context, s logical.Storage, clientT
 		opts = append(opts, awsutil.WithEnvironmentCredentials(false), awsutil.WithSharedCredentials(false))
 	}
 
-	// at this point, in the IAM case, regions contains nothing, and endpoints contains iam_endpoint, if it was set.
+	// at this point, in the IAM case, regions contains config.Region, if it was set.
+	//                                 endpoints contains iam_endpoint, if it was set.
 	// in the sts case, regions contains sts_region, if it was set, then the sts_fallback_regions in order, if they were set.
 	//                  endpoints contains sts_endpint, if it wa set, then sts_fallback_endpoints in order, if they were set.
+
+	logger.Info("pre", "region", fmt.Sprintf("%+v", regions), "endpoint", fmt.Sprintf("%+v", endpoints))
 
 	// case in which nothing was supplied
 	if len(regions) == 0 {
 		// fallback region is in descending order, AWS_REGION, or AWS_DEFAULT_REGION, or us-east-1
 		regions = append(regions, fallbackRegion)
+	}
 
-		// we also need to set the endpoint based on this region (since we need matched length arrays)
-		if len(endpoints) == 0 {
-			switch clientType {
-			case "sts":
-				endpoints = append(endpoints, matchingSTSEndpoint(fallbackRegion))
-			case "iam":
-				endpoints = append(endpoints, "https://iam.amazonaws.com") // see https://docs.aws.amazon.com/general/latest/gr/iam-service.html
+	if len(endpoints) == 0 {
+		switch clientType {
+		case "sts":
+			for _, v := range regions {
+				endpoints = append(endpoints, matchingSTSEndpoint(v))
+			}
+		case "iam":
+			for _, v := range regions {
+				endpoints = append(endpoints, matchingIAMEndpoint(v))
 			}
 		}
 	}
@@ -148,6 +161,8 @@ func (b *backend) getRootConfigs(ctx context.Context, s logical.Storage, clientT
 	if len(regions) != len(endpoints) {
 		return nil, errors.New("number of regions does not match number of endpoints")
 	}
+
+	logger.Info("data", "region", fmt.Sprintf("%+v", regions), "endpoint", fmt.Sprintf("%+v", endpoints))
 
 	for i := 0; i < len(endpoints); i++ {
 		if len(regions) > i {
@@ -236,6 +251,14 @@ func (b *backend) nonCachedClientSTS(ctx context.Context, s logical.Storage, log
 // http://docs.aws.amazon.com/general/latest/gr/sts.html
 func matchingSTSEndpoint(stsRegion string) string {
 	return fmt.Sprintf("https://sts.%s.amazonaws.com", stsRegion)
+}
+
+func matchingIAMEndpoint(iamRegion string) string {
+	if strings.Contains(iamRegion, "us-gov") {
+		return "https://iam.us-gov.amazonaws.com"
+	}
+
+	return "https://iam.amazonaws.com"
 }
 
 // PluginIdentityTokenFetcher fetches plugin identity tokens from Vault. It is provided
