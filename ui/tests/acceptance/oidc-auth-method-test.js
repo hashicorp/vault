@@ -67,7 +67,7 @@ module('Acceptance | oidc auth method', function (hooks) {
     await logout();
     await this.selectMethod('oidc');
 
-    later(() => {
+    setTimeout(() => {
       window.postMessage(buildMessage().data, window.origin);
     }, DELAY_IN_MS);
 
@@ -97,7 +97,7 @@ module('Acceptance | oidc auth method', function (hooks) {
     await logout();
     await this.selectMethod('oidc', true);
 
-    later(() => {
+    setTimeout(() => {
       window.postMessage(buildMessage().data, window.origin);
     }, DELAY_IN_MS);
     await click(AUTH_FORM.login);
@@ -109,7 +109,7 @@ module('Acceptance | oidc auth method', function (hooks) {
     await logout();
     await this.selectMethod('oidc');
 
-    later(() => {
+    setTimeout(() => {
       window.postMessage(buildMessage().data, window.origin);
     }, DELAY_IN_MS);
 
@@ -167,7 +167,7 @@ module('Acceptance | oidc auth method', function (hooks) {
     this.server.get('/auth/foo/oidc/callback', () => setupTotpMfaResponse('foo'));
     await logout();
     await this.selectMethod('oidc');
-    later(() => {
+    setTimeout(() => {
       window.postMessage(buildMessage().data, window.origin);
     }, DELAY_IN_MS);
 
@@ -181,7 +181,7 @@ module('Acceptance | oidc auth method', function (hooks) {
     this.setupMocks();
     await logout();
     await this.selectMethod('oidc');
-    later(() => {
+    setTimeout(() => {
       window.postMessage(buildMessage().data, window.origin);
     }, DELAY_IN_MS);
     await click(AUTH_FORM.login);
@@ -228,7 +228,7 @@ module('Acceptance | oidc auth method', function (hooks) {
     await logout();
     await this.selectMethod('oidc');
 
-    later(() => {
+    setTimeout(() => {
       // first assertion
       window.postMessage(callbackData({ source: 'miscellaneous-source' }), window.origin);
       // second assertion
@@ -244,7 +244,7 @@ module('Acceptance | oidc auth method', function (hooks) {
     this.setupMocks();
     await logout();
     await this.selectMethod('oidc');
-    later(() => {
+    setTimeout(() => {
       // callback params are missing "code"
       window.postMessage({ source: 'oidc-callback', state: 'state', foo: 'bar' }, window.origin);
     }, DELAY_IN_MS);
