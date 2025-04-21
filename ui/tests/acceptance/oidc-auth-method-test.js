@@ -2,10 +2,10 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
-import { module, test, skip } from 'qunit';
+import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, fillIn, find, visit, waitUntil } from '@ember/test-helpers';
 import { later } from '@ember/runloop';
+import { click, fillIn, find, waitUntil } from '@ember/test-helpers';
 import { logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { buildMessage, callbackData, windowStub } from 'vault/tests/helpers/oidc-window-stub';
@@ -16,7 +16,7 @@ import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { ERROR_MISSING_PARAMS, ERROR_WINDOW_CLOSED } from 'vault/components/auth-jwt';
 
-const DELAY_IN_MS = 50;
+const DELAY_IN_MS = 500;
 
 module('Acceptance | oidc auth method', function (hooks) {
   setupApplicationTest(hooks);
@@ -45,10 +45,6 @@ module('Acceptance | oidc auth method', function (hooks) {
 
     // select method from dropdown or click auth path tab
     this.selectMethod = async (method, useLink) => {
-      const methodSelector = useLink
-        ? `[data-test-auth-method-link="${method}"]`
-        : '[data-test-select="auth-method"]';
-      await waitUntil(() => find(methodSelector), { timeout: 7000 });
       if (useLink) {
         await click(`[data-test-auth-method-link="${method}"]`);
       } else {
@@ -58,18 +54,19 @@ module('Acceptance | oidc auth method', function (hooks) {
 
     // ensure clean state
     localStorage.removeItem('selectedAuth');
-    await logout();
+    // Cannot log out here because it will cause the internal mount request to be hit before the mocks can interrupt it
   });
 
-  hooks.afterEach(function () {
+  hooks.afterEach(async function () {
     this.openStub.restore();
   });
 
   test('it should login with oidc when selected from auth methods dropdown', async function (assert) {
     assert.expect(1);
     this.setupMocks(assert);
-
+    await logout();
     await this.selectMethod('oidc');
+
     later(() => {
       window.postMessage(buildMessage().data, window.origin);
     }, DELAY_IN_MS);
@@ -79,25 +76,27 @@ module('Acceptance | oidc auth method', function (hooks) {
 
   test('it should login with oidc from listed auth mount tab', async function (assert) {
     assert.expect(3);
-
     this.setupMocks(assert);
 
     this.server.get('/sys/internal/ui/mounts', () => ({
       data: {
         auth: {
-          'test-path/': { description: '', options: {}, type: 'oidc' },
+          'oidc/': { description: '', options: {}, type: 'oidc' },
         },
       },
     }));
+
     // this request is fired twice -- total assertion count should be 3 rather than 2
     // JLR TODO - auth-jwt: verify whether additional request is necessary, especially when glimmerizing component
     // look into whether didReceiveAttrs is necessary to trigger this request
-    this.server.post('/auth/test-path/oidc/auth_url', () => {
+    this.server.post('/auth/oidc/oidc/auth_url', () => {
       assert.ok(true, 'auth_url request made to correct non-standard mount path');
       return { data: { auth_url: 'http://example.com' } };
     });
 
+    await logout();
     await this.selectMethod('oidc', true);
+
     later(() => {
       window.postMessage(buildMessage().data, window.origin);
     }, DELAY_IN_MS);
@@ -106,9 +105,10 @@ module('Acceptance | oidc auth method', function (hooks) {
 
   // coverage for bug where token was selected as auth method for oidc and jwt
   // TODO: revisit this test after the auth form refactor as this is not a timeout issue but most likely broken logic that inconsistently fails.
-  skip('(flaky): it should populate oidc auth method on logout', async function (assert) {
+  test('(flaky): it should populate oidc auth method on logout', async function (assert) {
     // This test is flaky and hopefully will be less flaky after the auth form refactor
     this.setupMocks();
+    await logout();
     await this.selectMethod('oidc');
 
     later(() => {
@@ -116,17 +116,18 @@ module('Acceptance | oidc auth method', function (hooks) {
     }, DELAY_IN_MS);
 
     await click(AUTH_FORM.login);
-    await waitUntil(() => find('[data-test-dashboard-card-header="Vault version"]'));
-    await visit('/vault/logout');
-    // Removing the timeout so the error is clear (the timeout does not help)
-    // await waitUntil(() => find('[data-test-splash-page-content]'), { timeout: 5000 });
+    assert
+      .dom('[data-test-dashboard-card-header="Vault version"]')
+      .exists('Render the dashboard landing page.');
 
+    await logout();
     assert
       .dom('[data-test-select="auth-method"]')
       .hasValue('oidc', 'Previous auth method selected on logout');
   });
 
   test('it should fetch role when switching between oidc/jwt auth methods and changing the mount path', async function (assert) {
+    await logout();
     let reqCount = 0;
     this.server.post('/auth/:method/oidc/auth_url', (schema, req) => {
       reqCount++;
@@ -151,7 +152,7 @@ module('Acceptance | oidc auth method', function (hooks) {
       const errors = role ? ['permission denied'] : ['missing role'];
       return new Response(status, {}, { errors });
     });
-
+    await logout();
     await this.selectMethod('oidc');
     await click(AUTH_FORM.login);
     assert.dom('[data-test-message-error-description]').hasText('Invalid role. Please try again.');
@@ -166,6 +167,7 @@ module('Acceptance | oidc auth method', function (hooks) {
 
     this.setupMocks(assert);
     this.server.get('/auth/foo/oidc/callback', () => setupTotpMfaResponse('foo'));
+    await logout();
     await this.selectMethod('oidc');
     later(() => {
       window.postMessage(buildMessage().data, window.origin);
@@ -179,6 +181,7 @@ module('Acceptance | oidc auth method', function (hooks) {
   test('auth service is called with client_token and cluster data', async function (assert) {
     const authSpy = sinon.spy(this.owner.lookup('service:auth'), 'authenticate');
     this.setupMocks();
+    await logout();
     await this.selectMethod('oidc');
     later(() => {
       window.postMessage(buildMessage().data, window.origin);
@@ -224,7 +227,7 @@ module('Acceptance | oidc auth method', function (hooks) {
       assert.strictEqual(event.data.source, source, `message event fires with source: ${event.data.source}`);
     };
     window.addEventListener('message', assertEvent);
-
+    await logout();
     await this.selectMethod('oidc');
 
     later(() => {
@@ -241,6 +244,7 @@ module('Acceptance | oidc auth method', function (hooks) {
 
   test('it shows error when message posted with state key, wrong params', async function (assert) {
     this.setupMocks();
+    await logout();
     await this.selectMethod('oidc');
     later(() => {
       // callback params are missing "code"
@@ -256,6 +260,7 @@ module('Acceptance | oidc auth method', function (hooks) {
     windowStub({ stub: this.openStub, popup: { closed: true, close: () => {} } });
 
     this.setupMocks();
+    await logout();
     await this.selectMethod('oidc');
     await click(AUTH_FORM.login);
     assert
