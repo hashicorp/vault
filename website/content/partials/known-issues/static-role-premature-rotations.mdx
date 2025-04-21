@@ -6,6 +6,12 @@
 - 1.17.12, 1.17.13, 1.17.14
 - 1.16.16, 1.16.17, 1.16.18
 
+#### Fixed Versions
+- 1.19.2
+- 1.18.8
+- 1.17.15
+- 1.16.19
+
 #### Issue
 Vault automatically rotates existing static roles tied to LDAP
 credentials once when upgrading to an affected version. After the one-time
@@ -13,4 +19,4 @@ rotation, the static roles behave as expected.
 
 #### Workaround
 If you rely on LDAP static roles, avoid upgrading to the affected
-versions. Fix has been merged to 1.16.19+, 1.17.15+, 1.18.8+ and 1.19.2+.
+versions. Upgrade to fixed versions if possible.
