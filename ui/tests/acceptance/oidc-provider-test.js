@@ -3,21 +3,18 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
-import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
-import authForm from 'vault/tests/pages/components/auth-form';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
-import { visit, settled, currentURL, waitFor, currentRouteName } from '@ember/test-helpers';
+import { visit, settled, currentURL, waitFor, currentRouteName, fillIn, click } from '@ember/test-helpers';
 import { clearRecord } from 'vault/tests/helpers/oidc-config';
 import { runCmd } from 'vault/tests/helpers/commands';
 import queryParamString from 'vault/utils/query-param-string';
-
-const authFormComponent = create(authForm);
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 
 const OIDC_USER = 'end-user';
 const USER_PASSWORD = 'mypassword';
@@ -124,14 +121,14 @@ module('Acceptance | oidc provider', function (hooks) {
   hooks.beforeEach(async function () {
     this.uid = uuidv4();
     this.store = this.owner.lookup('service:store');
-    await authPage.login();
+    await login();
     await settled();
     this.oidcSetupInformation = await setupOidc(this.uid);
     return;
   });
 
   hooks.afterEach(async function () {
-    await authPage.login();
+    await login();
   });
 
   test('OIDC Provider logs in and redirects correctly', async function (assert) {
@@ -140,8 +137,7 @@ module('Acceptance | oidc provider', function (hooks) {
     assert
       .dom(`[data-test-oidc-client-linked-block='${WEB_APP_NAME}']`)
       .exists({ count: 1 }, 'shows webapp in oidc provider list');
-    await logout.visit();
-    await settled();
+    await visit('/vault/logout');
     const url = getAuthzUrl(providerName, callback, clientId);
     await visit(url);
 
@@ -159,11 +155,10 @@ module('Acceptance | oidc provider', function (hooks) {
         'Once you log in, you will be redirected back to your application. If you require login credentials, contact your administrator.',
         'Has updated text for client authorization flow'
       );
-    await authFormComponent.selectMethod(authMethodPath);
-    await authFormComponent.username(OIDC_USER);
-    await authFormComponent.password(USER_PASSWORD);
-    await authFormComponent.login();
-    await settled();
+    await fillIn(AUTH_FORM.method, authMethodPath);
+    await fillIn(GENERAL.inputByAttr('username'), OIDC_USER);
+    await fillIn(GENERAL.inputByAttr('password'), USER_PASSWORD);
+    await click(AUTH_FORM.login);
     assert.strictEqual(currentURL(), url, 'URL is as expected after login');
     assert
       .dom('[data-test-oidc-redirect]')
@@ -189,26 +184,25 @@ module('Acceptance | oidc provider', function (hooks) {
       currentURL().includes('prompt=login'),
       'Url params no longer include prompt=login after redirect'
     );
-    await authFormComponent.selectMethod(authMethodPath);
-    await authFormComponent.username(OIDC_USER);
-    await authFormComponent.password(USER_PASSWORD);
-    await authFormComponent.login();
-    await settled();
+    await fillIn(AUTH_FORM.method, authMethodPath);
+    await fillIn(GENERAL.inputByAttr('username'), OIDC_USER);
+    await fillIn(GENERAL.inputByAttr('password'), USER_PASSWORD);
+    await click(AUTH_FORM.login);
     assert
       .dom('[data-test-oidc-redirect]')
       .hasTextContaining(`click here to go back to app`, 'Shows link back to app');
     const link = document.querySelector('[data-test-oidc-redirect]').getAttribute('href');
-    assert.ok(link.includes('/callback?code='), 'Redirects to correct url');
+    assert.true(link.includes('/callback?code='), 'Redirects to correct url');
   });
 
   test('OIDC Provider shows consent form when prompt = consent', async function (assert) {
     const { providerName, callback, clientId, authMethodPath } = this.oidcSetupInformation;
     const url = getAuthzUrl(providerName, callback, clientId, { prompt: 'consent' });
-    await logout.visit();
-    await authFormComponent.selectMethod(authMethodPath);
-    await authFormComponent.username(OIDC_USER);
-    await authFormComponent.password(USER_PASSWORD);
-    await authFormComponent.login();
+    await visit('/vault/logout');
+    await fillIn(AUTH_FORM.method, authMethodPath);
+    await fillIn(GENERAL.inputByAttr('username'), OIDC_USER);
+    await fillIn(GENERAL.inputByAttr('password'), USER_PASSWORD);
+    await click(AUTH_FORM.login);
     await visit(url);
 
     assert.notOk(

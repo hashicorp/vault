@@ -5,13 +5,13 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, fillIn, find, visit, waitUntil } from '@ember/test-helpers';
-import authPage from 'vault/tests/pages/auth';
+import { logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { buildMessage, callbackData, windowStub } from 'vault/tests/helpers/oidc-window-stub';
 import sinon from 'sinon';
 import { Response } from 'miragejs';
 import { setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
-import { GENERAL } from '../helpers/general-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { ERROR_MISSING_PARAMS, ERROR_WINDOW_CLOSED } from 'vault/components/auth-jwt';
 
 module('Acceptance | oidc auth method', function (hooks) {
@@ -54,7 +54,7 @@ module('Acceptance | oidc auth method', function (hooks) {
 
     // ensure clean state
     localStorage.removeItem('selectedAuth');
-    authPage.logout();
+    logout();
   });
 
   hooks.afterEach(function () {
@@ -127,11 +127,11 @@ module('Acceptance | oidc auth method', function (hooks) {
     });
 
     await this.selectMethod('oidc');
-    assert.dom('[data-test-jwt]').doesNotExist('JWT Token input hidden for OIDC');
+    assert.dom(GENERAL.inputByAttr('jwt')).doesNotExist('JWT Token input hidden for OIDC');
     await this.selectMethod('jwt');
-    assert.dom('[data-test-jwt]').exists('JWT Token input renders for JWT configured method');
+    assert.dom(GENERAL.inputByAttr('jwt')).exists('JWT Token input renders for JWT configured method');
     await click('[data-test-auth-form-options-toggle]');
-    await fillIn('[data-test-auth-form-mount-path]', 'foo');
+    await fillIn(GENERAL.inputByAttr('path'), 'foo');
     assert.strictEqual(reqCount, 3, 'Role is fetched when dependant values are changed');
   });
 
@@ -147,7 +147,7 @@ module('Acceptance | oidc auth method', function (hooks) {
     await click('[data-test-auth-submit]');
     assert.dom('[data-test-message-error-description]').hasText('Invalid role. Please try again.');
 
-    await fillIn('[data-test-role]', 'test');
+    await fillIn(GENERAL.inputByAttr('role'), 'test');
     await click('[data-test-auth-submit]');
     assert.dom('[data-test-message-error-description]').hasText('Error fetching role: permission denied');
   });

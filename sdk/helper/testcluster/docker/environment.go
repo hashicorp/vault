@@ -77,7 +77,8 @@ type DockerCluster struct {
 	Logger    log.Logger
 	builtTags map[string]struct{}
 
-	storage testcluster.ClusterStorage
+	storage      testcluster.ClusterStorage
+	disableMlock bool
 }
 
 func (dc *DockerCluster) NamedLogger(s string) log.Logger {
@@ -401,7 +402,7 @@ func (n *DockerClusterNode) setupCert(ip string) error {
 
 func NewTestDockerCluster(t *testing.T, opts *DockerClusterOptions) *DockerCluster {
 	if opts == nil {
-		opts = &DockerClusterOptions{}
+		opts = &DockerClusterOptions{DisableMlock: true}
 	}
 	if opts.ClusterName == "" {
 		opts.ClusterName = strings.ReplaceAll(t.Name(), "/", "-")
@@ -431,7 +432,7 @@ func NewDockerCluster(ctx context.Context, opts *DockerClusterOptions) (*DockerC
 	}
 
 	if opts == nil {
-		opts = &DockerClusterOptions{}
+		opts = &DockerClusterOptions{DisableMlock: true}
 	}
 	if opts.Logger == nil {
 		opts.Logger = log.NewNullLogger()
@@ -441,12 +442,13 @@ func NewDockerCluster(ctx context.Context, opts *DockerClusterOptions) (*DockerC
 	}
 
 	dc := &DockerCluster{
-		DockerAPI:   api,
-		ClusterName: opts.ClusterName,
-		Logger:      opts.Logger,
-		builtTags:   map[string]struct{}{},
-		CA:          opts.CA,
-		storage:     opts.Storage,
+		DockerAPI:    api,
+		ClusterName:  opts.ClusterName,
+		Logger:       opts.Logger,
+		builtTags:    map[string]struct{}{},
+		CA:           opts.CA,
+		storage:      opts.Storage,
+		disableMlock: opts.DisableMlock,
 	}
 
 	if err := dc.setupDockerCluster(ctx, opts); err != nil {
@@ -706,7 +708,7 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 
 	//// disable_mlock is required for working in the Docker environment with
 	//// custom plugins
-	vaultCfg["disable_mlock"] = true
+	vaultCfg["disable_mlock"] = opts.DisableMlock
 
 	protocol := "https"
 	if opts.DisableTLS {
@@ -811,6 +813,7 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 		"SKIP_SETCAP=true",
 		"VAULT_LOG_FORMAT=json",
 		"VAULT_LICENSE=" + opts.VaultLicense,
+		"VAULT_DISABLE_MLOCK=" + strconv.FormatBool(opts.DisableMlock),
 	}
 	envs = append(envs, opts.Envs...)
 
@@ -1085,17 +1088,18 @@ func (l LogConsumerWriter) Write(p []byte) (n int, err error) {
 // DockerClusterOptions has options for setting up the docker cluster
 type DockerClusterOptions struct {
 	testcluster.ClusterOptions
-	CAKey       *ecdsa.PrivateKey
-	NetworkName string
-	ImageRepo   string
-	ImageTag    string
-	CA          *testcluster.CA
-	VaultBinary string
-	Args        []string
-	Envs        []string
-	StartProbe  func(*api.Client) error
-	Storage     testcluster.ClusterStorage
-	DisableTLS  bool
+	CAKey        *ecdsa.PrivateKey
+	NetworkName  string
+	ImageRepo    string
+	ImageTag     string
+	CA           *testcluster.CA
+	VaultBinary  string
+	Args         []string
+	Envs         []string
+	StartProbe   func(*api.Client) error
+	Storage      testcluster.ClusterStorage
+	DisableTLS   bool
+	DisableMlock bool
 }
 
 func ensureLeaderMatches(ctx context.Context, client *api.Client, ready func(response *api.LeaderResponse) error) error {
@@ -1259,7 +1263,7 @@ func (dc *DockerCluster) joinNode(ctx context.Context, nodeIdx int, leaderIdx in
 
 func (dc *DockerCluster) setupImage(ctx context.Context, opts *DockerClusterOptions) (string, error) {
 	if opts == nil {
-		opts = &DockerClusterOptions{}
+		opts = &DockerClusterOptions{DisableMlock: true}
 	}
 	sourceTag := opts.ImageTag
 	if sourceTag == "" {
