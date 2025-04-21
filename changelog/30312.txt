@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/aws: fix a case where GovCloud wasn't taken into account; fix a case where the region setting wasn't respected
+```
