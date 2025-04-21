@@ -21,7 +21,7 @@ module('Acceptance | oidc auth method', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.beforeEach(async function () {
+  hooks.beforeEach(function () {
     this.openStub = windowStub();
 
     this.setupMocks = (assert) => {
@@ -84,7 +84,6 @@ module('Acceptance | oidc auth method', function (hooks) {
         },
       },
     }));
-
     // this request is fired twice -- total assertion count should be 3 rather than 2
     // JLR TODO - auth-jwt: verify whether additional request is necessary, especially when glimmerizing component
     // look into whether didReceiveAttrs is necessary to trigger this request
@@ -95,7 +94,6 @@ module('Acceptance | oidc auth method', function (hooks) {
 
     await logout();
     await this.selectMethod('oidc', true);
-
     setTimeout(() => {
       window.postMessage(buildMessage().data, window.origin);
     }, DELAY_IN_MS);
