@@ -161,12 +161,6 @@ export default class SecretCreateOrUpdate extends Component {
     this.checkRows();
   }
 
-  // competing error messages here
-  @action
-  codemirrorLinted(diagnostics) {
-    this.error = diagnostics[0]?.message;
-  }
-
   @action
   codemirrorUpdated(val) {
     try {

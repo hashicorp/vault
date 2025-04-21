@@ -233,9 +233,7 @@ export default class FormFieldComponent extends Component {
 
       this.onChange(this.valuePath, valToSet);
     } catch {
-      // this is a catch for the case where the user is typing in a JSON field and it is not valid JSON
-      // we don't want to set the model value until they are done typing
-      // so we just ignore the error
+      // if the value is not valid JSON, we don't want to set it on the model
     }
   }
 

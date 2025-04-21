@@ -38,11 +38,10 @@ export default class KvPatchJsonForm extends Component {
 
     try {
       JSON.parse(value);
+      this.jsonObject = value;
     } catch {
       this.lintingErrors = true;
     }
-
-    this.jsonObject = value;
   }
 
   @action

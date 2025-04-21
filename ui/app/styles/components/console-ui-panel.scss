@@ -48,14 +48,6 @@ $console-close-height: 35px;
     padding: 0;
   }
 
-  // TODO: find how this was applied
-  .cm-s-hashi.CodeMirror {
-    background-color: rgba(color_variables.$black, 0.5) !important;
-    font-weight: font_variables.$font-weight-normal;
-    margin-left: size_variables.$spacing-20;
-    padding: size_variables.$spacing-12 size_variables.$spacing-20;
-  }
-
   .console-ui-panel-intro {
     color: var(--token-color-palette-neutral-400);
   }
