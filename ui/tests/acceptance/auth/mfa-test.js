@@ -15,6 +15,7 @@ import { AUTH_METHOD_MAP, fillInLoginFields } from 'vault/tests/helpers/auth/aut
 import { callbackData, windowStub } from 'vault/tests/helpers/oidc-window-stub';
 
 const ENT_ONLY = ['saml'];
+const DELAY_IN_MS = 50;
 
 for (const method of AUTH_METHOD_MAP) {
   const { authType, options } = method;
@@ -56,7 +57,7 @@ for (const method of AUTH_METHOD_MAP) {
         setTimeout(() => {
           // set path which is used to set :mount param in the callback url => /auth/:mount/oidc/callback
           window.postMessage(callbackData({ path: this.mountPath }), window.origin);
-        }, 50);
+        }, DELAY_IN_MS);
       }
 
       await click(AUTH_FORM.login);
@@ -89,7 +90,7 @@ for (const method of AUTH_METHOD_MAP) {
         setTimeout(() => {
           // set path which is used to set :mount param in the callback url => /auth/:mount/oidc/callback
           window.postMessage(callbackData({ path: this.mountPath }), window.origin);
-        }, 50);
+        }, DELAY_IN_MS);
       }
 
       await click(AUTH_FORM.login);
@@ -127,7 +128,7 @@ for (const method of AUTH_METHOD_MAP) {
         setTimeout(() => {
           // set path which is used to set :mount param in the callback url => /auth/:mount/oidc/callback
           window.postMessage(callbackData({ path: this.mountPath }), window.origin);
-        }, 50);
+        }, DELAY_IN_MS);
       }
 
       await click(AUTH_FORM.login);
@@ -158,7 +159,7 @@ for (const method of AUTH_METHOD_MAP) {
         setTimeout(() => {
           // set path which is used to set :mount param in the callback url => /auth/:mount/oidc/callback
           window.postMessage(callbackData({ path: this.mountPath }), window.origin);
-        }, 50);
+        }, DELAY_IN_MS);
       }
 
       await click(AUTH_FORM.login);
