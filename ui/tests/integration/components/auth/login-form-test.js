@@ -3,11 +3,10 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { _cancelTimers as cancelTimers } from '@ember/runloop';
+import { _cancelTimers as cancelTimers, later } from '@ember/runloop';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { click, fillIn, render, settled } from '@ember/test-helpers';
-import { later } from '@ember/runloop';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { validate } from 'uuid';
