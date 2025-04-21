@@ -81,7 +81,7 @@ module('Acceptance | oidc auth method', function (hooks) {
     this.server.get('/sys/internal/ui/mounts', () => ({
       data: {
         auth: {
-          'oidc/': { description: '', options: {}, type: 'oidc' },
+          'test-path/': { description: '', options: {}, type: 'oidc' },
         },
       },
     }));
@@ -89,7 +89,7 @@ module('Acceptance | oidc auth method', function (hooks) {
     // this request is fired twice -- total assertion count should be 3 rather than 2
     // JLR TODO - auth-jwt: verify whether additional request is necessary, especially when glimmerizing component
     // look into whether didReceiveAttrs is necessary to trigger this request
-    this.server.post('/auth/oidc/oidc/auth_url', () => {
+    this.server.post('/auth/test-path/oidc/auth_url', () => {
       assert.ok(true, 'auth_url request made to correct non-standard mount path');
       return { data: { auth_url: 'http://example.com' } };
     });
