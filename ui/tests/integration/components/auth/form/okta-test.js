@@ -23,7 +23,25 @@ module('Integration | Component | auth | form | okta', function (hooks) {
     this.cluster = { id: 1 };
     this.onError = sinon.spy();
     this.onSuccess = sinon.spy();
-    this.renderComponent = () => {
+    this.expectedSubmit = {
+      default: { path: 'okta', username: 'matilda', password: 'password' },
+      custom: { path: 'custom-okta', username: 'matilda', password: 'password' },
+    };
+    this.renderComponent = ({ yieldBlock = false } = {}) => {
+      if (yieldBlock) {
+        return render(hbs`
+          <Auth::Form::Okta 
+            @authType={{this.authType}} 
+            @cluster={{this.cluster}}
+            @onError={{this.onError}}
+            @onSuccess={{this.onSuccess}}
+          >
+            <:advancedSettings>
+              <label for="path">Mount path</label>
+              <input data-test-input="path" id="path" name="path" type="text" /> 
+            </:advancedSettings>
+          </Auth::Form::Okta>`);
+      }
       return render(hbs`
       <Auth::Form::Okta       
         @authType={{this.authType}}
