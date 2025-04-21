@@ -10,6 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { capabilitiesStub } from 'vault/tests/helpers/stubs';
 import { click, fillIn } from '@ember/test-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | database-role-edit', function (hooks) {
   setupRenderingTest(hooks);
@@ -96,18 +97,18 @@ module('Integration | Component | database-role-edit', function (hooks) {
     });
 
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="create"/>`);
-    await fillIn('[data-test-ttl-value="Rotation period"]', '2');
-    await click('[data-test-toggle-input="toggle-skip_import_rotation"]');
-    await fillIn('[data-test-input="password"]', 'testPassword'); // fill in password field
+    await fillIn(GENERAL.ttl.input('Rotation period'), '2');
+    await click(GENERAL.toggleInput('toggle-skip_import_rotation'));
+    await fillIn(GENERAL.inputByAttr('password'), 'testPassword'); // fill in password field
 
     await click('[data-test-secret-save]');
 
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="show"/>`);
-    assert.dom('[data-test-value-div="Rotate immediately"]').containsText('No');
-    assert.dom('[data-test-value="Password"]').doesNotExist(); // verify password field doesn't show on details view
+    assert.dom(GENERAL.infoRowValue('Rotate immediately')).containsText('No');
+    assert.dom(GENERAL.infoRowValue('password')).doesNotExist(); // verify password field doesn't show on details view
 
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="edit"/>`);
-    assert.dom('[data-test-icon="edit"]').exists(); // verify password field is enabled for edit & enable button is rendered bc role hasn't been rotated
+    assert.dom(GENERAL.icon('edit')).exists(); // verify password field is enabled for edit & enable button is rendered bc role hasn't been rotated
   });
 
   test('enterprise: it should successfully create user that does rotate immediately & verify warning modal pops up', async function (assert) {
@@ -121,10 +122,11 @@ module('Integration | Component | database-role-edit', function (hooks) {
     await click('[data-test-issuer-save]'); // click continue button on modal
 
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="show"/>`);
-    assert.dom('[data-test-value-div="Rotate immediately"]').containsText('Yes');
+    assert.dom(GENERAL.infoRowValue('Rotate immediately')).containsText('Yes');
 
+    this.modelStatic.last_vault_rotation = '2025-04-21T12:51:59.063124-04:00'; // Setting a sample rotation time here to simulate what returns from BE after rotation
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="edit"/>`);
-    assert.dom('[data-test-icon="edit"]').doesNotExist(); // verify password field is disabled for edit & enable button isn't rendered bc role has already been rotated
+    assert.dom(GENERAL.icon('edit')).doesNotExist(); // verify password field is disabled for edit & enable button isn't rendered bc role has already been rotated
   });
 
   test('it should show Get credentials button when a user has the correct policy', async function (assert) {

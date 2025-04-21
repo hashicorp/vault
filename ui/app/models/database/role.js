@@ -138,7 +138,7 @@ export default class RoleModel extends Model {
   skip_import_rotation;
 
   @attr('string', {
-    editType: 'password',
+    sensitive: true,
     subText: 'The database password that this Vault role corresponds to.',
   })
   password;
