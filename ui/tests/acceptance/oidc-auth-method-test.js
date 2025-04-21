@@ -6,12 +6,15 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, fillIn, find, waitUntil } from '@ember/test-helpers';
+import { logout } from 'vault/tests/helpers/auth/auth-helpers';
 import authPage from 'vault/tests/pages/auth';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { WindowStub, buildMessage } from 'vault/tests/helpers/oidc-window-stub';
 import sinon from 'sinon';
 import { Response } from 'miragejs';
 import { setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
+
+const DELAY_IN_MS = 50;
 
 module('Acceptance | oidc auth method', function (hooks) {
   setupApplicationTest(hooks);
@@ -40,10 +43,6 @@ module('Acceptance | oidc auth method', function (hooks) {
 
     // select method from dropdown or click auth path tab
     this.selectMethod = async (method, useLink) => {
-      const methodSelector = useLink
-        ? `[data-test-auth-method-link="${method}"]`
-        : '[data-test-select="auth-method"]';
-      await waitUntil(() => find(methodSelector));
       if (useLink) {
         await click(`[data-test-auth-method-link="${method}"]`);
       } else {
@@ -53,7 +52,7 @@ module('Acceptance | oidc auth method', function (hooks) {
 
     // ensure clean state
     localStorage.removeItem('selectedAuth');
-    authPage.logout();
+    // Cannot log out here because it will cause the internal mount request to be hit before the mocks can interrupt it
   });
 
   hooks.afterEach(function () {
@@ -65,10 +64,11 @@ module('Acceptance | oidc auth method', function (hooks) {
 
     this.setupMocks(assert);
 
+    await logout();
     await this.selectMethod('oidc');
     setTimeout(() => {
       window.postMessage(buildMessage().data, window.origin);
-    }, 50);
+    }, DELAY_IN_MS);
 
     await click('[data-test-auth-submit]');
   });
@@ -93,32 +93,37 @@ module('Acceptance | oidc auth method', function (hooks) {
       return { data: { auth_url: 'http://example.com' } };
     });
 
+    await logout();
     await this.selectMethod('oidc', true);
     setTimeout(() => {
       window.postMessage(buildMessage().data, window.origin);
-    }, 50);
+    }, DELAY_IN_MS);
     await click('[data-test-auth-submit]');
   });
 
   // coverage for bug where token was selected as auth method for oidc and jwt
   test('it should populate oidc auth method on logout', async function (assert) {
     this.setupMocks();
+    await logout();
     await this.selectMethod('oidc');
 
     setTimeout(() => {
       window.postMessage(buildMessage().data, window.origin);
-    }, 50);
+    }, DELAY_IN_MS);
 
     await click('[data-test-auth-submit]');
-    await waitUntil(() => find('[data-test-user-menu-trigger]'));
-    await click('[data-test-user-menu-trigger]');
-    await click('#logout');
+    assert
+      .dom('[data-test-dashboard-card-header="Vault version"]')
+      .exists('Render the dashboard landing page.');
+
+    await logout();
     assert
       .dom('[data-test-select="auth-method"]')
       .hasValue('oidc', 'Previous auth method selected on logout');
   });
 
   test('it should fetch role when switching between oidc/jwt auth methods and changing the mount path', async function (assert) {
+    await logout();
     let reqCount = 0;
     this.server.post('/auth/:method/oidc/auth_url', (schema, req) => {
       reqCount++;
@@ -143,7 +148,7 @@ module('Acceptance | oidc auth method', function (hooks) {
       const errors = role ? ['permission denied'] : ['missing role'];
       return new Response(status, {}, { errors });
     });
-
+    await logout();
     await this.selectMethod('oidc');
     await click('[data-test-auth-submit]');
     assert.dom('[data-test-message-error-description]').hasText('Invalid role. Please try again.');
@@ -158,10 +163,11 @@ module('Acceptance | oidc auth method', function (hooks) {
 
     this.setupMocks(assert);
     this.server.get('/auth/foo/oidc/callback', () => setupTotpMfaResponse('foo'));
+    await logout();
     await this.selectMethod('oidc');
     setTimeout(() => {
       window.postMessage(buildMessage().data, window.origin);
-    }, 50);
+    }, DELAY_IN_MS);
 
     await click('[data-test-auth-submit]');
     await waitUntil(() => find('[data-test-mfa-form]'));
