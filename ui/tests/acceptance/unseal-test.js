@@ -9,7 +9,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 
@@ -22,7 +22,7 @@ module('Acceptance | unseal', function (hooks) {
   hooks.beforeEach(function () {
     this.unsealCount = 0;
     this.sealed = false;
-    return authPage.login();
+    return login();
   });
 
   test('seal then unseal', async function (assert) {

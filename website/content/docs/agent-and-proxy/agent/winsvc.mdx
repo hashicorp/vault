@@ -15,10 +15,14 @@ While this guide focuses on an example for Vault Agent, this example can be easi
 [Vault Proxy](/vault/docs/agent-and-proxy/proxy) by changing the config and subcommand
 given to `vault.exe` as appropriate.
 
-~> Note: The commands on this page should be run in a PowerShell session with Administrator capabilities.
+<Note>
 
-~> Note: When specifying Windows file paths in config files, they should be formatted like this: `C:/foo/bar/file.txt`
+- Run the commands on this page in a PowerShell session with Administrator capabilities.
+
+- When specifying Windows file paths in config files, they should be formatted like this: `C:/foo/bar/file.txt`
 instead of using backslashes.
+
+</Note>
 
 ## Register Vault Agent as a Windows service
 
@@ -34,8 +38,12 @@ both will be shown below.
 
 ### Using sc.exe
 
-~> **Important Note:** Ensure the executable path of the service is quoted, especially when it contains spaces, to avoid
+<Note title="Important">
+
+Ensure the executable path of the service is quoted, especially when it contains spaces, to avoid
 potential privilege escalation risks.
+
+</Note>
 
 If you use `sc.exe`, make sure you specify `sc.exe` explicitly, and not just `sc`. The command below shows the creation
 of Vault Agent as a service, using "Vault Agent" as the display name, and starting automatically when Windows starts.

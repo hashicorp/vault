@@ -8,7 +8,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/access/identity/create';
 import { testCRUD, testDeleteFromForm } from '../_shared-tests';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Acceptance | /access/identity/entities/create', function (hooks) {
@@ -21,7 +21,7 @@ module('Acceptance | /access/identity/entities/create', function (hooks) {
         'color-contrast': { enabled: false },
       },
     });
-    return authPage.login();
+    return login();
   });
 
   test('it visits the correct page', async function (assert) {

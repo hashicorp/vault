@@ -16,13 +16,13 @@ import { v4 as uuidv4 } from 'uuid';
 import secretList from 'vault/tests/pages/secrets/backend/list';
 import secretEdit from 'vault/tests/pages/secrets/backend/kv/edit-secret';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 
 module('Acceptance | leases', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
-    await authPage.login();
+    await login();
     this.enginePath = `kv-for-lease-${uuidv4()}`;
     // need a version 1 mount for leased secrets here
     return mountSecrets.visit().path(this.enginePath).type('kv').version(1).submit();
