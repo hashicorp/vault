@@ -1,13 +1,16 @@
 ### Static role rotations on upgrade ((#static-role-rotations))
 
 #### Affected Versions
-- 1.19.0+, 1.18.5+, 1.17.12+, 1.16.16+
+- 1.19.0, 1.19.1
+- 1.18.5, 1.18.6, 1.18.7
+- 1.17.12, 1.17.13, 1.17.14
+- 1.16.16, 1.16.17, 1.16.18
 
 #### Issue
-Vault automatically rotates existing static roles tied to database and LDAP
+Vault automatically rotates existing static roles tied LDAP
 credentials once when upgrading to an affected version. After the one-time
 rotation, the static roles behave as expected.
 
 #### Workaround
-If you rely on LDAP or static database roles, avoid upgrading to the affected
-versions until we fix the issue.
+If you rely on LDAP static roles, avoid upgrading to the affected
+versions. Fix has been merged to 1.16.19+, 1.17.15+, 1.18.8+ and 1.19.2+.
