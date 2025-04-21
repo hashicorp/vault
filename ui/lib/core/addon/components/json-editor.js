@@ -25,6 +25,7 @@ import { action } from '@ember/object';
  * @param {string} [example] - Example to show when value is null -- when example is provided a restore action will render in the toolbar to clear the current value and show the example after input
  * @param {string} [container] - **REQUIRED if rendering within a modal** Selector string or element object of containing element, set the focused element as the container value. This is for the Hds::Copy::Button and to set `autoRefresh=true` so content renders https://hds-website-hashicorp.vercel.app/components/copy/button?tab=code
  * @param {Function} [onLint] - action to preform when you lint the codemirror value.
+ * @param {Function} [onSetup] - action to preform when the codemirror editor is setup.
  *
  */
 
@@ -41,6 +42,13 @@ export default class JsonEditorComponent extends Component {
 
   get ariaLabel() {
     return this.args.title ?? 'JSON Editor';
+  }
+
+  @action
+  onSetup(editor) {
+    this._codemirrorEditor = editor;
+
+    this.args.onSetup?.(editor);
   }
 
   @action

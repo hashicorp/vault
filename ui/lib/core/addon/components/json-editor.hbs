@@ -29,7 +29,7 @@
       @onBlur={{@onBlur}}
       @onInput={{this.onUpdate}}
       @onLint={{@onLint}}
-      @onSetup={{fn (mut this._codemirrorEditor)}}
+      @onSetup={{this.onSetup}}
       as |CE|
     >
       {{#if this.getShowToolbar}}
