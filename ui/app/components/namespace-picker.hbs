@@ -9,11 +9,22 @@
     <D.ToggleButton @icon="org" @text={{or this.selected.id "-"}} data-test-namespace-toggle />
 
     <D.Generic>
-      {{this.namespaceLabel}}
-      <Hds::BadgeCount @text={{or this.options.length 0}} />
+      <Hds::Form::TextInput::Field
+        @value={{this.searchInput}}
+        @type="search"
+        placeholder="Search"
+        {{on "input" this.onSearchInput}}
+      />
     </D.Generic>
 
-    {{#each this.options as |option|}}
+    <D.Separator />
+
+    <D.Generic>
+      {{this.namespaceLabel}}
+      <Hds::BadgeCount @text={{or this.namespaceOptions.length 0}} />
+    </D.Generic>
+
+    {{#each this.namespaceOptions as |option|}}
       <D.Checkmark
         @selected={{eq option.id this.selected.id}}
         {{on "click" (fn this.onChange option)}}
@@ -26,7 +37,7 @@
     {{! Check if the user has permissions to list namespaces. If true, display additional footer options like "Refresh list" and "Manage". }}
     {{#if this.hasListPermissions}}
       <D.Footer @hasDivider={{true}}>
-        <Hds::Button @color="secondary" @text="Refresh list" {{on "click" this.loadOptions}} data-test-refresh-namespaces />
+        <Hds::Button @color="secondary" @text="Refresh list" {{on "click" this.refreshList}} data-test-refresh-namespaces />
         <Hds::Button @color="secondary" @text="Manage" @icon="settings" @route="vault.cluster.access.namespaces" />
       </D.Footer>
     {{/if}}
