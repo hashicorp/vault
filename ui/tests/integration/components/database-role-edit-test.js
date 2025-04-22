@@ -106,9 +106,26 @@ module('Integration | Component | database-role-edit', function (hooks) {
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="show"/>`);
     assert.dom(GENERAL.infoRowValue('Rotate immediately')).containsText('No');
     assert.dom(GENERAL.infoRowValue('password')).doesNotExist(); // verify password field doesn't show on details view
+  });
 
+  test('enterprise: it should show edit button for password when role has not been rotated', async function (assert) {
+    this.version.type = 'enterprise';
+    this.server.post('/sys/capabilities-self', capabilitiesStub('database/static-creds/my-role', ['update']));
+
+    this.modelStatic.password = 'testPass';
+    this.modelStatic.skip_import_rotation = false;
+    this.modelStatic.rotation_period = '172800';
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="edit"/>`);
     assert.dom(GENERAL.icon('edit')).exists(); // verify password field is enabled for edit & enable button is rendered bc role hasn't been rotated
+  });
+
+  test('enterprise: it should not show edit button for password when role has been rotated', async function (assert) {
+    this.version.type = 'enterprise';
+    this.server.post('/sys/capabilities-self', capabilitiesStub('database/static-creds/my-role', ['update']));
+
+    this.modelStatic.last_vault_rotation = '2025-04-21T12:51:59.063124-04:00'; // Setting a sample rotation time here to simulate what returns from BE after rotation
+    await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="edit"/>`);
+    assert.dom(GENERAL.icon('edit')).doesNotExist(); // verify password field is disabled for edit & enable button isn't rendered bc role has already been rotated
   });
 
   test('enterprise: it should successfully create user that does rotate immediately & verify warning modal pops up', async function (assert) {
@@ -123,10 +140,6 @@ module('Integration | Component | database-role-edit', function (hooks) {
 
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="show"/>`);
     assert.dom(GENERAL.infoRowValue('Rotate immediately')).containsText('Yes');
-
-    this.modelStatic.last_vault_rotation = '2025-04-21T12:51:59.063124-04:00'; // Setting a sample rotation time here to simulate what returns from BE after rotation
-    await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="edit"/>`);
-    assert.dom(GENERAL.icon('edit')).doesNotExist(); // verify password field is disabled for edit & enable button isn't rendered bc role has already been rotated
   });
 
   test('it should show Get credentials button when a user has the correct policy', async function (assert) {
