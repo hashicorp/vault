@@ -593,7 +593,10 @@ func (b *backend) pathIssuerSignSelfIssued(ctx context.Context, req *logical.Req
 		SigningBundle: nil,
 		CSR:           nil,
 	}
-	certutil.AddDeltaCRLExtension(bundleData, cert)
+	err = certutil.AddDeltaCRLExtension(bundleData, cert)
+	if err != nil {
+		return nil, err
+	}
 
 	// If the requested signature algorithm isn't the same as the signing certificate, and
 	// the user has requested a cross-algorithm signature, reset the template's signing algorithm

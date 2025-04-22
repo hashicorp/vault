@@ -17,7 +17,6 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/pem"
 	"errors"
@@ -969,7 +968,10 @@ func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGen
 
 	certTemplate.IssuingCertificateURL = data.Params.URLs.IssuingCertificates
 	certTemplate.CRLDistributionPoints = data.Params.URLs.CRLDistributionPoints
-	AddDeltaCRLExtension(data, certTemplate)
+	err = AddDeltaCRLExtension(data, certTemplate)
+	if err != nil {
+		return nil, err
+	}
 	certTemplate.OCSPServer = data.Params.URLs.OCSPServers
 
 	var certBytes []byte
@@ -1350,7 +1352,10 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 
 	certTemplate.IssuingCertificateURL = data.Params.URLs.IssuingCertificates
 	certTemplate.CRLDistributionPoints = data.Params.URLs.CRLDistributionPoints
-	AddDeltaCRLExtension(data, certTemplate)
+	err = AddDeltaCRLExtension(data, certTemplate)
+	if err != nil {
+		return nil, err
+	}
 	certTemplate.OCSPServer = data.SigningBundle.URLs.OCSPServers
 
 	if data.Params.IsCA {
@@ -2169,6 +2174,9 @@ type distributionPointName struct {
 }
 
 func CreateDeltaCRLExtension(deltaUrls []string) (pkix.Extension, error) {
+	if deltaUrls == nil || len(deltaUrls) == 0 {
+		return pkix.Extension{}, fmt.Errorf("since no delta crl distribution points were provided, the extension returned is empty")
+	}
 	var deltaDistributionPoints []deltaDistributionPoint
 	for _, deltaUrl := range deltaUrls {
 		delta := deltaDistributionPoint{
@@ -2197,7 +2205,6 @@ func CreateDeltaCRLExtension(deltaUrls []string) (pkix.Extension, error) {
 
 // Adapted From: https://cs.opensource.google/go/go/+/master:src/crypto/x509/parser.go?q=CRLDistributionPoints&ss=go%2Fgo
 func ParseDeltaCRLExtension(certificate *x509.Certificate) ([]string, error) {
-	logCert := base64.StdEncoding.EncodeToString(certificate.Raw)
 	urls := []string{}
 	for _, extension := range certificate.Extensions {
 		if extension.Id.Equal(FreshestCrlOid) {
@@ -2236,21 +2243,17 @@ func ParseDeltaCRLExtension(certificate *x509.Certificate) ([]string, error) {
 			return urls, nil
 		}
 	}
-	fmt.Print(logCert)
 	return urls, nil
 }
 
-func AddDeltaCRLExtension(data *CreationBundle, certTemplate *x509.Certificate) {
+func AddDeltaCRLExtension(data *CreationBundle, certTemplate *x509.Certificate) error {
 	if data.Params != nil && data.Params.URLs != nil && data.Params.URLs.DeltaCRLDistributionPoints != nil &&
 		len(data.Params.URLs.DeltaCRLDistributionPoints) > 0 {
 		extension, err := CreateDeltaCRLExtension(data.Params.URLs.DeltaCRLDistributionPoints)
 		if err != nil {
-			return
+			return fmt.Errorf("failed to create delta crl extension: %w", err)
 		}
-		if certTemplate.ExtraExtensions == nil {
-			certTemplate.ExtraExtensions = []pkix.Extension{extension}
-		} else {
-			certTemplate.ExtraExtensions = append(certTemplate.ExtraExtensions, extension)
-		}
+		certTemplate.ExtraExtensions = append(certTemplate.ExtraExtensions, extension)
 	}
+	return nil
 }

@@ -35,7 +35,8 @@ func GetAIAURLs(ctx context.Context, s logical.Storage, i *IssuerEntry) (*certut
 
 	// If none are set (either due to a nil entry or because no URLs have
 	// been provided), fall back to the global AIA URL config.
-	if entries == nil || (len(entries.IssuingCertificates) == 0 && len(entries.CRLDistributionPoints) == 0 && len(entries.OCSPServers) == 0) && len(entries.DeltaCRLDistributionPoints) == 0 && len(entries.DeltaCRLDistributionPoints) == 0 {
+	if entries == nil || (len(entries.IssuingCertificates) == 0 && len(entries.CRLDistributionPoints) == 0 &&
+		len(entries.OCSPServers) == 0) && len(entries.DeltaCRLDistributionPoints) == 0 {
 		var err error
 
 		entries, err = GetGlobalAIAURLs(ctx, s)
