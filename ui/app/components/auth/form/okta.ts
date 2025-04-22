@@ -12,6 +12,8 @@ import { waitFor } from '@ember/test-waiters';
 import errorMessage from 'vault/utils/error-message';
 import uuid from 'core/utils/uuid';
 
+import type AuthService from 'vault/vault/services/auth';
+
 /**
  * @module Auth::Form::Okta
  * see Auth::Base
@@ -20,9 +22,9 @@ import uuid from 'core/utils/uuid';
 export default class AuthFormOkta extends AuthBase {
   loginFields = [{ name: 'username' }, { name: 'password' }];
 
-  @service auth;
+  @service declare readonly auth: AuthService;
 
-  @tracked challengeAnswer = null;
+  @tracked challengeAnswer = '';
   @tracked oktaVerifyError = '';
   @tracked showNumberChallenge = false;
 
@@ -35,6 +37,7 @@ export default class AuthFormOkta extends AuthBase {
       this.pollForOktaNumberChallenge.perform(data.nonce, data.path);
 
       try {
+        // selecting the correct okta verify answer on the personal device resolves this request
         const authResponse = await this.auth.authenticate({
           clusterId: this.args.cluster.id,
           backend: this.args.authType,
@@ -46,7 +49,7 @@ export default class AuthFormOkta extends AuthBase {
       } catch (error) {
         // if a user fails the okta verify challenge, the POST login request fails (made by this.auth.authenticate above)
         // bubble those up for consistency instead of managing error state in this component
-        this.onError(error);
+        this.onError(error as Error);
         // cancel polling tasks and reset state
         this.reset();
       }
@@ -58,38 +61,41 @@ export default class AuthFormOkta extends AuthBase {
       this.showNumberChallenge = true;
 
       // keep polling /auth/okta/verify/:nonce API every 1s until response returns with correct_number
-      let response = null;
-      while (response === null) {
+      let verifyNumber = null;
+      while (verifyNumber === null) {
         await timeout(1000);
-        response = await this.requestOktaVerify(nonce, mountPath);
+        // verifyNumber = await this.requestOktaVerify(nonce, mountPath);
+        verifyNumber = await this.requestOktaVerify(nonce, mountPath);
       }
 
       // display correct number so user can select on personal MFA device
-      this.challengeAnswer = response;
+      this.challengeAnswer = verifyNumber ?? '';
     })
   );
 
   @action
-  requestOktaVerify(nonce, mountPath) {
+  async requestOktaVerify(nonce: string, mountPath: string) {
     const url = `/v1/auth/${mountPath}/verify/${nonce}`;
-    return this.auth
-      .ajax(url, 'GET', {})
-      .then((resp) => resp.data.correct_answer)
-      .catch((e) => {
-        // if error status is 404 keep polling for a response
-        if (e.status === 404) {
-          return null;
-        } else {
-          // this would be unusual, but handling just in case
-          this.oktaVerifyError = errorMessage(e);
-        }
-      });
+    try {
+      const response = await this.auth.ajax(url, 'GET', {});
+      return response.data.correct_answer;
+    } catch (e) {
+      const error = e as Response;
+      if (error?.status === 404) {
+        // if error status is 404 return null to keep polling for a response
+        return null;
+      } else {
+        // this would be unusual, but handling just in case
+        this.oktaVerifyError = errorMessage(e);
+        return;
+      }
+    }
   }
 
   @action
   reset() {
     // reset tracked variables and stop polling tasks
-    this.challengeAnswer = null;
+    this.challengeAnswer = '';
     this.oktaVerifyError = '';
     this.showNumberChallenge = false;
     this.login.cancelAll();

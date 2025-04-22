@@ -20,6 +20,7 @@ export interface AuthData {
 export default class AuthService extends Service {
   authData: AuthData;
   currentToken: string;
+  mfaErrors: null | Errors[];
   setLastFetch: (time: number) => void;
   handleError: (error: Error) => string | error[] | [error];
   authenticate(params: {
@@ -28,5 +29,13 @@ export default class AuthService extends Service {
     data: Record<string, FormDataEntryValue | null>;
     selectedAuth: string;
   }): Promise<any>;
-  mfaErrors: null | Errors[];
+  ajax: (
+    url: string,
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+    options?: {
+      headers?: Record<string, string>;
+      namespace?: string;
+      data?: Record<string, unknown>;
+    }
+  ) => Promise<any>;
 }
