@@ -648,6 +648,14 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 				"Vault (or the sdk if using a custom plugin) to gain password policy support", config.PluginName))
 		}
 
+		// We can ignore the error at this point since we're simply adding a warning.
+		dbType, _ := dbw.Type()
+		if dbType == "snowflake" && config.ConnectionDetails["password"] != nil {
+			resp.AddWarning(`[DEPRECATED] Single-factor password authentication is deprecated in Snowflake and will
+be removed by November 2025. Please be ready for multi-factor authentication (MFA) configuration to continue use.
+More information is available at https://www.snowflake.com/en/blog/blocking-single-factor-password-authentification`)
+		}
+
 		b.dbEvent(ctx, "config-write", req.Path, name, true)
 		if len(resp.Warnings) == 0 {
 			return nil, nil
