@@ -10,7 +10,7 @@ import { create } from 'ember-cli-page-object';
 import { selectChoose } from 'ember-power-select/test-support';
 import { typeInSearch, clickTrigger } from 'ember-power-select/test-support/helpers';
 
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import transformationsPage from 'vault/tests/pages/secrets/backend/transform/transformations';
 import rolesPage from 'vault/tests/pages/secrets/backend/transform/roles';
@@ -60,7 +60,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
-    return authPage.login();
+    return login();
   });
 
   test('it transitions to list route after mount success', async function (assert) {

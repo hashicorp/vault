@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, currentURL, visit, waitUntil, find, fillIn } from '@ember/test-helpers';
+import { click, currentURL, visit, waitUntil, find, fillIn, typeIn } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { allSupportedAuthBackends, supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
@@ -16,7 +16,7 @@ import {
   mountEngineCmd,
   runCmd,
 } from 'vault/tests/helpers/commands';
-import { login, loginMethod, loginNs, logout } from 'vault/tests/helpers/auth/auth-helpers';
+import { login, loginMethod, loginNs } from 'vault/tests/helpers/auth/auth-helpers';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { v4 as uuidv4 } from 'uuid';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -45,10 +45,10 @@ module('Acceptance | auth', function (hooks) {
 
   test('it clears token when changing selected auth method', async function (assert) {
     await visit('/vault/auth');
-    await fillIn(AUTH_FORM.input('token'), 'token');
+    await fillIn(GENERAL.inputByAttr('token'), 'token');
     await fillIn(AUTH_FORM.method, 'github');
     await fillIn(AUTH_FORM.method, 'token');
-    assert.dom(AUTH_FORM.input('token')).hasNoValue('it clears the token value when toggling methods');
+    assert.dom(GENERAL.inputByAttr('token')).hasNoValue('it clears the token value when toggling methods');
   });
 
   module('it sends the right payload when authenticating', function (hooks) {
@@ -169,15 +169,14 @@ module('Acceptance | auth', function (hooks) {
 
         if (type !== 'token') {
           // set custom mount
-          await click('[data-test-auth-form-options-toggle]');
-          await fillIn('[data-test-auth-form-mount-path]', `custom-${type}`);
+          await click(AUTH_FORM.moreOptions);
+          await fillIn(GENERAL.inputByAttr('path'), `custom-${type}`);
         }
-        backend.formAttributes.forEach(async (key) => {
+        for (const key of backend.formAttributes) {
           // fill in all form items, except JWT which is not rendered
           if (key === 'jwt') return;
-          await fillIn(`[data-test-${key}]`, `some-${key}`);
-        });
-
+          await fillIn(GENERAL.inputByAttr(key), `some-${key}`);
+        }
         await click(AUTH_FORM.login);
       });
     }
@@ -197,7 +196,7 @@ module('Acceptance | auth', function (hooks) {
       },
       { timing: 1000 }
     );
-    await visit('/vault/auth');
+    await visit('/vault/auth?with=token');
     await fillIn(AUTH_FORM.method, 'token');
     await click('[data-test-auth-submit]');
   });
@@ -212,62 +211,44 @@ module('Acceptance | auth', function (hooks) {
     assert.strictEqual(currentURL(), '/vault/dashboard');
   });
 
-  module('Enterprise', function (hooks) {
-    hooks.beforeEach(async function () {
+  module('Enterprise', function () {
+    // this test is specifically to cover a token renewal bug within namespaces
+    // namespace_path isn't returned by the renew-self response and so the auth service was
+    // incorrectly setting userRootNamespace to '' (which denotes 'root'). this caused
+    // subsequent capability checks fail because they would not be queried with the appropriate namespace header
+    // if this test fails because a POST /v1/sys/capabilities-self returns a 403, then we have a problem!
+    test('it sets namespace when renewing token', async function (assert) {
       const uid = uuidv4();
-      this.ns = `admin-${uid}`;
+      const ns = `admin-${uid}`;
       // log in to root to create namespace
       await login();
-      await runCmd(createNS(this.ns), false);
+      await runCmd(createNS(ns), false);
       // login to namespace, mount userpass, create policy and user
-      await loginNs(this.ns);
-      this.db = `database-${uid}`;
-      this.userpass = `userpass-${uid}`;
-      this.user = 'bob';
-      this.policyName = `policy-${this.userpass}`;
-      this.policy = `
-        path "${this.db}/" {
+      await loginNs(ns);
+      const db = `database-${uid}`;
+      const userpass = `userpass-${uid}`;
+      const user = 'bob';
+      const policyName = `policy-${userpass}`;
+      const policy = `
+        path "${db}/" {
           capabilities = ["list"]
         }
-        path "${this.db}/roles" {
+        path "${db}/roles" {
           capabilities = ["read","list"]
         }
         `;
       await runCmd([
-        mountAuthCmd('userpass', this.userpass),
-        mountEngineCmd('database', this.db),
-        createPolicyCmd(this.policyName, this.policy),
-        `write auth/${this.userpass}/users/${this.user} password=${this.user} token_policies=${this.policyName}`,
-      ]);
-      return await logout();
-    });
-
-    hooks.afterEach(async function () {
-      await visit(`/vault/logout?namespace=${this.ns}`);
-      await fillIn(AUTH_FORM.namespaceInput, ''); // clear login form namespace input
-      await login();
-      await runCmd([`delete sys/namespaces/${this.ns}`], false);
-    });
-
-    // this test is specifically to cover a token renewal bug within namespaces
-    // namespace_path isn't returned by the renew-self response and so the auth service was
-    // incorrectly setting userRootNamespace to '' (which denotes 'root')
-    // making subsequent capability checks fail because they would not be queried with the appropriate namespace header
-    // if this test fails because a POST /v1/sys/capabilities-self returns a 403, then we have a problem!
-    test('it sets namespace when renewing token', async function (assert) {
-      await login();
-      await runCmd([
-        mountAuthCmd('userpass', this.userpass),
-        mountEngineCmd('database', this.db),
-        createPolicyCmd(this.policyName, this.policy),
-        `write auth/${this.userpass}/users/${this.user} password=${this.user} token_policies=${this.policyName}`,
+        mountAuthCmd('userpass', userpass),
+        mountEngineCmd('database', db),
+        createPolicyCmd(policyName, policy),
+        `write auth/${userpass}/users/${user} password=${user} token_policies=${policyName}`,
       ]);
 
       const inputValues = {
-        username: this.user,
-        password: this.user,
-        'auth-form-mount-path': this.userpass,
-        'auth-form-ns-input': this.ns,
+        username: user,
+        password: user,
+        path: userpass,
+        namespace: ns,
       };
 
       // login as user just to get token (this is the only way to generate a token in the UI right now..)
@@ -276,8 +257,8 @@ module('Acceptance | auth', function (hooks) {
       const token = find('[data-test-copy-button]').getAttribute('data-test-copy-button');
 
       // login with token to reproduce bug
-      await loginNs(this.ns, token);
-      await visit(`/vault/secrets/${this.db}/overview?namespace=${this.ns}`);
+      await loginNs(ns, token);
+      await visit(`/vault/secrets/${db}/overview?namespace=${ns}`);
       assert
         .dom('[data-test-overview-card="Roles"]')
         .hasText('Roles Create new', 'database overview renders');
@@ -289,9 +270,30 @@ module('Acceptance | auth', function (hooks) {
       await click(GENERAL.tab('overview'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.db}/overview?namespace=${this.ns}`,
+        `/vault/secrets/${db}/overview?namespace=${ns}`,
         'it navigates to database overview'
       );
+
+      // cleanup
+      await visit(`/vault/logout?namespace=${ns}`);
+      await fillIn(GENERAL.inputByAttr('namespace'), ''); // clear login form namespace input
+      await login();
+      await runCmd([`delete sys/namespaces/${ns}`], false);
+    });
+
+    test('it sets namespace header for sys/internal/ui/mounts request when namespace is inputted', async function (assert) {
+      assert.expect(1);
+      await visit('/vault/auth');
+
+      this.server.get('/sys/internal/ui/mounts', (schema, req) => {
+        assert.strictEqual(
+          req.requestHeaders['X-Vault-Namespace'],
+          'admin',
+          'request header contains expected namespace'
+        );
+        return { errors: ['permission denied'] };
+      });
+      await typeIn(GENERAL.inputByAttr('namespace'), 'admin');
     });
   });
 });

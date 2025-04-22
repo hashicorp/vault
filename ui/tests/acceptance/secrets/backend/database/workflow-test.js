@@ -12,7 +12,7 @@ import { create } from 'ember-cli-page-object';
 
 import databaseHandlers from 'vault/mirage/handlers/database';
 import { setupApplicationTest } from 'vault/tests/helpers';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import flashMessage from 'vault/tests/pages/components/flash-message';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 
@@ -64,12 +64,12 @@ module('Acceptance | database workflow', function (hooks) {
     databaseHandlers(this.server);
     this.backend = `db-workflow-${uuidv4()}`;
     this.store = this.owner.lookup('service:store');
-    await authPage.login();
+    await login();
     await runCmd(mountEngineCmd('database', this.backend), false);
   });
 
   hooks.afterEach(async function () {
-    await authPage.login();
+    await login();
     return runCmd(deleteEngineCmd(this.backend));
   });
 

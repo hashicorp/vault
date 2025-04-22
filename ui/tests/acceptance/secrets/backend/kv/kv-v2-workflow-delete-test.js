@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { v4 as uuidv4 } from 'uuid';
 import { setupApplicationTest } from 'vault/tests/helpers';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { personas } from 'vault/tests/helpers/kv/policy-generator';
 import { clearRecords, deleteLatestCmd, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
@@ -44,7 +44,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     this.backend = `kv-delete-${uuidv4()}`;
     this.secretPath = 'bad-secret';
     this.nestedSecretPath = 'app/nested/bad-secret';
-    await authPage.login();
+    await login();
     await runCmd(mountEngineCmd('kv-v2', this.backend), false);
     await writeVersionedSecret(this.backend, this.secretPath, 'foo', 'bar', 4);
     await writeVersionedSecret(this.backend, this.nestedSecretPath, 'foo', 'bar', 1);
@@ -53,7 +53,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
   });
 
   hooks.afterEach(async function () {
-    await authPage.login();
+    await login();
     return runCmd(deleteEngineCmd(this.backend));
   });
 
@@ -63,7 +63,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       // patch actions exist before/after deletion can run on both CE and ent repos
       this.version = this.owner.lookup('service:version').type = 'enterprise';
       const token = await runCmd(makeToken('admin', this.backend, personas.admin));
-      await authPage.login(token);
+      await login(token);
       clearRecords(this.store);
       return;
     });
@@ -189,12 +189,12 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
   module('data-reader persona', function (hooks) {
     hooks.beforeEach(async function () {
       // create and delete a secret as root user
-      await authPage.login();
+      await login();
       await writeVersionedSecret(this.backend, 'nuke', 'foo', 'bar', 2);
       await runCmd(deleteLatestCmd(this.backend, 'nuke'));
       // login as data-reader persona
       const token = await runCmd(makeToken('data-reader', this.backend, personas.dataReader));
-      await authPage.login(token);
+      await login(token);
       clearRecords(this.store);
       return;
     });
@@ -241,12 +241,12 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
   module('data-list-reader persona', function (hooks) {
     hooks.beforeEach(async function () {
       // create and delete a secret as root user
-      await authPage.login();
+      await login();
       await writeVersionedSecret(this.backend, 'nuke', 'foo', 'bar', 2);
       await runCmd(deleteLatestCmd(this.backend, 'nuke'));
       // login as data-list-reader persona
       const token = await runCmd(makeToken('data-list-reader', this.backend, personas.dataListReader));
-      await authPage.login(token);
+      await login(token);
       clearRecords(this.store);
       return;
     });
@@ -305,12 +305,12 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
   module('metadata-maintainer persona', function (hooks) {
     hooks.beforeEach(async function () {
       // create and delete a secret as root user
-      await authPage.login();
+      await login();
       await writeVersionedSecret(this.backend, 'nuke', 'foo', 'bar', 2);
       await runCmd(deleteLatestCmd(this.backend, 'nuke'));
       // login as metadata-maintainer persona
       const token = await runCmd(makeToken('metadata-maintainer', this.backend, personas.metadataMaintainer));
-      await authPage.login(token);
+      await login(token);
       clearRecords(this.store);
       return;
     });
@@ -409,7 +409,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       const token = await runCmd(
         makeToken('secret-nested-creator', this.backend, personas.secretNestedCreator)
       );
-      await authPage.login(token);
+      await login(token);
       clearRecords(this.store);
       return;
     });
@@ -434,7 +434,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
   module('secret-creator persona', function (hooks) {
     hooks.beforeEach(async function () {
       const token = await runCmd(makeToken('secret-creator', this.backend, personas.secretCreator));
-      await authPage.login(token);
+      await login(token);
       clearRecords(this.store);
       return;
     });
@@ -520,7 +520,7 @@ path "sys/control-group/request" {
 
       const { userToken } = await setupControlGroup({ userPolicy, backend: this.backend });
       this.userToken = userToken;
-      await authPage.login(userToken);
+      await login(userToken);
       clearRecords(this.store);
       return;
     });

@@ -7,7 +7,7 @@ import { click, fillIn, find, findAll, currentURL, visit, waitUntil } from '@emb
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { toolsActions } from 'vault/helpers/tools-actions';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { capitalize } from '@ember/string';
 import codemirror from 'vault/tests/helpers/codemirror';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -32,7 +32,7 @@ module('Acceptance | tools', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    await authPage.login();
+    await login();
     return visit('/vault/tools');
   });
 
