@@ -112,9 +112,6 @@ module('Integration | Component | database-role-edit', function (hooks) {
     this.version.type = 'enterprise';
     this.server.post('/sys/capabilities-self', capabilitiesStub('database/static-creds/my-role', ['update']));
 
-    this.modelStatic.password = 'testPass';
-    this.modelStatic.skip_import_rotation = false;
-    this.modelStatic.rotation_period = '172800';
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="edit"/>`);
     assert.dom(GENERAL.icon('edit')).exists(); // verify password field is enabled for edit & enable button is rendered bc role hasn't been rotated
   });
