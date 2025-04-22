@@ -4,9 +4,9 @@ Affected Upgrade Path
 This issue only occurs when upgrading from the following initial versions to the following target versions:
 
 Initial Versions (including and prior to):
-- 1.15.0
-- 1.14.4
-- 1.13.8
+- 1.14.x
+- 1.13.x
+
 
 Target Versions:
 - 1.19.0, 1.19.1
@@ -20,5 +20,5 @@ credentials once when upgrading to an affected target version from an
 affected initial version. After the one-time rotation, the static roles behave as expected.
 
 #### Workaround
-If you rely on Database static roles and are currently on a version prior to 1.15.0, 1.14.4, or 1.13.8, 
+If you rely on Database static roles and are currently on a version prior to 1.15.0, 
 avoid upgrading directly to the target versions listed above.
