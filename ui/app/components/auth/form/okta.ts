@@ -20,13 +20,13 @@ import type AuthService from 'vault/vault/services/auth';
  * */
 
 export default class AuthFormOkta extends AuthBase {
-  loginFields = [{ name: 'username' }, { name: 'password' }];
-
   @service declare readonly auth: AuthService;
 
   @tracked challengeAnswer = '';
   @tracked oktaVerifyError = '';
   @tracked showNumberChallenge = false;
+
+  loginFields = [{ name: 'username' }, { name: 'password' }];
 
   login = task(
     waitFor(async (data) => {
