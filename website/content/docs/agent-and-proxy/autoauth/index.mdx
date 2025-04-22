@@ -69,8 +69,12 @@ There are two ways that tokens can be response-wrapped:
 
 ### Encrypting tokens
 
-~> Support for encrypted tokens is experimental; if input/output formats
+<Note>
+
+Support for encrypted tokens is experimental; if input/output formats
 change, we will make every effort to provide backwards compatibility.
+
+</Note>
 
 Tokens can be encrypted, using a Diffie-Hellman exchange to generate an
 ephemeral key. In this mechanism, the client receiving the token writes a
@@ -80,11 +84,15 @@ key, which is then used to encrypt the token via AES-GCM. The nonce, encrypted
 payload, and the sink's public key are then written to the output file, where
 the client can compute the shared secret and decrypt the token value.
 
-~> NOTE: Token encryption is not a protection against MITM attacks! The purpose
+<Note>
+
+Token encryption is not a protection against MITM attacks! The purpose
 of this feature is for forward-secrecy and coverage against bare token values
 being persisted. A MITM that can write to the sink's output and/or client
 public-key input files could attack this exchange. Using TLS to protect the
 transit of tokens is highly recommended.
+
+</Note>
 
 To help mitigate MITM attacks, additional authenticated data (AAD) can be
 provided to Agent and Proxy. This data is written as part of the AES-GCM tag and must
@@ -121,11 +129,15 @@ The top level `auto_auth` block has two configuration entries:
 
 ### Configuration (Method)
 
-~> Auto-auth does not support using tokens with a limited number of uses. Auto-auth
+<Note>
+
+Auto-auth does not support using tokens with a limited number of uses. Auto-auth
 does not track the number of uses remaining, and may allow the token to
 expire before attempting to renew it. For example, if using AppRole auto-auth,
 you must use 0 (meaning unlimited) as the value for
 [`token_num_uses`](/vault/api-docs/auth/approle#token_num_uses).
+
+</Note>
 
 These are common configuration values that live within the `method` block:
 
@@ -228,8 +240,12 @@ the two formats.
 The HCL format may define any number of sink objects with an optional wrapping
 `sinks {...}` object.
 
-~> Note: The [corresponding JSON format](#sinks-json-format) _must_ specify a
+<Note>
+
+The [corresponding JSON format](#sinks-json-format) _must_ specify a
 `"sinks" : [...]` array to encapsulate all `sink` JSON objects.
+
+</Note>
 
 ```hcl
 // Other Vault Agent or Vault Proxy configuration blocks
