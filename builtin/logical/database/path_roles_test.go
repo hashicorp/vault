@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBackend_Roles_CredentialTypes(t *testing.T) {
@@ -1352,6 +1353,56 @@ func TestIsInsideRotationWindow(t *testing.T) {
 	}
 }
 
+// TestStaticRoleNextVaultRotationOnPopulate tests the case where
+// a static role was created before the 1.15.0 release and the
+// NextVaultRotation was not set. It ensures that the NextVaultRotation
+// is set to the next rotation time when the role is read from storage
+// and the queue is populated.
+func TestStaticRoleNextVaultRotationOnPopulate(t *testing.T) {
+	ctx := context.Background()
+	b, storage, mockDB := getBackend(t)
+	defer b.Cleanup(ctx)
+	configureDBMount(t, storage)
+
+	roleName := "hashicorp"
+	data := map[string]interface{}{
+		"username":        "hashicorp",
+		"db_name":         "mockv5",
+		"rotation_period": "10m",
+	}
+
+	createStaticRoleWithData(t, b, storage, mockDB, roleName, data)
+	item, err := b.credRotationQueue.Pop()
+	require.NoError(t, err)
+	firstPriority := item.Priority
+
+	// force NextVaultRotation to zero to simulate roles before 1.15.0
+	role, err := b.StaticRole(context.Background(), storage, roleName)
+	require.NoError(t, err)
+	role.StaticAccount.NextVaultRotation = time.Time{}
+	entry, err := logical.StorageEntryJSON(databaseStaticRolePath+roleName, role)
+	require.NoError(t, err)
+	if err := storage.Put(context.Background(), entry); err != nil {
+		t.Fatal("failed to write role to storage", err)
+	}
+
+	// Confirm that NextVaultRotation is nil
+	role, err = b.StaticRole(ctx, storage, roleName)
+	require.NoError(t, err)
+	require.Equal(t, role.StaticAccount.NextVaultRotation, time.Time{})
+
+	// Repopulate queue to simulate restart
+	b.populateQueue(ctx, storage)
+
+	role, err = b.StaticRole(ctx, storage, roleName)
+	require.NoError(t, err)
+	require.NotEqual(t, role.StaticAccount.NextVaultRotation, time.Time{}) // Confirm next vault rotation has been updated in storage
+	item, err = b.credRotationQueue.Pop()
+	require.NoError(t, err)
+	newPriority := item.Priority
+	require.Equal(t, newPriority, firstPriority)
+}
+
 func createRole(t *testing.T, b *databaseBackend, storage logical.Storage, mockDB *mockNewDatabase, roleName string) {
 	t.Helper()
 	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
@@ -1402,6 +1453,28 @@ func readStaticCred(t *testing.T, b *databaseBackend, s logical.Storage, mockDB 
 		t.Fatal(resp, err)
 	}
 	return resp
+}
+
+func createStaticRoleWithData(t *testing.T, b *databaseBackend, storage logical.Storage, mockDB *mockNewDatabase, roleName string, d map[string]interface{}) {
+	t.Helper()
+
+	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
+		Return(v5.UpdateUserResponse{}, nil).
+		Once()
+
+	req := &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "static-roles/" + roleName,
+		Storage:   storage,
+		Data:      d,
+	}
+
+	resp, err := b.HandleRequest(context.Background(), req)
+
+	require.NoError(t, err)
+	if resp != nil && resp.IsError() {
+		t.Fatal(resp, err)
+	}
 }
 
 const testRoleStaticCreate = `

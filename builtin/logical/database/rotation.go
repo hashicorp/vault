@@ -64,6 +64,29 @@ func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) 
 			continue
 		}
 
+		// If an account's NextVaultRotation period is nil, it means that the
+		// role was created before we added the `NextVaultRotation` field. In this
+		// case, we need to calculate the next rotation time based on the
+		// LastVaultRotation and the RotationPeriod. However, if the role was
+		// created with skip_import_rotation set, we need to use the current time
+		// instead of LastVaultRotation because LastVaultRotation is 0
+		if role.StaticAccount.NextVaultRotation.IsZero() {
+			log.Debug("NextVaultRotation is zero", roleName)
+			// Previously skipped import rotation roles had a LastVaultRotation value of zero
+			if role.StaticAccount.LastVaultRotation.IsZero() {
+				role.StaticAccount.SetNextVaultRotation(time.Now())
+			} else {
+				role.StaticAccount.SetNextVaultRotation(role.StaticAccount.LastVaultRotation)
+			}
+
+			entry, err := logical.StorageEntryJSON(databaseStaticRolePath+roleName, role)
+			if err != nil {
+				log.Warn("failed to build write storage entry", "error", err, "roleName", roleName)
+			} else if err := s.Put(ctx, entry); err != nil {
+				log.Warn("failed to write storage entry", "error", err, "roleName", roleName)
+			}
+		}
+
 		item := queue.Item{
 			Key:      roleName,
 			Priority: role.StaticAccount.NextRotationTime().Unix(),
