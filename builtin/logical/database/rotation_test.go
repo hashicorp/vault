@@ -1620,6 +1620,56 @@ func TestDeletesOlderWALsOnLoad(t *testing.T) {
 	requireWALs(t, storage, 1)
 }
 
+// TestStaticRoleNextVaultRotationOnPopulate tests the case where
+// a static role was created before the 1.15.0 release and the
+// NextVaultRotation was not set. It ensures that the NextVaultRotation
+// is set to the next rotation time when the role is read from storage
+// and the queue is populated.
+func TestStaticRoleNextVaultRotationOnPopulate(t *testing.T) {
+	ctx := context.Background()
+	b, storage, mockDB := getBackend(t)
+	defer b.Cleanup(ctx)
+	configureDBMount(t, storage)
+
+	roleName := "hashicorp"
+	data := map[string]interface{}{
+		"username":        "hashicorp",
+		"db_name":         "mockv5",
+		"rotation_period": "10m",
+	}
+
+	createStaticRoleWithData(t, b, storage, mockDB, roleName, data)
+	item, err := b.credRotationQueue.Pop()
+	require.NoError(t, err)
+	firstPriority := item.Priority
+
+	// force NextVaultRotation to zero to simulate roles before 1.15.0
+	role, err := b.StaticRole(context.Background(), storage, roleName)
+	require.NoError(t, err)
+	role.StaticAccount.NextVaultRotation = time.Time{}
+	entry, err := logical.StorageEntryJSON(databaseStaticRolePath+roleName, role)
+	require.NoError(t, err)
+	if err := storage.Put(context.Background(), entry); err != nil {
+		t.Fatal("failed to write role to storage", err)
+	}
+
+	// Confirm that NextVaultRotation is nil
+	role, err = b.StaticRole(ctx, storage, roleName)
+	require.NoError(t, err)
+	require.Equal(t, role.StaticAccount.NextVaultRotation, time.Time{})
+
+	// Repopulate queue to simulate restart
+	b.populateQueue(ctx, storage)
+
+	role, err = b.StaticRole(ctx, storage, roleName)
+	require.NoError(t, err)
+	item, err = b.credRotationQueue.Pop()
+	require.NoError(t, err)
+	newPriority := item.Priority
+	require.Equal(t, role.StaticAccount.NextVaultRotation.Unix(), newPriority) // Confirm NextVaultRotation and priority are equal
+	require.Equal(t, newPriority, firstPriority)                               // confirm that priority has not changed
+}
+
 func generateWALFromFailedRotation(t *testing.T, b *databaseBackend, storage logical.Storage, mockDB *mockNewDatabase, roleName string) {
 	t.Helper()
 	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
