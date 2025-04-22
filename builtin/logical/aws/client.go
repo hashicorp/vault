@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -24,8 +23,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
-
-const fallbackEndpoint = "https://sts.amazonaws.com" // this is not regionally distributed; all requests go to us-east-1
 
 // Return a slice of *aws.Config, based on descending configuration priority. STS endpoints are the only place this is used.
 // NOTE: The caller is required to ensure that b.clientMutex is at least read locked
@@ -151,8 +148,11 @@ func (b *backend) getRootConfigs(ctx context.Context, s logical.Storage, clientT
 				endpoints = append(endpoints, matchingSTSEndpoint(v))
 			}
 		case "iam":
-			for _, v := range regions {
-				endpoints = append(endpoints, matchingIAMEndpoint(v))
+			for range regions {
+				// for custom IAM implementations, iam_endpoint would have been set above - this case will only occur in
+				// real IAM deployments, where you don't specify an endpoint, and in fact, AWS doesn't seem to like it
+				// if you do.
+				endpoints = append(endpoints, "")
 			}
 		}
 	}
@@ -174,6 +174,7 @@ func (b *backend) getRootConfigs(ctx context.Context, s logical.Storage, clientT
 		if err != nil {
 			return nil, err
 		}
+		logger.Info("this pair is", "region", credsConfig.Region, "endpoint", endpoints[i])
 		configs = append(configs, &aws.Config{
 			Credentials: creds,
 			Region:      aws.String(credsConfig.Region),
@@ -251,14 +252,6 @@ func (b *backend) nonCachedClientSTS(ctx context.Context, s logical.Storage, log
 // http://docs.aws.amazon.com/general/latest/gr/sts.html
 func matchingSTSEndpoint(stsRegion string) string {
 	return fmt.Sprintf("https://sts.%s.amazonaws.com", stsRegion)
-}
-
-func matchingIAMEndpoint(iamRegion string) string {
-	if strings.Contains(iamRegion, "us-gov") {
-		return "https://iam.us-gov.amazonaws.com"
-	}
-
-	return "https://iam.amazonaws.com"
 }
 
 // PluginIdentityTokenFetcher fetches plugin identity tokens from Vault. It is provided
