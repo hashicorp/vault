@@ -8,6 +8,7 @@ import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
+import { sanitizePath } from 'core/utils/sanitize-path';
 
 import type AuthService from 'vault/vault/services/auth';
 import type ClusterModel from 'vault/models/cluster';
@@ -39,7 +40,9 @@ export default class AuthBase extends Component<Args> {
     const data: Record<string, FormDataEntryValue | null> = {};
 
     for (const key of formData.keys()) {
-      data[key] = formData.get(key);
+      const value = formData.get(key);
+      // strip leading or trailing slashes from path for consistency
+      data[key] = key === 'path' ? sanitizePath(value) : value;
     }
 
     // If path is not included in the submitted form data,
