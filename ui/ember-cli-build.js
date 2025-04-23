@@ -49,6 +49,7 @@ const appConfig = {
       './node_modules/@hashicorp/design-system-tokens/dist/products/css',
       './node_modules/ember-basic-dropdown/',
       './node_modules/ember-power-select/',
+      './node_modules/@hashicorp/vault-reporting/dist/styles',
     ],
   },
   minifyCSS: {
