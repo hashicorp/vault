@@ -150,9 +150,11 @@ For anonymous search, `discoverdn` must be set to `true`, and `deny_null_bind` m
 
 ### Certificates
 
-Vault also reads certificates stored in Operating Systems (OS) certificate trust store for Vault LDAP Authentication Method and so you may wish to use that instead of specifying the CA certificate via the certificate parameter that may be omitted altogether when initially configuring the method.
-
-This trust store is read during Vault startup only. CA certificate additions to the OS trust store will require a restart to the Vault process before the LDAP authentication method can use those to establish new LDAP connections to the configured server address.
+At startup, Vault can read LDAP certificates from the operating systems (OS)
+certificate trust store instead of reading CA certificates from the
+certificate parameter. After startup, you need to restart Vault to read in
+new certificates before the LDAP plugin can use the information to establish new
+LDAP connections to the configured server address.
 
 ### Group membership resolution
 
