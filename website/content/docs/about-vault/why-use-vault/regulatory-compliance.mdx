@@ -10,9 +10,16 @@ description: >-
 
 @include '/why-use-vault/regulatory-compliance-small.mdx'
 
-Deploy for HSM
-Configure FIPS
-Use PKCS11 authN
+Vault Enterprise supports HSM for devices with PKCS#11 version 2.20+ interfaces
+with integration libraries for Linux/amd64 platforms. Compliance support
+includes:
+
+- HSM-wrapped root keys
+- automatic unsealing with the HSM-wrapped root key
+- entropy augmentation from external cryptographic modules
+- FIPS 140-2 compliant cryptography built into the Vault binary
+- FIPS seal wrapping for critical Security parameters
+
 
 <Tabs>
 <Tab heading="Key concepts + Overviews" group="overviews">

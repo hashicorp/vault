@@ -11,10 +11,14 @@ description: >-
 @include '/why-use-vault/manage-identities-small.mdx'
 
 
-## Manage entities and identities
+## Manage identities and entities
 
-Manage roles
-Manage identity keys
+Vault provides centralized identity management through the identity plugin so
+clients can use accounts with different identity providers to authenticate to
+Vault. The identity plugin ties authentication instances to a single,
+consolidated representation called an **entity**. Entities map to aliases for
+corresponding accounts with authentication providers and policies that authorize
+those entities to take action within Vault.
 
 
 <Tabs>
@@ -55,8 +59,13 @@ Manage identity keys
 
 ## Use OIDC
 
-Create an OIDC provider
-Manage OIDC flows?
+Use Vault as an OpenID Connect (OIDC) identity provider to let client
+applications that speak the OIDC protocol to leverage Vault as a source of
+identity.
+
+Vault generates OIDC-compliant ID tokens against internal roles that can
+configure authentication token claims with a templating system, token TTLs, and
+explicit mapping to specify signing keys.
 
 <Tabs>
 <Tab heading="Key concepts + Overviews" group="overviews">
@@ -89,11 +98,17 @@ Manage OIDC flows?
 </Tabs>
 
 
-## Use Workload Identity Federation
+## Use WIF
 
-Setup WIF for AWS
-Setup WIF for Azure
-Setup WIF for GCP
+Use Vault with workload identity federation (WIF) to let your applications
+authenticate to cloud services securely with short-lived tokens obtained from a
+trusted identity provider (IdP). 
+
+When you configure a WIF-enabled plugin and establish a trusted relationship
+between Vault and the associated  provider like AWS, Azure, and Google Cloud
+Platform, Vault can exchange internal identity tokens for short-lived STS
+credentials so the associated plugin can operate without configuring explicit
+access to sensitive IAM security credentials.
 
 <Tabs>
 <Tab heading="Guides" group="guides">

@@ -13,11 +13,14 @@ description: >-
 
 ## Encrypt data
 
+Use Vault to deploy **encryption as a service** and move the burden of data
+encryption/decryption from your applications to Vault.
 
-at rest
-in transit
+With the transit plugin, Vault can encrypt and decrypt external data,
+essentially allowing applications to encrypt their data while storing it in the
+primary data store, which simplifies encrypting data in transit and at rest
+across clouds and datacenters.
 
-Many organizations seek solutions to encrypt/decrypt application data within a cloud or multi-datacenter environment; deploying cryptography and maintaining a complex key management infrastructure can be expensive and challenging to develop. Vault provides [encryption as a service](/vault/docs/secrets/transit) with centralized key management to simplify encrypting data in transit and stored across clouds and datacenters. Vault can encrypt/decrypt data stored elsewhere, essentially allowing applications to encrypt their data while storing it in the primary data store. Vault's security team manages and maintains the responsibility of the data encryption within the Vault environment, allowing developers to focus solely on encrypting/decrypting data as needed.
 
 <Tabs>
 <Tab heading="Key concepts + Overviews" group="overviews">
@@ -49,7 +52,15 @@ Many organizations seek solutions to encrypt/decrypt application data within a c
 
 ## Tokenize data
 
-Many organizations seek solutions to encrypt/decrypt application data within a cloud or multi-datacenter environment; deploying cryptography and maintaining a complex key management infrastructure can be expensive and challenging to develop. Vault provides [encryption as a service](/vault/docs/secrets/transit) with centralized key management to simplify encrypting data in transit and stored across clouds and datacenters. Vault can encrypt/decrypt data stored elsewhere, essentially allowing applications to encrypt their data while storing it in the primary data store. Vault's security team manages and maintains the responsibility of the data encryption within the Vault environment, allowing developers to focus solely on encrypting/decrypting data as needed.
+Use Vault to securely transform and tokenize input data with NIST vetted
+cryptographic standards such as format-preserving encryption (FPE) via FF3-1 and
+pseudonymous transformations like data masking.
+
+With the transform plugin, Vault can perform one-way transformations that
+exchange sensitive values for unrelated, stateful tokenized values. Tokenization
+makes the original value unrecoverable from the token alone. Authorized clients
+must submit the token to Vault to retrieve the original value from a
+cryptographic mapping in storage.
 
 <Tabs>
 <Tab heading="Key concepts + Overviews" group="overviews">
