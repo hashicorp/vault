@@ -2512,7 +2512,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hashicorp/design-system-components@npm:~4.18.1":
+"@hashicorp/design-system-components@npm:~4.18.0, @hashicorp/design-system-components@npm:~4.18.2":
   version: 4.18.2
   resolution: "@hashicorp/design-system-components@npm:4.18.2"
   dependencies:
@@ -18569,7 +18569,7 @@ __metadata:
     "@ember/test-waiters": ^4.0.0
     "@glimmer/component": ^1.1.2
     "@glimmer/tracking": ^1.1.2
-    "@hashicorp/design-system-components": ~4.18.1
+    "@hashicorp/design-system-components": ~4.18.2
     "@hashicorp/vault-client-typescript": "portal:./api-client"
     "@hashicorp/vault-reporting": "portal:./vault-reporting"
     "@icholy/duration": ^5.1.0
