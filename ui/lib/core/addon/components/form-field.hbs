@@ -22,7 +22,7 @@
             <G.HelperText data-test-label-subtext>
               {{@attr.options.subText}}
               {{#if @attr.options.docLink}}
-                <DocLink @path={{@attr.options.docLink}}>See our documentation</DocLink>
+                <DocLink @path={{@attr.options.docLink}} data-test-form-field-doc-link>See our documentation</DocLink>
                 for help.
               {{/if}}
             </G.HelperText>
@@ -61,7 +61,7 @@
             <F.HelperText data-test-label-subtext>
               {{@attr.options.subText}}
               {{#if @attr.options.docLink}}
-                <DocLink @path={{@attr.options.docLink}}>See our documentation</DocLink>
+                <DocLink @path={{@attr.options.docLink}} data-test-form-field-doc-link>See our documentation</DocLink>
                 for help.
               {{/if}}
             </F.HelperText>
@@ -111,7 +111,7 @@
                 <F.HelperText data-test-label-subtext>
                   {{@attr.options.subText}}
                   {{#if @attr.options.docLink}}
-                    <DocLink @path={{@attr.options.docLink}}>See our documentation</DocLink>
+                    <DocLink @path={{@attr.options.docLink}} data-test-form-field-doc-link>See our documentation</DocLink>
                     for help.
                   {{/if}}
                 </F.HelperText>
@@ -310,7 +310,7 @@
             <span>
               {{@attr.options.subText}}
               {{#if @attr.options.docLink}}
-                <DocLink @path={{@attr.options.docLink}}>
+                <DocLink @path={{@attr.options.docLink}} data-test-form-field-doc-link>
                   See our documentation
                 </DocLink>
                 for help.
@@ -320,7 +320,7 @@
             <span>
               {{or @attr.options.defaultSubText "Vault will use the engine default."}}
               {{#if @attr.options.docLink}}
-                <DocLink @path={{@attr.options.docLink}}>
+                <DocLink @path={{@attr.options.docLink}} data-test-form-field-doc-link>
                   See our documentation
                 </DocLink>
                 for help.
@@ -404,7 +404,7 @@
             <p class="sub-text">
               {{@attr.options.subText}}
               {{#if @attr.options.docLink}}
-                <DocLink @path={{@attr.options.docLink}}>
+                <DocLink @path={{@attr.options.docLink}} data-test-form-field-doc-link>
                   See our documentation
                 </DocLink>
                 for help.
@@ -451,7 +451,7 @@
           <p class="sub-text">
             {{@attr.options.subText}}
             {{#if @attr.options.docLink}}
-              <DocLink @path={{@attr.options.docLink}}>
+              <DocLink @path={{@attr.options.docLink}} data-test-form-field-doc-link>
                 Learn more here.
               </DocLink>
             {{/if}}
