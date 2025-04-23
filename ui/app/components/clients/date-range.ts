@@ -68,18 +68,14 @@ export default class ClientsDateRangeComponent extends Component<Args> {
 
   get historicalBillingPeriods() {
     const count = this.args.retentionMonths / 12;
-    const periods = [];
+    const periods: string[] = [];
 
     // for each historical billing period, start_date will be billing_start_date - (12 * multiple)
     for (let i = 1; i <= count; i++) {
       const startDate = new Date(this.args.billingStartTime);
-      const endDate = new Date(startDate);
       startDate.setMonth(startDate.getMonth() - 12 * i);
-      endDate.setMonth(startDate.getMonth() - 12 * (i - 1));
-      // go back one month to prevent overlap with start month
-      endDate.setMonth(startDate.getMonth() - 1);
 
-      periods.push({ start: startDate.toISOString(), end: endDate.toISOString() });
+      periods.push(startDate.toISOString());
     }
 
     return periods;

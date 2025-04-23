@@ -26,8 +26,8 @@
             {{this.formattedDate @billingStartTime}}
           </D.Interactive>
           {{#each this.historicalBillingPeriods as |period|}}
-            <D.Interactive {{on "click" (fn this.updateEnterpriseDateRange period.start)}} selected="true">
-              {{this.formattedDate period.start}}
+            <D.Interactive {{on "click" (fn this.updateEnterpriseDateRange period)}} selected="true">
+              {{this.formattedDate period}}
             </D.Interactive>
           {{/each}}
         </Hds::Dropdown>
