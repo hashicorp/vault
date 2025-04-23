@@ -8,6 +8,7 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { DASHBOARD } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
 module('Integration | Component | dashboard/secrets-engines-card', function (hooks) {
   setupRenderingTest(hooks);
@@ -31,7 +32,9 @@ module('Integration | Component | dashboard/secrets-engines-card', function (hoo
     await render(hbs`<Dashboard::SecretsEnginesCard @secretsEngines={{this.secretsEngines}} />`);
 
     // verify overflow style exists on secret engine text
-    assert.dom('[data-test-secret-path]').hasClass('overflow-wrap', 'secret engine name has overflow class ');
+    assert
+      .dom(SES.secretPath('kubernetes-test/'))
+      .hasClass('overflow-wrap', 'secret engine name has overflow class ');
 
     assert.dom('[data-test-secrets-engines-card-show-all]').doesNotExist();
   });
@@ -136,8 +139,12 @@ module('Integration | Component | dashboard/secrets-engines-card', function (hoo
 
     test('it adds disabled css styling to unsupported secret engines', async function (assert) {
       await this.renderComponent();
-      assert.dom('[data-test-secrets-engines-row="nomad"] [data-test-view]').doesNotExist();
-      assert.dom('[data-test-secrets-engines-row="nomad"] [data-test-secret-path]').hasClass('has-text-grey');
+      assert
+        .dom(SES.secretPath('secrets-test/'))
+        .hasClass('has-text-black', 'does not apply disabled class to supported secret engine');
+      assert
+        .dom(SES.secretPath('nomad/'))
+        .hasClass('has-text-grey', 'nomad is not a supported secret engine and has disabled class');
     });
   });
 });
