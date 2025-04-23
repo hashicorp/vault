@@ -1,0 +1,4 @@
+
+```release-note:improvement
+ui: Client count design and date picker updates to maintain consistency with user expectations
+```
