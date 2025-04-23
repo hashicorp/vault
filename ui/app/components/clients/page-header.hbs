@@ -4,22 +4,19 @@
 }}
 
 <Hds::PageHeader class="has-top-padding-l has-bottom-padding-m" as |PH|>
-  <PH.Title>Vault Usage Metrics</PH.Title>
-  <PH.Description>
-    This dashboard surfaces Vault client usage over time.
-    <Hds::Link::Inline @href={{doc-link "/vault/docs/concepts/client-count"}}>Documentation is available here</Hds::Link::Inline>.
-    Date queries are sent in UTC.
-  </PH.Description>
+  {{#if this.version.isEnterprise}}
+    <PH.Title>Billing Period Client Usage</PH.Title>
+  {{else}}
+    <PH.Title>Client Count</PH.Title>
+  {{/if}}
   <PH.Actions>
-    {{#if this.showExportButton}}
-      <Hds::Button
-        data-test-export-button
-        @text="Export activity data"
-        @color="secondary"
-        @icon="download"
-        {{on "click" (fn (mut this.showExportModal) true)}}
-      />
-    {{/if}}
+    <Clients::DateRange
+      @startTime={{@startTimestamp}}
+      @endTime={{@endTimestamp}}
+      @billingStartTime={{@billingStartTime}}
+      @retentionMonths={{@retentionMonths}}
+      @onChange={{@onChange}}
+    />
   </PH.Actions>
 </Hds::PageHeader>
 

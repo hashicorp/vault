@@ -10,7 +10,7 @@ import { tracked } from '@glimmer/tracking';
 import { formatDateObject } from 'core/utils/client-count-utils';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import timestamp from 'core/utils/timestamp';
-import { format } from 'date-fns';
+import { format, getUnixTime } from 'date-fns';
 import type VersionService from 'vault/services/version';
 import type { HTMLElementEvent } from 'forms';
 
@@ -22,6 +22,8 @@ interface Args {
   onChange: (callback: OnChangeParams) => void;
   startTime: string;
   endTime: string;
+  billingStartTime: string;
+  retentionMonths: number;
 }
 /**
  * @module ClientsDateRange
@@ -34,6 +36,8 @@ interface Args {
  * @param {function} onChange - callback when a new range is saved.
  * @param {string} [startTime] - ISO string timestamp of the current start date
  * @param {string} [endTime] - ISO string timestamp of the current end date
+ * @param {int} [retentionMonths] - number of months for historical billing
+ * @param {string} [billingStartTime] - ISO string timestamp of billing start date
  */
 
 export default class ClientsDateRangeComponent extends Component<Args> {
@@ -61,6 +65,29 @@ export default class ClientsDateRangeComponent extends Component<Args> {
   formattedDate = (isoTimestamp: string) => {
     return parseAPITimestamp(isoTimestamp, 'MMMM yyyy');
   };
+
+  get billingEndTime() {
+    return new Date().toISOString();
+  }
+
+  get historicalBillingPeriods() {
+    const count = this.args.retentionMonths / 12;
+    const periods = [];
+
+    // for each historical billing period, start_date will be billing_start_date - (12 * multiple)
+    for (let i = 1; i <= count; i++) {
+      const startDate = new Date(this.args.billingStartTime);
+      const endDate = new Date(startDate);
+      startDate.setMonth(startDate.getMonth() - 12 * i);
+      endDate.setMonth(startDate.getMonth() - 12 * (i - 1));
+      // go back one month to prevent overlap with start month
+      endDate.setMonth(startDate.getMonth() - 1);
+
+      periods.push({ start: startDate.toISOString(), end: endDate.toISOString() });
+    }
+
+    return periods;
+  }
 
   get useDefaultDates() {
     return !this.startDate && !this.endDate;
@@ -100,6 +127,7 @@ export default class ClientsDateRangeComponent extends Component<Args> {
     }
   }
 
+  // used for CE date picker
   @action handleSave() {
     if (this.validationError) return;
     const params: OnChangeParams = {
@@ -121,5 +149,18 @@ export default class ClientsDateRangeComponent extends Component<Args> {
 
     this.args.onChange(params);
     this.onClose();
+  }
+
+  @action
+  updateEnterpriseDateRange(start: string) {
+    const params: OnChangeParams = {
+      start_time: undefined,
+      end_time: undefined,
+    };
+    const formattedStart = getUnixTime(new Date(start));
+
+    params.start_time = formattedStart;
+
+    this.args.onChange(params);
   }
 }

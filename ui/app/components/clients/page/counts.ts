@@ -42,6 +42,12 @@ export default class ClientsCountsPageComponent extends Component<Args> {
     return this.args.startTimestamp ? parseAPITimestamp(this.args.startTimestamp, 'MMMM yyyy') : null;
   }
 
+  get formattedBillingStartDate() {
+    return this.args.config.billingStartTimestamp
+      ? this.args.config.billingStartTimestamp.toISOString()
+      : null;
+  }
+
   // returns text for empty state message if noActivityData
   get dateRangeMessage() {
     if (this.args.startTimestamp && this.args.endTimestamp) {

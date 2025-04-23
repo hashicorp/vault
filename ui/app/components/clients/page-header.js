@@ -31,6 +31,7 @@ export default class ClientsPageHeaderComponent extends Component {
   @service download;
   @service namespace;
   @service store;
+  @service version;
 
   @tracked canDownload = false;
   @tracked showExportModal = false;

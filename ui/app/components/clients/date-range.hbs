@@ -4,35 +4,49 @@
 }}
 
 <div ...attributes>
-  <Hds::Text::Display @tag="p" class="has-bottom-margin-xs">
-    Client counting period
-  </Hds::Text::Display>
-  <Hds::Text::Body @tag="p" @color="faint" @size="300">
-    The dashboard displays client count activity during the specified date range below. Click edit to update the date range.
-  </Hds::Text::Body>
+  <div class="is-flex-column align-items-end">
+    <Hds::Text::Display @tag="p" @size="100" class="has-bottom-margin-xs">
+      Select billing period
+    </Hds::Text::Display>
+    <div class="is-flex">
+      {{#if (and @startTime @endTime)}}
+        <div class="flex align-items-center">
+          <p class="is-size-5 has-text-weight-semibold" data-test-date-range="start">{{this.formattedDate @startTime}}</p>
+          <p class="has-left-margin-xs"> — </p>
+          <p class="is-size-5 has-text-weight-semibold has-left-margin-xs" data-test-date-range="end">{{this.formattedDate
+              @endTime
+            }}
+          </p>
+        </div>
+      {{else}}
+        <Hds::Button
+          @text="Set date range"
+          @icon="edit"
+          {{on "click" (fn (mut this.showEditModal) true)}}
+          data-test-date-range-edit
+        />
+      {{/if}}
+      {{#if this.version.isEnterprise}}
+        <Hds::Dropdown class="has-left-margin-xs" as |D|>
+          <D.ToggleButton @text="Current" @color="secondary" />
 
-  <div class="is-flex-align-baseline">
-    {{#if (and @startTime @endTime)}}
-      <p class="is-size-6" data-test-date-range="start">{{this.formattedDate @startTime}}</p>
-      <p class="has-left-margin-xs"> — </p>
-      <p class="is-size-6 has-left-margin-xs" data-test-date-range="end">{{this.formattedDate @endTime}}</p>
-      <Hds::Button
-        class="has-left-margin-xs"
-        @text="Edit"
-        @color="tertiary"
-        @icon="edit"
-        @iconPosition="trailing"
-        data-test-date-range-edit
-        {{on "click" (fn (mut this.showEditModal) true)}}
-      />
-    {{else}}
-      <Hds::Button
-        @text="Set date range"
-        @icon="edit"
-        {{on "click" (fn (mut this.showEditModal) true)}}
-        data-test-date-range-edit
-      />
-    {{/if}}
+          <D.Interactive {{on "click" (fn this.updateEnterpriseDateRange @billingStartTime)}}>
+            {{this.formattedDate @billingStartTime}}
+            -
+            {{this.formattedDate this.billingEndTime}}
+          </D.Interactive>
+          {{#each this.historicalBillingPeriods as |period|}}
+            <D.Interactive {{on "click" (fn this.updateEnterpriseDateRange period.start)}}>
+              {{this.formattedDate period.start}}
+              -
+              {{this.formattedDate period.end}}
+
+            </D.Interactive>
+          {{/each}}
+        </Hds::Dropdown>
+      {{/if}}
+    </div>
+
   </div>
 
   {{#if this.showEditModal}}
@@ -43,11 +57,6 @@
       <M.Body>
         <p class="has-bottom-margin-s">
           The start date will be used as the client counting start time and all clients in that month will be considered new.
-          {{#if this.version.isEnterprise}}
-            We recommend setting this date as your license or billing start date to get the most accurate new and total
-            client count estimations. These dates are only for querying data in storage. Editing the date range does not
-            change any license or billing configurations.
-          {{/if}}
         </p>
         <div class="clients-date-range-display">
           <div>
@@ -78,26 +87,12 @@
               <F.Label>End</F.Label>
             </Hds::Form::TextInput::Field>
           </div>
-          {{#if this.version.isEnterprise}}
-            <Hds::Button
-              @text="Reset"
-              @color="tertiary"
-              @icon="reload"
-              {{on "click" this.resetDates}}
-              data-test-date-edit="reset"
-            />
-          {{/if}}
         </div>
         {{#if this.validationError}}
           <Hds::Form::Error
             class="has-top-margin-xs"
             data-test-date-range-validation
           >{{this.validationError}}</Hds::Form::Error>
-        {{/if}}
-        {{#if (and this.version.isEnterprise this.useDefaultDates)}}
-          <Hds::Alert @type="compact" @color="highlight" class="has-top-margin-xs" data-test-range-default-alert as |A|>
-            <A.Description>Dashboard will use the default date range from the API.</A.Description>
-          </Hds::Alert>
         {{/if}}
       </M.Body>
       <M.Footer as |F|>
