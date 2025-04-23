@@ -106,10 +106,9 @@ func (c *Core) reloadMatchingPlugin(ctx context.Context, ns *namespace.Namespace
 				if err != nil {
 					errors = multierror.Append(errors, fmt.Errorf("cannot reload plugin on %q: %w", entry.Path, err))
 				} else {
+					c.logger.Info("successfully reloaded plugin", "plugin", pluginName, "namespace", entry.Namespace(), "path", entry.Path, "version", entry.RunningVersion)
 					reloaded++
 				}
-
-				c.logger.Info("successfully reloaded plugin", "plugin", pluginName, "namespace", entry.Namespace(), "path", entry.Path, "version", entry.RunningVersion)
 			} else if database && entry.Type == "database" {
 				// The combined database plugin is itself a secrets engine, but
 				// knowledge of whether a database plugin is in use within a particular
@@ -155,14 +154,15 @@ func (c *Core) reloadMatchingPlugin(ctx context.Context, ns *namespace.Namespace
 					errors = multierror.Append(errors, fmt.Errorf("cannot reload plugin on %q: %w", entry.Path, err))
 					// return reloaded, err
 				} else {
+					c.logger.Info("successfully reloaded plugin", "plugin", entry.Accessor, "path", entry.Path, "version", entry.RunningVersion)
 					reloaded++
 				}
-				c.logger.Info("successfully reloaded plugin", "plugin", entry.Accessor, "path", entry.Path, "version", entry.RunningVersion)
+
 			}
 		}
 	}
 
-	return reloaded, nil
+	return reloaded, errors
 }
 
 // reloadBackendCommon is a generic method to reload a backend provided a
