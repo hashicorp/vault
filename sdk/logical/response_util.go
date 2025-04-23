@@ -8,9 +8,11 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/errwrap"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 )
@@ -197,6 +199,8 @@ func AdjustErrorStatusCode(status *int, err error) {
 func RespondError(w http.ResponseWriter, status int, err error) {
 	AdjustErrorStatusCode(&status, err)
 
+	defer IncrementResponseStatusCodeMetric(status)
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 
@@ -215,6 +219,8 @@ func RespondError(w http.ResponseWriter, status int, err error) {
 func RespondErrorAndData(w http.ResponseWriter, status int, data interface{}, err error) {
 	AdjustErrorStatusCode(&status, err)
 
+	defer IncrementResponseStatusCodeMetric(status)
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 
@@ -230,4 +236,28 @@ func RespondErrorAndData(w http.ResponseWriter, status int, data interface{}, er
 
 	enc := json.NewEncoder(w)
 	enc.Encode(resp)
+}
+
+func IncrementResponseStatusCodeMetric(statusCode int) {
+	// defer metrics.IncrCounterWithLabels([]string{"core", "request_status_code"}, float32(status), "statusCode")
+	// metrics.IncrCounterWithLabels(append(key, "failure"), 1.0, labels)
+	// r.m.core.metricSink.IncrCounterWithLabels([]string{"expire", "lease_expiration"}, 1, []metrics.Label{metricsutil.NamespaceLabel(r.ns)})
+
+	// statusString := strconv.Itoa(status)
+	// statusType := fmt.Sprintf("%cxx", statusString[0])
+	// defer metrics.IncrCounterWithLabels([]string{"core", "request_status_code"},
+	//	1,
+	//	[]metrics.Label{
+	//		{"code", statusString},
+	//		{"type", statusType},
+	//	})
+	// defer metrics.IncrCounter([]string{"core", "request_status_code", strconv.Itoa(status)}, 1)
+	statusString := strconv.Itoa(statusCode)
+	statusType := fmt.Sprintf("%cxx", statusString[0])
+	metrics.IncrCounterWithLabels([]string{"core", "request_status_code"},
+		1,
+		[]metrics.Label{
+			{"code", statusString},
+			{"type", statusType},
+		})
 }
