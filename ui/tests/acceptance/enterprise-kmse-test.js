@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, currentRouteName, fillIn } from '@ember/test-helpers';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { allEngines } from 'vault/helpers/mountable-secret-engines';
@@ -18,7 +18,7 @@ module('Acceptance | Enterprise | keymgmt', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    return authPage.login();
+    return login();
   });
 
   test('it transitions to list route after mount success', async function (assert) {

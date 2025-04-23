@@ -8,13 +8,13 @@ import { settled } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import { testAliasCRUD, testAliasDeleteFromForm } from '../../_shared-alias-tests';
 import { v4 as uuidv4 } from 'uuid';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 
 module('Acceptance | /access/identity/entities/aliases/add', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
-    await authPage.login();
+    await login();
     return;
   });
 

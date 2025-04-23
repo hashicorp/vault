@@ -10,7 +10,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CUSTOM_MESSAGES } from 'vault/tests/helpers/config-ui/message-selectors';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { datetimeLocalStringFormat } from 'core/utils/date-formatters';
 import { format, addDays, startOfDay } from 'date-fns';
 import { createNS, runCmd } from '../../../helpers/commands';
@@ -123,7 +123,7 @@ module('Acceptance | auth custom messages auth tests', function (hooks) {
 
   test('it should display an active authenticated message after creation on enterprise', async function (assert) {
     assert.expect(4);
-    await authPage.login();
+    await login();
     await visit('vault/config-ui/messages');
     await click(CUSTOM_MESSAGES.button('create message'));
     await fillIn(CUSTOM_MESSAGES.input('title'), 'Awesome custom message title');

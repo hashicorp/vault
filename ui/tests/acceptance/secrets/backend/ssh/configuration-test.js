@@ -8,7 +8,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { runCmd } from 'vault/tests/helpers/commands';
@@ -25,7 +25,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
     this.uid = uuidv4();
-    return authPage.login();
+    return login();
   });
 
   test('it should prompt configuration after mounting ssh engine', async function (assert) {

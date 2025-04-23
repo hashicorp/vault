@@ -23,7 +23,21 @@ module('Integration | Component | auth | form | oidc-jwt', function (hooks) {
     this.cluster = { id: 1 };
     this.onError = sinon.spy();
     this.onSuccess = sinon.spy();
-    this.renderComponent = () => {
+    this.renderComponent = ({ yieldBlock = false } = {}) => {
+      if (yieldBlock) {
+        return render(hbs`
+          <Auth::Form::OidcJwt 
+            @authType={{this.authType}} 
+            @cluster={{this.cluster}}
+            @onError={{this.onError}}
+            @onSuccess={{this.onSuccess}}
+          >
+            <:advancedSettings>
+              <label for="path">Mount path</label>
+              <input data-test-input="path" id="path" name="path" type="text" /> 
+            </:advancedSettings>
+          </Auth::Form::OidcJwt>`);
+      }
       return render(hbs`
         <Auth::Form::OidcJwt       
         @authType={{this.authType}}
@@ -46,6 +60,10 @@ module('Integration | Component | auth | form | oidc-jwt', function (hooks) {
   module('oidc', function (hooks) {
     hooks.beforeEach(function () {
       this.authType = 'oidc';
+      this.expectedSubmit = {
+        default: { path: 'oidc', role: 'some-dev' },
+        custom: { path: 'custom-oidc', role: 'some-dev' },
+      };
     });
 
     testHelper(test);
@@ -54,6 +72,10 @@ module('Integration | Component | auth | form | oidc-jwt', function (hooks) {
   module('jwt', function (hooks) {
     hooks.beforeEach(function () {
       this.authType = 'jwt';
+      this.expectedSubmit = {
+        default: { path: 'jwt', role: 'some-dev' },
+        custom: { path: 'custom-jwt', role: 'some-dev' },
+      };
     });
 
     testHelper(test);

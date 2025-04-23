@@ -10,7 +10,7 @@ import { visit, click, currentURL } from '@ember/test-helpers';
 import { getUnixTime } from 'date-fns';
 import sinon from 'sinon';
 import timestamp from 'core/utils/timestamp';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CHARTS, CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
 import { ACTIVITY_RESPONSE_STUB, assertBarChart } from 'vault/tests/helpers/clients/client-count-helpers';
@@ -50,7 +50,7 @@ module('Acceptance | clients | counts | acme', function (hooks) {
       nsMonthlyUsage: filterByMonthDataForMount(activity.byMonth, this.nsPath, this.mountPath),
     };
 
-    await authPage.login();
+    await login();
     return visit('/vault');
   });
 

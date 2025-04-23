@@ -5,10 +5,9 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, fillIn, find, waitUntil } from '@ember/test-helpers';
+import { click, fillIn, find, visit, waitUntil } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
-import authPage from 'vault/tests/pages/auth';
 import { windowStub } from 'vault/tests/helpers/oidc-window-stub';
 import { setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -30,7 +29,7 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
     }));
     // ensure clean state
     localStorage.removeItem('selectedAuth');
-    authPage.logout();
+    visit('/vault/logout');
   });
 
   hooks.afterEach(function () {
@@ -147,7 +146,7 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
   });
 
   test('it should populate saml auth method on logout', async function (assert) {
-    authPage.logout();
+    await visit('/vault/logout');
     // select from dropdown
     await waitUntil(() => find('[data-test-select="auth-method"]'));
     await fillIn('[data-test-select="auth-method"]', 'saml');

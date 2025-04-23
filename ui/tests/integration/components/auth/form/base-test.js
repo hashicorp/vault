@@ -28,7 +28,25 @@ module('Integration | Component | auth | form | base', function (hooks) {
     hooks.beforeEach(function () {
       this.authType = 'github';
       this.expectedFields = ['token'];
-      this.renderComponent = () => {
+      this.expectedSubmit = {
+        default: { path: 'github', token: 'mysupersecuretoken' },
+        custom: { path: 'custom-github', token: 'mysupersecuretoken' },
+      };
+      this.renderComponent = ({ yieldBlock = false } = {}) => {
+        if (yieldBlock) {
+          return render(hbs`
+            <Auth::Form::Github 
+              @authType={{this.authType}} 
+              @cluster={{this.cluster}}
+              @onError={{this.onError}}
+              @onSuccess={{this.onSuccess}}
+            >
+             <:advancedSettings>
+             <label for="path">Mount path</label>
+             <input data-test-input="path" id="path" name="path" type="text" /> 
+             </:advancedSettings>
+            </Auth::Form::Github>`);
+        }
         return render(hbs`
           <Auth::Form::Github       
             @authType={{this.authType}}
@@ -52,7 +70,25 @@ module('Integration | Component | auth | form | base', function (hooks) {
     hooks.beforeEach(function () {
       this.authType = 'ldap';
       this.expectedFields = ['username', 'password'];
-      this.renderComponent = () => {
+      this.expectedSubmit = {
+        default: { password: 'password', path: 'ldap', username: 'matilda' },
+        custom: { password: 'password', path: 'custom-ldap', username: 'matilda' },
+      };
+      this.renderComponent = ({ yieldBlock = false } = {}) => {
+        if (yieldBlock) {
+          return render(hbs`
+            <Auth::Form::Ldap 
+              @authType={{this.authType}} 
+              @cluster={{this.cluster}}
+              @onError={{this.onError}}
+              @onSuccess={{this.onSuccess}}
+            >
+             <:advancedSettings>
+             <label for="path">Mount path</label>
+             <input data-test-input="path" id="path" name="path" type="text" /> 
+             </:advancedSettings>
+            </Auth::Form::Ldap>`);
+        }
         return render(hbs`
           <Auth::Form::Ldap       
             @authType={{this.authType}}
@@ -70,7 +106,25 @@ module('Integration | Component | auth | form | base', function (hooks) {
     hooks.beforeEach(function () {
       this.authType = 'radius';
       this.expectedFields = ['username', 'password'];
-      this.renderComponent = () => {
+      this.expectedSubmit = {
+        default: { password: 'password', path: 'radius', username: 'matilda' },
+        custom: { password: 'password', path: 'custom-radius', username: 'matilda' },
+      };
+      this.renderComponent = ({ yieldBlock = false } = {}) => {
+        if (yieldBlock) {
+          return render(hbs`
+            <Auth::Form::Radius 
+              @authType={{this.authType}} 
+              @cluster={{this.cluster}}
+              @onError={{this.onError}}
+              @onSuccess={{this.onSuccess}}
+            >
+             <:advancedSettings>
+              <label for="path">Mount path</label>
+              <input data-test-input="path" id="path" name="path" type="text" /> 
+             </:advancedSettings>
+            </Auth::Form::Radius>`);
+        }
         return render(hbs`
           <Auth::Form::Radius       
             @authType={{this.authType}}
@@ -88,7 +142,26 @@ module('Integration | Component | auth | form | base', function (hooks) {
     hooks.beforeEach(function () {
       this.authType = 'token';
       this.expectedFields = ['token'];
-      this.renderComponent = () => {
+      this.expectedSubmit = {
+        default: { token: 'mytoken' },
+        // token doesn't support custom paths, so just test yielding functionality
+        custom: { token: 'mytoken', yield: 'yield-token' },
+      };
+      this.renderComponent = ({ yieldBlock = false } = {}) => {
+        if (yieldBlock) {
+          return render(hbs`
+            <Auth::Form::Token 
+              @authType={{this.authType}} 
+              @cluster={{this.cluster}}
+              @onError={{this.onError}}
+              @onSuccess={{this.onSuccess}}
+            >
+             <:advancedSettings>
+                <label for="yield">Yielded input</label>
+                <input data-test-input="yield" id="yield" name="yield" type="text" /> 
+             </:advancedSettings>
+            </Auth::Form::Token>`);
+        }
         return render(hbs`
           <Auth::Form::Token       
             @authType={{this.authType}}
@@ -106,7 +179,25 @@ module('Integration | Component | auth | form | base', function (hooks) {
     hooks.beforeEach(function () {
       this.authType = 'userpass';
       this.expectedFields = ['username', 'password'];
-      this.renderComponent = () => {
+      this.expectedSubmit = {
+        default: { password: 'password', path: 'userpass', username: 'matilda' },
+        custom: { password: 'password', path: 'custom-userpass', username: 'matilda' },
+      };
+      this.renderComponent = ({ yieldBlock = false } = {}) => {
+        if (yieldBlock) {
+          return render(hbs`
+            <Auth::Form::Userpass 
+              @authType={{this.authType}} 
+              @cluster={{this.cluster}}
+              @onError={{this.onError}}
+              @onSuccess={{this.onSuccess}}
+            >
+             <:advancedSettings>
+              <label for="path">Mount path</label>
+              <input data-test-input="path" id="path" name="path" type="text" /> 
+             </:advancedSettings>
+            </Auth::Form::Userpass>`);
+        }
         return render(hbs`
           <Auth::Form::Userpass       
             @authType={{this.authType}}

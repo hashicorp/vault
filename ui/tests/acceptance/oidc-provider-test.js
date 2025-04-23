@@ -7,8 +7,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
-import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
 import { visit, settled, currentURL, waitFor, currentRouteName, fillIn, click } from '@ember/test-helpers';
 import { clearRecord } from 'vault/tests/helpers/oidc-config';
@@ -122,14 +121,14 @@ module('Acceptance | oidc provider', function (hooks) {
   hooks.beforeEach(async function () {
     this.uid = uuidv4();
     this.store = this.owner.lookup('service:store');
-    await authPage.login();
+    await login();
     await settled();
     this.oidcSetupInformation = await setupOidc(this.uid);
     return;
   });
 
   hooks.afterEach(async function () {
-    await authPage.login();
+    await login();
   });
 
   test('OIDC Provider logs in and redirects correctly', async function (assert) {
@@ -138,8 +137,7 @@ module('Acceptance | oidc provider', function (hooks) {
     assert
       .dom(`[data-test-oidc-client-linked-block='${WEB_APP_NAME}']`)
       .exists({ count: 1 }, 'shows webapp in oidc provider list');
-    await logout.visit();
-    await settled();
+    await visit('/vault/logout');
     const url = getAuthzUrl(providerName, callback, clientId);
     await visit(url);
 
@@ -200,7 +198,7 @@ module('Acceptance | oidc provider', function (hooks) {
   test('OIDC Provider shows consent form when prompt = consent', async function (assert) {
     const { providerName, callback, clientId, authMethodPath } = this.oidcSetupInformation;
     const url = getAuthzUrl(providerName, callback, clientId, { prompt: 'consent' });
-    await logout.visit();
+    await visit('/vault/logout');
     await fillIn(AUTH_FORM.method, authMethodPath);
     await fillIn(GENERAL.inputByAttr('username'), OIDC_USER);
     await fillIn(GENERAL.inputByAttr('password'), USER_PASSWORD);

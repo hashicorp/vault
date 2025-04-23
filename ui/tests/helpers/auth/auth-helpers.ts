@@ -39,6 +39,15 @@ export const loginNs = async (ns: string, token = rootToken) => {
 };
 
 // LOGIN WITH NON-TOKEN methods
+interface LoginFields {
+  username?: string;
+  password?: string;
+  token?: string;
+  role?: string;
+  path: string;
+  namespace: string;
+}
+
 interface LoginOptions {
   authType?: string;
   toggleOptions?: boolean;
@@ -51,16 +60,6 @@ export const loginMethod = async (loginFields: LoginFields, options: LoginOption
   await fillInLoginFields(loginFields, options);
   return click(AUTH_FORM.login);
 };
-
-// the keys complete the input's test selector and the helper fills the input with the corresponding value
-interface LoginFields {
-  username?: string;
-  password?: string;
-  token?: string;
-  role?: string;
-  path: string;
-  namespace: string;
-}
 
 export const fillInLoginFields = async (loginFields: LoginFields, { toggleOptions = false } = {}) => {
   if (toggleOptions) await click(AUTH_FORM.moreOptions);
