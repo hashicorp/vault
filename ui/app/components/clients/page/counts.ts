@@ -43,9 +43,7 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   }
 
   get formattedBillingStartDate() {
-    return this.args.config.billingStartTimestamp
-      ? this.args.config.billingStartTimestamp.toISOString()
-      : null;
+    return this.args.config.billingStartTimestamp.toISOString();
   }
 
   // returns text for empty state message if noActivityData
