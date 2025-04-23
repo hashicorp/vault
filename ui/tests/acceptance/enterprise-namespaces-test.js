@@ -7,23 +7,21 @@ import { click, settled, visit, fillIn, currentURL, waitFor } from '@ember/test-
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { runCmd, createNS } from 'vault/tests/helpers/commands';
-import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
+import { login, loginNs, logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 
 module('Acceptance | Enterprise | namespaces', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
-    return authPage.login();
+    return login();
   });
 
   test('it clears namespaces when you log out', async function (assert) {
     const ns = 'foo';
     await runCmd(createNS(ns), false);
     const token = await runCmd(`write -field=client_token auth/token/create policies=default`);
-    await logout.visit();
-    await authPage.login(token);
+    await login(token);
     await click('[data-test-namespace-toggle]');
     assert.dom('[data-test-current-namespace]').hasText('root', 'root renders as current namespace');
     assert.dom('[data-test-namespace-link]').doesNotExist('Additional namespace have been cleared');
@@ -53,15 +51,11 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
       await visit(url);
     }
 
-    await logout.visit();
-    await settled();
-    await authPage.visit({ namespace: '/beep/boop' });
-    await settled();
-    await authPage.tokenInput('root').submit();
+    await loginNs('/beep/boop');
     await settled();
     await click('[data-test-namespace-toggle]');
     await waitFor('[data-test-current-namespace]');
-    assert.dom('[data-test-current-namespace]').hasText('/beep/boop/', 'current namespace begins with a /');
+    assert.dom('[data-test-current-namespace]').hasText('beep/boop/');
     assert
       .dom('[data-test-namespace-link="beep/boop/bop"]')
       .exists('renders the link to the nested namespace');
@@ -69,7 +63,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
 
   test('it shows the regular namespace toolbar when not managed', async function (assert) {
     // This test is the opposite of the test in managed-namespace-test
-    await logout.visit();
+    await logout();
     assert.strictEqual(currentURL(), '/vault/auth?with=token', 'Does not redirect');
     assert.dom('[data-test-namespace-toolbar]').exists('Normal namespace toolbar exists');
     assert.dom(AUTH_FORM.managedNsRoot).doesNotExist('Managed namespace indicator does not exist');

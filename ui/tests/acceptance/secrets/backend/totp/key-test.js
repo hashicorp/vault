@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import authPage from 'vault/tests/pages/auth';
 import { click, fillIn, currentURL, visit, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { v4 as uuidv4 } from 'uuid';
 import sinon from 'sinon';
 
@@ -50,7 +50,7 @@ module('Acceptance | totp key backend', function (hooks) {
     const flash = this.owner.lookup('service:flash-messages');
     this.flashSuccessSpy = sinon.spy(flash, 'success');
 
-    await authPage.login();
+    await login();
     // Setup TOTP engine
     await visit('/vault/settings/mount-secret-backend');
     await mountBackend('totp', this.mountPath);

@@ -6,7 +6,7 @@
 import { visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import Ember from 'ember';
 
 let adapterException;
@@ -17,7 +17,7 @@ module('Acceptance | not-found', function (hooks) {
   hooks.beforeEach(function () {
     adapterException = Ember.Test.adapter.exception;
     Ember.Test.adapter.exception = () => {};
-    return authPage.login();
+    return login();
   });
 
   hooks.afterEach(function () {

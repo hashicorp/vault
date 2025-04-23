@@ -841,6 +841,7 @@ scenario "upgrade" {
 
   output "secrets_engines_state" {
     description = "The state of configured secrets engines"
+    sensitive   = true
     value       = step.verify_secrets_engines_create.state
   }
 

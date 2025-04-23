@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, currentURL, settled, visit, waitFor } from '@ember/test-helpers';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { STATUS_DISABLED_RESPONSE, mockReplicationBlock } from 'vault/tests/helpers/replication';
 
 const s = {
@@ -36,7 +36,7 @@ module('Acceptance | Enterprise | replication modes', function (hooks) {
       this.server.get('sys/replication/status', () => ({
         data: payload,
       }));
-      return authPage.login();
+      return login();
     };
   });
 
@@ -47,7 +47,7 @@ module('Acceptance | Enterprise | replication modes', function (hooks) {
       },
     }));
 
-    await authPage.login();
+    await login();
     await visit('/vault/replication');
 
     await assertTitle(assert, 'Replication unsupported');

@@ -12,7 +12,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import editPage from 'vault/tests/pages/secrets/backend/kv/edit-secret';
 import showPage from 'vault/tests/pages/secrets/backend/kv/show';
 import listPage from 'vault/tests/pages/secrets/backend/list';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { assertSecretWrap } from 'vault/tests/helpers/components/secret-edit-toolbar';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
@@ -22,7 +22,7 @@ module('Acceptance | secrets/cubbyhole/create', function (hooks) {
 
   hooks.beforeEach(function () {
     this.uid = uuidv4();
-    return authPage.login();
+    return login();
   });
 
   hooks.afterEach(function () {

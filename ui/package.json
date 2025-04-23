@@ -222,6 +222,7 @@
     "@babel/core": "^7.26.10",
     "@hashicorp/design-system-components": "~4.18.0",
     "@hashicorp/vault-client-typescript": "portal:./api-client",
+    "@hashicorp/vault-reporting": "portal:./vault-reporting",
     "ember-auto-import": "^2.7.2",
     "handlebars": "4.7.7",
     "highlight.js": "^10.4.1",
