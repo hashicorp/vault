@@ -652,8 +652,9 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		dbType, _ := dbw.Type()
 		if dbType == "snowflake" && config.ConnectionDetails["password"] != nil {
 			resp.AddWarning(`[DEPRECATED] Single-factor password authentication is deprecated in Snowflake and will
-be removed by November 2025. Please be ready for multi-factor authentication (MFA) configuration to continue use.
-More information is available at https://www.snowflake.com/en/blog/blocking-single-factor-password-authentification`)
+be removed by November 2025. Key pair authentication will be required after this date. Please
+see the Vault documentation for details on the removal of this feature. More information is
+available at https://www.snowflake.com/en/blog/blocking-single-factor-password-authentification`)
 		}
 
 		b.dbEvent(ctx, "config-write", req.Path, name, true)
