@@ -72,19 +72,13 @@ func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) 
 		// instead of LastVaultRotation because LastVaultRotation is 0
 		if role.StaticAccount.NextVaultRotation.IsZero() {
 			log.Debug("NextVaultRotation unset (zero time). Role may predate field", roleName)
-			// Previously skipped import rotation roles had a LastVaultRotation value of zero
 			if role.StaticAccount.LastVaultRotation.IsZero() {
 				role.StaticAccount.SetNextVaultRotation(time.Now())
 			} else {
 				role.StaticAccount.SetNextVaultRotation(role.StaticAccount.LastVaultRotation)
 			}
 
-			entry, err := logical.StorageEntryJSON(databaseStaticRolePath+roleName, role)
-			if err != nil {
-				log.Warn("failed to build write storage entry", "error", err, "roleName", roleName)
-			} else if err := s.Put(ctx, entry); err != nil {
-				log.Warn("failed to write storage entry", "error", err, "roleName", roleName)
-			}
+			b.StoreStaticRole(ctx, s, role)
 		}
 
 		item := queue.Item{
