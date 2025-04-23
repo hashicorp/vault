@@ -46,17 +46,6 @@ $console-close-height: 35px;
     font-size: size_variables.$size-7;
     min-height: 2rem;
     padding: 0;
-
-    &:not(.console-ui-command):not(.CodeMirror-line) {
-      padding-left: size_variables.$spacing-20;
-    }
-  }
-
-  .cm-s-hashi.CodeMirror {
-    background-color: rgba(color_variables.$black, 0.5) !important;
-    font-weight: font_variables.$font-weight-normal;
-    margin-left: size_variables.$spacing-20;
-    padding: size_variables.$spacing-12 size_variables.$spacing-20;
   }
 
   .console-ui-panel-intro {

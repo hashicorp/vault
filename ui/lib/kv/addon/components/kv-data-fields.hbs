@@ -31,7 +31,6 @@
       @title="{{if (eq @type 'create') 'Secret' 'Version'}} data"
       @value={{this.stringifiedSecretData}}
       @valueUpdated={{this.handleJson}}
-      @viewportMargin={{this.viewportMargin}}
     />
   {{/if}}
   {{#if (or @modelValidations.secretData.errors this.lintingErrors)}}

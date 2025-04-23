@@ -100,5 +100,5 @@ export const GENERAL = {
   backButton: '[data-test-back-button]',
   codeBlock: (label: string) => `[data-test-code-block="${label}"]`,
   codemirror: `[data-test-component="code-mirror-modifier"]`,
-  codemirrorTextarea: `[data-test-component="code-mirror-modifier"] textarea`,
+  codemirrorTextarea: `[data-test-component="code-mirror-modifier"] .cm-content`,
 };
