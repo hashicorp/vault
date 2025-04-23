@@ -150,8 +150,6 @@ func TestReloadMatchingMounts(t *testing.T) {
 	ctx := context.Background()
 	nsCTX := namespace.RootContext(ctx)
 
-	core, _, _ := TestCoreUnsealed(t)
-
 	cases := []struct {
 		name        string
 		backends    map[string]logical.Factory
@@ -193,6 +191,7 @@ func TestReloadMatchingMounts(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			core, _, _ := TestCoreUnsealed(t)
 			var mes []*MountEntry
 			var names []string
 
