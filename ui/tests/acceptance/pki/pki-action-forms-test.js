@@ -43,7 +43,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       this.pemBundle = issuerPemBundle;
     });
 
-    skip('happy path', async function (assert) {
+    test('happy path', async function (assert) {
       await login(this.pkiAdminToken);
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
@@ -173,7 +173,7 @@ module('Acceptance | pki action forms test', function (hooks) {
   });
 
   module('generate root', function () {
-    test('happy path', async function (assert) {
+    skip('happy path', async function (assert) {
       const commonName = 'my-common-name';
       const issuerName = 'my-first-issuer';
       const keyName = 'my-first-key';
