@@ -318,7 +318,7 @@ func TestBackend_PathConfigRoot_STSFallback_defaultEndpointRegion(t *testing.T) 
 		t.Fatalf("bad: config writing failed: err: %v", err)
 	}
 
-	cfgs, err := b.getRootConfigs(context.Background(), config.StorageView, "sts", b.Logger())
+	cfgs, err := b.getRootSTSConfigs(context.Background(), config.StorageView, b.Logger())
 	if err != nil {
 		t.Fatalf("couldn't get STS configs with default region/endpoints: %v", err)
 	}
@@ -369,20 +369,15 @@ func TestBackend_PathConfigRoot_IAM_specifiedRegion(t *testing.T) {
 		t.Fatalf("bad: config writing failed: err: %v", err)
 	}
 
-	cfgs, err := b.getRootConfigs(context.Background(), config.StorageView, "iam", b.Logger())
+	cfg, err := b.getRootIAMConfig(context.Background(), config.StorageView, b.Logger())
 	if err != nil {
 		t.Fatalf("couldn't get IAM configs with default region/endpoints: %v", err)
 	}
-
-	if len(cfgs) != 1 {
-		t.Fatalf("got %d configs, but expected 1", len(cfgs))
+	if *(cfg.Endpoint) != "" {
+		t.Fatalf("endpoint should have remained blank but it became %s", *(cfg.Endpoint))
 	}
-
-	if *(cfgs[0].Endpoint) != "" {
-		t.Fatalf("endpoint should have remained blank but it became %s", *(cfgs[0].Endpoint))
-	}
-	if *(cfgs[0].Region) != desiredRegion {
-		t.Fatalf("region changed from config: %s became %s", desiredRegion, *(cfgs[0].Region))
+	if *(cfg.Region) != desiredRegion {
+		t.Fatalf("region changed from config: %s became %s", desiredRegion, *(cfg.Region))
 	}
 }
 
@@ -425,20 +420,16 @@ func TestBackend_PathConfigRoot_IAM_specifiedRegionAndEndpoint(t *testing.T) {
 		t.Fatalf("bad: config writing failed: err: %v", err)
 	}
 
-	cfgs, err := b.getRootConfigs(context.Background(), config.StorageView, "iam", b.Logger())
+	cfg, err := b.getRootIAMConfig(context.Background(), config.StorageView, b.Logger())
 	if err != nil {
 		t.Fatalf("couldn't get IAM configs with default region/endpoints: %v", err)
 	}
 
-	if len(cfgs) != 1 {
-		t.Fatalf("got %d configs, but expected 1", len(cfgs))
+	if *(cfg.Endpoint) != desiredEndpoint {
+		t.Fatalf("endpoint should have been %s but it became %s", desiredEndpoint, *(cfg.Endpoint))
 	}
-
-	if *(cfgs[0].Endpoint) != desiredEndpoint {
-		t.Fatalf("endpoint should have been %s but it became %s", desiredEndpoint, *(cfgs[0].Endpoint))
-	}
-	if *(cfgs[0].Region) != desiredRegion {
-		t.Fatalf("region changed from config: %s became %s", desiredRegion, *(cfgs[0].Region))
+	if *(cfg.Region) != desiredRegion {
+		t.Fatalf("region changed from config: %s became %s", desiredRegion, *(cfg.Region))
 	}
 }
 
@@ -476,17 +467,13 @@ func TestBackend_PathConfigRoot_IAM_defaultEndpointRegion(t *testing.T) {
 		t.Fatalf("bad: config writing failed: err: %v", err)
 	}
 
-	cfgs, err := b.getRootConfigs(context.Background(), config.StorageView, "iam", b.Logger())
+	cfg, err := b.getRootIAMConfig(context.Background(), config.StorageView, b.Logger())
 	if err != nil {
 		t.Fatalf("couldn't get IAM configs with default region/endpoints: %v", err)
 	}
-	if len(cfgs) != 1 {
-		t.Fatalf("got %d configs, but expected 1", len(cfgs))
-	} else {
-		// ensure endpoint is blank, because AWS wants that
-		if *(cfgs[0].Endpoint) != "" {
-			t.Fatalf("expected endpoint to be blank but it was %s", *(cfgs[0].Endpoint))
-		}
+	// ensure endpoint is blank, because AWS wants that
+	if *(cfg.Endpoint) != "" {
+		t.Fatalf("expected endpoint to be blank but it was %s", *(cfg.Endpoint))
 	}
 }
 
@@ -534,24 +521,20 @@ func TestBackend_PathConfigRoot_STSIAM_SetEverything(t *testing.T) {
 	}
 
 	// get IAM
-	cfgs, err := b.getRootConfigs(context.Background(), config.StorageView, "iam", b.Logger())
+	cfg, err := b.getRootIAMConfig(context.Background(), config.StorageView, b.Logger())
 	if err != nil {
 		t.Fatalf("couldn't get IAM configs with default region/endpoints: %v", err)
 	}
 
-	if len(cfgs) != 1 {
-		t.Fatalf("got %d configs, but expected 1", len(cfgs))
+	if *(cfg.Endpoint) != "" {
+		t.Fatalf("endpoint should have remained blank but it became %s", *(cfg.Endpoint))
 	}
-
-	if *(cfgs[0].Endpoint) != "" {
-		t.Fatalf("endpoint should have remained blank but it became %s", *(cfgs[0].Endpoint))
-	}
-	if *(cfgs[0].Region) != desiredRegion {
-		t.Fatalf("region changed from config: %s became %s", desiredRegion, *(cfgs[0].Region))
+	if *(cfg.Region) != desiredRegion {
+		t.Fatalf("region changed from config: %s became %s", desiredRegion, *(cfg.Region))
 	}
 
 	// get STS
-	cfgs, err = b.getRootConfigs(context.Background(), config.StorageView, "sts", b.Logger())
+	cfgs, err := b.getRootSTSConfigs(context.Background(), config.StorageView, b.Logger())
 	if err != nil {
 		t.Fatalf("couldn't get IAM configs with default region/endpoints: %v", err)
 	}

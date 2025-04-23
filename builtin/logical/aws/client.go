@@ -24,17 +24,79 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+// getRootIAMConfig creates an *aws.Config for Vault to connect to IAM.
+func (b *backend) getRootIAMConfig(ctx context.Context, s logical.Storage, logger hclog.Logger) (*aws.Config, error) {
+	credsConfig := &awsutil.CredentialsConfig{}
+	var endpoint string
+	var maxRetries int = aws.UseServiceDefaultRetries
+
+	entry, err := s.Get(ctx, "config/root")
+	if err != nil {
+		return nil, err
+	}
+	if entry != nil {
+		var config rootConfig
+		if err := entry.DecodeJSON(&config); err != nil {
+			return nil, fmt.Errorf("error reading root configuration: %w", err)
+		}
+
+		credsConfig.AccessKey = config.AccessKey
+		credsConfig.SecretKey = config.SecretKey
+		credsConfig.Region = config.Region
+		maxRetries = config.MaxRetries
+
+		if config.IAMEndpoint != "" {
+			endpoint = *aws.String(config.IAMEndpoint)
+		}
+
+		if config.IdentityTokenAudience != "" {
+			ns, err := namespace.FromContext(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get namespace from context: %w", err)
+			}
+
+			fetcher := &PluginIdentityTokenFetcher{
+				sys:      b.System(),
+				logger:   b.Logger(),
+				ns:       ns,
+				audience: config.IdentityTokenAudience,
+				ttl:      config.IdentityTokenTTL,
+			}
+
+			sessionSuffix := strconv.FormatInt(time.Now().UnixNano(), 10)
+			credsConfig.RoleSessionName = fmt.Sprintf("vault-aws-secrets-%s", sessionSuffix)
+			credsConfig.WebIdentityTokenFetcher = fetcher
+			credsConfig.RoleARN = config.RoleARN
+		}
+	}
+
+	if credsConfig.Region == "" {
+		credsConfig.Region = getFallbackRegion()
+	}
+
+	credsConfig.HTTPClient = cleanhttp.DefaultClient()
+
+	credsConfig.Logger = logger
+
+	creds, err := credsConfig.GenerateCredentialChain()
+	if err != nil {
+		return nil, err
+	}
+
+	return &aws.Config{
+		Credentials: creds,
+		Region:      aws.String(credsConfig.Region),
+		Endpoint:    &endpoint,
+		HTTPClient:  cleanhttp.DefaultClient(),
+		MaxRetries:  aws.Int(maxRetries),
+	}, nil
+}
+
 // Return a slice of *aws.Config, based on descending configuration priority. STS endpoints are the only place this is used.
 // NOTE: The caller is required to ensure that b.clientMutex is at least read locked
-func (b *backend) getRootConfigs(ctx context.Context, s logical.Storage, clientType string, logger hclog.Logger) ([]*aws.Config, error) {
+func (b *backend) getRootSTSConfigs(ctx context.Context, s logical.Storage, logger hclog.Logger) ([]*aws.Config, error) {
 	// set fallback region (we can overwrite later)
-	fallbackRegion := os.Getenv("AWS_REGION")
-	if fallbackRegion == "" {
-		fallbackRegion = os.Getenv("AWS_DEFAULT_REGION")
-	}
-	if fallbackRegion == "" {
-		fallbackRegion = "us-east-1"
-	}
+	fallbackRegion := getFallbackRegion()
 
 	maxRetries := aws.UseServiceDefaultRetries
 
@@ -84,10 +146,7 @@ func (b *backend) getRootConfigs(ctx context.Context, s logical.Storage, clientT
 	}
 
 	maxRetries = config.MaxRetries
-	if clientType == "iam" && config.IAMEndpoint != "" {
-		endpoints = append(endpoints, config.IAMEndpoint)
-		// in the iam case, region is set from config.Region, unless it's blank
-	} else if clientType == "sts" && config.STSEndpoint != "" {
+	if config.STSEndpoint != "" {
 		endpoints = append(endpoints, config.STSEndpoint)
 		if config.STSRegion != "" {
 			// this retains original logic, where sts region was only used if sts endpoint was set
@@ -142,18 +201,8 @@ func (b *backend) getRootConfigs(ctx context.Context, s logical.Storage, clientT
 	}
 
 	if len(endpoints) == 0 {
-		switch clientType {
-		case "sts":
-			for _, v := range regions {
-				endpoints = append(endpoints, matchingSTSEndpoint(v))
-			}
-		case "iam":
-			for range regions {
-				// for custom IAM implementations, iam_endpoint would have been set above - this case will only occur in
-				// real IAM deployments, where you don't specify an endpoint, and in fact, AWS doesn't seem to like it
-				// if you do.
-				endpoints = append(endpoints, "")
-			}
+		for _, v := range regions {
+			endpoints = append(endpoints, matchingSTSEndpoint(v))
 		}
 	}
 
@@ -197,14 +246,10 @@ func (b *backend) nonCachedClientIAM(ctx context.Context, s logical.Storage, log
 			return nil, fmt.Errorf("failed to assume role %q: %w", entry.AssumeRoleARN, err)
 		}
 	} else {
-		configs, err := b.getRootConfigs(ctx, s, "iam", logger)
+		awsConfig, err = b.getRootIAMConfig(ctx, s, logger)
 		if err != nil {
 			return nil, err
 		}
-		if len(configs) != 1 {
-			return nil, errors.New("could not obtain aws config")
-		}
-		awsConfig = configs[0]
 	}
 
 	sess, err := session.NewSession(awsConfig)
@@ -219,7 +264,7 @@ func (b *backend) nonCachedClientIAM(ctx context.Context, s logical.Storage, log
 }
 
 func (b *backend) nonCachedClientSTS(ctx context.Context, s logical.Storage, logger hclog.Logger) (*sts.STS, error) {
-	awsConfig, err := b.getRootConfigs(ctx, s, "sts", logger)
+	awsConfig, err := b.getRootSTSConfigs(ctx, s, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -252,6 +297,23 @@ func (b *backend) nonCachedClientSTS(ctx context.Context, s logical.Storage, log
 // http://docs.aws.amazon.com/general/latest/gr/sts.html
 func matchingSTSEndpoint(stsRegion string) string {
 	return fmt.Sprintf("https://sts.%s.amazonaws.com", stsRegion)
+}
+
+// getFallbackRegion returns an aws region fallback. It will check in the AWS specified order:
+// - AWS_REGION, then
+// - AWS_DEFAULT_REGION, then
+// - us-east-1
+func getFallbackRegion() string {
+	// set fallback region (we can overwrite later)
+	fallbackRegion := os.Getenv("AWS_REGION")
+	if fallbackRegion == "" {
+		fallbackRegion = os.Getenv("AWS_DEFAULT_REGION")
+	}
+	if fallbackRegion == "" {
+		fallbackRegion = "us-east-1"
+	}
+
+	return fallbackRegion
 }
 
 // PluginIdentityTokenFetcher fetches plugin identity tokens from Vault. It is provided
