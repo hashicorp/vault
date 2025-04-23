@@ -21,7 +21,6 @@
     "@ember/render-modifiers": "*",
     "ember-power-select": "*",
     "ember-router-helpers": "*",
-    "ember-svg-jar": "*",
     "ember-truth-helpers": "*",
     "escape-string-regexp": "*",
     "@hashicorp/flight-icons": "*",
