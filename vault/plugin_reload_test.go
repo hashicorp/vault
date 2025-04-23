@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
@@ -16,6 +17,9 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+const reloadFailurePrefix = "cannot reload"
+
+// A goodPluginTestBackend does nothing but always succeeds at Initialization (how good!)
 type goodPluginTestBackend struct{}
 
 func (g goodPluginTestBackend) Initialize(ctx context.Context, request *logical.InitializationRequest) error {
@@ -38,41 +42,10 @@ func (g goodPluginTestBackend) Setup(ctx context.Context, config *logical.Backen
 }
 func (g goodPluginTestBackend) Type() logical.BackendType { return logical.TypeLogical }
 
-type badPluginTestBackend struct{}
-
-func (b badPluginTestBackend) Initialize(ctx context.Context, r *logical.InitializationRequest) error {
-	// we need the plugin to succeed the first initialize or it can't mount
-	se, err := r.Storage.Get(ctx, "tag")
-	if err != nil {
-		return fmt.Errorf("couldn't read storage: %s", err)
-	}
-	if se == nil {
-		r.Storage.Put(ctx, &logical.StorageEntry{
-			Key:   "tag",
-			Value: []byte("boo"),
-		})
-		return nil
-	}
-
-	return errors.New("already initialized")
-}
-
-func (b badPluginTestBackend) HandleRequest(_ context.Context, _ *logical.Request) (*logical.Response, error) {
-	return nil, nil
-}
-func (b badPluginTestBackend) SpecialPaths() *logical.Paths { return nil }
-func (b badPluginTestBackend) System() logical.SystemView   { return nil }
-func (b badPluginTestBackend) Logger() hclog.Logger         { return nil }
-func (b badPluginTestBackend) HandleExistenceCheck(ctx context.Context, request *logical.Request) (bool, bool, error) {
-	return false, false, nil
-}
-func (b badPluginTestBackend) Cleanup(ctx context.Context)                 {}
-func (b badPluginTestBackend) InvalidateKey(ctx context.Context, s string) {}
-func (b badPluginTestBackend) Setup(ctx context.Context, config *logical.BackendConfig) error {
-	return nil
-}
-func (b badPluginTestBackend) Type() logical.BackendType { return logical.TypeLogical }
-
+// An incrementallyBadPluginTestBackend is a plugin that will fail after a specified number of Initialize calls.
+// The first time it is initialized (at a given path), the check value is put in storage and persisted. When the plugin
+// has been initialized that many times, the next call will fail. Note that every plugin needs to succeed at initialization
+// once, or it will just fail to mount.
 type incrementallyBadPluginTestBackend struct {
 	check byte
 }
@@ -180,10 +153,22 @@ func TestReloadMatchingMounts(t *testing.T) {
 			errCount: 2,
 			backends: map[string]logical.Factory{
 				"bad1": func(_ context.Context, _ *logical.BackendConfig) (logical.Backend, error) {
-					return badPluginTestBackend{}, nil
+					return incrementallyBadPluginTestBackend{1}, nil
 				},
 				"bad2": func(_ context.Context, _ *logical.BackendConfig) (logical.Backend, error) {
-					return badPluginTestBackend{}, nil
+					return incrementallyBadPluginTestBackend{1}, nil
+				},
+			},
+		},
+		{
+			name:     "one broken, one good",
+			errCount: 1,
+			backends: map[string]logical.Factory{
+				"bad": func(_ context.Context, _ *logical.BackendConfig) (logical.Backend, error) {
+					return incrementallyBadPluginTestBackend{1}, nil
+				},
+				"good": func(_ context.Context, _ *logical.BackendConfig) (logical.Backend, error) {
+					return goodPluginTestBackend{}, nil
 				},
 			},
 		},
@@ -229,12 +214,19 @@ func TestReloadMatchingMounts(t *testing.T) {
 					if merr.Len() != c.errCount {
 						t.Fatalf("didn't get the right number of errors, expected %d but got %d", c.errCount, merr.Len())
 					}
+					for _, e := range merr.Errors {
+						if !strings.HasPrefix(e.Error(), reloadFailurePrefix) {
+							t.Fatalf("got a different error than expected: %s", e)
+						}
+					}
 				}
 			}
 		})
 	}
 }
 
+// TestProgressiveReloadErrorsByPluginType tests core.reloadMatchingPlugin by creating a plugin of a single type
+// that fails after 1, 2, and 3 initializations (mounting is the first).
 func TestProgressiveReloadErrorsByPluginType(t *testing.T) {
 	nsCTX := namespace.RootContext(nil)
 
@@ -292,5 +284,10 @@ func TestProgressiveReloadErrorsByPluginType(t *testing.T) {
 	}
 	if merr.Len() != 3 {
 		t.Fatalf("expected 1 reload error but got %d", merr.Len())
+	}
+	for _, e := range merr.Errors {
+		if !strings.HasPrefix(e.Error(), reloadFailurePrefix) {
+			t.Fatalf("got a different error than expected: %s", e)
+		}
 	}
 }
