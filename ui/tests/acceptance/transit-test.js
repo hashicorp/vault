@@ -13,6 +13,7 @@ import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import codemirror from 'vault/tests/helpers/codemirror';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
 const SELECTORS = {
   secretLink: '[data-test-secret-link]',
@@ -229,7 +230,7 @@ module('Acceptance | transit', function (hooks) {
     assert.expect(8);
     const type = 'chacha20-poly1305';
     const name = `test-generate-${this.uid}`;
-    await click('[data-test-secret-create]');
+    await click(SES.createSecretLink);
 
     await fillIn(SELECTORS.form('name'), name);
     await fillIn(SELECTORS.form('type'), type);
