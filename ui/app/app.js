@@ -20,7 +20,6 @@ export default class App extends Application {
           'flash-messages',
           'namespace',
           { 'app-router': 'router' },
-          'store',
           'pagination',
           'version',
           'custom-messages',

@@ -18,7 +18,6 @@ export default class ConfigUiEngine extends Engine {
   dependencies = {
     services: [
       'auth',
-      'store',
       'pagination',
       'flash-messages',
       'namespace',
