@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -40,6 +41,7 @@ func (g goodPluginTestBackend) Type() logical.BackendType { return logical.TypeL
 type badPluginTestBackend struct{}
 
 func (b badPluginTestBackend) Initialize(ctx context.Context, r *logical.InitializationRequest) error {
+	// we need the plugin to succeed the first initialize or it can't mount
 	se, err := r.Storage.Get(ctx, "tag")
 	if err != nil {
 		return fmt.Errorf("couldn't read storage: %s", err)
@@ -71,11 +73,80 @@ func (b badPluginTestBackend) Setup(ctx context.Context, config *logical.Backend
 }
 func (b badPluginTestBackend) Type() logical.BackendType { return logical.TypeLogical }
 
-type BadBackend struct{}
+type incrementallyBadPluginTestBackend struct {
+	check byte
+}
 
-// TestReload vets the reload functionality of Core by adding plugins of varying kinds
+func (i incrementallyBadPluginTestBackend) Initialize(ctx context.Context, r *logical.InitializationRequest) error {
+	countEntry, err := r.Storage.Get(ctx, "count")
+	if err != nil {
+		return fmt.Errorf("failed to initialize for the wrong reason: %s", err)
+	}
+	if countEntry == nil {
+		r.Storage.Put(ctx, &logical.StorageEntry{
+			Key:   "count",
+			Value: []byte{1},
+		})
+		// also write check to storage, because this is our real value
+		r.Storage.Put(ctx, &logical.StorageEntry{
+			Key:   "check",
+			Value: []byte{i.check},
+		})
+		return nil
+	}
+
+	// read check value from storage
+	checkEntry, err := r.Storage.Get(ctx, "check")
+	if err != nil {
+		return fmt.Errorf("failed to initialize for the wrong reason: %s", err)
+	}
+
+	i.check = checkEntry.Value[0]
+
+	if countEntry.Value[0] >= i.check {
+		return fmt.Errorf("initialized error requested, %d was greater than or equal to %d", countEntry.Value[0], i.check)
+	}
+	r.Storage.Put(ctx, &logical.StorageEntry{
+		Key:   "count",
+		Value: []byte{countEntry.Value[0] + 1},
+	})
+
+	return nil
+}
+
+func (i incrementallyBadPluginTestBackend) HandleRequest(ctx context.Context, r *logical.Request) (*logical.Response, error) {
+	return nil, nil
+}
+
+func (i incrementallyBadPluginTestBackend) SpecialPaths() *logical.Paths {
+	return nil
+}
+
+func (i incrementallyBadPluginTestBackend) System() logical.SystemView {
+	return nil
+}
+
+func (i incrementallyBadPluginTestBackend) Logger() hclog.Logger {
+	return nil
+}
+
+func (i incrementallyBadPluginTestBackend) HandleExistenceCheck(ctx context.Context, request *logical.Request) (bool, bool, error) {
+	return false, false, nil
+}
+
+func (i incrementallyBadPluginTestBackend) Cleanup(ctx context.Context)                 {}
+func (i incrementallyBadPluginTestBackend) InvalidateKey(ctx context.Context, s string) {}
+func (i incrementallyBadPluginTestBackend) Setup(ctx context.Context, config *logical.BackendConfig) error {
+	return nil
+}
+
+func (i incrementallyBadPluginTestBackend) Type() logical.BackendType {
+	return logical.TypeLogical
+}
+
+// TestReloadMatchingMounts vets the reload functionality of Core by adding plugins of varying kinds
 // and finds out if they reload as expected.
-func TestReload(t *testing.T) {
+func TestReloadMatchingMounts(t *testing.T) {
 	ctx := context.Background()
 	nsCTX := namespace.RootContext(ctx)
 
@@ -162,5 +233,65 @@ func TestReload(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestProgressiveReloadErrorsByPluginType(t *testing.T) {
+	nsCTX := namespace.RootContext(nil)
+
+	core, _, _ := TestCoreUnsealed(t)
+
+	failBar := byte(1)
+
+	core.logicalBackends["incr"] = func(_ context.Context, _ *logical.BackendConfig) (logical.Backend, error) {
+		b := incrementallyBadPluginTestBackend{
+			check: failBar,
+		}
+		failBar++
+		return b, nil
+	}
+
+	core.mount(nsCTX, &MountEntry{
+		Path:  "a1",
+		Type:  "incr",
+		Table: mountTableType,
+	})
+	core.mount(nsCTX, &MountEntry{
+		Path:  "a2",
+		Type:  "incr",
+		Table: mountTableType,
+	})
+	core.mount(nsCTX, &MountEntry{
+		Path:  "a3",
+		Type:  "incr",
+		Table: mountTableType,
+	})
+
+	num, err := core.reloadMatchingPlugin(nsCTX, namespace.RootNamespace, consts.PluginTypeSecrets, "incr")
+	var merr *multierror.Error
+	errors.As(err, &merr)
+	if num != 2 {
+		t.Fatalf("expected 2 successes but got %d", num)
+	}
+	if merr.Len() != 1 {
+		t.Fatalf("expected 1 reload error but got %d", merr.Len())
+	}
+
+	num, err = core.reloadMatchingPlugin(nsCTX, namespace.RootNamespace, consts.PluginTypeSecrets, "incr")
+	errors.As(err, &merr)
+	if num != 1 {
+		t.Fatalf("expected 2 successes but got %d", num)
+	}
+	if merr.Len() != 2 {
+		t.Fatalf("expected 1 reload error but got %d", merr.Len())
+	}
+
+	num, err = core.reloadMatchingPlugin(nsCTX, namespace.RootNamespace, consts.PluginTypeSecrets, "incr")
+	errors.As(err, &merr)
+	if num != 0 {
+		t.Fatalf("expected 2 successes but got %d", num)
+	}
+	if merr.Len() != 3 {
+		t.Fatalf("expected 1 reload error but got %d", merr.Len())
 	}
 }
