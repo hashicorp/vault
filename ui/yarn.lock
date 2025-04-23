@@ -2489,6 +2489,58 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@hashicorp/design-system-components@npm:^4.18.2":
+  version: 4.18.2
+  resolution: "@hashicorp/design-system-components@npm:4.18.2"
+  dependencies:
+    "@codemirror/commands": ^6.8.0
+    "@codemirror/lang-go": ^6.0.1
+    "@codemirror/lang-javascript": ^6.2.2
+    "@codemirror/lang-json": ^6.0.1
+    "@codemirror/lang-markdown": ^6.3.2
+    "@codemirror/lang-sql": ^6.8.0
+    "@codemirror/lang-yaml": ^6.1.2
+    "@codemirror/language": ^6.10.3
+    "@codemirror/legacy-modes": ^6.4.2
+    "@codemirror/lint": ^6.8.4
+    "@codemirror/state": ^6.5.0
+    "@codemirror/view": ^6.36.2
+    "@ember/render-modifiers": ^2.1.0
+    "@ember/string": ^3.1.1
+    "@ember/test-waiters": ^3.1.0
+    "@embroider/addon-shim": ^1.9.0
+    "@embroider/macros": ^1.16.12
+    "@embroider/util": ^1.13.2
+    "@floating-ui/dom": ^1.6.12
+    "@hashicorp/design-system-tokens": ^2.3.0
+    "@hashicorp/flight-icons": ^3.10.0
+    "@lezer/highlight": ^1.2.1
+    "@nullvoxpopuli/ember-composable-helpers": ^5.2.9
+    clipboard-polyfill: ^4.1.1
+    codemirror-lang-hcl: ^0.0.0-beta.2
+    decorator-transforms: ^2.3.0
+    ember-a11y-refocus: ^4.1.4
+    ember-cli-sass: ^11.0.1
+    ember-concurrency: ^4.0.2
+    ember-element-helper: ^0.8.6
+    ember-focus-trap: ^1.1.1
+    ember-get-config: ^2.1.1
+    ember-modifier: ^4.2.0
+    ember-power-select: ^8.6.2
+    ember-stargate: ^0.4.3
+    ember-style-modifier: ^4.4.0
+    ember-truth-helpers: ^4.0.3
+    luxon: ^2.3.2 || ^3.4.2
+    prismjs: ^1.30.0
+    sass: ^1.83.0
+    tabbable: ^6.2.0
+    tippy.js: ^6.3.7
+  peerDependencies:
+    ember-source: ^3.28.0 || ^4.0.0 || ^5.3.0
+  checksum: 17b9c2a4ebf3faa1aafd61ad9f089bb648f3c598d6b5c91bcf17f1ad6d67d982cbb4db7731fe23b7ccf688843a1b3905faa6250f21650a4f506bc3afcf5f7b8f
+  languageName: node
+  linkType: hard
+
 "@hashicorp/design-system-components@npm:~4.18.0":
   version: 4.18.1
   resolution: "@hashicorp/design-system-components@npm:4.18.1"
@@ -2538,58 +2590,6 @@ __metadata:
   peerDependencies:
     ember-source: ^3.28.0 || ^4.0.0 || ^5.3.0
   checksum: bfc9d1bc217a8898980e503e7aeca3831f07a8b2af734b43ae5525289c24cbbaa200edbb57f5fc00fddf3d57a644ed3479f0f5e9f460554fc6d5ecd7ea2f6831
-  languageName: node
-  linkType: hard
-
-"@hashicorp/design-system-components@npm:~4.18.1":
-  version: 4.18.2
-  resolution: "@hashicorp/design-system-components@npm:4.18.2"
-  dependencies:
-    "@codemirror/commands": ^6.8.0
-    "@codemirror/lang-go": ^6.0.1
-    "@codemirror/lang-javascript": ^6.2.2
-    "@codemirror/lang-json": ^6.0.1
-    "@codemirror/lang-markdown": ^6.3.2
-    "@codemirror/lang-sql": ^6.8.0
-    "@codemirror/lang-yaml": ^6.1.2
-    "@codemirror/language": ^6.10.3
-    "@codemirror/legacy-modes": ^6.4.2
-    "@codemirror/lint": ^6.8.4
-    "@codemirror/state": ^6.5.0
-    "@codemirror/view": ^6.36.2
-    "@ember/render-modifiers": ^2.1.0
-    "@ember/string": ^3.1.1
-    "@ember/test-waiters": ^3.1.0
-    "@embroider/addon-shim": ^1.9.0
-    "@embroider/macros": ^1.16.12
-    "@embroider/util": ^1.13.2
-    "@floating-ui/dom": ^1.6.12
-    "@hashicorp/design-system-tokens": ^2.3.0
-    "@hashicorp/flight-icons": ^3.10.0
-    "@lezer/highlight": ^1.2.1
-    "@nullvoxpopuli/ember-composable-helpers": ^5.2.9
-    clipboard-polyfill: ^4.1.1
-    codemirror-lang-hcl: ^0.0.0-beta.2
-    decorator-transforms: ^2.3.0
-    ember-a11y-refocus: ^4.1.4
-    ember-cli-sass: ^11.0.1
-    ember-concurrency: ^4.0.2
-    ember-element-helper: ^0.8.6
-    ember-focus-trap: ^1.1.1
-    ember-get-config: ^2.1.1
-    ember-modifier: ^4.2.0
-    ember-power-select: ^8.6.2
-    ember-stargate: ^0.4.3
-    ember-style-modifier: ^4.4.0
-    ember-truth-helpers: ^4.0.3
-    luxon: ^2.3.2 || ^3.4.2
-    prismjs: ^1.30.0
-    sass: ^1.83.0
-    tabbable: ^6.2.0
-    tippy.js: ^6.3.7
-  peerDependencies:
-    ember-source: ^3.28.0 || ^4.0.0 || ^5.3.0
-  checksum: 17b9c2a4ebf3faa1aafd61ad9f089bb648f3c598d6b5c91bcf17f1ad6d67d982cbb4db7731fe23b7ccf688843a1b3905faa6250f21650a4f506bc3afcf5f7b8f
   languageName: node
   linkType: hard
 
@@ -19002,7 +19002,7 @@ __metadata:
     "@ember/test-waiters": ^4.0.0
     "@glimmer/component": ^1.1.2
     "@glimmer/tracking": ^1.1.2
-    "@hashicorp/design-system-components": ~4.18.1
+    "@hashicorp/design-system-components": ^4.18.2
     "@hashicorp/vault-client-typescript": "portal:./api-client"
     "@hashicorp/vault-reporting": "portal:./vault-reporting"
     "@icholy/duration": ^5.1.0
