@@ -1,0 +1,24 @@
+### Database static role rotations on upgrade ((#db-static-role-rotations))
+
+#### Affected Upgrade Path
+* This issue only occurs when upgrading from the following initial versions to the following target versions:
+
+Initial Versions (any version prior to 1.15.0):
+- 1.14.x
+- 1.13.x
+- and earlier
+
+Target Versions:
+- 1.19.0, 1.19.1, 1.19.2
+- 1.18.5, 1.18.6, 1.18.7, 1.18.8
+- 1.17.12, 1.17.13, 1.17.14, 1.17.15
+- 1.16.16, 1.16.17, 1.16.18, 1.16.19
+
+#### Issue
+Vault automatically rotates existing static roles tied to Database
+credentials once when upgrading to an affected target version from an 
+affected initial version. After the one-time rotation, the static roles behave as expected.
+
+#### Workaround
+If you rely on Database static roles and are currently on a version prior to 1.15.0, 
+avoid upgrading directly to the target versions listed above.

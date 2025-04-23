@@ -193,6 +193,12 @@ for the issuing certificate attribute. See also RFC 5280 Section 4.2.2.1.`,
 		Description: `Comma-separated list of URLs to be used
 for the CRL distribution points attribute. See also RFC 5280 Section 4.2.1.13.`,
 	}
+	fields["delta_crl_distribution_points"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `Comma-separated list of URLs to be used
+for the Delta CRL distribution points attribute, also known as Freshest CRL
+distribution points attribute. See also RFC 5280 Section 4.2.1.15.`,
+	}
 	fields["ocsp_servers"] = &framework.FieldSchema{
 		Type: framework.TypeCommaStringSlice,
 		Description: `Comma-separated list of URLs to be used
@@ -335,6 +341,11 @@ func issuerResponseFields(required bool) map[string]*framework.FieldSchema {
 			Description: `CRL Distribution Points`,
 			Required:    required,
 		},
+		"delta_crl_distribution_points": {
+			Type:        framework.TypeStringSlice,
+			Description: `Delta CRL Distribution Points`,
+			Required:    required,
+		},
 		"ocsp_servers": {
 			Type:        framework.TypeStringSlice,
 			Description: `OCSP Servers`,
@@ -464,6 +475,7 @@ func respondReadIssuer(issuer *issuing.IssuerEntry) (*logical.Response, error) {
 		"revoked":                        issuer.Revoked,
 		"issuing_certificates":           []string{},
 		"crl_distribution_points":        []string{},
+		"delta_crl_distribution_points":  []string{},
 		"ocsp_servers":                   []string{},
 	}
 	setEntIssuerData(data, issuer)
@@ -476,6 +488,7 @@ func respondReadIssuer(issuer *issuing.IssuerEntry) (*logical.Response, error) {
 	if issuer.AIAURIs != nil {
 		data["issuing_certificates"] = issuer.AIAURIs.IssuingCertificates
 		data["crl_distribution_points"] = issuer.AIAURIs.CRLDistributionPoints
+		data["delta_crl_distribution_points"] = issuer.AIAURIs.DeltaCRLDistributionPoints
 		data["ocsp_servers"] = issuer.AIAURIs.OCSPServers
 		data["enable_aia_url_templating"] = issuer.AIAURIs.EnableTemplating
 	} else {
@@ -587,6 +600,10 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	if badURL := issuing.ValidateURLs(crlDistributionPoints); !enableTemplating && badURL != "" {
 		return logical.ErrorResponse(fmt.Sprintf("invalid URL found in Authority Information Access (AIA) parameter crl_distribution_points: %s", badURL)), nil
 	}
+	deltaCRLDistributionPoints := data.Get("delta_crl_distribution_points").([]string)
+	if badURL := issuing.ValidateURLs(deltaCRLDistributionPoints); !enableTemplating && badURL != "" {
+		return logical.ErrorResponse(fmt.Sprintf("invalid URL found in Authority Information Access (AIA) parameter delta_crl_distribution_points: %s", badURL)), nil
+	}
 	ocspServers := data.Get("ocsp_servers").([]string)
 	if badURL := issuing.ValidateURLs(ocspServers); !enableTemplating && badURL != "" {
 		return logical.ErrorResponse(fmt.Sprintf("invalid URL found in Authority Information Access (AIA) parameter ocsp_servers: %s", badURL)), nil
@@ -635,7 +652,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		modified = true
 	}
 
-	if issuer.AIAURIs == nil && (len(issuerCertificates) > 0 || len(crlDistributionPoints) > 0 || len(ocspServers) > 0) {
+	if issuer.AIAURIs == nil && (len(issuerCertificates) > 0 || len(crlDistributionPoints) > 0 || len(ocspServers) > 0 || len(deltaCRLDistributionPoints) > 0) {
 		issuer.AIAURIs = &issuing.AiaConfigEntry{}
 	}
 	if issuer.AIAURIs != nil {
@@ -658,6 +675,10 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 				Source: &ocspServers,
 				Dest:   &issuer.AIAURIs.OCSPServers,
 			},
+			{
+				Source: &deltaCRLDistributionPoints,
+				Dest:   &issuer.AIAURIs.DeltaCRLDistributionPoints,
+			},
 		}
 
 		// For each pair, if it is different on the object, update it.
@@ -674,7 +695,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 
 		// If no AIA URLs exist on the issuer, set the AIA URLs entry to nil
 		// to ease usage later.
-		if len(issuer.AIAURIs.IssuingCertificates) == 0 && len(issuer.AIAURIs.CRLDistributionPoints) == 0 && len(issuer.AIAURIs.OCSPServers) == 0 {
+		if len(issuer.AIAURIs.IssuingCertificates) == 0 && len(issuer.AIAURIs.CRLDistributionPoints) == 0 && len(issuer.AIAURIs.OCSPServers) == 0 && len(issuer.AIAURIs.DeltaCRLDistributionPoints) == 0 {
 			issuer.AIAURIs = nil
 		}
 	}
@@ -752,6 +773,9 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	}
 
 	response, err := respondReadIssuer(issuer)
+	if err != nil {
+		return response, err
+	}
 	if newName != oldName {
 		addWarningOnDereferencing(sc, oldName, response)
 	}
@@ -760,6 +784,10 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		if aiaErr != nil {
 			response.AddWarning(fmt.Sprintf("issuance may fail: %v\n\nConsider setting the cluster-local address if it is not already set.", aiaErr))
 		}
+	}
+	if (issuer.AIAURIs != nil && issuer.AIAURIs.DeltaCRLDistributionPoints != nil && len(issuer.AIAURIs.DeltaCRLDistributionPoints) > 0) &&
+		(issuer.AIAURIs.CRLDistributionPoints == nil || len(issuer.AIAURIs.CRLDistributionPoints) == 0) {
+		response.AddWarning(fmt.Sprintf("delta crl distribution points were set: %v but no base crl distribution point was set, consider setting base crl distribution point.", strings.Join(issuer.AIAURIs.DeltaCRLDistributionPoints, ", ")))
 	}
 	if updatedIssuanceValidations {
 		warning := checkIssuer(issuer, ctx, req, b)
@@ -934,6 +962,10 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 			Dest:   &issuer.AIAURIs.CRLDistributionPoints,
 		},
 		{
+			Source: "delta_crl_distribution_points",
+			Dest:   &issuer.AIAURIs.DeltaCRLDistributionPoints,
+		},
+		{
 			Source: "ocsp_servers",
 			Dest:   &issuer.AIAURIs.OCSPServers,
 		},
@@ -965,7 +997,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 
 	// If no AIA URLs exist on the issuer, set the AIA URLs entry to nil to
 	// ease usage later.
-	if len(issuer.AIAURIs.IssuingCertificates) == 0 && len(issuer.AIAURIs.CRLDistributionPoints) == 0 && len(issuer.AIAURIs.OCSPServers) == 0 {
+	if len(issuer.AIAURIs.IssuingCertificates) == 0 && len(issuer.AIAURIs.CRLDistributionPoints) == 0 && len(issuer.AIAURIs.DeltaCRLDistributionPoints) == 0 && len(issuer.AIAURIs.OCSPServers) == 0 {
 		issuer.AIAURIs = nil
 	}
 
@@ -1044,6 +1076,9 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 	}
 
 	response, err := respondReadIssuer(issuer)
+	if err != nil {
+		return nil, err
+	}
 	if newName != oldName {
 		addWarningOnDereferencing(sc, oldName, response)
 	}
@@ -1058,6 +1093,10 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 		if aiaErr != nil {
 			response.AddWarning(fmt.Sprintf("issuance may fail: %v\n\nConsider setting the cluster-local address if it is not already set.", aiaErr))
 		}
+	}
+	if (issuer.AIAURIs != nil && issuer.AIAURIs.DeltaCRLDistributionPoints != nil && len(issuer.AIAURIs.DeltaCRLDistributionPoints) > 0) &&
+		(issuer.AIAURIs.CRLDistributionPoints == nil || len(issuer.AIAURIs.CRLDistributionPoints) == 0) {
+		response.AddWarning(fmt.Sprintf("delta crl distribution points were set: %v but no base crl distribution point was set, consider setting base crl distribution point.", strings.Join(issuer.AIAURIs.DeltaCRLDistributionPoints, ", ")))
 	}
 
 	return response, err

@@ -194,7 +194,7 @@ const testConvergentEncryption = async function (assert, keyName) {
   }
 };
 
-module('Acceptance | transit (flaky)', function (hooks) {
+module('Acceptance | transit', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {

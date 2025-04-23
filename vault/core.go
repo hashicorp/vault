@@ -778,7 +778,7 @@ func (c *Core) HALock() sync.Locker {
 
 // CoreConfig is used to parameterize a core
 type CoreConfig struct {
-	EntCoreConfig
+	entCoreConfig
 
 	DevToken string
 
