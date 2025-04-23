@@ -15,7 +15,7 @@ This is intentional to test component logic specific to auth/form/base or auth/f
 separately from auth/form-template.
 */
 
-export default (test) => {
+export default (test, { standardSubmit = true } = {}) => {
   test('it renders fields', async function (assert) {
     await this.renderComponent();
     assert.dom(AUTH_FORM.authForm(this.authType)).exists(`${this.authType}: it renders form component`);
@@ -46,47 +46,50 @@ export default (test) => {
     assert.strictEqual(actual, 'success!', 'it calls onSuccess');
   });
 
-  test('it submits form data with defaults', async function (assert) {
-    await this.renderComponent();
-    const { options } = AUTH_METHOD_MAP.find((m) => m.authType === this.authType);
-    const { loginData } = options;
+  // some methods are tested separately because they have more complex submit logic
+  if (standardSubmit) {
+    test('it submits form data with defaults', async function (assert) {
+      await this.renderComponent();
+      const { options } = AUTH_METHOD_MAP.find((m) => m.authType === this.authType);
+      const { loginData } = options;
 
-    for (const [field, value] of Object.entries(loginData)) {
-      await fillIn(GENERAL.inputByAttr(field), value);
-    }
-    await click(AUTH_FORM.login);
-    const [actual] = this.authenticateStub.lastCall.args;
-    assert.propEqual(
-      actual.data,
-      this.expectedSubmit.default,
-      'auth service "authenticate" method is called with form data'
-    );
-  });
+      for (const [field, value] of Object.entries(loginData)) {
+        await fillIn(GENERAL.inputByAttr(field), value);
+      }
+      await click(AUTH_FORM.login);
+      const [actual] = this.authenticateStub.lastCall.args;
+      assert.propEqual(
+        actual.data,
+        this.expectedSubmit.default,
+        'auth service "authenticate" method is called with form data'
+      );
+    });
 
-  // not for testing real-world submit, that happens in acceptance tests
-  // component here just yields <:advancedSettings> to test form submits data from yielded inputs
-  test('it submits form data from yielded inputs', async function (assert) {
-    await this.renderComponent({ yieldBlock: true });
-    const { options } = AUTH_METHOD_MAP.find((m) => m.authType === this.authType);
-    const { loginData } = options;
+    // not for testing real-world submit, that happens in acceptance tests.
+    // component here just yields <:advancedSettings> to test form submits data from yielded inputs
+    test('it submits form data from yielded inputs', async function (assert) {
+      await this.renderComponent({ yieldBlock: true });
+      const { options } = AUTH_METHOD_MAP.find((m) => m.authType === this.authType);
+      const { loginData } = options;
 
-    for (const [field, value] of Object.entries(loginData)) {
-      await fillIn(GENERAL.inputByAttr(field), value);
-    }
+      for (const [field, value] of Object.entries(loginData)) {
+        await fillIn(GENERAL.inputByAttr(field), value);
+      }
 
-    if (this.authType === 'token') {
-      // token doesn't support custom paths, so just test yielding functionality
-      await fillIn(GENERAL.inputByAttr('yield'), `yield-${this.authType}`);
-    } else {
-      await fillIn(GENERAL.inputByAttr('path'), `custom-${this.authType}`);
-    }
+      if (this.authType === 'token') {
+        // token doesn't support custom paths, so just test yielding functionality
+        await fillIn(GENERAL.inputByAttr('yield'), `yield-${this.authType}`);
+      } else {
+        await fillIn(GENERAL.inputByAttr('path'), `custom-${this.authType}`);
+      }
 
-    await click(AUTH_FORM.login);
-    const [actual] = this.authenticateStub.lastCall.args;
-    assert.propEqual(
-      actual.data,
-      this.expectedSubmit.custom,
-      'auth service "authenticate" method is called with yielded form data'
-    );
-  });
+      await click(AUTH_FORM.login);
+      const [actual] = this.authenticateStub.lastCall.args;
+      assert.propEqual(
+        actual.data,
+        this.expectedSubmit.custom,
+        'auth service "authenticate" method is called with yielded form data'
+      );
+    });
+  }
 };
