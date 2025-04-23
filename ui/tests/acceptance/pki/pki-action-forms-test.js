@@ -188,7 +188,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       assert.dom(GENERAL.emptyStateTitle).doesNotExist();
       // The URLs section is populated based on params returned from OpenAPI. This test will break when
       // the backend adds fields. We should update the count accordingly.
-      assert.dom(PKI_GENERATE_ROOT.urlField).exists({ count: 4 });
+      assert.dom(PKI_GENERATE_ROOT.urlField).exists({ count: 5 });
       // Fill in form
       await fillIn(GENERAL.inputByAttr('type'), 'internal');
       await typeIn(GENERAL.inputByAttr('commonName'), commonName);
