@@ -250,7 +250,7 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 
 	// We need to check SQLConnectionProducer fields separately since they are not top-level Path fields.
 	var sqlFields map[string]any
-	if req.MountType == "database" {
+	if req.MountType == "database" && strings.HasPrefix(req.Path, "config") {
 		sqlFields = connutil.SQLConnectionProducerFieldNames()
 	}
 	// Build up the data for the route, with the URL taking priority
