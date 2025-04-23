@@ -17,8 +17,10 @@ container {
   triage {
     suppress {
       vulnerabilities = [
-        "CVE-2025-46394", // We can't do anything about this until a new Alpine container with busybox 1.38 is available.
-        "GO-2022-0635",   // github.com/aws/aws-sdk-go@v1.x
+        // We can't do anything about these two CVE's until a new Alpine container with busybox 1.38 is available.
+        "CVE-2025-46394",
+        "CVE-2024-58251",
+        "GO-2022-0635", // github.com/aws/aws-sdk-go@v1.x
       ]
     }
   }
