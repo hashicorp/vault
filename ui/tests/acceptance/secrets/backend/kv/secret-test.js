@@ -21,6 +21,7 @@ import codemirror from 'vault/tests/helpers/codemirror';
 import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SS } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import { createSecret } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 
 const deleteEngine = async function (enginePath, assert) {
   await login();
@@ -148,8 +149,8 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     test('version 1 performs the correct capabilities lookup', async function (assert) {
       // TODO: while this should pass it doesn't really do anything anymore for us as v1 and v2 are completely separate.
       const secretPath = 'foo/bar';
-      await listPage.create();
-      await editPage.createSecret(secretPath, 'foo', 'bar');
+      await click(SS.createSecretLink);
+      await createSecret(secretPath, 'foo', 'bar');
       assert.strictEqual(
         currentRouteName(),
         'vault.cluster.secrets.backend.show',
@@ -205,8 +206,8 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
 
     test('first level secrets redirect properly upon deletion', async function (assert) {
       const secretPath = 'test';
-      await listPage.create();
-      await editPage.createSecret(secretPath, 'foo', 'bar');
+      await click(SS.createSecretLink);
+      await createSecret(secretPath, 'foo', 'bar');
       await showPage.deleteSecretV1();
       assert.strictEqual(
         currentRouteName(),
@@ -299,8 +300,8 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       const paths = ["'some", '"some'];
       for (const path of paths) {
         await listPage.visitRoot({ backend });
-        await listPage.create();
-        await editPage.createSecret(`${path}/2`, 'foo', 'bar');
+        await click(SS.createSecretLink);
+        await createSecret(`${path}/2`, 'foo', 'bar');
         await listPage.visit({ backend, id: path });
         assert.dom(SS.secretLinkATag()).hasText('2', `${path}: secret is displayed properly`);
         await click(SS.secretLink());
@@ -336,8 +337,9 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       const content = JSON.stringify({ foo: 'fa', bar: 'boo' });
       const secretPath = `kv-json-${this.uid}`;
       await listPage.visitRoot({ backend: this.backend });
-      await listPage.create();
-      await editPage.path(secretPath).toggleJSON();
+      await click(SS.createSecretLink);
+      await fillIn(SS.secretPath('create'), secretPath);
+      await click(GENERAL.toggleInput('json'));
       codemirror().setValue(content);
       await editPage.save();
 
