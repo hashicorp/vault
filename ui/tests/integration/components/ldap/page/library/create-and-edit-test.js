@@ -87,10 +87,10 @@ module('Integration | Component | ldap | Page::Library::CreateAndEdit', function
     await click('[data-test-save]');
 
     assert
-      .dom('[data-test-field-validation="name"]')
+      .dom('[data-test-form-field-validation-error="name"]')
       .hasText('Library name is required.', 'Name validation error renders');
     assert
-      .dom('[data-test-field-validation="service_account_names"]')
+      .dom('[data-test-form-field-validation-error="service_account_names"]')
       .hasText('At least one service account is required.', 'Service account name validation error renders');
     assert
       .dom('[data-test-invalid-form-message]')

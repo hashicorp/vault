@@ -53,8 +53,8 @@ export const GENERAL = {
     input: (attr: string) => `[data-test-ttl-value="${attr}"]`,
   },
 
-  validation: (attr: string) => `[data-test-field-validation=${attr}]`,
-  validationWarning: (attr: string) => `[data-test-validation-warning=${attr}]`,
+  validation: (attr: string) => `[data-test-form-field-validation-error=${attr}]`,
+  validationWarning: (attr: string) => `[data-test-form-field-validation-warning=${attr}]`,
   messageError: '[data-test-message-error]',
   notFound: '[data-test-not-found]',
   pageError: {

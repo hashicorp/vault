@@ -16,10 +16,10 @@
             <G.Legend data-test-form-field-label>{{this.labelString}}</G.Legend>
           {{/if}}
           {{#if this.helpTextString}}
-            <G.HelperText data-test-help-text>{{this.helpTextString}}</G.HelperText>
+            <G.HelperText data-test-form-field-help-text>{{this.helpTextString}}</G.HelperText>
           {{/if}}
           {{#if @attr.options.subText}}
-            <G.HelperText data-test-label-subtext>
+            <G.HelperText data-test-form-field-subtext>
               {{@attr.options.subText}}
               {{#if @attr.options.docLink}}
                 <DocLink @path={{@attr.options.docLink}} data-test-form-field-doc-link>See our documentation</DocLink>
@@ -39,7 +39,7 @@
             </G.CheckboxField>
           {{/each}}
           {{#if this.validationError}}
-            <G.Error data-test-field-validation={{this.valuePath}}>{{this.validationError}}</G.Error>
+            <G.Error data-test-form-field-validation-error={{this.valuePath}}>{{this.validationError}}</G.Error>
           {{/if}}
         </Hds::Form::Checkbox::Group>
       {{else}}
@@ -55,10 +55,10 @@
             <F.Label data-test-form-field-label>{{this.labelString}}</F.Label>
           {{/if}}
           {{#if this.helpTextString}}
-            <F.HelperText data-test-help-text>{{this.helpTextString}}</F.HelperText>
+            <F.HelperText data-test-form-field-help-text>{{this.helpTextString}}</F.HelperText>
           {{/if}}
           {{#if @attr.options.subText}}
-            <F.HelperText data-test-label-subtext>
+            <F.HelperText data-test-form-field-subtext>
               {{@attr.options.subText}}
               {{#if @attr.options.docLink}}
                 <DocLink @path={{@attr.options.docLink}} data-test-form-field-doc-link>See our documentation</DocLink>
@@ -79,7 +79,7 @@
             {{/each}}
           </F.Options>
           {{#if this.validationError}}
-            <F.Error data-test-field-validation={{this.valuePath}}>{{this.validationError}}</F.Error>
+            <F.Error data-test-form-field-validation-error={{this.valuePath}}>{{this.validationError}}</F.Error>
           {{/if}}
         </Hds::Form::Select::Field>
       {{/if}}
@@ -94,6 +94,7 @@
             name={{@attr.name}}
             @isInvalid={{this.validationError}}
             {{! Prevents browsers from auto-filling }}
+            placeholder={{@attr.options.placeholder}}
             autocomplete="new-password"
             spellcheck="false"
             {{on "input" this.onChangeWithEvent}}
@@ -105,10 +106,10 @@
                 <F.Label data-test-form-field-label>{{this.labelString}}</F.Label>
               {{/if}}
               {{#if this.helpTextString}}
-                <F.HelperText data-test-help-text>{{this.helpTextString}}</F.HelperText>
+                <F.HelperText data-test-form-field-help-text>{{this.helpTextString}}</F.HelperText>
               {{/if}}
               {{#if @attr.options.subText}}
-                <F.HelperText data-test-label-subtext>
+                <F.HelperText data-test-form-field-subtext>
                   {{@attr.options.subText}}
                   {{#if @attr.options.docLink}}
                     <DocLink @path={{@attr.options.docLink}} data-test-form-field-doc-link>See our documentation</DocLink>
@@ -118,7 +119,7 @@
               {{/if}}
             {{/unless}}
             {{#if this.validationError}}
-              <F.Error data-test-field-validation={{this.valuePath}}>{{this.validationError}}</F.Error>
+              <F.Error data-test-form-field-validation-error={{this.valuePath}}>{{this.validationError}}</F.Error>
             {{/if}}
           </Hds::Form::TextInput::Field>
         {{/if}}
@@ -474,7 +475,7 @@
         @type="danger"
         @message={{this.validationError}}
         @paddingTop={{not-eq @attr.options.editType "ttl"}}
-        data-test-field-validation={{this.valuePath}}
+        data-test-form-field-validation-error={{this.valuePath}}
         class={{if (eq @attr.options.editType "stringArray") "has-top-margin-negative-xxl"}}
       />
     {{/if}}
@@ -488,7 +489,7 @@
       @type="warning"
       @message={{this.validationWarning}}
       @paddingTop={{if (and (not this.validationError) (eq @attr.options.editType "ttl")) false true}}
-      data-test-validation-warning={{this.valuePath}}
+      data-test-form-field-validation-warning={{this.valuePath}}
       class={{if (and (not this.validationError) (eq @attr.options.editType "stringArray")) "has-top-margin-negative-xxl"}}
     />
   {{/if}}
