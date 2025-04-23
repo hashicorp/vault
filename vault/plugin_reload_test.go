@@ -19,38 +19,40 @@ import (
 
 const reloadFailurePrefix = "cannot reload"
 
-// A goodPluginTestBackend does nothing but always succeeds at Initialization (how good!)
-type goodPluginTestBackend struct{}
+// A goodReloadPluginTestBackend does nothing but always succeeds at Initialization (how good!)
+//
+// The name is long to avoid collisions in the vault package.
+type goodReloadPluginTestBackend struct{}
 
-func (g goodPluginTestBackend) Initialize(ctx context.Context, request *logical.InitializationRequest) error {
+func (g goodReloadPluginTestBackend) Initialize(ctx context.Context, request *logical.InitializationRequest) error {
 	return nil
 }
 
-func (g goodPluginTestBackend) HandleRequest(ctx context.Context, request *logical.Request) (*logical.Response, error) {
+func (g goodReloadPluginTestBackend) HandleRequest(ctx context.Context, request *logical.Request) (*logical.Response, error) {
 	return nil, nil
 }
-func (g goodPluginTestBackend) SpecialPaths() *logical.Paths { return nil }
-func (g goodPluginTestBackend) System() logical.SystemView   { return nil }
-func (g goodPluginTestBackend) Logger() hclog.Logger         { return nil }
-func (g goodPluginTestBackend) HandleExistenceCheck(ctx context.Context, request *logical.Request) (bool, bool, error) {
+func (g goodReloadPluginTestBackend) SpecialPaths() *logical.Paths { return nil }
+func (g goodReloadPluginTestBackend) System() logical.SystemView   { return nil }
+func (g goodReloadPluginTestBackend) Logger() hclog.Logger         { return nil }
+func (g goodReloadPluginTestBackend) HandleExistenceCheck(ctx context.Context, request *logical.Request) (bool, bool, error) {
 	return false, false, nil
 }
-func (g goodPluginTestBackend) Cleanup(ctx context.Context)                 {}
-func (g goodPluginTestBackend) InvalidateKey(ctx context.Context, s string) {}
-func (g goodPluginTestBackend) Setup(ctx context.Context, config *logical.BackendConfig) error {
+func (g goodReloadPluginTestBackend) Cleanup(ctx context.Context)                 {}
+func (g goodReloadPluginTestBackend) InvalidateKey(ctx context.Context, s string) {}
+func (g goodReloadPluginTestBackend) Setup(ctx context.Context, config *logical.BackendConfig) error {
 	return nil
 }
-func (g goodPluginTestBackend) Type() logical.BackendType { return logical.TypeLogical }
+func (g goodReloadPluginTestBackend) Type() logical.BackendType { return logical.TypeLogical }
 
-// An incrementallyBadPluginTestBackend is a plugin that will fail after a specified number of Initialize calls.
+// An incrementallyBadReloadPluginTestBackend is a plugin that will fail after a specified number of Initialize calls.
 // The first time it is initialized (at a given path), the check value is put in storage and persisted. When the plugin
 // has been initialized that many times, the next call will fail. Note that every plugin needs to succeed at initialization
 // once, or it will just fail to mount.
-type incrementallyBadPluginTestBackend struct {
+type incrementallyBadReloadPluginTestBackend struct {
 	check byte
 }
 
-func (i incrementallyBadPluginTestBackend) Initialize(ctx context.Context, r *logical.InitializationRequest) error {
+func (i incrementallyBadReloadPluginTestBackend) Initialize(ctx context.Context, r *logical.InitializationRequest) error {
 	countEntry, err := r.Storage.Get(ctx, "count")
 	if err != nil {
 		return fmt.Errorf("failed to initialize for the wrong reason: %s", err)
@@ -87,33 +89,33 @@ func (i incrementallyBadPluginTestBackend) Initialize(ctx context.Context, r *lo
 	return nil
 }
 
-func (i incrementallyBadPluginTestBackend) HandleRequest(ctx context.Context, r *logical.Request) (*logical.Response, error) {
+func (i incrementallyBadReloadPluginTestBackend) HandleRequest(ctx context.Context, r *logical.Request) (*logical.Response, error) {
 	return nil, nil
 }
 
-func (i incrementallyBadPluginTestBackend) SpecialPaths() *logical.Paths {
+func (i incrementallyBadReloadPluginTestBackend) SpecialPaths() *logical.Paths {
 	return nil
 }
 
-func (i incrementallyBadPluginTestBackend) System() logical.SystemView {
+func (i incrementallyBadReloadPluginTestBackend) System() logical.SystemView {
 	return nil
 }
 
-func (i incrementallyBadPluginTestBackend) Logger() hclog.Logger {
+func (i incrementallyBadReloadPluginTestBackend) Logger() hclog.Logger {
 	return nil
 }
 
-func (i incrementallyBadPluginTestBackend) HandleExistenceCheck(ctx context.Context, request *logical.Request) (bool, bool, error) {
+func (i incrementallyBadReloadPluginTestBackend) HandleExistenceCheck(ctx context.Context, request *logical.Request) (bool, bool, error) {
 	return false, false, nil
 }
 
-func (i incrementallyBadPluginTestBackend) Cleanup(ctx context.Context)                 {}
-func (i incrementallyBadPluginTestBackend) InvalidateKey(ctx context.Context, s string) {}
-func (i incrementallyBadPluginTestBackend) Setup(ctx context.Context, config *logical.BackendConfig) error {
+func (i incrementallyBadReloadPluginTestBackend) Cleanup(ctx context.Context)                 {}
+func (i incrementallyBadReloadPluginTestBackend) InvalidateKey(ctx context.Context, s string) {}
+func (i incrementallyBadReloadPluginTestBackend) Setup(ctx context.Context, config *logical.BackendConfig) error {
 	return nil
 }
 
-func (i incrementallyBadPluginTestBackend) Type() logical.BackendType {
+func (i incrementallyBadReloadPluginTestBackend) Type() logical.BackendType {
 	return logical.TypeLogical
 }
 
@@ -133,7 +135,7 @@ func TestReloadMatchingMounts(t *testing.T) {
 			name: "reload one",
 			backends: map[string]logical.Factory{
 				"work": func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
-					return goodPluginTestBackend{}, nil
+					return goodReloadPluginTestBackend{}, nil
 				},
 			},
 		},
@@ -141,10 +143,10 @@ func TestReloadMatchingMounts(t *testing.T) {
 			name: "reload two",
 			backends: map[string]logical.Factory{
 				"work": func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
-					return goodPluginTestBackend{}, nil
+					return goodReloadPluginTestBackend{}, nil
 				},
 				"work2": func(_ context.Context, _ *logical.BackendConfig) (logical.Backend, error) {
-					return goodPluginTestBackend{}, nil
+					return goodReloadPluginTestBackend{}, nil
 				},
 			},
 		},
@@ -153,10 +155,10 @@ func TestReloadMatchingMounts(t *testing.T) {
 			errCount: 2,
 			backends: map[string]logical.Factory{
 				"bad1": func(_ context.Context, _ *logical.BackendConfig) (logical.Backend, error) {
-					return incrementallyBadPluginTestBackend{1}, nil
+					return incrementallyBadReloadPluginTestBackend{1}, nil
 				},
 				"bad2": func(_ context.Context, _ *logical.BackendConfig) (logical.Backend, error) {
-					return incrementallyBadPluginTestBackend{1}, nil
+					return incrementallyBadReloadPluginTestBackend{1}, nil
 				},
 			},
 		},
@@ -165,10 +167,10 @@ func TestReloadMatchingMounts(t *testing.T) {
 			errCount: 1,
 			backends: map[string]logical.Factory{
 				"bad": func(_ context.Context, _ *logical.BackendConfig) (logical.Backend, error) {
-					return incrementallyBadPluginTestBackend{1}, nil
+					return incrementallyBadReloadPluginTestBackend{1}, nil
 				},
 				"good": func(_ context.Context, _ *logical.BackendConfig) (logical.Backend, error) {
-					return goodPluginTestBackend{}, nil
+					return goodReloadPluginTestBackend{}, nil
 				},
 			},
 		},
@@ -235,7 +237,7 @@ func TestProgressiveReloadErrorsByPluginType(t *testing.T) {
 	failBar := byte(1)
 
 	core.logicalBackends["incr"] = func(_ context.Context, _ *logical.BackendConfig) (logical.Backend, error) {
-		b := incrementallyBadPluginTestBackend{
+		b := incrementallyBadReloadPluginTestBackend{
 			check: failBar,
 		}
 		failBar++
