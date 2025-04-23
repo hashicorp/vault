@@ -11,6 +11,7 @@ import { waitFor } from '@ember/test-waiters';
 import { sanitizePath } from 'core/utils/sanitize-path';
 
 import type AuthService from 'vault/vault/services/auth';
+import type { AuthData } from 'vault/vault/services/auth';
 import type ClusterModel from 'vault/models/cluster';
 import type { HTMLElementEvent } from 'vault/forms';
 
@@ -56,28 +57,25 @@ export default class AuthBase extends Component<Args> {
   }
 
   login = task(
-    waitFor(async (data) => {
+    waitFor(async (formData) => {
       try {
         const authResponse = await this.auth.authenticate({
           clusterId: this.args.cluster.id,
           backend: this.args.authType,
-          data,
+          data: formData,
           selectedAuth: this.args.authType,
         });
 
-        // responsible for redirect after auth data is persisted
-        this.onSuccess(authResponse);
+        this.handleAuthResponse(authResponse);
       } catch (error) {
         this.onError(error as Error);
       }
     })
   );
 
-  // if we move auth service authSuccess method here (or to each auth method component)
-  // then call that before calling parent this.args.onSuccess
-  onSuccess(authResponse: object) {
-    //  responsible for redirect after auth data is persisted
-    this.args.onSuccess(authResponse, this.args.authType);
+  handleAuthResponse(authResponse: AuthData) {
+    // calls onAuthResponse in parent auth/page.js component
+    this.args.onSuccess(authResponse);
   }
 
   onError(error: Error) {
