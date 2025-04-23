@@ -66,10 +66,6 @@ export default class ClientsDateRangeComponent extends Component<Args> {
     return parseAPITimestamp(isoTimestamp, 'MMMM yyyy');
   };
 
-  get billingEndTime() {
-    return new Date().toISOString();
-  }
-
   get historicalBillingPeriods() {
     const count = this.args.retentionMonths / 12;
     const periods = [];

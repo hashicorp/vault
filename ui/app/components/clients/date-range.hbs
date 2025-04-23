@@ -20,7 +20,7 @@
         </div>
       {{/if}}
       {{#if this.version.isEnterprise}}
-        <Hds::Dropdown class="has-left-margin-xs" as |D|>
+        <Hds::Dropdown class="has-left-margin-xs" @matchToggleWidth={{true}} as |D|>
           <D.ToggleButton @text="Current Billing Start" @color="secondary" />
           <D.Interactive {{on "click" (fn this.updateEnterpriseDateRange @billingStartTime)}}>
             {{this.formattedDate @billingStartTime}}
