@@ -64,14 +64,14 @@ func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) 
 			continue
 		}
 
-		// If an account's NextVaultRotation period is nil, it means that the
+		// If an account's NextVaultRotation period is zero time (time.Time{}), it means that the
 		// role was created before we added the `NextVaultRotation` field. In this
 		// case, we need to calculate the next rotation time based on the
 		// LastVaultRotation and the RotationPeriod. However, if the role was
 		// created with skip_import_rotation set, we need to use the current time
 		// instead of LastVaultRotation because LastVaultRotation is 0
 		if role.StaticAccount.NextVaultRotation.IsZero() {
-			log.Debug("NextVaultRotation is zero", roleName)
+			log.Debug("NextVaultRotation unset (zero time). Role may predate field", roleName)
 			// Previously skipped import rotation roles had a LastVaultRotation value of zero
 			if role.StaticAccount.LastVaultRotation.IsZero() {
 				role.StaticAccount.SetNextVaultRotation(time.Now())
