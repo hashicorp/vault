@@ -7561,7 +7561,7 @@ func TestIssuance_DeltaCRLDistributionPoint(t *testing.T) {
 	}
 	out, err := exec.Command(opensslCmd, args...).CombinedOutput()
 	require.NoError(t, err, "failed running command %s with args: %v\n%s", opensslCmd, args, string(out))
-	require.Contains(t, string(out), "            X509v3 Freshest CRL: \n                Full Name:\n                  URI:http://example.com/crl/delta\n\n                Full Name:\n                  URI:http://backup.example.com/crl/delta", "delta crl extension did not appear as expected on parsed certificate: %v", string(out))
+	require.Regexp(t, `\s+X509v3 Freshest CRL:\s+Full Name:\s+URI:http://example.com/crl/delta\s+Full Name:\s+URI:http://backup\.example\.com/crl/delta`, string(out))
 }
 
 var (
