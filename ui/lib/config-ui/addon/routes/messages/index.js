@@ -73,23 +73,6 @@ export default class MessagesRoute extends Route {
       }
       throw e;
     }
-
-    // const messages = this.pagination
-    //   .lazyPaginatedQuery('config-ui/message', {
-    //     authenticated,
-    //     pageFilter: filter,
-    //     active,
-    //     type,
-    //     responsePath: 'data.keys',
-    //     page: page || 1,
-    //     size: 10,
-    //   })
-    //   .catch((e) => {
-    //     if (e.httpStatus === 404) {
-    //       return [];
-    //     }
-    //     throw e;
-    //   });
   }
 
   setupController(controller, resolvedModel) {
