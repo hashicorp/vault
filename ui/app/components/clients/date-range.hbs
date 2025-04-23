@@ -18,13 +18,6 @@
             }}
           </p>
         </div>
-      {{else}}
-        <Hds::Button
-          @text="Set date range"
-          @icon="edit"
-          {{on "click" (fn (mut this.showEditModal) true)}}
-          data-test-date-range-edit
-        />
       {{/if}}
       {{#if this.version.isEnterprise}}
         <Hds::Dropdown class="has-left-margin-xs" as |D|>
@@ -44,6 +37,14 @@
             </D.Interactive>
           {{/each}}
         </Hds::Dropdown>
+      {{else}}
+        <Hds::Button
+          class="has-left-margin-xs"
+          @text="Set date range"
+          @icon="edit"
+          {{on "click" (fn (mut this.showEditModal) true)}}
+          data-test-date-range-edit
+        />
       {{/if}}
     </div>
 
