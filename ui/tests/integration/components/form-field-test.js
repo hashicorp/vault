@@ -46,6 +46,10 @@ module('Integration | Component | form field', function (hooks) {
     assert.notOk(component.hasInput, 'renders only the label');
   });
 
+  // ------------------
+  // LEGACY FORM FIELDS
+  // ------------------
+
   test('it renders: string', async function (assert) {
     const [model, spy] = await setup.call(this, createAttr('foo', 'string', { defaultValue: 'default' }));
     assert.strictEqual(component.fields.objectAt(0).labelValue, 'Foo', 'renders a label');
@@ -285,6 +289,8 @@ module('Integration | Component | form field', function (hooks) {
     assert.ok(spy.calledWith('password', 'secret'), 'onChange called with correct args');
   });
 
+  // --- common elements (legacy) ---
+
   test('it uses a passed label', async function (assert) {
     await setup.call(this, createAttr('foo', 'string', { label: 'Not Foo' }));
     assert.strictEqual(component.fields.objectAt(0).labelValue, 'Not Foo', 'renders the label from options');
@@ -343,6 +349,109 @@ module('Integration | Component | form field', function (hooks) {
     await render(
       hbs`<FormField @attr={{this.attr}} @model={{this.model}} @modelValidations={{this.validations}} @onChange={{this.onChange}} />`
     );
-    assert.dom('[data-test-validation-warning]').exists('Validation warning renders');
+    assert.dom('[data-test-form-field-validation-warning]').exists('Validation warning renders');
+  });
+
+  // ---------------
+  // HDS FORM FIELDS
+  // ---------------
+  // Note: some tests may be duplicative of the generic tests above
+  //
+
+  // ––––– editType === 'password' –––––
+
+  test('it renders: editType=password / type=string - as Hds::Form::TextInput [@type=password]', async function (assert) {
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('foo', 'string', { editType: 'password', defaultValue: 'default' })
+    );
+    assert
+      .dom('.field [class^="hds-form-field"] input.hds-form-text-input')
+      .exists('renders as Hds::Form::TextInput');
+    assert.dom('input[data-test-input="foo"][type="password"]').exists('renders input with type=password');
+    assert.strictEqual(component.fields.objectAt(0).labelValue, 'Foo', 'renders a label');
+    assert.strictEqual(component.fields.objectAt(0).inputValue, 'default', 'renders default value');
+    await fillIn('[data-test-input]', 'bar');
+    assert.strictEqual(model.get('foo'), 'bar');
+    assert.ok(spy.calledWith('foo', 'bar'), 'onChange called with correct args');
+  });
+
+  test('it renders: editType=password / type=number - as Hds::Form::TextInput [@type=password]', async function (assert) {
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('foo', 'number', { editType: 'password', defaultValue: 123 })
+    );
+    assert
+      .dom('.field [class^="hds-form-field"] input.hds-form-text-input')
+      .exists('renders as Hds::Form::TextInput');
+    assert.dom('input[data-test-input="foo"][type="password"]').exists('renders input with type=password');
+    assert.strictEqual(component.fields.objectAt(0).labelValue, 'Foo', 'renders a label');
+    assert.strictEqual(component.fields.objectAt(0).inputValue, '123', 'renders default value');
+    await fillIn('[data-test-input]', 987);
+    assert.strictEqual(model.get('foo'), '987');
+    assert.ok(spy.calledWith('foo', '987'), 'onChange called with correct args');
+  });
+
+  test('it renders: editType=password / type=string - with passed label, placeholder, subtext, helptext, doclink', async function (assert) {
+    await setup.call(
+      this,
+      createAttr('foo', 'string', {
+        editType: 'password',
+        placeholder: 'Custom placeholder',
+        label: 'Custom label',
+        subText: 'Some subtext',
+        helpText: 'Some helptext',
+        docLink: '/docs',
+      })
+    );
+    assert.strictEqual(
+      component.fields.objectAt(0).labelValue,
+      'Custom label',
+      'renders the custom label from options'
+    );
+    assert
+      .dom('[data-test-input="foo"]')
+      .hasAttribute('placeholder', 'Custom placeholder', 'renders the placeholder from options');
+    assert
+      .dom('[data-test-form-field-subtext]')
+      .exists('renders `subText` option as HelperText')
+      .hasText(
+        'Some subtext See our documentation for help.',
+        'renders the right subtext string from options'
+      );
+    assert
+      .dom('[data-test-form-field-subtext] a[data-test-form-field-doc-link]')
+      .exists('renders `docLink` option as as link inside the subtext');
+    assert
+      .dom('[data-test-form-field-help-text]')
+      .exists('renders `helptext` option as HelperText')
+      .hasText('Some helptext', 'renders the right help text string from options');
+  });
+
+  test('it renders: editType=password / type=string - with validation errors and warnings', async function (assert) {
+    this.setProperties({
+      attr: createAttr('foo', 'string', { editType: 'password' }),
+      model: { foo: 'bar' },
+      modelValidations: {
+        foo: {
+          isValid: false,
+          errors: ['Error message #1', 'Error message #2'],
+          warnings: ['Warning message #1', 'Warning message #2'],
+        },
+      },
+      onChange: () => {},
+    });
+
+    await render(
+      hbs`<FormField @attr={{this.attr}} @model={{this.model}} @modelValidations={{this.modelValidations}} @onChange={{this.onChange}} />`
+    );
+    assert
+      .dom('[data-test-form-field-validation-error="foo"]')
+      .exists('Validation error renders')
+      .hasText('Error message #1 Error message #2', 'Validation errors are combined');
+    assert
+      .dom('[data-test-form-field-validation-warning="foo"]')
+      .exists('Validation warning renders')
+      .hasText('Warning message #1 Warning message #2', 'Validation warnings are combined');
   });
 });
