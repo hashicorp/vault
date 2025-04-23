@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, fillIn, findAll, waitFor, click } from '@ember/test-helpers';
+import { render, fillIn, findAll, waitFor, click, find } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import Service from '@ember/service';
 import { NAMESPACE_PICKER_SELECTORS } from 'vault/tests/helpers/namespace-picker';
@@ -55,6 +55,22 @@ module('Integration | Component | namespace-picker', function (hooks) {
     this.owner.register('service:store', storeService);
   });
 
+  test('it focuses the search input field when the component is loaded', async function (assert) {
+    assert.expect(1);
+
+    await render(hbs`<NamespacePicker />`);
+
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+
+    // Verify that the search input field is focused
+    const searchInput = find(NAMESPACE_PICKER_SELECTORS.searchInput);
+    assert.strictEqual(
+      document.activeElement,
+      searchInput,
+      'The search input field is focused on component load'
+    );
+  });
+
   test('it filters namespace options based on search input', async function (assert) {
     assert.expect(3);
 
@@ -71,8 +87,8 @@ module('Integration | Component | namespace-picker', function (hooks) {
     );
 
     // Simulate typing into the search input
-    await waitFor('[type="search"]');
-    await fillIn('[type="search"]', 'child1');
+    await waitFor(NAMESPACE_PICKER_SELECTORS.searchInput);
+    await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, 'child1');
 
     // Verify that only namespaces matching the search input are displayed
     assert.strictEqual(
@@ -82,7 +98,7 @@ module('Integration | Component | namespace-picker', function (hooks) {
     );
 
     // Clear the search input
-    await fillIn('[type="search"]', '');
+    await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, '');
 
     // Verify all namespaces are displayed after clearing the search input
     assert.strictEqual(

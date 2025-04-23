@@ -3,7 +3,17 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, settled, visit, fillIn, currentURL, waitFor, findAll } from '@ember/test-helpers';
+import {
+  click,
+  settled,
+  visit,
+  fillIn,
+  currentURL,
+  waitFor,
+  findAll,
+  triggerKeyEvent,
+  find,
+} from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { runCmd, createNS } from 'vault/tests/helpers/commands';
@@ -28,6 +38,42 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     fetchSpy.restore();
   });
 
+  test('it focuses the search input field when the component is loaded', async function (assert) {
+    assert.expect(1);
+
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+
+    // Verify that the search input field is focused
+    const searchInput = find(NAMESPACE_PICKER_SELECTORS.searchInput);
+    assert.strictEqual(
+      document.activeElement,
+      searchInput,
+      'The search input field is focused on component load'
+    );
+  });
+
+  test('it navigates to the matching namespace when Enter is pressed', async function (assert) {
+    assert.expect(2);
+
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+
+    // Simulate typing into the search input
+    await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, 'beep/boop');
+    assert
+      .dom(NAMESPACE_PICKER_SELECTORS.searchInput)
+      .hasValue('beep/boop', 'The search input field has the correct value');
+
+    // Simulate pressing Enter
+    await triggerKeyEvent(NAMESPACE_PICKER_SELECTORS.searchInput, 'keydown', 'Enter');
+
+    // Verify navigation to the matching namespace
+    assert.strictEqual(
+      this.owner.lookup('service:router').currentURL,
+      '/vault/dashboard?namespace=beep%2Fboop',
+      'Navigates to the correct namespace when Enter is pressed'
+    );
+  });
+
   test('it filters namespaces based on search input', async function (assert) {
     assert.expect(7);
 
@@ -42,10 +88,10 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     );
 
     // Verify the search input field exists
-    assert.dom('[type="search"]').exists('The namespace search field exists');
+    assert.dom(NAMESPACE_PICKER_SELECTORS.searchInput).exists('The namespace search field exists');
 
     // Verify 3 namespaces are displayed after searching for "beep"
-    await fillIn('[type="search"]', 'beep');
+    await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, 'beep');
     assert.strictEqual(
       findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
       3,
@@ -53,7 +99,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     );
 
     // Verify 1 namespace is displayed after searching for "bop"
-    await fillIn('[type="search"]', 'bop');
+    await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, 'bop');
     assert.strictEqual(
       findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
       1,
@@ -61,7 +107,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     );
 
     // Verify no namespaces are displayed after searching for "other"
-    await fillIn('[type="search"]', 'other');
+    await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, 'other');
     assert.strictEqual(
       findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
       0,
@@ -69,7 +115,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     );
 
     // Clear the search input & verify all namespaces are displayed again
-    await fillIn('[type="search"]', '');
+    await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, '');
     assert.strictEqual(
       findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
       5,
