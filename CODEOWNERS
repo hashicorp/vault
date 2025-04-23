@@ -49,7 +49,7 @@
 
 # Plugin docs
 /website/content/docs/plugins/              @hashicorp/vault-ecosystem @hashicorp/vault-education-approvers
-/website/content/docs/upgrading/plugins.mdx @hashicorp/vault-ecosystem @hashicorp/vault-education-approvers
+/website/content/docs/plugins/upgrade.mdx   @hashicorp/vault-ecosystem @hashicorp/vault-education-approvers
 
 /ui/  @hashicorp/vault-ui
 # UI code related to Vault's JWT/OIDC auth method and OIDC provider.
@@ -107,4 +107,4 @@
 /website/content/docs/secrets/kmip.mdx               @hashicorp/vault-crypto @hashicorp/vault-education-approvers
 /website/content/api-docs/secret/kmip.mdx            @hashicorp/vault-crypto @hashicorp/vault-education-approvers
 /website/content/docs/enterprise/fips/               @hashicorp/vault-crypto @hashicorp/vault-education-approvers
-/website/content/docs/platform/k8s                   @hashicorp/vault-ecosystem @hashicorp/vault-education-approvers
+/website/content/docs/deploy/kubernetes              @hashicorp/vault-ecosystem @hashicorp/vault-education-approvers
