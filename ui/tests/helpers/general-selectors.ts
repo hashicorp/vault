@@ -54,8 +54,8 @@ export const GENERAL = {
   infoRowLabel: (label: string) => `[data-test-row-label="${label}"]`,
   infoRowValue: (label: string) => `[data-test-row-value="${label}"]`,
   // Validation
-  validation: (attr: string) => `[data-test-field-validation=${attr}]`,
-  validationWarning: (attr: string) => `[data-test-validation-warning=${attr}]`,
+  validation: (attr: string) => `[data-test-form-field-validation-error=${attr}]`,
+  validationWarning: (attr: string) => `[data-test-form-field-validation-warning=${attr}]`,
   messageError: '[data-test-message-error]',
   notFound: '[data-test-not-found]',
   pageError: {

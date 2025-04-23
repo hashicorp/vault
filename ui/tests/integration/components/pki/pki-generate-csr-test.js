@@ -92,7 +92,7 @@ module('Integration | Component | pki-generate-csr', function (hooks) {
     await click('[data-test-save]');
 
     assert
-      .dom('[data-test-field-validation="type"]')
+      .dom('[data-test-form-field-validation-error="type"]')
       .hasText('Type is required.', 'Type validation error renders');
     assert
       .dom('[data-test-field="commonName"] [data-test-inline-alert]')

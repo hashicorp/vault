@@ -98,7 +98,7 @@ module('Integration | Component | text-file', function (hooks) {
 
     await triggerEvent(SELECTORS.fileUpload, 'change', { files: [this.file] });
     assert
-      .dom('[data-test-field-validation="text-file"]')
+      .dom('[data-test-form-field-validation-error="text-file"]')
       .hasText('There was a problem uploading. Please try again.');
     assert.propEqual(
       this.onChange.lastCall.args[0],
