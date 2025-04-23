@@ -581,6 +581,10 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			"http://example.com/crl1",
 			"http://example.com/crl2",
 		},
+		DeltaCRLDistributionPoints: []string{
+			"http://example.com/delta1",
+			"http://example.com/delta2",
+		},
 		OCSPServers: []string{
 			"http://example.com/ocsp1",
 			"http://example.com/ocsp2",
@@ -626,9 +630,10 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			Operation: logical.UpdateOperation,
 			Path:      "config/urls",
 			Data: map[string]interface{}{
-				"issuing_certificates":    strings.Join(expected.IssuingCertificates, ","),
-				"crl_distribution_points": strings.Join(expected.CRLDistributionPoints, ","),
-				"ocsp_servers":            strings.Join(expected.OCSPServers, ","),
+				"issuing_certificates":          strings.Join(expected.IssuingCertificates, ","),
+				"crl_distribution_points":       strings.Join(expected.CRLDistributionPoints, ","),
+				"delta_crl_distribution_points": strings.Join(expected.DeltaCRLDistributionPoints, ","),
+				"ocsp_servers":                  strings.Join(expected.OCSPServers, ","),
 			},
 		},
 
@@ -705,11 +710,17 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 
 				skid, _ := hex.DecodeString("142EB317B75856CBAE500940E61FAF9D8B14C2C6")
 
+				deltaCrlDistributionPoints, err := certutil.ParseDeltaCRLExtension(cert)
+				if err != nil {
+					return fmt.Errorf("error: invalid delta crl extension: %v", err.Error())
+				}
 				switch {
 				case !reflect.DeepEqual(expected.IssuingCertificates, cert.IssuingCertificateURL):
 					return fmt.Errorf("IssuingCertificateURL:\nexpected\n%#v\ngot\n%#v\n", expected.IssuingCertificates, cert.IssuingCertificateURL)
 				case !reflect.DeepEqual(expected.CRLDistributionPoints, cert.CRLDistributionPoints):
 					return fmt.Errorf("CRLDistributionPoints:\nexpected\n%#v\ngot\n%#v\n", expected.CRLDistributionPoints, cert.CRLDistributionPoints)
+				case !reflect.DeepEqual(expected.DeltaCRLDistributionPoints, deltaCrlDistributionPoints):
+					return fmt.Errorf("DeltaCRLDistributionPoints:\nexpected\n%#v\ngot\n%#v\n", expected.DeltaCRLDistributionPoints, deltaCrlDistributionPoints)
 				case !reflect.DeepEqual(expected.OCSPServers, cert.OCSPServer):
 					return fmt.Errorf("OCSPServer:\nexpected\n%#v\ngot\n%#v\n", expected.OCSPServers, cert.OCSPServer)
 				case !reflect.DeepEqual([]string{"intermediate.cert.com"}, cert.DNSNames):
@@ -756,11 +767,17 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 				}
 				cert := certs[0]
 
+				deltaCrlDistributionPoints, err := certutil.ParseDeltaCRLExtension(cert)
+				if err != nil {
+					return fmt.Errorf("error: invalid delta crl extension: %v", err.Error())
+				}
 				switch {
 				case !reflect.DeepEqual(expected.IssuingCertificates, cert.IssuingCertificateURL):
 					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", expected.IssuingCertificates, cert.IssuingCertificateURL)
 				case !reflect.DeepEqual(expected.CRLDistributionPoints, cert.CRLDistributionPoints):
 					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", expected.CRLDistributionPoints, cert.CRLDistributionPoints)
+				case !reflect.DeepEqual(expected.DeltaCRLDistributionPoints, deltaCrlDistributionPoints):
+					return fmt.Errorf("exected\n%#v\ngot\n%#v\n", expected.DeltaCRLDistributionPoints, deltaCrlDistributionPoints)
 				case !reflect.DeepEqual(expected.OCSPServers, cert.OCSPServer):
 					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", expected.OCSPServers, cert.OCSPServer)
 				case !reflect.DeepEqual([]string(nil), cert.DNSNames):
@@ -2093,8 +2110,9 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 
 	// config urls
 	urlsData := map[string]interface{}{
-		"issuing_certificates":    "http://127.0.0.1:8200/v1/pki/ca",
-		"crl_distribution_points": "http://127.0.0.1:8200/v1/pki/crl",
+		"issuing_certificates":          "http://127.0.0.1:8200/v1/pki/ca",
+		"crl_distribution_points":       "http://127.0.0.1:8200/v1/pki/crl",
+		"delta_crl_distribution_points": "http://127.0.0.1:8200/v1/pki/crl/delta",
 	}
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -5301,6 +5319,9 @@ func TestPerIssuerAIA(t *testing.T) {
 	require.Empty(t, rootCert.OCSPServer)
 	require.Empty(t, rootCert.IssuingCertificateURL)
 	require.Empty(t, rootCert.CRLDistributionPoints)
+	deltaCrlDistributionPoints, err := certutil.ParseDeltaCRLExtension(rootCert)
+	require.NoError(t, err)
+	require.Empty(t, deltaCrlDistributionPoints)
 
 	// Set some local URLs on the issuer.
 	resp, err = CBWrite(b, s, "issuer/default", map[string]interface{}{
@@ -5327,12 +5348,16 @@ func TestPerIssuerAIA(t *testing.T) {
 	require.Empty(t, leafCert.OCSPServer)
 	require.Equal(t, leafCert.IssuingCertificateURL, []string{"https://google.com"})
 	require.Empty(t, leafCert.CRLDistributionPoints)
+	deltaCrlDistributionPoints, err = certutil.ParseDeltaCRLExtension(leafCert)
+	require.NoError(t, err)
+	require.Empty(t, deltaCrlDistributionPoints)
 
 	// Set global URLs and ensure they don't appear on this issuer's leaf.
 	_, err = CBWrite(b, s, "config/urls", map[string]interface{}{
-		"issuing_certificates":    []string{"https://example.com/ca", "https://backup.example.com/ca"},
-		"crl_distribution_points": []string{"https://example.com/crl", "https://backup.example.com/crl"},
-		"ocsp_servers":            []string{"https://example.com/ocsp", "https://backup.example.com/ocsp"},
+		"issuing_certificates":          []string{"https://example.com/ca", "https://backup.example.com/ca"},
+		"crl_distribution_points":       []string{"https://example.com/crl", "https://backup.example.com/crl"},
+		"delta_crl_distribution_points": []string{"https://example.com/crl/delta", "https://backup.example.com/crl/delta"},
+		"ocsp_servers":                  []string{"https://example.com/ocsp", "https://backup.example.com/ocsp"},
 	})
 	require.NoError(t, err)
 	resp, err = CBWrite(b, s, "issuer/default/issue/testing", map[string]interface{}{
@@ -5344,6 +5369,9 @@ func TestPerIssuerAIA(t *testing.T) {
 	require.Empty(t, leafCert.OCSPServer)
 	require.Equal(t, leafCert.IssuingCertificateURL, []string{"https://google.com"})
 	require.Empty(t, leafCert.CRLDistributionPoints)
+	deltaCrlDistributionPoints, err = certutil.ParseDeltaCRLExtension(leafCert)
+	require.NoError(t, err)
+	require.Empty(t, deltaCrlDistributionPoints)
 
 	// Now come back and remove the local modifications and ensure we get
 	// the defaults again.
@@ -5360,6 +5388,9 @@ func TestPerIssuerAIA(t *testing.T) {
 	require.Equal(t, leafCert.IssuingCertificateURL, []string{"https://example.com/ca", "https://backup.example.com/ca"})
 	require.Equal(t, leafCert.OCSPServer, []string{"https://example.com/ocsp", "https://backup.example.com/ocsp"})
 	require.Equal(t, leafCert.CRLDistributionPoints, []string{"https://example.com/crl", "https://backup.example.com/crl"})
+	deltaCrlDistributionPoints, err = certutil.ParseDeltaCRLExtension(leafCert)
+	require.NoError(t, err)
+	require.Equal(t, deltaCrlDistributionPoints, []string{"https://example.com/crl/delta", "https://backup.example.com/crl/delta"})
 
 	// Validate that we can set an issuer name and remove it.
 	_, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
@@ -6282,10 +6313,11 @@ func TestPKI_TemplatedAIAs(t *testing.T) {
 	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/cluster"), logical.ReadOperation), resp, true)
 
 	aiaData := map[string]interface{}{
-		"crl_distribution_points": "{{cluster_path}}/issuer/{{issuer_id}}/crl/der",
-		"issuing_certificates":    "{{cluster_aia_path}}/issuer/{{issuer_id}}/der",
-		"ocsp_servers":            "{{cluster_path}}/ocsp",
-		"enable_templating":       true,
+		"crl_distribution_points":       "{{cluster_path}}/issuer/{{issuer_id}}/crl/der",
+		"delta_crl_distribution_points": "{{cluster_path}}/issuer/{{issuer_id}}/crl/delta",
+		"issuing_certificates":          "{{cluster_aia_path}}/issuer/{{issuer_id}}/der",
+		"ocsp_servers":                  "{{cluster_path}}/ocsp",
+		"enable_templating":             true,
 	}
 	_, err = CBWrite(b, s, "config/urls", aiaData)
 	require.NoError(t, err)
@@ -6303,10 +6335,11 @@ func TestPKI_TemplatedAIAs(t *testing.T) {
 
 	// Clearing the config and regenerating the root should still succeed.
 	_, err = CBWrite(b, s, "config/urls", map[string]interface{}{
-		"crl_distribution_points": "{{cluster_path}}/issuer/my-root-id/crl/der",
-		"issuing_certificates":    "{{cluster_aia_path}}/issuer/my-root-id/der",
-		"ocsp_servers":            "{{cluster_path}}/ocsp",
-		"enable_templating":       true,
+		"crl_distribution_points":       "{{cluster_path}}/issuer/my-root-id/crl/der",
+		"delta_crl_distribution_points": "{{cluster_path}}/issuer/my-root-id/crl/delta",
+		"issuing_certificates":          "{{cluster_aia_path}}/issuer/my-root-id/der",
+		"ocsp_servers":                  "{{cluster_path}}/ocsp",
+		"enable_templating":             true,
 	})
 	require.NoError(t, err)
 	resp, err = CBWrite(b, s, "root/generate/internal", rootData)
@@ -6332,22 +6365,27 @@ func TestPKI_TemplatedAIAs(t *testing.T) {
 	require.Equal(t, cert.OCSPServer, []string{"http://localhost:8200/v1/pki/ocsp"})
 	require.Equal(t, cert.IssuingCertificateURL, []string{"http://localhost:8200/cdn/pki/issuer/" + issuerId + "/der"})
 	require.Equal(t, cert.CRLDistributionPoints, []string{"http://localhost:8200/v1/pki/issuer/" + issuerId + "/crl/der"})
+	deltaCrlDistributionPoints, err := certutil.ParseDeltaCRLExtension(cert)
+	require.NoError(t, err)
+	require.Equal(t, deltaCrlDistributionPoints, []string{"http://localhost:8200/v1/pki/issuer/" + issuerId + "/crl/delta"})
 
 	// Modify our issuer to set custom AIAs: these URLs are bad.
 	_, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
-		"enable_aia_url_templating": "false",
-		"crl_distribution_points":   "a",
-		"issuing_certificates":      "b",
-		"ocsp_servers":              "c",
+		"enable_aia_url_templating":     "false",
+		"crl_distribution_points":       "a",
+		"issuing_certificates":          "b",
+		"ocsp_servers":                  "c",
+		"delta_crl_distribution_points": "d",
 	})
 	require.Error(t, err)
 
 	// These URLs are good.
 	_, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
-		"enable_aia_url_templating": "false",
-		"crl_distribution_points":   "http://localhost/a",
-		"issuing_certificates":      "http://localhost/b",
-		"ocsp_servers":              "http://localhost/c",
+		"enable_aia_url_templating":     "false",
+		"crl_distribution_points":       "http://localhost/a",
+		"delta_crl_distribution_points": "http://localhost/d",
+		"issuing_certificates":          "http://localhost/b",
+		"ocsp_servers":                  "http://localhost/c",
 	})
 
 	resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
@@ -6360,13 +6398,17 @@ func TestPKI_TemplatedAIAs(t *testing.T) {
 	require.Equal(t, cert.OCSPServer, []string{"http://localhost/c"})
 	require.Equal(t, cert.IssuingCertificateURL, []string{"http://localhost/b"})
 	require.Equal(t, cert.CRLDistributionPoints, []string{"http://localhost/a"})
+	deltaCrlDistributionPoints, err = certutil.ParseDeltaCRLExtension(cert)
+	require.NoError(t, err)
+	require.Equal(t, deltaCrlDistributionPoints, []string{"http://localhost/d"})
 
 	// These URLs are bad, but will fail at issuance time due to AIA templating.
 	resp, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
-		"enable_aia_url_templating": "true",
-		"crl_distribution_points":   "a",
-		"issuing_certificates":      "b",
-		"ocsp_servers":              "c",
+		"enable_aia_url_templating":     "true",
+		"crl_distribution_points":       "a",
+		"issuing_certificates":          "b",
+		"ocsp_servers":                  "c",
+		"delta_crl_distribution_points": "d",
 	})
 	requireSuccessNonNilResponse(t, resp, err)
 	require.NotEmpty(t, resp.Warnings)
@@ -7211,6 +7253,11 @@ func TestPatchIssuer(t *testing.T) {
 			Patched: []string{"http://localhost/v1/pki/crl"},
 		},
 		{
+			Field:   "delta_crl_distribution_points",
+			Before:  []string{"http://localhost/v1/pki-1/crl/delta"},
+			Patched: []string{"http://localhost/v1/pki/crl/delta"},
+		},
+		{
 			Field:   "ocsp_servers",
 			Before:  []string{"http://localhost/v1/pki-1/ocsp"},
 			Patched: []string{"http://localhost/v1/pki/ocsp"},
@@ -7253,9 +7300,10 @@ func testPatchIssuer(t *testing.T, testCases []patchIssuerTestCase) {
 
 			// 3. Add AIA information
 			resp, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
-				"issuing_certificates":    "http://localhost/v1/pki-1/ca",
-				"crl_distribution_points": "http://localhost/v1/pki-1/crl",
-				"ocsp_servers":            "http://localhost/v1/pki-1/ocsp",
+				"issuing_certificates":          "http://localhost/v1/pki-1/ca",
+				"crl_distribution_points":       "http://localhost/v1/pki-1/crl",
+				"delta_crl_distribution_points": "http://localhost/v1/pki-1/crl/delta",
+				"ocsp_servers":                  "http://localhost/v1/pki-1/ocsp",
 			})
 			requireSuccessNonNilResponse(t, resp, err, "failed setting up issuer")
 
@@ -7317,10 +7365,11 @@ func TestGenerateRootCAWithAIA(t *testing.T) {
 	require.NoError(t, err, "failed to write AIA settings")
 
 	_, err = CBWrite(b_root, s_root, "config/urls", map[string]interface{}{
-		"crl_distribution_points": "{{cluster_path}}/issuer/{{issuer_id}}/crl/der",
-		"issuing_certificates":    "{{cluster_aia_path}}/issuer/{{issuer_id}}/der",
-		"ocsp_servers":            "{{cluster_path}}/ocsp",
-		"enable_templating":       true,
+		"crl_distribution_points":       "{{cluster_path}}/issuer/{{issuer_id}}/crl/der",
+		"delta_crl_distribution_points": "{{cluster_path}}/issuer/{{issuer_id}}/crl/delta/der",
+		"issuing_certificates":          "{{cluster_aia_path}}/issuer/{{issuer_id}}/der",
+		"ocsp_servers":                  "{{cluster_path}}/ocsp",
+		"enable_templating":             true,
 	})
 	require.NoError(t, err, "failed to write AIA settings")
 
