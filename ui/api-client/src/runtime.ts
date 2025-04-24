@@ -457,11 +457,8 @@ export class JSONApiResponse<T> {
 export class VoidApiResponse {
     constructor(public raw: Response) {}
     async value(): Promise<VoidResponse> {
-        if (this.raw.headers.get('Content-Length')) {
-            const response = await this.raw.json();
-            return camelizeResponseKeys(response);
-        }
-        return undefined;
+        const response = await this.raw?.json();
+        return camelizeResponseKeys(response);
     }
 }
 
