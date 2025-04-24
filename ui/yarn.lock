@@ -3568,13 +3568,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@scarf/scarf@npm:=1.4.0":
-  version: 1.4.0
-  resolution: "@scarf/scarf@npm:1.4.0"
-  checksum: def62aa403f7e63165ccb219efd2c420fc0b7357b0ba43397f635e4aa813ace1cdf3855a93fc559b4619bcc0469ae4767b8cb72af30ea5c0522bf4a2ecb18198
-  languageName: node
-  linkType: hard
-
 "@simple-dom/document@npm:^1.4.0":
   version: 1.4.0
   resolution: "@simple-dom/document@npm:1.4.0"
@@ -5159,14 +5152,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"asn1js@npm:^3.0.3":
-  version: 3.0.6
-  resolution: "asn1js@npm:3.0.6"
+"asn1js@npm:^2.1.1":
+  version: 2.4.0
+  resolution: "asn1js@npm:2.4.0"
   dependencies:
-    pvtsutils: ^1.3.6
     pvutils: ^1.1.3
-    tslib: ^2.8.1
-  checksum: 2b43a4c7964183cc2c6b45d7f757eeeb93d2c60e89250dae2826250580e2049a43a795af6ab6d8eb6cbb13c8f51674a430923b2981313c64503b7159e378b477
+  checksum: 0aaa8d64d0824643f69826c31ed0d89fffd4832d93fd71f745b19d6af9d0e1b4e8e7c9f81fcd343ea7e2bd51858f5f80c31ed8381ecf782e44504ce554274b98
   languageName: node
   linkType: hard
 
@@ -12992,7 +12983,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jsdoc-babel@npm:^0.5.0":
+"jsdoc-babel@npm:~0.5.0":
   version: 0.5.0
   resolution: "jsdoc-babel@npm:0.5.0"
   dependencies:
@@ -13023,7 +13014,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jsdoc-to-markdown@npm:^8.0.1":
+"jsdoc-to-markdown@npm:~8.0.1":
   version: 8.0.3
   resolution: "jsdoc-to-markdown@npm:8.0.3"
   dependencies:
@@ -13152,7 +13143,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jsondiffpatch@npm:^0.4.1":
+"jsondiffpatch@npm:~0.4.1":
   version: 0.4.1
   resolution: "jsondiffpatch@npm:0.4.1"
   dependencies:
@@ -13220,7 +13211,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jsonlint@npm:^1.6.3":
+"jsonlint@npm:~1.6.3":
   version: 1.6.3
   resolution: "jsonlint@npm:1.6.3"
   dependencies:
@@ -13353,7 +13344,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lint-staged@npm:^10.5.1":
+"lint-staged@npm:~10.5.1":
   version: 10.5.4
   resolution: "lint-staged@npm:10.5.4"
   dependencies:
@@ -13424,7 +13415,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"loader.js@npm:^4.7.0":
+"loader.js@npm:~4.7.0":
   version: 4.7.0
   resolution: "loader.js@npm:4.7.0"
   checksum: 947412e7665e47ed1fefcd5c07b8fbcfd9991ccc4f39aa3ad631fc0be301c4410f57a2ed762e710450643210072fbbb54ea00128f9c449d76ee79fe5b8481ec6
@@ -14531,7 +14522,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"miragejs@npm:^0.1.48":
+"miragejs@npm:~0.1.48":
   version: 0.1.48
   resolution: "miragejs@npm:0.1.48"
   dependencies:
@@ -15531,14 +15522,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pkijs@npm:^2.2.2":
-  version: 2.4.0
-  resolution: "pkijs@npm:2.4.0"
+"pkijs@npm:~2.2.2":
+  version: 2.2.2
+  resolution: "pkijs@npm:2.2.2"
   dependencies:
-    asn1js: ^3.0.3
+    asn1js: ^2.1.1
     bytestreamjs: ^1.0.29
-    pvutils: ^1.1.3
-  checksum: 0534d3ff4eb50ebe93818cc93a5190d78d4702ba55c0ffd270e10fddc58659b75f5d52b17ac0b100ad65757d595e5cc2985e646db4b295a09fb0c37eed58cae3
+    pvutils: ^1.0.17
+  checksum: 92664bc4b7378200f74d7faf32a80365058d79f22b27f9a83b10e1e7684892a17657ff65c106e7c48be6d79b76545149e949229ae42a6456d0e447b9872a26e5
   languageName: node
   linkType: hard
 
@@ -15683,7 +15674,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prettier-eslint-cli@npm:^7.1.0":
+"prettier-eslint-cli@npm:~7.1.0":
   version: 7.1.0
   resolution: "prettier-eslint-cli@npm:7.1.0"
   dependencies:
@@ -15897,19 +15888,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pvtsutils@npm:^1.3.6":
-  version: 1.3.6
-  resolution: "pvtsutils@npm:1.3.6"
-  dependencies:
-    tslib: ^2.8.1
-  checksum: 97b023b46d7b95bff004f8340efc465c1d995f35d7e97a2ef2e28d5e160f5ca47b48f42463b6be92b4341452a6b8c555feb2b1eb59ee90b97bd5d6fc86ffb186
-  languageName: node
-  linkType: hard
-
 "pvutils@npm:^1.0.17, pvutils@npm:^1.1.3, pvutils@npm:latest":
   version: 1.1.3
   resolution: "pvutils@npm:1.1.3"
   checksum: 2ee26a9e5176c348977d6ec00d8ee80bff62f51743b1c5fe8abeeb4c5d29d9959cdfe0ce146707a9e6801bce88190fed3002d720b072dc87d031c692820b44c9
+  languageName: node
+  linkType: hard
+
+"pvutils@npm:~1.0.17":
+  version: 1.0.17
+  resolution: "pvutils@npm:1.0.17"
+  checksum: 370cc6c7ed2cddeb97e85339f4cac06cc07e3195774b0b8707a7994db0acd73451745cc57209a2bc6d4138b9b14d5ab0335e3614743a91010a74db597428dfe8
   languageName: node
   linkType: hard
 
@@ -15956,7 +15945,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"qunit-dom@npm:^2.0.0":
+"qunit-dom@npm:~2.0.0":
   version: 2.0.0
   resolution: "qunit-dom@npm:2.0.0"
   dependencies:
@@ -15968,16 +15957,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"qunit@npm:^2.20.0":
-  version: 2.24.1
-  resolution: "qunit@npm:2.24.1"
+"qunit@npm:~2.20.0":
+  version: 2.20.1
+  resolution: "qunit@npm:2.20.1"
   dependencies:
     commander: 7.2.0
     node-watch: 0.7.3
     tiny-glob: 0.2.9
   bin:
     qunit: bin/qunit.js
-  checksum: 0f12915dd21d1a10e7f8e3ac09f73333f3e09cbda11b2a8f23a01a5fd2ea069da10292aaf0112a05754eaa0801d25906a61ecc6a364c9248abcd0c05d499bc7e
+  checksum: ee0db04239ff7ae1ff9b67f15ab31e8c4f1e41bb5d6a41f34b19b17f836bc9414e43897516a617d08840eaa2bd71580c456e7e448d81c388dfb58198f0c26de7
   languageName: node
   linkType: hard
 
@@ -16851,7 +16840,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"sass@npm:^1.66.3, sass@npm:^1.83.0":
+"sass@npm:^1.83.0":
   version: 1.87.0
   resolution: "sass@npm:1.87.0"
   dependencies:
@@ -16865,6 +16854,23 @@ __metadata:
   bin:
     sass: sass.js
   checksum: 83d166fc6f03ed679460c21351c783d57a61c32fe1afdacf647ce477dd5611f03b1cff27444cccd59d3a5bd1453471fbbcdba7b9e7fc510e4f57226e125e4e01
+  languageName: node
+  linkType: hard
+
+"sass@npm:~1.83.0":
+  version: 1.83.4
+  resolution: "sass@npm:1.83.4"
+  dependencies:
+    "@parcel/watcher": ^2.4.1
+    chokidar: ^4.0.0
+    immutable: ^5.0.2
+    source-map-js: ">=0.6.2 <2.0.0"
+  dependenciesMeta:
+    "@parcel/watcher":
+      optional: true
+  bin:
+    sass: sass.js
+  checksum: 500958ea77ceb92db0aaef7e6ee5bc3cc016f4ad42fcad40dd2a2891b758c74538c651c47c01f9c04d9b743453efd5a6ba0caccc679f03c6da47a7bb25b2d30c
   languageName: node
   linkType: hard
 
@@ -17068,7 +17074,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"shell-quote@npm:^1.8.1":
+"shell-quote@npm:^1.8.1, shell-quote@npm:~1.8.1":
   version: 1.8.2
   resolution: "shell-quote@npm:1.8.2"
   checksum: 1e97b62ced1c4c5135015978ebf273bed1f425a68cf84163e83fbb0f34b3ff9471e656720dab2b7cbb4ae0f58998e686d17d166c28dfb3662acd009e8bd7faed
@@ -17160,7 +17166,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"sinon@npm:^17.0.1":
+"sinon@npm:~17.0.1":
   version: 17.0.1
   resolution: "sinon@npm:17.0.1"
   dependencies:
@@ -17800,7 +17806,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"stylelint-config-standard@npm:^34.0.0":
+"stylelint-config-standard@npm:~34.0.0":
   version: 34.0.0
   resolution: "stylelint-config-standard@npm:34.0.0"
   dependencies:
@@ -17811,19 +17817,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"stylelint-prettier@npm:^4.0.2":
-  version: 4.1.0
-  resolution: "stylelint-prettier@npm:4.1.0"
+"stylelint-prettier@npm:~4.0.2":
+  version: 4.0.2
+  resolution: "stylelint-prettier@npm:4.0.2"
   dependencies:
     prettier-linter-helpers: ^1.0.0
   peerDependencies:
     prettier: ">=3.0.0"
     stylelint: ">=15.8.0"
-  checksum: bbeb7e0dd49099c43297e88a61385b39f4b5810c8bfcc972d5b2706b6a7e14a8eefd5f9e623841cf3127111a8859eb624a3e7cc1bc5197c83c55c6c9a616a4d2
+  checksum: b60112c10b8f31456211d65b4c17238fdaf46ee9f80ab035621f2eb86b47505a4b9582d99f4334dfe370cc8104de870f7fcc256737d0f2e68f4357239f739054
   languageName: node
   linkType: hard
 
-"stylelint@npm:^15.11.0":
+"stylelint@npm:~15.11.0":
   version: 15.11.0
   resolution: "stylelint@npm:15.11.0"
   dependencies:
@@ -17940,12 +17946,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"swagger-ui-dist@npm:^5.9.0":
-  version: 5.21.0
-  resolution: "swagger-ui-dist@npm:5.21.0"
-  dependencies:
-    "@scarf/scarf": =1.4.0
-  checksum: 7780be7b0f77a7be40d854d33117e7e4be77f63ac19859b0ef4243bc0dd6ba9af3b103beb8526911d6e09718f0ef5ea43854f5c7b61c5f1a7352730388a2fecf
+"swagger-ui-dist@npm:~5.9.0":
+  version: 5.9.4
+  resolution: "swagger-ui-dist@npm:5.9.4"
+  checksum: 46b72bf24c77191e32005841eecaca48794fc2ef0335666dda8f429d284a3682f99c3c92af40d6967037990183c95dbf488ba28eab7d18f4ea78f9ff8353130c
   languageName: node
   linkType: hard
 
@@ -18342,14 +18346,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tracked-built-ins@npm:^3.3.0":
-  version: 3.4.0
-  resolution: "tracked-built-ins@npm:3.4.0"
+"tracked-built-ins@npm:~3.3.0":
+  version: 3.3.0
+  resolution: "tracked-built-ins@npm:3.3.0"
   dependencies:
-    "@embroider/addon-shim": ^1.8.7
-    decorator-transforms: ^2.0.0
+    "@embroider/addon-shim": ^1.8.3
     ember-tracked-storage-polyfill: ^1.0.0
-  checksum: 4b65ebfa9f395d72733c1e29f88e09e125bb493c36151a2c56e4a5fc427690113dd0baf86ee0ac5094bfb58c2ea7983027e2def7e2014c120defbe80ccd2fed5
+  checksum: 3f50b98b26f32d96adeed7611f83566d27086b3ea9402bfdbe66dd4a5f4fc86d1acf5f55870568be7442e0b51dde4a3617c7d465cbfcc640c0a1e702f67b5190
   languageName: node
   linkType: hard
 
@@ -18432,7 +18435,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tslib@npm:^2.0.3, tslib@npm:^2.1.0, tslib@npm:^2.4.1, tslib@npm:^2.6.2, tslib@npm:^2.8.1":
+"tslib@npm:^2.0.3, tslib@npm:^2.1.0, tslib@npm:^2.4.1, tslib@npm:^2.6.2":
   version: 2.8.1
   resolution: "tslib@npm:2.8.1"
   checksum: e4aba30e632b8c8902b47587fd13345e2827fa639e7c3121074d5ee0880723282411a8838f830b55100cbe4517672f84a2472667d355b81e8af165a55dc6203a
@@ -18613,13 +18616,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@npm:^5.4.5":
-  version: 5.8.3
-  resolution: "typescript@npm:5.8.3"
+"typescript@npm:~5.4.5":
+  version: 5.4.5
+  resolution: "typescript@npm:5.4.5"
   bin:
     tsc: bin/tsc
     tsserver: bin/tsserver
-  checksum: cb1d081c889a288b962d3c8ae18d337ad6ee88a8e81ae0103fa1fecbe923737f3ba1dbdb3e6d8b776c72bc73bfa6d8d850c0306eed1a51377d2fccdfd75d92c4
+  checksum: 53c879c6fa1e3bcb194b274d4501ba1985894b2c2692fa079db03c5a5a7140587a1e04e1ba03184605d35f439b40192d9e138eb3279ca8eee313c081c8bcd9b0
   languageName: node
   linkType: hard
 
@@ -18633,13 +18636,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@patch:typescript@^5.4.5#~builtin<compat/typescript>":
-  version: 5.8.3
-  resolution: "typescript@patch:typescript@npm%3A5.8.3#~builtin<compat/typescript>::version=5.8.3&hash=85af82"
+"typescript@patch:typescript@~5.4.5#~builtin<compat/typescript>":
+  version: 5.4.5
+  resolution: "typescript@patch:typescript@npm%3A5.4.5#~builtin<compat/typescript>::version=5.4.5&hash=85af82"
   bin:
     tsc: bin/tsc
     tsserver: bin/tsserver
-  checksum: 1b503525a88ff0ff5952e95870971c4fb2118c17364d60302c21935dedcd6c37e6a0a692f350892bafcef6f4a16d09073fe461158547978d2f16fbe4cb18581c
+  checksum: 2373c693f3b328f3b2387c3efafe6d257b057a142f9a79291854b14ff4d5367d3d730810aee981726b677ae0fd8329b23309da3b6aaab8263dbdccf1da07a3ba
   languageName: node
   linkType: hard
 
@@ -19135,33 +19138,33 @@ __metadata:
     flat: ~6.0.1
     handlebars: 4.7.7
     highlight.js: ^10.4.1
-    jsdoc-babel: ^0.5.0
-    jsdoc-to-markdown: ^8.0.1
-    jsondiffpatch: ^0.4.1
-    jsonlint: ^1.6.3
-    lint-staged: ^10.5.1
-    loader.js: ^4.7.0
-    miragejs: ^0.1.48
+    jsdoc-babel: ~0.5.0
+    jsdoc-to-markdown: ~8.0.1
+    jsondiffpatch: ~0.4.1
+    jsonlint: ~1.6.3
+    lint-staged: ~10.5.1
+    loader.js: ~4.7.0
+    miragejs: ~0.1.48
     node-notifier: ^8.0.1
     normalize.css: 4.1.1
-    pkijs: ^2.2.2
+    pkijs: ~2.2.2
     prettier: 3.0.3
-    prettier-eslint-cli: ^7.1.0
-    pvutils: ^1.0.17
-    qunit: ^2.20.0
-    qunit-dom: ^2.0.0
-    sass: ^1.66.3
-    shell-quote: ^1.8.1
-    sinon: ^17.0.1
-    stylelint: ^15.11.0
-    stylelint-config-standard: ^34.0.0
-    stylelint-prettier: ^4.0.2
-    swagger-ui-dist: ^5.9.0
+    prettier-eslint-cli: ~7.1.0
+    pvutils: ~1.0.17
+    qunit: ~2.20.0
+    qunit-dom: ~2.0.0
+    sass: ~1.83.0
+    shell-quote: ~1.8.1
+    sinon: ~17.0.1
+    stylelint: ~15.11.0
+    stylelint-config-standard: ~34.0.0
+    stylelint-prettier: ~4.0.2
+    swagger-ui-dist: ~5.9.0
     text-encoder-lite: 2.0.0
-    tracked-built-ins: ^3.3.0
-    typescript: ^5.4.5
+    tracked-built-ins: ~3.3.0
+    typescript: ~5.4.5
     uuid: ^9.0.0
-    walk-sync: ^2.0.2
+    walk-sync: ~2.0.2
     webpack: 5.94.0
   languageName: unknown
   linkType: soft
@@ -19278,6 +19281,17 @@ __metadata:
     matcher-collection: ^2.0.1
     minimatch: ^3.0.4
   checksum: b8701fc893003e4dac62d4fae8e7f411081fb18a9350632e078e9b61880e9a0c7b532385162c8e0b0fb3070f022cf70ac64518bde709b0dec58c13a833182cbc
+  languageName: node
+  linkType: hard
+
+"walk-sync@npm:~2.0.2":
+  version: 2.0.2
+  resolution: "walk-sync@npm:2.0.2"
+  dependencies:
+    "@types/minimatch": ^3.0.3
+    ensure-posix-path: ^1.1.0
+    matcher-collection: ^2.0.0
+  checksum: 6f13b163aad92e0886f782c146fe347658dabed71e766677f3f03ac8a6c356b864ea4ffdc4d172a7814adfb5182a7b0b12a97b26b75ac186dbb937a52666b7df
   languageName: node
   linkType: hard
 
