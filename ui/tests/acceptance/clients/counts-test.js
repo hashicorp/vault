@@ -44,6 +44,7 @@ module('Acceptance | clients | counts', function (hooks) {
   });
 
   test('it should persist filter query params between child routes', async function (assert) {
+    this.owner.lookup('service:version').type = 'community';
     await visit('/vault/clients/counts/overview');
     await click(CLIENT_COUNT.dateRange.edit);
     await fillIn(CLIENT_COUNT.dateRange.editDate('start'), '2023-03');

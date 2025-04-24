@@ -21,12 +21,18 @@
       {{/if}}
       {{#if this.version.isEnterprise}}
         <Hds::Dropdown class="has-left-margin-xs" @matchToggleWidth={{true}} as |D|>
-          <D.ToggleButton @text="Current Billing Start" @color="secondary" />
-          <D.Interactive {{on "click" (fn this.updateEnterpriseDateRange @billingStartTime)}}>
+          <D.ToggleButton @text="Current Billing Start" @color="secondary" data-test-date-range-edit />
+          <D.Interactive
+            {{on "click" (fn this.updateEnterpriseDateRange @billingStartTime)}}
+            data-test-date-range-billing-start="0"
+          >
             {{this.formattedDate @billingStartTime}}
           </D.Interactive>
-          {{#each this.historicalBillingPeriods as |period|}}
-            <D.Interactive {{on "click" (fn this.updateEnterpriseDateRange period)}} selected="true">
+          {{#each this.historicalBillingPeriods as |period idx|}}
+            <D.Interactive
+              {{on "click" (fn this.updateEnterpriseDateRange period)}}
+              data-test-date-range-billing-start={{add idx 1}}
+            >
               {{this.formattedDate period}}
             </D.Interactive>
           {{/each}}
