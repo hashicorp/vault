@@ -8168,7 +8168,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-auto-import@npm:^2.2.4, ember-auto-import@npm:^2.4.1, ember-auto-import@npm:^2.6.0, ember-auto-import@npm:^2.6.3, ember-auto-import@npm:^2.7.0, ember-auto-import@npm:^2.7.2":
+"ember-auto-import@npm:^2.2.4, ember-auto-import@npm:^2.4.1, ember-auto-import@npm:^2.6.0, ember-auto-import@npm:^2.6.3, ember-auto-import@npm:^2.7.0, ember-auto-import@npm:~2.10.0":
   version: 2.10.0
   resolution: "ember-auto-import@npm:2.10.0"
   dependencies:
@@ -11703,25 +11703,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"handlebars@npm:4.7.7":
-  version: 4.7.7
-  resolution: "handlebars@npm:4.7.7"
-  dependencies:
-    minimist: ^1.2.5
-    neo-async: ^2.6.0
-    source-map: ^0.6.1
-    uglify-js: ^3.1.4
-    wordwrap: ^1.0.0
-  dependenciesMeta:
-    uglify-js:
-      optional: true
-  bin:
-    handlebars: bin/handlebars
-  checksum: 1e79a43f5e18d15742977cb987923eab3e2a8f44f2d9d340982bcb69e1735ed049226e534d7c1074eaddaf37e4fb4f471a8adb71cddd5bc8cf3f894241df5cee
-  languageName: node
-  linkType: hard
-
-"handlebars@npm:^4.0.11, handlebars@npm:^4.0.4, handlebars@npm:^4.3.1, handlebars@npm:^4.7.3, handlebars@npm:^4.7.8":
+"handlebars@npm:4.7.8, handlebars@npm:^4.0.11, handlebars@npm:^4.0.4, handlebars@npm:^4.3.1, handlebars@npm:^4.7.3, handlebars@npm:^4.7.8":
   version: 4.7.8
   resolution: "handlebars@npm:4.7.8"
   dependencies:
@@ -14697,7 +14679,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"neo-async@npm:^2.6.0, neo-async@npm:^2.6.2":
+"neo-async@npm:^2.6.2":
   version: 2.6.2
   resolution: "neo-async@npm:2.6.2"
   checksum: deac9f8d00eda7b2e5cd1b2549e26e10a0faa70adaa6fdadca701cc55f49ee9018e427f424bac0c790b7c7e2d3068db97f3093f1093975f2acb8f8818b936ed9
@@ -18975,12 +18957,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"uuid@npm:^9.0.0":
-  version: 9.0.1
-  resolution: "uuid@npm:9.0.1"
+"uuid@npm:~11.1.0":
+  version: 11.1.0
+  resolution: "uuid@npm:11.1.0"
   bin:
-    uuid: dist/bin/uuid
-  checksum: 39931f6da74e307f51c0fb463dc2462807531dc80760a9bff1e35af4316131b4fc3203d16da60ae33f07fdca5b56f3f1dd662da0c99fea9aaeab2004780cc5f4
+    uuid: dist/esm/bin/uuid
+  checksum: 840f19758543c4631e58a29439e51b5b669d5f34b4dd2700b6a1d15c5708c7a6e0c3e2c8c4a2eae761a3a7caa7e9884d00c86c02622ba91137bd3deade6b4b4a
   languageName: node
   linkType: hard
 
@@ -19092,7 +19074,7 @@ __metadata:
     doctoc: ~2.2.0
     dompurify: ~3.2.4
     ember-a11y-testing: ~7.0.1
-    ember-auto-import: ^2.7.2
+    ember-auto-import: ~2.10.0
     ember-basic-dropdown: ~8.0.4
     ember-cli: ~5.8.0
     ember-cli-babel: ~8.2.0
@@ -19143,8 +19125,8 @@ __metadata:
     eslint-plugin-qunit: ~8.0.1
     filesize: ~4.2.1
     flat: ~6.0.1
-    handlebars: 4.7.7
-    highlight.js: ^10.4.1
+    handlebars: 4.7.8
+    highlight.js: 10.4.1
     jsdoc-babel: ~0.5.0
     jsdoc-to-markdown: ~8.0.1
     jsondiffpatch: ~0.4.1
@@ -19152,7 +19134,7 @@ __metadata:
     lint-staged: ~10.5.1
     loader.js: ~4.7.0
     miragejs: ~0.1.48
-    node-notifier: ^8.0.1
+    node-notifier: ~8.0.1
     normalize.css: 4.1.1
     pkijs: ~2.2.2
     prettier: 3.0.3
@@ -19170,7 +19152,7 @@ __metadata:
     text-encoder-lite: 2.0.0
     tracked-built-ins: ~3.3.0
     typescript: ~5.4.5
-    uuid: ^9.0.0
+    uuid: ~11.1.0
     walk-sync: ~2.0.2
     webpack: 5.94.0
   languageName: unknown
