@@ -177,6 +177,7 @@ export interface VoidResponse {
 export interface ResponseTransformer<T> {
     (json: any): T;
 }
+export declare function camelizeResponseKeys(json: any): any;
 export declare class JSONApiResponse<T> {
     raw: Response;
     private transformer;
