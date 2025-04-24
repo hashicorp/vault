@@ -164,6 +164,8 @@ export default class AuthFormOidcJwt extends AuthBase {
     // ensure that postMessage event is from expected source
     // eslint-disable-next-line no-constant-condition
     while (true) {
+      // the oidc-callback url is parsed by getParamsForCallback in the oidc-callback route
+      // and the params are returned as event.data here
       const event = await waitForEvent(thisWindow, 'message');
       if (event.origin === thisWindow.origin && event.isTrusted && event.data.source === 'oidc-callback') {
         return this.exchangeOIDC.perform(event.data, oidcWindow);
@@ -176,19 +178,7 @@ export default class AuthFormOidcJwt extends AuthBase {
       return;
     }
 
-    let { namespace, path, state, code } = oidcState;
-
-    // The namespace can be either be passed as a query parameter, or be embedded
-    // in the state param in the format `<state_id>,ns=<namespace>`. So if
-    // `namespace` is empty, check for namespace in state as well.
-    if (namespace === '' || this.flags.hvdManagedNamespaceRoot) {
-      const i = state.indexOf(',ns=');
-      if (i >= 0) {
-        // ",ns=" is 4 characters
-        namespace = state.substring(i + 4);
-        state = state.substring(0, i);
-      }
-    }
+    const { path, state, code } = oidcState;
 
     if (!path || !state || !code) {
       return this.cancelLogin(oidcWindow, ERROR_MISSING_PARAMS);

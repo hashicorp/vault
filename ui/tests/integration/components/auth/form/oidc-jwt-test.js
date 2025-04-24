@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import hbs from 'htmlbars-inline-precompile';
-import { click, fillIn, find, render } from '@ember/test-helpers';
+import { click, fillIn, find, render, settled, waitUntil } from '@ember/test-helpers';
 import sinon from 'sinon';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import testHelper from './test-helper';
@@ -14,6 +14,8 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { ERROR_JWT_LOGIN } from 'vault/components/auth/form/oidc-jwt';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
+import { callbackData } from 'vault/tests/helpers/oidc-window-stub';
+import { _cancelTimers as cancelTimers } from '@ember/runloop';
 
 /* 
 The OIDC and JWT mounts call the same endpoint (see docs https://developer.hashicorp.com/vault/docs/auth/jwt )
@@ -139,6 +141,138 @@ const jwtLoginTests = (test) => {
   });
 };
 
+const oidcLoginTests = (test) => {
+  test('it renders fields', async function (assert) {
+    await this.renderComponent();
+    assert.dom(AUTH_FORM.authForm(this.authType)).exists(`${this.authType}: it renders form component`);
+    this.expectedFields.forEach((field) => {
+      assert.dom(GENERAL.inputByAttr(field)).exists(`${this.authType}: it renders ${field}`);
+    });
+  });
+
+  // true success has to be asserted in acceptance tests because it's not possible to mock a trusted message event
+  test('it opens the popup window on submit', async function (assert) {
+    this.server.post(`/auth/${this.authType}/oidc/auth_url`, () => {
+      return { data: { auth_url: '123-example.com' } };
+    });
+    sinon.replaceGetter(window, 'screen', () => ({ height: 600, width: 500 }));
+    await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('role'), 'test');
+    await click(AUTH_FORM.login);
+    await waitUntil(() => {
+      return this.windowStub.calledOnce;
+    });
+
+    const [authURL, windowName, windowDimensions] = this.windowStub.lastCall.args;
+
+    assert.strictEqual(authURL, '123-example.com', 'window stub called with auth_url');
+    assert.strictEqual(windowName, 'vaultOIDCWindow', 'window stub called with name');
+    assert.strictEqual(
+      windowDimensions,
+      'width=500,height=600,resizable,scrollbars=yes,top=0,left=0',
+      'window stub called with dimensions'
+    );
+    sinon.restore();
+  });
+
+  // auth_url error handling on submit
+  test('it fires onError callback on submit when auth_url request fails with 400', async function (assert) {
+    this.server.post('/auth/:path/oidc/auth_url', () => overrideResponse(400));
+    await this.renderComponent();
+    await click(AUTH_FORM.login);
+
+    const [actual] = this.onError.lastCall.args;
+    assert.strictEqual(actual, 'Authentication failed: Invalid role. Please try again.');
+  });
+
+  test('it fires onError callback on submit when auth_url request fails with 403', async function (assert) {
+    this.server.post('/auth/:path/oidc/auth_url', () => overrideResponse(403));
+    await this.renderComponent();
+    await click(AUTH_FORM.login);
+
+    const [actual] = this.onError.lastCall.args;
+    assert.strictEqual(actual, 'Authentication failed: Error fetching role: permission denied');
+  });
+
+  test('it fires onError callback on submit when auth_url request is successful but missing auth_url key', async function (assert) {
+    this.server.post('/auth/:path/oidc/auth_url', () => ({ data: {} }));
+    await this.renderComponent();
+    await click(AUTH_FORM.login);
+
+    const [actual] = this.onError.lastCall.args;
+    assert.strictEqual(
+      actual,
+      'Authentication failed: Missing auth_url. Please check that allowed_redirect_uris for the role include this mount path.',
+      'it calls onError'
+    );
+  });
+  // end auth_url error handling
+
+  // prepareForOIDC logic tests
+  test('fails silently when event is not trusted', async function (assert) {
+    assert.expect(2);
+    this.server.post(`/auth/${this.authType}/oidc/auth_url`, () => {
+      return { data: { auth_url: '123-example.com' } };
+    });
+    // prevent test incorrectly passing because the event isn't triggered at all
+    // by also asserting that the message event fires
+    const messageData = callbackData();
+    const assertEvent = (event) => {
+      assert.propEqual(event.data, messageData, 'message event fires');
+    };
+    window.addEventListener('message', assertEvent);
+
+    await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('role'), 'test');
+    await click(AUTH_FORM.login);
+    await waitUntil(() => {
+      return this.windowStub.calledOnce;
+    });
+    // mocking a message event is always untrusted (there is no way to override isTrusted on the window object)
+    window.dispatchEvent(new MessageEvent('message', { data: messageData }));
+
+    cancelTimers();
+    await settled();
+    assert.false(this.onSuccess.called, 'onSuccess is not called');
+
+    // Cleanup
+    window.removeEventListener('message', assertEvent);
+  });
+
+  // not the greatest test because this assertion would also pass if the event.origin === window.origin.
+  // because event.isTrusted is always false (another condition checked by the component)
+  // but this is good enough because the origin logic is checked first in the conditional.
+  test('it fails silently when event origin does not match window origin', async function (assert) {
+    assert.expect(3);
+    this.server.post(`/auth/${this.authType}/oidc/auth_url`, () => {
+      return { data: { auth_url: '123-example.com' } };
+    });
+    // prevent test incorrectly passing because the event isn't triggered at all
+    // by also asserting that the message event fires
+    const message = { data: callbackData(), origin: 'http://hackerz.com' };
+    const assertEvent = (event) => {
+      assert.propEqual(event.data, message.data, 'message has expected data');
+      assert.strictEqual(event.origin, message.origin, 'message has expected origin');
+    };
+    window.addEventListener('message', assertEvent);
+
+    await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('role'), 'test');
+    await click(AUTH_FORM.login);
+    await waitUntil(() => {
+      return this.windowStub.calledOnce;
+    });
+
+    window.dispatchEvent(new MessageEvent('message', message));
+    cancelTimers();
+    await settled();
+    assert.false(this.onSuccess.called, 'onSuccess is not called');
+
+    // Cleanup
+    window.removeEventListener('message', assertEvent);
+  });
+};
+
 module('Integration | Component | auth | form | oidc-jwt', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
@@ -152,8 +286,6 @@ module('Integration | Component | auth | form | oidc-jwt', function (hooks) {
     // additional test setup for oidc/jwt business
     this.store = this.owner.lookup('service:store');
     this.routerStub = sinon.stub(this.owner.lookup('service:router'), 'urlFor').returns('123-example.com');
-    // for oidc login workflow only
-    this.windowStub = sinon.stub(window, 'open');
 
     this.renderComponent = ({ yieldBlock = false } = {}) => {
       if (yieldBlock) {
@@ -179,10 +311,6 @@ module('Integration | Component | auth | form | oidc-jwt', function (hooks) {
         />
         `);
     };
-  });
-
-  hooks.afterEach(function () {
-    this.windowStub.restore();
   });
 
   test('it renders helper text', async function (assert) {
@@ -220,16 +348,18 @@ module('Integration | Component | auth | form | oidc-jwt', function (hooks) {
       jwtLoginTests(test);
     });
 
-    // module('login workflow: oidc', function (hooks) {
-    //   hooks.beforeEach(function () {
-    //     this.expectedSubmit = {
-    //       default: { path: 'oidc', role: 'some-dev' },
-    //       custom: { path: 'custom-oidc', role: 'some-dev' },
-    //     };
-    //   });
+    module('login workflow: oidc', function (hooks) {
+      hooks.beforeEach(function () {
+        // for oidc login workflow only
+        this.windowStub = sinon.stub(window, 'open');
+      });
 
-    //   oidcLoginTests(test);
-    // });
+      hooks.afterEach(function () {
+        this.windowStub.restore();
+      });
+
+      oidcLoginTests(test);
+    });
   });
 
   module('jwt', function (hooks) {
@@ -259,12 +389,17 @@ module('Integration | Component | auth | form | oidc-jwt', function (hooks) {
       jwtLoginTests(test);
     });
 
-    // module('login workflow: oidc', function (hooks) {
-    //   hooks.beforeEach(function () {
-    //     this.authType = 'jwt';
-    //   });
+    module('login workflow: oidc', function (hooks) {
+      hooks.beforeEach(function () {
+        // for oidc login workflow only
+        this.windowStub = sinon.stub(window, 'open');
+      });
 
-    //   oidcLoginTests(test);
-    // });
+      hooks.afterEach(function () {
+        this.windowStub.restore();
+      });
+
+      oidcLoginTests(test);
+    });
   });
 });
