@@ -6,19 +6,16 @@
 import { _cancelTimers as cancelTimers } from '@ember/runloop';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { fillIn, render, settled, waitUntil } from '@ember/test-helpers';
+import { click, fillIn, render, settled, waitUntil } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { resolve } from 'rsvp';
-import { create } from 'ember-cli-page-object';
-import form from '../../pages/components/auth-jwt';
 import { ERROR_JWT_LOGIN } from 'vault/components/auth-jwt';
 import { callbackData } from 'vault/tests/helpers/oidc-window-stub';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
-
-const component = create(form);
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const renderIt = async (context, { path = 'jwt', type = 'jwt' } = {}) => {
   const handler = (data, e) => {
@@ -78,7 +75,7 @@ module('Integration | Component | auth jwt', function (hooks) {
 
   test('it renders the yield', async function (assert) {
     await render(hbs`<AuthJwt @onSubmit={{action (mut this.submit)}}>Hello!</AuthJwt>`);
-    assert.strictEqual(component.yieldContent, 'Hello!', 'yields properly');
+    assert.dom('[data-test-yield-content]').hasText('Hello!', 'yields properly');
   });
 
   test('it fetches auth_url when type changes', async function (assert) {
@@ -119,8 +116,8 @@ module('Integration | Component | auth jwt', function (hooks) {
     await renderIt(this);
     await settled();
     assert.strictEqual(postCount, 1, 'request to the default path is made');
-    assert.ok(component.jwtPresent, 'renders jwt field');
-    assert.ok(component.rolePresent, 'renders jwt field');
+    assert.dom(GENERAL.inputByAttr('jwt')).exists();
+    assert.dom(GENERAL.inputByAttr('role')).exists();
 
     this.set('selectedAuthPath', 'foo');
     await settled();
@@ -129,7 +126,7 @@ module('Integration | Component | auth jwt', function (hooks) {
 
   test('jwt: it calls passed action on login', async function (assert) {
     await renderIt(this);
-    await component.login();
+    await click(AUTH_FORM.login);
     assert.ok(this.handler.calledOnce);
   });
 
@@ -145,12 +142,12 @@ module('Integration | Component | auth jwt', function (hooks) {
     });
     await renderIt(this, { path: 'foo', type: 'oidc' });
     await settled();
-    await fillIn(AUTH_FORM.roleInput, 'test');
+    await fillIn(GENERAL.inputByAttr('role'), 'test');
     assert
-      .dom(AUTH_FORM.input('jwt'))
+      .dom(GENERAL.inputByAttr('jwt'))
       .doesNotExist('does not show jwt token input if role matches OIDC login url');
     assert.dom(AUTH_FORM.login).hasText('Sign in with OIDC Provider');
-    await fillIn(AUTH_FORM.roleInput, 'okta');
+    await fillIn(GENERAL.inputByAttr('role'), 'okta');
     // 1 for initial render, 1 for each time role changed = 3
     assert.strictEqual(postCount, 3, 'fetches the auth_url when the role changes');
     assert.dom(AUTH_FORM.login).hasText('Sign in with Okta', 'recognizes auth methods with certain urls');
@@ -176,8 +173,8 @@ module('Integration | Component | auth jwt', function (hooks) {
   test('oidc: it calls window.open popup window on login', async function (assert) {
     sinon.replaceGetter(window, 'screen', () => ({ height: 600, width: 500 }));
     await renderIt(this, { path: 'foo', type: 'oidc' });
-    await component.role('test');
-    component.login();
+    await fillIn(GENERAL.inputByAttr('role'), 'test');
+    await click(AUTH_FORM.login);
     await waitUntil(() => {
       return this.windowStub.calledOnce;
     });
@@ -205,8 +202,8 @@ module('Integration | Component | auth jwt', function (hooks) {
     window.addEventListener('message', assertEvent);
 
     await renderIt(this, { path: 'foo', type: 'oidc' });
-    await component.role('test');
-    component.login();
+    await fillIn(GENERAL.inputByAttr('role'), 'test');
+    await click(AUTH_FORM.login);
     await waitUntil(() => {
       return this.windowStub.calledOnce;
     });
@@ -231,8 +228,8 @@ module('Integration | Component | auth jwt', function (hooks) {
     window.addEventListener('message', assertEvent);
 
     await renderIt(this, { path: 'foo', type: 'oidc' });
-    await component.role('test');
-    component.login();
+    await fillIn(GENERAL.inputByAttr('role'), 'test');
+    await click(AUTH_FORM.login);
     await waitUntil(() => {
       return this.windowStub.calledOnce;
     });
@@ -249,8 +246,8 @@ module('Integration | Component | auth jwt', function (hooks) {
 
   test('oidc: it should trigger error callback when role is not found', async function (assert) {
     await renderIt(this, { path: 'oidc', type: 'oidc' });
-    await component.role('foo');
-    await component.login();
+    await fillIn(GENERAL.inputByAttr('role'), 'foo');
+    await click(AUTH_FORM.login);
     assert.strictEqual(
       this.error,
       'Invalid role. Please try again.',
@@ -260,8 +257,8 @@ module('Integration | Component | auth jwt', function (hooks) {
 
   test('oidc: it should trigger error callback when role is returned without auth_url', async function (assert) {
     await renderIt(this, { path: 'oidc', type: 'oidc' });
-    await component.role('bar');
-    await component.login();
+    await fillIn(GENERAL.inputByAttr('role'), 'bar');
+    await click(AUTH_FORM.login);
     assert.strictEqual(
       this.error,
       'Missing auth_url. Please check that allowed_redirect_uris for the role include this mount path.',

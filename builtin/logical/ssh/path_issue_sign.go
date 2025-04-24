@@ -101,7 +101,7 @@ func (b *backend) pathSignIssueCertificateHelper(ctx context.Context, req *logic
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	privateKeyEntry, err := caKey(ctx, req.Storage, caPrivateKey)
+	privateKeyEntry, err := readStoredKey(ctx, req.Storage, caPrivateKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read CA private key: %w", err)
 	}

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { _cancelTimers as cancelTimers } from '@ember/runloop';
+import { _cancelTimers as cancelTimers, later } from '@ember/runloop';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { click, fillIn, render, settled } from '@ember/test-helpers';
@@ -91,8 +91,8 @@ module('Integration | Component | auth | login-form', function (hooks) {
     });
 
     await this.renderComponent();
-    await fillIn(AUTH_FORM.input('username'), 'sandy');
-    await fillIn(AUTH_FORM.input('password'), '1234');
+    await fillIn(GENERAL.inputByAttr('username'), 'sandy');
+    await fillIn(GENERAL.inputByAttr('password'), '1234');
     await click(AUTH_FORM.login);
     const [actual] = authenticateStub.lastCall.args;
     const expectedArgs = {
@@ -123,7 +123,7 @@ module('Integration | Component | auth | login-form', function (hooks) {
     });
 
     await this.renderComponent();
-    await fillIn(AUTH_FORM.input('token'), 'mytoken');
+    await fillIn(GENERAL.inputByAttr('token'), 'mytoken');
     await click(AUTH_FORM.login);
     const [authResponse, backendType, data] = this.onSuccess.lastCall.args;
     const expected = { isRoot: false, namespace: '', token: 'vault-token☃1' };
@@ -158,7 +158,7 @@ module('Integration | Component | auth | login-form', function (hooks) {
 
     await this.renderComponent();
 
-    setTimeout(() => cancelTimers(), 50);
+    later(() => cancelTimers(), 50);
     await settled();
     const [actual] = authenticateStub.lastCall.args;
     assert.propEqual(
@@ -191,8 +191,8 @@ module('Integration | Component | auth | login-form', function (hooks) {
     await this.renderComponent();
 
     await fillIn(GENERAL.selectByAttr('auth-method'), 'okta');
-    await fillIn(AUTH_FORM.input('username'), 'foo');
-    await fillIn(AUTH_FORM.input('password'), 'bar');
+    await fillIn(GENERAL.inputByAttr('username'), 'foo');
+    await fillIn(GENERAL.inputByAttr('password'), 'bar');
     await click(AUTH_FORM.login);
     assert
       .dom('[data-test-okta-number-challenge]')

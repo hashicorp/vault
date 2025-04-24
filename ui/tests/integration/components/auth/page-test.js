@@ -11,6 +11,7 @@ import sinon from 'sinon';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { fillInLoginFields } from 'vault/tests/helpers/auth/auth-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | auth | page', function (hooks) {
   setupRenderingTest(hooks);
@@ -57,14 +58,14 @@ module('Integration | Component | auth | page', function (hooks) {
     this.version.features = ['Namespaces'];
     await this.renderComponent();
     assert.dom(AUTH_FORM.logo).exists();
-    assert.dom(AUTH_FORM.namespaceInput).isDisabled();
+    assert.dom(GENERAL.inputByAttr('namespace')).isDisabled();
   });
 
   test('it calls onNamespaceUpdate', async function (assert) {
     assert.expect(1);
     this.version.features = ['Namespaces'];
     await this.renderComponent();
-    await fillIn(AUTH_FORM.namespaceInput, 'mynamespace');
+    await fillIn(GENERAL.inputByAttr('namespace'), 'mynamespace');
     const [actual] = this.onNamespaceUpdate.lastCall.args;
     assert.strictEqual(actual, 'mynamespace', `onNamespaceUpdate called with: ${actual}`);
   });
@@ -76,8 +77,8 @@ module('Integration | Component | auth | page', function (hooks) {
     this.nsQp = 'admin';
     await this.renderComponent();
 
-    assert.dom(AUTH_FORM.namespaceInput).hasValue('');
-    await fillIn(AUTH_FORM.namespaceInput, 'mynamespace');
+    assert.dom(GENERAL.inputByAttr('namespace')).hasValue('');
+    await fillIn(GENERAL.inputByAttr('namespace'), 'mynamespace');
     const [actual] = this.onNamespaceUpdate.lastCall.args;
     assert.strictEqual(actual, 'mynamespace', `onNamespaceUpdate called with: ${actual}`);
   });
@@ -126,7 +127,7 @@ module('Integration | Component | auth | page', function (hooks) {
       assert.expect(1);
       const customPath = `${authType}-custom`;
       const { loginData, url } = options;
-      const loginDataWithPath = { ...loginData, 'auth-form-mount-path': customPath };
+      const loginDataWithPath = { ...loginData, path: customPath };
       // pass custom path to request URL
       const requestUrl = url({ path: customPath, username: loginData?.username });
       this.authRequest(requestUrl);

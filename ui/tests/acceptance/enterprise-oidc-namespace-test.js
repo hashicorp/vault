@@ -3,13 +3,14 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { currentURL, click } from '@ember/test-helpers';
+import { currentURL, click, fillIn } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { runCmd, createNS } from 'vault/tests/helpers/commands';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import parseURL from 'core/utils/parse-url';
-import authPage from 'vault/tests/pages/auth';
+import { login, loginNs, logout } from 'vault/tests/helpers/auth/auth-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SELECTORS = {
   authTab: (path) => `[data-test-auth-method="${path}"] a`,
@@ -41,6 +42,8 @@ module('Acceptance | Enterprise | oidc auth namespace test', function (hooks) {
   test('oidc: request is made to auth_url when a namespace is inputted', async function (assert) {
     assert.expect(4);
 
+    // stubs the auth_url for the OIDC method configured in the namespace, NOT for the root namespace
+    // should only be hit once when the oidc tab is clicked after inputting a namespace
     this.server.post(`/auth/${this.nsOidc}/oidc/auth_url`, (schema, req) => {
       const { redirect_uri } = JSON.parse(req.requestBody);
       const { pathname, search } = parseURL(redirect_uri);
@@ -51,30 +54,31 @@ module('Acceptance | Enterprise | oidc auth namespace test', function (hooks) {
       );
     });
 
-    await authPage.login();
+    await login();
     // enable oidc in root namespace, without default role
     await this.enableOidc(this.rootOidc);
     // create child namespace to enable oidc
     await runCmd(createNS(this.namespace), false);
     // enable oidc in child namespace with default role
-    await authPage.loginNs(this.namespace);
+    await loginNs(this.namespace);
     await this.enableOidc(this.nsOidc, `${this.nsOidc}-role`);
     // check root namespace for method tab
-    await authPage.logout();
-    await authPage.namespaceInput('');
+    await logout();
+    await fillIn(GENERAL.inputByAttr('namespace'), '');
     assert.dom(SELECTORS.authTab(this.rootOidc)).exists('renders oidc method tab for root');
     // check child namespace for method tab
-    await authPage.namespaceInput(this.namespace);
+    await fillIn(GENERAL.inputByAttr('namespace'), this.namespace);
     assert.dom(SELECTORS.authTab(this.nsOidc)).exists('renders oidc method tab for child namespace');
     // clicking on the tab should update with= queryParam
-    await click(`[data-test-auth-method="${this.nsOidc}"] a`);
+    await click(`[data-test-auth-method="${this.nsOidc}"] a`); // fires request to /auth_url and assertion
     assert.strictEqual(
       currentURL(),
       `/vault/auth?namespace=${this.namespace}&with=${this.nsOidc}%2F`,
       'url updates with namespace value'
     );
     // disable methods to cleanup test state for re-running
-    await authPage.login();
+    await fillIn(GENERAL.inputByAttr('namespace'), '');
+    await login();
     await this.disableOidc(this.rootOidc);
     await this.disableOidc(this.nsOidc);
     await runCmd([`delete /sys/auth/${this.namespace}`]);
