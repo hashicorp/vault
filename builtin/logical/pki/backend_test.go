@@ -26,6 +26,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"os/exec"
 	"reflect"
 	"slices"
 	"sort"
@@ -46,6 +47,7 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -7514,6 +7516,52 @@ func TestIssuance_SignIntermediateKeyUsages(t *testing.T) {
 	require.Equal(t, x509.KeyUsageCertSign, intCert.KeyUsage&x509.KeyUsageCertSign, "keyUsage CertSign was not present")
 	require.Equal(t, x509.KeyUsageCRLSign, intCert.KeyUsage&x509.KeyUsageCRLSign, "keyUsage CRLSign was not present")
 	require.Equal(t, x509.KeyUsageDigitalSignature|x509.KeyUsageCertSign|x509.KeyUsageCRLSign, intCert.KeyUsage, "unexpected KeyUsage present on intermediate certificate")
+}
+
+func TestIssuance_DeltaCRLDistributionPoint(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	// Set up the Mount-Level AIA information
+	resp, err := CBWrite(b, s, "config/urls", map[string]interface{}{
+		"delta_crl_distribution_points": []string{"http://example.com/crl/delta", "http://backup.example.com/crl/delta"},
+	})
+	requireSuccessNonNilResponse(t, resp, err, "expected setting mount-level DeltaCRLDistributionPoints to succeed")
+	require.Contains(t, resp.Warnings, "delta_crl_distribution_points were set: http://example.com/crl/delta, http://backup.example.com/crl/delta but not crl_distribution_points, consider setting crl_distribution_points")
+
+	// Create a (Root) Certificate with this AIA information
+	resp, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"key_type":    "ec",
+		"ttl":         "10h",
+		"issuer_name": "root-ca",
+		"key_name":    "root-key",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "expected root generation to succeed")
+	require.NotNil(t, resp.Data, "expected response to have body")
+	require.NotNil(t, resp.Data["certificate"], "expected response to contain generated certificate")
+
+	// Use openssl to check that the certificate created does have the expected Delta CRL Distribution Point Information
+	tmpDir := t.TempDir()
+	filePath := writeToTmpDir(t, tmpDir, "certificate.pem", resp.Data["certificate"].(string))
+
+	opensslCmd, output, found := findOpenSSL()
+	if !found {
+		t.Skipf("no appropriate OpenSSL version found")
+	}
+	log := corehelpers.NewTestLogger(t)
+	log.Info("Using OpenSSL", "path", opensslCmd, "version", output)
+
+	// The open ssl test:
+	args := []string{
+		"x509",
+		"-noout",
+		"-text",
+		"-in", filePath,
+	}
+	out, err := exec.Command(opensslCmd, args...).CombinedOutput()
+	require.NoError(t, err, "failed running command %s with args: %v\n%s", opensslCmd, args, string(out))
+	require.Regexp(t, `\s+X509v3 Freshest CRL:\s+Full Name:\s+URI:http://example.com/crl/delta\s+Full Name:\s+URI:http://backup\.example\.com/crl/delta`, string(out))
 }
 
 var (
