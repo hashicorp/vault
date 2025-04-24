@@ -3651,9 +3651,12 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 			policy.Raw = string(polBytes)
 		}
 
+		var duplicate bool
 		switch policyType {
 		case PolicyTypeACL:
-			p, err := ParseACLPolicy(ns, policy.Raw)
+			var p *Policy
+			// TODO (HCL_DUP_KEYS_DEPRECATION): go back to ParseACLPolicy once the deprecation is done
+			p, duplicate, err = ParseACLPolicyCheckDuplicates(ns, policy.Raw)
 			if err != nil {
 				return handleError(err)
 			}
@@ -3677,6 +3680,11 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 			return handleError(err)
 		}
 
+		if duplicate {
+			// TODO (HCL_DUP_KEYS_DEPRECATION): remove log and API Warning once the deprecation is done
+			b.logger.Warn("newly created HCL policy contains duplicate attributes, which will be forbidden in a future version", "policy", policy.Name, "namespace", ns.Path)
+			resp.AddWarning("policy contains duplicate attributes, which will be forbidden in a future version")
+		}
 		return resp, nil
 	}
 }
