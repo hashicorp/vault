@@ -17,7 +17,7 @@ export const SECRET_ENGINE_SELECTORS = {
   // ARG TODO try without the optional path because it should always have an id passed in
   secretsBackendLink: (path: string) =>
     path ? `[data-test-secrets-backend-link="${path}"]` : '[data-test-secrets-backend-link]',
-  createSecretLink: '[data-test-create-secret-link',
+  createSecretLink: '[data-test-create-secret-link]',
   secretPath: (name: string) => `[data-test-secret-path="${name}"]`,
   secretHeader: '[data-test-secret-header]',
   secretLink: (name: string) => (name ? `[data-test-secret-link="${name}"]` : '[data-test-secret-link]'),
