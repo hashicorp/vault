@@ -156,7 +156,9 @@ export default class AuthFormOidcJwt extends AuthBase {
     }
   }
 
-  //* OIDC AUTH BEGINS
+  // * OIDC AUTH PART 1
+  // 1. request oidc/auth_url to check for config errors, if none continue
+  // 2. open popup window at auth_url
   async startOIDCAuth() {
     await this.fetchRole.perform();
 
@@ -183,28 +185,33 @@ export default class AuthFormOidcJwt extends AuthBase {
     }
   }
 
-  // NOTE TO DEVS: Be careful when updating the OIDC flow and ensure the updates
-  // work with implicit flow. See issue https://github.com/hashicorp/vault-plugin-auth-jwt/pull/192
+  // * OIDC AUTH PART 2
+  // 3. watch popups for premature closure
+  // 4. wait message event from window.postMessage() in oidc-callback route
   prepareForOIDC = task(async (oidcWindow) => {
+    // NOTE TO DEVS: Be careful when updating the OIDC flow and ensure the updates
+    // work with implicit flow. See issue https://github.com/hashicorp/vault-plugin-auth-jwt/pull/192
     const thisWindow = window;
 
     // start watching the popup window and the current one
     this.watchPopup.perform(oidcWindow);
     this.watchCurrent.perform(oidcWindow);
-    // wait for message posted from oidc callback
-    // see issue https://github.com/hashicorp/vault/issues/12436
-    // ensure that postMessage event is from expected source
     // eslint-disable-next-line no-constant-condition
     while (true) {
-      // the oidc-callback url is parsed by getParamsForCallback in the oidc-callback route
-      // and the params are returned as event.data here
+      // wait for message posted from oidc callback, see issue https://github.com/hashicorp/vault/issues/12436
+      // ensure that postMessage event is from expected source
       const event = (await waitForEvent(thisWindow, 'message')) as unknown as MessageEvent;
       if (event.origin === thisWindow.origin && event.isTrusted && event.data.source === 'oidc-callback') {
+        // event.data are params from the oidc callback url parsed by getParamsForCallback in the oidc-callback route
         return this.exchangeOIDC.perform(event.data, oidcWindow);
       }
     }
   });
 
+  // * OIDC AUTH PART 3
+  // 5. check parsed url for expected state params
+  // 6. if successful, request client_token from oidc/callback
+  // 7. close popups and continue login with client_token
   exchangeOIDC = task(async (oidcState, oidcWindow) => {
     if (oidcState === null || oidcState === undefined) {
       return;
@@ -214,6 +221,10 @@ export default class AuthFormOidcJwt extends AuthBase {
     if (!path || !state || !code) {
       return this.cancelLogin(oidcWindow, ERROR_MISSING_PARAMS);
     }
+
+    // TODO CMB - when wiring up components check if this is still necessary
+    // pass namespace from state back to AuthForm
+    // this.args.onNamespace(namespace);
 
     let resp;
     // do the OIDC exchange, set the token and continue login flow
