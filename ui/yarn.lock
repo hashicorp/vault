@@ -8652,7 +8652,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-cli-typescript@npm:~5.3.0":
+"ember-cli-typescript@npm:5.3.0":
   version: 5.3.0
   resolution: "ember-cli-typescript@npm:5.3.0"
   dependencies:
@@ -13122,7 +13122,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"json5@npm:~1.0.2":
+"json5@npm:1.0.2":
   version: 1.0.2
   resolution: "json5@npm:1.0.2"
   dependencies:
@@ -15741,7 +15741,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prismjs@npm:~1.30.0":
+"prismjs@npm:1.30.0":
   version: 1.30.0
   resolution: "prismjs@npm:1.30.0"
   checksum: a68eddd4c5f1c506badb5434b0b28a7cc2479ed1df91bc4218e6833c7971ef40c50ec481ea49749ac964256acb78d8b66a6bd11554938e8998e46c18b5f9a580
@@ -16621,7 +16621,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"rollup@npm:~2.79.2":
+"rollup@npm:2.79.2":
   version: 2.79.2
   resolution: "rollup@npm:2.79.2"
   dependencies:
@@ -16953,7 +16953,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"serialize-javascript@npm:~3.1.0":
+"serialize-javascript@npm:3.1.0":
   version: 3.1.0
   resolution: "serialize-javascript@npm:3.1.0"
   dependencies:
@@ -17250,7 +17250,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"socket.io@npm:~4.6.2":
+"socket.io@npm:4.6.2":
   version: 4.6.2
   resolution: "socket.io@npm:4.6.2"
   dependencies:
@@ -18701,7 +18701,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"underscore@npm:~1.12.1":
+"underscore@npm:1.12.1":
   version: 1.12.1
   resolution: "underscore@npm:1.12.1"
   checksum: ec327603aa112b99fe9d74cd9bf3b3b7451465a9d2610ceab269a532e3f191650ab017903be34dc86fe406a11d04d8905a3b04dd4c129493e51bee09a3f3074c
