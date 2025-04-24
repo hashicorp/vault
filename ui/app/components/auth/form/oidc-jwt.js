@@ -11,6 +11,7 @@ import { restartableTask, task, timeout, waitForEvent } from 'ember-concurrency'
 import { action } from '@ember/object';
 import { sanitizePath } from 'core/utils/sanitize-path';
 import { waitFor } from '@ember/test-waiters';
+import errorMessage from 'vault/utils/error-message';
 
 /**
  * @module Auth::Form::OidcJwt
@@ -90,14 +91,14 @@ export default class AuthFormOidcJwt extends AuthBase {
       });
       this.isOIDC = true;
     } catch (e) {
-      const error = (e.errors || [])[0];
-      const errorMessage =
-        e.httpStatus === 400 ? 'Invalid role. Please try again.' : `Error fetching role: ${error}`;
+      const { httpStatus } = e;
+      const message = errorMessage(e);
+      // track errors but they only display on submit
+      this.errorMessage =
+        httpStatus === 400 ? 'Invalid role. Please try again.' : `Error fetching role: ${message}`;
       // if the mount is configured for JWT authentication via static keys, JWKS, or OIDC discovery
       // this specific error is returned. Flip the isOIDC boolean accordingly, otherwise assume OIDC.
-      this.isOIDC = error !== ERROR_JWT_LOGIN;
-      // track errors but only display them on submit
-      this.errorMessage = errorMessage;
+      this.isOIDC = message !== ERROR_JWT_LOGIN;
     }
   });
 
