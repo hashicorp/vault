@@ -19,7 +19,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
   setupApplicationTest(hooks);
 
   const createSecret = async (path, key, value, enginePath) => {
-    await click(SES.createSecret);
+    await click(SES.createSecretLink);
     await fillIn('[data-test-secret-path]', path);
 
     await fillIn('[data-test-secret-key]', key);
