@@ -1,0 +1,13 @@
+### Automated Rotation Stops After Unseal
+
+#### Affected Versions
+
+- 1.19.0, 1.19.1, 1.19.2
+
+#### Issue
+
+After unsealing Vault, the rotation manager does not correctly reinstate the rotation queue.
+
+#### Workaround
+
+Update the root configuration on an affected backend to cause Vault to recreate the rotation schedule.
