@@ -57,7 +57,7 @@ if [ "${VERIFY_PKI_CERTS}" = true ]; then
   [[ -z "$VAULT_CERTS" ]] && fail "VAULT_CERTS should include vault certificates"
   for CERT in $VAULT_CERTS; do
     echo "Getting certificate from Vault PKI: ${CERT}"
-    "$binpath" read "${MOUNT}/cert/${CERT}" | jq -r '.data.certificate' >"${TEST_DIR}/${TMP_FILE}"
+    "$binpath" read "${MOUNT}/cert/${CERT}" | jq -r '.data.certificate' > "${TEST_DIR}/${TMP_FILE}"
     echo "Verifying certificate contents..."
     openssl x509 -in "${TEST_DIR}/${TMP_FILE}" -text -noout || fail "The certificate appears to be improperly configured or contains errors"
     CURR_CERT_SERIAL=$(echo "${CERT}" | tr -d ':' | tr '[:lower:]' '[:upper:]')
@@ -90,9 +90,9 @@ if [ "${VERIFY_PKI_CERTS}" = true ]; then
     CA_NAME="ca.pem"
     INTERMEDIATE_CA_NAME="intermediate-ca.pem"
     ISSUED_NAME="issued.pem"
-    "$binpath" read "${MOUNT}/cert/${CA_CERT}" | jq -r '.data.certificate' >"${TEST_DIR}/${CA_NAME}"
-    "$binpath" read "${MOUNT}/cert/${INTERMEDIATE_CA_CERT}" | jq -r '.data.certificate' >"${TEST_DIR}/${INTERMEDIATE_CA_NAME}"
-    "$binpath" read "${MOUNT}/cert/${INTERMEDIATE_ISSUED_CERT}" | jq -r '.data.certificate' >"${TEST_DIR}/${ISSUED_NAME}"
+    "$binpath" read "${MOUNT}/cert/${CA_CERT}" | jq -r '.data.certificate' > "${TEST_DIR}/${CA_NAME}"
+    "$binpath" read "${MOUNT}/cert/${INTERMEDIATE_CA_CERT}" | jq -r '.data.certificate' > "${TEST_DIR}/${INTERMEDIATE_CA_NAME}"
+    "$binpath" read "${MOUNT}/cert/${INTERMEDIATE_ISSUED_CERT}" | jq -r '.data.certificate' > "${TEST_DIR}/${ISSUED_NAME}"
     openssl verify --CAfile "${TEST_DIR}/${CA_NAME}" -untrusted "${TEST_DIR}/${INTERMEDIATE_CA_NAME}" "${TEST_DIR}/${ISSUED_NAME}" || fail "One or more Certificate is not valid."
   else
     echo "CA Cert: ${CA_CERT}, Intermedidate Cert: ${INTERMEDIATE_CA_CERT}, Issued Cert: ${INTERMEDIATE_ISSUED_CERT}"

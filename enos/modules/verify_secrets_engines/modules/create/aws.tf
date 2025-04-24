@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 module "create_aws_secrets_engine" {
   count  = var.create_aws_secrets_engine ? 1 : 0
   source = "./aws"
@@ -10,9 +13,9 @@ module "create_aws_secrets_engine" {
 }
 
 locals {
-  aws_output = try(module.create_aws_secrets_engine[0].output, null)
+  aws_state = try(module.create_aws_secrets_engine[0].state, null)
 }
 
 output "aws" {
-  value = local.aws_output
+  value = local.aws_state
 }

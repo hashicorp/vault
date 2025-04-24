@@ -5,7 +5,7 @@
 // return the metadata for an artifact.
 
 variable "arch" {
-  description = "The platform architecture"
+  description = "The artifact platform architecture"
   type        = string
 
   validation {
@@ -17,7 +17,7 @@ variable "arch" {
 }
 
 variable "distro" {
-  description = "The operating system distro"
+  description = "The target operating system distro"
   type        = string
 
   validation {
@@ -41,7 +41,7 @@ variable "edition" {
 }
 
 variable "package_type" {
-  description = "The preferred packaging"
+  description = "The artifact packaging type"
   type        = string
 
   validation {
@@ -53,7 +53,7 @@ variable "package_type" {
 }
 
 variable "vault_version" {
-  description = "The of Vault or Vault Enterprise. E.g 1.18.2, 1.19.0-rc1, 1.18.5+ent.hsm"
+  description = "The version of Vault or Vault Enterprise. E.g 1.18.2, 1.19.0-rc1, 1.18.5+ent.hsm"
   type        = string
 }
 

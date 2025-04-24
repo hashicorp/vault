@@ -114,7 +114,7 @@ resource "enos_remote_exec" "secrets_enable_aws_secret" {
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
-  scripts = [abspath("${path.module}/../../scripts/secrets-enable.sh")]
+  scripts = [abspath("${path.module}/../../../scripts/secrets-enable.sh")]
 
   transport = {
     ssh = {

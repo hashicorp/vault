@@ -28,7 +28,6 @@ locals {
       "rhel" = {
         "8.10" = data.aws_ami.rhel_8["arm64"].id
         "9.5"  = data.aws_ami.rhel_9["arm64"].id
-        "10.0" = data.aws_ami.rhel_9["arm64"].id
       }
       "sles" = {
         "15.6" = data.aws_ami.sles_15["arm64"].id
