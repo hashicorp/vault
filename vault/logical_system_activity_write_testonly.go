@@ -398,7 +398,7 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 		startTime, endTime := activityLog.getStartTimeAndEndTimeUntilLastMonth(true)
 
 		// only load clients used until last month in the billing period to memory
-		if writeClientIDsMemory && (!startTime.After(timestamp) && !endTime.Before(timestamp)) {
+		if writeClientIDsMemory && (startTime != time.Time{} && !startTime.After(timestamp) && !endTime.Before(timestamp)) {
 			loadClientIDsToMemory = true
 		}
 
