@@ -4862,12 +4862,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ansi-html@npm:^0.0.8":
-  version: 0.0.8
-  resolution: "ansi-html@npm:0.0.8"
+"ansi-html@npm:~0.0.8":
+  version: 0.0.9
+  resolution: "ansi-html@npm:0.0.9"
   bin:
     ansi-html: bin/ansi-html
-  checksum: aee57b90d7c0b2e661446b7c3cacc70511518ea434aaf299280ab3aa943757fd101ef5e7351850c64f55b8a3692b6df32b965f2645435a83cf4a82cbceb8b69e
+  checksum: a03754d6f66bae33938ed8bb3dd98174b7f4895ebe45226185036ed4a1388a7aaf2f2b9581608f0626432ba7add92cfc590aa6475a78bbb90d9d1e1d1af8cbe6
   languageName: node
   linkType: hard
 
@@ -5247,7 +5247,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"async@npm:^2.6.4":
+"async@npm:~2.6.4":
   version: 2.6.4
   resolution: "async@npm:2.6.4"
   dependencies:
@@ -5621,7 +5621,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"body-parser@npm:^1.20.3":
+"body-parser@npm:~1.20.3":
   version: 1.20.3
   resolution: "body-parser@npm:1.20.3"
   dependencies:
@@ -5679,7 +5679,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"braces@npm:^3.0.3":
+"braces@npm:~3.0.3":
   version: 3.0.3
   resolution: "braces@npm:3.0.3"
   dependencies:
@@ -10066,7 +10066,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eslint-utils@npm:^1.4.1":
+"eslint-utils@npm:~1.4.1":
   version: 1.4.3
   resolution: "eslint-utils@npm:1.4.3"
   dependencies:
@@ -11919,10 +11919,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"highlight.js@npm:^10.4.1":
-  version: 10.7.3
-  resolution: "highlight.js@npm:10.7.3"
-  checksum: defeafcd546b535d710d8efb8e650af9e3b369ef53e28c3dc7893eacfe263200bba4c5fcf43524ae66d5c0c296b1af0870523ceae3e3104d24b7abf6374a4fea
+"highlight.js@npm:~10.4.1":
+  version: 10.4.1
+  resolution: "highlight.js@npm:10.4.1"
+  checksum: b6b5f6c4ab6f5d2289fa2d2c321759cd0af081daf8586b1c51185a59914804b3062bb66969e38ac0609782cca775ef3060a4f0c38a04c12c668a884117b67531
   languageName: node
   linkType: hard
 
@@ -12048,7 +12048,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"https-proxy-agent@npm:^2.2.3":
+"https-proxy-agent@npm:~2.2.3":
   version: 2.2.4
   resolution: "https-proxy-agent@npm:2.2.4"
   dependencies:
@@ -12231,7 +12231,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ini@npm:^1.3.6":
+"ini@npm:~1.3.6":
   version: 1.3.8
   resolution: "ini@npm:1.3.8"
   checksum: dfd98b0ca3a4fc1e323e38a6c8eb8936e31a97a918d3b377649ea15bdb15d481207a0dda1021efbd86b464cae29a0d33c1d7dcaf6c5672bee17fa849bc50a1b3
@@ -13239,7 +13239,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"kind-of@npm:^6.0.3":
+"kind-of@npm:~6.0.3":
   version: 6.0.3
   resolution: "kind-of@npm:6.0.3"
   checksum: 3ab01e7b1d440b22fe4c31f23d8d38b4d9b91d9f291df683476576493d5dfd2e03848a8b05813dd0c3f0e835bc63f433007ddeceb71f05cb25c45ae1b19c6d3b
@@ -14769,7 +14769,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"node-notifier@npm:^8.0.1":
+"node-notifier@npm:~8.0.1":
   version: 8.0.2
   resolution: "node-notifier@npm:8.0.2"
   dependencies:
@@ -15751,7 +15751,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prismjs@npm:^1.21.0":
+"prismjs@npm:~1.30.0":
   version: 1.30.0
   resolution: "prismjs@npm:1.30.0"
   checksum: a68eddd4c5f1c506badb5434b0b28a7cc2479ed1df91bc4218e6833c7971ef40c50ec481ea49749ac964256acb78d8b66a6bd11554938e8998e46c18b5f9a580
