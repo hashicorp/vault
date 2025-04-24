@@ -1,0 +1,47 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<form
+  {{did-insert this.initializeFormData}}
+  {{! OIDC and JWT share the same form and so @authType is the only indication a user has switched tabs.
+  Selecting a different type means we need to re-initialize form data and re-request the role }}
+  {{did-update this.initializeFormData @authType}}
+  {{! manage input changes at the <form> level since "path" and "namespace" are yielded }}
+  {{on "input" this.updateFormData}}
+  {{on "submit" this.onSubmit}}
+  data-test-auth-form={{@authType}}
+>
+
+  {{yield to="namespace"}}
+
+  <div class="has-padding-l">
+    {{yield to="back"}}
+    {{yield to="authSelectOptions"}}
+    {{yield to="error"}}
+
+    <Hds::Form::TextInput::Field @type="text" class="has-bottom-margin-m" name="role" data-test-input="role" as |F|>
+      <F.Label>Role</F.Label>
+      <F.HelperText>Vault will use the default role to sign in if this field is left blank.</F.HelperText>
+    </Hds::Form::TextInput::Field>
+
+    {{#unless this.isOIDC}}
+      <Hds::Form::TextInput::Field @type="password" class="has-bottom-margin-m" name="jwt" data-test-input="jwt" as |F|>
+        <F.Label>JWT Token</F.Label>
+      </Hds::Form::TextInput::Field>
+    {{/unless}}
+
+    {{yield to="advancedSettings"}}
+
+    <Hds::Button
+      @isFullWidth={{true}}
+      @text="Sign in"
+      class="has-top-margin-m has-bottom-margin-m"
+      type="submit"
+      data-test-auth-submit
+    />
+
+    {{yield to="footer"}}
+  </div>
+</form>
