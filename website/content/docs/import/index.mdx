@@ -37,22 +37,23 @@ read from, and how to filter this data. Three HCL blocks make this possible:
 The secrets import feature requires manual activation through a one-time trigger. If a import-related endpoint is called prior to
 activation, an error response will be received indicating that the feature has not been activated yet.
 
-1. Activation directly through the UI.
+<Tabs>
+<Tab heading="CLI" group="cli">
 
-2. Activation through the CLI:
+$ vault write -f sys/activation-flags/secrets-import/activate
 
-  ```shell-session
-  $ vault write -f sys/activation-flags/secrets-import/activate
-  ```
+</Tab>
+<Tab heading="API" group="api">
 
-3. Activation through a POST or PUT request:
+```shell-session
+$ curl \
+  --request PUT \
+  --header "X-Vault-Token: ..." \
+  http://127.0.0.1:8200/v1/sys/activation-flags/secrets-import/activate
+```
 
-  ```shell-session
-  $ curl \
-    --request PUT \
-    --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/sys/activation-flags/secrets-import/activate
-  ```
+</Tab>
+</Tabs>
 
 ## Destinations
 
