@@ -456,7 +456,7 @@ func TestPolicyStore_DuplicateAttributes(t *testing.T) {
 	}
 	core, _, _ := TestCoreUnsealedWithConfig(t, conf)
 	ps := core.policyStore
-	dupAttrPolicy := aclPolicy2 + `
+	dupAttrPolicy := aclPolicy + `
 path "foo" {
 	capabilities = ["deny"]
 	capabilities = ["deny"]
@@ -472,6 +472,12 @@ path "foo" {
 	logOut.Reset()
 	_, err = ps.ACL(ctx, nil, map[string][]string{namespace.RootNamespace.ID: {"dev", "ops"}})
 	require.NoError(t, err)
+	require.Contains(t, logOut.String(), "HCL policy contains duplicate attributes")
 
+	ps.tokenPoliciesLRU.Purge()
+	logOut.Reset()
+	p, err := ps.GetPolicy(ctx, "dev", PolicyTypeACL)
+	require.NotNil(t, p)
+	require.NoError(t, err)
 	require.Contains(t, logOut.String(), "HCL policy contains duplicate attributes")
 }

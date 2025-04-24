@@ -588,9 +588,12 @@ func (ps *PolicyStore) switchedGetPolicy(ctx context.Context, name string, polic
 	switch policyEntry.Type {
 	case PolicyTypeACL:
 		// Parse normally
-		p, err := ParseACLPolicy(ns, policyEntry.Raw)
+		p, duplicate, err := ParseACLPolicyCheckDuplicates(ns, policyEntry.Raw)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse policy: %w", err)
+		}
+		if duplicate {
+			ps.logger.Warn("HCL policy contains duplicate attributes", "policy", policy.Name, "namespace", policy.namespace.Path)
 		}
 		policy.Paths = p.Paths
 
@@ -876,7 +879,7 @@ func (ps *PolicyStore) ACL(ctx context.Context, entity *identity.Entity, policyN
 				return nil, fmt.Errorf("error parsing templated policy %q: %w", policy.Name, err)
 			}
 			if duplicate {
-				ps.logger.Warn("HCL policy contains duplicate attributes", "policy", policy.Name, "namespace", policy.namespace.Path)
+				ps.logger.Warn("HCL policy contains duplicate attributes, which will be forbidden in a future version", "policy", policy.Name, "namespace", policy.namespace.Path)
 			}
 			p.Name = policy.Name
 			allPolicies[i] = p
