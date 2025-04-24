@@ -15,6 +15,8 @@ export interface AuthData {
   renewable: boolean;
   entity_id: string;
   displayName?: string;
+  mfa_requirement: object;
+  client_token: string;
 }
 
 export default class AuthService extends Service {
@@ -22,11 +24,11 @@ export default class AuthService extends Service {
   currentToken: string;
   mfaErrors: null | Errors[];
   setLastFetch: (time: number) => void;
-  handleError: (error: Error) => string | error[] | [error];
+  handleError: (error: Error | string) => string | error[] | [error];
   authenticate(params: {
     clusterId: string;
     backend: string;
-    data: Record<string, FormDataEntryValue | null>;
+    data: object;
     selectedAuth: string;
   }): Promise<any>;
   ajax: (
