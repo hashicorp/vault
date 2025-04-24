@@ -26,7 +26,7 @@ export default class FormField {
     this.type = type;
     this.options = {
       ...options,
-      fieldValue: options.fieldValue || `data.${key}`,
+      fieldValue: options.fieldValue || key,
     };
   }
 }
