@@ -8,25 +8,7 @@ import { sanitizePath, sanitizeStart } from 'core/utils/sanitize-path';
 
 import type ApiService from 'vault/services/api';
 import type NamespaceService from 'vault/services/namespace';
-
-interface Capabilities {
-  canCreate: boolean;
-  canDelete: boolean;
-  canList: boolean;
-  canPatch: boolean;
-  canRead: boolean;
-  canSudo: boolean;
-  canUpdate: boolean;
-}
-
-interface MultipleCapabilities {
-  [key: string]: Capabilities;
-}
-
-type CapabilityTypes = 'root' | 'sudo' | 'deny' | 'create' | 'read' | 'update' | 'delete' | 'list' | 'patch';
-interface CapabilitiesData {
-  [key: string]: CapabilityTypes[];
-}
+import type { Capabilities, CapabilitiesMap, CapabilitiesData, CapabilityTypes } from 'vault/app-types';
 
 export default class CapabilitiesService extends Service {
   @service declare readonly api: ApiService;
@@ -59,7 +41,7 @@ export default class CapabilitiesService extends Service {
     const { SUDO_PATHS, SUDO_PATH_PREFIXES } = this;
     // request may not return capabilities for all provided paths
     // loop provided paths and map capabilities, defaulting to true for missing paths
-    return paths.reduce((mappedCapabilities: MultipleCapabilities, path) => {
+    return paths.reduce((mappedCapabilities: CapabilitiesMap, path) => {
       // key in capabilitiesData includes relativeNamespace if applicable
       const key = this.relativeNamespacePath(path);
       const capabilities = capabilitiesData[key];
@@ -94,7 +76,7 @@ export default class CapabilitiesService extends Service {
     }, {});
   }
 
-  async fetch(paths: string[]): Promise<MultipleCapabilities> {
+  async fetch(paths: string[]): Promise<CapabilitiesMap> {
     const payload = {
       paths: paths.map((path) => this.relativeNamespacePath(path)),
       namespace: sanitizePath(this.namespace.userRootNamespace),
@@ -106,7 +88,7 @@ export default class CapabilitiesService extends Service {
     } catch (e) {
       // default to true if there is a problem fetching the model
       // we can rely on the API to gate as a fallback
-      return paths.reduce((obj: MultipleCapabilities, path: string) => {
+      return paths.reduce((obj: CapabilitiesMap, path: string) => {
         obj[path] = {
           canCreate: true,
           canDelete: true,
