@@ -22,6 +22,11 @@ const appConfig = {
   babel: {
     plugins: [require.resolve('ember-concurrency/async-arrow-task-transform')],
   },
+  svgJar: {
+    optimizer: {},
+    sourceDirs: ['public'],
+    rootURL: '/ui/',
+  },
   fingerprint: {
     exclude: ['images/'],
   },
