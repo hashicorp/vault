@@ -613,9 +613,14 @@ func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool, makeSealer fu
 		if !ok {
 			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
 		}
-		body, ok := logical.ContextOriginalBodyValue(ctx)
-		if !ok {
-			return nil, errors.New("no reader for request")
+
+		source, err := b.makeSnapshotSource(ctx, d)
+		if err != nil {
+			return nil, err
+		}
+		body, err := source.ReadCloser(ctx)
+		if err != nil {
+			return nil, err
 		}
 
 		var sealer snapshot.Sealer
