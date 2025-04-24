@@ -159,17 +159,17 @@ export interface ApiResponse<T> {
 export interface VoidResponse {
     auth: unknown;
     data: unknown;
-    lease_duration: number;
-    lease_id: string;
-    mount_type: string;
+    leaseDuration: number;
+    leaseId: string;
+    mountType: string;
     renewable: boolean;
-    request_id: string;
+    requestId: string;
     warnings: Array<string> | null;
-    wrap_info: {
+    wrapInfo: {
         accessor: string;
-        creation_path: string;
-        creation_time: string;
-        wrapped_accessor: string;
+        creationPath: string;
+        creationTime: string;
+        wrappedAccessor: string;
         token: string;
         ttl: number;
     } | null;
