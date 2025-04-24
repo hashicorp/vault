@@ -7,15 +7,16 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import hbs from 'htmlbars-inline-precompile';
 import { click, fillIn, find, render, settled, waitUntil } from '@ember/test-helpers';
-import sinon from 'sinon';
-import { setupMirage } from 'ember-cli-mirage/test-support';
-import testHelper from './test-helper';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { overrideResponse } from 'vault/tests/helpers/stubs';
-import { ERROR_JWT_LOGIN } from 'vault/components/auth/form/oidc-jwt';
+import { _cancelTimers as cancelTimers } from '@ember/runloop';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { callbackData } from 'vault/tests/helpers/oidc-window-stub';
-import { _cancelTimers as cancelTimers } from '@ember/runloop';
+import { ERROR_JWT_LOGIN } from 'vault/components/auth/form/oidc-jwt';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { overrideResponse } from 'vault/tests/helpers/stubs';
+import { setupMirage } from 'ember-cli-mirage/test-support';
+import * as parseURL from 'core/utils/parse-url';
+import sinon from 'sinon';
+import testHelper from './test-helper';
 
 /* 
 The OIDC and JWT mounts call the same endpoint (see docs https://developer.hashicorp.com/vault/docs/auth/jwt )
@@ -98,6 +99,11 @@ const authUrlRequestTests = (test) => {
 };
 
 const jwtLoginTests = (test) => {
+  test('it renders sign in button text', async function (assert) {
+    await this.renderComponent();
+    assert.dom(AUTH_FORM.login).hasText('Sign in');
+  });
+
   test('it submits form data with defaults', async function (assert) {
     await this.renderComponent();
 
@@ -145,9 +151,21 @@ const oidcLoginTests = (test) => {
   test('it renders fields', async function (assert) {
     await this.renderComponent();
     assert.dom(AUTH_FORM.authForm(this.authType)).exists(`${this.authType}: it renders form component`);
+    assert.dom(AUTH_FORM.login).hasText('Sign in with OIDC Provider');
     this.expectedFields.forEach((field) => {
       assert.dom(GENERAL.inputByAttr(field)).exists(`${this.authType}: it renders ${field}`);
     });
+  });
+
+  test('it renders provider icon and name', async function (assert) {
+    const parseURLStub = sinon.stub(parseURL, 'default').returns({ hostname: 'auth0.com' });
+    this.server.post(`/auth/${this.authType}/oidc/auth_url`, () => {
+      return { data: { auth_url: '123.auth0.com' } };
+    });
+    await this.renderComponent();
+    assert.dom(AUTH_FORM.login).hasText('Sign in with Auth0');
+    assert.dom(GENERAL.icon('auth0')).exists(0);
+    parseURLStub.restore();
   });
 
   // true success has to be asserted in acceptance tests because it's not possible to mock a trusted message event

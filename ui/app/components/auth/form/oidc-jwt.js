@@ -41,6 +41,18 @@ export default class AuthFormOidcJwt extends AuthBase {
   @tracked errorMessage = null;
   @tracked isOIDC = true;
 
+  get tasksAreRunning() {
+    return this.prepareForOIDC.isRunning || this.exchangeOIDC.isRunning;
+  }
+
+  get icon() {
+    return this?.fetchedRole?.providerIcon || '';
+  }
+
+  get providerName() {
+    return `with ${this?.fetchedRole?.providerName || 'OIDC Provider'}`;
+  }
+
   @action
   initializeFormData(element) {
     this.formData = new FormData(element);
