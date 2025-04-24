@@ -3718,6 +3718,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/cookie@npm:^0.4.1":
+  version: 0.4.1
+  resolution: "@types/cookie@npm:0.4.1"
+  checksum: 3275534ed69a76c68eb1a77d547d75f99fedc80befb75a3d1d03662fb08d697e6f8b1274e12af1a74c6896071b11510631ba891f64d30c78528d0ec45a9c1a18
+  languageName: node
+  linkType: hard
+
 "@types/cors@npm:^2.8.12":
   version: 2.8.17
   resolution: "@types/cors@npm:2.8.17"
@@ -7352,10 +7359,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"cookie@npm:~0.7.2":
-  version: 0.7.2
-  resolution: "cookie@npm:0.7.2"
-  checksum: 9bf8555e33530affd571ea37b615ccad9b9a34febbf2c950c86787088eb00a8973690833b0f8ebd6b69b753c62669ea60cec89178c1fb007bf0749abed74f93e
+"cookie@npm:~0.4.1":
+  version: 0.4.2
+  resolution: "cookie@npm:0.4.2"
+  checksum: a00833c998bedf8e787b4c342defe5fa419abd96b32f4464f718b91022586b8f1bafbddd499288e75c037642493c83083da426c6a9080d309e3bd90fd11baa9b
   languageName: node
   linkType: hard
 
@@ -8645,7 +8652,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-cli-typescript@npm:^5.3.0":
+"ember-cli-typescript@npm:~5.3.0":
   version: 5.3.0
   resolution: "ember-cli-typescript@npm:5.3.0"
   dependencies:
@@ -9632,27 +9639,28 @@ __metadata:
   languageName: node
   linkType: hard
 
-"engine.io-parser@npm:~5.2.1":
-  version: 5.2.3
-  resolution: "engine.io-parser@npm:5.2.3"
-  checksum: a76d998b794ce8bbcade833064d949715781fdb9e9cf9b33ecf617d16355ddfd7772f12bb63aaec0f497d63266c6db441129c5aa24c60582270f810c696a6cf8
+"engine.io-parser@npm:~5.0.3":
+  version: 5.0.7
+  resolution: "engine.io-parser@npm:5.0.7"
+  checksum: 70ce4e22429ad4afbba187a0f71f87eb1448dbc2e4ff611857e46ca5ad09951408afa97f216e5fda993be4a944815b6f8eaebd6f70a9de522b54c7b8262fafb4
   languageName: node
   linkType: hard
 
-"engine.io@npm:~6.6.0":
-  version: 6.6.4
-  resolution: "engine.io@npm:6.6.4"
+"engine.io@npm:~6.4.2":
+  version: 6.4.2
+  resolution: "engine.io@npm:6.4.2"
   dependencies:
+    "@types/cookie": ^0.4.1
     "@types/cors": ^2.8.12
     "@types/node": ">=10.0.0"
     accepts: ~1.3.4
     base64id: 2.0.0
-    cookie: ~0.7.2
+    cookie: ~0.4.1
     cors: ~2.8.5
     debug: ~4.3.1
-    engine.io-parser: ~5.2.1
-    ws: ~8.17.1
-  checksum: e2d98ed3adc2fe6cdcee7208a95114bc12d3792f69abedcaeaf7cd21aec478f82b84d36f2e59b03af5f6ffae028923c0e799774400c008a768c8ceb17610a7c4
+    engine.io-parser: ~5.0.3
+    ws: ~8.11.0
+  checksum: c4ca538c98d251ff00756ed955d924c3fd78e61af0a5825c9fa1d77ebb661ead7971598fb61daf079c2655c7be2d4a26094e446759e3c6786d8ac75ccffe36d5
   languageName: node
   linkType: hard
 
@@ -13132,7 +13140,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"json5@npm:^1.0.2":
+"json5@npm:~1.0.2":
   version: 1.0.2
   resolution: "json5@npm:1.0.2"
   dependencies:
@@ -16963,7 +16971,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"serialize-javascript@npm:^3.1.0":
+"serialize-javascript@npm:~3.1.0":
   version: 3.1.0
   resolution: "serialize-javascript@npm:3.1.0"
   dependencies:
@@ -17260,18 +17268,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"socket.io@npm:^4.6.2":
-  version: 4.8.1
-  resolution: "socket.io@npm:4.8.1"
+"socket.io@npm:~4.6.2":
+  version: 4.6.2
+  resolution: "socket.io@npm:4.6.2"
   dependencies:
     accepts: ~1.3.4
     base64id: ~2.0.0
-    cors: ~2.8.5
     debug: ~4.3.2
-    engine.io: ~6.6.0
+    engine.io: ~6.4.2
     socket.io-adapter: ~2.5.2
     socket.io-parser: ~4.2.4
-  checksum: d5e4d7eabba7a04c0d130a7b34c57050a1b4694e5b9eb9bd0a40dd07c1d635f3d5cacc15442f6135be8b2ecdad55dad08ee576b5c74864508890ff67329722fa
+  checksum: 17f48c65627f6663384529072e33bff631eb496f6189a1325dd6775b2a50779b2acb36b6f57c9fc26f28e3ae109fb238d39167aebfbf96838a5fb7dd1b74c209
   languageName: node
   linkType: hard
 
@@ -18712,10 +18719,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"underscore@npm:^1.12.1":
-  version: 1.13.7
-  resolution: "underscore@npm:1.13.7"
-  checksum: 174b011af29e4fbe2c70eb2baa8bfab0d0336cf2f5654f364484967bc6264a86224d0134b9176e4235c8cceae00d11839f0fd4824268de04b11c78aca1241684
+"underscore@npm:~1.12.1":
+  version: 1.12.1
+  resolution: "underscore@npm:1.12.1"
+  checksum: ec327603aa112b99fe9d74cd9bf3b3b7451465a9d2610ceab269a532e3f191650ab017903be34dc86fe406a11d04d8905a3b04dd4c129493e51bee09a3f3074c
   languageName: node
   linkType: hard
 
@@ -19637,6 +19644,21 @@ __metadata:
     imurmurhash: ^0.1.4
     signal-exit: ^4.0.1
   checksum: 8dbb0e2512c2f72ccc20ccedab9986c7d02d04039ed6e8780c987dc4940b793339c50172a1008eed7747001bfacc0ca47562668a069a7506c46c77d7ba3926a9
+  languageName: node
+  linkType: hard
+
+"ws@npm:~8.11.0":
+  version: 8.11.0
+  resolution: "ws@npm:8.11.0"
+  peerDependencies:
+    bufferutil: ^4.0.1
+    utf-8-validate: ^5.0.2
+  peerDependenciesMeta:
+    bufferutil:
+      optional: true
+    utf-8-validate:
+      optional: true
+  checksum: 316b33aba32f317cd217df66dbfc5b281a2f09ff36815de222bc859e3424d83766d9eb2bd4d667de658b6ab7be151f258318fb1da812416b30be13103e5b5c67
   languageName: node
   linkType: hard
 
