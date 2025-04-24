@@ -12,3 +12,9 @@ automated root credential rotations to stop.
 #### Workaround
 
 Update the root configuration on an affected backend to cause Vault to recreate the rotation schedule.
+
+```
+vault write aws/config/root rotation_schedule="<old schedule>" rotation_window="<old window>"
+```
+
+Values can be the same as they were previously.
