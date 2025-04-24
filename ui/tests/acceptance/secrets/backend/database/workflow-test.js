@@ -16,6 +16,7 @@ import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import flashMessage from 'vault/tests/pages/components/flash-message';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import connectionPage from 'vault/tests/pages/secrets/backend/database/connection';
 
 const flash = create(flashMessage);
 
@@ -31,7 +32,6 @@ const PAGE = {
   confirmRotate: '[data-test-enable-rotate-connection]',
   skipRotate: '[data-test-enable-connection]',
   // ROLES
-  addRole: '[data-test-secret-create]',
   roleSettingsSection: '[data-test-role-settings-section]',
   statementsSection: '[data-test-statements-section]',
   editRole: '[data-test-edit-link]',
@@ -249,7 +249,7 @@ module('Acceptance | database workflow', function (hooks) {
 
     test('it creates a dynamic role attached to the current connection', async function (assert) {
       const roleName = 'dynamic-role';
-      await click(PAGE.addRole);
+      await click(connectionPage.addRole);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.backend}/create?initialKey=${this.connection}&itemType=role`,
@@ -375,7 +375,7 @@ module('Acceptance | database workflow', function (hooks) {
       await this.setup({ toggleRotateOff: false });
 
       const roleName = 'static-role';
-      await click(PAGE.addRole);
+      await click(connectionPage.addRole);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.backend}/create?initialKey=${this.connection}&itemType=role`,
@@ -395,7 +395,7 @@ module('Acceptance | database workflow', function (hooks) {
       await this.setup({ toggleRotateOff: true });
 
       const roleName = 'static-role';
-      await click(PAGE.addRole);
+      await click(connectionPage.addRole);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.backend}/create?initialKey=${this.connection}&itemType=role`,
