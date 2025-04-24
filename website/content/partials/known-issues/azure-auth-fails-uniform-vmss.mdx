@@ -1,0 +1,16 @@
+### Azure Auth fails to authenticate Uniform VMSS instances ((#azure-auth-fails-uniform-vmss))
+
+#### Affected versions
+
+- 1.19.1+
+- 1.18.7+
+- 1.17.14+
+- 1.16.18+
+
+#### Issue
+
+Azure Authentication from a uniform VMSS instance with a user assigned managed identity on the VMSS incorrectly results in an error. There was a regression introduced from adding [validations on the JWT claims](/vault/docs/auth/azure#token-validation) against the provided VM, VMSS, and resource group names without accounting for the uniform VMSS format.
+
+#### Workaround
+
+None at this time.
