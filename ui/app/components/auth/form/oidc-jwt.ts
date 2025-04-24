@@ -53,10 +53,17 @@ export default class AuthFormOidcJwt extends AuthBase {
   @service declare readonly flags: FlagsService;
   @service declare readonly store: Store;
 
+  loginFields = [
+    {
+      name: 'role',
+      helperText: 'Vault will use the default role to sign in if this field is left blank.',
+    },
+  ];
+
   // set by form inputs
   _formData: FormData | null = null;
 
-  // set by auth workflow
+  // set during auth prep and login workflow
   @tracked fetchedRole: RoleJwtModel | null = null;
   @tracked errorMessage = '';
   @tracked isOIDC = true;
@@ -122,11 +129,11 @@ export default class AuthFormOidcJwt extends AuthBase {
   });
 
   login = task(
-    waitFor(async (formData) => {
+    waitFor(async (submitData) => {
       if (this.isOIDC) {
         this.startOIDCAuth();
       } else {
-        this.continueLogin(formData);
+        this.continueLogin(submitData);
       }
     })
   );
@@ -204,15 +211,14 @@ export default class AuthFormOidcJwt extends AuthBase {
     }
 
     const { path, state, code } = oidcState;
-
     if (!path || !state || !code) {
       return this.cancelLogin(oidcWindow, ERROR_MISSING_PARAMS);
     }
-    const adapter = this.store.adapterFor('auth-method');
 
     let resp;
     // do the OIDC exchange, set the token and continue login flow
     try {
+      const adapter = this.store.adapterFor('auth-method');
       resp = await adapter.exchangeOIDC(path, state, code);
       this.closeWindow(oidcWindow);
     } catch (e) {

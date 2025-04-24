@@ -21,10 +21,7 @@
     {{yield to="authSelectOptions"}}
     {{yield to="error"}}
 
-    <Hds::Form::TextInput::Field @type="text" class="has-bottom-margin-m" name="role" data-test-input="role" as |F|>
-      <F.Label>Role</F.Label>
-      <F.HelperText>Vault will use the default role to sign in if this field is left blank.</F.HelperText>
-    </Hds::Form::TextInput::Field>
+    <Auth::Fields @loginFields={{this.loginFields}} />
 
     {{#unless this.isOIDC}}
       <Hds::Form::TextInput::Field @type="password" class="has-bottom-margin-m" name="jwt" data-test-input="jwt" as |F|>
