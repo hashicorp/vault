@@ -1,4 +1,4 @@
 
 ```release-note:improvement
-ui: Client count design and date picker updates to maintain consistency with user expectations
+ui (enterprise): Replace date selector in client count usage page with fixed start and end dates that align with billing periods in order to return more relevant client counting data. 
 ```
