@@ -47,8 +47,8 @@ ROOT_CA_CERT=$("$binpath" read pki/cert/ca | jq -r '.data.certificate')
 # Verifying Certificates
 if [ "${VERIFY_PKI_CERTS}" = true ]; then
   if [ ! -d "${TEST_DIR}" ]; then
-      echo "Directory does not exist. Creating it now."
-      mkdir -p "${TEST_DIR}" # Need to create this directory for Enterprise test
+    echo "Directory does not exist. Creating it now."
+    mkdir -p "${TEST_DIR}" # Need to create this directory for Enterprise test
   fi
   TMP_FILE="tmp-vault-cert.pem"
 
@@ -57,13 +57,15 @@ if [ "${VERIFY_PKI_CERTS}" = true ]; then
   [[ -z "$VAULT_CERTS" ]] && fail "VAULT_CERTS should include vault certificates"
   for CERT in $VAULT_CERTS; do
     echo "Getting certificate from Vault PKI: ${CERT}"
-    "$binpath" read "${MOUNT}/cert/${CERT}" | jq -r '.data.certificate' > "${TEST_DIR}/${TMP_FILE}"
+    "$binpath" read "${MOUNT}/cert/${CERT}" | jq -r '.data.certificate' >"${TEST_DIR}/${TMP_FILE}"
     echo "Verifying certificate contents..."
     openssl x509 -in "${TEST_DIR}/${TMP_FILE}" -text -noout || fail "The certificate appears to be improperly configured or contains errors"
     CURR_CERT_SERIAL=$(echo "${CERT}" | tr -d ':' | tr '[:lower:]' '[:upper:]')
-    TMP_CERT_SUBJECT=$(openssl x509 -in "${TEST_DIR}/${TMP_FILE}" -noout -subject | awk -F'CN[ ]*=[ ]*' '{print "CN=" $2}')
-    TMP_CERT_ISSUER=$(openssl x509 -in "${TEST_DIR}/${TMP_FILE}" -noout -issuer | awk -F'CN[ ]*=[ ]*' '{print "CN=" $2}')
-    TMP_CERT_SERIAL=$(openssl x509 -in "${TEST_DIR}/${TMP_FILE}" -noout -serial | awk -F'=' '{print $2}')
+    if ! TMP_CERT_SUBJECT=$(openssl x509 -in "${TEST_DIR}/${TMP_FILE}" -noout -subject | cut -d '=' -f2-); then
+      fail "failed to read certificate subject: $TMP_CERT_SUBJECT"
+    fi
+    TMP_CERT_ISSUER=$(openssl x509 -in "${TEST_DIR}/${TMP_FILE}" -noout -issuer | cut -d '=' -f2-)
+    TMP_CERT_SERIAL=$(openssl x509 -in "${TEST_DIR}/${TMP_FILE}" -noout -serial | cut -d '=' -f2-)
     [[ "${TMP_CERT_SUBJECT}" == *"${COMMON_NAME}.com"* ]] || fail "Subject is incorrect. Actual Subject: ${TMP_CERT_SUBJECT}"
     [[ "${TMP_CERT_ISSUER}" == *"${COMMON_NAME}.com"* ]] || fail "Issuer is incorrect. Actual Issuer: ${TMP_CERT_ISSUER}"
     [[ "${TMP_CERT_SERIAL}" == *"${CURR_CERT_SERIAL}"* ]] || fail "Certificate Serial is incorrect. Actual certificate Serial: ${CURR_CERT_SERIAL},${TMP_CERT_SERIAL}"
@@ -88,9 +90,9 @@ if [ "${VERIFY_PKI_CERTS}" = true ]; then
     CA_NAME="ca.pem"
     INTERMEDIATE_CA_NAME="intermediate-ca.pem"
     ISSUED_NAME="issued.pem"
-    "$binpath" read "${MOUNT}/cert/${CA_CERT}" | jq -r '.data.certificate' > "${TEST_DIR}/${CA_NAME}"
-    "$binpath" read "${MOUNT}/cert/${INTERMEDIATE_CA_CERT}" | jq -r '.data.certificate' > "${TEST_DIR}/${INTERMEDIATE_CA_NAME}"
-    "$binpath" read "${MOUNT}/cert/${INTERMEDIATE_ISSUED_CERT}" | jq -r '.data.certificate' > "${TEST_DIR}/${ISSUED_NAME}"
+    "$binpath" read "${MOUNT}/cert/${CA_CERT}" | jq -r '.data.certificate' >"${TEST_DIR}/${CA_NAME}"
+    "$binpath" read "${MOUNT}/cert/${INTERMEDIATE_CA_CERT}" | jq -r '.data.certificate' >"${TEST_DIR}/${INTERMEDIATE_CA_NAME}"
+    "$binpath" read "${MOUNT}/cert/${INTERMEDIATE_ISSUED_CERT}" | jq -r '.data.certificate' >"${TEST_DIR}/${ISSUED_NAME}"
     openssl verify --CAfile "${TEST_DIR}/${CA_NAME}" -untrusted "${TEST_DIR}/${INTERMEDIATE_CA_NAME}" "${TEST_DIR}/${ISSUED_NAME}" || fail "One or more Certificate is not valid."
   else
     echo "CA Cert: ${CA_CERT}, Intermedidate Cert: ${INTERMEDIATE_CA_CERT}, Issued Cert: ${INTERMEDIATE_ISSUED_CERT}"

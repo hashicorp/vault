@@ -126,7 +126,9 @@ locals {
   release_repo_apt = "hashicorp-apt-release-local*"
   release_repos = {
     amzn   = local.release_repo_rpm
+    leap   = local.release_repo_rpm
     rhel   = local.release_repo_rpm
+    sles   = local.release_repo_rpm
     ubuntu = local.release_repo_apt
   }
   release_repo = local.release_repos[var.distro]
@@ -149,8 +151,8 @@ locals {
       "15.6" = "RHEL/9/${local.release_sub_path_rpm}"
     }
     rhel = {
-      "8" = "RHEL/8/${local.release_sub_path_rpm}"
-      "9" = "RHEL/9/${local.release_sub_path_rpm}"
+      "8.10" = "RHEL/8/${local.release_sub_path_rpm}"
+      "9.5"  = "RHEL/9/${local.release_sub_path_rpm}"
     }
     sles = {
       "15.6" = "RHEL/9/${local.release_sub_path_rpm}"
