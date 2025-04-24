@@ -13,22 +13,20 @@ module('Integration | Component | usage | Page::Usage', function (hooks) {
 
   hooks.beforeEach(async function () {
     this.api = this.owner.lookup('service:api');
-    this.systemReadUtilizationReportStub = sinon
-      .stub(this.api.sys, 'systemReadUtilizationReport')
-      .resolves({});
+    this.generateUtilizationReportStub = sinon.stub(this.api.sys, 'generateUtilizationReport').resolves({});
   });
 
   hooks.afterEach(function () {
-    this.systemReadUtilizationReportStub.restore();
+    this.generateUtilizationReportStub.restore();
   });
 
   test('it provides the correct fetch function to the dashboard component', async function (assert) {
     await render(hbs`<Usage::Page />`);
-    assert.true(this.systemReadUtilizationReportStub.calledOnce, 'fetch function is called on render');
+    assert.true(this.generateUtilizationReportStub.calledOnce, 'fetch function is called on render');
   });
 
   test('it remaps data to friendly names if available', async function (assert) {
-    this.systemReadUtilizationReportStub.resolves({
+    this.generateUtilizationReportStub.resolves({
       data: {
         auth_methods: { alicloud: 2, cert: 2, userpass: 2, 'unknown-random-method': 1 },
         kvv1_secrets: 15,
