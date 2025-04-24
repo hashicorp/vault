@@ -2823,7 +2823,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hashicorp/design-system-components@npm:~4.18.0, @hashicorp/design-system-components@npm:~4.18.2":
+"@hashicorp/design-system-components@npm:4.18.2, @hashicorp/design-system-components@npm:~4.18.0":
   version: 4.18.2
   resolution: "@hashicorp/design-system-components@npm:4.18.2"
   dependencies:
@@ -8168,7 +8168,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-auto-import@npm:^2.2.4, ember-auto-import@npm:^2.4.1, ember-auto-import@npm:^2.6.0, ember-auto-import@npm:^2.6.3, ember-auto-import@npm:^2.7.0, ember-auto-import@npm:~2.10.0":
+"ember-auto-import@npm:2.10.0, ember-auto-import@npm:^2.2.4, ember-auto-import@npm:^2.4.1, ember-auto-import@npm:^2.6.0, ember-auto-import@npm:^2.6.3, ember-auto-import@npm:^2.7.0":
   version: 2.10.0
   resolution: "ember-auto-import@npm:2.10.0"
   dependencies:
@@ -18948,21 +18948,21 @@ __metadata:
   languageName: node
   linkType: hard
 
+"uuid@npm:11.1.0":
+  version: 11.1.0
+  resolution: "uuid@npm:11.1.0"
+  bin:
+    uuid: dist/esm/bin/uuid
+  checksum: 840f19758543c4631e58a29439e51b5b669d5f34b4dd2700b6a1d15c5708c7a6e0c3e2c8c4a2eae761a3a7caa7e9884d00c86c02622ba91137bd3deade6b4b4a
+  languageName: node
+  linkType: hard
+
 "uuid@npm:^8.3.0":
   version: 8.3.2
   resolution: "uuid@npm:8.3.2"
   bin:
     uuid: dist/bin/uuid
   checksum: 5575a8a75c13120e2f10e6ddc801b2c7ed7d8f3c8ac22c7ed0c7b2ba6383ec0abda88c905085d630e251719e0777045ae3236f04c812184b7c765f63a70e58df
-  languageName: node
-  linkType: hard
-
-"uuid@npm:~11.1.0":
-  version: 11.1.0
-  resolution: "uuid@npm:11.1.0"
-  bin:
-    uuid: dist/esm/bin/uuid
-  checksum: 840f19758543c4631e58a29439e51b5b669d5f34b4dd2700b6a1d15c5708c7a6e0c3e2c8c4a2eae761a3a7caa7e9884d00c86c02622ba91137bd3deade6b4b4a
   languageName: node
   linkType: hard
 
@@ -19039,7 +19039,7 @@ __metadata:
     "@ember/test-waiters": ~4.1.0
     "@glimmer/component": ~1.1.2
     "@glimmer/tracking": ~1.1.2
-    "@hashicorp/design-system-components": ~4.18.2
+    "@hashicorp/design-system-components": 4.18.2
     "@hashicorp/vault-client-typescript": "portal:./api-client"
     "@hashicorp/vault-reporting": "portal:./vault-reporting"
     "@icholy/duration": ~5.1.0
@@ -19074,7 +19074,7 @@ __metadata:
     doctoc: ~2.2.0
     dompurify: ~3.2.4
     ember-a11y-testing: ~7.0.1
-    ember-auto-import: ~2.10.0
+    ember-auto-import: 2.10.0
     ember-basic-dropdown: ~8.0.4
     ember-cli: ~5.8.0
     ember-cli-babel: ~8.2.0
@@ -19134,7 +19134,7 @@ __metadata:
     lint-staged: ~10.5.1
     loader.js: ~4.7.0
     miragejs: ~0.1.48
-    node-notifier: ~8.0.1
+    node-notifier: 8.0.2
     normalize.css: 4.1.1
     pkijs: ~2.2.2
     prettier: 3.0.3
@@ -19152,7 +19152,7 @@ __metadata:
     text-encoder-lite: 2.0.0
     tracked-built-ins: ~3.3.0
     typescript: ~5.4.5
-    uuid: ~11.1.0
+    uuid: 11.1.0
     walk-sync: ~2.0.2
     webpack: 5.94.0
   languageName: unknown
