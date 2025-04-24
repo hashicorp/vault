@@ -77,10 +77,9 @@ jobs:
     # If you'd like to run the autopilot tests for a specific git checkout or set of source versions,
     # you can manually trigger the workflow, see the .github/workflows/run-apupgrade-tests-ent.yml file in the ENT repo.
     if: |
-      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'autopilot') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'autopilot') &&
       needs.setup.outputs.is-enterprise == 'true' &&
-      ((github.event_name == 'pull_request' && github.base_ref == 'main') ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/main'))
+      (github.base_ref == 'main' || github.ref == 'refs/heads/main')
     needs: setup
     permissions:
       id-token: write
