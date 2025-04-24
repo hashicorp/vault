@@ -31,6 +31,7 @@ const PAGE = {
   confirmRotate: '[data-test-enable-rotate-connection]',
   skipRotate: '[data-test-enable-connection]',
   // ROLES
+  addRole: '[data-test-secret-create]',
   roleSettingsSection: '[data-test-role-settings-section]',
   statementsSection: '[data-test-statements-section]',
   editRole: '[data-test-edit-link]',
@@ -248,7 +249,7 @@ module('Acceptance | database workflow', function (hooks) {
 
     test('it creates a dynamic role attached to the current connection', async function (assert) {
       const roleName = 'dynamic-role';
-      await click(SES.createSecretLink);
+      await click(PAGE.addRole);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.backend}/create?initialKey=${this.connection}&itemType=role`,
