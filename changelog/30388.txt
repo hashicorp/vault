@@ -1,0 +1,3 @@
+```release-note:security
+sdk/framework: Prevented sensitive values from being logged when schema validation fails. Previously, malformed user input (such as in KV v2 secret writes) could result in secret values being included in Vault's server or audit logs. Values are now omitted from error messages to avoid accidental data exposure.
+```
