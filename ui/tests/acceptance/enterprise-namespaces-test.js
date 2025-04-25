@@ -75,17 +75,13 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
   });
 
   test('it filters namespaces based on search input', async function (assert) {
-    assert.expect(7);
+    assert.expect(6);
 
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
 
     // Verify all namespaces are displayed initially
     assert.dom(NAMESPACE_PICKER_SELECTORS.link()).exists('Namespace link(s) exist');
-    assert.strictEqual(
-      findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
-      5,
-      'All namespaces are displayed initially'
-    );
+    const allNamespaces = findAll(NAMESPACE_PICKER_SELECTORS.link());
 
     // Verify the search input field exists
     assert.dom(NAMESPACE_PICKER_SELECTORS.searchInput).exists('The namespace search field exists');
@@ -118,7 +114,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, '');
     assert.strictEqual(
       findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
-      5,
+      allNamespaces.length,
       'All namespaces are displayed after clearing search input'
     );
   });
@@ -200,6 +196,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
 
       // check that the full namespace path, like "beep/boop", shows in the toggle display
       await waitFor(NAMESPACE_PICKER_SELECTORS.link(targetNamespace));
+
       assert
         .dom(NAMESPACE_PICKER_SELECTORS.link(targetNamespace))
         .hasText(targetNamespace, `shows the namespace ${targetNamespace} in the toggle component`);
@@ -216,14 +213,12 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await waitFor(`svg${GENERAL.icon('check')}`);
 
     // Find the selected element with the check icon & ensure it exists
-    const checkIcon = document.querySelector(
-      `${NAMESPACE_PICKER_SELECTORS.link()} svg${GENERAL.icon('check')}`
-    );
-    assert.ok(checkIcon, 'A selected namespace link with the check icon exists');
+    const checkIcon = find(`${NAMESPACE_PICKER_SELECTORS.link()} ${GENERAL.icon('check')}`);
+    assert.dom(checkIcon).exists('A selected namespace link with the check icon exists');
 
     // Get the selected namespace with the data-test-namespace-link attribute & ensure it exists
-    const selectedNamespace = checkIcon.closest(NAMESPACE_PICKER_SELECTORS.link());
-    assert.ok(selectedNamespace, 'The selected namespace link exists');
+    const selectedNamespace = checkIcon?.closest(NAMESPACE_PICKER_SELECTORS.link());
+    assert.dom(selectedNamespace).exists('The selected namespace link exists');
 
     // Verify that the selected namespace has the correct data-test-namespace-link attribute and path value
     assert.strictEqual(

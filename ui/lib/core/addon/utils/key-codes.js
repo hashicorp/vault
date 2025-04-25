@@ -3,6 +3,13 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+/*
+ * DEPRCATED (see: https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/keyCode).
+ *
+ * TODO: Replace all instances with `event.key` (use lib/core/addon/utils/keyboard-keys.ts).
+ * `event.keyCode` is deprecated and will be removed in future versions of browsers.
+ */
+
 // a map of keyCode for use in keyboard event handlers
 export default {
   ENTER: 13,

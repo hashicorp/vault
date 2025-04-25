@@ -7,7 +7,7 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
-import keys from 'core/utils/key-codes';
+import { KEYS } from 'core/utils/keyboard-keys';
 
 /**
  * @module NamespacePicker
@@ -74,7 +74,7 @@ export default class NamespacePicker extends Component {
     ];
 
     // Conditionally add the root namespace
-    if (this.auth.authData.userRootNamespace === '') {
+    if (this.auth?.authData?.userRootNamespace === '') {
       options.unshift({ id: 'root', path: '', label: 'root' });
     }
 
@@ -142,7 +142,7 @@ export default class NamespacePicker extends Component {
 
   @action
   async onKeyDown(event) {
-    if (event.keyCode === keys.ENTER && this.searchInput?.trim()) {
+    if (event.key === KEYS.ENTER && this.searchInput?.trim()) {
       const matchingNamespace = this.allNamespaces.find((ns) => ns.label === this.searchInput.trim());
 
       if (matchingNamespace) {
