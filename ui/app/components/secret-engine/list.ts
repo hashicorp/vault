@@ -10,9 +10,6 @@ import { tracked } from '@glimmer/tracking';
 import { dropTask } from 'ember-concurrency';
 import errorMessage from 'vault/utils/error-message';
 
-import type Router from '@ember/routing/router';
-import type Store from '@ember-data/store';
-import type VersionService from 'vault/services/version';
 import type FlashMessageService from 'vault/services/flash-messages';
 import SecretEngineModel from 'vault/models/secret-engine';
 
@@ -32,15 +29,12 @@ interface Args {
 }
 
 export default class SecretListItem extends Component<Args> {
-  @service declare readonly router: Router;
-  @service declare readonly store: Store;
-  @service declare readonly version: VersionService;
   @service declare readonly flashMessages: FlashMessageService;
 
   @tracked secretEngineOptions: Array<string> | [] = [];
-  @tracked selectedEngineType: string | undefined = undefined;
-  @tracked selectedEngineName: string | undefined = undefined;
-  @tracked engineToDisable: string | undefined = undefined;
+  @tracked selectedEngineType = '';
+  @tracked selectedEngineName = '';
+  @tracked engineToDisable: SecretEngineModel | undefined = undefined;
 
   get displayableBackends() {
     return this.args.secretEngineModels.filter((backend) => backend.shouldIncludeInList);
@@ -92,13 +86,13 @@ export default class SecretListItem extends Component<Args> {
   @action
   filterEngineType(type: string[]) {
     const [selectedType] = type;
-    this.selectedEngineType = selectedType;
+    this.selectedEngineType = selectedType || '';
   }
 
   @action
   filterEngineName(name: string[]) {
     const [selectedName] = name;
-    this.selectedEngineName = selectedName;
+    this.selectedEngineName = selectedName || '';
   }
 
   @dropTask
