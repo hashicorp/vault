@@ -241,7 +241,7 @@ func RespondErrorAndData(w http.ResponseWriter, status int, data interface{}, er
 func IncrementResponseStatusCodeMetric(statusCode int) {
 	statusString := strconv.Itoa(statusCode)
 	statusType := fmt.Sprintf("%cxx", statusString[0])
-	metrics.IncrCounterWithLabels([]string{"core", "request_status_code"},
+	metrics.IncrCounterWithLabels([]string{"core", "response_status_code"},
 		1,
 		[]metrics.Label{
 			{"code", statusString},
