@@ -13,4 +13,11 @@ export default buildRoutes(function () {
       this.route('edit');
     });
   });
+
+  this.route('login-settings', function () {
+    this.route('rule', { path: '/:name' }, function () {
+      this.route('details');
+      this.route('list');
+    });
+  });
 });
