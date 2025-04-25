@@ -12,9 +12,11 @@
       @onError={{this.handleError}}
       @onSuccess={{@onSuccess}}
       @wrappedToken={{@wrappedToken}}
+      {{! TBD if OIDC-JWT needs to pass back the namespace from state }}
+      {{!-- @updateNamespace={{this.handleNamespaceUpdate}} --}}
     >
       <:namespace>
-        {{#if this.version.isEnterprise}}
+        {{#if (has-feature "Namespaces")}}
           <Auth::NamespaceInput
             @disabled={{@oidcProviderQueryParam}}
             @hvdManagedNamespace={{this.flags.hvdManagedNamespaceRoot}}
@@ -93,6 +95,7 @@
         {{#if this.renderTabs}}
           <Hds::Button
             {{on "click" this.toggleView}}
+            class="has-top-margin-m"
             @color="tertiary"
             @icon="arrow-right"
             @iconPosition="trailing"
