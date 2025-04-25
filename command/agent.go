@@ -1211,8 +1211,8 @@ func (c *AgentCommand) loadConfig(paths []string) (*agentConfig.Config, error) {
 	cfg := agentConfig.NewConfig()
 
 	for _, configPath := range paths {
-		// TODO (HCL_DUP_KEYS_DEPRECATION): go back to agentConfig.LoadConfigDir and remove duplicate when deprecation is done
-		configFromPath, duplicate, err := agentConfig.LoadConfigDirCheckDuplicates(configPath)
+		// TODO (HCL_DUP_KEYS_DEPRECATION): go back to agentConfig.LoadConfig and remove duplicate when deprecation is done
+		configFromPath, duplicate, err := agentConfig.LoadConfigCheckDuplicates(configPath)
 		if err != nil {
 			errs = multierror.Append(errs, fmt.Errorf("error loading configuration from %s: %w", configPath, err))
 		} else {
