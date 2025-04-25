@@ -1,0 +1,14 @@
+## Duplicate HCL attributes ((#duplicate-hcl-attributes))
+
+| Announced | Expected end of support | Expected removal |
+| :-------: | :---------------------: | :--------------: |
+| JUN 2025  | OCT 2025                | N/A
+
+The usage of duplicate attributes in HCL configuration files and policy definitions is deprecated.
+
+Look for "policy contains duplicate attributes" warnings in the server logs to identify if you are affected, once
+support for duplicate attributes ends any attempts to interact with such policies will result fail, like creating a
+token referencing it or even using a token that references it.
+
+Configuration files provided to any Vault CLI commands are also subject to this deprecation and will warn about the
+usage of duplicate attributes.
