@@ -77,10 +77,9 @@ jobs:
     # If you'd like to run the autopilot tests for a specific git checkout or set of source versions,
     # you can manually trigger the workflow, see the .github/workflows/run-apupgrade-tests-ent.yml file in the ENT repo.
     if: |
-      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'autopilot') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'autopilot') &&
       needs.setup.outputs.is-enterprise == 'true' &&
-      ((github.event_name == 'pull_request' && github.base_ref == 'main') ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/main'))
+      (github.base_ref == 'main' || github.ref == 'refs/heads/main')
     needs: setup
     permissions:
       id-token: write
@@ -142,6 +141,7 @@ jobs:
     # Run Go tests if the vault app changed
     if: |
       contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain') ||
       contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline')
     name: Run Go tests
     needs: setup
@@ -162,7 +162,9 @@ jobs:
 
   test-go-testonly:
     # Run Go tests tagged with "testonly" if the vault app changed
-    if: contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app')
+    if: |
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain')
     name: Run Go tests tagged with testonly
     needs: setup
     uses: ./.github/workflows/test-go.yml
@@ -181,7 +183,12 @@ jobs:
   test-go-race:
     # Run Go test with the data race detector enabled if the vault app changed and we're out of
     # drafts mode.
-    if: contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') && needs.setup.outputs.is-draft == 'false'
+    if: |
+      needs.setup.outputs.is-draft == 'false' &&
+        (
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain')
+        )
     name: Run Go tests with data race detection
     needs: setup
     uses: ./.github/workflows/test-go.yml
@@ -208,7 +215,9 @@ jobs:
     if: |
       contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') &&
       needs.setup.outputs.is-enterprise == 'true' &&
-      (needs.setup.outputs.workflow-trigger == 'push' || contains(needs.setup.outputs.labels, 'fips'))
+        (
+          needs.setup.outputs.workflow-trigger == 'push' || contains(needs.setup.outputs.labels, 'fips')
+        )
     needs: setup
     uses: ./.github/workflows/test-go.yml
     with:
@@ -248,12 +257,12 @@ jobs:
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       # Setup node.js without caching to allow running npm install -g yarn (next step)
-      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+      - uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e # v4.3.0
         with:
           node-version-file: './ui/package.json'
       - run: npm install -g yarn
       # Setup node.js with caching using the yarn.lock file
-      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+      - uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e # v4.3.0
         with:
           node-version-file: './ui/package.json'
           cache: yarn
@@ -308,7 +317,7 @@ jobs:
           mkdir -p test-results/qunit
           yarn ${{ needs.setup.outputs.is-enterprise == 'true' && 'test' || 'test:oss' }}
       - if: always()
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: test-results-ui
           path: ui/test-results
@@ -463,7 +472,7 @@ jobs:
       # to secrets.
       - if: ${{ needs.setup.outputs.is-fork == 'false' }}
         name: Download failure summaries
-        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
         with:
           pattern: failure-summary-*.md
           path: failure-summaries

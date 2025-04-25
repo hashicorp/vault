@@ -13,7 +13,7 @@ description: >-
   [Static secret caching](/vault/docs/agent-and-proxy/proxy/caching/static-secret-caching)
   (KVv1 and KVv2) with API proxy minimizes the number of requests forwarded to
   Vault. Vault Agent does not support static secret caching with API proxy. We
-  recommend using [Vault Proxy](/vault/docs/agent-and-proxy/proxy) for API Proxy
+  recommend using [Vault Proxy](/vault/docs/agent-and-proxy/proxy) for API proxy
   related workflows.
 
 </Note>
@@ -166,7 +166,7 @@ The top level `cache` block has the following configuration entry:
 
 The `cache` block also supports the `use_auto_auth_token`, `enforce_consistency`, and
 `when_inconsistent` configuration values of the `api_proxy` block
-[described in the API Proxy documentation](/vault/docs/agent-and-proxy/agent/apiproxy#configuration-api_proxy) only to
+[described in the API proxy documentation](/vault/docs/agent-and-proxy/agent/apiproxy#configuration-api_proxy) only to
 maintain backwards compatibility. This configuration **cannot** be specified alongside `api_proxy` equivalents,
 should not be preferred over configuring these values in the `api_proxy` block,
 and `api_proxy` should be the preferred place to configure these values.
@@ -205,7 +205,7 @@ Defaults to `/var/run/secrets/kubernetes.io/serviceaccount/token`.
 - `listener` `(array of objects: required)` - Configuration for the listeners.
 
 There can be one or more `listener` blocks at the top level. Adding a listener enables
-the [API Proxy](/vault/docs/agent-and-proxy/agent/apiproxy) and enables the API proxy to use the cache, if configured.
+the [API proxy](/vault/docs/agent-and-proxy/agent/apiproxy) and enables the API proxy to use the cache, if configured.
 These configuration values are common to both `tcp` and `unix` listener blocks. Blocks of type
 `tcp` support the standard `tcp` [listener](/vault/docs/configuration/listener/tcp)
 options. Additionally, the `role` string option is available as part of the top level

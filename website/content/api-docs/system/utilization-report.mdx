@@ -1,0 +1,86 @@
+---
+layout: api
+page_title: /sys/utilization-report - HTTP API
+description: The `/sys/utilization-report` produces a snapshot report of this cluster's utilization from all namespaces.
+---
+
+# `/sys/utilization-report`
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-admin.mdx'
+
+The `/sys/utilization-report` endpoint returns a snapshot utilization report
+for the targeted cluster. The report covers all namespaces and includes
+high-level insights on mounts, leases, lease count quotas, PKI, and KV secrets.
+
+## Get utilization report
+
+Return a snapshot utilization report for all namespaces in the cluster.
+
+| Method | Path                      |
+|:-------|:--------------------------|
+| `GET`  | `/sys/utilization-report` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/utilization-report
+```
+
+### Sample response
+
+```json
+{
+  "request_id": "8fb6005c-74cc-a4ec-6c3c-e396eb11c7ed",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "auth_methods": {
+      "cert": 1,
+      "token": 2,
+      "userpass": 1
+    },
+    "kvv1_secrets": 0,
+    "kvv2_secrets": 23,
+    "lease_count_quotas": {
+      "global_lease_count_quota": {
+        "capacity": 300000,
+        "count": 1542,
+        "name": "default"
+      },
+      "total_lease_count_quotas": 1
+    },
+    "leases_by_auth_method": {
+      "cert": 0,
+      "token": 1500,
+      "userpass": 42
+    },
+    "namespaces": 2,
+    "pki": {
+      "total_issuers": 2,
+      "total_roles": 3
+    },
+    "replication_status": {
+      "dr_primary": false,
+      "dr_state": "disabled",
+      "pr_primary": false,
+      "pr_state": "disabled"
+    },
+    "secret_engines": {
+      "cubbyhole": 1,
+      "identity": 1,
+      "kv": 1,
+      "pki": 2,
+      "system": 1
+    }
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null,
+  "mount_type": "system"
+}
+```

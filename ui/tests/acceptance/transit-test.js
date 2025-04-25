@@ -9,10 +9,11 @@ import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
 import { encodeString } from 'vault/utils/b64';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import codemirror from 'vault/tests/helpers/codemirror';
-import { GENERAL } from '../helpers/general-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
 const SELECTORS = {
   secretLink: '[data-test-secret-link]',
@@ -194,12 +195,12 @@ const testConvergentEncryption = async function (assert, keyName) {
   }
 };
 
-module('Acceptance | transit (flaky)', function (hooks) {
+module('Acceptance | transit', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
     const uid = uuidv4();
-    await authPage.login();
+    await login();
     this.uid = uid;
     this.path = `transit-${uid}`;
 
@@ -221,7 +222,7 @@ module('Acceptance | transit (flaky)', function (hooks) {
   });
 
   hooks.afterEach(async function () {
-    await authPage.login();
+    await login();
     await runCmd(deleteEngineCmd(this.mountPath));
   });
 
@@ -229,7 +230,7 @@ module('Acceptance | transit (flaky)', function (hooks) {
     assert.expect(8);
     const type = 'chacha20-poly1305';
     const name = `test-generate-${this.uid}`;
-    await click('[data-test-secret-create]');
+    await click(SES.createSecretLink);
 
     await fillIn(SELECTORS.form('name'), name);
     await fillIn(SELECTORS.form('type'), type);

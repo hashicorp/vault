@@ -22,8 +22,12 @@ on the value of the `resource` parameter.
   Azure documentation][environment-variables]. Will work seamlessly with Azure
   [Workload Identity][workload-identity] and others.
 
-~> Note: If `authenticate_from_environment` is set to true, `object_id`, and `client_id` will be ignored
-in favour of that authentication approach.
+  <Note>
+
+  If `authenticate_from_environment` is set to true, `object_id`, and `client_id` will be ignored
+  in favour of that authentication approach.
+
+  </Note>
 
 - `scope` `(string: optional)` - The scope to use when obtaining a token. If not supplied, will default to
   the value used for `resource` appended with "`/.default`" appended as a suffix. For more information on

@@ -673,9 +673,10 @@ type IssueData struct {
 }
 
 type URLEntries struct {
-	IssuingCertificates   []string `json:"issuing_certificates" structs:"issuing_certificates" mapstructure:"issuing_certificates"`
-	CRLDistributionPoints []string `json:"crl_distribution_points" structs:"crl_distribution_points" mapstructure:"crl_distribution_points"`
-	OCSPServers           []string `json:"ocsp_servers" structs:"ocsp_servers" mapstructure:"ocsp_servers"`
+	IssuingCertificates        []string `json:"issuing_certificates" structs:"issuing_certificates" mapstructure:"issuing_certificates"`
+	CRLDistributionPoints      []string `json:"crl_distribution_points" structs:"crl_distribution_points" mapstructure:"crl_distribution_points"`
+	DeltaCRLDistributionPoints []string `json:"delta_crl_distribution_points" structs:"delta_crl_distribution_points" mapstructure:"delta_crl_distribution_points"`
+	OCSPServers                []string `json:"ocsp_servers" structs:"ocsp_servers" mapstructure:"ocsp_servers"`
 }
 
 type NotAfterBehavior int
@@ -821,7 +822,14 @@ type CreationBundle struct {
 // information
 func AddKeyUsages(data *CreationBundle, certTemplate *x509.Certificate) {
 	if data.Params.IsCA {
-		certTemplate.KeyUsage = x509.KeyUsage(x509.KeyUsageCertSign | x509.KeyUsageCRLSign)
+		// https://cabforum.org/working-groups/server/baseline-requirements/documents/CA-Browser-Forum-TLS-BR-2.1.4.pdf
+		// Per Section 7.1.2.10.7, the only acceptable additional key usage is Digital Signature
+		if data.Params.KeyUsage&x509.KeyUsageDigitalSignature == x509.KeyUsageDigitalSignature {
+			certTemplate.KeyUsage = x509.KeyUsageDigitalSignature
+		} else {
+			certTemplate.KeyUsage = x509.KeyUsage(0)
+		}
+		certTemplate.KeyUsage |= x509.KeyUsageCertSign | x509.KeyUsageCRLSign
 		return
 	}
 

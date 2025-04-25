@@ -123,7 +123,7 @@ not be suitable for every deployment.
 
   When using platform-specific identity solutions, you should be mindful of auth
   method and secret engine configuration within namespaces. You can share
-  platform identity across Vault namespaces, as these provider features 
+  platform identity across Vault namespaces, as these provider features
   generally offer host-based identity solutions.
 
   If that is not applicable, set the credentials as environment variables
@@ -154,7 +154,7 @@ not be suitable for every deployment.
   give secret values from either standard input or with command-line arguments.
   Command-line arguments can persisted in shell history, and are readable by other unprivileged users on the same host.
 
-- **Develop an off-boarding process**. Removing accounts in Vault or associated 
+- **Develop an off-boarding process**. Removing accounts in Vault or associated
   identity providers may not immediately revoke [token-based access](/vault/docs/concepts/tokens#user-management-considerations).
   Depending on how you manage access to Vault, operators should consider:
 
@@ -213,3 +213,13 @@ not be suitable for every deployment.
 - **Be aware of special container considerations**. To use memory locking
   (mlock) inside a Vault container, you need to use the `overlayfs2` or another
   supporting driver.
+
+-	**Consider memory usage when configuring `disable_mlock` with integrated storage**.
+  When you leave `mlock` enabled, Vault disallows data swaps from memory to disk.
+  Disallowing swaps ensures that sensitive data remains in RAM, but also
+  increases the risk of out-of-memory (OOM) errors in under-provisioned systems.
+  Conversely, disabling `mlock` lets the operating system swap memory to disk
+  under pressure, which can reduce the risk of OOM errors but increase the
+  exposure risk for secrets that end up in the swap file. If you choose to
+  disable `mlock`, we recommend encrypting your swap file to limit the exposure
+  risk.

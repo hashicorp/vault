@@ -9,7 +9,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { v4 as uuidv4 } from 'uuid';
 import ldapMirageScenario from 'vault/mirage/scenarios/ldap';
 import ldapHandlers from 'vault/mirage/handlers/ldap';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { click, visit } from '@ember/test-helpers';
 import { selectChoose } from 'ember-power-select/test-support';
 import { isURL, visitURL } from 'vault/tests/helpers/ldap/ldap-helpers';
@@ -29,7 +29,7 @@ module('Acceptance | ldap | overview', function (hooks) {
         `write ${backend}/config binddn=foo bindpass=bar url=http://localhost:8208`,
       ]);
     };
-    return authPage.login();
+    return login();
   });
 
   test('it should transition to ldap overview on mount success', async function (assert) {

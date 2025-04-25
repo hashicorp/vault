@@ -8,7 +8,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import syncScenario from 'vault/mirage/scenarios/sync';
 import syncHandlers from 'vault/mirage/handlers/sync';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { click, visit, fillIn, currentURL, currentRouteName } from '@ember/test-helpers';
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
 import { syncDestinations } from 'vault/helpers/sync-destinations';
@@ -25,7 +25,7 @@ module('Acceptance | sync | destinations (plural)', function (hooks) {
     this.version.features = ['Secrets Sync'];
     syncScenario(this.server);
     syncHandlers(this.server);
-    return authPage.login();
+    return login();
   });
 
   test('it should create new destination', async function (assert) {
