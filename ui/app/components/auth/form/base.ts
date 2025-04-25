@@ -78,7 +78,7 @@ export default class AuthBase extends Component<Args> {
     this.args.onSuccess(authResponse);
   }
 
-  onError(error: Error) {
+  onError(error: Error | string) {
     if (!this.auth.mfaErrors) {
       const errorMessage = `Authentication failed: ${this.auth.handleError(error)}`;
       this.args.onError(errorMessage);
