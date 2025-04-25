@@ -21,6 +21,7 @@ import { runCmd } from '../helpers/commands';
 import { allEngines } from 'vault/helpers/mountable-secret-engines';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { v4 as uuidv4 } from 'uuid';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
 const searchSelectComponent = create(searchSelect);
 
@@ -107,8 +108,8 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     const transformationName = 'foo';
     const roleName = 'foo-role';
     await settled();
-    await transformationsPage.createLink({ backend });
-    await settled();
+    await click(SES.createSecretLink);
+
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/create`,
@@ -167,7 +168,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     await click('[data-test-secret-list-tab="Roles"]');
     assert.strictEqual(currentURL(), `/vault/secrets/${backend}/list?tab=role`, 'links to role list page');
     // create role with transformation attached
-    await rolesPage.createLink();
+    await click(SES.createSecretLink);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/create?itemType=role`,
@@ -256,7 +257,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
       'links to template list page'
     );
     await settled();
-    await templatesPage.createLink();
+    await click(SES.createSecretLink);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/create?itemType=template`,
@@ -299,8 +300,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
       `/vault/secrets/${backend}/list?tab=alphabet`,
       'links to alphabet list page'
     );
-    await alphabetsPage.createLink();
-    await settled();
+    await click(SES.createSecretLink);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/create?itemType=alphabet`,
