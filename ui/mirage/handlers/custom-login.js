@@ -26,7 +26,7 @@ export default function (server) {
   });
 
   server.get('sys/config/ui/login/default-auth/:name', (schema, req) => {
-    // req.params = { name: "Login rule name" }
+    // req.params come in as: { name: "Login rule name" }
     const record = schema.db['loginRules'].findBy(req.params);
     if (record) {
       delete record.id; // "name" is the id
