@@ -1625,7 +1625,7 @@ func TestDeletesOlderWALsOnLoad(t *testing.T) {
 // NextVaultRotation was not set. It ensures that the NextVaultRotation
 // is set to the next rotation time when the role is read from storage
 // and the queue is populated.
-func TestStaticRoleNextVaultRotationOnPopulate(t *testing.T) {
+func TestStaticRoleNextVaultRotationOnRestart(t *testing.T) {
 	ctx := context.Background()
 	b, storage, mockDB := getBackend(t)
 	defer b.Cleanup(ctx)
@@ -1642,10 +1642,11 @@ func TestStaticRoleNextVaultRotationOnPopulate(t *testing.T) {
 	item, err := b.credRotationQueue.Pop()
 	require.NoError(t, err)
 	firstPriority := item.Priority
+	role, err := b.StaticRole(context.Background(), storage, roleName)
+	firstPassword := role.StaticAccount.Password
+	require.NoError(t, err)
 
 	// force NextVaultRotation to zero to simulate roles before 1.15.0
-	role, err := b.StaticRole(context.Background(), storage, roleName)
-	require.NoError(t, err)
 	role.StaticAccount.NextVaultRotation = time.Time{}
 	entry, err := logical.StorageEntryJSON(databaseStaticRolePath+roleName, role)
 	require.NoError(t, err)
@@ -1660,9 +1661,15 @@ func TestStaticRoleNextVaultRotationOnPopulate(t *testing.T) {
 
 	// Repopulate queue to simulate restart
 	b.populateQueue(ctx, storage)
+	// call rotateCredential to simulate ticker running and rotating first item in queue
+	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
+		Return(v5.UpdateUserResponse{}, nil).
+		Once()
+	b.rotateCredentials(ctx, storage)
 
 	role, err = b.StaticRole(ctx, storage, roleName)
 	require.NoError(t, err)
+	require.Equal(t, role.StaticAccount.Password, firstPassword)
 	item, err = b.credRotationQueue.Pop()
 	require.NoError(t, err)
 	newPriority := item.Priority
