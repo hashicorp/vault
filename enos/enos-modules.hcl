@@ -296,7 +296,7 @@ module "vault_verify_dr_replication" {
 }
 
 module "vault_verify_removed_node" {
-  source = "./modules/vault_verify_raft_removed"
+  source = "./modules/vault_verify_removed_node"
 
   vault_install_dir = var.vault_install_dir
 }
