@@ -32,6 +32,7 @@ function UiConfigUpdateCustomMessageResponseFromJSONTyped(json, ignoreDiscrimina
         return json;
     }
     return {
+        'active': json['active'] == null ? undefined : json['active'],
         'authenticated': json['authenticated'] == null ? undefined : json['authenticated'],
         'endTime': json['end_time'] == null ? undefined : (new Date(json['end_time'])),
         'id': json['id'] == null ? undefined : json['id'],
@@ -51,6 +52,7 @@ function UiConfigUpdateCustomMessageResponseToJSONTyped(value, ignoreDiscriminat
         return value;
     }
     return {
+        'active': value['active'],
         'authenticated': value['authenticated'],
         'end_time': value['endTime'] == null ? undefined : ((value['endTime']).toISOString()),
         'id': value['id'],

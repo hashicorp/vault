@@ -63,7 +63,7 @@ module('Acceptance | totp key backend', function (hooks) {
       'After enabling totp secrets engine it navigates to keys list'
     );
 
-    await click(SES.createSecret);
+    await click(SES.createSecretLink);
     await createVaultKey(this.keyName, this.issuer, this.accountName);
     await click(GENERAL.backButton);
     await visit(`/vault/secrets/${this.path}`);
@@ -81,7 +81,7 @@ module('Acceptance | totp key backend', function (hooks) {
   });
 
   test('it deletes a key via menu option', async function (assert) {
-    await click(SES.createSecret);
+    await click(SES.createSecretLink);
     await createVaultKey(this.keyName, this.issuer, this.accountName);
     await click(GENERAL.backButton);
     await waitUntil(() => currentURL() === `/vault/secrets/${this.path}/show/${this.keyName}`);
@@ -96,7 +96,7 @@ module('Acceptance | totp key backend', function (hooks) {
   });
 
   test('it creates a key with Vault as the provider', async function (assert) {
-    await click(SES.createSecret);
+    await click(SES.createSecretLink);
     assert.dom(SES.secretHeader).hasText('Create a TOTP key', 'It renders the create key page');
 
     await createVaultKey(this.keyName, this.issuer, this.accountName);
@@ -116,7 +116,7 @@ module('Acceptance | totp key backend', function (hooks) {
   });
 
   test('it creates a key with another service as the provider with URL', async function (assert) {
-    await click(SES.createSecret);
+    await click(SES.createSecretLink);
     assert.dom(SES.secretHeader).hasText('Create a TOTP key', 'It renders the create key page');
     await createNonVaultKey(this.keyName, this.issuer, this.accountName, this.url);
     await waitUntil(() => currentURL() === `/vault/secrets/${this.path}/show/${this.keyName}`);
@@ -131,7 +131,7 @@ module('Acceptance | totp key backend', function (hooks) {
   });
 
   test('it creates a key with another service as the provider with key', async function (assert) {
-    await click(SES.createSecret);
+    await click(SES.createSecretLink);
     assert.dom(SES.secretHeader).hasText('Create a TOTP key', 'It renders the create key page');
     await createNonVaultKey(this.keyName, this.issuer, this.accountName, undefined, this.key);
     await waitUntil(() => currentURL() === `/vault/secrets/${this.path}/show/${this.keyName}`);
@@ -146,7 +146,7 @@ module('Acceptance | totp key backend', function (hooks) {
   });
 
   test('it does not render QR code when exported is false', async function (assert) {
-    await click(SES.createSecret);
+    await click(SES.createSecretLink);
     await createVaultKey(this.keyName, this.issuer, this.accountName, false);
     await waitUntil(() => currentURL() === `/vault/secrets/${this.path}/show/${this.keyName}`);
     assert.dom('[data-test-qr-code]').doesNotExist('QR code is not displayed');

@@ -15,6 +15,8 @@ import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 import secretList from 'vault/tests/pages/secrets/backend/list';
 import secretEdit from 'vault/tests/pages/secrets/backend/kv/edit-secret';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+
 // import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 // import { login } from 'vault/tests/helpers/auth/auth-helpers';
 
@@ -31,7 +33,7 @@ module('Acceptance | leases', function (hooks) {
   const createSecret = async (context, isRenewable) => {
     context.name = `secret-${uuidv4()}`;
     await secretList.visitRoot({ backend: context.enginePath });
-    await secretList.create();
+    await click(SES.createSecretLink);
     if (isRenewable) {
       await secretEdit.createSecret(context.name, 'ttl', '30h');
     } else {
