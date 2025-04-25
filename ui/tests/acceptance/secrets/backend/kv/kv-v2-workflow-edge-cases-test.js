@@ -34,6 +34,7 @@ import {
 import { clearRecords, writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import codemirror from 'vault/tests/helpers/codemirror';
 import { personas } from 'vault/tests/helpers/kv/policy-generator';
 
@@ -494,7 +495,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
 
   const navToEngine = async (backend) => {
     await click('[data-test-sidebar-nav-link="Secrets Engines"]');
-    return await click(PAGE.backends.link(backend));
+    return await click(SES.secretsBackendLink(backend));
   };
 
   const assertDeleteActions = (assert, expected = ['delete', 'destroy']) => {

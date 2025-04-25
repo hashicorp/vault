@@ -125,6 +125,8 @@ export default class RoleModel extends Model {
   })
   revocation_statement;
 
+  @attr('string', { readOnly: true }) last_vault_rotation;
+
   // ENTERPRISE ONLY
   @attr({
     label: 'Rotate immediately',
@@ -134,6 +136,12 @@ export default class RoleModel extends Model {
     isOppositeValue: true,
   })
   skip_import_rotation;
+
+  @attr('string', {
+    sensitive: true,
+    subText: 'The database password that this Vault role corresponds to.',
+  })
+  password;
 
   /* FIELD ATTRIBUTES */
   get fieldAttrs() {
@@ -156,6 +164,7 @@ export default class RoleModel extends Model {
       'default_ttl',
       'max_ttl',
       'username',
+      'password',
       'rotation_period',
       'skip_import_rotation',
       'creation_statements',
@@ -169,7 +178,9 @@ export default class RoleModel extends Model {
 
     // remove enterprise-only attrs if on community
     if (!this.version.isEnterprise) {
-      allRoleSettingFields = allRoleSettingFields.filter((role) => role !== 'skip_import_rotation');
+      allRoleSettingFields = allRoleSettingFields.filter(
+        (role) => !['skip_import_rotation', 'password'].includes(role)
+      );
     }
 
     return expandAttributeMeta(this, allRoleSettingFields);

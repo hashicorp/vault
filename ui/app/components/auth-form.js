@@ -187,7 +187,7 @@ export default Component.extend(DEFAULTS, {
       this.set('selectedAuth', 'token');
       try {
         const response = yield this.api.sys.unwrap({}, this.api.buildHeaders({ token }));
-        this.set('token', response.auth.client_token);
+        this.set('token', response.auth.clientToken);
         this.send('doSubmit');
       } catch (e) {
         const error = yield apiErrorMessage(e);

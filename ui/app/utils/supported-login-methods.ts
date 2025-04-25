@@ -56,3 +56,7 @@ export const ALL_LOGIN_METHODS = [...BASE_LOGIN_METHODS, ...ENTERPRISE_LOGIN_MET
 
 export const supportedTypes = (isEnterprise: boolean) =>
   isEnterprise ? ALL_LOGIN_METHODS.map((m) => m.type) : BASE_LOGIN_METHODS.map((m) => m.type);
+
+// this ensures no unexpected params are injected and submitted in the login form
+// 'namespace' and 'path' are intentionally omitted because they are handled explicitly
+export const POSSIBLE_FIELDS = ['role', 'jwt', 'password', 'token', 'username'];

@@ -33,6 +33,7 @@ function PkiConfigureUrlsResponseFromJSONTyped(json, ignoreDiscriminator) {
     }
     return {
         'crlDistributionPoints': json['crl_distribution_points'] == null ? undefined : json['crl_distribution_points'],
+        'deltaCrlDistributionPoints': json['delta_crl_distribution_points'] == null ? undefined : json['delta_crl_distribution_points'],
         'enableTemplating': json['enable_templating'] == null ? undefined : json['enable_templating'],
         'issuingCertificates': json['issuing_certificates'] == null ? undefined : json['issuing_certificates'],
         'ocspServers': json['ocsp_servers'] == null ? undefined : json['ocsp_servers'],
@@ -47,6 +48,7 @@ function PkiConfigureUrlsResponseToJSONTyped(value, ignoreDiscriminator = false)
     }
     return {
         'crl_distribution_points': value['crlDistributionPoints'],
+        'delta_crl_distribution_points': value['deltaCrlDistributionPoints'],
         'enable_templating': value['enableTemplating'],
         'issuing_certificates': value['issuingCertificates'],
         'ocsp_servers': value['ocspServers'],

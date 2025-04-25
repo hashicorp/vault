@@ -18,6 +18,8 @@ import {
   ENTERPRISE_LOGIN_METHODS,
 } from 'vault/utils/supported-login-methods';
 import { Response } from 'miragejs';
+import { overrideResponse } from 'vault/tests/helpers/stubs';
+import { ERROR_JWT_LOGIN } from 'vault/components/auth/form/oidc-jwt';
 
 module('Integration | Component | auth | form template', function (hooks) {
   setupRenderingTest(hooks);
@@ -45,6 +47,7 @@ module('Integration | Component | auth | form template', function (hooks) {
     };
   });
 
+  // test to select each method is in "ent" module to include enterprise methods
   test('it selects token by default', async function (assert) {
     await this.renderComponent();
     assert.dom(GENERAL.selectByAttr('auth type')).hasValue('token');
@@ -82,10 +85,14 @@ module('Integration | Component | auth | form template', function (hooks) {
   });
 
   test('it displays errors', async function (assert) {
+    const authenticateStub = sinon.stub(this.owner.lookup('service:auth'), 'authenticate');
+    authenticateStub.throws('permission denied');
     await this.renderComponent();
     await click(AUTH_FORM.login);
-    // this error message text is because the auth service is not stubbed in this test
-    assert.dom(GENERAL.messageError).hasText('Error Authentication failed: permission denied');
+    assert
+      .dom(GENERAL.messageError)
+      .hasText('Error Authentication failed: permission denied: Sinon-provided permission denied');
+    authenticateStub.restore();
   });
 
   module('listing visibility', function (hooks) {
@@ -422,6 +429,65 @@ module('Integration | Component | auth | form template', function (hooks) {
       await fillIn(GENERAL.inputByAttr('namespace'), 'admin');
       assert.dom(AUTH_FORM.tabs('userpass')).exists('userpass renders as a tab');
       assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist('dropdown does not render');
+    });
+  });
+
+  // AUTH METHOD SPECIFIC TESTS
+  // since the template yields each auth <form> some assertions are best done here instead of
+  // in the corresponding the Auth::Form::<Type> integration tests
+  module('oidc-jwt', function (hooks) {
+    hooks.beforeEach(async function () {
+      this.store = this.owner.lookup('service:store');
+      this.routerStub = sinon.stub(this.owner.lookup('service:router'), 'urlFor').returns('123-example.com');
+    });
+
+    test('it re-requests the auth_url when authType changes', async function (assert) {
+      assert.expect(2); // auth_url should be hit twice, one for each type selection
+      let expectedType = 'oidc';
+      this.server.post(`/auth/:path/oidc/auth_url`, (_, req) => {
+        assert.strictEqual(
+          req.params.path,
+          expectedType,
+          `it makes request to auth_url for selected type: ${expectedType}`
+        );
+        return { data: { auth_url: '123-example.com' } };
+      });
+      await this.renderComponent();
+      // auth_url should be requested once when "oidc" is selected
+      await fillIn(GENERAL.selectByAttr('auth type'), 'oidc');
+      // auth_url should be requested again when "jwt" is selected
+      expectedType = 'jwt';
+      await fillIn(GENERAL.selectByAttr('auth type'), 'jwt');
+    });
+
+    // for simplicity the auth types are configured as their namesake but type isn't relevant.
+    // these tests assert that CONFIG changes from OIDC -> JWT render correctly and vice versa
+    // so the order the requests are hit is what matters.
+    test('"OIDC" to "JWT" configuration: it updates the form when the auth_url response changes', async function (assert) {
+      this.server.post(`/auth/oidc/oidc/auth_url`, () => ({ data: { auth_url: '123-example.com' } })); // this return means mount is configured as oidc
+      this.server.post(`/auth/jwt/oidc/auth_url`, () => overrideResponse(400, { errors: [ERROR_JWT_LOGIN] })); // this return means the mount is configured as jwt
+      await this.renderComponent();
+
+      // select mount configured for OIDC first
+      await fillIn(GENERAL.selectByAttr('auth type'), 'oidc');
+      assert.dom(GENERAL.inputByAttr('jwt')).doesNotExist();
+      // then select mount configured for JWT
+      await fillIn(GENERAL.selectByAttr('auth type'), 'jwt');
+      assert.dom(GENERAL.inputByAttr('jwt')).exists();
+    });
+
+    test('"JWT" to "OIDC" configuration: it updates the form when the auth_url response changes', async function (assert) {
+      this.server.post(`/auth/jwt/oidc/auth_url`, () => overrideResponse(400, { errors: [ERROR_JWT_LOGIN] })); // this return means the mount is configured as jwt
+      this.server.post(`/auth/oidc/oidc/auth_url`, () => ({ data: { auth_url: '123-example.com' } })); // this return means mount is configured as oidc
+      await this.renderComponent();
+
+      // select mount configured for JWT first
+      await fillIn(GENERAL.selectByAttr('auth type'), 'jwt');
+      assert.dom(GENERAL.inputByAttr('jwt')).exists();
+
+      // then select mount configured for OIDC
+      await fillIn(GENERAL.selectByAttr('auth type'), 'oidc');
+      assert.dom(GENERAL.inputByAttr('jwt')).doesNotExist();
     });
   });
 });
