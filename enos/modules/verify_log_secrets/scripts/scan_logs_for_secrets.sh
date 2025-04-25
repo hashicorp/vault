@@ -16,6 +16,7 @@ verify_radar_scan_output_file() {
     found=$(jq -eMn '[inputs] | [.[] | select(.type != "aws_access_key_id") | select((.tags == null) or (.tags | contains(["ignore_rule"]) | not ))]' < "$2")
     fail "failed to radar secrets output: vault radar detected secrets in $1!: $found"
   fi
+  exit 1
 }
 
 set -e
