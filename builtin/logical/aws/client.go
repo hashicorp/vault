@@ -192,8 +192,6 @@ func (b *backend) getRootSTSConfigs(ctx context.Context, s logical.Storage, logg
 	// in the sts case, regions contains sts_region, if it was set, then the sts_fallback_regions in order, if they were set.
 	//                  endpoints contains sts_endpint, if it wa set, then sts_fallback_endpoints in order, if they were set.
 
-	logger.Info("pre", "region", fmt.Sprintf("%+v", regions), "endpoint", fmt.Sprintf("%+v", endpoints))
-
 	// case in which nothing was supplied
 	if len(regions) == 0 {
 		// fallback region is in descending order, AWS_REGION, or AWS_DEFAULT_REGION, or us-east-1
@@ -211,8 +209,6 @@ func (b *backend) getRootSTSConfigs(ctx context.Context, s logical.Storage, logg
 		return nil, errors.New("number of regions does not match number of endpoints")
 	}
 
-	logger.Info("data", "region", fmt.Sprintf("%+v", regions), "endpoint", fmt.Sprintf("%+v", endpoints))
-
 	for i := 0; i < len(endpoints); i++ {
 		if len(regions) > i {
 			credsConfig.Region = regions[i]
@@ -223,7 +219,6 @@ func (b *backend) getRootSTSConfigs(ctx context.Context, s logical.Storage, logg
 		if err != nil {
 			return nil, err
 		}
-		logger.Info("this pair is", "region", credsConfig.Region, "endpoint", endpoints[i])
 		configs = append(configs, &aws.Config{
 			Credentials: creds,
 			Region:      aws.String(credsConfig.Region),
