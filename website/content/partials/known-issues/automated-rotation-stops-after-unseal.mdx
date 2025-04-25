@@ -16,5 +16,9 @@ Update the root configuration on an affected backend to cause Vault to recreate 
 ```
 vault write aws/config/root rotation_schedule="<old schedule>" rotation_window="<old window>"
 ```
+or
+```
+vault write gcp/config/root rotation_period="<old period>"
+```
 
 Values can be the same as they were previously.
