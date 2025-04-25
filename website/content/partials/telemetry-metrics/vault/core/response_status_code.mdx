@@ -1,0 +1,9 @@
+### vault.core.response_status_code ((#vault-core-response_status_code))
+
+| Metric type | Value  | Description                                  |
+|-------------|--------|----------------------------------------------|
+| counter     | number | Number of responses issued by the local node |
+
+The metric includes two labels, `code`, which is the exact status code of the response,
+and `type`, which is the series of the status code. For example, code might be `429`, and
+`type` might be `4xx`.
