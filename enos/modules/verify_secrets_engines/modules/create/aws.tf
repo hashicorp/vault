@@ -13,7 +13,7 @@ module "create_aws_secrets_engine" {
 }
 
 locals {
-  aws_state = try(module.create_aws_secrets_engine[0].state, null)
+  aws_state = var.create_aws_secrets_engine ? module.create_aws_secrets_engine[0].state : null
 }
 
 output "aws" {

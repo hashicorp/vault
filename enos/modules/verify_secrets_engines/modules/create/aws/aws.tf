@@ -50,8 +50,8 @@ locals {
   vault_aws_role = "enos_test_role"
   my_email       = split("/", data.aws_caller_identity.current.arn)[2]
 
-  // Output
-  aws_output = {
+  // State output
+  state = {
     aws_role       = data.aws_iam_role.premade_demo_assumed_role.name
     aws_role_arn   = data.aws_iam_role.premade_demo_assumed_role.arn
     aws_policy_arn = data.aws_iam_policy.premade_demo_user_policy.arn
@@ -64,8 +64,8 @@ locals {
   }
 }
 
-output "output" {
-  value = local.aws_output
+output "state" {
+  value = local.state
 }
 
 resource "random_id" "unique_suffix" {
@@ -129,14 +129,14 @@ resource "enos_remote_exec" "aws_generate_roles" {
   for_each   = var.hosts
 
   environment = {
-    AWS_REGION            = local.aws_output.region
+    AWS_REGION            = local.state.region
     ENGINE                = local.aws_mount
     MOUNT                 = local.aws_mount
-    AWS_USER_NAME         = local.aws_output.aws_user_name
-    AWS_POLICY_ARN        = local.aws_output.aws_policy_arn
-    AWS_ROLE_ARN          = local.aws_output.aws_role_arn
-    AWS_ACCESS_KEY_ID     = local.aws_output.aws_access_key
-    AWS_SECRET_ACCESS_KEY = local.aws_output.aws_secret_key
+    AWS_USER_NAME         = local.state.aws_user_name
+    AWS_POLICY_ARN        = local.state.aws_policy_arn
+    AWS_ROLE_ARN          = local.state.aws_role_arn
+    AWS_ACCESS_KEY_ID     = local.state.aws_access_key
+    AWS_SECRET_ACCESS_KEY = local.state.aws_secret_key
     VAULT_AWS_ROLE        = local.vault_aws_role
     VAULT_ADDR            = var.vault_addr
     VAULT_TOKEN           = var.vault_root_token
