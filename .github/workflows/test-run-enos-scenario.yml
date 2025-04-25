@@ -70,7 +70,7 @@ jobs:
         with:
           node-version: 14
           cache-dependency-path: ui/yarn.lock
-      - uses: hashicorp/setup-terraform@v2
+      - uses: hashicorp/setup-terraform@v3
         with:
           # the Terraform wrapper will break Terraform execution in Enos because
           # it changes the output to text when we expect it to be JSON.
