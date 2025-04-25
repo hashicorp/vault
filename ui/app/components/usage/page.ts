@@ -32,8 +32,8 @@ export default class UsagePage extends Component {
 
   handleFetchUsageData: getUsageDataFunction = async () => {
     //TODO: Update client with typed response after the API is updated https://hashicorp.atlassian.net/browse/VAULT-35108
-    const response = await this.api.sys.systemReadUtilizationReport();
-    const data = response.data as UsageDashboardData;
+    const response = await this.api.sys.generateUtilizationReport();
+    const data = response as UsageDashboardData;
     // Replace engine names with display names if available
     allEngines().forEach((engine) => {
       if (engine.type in data.secret_engines) {

@@ -81,6 +81,9 @@ export default class CapabilitiesService extends Service {
       paths: paths.map((path) => this.relativeNamespacePath(path)),
       namespace: sanitizePath(this.namespace.userRootNamespace),
     };
+    if (!payload.namespace) {
+      delete payload.namespace;
+    }
 
     try {
       const { data } = await this.api.sys.queryTokenSelfCapabilities(payload);

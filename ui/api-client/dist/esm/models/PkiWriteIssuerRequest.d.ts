@@ -22,6 +22,12 @@ export interface PkiWriteIssuerRequest {
      */
     crlDistributionPoints?: Array<string>;
     /**
+     * Comma-separated list of URLs to be used for the Delta CRL distribution points attribute, also known as Freshest CRL distribution points attribute. See also RFC 5280 Section 4.2.1.15.
+     * @type {Array<string>}
+     * @memberof PkiWriteIssuerRequest
+     */
+    deltaCrlDistributionPoints?: Array<string>;
+    /**
      * Whether critical extension checks should be performed when issuing certificates. (Enterprise only)
      * @type {boolean}
      * @memberof PkiWriteIssuerRequest

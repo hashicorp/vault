@@ -32,6 +32,7 @@ function QueryTokenSelfCapabilitiesRequestFromJSONTyped(json, ignoreDiscriminato
         return json;
     }
     return {
+        'namespace': json['namespace'] == null ? undefined : json['namespace'],
         'path': json['path'] == null ? undefined : json['path'],
         'paths': json['paths'] == null ? undefined : json['paths'],
         'token': json['token'] == null ? undefined : json['token'],
@@ -45,6 +46,7 @@ function QueryTokenSelfCapabilitiesRequestToJSONTyped(value, ignoreDiscriminator
         return value;
     }
     return {
+        'namespace': value['namespace'],
         'path': value['path'],
         'paths': value['paths'],
         'token': value['token'],
