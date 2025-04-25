@@ -187,10 +187,12 @@ func (b *backend) getRootSTSConfigs(ctx context.Context, s logical.Storage, logg
 		opts = append(opts, awsutil.WithEnvironmentCredentials(false), awsutil.WithSharedCredentials(false))
 	}
 
-	// at this point, in the IAM case, regions contains config.Region, if it was set.
-	//                                 endpoints contains iam_endpoint, if it was set.
-	// in the sts case, regions contains sts_region, if it was set, then the sts_fallback_regions in order, if they were set.
-	//                  endpoints contains sts_endpint, if it wa set, then sts_fallback_endpoints in order, if they were set.
+	// at this point, in the IAM case,
+	// - regions contains config.Region, if it was set.
+	// - endpoints contains iam_endpoint, if it was set.
+	// in the sts case,
+	// - regions contains sts_region, if it was set, then sts_fallback_regions in order, if they were set.
+	// - endpoints contains sts_endpoint, if it was set, then sts_fallback_endpoints in order, if they were set.
 
 	// case in which nothing was supplied
 	if len(regions) == 0 {
