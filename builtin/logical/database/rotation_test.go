@@ -1661,11 +1661,9 @@ func TestStaticRoleNextVaultRotationOnRestart(t *testing.T) {
 
 	// Repopulate queue to simulate restart
 	b.populateQueue(ctx, storage)
-	// call rotateCredential to simulate ticker running and rotating first item in queue
-	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
-		Return(v5.UpdateUserResponse{}, nil).
-		Once()
-	b.rotateCredentials(ctx, storage)
+
+	success := b.rotateCredential(t.Context(), storage)
+	require.False(t, success, "expected rotation to fail")
 
 	role, err = b.StaticRole(ctx, storage, roleName)
 	require.NoError(t, err)
