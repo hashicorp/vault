@@ -536,10 +536,9 @@ func ParsePublicKeyPEM(data []byte) (interface{}, error) {
 func AddPolicyIdentifiers(data *CreationBundle, certTemplate *x509.Certificate) {
 	oidOnly := true
 	for _, oidStr := range data.Params.PolicyIdentifiers {
-		// Compatible with Go 1.24 and higher only (or 1.22 with x509usepolicies=1)
-		x509Oid, err := x509.ParseOID(oidStr)
+		oid, err := StringToOid(oidStr)
 		if err == nil {
-			certTemplate.Policies = append(certTemplate.Policies, x509Oid)
+			certTemplate.PolicyIdentifiers = append(certTemplate.PolicyIdentifiers, oid)
 		}
 		if err != nil {
 			oidOnly = false

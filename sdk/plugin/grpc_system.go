@@ -483,7 +483,8 @@ func (s *gRPCSystemViewServer) RegisterRotationJob(ctx context.Context, req *pb.
 
 	rotationID, err := s.impl.RegisterRotationJob(ctx, cfgReq)
 	if err != nil {
-		return &pb.RegisterRotationJobResponse{}, status.Error(codes.Internal, err.Error())
+		return &pb.RegisterRotationJobResponse{}, status.Errorf(codes.Internal,
+			err.Error())
 	}
 
 	return &pb.RegisterRotationJobResponse{
@@ -503,7 +504,8 @@ func (s *gRPCSystemViewServer) DeregisterRotationJob(ctx context.Context, req *p
 
 	err := s.impl.DeregisterRotationJob(ctx, cfgReq)
 	if err != nil {
-		return &pb.Empty{}, status.Error(codes.Internal, err.Error())
+		return &pb.Empty{}, status.Errorf(codes.Internal,
+			err.Error())
 	}
 
 	return &pb.Empty{}, nil
