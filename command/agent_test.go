@@ -3123,7 +3123,7 @@ log_level = "debug"
 	// TODO (HCL_DUP_KEYS_DEPRECATION): expect error on duplicates once deprecation is done
 	require.NoError(t, err)
 	require.True(t, duplicate)
-	//require.Contains(t, err.Error(), "Each argument can only be defined once")
+	// require.Contains(t, err.Error(), "Each argument can only be defined once")
 }
 
 // TestAgent_NonTLSListener_SIGHUP tests giving a SIGHUP signal to a listener

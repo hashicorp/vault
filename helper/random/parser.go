@@ -5,13 +5,13 @@ package random
 
 import (
 	"fmt"
-	"github.com/hashicorp/hcl/hcl/ast"
-	hclParser "github.com/hashicorp/hcl/hcl/parser"
 	"reflect"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/hashicorp/hcl"
+	"github.com/hashicorp/hcl/hcl/ast"
+	hclParser "github.com/hashicorp/hcl/hcl/parser"
 	"github.com/mitchellh/mapstructure"
 )
 

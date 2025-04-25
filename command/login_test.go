@@ -5,7 +5,6 @@ package command
 
 import (
 	"context"
-	"github.com/stretchr/testify/require"
 	"os"
 	"regexp"
 	"strings"
@@ -19,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/command/token"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 )
 
 // minTokenLengthExternal is the minimum size of SSC

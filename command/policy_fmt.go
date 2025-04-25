@@ -6,13 +6,13 @@ package command
 import (
 	"bytes"
 	"fmt"
-	"github.com/hashicorp/vault/helper/random"
 	"io/ioutil"
 	"strings"
 
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/hcl/hcl/printer"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/vault"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/posener/complete"

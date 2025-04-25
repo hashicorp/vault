@@ -6,7 +6,6 @@ package command
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/vault/helper/random"
 	"io/ioutil"
 	"math"
 	"net/url"
@@ -21,6 +20,7 @@ import (
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"

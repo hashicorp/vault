@@ -5,10 +5,11 @@ package api
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"net/http"
 	"strings"
 	"testing"
+	
+	"github.com/stretchr/testify/require"
 )
 
 // TestSSH_CanLoadDuplicateKeys verifies that during the deprecation process of duplicate HCL attributes this function
