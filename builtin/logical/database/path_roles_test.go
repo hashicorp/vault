@@ -1353,6 +1353,39 @@ func TestIsInsideRotationWindow(t *testing.T) {
 	}
 }
 
+// TestStaticRoleTTLAfterUpdate tests that a static roles
+// TTL is properly updated after updating rotation period
+// This addresses a bug in which NextVaultRotation was not
+// set on update
+func TestStaticRoleTTLAfterUpdate(t *testing.T) {
+	ctx := context.Background()
+	b, storage, mockDB := getBackend(t)
+	defer b.Cleanup(ctx)
+	configureDBMount(t, storage)
+
+	roleName := "hashicorp"
+	data := map[string]interface{}{
+		"username":        "hashicorp",
+		"db_name":         "mockv5",
+		"rotation_period": "10m",
+	}
+
+	createRoleWithData(t, b, storage, mockDB, roleName, data)
+	// read credential
+	resp := readStaticCred(t, b, storage, mockDB, roleName)
+	initialTTL := resp.Data["ttl"]
+
+	updateStaticRoleWithData(t, b, storage, mockDB, roleName, map[string]interface{}{
+		"username":        "hashicorp",
+		"db_name":         "mockv5",
+		"rotation_period": "20m",
+	})
+
+	resp = readStaticCred(t, b, storage, mockDB, roleName)
+	updatedTTL := resp.Data["ttl"]
+	require.NotEqual(t, initialTTL, updatedTTL)
+}
+
 func createRole(t *testing.T, b *databaseBackend, storage logical.Storage, mockDB *mockNewDatabase, roleName string) {
 	t.Helper()
 	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
@@ -1405,7 +1438,7 @@ func readStaticCred(t *testing.T, b *databaseBackend, s logical.Storage, mockDB 
 	return resp
 }
 
-func createStaticRoleWithData(t *testing.T, b *databaseBackend, storage logical.Storage, mockDB *mockNewDatabase, roleName string, d map[string]interface{}) {
+func updateStaticRoleWithData(t *testing.T, b *databaseBackend, storage logical.Storage, mockDB *mockNewDatabase, roleName string, d map[string]interface{}) {
 	t.Helper()
 
 	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
@@ -1413,16 +1446,14 @@ func createStaticRoleWithData(t *testing.T, b *databaseBackend, storage logical.
 		Once()
 
 	req := &logical.Request{
-		Operation: logical.CreateOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "static-roles/" + roleName,
 		Storage:   storage,
 		Data:      d,
 	}
 
 	resp, err := b.HandleRequest(context.Background(), req)
-
-	require.NoError(t, err)
-	if resp != nil && resp.IsError() {
+	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatal(resp, err)
 	}
 }

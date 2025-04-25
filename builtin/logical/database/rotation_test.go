@@ -1620,11 +1620,9 @@ func TestDeletesOlderWALsOnLoad(t *testing.T) {
 	requireWALs(t, storage, 1)
 }
 
-// TestStaticRoleNextVaultRotationOnRestart tests the case where
-// a static role was created before the 1.15.0 release and the
-// NextVaultRotation was not set. It ensures that the NextVaultRotation
-// is set to the next rotation time when the role is read from storage
-// and the queue is populated.
+// TestStaticRoleTTLAfterUpdate verifies that a static role created prior to Vault 1.15.0
+// (when roles were created without NextVaultRotation set) is automatically assigned a valid
+// NextVaultRotation when loaded from storage and the rotation queue is repopulated.
 func TestStaticRoleNextVaultRotationOnRestart(t *testing.T) {
 	ctx := context.Background()
 	b, storage, mockDB := getBackend(t)
@@ -1638,7 +1636,7 @@ func TestStaticRoleNextVaultRotationOnRestart(t *testing.T) {
 		"rotation_period": "10m",
 	}
 
-	createStaticRoleWithData(t, b, storage, mockDB, roleName, data)
+	createRoleWithData(t, b, storage, mockDB, roleName, data)
 	item, err := b.credRotationQueue.Pop()
 	require.NoError(t, err)
 	firstPriority := item.Priority
