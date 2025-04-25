@@ -1,0 +1,24 @@
+### Automated Rotation Stops After Unseal
+
+#### Affected Versions
+
+- 1.19.0, 1.19.1, 1.19.2
+
+#### Issue
+
+After unsealing Vault, the rotation manager does not correctly reinstate the rotation queue. This causes configured
+automated root credential rotations to stop.
+
+#### Workaround
+
+Update the root configuration on an affected backend to cause Vault to recreate the rotation schedule.
+
+```
+vault write aws/config/root rotation_schedule="<old schedule>" rotation_window="<old window>"
+```
+or
+```
+vault write gcp/config/root rotation_period="<old period>"
+```
+
+Values can be the same as they were previously.
