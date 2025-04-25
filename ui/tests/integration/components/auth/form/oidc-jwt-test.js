@@ -331,6 +331,10 @@ module('Integration | Component | auth | form | oidc-jwt', function (hooks) {
     };
   });
 
+  hooks.afterEach(function () {
+    this.authenticateStub.restore();
+  });
+
   test('it renders helper text', async function (assert) {
     await this.renderComponent();
     const id = find(GENERAL.inputByAttr('role')).id;
