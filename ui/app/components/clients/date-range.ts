@@ -10,7 +10,7 @@ import { tracked } from '@glimmer/tracking';
 import { formatDateObject } from 'core/utils/client-count-utils';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import timestamp from 'core/utils/timestamp';
-import { format, getUnixTime } from 'date-fns';
+import { format } from 'date-fns';
 import type VersionService from 'vault/services/version';
 import type { HTMLElementEvent } from 'forms';
 
@@ -70,10 +70,13 @@ export default class ClientsDateRangeComponent extends Component<Args> {
     const count = this.args.retentionMonths / 12;
     const periods: string[] = [];
 
-    // for each historical billing period, start_date will be billing_start_date - (12 * multiple)
     for (let i = 1; i <= count; i++) {
       const startDate = new Date(this.args.billingStartTime);
-      startDate.setMonth(startDate.getMonth() - 12 * i);
+      const utcMonth = startDate.getUTCMonth();
+      const utcYear = startDate.getUTCFullYear() - i;
+
+      startDate.setUTCFullYear(utcYear);
+      startDate.setUTCMonth(utcMonth);
 
       periods.push(startDate.toISOString());
     }
@@ -149,9 +152,13 @@ export default class ClientsDateRangeComponent extends Component<Args> {
       start_time: undefined,
       end_time: undefined,
     };
-    const formattedStart = getUnixTime(new Date(start));
 
-    params.start_time = formattedStart;
+    const [year, month] = start.split('-');
+    if (year && month) {
+      // pass true for isEnd even for start because we want to go off last day of month here, otherwise we risk
+      // setting it to a start_time that is for the previous billing period
+      params.start_time = formatDateObject({ monthIdx: parseInt(month) - 1, year: parseInt(year) }, true);
+    }
 
     this.args.onChange(params);
   }

@@ -21,7 +21,7 @@
       {{/if}}
       {{#if this.version.isEnterprise}}
         <Hds::Dropdown class="has-left-margin-xs" @matchToggleWidth={{true}} as |D|>
-          <D.ToggleButton @text="Current Billing Start" @color="secondary" data-test-date-range-edit />
+          <D.ToggleButton @text="Billing start date" @color="secondary" data-test-date-range-edit />
           <D.Interactive
             {{on "click" (fn this.updateEnterpriseDateRange @billingStartTime)}}
             data-test-date-range-billing-start="0"

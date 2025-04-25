@@ -4,11 +4,13 @@
 }}
 
 <Hds::PageHeader class="has-top-padding-l has-bottom-padding-m" as |PH|>
-  {{#if this.version.isEnterprise}}
-    <PH.Title>Billing Period Client Usage</PH.Title>
-  {{else}}
-    <PH.Title>Client Count</PH.Title>
-  {{/if}}
+  <PH.Title>
+    {{#if this.version.isEnterprise}}
+      Billing Period Client Usage
+    {{else}}
+      Vault Client Usage
+    {{/if}}
+  </PH.Title>
   <PH.Actions>
     <Clients::DateRange
       @startTime={{@startTimestamp}}
