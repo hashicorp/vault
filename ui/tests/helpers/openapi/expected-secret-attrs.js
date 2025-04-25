@@ -1594,6 +1594,12 @@ const pki = {
         'Comma-separated list of URLs to be used for the CRL distribution points attribute. See also RFC 5280 Section 4.2.1.13.',
       fieldGroup: 'default',
     },
+    deltaCrlDistributionPoints: {
+      editType: 'stringArray',
+      helpText:
+        'Comma-separated list of URLs to be used for the Delta CRL distribution points attribute. See also RFC 5280 Section 4.2.1.15.',
+      fieldGroup: 'default',
+    },
     enableTemplating: {
       editType: 'boolean',
       helpText:

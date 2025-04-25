@@ -60,7 +60,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/core@npm:^7.0.0, @babel/core@npm:^7.12.0, @babel/core@npm:^7.13.10, @babel/core@npm:^7.16.10, @babel/core@npm:^7.16.7, @babel/core@npm:^7.22.20, @babel/core@npm:^7.23.6, @babel/core@npm:^7.26.0, @babel/core@npm:^7.26.10, @babel/core@npm:^7.3.4":
+"@babel/core@npm:^7.0.0, @babel/core@npm:^7.12.0, @babel/core@npm:^7.13.10, @babel/core@npm:^7.16.10, @babel/core@npm:^7.16.7, @babel/core@npm:^7.22.20, @babel/core@npm:^7.23.6, @babel/core@npm:^7.24.0, @babel/core@npm:^7.26.0, @babel/core@npm:^7.26.10, @babel/core@npm:^7.3.4":
   version: 7.26.10
   resolution: "@babel/core@npm:7.26.10"
   dependencies:
@@ -1959,14 +1959,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@embroider/macros@npm:^1.15.0":
-  version: 1.17.1
-  resolution: "@embroider/macros@npm:1.17.1"
+"@embroider/macros@npm:1.15.0":
+  version: 1.15.0
+  resolution: "@embroider/macros@npm:1.15.0"
   dependencies:
-    "@embroider/shared-internals": 3.0.0
+    "@babel/core": ^7.24.0
+    "@embroider/shared-internals": 2.5.2
     assert-never: ^1.2.1
-    babel-import-util: ^3.0.1
-    ember-cli-babel: ^7.26.6
+    babel-import-util: ^2.0.0
+    ember-cli-babel: ^8.2.0
     find-up: ^5.0.0
     lodash: ^4.17.21
     resolve: ^1.20.0
@@ -1976,28 +1977,24 @@ __metadata:
   peerDependenciesMeta:
     "@glint/template":
       optional: true
-  checksum: ff664938f1c158deb5a5abfa3a3fb772e4501f9ecfe414af94a210cb7281110d6c08aca95a83689d8f55a7715a6e81ed739f6b761b38cdc8d88ae62f00c93aa0
+  checksum: ac78c4e0d8a553a6d45476acf9248b6ccfb6499e0eb1ddc7e953e1e52cc7a491ce72d4a28defcbe29aff69ed4c32fac5a7311445400836f6427281ef378f1f83
   languageName: node
   linkType: hard
 
-"@embroider/shared-internals@npm:3.0.0, @embroider/shared-internals@npm:^3.0.0":
-  version: 3.0.0
-  resolution: "@embroider/shared-internals@npm:3.0.0"
+"@embroider/shared-internals@npm:2.5.2":
+  version: 2.5.2
+  resolution: "@embroider/shared-internals@npm:2.5.2"
   dependencies:
-    babel-import-util: ^3.0.1
+    babel-import-util: ^2.0.0
     debug: ^4.3.2
     ember-rfc176-data: ^0.3.17
     fs-extra: ^9.1.0
-    is-subdir: ^1.2.0
     js-string-escape: ^1.0.1
     lodash: ^4.17.21
-    minimatch: ^3.0.4
-    pkg-entry-points: ^1.1.0
     resolve-package-path: ^4.0.1
-    resolve.exports: ^2.0.2
     semver: ^7.3.5
     typescript-memoize: ^1.0.1
-  checksum: 508b9729656f6a5ebd2dba65c7ff0ee204b9e092717eb701bfcc9bc91495b83f8cdb3e7ac38d38b48f1cf602e487f2b24308cf1702645d5621da82552cbcaba4
+  checksum: ffa48bc708498f57482d7c1ebca44fccf46543d705a2dab698581ef5dee5f0981a9a67d7df3164940f8de1b7412f20cfd4d6204b13c2945f461660089908fe53
   languageName: node
   linkType: hard
 
@@ -2018,6 +2015,27 @@ __metadata:
     semver: ^7.3.5
     typescript-memoize: ^1.0.1
   checksum: 61e7b5ffccd3a76127dd0c1ca353e2b0bcc8225ad8fd0aa82fc9f2b7118190b6448ca41689fa94cf4c9a6fce2c83c8005a63b200f509ea8596af6c51b53f2bd9
+  languageName: node
+  linkType: hard
+
+"@embroider/shared-internals@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "@embroider/shared-internals@npm:3.0.0"
+  dependencies:
+    babel-import-util: ^3.0.1
+    debug: ^4.3.2
+    ember-rfc176-data: ^0.3.17
+    fs-extra: ^9.1.0
+    is-subdir: ^1.2.0
+    js-string-escape: ^1.0.1
+    lodash: ^4.17.21
+    minimatch: ^3.0.4
+    pkg-entry-points: ^1.1.0
+    resolve-package-path: ^4.0.1
+    resolve.exports: ^2.0.2
+    semver: ^7.3.5
+    typescript-memoize: ^1.0.1
+  checksum: 508b9729656f6a5ebd2dba65c7ff0ee204b9e092717eb701bfcc9bc91495b83f8cdb3e7ac38d38b48f1cf602e487f2b24308cf1702645d5621da82552cbcaba4
   languageName: node
   linkType: hard
 
@@ -2512,7 +2530,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hashicorp/design-system-components@npm:~4.18.1":
+"@hashicorp/design-system-components@npm:~4.18.0, @hashicorp/design-system-components@npm:~4.18.2":
   version: 4.18.2
   resolution: "@hashicorp/design-system-components@npm:4.18.2"
   dependencies:
@@ -18569,7 +18587,7 @@ __metadata:
     "@ember/test-waiters": ^4.0.0
     "@glimmer/component": ^1.1.2
     "@glimmer/tracking": ^1.1.2
-    "@hashicorp/design-system-components": ~4.18.1
+    "@hashicorp/design-system-components": ~4.18.2
     "@hashicorp/vault-client-typescript": "portal:./api-client"
     "@hashicorp/vault-reporting": "portal:./vault-reporting"
     "@icholy/duration": ^5.1.0
