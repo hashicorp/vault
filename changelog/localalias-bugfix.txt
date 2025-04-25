@@ -1,0 +1,4 @@
+```release-note:bug
+identity: Fix non-deterministic merge behavior when two entities have
+conflicting local aliases.
+```
