@@ -15,7 +15,7 @@ import apiErrorMessage from 'vault/utils/api-error-message';
  * ```js
  * <Page::MessageDetails @message={{this.model.message}} @capabilities={{this.model.capabilities}}  />
  * ```
- * @param message - message model
+ * @param message
  * @param capabilities - capabilities for the message
  */
 
