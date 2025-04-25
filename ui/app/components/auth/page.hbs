@@ -58,7 +58,7 @@
       {{else}}
         <Auth::FormTemplate
           @cluster={{@cluster}}
-          @handleNamespaceUpdate={{this.handleNamespaceUpdate}}
+          @handleNamespaceUpdate={{@onNamespaceUpdate}}
           @namespace={{@namespaceQueryParam}}
           @oidcProviderQueryParam={{@oidcProviderQueryParam}}
           @onSuccess={{this.onAuthResponse}}

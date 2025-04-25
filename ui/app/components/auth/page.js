@@ -54,7 +54,7 @@ export default class AuthPage extends Component {
     return namespaceQP;
   }
 
-  // TODO MOVE TO AUTH::FORMTEMPLATE
+  // TODO DELETE
   @action
   handleNamespaceUpdate(event) {
     this.args.onNamespaceUpdate(event.target.value);
