@@ -32,9 +32,9 @@ type SharedConfig struct {
 	DisableMlock    bool        `hcl:"-"`
 	DisableMlockRaw interface{} `hcl:"disable_mlock"`
 
-	Telemetry *Telemetry `hcl:"telemetry"`
+	Telemetry *Telemetry `hcl:"-"`
 
-	HCPLinkConf *HCPLinkConfig `hcl:"cloud"`
+	HCPLinkConf *HCPLinkConfig `hcl:"-"`
 
 	DefaultMaxRequestDuration    time.Duration `hcl:"-"`
 	DefaultMaxRequestDurationRaw interface{}   `hcl:"default_max_request_duration"`
