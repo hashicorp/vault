@@ -23,7 +23,6 @@ export default class MessageDetails extends Component {
   @service('app-router') router;
   @service flashMessages;
   @service customMessages;
-  @service namespace;
   @service pagination;
   @service api;
 
@@ -35,7 +34,7 @@ export default class MessageDetails extends Component {
       const { message } = this.args;
       await this.api.sys.uiConfigDeleteCustomMessage(message.id);
       this.router.transitionTo('vault.cluster.config-ui.messages');
-      this.customMessages.fetchMessages(this.namespace.path);
+      this.customMessages.fetchMessages();
       this.flashMessages.success(`Successfully deleted ${message.title}.`);
     } catch (e) {
       const errorMessage = await apiErrorMessage(e);

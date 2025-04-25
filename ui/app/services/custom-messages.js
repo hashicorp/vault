@@ -19,17 +19,15 @@ export default class CustomMessagesService extends Service {
 
   constructor() {
     super(...arguments);
-    this.fetchMessages(this.namespace.path);
+    this.fetchMessages();
   }
 
   get bannerMessages() {
-    if (!this.messages || !this.messages.length) return [];
-    return this.messages?.filter((message) => message?.type === 'banner');
+    return this.messages?.filter((message) => message?.type === 'banner') || [];
   }
 
   get modalMessages() {
-    if (!this.messages || !this.messages.length) return [];
-    return this.messages?.filter((message) => message?.type === 'modal');
+    return this.messages?.filter((message) => message?.type === 'modal') || [];
   }
 
   async fetchMessages() {
@@ -49,7 +47,7 @@ export default class CustomMessagesService extends Service {
 
       this.bannerMessages?.forEach((bm) => (this.bannerState[bm.id] = true));
     } catch (e) {
-      this.messages = [];
+      this.clearCustomMessages();
     }
   }
 
