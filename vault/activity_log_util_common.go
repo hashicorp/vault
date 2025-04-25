@@ -13,66 +13,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/axiomhq/hyperloglog"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
 	"google.golang.org/protobuf/proto"
 )
 
-type HLLGetter func(ctx context.Context, startTime time.Time) (*hyperloglog.Sketch, error)
-
 // computeCurrentMonthForBillingPeriod computes the current month's data with respect
 // to a billing period.
 func (a *ActivityLog) computeCurrentMonthForBillingPeriod(byMonth map[int64]*processMonth, startTime time.Time, endTime time.Time) (*activity.MonthRecord, error) {
 	return a.computeCurrentMonthForBillingPeriodInternal(byMonth, startTime, endTime)
-}
-
-// CreateOrFetchHyperlogLog creates a new hyperlogLog for each startTime (month) if it does not exist in storage.
-// hyperlogLog is used here to solve count-distinct problem i.e, to count the number of distinct clients
-// In activity log, hyperloglog is a sketch containing clientID's in a given month
-func (a *ActivityLog) CreateOrFetchHyperlogLog(ctx context.Context, startTime time.Time) (*hyperloglog.Sketch, error) {
-	monthlyHLLPath := fmt.Sprintf("%s%d", distinctClientsBasePath, startTime.Unix())
-	hll := hyperloglog.New()
-	data, err := a.view.Get(ctx, monthlyHLLPath)
-	if err != nil {
-		// If there is no hll, we should log the error, as having this fire multiple times
-		// is a sign that something is wrong with hll store/get. However, this is not a
-		// critical failure (in fact it is expected during the first month rotation after
-		// this code is deployed), so we will not throw an error.
-		a.logger.Warn("fetch of hyperloglog threw an error at path", monthlyHLLPath, "error", err)
-	}
-	if data == nil {
-		a.logger.Trace("creating hyperloglog ", "path", monthlyHLLPath)
-		err = a.StoreHyperlogLog(ctx, startTime, hll)
-		if err != nil {
-			return hll, fmt.Errorf("error storing hyperloglog at path %s: error %w", monthlyHLLPath, err)
-		}
-	} else {
-		err = hll.UnmarshalBinary(data.Value)
-		if err != nil {
-			return hll, fmt.Errorf("error unmarshaling hyperloglog at path %s: error %w", monthlyHLLPath, err)
-		}
-	}
-	return hll, nil
-}
-
-// StoreHyperlogLog stores the hyperloglog (a sketch containing client IDs) for startTime (month) in storage
-func (a *ActivityLog) StoreHyperlogLog(ctx context.Context, startTime time.Time, newHll *hyperloglog.Sketch) error {
-	monthlyHLLPath := fmt.Sprintf("%s%d", distinctClientsBasePath, startTime.Unix())
-	a.logger.Trace("storing hyperloglog ", "path", monthlyHLLPath)
-	marshalledHll, err := newHll.MarshalBinary()
-	if err != nil {
-		return err
-	}
-	err = a.view.Put(ctx, &logical.StorageEntry{
-		Key:   monthlyHLLPath,
-		Value: marshalledHll,
-	})
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(byMonth map[int64]*processMonth, startTime time.Time, endTime time.Time) (*activity.MonthRecord, error) {

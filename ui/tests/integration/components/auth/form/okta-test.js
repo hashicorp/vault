@@ -70,6 +70,10 @@ module('Integration | Component | auth | form | okta', function (hooks) {
     };
   });
 
+  hooks.afterEach(function () {
+    this.authenticateStub.restore();
+  });
+
   testHelper(test, { standardSubmit: false });
 
   test('it submits form data with defaults', async function (assert) {
