@@ -1,3 +1,3 @@
 ```release-note:bug
-database: Fix a bug where static roles created in a prior version get rotated on backend restart.
+database: Prevent static roles created in versions prior to 1.15.0 from rotating on backend restart.
 ```

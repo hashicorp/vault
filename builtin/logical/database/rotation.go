@@ -73,8 +73,10 @@ func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) 
 		if role.StaticAccount.NextVaultRotation.IsZero() {
 			log.Debug("NextVaultRotation unset (zero time). Role may predate field", roleName)
 			if role.StaticAccount.LastVaultRotation.IsZero() {
+				log.Debug("Setting NextVaultRotation based on current time", roleName)
 				role.StaticAccount.SetNextVaultRotation(time.Now())
 			} else {
+				log.Debug("Setting NextVaultRotation based on LastVaultRotation", roleName)
 				role.StaticAccount.SetNextVaultRotation(role.StaticAccount.LastVaultRotation)
 			}
 
