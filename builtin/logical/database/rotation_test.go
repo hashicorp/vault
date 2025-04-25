@@ -1620,7 +1620,7 @@ func TestDeletesOlderWALsOnLoad(t *testing.T) {
 	requireWALs(t, storage, 1)
 }
 
-// TestStaticRoleNextVaultRotationOnPopulate tests the case where
+// TestStaticRoleNextVaultRotationOnRestart tests the case where
 // a static role was created before the 1.15.0 release and the
 // NextVaultRotation was not set. It ensures that the NextVaultRotation
 // is set to the next rotation time when the role is read from storage
