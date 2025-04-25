@@ -8,7 +8,7 @@ import { service } from '@ember/service';
 
 import type Store from '@ember-data/store';
 
-export default class ClientsRoute extends Route {
+export default class SecretsBackends extends Route {
   @service declare readonly store: Store;
 
   model() {
