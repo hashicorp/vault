@@ -77,11 +77,10 @@ export default class MessagesList extends Component {
 
       if (isValid) {
         const { data } = message.toJSON();
-        const method = message.isNew ? 'createCustomMessage' : 'uiConfigUpdateCustomMessage';
         let id = data.id;
 
         if (message.isNew) {
-          const response = yield this.api.sys[method](data);
+          const response = yield this.api.sys.createCustomMessage(data);
           id = response.data.id;
         } else {
           yield this.api.sys.uiConfigUpdateCustomMessage(id, data);
