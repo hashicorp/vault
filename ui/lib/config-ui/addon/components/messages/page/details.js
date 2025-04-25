@@ -27,7 +27,7 @@ export default class MessageDetails extends Component {
   @service pagination;
   @service api;
 
-  orderedKeys = ['active', 'type', 'authenticated', 'title', 'message', 'startTime', 'endTime', 'link'];
+  displayFields = ['active', 'type', 'authenticated', 'title', 'message', 'startTime', 'endTime', 'link'];
 
   @action
   async deleteMessage() {
