@@ -24,6 +24,12 @@ export interface UiConfigUpdateCustomMessageResponse {
      * @type {boolean}
      * @memberof UiConfigUpdateCustomMessageResponse
      */
+    active?: boolean;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof UiConfigUpdateCustomMessageResponse
+     */
     authenticated?: boolean;
     /**
      * 
@@ -92,6 +98,7 @@ export function UiConfigUpdateCustomMessageResponseFromJSONTyped(json: any, igno
     }
     return {
         
+        'active': json['active'] == null ? undefined : json['active'],
         'authenticated': json['authenticated'] == null ? undefined : json['authenticated'],
         'endTime': json['end_time'] == null ? undefined : (new Date(json['end_time'])),
         'id': json['id'] == null ? undefined : json['id'],
@@ -115,6 +122,7 @@ export function UiConfigUpdateCustomMessageResponseToJSONTyped(value?: UiConfigU
 
     return {
         
+        'active': value['active'],
         'authenticated': value['authenticated'],
         'end_time': value['endTime'] == null ? undefined : ((value['endTime']).toISOString()),
         'id': value['id'],
