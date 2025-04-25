@@ -1,3 +1,0 @@
-```release-note:improvement
-secret/tests : Updating selectors used in secrets test files
-```
