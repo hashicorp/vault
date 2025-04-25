@@ -9,10 +9,10 @@ import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
 import { encodeString } from 'vault/utils/b64';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import codemirror from 'vault/tests/helpers/codemirror';
-import { GENERAL } from '../helpers/general-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SELECTORS = {
   secretLink: '[data-test-secret-link]',
@@ -194,12 +194,12 @@ const testConvergentEncryption = async function (assert, keyName) {
   }
 };
 
-module('Acceptance | transit (flaky)', function (hooks) {
+module('Acceptance | transit', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
     const uid = uuidv4();
-    await authPage.login();
+    await login();
     this.uid = uid;
     this.path = `transit-${uid}`;
 
@@ -221,7 +221,7 @@ module('Acceptance | transit (flaky)', function (hooks) {
   });
 
   hooks.afterEach(async function () {
-    await authPage.login();
+    await login();
     await runCmd(deleteEngineCmd(this.mountPath));
   });
 

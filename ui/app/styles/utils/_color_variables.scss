@@ -3,6 +3,16 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+//  HDS TOKENS
+
+// Grey
+$neutral-50: var(--token-color-palette-neutral-50);
+
+/*
+DEPRECATED
+below variables are deprecated, use HDS tokens instead
+*/
+
 // UI Gray
 $ui-gray-010: #fbfbfc;
 $ui-gray-050: #f7f8fa;
