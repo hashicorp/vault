@@ -133,8 +133,8 @@ presets:
         - "github_actions-vault_ci -> AssumeServiceUserRole"
         - "github_actions-vault_enterprise_ci -> AssumeServiceUserRole"
       IAMUser:
-        - property: UserName
-          value: "enos*"  # Only delete IAM users whose names start with "testing"
+        - type: regex
+          value: "^github_actions-vault_.*"
 
 
 resource-types:
