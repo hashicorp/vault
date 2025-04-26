@@ -31,7 +31,8 @@ export default class NamespacePicker extends Component {
 
   @tracked allNamespaces = [];
   @tracked searchInput = '';
-  @tracked searchInputHelpText = 'Enter a full path in the search bar and hit ↵ key to navigate faster.';
+  @tracked searchInputHelpText =
+    "Enter a full path in the search bar and hit the 'Enter' ↵ key to navigate faster.";
   @tracked selected = {};
 
   constructor() {
@@ -147,6 +148,7 @@ export default class NamespacePicker extends Component {
 
       if (matchingNamespace) {
         this.selected = matchingNamespace;
+        this.searchInput = '';
         this.router.transitionTo('vault.cluster.dashboard', {
           queryParams: { namespace: matchingNamespace.path },
         });

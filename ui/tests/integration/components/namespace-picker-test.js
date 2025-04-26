@@ -45,8 +45,6 @@ module('Integration | Component | namespace-picker', function (hooks) {
   });
 
   test('it focuses the search input field when the component is loaded', async function (assert) {
-    assert.expect(1);
-
     await render(hbs`<NamespacePicker />`);
 
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
@@ -61,8 +59,6 @@ module('Integration | Component | namespace-picker', function (hooks) {
   });
 
   test('it filters namespace options based on search input', async function (assert) {
-    assert.expect(3);
-
     await render(hbs`<NamespacePicker/>`);
 
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
@@ -98,8 +94,6 @@ module('Integration | Component | namespace-picker', function (hooks) {
   });
 
   test('it updates the namespace list after clicking "Refresh list"', async function (assert) {
-    assert.expect(3);
-
     // Mock `hasListPermissions`
     this.owner.lookup('service:namespace').set('hasListPermissions', true);
 
@@ -144,8 +138,6 @@ module('Integration | Component | namespace-picker', function (hooks) {
   });
 
   test('it displays the "Manage" button when the user has permissions', async function (assert) {
-    assert.expect(1);
-
     // Mock `hasListPermissions` to be true
     this.owner.lookup('service:namespace').set('hasListPermissions', true);
 

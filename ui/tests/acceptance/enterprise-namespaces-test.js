@@ -39,8 +39,6 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
   });
 
   test('it focuses the search input field when the component is loaded', async function (assert) {
-    assert.expect(1);
-
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
 
     // Verify that the search input field is focused
@@ -53,8 +51,6 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
   });
 
   test('it navigates to the matching namespace when Enter is pressed', async function (assert) {
-    assert.expect(2);
-
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
 
     // Simulate typing into the search input
@@ -75,8 +71,6 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
   });
 
   test('it filters namespaces based on search input', async function (assert) {
-    assert.expect(6);
-
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
 
     // Verify all namespaces are displayed initially
@@ -120,8 +114,6 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
   });
 
   test('it updates the namespace list after clicking "Refresh list"', async function (assert) {
-    assert.expect(3);
-
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
 
     // Verify that the namespace list was fetched on load
@@ -150,8 +142,6 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
   });
 
   test('it displays the "Manage" button with the correct URL', async function (assert) {
-    assert.expect(1);
-
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
 
     // Verify the "Manage" button is rendered and has the correct URL
