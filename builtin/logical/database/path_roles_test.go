@@ -1453,8 +1453,13 @@ func updateStaticRoleWithData(t *testing.T, b *databaseBackend, storage logical.
 	}
 
 	resp, err := b.HandleRequest(context.Background(), req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatal(resp, err)
+	assert.NoError(t, err, "unexpected error")
+	if resp != nil {
+		assert.NoError(t, resp.Error(), "unexpected error in response")
+	}
+
+	if t.Failed() {
+		require.FailNow(t, "failed to update static role: %s", roleName)
 	}
 }
 
