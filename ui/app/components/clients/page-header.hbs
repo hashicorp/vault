@@ -5,13 +5,25 @@
 
 <Hds::PageHeader class="has-top-padding-l has-bottom-padding-m" as |PH|>
   <PH.Title>
-    {{#if this.version.isEnterprise}}
-      Billing Period Client Usage
-    {{else}}
-      Vault Client Usage
-    {{/if}}
+    Client Usage
   </PH.Title>
-  <PH.Actions>
+  <PH.Description class="has-text-weight-semibold">
+    For billing period:
+    {{this.formattedStartDate}}
+    -
+    {{this.formattedEndDate}}
+  </PH.Description>
+  <PH.Actions class="align-items-end">
+    {{#if this.showExportButton}}
+      <Hds::Button
+        class="has-font-weight-normal"
+        data-test-export-button
+        @text="Export activity data"
+        @color="secondary"
+        @icon="download"
+        {{on "click" (fn (mut this.showExportModal) true)}}
+      />
+    {{/if}}
     <Clients::DateRange
       @startTime={{@startTimestamp}}
       @endTime={{@endTimestamp}}

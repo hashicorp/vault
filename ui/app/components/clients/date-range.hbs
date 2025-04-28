@@ -6,36 +6,33 @@
 <div ...attributes>
   <div class="is-flex-column align-items-end">
     <Hds::Text::Display @tag="p" @size="100" class="has-bottom-margin-xs">
-      Select billing period
+      Change billing period
     </Hds::Text::Display>
     <div class="is-flex">
-      {{#if (and @startTime @endTime)}}
-        <div class="flex align-items-center">
-          <p class="is-size-5 has-text-weight-semibold" data-test-date-range="start">{{this.formattedDate @startTime}}</p>
-          <p class="has-left-margin-xs"> — </p>
-          <p class="is-size-5 has-text-weight-semibold has-left-margin-xs" data-test-date-range="end">{{this.formattedDate
-              @endTime
-            }}
-          </p>
-        </div>
-      {{/if}}
       {{#if this.version.isEnterprise}}
         <Hds::Dropdown class="has-left-margin-xs" @matchToggleWidth={{true}} as |D|>
           <D.ToggleButton @text="Billing start date" @color="secondary" data-test-date-range-edit />
-          <D.Interactive
+          <D.Description @text="Current period" />
+          <D.Checkmark
             {{on "click" (fn this.updateEnterpriseDateRange @billingStartTime)}}
+            @selected={{eq this.selectedStart (this.formattedDate @billingStartTime)}}
             data-test-date-range-billing-start="0"
           >
             {{this.formattedDate @billingStartTime}}
-          </D.Interactive>
-          {{#each this.historicalBillingPeriods as |period idx|}}
-            <D.Interactive
-              {{on "click" (fn this.updateEnterpriseDateRange period)}}
-              data-test-date-range-billing-start={{add idx 1}}
-            >
-              {{this.formattedDate period}}
-            </D.Interactive>
-          {{/each}}
+          </D.Checkmark>
+          {{#if this.historicalBillingPeriods.length}}
+            <D.Separator />
+            <D.Description @text="Historical periods" />
+            {{#each this.historicalBillingPeriods as |period idx|}}
+              <D.Checkmark
+                {{on "click" (fn this.updateEnterpriseDateRange period)}}
+                data-test-date-range-billing-start={{add idx 1}}
+                @selected={{eq this.selectedStart (this.formattedDate period)}}
+              >
+                {{this.formattedDate period}}
+              </D.Checkmark>
+            {{/each}}
+          {{/if}}
         </Hds::Dropdown>
       {{else}}
         <Hds::Button

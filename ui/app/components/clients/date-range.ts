@@ -46,6 +46,7 @@ export default class ClientsDateRangeComponent extends Component<Args> {
   @tracked showEditModal = false;
   @tracked startDate = ''; // format yyyy-MM
   @tracked endDate = ''; // format yyyy-MM
+  @tracked selectedStart = this.args.billingStartTime;
   currentMonth = format(timestamp.now(), 'yyyy-MM');
 
   constructor(owner: unknown, args: Args) {
@@ -56,6 +57,7 @@ export default class ClientsDateRangeComponent extends Component<Args> {
   setTrackedFromArgs() {
     if (this.args.startTime) {
       this.startDate = parseAPITimestamp(this.args.startTime, 'yyyy-MM') as string;
+      this.selectedStart = this.formattedDate(this.args.startTime) as string;
     }
     if (this.args.endTime) {
       this.endDate = parseAPITimestamp(this.args.endTime, 'yyyy-MM') as string;
