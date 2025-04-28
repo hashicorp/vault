@@ -30,7 +30,6 @@ export default class MessagesList extends Component {
   @service pagination;
   @service flashMessages;
   @service customMessages;
-  @service namespace;
   @service api;
 
   @tracked errorBanner = '';
@@ -87,7 +86,7 @@ export default class MessagesList extends Component {
         }
 
         this.flashMessages.success(`Successfully saved ${data.title} message.`);
-        this.customMessages.fetchMessages(this.namespace.path);
+        this.customMessages.fetchMessages();
         this.router.transitionTo('vault.cluster.config-ui.messages.message.details', id);
       }
     } catch (error) {
