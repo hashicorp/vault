@@ -7,12 +7,14 @@
   <PH.Title>
     Client Usage
   </PH.Title>
-  <PH.Description class="has-text-weight-semibold">
-    For billing period:
-    {{this.formattedStartDate}}
-    -
-    {{this.formattedEndDate}}
-  </PH.Description>
+  {{#if (and this.formattedStartDate this.formattedEndDate)}}
+    <PH.Description class="has-text-weight-semibold">
+      For billing period:
+      {{this.formattedStartDate}}
+      -
+      {{this.formattedEndDate}}
+    </PH.Description>
+  {{/if}}
   <PH.Actions class="align-items-end">
     {{#if this.showExportButton}}
       <Hds::Button
