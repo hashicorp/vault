@@ -146,8 +146,9 @@ export default class AuthFormOidcJwt extends AuthBase {
         data,
         selectedAuth: this.args.authType,
       });
+
       // responsible for redirect after auth data is persisted
-      this.handleAuthResponse(authResponse);
+      this.handleAuthResponse(authResponse, this.args.authType);
     } catch (error) {
       this.onError(error as Error);
     }

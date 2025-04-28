@@ -64,7 +64,7 @@ export default class AuthBase extends Component<Args> {
     })
   );
 
-  handleAuthResponse(authResponse: AuthData, authType: string, formData: object) {
+  handleAuthResponse(authResponse: AuthData, authType: string, formData?: object) {
     // calls onAuthResponse in parent auth/page.js component
     this.args.onSuccess(authResponse, authType, formData);
   }
