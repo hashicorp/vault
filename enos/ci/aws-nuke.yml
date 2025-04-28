@@ -2,31 +2,14 @@
 # SPDX-License-Identifier: BUSL-1.1
 
 regions:
-- eu-north-1
-- ap-south-1
-- eu-west-3
-- eu-west-2
-- eu-west-1
-- ap-northeast-3
-- ap-northeast-2
-- ap-northeast-1
-- sa-east-1
-- ca-central-1
-- ap-southeast-1
-- ap-southeast-2
-- eu-central-1
-- us-east-1
-- us-east-2
-- us-west-1
-- us-west-2
-- global
+  - us-east-1
 
 blocklist:
- - 1234567890
+  - 1234567890
 
 accounts:
   # replaced in CI
-  ACCOUNT_NUM:
+  774305585021:
     presets:
       - default
       - olderthan
@@ -63,7 +46,7 @@ presets:
       EC2Instance:
         - property: LaunchTime
           type: dateOlderThan
-          value: "TIME_LIMIT"
+          value: "72h"
       EC2NetworkACL:
       EC2RouteTable:
       EC2SecurityGroup:
@@ -72,11 +55,11 @@ presets:
       EC2VPC:
         - property: tag:cloud-nuke-first-seen
           type: dateOlderThan
-          value: "TIME_LIMIT"
+          value: "72h"
       ELBv2:
         - property: tag:cloud-nuke-first-seen
           type: dateOlderThan
-          value: "TIME_LIMIT"
+          value: "72h"
       ELBv2TargetGroup:
       EC2NetworkInterface:
       EC2InternetGateway:
@@ -84,7 +67,7 @@ presets:
       RDSInstance:
         - property: InstanceCreateTime
           type: dateOlderThan
-          value: "TIME_LIMIT"
+          value: "72h"
 
   honeybee:
     # Cloudsec
@@ -132,12 +115,15 @@ presets:
       IAMUserPolicy:
         - "github_actions-vault_ci -> AssumeServiceUserRole"
         - "github_actions-vault_enterprise_ci -> AssumeServiceUserRole"
+      IAMUser:
+        - type: regex
+          value: "^github_actions-vault_.*"
+
 
 resource-types:
   # Run against everything, excluding these:
   excludes:
     # Avoid cloudsec things
-    - IAMUser
     - IAMPolicy
     - IAMUserAccessKey
     - S3Object
@@ -406,4 +392,3 @@ resource-types:
     - WorkSpacesWorkspace
     - XRayGroup
     - XRaySamplingRule
-
