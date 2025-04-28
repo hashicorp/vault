@@ -1383,7 +1383,7 @@ func TestStaticRoleTTLAfterUpdate(t *testing.T) {
 
 	resp = readStaticCred(t, b, storage, mockDB, roleName)
 	updatedTTL := resp.Data["ttl"]
-	require.NotEqual(t, initialTTL, updatedTTL)
+	require.Less(t, initialTTL, updatedTTL)
 }
 
 func createRole(t *testing.T, b *databaseBackend, storage logical.Storage, mockDB *mockNewDatabase, roleName string) {
