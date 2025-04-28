@@ -32,7 +32,16 @@ function UiConfigReadCustomMessageResponseFromJSONTyped(json, ignoreDiscriminato
         return json;
     }
     return {
+        'active': json['active'] == null ? undefined : json['active'],
+        'authenticated': json['authenticated'] == null ? undefined : json['authenticated'],
+        'endTime': json['end_time'] == null ? undefined : (new Date(json['end_time'])),
         'id': json['id'] == null ? undefined : json['id'],
+        'link': json['link'] == null ? undefined : json['link'],
+        'message': json['message'] == null ? undefined : json['message'],
+        'options': json['options'] == null ? undefined : json['options'],
+        'startTime': json['start_time'] == null ? undefined : (new Date(json['start_time'])),
+        'title': json['title'] == null ? undefined : json['title'],
+        'type': json['type'] == null ? undefined : json['type'],
     };
 }
 function UiConfigReadCustomMessageResponseToJSON(json) {
@@ -43,6 +52,15 @@ function UiConfigReadCustomMessageResponseToJSONTyped(value, ignoreDiscriminator
         return value;
     }
     return {
+        'active': value['active'],
+        'authenticated': value['authenticated'],
+        'end_time': value['endTime'] == null ? undefined : ((value['endTime']).toISOString()),
         'id': value['id'],
+        'link': value['link'],
+        'message': value['message'],
+        'options': value['options'],
+        'start_time': value['startTime'] == null ? undefined : ((value['startTime']).toISOString()),
+        'title': value['title'],
+        'type': value['type'],
     };
 }

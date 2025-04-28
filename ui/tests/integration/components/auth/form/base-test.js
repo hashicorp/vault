@@ -6,10 +6,11 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import hbs from 'htmlbars-inline-precompile';
-import { find, render } from '@ember/test-helpers';
+import { click, fillIn, find, render } from '@ember/test-helpers';
 import sinon from 'sinon';
 import testHelper from './test-helper';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 
 // These auth types all use the default methods in auth/form/base
 // Any auth types with custom logic should be in a separate test file, i.e. okta
@@ -22,6 +23,10 @@ module('Integration | Component | auth | form | base', function (hooks) {
     this.cluster = { id: 1 };
     this.onError = sinon.spy();
     this.onSuccess = sinon.spy();
+  });
+
+  hooks.afterEach(function () {
+    this.authenticateStub.restore();
   });
 
   module('github', function (hooks) {
@@ -142,11 +147,6 @@ module('Integration | Component | auth | form | base', function (hooks) {
     hooks.beforeEach(function () {
       this.authType = 'token';
       this.expectedFields = ['token'];
-      this.expectedSubmit = {
-        default: { token: 'mytoken' },
-        // token doesn't support custom paths, so just test yielding functionality
-        custom: { token: 'mytoken', yield: 'yield-token' },
-      };
       this.renderComponent = ({ yieldBlock = false } = {}) => {
         if (yieldBlock) {
           return render(hbs`
@@ -157,8 +157,8 @@ module('Integration | Component | auth | form | base', function (hooks) {
               @onSuccess={{this.onSuccess}}
             >
              <:advancedSettings>
-                <label for="yield">Yielded input</label>
-                <input data-test-input="yield" id="yield" name="yield" type="text" /> 
+                <label for="path">Mount path</label>
+                <input data-test-input="path" id="path" name="path" type="text" /> 
              </:advancedSettings>
             </Auth::Form::Token>`);
         }
@@ -172,7 +172,33 @@ module('Integration | Component | auth | form | base', function (hooks) {
       };
     });
 
-    testHelper(test);
+    testHelper(test, { standardSubmit: false });
+
+    test('it submits form data with defaults', async function (assert) {
+      await this.renderComponent();
+      await fillIn(GENERAL.inputByAttr('token'), 'mytoken');
+      await click(AUTH_FORM.login);
+      const [actual] = this.authenticateStub.lastCall.args;
+      assert.propEqual(
+        actual.data,
+        { token: 'mytoken' },
+        'auth service "authenticate" method is called with form data'
+      );
+    });
+
+    test('it submits form data from yielded inputs', async function (assert) {
+      await this.renderComponent({ yieldBlock: true });
+      await fillIn(GENERAL.inputByAttr('token'), 'mytoken');
+      // token doesn't support custom paths, so testing path is not sent
+      await fillIn(GENERAL.inputByAttr('path'), `path-${this.authType}`);
+      await click(AUTH_FORM.login);
+      const [actual] = this.authenticateStub.lastCall.args;
+      assert.propEqual(
+        actual.data,
+        { token: 'mytoken' },
+        'auth service "authenticate" method is called without "path"'
+      );
+    });
   });
 
   module('userpass', function (hooks) {
