@@ -9,10 +9,12 @@
   </PH.Title>
   {{#if (and this.formattedStartDate this.formattedEndDate)}}
     <PH.Description class="has-text-weight-semibold">
-      For billing period:
-      {{this.formattedStartDate}}
-      -
-      {{this.formattedEndDate}}
+      <p>
+        For billing period:
+        <span data-test-date-range="start">{{this.formattedStartDate}}</span>
+        -
+        <span data-test-date-range="end">{{this.formattedEndDate}}</span>
+      </p>
     </PH.Description>
   {{/if}}
   <PH.Actions class="align-items-end">
