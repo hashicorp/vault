@@ -8,6 +8,7 @@ import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { Server } from 'miragejs';
+import { POSSIBLE_FIELDS } from 'vault/utils/supported-login-methods';
 
 const { rootToken } = VAULT_KEYS;
 
@@ -38,15 +39,11 @@ export const loginNs = async (ns: string, token = rootToken) => {
   return click(AUTH_FORM.login);
 };
 
-// LOGIN WITH NON-TOKEN methods
-interface LoginFields {
-  username?: string;
-  password?: string;
-  token?: string;
-  role?: string;
+// LOGIN WITH NON-TOKEN METHODS
+type LoginFields = Partial<Record<(typeof POSSIBLE_FIELDS)[number], string>> & {
   path: string;
   namespace: string;
-}
+};
 
 interface LoginOptions {
   authType?: string;
@@ -64,7 +61,7 @@ export const loginMethod = async (loginFields: LoginFields, options: LoginOption
 export const fillInLoginFields = async (loginFields: LoginFields, { toggleOptions = false } = {}) => {
   if (toggleOptions) await click(AUTH_FORM.moreOptions);
 
-  for (const [input, value] of Object.entries(loginFields)) {
+  for (const [input, value = ''] of Object.entries(loginFields)) {
     await fillIn(GENERAL.inputByAttr(input), value);
   }
 };

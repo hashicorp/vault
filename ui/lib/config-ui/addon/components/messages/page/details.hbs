@@ -32,18 +32,18 @@
   </ToolbarActions>
 </Toolbar>
 
-{{#each this.orderedKeys as |key|}}
-  {{#if (or (eq key "endTime") (eq key "startTime"))}}
+{{#each this.displayFields as |field|}}
+  {{#if (or (eq field "endTime") (eq field "startTime"))}}
     {{! if the attr is an endTime and is falsy, we want to show a 'Never' text value }}
     <InfoTableRow
-      @label={{capitalize (humanize (dasherize key))}}
+      @label={{capitalize (humanize (dasherize field))}}
       @value={{if
-        (and (eq key "endTime") (not (get @message key)))
+        (and (eq field "endTime") (not (get @message field)))
         "Never"
-        (date-format (get @message key) "MMM d, yyyy hh:mm aaa" withTimeZone=true)
+        (date-format (get @message field) "MMM d, yyyy hh:mm aaa" withTimeZone=true)
       }}
     />
-  {{else if (eq key "link")}}
+  {{else if (eq field "link")}}
     {{#if (is-empty-value @message.link)}}
       <InfoTableRow @label="Link" @value="None" />
     {{else}}
@@ -54,7 +54,7 @@
       {{/each-in}}
     {{/if}}
   {{else}}
-    <InfoTableRow @label={{capitalize (humanize (dasherize key))}} @value={{get @message key}} />
+    <InfoTableRow @label={{capitalize (humanize (dasherize field))}} @value={{get @message field}} />
   {{/if}}
 
 {{/each}}

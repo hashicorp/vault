@@ -7,7 +7,7 @@ import AuthBase from './base';
 
 /**
  * @module Auth::Form::Userpass
- *
+ * see Auth::Base
  * */
 
 export default class AuthFormUserpass extends AuthBase {
