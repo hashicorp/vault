@@ -1660,7 +1660,7 @@ func TestStaticRoleNextVaultRotationOnRestart(t *testing.T) {
 	// Repopulate queue to simulate restart
 	b.populateQueue(ctx, storage)
 
-	success := b.rotateCredential(t.Context(), storage)
+	success := b.rotateCredential(ctx, storage)
 	require.False(t, success, "expected rotation to fail")
 
 	role, err = b.StaticRole(ctx, storage, roleName)
