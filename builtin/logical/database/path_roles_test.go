@@ -1373,7 +1373,15 @@ func TestStaticRoleTTLAfterUpdate(t *testing.T) {
 	createRoleWithData(t, b, storage, mockDB, roleName, data)
 	// read credential
 	resp := readStaticCred(t, b, storage, mockDB, roleName)
-	initialTTL := resp.Data["ttl"]
+	var initialTTL float64
+	if v, ok := resp.Data["ttl"]; !ok || v == nil {
+		require.FailNow(t, "initial ttl should be set")
+	} else {
+		initialTTL, ok = v.(float64)
+		if !ok {
+			require.FailNow(t, "expected ttl to be an integer")
+		}
+	}
 
 	updateStaticRoleWithData(t, b, storage, mockDB, roleName, map[string]interface{}{
 		"username":        "hashicorp",
@@ -1382,8 +1390,18 @@ func TestStaticRoleTTLAfterUpdate(t *testing.T) {
 	})
 
 	resp = readStaticCred(t, b, storage, mockDB, roleName)
-	updatedTTL := resp.Data["ttl"]
-	require.Less(t, initialTTL, updatedTTL)
+	var updatedTTL float64
+	if v, ok := resp.Data["ttl"]; !ok || v == nil {
+		require.FailNow(t, "expected ttl to be set after update")
+	} else {
+		updatedTTL, ok = v.(float64)
+		if !ok {
+			require.FailNow(t, "expected ttl to be a float64 after update")
+		}
+	}
+
+	require.Greaterf(t, updatedTTL, initialTTL, "expected ttl to be greater than %f, actual value: %f",
+		initialTTL, updatedTTL)
 }
 
 func createRole(t *testing.T, b *databaseBackend, storage logical.Storage, mockDB *mockNewDatabase, roleName string) {
