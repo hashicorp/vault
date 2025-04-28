@@ -10,11 +10,14 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
+import { loginNs } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { UNSUPPORTED_ENGINES, mountableEngines } from 'vault/helpers/mountable-secret-engines';
+import { MOUNT_BACKEND_FORM } from '../helpers/components/mount-backend-form-selectors';
+import page from 'vault/tests/pages/settings/mount-secret-backend';
 
 module('Acceptance | secret-engine list view', function (hooks) {
   setupApplicationTest(hooks);
@@ -35,18 +38,75 @@ module('Acceptance | secret-engine list view', function (hooks) {
   });
 
   // TEST 1:
-  // enable an engine and it takes you to the mount page.
   // after mounting an unsupported backend (nomad) it takes you to the list page
+  test('after enabling an unsupported engine it takes you to list page', async function (assert) {
+    await visit('/vault/secrets');
+    await page.enableEngine();
+    await click(MOUNT_BACKEND_FORM.mountType('nomad'));
+    await click(GENERAL.saveButton);
+
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backends', 'navigates to the list page');
+  });
 
   // TEST 2:
-  // enable supported engines and it takes you to the mount page.
   // after mounting a supported engine you see configure and clicking breadcrumb takes you back to the list page
+  test('after enabling a supported engine it takes you to mount page, can see configure and clicking breadcrumb takes you back to list page', async function (assert) {
+    await visit('/vault/secrets');
+    await page.enableEngine();
+    await click(MOUNT_BACKEND_FORM.mountType('aws'));
+    await click(GENERAL.saveButton);
+
+    assert.dom(SES.configTab).exists();
+
+    await click(GENERAL.breadcrumbLink('Secrets'));
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backends',
+      'breadcrumb navigates to the list page'
+    );
+  });
 
   // TEST 3:
   // Permissions: I cannot see this page if I DONT have permissions inside namespace
 
+  test('cannot view list without permissions inside namespace', async function (assert) {
+    const uid = uuidv4();
+    this.store = this.owner.lookup('service:store');
+    this.backend = `bk-${uid}`;
+    this.namespace = `ns-${uid}`;
+    // await login();
+    await runCmd([`write sys/namespaces/${this.namespace} -force`]);
+    await loginNs(this.namespace);
+    // mount engine within namespace
+    await runCmd(mountEngineCmd('kv-v2', this.backend), false);
+
+    await visit('/vault/secrets');
+    await this.pauseTest();
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backends',
+      'breadcrumb navigates to the list page'
+    );
+  });
+
   // TEST 4:
   // Permissions: I can see this page if I DO have permissions inside namespace
+
+  test('can view list with permissions inside namespace', async function (assert) {
+    await visit('/vault/secrets');
+    await page.enableEngine();
+    await click(MOUNT_BACKEND_FORM.mountType('aws'));
+    await click(GENERAL.saveButton);
+
+    assert.dom(SES.configTab).exists();
+
+    await click(GENERAL.breadcrumbLink('Secrets'));
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backends',
+      'breadcrumb navigates to the list page'
+    );
+  });
 
   test('after disabling it stays on the list view', async function (assert) {
     // first mount an engine so we can disable it.
