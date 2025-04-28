@@ -3,13 +3,14 @@
 
 regions:
   - us-east-1
+  - global
 
 blocklist:
   - 1234567890
 
 accounts:
   # replaced in CI
-  774305585021:
+  040730498200:
     presets:
       - default
       - olderthan
@@ -115,6 +116,9 @@ presets:
       IAMUserPolicy:
         - "github_actions-vault_ci -> AssumeServiceUserRole"
         - "github_actions-vault_enterprise_ci -> AssumeServiceUserRole"
+      IAMUserAccessKey:
+        - type: regex
+          value: "^github_actions-vault_.*"
       IAMUser:
         - type: regex
           value: "^github_actions-vault_.*"
@@ -125,7 +129,6 @@ resource-types:
   excludes:
     # Avoid cloudsec things
     - IAMPolicy
-    - IAMUserAccessKey
     - S3Object
     - S3Bucket
     - EC2KeyPair
