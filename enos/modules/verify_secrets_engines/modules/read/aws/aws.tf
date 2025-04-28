@@ -67,3 +67,12 @@ resource "enos_remote_exec" "aws_verify_new_creds" {
     }
   }
 }
+
+# # Deleting Enos Test Access Key
+# resource "null_resource" "delete_access_key" {
+#   depends_on = [enos_remote_exec.aws_verify_new_creds]
+#
+#   provisioner "local-exec" {
+#     command = "aws iam delete-access-key --user-name ${var.create_state.aws.aws_user_name} --access-key-id ${var.create_state.aws.aws_access_key}"
+#   }
+# }
