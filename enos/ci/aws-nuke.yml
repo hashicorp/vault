@@ -122,6 +122,7 @@ presets:
       IAMUser:
         - type: regex
           value: "^github_actions-vault_.*"
+      IAMUserPermissionsBoundary:
 
 
 resource-types:
