@@ -13,6 +13,7 @@ enum WriteOptions {
   WRITE_ENTITIES = 3;
   WRITE_DIRECT_TOKENS = 4;
   WRITE_INTENT_LOGS = 5;
+  WRITE_CLIENT_IDS_MEMORY = 6;
 }
 message ActivityLogMockInput {
   repeated WriteOptions write = 1;

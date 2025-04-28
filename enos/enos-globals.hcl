@@ -30,7 +30,7 @@ globals {
     }
     rhel = {
       "8.10" = ["nc"]
-      "9.4"  = ["nc"]
+      "9.5"  = ["nc"]
     }
     sles = {
       // When installing Vault RPM packages on a SLES AMI, the openssl package provided

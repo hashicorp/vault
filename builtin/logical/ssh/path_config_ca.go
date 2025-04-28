@@ -434,8 +434,8 @@ func (b *backend) createManagedKey(ctx context.Context, s logical.Storage, manag
 
 	entry, err := logical.StorageEntryJSON(caManagedKeyStoragePath, &managedKeyStorageEntry{
 		PublicKey: string(ssh.MarshalAuthorizedKey(keyInfo.PublicKey())),
-		KeyName:   keyName,
-		KeyId:     keyId,
+		KeyName:   keyInfo.Name,
+		KeyId:     keyInfo.Uuid,
 	})
 	if err != nil {
 		return fmt.Errorf("error creating storage entry: %s", err)

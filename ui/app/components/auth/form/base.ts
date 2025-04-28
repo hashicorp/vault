@@ -8,9 +8,14 @@ import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
+import { sanitizePath } from 'core/utils/sanitize-path';
+import { POSSIBLE_FIELDS } from 'vault/utils/supported-login-methods';
 
 import type AuthService from 'vault/vault/services/auth';
 import type ClusterModel from 'vault/models/cluster';
+import type FlagsService from 'vault/services/flags';
+import type VersionService from 'vault/services/version';
+import type { AuthData } from 'vault/vault/services/auth';
 import type { HTMLElementEvent } from 'vault/forms';
 
 /**
@@ -31,56 +36,76 @@ interface Args {
 
 export default class AuthBase extends Component<Args> {
   @service declare readonly auth: AuthService;
+  @service declare readonly flags: FlagsService;
+  @service declare readonly version: VersionService;
 
   @action
   onSubmit(event: HTMLElementEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.target as HTMLFormElement);
-    const data: Record<string, FormDataEntryValue | null> = {};
-
-    for (const key of formData.keys()) {
-      data[key] = formData.get(key);
-    }
-
-    // If path is not included in the submitted form data,
-    // set it as the auth type which is the default path Vault expects.
-    // The "token" auth method does not support custom login paths.
-    if (this.args.authType !== 'token' && !Object.keys(data).includes('path')) {
-      data['path'] = this.args.authType;
-    }
-
+    const data = this.parseFormData(formData);
     this.login.unlinked().perform(data);
   }
 
   login = task(
-    waitFor(async (data) => {
+    waitFor(async (formData) => {
       try {
         const authResponse = await this.auth.authenticate({
           clusterId: this.args.cluster.id,
           backend: this.args.authType,
-          data,
+          data: formData,
           selectedAuth: this.args.authType,
         });
 
-        // responsible for redirect after auth data is persisted
-        this.onSuccess(authResponse);
+        this.handleAuthResponse(authResponse);
       } catch (error) {
         this.onError(error as Error);
       }
     })
   );
 
-  // if we move auth service authSuccess method here (or to each auth method component)
-  // then call that before calling parent this.args.onSuccess
-  onSuccess(authResponse: object) {
-    //  responsible for redirect after auth data is persisted
-    this.args.onSuccess(authResponse, this.args.authType);
+  handleAuthResponse(authResponse: AuthData) {
+    // calls onAuthResponse in parent auth/page.js component
+    this.args.onSuccess(authResponse);
   }
 
-  onError(error: Error) {
+  onError(error: Error | string) {
     if (!this.auth.mfaErrors) {
       const errorMessage = `Authentication failed: ${this.auth.handleError(error)}`;
       this.args.onError(errorMessage);
     }
+  }
+
+  parseFormData(formData: FormData) {
+    const data: Record<string, FormDataEntryValue | null> = {};
+
+    // iterate over method specific fields
+    for (const field of POSSIBLE_FIELDS) {
+      const value = formData.get(field);
+      if (value) {
+        data[field] = value;
+      }
+    }
+
+    // path is supported by all auth methods except token
+    if (this.args.authType !== 'token') {
+      // strip leading or trailing slashes for consistency.
+      // fallback to auth type which is the default path Vault expects.
+      data['path'] = sanitizePath(formData?.get('path')) || this.args.authType;
+    }
+
+    if (this.version.isEnterprise) {
+      // strip leading or trailing slashes for consistency
+      let namespace = sanitizePath(formData?.get('namespace')) || '';
+
+      const hvdRootNs = this.flags.hvdManagedNamespaceRoot; // if HVD managed, this is "admin"
+      if (hvdRootNs) {
+        // HVD managed clusters can only input child namespaces, manually prepend with the hvd root
+        namespace = namespace ? `${hvdRootNs}/${namespace}` : hvdRootNs;
+      }
+      data['namespace'] = namespace;
+    }
+
+    return data;
   }
 }
