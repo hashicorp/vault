@@ -36,7 +36,7 @@ interface Args {
  * @param {function} onChange - callback when a new range is saved.
  * @param {string} [startTime] - ISO string timestamp of the current start date
  * @param {string} [endTime] - ISO string timestamp of the current end date
- * @param {int} [retentionMonths] - number of months for historical billing
+ * @param {int} [retentionMonths=48] - number of months for historical billing
  * @param {string} [billingStartTime] - ISO string timestamp of billing start date
  */
 
