@@ -185,7 +185,7 @@ export default class AuthFormTemplate extends Component<Args> {
           this.authTabs = unauthMounts.reduce((obj: AuthTabs, m) => {
             // serialize the ember data model into a regular ol' object
             const mountData = m.serialize();
-            const methodType: string = mountData.type;
+            const methodType = mountData.type;
             if (!Object.keys(obj).includes(methodType)) {
               // create a new empty array for that type
               obj[methodType] = [];
@@ -193,7 +193,7 @@ export default class AuthFormTemplate extends Component<Args> {
 
             if (Array.isArray(obj[methodType])) {
               // push mount data into corresponding type's array
-              obj[methodType]?.push(mountData);
+              obj[methodType].push(mountData);
             }
 
             return obj;
