@@ -5,36 +5,25 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, fillIn, findAll, waitFor, click } from '@ember/test-helpers';
+import { render, fillIn, findAll, waitFor, click, find } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import Service from '@ember/service';
 import { NAMESPACE_PICKER_SELECTORS } from 'vault/tests/helpers/namespace-picker';
 
-const authService = Service.extend({
-  init() {
-    this._super(...arguments);
-    this.set('authData', {
-      userRootNamespace: '',
-    });
-  },
-});
+class AuthService extends Service {
+  authData = { userRootNamespace: '' };
+}
 
-const namespaceService = Service.extend({
-  accessibleNamespaces: null,
-  findNamespacesForUser: null,
-  path: null,
+class NamespaceService extends Service {
+  accessibleNamespaces = ['parent1', 'parent1/child1'];
+  path = 'parent1/child1';
 
-  init() {
-    this._super(...arguments);
-    this.set('accessibleNamespaces', ['parent1', 'parent1/child1']);
-    this.set('findNamespacesForUser', {
-      perform: () => Promise.resolve(),
-    });
-    this.set('path', 'parent1/child1');
-  },
-});
+  findNamespacesForUser = {
+    perform: () => Promise.resolve(),
+  };
+}
 
-const storeService = Service.extend({
+class StoreService extends Service {
   findRecord(modelType, id) {
     return new Promise((resolve, reject) => {
       if (modelType === 'capabilities' && id === 'sys/namespaces/') {
@@ -43,21 +32,33 @@ const storeService = Service.extend({
         reject({ httpStatus: 404, message: 'not found' }); // Simulate an error response
       }
     });
-  },
-});
+  }
+}
 
 module('Integration | Component | namespace-picker', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    this.owner.register('service:auth', authService);
-    this.owner.register('service:namespace', namespaceService);
-    this.owner.register('service:store', storeService);
+    this.owner.register('service:auth', AuthService);
+    this.owner.register('service:namespace', NamespaceService);
+    this.owner.register('service:store', StoreService);
+  });
+
+  test('it focuses the search input field when the component is loaded', async function (assert) {
+    await render(hbs`<NamespacePicker />`);
+
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+
+    // Verify that the search input field is focused
+    const searchInput = find(NAMESPACE_PICKER_SELECTORS.searchInput);
+    assert.strictEqual(
+      document.activeElement,
+      searchInput,
+      'The search input field is focused on component load'
+    );
   });
 
   test('it filters namespace options based on search input', async function (assert) {
-    assert.expect(3);
-
     await render(hbs`<NamespacePicker/>`);
 
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
@@ -71,8 +72,8 @@ module('Integration | Component | namespace-picker', function (hooks) {
     );
 
     // Simulate typing into the search input
-    await waitFor('[type="search"]');
-    await fillIn('[type="search"]', 'child1');
+    await waitFor(NAMESPACE_PICKER_SELECTORS.searchInput);
+    await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, 'child1');
 
     // Verify that only namespaces matching the search input are displayed
     assert.strictEqual(
@@ -82,7 +83,7 @@ module('Integration | Component | namespace-picker', function (hooks) {
     );
 
     // Clear the search input
-    await fillIn('[type="search"]', '');
+    await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, '');
 
     // Verify all namespaces are displayed after clearing the search input
     assert.strictEqual(
@@ -93,8 +94,6 @@ module('Integration | Component | namespace-picker', function (hooks) {
   });
 
   test('it updates the namespace list after clicking "Refresh list"', async function (assert) {
-    assert.expect(3);
-
     // Mock `hasListPermissions`
     this.owner.lookup('service:namespace').set('hasListPermissions', true);
 
@@ -139,8 +138,6 @@ module('Integration | Component | namespace-picker', function (hooks) {
   });
 
   test('it displays the "Manage" button when the user has permissions', async function (assert) {
-    assert.expect(1);
-
     // Mock `hasListPermissions` to be true
     this.owner.lookup('service:namespace').set('hasListPermissions', true);
 

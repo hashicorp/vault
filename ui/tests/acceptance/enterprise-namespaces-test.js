@@ -3,7 +3,17 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, settled, visit, fillIn, currentURL, waitFor, findAll } from '@ember/test-helpers';
+import {
+  click,
+  settled,
+  visit,
+  fillIn,
+  currentURL,
+  waitFor,
+  findAll,
+  triggerKeyEvent,
+  find,
+} from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { runCmd, createNS } from 'vault/tests/helpers/commands';
@@ -28,24 +38,50 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     fetchSpy.restore();
   });
 
-  test('it filters namespaces based on search input', async function (assert) {
-    assert.expect(7);
+  test('it focuses the search input field when the component is loaded', async function (assert) {
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
 
+    // Verify that the search input field is focused
+    const searchInput = find(NAMESPACE_PICKER_SELECTORS.searchInput);
+    assert.strictEqual(
+      document.activeElement,
+      searchInput,
+      'The search input field is focused on component load'
+    );
+  });
+
+  test('it navigates to the matching namespace when Enter is pressed', async function (assert) {
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+
+    // Simulate typing into the search input
+    await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, 'beep/boop');
+    assert
+      .dom(NAMESPACE_PICKER_SELECTORS.searchInput)
+      .hasValue('beep/boop', 'The search input field has the correct value');
+
+    // Simulate pressing Enter
+    await triggerKeyEvent(NAMESPACE_PICKER_SELECTORS.searchInput, 'keydown', 'Enter');
+
+    // Verify navigation to the matching namespace
+    assert.strictEqual(
+      this.owner.lookup('service:router').currentURL,
+      '/vault/dashboard?namespace=beep%2Fboop',
+      'Navigates to the correct namespace when Enter is pressed'
+    );
+  });
+
+  test('it filters namespaces based on search input', async function (assert) {
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
 
     // Verify all namespaces are displayed initially
     assert.dom(NAMESPACE_PICKER_SELECTORS.link()).exists('Namespace link(s) exist');
-    assert.strictEqual(
-      findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
-      5,
-      'All namespaces are displayed initially'
-    );
+    const allNamespaces = findAll(NAMESPACE_PICKER_SELECTORS.link());
 
     // Verify the search input field exists
-    assert.dom('[type="search"]').exists('The namespace search field exists');
+    assert.dom(NAMESPACE_PICKER_SELECTORS.searchInput).exists('The namespace search field exists');
 
     // Verify 3 namespaces are displayed after searching for "beep"
-    await fillIn('[type="search"]', 'beep');
+    await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, 'beep');
     assert.strictEqual(
       findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
       3,
@@ -53,7 +89,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     );
 
     // Verify 1 namespace is displayed after searching for "bop"
-    await fillIn('[type="search"]', 'bop');
+    await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, 'bop');
     assert.strictEqual(
       findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
       1,
@@ -61,7 +97,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     );
 
     // Verify no namespaces are displayed after searching for "other"
-    await fillIn('[type="search"]', 'other');
+    await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, 'other');
     assert.strictEqual(
       findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
       0,
@@ -69,17 +105,15 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     );
 
     // Clear the search input & verify all namespaces are displayed again
-    await fillIn('[type="search"]', '');
+    await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, '');
     assert.strictEqual(
       findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
-      5,
+      allNamespaces.length,
       'All namespaces are displayed after clearing search input'
     );
   });
 
   test('it updates the namespace list after clicking "Refresh list"', async function (assert) {
-    assert.expect(3);
-
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
 
     // Verify that the namespace list was fetched on load
@@ -108,8 +142,6 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
   });
 
   test('it displays the "Manage" button with the correct URL', async function (assert) {
-    assert.expect(1);
-
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
 
     // Verify the "Manage" button is rendered and has the correct URL
@@ -154,6 +186,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
 
       // check that the full namespace path, like "beep/boop", shows in the toggle display
       await waitFor(NAMESPACE_PICKER_SELECTORS.link(targetNamespace));
+
       assert
         .dom(NAMESPACE_PICKER_SELECTORS.link(targetNamespace))
         .hasText(targetNamespace, `shows the namespace ${targetNamespace} in the toggle component`);
@@ -170,14 +203,12 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await waitFor(`svg${GENERAL.icon('check')}`);
 
     // Find the selected element with the check icon & ensure it exists
-    const checkIcon = document.querySelector(
-      `${NAMESPACE_PICKER_SELECTORS.link()} svg${GENERAL.icon('check')}`
-    );
-    assert.ok(checkIcon, 'A selected namespace link with the check icon exists');
+    const checkIcon = find(`${NAMESPACE_PICKER_SELECTORS.link()} ${GENERAL.icon('check')}`);
+    assert.dom(checkIcon).exists('A selected namespace link with the check icon exists');
 
     // Get the selected namespace with the data-test-namespace-link attribute & ensure it exists
-    const selectedNamespace = checkIcon.closest(NAMESPACE_PICKER_SELECTORS.link());
-    assert.ok(selectedNamespace, 'The selected namespace link exists');
+    const selectedNamespace = checkIcon?.closest(NAMESPACE_PICKER_SELECTORS.link());
+    assert.dom(selectedNamespace).exists('The selected namespace link exists');
 
     // Verify that the selected namespace has the correct data-test-namespace-link attribute and path value
     assert.strictEqual(
