@@ -15,13 +15,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/cli@npm:~7.24.6":
-  version: 7.24.8
-  resolution: "@babel/cli@npm:7.24.8"
+"@babel/cli@npm:~7.27.0":
+  version: 7.27.0
+  resolution: "@babel/cli@npm:7.27.0"
   dependencies:
     "@jridgewell/trace-mapping": ^0.3.25
     "@nicolo-ribaudo/chokidar-2": 2.1.8-no-fsevents.3
-    chokidar: ^3.4.0
+    chokidar: ^3.6.0
     commander: ^6.2.0
     convert-source-map: ^2.0.0
     fs-readdir-recursive: ^1.1.0
@@ -38,7 +38,7 @@ __metadata:
   bin:
     babel: ./bin/babel.js
     babel-external-helpers: ./bin/babel-external-helpers.js
-  checksum: 8a1fb83d0c2959b6a83cccab55ac1b0ffd408e1959369609071dadb38c1dc99a501d58751b6e4f0c43b751e595e9868856433b01832a19f592f004dd854a8c1f
+  checksum: 1614007930af651f6ce8d35b95f41e9d0e6fc5147eeedd2146da41512796ce5c7c9c33388f77779bab7ff1bc96ec8ac54876488fa043b1bf1e5fadc03b103a6f
   languageName: node
   linkType: hard
 
@@ -6368,7 +6368,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"chokidar@npm:^3.4.0":
+"chokidar@npm:^3.6.0":
   version: 3.6.0
   resolution: "chokidar@npm:3.6.0"
   dependencies:
@@ -18586,7 +18586,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "vault@workspace:."
   dependencies:
-    "@babel/cli": ~7.24.6
+    "@babel/cli": ~7.27.0
     "@babel/core": ~7.26.10
     "@babel/eslint-parser": ~7.27.0
     "@babel/plugin-proposal-class-properties": ~7.18.6

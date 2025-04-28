@@ -43,7 +43,7 @@
     "vault:cluster": "VAULT_REDIRECT_ADDR=http://127.0.0.1:8202 vault server -log-level=error -dev -dev-root-token-id=root -dev-listen-address=127.0.0.1:8202 -dev-ha -dev-transactional"
   },
   "devDependencies": {
-    "@babel/cli": "~7.24.6",
+    "@babel/cli": "~7.27.0",
     "@babel/core": "~7.26.10",
     "@babel/eslint-parser": "~7.27.0",
     "@babel/plugin-proposal-class-properties": "~7.18.6",
