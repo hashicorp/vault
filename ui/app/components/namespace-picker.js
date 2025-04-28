@@ -7,6 +7,7 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
+import { KEYS } from 'core/utils/keyboard-keys';
 
 /**
  * @module NamespacePicker
@@ -30,6 +31,8 @@ export default class NamespacePicker extends Component {
 
   @tracked allNamespaces = [];
   @tracked searchInput = '';
+  @tracked searchInputHelpText =
+    "Enter a full path in the search bar and hit the 'Enter' ↵ key to navigate faster.";
   @tracked selected = {};
 
   constructor() {
@@ -72,11 +75,15 @@ export default class NamespacePicker extends Component {
     ];
 
     // Conditionally add the root namespace
-    if (this.auth.authData.userRootNamespace === '') {
+    if (this.auth?.authData?.userRootNamespace === '') {
       options.unshift({ id: 'root', path: '', label: 'root' });
     }
 
     return options;
+  }
+
+  get hasSearchInput() {
+    return this.searchInput?.trim().length > 0;
   }
 
   get namespaceLabel() {
@@ -96,11 +103,6 @@ export default class NamespacePicker extends Component {
   }
 
   @action
-  onSearchInput(event) {
-    this.searchInput = event.target.value;
-  }
-
-  @action
   async fetchListCapability() {
     // TODO: Revist. This logic was carried over from previous component implmenetation.
     //  When the user doesn't have this capability, shouldn't we just hide the "Manage" button,
@@ -116,6 +118,12 @@ export default class NamespacePicker extends Component {
   }
 
   @action
+  focusSearchInput(element) {
+    // On mount, cursor should default to the search input field
+    element.focus();
+  }
+
+  @action
   async loadOptions() {
     // TODO: namespace service's findNamespacesForUser will never throw an error.
     //  Check with design to determine if we should continue to ignore or handle an error situation here.
@@ -128,14 +136,34 @@ export default class NamespacePicker extends Component {
   }
 
   @action
-  async refreshList() {
-    this.searchInput = '';
-    await this.loadOptions();
-  }
-
-  @action
   async onChange(selected) {
     this.selected = selected;
     this.router.transitionTo('vault.cluster.dashboard', { queryParams: { namespace: selected.path } });
+  }
+
+  @action
+  async onKeyDown(event) {
+    if (event.key === KEYS.ENTER && this.searchInput?.trim()) {
+      const matchingNamespace = this.allNamespaces.find((ns) => ns.label === this.searchInput.trim());
+
+      if (matchingNamespace) {
+        this.selected = matchingNamespace;
+        this.searchInput = '';
+        this.router.transitionTo('vault.cluster.dashboard', {
+          queryParams: { namespace: matchingNamespace.path },
+        });
+      }
+    }
+  }
+
+  @action
+  onSearchInput(event) {
+    this.searchInput = event.target.value;
+  }
+
+  @action
+  async refreshList() {
+    this.searchInput = '';
+    await this.loadOptions();
   }
 }
