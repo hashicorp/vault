@@ -347,6 +347,7 @@ func TestMongoDB_RotateRoot_NonAdminDB(t *testing.T) {
 	assertCredsExist(t, dbUser, newPassword, connURL)
 }
 
+// TestGetTLS verify the different options of the MongoDB client created based on the multiple parameters given
 func TestGetTLSAuth(t *testing.T) {
 	ca := certhelpers.NewCert(t,
 		certhelpers.CommonName("certificate authority"),
@@ -360,6 +361,7 @@ func TestGetTLSAuth(t *testing.T) {
 
 	type testCase struct {
 		username   string
+		password   string
 		tlsCAData  []byte
 		tlsKeyData []byte
 
@@ -411,12 +413,31 @@ func TestGetTLSAuth(t *testing.T) {
 				}),
 			expectErr: false,
 		},
+		"good key + username/password": {
+			username:   "unittest",
+			password:   "unittest",
+			tlsKeyData: cert.CombinedPEM(),
+
+			expectOpts: options.Client().
+				SetTLSConfig(
+					&tls.Config{
+						Certificates: []tls.Certificate{cert.TLSCert},
+					},
+				).
+				SetAuth(options.Credential{
+					AuthMechanism: "SCRAM-SHA-256",
+					Username:      "unittest",
+					Password:      "unittest",
+				}),
+			expectErr: false,
+		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			c := new()
 			c.Username = test.username
+			c.Password = test.password
 			c.TLSCAData = test.tlsCAData
 			c.TLSCertificateKeyData = test.tlsKeyData
 
@@ -430,66 +451,6 @@ func TestGetTLSAuth(t *testing.T) {
 			assertDeepEqual(t, test.expectOpts, actual)
 		})
 	}
-}
-
-// TestGetTLSAndUserPasswordAuth verify that when a User/Password authentication with TLS certs,
-// the client will still use the SCRAM-SHA-256 mecanism
-func TestGetTLSAndUserPasswordAuth(t *testing.T) {
-	ca := certhelpers.NewCert(t,
-		certhelpers.CommonName("certificate authority"),
-		certhelpers.IsCA(true),
-		certhelpers.SelfSign(),
-	)
-	cert := certhelpers.NewCert(t,
-		certhelpers.CommonName("test cert"),
-		certhelpers.Parent(ca),
-	)
-
-	type testCase struct {
-		username   string
-		password   string
-		tlsCAData  []byte
-		tlsKeyData []byte
-
-		expectOpts *options.ClientOptions
-		expectErr  bool
-	}
-
-	test := testCase{
-		username:   "unittest",
-		password:   "unittest",
-		tlsCAData:  cert.Pem,
-		tlsKeyData: cert.CombinedPEM(),
-
-		expectOpts: options.Client().
-			SetTLSConfig(
-				&tls.Config{
-					RootCAs:      appendToCertPool(t, x509.NewCertPool(), cert.Pem),
-					Certificates: []tls.Certificate{cert.TLSCert},
-				},
-			).
-			SetAuth(options.Credential{
-				AuthMechanism: "SCRAM-SHA-256",
-				Username:      "unittest",
-				Password:      "unittest",
-			}),
-		expectErr: false,
-	}
-
-	c := new()
-	c.Username = test.username
-	c.Password = test.password
-	c.TLSCAData = test.tlsCAData
-	c.TLSCertificateKeyData = test.tlsKeyData
-
-	actual, err := c.getTLSAuth()
-	if test.expectErr && err == nil {
-		t.Fatalf("err expected, got nil")
-	}
-	if !test.expectErr && err != nil {
-		t.Fatalf("no error expected, got: %s", err)
-	}
-	assertDeepEqual(t, test.expectOpts, actual)
 }
 
 func appendToCertPool(t *testing.T, pool *x509.CertPool, caPem []byte) *x509.CertPool {
