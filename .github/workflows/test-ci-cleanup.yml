@@ -1,6 +1,6 @@
 name: test-ci-cleanup
 on:
-  pull_request:
+  push:
     branches:
       - enos/VAULT-35697
   schedule:
