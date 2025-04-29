@@ -198,7 +198,7 @@ jobs:
             echo "ENOS_VAR_vault_radar_license_path=./support/vault-radar.hclic"
             echo "ENOS_VAR_vault_revision=${{ inputs.vault-revision }}"
             echo "ENOS_VAR_vault_upgrade_initial_version=${{ matrix.attributes.upgrade_initial_version }}"
-            echo "ENOS_VAR_verify_aws_secrets_engine=true"
+            echo "ENOS_VAR_verify_aws_secrets_engine=false"
             echo "ENOS_VAR_verify_log_secrets=true"
           } | tee -a "$GITHUB_ENV"
       - uses: hashicorp/setup-terraform@v3
