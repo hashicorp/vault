@@ -64,7 +64,6 @@ export default class AuthFormOkta extends AuthBase {
       let verifyNumber = null;
       while (verifyNumber === null) {
         await timeout(1000);
-        // verifyNumber = await this.requestOktaVerify(nonce, mountPath);
         verifyNumber = await this.requestOktaVerify(nonce, mountPath);
       }
 
