@@ -64,30 +64,28 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await runCmd(deleteEngineCmd('aws'));
   });
 
-  test('cannot view list without permissions inside namespace', async function (assert) {
+  test('enterprise: cannot view list without permissions inside namespace', async function (assert) {
+    this.version = 'enterprise';
     this.backend = `bk-${this.uid}`;
     this.namespace = `ns-${this.uid}`;
-    // mount engine within namespace
-    await runCmd(mountEngineCmd('kv-v2', this.backend), false);
     await runCmd([`write sys/namespaces/${this.namespace} -force`]);
     await loginNs(this.namespace, ' ');
 
     await visit('/vault/secrets');
-    assert.dom('[data-test-secrets-backend-link="kv"]').doesNotExist();
+    assert.dom(SES.secretsBackendLink('database')).doesNotExist();
 
     await logout();
   });
 
-  test('can view list with permissions inside namespace', async function (assert) {
+  test('enterprise: can view list with permissions inside namespace', async function (assert) {
+    this.version = 'enterprise';
     this.backend = `bk-${this.uid}`;
     this.namespace = `ns-${this.uid}`;
     await runCmd([`write sys/namespaces/${this.namespace} -force`]);
     await loginNs(this.namespace);
-    // mount engine within namespace
-    await runCmd(mountEngineCmd('kv-v2', this.backend), false);
     await visit('/vault/secrets');
 
-    assert.dom('[data-test-secrets-backend-link="kv"]').exists();
+    assert.dom(SES.secretsBackendLink('cubbyhole')).exists();
   });
 
   test('after disabling it stays on the list view', async function (assert) {
