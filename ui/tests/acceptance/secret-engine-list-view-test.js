@@ -72,7 +72,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await loginNs(this.namespace, ' ');
 
     await visit('/vault/secrets');
-    assert.dom(SES.secretsBackendLink('database')).doesNotExist();
+    assert.dom(SES.secretsBackendLink('cubbyhole')).doesNotExist();
 
     await logout();
   });
