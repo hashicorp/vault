@@ -82,6 +82,17 @@ module('Integration | Component | auth | form | saml', function (hooks) {
       .hasText('Vault will use the default role to sign in if this field is left blank.');
   });
 
+  test('it renders warning if insecure context is detected', async function (assert) {
+    sinon.replaceGetter(window, 'isSecureContext', () => false);
+
+    await this.renderComponent();
+    assert
+      .dom('[data-test-saml-auth-not-allowed]')
+      .hasText(
+        'Insecure context detected Logging in with a SAML auth method requires a browser in a secure context. Read more about secure contexts.'
+      );
+  });
+
   test('it requests sso_service_url and opens popup on submit if role is empty', async function (assert) {
     assert.expect(6);
     this.server.put('/auth/saml/sso_service_url', (_, req) => {
