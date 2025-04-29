@@ -12,10 +12,11 @@ import { buildWaiter } from '@ember/test-waiters';
 const waiter = buildWaiter('namespaces');
 const ROOT_NAMESPACE = '';
 export default class NamespaceService extends Service {
-  @service store;
   @service auth;
+  @service flags;
+  @service store;
 
-  //populated by the query param on the cluster route
+  // populated by the query param on the cluster route
   @tracked path = '';
   // list of namespaces available to the current user under the
   // current namespace
@@ -27,6 +28,13 @@ export default class NamespaceService extends Service {
 
   get inRootNamespace() {
     return this.path === ROOT_NAMESPACE;
+  }
+
+  // the top-level namespace is "admin" for HVD managed clusters accessing the UI
+  // (similar to "root" for self-managed clusters)
+  // this getter checks if the user is specifically at the administrative namespace level
+  get inHvdAdminNamespace() {
+    return this.flags.isHvdManaged && this.path === 'admin';
   }
 
   get currentNamespace() {

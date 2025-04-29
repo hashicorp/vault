@@ -35,8 +35,8 @@ retry() {
 }
 
 remove_peer() {
-  if ! node_id=$("$binpath" operator raft list-peers -format json | jq -Mr --argjson expected "false" '.data.config.servers[] | select(.address=='\""$node_addr"\"') | select(.voter==$expected) | .node_id'); then
-    fail "failed to get node id of a non-voter node"
+  if ! node_id=$("$binpath" operator raft list-peers -format json | jq -Mr --argjson expected "${REMOVE_NODE_IS_VOTER}" '.data.config.servers[] | select(.address=='\""$node_addr"\"') | select(.voter==$expected) | .node_id'); then
+    fail "failed to get node id of a node with voter status ${REMOVE_NODE_IS_VOTER}"
   fi
 
   $binpath operator raft remove-peer "$node_id"

@@ -45,6 +45,12 @@ func (c *Core) IdentityStore() *IdentityStore {
 	return c.identityStore
 }
 
+func (i *IdentityStore) GetDisableLowerCasedNames() bool {
+	i.lock.RLock()
+	defer i.lock.RUnlock()
+	return i.disableLowerCasedNames
+}
+
 func (i *IdentityStore) resetDB() error {
 	var err error
 
@@ -66,6 +72,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		namespacer:             core,
 		metrics:                core.MetricSink(),
 		totpPersister:          core,
+		groupUpdater:           core,
 		tokenStorer:            core,
 		entityCreator:          core,
 		mountLister:            core,

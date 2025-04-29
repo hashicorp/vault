@@ -96,6 +96,8 @@ func pathConfigRoot(b *backend) *framework.Path {
 					OperationVerb:   "configure",
 					OperationSuffix: "root-iam-credentials",
 				},
+				ForwardPerformanceSecondary: true,
+				ForwardPerformanceStandby:   true,
 			},
 			logical.CreateOperation: &framework.PathOperation{
 				Callback: b.pathConfigRootWrite,
@@ -103,6 +105,8 @@ func pathConfigRoot(b *backend) *framework.Path {
 					OperationVerb:   "configure",
 					OperationSuffix: "root-iam-credentials",
 				},
+				ForwardPerformanceSecondary: true,
+				ForwardPerformanceStandby:   true,
 			},
 		},
 

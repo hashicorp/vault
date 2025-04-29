@@ -47,8 +47,8 @@ ROOT_CA_CERT=$("$binpath" read pki/cert/ca | jq -r '.data.certificate')
 # Verifying Certificates
 if [ "${VERIFY_PKI_CERTS}" = true ]; then
   if [ ! -d "${TEST_DIR}" ]; then
-      echo "Directory does not exist. Creating it now."
-      mkdir -p "${TEST_DIR}" # Need to create this directory for Enterprise test
+    echo "Directory does not exist. Creating it now."
+    mkdir -p "${TEST_DIR}" # Need to create this directory for Enterprise test
   fi
   TMP_FILE="tmp-vault-cert.pem"
 
@@ -61,9 +61,11 @@ if [ "${VERIFY_PKI_CERTS}" = true ]; then
     echo "Verifying certificate contents..."
     openssl x509 -in "${TEST_DIR}/${TMP_FILE}" -text -noout || fail "The certificate appears to be improperly configured or contains errors"
     CURR_CERT_SERIAL=$(echo "${CERT}" | tr -d ':' | tr '[:lower:]' '[:upper:]')
-    TMP_CERT_SUBJECT=$(openssl x509 -in "${TEST_DIR}/${TMP_FILE}" -noout -subject | awk -F'= ' '{print $2}')
-    TMP_CERT_ISSUER=$(openssl x509 -in "${TEST_DIR}/${TMP_FILE}" -noout -issuer | awk -F'= ' '{print $2}')
-    TMP_CERT_SERIAL=$(openssl x509 -in "${TEST_DIR}/${TMP_FILE}" -noout -serial | awk -F'=' '{print $2}')
+    if ! TMP_CERT_SUBJECT=$(openssl x509 -in "${TEST_DIR}/${TMP_FILE}" -noout -subject | cut -d '=' -f2-); then
+      fail "failed to read certificate subject: $TMP_CERT_SUBJECT"
+    fi
+    TMP_CERT_ISSUER=$(openssl x509 -in "${TEST_DIR}/${TMP_FILE}" -noout -issuer | cut -d '=' -f2-)
+    TMP_CERT_SERIAL=$(openssl x509 -in "${TEST_DIR}/${TMP_FILE}" -noout -serial | cut -d '=' -f2-)
     [[ "${TMP_CERT_SUBJECT}" == *"${COMMON_NAME}.com"* ]] || fail "Subject is incorrect. Actual Subject: ${TMP_CERT_SUBJECT}"
     [[ "${TMP_CERT_ISSUER}" == *"${COMMON_NAME}.com"* ]] || fail "Issuer is incorrect. Actual Issuer: ${TMP_CERT_ISSUER}"
     [[ "${TMP_CERT_SERIAL}" == *"${CURR_CERT_SERIAL}"* ]] || fail "Certificate Serial is incorrect. Actual certificate Serial: ${CURR_CERT_SERIAL},${TMP_CERT_SERIAL}"

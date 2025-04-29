@@ -413,7 +413,8 @@ $ curl \
             },
             "mounts":[
                {
-                  "path":"auth/up1/",
+                  "mount_path":"auth/up1/",
+                  "mount_type":"userpass/",
                   "counts":{
                      "entity_clients":10,
                      "non_entity_clients":10,
@@ -423,7 +424,8 @@ $ curl \
                   }
                },
                {
-                  "path":"auth/up2/",
+                  "mount_path":"auth/up2/",
+                  "mount_type":"userpass/",
                   "counts":{
                      "entity_clients":5,
                      "non_entity_clients":5,
@@ -433,7 +435,8 @@ $ curl \
                   }
                },
                {
-                  "path":"secrets/kv1/",
+                  "mount_path":"secrets/kv1/",
+                  "mount_type":"kv/",
                   "counts":{
                      "entity_clients":0,
                      "non_entity_clients":0,
@@ -443,7 +446,8 @@ $ curl \
                   }
                },
                {
-                  "path":"secrets/kv2/",
+                  "mount_path":"secrets/kv2/",
+                  "mount_type":"kv/",
                   "counts":{
                      "entity_clients":0,
                      "non_entity_clients":0,
@@ -453,7 +457,8 @@ $ curl \
                   }
                },
                {
-                  "path":"secrets/pki/",
+                  "mount_path":"secrets/pki/",
+                  "mount_type":"pki/",
                   "counts":{
                      "entity_clients":0,
                      "non_entity_clients":0,
@@ -476,7 +481,8 @@ $ curl \
             },
             "mounts":[
                {
-                  "path":"auth/up1/",
+                  "mount_path":"auth/up1/",
+                  "mount_type":"userpass/",
                   "counts":{
                      "entity_clients":0,
                      "non_entity_clients":5,
@@ -486,7 +492,8 @@ $ curl \
                   }
                },
                {
-                  "path":"auth/up2/",
+                  "mount_path":"auth/up2/",
+                  "mount_type":"userpass/",
                   "counts":{
                      "entity_clients":5,
                      "non_entity_clients":0,
@@ -522,7 +529,8 @@ $ curl \
                   },
                   "mounts":[
                      {
-                        "path":"auth/up2/",
+                        "mount_path":"auth/up2/",
+                        "mount_type":"userpass/",
                         "counts":{
                            "entity_clients":10,
                            "non_entity_clients":5,
@@ -532,7 +540,8 @@ $ curl \
                         }
                      },
                      {
-                        "path":"auth/up1/",
+                        "mount_path":"auth/up1/",
+                        "mount_type":"userpass/",
                         "counts":{
                            "entity_clients":3,
                            "non_entity_clients":2,
@@ -542,7 +551,8 @@ $ curl \
                         }
                      },
                      {
-                        "path":"secrets/kv1/",
+                        "mount_path":"secrets/kv1/",
+                        "mount_type":"kv/",
                         "counts":{
                            "entity_clients":0,
                            "non_entity_clients":0,
@@ -552,7 +562,8 @@ $ curl \
                         }
                      },
                      {
-                        "path":"secrets/kv2/",
+                        "mount_path":"secrets/kv2/",
+                        "mount_type":"kv/",
                         "counts":{
                            "entity_clients":0,
                            "non_entity_clients":0,
@@ -562,7 +573,8 @@ $ curl \
                         }
                      },
                      {
-                        "path":"secrets/pki/",
+                        "mount_path":"secrets/pki/",
+                        "mount_type":"pki/",
                         "counts":{
                            "entity_clients":0,
                            "non_entity_clients":0,
@@ -585,7 +597,8 @@ $ curl \
                   },
                   "mounts":[
                      {
-                        "path":"auth/up1/",
+                        "mount_path":"auth/up1/",
+                        "mount_type":"userpass/",
                         "counts":{
                            "entity_clients":0,
                            "non_entity_clients":5,
@@ -595,7 +608,8 @@ $ curl \
                         }
                      },
                      {
-                        "path":"auth/up2/",
+                        "mount_path":"auth/up2/",
+                        "mount_type":"userpass/",
                         "counts":{
                            "entity_clients":5,
                            "non_entity_clients":0,
@@ -628,7 +642,8 @@ $ curl \
                      },
                      "mounts":[
                         {
-                           "path":"auth/up2/",
+                           "mount_path":"auth/up2/",
+                           "mount_type":"userpass/",
                            "counts":{
                               "entity_clients":0,
                               "non_entity_clients":5,
@@ -636,7 +651,8 @@ $ curl \
                            }
                         },
                         {
-                           "path":"auth/up1/",
+                           "mount_path":"auth/up1/",
+                           "mount_type":"userpass/",
                            "counts":{
                               "entity_clients":5,
                               "non_entity_clients":0,
@@ -644,7 +660,8 @@ $ curl \
                            }
                         },
                         {
-                           "path":"secrets/kv1/",
+                           "mount_path":"secrets/kv1/",
+                           "mount_type":"kv/",
                            "counts":{
                               "entity_clients":0,
                               "non_entity_clients":0,
@@ -653,7 +670,8 @@ $ curl \
                            }
                         },
                         {
-                           "path":"secrets/kv2/",
+                           "mount_path":"secrets/kv2/",
+                           "mount_type":"kv/",
                            "counts":{
                               "entity_clients":0,
                               "non_entity_clients":0,
@@ -662,7 +680,8 @@ $ curl \
                            }
                         },
                         {
-                           "path":"secrets/pki/",
+                           "mount_path":"secrets/pki/",
+                           "mount_type":"pki/",
                            "counts":{
                               "entity_clients":0,
                               "non_entity_clients":0,
@@ -685,7 +704,8 @@ $ curl \
                      },
                      "mounts":[
                         {
-                           "path":"auth/up1/",
+                           "mount_path":"auth/up1/",
+                           "mount_type":"userpass/",
                            "counts":{
                               "entity_clients":0,
                               "non_entity_clients":5,
@@ -695,7 +715,8 @@ $ curl \
                            }
                         },
                         {
-                           "path":"auth/up2/",
+                           "mount_path":"auth/up2/",
+                           "mount_type":"userpass/",
                            "counts":{
                               "entity_clients":5,
                               "non_entity_clients":0,
@@ -731,7 +752,8 @@ $ curl \
                   },
                   "mounts":[
                      {
-                        "path":"auth/up1/",
+                        "mount_path":"auth/up1/",
+                        "mount_type":"userpass/",
                         "counts":{
                            "entity_clients":0,
                            "non_entity_clients":5,
@@ -741,7 +763,8 @@ $ curl \
                         }
                      },
                      {
-                        "path":"auth/up2/",
+                        "mount_path":"auth/up2/",
+                        "mount_type":"userpass/",
                         "counts":{
                            "entity_clients":5,
                            "non_entity_clients":0,
@@ -774,7 +797,8 @@ $ curl \
                      },
                      "mounts":[
                         {
-                           "path":"auth/up1/",
+                           "mount_path":"auth/up1/",
+                           "mount_type":"userpass/",
                            "counts":{
                               "entity_clients":0,
                               "non_entity_clients":5,
@@ -784,7 +808,8 @@ $ curl \
                            }
                         },
                         {
-                           "path":"auth/up2/",
+                           "mount_path":"auth/up2/",
+                           "mount_type":"userpass/",
                            "counts":{
                               "entity_clients":5,
                               "non_entity_clients":0,
@@ -794,7 +819,8 @@ $ curl \
                            }
                         },
                         {
-                           "path":"secrets/kv1/",
+                           "mount_path":"secrets/kv1/",
+                           "mount_type":"kv/",
                            "counts":{
                               "entity_clients":0,
                               "non_entity_clients":0,
@@ -804,7 +830,8 @@ $ curl \
                            }
                         },
                         {
-                           "path":"secrets/kv2/",
+                           "mount_path":"secrets/kv2/",
+                           "mount_type":"kv/",
                            "counts":{
                               "entity_clients":0,
                               "non_entity_clients":0,
@@ -814,7 +841,8 @@ $ curl \
                            }
                         },
                         {
-                           "path":"secrets/pki/",
+                           "mount_path":"secrets/pki/",
+                           "mount_type":"pki/",
                            "counts":{
                               "entity_clients":0,
                               "non_entity_clients":0,
@@ -932,6 +960,7 @@ $ curl \
               "secret_syncs": 0
             },
             "mount_path": "auth_token_0747d59c"
+            "mount_type":"token/",
           }
         ],
         "namespace_id": "root",
@@ -968,6 +997,7 @@ $ curl \
                   "secret_syncs": 0
                 },
                 "mount_path": "auth_token_0747d59c"
+                "mount_type":"token/",
               }
             ],
             "namespace_id": "root",
@@ -1001,6 +1031,7 @@ $ curl \
                     "secret_syncs": 0
                   },
                   "mount_path": "auth_token_0747d59c"
+                  "mount_type":"token/",
                 }
               ],
               "namespace_id": "root",

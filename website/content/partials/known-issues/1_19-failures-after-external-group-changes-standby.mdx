@@ -1,0 +1,22 @@
+### Login/token renewal failures after group changes ((#group-writes))
+
+#### Affected Versions
+- 1.19.0
+
+#### Issue
+Performance standby nodes return a 500 error during login or token renewal if an
+entity's external group association has changed. This occurs because standbys are
+unable to persist the updated group membership to storage. 
+
+The login will return a read-only error:
+```
+* failed to persist packed storage entry: cannot write to readonly storage
+```
+
+A related debug message may also appear in Vault server logs:
+```
+[DEBUG] identity: adding member entity ID to external group: member_entity_id=
+```
+
+#### Workaround
+Direct all logins and token renewals to the active node.

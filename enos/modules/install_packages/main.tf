@@ -27,7 +27,7 @@ locals {
     }
     "rhel" = {
       "8.10" = "https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm"
-      "9.4"  = "https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm"
+      "9.5"  = "https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm"
     }
   }
 }

@@ -1412,19 +1412,6 @@
         "path": "secrets"
       },
       {
-        "title": "Active Directory",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "secrets/ad"
-          },
-          {
-            "title": "Migration Guide",
-            "path": "secrets/ad/migration-guide"
-          }
-        ]
-      },
-      {
         "title": "AliCloud",
         "path": "secrets/alicloud"
       },
@@ -1827,7 +1814,8 @@
       },
       {
         "title": "Venafi (Certificates)",
-        "path": "secrets/venafi"
+        "path": "secrets/venafi",
+        "hidden": true
       }
     ]
   },
