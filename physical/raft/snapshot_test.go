@@ -962,8 +962,8 @@ func TestBoltSnapshotStore_CloseFailure(t *testing.T) {
 	}
 }
 
-// TestLoadSnapshot loads a test snapshot file and verifies that there are no
-// errors, and that the expected paths are excluded from the FSM.
+// TestLoadReadOnlySnapshot loads a test snapshot file and verifies that there
+// are no errors, and that the expected paths are excluded from the FSM.
 func TestLoadReadOnlySnapshot(t *testing.T) {
 	t.Parallel()
 	// Load a test snapshot file from the testdata directory.

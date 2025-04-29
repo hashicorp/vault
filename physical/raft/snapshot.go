@@ -520,8 +520,6 @@ func loadSnapshot(db *bolt.DB, logger log.Logger, snapshotFile io.ReadCloser, pa
 	protoReader := NewDelimitedReader(snapshotFile, math.MaxInt32)
 	defer protoReader.Close()
 
-	db.IsReadOnly()
-
 	var done bool
 	var keys int
 	entry := new(pb.StorageEntry)
