@@ -24,7 +24,6 @@ export { ERROR_WINDOW_CLOSED };
 
 export default class AuthFormSaml extends AuthBase {
   @service store;
-  @service flags;
 
   @tracked errorMessage;
   @tracked fetchedRole;
@@ -36,15 +35,12 @@ export default class AuthFormSaml extends AuthBase {
     },
   ];
 
-  // set by form inputs
-  _formData = new FormData();
-
   get canLoginSaml() {
     return window.isSecureContext;
   }
 
   get tasksAreRunning() {
-    return this.exchangeSAMLTokenPollID.isRunning;
+    return this.login.isRunning || this.exchangeSAMLTokenPollID.isRunning;
   }
 
   /* Saml auth flow on login button click:
