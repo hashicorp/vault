@@ -82,6 +82,16 @@ export default class NamespacePicker extends Component {
       options.unshift({ id: 'root', path: '', label: 'root' });
     }
 
+    // If there are no namespaces returned by the internal endpoint, add the current namespace
+    // to the list of options. This is a fallback for when the user has access to a single namespace.
+    if (options.length === 0) {
+      options.push({
+        id: namespace.currentNamespace,
+        path: namespace.path,
+        label: namespace.path,
+      });
+    }
+
     return options;
   }
 
