@@ -19,6 +19,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
+	iradix "github.com/hashicorp/go-immutable-radix"
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
 	"github.com/rboyer/safeio"
@@ -364,49 +365,10 @@ func (s *BoltSnapshotSink) writeBoltDBFile() error {
 		defer close(s.doneWritingCh)
 		defer boltDB.Close()
 
-		// The delimted reader will parse full proto messages from the snapshot
-		// data.
-		protoReader := NewDelimitedReader(reader, math.MaxInt32)
-		defer protoReader.Close()
-
-		var done bool
-		var keys int
-		entry := new(pb.StorageEntry)
-		for !done {
-			err := boltDB.Update(func(tx *bolt.Tx) error {
-				b, err := tx.CreateBucketIfNotExists(dataBucketName)
-				if err != nil {
-					return err
-				}
-
-				// Commit in batches of 50k. Bolt holds all the data in memory and
-				// doesn't split the pages until commit so we do incremental writes.
-				for i := 0; i < 50000; i++ {
-					err := protoReader.ReadMsg(entry)
-					if err != nil {
-						if err == io.EOF {
-							done = true
-							return nil
-						}
-						return err
-					}
-
-					err = b.Put([]byte(entry.Key), entry.Value)
-					if err != nil {
-						return err
-					}
-					keys += 1
-				}
-
-				return nil
-			})
-			if err != nil {
-				s.logger.Error("snapshot write: failed to write transaction", "error", err)
-				s.writeError = err
-				return
-			}
-
-			s.logger.Trace("snapshot write: writing keys", "num_written", keys)
+		err := loadSnapshot(boltDB, s.logger, reader, nil, false)
+		if err != nil {
+			s.writeError = err
+			return
 		}
 	}()
 
@@ -534,4 +496,77 @@ func snapshotName(term, index uint64) string {
 	now := time.Now()
 	msec := now.UnixNano() / int64(time.Millisecond)
 	return fmt.Sprintf("%d-%d-%d", term, index, msec)
+}
+
+// LoadReadOnlySnapshot loads a snapshot from a file into the supplied FSM.
+// It sets the fill percent of the underlying boltDB bucket to 1.0. This is a
+// blocking call and will not return until the snapshot has been written to the
+// FSM. The caller is responsible for closing the reader.
+// If pathsToFilter is not nil, the function will filter out any keys that are
+// found in the pathsToFilter tree.
+func LoadReadOnlySnapshot(fsm *FSM, snapshotFile io.ReadCloser, pathsToFilter *iradix.Tree, logger log.Logger) error {
+	return loadSnapshot(fsm.db, logger, snapshotFile, pathsToFilter, true)
+}
+
+// loadSnapshot loads a snapshot from a file into the supplied boltDB database.
+// This is a blocking call and will not return until the snapshot has
+// been written to the FSM. The caller is responsible for closing the reader.
+// If readOnly is true, it sets the fill percent of the underlying boltDB bucket
+// to 1.0.
+// If pathsToFilter is not nil, the function will filter out any keys that are
+// found in the pathsToFilter tree.
+func loadSnapshot(db *bolt.DB, logger log.Logger, snapshotFile io.ReadCloser, pathsToFilter *iradix.Tree, readOnly bool) error {
+	// The delimited reader will parse full proto messages from the snapshot data.
+	protoReader := NewDelimitedReader(snapshotFile, math.MaxInt32)
+	defer protoReader.Close()
+
+	var done bool
+	var keys int
+	entry := new(pb.StorageEntry)
+	for !done {
+		err := db.Update(func(tx *bolt.Tx) error {
+			b, err := tx.CreateBucketIfNotExists(dataBucketName)
+			if readOnly {
+				b.FillPercent = 1.0
+			}
+			if err != nil {
+				return err
+			}
+
+			// Commit in batches of 50k. Bolt holds all the data in memory and
+			// doesn't split the pages until commit so we do incremental writes.
+			for i := 0; i < 50000; i++ {
+				err := protoReader.ReadMsg(entry)
+				if err != nil {
+					if err == io.EOF {
+						done = true
+						return nil
+					}
+					return err
+				}
+
+				if pathsToFilter != nil {
+					keyToLookUp := []byte(entry.Key)
+					_, _, ok := pathsToFilter.Root().LongestPrefix(keyToLookUp)
+					if ok {
+						continue
+					}
+				}
+
+				err = b.Put([]byte(entry.Key), entry.Value)
+				if err != nil {
+					return err
+				}
+				keys += 1
+			}
+			return nil
+		})
+		if err != nil {
+			logger.Error("snapshot write: failed to write transaction", "error", err)
+			return err
+		}
+		logger.Trace("snapshot write: writing keys", "num_written", keys)
+	}
+
+	return nil
 }
