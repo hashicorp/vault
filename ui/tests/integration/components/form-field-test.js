@@ -358,6 +358,120 @@ module('Integration | Component | form field', function (hooks) {
   // Note: some tests may be duplicative of the generic tests above
   //
 
+  // ––––– editType === 'select' / possibleValues –––––
+
+  test('it renders: editType=select / possibleValues - as Hds::Form::Select', async function (assert) {
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('foo', 'string', { editType: 'select', possibleValues: ['foo', 'bar', 'baz'] })
+    );
+
+    assert
+      .dom('.field [class^="hds-form-field"] select.hds-form-select')
+      .exists('renders as Hds::Form::Select');
+    assert.dom('select[data-test-input="foo"]').exists('renders a select element');
+    assert.strictEqual(component.fields.objectAt(0).labelValue, 'Foo', 'renders a label');
+    assert.dom('[data-test-input]').hasValue('foo', 'has first option value');
+    await fillIn('[data-test-input]', 'bar');
+    assert.dom('[data-test-input]').hasValue('bar', 'has selected option value');
+    assert.strictEqual(model.get('foo'), 'bar');
+    assert.ok(spy.calledWith('foo', 'bar'), 'onChange called with correct args');
+  });
+
+  test('it renders: possibleValues / select - with no default', async function (assert) {
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('foo', 'string', {
+        editType: 'select',
+        possibleValues: ['foo', 'bar', 'baz'],
+        noDefault: true,
+      })
+    );
+
+    assert.dom('[data-test-input]').hasValue('', 'has no initial value');
+    await fillIn('[data-test-input]', 'foo');
+    assert.dom('[data-test-input]').hasValue('foo', 'has selected option value');
+    assert.strictEqual(model.get('foo'), 'foo');
+    assert.ok(spy.calledWith('foo', 'foo'), 'onChange called with correct args');
+  });
+
+  test('it renders: possibleValues / select - with selected value', async function (assert) {
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('foo', 'string', {
+        editType: 'select',
+        possibleValues: ['foo', 'bar', 'baz'],
+        defaultValue: 'baz',
+      })
+    );
+
+    assert.dom('[data-test-input]').hasValue('baz', 'has initial value selected');
+    await fillIn('[data-test-input]', 'foo');
+    assert.dom('[data-test-input]').hasValue('foo', 'has selected option value');
+    assert.strictEqual(model.get('foo'), 'foo');
+    assert.ok(spy.calledWith('foo', 'foo'), 'onChange called with correct args');
+  });
+
+  test('it renders: possibleValues / select - with passed label, subtext, helptext, doclink', async function (assert) {
+    await setup.call(
+      this,
+      createAttr('foo', 'string', {
+        editType: 'select',
+        possibleValues: ['foo', 'bar', 'baz'],
+        label: 'Custom label',
+        subText: 'Some subtext',
+        helpText: 'Some helptext',
+        docLink: '/docs',
+      })
+    );
+    assert.strictEqual(
+      component.fields.objectAt(0).labelValue,
+      'Custom label',
+      'renders the custom label from options'
+    );
+    assert
+      .dom('[data-test-form-field-subtext]')
+      .exists('renders `subText` option as HelperText')
+      .hasText(
+        'Some subtext See our documentation for help.',
+        'renders the right subtext string from options'
+      );
+    assert
+      .dom('[data-test-form-field-subtext] a[data-test-form-field-doc-link]')
+      .exists('renders `docLink` option as as link inside the subtext');
+    assert
+      .dom('[data-test-form-field-help-text]')
+      .exists('renders `helptext` option as HelperText')
+      .hasText('Some helptext', 'renders the right help text string from options');
+  });
+
+  test('it renders: possibleValues / select - with validation errors and warnings', async function (assert) {
+    this.setProperties({
+      attr: createAttr('foo', 'string', { editType: 'select', possibleValues: ['foo', 'bar', 'baz'] }),
+      model: { foo: 'bar' },
+      modelValidations: {
+        foo: {
+          isValid: false,
+          errors: ['Error message #1', 'Error message #2'],
+          warnings: ['Warning message #1', 'Warning message #2'],
+        },
+      },
+      onChange: () => {},
+    });
+
+    await render(
+      hbs`<FormField @attr={{this.attr}} @model={{this.model}} @modelValidations={{this.modelValidations}} @onChange={{this.onChange}} />`
+    );
+    assert
+      .dom('[data-test-form-field-validation-error="foo"]')
+      .exists('Validation error renders')
+      .hasText('Error message #1 Error message #2', 'Validation errors are combined');
+    assert
+      .dom('[data-test-form-field-validation-warning="foo"]')
+      .exists('Validation warning renders')
+      .hasText('Warning message #1 Warning message #2', 'Validation warnings are combined');
+  });
+
   // ––––– editType === 'password' –––––
 
   test('it renders: editType=password / type=string - as Hds::Form::TextInput [@type=password]', async function (assert) {
