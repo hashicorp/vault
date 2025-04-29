@@ -69,7 +69,8 @@ export default class ClientsDateRangeComponent extends Component<Args> {
   };
 
   get historicalBillingPeriods() {
-    const count = this.args.retentionMonths / 12;
+    // we want whole billing periods
+    const count = Math.floor(this.args.retentionMonths / 12);
     const periods: string[] = [];
 
     for (let i = 1; i <= count; i++) {
