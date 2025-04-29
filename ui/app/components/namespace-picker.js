@@ -29,7 +29,6 @@ export default class NamespacePicker extends Component {
   // Show/hide refresh & manage namespaces buttons
   @tracked hasListPermissions = false;
 
-  @tracked visibleNamespaceOptions = [];
   @tracked batchSize = 200;
 
   @tracked allNamespaces = [];
@@ -116,6 +115,10 @@ export default class NamespacePicker extends Component {
     return this.hasSearchInput ? noMatchingNamespacesHelpText : noNamespacesMessage;
   }
 
+  get visibleNamespaceOptions() {
+    return this.namespaceOptions.slice(0, this.batchSize);
+  }
+
   @action
   async fetchListCapability() {
     // TODO: Revist. This logic was carried over from previous component implmenetation.
@@ -146,22 +149,12 @@ export default class NamespacePicker extends Component {
     this.allNamespaces = this.#getOptions(this.namespace);
     this.selected = this.#getSelected(this.allNamespaces, this.namespace?.path);
 
-    // Initialize visibleNamespaceOptions with the first batch
-    this.visibleNamespaceOptions = this.allNamespaces.slice(0, this.batchSize);
-
     await this.fetchListCapability();
   }
 
   @action
   loadMore() {
-    const nextBatch = this.namespaceOptions.slice(
-      this.visibleNamespaceOptions.length,
-      this.visibleNamespaceOptions.length + this.batchSize
-    );
-
-    if (nextBatch.length > 0) {
-      this.visibleNamespaceOptions = [...this.visibleNamespaceOptions, ...nextBatch];
-    }
+    this.batchSize += 200; // Increase the batch size to load more items
   }
 
   @action
@@ -182,6 +175,7 @@ export default class NamespacePicker extends Component {
   @action
   async onChange(selected) {
     this.selected = selected;
+    this.searchInput = '';
     this.router.transitionTo('vault.cluster.dashboard', { queryParams: { namespace: selected.path } });
   }
 
@@ -203,9 +197,6 @@ export default class NamespacePicker extends Component {
   @action
   onSearchInput(event) {
     this.searchInput = event.target.value;
-
-    // Reset visibleNamespaceOptions when the search input changes
-    this.visibleNamespaceOptions = this.namespaceOptions.slice(0, this.batchSize);
   }
 
   @action
