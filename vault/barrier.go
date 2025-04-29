@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 var (
@@ -168,6 +169,8 @@ type SecurityBarrier interface {
 	BarrierEncryptor
 
 	DetectDeadlocks() bool
+
+	WithUnderlying(b physical.Backend) (logical.Storage, error)
 }
 
 // BarrierStorage is the storage only interface required for a Barrier.
