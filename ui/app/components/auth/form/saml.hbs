@@ -3,11 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<form
-  {{! manage input changes at the <form> level since "path" and "namespace" are yielded }}
-  {{on "submit" this.onSubmit}}
-  data-test-auth-form={{@authType}}
->
+<form {{on "submit" this.onSubmit}} data-test-auth-form={{@authType}}>
 
   {{yield to="namespace"}}
 
