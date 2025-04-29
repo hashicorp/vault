@@ -87,7 +87,7 @@ module('Integration | Component | auth | form | saml', function (hooks) {
     this.server.put('/auth/saml/sso_service_url', (_, req) => {
       const { acs_url, role } = JSON.parse(req.requestBody);
       assert.strictEqual(acs_url, `${window.origin}/v1/auth/saml/callback`, 'it builds acs_url for payload');
-      assert.strictEqual(role, null, 'role has no value');
+      assert.strictEqual(role, '', 'role has no value');
       return {
         data: {
           sso_service_url: 'https://my-single-sign-on-url.com',
@@ -246,7 +246,7 @@ module('Integration | Component | auth | form | saml', function (hooks) {
     const [actual] = this.onError.lastCall.args;
     assert.strictEqual(
       actual,
-      'Authentication failed: permission denied!!: Sinon-provided permission denied!!',
+      'Authentication failed: Sinon-provided permission denied!!',
       'onError called with auth service failure'
     );
   });

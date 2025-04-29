@@ -10,10 +10,21 @@ import { task, timeout, waitForEvent } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
 import errorMessage from 'vault/utils/error-message';
 
+import type AdapterError from 'vault/@ember-data/adapter/error';
+import type AuthMethodAdapter from 'vault/vault/adapters/auth-method';
+import type AuthService from 'vault/vault/services/auth';
+import type RoleSamlModel from 'vault/models/role-saml';
+import type Store from '@ember-data/store';
+
 /**
  * @module Auth::Form::Saml
  * see Auth::Base
  */
+
+interface SamlLoginData {
+  token: string;
+  mfa_requirement: object | null;
+}
 
 const ERROR_WINDOW_CLOSED =
   'The provider window was closed before authentication was complete. Your web browser may have blocked or closed a pop-up window. Please check your settings and click "Sign in" to try again.';
@@ -22,10 +33,10 @@ const ERROR_TIMEOUT = 'The authentication request has timed out. Please click "S
 export { ERROR_WINDOW_CLOSED };
 
 export default class AuthFormSaml extends AuthBase {
-  @service store;
+  @service declare readonly auth: AuthService;
+  @service declare readonly store: Store;
 
-  @tracked errorMessage;
-  @tracked fetchedRole;
+  @tracked fetchedRole: RoleSamlModel | null = null;
 
   loginFields = [
     {
@@ -49,16 +60,16 @@ export default class AuthFormSaml extends AuthBase {
    * 4. poll vault for 200 token response
    * 5. close popup, stop polling, and trigger onSubmit with token data
    */
-  login = task(async (submitData) => {
+  login = task(async (formData) => {
     // submit data is parsed by base.ts and a path will always have a value.
     // either the default of auth type, or the custom inputted path
-    const { role, path, namespace } = submitData;
+    const { role, path, namespace } = formData;
 
     await this.startSAMLAuth({ role, path, namespace });
   });
 
   // Fetch role to get sso_service_url and open popup
-  async startSAMLAuth({ role, path, namespace }) {
+  async startSAMLAuth({ role = '', path = '', namespace = '' }) {
     try {
       const id = JSON.stringify([path, role]);
       this.fetchedRole = await this.store.findRecord('role-saml', id, {
@@ -69,18 +80,20 @@ export default class AuthFormSaml extends AuthBase {
       return;
     }
 
-    const win = window;
-    const POPUP_WIDTH = 500;
-    const POPUP_HEIGHT = 600;
-    const left = win.screen.width / 2 - POPUP_WIDTH / 2;
-    const top = win.screen.height / 2 - POPUP_HEIGHT / 2;
-    const samlWindow = win.open(
-      this.fetchedRole.ssoServiceURL,
-      'vaultSAMLWindow',
-      `width=${POPUP_WIDTH},height=${POPUP_HEIGHT},resizable,scrollbars=yes,top=${top},left=${left}`
-    );
+    if (this.fetchedRole) {
+      const win = window;
+      const POPUP_WIDTH = 500;
+      const POPUP_HEIGHT = 600;
+      const left = win.screen.width / 2 - POPUP_WIDTH / 2;
+      const top = win.screen.height / 2 - POPUP_HEIGHT / 2;
+      const samlWindow = win.open(
+        this.fetchedRole.ssoServiceURL,
+        'vaultSAMLWindow',
+        `width=${POPUP_WIDTH},height=${POPUP_HEIGHT},resizable,scrollbars=yes,top=${top},left=${left}`
+      );
 
-    await this.exchangeSAMLTokenPollID.perform(samlWindow, { path });
+      await this.exchangeSAMLTokenPollID.perform(samlWindow, { path });
+    }
   }
 
   exchangeSAMLTokenPollID = task(async (samlWindow, { path }) => {
@@ -92,31 +105,34 @@ export default class AuthFormSaml extends AuthBase {
     // pass namespace from state back to AuthForm
     // this.args.onNamespace(namespace);
     try {
-      const { mfa_requirement, client_token } = await this.pollForToken(samlWindow, { path });
+      const authData = await this.pollForToken(samlWindow, { path });
       // We've obtained the Vault token for the authentication flow now log in or pass MFA data
-      const samlExchangeData = { token: client_token, mfa_requirement };
-      await this.continueLogin(samlExchangeData);
-      this.closeWindow(samlWindow);
+
+      if (authData?.client_token) {
+        const samlExchangeData = { token: authData.client_token, mfa_requirement: authData?.mfa_requirement };
+        await this.continueLogin(samlExchangeData);
+        this.closeWindow(samlWindow);
+      }
     } catch (error) {
       this.cancelLogin(samlWindow, errorMessage(error));
     }
   });
 
-  async pollForToken(samlWindow, { path }) {
+  async pollForToken(samlWindow: Window, { path = '' }) {
     // Poll every one second for the token to become available
     const WAIT_TIME = Ember.testing ? 50 : 1000;
     const MAX_TIME = 180; // 3 minutes in seconds
 
-    const adapter = this.store.adapterFor('auth-method');
+    const adapter = this.store.adapterFor('auth-method') as AuthMethodAdapter;
     // Wait up to 3 minutes for a token to become available
     for (let attempt = 0; attempt < MAX_TIME; attempt++) {
       await timeout(WAIT_TIME);
 
       try {
-        const resp = await await adapter.pollSAMLToken(
+        const resp = await adapter.pollSAMLToken(
           path,
-          this.fetchedRole.tokenPollID,
-          this.fetchedRole.clientVerifier
+          this.fetchedRole?.tokenPollID,
+          this.fetchedRole?.clientVerifier
         );
 
         if (resp?.auth) {
@@ -124,18 +140,20 @@ export default class AuthFormSaml extends AuthBase {
           return resp.auth;
         }
       } catch (e) {
-        if (e.httpStatus === 401) {
+        const error = e as AdapterError;
+        if (error.httpStatus === 401) {
           // Continue to retry on 401 Unauthorized
           continue;
         }
-        throw e;
+        throw error;
       }
     }
 
     this.cancelLogin(samlWindow, ERROR_TIMEOUT);
+    return;
   }
 
-  async continueLogin(data) {
+  async continueLogin(data: SamlLoginData) {
     try {
       const authResponse = await this.auth.authenticate({
         clusterId: this.args.cluster.id,
@@ -146,8 +164,9 @@ export default class AuthFormSaml extends AuthBase {
 
       // responsible for redirect after auth data is persisted
       this.handleAuthResponse(authResponse, this.args.authType);
-    } catch (error) {
-      this.onError(error);
+    } catch (e) {
+      const error = e as AdapterError;
+      this.onError(errorMessage(error));
     }
   }
 
@@ -156,8 +175,8 @@ export default class AuthFormSaml extends AuthBase {
     // eslint-disable-next-line no-constant-condition
     while (true) {
       const WAIT_TIME = Ember.testing ? 50 : 500;
-
       await timeout(WAIT_TIME);
+
       if (!samlWindow || samlWindow.closed) {
         return this.handleSAMLError(ERROR_WINDOW_CLOSED);
       }
@@ -170,19 +189,19 @@ export default class AuthFormSaml extends AuthBase {
     samlWindow?.close();
   });
 
-  cancelLogin(samlWindow, errorMessage) {
+  cancelLogin(samlWindow: Window, errorMessage: string) {
     this.closeWindow(samlWindow);
     this.handleSAMLError(errorMessage);
   }
 
-  closeWindow(samlWindow) {
+  closeWindow(samlWindow: Window) {
     this.watchPopup.cancelAll();
     this.watchCurrent.cancelAll();
     samlWindow.close();
   }
 
-  handleSAMLError(err) {
+  handleSAMLError(errorMessage: string) {
     this.exchangeSAMLTokenPollID.cancelAll();
-    this.onError(err);
+    this.onError(errorMessage);
   }
 }
