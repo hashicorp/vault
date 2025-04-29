@@ -3,9 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn, find, findAll, currentRouteName, visit, currentURL } from '@ember/test-helpers';
-import { clickTrigger } from 'ember-power-select/test-support/helpers';
-import { selectChoose } from 'ember-power-select/test-support';
+import { click, currentRouteName, visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -13,32 +11,19 @@ import { v4 as uuidv4 } from 'uuid';
 import { loginNs } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
-import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
+import { mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
-import { UNSUPPORTED_ENGINES, mountableEngines } from 'vault/helpers/mountable-secret-engines';
 import { MOUNT_BACKEND_FORM } from '../helpers/components/mount-backend-form-selectors';
 import page from 'vault/tests/pages/settings/mount-secret-backend';
 
 module('Acceptance | secret-engine list view', function (hooks) {
   setupApplicationTest(hooks);
 
-  const createSecret = async (path, key, value, enginePath) => {
-    await click(SES.createSecretLink);
-    await fillIn(SES.secretPath('create'), path);
-
-    await fillIn(SES.secretKey('create'), key);
-    await fillIn(GENERAL.inputByAttr(key), value);
-    await click(GENERAL.saveButton);
-    await click(SES.crumb(enginePath));
-  };
-
   hooks.beforeEach(function () {
     this.uid = uuidv4();
     return login();
   });
 
-  // TEST 1:
-  // after mounting an unsupported backend (nomad) it takes you to the list page
   test('after enabling an unsupported engine it takes you to list page', async function (assert) {
     await visit('/vault/secrets');
     await page.enableEngine();
@@ -48,8 +33,6 @@ module('Acceptance | secret-engine list view', function (hooks) {
     assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backends', 'navigates to the list page');
   });
 
-  // TEST 2:
-  // after mounting a supported engine you see configure and clicking breadcrumb takes you back to the list page
   test('after enabling a supported engine it takes you to mount page, can see configure and clicking breadcrumb takes you back to list page', async function (assert) {
     await visit('/vault/secrets');
     await page.enableEngine();
@@ -66,12 +49,22 @@ module('Acceptance | secret-engine list view', function (hooks) {
     );
   });
 
-  // TEST 3:
-  // Permissions: I cannot see this page if I DONT have permissions inside namespace
-
   test('cannot view list without permissions inside namespace', async function (assert) {
     const uid = uuidv4();
-    this.store = this.owner.lookup('service:store');
+    this.backend = `bk-${uid}`;
+    this.namespace = `ns-${uid}`;
+    // mount engine within namespace
+    await runCmd(mountEngineCmd('kv-v2', this.backend), false);
+    // await login();
+    await runCmd([`write sys/namespaces/${this.namespace} -force`]);
+    await loginNs(this.namespace, ' ');
+
+    await visit('/vault/secrets');
+    assert.dom('[data-test-secrets-backend-link="kv"]').doesNotExist();
+  });
+
+  test('can view list with permissions inside namespace', async function (assert) {
+    const uid = uuidv4();
     this.backend = `bk-${uid}`;
     this.namespace = `ns-${uid}`;
     // await login();
@@ -79,33 +72,8 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await loginNs(this.namespace);
     // mount engine within namespace
     await runCmd(mountEngineCmd('kv-v2', this.backend), false);
-
     await visit('/vault/secrets');
-    await this.pauseTest();
-    assert.strictEqual(
-      currentRouteName(),
-      'vault.cluster.secrets.backends',
-      'breadcrumb navigates to the list page'
-    );
-  });
-
-  // TEST 4:
-  // Permissions: I can see this page if I DO have permissions inside namespace
-
-  test('can view list with permissions inside namespace', async function (assert) {
-    await visit('/vault/secrets');
-    await page.enableEngine();
-    await click(MOUNT_BACKEND_FORM.mountType('aws'));
-    await click(GENERAL.saveButton);
-
-    assert.dom(SES.configTab).exists();
-
-    await click(GENERAL.breadcrumbLink('Secrets'));
-    assert.strictEqual(
-      currentRouteName(),
-      'vault.cluster.secrets.backends',
-      'breadcrumb navigates to the list page'
-    );
+    assert.dom('[data-test-secrets-backend-link="kv"]').exists();
   });
 
   test('after disabling it stays on the list view', async function (assert) {
@@ -125,138 +93,5 @@ module('Acceptance | secret-engine list view', function (hooks) {
       'vault.cluster.secrets.backends',
       'redirects to the backends list page'
     );
-  });
-
-  // Everything below goes to the component test
-  test('it adds disabled css styling to unsupported secret engines', async function (assert) {
-    assert.expect(16);
-    const allEnginesArray = mountableEngines();
-    for (const engineObject of allEnginesArray) {
-      const engine = engineObject.type;
-      const enginePath = `${engine}-${this.uid}`;
-      await runCmd(mountEngineCmd(engine, enginePath));
-      await visit('/vault/cluster/dashboard');
-      await visit('/vault/secrets');
-      if (UNSUPPORTED_ENGINES.includes(engine)) {
-        assert
-          .dom(SES.secretsBackendLink(enginePath))
-          .doesNotHaveClass(
-            'linked-block',
-            `the linked-block class is not added to the unsupported ${engine}, which effectively disables it.`
-          );
-      } else {
-        assert
-          .dom(SES.secretsBackendLink(enginePath))
-          .hasClass('linked-block', `linked-block class is added to supported ${engine} engines.`);
-      }
-      // cleanup
-      await runCmd(deleteEngineCmd(enginePath));
-    }
-  });
-
-  test('it filters by name and engine type', async function (assert) {
-    const enginePath1 = `aws-1-${this.uid}`;
-    const enginePath2 = `aws-2-${this.uid}`;
-
-    await await runCmd(mountEngineCmd('aws', enginePath1));
-    await await runCmd(mountEngineCmd('aws', enginePath2));
-    await visit('/vault/secrets');
-    // filter by type
-    await clickTrigger('#filter-by-engine-type');
-    await click(GENERAL.searchSelect.option());
-
-    const rows = findAll(SES.secretsBackendLink());
-    const rowsAws = Array.from(rows).filter((row) => row.innerText.includes('aws'));
-
-    assert.strictEqual(rows.length, rowsAws.length, 'all rows returned are aws');
-    // filter by name
-    await clickTrigger('#filter-by-engine-name');
-    const firstItemToSelect = find(GENERAL.searchSelect.option()).innerText;
-    await click(GENERAL.searchSelect.option());
-    const singleRow = document.querySelectorAll(SES.secretsBackendLink());
-    assert.strictEqual(singleRow.length, 1, 'returns only one row');
-    assert.dom(singleRow[0]).includesText(firstItemToSelect, 'shows the filtered by name engine');
-    // clear filter by engine name
-    await click(`#filter-by-engine-name ${GENERAL.searchSelect.removeSelected}`);
-    const rowsAgain = document.querySelectorAll(SES.secretsBackendLink());
-    assert.ok(rowsAgain.length > 1, 'filter has been removed');
-
-    // cleanup
-    await runCmd(deleteEngineCmd(enginePath1));
-    await runCmd(deleteEngineCmd(enginePath2));
-  });
-
-  test('it applies overflow styling', async function (assert) {
-    await visit('/vault/secrets');
-    // not using the secret-engine-selector "secretPath" because I want to return the first node of a querySelectorAll
-    const firstSecretEngine = document.querySelectorAll('[data-test-secret-path]')[0];
-    assert.dom(firstSecretEngine).hasClass('overflow-wrap', 'secret engine name has overflow class ');
-  });
-
-  test('it allows navigation to a non-nested secret with pagination', async function (assert) {
-    assert.expect(2);
-
-    const enginePath1 = `kv-v1-${this.uid}`;
-    const secretPath = 'secret-9';
-    await runCmd(mountEngineCmd('kv', enginePath1));
-
-    // check kv1
-    await visit('/vault/secrets');
-    await click(SES.secretsBackendLink(enginePath1));
-    for (let i = 0; i <= 15; i++) {
-      await createSecret(`secret-${i}`, 'foo', 'bar', enginePath1);
-    }
-
-    // navigate and check that details view is shown from non-nested secrets
-    await click(GENERAL.pagination.next);
-    assert.strictEqual(
-      currentURL(),
-      `/vault/secrets/${enginePath1}/list?page=2`,
-      'After clicking next page in navigates to the second page.'
-    );
-    await click(SES.secretLink(secretPath));
-    assert.strictEqual(
-      currentURL(),
-      `/vault/secrets/${enginePath1}/show/${secretPath}`,
-      'After clicking a non-nested secret, it navigates to the details view.'
-    );
-
-    // cleanup
-    await runCmd(deleteEngineCmd(enginePath1));
-  });
-
-  test('it allows navigation to a nested secret with pagination', async function (assert) {
-    assert.expect(2);
-
-    const enginePath1 = `kv-v1-${this.uid}`;
-    const parentPath = 'nested';
-
-    await runCmd(mountEngineCmd('kv', enginePath1));
-
-    // check kv1
-    await visit('/vault/secrets');
-    await click(SES.secretsBackendLink(enginePath1));
-    for (let i = 0; i <= 15; i++) {
-      await createSecret(`${parentPath}/secret-${i}`, 'foo', 'bar', enginePath1);
-    }
-
-    // navigate and check that the children list view is shown from nested secrets
-    await click(SES.secretLink(`${parentPath}/`));
-
-    assert.strictEqual(
-      currentURL(),
-      `/vault/secrets/${enginePath1}/list/${parentPath}/`,
-      'After clicking a nested secret it navigates to the children list view.'
-    );
-
-    await click(GENERAL.pagination.next);
-    assert.strictEqual(
-      currentURL(),
-      `/vault/secrets/${enginePath1}/list/${parentPath}/?page=2`,
-      'After clicking next page it navigates to the second page.'
-    );
-
-    // cleanup
-    await runCmd(deleteEngineCmd(enginePath1));
   });
 });
