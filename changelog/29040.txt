@@ -1,0 +1,3 @@
+```release-note:improvement
+website/docs: Updates the command to pull the Kubernetes root CA certificate for the Standalone Server w/ TLS example doc
+```
