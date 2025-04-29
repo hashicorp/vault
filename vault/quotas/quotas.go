@@ -70,6 +70,15 @@ func (q Type) String() string {
 	return "unknown"
 }
 
+type GroupBy string
+
+const (
+	GroupByIp             = "ip"
+	GroupByNone           = "none"
+	GroupByEntityThenIp   = "entity_then_ip"
+	GroupByEntityThenNone = "entity_then_none"
+)
+
 const (
 	indexID                 = "id"
 	indexName               = "name"
