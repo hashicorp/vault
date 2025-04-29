@@ -29,7 +29,10 @@ export default class NamespacePicker extends Component {
   // Show/hide refresh & manage namespaces buttons
   @tracked hasListPermissions = false;
 
+  @tracked batchSize = 200;
+
   @tracked allNamespaces = [];
+  @tracked hasNamespaces = false;
   @tracked searchInput = '';
   @tracked searchInputHelpText =
     "Enter a full path in the search bar and hit the 'Enter' ↵ key to navigate faster.";
@@ -41,16 +44,16 @@ export default class NamespacePicker extends Component {
   }
 
   // TODO make private when converting from js to ts
-  #matchesPath(option, currentNamespace) {
+  #matchesPath(option, currentPath) {
     // TODO: Revisit. A hardcoded check for "path" & "/path" seems hacky, but it fixes a breaking test:
     //  "Acceptance | Enterprise | namespaces: it shows nested namespaces if you log in with a namespace starting with a /"
     //  My assumption is that namespace shouldn't start with a "/", but is this a HVD thing? or is the test outdated?
-    return option?.path === currentNamespace?.path || `/${option?.path}` === currentNamespace?.path;
+    return option?.path === currentPath || `/${option?.path}` === currentPath;
   }
 
   // TODO make private when converting from js to ts
-  #getSelected(options, currentNamespace) {
-    return options.find((option) => this.#matchesPath(option, currentNamespace));
+  #getSelected(options, currentPath) {
+    return options.find((option) => this.#matchesPath(option, currentPath));
   }
 
   // TODO make private when converting from js to ts
@@ -70,13 +73,23 @@ export default class NamespacePicker extends Component {
     const options = [
       ...(namespace?.accessibleNamespaces || []).map((ns) => {
         const parts = ns.split('/');
-        return { id: parts[parts.length - 1], path: ns, label: ns };
+        return { id: parts[parts.length - 1] || '', path: ns, label: ns };
       }),
     ];
 
     // Conditionally add the root namespace
     if (this.auth?.authData?.userRootNamespace === '') {
       options.unshift({ id: 'root', path: '', label: 'root' });
+    }
+
+    // If there are no namespaces returned by the internal endpoint, add the current namespace
+    // to the list of options. This is a fallback for when the user has access to a single namespace.
+    if (options.length === 0) {
+      options.push({
+        id: namespace.currentNamespace,
+        path: namespace.path,
+        label: namespace.path,
+      });
     }
 
     return options;
@@ -86,20 +99,34 @@ export default class NamespacePicker extends Component {
     return this.searchInput?.trim().length > 0;
   }
 
+  get namespaceCount() {
+    return this.namespaceOptions.length;
+  }
+
   get namespaceLabel() {
     return this.searchInput === '' ? 'All namespaces' : 'Matching namespaces';
   }
 
   get namespaceOptions() {
     if (this.searchInput.trim() === '') {
-      // If the search input is empty, reset to all namespaces
-      return this.allNamespaces;
+      return this.allNamespaces || [];
     } else {
-      // Filter namespaces based on the search input
-      return this.allNamespaces.filter((ns) =>
+      const filtered = this.allNamespaces.filter((ns) =>
         ns.label.toLowerCase().includes(this.searchInput.toLowerCase())
       );
+      return filtered || [];
     }
+  }
+
+  get noNamespacesMessage() {
+    const noNamespacesMessage = 'No namespaces found.';
+    const noMatchingNamespacesHelpText =
+      'No matching namespaces found. Try searching for a different namespace.';
+    return this.hasSearchInput ? noMatchingNamespacesHelpText : noNamespacesMessage;
+  }
+
+  get visibleNamespaceOptions() {
+    return this.namespaceOptions.slice(0, this.batchSize);
   }
 
   @action
@@ -126,18 +153,39 @@ export default class NamespacePicker extends Component {
   @action
   async loadOptions() {
     // TODO: namespace service's findNamespacesForUser will never throw an error.
-    //  Check with design to determine if we should continue to ignore or handle an error situation here.
-    await this.namespace?.findNamespacesForUser.perform();
+    // Check with design to determine if we should continue to ignore or handle an error situation here.
+    await this.namespace?.findNamespacesForUser?.perform();
 
     this.allNamespaces = this.#getOptions(this.namespace);
-    this.selected = this.#getSelected(this.allNamespaces, this.namespace);
+    this.selected = this.#getSelected(this.allNamespaces, this.namespace?.path);
 
     await this.fetchListCapability();
   }
 
   @action
+  loadMore() {
+    this.batchSize += 200; // Increase the batch size to load more items
+  }
+
+  @action
+  setupScrollListener(element) {
+    element.addEventListener('scroll', this.onScroll);
+  }
+
+  @action
+  onScroll(event) {
+    const element = event.target;
+
+    // Check if the user has scrolled to the bottom
+    if (element.scrollTop + element.clientHeight >= element.scrollHeight) {
+      this.loadMore();
+    }
+  }
+
+  @action
   async onChange(selected) {
     this.selected = selected;
+    this.searchInput = '';
     this.router.transitionTo('vault.cluster.dashboard', { queryParams: { namespace: selected.path } });
   }
 

@@ -11,6 +11,7 @@ interface PathsResponse {
   };
 }
 export default class NamespaceService extends Service {
+  accessibleNamespaces: string[];
   userRootNamespace: string;
   inRootNamespace: boolean;
   inHvdAdminNamespace: boolean;
