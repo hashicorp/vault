@@ -16,7 +16,7 @@
  */
 export interface SshConfigureCaRequest {
     /**
-     * Generate SSH key pair internally rather than use the private_key and public_key fields.
+     * Generate SSH key pair internally rather than use the private_key and public_key fields. If managed key config is provided, this field is ignored.
      * @type {boolean}
      * @memberof SshConfigureCaRequest
      */
@@ -33,6 +33,18 @@ export interface SshConfigureCaRequest {
      * @memberof SshConfigureCaRequest
      */
     keyType?: string;
+    /**
+     * The id of the managed key to use. When using a managed key, this field or managed_key_name is required.
+     * @type {string}
+     * @memberof SshConfigureCaRequest
+     */
+    managedKeyId?: string;
+    /**
+     * The name of the managed key to use. When using a managed key, this field or managed_key_id is required.
+     * @type {string}
+     * @memberof SshConfigureCaRequest
+     */
+    managedKeyName?: string;
     /**
      * Private half of the SSH key that will be used to sign certificates.
      * @type {string}

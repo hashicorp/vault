@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn } from '@ember/test-helpers';
+import { click, fillIn, findAll } from '@ember/test-helpers';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { AUTH_METHOD_MAP } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -19,9 +19,10 @@ export default (test, { standardSubmit = true } = {}) => {
   test('it renders fields', async function (assert) {
     await this.renderComponent();
     assert.dom(AUTH_FORM.authForm(this.authType)).exists(`${this.authType}: it renders form component`);
-    this.expectedFields.forEach((field) => {
-      assert.dom(GENERAL.inputByAttr(field)).exists(`${this.authType}: it renders ${field}`);
-    });
+    const fields = findAll('input');
+    for (const field of fields) {
+      assert.true(this.expectedFields.includes(field.name), `it renders field: ${field.name}`);
+    }
   });
 
   test('it fires onError callback', async function (assert) {
@@ -75,13 +76,7 @@ export default (test, { standardSubmit = true } = {}) => {
       for (const [field, value] of Object.entries(loginData)) {
         await fillIn(GENERAL.inputByAttr(field), value);
       }
-
-      if (this.authType === 'token') {
-        // token doesn't support custom paths, so just test yielding functionality
-        await fillIn(GENERAL.inputByAttr('yield'), `yield-${this.authType}`);
-      } else {
-        await fillIn(GENERAL.inputByAttr('path'), `custom-${this.authType}`);
-      }
+      await fillIn(GENERAL.inputByAttr('path'), `custom-${this.authType}`);
 
       await click(AUTH_FORM.login);
       const [actual] = this.authenticateStub.lastCall.args;

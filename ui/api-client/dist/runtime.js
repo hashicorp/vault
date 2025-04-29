@@ -27,6 +27,7 @@ exports.querystring = querystring;
 exports.exists = exists;
 exports.mapValues = mapValues;
 exports.canConsumeForm = canConsumeForm;
+exports.camelizeResponseKeys = camelizeResponseKeys;
 exports.BASE_PATH = "http://localhost".replace(/\/+$/, "");
 class Configuration {
     constructor(configuration = {}) {
@@ -297,6 +298,28 @@ function canConsumeForm(consumes) {
     }
     return false;
 }
+function camelizeResponseKeys(json) {
+    const camelizeKeys = (json) => {
+        const notAnObject = (obj) => Object.prototype.toString.call(obj) !== '[object Object]';
+        if (notAnObject(json)) {
+            return json;
+        }
+        if (Array.isArray(json)) {
+            return json.map(camelizeKeys);
+        }
+        return Object.keys(json).reduce((convertedJson, key) => {
+            const value = json[key];
+            const convertedValue = notAnObject(value) ? value : camelizeKeys(value);
+            const convertedKey = key.split('_').reduce((str, segment, index) => {
+                const capitalized = index ? segment.charAt(0).toUpperCase() + segment.slice(1) : segment;
+                return str.concat(capitalized);
+            }, '');
+            convertedJson[convertedKey] = convertedValue;
+            return convertedJson;
+        }, {});
+    };
+    return camelizeKeys(json);
+}
 class JSONApiResponse {
     constructor(raw, transformer = (jsonValue) => jsonValue) {
         this.raw = raw;
@@ -305,7 +328,8 @@ class JSONApiResponse {
     value() {
         return __awaiter(this, void 0, void 0, function* () {
             const response = yield this.raw.json();
-            return this.transformer(response.data);
+            const transformed = this.transformer(response.data);
+            return camelizeResponseKeys(transformed);
         });
     }
 }
@@ -316,7 +340,13 @@ class VoidApiResponse {
     }
     value() {
         return __awaiter(this, void 0, void 0, function* () {
-            return yield this.raw.json();
+            try {
+                const response = yield this.raw.json();
+                return camelizeResponseKeys(response);
+            }
+            catch (e) {
+                return undefined;
+            }
         });
     }
 }
