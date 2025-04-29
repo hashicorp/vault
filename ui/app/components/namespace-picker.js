@@ -140,8 +140,7 @@ export default class NamespacePicker extends Component {
   @action
   async loadOptions() {
     // TODO: namespace service's findNamespacesForUser will never throw an error.
-    //  Check with design to determine if we should continue to ignore or handle an error situation here.
-    // Temporarily suppress the eslint error by asserting that `findNamespacesForUser` exists.
+    // Check with design to determine if we should continue to ignore or handle an error situation here.
     await this.namespace?.findNamespacesForUser?.perform();
 
     this.allNamespaces = this.#getOptions(this.namespace);
