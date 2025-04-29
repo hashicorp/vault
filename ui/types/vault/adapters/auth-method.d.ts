@@ -15,4 +15,11 @@ export default interface AuthMethodAdapter extends AdapterRegistry {
   ) => Promise<{
     auth: AuthData;
   }>;
+  pollSAMLToken: (
+    path: string,
+    tokenPollID: string,
+    clientVerifier: string
+  ) => Promise<{
+    auth: AuthData;
+  }>;
 }
