@@ -8,6 +8,16 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 import { KEYS } from 'core/utils/keyboard-keys';
+import type Router from 'vault/router';
+import type NamespaceService from 'vault/services/namespace';
+import type AuthService from 'vault/vault/services/auth';
+import type Store from '@ember-data/store';
+
+interface NamespaceOption {
+  id: string;
+  path: string;
+  label: string;
+}
 
 /**
  * @module NamespacePicker
@@ -19,18 +29,11 @@ import { KEYS } from 'core/utils/keyboard-keys';
  * @example
  * <NamespacePicker class="hds-side-nav-hide-when-minimized" />
  */
-
-interface NamespaceOption {
-  id: string;
-  path: string;
-  label: string;
-}
-
 export default class NamespacePicker extends Component {
-  @service declare auth: any;
-  @service declare namespace: any;
-  @service declare router: any;
-  @service declare store: any;
+  @service declare auth: AuthService;
+  @service declare namespace: NamespaceService;
+  @service declare router: Router;
+  @service declare store: Store;
 
   // Show/hide refresh & manage namespaces buttons
   @tracked hasListPermissions = false;
@@ -44,7 +47,7 @@ export default class NamespacePicker extends Component {
     "Enter a full path in the search bar and hit the 'Enter' ↵ key to navigate faster.";
   @tracked selected: NamespaceOption | null = null;
 
-  constructor(owner: unknown, args: any) {
+  constructor(owner: unknown, args: Record<string, never>) {
     super(owner, args);
     this.loadOptions();
   }
