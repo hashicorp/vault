@@ -29,6 +29,8 @@ export const getManagedNamespace = (nsParam, root) => {
 
 export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   auth: service(),
+  api: service(),
+  analytics: service(),
   currentCluster: service(),
   customMessages: service(),
   flagsService: service('flags'),
@@ -124,8 +126,9 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     .cancelOn('deactivate')
     .keepLatest(),
 
-  afterModel(model, transition) {
+  async afterModel(model, transition) {
     this._super(...arguments);
+
     this.currentCluster.setCluster(model);
     if (model.needsInit && this.auth.currentToken) {
       // clear token to prevent infinite load state
@@ -137,6 +140,23 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     if (this.namespaceService.path && !this.version.hasNamespaces) {
       return this.router.transitionTo(this.routeName, { queryParams: { namespace: '' } });
     }
+
+    // identify user for analytics service
+    try {
+      const token = await this.api.auth.tokenLookUpSelf();
+      const entity = token.data.entity_id ? token.data.entity_id : `root_${crypto.randomUUID()}`;
+
+      this.analytics.identifyUser(entity, {
+        licenseState: model.license.state,
+        version: model.version.version,
+        storageType: model.storageType,
+        replicationMode: model.replicationMode,
+      });
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.log('unable to identify user for analytics', e);
+    }
+
     return this.transitionToTargetRoute(transition);
   },
 

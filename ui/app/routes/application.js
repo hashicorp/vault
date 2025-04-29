@@ -5,10 +5,14 @@
 
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
-import ControlGroupError from 'vault/lib/control-group-error';
 import { action } from '@ember/object';
 
+import config from 'vault/config/environment';
+
+import ControlGroupError from 'vault/lib/control-group-error';
+
 export default class ApplicationRoute extends Route {
+  @service analytics;
   @service controlGroup;
   @service('router') routing;
   @service('namespace') namespaceService;
@@ -68,5 +72,11 @@ export default class ApplicationRoute extends Route {
 
   beforeModel() {
     return this.flagsService.fetchFeatureFlags();
+  }
+
+  afterModel() {
+    const { ANALYTICS_CONFIG } = config.APP;
+
+    this.analytics.start(ANALYTICS_CONFIG.provider, ANALYTICS_CONFIG);
   }
 }
