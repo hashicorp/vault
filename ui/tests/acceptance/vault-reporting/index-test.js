@@ -4,6 +4,18 @@ import { visit, currentURL, waitFor } from '@ember/test-helpers';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
+const mockedResponse = {
+  data: {
+    auth_methods: {},
+    kvv1_secrets: 0,
+    kvv2_secrets: 0,
+    lease_count_quotas: {},
+    leases_by_auth_method: {},
+    replication_status: {},
+    secret_engines: {},
+  },
+};
+
 module('Acceptance | vault-reporting', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
@@ -20,7 +32,6 @@ module('Acceptance | vault-reporting', function (hooks) {
 
   test('it renders the counters dashboard block with all expected counters', async function (assert) {
     await visit('/vault/usage-reporting');
-
     await waitFor('[data-test-dashboard-counters]');
     assert.dom('[data-test-dashboard-counters]').exists('renders the counters dashboard block');
 
@@ -129,6 +140,59 @@ module('Acceptance | vault-reporting', function (hooks) {
       'Check the status and health of Vault clusters',
       'description is correct'
     );
+  });
+
+  test('empty states display expected text', async function (assert) {
+    this.server.get('http://localhost:7357/v1/sys/utilization-report', () => mockedResponse);
+    await visit('/vault/usage-reporting');
+
+    // Secret Engines
+    await waitFor('[data-test-dashboard-secret-engines]');
+
+    assert
+      .dom('[data-test-dashboard-secret-engines]')
+      .includesText('None enabled', 'Secret engines empty state: title is shown');
+    assert
+      .dom('[data-test-dashboard-secret-engines]')
+      .includesText(
+        'Secret engines in this namespace will appear here.',
+        'Secret engines empty state: body is shown'
+      );
+    assert
+      .dom('[data-test-dashboard-secret-engines]')
+      .includesText('Enable secret engines', 'Secret engines empty state: CTA is shown');
+
+    // Auth Methods
+    await waitFor('[data-test-dashboard-auth-methods]');
+
+    assert
+      .dom('[data-test-dashboard-auth-methods]')
+      .includesText('None enabled', 'Auth methods empty state: title is shown');
+    assert
+      .dom('[data-test-dashboard-auth-methods]')
+      .includesText(
+        'Authentication methods in this namespace will appear here.',
+        'Auth methods empty state: body is shown'
+      );
+    assert
+      .dom('[data-test-dashboard-auth-methods]')
+      .includesText('Enable authentication methods', 'Auth methods empty state: CTA is shown');
+
+    // Lease Count Quota
+    await waitFor('[data-test-dashboard-lease-count]');
+
+    assert
+      .dom('[data-test-dashboard-lease-count]')
+      .includesText('None enforced', 'Lease quota empty state: title is shown');
+    assert
+      .dom('[data-test-dashboard-lease-count]')
+      .includesText(
+        'Global lease count quota is disabled. Enable it to manage active leases.',
+        'Lease quota empty state: body is shown'
+      );
+    assert
+      .dom('[data-test-dashboard-lease-count]')
+      .includesText('Global lease count quota', 'Lease quota empty state: docs link is shown');
   });
 
   //
