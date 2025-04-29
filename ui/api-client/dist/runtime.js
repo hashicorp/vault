@@ -340,9 +340,13 @@ class VoidApiResponse {
     }
     value() {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a;
-            const response = yield ((_a = this.raw) === null || _a === void 0 ? void 0 : _a.json());
-            return camelizeResponseKeys(response);
+            try {
+                const response = yield this.raw.json();
+                return camelizeResponseKeys(response);
+            }
+            catch (e) {
+                return undefined;
+            }
         });
     }
 }

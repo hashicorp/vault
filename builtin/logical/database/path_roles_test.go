@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBackend_Roles_CredentialTypes(t *testing.T) {
@@ -1352,6 +1353,57 @@ func TestIsInsideRotationWindow(t *testing.T) {
 	}
 }
 
+// TestStaticRoleTTLAfterUpdate tests that a static roles
+// TTL is properly updated after updating rotation period
+// This addresses a bug in which NextVaultRotation was not
+// set on update
+func TestStaticRoleTTLAfterUpdate(t *testing.T) {
+	ctx := context.Background()
+	b, storage, mockDB := getBackend(t)
+	defer b.Cleanup(ctx)
+	configureDBMount(t, storage)
+
+	roleName := "hashicorp"
+	data := map[string]interface{}{
+		"username":        "hashicorp",
+		"db_name":         "mockv5",
+		"rotation_period": "10m",
+	}
+
+	createRoleWithData(t, b, storage, mockDB, roleName, data)
+	// read credential
+	resp := readStaticCred(t, b, storage, mockDB, roleName)
+	var initialTTL float64
+	if v, ok := resp.Data["ttl"]; !ok || v == nil {
+		require.FailNow(t, "initial ttl should be set")
+	} else {
+		initialTTL, ok = v.(float64)
+		if !ok {
+			require.FailNow(t, "expected ttl to be an integer")
+		}
+	}
+
+	updateStaticRoleWithData(t, b, storage, mockDB, roleName, map[string]interface{}{
+		"username":        "hashicorp",
+		"db_name":         "mockv5",
+		"rotation_period": "20m",
+	})
+
+	resp = readStaticCred(t, b, storage, mockDB, roleName)
+	var updatedTTL float64
+	if v, ok := resp.Data["ttl"]; !ok || v == nil {
+		require.FailNow(t, "expected ttl to be set after update")
+	} else {
+		updatedTTL, ok = v.(float64)
+		if !ok {
+			require.FailNow(t, "expected ttl to be a float64 after update")
+		}
+	}
+
+	require.Greaterf(t, updatedTTL, initialTTL, "expected ttl to be greater than %f, actual value: %f",
+		initialTTL, updatedTTL)
+}
+
 func createRole(t *testing.T, b *databaseBackend, storage logical.Storage, mockDB *mockNewDatabase, roleName string) {
 	t.Helper()
 	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
@@ -1402,6 +1454,31 @@ func readStaticCred(t *testing.T, b *databaseBackend, s logical.Storage, mockDB 
 		t.Fatal(resp, err)
 	}
 	return resp
+}
+
+func updateStaticRoleWithData(t *testing.T, b *databaseBackend, storage logical.Storage, mockDB *mockNewDatabase, roleName string, d map[string]interface{}) {
+	t.Helper()
+
+	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
+		Return(v5.UpdateUserResponse{}, nil).
+		Once()
+
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "static-roles/" + roleName,
+		Storage:   storage,
+		Data:      d,
+	}
+
+	resp, err := b.HandleRequest(context.Background(), req)
+	assert.NoError(t, err, "unexpected error")
+	if resp != nil {
+		assert.NoError(t, resp.Error(), "unexpected error in response")
+	}
+
+	if t.Failed() {
+		require.FailNow(t, "failed to update static role: %s", roleName)
+	}
 }
 
 const testRoleStaticCreate = `

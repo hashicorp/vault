@@ -457,8 +457,12 @@ export class JSONApiResponse<T> {
 export class VoidApiResponse {
     constructor(public raw: Response) {}
     async value(): Promise<VoidResponse> {
-        const response = await this.raw?.json();
-        return camelizeResponseKeys(response);
+        try {
+            const response = await this.raw.json();
+            return camelizeResponseKeys(response);
+        } catch (e) {
+            return undefined;
+        }
     }
 }
 

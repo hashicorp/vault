@@ -137,6 +137,7 @@ export default class AuthFormOidcJwt extends AuthBase {
 
   async continueLogin(data: JwtLoginData | OidcLoginData) {
     try {
+      // TODO backend should probably be path, but holding off refactor since api service may remove need all together
       // OIDC callback returns a token so authenticate with that
       const backend = this.isOIDC && 'token' in data ? 'token' : this.args.authType;
 
@@ -146,8 +147,9 @@ export default class AuthFormOidcJwt extends AuthBase {
         data,
         selectedAuth: this.args.authType,
       });
+
       // responsible for redirect after auth data is persisted
-      this.handleAuthResponse(authResponse);
+      this.handleAuthResponse(authResponse, this.args.authType);
     } catch (error) {
       this.onError(error as Error);
     }
