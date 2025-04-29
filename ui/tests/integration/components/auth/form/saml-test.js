@@ -6,11 +6,13 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import hbs from 'htmlbars-inline-precompile';
-import { find, render } from '@ember/test-helpers';
+import { click, fillIn, find, render } from '@ember/test-helpers';
 import sinon from 'sinon';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import testHelper from './test-helper';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
+import { overrideResponse } from 'vault/tests/helpers/stubs';
+import { windowStub } from 'vault/tests/helpers/oidc-window-stub';
 
 module('Integration | Component | auth | form | saml', function (hooks) {
   setupRenderingTest(hooks);
@@ -21,13 +23,13 @@ module('Integration | Component | auth | form | saml', function (hooks) {
     this.expectedFields = ['role'];
 
     this.authenticateStub = sinon.stub(this.owner.lookup('service:auth'), 'authenticate');
+    this.store = this.owner.lookup('service:store');
     this.cluster = { id: 1 };
     this.onError = sinon.spy();
     this.onSuccess = sinon.spy();
-    this.expectedSubmit = {
-      default: { path: 'saml', role: 'some-dev' },
-      custom: { path: 'custom-saml', role: 'some-dev' },
-    };
+    this.windowStub = windowStub();
+    sinon.replaceGetter(window, 'screen', () => ({ height: 600, width: 500 }));
+
     this.renderComponent = ({ yieldBlock = false } = {}) => {
       if (yieldBlock) {
         return render(hbs`
@@ -53,7 +55,10 @@ module('Integration | Component | auth | form | saml', function (hooks) {
     };
   });
 
-  testHelper(test);
+  hooks.afterEach(function () {
+    this.windowStub.restore();
+    sinon.restore();
+  });
 
   test('it renders helper text', async function (assert) {
     await this.renderComponent();
@@ -61,5 +66,213 @@ module('Integration | Component | auth | form | saml', function (hooks) {
     assert
       .dom(`#helper-text-${id}`)
       .hasText('Vault will use the default role to sign in if this field is left blank.');
+  });
+
+  test('default path: it requests sso_service_url and opens popup on submit', async function (assert) {
+    assert.expect(6);
+    this.server.put('/auth/saml/sso_service_url', (_, req) => {
+      const { acs_url, role } = JSON.parse(req.requestBody);
+      assert.strictEqual(acs_url, `${window.origin}/v1/auth/saml/callback`, 'it builds acs_url for payload');
+      assert.strictEqual(role, 'some-dev', 'payload contains role');
+      return {
+        data: {
+          sso_service_url: 'https://my-single-sign-on-url.com',
+          token_poll_id: '4fe2ec01-1f56-b665-0ba2-09c7bca10ae8',
+        },
+      };
+    });
+
+    await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('role'), 'some-dev');
+    await click(AUTH_FORM.login);
+
+    const [sso_service_url, name, dimensions] = this.windowStub.lastCall.args;
+    assert.strictEqual(
+      sso_service_url,
+      'https://my-single-sign-on-url.com',
+      'it calls window opener with sso_service_url returned by role request'
+    );
+    assert.strictEqual(sso_service_url, 'https://my-single-sign-on-url.com');
+    assert.strictEqual(name, 'vaultSAMLWindow', 'it calls window opener with expected name');
+    assert.strictEqual(
+      dimensions,
+      'width=500,height=600,resizable,scrollbars=yes,top=0,left=0',
+      'it calls window opener with expected dimensions'
+    );
+  });
+
+  test('custom path: it requests sso_service_url and opens popup on submit', async function (assert) {
+    assert.expect(6);
+    const path = 'custom-path';
+    this.server.put(`/auth/${path}/sso_service_url`, (_, req) => {
+      const { acs_url, role } = JSON.parse(req.requestBody);
+      assert.strictEqual(
+        acs_url,
+        `${window.origin}/v1/auth/${path}/callback`,
+        'it builds acs_url for payload'
+      );
+      assert.strictEqual(role, 'some-dev', 'payload contains role');
+      return {
+        data: {
+          sso_service_url: 'https://my-single-sign-on-url.com',
+          token_poll_id: '4fe2ec01-1f56-b665-0ba2-09c7bca10ae8',
+        },
+      };
+    });
+
+    await this.renderComponent({ yieldBlock: true });
+    await fillIn(GENERAL.inputByAttr('role'), 'some-dev');
+    await fillIn(GENERAL.inputByAttr('path'), path);
+    await click(AUTH_FORM.login);
+
+    const [sso_service_url, name, dimensions] = this.windowStub.lastCall.args;
+    assert.strictEqual(
+      sso_service_url,
+      'https://my-single-sign-on-url.com',
+      'it calls window opener with sso_service_url returned by role request'
+    );
+    assert.strictEqual(sso_service_url, 'https://my-single-sign-on-url.com');
+    assert.strictEqual(name, 'vaultSAMLWindow', 'it calls window opener with expected name');
+    assert.strictEqual(
+      dimensions,
+      'width=500,height=600,resizable,scrollbars=yes,top=0,left=0',
+      'it calls window opener with expected dimensions'
+    );
+  });
+
+  test('it polls token request', async function (assert) {
+    assert.expect(2); // saml/token url should be requested twice
+    this.server.put('/auth/saml/sso_service_url', () => {
+      return {
+        data: {
+          sso_service_url: 'https://my-single-sign-on-url.com',
+          token_poll_id: '4fe2ec01-1f56-b665-0ba2-09c7bca10ae8',
+        },
+      };
+    });
+    let count = 0;
+    this.server.put('/auth/saml/token', () => {
+      count++;
+      const msg =
+        count === 1
+          ? 'it makes initial request to token url'
+          : 'it re-requests token url if httpStatus is 401';
+      assert.true(true, msg);
+
+      if (count === 1) {
+        return overrideResponse(401);
+      } else {
+        return { auth: { client_token: 'my_token' } };
+      }
+    });
+    await this.renderComponent();
+    await click(AUTH_FORM.login);
+  });
+
+  test('it calls auth service with token request callback data', async function (assert) {
+    this.server.put('/auth/saml/sso_service_url', () => {
+      return {
+        data: {
+          sso_service_url: 'https://my-single-sign-on-url.com',
+          token_poll_id: '4fe2ec01-1f56-b665-0ba2-09c7bca10ae8',
+        },
+      };
+    });
+    this.server.put('/auth/saml/token', () => {
+      return { auth: { client_token: 'my_token' } };
+    });
+
+    await this.renderComponent();
+    await click(AUTH_FORM.login);
+
+    const [actual] = this.authenticateStub.lastCall.args;
+    assert.propEqual(
+      actual.data,
+      {
+        mfa_requirement: undefined,
+        token: 'my_token',
+      },
+      'auth service "authenticate" method is called token callback data'
+    );
+  });
+
+  test('it calls onSuccess on successful auth', async function (assert) {
+    const expectedResponse = {
+      namespace: '',
+      token: 'my_token',
+      isRoot: false,
+    };
+    this.authenticateStub.returns(expectedResponse);
+    this.server.put('/auth/saml/sso_service_url', () => {
+      return {
+        data: {
+          sso_service_url: 'https://my-single-sign-on-url.com',
+          token_poll_id: '4fe2ec01-1f56-b665-0ba2-09c7bca10ae8',
+        },
+      };
+    });
+    this.server.put('/auth/saml/token', () => {
+      return { auth: { client_token: 'my_token' } };
+    });
+    await this.renderComponent();
+    await click(AUTH_FORM.login);
+    const [actualResponse, type] = this.onSuccess.lastCall.args;
+    assert.propEqual(actualResponse, expectedResponse, 'onSuccess is called with auth response');
+    assert.strictEqual(type, 'saml', 'onSuccess is called with auth type');
+  });
+
+  test('it calls onError if auth service authentication fails', async function (assert) {
+    this.authenticateStub.throws('permission denied!!');
+    this.server.put('/auth/saml/sso_service_url', () => {
+      return {
+        data: {
+          sso_service_url: 'https://my-single-sign-on-url.com',
+          token_poll_id: '4fe2ec01-1f56-b665-0ba2-09c7bca10ae8',
+        },
+      };
+    });
+    this.server.put('/auth/saml/token', () => {
+      return { auth: { client_token: 'my_token' } };
+    });
+    await this.renderComponent();
+    await click(AUTH_FORM.login);
+    const [actual] = this.onError.lastCall.args;
+    assert.strictEqual(
+      actual,
+      'Authentication failed: permission denied!!: Sinon-provided permission denied!!',
+      'onError called with auth service failure'
+    );
+  });
+
+  test('it calls onError if sso_service_url request fails', async function (assert) {
+    this.server.put('/auth/saml/sso_service_url', () => overrideResponse(403));
+    await this.renderComponent();
+    await click(AUTH_FORM.login);
+    const [actual] = this.onError.lastCall.args;
+    assert.strictEqual(
+      actual,
+      'Authentication failed: permission denied',
+      'onError called with sso_service_url failure'
+    );
+  });
+
+  test('it calls onError if polling token errors in non-401 status code', async function (assert) {
+    this.server.put('/auth/saml/sso_service_url', () => {
+      return {
+        data: {
+          sso_service_url: 'https://my-single-sign-on-url.com',
+          token_poll_id: '4fe2ec01-1f56-b665-0ba2-09c7bca10ae8',
+        },
+      };
+    });
+    this.server.put('/auth/saml/token', () => overrideResponse(500));
+    await this.renderComponent();
+    await click(AUTH_FORM.login);
+    const [actual] = this.onError.lastCall.args;
+    assert.strictEqual(
+      actual,
+      'Authentication failed: Ember Data Request PUT /v1/auth/saml/token returned a 500\nPayload (application/json)\n{}',
+      'onError called with auth failure'
+    );
   });
 });
