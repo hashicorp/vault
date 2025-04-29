@@ -8,56 +8,62 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 import { KEYS } from 'core/utils/keyboard-keys';
+import type Router from 'vault/router';
+import type NamespaceService from 'vault/services/namespace';
+import type AuthService from 'vault/vault/services/auth';
+import type Store from '@ember-data/store';
+
+interface NamespaceOption {
+  id: string;
+  path: string;
+  label: string;
+}
 
 /**
  * @module NamespacePicker
  * @description component is used to display a dropdown listing all namespaces that the current user has access to.
  *  The user can select a namespace from the dropdown to navigate directly to that namespace.
  *  The "Manage" button directs the user to the namespace management page.
- *  The "Refresh List" button refrehes the list of namespaces in the dropdown.
+ *  The "Refresh List" button refreshes the list of namespaces in the dropdown.
  *
  * @example
  * <NamespacePicker class="hds-side-nav-hide-when-minimized" />
  */
-
 export default class NamespacePicker extends Component {
-  @service auth;
-  @service namespace;
-  @service router;
-  @service store;
+  @service declare auth: AuthService;
+  @service declare namespace: NamespaceService;
+  @service declare router: Router;
+  @service declare store: Store;
 
   // Show/hide refresh & manage namespaces buttons
   @tracked hasListPermissions = false;
 
   @tracked batchSize = 200;
 
-  @tracked allNamespaces = [];
+  @tracked allNamespaces: NamespaceOption[] = [];
   @tracked hasNamespaces = false;
   @tracked searchInput = '';
   @tracked searchInputHelpText =
     "Enter a full path in the search bar and hit the 'Enter' ↵ key to navigate faster.";
-  @tracked selected = {};
+  @tracked selected: NamespaceOption | null = null;
 
-  constructor() {
-    super(...arguments);
+  constructor(owner: unknown, args: Record<string, never>) {
+    super(owner, args);
     this.loadOptions();
   }
 
-  // TODO make private when converting from js to ts
-  #matchesPath(option, currentPath) {
+  private matchesPath(option: NamespaceOption, currentPath: string): boolean {
     // TODO: Revisit. A hardcoded check for "path" & "/path" seems hacky, but it fixes a breaking test:
     //  "Acceptance | Enterprise | namespaces: it shows nested namespaces if you log in with a namespace starting with a /"
     //  My assumption is that namespace shouldn't start with a "/", but is this a HVD thing? or is the test outdated?
     return option?.path === currentPath || `/${option?.path}` === currentPath;
   }
 
-  // TODO make private when converting from js to ts
-  #getSelected(options, currentPath) {
-    return options.find((option) => this.#matchesPath(option, currentPath));
+  private getSelected(options: NamespaceOption[], currentPath: string): NamespaceOption | undefined {
+    return options.find((option) => this.matchesPath(option, currentPath));
   }
 
-  // TODO make private when converting from js to ts
-  #getOptions(namespace) {
+  private getOptions(namespace: any): NamespaceOption[] {
     /* Each namespace option has 3 properties: { id, path, and label }
      *   - id: node / namespace name (displayed when the namespace picker is closed)
      *   - path: full namespace path (used to navigate to the namespace)
@@ -71,7 +77,7 @@ export default class NamespacePicker extends Component {
      *   | 'child'  | 'parent/child' | 'parent/child' |
      */
     const options = [
-      ...(namespace?.accessibleNamespaces || []).map((ns) => {
+      ...(namespace?.accessibleNamespaces || []).map((ns: string) => {
         const parts = ns.split('/');
         return { id: parts[parts.length - 1] || '', path: ns, label: ns };
       }),
@@ -95,19 +101,19 @@ export default class NamespacePicker extends Component {
     return options;
   }
 
-  get hasSearchInput() {
+  get hasSearchInput(): boolean {
     return this.searchInput?.trim().length > 0;
   }
 
-  get namespaceCount() {
+  get namespaceCount(): number {
     return this.namespaceOptions.length;
   }
 
-  get namespaceLabel() {
+  get namespaceLabel(): string {
     return this.searchInput === '' ? 'All namespaces' : 'Matching namespaces';
   }
 
-  get namespaceOptions() {
+  get namespaceOptions(): NamespaceOption[] {
     if (this.searchInput.trim() === '') {
       return this.allNamespaces || [];
     } else {
@@ -118,20 +124,20 @@ export default class NamespacePicker extends Component {
     }
   }
 
-  get noNamespacesMessage() {
+  get noNamespacesMessage(): string {
     const noNamespacesMessage = 'No namespaces found.';
     const noMatchingNamespacesHelpText =
       'No matching namespaces found. Try searching for a different namespace.';
     return this.hasSearchInput ? noMatchingNamespacesHelpText : noNamespacesMessage;
   }
 
-  get visibleNamespaceOptions() {
+  get visibleNamespaceOptions(): NamespaceOption[] {
     return this.namespaceOptions.slice(0, this.batchSize);
   }
 
   @action
-  async fetchListCapability() {
-    // TODO: Revist. This logic was carried over from previous component implmenetation.
+  async fetchListCapability(): Promise<void> {
+    // TODO: Revist. This logic was carried over from previous component implementation.
     //  When the user doesn't have this capability, shouldn't we just hide the "Manage" button,
     //  instead of hiding both the "Manage" and "Refresh List" buttons?
     try {
@@ -145,36 +151,36 @@ export default class NamespacePicker extends Component {
   }
 
   @action
-  focusSearchInput(element) {
+  focusSearchInput(element: HTMLInputElement): void {
     // On mount, cursor should default to the search input field
     element.focus();
   }
 
   @action
-  async loadOptions() {
+  async loadOptions(): Promise<void> {
     // TODO: namespace service's findNamespacesForUser will never throw an error.
     // Check with design to determine if we should continue to ignore or handle an error situation here.
     await this.namespace?.findNamespacesForUser?.perform();
 
-    this.allNamespaces = this.#getOptions(this.namespace);
-    this.selected = this.#getSelected(this.allNamespaces, this.namespace?.path);
+    this.allNamespaces = this.getOptions(this.namespace);
+    this.selected = this.getSelected(this.allNamespaces, this.namespace?.path) ?? null;
 
     await this.fetchListCapability();
   }
 
   @action
-  loadMore() {
+  loadMore(): void {
     this.batchSize += 200; // Increase the batch size to load more items
   }
 
   @action
-  setupScrollListener(element) {
+  setupScrollListener(element: HTMLElement): void {
     element.addEventListener('scroll', this.onScroll);
   }
 
   @action
-  onScroll(event) {
-    const element = event.target;
+  onScroll(event: Event): void {
+    const element = event.target as HTMLElement;
 
     // Check if the user has scrolled to the bottom
     if (element.scrollTop + element.clientHeight >= element.scrollHeight) {
@@ -183,14 +189,14 @@ export default class NamespacePicker extends Component {
   }
 
   @action
-  async onChange(selected) {
+  async onChange(selected: NamespaceOption): Promise<void> {
     this.selected = selected;
     this.searchInput = '';
     this.router.transitionTo('vault.cluster.dashboard', { queryParams: { namespace: selected.path } });
   }
 
   @action
-  async onKeyDown(event) {
+  async onKeyDown(event: KeyboardEvent): Promise<void> {
     if (event.key === KEYS.ENTER && this.searchInput?.trim()) {
       const matchingNamespace = this.allNamespaces.find((ns) => ns.label === this.searchInput.trim());
 
@@ -205,12 +211,13 @@ export default class NamespacePicker extends Component {
   }
 
   @action
-  onSearchInput(event) {
-    this.searchInput = event.target.value;
+  onSearchInput(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    this.searchInput = target.value;
   }
 
   @action
-  async refreshList() {
+  async refreshList(): Promise<void> {
     this.searchInput = '';
     await this.loadOptions();
   }
