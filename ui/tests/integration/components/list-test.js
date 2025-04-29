@@ -5,33 +5,31 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { render, click, find, findAll, currentURL } from '@ember/test-helpers';
-import { clickTrigger } from 'ember-power-select/test-support/helpers';
+import { render, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { v4 as uuidv4 } from 'uuid';
 import sinon from 'sinon';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
-import { UNSUPPORTED_ENGINES, mountableEngines } from 'vault/helpers/mountable-secret-engines';
 
 import { createSecretsEngine } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { deleteEngineCmd, runCmd, mountEngineCmd } from 'vault/tests/helpers/commands';
 
 module('Integration | Component | secret-engine/list', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
-  const createSecret = async (path, key, value, enginePath) => {
-    await click(SES.createSecretLink);
-    await fillIn('[data-test-secret-path]', path);
+  // Incoming tests:
+  // allows you to disable an engine
+  // adds disabled css styling to unsupported secret engines
+  // filters by name and engine type
+  // applies overflow styling
 
-    await fillIn('[data-test-secret-key]', key);
-    await fillIn(GENERAL.inputByAttr(key), value);
-    await click('[data-test-secret-save]');
-    await click(SES.crumb(enginePath));
-  };
+  // Add these tests:
+  // shows only displayable engines (whatever that means)
+  // sorts the engines first by supported and then name
+  //
 
   hooks.beforeEach(function () {
     this.server.post('/sys/capabilities-self', () => ({
@@ -72,138 +70,5 @@ module('Integration | Component | secret-engine/list', function (hooks) {
       this.flashSuccessSpy.calledWith(`The kv Secrets Engine at ${enginePath}/ has been disabled.`),
       'Flash message shows that engine was disabled.'
     );
-  });
-
-  // Everything below goes to the component test
-  test('it adds disabled css styling to unsupported secret engines', async function (assert) {
-    assert.expect(16);
-    const allEnginesArray = mountableEngines();
-    for (const engineObject of allEnginesArray) {
-      const engine = engineObject.type;
-      const enginePath = `${engine}-${this.uid}`;
-      await runCmd(mountEngineCmd(engine, enginePath));
-      await visit('/vault/cluster/dashboard');
-      await visit('/vault/secrets');
-      if (UNSUPPORTED_ENGINES.includes(engine)) {
-        assert
-          .dom(SES.secretsBackendLink(enginePath))
-          .doesNotHaveClass(
-            'linked-block',
-            `the linked-block class is not added to the unsupported ${engine}, which effectively disables it.`
-          );
-      } else {
-        assert
-          .dom(SES.secretsBackendLink(enginePath))
-          .hasClass('linked-block', `linked-block class is added to supported ${engine} engines.`);
-      }
-      // cleanup
-      await runCmd(deleteEngineCmd(enginePath));
-    }
-  });
-
-  test('it filters by name and engine type', async function (assert) {
-    const enginePath1 = `aws-1-${this.uid}`;
-    const enginePath2 = `aws-2-${this.uid}`;
-
-    await await runCmd(mountEngineCmd('aws', enginePath1));
-    await await runCmd(mountEngineCmd('aws', enginePath2));
-    await visit('/vault/secrets');
-    // filter by type
-    await clickTrigger('#filter-by-engine-type');
-    await click(GENERAL.searchSelect.option());
-
-    const rows = findAll(SES.secretsBackendLink());
-    const rowsAws = Array.from(rows).filter((row) => row.innerText.includes('aws'));
-
-    assert.strictEqual(rows.length, rowsAws.length, 'all rows returned are aws');
-    // filter by name
-    await clickTrigger('#filter-by-engine-name');
-    const firstItemToSelect = find(GENERAL.searchSelect.option()).innerText;
-    await click(GENERAL.searchSelect.option());
-    const singleRow = document.querySelectorAll(SES.secretsBackendLink());
-    assert.strictEqual(singleRow.length, 1, 'returns only one row');
-    assert.dom(singleRow[0]).includesText(firstItemToSelect, 'shows the filtered by name engine');
-    // clear filter by engine name
-    await click(`#filter-by-engine-name ${GENERAL.searchSelect.removeSelected}`);
-    const rowsAgain = document.querySelectorAll(SES.secretsBackendLink());
-    assert.ok(rowsAgain.length > 1, 'filter has been removed');
-
-    // cleanup
-    await runCmd(deleteEngineCmd(enginePath1));
-    await runCmd(deleteEngineCmd(enginePath2));
-  });
-
-  test('it applies overflow styling', async function (assert) {
-    await visit('/vault/secrets');
-    // not using the secret-engine-selector "secretPath" because I want to return the first node of a querySelectorAll
-    const firstSecretEngine = document.querySelectorAll('[data-test-secret-path]')[0];
-    assert.dom(firstSecretEngine).hasClass('overflow-wrap', 'secret engine name has overflow class ');
-  });
-
-  test('it allows navigation to a non-nested secret with pagination', async function (assert) {
-    assert.expect(2);
-
-    const enginePath1 = `kv-v1-${this.uid}`;
-    const secretPath = 'secret-9';
-    await runCmd(mountEngineCmd('kv', enginePath1));
-
-    // check kv1
-    await visit('/vault/secrets');
-    await click(SES.secretsBackendLink(enginePath1));
-    for (let i = 0; i <= 15; i++) {
-      await createSecret(`secret-${i}`, 'foo', 'bar', enginePath1);
-    }
-
-    // navigate and check that details view is shown from non-nested secrets
-    await click(GENERAL.pagination.next);
-    assert.strictEqual(
-      currentURL(),
-      `/vault/secrets/${enginePath1}/list?page=2`,
-      'After clicking next page in navigates to the second page.'
-    );
-    await click(SES.secretLink(secretPath));
-    assert.strictEqual(
-      currentURL(),
-      `/vault/secrets/${enginePath1}/show/${secretPath}`,
-      'After clicking a non-nested secret, it navigates to the details view.'
-    );
-
-    // cleanup
-    await runCmd(deleteEngineCmd(enginePath1));
-  });
-
-  test('it allows navigation to a nested secret with pagination', async function (assert) {
-    assert.expect(2);
-
-    const enginePath1 = `kv-v1-${this.uid}`;
-    const parentPath = 'nested';
-
-    await runCmd(mountEngineCmd('kv', enginePath1));
-
-    // check kv1
-    await visit('/vault/secrets');
-    await click(SES.secretsBackendLink(enginePath1));
-    for (let i = 0; i <= 15; i++) {
-      await createSecret(`${parentPath}/secret-${i}`, 'foo', 'bar', enginePath1);
-    }
-
-    // navigate and check that the children list view is shown from nested secrets
-    await click(SES.secretLink(`${parentPath}/`));
-
-    assert.strictEqual(
-      currentURL(),
-      `/vault/secrets/${enginePath1}/list/${parentPath}/`,
-      'After clicking a nested secret it navigates to the children list view.'
-    );
-
-    await click(GENERAL.pagination.next);
-    assert.strictEqual(
-      currentURL(),
-      `/vault/secrets/${enginePath1}/list/${parentPath}/?page=2`,
-      'After clicking next page it navigates to the second page.'
-    );
-
-    // cleanup
-    await runCmd(deleteEngineCmd(enginePath1));
   });
 });
