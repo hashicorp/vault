@@ -6,7 +6,8 @@
 {{#each @loginFields as |field|}}
   {{#let field.name field.label field.helperText as |name label helperText|}}
     <Hds::Form::TextInput::Field
-      autocomplete={{this.setAutocomplete name}}
+      {{! For security, we do not support autocomplete at this time }}
+      autocomplete="off"
       @type={{this.setInputType name}}
       name={{name}}
       class="has-bottom-margin-m"
