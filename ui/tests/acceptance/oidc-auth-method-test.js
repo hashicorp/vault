@@ -5,6 +5,7 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, fillIn, find, waitUntil } from '@ember/test-helpers';
+import { _cancelTimers as cancelTimers, later } from '@ember/runloop';
 import { logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { buildMessage, callbackData, windowStub } from 'vault/tests/helpers/oidc-window-stub';
@@ -66,8 +67,9 @@ module('Acceptance | oidc auth method', function (hooks) {
     await logout();
     await this.selectMethod('oidc');
 
-    setTimeout(() => {
+    later(() => {
       window.postMessage(buildMessage().data, window.origin);
+      cancelTimers();
     }, DELAY_IN_MS);
 
     await click(AUTH_FORM.login);
@@ -94,8 +96,9 @@ module('Acceptance | oidc auth method', function (hooks) {
 
     await logout();
     await this.selectMethod('oidc', true);
-    setTimeout(() => {
+    later(() => {
       window.postMessage(buildMessage().data, window.origin);
+      cancelTimers();
     }, DELAY_IN_MS);
     await click(AUTH_FORM.login);
   });
@@ -106,8 +109,9 @@ module('Acceptance | oidc auth method', function (hooks) {
     await logout();
     await this.selectMethod('oidc');
 
-    setTimeout(() => {
+    later(() => {
       window.postMessage(buildMessage().data, window.origin);
+      cancelTimers();
     }, DELAY_IN_MS);
 
     await click(AUTH_FORM.login);
@@ -164,8 +168,9 @@ module('Acceptance | oidc auth method', function (hooks) {
     this.server.get('/auth/foo/oidc/callback', () => setupTotpMfaResponse('foo'));
     await logout();
     await this.selectMethod('oidc');
-    setTimeout(() => {
+    later(() => {
       window.postMessage(buildMessage().data, window.origin);
+      cancelTimers();
     }, DELAY_IN_MS);
 
     await click(AUTH_FORM.login);
@@ -178,8 +183,9 @@ module('Acceptance | oidc auth method', function (hooks) {
     this.setupMocks();
     await logout();
     await this.selectMethod('oidc');
-    setTimeout(() => {
+    later(() => {
       window.postMessage(buildMessage().data, window.origin);
+      cancelTimers();
     }, DELAY_IN_MS);
     await click(AUTH_FORM.login);
     const [actual] = authSpy.lastCall.args;
@@ -225,11 +231,12 @@ module('Acceptance | oidc auth method', function (hooks) {
     await logout();
     await this.selectMethod('oidc');
 
-    setTimeout(() => {
+    later(() => {
       // first assertion
       window.postMessage(callbackData({ source: 'miscellaneous-source' }), window.origin);
       // second assertion
       window.postMessage(callbackData({ source: 'oidc-callback' }), window.origin);
+      cancelTimers();
     }, DELAY_IN_MS);
 
     await click(AUTH_FORM.login);
@@ -241,9 +248,10 @@ module('Acceptance | oidc auth method', function (hooks) {
     this.setupMocks();
     await logout();
     await this.selectMethod('oidc');
-    setTimeout(() => {
+    later(() => {
       // callback params are missing "code"
       window.postMessage({ source: 'oidc-callback', state: 'state', foo: 'bar' }, window.origin);
+      cancelTimers();
     }, DELAY_IN_MS);
     await click(AUTH_FORM.login);
     assert
