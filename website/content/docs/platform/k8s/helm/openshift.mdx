@@ -91,13 +91,21 @@ Or install a specific version of the chart.
 @include 'helm/install.mdx'
 
 The `helm install` command accepts parameters to override default configuration
-values inline or defined in a file. For all OpenShift deployments, `global.openshift`
-should be set to `true`.
+values inline or defined in a file.
+
+<Tip>
+
+For all OpenShift deployments, set `global.openshift` to `true`, and deploy the
+chart in a namespace other than `default`.
+
+</Tip>
 
 Override the `server.dev.enabled` configuration value:
 
 ```shell-session
 $ helm install vault hashicorp/vault \
+    --create-namespace \
+    --namespace vault \
     --set "global.openshift=true" \
     --set "server.dev.enabled=true"
 ```
@@ -115,6 +123,8 @@ server:
     replicas: 5
 ##
 $ helm install vault hashicorp/vault \
+    --create-namespace \
+    --namespace vault \
     --values override-values.yml
 ```
 
@@ -130,6 +140,8 @@ Install the latest Vault Helm chart in development mode.
 
 ```shell-session
 $ helm install vault hashicorp/vault \
+    --create-namespace \
+    --namespace vault \
     --set "global.openshift=true" \
     --set "server.dev.enabled=true"
 ```
@@ -142,6 +154,8 @@ Install the latest Vault Helm chart in HA Raft mode:
 
 ```shell-session
 $ helm install vault hashicorp/vault \
+  --create-namespace \
+  --namespace vault \
   --set='global.openshift=true' \
   --set='server.ha.enabled=true' \
   --set='server.ha.raft.enabled=true'
@@ -197,6 +211,8 @@ Install the latest Vault Helm chart in external mode.
 
 ```shell-session
 $ helm install vault hashicorp/vault \
+    --create-namespace \
+    --namespace vault \
     --set "global.openshift=true" \
     --set "injector.externalVaultAddr=http://external-vault:8200"
 ```
