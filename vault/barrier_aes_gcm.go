@@ -1301,3 +1301,19 @@ func (b *AESGCMBarrier) encryptions() int64 {
 	}
 	return 0
 }
+
+// WithUnderlying returns a new barrier with the same underlying settings as
+// this one, but wrapping the given backend
+func (b *AESGCMBarrier) WithUnderlying(be physical.Backend) (logical.Storage, error) {
+	barrier, err := NewAESGCMBarrier(be, b.DetectDeadlocks())
+	if err != nil {
+		return nil, err
+	}
+	barrier.sealed = b.sealed
+	barrier.keyring = b.keyring
+	barrier.bestEffortKeyringTimeout = b.bestEffortKeyringTimeout
+	barrier.initialized = b.initialized
+	barrier.currentAESGCMVersionByte = b.currentAESGCMVersionByte
+
+	return barrier, nil
+}
