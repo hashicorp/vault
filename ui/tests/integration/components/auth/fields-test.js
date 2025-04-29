@@ -72,10 +72,10 @@ module('Integration | Component | auth | fields', function (hooks) {
   test('it renders expected autocomplete values', async function (assert) {
     await this.renderComponent();
     const expectedValues = {
-      username: 'username',
-      role: 'role',
+      username: 'off',
+      role: 'off',
       token: 'off',
-      password: 'current-password',
+      password: 'off',
     };
 
     for (const field of this.loginFields) {
