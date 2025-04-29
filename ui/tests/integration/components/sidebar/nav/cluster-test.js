@@ -75,6 +75,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
       'License',
       'Seal Vault',
       'Custom Messages',
+      'UI Login Rules',
     ];
     stubFeaturesAndPermissions(this.owner, true, true);
     await renderComponent();
