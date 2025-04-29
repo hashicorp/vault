@@ -30,6 +30,20 @@ module('Integration | Component | auth | form | saml', function (hooks) {
     this.windowStub = windowStub();
     sinon.replaceGetter(window, 'screen', () => ({ height: 600, width: 500 }));
 
+    // role request
+    this.server.put('/auth/saml/sso_service_url', () => {
+      return {
+        data: {
+          sso_service_url: 'https://my-single-sign-on-url.com',
+          token_poll_id: '4fe2ec01-1f56-b665-0ba2-09c7bca10ae8',
+        },
+      };
+    });
+    // polling request
+    this.server.put('/auth/saml/token', () => {
+      return { auth: { client_token: 'my_token' } };
+    });
+
     this.renderComponent = ({ yieldBlock = false } = {}) => {
       if (yieldBlock) {
         return render(hbs`
@@ -68,7 +82,39 @@ module('Integration | Component | auth | form | saml', function (hooks) {
       .hasText('Vault will use the default role to sign in if this field is left blank.');
   });
 
-  test('default path: it requests sso_service_url and opens popup on submit', async function (assert) {
+  test('it requests sso_service_url and opens popup on submit if role is empty', async function (assert) {
+    assert.expect(6);
+    this.server.put('/auth/saml/sso_service_url', (_, req) => {
+      const { acs_url, role } = JSON.parse(req.requestBody);
+      assert.strictEqual(acs_url, `${window.origin}/v1/auth/saml/callback`, 'it builds acs_url for payload');
+      assert.strictEqual(role, null, 'role has no value');
+      return {
+        data: {
+          sso_service_url: 'https://my-single-sign-on-url.com',
+          token_poll_id: '4fe2ec01-1f56-b665-0ba2-09c7bca10ae8',
+        },
+      };
+    });
+
+    await this.renderComponent();
+    await click(AUTH_FORM.login);
+
+    const [sso_service_url, name, dimensions] = this.windowStub.lastCall.args;
+    assert.strictEqual(
+      sso_service_url,
+      'https://my-single-sign-on-url.com',
+      'it calls window opener with sso_service_url returned by role request'
+    );
+    assert.strictEqual(sso_service_url, 'https://my-single-sign-on-url.com');
+    assert.strictEqual(name, 'vaultSAMLWindow', 'it calls window opener with expected name');
+    assert.strictEqual(
+      dimensions,
+      'width=500,height=600,resizable,scrollbars=yes,top=0,left=0',
+      'it calls window opener with expected dimensions'
+    );
+  });
+
+  test('it requests sso_service_url with inputted role and default path', async function (assert) {
     assert.expect(6);
     this.server.put('/auth/saml/sso_service_url', (_, req) => {
       const { acs_url, role } = JSON.parse(req.requestBody);
@@ -101,7 +147,7 @@ module('Integration | Component | auth | form | saml', function (hooks) {
     );
   });
 
-  test('custom path: it requests sso_service_url and opens popup on submit', async function (assert) {
+  test('it requests sso_service_url with custom path', async function (assert) {
     assert.expect(6);
     const path = 'custom-path';
     this.server.put(`/auth/${path}/sso_service_url`, (_, req) => {
@@ -141,22 +187,15 @@ module('Integration | Component | auth | form | saml', function (hooks) {
   });
 
   test('it polls token request', async function (assert) {
-    assert.expect(2); // saml/token url should be requested twice
-    this.server.put('/auth/saml/sso_service_url', () => {
-      return {
-        data: {
-          sso_service_url: 'https://my-single-sign-on-url.com',
-          token_poll_id: '4fe2ec01-1f56-b665-0ba2-09c7bca10ae8',
-        },
-      };
-    });
+    assert.expect(2); // auth/saml/token url should be requested twice
+
     let count = 0;
     this.server.put('/auth/saml/token', () => {
       count++;
       const msg =
         count === 1
           ? 'it makes initial request to token url'
-          : 'it re-requests token url if httpStatus is 401';
+          : 'it re-requests token url if httpStatus was 401';
       assert.true(true, msg);
 
       if (count === 1) {
@@ -170,18 +209,6 @@ module('Integration | Component | auth | form | saml', function (hooks) {
   });
 
   test('it calls auth service with token request callback data', async function (assert) {
-    this.server.put('/auth/saml/sso_service_url', () => {
-      return {
-        data: {
-          sso_service_url: 'https://my-single-sign-on-url.com',
-          token_poll_id: '4fe2ec01-1f56-b665-0ba2-09c7bca10ae8',
-        },
-      };
-    });
-    this.server.put('/auth/saml/token', () => {
-      return { auth: { client_token: 'my_token' } };
-    });
-
     await this.renderComponent();
     await click(AUTH_FORM.login);
 
@@ -196,24 +223,15 @@ module('Integration | Component | auth | form | saml', function (hooks) {
     );
   });
 
-  test('it calls onSuccess on successful auth', async function (assert) {
+  test('it calls onSuccess if auth service authentication is successful', async function (assert) {
     const expectedResponse = {
       namespace: '',
       token: 'my_token',
       isRoot: false,
     };
+    // stub happy response
     this.authenticateStub.returns(expectedResponse);
-    this.server.put('/auth/saml/sso_service_url', () => {
-      return {
-        data: {
-          sso_service_url: 'https://my-single-sign-on-url.com',
-          token_poll_id: '4fe2ec01-1f56-b665-0ba2-09c7bca10ae8',
-        },
-      };
-    });
-    this.server.put('/auth/saml/token', () => {
-      return { auth: { client_token: 'my_token' } };
-    });
+
     await this.renderComponent();
     await click(AUTH_FORM.login);
     const [actualResponse, type] = this.onSuccess.lastCall.args;
@@ -223,17 +241,6 @@ module('Integration | Component | auth | form | saml', function (hooks) {
 
   test('it calls onError if auth service authentication fails', async function (assert) {
     this.authenticateStub.throws('permission denied!!');
-    this.server.put('/auth/saml/sso_service_url', () => {
-      return {
-        data: {
-          sso_service_url: 'https://my-single-sign-on-url.com',
-          token_poll_id: '4fe2ec01-1f56-b665-0ba2-09c7bca10ae8',
-        },
-      };
-    });
-    this.server.put('/auth/saml/token', () => {
-      return { auth: { client_token: 'my_token' } };
-    });
     await this.renderComponent();
     await click(AUTH_FORM.login);
     const [actual] = this.onError.lastCall.args;
@@ -245,6 +252,7 @@ module('Integration | Component | auth | form | saml', function (hooks) {
   });
 
   test('it calls onError if sso_service_url request fails', async function (assert) {
+    // role request
     this.server.put('/auth/saml/sso_service_url', () => overrideResponse(403));
     await this.renderComponent();
     await click(AUTH_FORM.login);
@@ -256,15 +264,7 @@ module('Integration | Component | auth | form | saml', function (hooks) {
     );
   });
 
-  test('it calls onError if polling token errors in non-401 status code', async function (assert) {
-    this.server.put('/auth/saml/sso_service_url', () => {
-      return {
-        data: {
-          sso_service_url: 'https://my-single-sign-on-url.com',
-          token_poll_id: '4fe2ec01-1f56-b665-0ba2-09c7bca10ae8',
-        },
-      };
-    });
+  test('it calls onError if polling token errors in status code that is NOT 401', async function (assert) {
     this.server.put('/auth/saml/token', () => overrideResponse(500));
     await this.renderComponent();
     await click(AUTH_FORM.login);

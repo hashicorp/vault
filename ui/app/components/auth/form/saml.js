@@ -5,7 +5,6 @@
 
 import AuthBase from './base';
 import Ember from 'ember';
-import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { task, timeout, waitForEvent } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
@@ -51,7 +50,15 @@ export default class AuthFormSaml extends AuthBase {
    * 5. close popup, stop polling, and trigger onSubmit with token data
    */
   login = task(async (submitData) => {
+    // submit data is parsed by base.ts and a path will always have a value.
+    // either the default of auth type, or the custom inputted path
     const { role, path, namespace } = submitData;
+
+    await this.startSAMLAuth({ role, path, namespace });
+  });
+
+  // Fetch role to get sso_service_url and open popup
+  async startSAMLAuth({ role, path, namespace }) {
     try {
       const id = JSON.stringify([path, role]);
       this.fetchedRole = await this.store.findRecord('role-saml', id, {
@@ -62,70 +69,71 @@ export default class AuthFormSaml extends AuthBase {
       return;
     }
 
-    // if role is successfully fetched start SAML auth
-    const samlWindow = await this.startSAMLAuth();
-    await this.exchangeSAMLTokenPollID.perform(samlWindow, submitData);
-  });
-
-  @action
-  async startSAMLAuth() {
     const win = window;
     const POPUP_WIDTH = 500;
     const POPUP_HEIGHT = 600;
     const left = win.screen.width / 2 - POPUP_WIDTH / 2;
     const top = win.screen.height / 2 - POPUP_HEIGHT / 2;
-    return win.open(
+    const samlWindow = win.open(
       this.fetchedRole.ssoServiceURL,
       'vaultSAMLWindow',
       `width=${POPUP_WIDTH},height=${POPUP_HEIGHT},resizable,scrollbars=yes,top=${top},left=${left}`
     );
+
+    await this.exchangeSAMLTokenPollID.perform(samlWindow, { path });
   }
 
-  exchangeSAMLTokenPollID = task(async (samlWindow, submitData) => {
+  exchangeSAMLTokenPollID = task(async (samlWindow, { path }) => {
     // start watching the popup window and the current one
     this.watchPopup.perform(samlWindow);
     this.watchCurrent.perform(samlWindow);
 
-    const { path } = submitData;
-
     // TODO CMB - when wiring up components check if this is still necessary
     // pass namespace from state back to AuthForm
     // this.args.onNamespace(namespace);
+    try {
+      const { mfa_requirement, client_token } = await this.pollForToken(samlWindow, { path });
+      // We've obtained the Vault token for the authentication flow now log in or pass MFA data
+      const samlExchangeData = { token: client_token, mfa_requirement };
+      await this.continueLogin(samlExchangeData);
+      this.closeWindow(samlWindow);
+    } catch (error) {
+      this.cancelLogin(samlWindow, errorMessage(error));
+    }
+  });
+
+  async pollForToken(samlWindow, { path }) {
+    // Poll every one second for the token to become available
+    const WAIT_TIME = Ember.testing ? 50 : 1000;
+    const MAX_TIME = 180; // 3 minutes in seconds
 
     const adapter = this.store.adapterFor('auth-method');
-    // Wait up to 3 minutes (180 seconds) for the token to become available
-    for (let i = 0; i < 180; i++) {
-      const WAIT_TIME = Ember.testing ? 50 : 1000;
+    // Wait up to 3 minutes for a token to become available
+    for (let attempt = 0; attempt < MAX_TIME; attempt++) {
       await timeout(WAIT_TIME);
 
       try {
-        const resp = await adapter.pollSAMLToken(
+        const resp = await await adapter.pollSAMLToken(
           path,
           this.fetchedRole.tokenPollID,
           this.fetchedRole.clientVerifier
         );
 
         if (resp?.auth) {
-          // We've obtained the Vault token for the authentication flow now log in or pass MFA data
-          const { mfa_requirement, client_token } = resp.auth;
-          // onSubmit calls doSubmit in auth-form.js
-          const samlExchangeData = { token: client_token, mfa_requirement };
-          await this.continueLogin(samlExchangeData);
-          this.closeWindow(samlWindow);
-          return;
-        } else {
-          continue;
+          // Exit loop if response
+          return resp.auth;
         }
       } catch (e) {
         if (e.httpStatus === 401) {
           // Continue to retry on 401 Unauthorized
           continue;
         }
-        return this.cancelLogin(samlWindow, errorMessage(e));
+        throw e;
       }
     }
+
     this.cancelLogin(samlWindow, ERROR_TIMEOUT);
-  });
+  }
 
   async continueLogin(data) {
     try {
