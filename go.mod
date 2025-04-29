@@ -140,7 +140,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-azure v0.20.3
 	github.com/hashicorp/vault-plugin-auth-cf v0.20.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.20.2
-	github.com/hashicorp/vault-plugin-auth-jwt v0.23.0
+	github.com/hashicorp/vault-plugin-auth-jwt v0.23.2
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.14.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.21.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.18.0
@@ -221,7 +221,7 @@ require (
 	golang.org/x/crypto v0.37.0
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
 	golang.org/x/net v0.39.0
-	golang.org/x/oauth2 v0.28.0
+	golang.org/x/oauth2 v0.29.0
 	golang.org/x/sync v0.13.0
 	golang.org/x/sys v0.32.0
 	golang.org/x/term v0.31.0
