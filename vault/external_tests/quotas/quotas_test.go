@@ -676,6 +676,7 @@ func TestQuotas_RateLimitQuota_GroupByConfig(t *testing.T) {
 			},
 		},
 		"secondary_rate_defaults_cannot_be_negative": {
+			enterpriseOnly: true,
 			reqData: map[string]interface{}{
 				"rate":           100,
 				"group_by":       "entity_then_ip",
