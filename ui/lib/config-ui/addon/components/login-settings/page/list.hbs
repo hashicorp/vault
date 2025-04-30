@@ -29,14 +29,9 @@
         <dd.Interactive @route="login-settings.rule" @model={{rule.name}} data-test-view-rule-trigger>
           View
         </dd.Interactive>
-        {{!  TODO: uncomment once read comp is setup
-        <dd.Interactive data-test-read-rule-trigger>
-          Read
-        </dd.Interactive> 
-        }}
-        {{!-- {{#if (has-permission "delete")}} --}}
-        <dd.Interactive @color="critical" data-test-confirm-action-trigger>Delete</dd.Interactive>
-        {{!-- {{/if}} --}}
+        {{#if (has-capability @capabilities "delete" id=rule.name)}}
+          <dd.Interactive @color="critical" data-test-confirm-action-trigger>Delete</dd.Interactive>
+        {{/if}}
       </Hds::Dropdown>
     </div>
   </LinkedBlock>
