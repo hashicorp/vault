@@ -16,7 +16,7 @@ import (
 )
 
 // Open the DB connection to Snowflake or return an error.
-func openSnowflake(connectionURL, username, privateKeyPath string) (*sql.DB, error) {
+func openSnowflake(connectionURL, username, providedPrivateKey string) (*sql.DB, error) {
 	// Parse thee connection_url for required fields. Should be of
 	// the form <account_name>.snowflakecomputing.com/<db_name>
 	accountName, dbName, err := parseSnowflakeFieldsFromURL(connectionURL)
@@ -24,7 +24,7 @@ func openSnowflake(connectionURL, username, privateKeyPath string) (*sql.DB, err
 		return nil, err
 	}
 
-	privateKey, err := getPrivateKey(privateKeyPath)
+	privateKey, err := getPrivateKey(providedPrivateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -56,15 +56,23 @@ func parseSnowflakeFieldsFromURL(connectionURL string) (string, string, error) {
 }
 
 // Open and decode the private key file
-func getPrivateKey(privateKeyPath string) (*rsa.PrivateKey, error) {
-	keyFile, err := os.ReadFile(privateKeyPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read private key file: %w", err)
+func getPrivateKey(providedPrivateKey string) (*rsa.PrivateKey, error) {
+	var block *pem.Block
+
+	// If the provided data was the key itself, use it directly.
+	if strings.HasPrefix(providedPrivateKey, "-----BEGIN PRIVATE KEY-----") {
+		block, _ = pem.Decode([]byte(providedPrivateKey))
+	} else {
+		keyFile, err := os.ReadFile(providedPrivateKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read private key file: %w", err)
+		}
+
+		block, _ = pem.Decode(keyFile)
 	}
 
-	block, _ := pem.Decode(keyFile)
 	if block == nil || block.Type != "PRIVATE KEY" {
-		return nil, fmt.Errorf("failed to decode the the private key file")
+		return nil, fmt.Errorf("failed to decode the the private key value")
 	}
 
 	key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
