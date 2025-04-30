@@ -5,7 +5,7 @@
 
 <Hds::Card::Container @level="high" @hasBorder={{true}} class="has-padding-l" data-test-mfa-form>
   <Hds::Button @text="Back" @icon="arrow-left" @color="tertiary" {{on "click" @onCancel}} data-test-back-button />
-  <p data-test-mfa-description>
+  <p data-test-mfa-description class="has-top-margin-m">
     {{this.description}}
   </p>
   <form id="auth-form" {{on "submit" this.submit}}>
