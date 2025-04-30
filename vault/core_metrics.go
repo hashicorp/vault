@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/secrets-store-syncer/stores"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pluginconsts"
@@ -19,6 +20,10 @@ import (
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
+)
+
+const (
+	KVv2MetadataPath = "metadata"
 )
 
 func (c *Core) metricsLoop(stopCh chan struct{}) {
@@ -389,6 +394,14 @@ type kvMount struct {
 	NumSecrets int
 }
 
+type OperatorImportKVV2Metric struct {
+	NumSecrets                int
+	NumSecretsWithSourceGCP   int
+	NumSecretsWithSourceAWS   int
+	NumSecretsWithSourceAzure int
+	NumSecretsWithSourceVault int
+}
+
 func (c *Core) findKvMounts() []*kvMount {
 	mounts := make([]*kvMount, 0)
 
@@ -427,19 +440,19 @@ func (c *Core) kvCollectionErrorCount() {
 	)
 }
 
-func (c *Core) walkKvMountSecrets(ctx context.Context, m *kvMount) {
-	var subdirectories []string
-	if m.Version == "1" {
-		subdirectories = []string{m.Namespace.Path + m.MountPoint}
-	} else {
-		subdirectories = []string{m.Namespace.Path + m.MountPoint + "metadata/"}
-	}
+func (c *Core) walkKvSecrets(
+	ctx context.Context,
+	rootDirs []string,
+	m *kvMount,
+	onSecret func(ctx context.Context, fullPath string) error,
+) error {
+	subdirectories := rootDirs
 
 	for len(subdirectories) > 0 {
-		// Check for cancellation
+		// Context cancellation check
 		select {
 		case <-ctx.Done():
-			return
+			return nil
 		default:
 			break
 		}
@@ -451,6 +464,7 @@ func (c *Core) walkKvMountSecrets(ctx context.Context, m *kvMount) {
 			Operation: logical.ListOperation,
 			Path:      currentDirectory,
 		}
+
 		resp, err := c.router.Route(ctx, listRequest)
 		if err != nil {
 			c.kvCollectionErrorCount()
@@ -465,11 +479,12 @@ func (c *Core) walkKvMountSecrets(ctx context.Context, m *kvMount) {
 				break
 			}
 			// Quit handling this mount point (but it'll still appear in the list)
-			return
+			return err
 		}
 		if resp == nil {
 			continue
 		}
+
 		rawKeys, ok := resp.Data["keys"]
 		if !ok {
 			continue
@@ -479,15 +494,86 @@ func (c *Core) walkKvMountSecrets(ctx context.Context, m *kvMount) {
 			c.kvCollectionErrorCount()
 			c.logger.Error("KV list keys are not a []string", "mount_point", m.MountPoint, "rawKeys", rawKeys)
 			// Quit handling this mount point (but it'll still appear in the list)
-			return
+			return fmt.Errorf("KV list keys are not a []string")
 		}
+
 		for _, path := range keys {
-			if len(path) > 0 && path[len(path)-1] == '/' {
-				subdirectories = append(subdirectories, currentDirectory+path)
+			fullPath := currentDirectory + path
+			if strings.HasSuffix(path, "/") {
+				subdirectories = append(subdirectories, fullPath)
 			} else {
-				m.NumSecrets += 1
+				if callBackErr := onSecret(ctx, fullPath); callBackErr != nil {
+					c.logger.Error("failed to get metadata for KVv2 secret", "path", fullPath, "error", err)
+					return callBackErr
+				}
 			}
 		}
+	}
+	return nil
+}
+
+func (c *Core) collectOperatorImportMetrics(ctx context.Context, m *kvMount, results *OperatorImportKVV2Metric) {
+	startDirs := []string{m.Namespace.Path + m.MountPoint + KVv2MetadataPath + "/"}
+
+	err := c.walkKvSecrets(ctx, startDirs, m, func(ctx context.Context, fullPath string) error {
+		res, err := c.router.Route(ctx, &logical.Request{
+			Operation: logical.ReadOperation,
+			Path:      fullPath,
+		})
+		if err != nil {
+			c.kvCollectionErrorCount()
+			c.logger.Error("failed to get metadata for KVv2 secret", "path", fullPath, "error", err)
+			return err
+		}
+
+		metadata := res.Data
+		customMetadataRaw, ok := metadata["custom_metadata"]
+		if !ok {
+			return nil
+		}
+
+		customMetadata, ok := customMetadataRaw.(map[string]string)
+		if !ok {
+			c.logger.Error("custom_metadata not a map[string]string in KV v2 secret", "path", fullPath)
+			return nil
+		}
+
+		if val, found := customMetadata["operation"]; found && val == "import" {
+			results.NumSecrets++
+			switch customMetadata["import-source"] {
+			case string(stores.AwsSm):
+				results.NumSecretsWithSourceAWS++
+			case string(stores.GcpSm):
+				results.NumSecretsWithSourceGCP++
+			case string(stores.Vault):
+				results.NumSecretsWithSourceVault++
+			case string(stores.AzureKv):
+				results.NumSecretsWithSourceAzure++
+			default:
+				c.logger.Warn("unknown import-source in KVv2 secret", "path", fullPath, "import-source", customMetadata["import-source"])
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		c.logger.Error("failed to collect operator import metrics", "mount_point", m.MountPoint, "error", err)
+	}
+}
+
+func (c *Core) walkKvMountSecrets(ctx context.Context, m *kvMount) {
+	var startDirs []string
+	if m.Version == "1" {
+		startDirs = []string{m.Namespace.Path + m.MountPoint}
+	} else {
+		startDirs = []string{m.Namespace.Path + m.MountPoint + KVv2MetadataPath + "/"}
+	}
+
+	err := c.walkKvSecrets(ctx, startDirs, m, func(ctx context.Context, fullPath string) error {
+		m.NumSecrets++
+		return nil
+	})
+	if err != nil {
+		c.logger.Error("failed to walk KV mount", "mount_point", m.MountPoint, "error", err)
 	}
 }
 
@@ -627,7 +713,40 @@ func (c *Core) GetSecretEngineUsageMetrics() map[string]int {
 	return mounts
 }
 
-// GetAuthMethodUsageMetrics returns a map of auth mount types to the number of those mounts that exist.
+// GetKVV2OperatorImportMetrics returns a map of operator import metrics.
+func (c *Core) GetKVV2OperatorImportMetrics(ctx context.Context) (*OperatorImportKVV2Metric, error) {
+	mounts := c.findKvMounts()
+
+	var kvv2Mounts []*kvMount
+	for _, mount := range mounts {
+		if mount.Version == "2" {
+			kvv2Mounts = append(kvv2Mounts, mount)
+		}
+	}
+
+	results := &OperatorImportKVV2Metric{
+		NumSecrets:                0,
+		NumSecretsWithSourceGCP:   0,
+		NumSecretsWithSourceAWS:   0,
+		NumSecretsWithSourceAzure: 0,
+		NumSecretsWithSourceVault: 0,
+	}
+
+	for _, m := range kvv2Mounts {
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("context expired")
+		default:
+			break
+		}
+
+		c.collectOperatorImportMetrics(ctx, m, results)
+	}
+
+	return results, nil
+}
+
+// Get returns a map of auth mount types to the number of those mounts that exist.
 func (c *Core) GetAuthMethodUsageMetrics() map[string]int {
 	mounts := make(map[string]int)
 
