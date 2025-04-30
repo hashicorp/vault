@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/database: Add keypair authentication support to Snowflake database root configuration
+```
