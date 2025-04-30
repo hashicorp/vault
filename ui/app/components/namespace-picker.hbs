@@ -64,25 +64,26 @@
     {{/if}}
 
     <D.Footer @hasDivider={{true}} class="is-flex-center">
-
-      {{#if this.canRefreshNamespaces}}
-        <Hds::Button
-          @color="secondary"
-          @text="Refresh list"
-          @isFullWidth={{(not this.canManageNamespaces)}}
-          {{on "click" this.refreshList}}
-          data-test-refresh-namespaces
-        />
-      {{/if}}
-      {{#if this.canManageNamespaces}}
-        <Hds::Button
-          @color="secondary"
-          @text="Manage"
-          @isFullWidth={{(not this.canRefreshNamespaces)}}
-          @icon="settings"
-          @route="vault.cluster.access.namespaces"
-        />
-      {{/if}}
+      <Hds::ButtonSet class="is-fullwidth">
+        {{#if this.canRefreshNamespaces}}
+          <Hds::Button
+            @color="secondary"
+            @text="Refresh list"
+            @isFullWidth={{(not this.canManageNamespaces)}}
+            {{on "click" this.refreshList}}
+            data-test-refresh-namespaces
+          />
+        {{/if}}
+        {{#if this.canManageNamespaces}}
+          <Hds::Button
+            @color="secondary"
+            @text="Manage"
+            @isFullWidth={{(not this.canRefreshNamespaces)}}
+            @icon="settings"
+            @route="vault.cluster.access.namespaces"
+          />
+        {{/if}}
+      </Hds::ButtonSet>
 
     </D.Footer>
 
