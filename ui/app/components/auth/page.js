@@ -30,14 +30,11 @@ import { action } from '@ember/object';
  * */
 
 export default class AuthPage extends Component {
-  @service auth;
   @service flags;
 
-  @tracked preselectedAuthType;
-
-  // application state error handling
-  @tracked mfaErrors = '';
   @tracked mfaAuthData;
+  @tracked mfaErrors = '';
+  @tracked preselectedAuthType;
 
   get namespaceInput() {
     const namespaceQP = this.args.namespaceQueryParam;
@@ -91,7 +88,7 @@ export default class AuthPage extends Component {
   }
 
   @action
-  goBack() {
+  onMfaErrorDismiss() {
     this.mfaAuthData = null;
     this.mfaErrors = '';
   }

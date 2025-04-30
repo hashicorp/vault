@@ -11,7 +11,7 @@
     />
     <A.Body @text="Error: {{this.mfaErrors}}" />
     <A.Footer as |F|>
-      <F.Button @icon="arrow-left" @color="tertiary" @text="Go back" {{on "click" this.goBack}} />
+      <F.Button @icon="arrow-left" @color="tertiary" @text="Go back" {{on "click" this.onMfaErrorDismiss}} />
     </A.Footer>
   </Hds::ApplicationState>
 {{else}}
